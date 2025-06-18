@@ -45,7 +45,8 @@ export class BookDetailsComponent implements OnInit {
   ) { }
 
   // Add method to generate slug same as tatwer component
-  getBookSlug(bookName: string): string {
+  getBookSlug(bookName: string | undefined | null): string {
+    if (!bookName) return '';
     return bookName.trim().replace(/\s+/g, '-');
   }
 

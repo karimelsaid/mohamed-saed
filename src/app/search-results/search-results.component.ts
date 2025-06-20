@@ -27,9 +27,8 @@ export class SearchResultsComponent implements OnInit {
   totalBooks: number = 0; // إجمالي الكتب التي تطابق البحث
   showLoginPrompt = false;
   faShareAlt = faShareAlt;
-showCopySuccess: boolean = false;
-copiedBookId: string | null = null;
-
+  showCopySuccess: boolean = false;
+  copiedBookId: string | null = null;
 
   // New properties for modal and form
   showRequestModal: boolean = false;
@@ -39,6 +38,8 @@ copiedBookId: string | null = null;
   isRequestSubmitting: boolean = false;
   ratings: { [bookId: string]: any } = {};
 
+  filterType: string = 'all';
+
   constructor(private dataService: DataService, private route: ActivatedRoute, private authService: AuthService, private http: HttpClient) {}
 
   ngOnInit(): void {
@@ -46,9 +47,8 @@ copiedBookId: string | null = null;
     // نحصل على قيمة البحث من الـ queryParams
     this.route.queryParams.subscribe(params => {
       this.searchQuery = params['q'] || ''; // تأكد من وجود قيمة
-      if (this.searchQuery) {
-        this.searchBooks();
-      }
+      this.filterType = params['filter'] || 'all';
+      this.searchBooks();
     });
   }
   // دالة نسخ رابط الكتاب
@@ -237,28 +237,39 @@ this.http.get<{ bookId: string; averageRating: number; ratingCount: number }>(`$
   }
 
   searchBooks(): void {
-    this.dataService.getData().subscribe(data => {
-      const normalizedQuery = this.normalizeArabic(this.searchQuery.toLowerCase());
-      const filteredBooks = data.filter((book: Book) => {
-        if (!book.product_name || typeof book.product_name !== 'string') {
-          return false;
-        }
-        const normalizedProductName = this.normalizeArabic(book.product_name.toLowerCase());
-        return normalizedProductName.includes(normalizedQuery);
+    if (this.filterType === 'recentlyAdded') {
+      this.dataService.getRecentBooks().subscribe(data => {
+        this.totalBooks = data.length;
+        this.currentPage = Math.min(this.currentPage, Math.ceil(this.totalBooks / this.booksPerPage));
+        const startIndex = (this.currentPage - 1) * this.booksPerPage;
+        const endIndex = this.currentPage * this.booksPerPage;
+        this.books = data.slice(startIndex, endIndex);
+        this.fetchRatingsForBooks();
       });
-      // Sort filteredBooks to prioritize books starting with the exact original query
-      const originalQueryLower = this.searchQuery.toLowerCase();
-      filteredBooks.sort((a: Book, b: Book) => {
-        const aStarts = a.product_name.toLowerCase().startsWith(originalQueryLower);
-        const bStarts = b.product_name.toLowerCase().startsWith(originalQueryLower);
-        if (aStarts && !bStarts) return -1;
-        if (!aStarts && bStarts) return 1;
-        return 0;
+    } else {
+      this.dataService.getData().subscribe(data => {
+        const normalizedQuery = this.normalizeArabic(this.searchQuery.toLowerCase());
+        const filteredBooks = data.filter((book: Book) => {
+          if (!book.product_name || typeof book.product_name !== 'string') {
+            return false;
+          }
+          const normalizedProductName = this.normalizeArabic(book.product_name.toLowerCase());
+          return normalizedProductName.includes(normalizedQuery);
+        });
+        // Sort filteredBooks to prioritize books starting with the exact original query
+        const originalQueryLower = this.searchQuery.toLowerCase();
+        filteredBooks.sort((a: Book, b: Book) => {
+          const aStarts = a.product_name.toLowerCase().startsWith(originalQueryLower);
+          const bStarts = b.product_name.toLowerCase().startsWith(originalQueryLower);
+          if (aStarts && !bStarts) return -1;
+          if (!aStarts && bStarts) return 1;
+          return 0;
+        });
+        this.totalBooks = filteredBooks.length;
+        this.books = filteredBooks.slice((this.currentPage - 1) * this.booksPerPage, this.currentPage * this.booksPerPage);
+        this.fetchRatingsForBooks(); // Fetch ratings after books are loaded
       });
-      this.totalBooks = filteredBooks.length;
-      this.books = filteredBooks.slice((this.currentPage - 1) * this.booksPerPage, this.currentPage * this.booksPerPage);
-      this.fetchRatingsForBooks(); // Fetch ratings after books are loaded
-    });
+    }
   }
 
   // دالة الانتقال إلى الصفحة التالية
@@ -266,6 +277,7 @@ this.http.get<{ bookId: string; averageRating: number; ratingCount: number }>(`$
     if (this.currentPage * this.booksPerPage < this.totalBooks) {
       this.currentPage++;
       this.searchBooks();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }
 
@@ -274,6 +286,7 @@ this.http.get<{ bookId: string; averageRating: number; ratingCount: number }>(`$
     if (this.currentPage > 1) {
       this.currentPage--;
       this.searchBooks();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }
 

@@ -63,9 +63,13 @@ export class AppComponent {
     }
   }
 
-  onSearchExecuted(query: string) {
+  onSearchExecuted(event: { query: string; filter: string }) {
+    const query = event.query || '';
+    const filter = event.filter || 'all';
     if (query.trim()) {
-      this.router.navigate(['/research'], { queryParams: { q: query.trim() } });
+      this.router.navigate(['/research'], { queryParams: { q: query.trim(), filter } });
+    } else {
+      this.router.navigate(['/research'], { queryParams: { filter } });
     }
   }
 

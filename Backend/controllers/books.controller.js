@@ -31,6 +31,37 @@ async function getExcelData(req, res) {
   }
 }
 
+// دالة جديدة لإرجاع آخر 50 كتابًا مضافًا
+async function getRecentBooks(req, res) {
+  try {
+    fs.readFile('output.json', 'utf8', (err, data) => {
+      if (err) {
+        return res.status(500).json({ 
+          message: 'حدث خطأ أثناء قراءة الملف', 
+          error: err 
+        });
+      }
+      
+      try {
+        const jsonData = JSON.parse(data);
+        // افتراض أن ترتيب الكتب يعكس ترتيب الإضافة
+        const recentBooks = jsonData.slice(-50).reverse(); // آخر 50 كتابًا مع عكس الترتيب لعرض الأحدث أولاً
+        res.json(recentBooks);
+      } catch (error) {
+        res.status(500).json({ 
+          message: 'حدث خطأ أثناء تحويل بيانات JSON', 
+          error 
+        });
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      message: 'حدث خطأ أثناء جلب بيانات الكتب', 
+      error 
+    });
+  }
+}
+
 // تنزيل وتحويل بيانات Excel من Google Drive
 async function updateBooksData() {
   try {
@@ -45,5 +76,6 @@ async function updateBooksData() {
 
 module.exports = {
   getExcelData,
+  getRecentBooks,
   updateBooksData
 };

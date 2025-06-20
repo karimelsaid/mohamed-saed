@@ -9,6 +9,7 @@ import { environment } from '../../environments/environment';
 })
 export class DataService {
   private apiUrl = environment.apiBaseUrl ? environment.apiBaseUrl + '/books/get-excel-data' : '/api/books/get-excel-data';
+  private recentBooksApiUrl = environment.apiBaseUrl ? environment.apiBaseUrl + '/books/get-recent-books' : '/api/books/get-recent-books';
   private ordersApiUrl = environment.apiBaseUrl ? environment.apiBaseUrl + '/orders' : '/api/orders';
   private usersApiUrl = environment.apiBaseUrl ? environment.apiBaseUrl + '/users' : '/api/users';
 
@@ -19,6 +20,10 @@ export class DataService {
 
   getData(): Observable<any> {
     return this.http.get(this.apiUrl);
+  }
+
+  getRecentBooks(): Observable<any> {
+    return this.http.get(this.recentBooksApiUrl);
   }
 
   submitOrder(orderData: any): Observable<any> {

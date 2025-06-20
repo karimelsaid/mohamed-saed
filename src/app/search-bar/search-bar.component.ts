@@ -1,5 +1,5 @@
 import { Component, EventEmitter, Input, Output, ViewChild, ElementRef } from '@angular/core';
-import { faSearch } from '@fortawesome/free-solid-svg-icons';
+import { faSearch, faFilter } from '@fortawesome/free-solid-svg-icons';
 
 @Component({
   selector: 'app-search-bar',
@@ -9,17 +9,34 @@ import { faSearch } from '@fortawesome/free-solid-svg-icons';
 })
 export class SearchBarComponent {
   @Input() allBooks: any[] = [];
-  @Output() searchExecuted = new EventEmitter<string>();
+  @Output() searchExecuted = new EventEmitter<{ query: string, filter: string }>();
 
   faSearch = faSearch;
+  faFilter = faFilter;
   searchQuery: string = '';
   searchResults: any[] = [];
+  showFilterDropdown: boolean = false;
+  selectedFilter: string = 'all';
 
   @ViewChild('inputElement') inputElement!: ElementRef;
 
+  toggleFilterDropdown() {
+    this.showFilterDropdown = !this.showFilterDropdown;
+  }
+
+  selectFilter(filter: string) {
+    this.selectedFilter = filter;
+    this.showFilterDropdown = false;
+    this.emitSearch();
+  }
+
+  emitSearch() {
+    this.searchExecuted.emit({ query: this.searchQuery.trim(), filter: this.selectedFilter });
+  }
+
   onSearch() {
     if (this.searchQuery.trim()) {
-      this.searchExecuted.emit(this.searchQuery.trim());
+      this.emitSearch();
       this.searchResults = [];
     }
   }
@@ -27,7 +44,7 @@ export class SearchBarComponent {
   selectSuggestion(productName: string) {
     this.searchQuery = productName;
     this.searchResults = [];
-    this.onSearch();
+    this.emitSearch();
   }
 
   private normalizeArabic(text: string): string {
@@ -60,10 +77,10 @@ export class SearchBarComponent {
         if (!aStarts && bStarts) return 1;
         return 0;
       });
-      this.searchExecuted.emit(this.searchQuery.trim());
+      this.emitSearch();
     } else {
       this.searchResults = [];
-      this.searchExecuted.emit('');
+      this.emitSearch();
     }
   }
 

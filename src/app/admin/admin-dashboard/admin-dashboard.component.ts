@@ -43,6 +43,8 @@ interface Product {
   promotionEndDate?: string;
   product_price_before_discount?: number;
   product_discount_percent?: number;
+  createdAt?: string; // Added creation date for sorting by recently added
+  fileOrder?: number; // Added to track order in file for sorting
 }
 
 interface OrderProduct {
@@ -123,6 +125,10 @@ export class AdminDashboardComponent implements OnInit {
   productsPage: number = 1;
   productsPageSize: number = 50;
   searchTerm: string = '';
+
+  // New properties for sorting
+  sortField: keyof Product | '' = '';
+  sortDirection: 'asc' | 'desc' = 'asc';
 
   backendBaseUrl: string = environment.apiBaseUrl;
   uploadsBaseUrl: string = environment.uploadsBaseUrl;
@@ -254,7 +260,7 @@ export class AdminDashboardComponent implements OnInit {
       next: (response) => {
         if (response.success) {
           // Trim product_category to match categories array exactly
-          response.products.forEach(p => {
+          response.products.forEach((p, index) => {
             if (p.product_category && typeof p.product_category === 'string') {
               p.product_category = p.product_category.trim();
             }
@@ -262,6 +268,8 @@ export class AdminDashboardComponent implements OnInit {
             if (!p.product_category || !this.categories.includes(p.product_category)) {
               p.product_category = this.categories[0];
             }
+            // Add fileOrder property based on index in the file
+            p.fileOrder = index;
           });
           this.allProducts = response.products;
           this.originalProducts = JSON.parse(JSON.stringify(response.products)); // deep copy for change detection
@@ -275,22 +283,56 @@ export class AdminDashboardComponent implements OnInit {
   }
 
   get filteredProducts(): Product[] {
-    if (!this.searchTerm) {
-      return this.allProducts;
+    let filtered = this.allProducts;
+
+    if (this.searchTerm) {
+      const lowerSearch = this.searchTerm.toLowerCase();
+      filtered = filtered.filter(p => {
+        if (!p.product_name || typeof p.product_name !== 'string') {
+          return false;
+        }
+        return p.product_name.toLowerCase().includes(lowerSearch);
+      });
     }
-    const lowerSearch = this.searchTerm.toLowerCase();
-    return this.allProducts.filter(p => {
-      if (!p.product_name || typeof p.product_name !== 'string') {
-        return false;
-      }
-      return p.product_name.toLowerCase().includes(lowerSearch);
-    });
+
+    if (this.sortField !== '') {
+      filtered = filtered.slice().sort((a, b) => {
+        if (this.sortField === 'createdAt' || this.sortField === 'fileOrder') {
+          const aOrder = a.fileOrder ?? 0;
+          const bOrder = b.fileOrder ?? 0;
+          // Sort by file order: asc means oldest first (first in file), desc means newest last (last in file)
+          if (this.sortDirection === 'asc') {
+            return aOrder - bOrder;
+          } else {
+            return bOrder - aOrder;
+          }
+        }
+
+        const aValue = a[this.sortField as keyof Product];
+        const bValue = b[this.sortField as keyof Product];
+
+        if (aValue == null) return 1;
+        if (bValue == null) return -1;
+
+        if (typeof aValue === 'string' && typeof bValue === 'string') {
+          const comparison = aValue.localeCompare(bValue);
+          return this.sortDirection === 'asc' ? comparison : -comparison;
+        } else if (typeof aValue === 'number' && typeof bValue === 'number') {
+          return this.sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+        } else {
+          return 0;
+        }
+      });
+    }
+
+    return filtered;
   }
 
   updateProductsPage(): void {
     const start = (this.productsPage - 1) * this.productsPageSize;
     const end = this.productsPage * this.productsPageSize;
     this.products = this.filteredProducts.slice(start, end);
+    console.log('updateProductsPage called, productsPage:', this.productsPage, 'products count:', this.products.length);
   }
 
   nextProductsPage(): void {
@@ -303,6 +345,30 @@ export class AdminDashboardComponent implements OnInit {
 
   onSearchTermChange(): void {
     this.productsPage = 1;
+    this.updateProductsPage();
+  }
+
+  onSortFieldChange(event: Event): void {
+    const target = event.target as HTMLSelectElement;
+    if (!target) return;
+    const value = target.value as keyof Product | '';
+    console.log('onSortFieldChange called with value:', value);
+    if (value === this.sortField) {
+      // Toggle direction
+      this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+      console.log('Toggled sortDirection to:', this.sortDirection);
+    } else {
+      this.sortField = value;
+      this.sortDirection = 'asc';
+      console.log('Changed sortField to:', this.sortField, 'and reset sortDirection to asc');
+    }
+    this.productsPage = 1;
+    this.updateProductsPage();
+  }
+
+  toggleSortDirection(): void {
+    this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+    console.log('toggleSortDirection called, new sortDirection:', this.sortDirection);
     this.updateProductsPage();
   }
 

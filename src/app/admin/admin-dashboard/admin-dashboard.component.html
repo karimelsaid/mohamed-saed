@@ -18,7 +18,7 @@
   </button>
   <button (click)="switchView('newPage')" [class.bg-blue-600]="currentView === 'newPage'" class="px-4 py-2 rounded text-white bg-blue-400 hover:bg-blue-600 transition">
 pdf الي epub
-  </button>
+  </button>  
 </div>
 
 <div class="promotion-date-controls my-6 max-w-md mx-auto p-4 border rounded bg-gray-50 dark:bg-gray-800">
@@ -202,15 +202,29 @@ pdf الي epub
       حفظ الكل
     </button>
   </div>
-  <div class="mb-4">
-    <input
-      type="text"
-      placeholder="ابحث عن منتج..."
-      [(ngModel)]="searchTerm"
-      (input)="onSearchTermChange()"
-      class="w-full border rounded px-3 py-2 dark:bg-gray-700 dark:text-gray-200"
-    />
-  </div>
+    <div class="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <input
+        type="text"
+        placeholder="ابحث عن منتج..."
+        [(ngModel)]="searchTerm"
+        (input)="onSearchTermChange()"
+        class="w-full sm:w-1/2 border rounded px-3 py-2 dark:bg-gray-700 dark:text-gray-200"
+      />
+      <div class="flex items-center space-x-2 rtl">
+        <label for="sortField" class="text-gray-700 dark:text-gray-300 font-semibold">ترتيب حسب:</label>
+        <select id="sortField" [(ngModel)]="sortField" (change)="onSortFieldChange($event)" class="border rounded px-2 py-1 dark:bg-gray-700 dark:text-gray-200">
+          <option value="">بدون ترتيب</option>
+          <option value="product_name">اسم المنتج</option>
+          <option value="product_quantity">الكمية</option>
+          <option value="product_price">سعر البيع</option>
+          <option value="price_cost">سعر الشراء</option>
+          <option value="createdAt">الأحدث</option>
+        </select>
+        <button (click)="toggleSortDirection()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-3 py-1 rounded" title="تبديل اتجاه الترتيب">
+          {{ sortDirection === 'asc' ? 'تصاعدي' : 'تنازلي' }}
+        </button>
+      </div>
+    </div>
   <div class="overflow-x-auto">
     <table class="min-w-full bg-white dark:bg-gray-800 rounded-lg shadow-md text-sm mx-auto hidden sm:table">
       <thead>

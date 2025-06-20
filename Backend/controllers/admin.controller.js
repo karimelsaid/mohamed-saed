@@ -91,7 +91,8 @@ async function addProduct(req, res) {
       product_description,
       categoryPrefix,
       product_price: parseFloat(product_price) || 0,
-      price_cost: parseFloat(price_cost) || 0
+      price_cost: parseFloat(price_cost) || 0,
+      createdAt: new Date().toISOString() // Add createdAt field with current timestamp
     };
 
     // Call service to add product to Excel

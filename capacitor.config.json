@@ -2,5 +2,8 @@
   "appId": "com.kenouz.app",
   "appName": "Kenouz",
   "webDir": "Backend/dist/browser",
-  "bundledWebRuntime": false
+  "bundledWebRuntime": false,
+  "server": {
+    "url": "https://kenouz.org"
+  }
 }

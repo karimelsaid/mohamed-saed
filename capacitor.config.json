@@ -1,0 +1,6 @@
+{
+  "appId": "com.kenouz.app",
+  "appName": "Kenouz",
+  "webDir": "Backend/dist/browser",
+  "bundledWebRuntime": false
+}

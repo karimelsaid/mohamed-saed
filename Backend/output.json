@@ -7865,15 +7865,15 @@
   },
   {
     "products_id": "316894171891",
-    "product_name": "العبقريات الاسلاميه",
-    "product_price": 299,
+    "product_name": "مجموعة العبقريات الاسلاميه",
+    "product_price": 499,
     "price_cost": 280,
     "product_quantity": 1,
     "product_category": "كتب دينية",
     "product_description": "كتاب \"عبقريات إسلامية\" هو سلسلة كتب للكاتب المصري عباس محمود العقاد، يركز فيها على دراسة شخصيات إسلامية بارزة وتحليل عبقريتها من خلال كتبه \"عبقرية محمد\"، \"عبقرية الصديق\"، \"عبقرية عمر\"، \"عبقرية علي\"، و\"عبقرية خالد بن الوليد\".",
     "product_image": "316894171891",
     "promotionEndDate": "2025-07-05T00:00:00.000Z",
-    "product_price_before_discount": 829,
+    "product_price_before_discount": 1379,
     "rival": true,
     "product_discount_percent": 65
   },
@@ -7935,7 +7935,7 @@
   },
   {
     "products_id": "856652900408",
-    "product_name": "الاربعين النوويه",
+    "product_name": "شرح الاربعين النوويه",
     "product_price": 299,
     "price_cost": 280,
     "product_quantity": 1,

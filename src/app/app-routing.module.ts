@@ -23,6 +23,10 @@ import { PrintComponent } from './print/print.component';
 import { BookDetailsComponent } from './book-details/book-details.component';
 
 
+import { AboutComponent } from './about/about.component';
+import { PrivacyPolicyComponent } from './privacy-policy/privacy-policy.component';
+import { TermsConditionsComponent } from './terms-conditions/terms-conditions.component';
+
 const routes: Routes = [
   { path: 'Home', component: HomePageComponent },
   { path: 'Business-Marketing-Finance', component: ChildComponent },
@@ -45,6 +49,11 @@ const routes: Routes = [
   { path: 'requests', component: UserOrdersComponent },
   { path: 'print', component: PrintComponent },
   { path: 'pdf-ocr', loadComponent: () => import('./admin/pdf-ocr/pdf-ocr.component').then(m => m.PdfOcrComponent) },
+
+  { path: 'عن-الموقع', component: AboutComponent },
+  { path: 'سياسة-الخصوصية', component: PrivacyPolicyComponent },
+  { path: 'الشروط-والاحكام', component: TermsConditionsComponent },
+
   { path: '**', component: NotFoundComponent }
 ];
 

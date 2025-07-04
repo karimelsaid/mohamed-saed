@@ -1,6 +1,6 @@
 
-<div class="fixed w-full bg-white dark:bg-gray-900 z-30">
-    <div class="search-bar-container relative max-w-5xl p-4 flex justify-center pt-24 mx-auto">
+<div class="fixed w-full bg-gray-200/50 dark:bg-gray-900 z-30">
+    <div class="search-bar-container relative max-w-5xl p-4 flex justify-center pt-20 sm:pt-24 mx-auto">
       <div class="relative w-full max-w-full">
         <input 
           [(ngModel)]="searchQuery"
@@ -25,10 +25,7 @@
           </ul>
         </div>
         
-          <!-- أيقونة البحث -->
-          <button (click)="onSearch()" class="absolute inset-y-0 right-10 flex items-center pr-3 text-gray-500 dark:text-gray-300 hover:text-blue-600">
-            <fa-icon [icon]="faSearch" class="text-sm"></fa-icon>
-          </button>
+          
           <!-- أيقونة الفلتر -->
           <div class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 dark:text-gray-300 hover:text-blue-600 cursor-pointer" (click)="toggleFilterDropdown()">
             <fa-icon [icon]="faFilter" class="text-sm"></fa-icon>

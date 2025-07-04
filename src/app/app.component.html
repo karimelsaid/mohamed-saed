@@ -4,7 +4,7 @@
 <div [ngClass]="{'out':outOn,'on':!outOn}" class="z-50 w-auto h-auto grid items-center fixed -left-2 top-[60%] justify-end">
     <div class="py-4 px-2 cursor-pointer rounded-full bg-[rgba(0,0,0,0.36)]">
        <div class="flex">
-         <div (click)="outOn=!outOn" class="link bg-amber-800 rounded-full text-center w-8 h-8 absolute -right-3/4 top-1/2 flex place-items-center justify-center font-bold">
+         <div (click)="outOn=!outOn" class="link bg-blue-800 rounded-full text-center w-8 h-8 absolute -right-3/4 top-1/2 flex place-items-center justify-center font-bold">
             <fa-icon [ngClass]="{hidden:outOn}" class="text-white text-xs sm:mx-0" [icon]="faChevronRight"></fa-icon>
             <fa-icon [ngClass]="{hidden:!outOn}" class="text-white text-xs sm:mx-0" [icon]="faChevronLeft"></fa-icon>
          </div>
@@ -40,8 +40,7 @@
   </div>
 
 <!-- التنقل بين الصفحات -->
-<app-navbar></app-navbar>
-
+ <app-navbar></app-navbar>
 <app-search-bar [allBooks]="allBooks" (searchExecuted)="onSearchExecuted($event)"></app-search-bar>
 
 <router-outlet></router-outlet>
@@ -55,15 +54,15 @@
       <p class="text-sm">اكتشف واشتري أفضل الكتب من مكتبتنا المتنوعة</p>
     </div>
 
-    <div class="mb-4">
-      <ul class="flex flex-row-reverse sm:justify-center justify-start space-x-reverse space-x-8">
+    <div class="mb-4 text-center">
+      <ul class="flex flex-row-reverse sm:justify-center justify-center space-x-reverse space-x-8">
         <li><a [routerLink]="'/عن-الموقع'" class="hover:text-blue-400">عن الموقع</a></li>
         <li><a [routerLink]="'/سياسة-الخصوصية'" class="hover:text-blue-400">سياسة الخصوصية</a></li>
         <li><a [routerLink]="'/الشروط-والاحكام'" class="hover:text-blue-400">الشروط والأحكام</a></li>
       </ul>
     </div>
 
-    <div class="mt-4 text-sm text-yellow-400 flex items-center justify-center space-x-2">
+    <div class="mt-4 text-sm text-yellow-400 flex items-center justify-center space-x-2 px-4">
       <p>الموقع لا يتحمل مسؤولية حقوق الملكية الفكرية الخاصة بالكتب المعروضة، حيث يتم توفيرها من خلال موردين وشركاء متنوعين. نحن نعرض الكتب بغرض البيع فقط، وفي حال وجود أي انتهاك يرجى التواصل معنا لاتخاذ اللازم.</p>
     </div>
   </div>
@@ -81,3 +80,4 @@
   box-shadow: 0 0 10px #0ff, 0 0 20px #0ff, 0 0 40px #0ff;
 }
 </style>
+

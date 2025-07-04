@@ -1,19 +1,19 @@
-<div class="bg-amber-950 dark:bg-[#0a1325] p-4 fixed w-full h-auto z-50">
+<div class="bg-blue-950 dark:bg-[#0a1325] p-4 fixed bottom-0 w-full h-auto z-50 shadow-lg">
   <div class="flex justify-around items-center">
     <div routerLink="/" class="cursor-pointer">
-      <img class="w-10 sm:w-14 not" src="logoname2.png" alt="">
+      <img class="w-10 sm:w-14 not" src="logoname2.png" alt="Logo">
     </div>
 
       <div class="flex space-x-2 lg:space-x-14">
           <!-- أيقونة المفضلة -->
-          <div routerLink="/Favorites" routerLinkActive="text-orange-400" [routerLinkActiveOptions]="{exact:true}" class="relative flex flex-col sm:flex-row items-center cursor-pointer" *ngIf="isLoggedIn" #favLink="routerLinkActive">
+          <div routerLink="/Favorites" routerLinkActive="text-blue-400" [routerLinkActiveOptions]="{exact:true}" class="relative flex flex-col sm:flex-row items-center cursor-pointer" *ngIf="isLoggedIn" #favLink="routerLinkActive">
             <fa-icon 
               [icon]="faHeart" 
-              [ngClass]="{'text-orange-400': favLink.isActive, 'text-white dark:text-gray-300': !favLink.isActive}" 
+              [ngClass]="{'text-blue-400': favLink.isActive, 'text-white dark:text-gray-300': !favLink.isActive}" 
               class="relative text-xs sm:text-base mb-1 sm:mb-0" 
               title="المفضلة">
             </fa-icon>
-            <span [ngClass]="{'text-orange-400': favLink.isActive, 'text-white dark:text-gray-300': !favLink.isActive}" class="text-xs sm:text-xs">المفضلة</span>
+            <span [ngClass]="{'text-blue-400': favLink.isActive, 'text-white dark:text-gray-300': !favLink.isActive}" class="text-xs sm:text-xs">المفضلة</span>
             <span *ngIf="favoritesCount > 0" 
                   class="absolute sm:-top-1/2 right-0 bg-blue-600 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
               {{ favoritesCount }}
@@ -21,25 +21,25 @@
           </div>
 
           <!-- أيقونة print -->
-          <div *ngIf="isLoggedIn" class="relative flex flex-col sm:flex-row items-center cursor-pointer" routerLink="/print" routerLinkActive="text-orange-400" [routerLinkActiveOptions]="{exact:true}" #printLink="routerLinkActive">
+          <div *ngIf="isLoggedIn" class="relative flex flex-col sm:flex-row items-center cursor-pointer" routerLink="/print" routerLinkActive="text-blue-400" [routerLinkActiveOptions]="{exact:true}" #printLink="routerLinkActive">
             <fa-icon 
               [icon]="faFilePdf" 
-              [ngClass]="{'text-orange-400': printLink.isActive, 'text-white dark:text-gray-300': !printLink.isActive}" 
+              [ngClass]="{'text-blue-400': printLink.isActive, 'text-white dark:text-gray-300': !printLink.isActive}" 
               class="relative text-xs sm:text-base mb-1 sm:mb-0" 
               title="إطبعلي">
             </fa-icon>
-            <span [ngClass]="{'text-orange-400': printLink.isActive, 'text-white dark:text-gray-300': !printLink.isActive}" class="text-xs sm:text-xs">إطبعلي</span>
+            <span [ngClass]="{'text-blue-400': printLink.isActive, 'text-white dark:text-gray-300': !printLink.isActive}" class="text-xs sm:text-xs">إطبعلي</span>
           </div>
 
           <!-- أيقونة سلة المشتريات -->
-          <div routerLink="/basket" routerLinkActive="text-orange-400" [routerLinkActiveOptions]="{exact:true}" class="relative flex flex-col sm:flex-row items-center cursor-pointer" *ngIf="isLoggedIn" #cartLink="routerLinkActive">
+          <div routerLink="/basket" routerLinkActive="text-blue-400" [routerLinkActiveOptions]="{exact:true}" class="relative flex flex-col sm:flex-row items-center cursor-pointer" *ngIf="isLoggedIn" #cartLink="routerLinkActive">
             <fa-icon 
              [icon]="faCartPlus" 
-              [ngClass]="{'text-orange-400': cartLink.isActive, 'text-white dark:text-gray-300': !cartLink.isActive}" 
+              [ngClass]="{'text-blue-400': cartLink.isActive, 'text-white dark:text-gray-300': !cartLink.isActive}" 
               class="relative text-xs sm:text-base mb-1 sm:mb-0" 
               title="سلة المشتريات">
             </fa-icon>
-            <span [ngClass]="{'text-orange-400': cartLink.isActive, 'text-white dark:text-gray-300': !cartLink.isActive}" class="text-xs sm:text-xs text-center">سلة المشتريات</span>
+            <span [ngClass]="{'text-blue-400': cartLink.isActive, 'text-white dark:text-gray-300': !cartLink.isActive}" class="text-xs sm:text-xs text-center">سلة المشتريات</span>
             <span *ngIf="cartCount > 0" 
                   class="absolute sm:-top-1/2 right-0 bg-blue-600 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
               {{ cartCount }}
@@ -185,7 +185,7 @@
               <li>تاريخ وسير ذاتية</li>
             </div>
             <div (click)="exitBarsrow()" class="cursor-pointer flex p-2 items-end sm:items-center hover:bg-amber-600 dark:hover:bg-slate-400/10" routerLinkActive="text-orange-400" routerLink="/Arts-crafts">
-              <li>فنون وحرف</li>
+               <li>فنون وحرف</li>
             </div>
           </ul>
         </div>

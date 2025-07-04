@@ -1,7 +1,7 @@
 import { Component, HostListener, OnInit, ViewChild, ChangeDetectorRef } from '@angular/core';
 import { Router } from '@angular/router';
 import { faBars, faClose, faHome, faBook, faFilePdf, faUser, faChevronUp, faChevronDown, faSearch,faHeart,faCartPlus,faClipboardList, faTachometerAlt, faBell, faTrash } from '@fortawesome/free-solid-svg-icons';
-import { DataService } from '../services/data.service'; // استيراد خدمة البيانات
+import { DataService } from '../services/data.service';
 import { AccountModalComponent } from '../auth/account-modal/account-modal.component';
 import { AuthService } from '../auth/auth.service';
 import { NotificationService, Notification } from '../services/notification.service';

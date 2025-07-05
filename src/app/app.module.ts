@@ -27,6 +27,7 @@ import { LocationStrategy, PathLocationStrategy } from '@angular/common';
 import { SearchBarComponent } from './search-bar/search-bar.component';
 import { ChatWindowComponent } from './components/chat-window/chat-window.component';
 import { PdfOcrComponent } from './admin/pdf-ocr/pdf-ocr.component';
+import { NavbarIconsComponent } from './navbar-icons/navbar-icons.component';
 
 @NgModule({
   declarations: [
@@ -57,8 +58,9 @@ import { PdfOcrComponent } from './admin/pdf-ocr/pdf-ocr.component';
     SharedModule,
     RegisterComponent,
     LoginComponent,
-    PdfOcrComponent
-  ],
+    PdfOcrComponent,
+    NavbarIconsComponent
+],
   providers: [
     provideHttpClient(withInterceptorsFromDi()), // استخدام provideHttpClient بدلاً من HttpClientModule
     { provide: LocationStrategy, useClass: PathLocationStrategy }

@@ -302,16 +302,4 @@ faFilter = faFilter;
     this.router.navigate(['/requests']);
     this.isOrdersActive = true;
   }
-
-  // Add a method to handle account modal close event
-  onAccountModalClose(): void {
-    this.closeAccountModal();
-    this.cdr.markForCheck();
-  }
-
-  onAccountModalClosed(): void {
-    this.isOrdersActive = false;
-    this.closeAccountModal();
-    this.cdr.markForCheck();
-  }
 }

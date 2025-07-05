@@ -5,7 +5,7 @@ import { map } from 'rxjs/operators';
 import { CommonModule, NgIf } from '@angular/common';
 import { CheckoutModalComponent } from '../checkout-modal/checkout-modal.component';
 import { environment } from '../../environments/environment';
-
+import { Router } from '@angular/router';
 @Component({
   selector: 'app-cart',
   standalone : true,
@@ -22,12 +22,16 @@ export class CartComponent implements OnInit {
 
   constructor(
     private authService: AuthService,
-    private dataService: DataService
+    private dataService: DataService,
+    private router: Router
   ) {}
 
   ngOnInit(): void {
     this.loadCartBooks();
   }
+  navigateHome() {
+this.router.navigate(['/']);
+}
 
   loadCartBooks() {
     this.authService.cartBookIds.subscribe(bookIds => {

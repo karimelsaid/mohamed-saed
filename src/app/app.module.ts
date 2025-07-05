@@ -1,5 +1,6 @@
 import { NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
+import { RouterModule } from '@angular/router';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { IslamicComponent } from './book-list/islamic/islamic.component';
@@ -52,6 +53,7 @@ import { NavbarIconsComponent } from './navbar-icons/navbar-icons.component';
   ],
   imports: [
     BrowserModule,
+    RouterModule,
     AppRoutingModule,
     FontAwesomeModule,
     FormsModule,
@@ -60,7 +62,7 @@ import { NavbarIconsComponent } from './navbar-icons/navbar-icons.component';
     LoginComponent,
     PdfOcrComponent,
     NavbarIconsComponent
-],
+  ],
   providers: [
     provideHttpClient(withInterceptorsFromDi()), // استخدام provideHttpClient بدلاً من HttpClientModule
     { provide: LocationStrategy, useClass: PathLocationStrategy }

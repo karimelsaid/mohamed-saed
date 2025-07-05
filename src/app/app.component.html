@@ -37,35 +37,41 @@
            </div>
        </div>
     </div>
-  </div>
+</div>
 
 <!-- التنقل بين الصفحات -->
  <app-navbar></app-navbar>
+
 <app-search-bar [allBooks]="allBooks" (searchExecuted)="onSearchExecuted($event)"></app-search-bar>
 
-<router-outlet></router-outlet>
-<!-- إضافة مكون الدردشة -->
-<app-chat-window></app-chat-window>
-<!-- Footer -->
-<footer class="bg-blue-950 dark:bg-[#0a1325] text-white py-10 mt-a hidden md:block">
-  <div class="container mx-auto text-center">
-    <div class="mb-4">
-      <h2 class="text-2xl font-semibold">مكتبة كنوز</h2>
-      <p class="text-sm">اكتشف واشتري أفضل الكتب من مكتبتنا المتنوعة</p>
-    </div>
-
-    <div class="mb-4 text-center">
-      <ul class="flex flex-row-reverse sm:justify-center justify-center space-x-reverse space-x-8">
-        <li><a [routerLink]="'/عن-الموقع'" class="hover:text-blue-400">عن الموقع</a></li>
-        <li><a [routerLink]="'/سياسة-الخصوصية'" class="hover:text-blue-400">سياسة الخصوصية</a></li>
-        <li><a [routerLink]="'/الشروط-والاحكام'" class="hover:text-blue-400">الشروط والأحكام</a></li>
-      </ul>
-    </div>
-
-    <div class="mt-4 text-sm text-yellow-400 flex items-center justify-center space-x-2 px-4">
-      <p>الموقع لا يتحمل مسؤولية حقوق الملكية الفكرية الخاصة بالكتب المعروضة، حيث يتم توفيرها من خلال موردين وشركاء متنوعين. نحن نعرض الكتب بغرض البيع فقط، وفي حال وجود أي انتهاك يرجى التواصل معنا لاتخاذ اللازم.</p>
-    </div>
+<div class="flex flex-col min-h-screen">
+  <div class="flex-grow">
+    <router-outlet></router-outlet>
+    <!-- إضافة مكون الدردشة -->
+    <app-chat-window></app-chat-window>
   </div>
-</footer>
 
-<app-navbar-icons class="block md:hidden bg-blue-950 dark:bg-[#0a1325] p-4 shadow-inner bottom-0 w-full fixed"></app-navbar-icons>
+  <!-- Footer -->
+  <footer class="bg-blue-950 dark:bg-[#0a1325] text-white py-10 hidden md:block mt-auto mb-0">
+    <div class="container mx-auto text-center">
+      <div class="mb-4">
+        <h2 class="text-2xl font-semibold">مكتبة كنوز</h2>
+        <p class="text-sm">اكتشف واشتري أفضل الكتب من مكتبتنا المتنوعة</p>
+      </div>
+
+      <div class="mb-4 text-center">
+        <ul class="flex flex-row-reverse sm:justify-center justify-center space-x-reverse space-x-8">
+          <li><a [routerLink]="'/عن-الموقع'" class="hover:text-blue-400">عن الموقع</a></li>
+          <li><a [routerLink]="'/سياسة-الخصوصية'" class="hover:text-blue-400">سياسة الخصوصية</a></li>
+          <li><a [routerLink]="'/الشروط-والاحكام'" class="hover:text-blue-400">الشروط والأحكام</a></li>
+        </ul>
+      </div>
+
+      <div class="mt-4 text-sm text-yellow-400 flex items-center justify-center space-x-2 px-4">
+        <p>الموقع لا يتحمل مسؤولية حقوق الملكية الفكرية الخاصة بالكتب المعروضة، حيث يتم توفيرها من خلال موردين وشركاء متنوعين. نحن نعرض الكتب بغرض البيع فقط، وفي حال وجود أي انتهاك يرجى التواصل معنا لاتخاذ اللازم.</p>
+      </div>
+    </div>
+  </footer>
+</div>
+
+<app-navbar-icons class="block md:hidden bg-blue-950 dark:bg-[#0a1325] p-4 shadow-inner bottom-0 w-full fixed z-50"></app-navbar-icons>

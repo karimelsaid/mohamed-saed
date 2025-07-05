@@ -1,6 +1,6 @@
 <h2 class="text-3xl font-extrabold mb-6 pt-10 md:pt-40 text-center text-blue-700 dark:text-blue-400">لوحة تحكم الأدمن</h2>
 
-<div class="flex flex-wrap justify-center gap-4 mb-6">
+<div class="flex flex-wrap justify-center gap-4 mb-6 ">
   <button (click)="switchView('orders')" [class.bg-blue-600]="currentView === 'orders'" class="px-4 py-2 rounded text-white bg-blue-400 hover:bg-blue-600 transition">
     الطلبات
   </button>
@@ -40,7 +40,7 @@ pdf الي epub
   </div>
 </div>
 
-<div *ngIf="currentView === 'addProduct'" class="px-4 sm:px-10 max-w-3xl mx-auto">
+<div *ngIf="currentView === 'addProduct'" class="px-4 sm:px-10 max-w-3xl mx-auto mb-32 md:mb-0">
   <h3 class="text-xl font-bold mb-4 text-gray-900 dark:text-gray-200">إضافة منتج جديد</h3>
 <form (ngSubmit)="submitAddProduct()" #addProductForm="ngForm" enctype="multipart/form-data" class="space-y-4">
     <div>
@@ -191,7 +191,7 @@ pdf الي epub
   </form>
 </div>
 
-<div *ngIf="currentView === 'products'" class="px-4 sm:px-10 max-w-6xl mx-auto">
+<div *ngIf="currentView === 'products'" class="px-4 sm:px-10 max-w-6xl mx-auto mb-32 md:mb-0">
   <h3 class="text-xl font-bold mb-4 text-gray-900 dark:text-gray-200">عرض وتعديل المنتجات</h3>
   <!-- Search bar for filtering products -->
   <div class="mb-4 flex justify-between items-center">
@@ -340,7 +340,7 @@ pdf الي epub
 </div>
 
 <!-- Floating upload progress indicator -->
-<div *ngIf="uploading || uploadSuccess" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+<div *ngIf="uploading || uploadSuccess" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 mb-32 md:mb-0">
   <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-80 max-w-full text-center shadow-lg">
     <div *ngIf="uploading" class="text-blue-600 dark:text-blue-400 font-semibold">
       جاري الرفع... {{ uploadProgress }}%
@@ -355,13 +355,14 @@ pdf الي epub
   </div>
 </div>
 
-<div *ngIf="currentView === 'newPage'" class="max-w-4xl mx-auto p-6 border border-gray-300 rounded-lg bg-gray-50 dark:bg-gray-900">
+<!-- pdf  -->
+<div *ngIf="currentView === 'newPage'" class="max-w-4xl mx-auto p-6 border border-gray-300 rounded-lg bg-gray-50 dark:bg-gray-900 mb-32 md:mb-0">
   <app-pdf-ocr></app-pdf-ocr>
 </div>
 
 <!-- عرض الطلبات -->
 <div *ngIf="currentView === 'orders'">
-  <div class="px-2 sm:px-10">
+  <div class="px-2 sm:px-10 mb-32 md:mb-0">
 
     <!-- تصميم عرض الطلبات في الشاشات الصغيرة -->
     <div class="sm:hidden space-y-6">
@@ -520,7 +521,7 @@ pdf الي epub
 </div>
 
 <!-- عرض اقتراحات الكتب -->
-<div *ngIf="currentView === 'requestedBooks'" class="px-2 sm:px-10">
+<div *ngIf="currentView === 'requestedBooks'" class="px-2 sm:px-10 mb-32 md:mb-0">
   <h3 class="text-xl font-bold mb-4 text-gray-900 dark:text-gray-200">اقتراحات المستخدمين للكتب</h3>
   <!-- Table for medium and larger screens -->
   <table class="min-w-full bg-white dark:bg-gray-800 rounded-lg shadow-md text-sm mx-auto hidden sm:table">
@@ -581,7 +582,7 @@ pdf الي epub
 </div>
 
 <!-- عرض طلبات الطباعة -->
-<div *ngIf="currentView === 'printOrders'" class="px-2 sm:px-10">
+<div *ngIf="currentView === 'printOrders'" class="px-2 sm:px-10 mb-32 md:mb-0">
   <h3 class="text-xl font-bold mb-4 text-gray-900 dark:text-gray-200">طلبات الطباعة</h3>
   <!-- Table for medium and larger screens -->
   <table class="min-w-full bg-white dark:bg-gray-800 rounded-lg shadow-md text-sm mx-auto hidden sm:table">

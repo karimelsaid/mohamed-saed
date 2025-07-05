@@ -1,12 +1,12 @@
-<div class="container mx-auto p-4">
-  <h1 class="text-2xl font-bold mb-6 text-amber-900 dark:text-amber-300 mt-36">سلة المشتريات</h1>
+<div class="container mx-auto p-4 mb-32 md:mb-0">
+  <h1 class="text-2xl font-bold  md:mt-40 mt-10">سلة المشتريات</h1>
 
   <div *ngIf="isLoading" class="text-center py-8">
     <p>جاري تحميل محتويات السلة...</p>
   </div>
   <div *ngIf="!isLoading && cartBooks.length === 0" class="text-center py-8">
     <p>لا يوجد كتب في السلة حالياً</p>
-    <a routerLink="/" class="text-blue-600 hover:underline dark:text-blue-400">تصفح الكتب</a>
+   <button (click)="navigateHome()" class="text-blue-600 hover:underline dark:text-blue-400">تصفح الكتب</button>
   </div>
 
   <div *ngIf="!isLoading && cartBooks.length > 0" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3  gap-6">

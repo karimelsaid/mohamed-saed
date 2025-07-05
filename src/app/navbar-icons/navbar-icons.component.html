@@ -1,60 +1,60 @@
-<div class="flex space-x-2 lg:space-x-14">
+<div class="flex space-x-2 lg:space-x-14 justify-around">
   <!-- أيقونة المفضلة -->
-  <div routerLink="/Favorites" routerLinkActive="text-blue-400" [routerLinkActiveOptions]="{exact:true}" class="relative flex flex-col sm:flex-row items-center cursor-pointer" *ngIf="isLoggedIn" #favLink="routerLinkActive">
+  <div routerLink="/Favorites" routerLinkActive="text-blue-400" [routerLinkActiveOptions]="{exact:true}" class="relative flex flex-col sm:flex-row items-center cursor-pointer" #favLink="routerLinkActive">
     <fa-icon 
       [icon]="faHeart" 
       [ngClass]="{'text-blue-400': favLink.isActive, 'text-white dark:text-gray-300': !favLink.isActive}" 
-      class="relative text-xs sm:text-base mb-1 sm:mb-0" 
+      class="relative text-lg sm:text-base mb-1 sm:mb-0" 
       title="المفضلة">
     </fa-icon>
-    <span [ngClass]="{'text-blue-400': favLink.isActive, 'text-white dark:text-gray-300': !favLink.isActive}" class="text-xs sm:text-xs">المفضلة</span>
+    <span [ngClass]="{'text-blue-400': favLink.isActive, 'text-white dark:text-gray-300': !favLink.isActive}" class="text-sm sm:text-sm">المفضلة</span>
     <span *ngIf="favoritesCount > 0" 
           class="absolute sm:-top-1/2 right-0 bg-blue-600 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
       {{ favoritesCount }}
     </span>
   </div>
 
-  <!-- أيقونة print -->
-  <div *ngIf="isLoggedIn" class="relative flex flex-col sm:flex-row items-center cursor-pointer" routerLink="/print" routerLinkActive="text-blue-400" [routerLinkActiveOptions]="{exact:true}" #printLink="routerLinkActive">
-    <fa-icon 
-      [icon]="faFilePdf" 
-      [ngClass]="{'text-blue-400': printLink.isActive, 'text-white dark:text-gray-300': !printLink.isActive}" 
-      class="relative text-xs sm:text-base mb-1 sm:mb-0" 
-      title="إطبعلي">
-    </fa-icon>
-    <span [ngClass]="{'text-blue-400': printLink.isActive, 'text-white dark:text-gray-300': !printLink.isActive}" class="text-xs sm:text-xs">إطبعلي</span>
-  </div>
-
   <!-- أيقونة سلة المشتريات -->
-  <div routerLink="/basket" routerLinkActive="text-blue-400" [routerLinkActiveOptions]="{exact:true}" class="relative flex flex-col sm:flex-row items-center cursor-pointer" *ngIf="isLoggedIn" #cartLink="routerLinkActive">
+  <div routerLink="/basket" routerLinkActive="text-blue-400" [routerLinkActiveOptions]="{exact:true}" class="relative flex flex-col sm:flex-row items-center cursor-pointer" #cartLink="routerLinkActive">
     <fa-icon 
      [icon]="faCartPlus" 
       [ngClass]="{'text-blue-400': cartLink.isActive, 'text-white dark:text-gray-300': !cartLink.isActive}" 
-      class="relative text-xs sm:text-base mb-1 sm:mb-0" 
+      class="relative text-lg sm:text-base mb-1 sm:mb-0" 
       title="سلة المشتريات">
     </fa-icon>
-    <span [ngClass]="{'text-blue-400': cartLink.isActive, 'text-white dark:text-gray-300': !cartLink.isActive}" class="text-xs sm:text-xs text-center">سلة المشتريات</span>
+    <span [ngClass]="{'text-blue-400': cartLink.isActive, 'text-white dark:text-gray-300': !cartLink.isActive}" class="text-sm sm:text-sm text-center">سلة المشتريات</span>
     <span *ngIf="cartCount > 0" 
           class="absolute sm:-top-1/2 right-0 bg-blue-600 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
       {{ cartCount }}
     </span>
   </div>
+
+    <!-- أيقونة print -->
+  <div class="relative flex flex-col sm:flex-row items-center cursor-pointer" routerLink="/print" routerLinkActive="text-blue-400" [routerLinkActiveOptions]="{exact:true}" #printLink="routerLinkActive">
+    <fa-icon 
+      [icon]="faFilePdf" 
+      [ngClass]="{'text-blue-400': printLink.isActive, 'text-white dark:text-gray-300': !printLink.isActive}" 
+      class="relative text-lg sm:text-base mb-1 sm:mb-0" 
+      title="إطبعلي">
+    </fa-icon>
+    <span [ngClass]="{'text-blue-400': printLink.isActive, 'text-white dark:text-gray-300': !printLink.isActive}" class="text-sm sm:text-sm">إطبعلي</span>
+  </div>
+  
   <!-- Notification Icon -->
-  <div (click)="toggleNotificationsDropdown()" class="relative flex flex-col sm:flex-row items-center cursor-pointer ml-4" *ngIf="isLoggedIn">
+  <div (click)="toggleNotificationsDropdown()" class="relative flex flex-col sm:flex-row items-center cursor-pointer ml-4">
     <fa-icon 
       [icon]="faBell" 
-      class="relative text-xs sm:text-base mb-1 sm:mb-0 text-white dark:text-gray-300"
+      class="relative text-lg sm:text-base mb-1 sm:mb-0 text-white dark:text-gray-300"
       title="الإشعارات">
     </fa-icon>
-    <span [ngClass]="{'text-orange-400': false, 'text-white dark:text-gray-300': true}" class="text-xs sm:text-xs ml-1">الإشعارات</span>
+    <span [ngClass]="{'text-orange-400': false, 'text-white dark:text-gray-300': true}" class="text-sm sm:text-sm ml-1">الإشعارات</span>
     <span *ngIf="unreadCount > 0" 
           class="absolute sm:-top-1/2 right-0 bg-red-600 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center cursor-pointer">
       {{ unreadCount }}
     </span>
 <!-- Notifications Dropdown -->
-    <div
-      *ngIf="showNotificationsDropdown"
-      class="rtl absolute right-2 sm:right-4 top-full mt-4 w-auto sm:w-72 md:w-80 max-h-96 bg-white dark:bg-gray-800  dark:border-gray-700 rounded-2xl shadow-xl z-50 flex flex-col"
+    <div *ngIf="showNotificationsDropdown"
+      class="rtl absolute right-2 sm:right-4 bottom-16 md:top-full mt-4 w-56 md:w-80 max-h-96 bg-white dark:bg-gray-800  dark:border-gray-700 rounded-2xl shadow-xl z-50 flex flex-col"
     >
       <div *ngIf="notifications.length === 0" class="p-4 text-center text-gray-700 dark:text-gray-300 text-sm">
         لا توجد إشعارات
@@ -70,7 +70,7 @@
           {{ notification.message }}
         </div>
 
-        <div class="flex gap-3 text-xs">
+        <div class="flex gap-3 text-sm">
           <button
             class="text-blue-500 hover:text-blue-700 transition"
             (click)="markNotificationAsRead(notification); $event.stopPropagation();"
@@ -91,15 +91,15 @@
 
   </div>
   <!-- ايقونة requests -->
-   <div class="hidden md:flex">
-     <div *ngIf="isLoggedIn" class="relative flex flex-col sm:flex-row items-center cursor-pointer " [ngClass]="{'text-orange-400': isOrdersActive}"  routerLink="/requests" >
+   <div class="md:flex">
+     <div class="relative flex flex-col sm:flex-row items-center cursor-pointer " [ngClass]="{'text-orange-400': isOrdersActive}"  routerLink="/requests" >
          <fa-icon 
          [icon]="faClipboardList"
          [ngClass]="{'text-orange-400': isOrdersActive, 'text-white dark:text-gray-300': !isOrdersActive}"
-         class="relative text-xs sm:text-base mb-1 sm:mb-0"
+         class="relative text-lg sm:text-base mb-1 sm:mb-0"
          title="طلباتي">
          </fa-icon>
-         <span [ngClass]="{'text-orange-400': isOrdersActive, 'text-white dark:text-gray-300': !isOrdersActive}" class="text-xs sm:text-xs">طلباتي</span>
+         <span [ngClass]="{'text-orange-400': isOrdersActive, 'text-white dark:text-gray-300': !isOrdersActive}" class="text-sm sm:text-sm">طلباتي</span>
      <span *ngIf="orderCount > 0" 
            class="absolute sm:-top-1/2 right-0 bg-blue-600 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
          {{ orderCount }}
@@ -107,22 +107,22 @@
      </div>
    </div>
   <!-- ايقونة الحساب -->
-   <div class="md:flex" [ngClass]="{'hidden': isLoggedIn}">
+   <div class="">
      <div (click)="openAccountModal()" class="relative flex flex-col sm:flex-row items-center cursor-pointer" [ngClass]="{'text-orange-400': isAccountActive, 'text-white': !isAccountActive}">
        <fa-icon 
          [icon]="faUser" 
-         class="text-xs sm:text-base mb-1 sm:mb-0"
+         class="text-lg sm:text-base mb-1 sm:mb-0"
          [ngClass]="{'text-orange-400': isAccountActive, 'text-white dark:text-gray-300': !isAccountActive}" 
          title="ايقونة الحساب">
        </fa-icon>
-       <span [ngClass]="{'text-orange-400': isAccountActive, 'text-white dark:text-gray-300': !isAccountActive}" class="text-xs sm:text-xs">حسابي</span>
+       <span [ngClass]="{'text-orange-400': isAccountActive, 'text-white dark:text-gray-300': !isAccountActive}" class="text-sm sm:text-sm">حسابي</span>
      </div>
    </div>
   
   <!-- رابط لوحة التحكم للمسؤول فقط -->
-  <div *ngIf="isAdmin" routerLink="/ControlPanel" routerLinkActive="text-orange-400" [routerLinkActiveOptions]="{exact:true}" class="flex flex-col sm:flex-row items-center cursor-pointer ml-4 text-xs sm:text-base" #adminLink="routerLinkActive">
-    <fa-icon [icon]="faTachometerAlt" [ngClass]="{'text-orange-400': adminLink.isActive, 'text-white dark:text-gray-300': !adminLink.isActive}" class="text-xs sm:text-base mb-1 sm:mb-0" title="لوحة التحكم"></fa-icon>
-    <span [ngClass]="{'text-orange-400': adminLink.isActive, 'text-white dark:text-gray-300': !adminLink.isActive}" class="ml-1 text-xs sm:text-x text-centers">لوحة التحكم</span>
+  <div *ngIf="isAdmin" routerLink="/ControlPanel" routerLinkActive="text-orange-400" [routerLinkActiveOptions]="{exact:true}" class="flex flex-col sm:flex-row items-center cursor-pointer ml-4 text-sm sm:text-base" #adminLink="routerLinkActive">
+    <fa-icon [icon]="faTachometerAlt" [ngClass]="{'text-orange-400': adminLink.isActive, 'text-white dark:text-gray-300': !adminLink.isActive}" class="text-lg sm:text-base mb-1 sm:mb-0" title="لوحة التحكم"></fa-icon>
+    <span [ngClass]="{'text-orange-400': adminLink.isActive, 'text-white dark:text-gray-300': !adminLink.isActive}" class="ml-1 text-sm sm:text-x text-centers">لوحة التحكم</span>
   </div>
 </div>
 <app-account-modal #accountModal (modalClosed)="showAccountModal = false"></app-account-modal>

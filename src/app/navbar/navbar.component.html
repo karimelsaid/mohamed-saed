@@ -1,11 +1,11 @@
 <div class="bg-blue-950 dark:bg-[#0a1325] p-4 fixed top-0 w-full h-auto z-50 shadow-lg">
-  <div class="flex justify-around items-center">
+<div class="flex items-center justify-around">
     
     <div routerLink="/" class="cursor-pointer">
       <img class="w-10 sm:w-14 not" src="logoname2.png" alt="Logo">
     </div>
 
-      <div class="flex space-x-2 lg:space-x-14">
+      <div class="flex space-x-2 lg:space-x-14 hidden md:flex">
           <!-- أيقونة المفضلة -->
           <div routerLink="/Favorites" routerLinkActive="text-blue-400" [routerLinkActiveOptions]="{exact:true}" class="relative flex flex-col sm:flex-row items-center cursor-pointer" *ngIf="isLoggedIn" #favLink="routerLinkActive">
             <fa-icon 
@@ -131,6 +131,16 @@
             <fa-icon [icon]="faTachometerAlt" [ngClass]="{'text-orange-400': adminLink.isActive, 'text-white dark:text-gray-300': !adminLink.isActive}" class="text-xs sm:text-base mb-1 sm:mb-0" title="لوحة التحكم"></fa-icon>
             <span [ngClass]="{'text-orange-400': adminLink.isActive, 'text-white dark:text-gray-300': !adminLink.isActive}" class="ml-1 text-xs sm:text-x text-centers">لوحة التحكم</span>
           </div>
+      </div>
+      <div class="block md:hidden">
+        
+<div class="search-bar-container relative flex justify-center">
+          <app-search-bar 
+            [allBooks]="allBooks" 
+            (searchExecuted)="onSearchExecuted($event)">
+          </app-search-bar>
+        </div>
+      
       </div>
                 <!-- Dark Mode Toggle Button -->
       <div class="flex flex-col sm:flex-row items-center cursor-pointer ml-4" title="تبديل الوضع الداكن">

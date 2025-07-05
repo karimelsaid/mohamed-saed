@@ -1,6 +1,5 @@
-
-<div class="fixed w-full bg-gray-200/50 dark:bg-gray-900 z-30">
-    <div class="search-bar-container relative max-w-5xl p-4 flex justify-center pt-20 sm:pt-24 mx-auto">
+<div class="md:fixed w-full md:bg-gray-200/50 md:dark:bg-gray-900 md:z-30">
+    <div class="search-bar-container relative max-w-5xl md:p-4 flex justify-center md:pt-24 mx-auto">
       <div class="relative w-full max-w-full">
         <input 
           [(ngModel)]="searchQuery"
@@ -9,7 +8,7 @@
           #inputElement
           type="text" 
           placeholder="ابحث عن كتاب..."
-          class="search-input w-full h-10 py-2 pl-4 pr-10 text-sm border border-gray-300 dark:border-gray-700 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-gray-100 neon-border"
+          class="search-input w-full h-10 py-2 pr-32 md:pr-4 pl-4 text-sm border border-gray-300 dark:border-gray-700 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-gray-100 neon-border"
         />
         
         <!-- عرض الاقتراحات إذا كانت موجودة -->
@@ -31,7 +30,7 @@
             <fa-icon [icon]="faFilter" class="text-sm"></fa-icon>
           </div>
           <!-- قائمة الفلتر -->
-          <div *ngIf="showFilterDropdown" class="absolute right-0 mt-10 w-48 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md shadow-lg z-50">
+          <div *ngIf="showFilterDropdown" class="absolute right-0 mt-2 md:mt-10 w-48 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md shadow-lg z-50">
             <ul>
               <li (click)="selectFilter('recentlyAdded')" class="p-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-100">المضاف حديثًا</li>
               <li (click)="selectFilter('all')" class="p-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-100">الكل</li>

@@ -3,7 +3,7 @@ import { Component } from '@angular/core';
 @Component({
   selector: 'app-about',
   template: `
-    <div class="container mx-auto p-4 pt-40">
+    <div class="container mx-auto p-4 pt-10 md:pt-40">
       <h1 class="text-3xl font-bold mb-4">عن الموقع</h1>
       <div class="space-y-4 rtl">
         <p>

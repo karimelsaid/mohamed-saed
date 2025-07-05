@@ -22,3 +22,14 @@
     transform: translateX(0);
   }
 }
+
+/* Neon border effect for search input */
+.neon-border {
+  border-color: #1e40af;
+  box-shadow: 0 0 5px #3b82f6, 0 0 5px #3b82f6, 0 0 10px #1e40af;
+  transition: box-shadow 0.3s ease-in-out;
+}
+
+.neon-border:focus {
+  box-shadow: 0 0 10px #3b82f6, 0 0 10px #3b82f6, 0 0 20px #1e40af;
+}

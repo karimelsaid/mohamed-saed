@@ -1,6 +1,6 @@
-import { Component, HostListener, OnInit, ViewChild, ChangeDetectorRef } from '@angular/core';
+import { Component, HostListener, OnInit, ViewChild, ChangeDetectorRef, Output, EventEmitter } from '@angular/core';
 import { Router } from '@angular/router';
-import { faBars, faClose, faHome, faBook, faFilePdf, faUser, faChevronUp, faChevronDown, faSearch,faHeart,faCartPlus,faClipboardList, faTachometerAlt, faBell, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faBars, faClose, faHome, faBook, faFilePdf, faUser, faChevronUp, faChevronDown, faSearch,faHeart,faCartPlus,faClipboardList, faTachometerAlt, faBell, faTrash,faFilter } from '@fortawesome/free-solid-svg-icons';
 import { DataService } from '../services/data.service';
 import { AccountModalComponent } from '../auth/account-modal/account-modal.component';
 import { AuthService } from '../auth/auth.service';
@@ -15,7 +15,8 @@ import { NotificationService, Notification } from '../services/notification.serv
 export class NavbarComponent implements OnInit {
   @ViewChild(AccountModalComponent) accountModal!: AccountModalComponent;
   @ViewChild('inputElement') inputElement: any;
-
+   @Output() searchExecuted = new EventEmitter<{ query: string, filter: string }>();
+faFilter = faFilter;
   faBars = faBars;
   faClose = faClose;
   faHome = faHome;
@@ -57,7 +58,29 @@ export class NavbarComponent implements OnInit {
   isAccountActive: boolean = false;
 
   isDarkMode: boolean = false; // Track dark mode state
+  showFilterDropdown: boolean = false;
+   selectedFilter: string = 'all';
 
+   toggleFilterDropdown() {
+    this.showFilterDropdown = !this.showFilterDropdown;
+  }
+  selectFilter(filter: string) {
+    this.selectedFilter = filter;
+    this.showFilterDropdown = false;
+    this.onSearchExecuted({ query: this.searchQuery.trim(), filter: this.selectedFilter });
+  }
+
+  onSearchExecuted(event: { query: string; filter: string }) {
+    const query = event.query;
+    const filter = event.filter;
+    this.searchQuery = query;
+    this.selectedFilter = filter;
+    this.router.navigate(['/research'], { queryParams: { q: query, filter: filter } });
+  }
+  
+  emitSearch() {
+    this.searchExecuted.emit({ query: this.searchQuery.trim(), filter: this.selectedFilter });
+  }
   toggleDarkMode(): void {
     this.isDarkMode = !this.isDarkMode;
     localStorage.setItem('darkMode', this.isDarkMode.toString());
@@ -205,7 +228,7 @@ export class NavbarComponent implements OnInit {
 
   onSearch(): void {
     if (this.searchQuery.trim()) {
-      this.router.navigate(['/research'], { queryParams: { q: this.searchQuery.trim() } });
+      this.router.navigate(['/research'], { queryParams: { q: this.searchQuery.trim(), filter: this.selectedFilter } });
       this.searchResults = []; // إخفاء الاقتراحات بعد تنفيذ البحث
     }
   }
@@ -216,12 +239,36 @@ export class NavbarComponent implements OnInit {
     this.onSearch(); // تنفيذ البحث تلقائيًا
   }
 
+  private normalizeArabic(text: string): string {
+    return text
+      .replace(/[أإآ]/g, 'ا')
+      .replace(/[هة]/g, 'ه')
+      // Remove special characters except numbers and letters
+      .replace(/[^0-9a-zA-Z\u0600-\u06FF\s]/g, '')
+      // Remove extra spaces
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
   onSearchKeyup(): void {
     if (this.searchQuery.trim()) {
-      // تصفية الكتب بناءً على النص المدخل
-      this.searchResults = this.allBooks.filter((book) =>
-        book.product_name.toLowerCase().includes(this.searchQuery.toLowerCase())
-      );
+      const normalizedQuery = this.normalizeArabic(this.searchQuery.toLowerCase());
+      this.searchResults = this.allBooks.filter((book) => {
+        if (!book.product_name || typeof book.product_name !== 'string') {
+          return false;
+        }
+        const normalizedProductName = this.normalizeArabic(book.product_name.toLowerCase());
+        return normalizedProductName.includes(normalizedQuery);
+      });
+      // Sort results to prioritize books starting with the exact original query
+      const originalQueryLower = this.searchQuery.toLowerCase();
+      this.searchResults.sort((a, b) => {
+        const aStarts = a.product_name.toLowerCase().startsWith(originalQueryLower);
+        const bStarts = b.product_name.toLowerCase().startsWith(originalQueryLower);
+        if (aStarts && !bStarts) return -1;
+        if (!aStarts && bStarts) return 1;
+        return 0;
+      });
     } else {
       this.searchResults = []; // إذا كان النص فارغًا، إخفاء النتائج
     }

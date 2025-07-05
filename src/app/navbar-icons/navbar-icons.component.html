@@ -20,9 +20,9 @@
      [icon]="faCartPlus" 
       [ngClass]="{'text-blue-400': cartLink.isActive, 'text-white dark:text-gray-300': !cartLink.isActive}" 
       class="relative text-lg sm:text-base mb-1 sm:mb-0" 
-      title="سلة المشتريات">
+      title="السلة">
     </fa-icon>
-    <span [ngClass]="{'text-blue-400': cartLink.isActive, 'text-white dark:text-gray-300': !cartLink.isActive}" class="text-sm sm:text-sm text-center">سلة المشتريات</span>
+    <span [ngClass]="{'text-blue-400': cartLink.isActive, 'text-white dark:text-gray-300': !cartLink.isActive}" class="text-sm sm:text-sm text-center">السلة</span>
     <span *ngIf="cartCount > 0" 
           class="absolute sm:-top-1/2 right-0 bg-blue-600 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
       {{ cartCount }}
@@ -122,7 +122,7 @@
   <!-- رابط لوحة التحكم للمسؤول فقط -->
   <div *ngIf="isAdmin" routerLink="/ControlPanel" routerLinkActive="text-orange-400" [routerLinkActiveOptions]="{exact:true}" class="flex flex-col sm:flex-row items-center cursor-pointer ml-4 text-sm sm:text-base" #adminLink="routerLinkActive">
     <fa-icon [icon]="faTachometerAlt" [ngClass]="{'text-orange-400': adminLink.isActive, 'text-white dark:text-gray-300': !adminLink.isActive}" class="text-lg sm:text-base mb-1 sm:mb-0" title="لوحة التحكم"></fa-icon>
-    <span [ngClass]="{'text-orange-400': adminLink.isActive, 'text-white dark:text-gray-300': !adminLink.isActive}" class="ml-1 text-sm sm:text-x text-centers">لوحة التحكم</span>
+    <span [ngClass]="{'text-orange-400': adminLink.isActive, 'text-white dark:text-gray-300': !adminLink.isActive}" class="ml-1 text-sm sm:text-x text-centers">التحكم</span>
   </div>
 </div>
 <app-account-modal #accountModal (modalClosed)="showAccountModal = false"></app-account-modal>

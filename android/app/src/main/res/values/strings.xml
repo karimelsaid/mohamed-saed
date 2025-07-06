@@ -1,7 +1,0 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources>
-    <string name="app_name">Kenouz</string>
-    <string name="title_activity_main">Kenouz</string>
-    <string name="package_name">com.kenouz.bookstore</string>
-    <string name="custom_url_scheme">com.kenouz.bookstore</string>
-</resources>

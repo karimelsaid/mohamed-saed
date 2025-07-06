@@ -34,16 +34,19 @@ export class FitComponent implements OnInit, OnDestroy {
   faShareAlt = faShareAlt;
   showCopySuccess: boolean = false;
   copiedBookId: string | null = null;
+  isLoading: boolean = true;
 
   constructor(private dataService: DataService, private authService: AuthService, private http: HttpClient) { }
 
   ngOnInit(): void {
+    this.isLoading = true;
     this.dataService.getData().subscribe(data => {
       this.books = data.filter((book: Book) => book.product_category.includes('صحة'));
       this.totalPages = Math.ceil(this.books.length / this.booksPerPage);
       this.updatePage();
       this.startCountdown();
       this.fetchRatingsForBooks();
+      this.isLoading = false;
     });
   }
   copyBookLink(book: Book): void {

@@ -14,6 +14,7 @@ export class HomePageComponent implements OnInit, OnDestroy {
   
   resetTimeouts: any[] = [];
   uploadsBaseUrl = environment.uploadsBaseUrl;
+  isLoading: boolean = true;
 
   // Add getBookSlug method for use in template
   getBookSlug(bookName: string): string {
@@ -76,6 +77,7 @@ export class HomePageComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    this.isLoading = true;
     this.updateBooksToShow();
 
     this.dataService.getData().subscribe((data: any) => {
@@ -88,6 +90,7 @@ export class HomePageComponent implements OnInit, OnDestroy {
       });
       this.updateTransform();
       this.startAutoScroll();
+      this.isLoading = false;
     });
 
     // Set promo images based on screen width

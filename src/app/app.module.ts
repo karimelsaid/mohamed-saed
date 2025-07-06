@@ -29,6 +29,7 @@ import { SearchBarComponent } from './search-bar/search-bar.component';
 import { ChatWindowComponent } from './components/chat-window/chat-window.component';
 import { PdfOcrComponent } from './admin/pdf-ocr/pdf-ocr.component';
 import { NavbarIconsComponent } from './navbar-icons/navbar-icons.component';
+import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
 
 @NgModule({
   declarations: [
@@ -58,6 +59,7 @@ import { NavbarIconsComponent } from './navbar-icons/navbar-icons.component';
     FontAwesomeModule,
     FormsModule,
     SharedModule,
+    NgxSkeletonLoaderModule,
     RegisterComponent,
     LoginComponent,
     PdfOcrComponent,

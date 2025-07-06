@@ -35,6 +35,7 @@ export class AamalComponent implements OnInit, OnDestroy {
   faShareAlt = faShareAlt;
   showCopySuccess: boolean = false;
   copiedBookId: string | null = null;
+  isLoading: boolean = true;
 
   constructor(private dataService: DataService, private authService: AuthService, private http: HttpClient) { }
 
@@ -43,6 +44,7 @@ export class AamalComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+  this.isLoading = true;
   this.dataService.getData().subscribe(data => {
     console.log('Raw data received:', data); // Debug raw data
 
@@ -80,6 +82,7 @@ export class AamalComponent implements OnInit, OnDestroy {
     this.updatePage();
     this.startCountdown();
     this.fetchRatingsForBooks();
+    this.isLoading = false;
   });
 }
 

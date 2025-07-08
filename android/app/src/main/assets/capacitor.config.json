@@ -1,0 +1,9 @@
+{
+	"appId": "com.kenouz.bookstore",
+	"appName": "Kenouz",
+	"webDir": "Backend/dist/browser",
+	"bundledWebRuntime": false,
+	"server": {
+		"url": "https://kenouz.org"
+	}
+}

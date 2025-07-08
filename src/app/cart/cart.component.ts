@@ -6,10 +6,12 @@ import { CommonModule, NgIf } from '@angular/common';
 import { CheckoutModalComponent } from '../checkout-modal/checkout-modal.component';
 import { environment } from '../../environments/environment';
 import { Router } from '@angular/router';
+import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
+
 @Component({
   selector: 'app-cart',
   standalone : true,
-  imports:[CommonModule, NgIf, CheckoutModalComponent],
+  imports:[CommonModule, NgIf, CheckoutModalComponent, NgxSkeletonLoaderModule],
   templateUrl: './cart.component.html',
   styleUrls: ['./cart.component.css']
 })

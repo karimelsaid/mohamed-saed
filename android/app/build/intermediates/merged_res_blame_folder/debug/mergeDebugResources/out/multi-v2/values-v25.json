@@ -4,7 +4,7 @@
             "outputFile": "com.kenouz.bookstore.app-mergeDebugResources-25:/values-v25/values-v25.xml",
             "map": [
                 {
-                    "source": "C:\\Users\\karim\\.gradle\\caches\\8.11.1\\transforms\\dda665aa4a1576cfb1759fb2bbcd5279\\transformed\\appcompat-1.7.0\\res\\values-v25\\values-v25.xml",
+                    "source": "C:\\Users\\karim\\.gradle\\caches\\8.13\\transforms\\a7b3be14e520c902d9ff73cf4e4fcb08\\transformed\\appcompat-1.7.0\\res\\values-v25\\values-v25.xml",
                     "from": {
                         "startLines": "2,3,4,6",
                         "startColumns": "4,4,4,4",

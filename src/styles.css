@@ -4,7 +4,7 @@
 
 @layer components {
 h1 {
-    @apply p-3 text-center text-3xl m-2 font-bold text-blue-600 bg-blue-100 rounded-lg shadow-lg transition duration-300 ease-in-out transform hover:scale-105 w-[90%] mx-auto;
+    @apply p-3 text-center text-lg m-2 font-bold text-blue-600 bg-blue-100 rounded-lg shadow-lg transition duration-300 ease-in-out transform hover:scale-105 w-[90%] mx-auto;
     @apply dark:text-blue-300 dark:bg-blue-900;
 }
     .active {

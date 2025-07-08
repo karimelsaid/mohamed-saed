@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output, ViewChild, ElementRef } from '@angular/core';
+import { Component, EventEmitter, Input, Output, ViewChild, ElementRef, HostListener } from '@angular/core';
 import { faSearch, faFilter } from '@fortawesome/free-solid-svg-icons';
 
 @Component({
@@ -17,6 +17,7 @@ export class SearchBarComponent {
   searchResults: any[] = [];
   showFilterDropdown: boolean = false;
   selectedFilter: string = 'all';
+  showSuggestions: boolean = false;
 
   @ViewChild('inputElement') inputElement!: ElementRef;
 
@@ -38,6 +39,7 @@ export class SearchBarComponent {
     if (this.searchQuery.trim()) {
       this.emitSearch();
       this.searchResults = [];
+      this.showSuggestions = false;
     }
   }
 
@@ -45,6 +47,7 @@ export class SearchBarComponent {
     this.searchQuery = productName;
     this.searchResults = [];
     this.emitSearch();
+    this.showSuggestions = false;
   }
 
   private normalizeArabic(text: string): string {
@@ -78,9 +81,11 @@ export class SearchBarComponent {
         return 0;
       });
       this.emitSearch();
+      this.showSuggestions = true;
     } else {
       this.searchResults = [];
       this.emitSearch();
+      this.showSuggestions = false;
     }
   }
 
@@ -89,6 +94,15 @@ export class SearchBarComponent {
       this.onSearch();
       this.searchResults = [];
       this.inputElement.nativeElement.blur();
+      this.showSuggestions = false;
+    }
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent) {
+    const clickedInside = this.inputElement.nativeElement.contains(event.target);
+    if (!clickedInside) {
+      this.showSuggestions = false;
     }
   }
 }

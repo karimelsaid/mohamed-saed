@@ -64,6 +64,16 @@ faFilter = faFilter;
    toggleFilterDropdown() {
     this.showFilterDropdown = !this.showFilterDropdown;
   }
+  
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent) {
+    const target = event.target as HTMLElement;
+    const clickedInsideMenu = target.closest('.rtl.md\\:hidden.z-50.relative.text-blue-950.dark\\:text-blue-100');
+    const clickedOnBarsIcon = target.closest('.fa-bars');
+    if (!clickedInsideMenu && !clickedOnBarsIcon) {
+      this.openBars = false;
+    }
+  }
   selectFilter(filter: string) {
     this.selectedFilter = filter;
     this.showFilterDropdown = false;

@@ -23,22 +23,24 @@ export class SearchResultsComponent implements OnInit {
   books: Book[] = []; // كل الكتب
   searchQuery: string = ''; // نص البحث
   currentPage: number = 1; // الصفحة الحالية
-  booksPerPage: number = 10; // عدد الكتب في الصفحة
-  totalBooks: number = 0; // إجمالي الكتب التي تطابق البحث
+  booksPerPage = 10; // عدد الكتب في الصفحة
+  totalBooks = 0; // إجمالي الكتب التي تطابق البحث
   showLoginPrompt = false;
   faShareAlt = faShareAlt;
-  showCopySuccess: boolean = false;
+  showCopySuccess = false;
   copiedBookId: string | null = null;
 
   // New properties for modal and form
-  showRequestModal: boolean = false;
-  requestedBookName: string = '';
-  requestedAuthorName: string = '';
-  requestSuccessMessage: string = '';
-  isRequestSubmitting: boolean = false;
+  showRequestModal = false;
+  requestedBookName = '';
+  requestedAuthorName = '';
+  requestSuccessMessage = '';
+  isRequestSubmitting = false;
   ratings: { [bookId: string]: any } = {};
 
-  filterType: string = 'all';
+  filterType = 'all';
+
+  isLoading = false; // Add loading flag
 
   constructor(private dataService: DataService, private route: ActivatedRoute, private authService: AuthService, private http: HttpClient) {}
 
@@ -237,6 +239,7 @@ this.http.get<{ bookId: string; averageRating: number; ratingCount: number }>(`$
   }
 
   searchBooks(): void {
+    this.isLoading = true; // Set loading true before data fetch
     if (this.filterType === 'recentlyAdded') {
       this.dataService.getRecentBooks().subscribe(data => {
         this.totalBooks = data.length;
@@ -245,6 +248,7 @@ this.http.get<{ bookId: string; averageRating: number; ratingCount: number }>(`$
         const endIndex = this.currentPage * this.booksPerPage;
         this.books = data.slice(startIndex, endIndex);
         this.fetchRatingsForBooks();
+        this.isLoading = false; // Set loading false after data fetch
       });
     } else {
       this.dataService.getData().subscribe(data => {
@@ -268,6 +272,7 @@ this.http.get<{ bookId: string; averageRating: number; ratingCount: number }>(`$
         this.totalBooks = filteredBooks.length;
         this.books = filteredBooks.slice((this.currentPage - 1) * this.booksPerPage, this.currentPage * this.booksPerPage);
         this.fetchRatingsForBooks(); // Fetch ratings after books are loaded
+        this.isLoading = false; // Set loading false after data fetch
       });
     }
   }

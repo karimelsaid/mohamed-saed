@@ -8,6 +8,7 @@ const fs = require('fs');
 const path = require('path');
 const { connectDB } = require('./config/database');
 const { updateBooksData } = require('./controllers/books.controller');
+const sitemapService = require('./services/sitemap.service'); // Added import for sitemap service
 
 // استيراد المسارات
 const usersRoutes = require('./routes/users.routes');
@@ -154,7 +155,6 @@ cron.schedule('0 */2 * * *', () => {
   console.log('🔄 جاري تحديث بيانات الكتب...');
   updateBooksData()
     .then(() => {
-      generateSitemap();
       generateRobotsTxt();
     })
     .catch(console.error);
@@ -164,51 +164,8 @@ cron.schedule('0 */2 * * *', () => {
 updateBooksData().catch(console.error);
 
 // توليد ملف sitemap وقت تشغيل السيرفر
-generateSitemap();
 generateRobotsTxt();
 
-function generateSitemap() {
-  try {
-    const baseUrl = process.env.SITEMAP_BASE_URL || (isProduction ? 'https://kenouz.org' : 'http://localhost:3000');
-    console.log('🔧 جاري إنشاء ملف sitemap باستخدام الرابط الأساسي:', baseUrl);
-
-    // روابط ثابتة
-    const staticRoutes = ['Home', 'Business-Marketing-Finance', 'Education-children', 'Arts-crafts', 'HealthMedicineScience', 'Islamic', 'Novels-stories', 'Self-development-psychology', 'History-Biographies', 'Dictionaries-References', 'ControlPanel', 'research', 'basket', 'Favorites', 'login', 'register', 'requests', 'print'];
-    const staticUrls = staticRoutes.map(route => `
-      <url><loc>${baseUrl}/${route}</loc></url>
-    `).join('');
-    console.log('🔧 تم إنشاء روابط ثابتة');
-
-    // قراءة الكتب من output.json
-    const booksPath = path.join(__dirname, 'output.json');
-    const books = JSON.parse(fs.readFileSync(booksPath, 'utf8'));
-    console.log('🔧 تم تحميل الكتب من ملف output.json، عدد الكتب:', books.length);
-
-    const bookUrls = books.map(book => {
-      const safeName = book.product_name.trim().replace(/\s+/g, '-').replace(/[^\w\-ء-ي]/g, '');
-      return `
-        <url>
-          <loc>${baseUrl}/book/${safeName}</loc>
-          <changefreq>weekly</changefreq>
-          <priority>0.8</priority>
-        </url>
-      `;
-    }).join('');
-    console.log('🔧 تم إنشاء روابط الكتب');
-
-    const sitemapContent = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${staticUrls}
-${bookUrls}
-</urlset>`;
-
-    const sitemapPath = path.join(__dirname, 'dist/browser/sitemap.xml');
-    fs.writeFileSync(sitemapPath, sitemapContent);
-    console.log('✅ تم إنشاء ملف sitemap.xml بنجاح مع روابط الكتب');
-  } catch (error) {
-    console.error('❌ فشل في إنشاء sitemap.xml:', error.message);
-  }
-}
 
 function generateRobotsTxt() {
   try {
@@ -256,54 +213,11 @@ app.get('*', (req, res, next) => {
 });
 
 // بدء السيرفر
+
 app.listen(port, '0.0.0.0', () => {
   console.log(`🚀 الخادم يعمل على http://0.0.0.0:${port}`);
 });
 
-function generateSitemap() {
-  try {
-    const baseUrl = process.env.SITEMAP_BASE_URL || (isProduction ? 'https://kenouz.org' : 'http://localhost:3000');
-    console.log('🔧 جاري إنشاء ملف sitemap باستخدام الرابط الأساسي:', baseUrl);
-
-    // روابط ثابتة
-    const staticRoutes = ['Home', 'Business-Marketing-Finance', 'Education-children', 'Arts-crafts', 'HealthMedicineScience', 'Islamic', 'Novels-stories', 'Self-development-psychology', 'History-Biographies', 'Dictionaries-References', 'ControlPanel', 'research', 'basket', 'Favorites', 'login', 'register', 'requests', 'print'];
-    const staticUrls = staticRoutes.map(route => `
-      <url><loc>${baseUrl}/${route}</loc></url>
-    `).join('');
-    console.log('🔧 تم إنشاء روابط ثابتة');
-
-    // قراءة الكتب من output.json
-    const booksPath = path.join(__dirname, 'output.json');
-    const books = JSON.parse(fs.readFileSync(booksPath, 'utf8'));
-    console.log('🔧 تم تحميل الكتب من ملف output.json، عدد الكتب:', books.length);
-
-    const bookUrls = books.map(book => {
-      const safeName = book.product_name.trim().replace(/\s+/g, '-').replace(/[^\w\-ء-ي]/g, '');
-      return `
-        <url>
-          <loc>${baseUrl}/book/${safeName}</loc>
-          <changefreq>weekly</changefreq>
-          <priority>0.8</priority>
-        </url>
-      `;
-    }).join('');
-    console.log('🔧 تم إنشاء روابط الكتب');
-
-    const sitemapContent = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${staticUrls}
-${bookUrls}
-</urlset>`;
-
-    const sitemapPath = path.join(__dirname, 'dist/browser/sitemap.xml');
-    fs.writeFileSync(sitemapPath, sitemapContent);
-    console.log('✅ تم إنشاء ملف sitemap.xml بنجاح مع روابط الكتب');
-  } catch (error) {
-    console.error('❌ فشل في إنشاء sitemap.xml:', error.message);
-  }
-}
-
 module.exports = {
-  app,
-  generateSitemap
+  app
 };

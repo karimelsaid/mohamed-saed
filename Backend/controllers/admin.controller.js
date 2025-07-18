@@ -4,7 +4,6 @@ const multer = require('multer');
 const sharp = require('sharp');
 const { addProductToExcel, categoryMap, downloadAndConvertExcel, updateExcelFromJson } = require('../services/excel.service');
 
-const { generateSitemap } = require('../services/sitemap.service');
 const PromotionDate = require('../models/PromotionDate.model');
 
 // Helper function to generate random barcode string

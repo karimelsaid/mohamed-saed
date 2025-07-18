@@ -8156,5 +8156,33 @@
     "product_price_before_discount": 519,
     "rival": true,
     "product_discount_percent": 65
+  },
+  {
+    "products_id": "204932505951",
+    "product_name": "البؤساء",
+    "product_price": 99,
+    "price_cost": 75,
+    "product_quantity": 1,
+    "product_category": "روايات وقصص",
+    "product_description": "البؤساء\" هي رواية للكاتب الفرنسي فيكتور هوجو، نُشرت عام 1862، وتعد من أشهر روايات القرن التاسع عشر. تدور أحداثها في فرنسا خلال القرن التاسع عشر، وتسلط الضوء على الظلم الاجتماعي والفقر والمعاناة الإنسانية من خلال قصة جان فالجان، السجين السابق الذي يحاول التكفير عن ماضيه ويسعى للعيش حياة كريمة، ويتعرض لمواقف صعبة وتحديات كبيرة في رحلته [1، 2].",
+    "product_image": "204932505951",
+    "promotionEndDate": "2025-07-31T00:00:00.000Z",
+    "product_price_before_discount": 279,
+    "rival": true,
+    "product_discount_percent": 65
+  },
+  {
+    "products_id": "297133654926",
+    "product_name": "الرحيق المختوم",
+    "product_price": 179,
+    "price_cost": 175,
+    "product_quantity": 1,
+    "product_category": "كتب دينية",
+    "product_description": "الرحيق المختوم\" هو كتاب في السيرة النبوية للكاتب صفي الرحمن المباركفوري، يصف حياة النبي محمد صلى الله عليه وسلم منذ ولادته حتى وفاته، مع التركيز على الأحداث الرئيسية والمعارك والغزوات، بالإضافة إلى الجوانب الأخلاقية والتربوية في شخصيته. يتميز الكتاب بأسلوبه السهل والمبسط، مما جعله مرجعًا شائعًا ومقبولًا على نطاق واسع بين المسلمين. ",
+    "product_image": "297133654926",
+    "promotionEndDate": "2025-07-31T00:00:00.000Z",
+    "product_price_before_discount": 499,
+    "rival": true,
+    "product_discount_percent": 65
   }
 ]

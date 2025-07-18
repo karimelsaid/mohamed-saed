@@ -1,51 +1,94 @@
 const fs = require('fs');
 const path = require('path');
+const { EventEmitter } = require('events');
 
-const isProduction = process.env.NODE_ENV === 'production';
+function slugify(text) {
+  return text.toString().toLowerCase()
+    .replace(/\s+/g, '-')           // Replace spaces with -
+    .replace(/[^\u0600-\u06FF\w\-]+/g, '')       // Remove all non-word chars except Arabic letters
+    .replace(/\-\-+/g, '-')         // Replace multiple - with single -
+    .replace(/^-+/, '')             // Trim - from start of text
+    .replace(/-+$/, '');            // Trim - from end of text
+}
 
-async function generateSitemap() {
-  try {
-    const baseUrl = process.env.SITEMAP_BASE_URL || (isProduction ? 'https://kenouz.org' : 'http://localhost:3000');
-    console.log('🔧 جاري إنشاء ملف sitemap باستخدام الرابط الأساسي:', baseUrl);
+class SitemapService extends EventEmitter {
+  constructor() {
+    super();
+    this.outputJsonPath = path.join(__dirname, '..', 'output.json');
+    this.sitemapPath = path.join(__dirname, '..', 'dist', 'browser', 'sitemap.xml');
+    this.watch();
+  }
 
-    // روابط ثابتة
-    const staticRoutes = ['Home', 'Business-Marketing-Finance', 'Education-children', 'Arts-crafts', 'HealthMedicineScience', 'Islamic', 'Novels-stories', 'Self-development-psychology', 'History-Biographies', 'Dictionaries-References', 'ControlPanel', 'research', 'basket', 'Favorites', 'login', 'register', 'requests', 'print'];
-    const staticUrls = staticRoutes.map(route => `
-      <url><loc>${baseUrl}/${route}</loc></url>
-    `).join('');
-    console.log('🔧 تم إنشاء روابط ثابتة');
+  watch() {
+    // Watch output.json for changes with debounce
+    let timeout = null;
+    fs.watch(this.outputJsonPath, (eventType) => {
+      if (eventType === 'change') {
+        if (timeout) clearTimeout(timeout);
+        timeout = setTimeout(() => {
+          this.generateSitemap();
+          timeout = null;
+        }, 500); // 500ms debounce delay
+      }
+    });
+    // Initial generation
+    this.generateSitemap();
+  }
 
-    // قراءة الكتب من output.json
-    const booksPath = path.join(__dirname, '../output.json');
-    const books = JSON.parse(fs.readFileSync(booksPath, 'utf8'));
-    console.log('🔧 تم تحميل الكتب من ملف output.json، عدد الكتب:', books.length);
+  generateSitemap() {
+    fs.readFile(this.outputJsonPath, 'utf8', (err, data) => {
+      if (err) {
+        console.error('Error reading output.json:', err);
+        return;
+      }
+      let books;
+      try {
+        books = JSON.parse(data);
+      } catch (parseErr) {
+        console.error('Error parsing output.json:', parseErr);
+        return;
+      }
 
-    const bookUrls = books.map(book => {
-      const safeName = book.product_name.trim().replace(/\s+/g, '-').replace(/[^\w\-ء-ي]/g, '');
-      return `
-        <url>
-          <loc>${baseUrl}/book/${safeName}</loc>
-          <changefreq>weekly</changefreq>
-          <priority>0.8</priority>
-        </url>
-      `;
-    }).join('');
-    console.log('🔧 تم إنشاء روابط الكتب');
+      // Base URL for books - adjust if needed
+      const baseUrl = 'https://kenouz.org/book/';
 
-    const sitemapContent = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${staticUrls}
-${bookUrls}
+      // Generate sitemap XML content
+      const urls = books.map(book => {
+        // Use slugified product_name only for URL
+        const slug = slugify(book.product_name || '');
+        const loc = baseUrl + slug;
+        const lastmod = new Date().toISOString();
+        return `
+  <url>
+    <loc>${loc}</loc>
+    <lastmod>${lastmod}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+    <news:title>${book.product_name}</news:title>
+  </url>`;
+      }).join('');
+
+      const sitemapContent = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls}
 </urlset>`;
 
-    const sitemapPath = path.join(__dirname, '../dist/browser/sitemap.xml');
-    fs.writeFileSync(sitemapPath, sitemapContent);
-    console.log('✅ تم إنشاء ملف sitemap.xml بنجاح مع روابط الكتب');
-  } catch (error) {
-    console.error('❌ فشل في إنشاء sitemap.xml:', error.message);
+      // Ensure directory exists
+      fs.mkdir(path.dirname(this.sitemapPath), { recursive: true }, (mkdirErr) => {
+        if (mkdirErr) {
+          console.error('Error creating sitemap directory:', mkdirErr);
+          return;
+        }
+        // Write sitemap.xml
+        fs.writeFile(this.sitemapPath, sitemapContent, 'utf8', (writeErr) => {
+          if (writeErr) {
+            console.error('Error writing sitemap.xml:', writeErr);
+          } else {
+            console.log('✅ sitemap.xml generated successfully');
+          }
+        });
+      });
+    });
   }
 }
 
-module.exports = {
-  generateSitemap
-};
+module.exports = new SitemapService();

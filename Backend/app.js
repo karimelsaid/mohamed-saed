@@ -187,19 +187,18 @@ function generateRobotsTxt() {
   }
 }
 
-// تقديم ملفات Angular فقط في وضع الإنتاج
-if (isProduction) {
-  app.use(express.static(path.join(__dirname, 'dist/browser')));
-  // تقديم ملف robots.txt
-  app.get('/robots.txt', (req, res) => {
-    res.type('text/plain');
-    res.sendFile(path.join(__dirname, 'dist/browser/robots.txt'));
-  });
-}
+// تقديم ملفات Angular في جميع الأوضاع (تطوير وإنتاج)
+app.use(express.static(path.join(__dirname, 'dist/browser')));
 
-// إضافة مسار لخدمة ملف sitemap.xml
+// تقديم ملف robots.txt
+app.get('/robots.txt', (req, res) => {
+  res.type('text/plain');
+  res.sendFile(path.join(__dirname, 'dist/browser/robots.txt'));
+});
+
+// إضافة مسار لخدمة ملف sitemap.xml بنفس طريقة تقديم ملف robots.txt
 app.get('/sitemap.xml', (req, res) => {
-  res.type('application/xml');
+  res.type('text/plain');
   res.sendFile(path.join(__dirname, 'dist/browser/sitemap.xml'));
 });
 

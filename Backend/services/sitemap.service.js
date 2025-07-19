@@ -64,7 +64,6 @@ class SitemapService extends EventEmitter {
     <lastmod>${lastmod}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
-    <news:title>${book.product_name}</news:title>
   </url>`;
       }).join('');
 

@@ -169,15 +169,18 @@ generateRobotsTxt();
 
 function generateRobotsTxt() {
   try {
-    const staticRoutes = ['Home', 'Business-Marketing-Finance', 'Education-children', 'Arts-crafts', 'HealthMedicineScience', 'Islamic', 'Novels-stories', 'Self-development-psychology', 'History-Biographies', 'Dictionaries-References', 'ControlPanel', 'research', 'basket', 'Favorites', 'login', 'register', 'requests', 'print'];
-    const booksPath = path.join(__dirname, 'output.json');
-    const books = JSON.parse(fs.readFileSync(booksPath, 'utf8'));
+    const disallowRoutes = ['/login', '/register', '/basket', '/Favorites', '/ControlPanel'];
+    const allowRoutes = ['book', 'Home', 'Business-Marketing-Finance', 'Education-children', 'Arts-crafts', 'HealthMedicineScience', 'Islamic', 'Novels-stories', 'Self-development-psychology', 'History-Biographies', 'Dictionaries-References', 'research', 'requests', 'print'];
 
     let content = 'User-agent: *\n';
-    staticRoutes.forEach(route => {
+    disallowRoutes.forEach(route => {
+      content += `Disallow: ${route}\n`;
+    });
+    allowRoutes.forEach(route => {
       content += `Allow: /${route}\n`;
     });
-    content += 'Allow: /book/\n';
+
+    content += '\nSitemap: https://kenouz.org/sitemap.xml\n';
 
     const robotsPath = path.join(__dirname, 'dist/browser/robots.txt');
     fs.writeFileSync(robotsPath, content);

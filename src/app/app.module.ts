@@ -27,7 +27,6 @@ import { AdminDashboardComponent } from './admin/admin-dashboard/admin-dashboard
 import { LocationStrategy, PathLocationStrategy } from '@angular/common';
 import { SearchBarComponent } from './search-bar/search-bar.component';
 import { ChatWindowComponent } from './components/chat-window/chat-window.component';
-import { PdfOcrComponent } from './admin/pdf-ocr/pdf-ocr.component';
 import { NavbarIconsComponent } from './navbar-icons/navbar-icons.component';
 import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
 
@@ -62,7 +61,6 @@ import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
     NgxSkeletonLoaderModule,
     RegisterComponent,
     LoginComponent,
-    PdfOcrComponent,
     NavbarIconsComponent
   ],
   providers: [

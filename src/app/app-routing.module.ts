@@ -48,7 +48,6 @@ const routes: Routes = [
   { path: 'register', component: RegisterComponent },
   { path: 'requests', component: UserOrdersComponent },
   { path: 'print', component: PrintComponent },
-  { path: 'pdf-ocr', loadComponent: () => import('./admin/pdf-ocr/pdf-ocr.component').then(m => m.PdfOcrComponent) },
 
   { path: 'عن-الموقع', component: AboutComponent },
   { path: 'سياسة-الخصوصية', component: PrivacyPolicyComponent },

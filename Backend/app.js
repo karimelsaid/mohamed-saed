@@ -18,8 +18,6 @@ const paymentRoutes = require('./routes/payment.routes');
 const printRoutes = require('./routes/print.routes');
 const chatAiRoutes = require('./routes/chat-ai.routes');
 const adminRoutes = require('./routes/admin.routes');
-const pdfOcrRoutes = require('./routes/pdf-ocr.routes');
-
 const app = express();
 const port = process.env.PORT || 3000;
 const isProduction = process.env.NODE_ENV === 'production';
@@ -28,7 +26,6 @@ const isProduction = process.env.NODE_ENV === 'production';
 app.use(bodyParser.json());
 
 app.use('/api/print', printRoutes);
-app.use('/api/pdf-ocr', pdfOcrRoutes);
 
 // إضافة رؤوس Cross-Origin-Opener-Policy و Cross-Origin-Embedder-Policy
 app.use((req, res, next) => {

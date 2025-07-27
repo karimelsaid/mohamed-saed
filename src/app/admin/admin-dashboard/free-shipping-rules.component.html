@@ -1,35 +1,37 @@
-<h2>إدارة قواعد الشحن المجاني</h2>
+<h2 class="dark:text-gray-300 font-bold text-center">إدارة قواعد الشحن المجاني</h2>
 
-<form (ngSubmit)="saveRules()">
-  <label>
+<form (ngSubmit)="saveRules()" class="max-w-xl mx-auto flex flex-col space-y-4 dark:bg-gray-800 dark:text-gray-300 p-6 rounded-lg shadow-md">
+  <label class="font-bold">
     تفعيل الشحن المجاني:
-    <input type="checkbox" [(ngModel)]="freeShippingEnabled" name="freeShippingEnabled" />
+    <input type="checkbox" [(ngModel)]="freeShippingEnabled" name="freeShippingEnabled" class="ml-2" />
   </label>
 
   <div>
-    <label>الحد الأدنى للكمية للحصول على شحن مجاني:</label>
-    <input type="number" [(ngModel)]="minQuantity" name="minQuantity" min="0" />
+    <label class="font-bold block mb-1">الحد الأدنى للكمية للحصول على شحن مجاني:</label>
+    <input type="number" [(ngModel)]="minQuantity" name="minQuantity" min="0" class="w-full p-2 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200" />
   </div>
 
   <div>
-    <label>الحد الأدنى لقيمة الطلب للحصول على شحن مجاني:</label>
-    <input type="number" [(ngModel)]="minOrderValue" name="minOrderValue" min="0" step="0.01" />
+    <label class="font-bold block mb-1">الحد الأدنى لقيمة الطلب للحصول على شحن مجاني:</label>
+    <input type="number" [(ngModel)]="minOrderValue" name="minOrderValue" min="0" step="0.01" class="w-full p-2 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200" />
   </div>
 
   <div>
-    <label>فئات المستخدمين المشمولة (يمكن إضافة لاحقاً):</label>
-    <input type="text" placeholder="مثال: VIP, Premium" disabled />
+    <label class="font-bold block mb-1">فئات المستخدمين المشمولة (يمكن إضافة لاحقاً):</label>
+    <input type="text" placeholder="مثال: VIP, Premium" disabled class="w-full p-2 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-400" />
   </div>
 
   <div>
-    <label>المنتجات أو الفئات المشمولة (يمكن إضافة لاحقاً):</label>
-    <input type="text" placeholder="مثال: كتب تعليمية" disabled />
+    <label class="font-bold block mb-1">المنتجات أو الفئات المشمولة (يمكن إضافة لاحقاً):</label>
+    <input type="text" placeholder="مثال: كتب تعليمية" disabled class="w-full p-2 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-400" />
   </div>
 
   <div>
-    <label>المحافظات المشمولة (يمكن إضافة لاحقاً):</label>
-    <input type="text" placeholder="مثال: القاهرة, الجيزة" disabled />
+    <label class="font-bold block mb-1">المحافظات المشمولة (يمكن إضافة لاحقاً):</label>
+    <input type="text" placeholder="مثال: القاهرة, الجيزة" disabled class="w-full p-2 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-400" />
   </div>
 
-  <button type="submit">حفظ القواعد</button>
+  <button type="submit" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600">
+    حفظ القواعد
+  </button>
 </form>

@@ -16,6 +16,9 @@
   <button (click)="switchView('products')" [class.bg-blue-600]="currentView === 'products'" class="px-4 py-2 rounded text-white bg-blue-400 hover:bg-blue-600 transition">
     عرض وتعديل المنتجات
   </button>
+  <button (click)="switchView('freeShippingRules')" [class.bg-blue-600]="currentView === 'freeShippingRules'" class="px-4 py-2 rounded text-white bg-blue-400 hover:bg-blue-600 transition">
+    قواعد الشحن المجاني
+  </button>
 </div>
 
 <div class="promotion-date-controls my-6 max-w-md mx-auto p-4 border rounded bg-gray-50 dark:bg-gray-800">
@@ -187,6 +190,10 @@
       إضافة المنتج
     </button>
   </form>
+</div>
+
+<div *ngIf="currentView === 'freeShippingRules'">
+  <app-free-shipping-rules></app-free-shipping-rules>
 </div>
 
 <div *ngIf="currentView === 'products'" class="px-4 sm:px-10 max-w-6xl mx-auto mb-32 md:mb-0">

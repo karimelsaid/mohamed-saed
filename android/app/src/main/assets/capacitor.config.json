@@ -1,5 +1,5 @@
 {
-	"appId": "com.kenouz.bookstore",
+	"appId": "com.kenouz.bookstore2",
 	"appName": "Kenouz",
 	"webDir": "Backend/dist/browser",
 	"bundledWebRuntime": false,

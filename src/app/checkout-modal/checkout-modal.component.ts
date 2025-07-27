@@ -10,6 +10,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { environment } from '../../environments/environment';
+import { FreeShippingService, FreeShippingRules } from '../services/free-shipping.service';
 
 @Component({
   selector: 'app-checkout-modal',
@@ -35,6 +36,15 @@ export class CheckoutModalComponent implements OnInit {
   isEditingAddress: boolean = false;
   editedUserProfile: User | null = null;
 
+  private cartItemsLoaded: boolean = false;
+  private freeShippingRulesLoaded: boolean = false;
+
+  private tryCalculateShippingCost(): void {
+    if (this.cartItemsLoaded && this.freeShippingRulesLoaded) {
+      this.calculateShippingCost();
+    }
+  }
+
   governorates: any[] = governoratesData.governorates;
   cities: string[] = [];
 
@@ -43,18 +53,56 @@ export class CheckoutModalComponent implements OnInit {
   locationValid: boolean = true;
   errorMessage: string = '';
 
+  freeShippingRules: FreeShippingRules = {
+    minQuantity: 3,
+    minOrderValue: 0,
+    userGroups: [],
+    includedProducts: [],
+    includedCategories: [],
+    includedGovernorates: [],
+    freeShippingEnabled: true
+  };
+
   constructor(
     private authService: AuthService,
     private dataService: DataService,
-    private paymentService: PaymentService
+    private paymentService: PaymentService,
+    private freeShippingService: FreeShippingService
   ) {}
 
+  loadFreeShippingRules(): void {
+    this.freeShippingService.getRules().subscribe({
+      next: (rules) => {
+        console.log('Free shipping rules loaded:', rules);
+        this.freeShippingRules = rules;
+        this.calculateShippingCost();
+      },
+      error: (error) => {
+        console.error('Error loading free shipping rules:', error);
+      }
+    });
+  }
+
   get freeShippingMessage(): string {
+    if (!this.freeShippingRules.freeShippingEnabled) {
+      return '';
+    }
     const totalQuantity = this.cartItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
-    if (totalQuantity >= 3) {
+    const totalPrice = this.cartItems.reduce((total, book) => {
+      if (book.product_quantity > 0) {
+        return total + (parseFloat(book.product_price) * (book.quantity || 1));
+      }
+      return total;
+    }, 0);
+    if (totalQuantity >= this.freeShippingRules.minQuantity && totalPrice >= this.freeShippingRules.minOrderValue) {
       return 'لقد حصلت على شحن مجاني';
+    } else if (totalQuantity < this.freeShippingRules.minQuantity) {
+      return `اشترِ ${this.freeShippingRules.minQuantity - totalQuantity} كتاب${this.freeShippingRules.minQuantity - totalQuantity > 1 ? 'ات' : ''} أو أكثر لتحصل على شحن مجاني`;
+    } else if (totalPrice < this.freeShippingRules.minOrderValue) {
+      const remainingAmount = this.freeShippingRules.minOrderValue - totalPrice;
+      return `أضف ${remainingAmount.toFixed(2)} جنيهًا أو أكثر لتحصل على شحن مجاني`;
     } else {
-      return 'اشترِ كتابين أو أكثر لتحصل على شحن مجاني';
+      return '';
     }
   }
 
@@ -80,6 +128,7 @@ export class CheckoutModalComponent implements OnInit {
     console.log('CheckoutModalComponent initialized');
     this.loadCartItems();
     this.loadUserProfile();
+    this.loadFreeShippingRules();
   }
 
   loadUserProfile() {
@@ -115,7 +164,11 @@ export class CheckoutModalComponent implements OnInit {
         map((books: any[]) => books.filter(book => book.products_id === this.bookId))
       ).subscribe({
         next: (filteredBooks) => {
-          this.cartItems = filteredBooks;
+          // Ensure quantity is set to 1 if undefined
+          this.cartItems = filteredBooks.map(item => ({
+            ...item,
+            quantity: item.quantity ?? 1
+          }));
           this.calculateTotalPrice();
           this.isLoading = false;
         },
@@ -133,7 +186,11 @@ export class CheckoutModalComponent implements OnInit {
             map((books: any[]) => books.filter(book => bookIds.includes(book.products_id)))
           ).subscribe({
             next: (filteredBooks) => {
-              this.cartItems = filteredBooks.sort((a, b) => {
+              // Ensure quantity is set to 1 if undefined
+              this.cartItems = filteredBooks.map(item => ({
+                ...item,
+                quantity: item.quantity ?? 1
+              })).sort((a, b) => {
                 if (a.product_quantity > 0 && b.product_quantity <= 0) return -1;
                 if (a.product_quantity <= 0 && b.product_quantity > 0) return 1;
                 return b.product_quantity - a.product_quantity;
@@ -155,18 +212,54 @@ export class CheckoutModalComponent implements OnInit {
   }
 
   calculateShippingCost(): void {
-    // Calculate total quantity of books in cart
-    const totalQuantity = this.cartItems.reduce((sum, item) => {
-      return sum + (item.quantity || 1);
+    console.log('calculateShippingCost called');
+    console.log('freeShippingRules object:', this.freeShippingRules);
+    console.log('freeShippingEnabled:', this.freeShippingRules.freeShippingEnabled);
+    if (!this.freeShippingRules.freeShippingEnabled) {
+      // If free shipping is disabled, calculate shipping normally
+      this.calculateShippingCostNormal();
+      return;
+    }
+
+    const totalQuantity = this.cartItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
+    const totalPrice = this.cartItems.reduce((total, book) => {
+      if (book.product_quantity > 0) {
+        return total + (parseFloat(book.product_price) * (book.quantity || 1));
+      }
+      return total;
     }, 0);
 
-    // If total quantity >= 3, free shipping
-    if (totalQuantity >= 3) {
+    console.log('totalQuantity:', totalQuantity);
+    console.log('totalPrice:', totalPrice);
+    console.log('minQuantity:', this.freeShippingRules.minQuantity);
+    console.log('minOrderValue:', this.freeShippingRules.minOrderValue);
+
+    // Check free shipping conditions
+    if (totalQuantity >= this.freeShippingRules.minQuantity && totalPrice >= this.freeShippingRules.minOrderValue) {
       this.shippingCost = 0;
+      console.log('Free shipping applied, shippingCost set to 0');
       this.calculateTotalPrice();
       return;
     }
 
+    // Check governorate shipping cost if applicable
+    const governorateName = this.editedUserProfile?.governorate || this.userProfile?.governorate;
+    if (!governorateName) {
+      this.shippingCost = 0;
+      this.calculateTotalPrice();
+      return;
+    }
+    const governorate = this.governorates.find(g => g.governorate_name === governorateName);
+    if (governorate && governorate.shipping_cost) {
+      this.shippingCost = parseFloat(governorate.shipping_cost);
+    } else {
+      this.shippingCost = 0;
+    }
+    console.log('Shipping cost set to:', this.shippingCost);
+    this.calculateTotalPrice();
+  }
+
+  private calculateShippingCostNormal(): void {
     const governorateName = this.editedUserProfile?.governorate || this.userProfile?.governorate;
     if (!governorateName) {
       this.shippingCost = 0;

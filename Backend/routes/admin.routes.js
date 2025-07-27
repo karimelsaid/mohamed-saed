@@ -41,4 +41,7 @@ router.post('/update-promotion-dates', adminController.updatePromotionDates);
 router.get('/promotion-dates', adminController.getPromotionDates);
 
 
+router.get('/free-shipping-rules', adminController.getFreeShippingRules);
+router.post('/free-shipping-rules', adminController.saveFreeShippingRules);
+
 module.exports = router;

@@ -529,6 +529,63 @@ async function updatePromotionDates(req, res) {
   }
 }
 
+const FreeShippingRule = require('../models/FreeShippingRule.model');
+
+async function getFreeShippingRules(req, res) {
+  try {
+    let rules = await FreeShippingRule.findOne().sort({ createdAt: -1 }).exec();
+    if (!rules) {
+      // Return default rules if none found
+      rules = {
+        minQuantity: 3,
+        minOrderValue: 0,
+        userGroups: [],
+        includedProducts: [],
+        includedCategories: [],
+        includedGovernorates: [],
+        freeShippingEnabled: true
+      };
+    }
+    res.json({ success: true, rules });
+  } catch (error) {
+    console.error('Error in getFreeShippingRules:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+}
+
+async function saveFreeShippingRules(req, res) {
+  try {
+    const {
+      minQuantity,
+      minOrderValue,
+      userGroups,
+      includedProducts,
+      includedCategories,
+      includedGovernorates,
+      freeShippingEnabled
+    } = req.body;
+
+    const updatedRules = await FreeShippingRule.findOneAndUpdate(
+      {},
+      {
+        minQuantity,
+        minOrderValue,
+        userGroups,
+        includedProducts,
+        includedCategories,
+        includedGovernorates,
+        freeShippingEnabled
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+
+    res.json({ success: true, message: 'Free shipping rules saved successfully', rules: updatedRules });
+  } catch (error) {
+    console.error('Error in saveFreeShippingRules:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+}
+
 module.exports = {
   upload,
   addProduct,
@@ -539,5 +596,7 @@ module.exports = {
   syncJsonToExcel,
   batchUpdateProducts,
   getPromotionDates,
-  updatePromotionDates
+  updatePromotionDates,
+  getFreeShippingRules,
+  saveFreeShippingRules
 };

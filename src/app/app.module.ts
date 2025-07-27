@@ -29,6 +29,7 @@ import { SearchBarComponent } from './search-bar/search-bar.component';
 import { ChatWindowComponent } from './components/chat-window/chat-window.component';
 import { NavbarIconsComponent } from './navbar-icons/navbar-icons.component';
 import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
+import { FreeShippingRulesComponent } from './admin/admin-dashboard/free-shipping-rules.component';
 
 @NgModule({
   declarations: [
@@ -61,7 +62,8 @@ import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
     NgxSkeletonLoaderModule,
     RegisterComponent,
     LoginComponent,
-    NavbarIconsComponent
+    NavbarIconsComponent,
+    FreeShippingRulesComponent
   ],
   providers: [
     provideHttpClient(withInterceptorsFromDi()), // استخدام provideHttpClient بدلاً من HttpClientModule

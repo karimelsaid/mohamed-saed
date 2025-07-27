@@ -151,7 +151,7 @@
           <span class="text-gray-900 dark:text-gray-200">تكلفة الشحن:</span>
           <span class="text-gray-900 dark:text-gray-200">{{shippingCost}} EGP</span>
         </div>
-        <div class="text-sm text-green-600 dark:text-green-400 mb-2 flex items-center space-x-2 rtl:space-x-reverse">
+        <div *ngIf="freeShippingRules.freeShippingEnabled" class="text-sm text-green-600 dark:text-green-400 mb-2 flex items-center space-x-2 rtl:space-x-reverse">
           <fa-icon [icon]="faCheck" class="text-green-600 dark:text-green-400"></fa-icon>
           <span>{{ freeShippingMessage }}</span>
         </div>

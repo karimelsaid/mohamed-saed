@@ -1,10 +1,10 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace "com.kenouz.bookstore"
+    namespace "com.kenouz.bookstore2"
     compileSdk rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.kenouz.bookstore"
+        applicationId "com.kenouz.bookstore2"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
@@ -28,6 +28,7 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
         }
     }
 }

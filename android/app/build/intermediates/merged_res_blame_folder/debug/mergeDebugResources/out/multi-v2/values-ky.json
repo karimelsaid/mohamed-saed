@@ -4,7 +4,7 @@
             "outputFile": "com.kenouz.bookstore.app-mergeDebugResources-25:/values-ky/values-ky.xml",
             "map": [
                 {
-                    "source": "C:\\Users\\karim\\.gradle\\caches\\8.13\\transforms\\a7b3be14e520c902d9ff73cf4e4fcb08\\transformed\\appcompat-1.7.0\\res\\values-ky\\values-ky.xml",
+                    "source": "C:\\Users\\karim\\.gradle\\caches\\8.13\\transforms\\e2542f07e03e83966d61d2ce34c14b7c\\transformed\\appcompat-1.7.0\\res\\values-ky\\values-ky.xml",
                     "from": {
                         "startLines": "2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29",
                         "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4",
@@ -21,7 +21,7 @@
                     }
                 },
                 {
-                    "source": "C:\\Users\\karim\\.gradle\\caches\\8.13\\transforms\\b5aa2a62a91480d0fcf5957653de5cfe\\transformed\\core-1.15.0\\res\\values-ky\\values-ky.xml",
+                    "source": "C:\\Users\\karim\\.gradle\\caches\\8.13\\transforms\\ea82f0e4740fea90ca38a885280cdee8\\transformed\\core-1.15.0\\res\\values-ky\\values-ky.xml",
                     "from": {
                         "startLines": "2,3,4,5,6,7,8,9",
                         "startColumns": "4,4,4,4,4,4,4,4",

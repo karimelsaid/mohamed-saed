@@ -4,7 +4,7 @@
             "outputFile": "com.kenouz.bookstore.app-mergeDebugResources-25:/values-night-v8/values-night-v8.xml",
             "map": [
                 {
-                    "source": "C:\\Users\\karim\\.gradle\\caches\\8.13\\transforms\\a7b3be14e520c902d9ff73cf4e4fcb08\\transformed\\appcompat-1.7.0\\res\\values-night-v8\\values-night-v8.xml",
+                    "source": "C:\\Users\\karim\\.gradle\\caches\\8.13\\transforms\\e2542f07e03e83966d61d2ce34c14b7c\\transformed\\appcompat-1.7.0\\res\\values-night-v8\\values-night-v8.xml",
                     "from": {
                         "startLines": "2,3,4,5,6,7,8,9",
                         "startColumns": "4,4,4,4,4,4,4,4",
@@ -21,7 +21,7 @@
                     }
                 },
                 {
-                    "source": "C:\\Users\\karim\\.gradle\\caches\\8.13\\transforms\\c7bf7c5a388e3a92b7d68716da95fbf8\\transformed\\core-splashscreen-1.0.1\\res\\values-night-v8\\values-night-v8.xml",
+                    "source": "C:\\Users\\karim\\.gradle\\caches\\8.13\\transforms\\53f40aa6f6d840a54b93ab2747ad6132\\transformed\\core-splashscreen-1.0.1\\res\\values-night-v8\\values-night-v8.xml",
                     "from": {
                         "startLines": "2",
                         "startColumns": "4",

@@ -1,4 +1,4 @@
-package com.kenouz.bookstore;
+package com.kenouz.bookstore2;
 
 import com.getcapacitor.BridgeActivity;
 

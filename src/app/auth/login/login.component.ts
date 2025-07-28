@@ -6,10 +6,12 @@ import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../auth.service';
 import { environment } from '../../../environments/environment';
 
+import { RouterModule } from '@angular/router';
+
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.css']
 })
@@ -27,6 +29,14 @@ export class LoginComponent {
 
   ngAfterViewInit() {
     this.loadGoogleScript();
+  }
+
+  navigateToForgotPassword() {
+    this.router.navigate(['/forgot-password']).then(success => {
+      if (!success) {
+        console.error('Navigation to forgot-password failed');
+      }
+    });
   }
 
   loadGoogleScript() {

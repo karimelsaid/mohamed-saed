@@ -21,7 +21,9 @@ const {
   googleSignIn,
   getNotifications,
   markNotificationAsRead,
-  deleteNotification
+  deleteNotification,
+  checkEmailExists,
+  resetPassword
 } = require('../controllers/users.controller');
 
 // مسارات المستخدمين
@@ -68,5 +70,8 @@ router.get('/notifications/:userId', getNotifications);
 router.patch('/notifications/:userId/:notificationId', markNotificationAsRead);
 
 router.delete('/notifications/:userId/:notificationId', deleteNotification);
+
+router.post('/check-email', checkEmailExists);
+router.put('/reset-password', resetPassword);
 
 module.exports = router;

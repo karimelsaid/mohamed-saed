@@ -529,6 +529,44 @@ async function deleteNotification(req, res) {
   }
 }
 
+async function checkEmailExists(req, res) {
+  const { email } = req.body;
+  if (!email) {
+    return res.status(400).json({ message: 'البريد الإلكتروني مطلوب' });
+  }
+  try {
+    const user = await User.findOne({ email });
+    if (user) {
+      return res.status(200).json({ exists: true });
+    } else {
+      return res.status(404).json({ exists: false, message: 'البريد الإلكتروني غير موجود' });
+    }
+  } catch (error) {
+    console.error('Error checking email existence:', error);
+    return res.status(500).json({ message: 'حدث خطأ أثناء التحقق من البريد الإلكتروني' });
+  }
+}
+
+async function resetPassword(req, res) {
+  const { email, newPassword } = req.body;
+  if (!email || !newPassword) {
+    return res.status(400).json({ message: 'البريد الإلكتروني وكلمة المرور الجديدة مطلوبان' });
+  }
+  try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: 'المستخدم غير موجود' });
+    }
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+    user.password = hashedPassword;
+    await user.save();
+    return res.status(200).json({ message: 'تم تحديث كلمة المرور بنجاح' });
+  } catch (error) {
+    console.error('Error resetting password:', error);
+    return res.status(500).json({ message: 'حدث خطأ أثناء إعادة تعيين كلمة المرور' });
+  }
+}
+
 module.exports = {
   createAccount,
   login,
@@ -578,5 +616,7 @@ module.exports = {
       console.error('Error getting average rating:', error);
       return res.status(500).json({ message: 'Internal server error' });
     }
-  }
+  },
+  checkEmailExists,
+  resetPassword
 };

@@ -26,6 +26,8 @@ import { BookDetailsComponent } from './book-details/book-details.component';
 import { AboutComponent } from './about/about.component';
 import { PrivacyPolicyComponent } from './privacy-policy/privacy-policy.component';
 import { TermsConditionsComponent } from './terms-conditions/terms-conditions.component';
+import { ForgotPasswordComponent } from './auth/forgot-password/forgot-password.component';
+import { ResetPasswordComponent } from './auth/reset-password/reset-password.component';
 
 const routes: Routes = [
   { path: 'Home', component: HomePageComponent },
@@ -46,6 +48,8 @@ const routes: Routes = [
   { path: 'Favorites', component: FavoritesComponent },
   { path: 'login', component: LoginComponent },
   { path: 'register', component: RegisterComponent },
+  { path: 'forgot-password', component: ForgotPasswordComponent },
+  { path: 'reset-password', component: ResetPasswordComponent },
   { path: 'requests', component: UserOrdersComponent },
   { path: 'print', component: PrintComponent },
 

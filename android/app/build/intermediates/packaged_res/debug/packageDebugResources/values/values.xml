@@ -2,8 +2,8 @@
 <resources>
     <color name="ic_launcher_background">#FFFFFF</color>
     <string name="app_name">Kenouz</string>
-    <string name="custom_url_scheme">com.kenouz.bookstore</string>
-    <string name="package_name">com.kenouz.bookstore</string>
+    <string name="custom_url_scheme">com.kenouz.bookstore2</string>
+    <string name="package_name">com.kenouz.bookstore2</string>
     <string name="title_activity_main">Kenouz</string>
     <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
         

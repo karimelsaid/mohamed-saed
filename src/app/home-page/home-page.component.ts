@@ -11,7 +11,7 @@ import { environment } from '../../environments/environment';
   styleUrls: ['./home-page.component.css']
 })
 export class HomePageComponent implements OnInit, OnDestroy {
-  
+
   resetTimeouts: any[] = [];
   uploadsBaseUrl = environment.uploadsBaseUrl;
   isLoading: boolean = true;
@@ -128,21 +128,21 @@ export class HomePageComponent implements OnInit, OnDestroy {
     } else {
       this.booksToShow = 5;
     }
-    
+
     this.visibleBooks = [...this.books, ...this.books.slice(0, this.booksToShow)];
     if (this.currentIndex >= this.books.length) {
       this.currentIndex = 0;
     }
-    
+
     this.updateTransform();
   }
 
   startAutoScroll(): void {
     clearInterval(this.intervalId);
-    
+
     this.intervalId = setInterval(() => {
       if (this.isHovered) return;
-      
+
       this.currentIndex = (this.currentIndex + 1) % (this.books.length);
       this.updateTransform();
     }, 2000);
@@ -255,61 +255,74 @@ export class HomePageComponent implements OnInit, OnDestroy {
     }
   }
 
+
+  //  <div
+  //   class="print-image-container"
+  //   *ngFor="let img of printImages; let i = index"
+  // (mousedown)="startDrag($event, i)"
+  //   (mouseup)="stopDrag(i)"
+  //   (mouseleave)="stopDrag(i)"
+  //   (mousemove)="onDrag($event, i)"
+  //   (touchstart)="startDrag($event, i)"
+  //   (touchend)="stopDrag(i)"
+  //   (touchcancel)="stopDrag(i)"
+  //   (touchmove)="onDrag($event, i)"
+
   // 3D interaction methods for print images
-  startDrag(event: MouseEvent | TouchEvent, index: number): void {
-    event.preventDefault();
-    this.isDragging[index] = true;
-    // Clear any pending reset timeout when dragging starts
-    if (this.resetTimeouts[index]) {
-      clearTimeout(this.resetTimeouts[index]);
-      this.resetTimeouts[index] = null;
-    }
-    if (event instanceof MouseEvent) {
-      this.lastX[index] = event.clientX;
-      this.lastY[index] = event.clientY;
-    } else if (event instanceof TouchEvent) {
-      this.lastX[index] = event.touches[0].clientX;
-      this.lastY[index] = event.touches[0].clientY;
-    }
-  }
+  // startDrag(event: MouseEvent | TouchEvent, index: number): void {
+  //   event.preventDefault();
+  //   this.isDragging[index] = true;
+  //   // Clear any pending reset timeout when dragging starts
+  //   if (this.resetTimeouts[index]) {
+  //     clearTimeout(this.resetTimeouts[index]);
+  //     this.resetTimeouts[index] = null;
+  //   }
+  //   if (event instanceof MouseEvent) {
+  //     this.lastX[index] = event.clientX;
+  //     this.lastY[index] = event.clientY;
+  //   } else if (event instanceof TouchEvent) {
+  //     this.lastX[index] = event.touches[0].clientX;
+  //     this.lastY[index] = event.touches[0].clientY;
+  //   }
+  // }
 
-  stopDrag(index: number): void {
-    this.isDragging[index] = false;
-    // Reset rotation to default after 2 seconds delay when dragging stops
-    this.resetTimeouts[index] = setTimeout(() => {
-      this.rotationX[index] = 0;
-      this.rotationY[index] = 0;
-      this.printImageTransforms[index] = 'rotateX(0deg) rotateY(0deg)';
-      this.resetTimeouts[index] = null;
-    }, 2000);
-  }
+  // stopDrag(index: number): void {
+  //   this.isDragging[index] = false;
+  //   // Reset rotation to default after 2 seconds delay when dragging stops
+  //   this.resetTimeouts[index] = setTimeout(() => {
+  //     this.rotationX[index] = 0;
+  //     this.rotationY[index] = 0;
+  //     this.printImageTransforms[index] = 'rotateX(0deg) rotateY(0deg)';
+  //     this.resetTimeouts[index] = null;
+  //   }, 2000);
+  // }
 
-  onDrag(event: MouseEvent | TouchEvent, index: number): void {
-    if (!this.isDragging[index]) return;
-    event.preventDefault();
-    let currentX: number;
-    let currentY: number;
-    if (event instanceof MouseEvent) {
-      currentX = event.clientX;
-      currentY = event.clientY;
-    } else if (event instanceof TouchEvent) {
-      currentX = event.touches[0].clientX;
-      currentY = event.touches[0].clientY;
-    } else {
-      return;
-    }
-    const deltaX = currentX - this.lastX[index];
-    const deltaY = currentY - this.lastY[index];
-    this.lastX[index] = currentX;
-    this.lastY[index] = currentY;
+  // onDrag(event: MouseEvent | TouchEvent, index: number): void {
+  //   if (!this.isDragging[index]) return;
+  //   event.preventDefault();
+  //   let currentX: number;
+  //   let currentY: number;
+  //   if (event instanceof MouseEvent) {
+  //     currentX = event.clientX;
+  //     currentY = event.clientY;
+  //   } else if (event instanceof TouchEvent) {
+  //     currentX = event.touches[0].clientX;
+  //     currentY = event.touches[0].clientY;
+  //   } else {
+  //     return;
+  //   }
+  //   const deltaX = currentX - this.lastX[index];
+  //   const deltaY = currentY - this.lastY[index];
+  //   this.lastX[index] = currentX;
+  //   this.lastY[index] = currentY;
 
-    // Update rotation angles with some sensitivity factor
-    this.rotationY[index] += deltaX * 0.5;
-    this.rotationX[index] -= deltaY * 0.5;
+  //   // Update rotation angles with some sensitivity factor
+  //   this.rotationY[index] += deltaX * 0.5;
+  //   this.rotationX[index] -= deltaY * 0.5;
 
-    // Clamp rotationX to avoid flipping too far
-    this.rotationX[index] = Math.max(Math.min(this.rotationX[index], 30), -30);
+  //   // Clamp rotationX to avoid flipping too far
+  //   this.rotationX[index] = Math.max(Math.min(this.rotationX[index], 30), -30);
 
-    this.printImageTransforms[index] = `rotateX(${this.rotationX[index]}deg) rotateY(${this.rotationY[index]}deg)`;
-  }
+  //   this.printImageTransforms[index] = `rotateX(${this.rotationX[index]}deg) rotateY(${this.rotationY[index]}deg)`;
+  // }
 }

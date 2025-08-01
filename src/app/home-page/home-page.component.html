@@ -36,15 +36,15 @@
   (touchend)="onTouchEnd()"
   >
 <!-- زر السابق -->
-<button 
-  (click)="scrollPrev()" 
+<button
+  (click)="scrollPrev()"
   class="absolute left-2 top-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 rounded-full shadow dark:shadow-lg w-10 h-10 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 z-10">
   <fa-icon [icon]="faChevronLeft" class="text-gray-700 dark:text-gray-300 text-lg"></fa-icon>
 </button>
 
 <!-- زر التالي -->
-<button 
-  (click)="scrollNext()" 
+<button
+  (click)="scrollNext()"
   class="absolute right-2 top-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 rounded-full shadow dark:shadow-lg w-10 h-10 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 z-10">
   <fa-icon [icon]="faChevronRight" class="text-gray-700 dark:text-gray-300 text-lg"></fa-icon>
 </button>
@@ -62,9 +62,9 @@
 <div [routerLink]="['/book', getBookSlug(book.product_name)]"
       class="relative w-full sm:w-[160px] md:w-[240px] h-full sm:h-[300px] md:h-[350px] lg:h-[400px] bg-cover bg-center rounded-lg shadow-lg dark:shadow-black/50 hover:contrast-75 cursor-pointer overflow-hidden">
 <img [routerLink]="['/book', getBookSlug(book.product_name)]"
-      [src]="uploadsBaseUrl + '/' + book.product_image + '.jpg'" 
+      [src]="uploadsBaseUrl + '/' + book.product_image + '.jpg'"
       (error)="handleImageError($event)"
-      [alt]="book.product_name" 
+      [alt]="book.product_name"
       class="rounded-lg w-full sm:w-[160px] md:w-[240px] h-full sm:h-[300px] md:h-[350px] lg:h-[370px] cursor-pointer object-cover object-center"
 />
     <!-- <h2
@@ -83,14 +83,6 @@
   <div
     class="print-image-container"
     *ngFor="let img of printImages; let i = index"
-    (mousedown)="startDrag($event, i)"
-    (mouseup)="stopDrag(i)"
-    (mouseleave)="stopDrag(i)"
-    (mousemove)="onDrag($event, i)"
-    (touchstart)="startDrag($event, i)"
-    (touchend)="stopDrag(i)"
-    (touchcancel)="stopDrag(i)"
-    (touchmove)="onDrag($event, i)"
   >
     <div class="rotating-dashed-rays"></div>
     <div class="print-image-shadow"></div>

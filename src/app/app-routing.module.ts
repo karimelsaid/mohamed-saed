@@ -16,6 +16,7 @@ import { CartComponent } from './cart/cart.component';
 import { FavoritesComponent } from './favorites/favorites.component';
 import { AdminDashboardComponent } from './admin/admin-dashboard/admin-dashboard.component';
 import { NotFoundComponent } from './not-found/not-found.component';
+import { AdminMerchantsComponent } from './admin/admin-merchants.component';
 import { LoginComponent } from './auth/login/login.component';
 import { RegisterComponent } from './auth/register/register.component';
 import { UserOrdersComponent } from './user-orders/user-orders.component';
@@ -41,6 +42,7 @@ const routes: Routes = [
   { path: 'History-Biographies', component: TarekhComponent },
   { path: 'Dictionaries-References', component: QamosComponent },
   { path: 'ControlPanel', component: AdminDashboardComponent },
+  { path: 'admin/merchants', component: AdminMerchantsComponent },
   { path: 'book/:name', component: BookDetailsComponent },
   { path: '', redirectTo: '/Home', pathMatch: 'full' },  // الصفحة الرئيسية هي "home" افتراضيًا
   { path: 'research', component: SearchResultsComponent }, // المسار الذي نوجه إليه المستخدم عند البحث

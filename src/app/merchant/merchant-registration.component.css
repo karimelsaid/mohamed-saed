@@ -1,0 +1,36 @@
+/* Basic styling for merchant registration form */
+form {
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="file"],
+button {
+  width: 100%;
+  padding: 8px;
+  margin-top: 4px;
+  margin-bottom: 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+button {
+  background-color: #2563eb;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+button:disabled {
+  background-color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.text-error {
+  color: #dc2626;
+  font-size: 0.875rem;
+  margin-top: -8px;
+  margin-bottom: 8px;
+}

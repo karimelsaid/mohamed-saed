@@ -586,6 +586,40 @@ async function saveFreeShippingRules(req, res) {
   }
 }
 
+const Merchant = require('../models/Merchant.model');
+
+// Admin: List all merchants
+async function listMerchants(req, res) {
+  try {
+    const merchants = await Merchant.find().sort({ createdAt: -1 });
+    res.json({ success: true, merchants });
+  } catch (error) {
+    console.error('Error in listMerchants:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+}
+
+// Admin: Approve or reject merchant
+async function updateMerchantApproval(req, res) {
+  try {
+    const { merchantId } = req.params;
+    const { approved } = req.body;
+    if (typeof approved !== 'boolean') {
+      return res.status(400).json({ success: false, message: 'Approved must be boolean' });
+    }
+    const merchant = await Merchant.findById(merchantId);
+    if (!merchant) {
+      return res.status(404).json({ success: false, message: 'Merchant not found' });
+    }
+    merchant.approved = approved;
+    await merchant.save();
+    res.json({ success: true, message: `Merchant ${approved ? 'approved' : 'rejected'} successfully` });
+  } catch (error) {
+    console.error('Error in updateMerchantApproval:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+}
+
 module.exports = {
   upload,
   addProduct,
@@ -598,5 +632,7 @@ module.exports = {
   getPromotionDates,
   updatePromotionDates,
   getFreeShippingRules,
-  saveFreeShippingRules
+  saveFreeShippingRules,
+  listMerchants,
+  updateMerchantApproval
 };

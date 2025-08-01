@@ -7,6 +7,7 @@ import { take } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { NotificationService } from '../../services/notification.service';
 import * as XLSX from 'xlsx';
+import { AdminMerchantsComponent } from '../admin-merchants.component';
 import { FreeShippingRulesComponent } from './free-shipping-rules.component';
 
 interface Order {
@@ -98,11 +99,13 @@ interface PrintOrder {
   styleUrls: ['./admin-dashboard.component.css']
 })
 
+
+
 export class AdminDashboardComponent implements OnInit {
   orders: GroupedOrder[] = [];
   requestedBooks: RequestedBook[] = [];
   isAdmin: boolean = false;
-  currentView: 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' = 'orders';
+  currentView: 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' = 'orders';
 
   manualPromotionStartDate: string = '';
   manualPromotionEndDate: string = '';
@@ -200,7 +203,7 @@ export class AdminDashboardComponent implements OnInit {
     });
   }
 
-  switchView(view: 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules'): void {
+  switchView(view: 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants'): void {
     this.currentView = view;
     if (view === 'orders') {
       this.loadOrders();
@@ -210,6 +213,8 @@ export class AdminDashboardComponent implements OnInit {
       this.loadPrintOrders();
     } else if (view === 'products') {
       this.loadProducts();
+    } else if (view === 'merchants') {
+      // No data loading needed currently for merchants
     } else if (view === 'newPage') {
       // No data loading needed for newPage currently
     } else if (view === 'freeShippingRules') {

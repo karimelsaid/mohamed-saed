@@ -40,6 +40,8 @@ router.post('/update-promotion-dates', adminController.updatePromotionDates);
 // New route to get current promotion dates
 router.get('/promotion-dates', adminController.getPromotionDates);
 
+router.get('/merchants', adminController.listMerchants);
+router.patch('/merchants/:merchantId/approval', adminController.updateMerchantApproval);
 
 router.get('/free-shipping-rules', adminController.getFreeShippingRules);
 router.post('/free-shipping-rules', adminController.saveFreeShippingRules);

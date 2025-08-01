@@ -15,8 +15,12 @@ import { environment } from '../../../environments/environment';
 })
 export class RegisterComponent {
   governorates: any[] = governoratesData.governorates;
-  cities: string[] = [];
-  
+  buyerCities: string[] = [];
+  merchantCities: string[] = [];
+
+  isMerchantRegistration: boolean = false;
+
+  // Buyer user data
   user = {
     username: '',
     email: '',
@@ -25,6 +29,19 @@ export class RegisterComponent {
     governorate: '',
     city: '',
     village: ''
+  };
+
+  // Merchant user data
+  merchantUser = {
+    libraryName: '',
+    email: '',
+    password: '',
+    phone: '',
+    governorate: '',
+    city: '',
+    village: '',
+    taxNumber: '',
+    logoFile: null as File | null
   };
 
   confirmPassword: string = '';
@@ -81,11 +98,18 @@ export class RegisterComponent {
     });
   }
 
-  onGovernorateChange() {
-    const selectedGov = this.governorates.find(g => g.governorate_name === this.user.governorate);
-    this.cities = selectedGov ? selectedGov.cities : [];
-    this.user.city = ''; // Reset city when governorate changes
+  onGovernorateChange(formType: 'merchant' | 'buyer') {
+    if (formType === 'merchant') {
+      const selectedGov = this.governorates.find(g => g.governorate_name === this.merchantUser.governorate);
+      this.merchantCities = selectedGov ? selectedGov.cities : [];
+      this.merchantUser.city = ''; // Reset city when governorate changes
+    } else if (formType === 'buyer') {
+      const selectedGov = this.governorates.find(g => g.governorate_name === this.user.governorate);
+      this.buyerCities = selectedGov ? selectedGov.cities : [];
+      this.user.city = ''; // Reset city when governorate changes
+    }
   }
+
 
   validateLocation() {
     return this.user.governorate && this.user.city;
@@ -111,18 +135,34 @@ export class RegisterComponent {
   validatePhone() {
     const egyptPhoneRegex = /^(010|011|012|015)[0-9]{8}$/;
     this.phoneTouched = true;
-    this.phoneValid = egyptPhoneRegex.test(this.user.phone);
+    if (this.isMerchantRegistration) {
+      this.phoneValid = egyptPhoneRegex.test(this.merchantUser.phone);
+    } else {
+      this.phoneValid = egyptPhoneRegex.test(this.user.phone);
+    }
   }
 
   // التحقق من البريد الإلكتروني
   validateEmail() {
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;
     this.emailTouched = true;
-    this.emailValid = emailRegex.test(this.user.email);
+    if (this.isMerchantRegistration) {
+      this.emailValid = emailRegex.test(this.merchantUser.email);
+    } else {
+      this.emailValid = emailRegex.test(this.user.email);
+    }
   }
 
   // دالة التسجيل
   onRegister() {
+    if (this.isMerchantRegistration) {
+      this.registerMerchant();
+    } else {
+      this.registerBuyer();
+    }
+  }
+
+  registerBuyer() {
     this.checkPasswordMatch();
     this.validatePassword();
     this.validatePhone();
@@ -133,34 +173,81 @@ export class RegisterComponent {
       return;
     }
 
-    // إرسال البيانات إلى الباك اند (على سبيل المثال، AuthService)
-    this.message = ''; // مسح الرسائل السابقة
+    this.message = ''; // Clear previous messages
     console.log('تم التسجيل بالبيانات:', this.user);
 
-    // إرسال البيانات باستخدام خدمة AuthService
     this.authService.createAccount(
-      this.user.username, 
-      this.user.email, 
-      this.user.password, 
+      this.user.username,
+      this.user.email,
+      this.user.password,
       this.user.phone,
       this.user.governorate,
       this.user.city,
       this.user.village || ''
     )
-      .subscribe({
-        next: (response) => {
-          this.message = '✅ تم إنشاء الحساب بنجاح!';
-          // التوجيه إلى صفحة تسجيل الدخول بعد إنشاء الحساب
-          this.router.navigate(['/login']);
-        },
-        error: (error) => {
-          if (error.status === 400 && error.error.message === 'هذا البريد الإلكتروني مسجل من قبل.') {
-            this.message = '❌ هذا البريد الإلكتروني مسجل من قبل.';
-          } else {
-            this.message = '❌ حدث خطأ أثناء إنشاء الحساب. يرجى المحاولة لاحقًا.';
-          }
-          console.error('Error creating account:', error);
+    .subscribe({
+      next: (response) => {
+        this.message = '✅ تم إنشاء الحساب بنجاح!';
+        this.router.navigate(['/login']);
+      },
+      error: (error) => {
+        if (error.status === 400 && error.error.message === 'هذا البريد الإلكتروني مسجل من قبل.') {
+          this.message = '❌ هذا البريد الإلكتروني مسجل من قبل.';
+        } else {
+          this.message = '❌ حدث خطأ أثناء إنشاء الحساب. يرجى المحاولة لاحقًا.';
         }
-      });
+        console.error('Error creating account:', error);
+      }
+    });
+  }
+
+  registerMerchant() {
+    this.checkPasswordMatch();
+    this.validatePassword();
+    this.validatePhone();
+    this.validateEmail();
+
+    if (this.passwordMismatch || this.passwordInvalid || !this.phoneValid || !this.emailValid) {
+      this.message = '❌ هناك خطأ في البيانات المدخلة. يرجى التحقق من جميع الحقول.';
+      return;
+    }
+
+    if (!this.merchantUser.libraryName) {
+      this.message = '❌ يرجى إدخال اسم المكتبة.';
+      return;
+    }
+
+    if (!this.merchantUser.logoFile) {
+      this.message = '❌ يرجى رفع شعار المكتبة.';
+      return;
+    }
+
+    this.message = ''; // Clear previous messages
+
+    const formData = new FormData();
+    formData.append('name', this.merchantUser.libraryName);
+    formData.append('email', this.merchantUser.email);
+    formData.append('password', this.merchantUser.password);
+    formData.append('phone', this.merchantUser.phone);
+    formData.append('governorate', this.merchantUser.governorate);
+    formData.append('city', this.merchantUser.city);
+    formData.append('village', this.merchantUser.village || '');
+    formData.append('taxNumber', this.merchantUser.taxNumber || '');
+    formData.append('logo', this.merchantUser.logoFile);
+
+    this.authService.registerMerchant(formData).subscribe({
+      next: (response) => {
+        this.message = '✅ تم إنشاء حساب التاجر بنجاح! في انتظار موافقة الأدمن.';
+        this.router.navigate(['/login']);
+      },
+      error: (error) => {
+        if (error.status === 400 && error.error.message === 'هذا البريد الإلكتروني مسجل من قبل.') {
+          this.message = '❌ هذا البريد الإلكتروني مسجل من قبل.';
+        } else {
+          this.message = '❌ حدث خطأ أثناء إنشاء الحساب. يرجى المحاولة لاحقًا.';
+        }
+        console.error('Error creating merchant account:', error);
+      }
+    });
   }
 }

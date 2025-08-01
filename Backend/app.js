@@ -18,6 +18,7 @@ const paymentRoutes = require('./routes/payment.routes');
 const printRoutes = require('./routes/print.routes');
 const chatAiRoutes = require('./routes/chat-ai.routes');
 const adminRoutes = require('./routes/admin.routes');
+const merchantRoutes = require('./routes/merchant.routes');
 const app = express();
 const port = process.env.PORT || 3000;
 const isProduction = process.env.NODE_ENV === 'production';
@@ -45,7 +46,7 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
-  
+
 // Dedicated route to serve files with Content-Disposition attachment to force download
 app.get('/uploads/:filename', (req, res) => {
   const encodedFilename = req.params.filename;
@@ -97,6 +98,7 @@ app.use('/api', paymentRoutes);
 
 app.use('/api/chat-ai', chatAiRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/merchant', merchantRoutes);
 
 // Delete print order and associated file
 const mongoose = require('mongoose');

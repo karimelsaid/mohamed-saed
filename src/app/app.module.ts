@@ -30,6 +30,7 @@ import { ChatWindowComponent } from './components/chat-window/chat-window.compon
 import { NavbarIconsComponent } from './navbar-icons/navbar-icons.component';
 import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
 import { FreeShippingRulesComponent } from './admin/admin-dashboard/free-shipping-rules.component';
+import { AdminMerchantsComponent } from './admin/admin-merchants.component';
 
 @NgModule({
   declarations: [
@@ -63,7 +64,8 @@ import { FreeShippingRulesComponent } from './admin/admin-dashboard/free-shippin
     RegisterComponent,
     LoginComponent,
     NavbarIconsComponent,
-    FreeShippingRulesComponent
+    FreeShippingRulesComponent,
+    AdminMerchantsComponent
   ],
   providers: [
     provideHttpClient(withInterceptorsFromDi()), // استخدام provideHttpClient بدلاً من HttpClientModule

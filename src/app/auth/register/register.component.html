@@ -1,30 +1,39 @@
 <div class="pt-10 md:pt-40 mb-24 md:mb-4">
   <div class="max-w-md mx-auto mt-10 p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-300 dark:border-gray-700">
-   
-    <h2 class="text-2xl font-bold mb-4 text-center text-gray-900 dark:text-gray-200">إنشاء حساب</h2>
-    <div class="mt-6 flex justify-center rtl">
-      <div id="googleSignInDiv"></div>
-      </div>
 
-    
-    <form (ngSubmit)="onRegister()" #registerForm="ngForm">
+    <h2 class="text-2xl font-bold mb-4 text-center text-gray-900 dark:text-gray-200">إنشاء حساب</h2>
+  <div [class.hidden]="isMerchantRegistration" class="m-6 flex justify-center rtl">
+  <div id="googleSignInDiv"></div>
+</div>
+
+
+    <div class="flex justify-center mb-6 space-x-4 rtl space-x-reverse">
+      <button (click)="isMerchantRegistration = false" [class.bg-blue-600]="!isMerchantRegistration" [class.bg-gray-300]="isMerchantRegistration" class="px-4 py-2 rounded text-white">
+        حساب مشتري
+      </button>
+      <button (click)="isMerchantRegistration = true" [class.bg-blue-600]="isMerchantRegistration" [class.bg-gray-300]="!isMerchantRegistration" class="px-4 py-2 rounded text-white">
+        حساب تاجر
+      </button>
+    </div>
+
+      <form *ngIf="!isMerchantRegistration" (ngSubmit)="onRegister()" #registerForm="ngForm">
       <!-- اسم المستخدم -->
       <div class="mb-4">
         <label class="block mb-1 text-sm font-medium text-gray-900 dark:text-gray-300">الاسم</label>
         <input type="text" name="name" [(ngModel)]="user.username" required
           class="w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400" #nameInput="ngModel"/>
       </div>
-        <!-- رسائل خطأ -->
-  <div *ngIf="nameInput.invalid && nameInput.touched" class="text-red-500 dark:text-red-400 text-sm">
-    ❌ الاسم يجب أن لا يكون فارغًا.
-  </div>
+      <!-- رسائل خطأ -->
+      <div *ngIf="nameInput.invalid && nameInput.touched" class="text-red-500 dark:text-red-400 text-sm">
+        ❌ الاسم يجب أن لا يكون فارغًا.
+      </div>
 
       <!-- البريد الإلكتروني -->
       <div class="mb-4">
         <label class="block mb-1 text-sm font-medium text-gray-900 dark:text-gray-300">البريد الإلكتروني</label>
-          <input type="email" name="email" [(ngModel)]="user.email" required
-          [pattern]="'^[a-zA-Z0-9._%+-]+@[a-zAZ0-9.-]+\.[a-zA-Z]{2,}$'" 
-          #email="ngModel" 
+        <input type="email" name="email" [(ngModel)]="user.email" required
+          [pattern]="'^[a-zA-Z0-9._%+-]+@[a-zAZ0-9.-]+\.[a-zA-Z]{2,}$'"
+          #email="ngModel"
           class="w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 border rounded-lg border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
           [ngClass]="{
             'border-blue-500 focus:ring-blue-500': email.valid && email.touched,
@@ -44,12 +53,12 @@
       <div class="mb-4">
         <label class="block mb-1 text-sm font-medium text-gray-900 dark:text-gray-300">رقم الهاتف</label>
         <input type="tel" name="phone" [(ngModel)]="user.phone" required
-               (input)="validatePhone()"
-               class="w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 border rounded-lg border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
-               [ngClass]="{
-                 'border-blue-500 focus:ring-blue-500': phoneValid && phoneTouched,
-                 'border-red-500 focus:ring-red-500': !phoneValid && phoneTouched
-               }" />
+          (input)="validatePhone()"
+          class="w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 border rounded-lg border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+          [ngClass]="{
+            'border-blue-500 focus:ring-blue-500': phoneValid && phoneTouched,
+            'border-red-500 focus:ring-red-500': !phoneValid && phoneTouched
+          }" />
 
         <!-- رسائل خطأ أو نجاح الهاتف -->
         <div *ngIf="!phoneValid && phoneTouched" class="text-red-500 dark:text-red-400 text-sm">
@@ -59,52 +68,11 @@
           ✔️ رقم الهاتف صحيح!
         </div>
       </div>
-      <!-- اسعار الشحن -->
-      <!-- <div>
-        "shipping_cost": [
-  {
-    "الصعيد": [
-        { "name": "الفيوم", "shipping_cost": 100 },
-        { "name": "بني سويف", "shipping_cost": 100 },
-        { "name": "المنيا", "shipping_cost": 100 },
-        { "name": "أسيوط", "shipping_cost": 100 },
-        { "name": "سوهاج", "shipping_cost": 100 },
-        { "name": "قنا", "shipping_cost": 100 },
-        { "name": "الأقصر", "shipping_cost": 100 },
-        { "name": "أسوان", "shipping_cost": 100 },
-        { "name": "الوادي الجديد", "shipping_cost": 100 }
-      ],
-      "الدلتا": [
-        { "name": "الدقهلية", "shipping_cost": 60 },
-        { "name": "كفر الشيخ", "shipping_cost": 60 },
-        { "name": "الغربية", "shipping_cost": 60 },
-        { "name": "المنوفية", "shipping_cost": 60 },
-        { "name": "البحيرة", "shipping_cost": 60 },
-        { "name": "الشرقية", "shipping_cost": 60 }
-      ],
-      "أخرى": [
-        { "name": "القاهرة", "shipping_cost": 80 },
-        { "name": "الجيزة", "shipping_cost": 80 },
-        { "name": "الإسكندرية", "shipping_cost": 80 },
-        { "name": "القليوبية", "shipping_cost": 80 },
-        { "name": "الإسماعيلية", "shipping_cost": 80 },
-        { "name": "السويس", "shipping_cost": 80 },
-        { "name": "بورسعيد", "shipping_cost": 80 },
-        { "name": "دمياط", "shipping_cost": 80 },
-        { "name": "البحر الأحمر", "shipping_cost": 80 },
-        { "name": "مطروح", "shipping_cost": 80 },
-        { "name": "شمال سيناء", "shipping_cost": 80 },
-        { "name": "جنوب سيناء", "shipping_cost": 80 }
-      ]
-  }
-  
-]
-      </div> -->
-      <!-- المحافظة -->
+
       <div class="mb-4">
         <label class="block mb-1 text-sm font-medium text-gray-900 dark:text-gray-300">المحافظة</label>
         <select name="governorate" [(ngModel)]="user.governorate" required
-                (change)="onGovernorateChange()"
+                (change)="onGovernorateChange('buyer')"
                 class="w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400">
           <option value="" disabled selected>اختر المحافظة</option>
           <option *ngFor="let gov of governorates" [value]="gov.governorate_name">
@@ -116,11 +84,11 @@
       <!-- المدينة -->
       <div class="mb-4">
         <label class="block mb-1 text-sm font-medium text-gray-900 dark:text-gray-300">المدينة</label>
-        <select name="city" [(ngModel)]="user.city" required
+      <select name="city" [(ngModel)]="buyerCities" required
                 [disabled]="!user.governorate"
                 class="w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400">
           <option value="" disabled selected>اختر المدينة</option>
-          <option *ngFor="let city of cities" [value]="city">
+          <option *ngFor="let city of buyerCities" [value]="city">
             {{ city }}
           </option>
         </select>
@@ -130,7 +98,7 @@
       <div class="mb-4">
         <label class="block mb-1 text-sm font-medium text-red-600 dark:text-red-400">تفاصيل العنوان الإضافية *</label>
         <input type="text" name="addressDetails" [(ngModel)]="user.village" required
-               class="w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400" />
+          class="w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400" />
       </div>
 
       <!-- كلمة المرور -->
@@ -169,11 +137,155 @@
       </div>
 
       <!-- زر الإرسال -->
-      <button type="submit" 
+      <button type="submit"
         [disabled]="registerForm.invalid || passwordMismatch || !email.valid || !phoneValid || !user.village"
         class="w-full bg-blue-600 dark:bg-[#0a1325] text-white py-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-800 transition duration-200"
         [ngClass]="{'opacity-50 cursor-not-allowed': registerForm.invalid || passwordMismatch || !email.valid || !phoneValid || !user.village}">
         إنشاء الحساب
+      </button>
+    </form>
+
+
+    <!-- التاجر -->
+    <form *ngIf="isMerchantRegistration" (ngSubmit)="onRegister()" #merchantForm="ngForm" enctype="multipart/form-data" class="mt-6">
+      <!-- اسم المكتبة -->
+      <div class="mb-4">
+        <label class="block mb-1 text-sm font-medium text-gray-900 dark:text-gray-300">اسم المكتبة</label>
+        <input type="text" name="libraryName" [(ngModel)]="merchantUser.libraryName" required
+          class="w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400" #libraryNameInput="ngModel"/>
+      </div>
+      <!-- رسائل خطأ -->
+      <div *ngIf="libraryNameInput.invalid && libraryNameInput.touched" class="text-red-500 dark:text-red-400 text-sm">
+        ❌ اسم المكتبة يجب أن لا يكون فارغًا.
+      </div>
+
+      <!-- البريد الإلكتروني -->
+      <div class="mb-4">
+        <label class="block mb-1 text-sm font-medium text-gray-900 dark:text-gray-300">البريد الإلكتروني</label>
+        <input type="email" name="email" [(ngModel)]="merchantUser.email" required
+          [pattern]="'^[a-zA-Z0-9._%+-]+@[a-zAZ0-9.-]+\.[a-zA-Z]{2,}$'"
+          #merchantEmail="ngModel"
+          class="w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 border rounded-lg border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+          [ngClass]="{
+            'border-blue-500 focus:ring-blue-500': merchantEmail.valid && merchantEmail.touched,
+            'border-red-500 focus:ring-red-500': merchantEmail.invalid && merchantEmail.touched
+          }" (input)="validateEmail()"/>
+
+        <!-- رسائل خطأ البريد الإلكتروني -->
+        <div *ngIf="merchantEmail.invalid && merchantEmail.touched" class="text-red-500 dark:text-red-400 text-sm">
+          ❌ يرجى إدخال بريد إلكتروني صالح.
+        </div>
+        <div *ngIf="merchantEmail.valid && merchantEmail.touched" class="text-blue-500 dark:text-blue-400 text-sm">
+          ✔️ البريد الإلكتروني صحيح!
+        </div>
+      </div>
+
+      <!-- رقم الهاتف -->
+      <div class="mb-4">
+        <label class="block mb-1 text-sm font-medium text-gray-900 dark:text-gray-300">رقم الهاتف</label>
+        <input type="tel" name="phone" [(ngModel)]="merchantUser.phone" required
+          (input)="validatePhone()"
+          class="w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 border rounded-lg border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+          [ngClass]="{
+            'border-blue-500 focus:ring-blue-500': phoneValid && phoneTouched,
+            'border-red-500 focus:ring-red-500': !phoneValid && phoneTouched
+          }" />
+
+        <!-- رسائل خطأ أو نجاح الهاتف -->
+        <div *ngIf="!phoneValid && phoneTouched" class="text-red-500 dark:text-red-400 text-sm">
+          ❌ رقم الهاتف غير صالح. يجب أن يبدأ بـ 010 أو 011 أو 012 أو 015 ويحتوي على 11 رقمًا.
+        </div>
+        <div *ngIf="phoneValid && phoneTouched" class="text-blue-500 dark:text-blue-400 text-sm">
+          ✔️ رقم الهاتف صحيح!
+        </div>
+      </div>
+      <div class="mb-4">
+        <label class="block mb-1 text-sm font-medium text-gray-900 dark:text-gray-300">المحافظة</label>
+        <select name="governorate" [(ngModel)]="merchantUser.governorate" required
+                (change)="onGovernorateChange('merchant')"
+                class="w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400">
+          <option value="" disabled selected>اختر المحافظة</option>
+          <option *ngFor="let gov of governorates" [value]="gov.governorate_name">
+            {{ gov.governorate_name }}
+          </option>
+        </select>
+      </div>
+
+      <!-- المدينة -->
+      <div class="mb-4">
+        <label class="block mb-1 text-sm font-medium text-gray-900 dark:text-gray-300">المدينة</label>
+      <select name="city" [(ngModel)]="merchantUser.city" required
+                [disabled]="!merchantUser.governorate"
+                class="w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400">
+          <option value="" disabled selected>اختر المدينة</option>
+          <option *ngFor="let city of merchantCities" [value]="city">
+            {{ city }}
+          </option>
+        </select>
+      </div>
+
+      <!-- تفاصيل العنوان الإضافية (إجباري) -->
+      <div class="mb-4">
+        <label class="block mb-1 text-sm font-medium text-red-600 dark:text-red-400">تفاصيل العنوان الإضافية *</label>
+        <input type="text" name="addressDetails" [(ngModel)]="merchantUser.village" required
+          class="w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400" />
+      </div>
+
+      <!-- رقم التسجيل الضريبي (اختياري) -->
+      <div class="mb-4">
+        <label class="block mb-1 text-sm font-medium text-gray-900 dark:text-gray-300">رقم التسجيل الضريبي (اختياري)</label>
+        <input type="text" name="taxNumber" [(ngModel)]="merchantUser.taxNumber"
+          class="w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400" />
+      </div>
+
+      <!-- رفع شعار المكتبة -->
+      <div class="mb-4">
+        <label class="block mb-1 text-sm font-medium text-gray-900 dark:text-gray-300">شعار المكتبة</label>
+<input type="file" (change)="merchantUser.logoFile = $any($event.target).files && $any($event.target).files.length > 0 ? $any($event.target).files[0] : null" accept="image/*"
+          class="w-full text-gray-900 dark:text-gray-200" />
+      </div>
+
+      <!-- كلمة المرور -->
+      <div class="mb-4">
+        <label class="block mb-1 text-sm font-medium text-gray-900 dark:text-gray-300">كلمة المرور</label>
+        <input type="password" name="password" [(ngModel)]="merchantUser.password" required minlength="8" (input)="validatePassword()"
+          class="w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 border rounded-lg border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+          [ngClass]="{
+            'border-blue-500 focus:ring-blue-500': passwordValid && passwordTouched,
+            'border-red-500 focus:ring-red-500': passwordInvalid && passwordTouched
+          }" />
+        <!-- رسائل خطأ كلمة المرور -->
+        <div *ngIf="passwordInvalid && passwordTouched" class="text-red-500 dark:text-red-400 text-sm">
+          ❌ كلمة المرور يجب أن تكون على الأقل 8 أحرف ولا تحتوي على مسافات.
+        </div>
+      </div>
+
+      <!-- تأكيد كلمة المرور -->
+      <div class="mb-4">
+        <label class="block mb-1 text-sm font-medium text-gray-900 dark:text-gray-300">تأكيد كلمة المرور</label>
+        <input type="password" name="confirmPassword" [(ngModel)]="confirmPassword" required
+          [ngClass]="{
+            'border-red-500 focus:ring-red-500': passwordMismatch,
+            'border-blue-500 focus:ring-blue-500': !passwordMismatch && confirmPassword
+          }"
+          class="w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 border rounded-lg border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+          (blur)="passwordTouched = true" (input)="checkPasswordMatch()"/>
+
+        <!-- رسائل خطأ تطابق كلمة المرور -->
+        <div *ngIf="passwordMismatch && passwordTouched" class="text-red-500 dark:text-red-400 text-sm">
+          ❌ كلمتا المرور لا تتطابقان.
+        </div>
+        <div *ngIf="!passwordMismatch && confirmPassword" class="text-blue-500 dark:text-blue-400 text-sm">
+          ✔️ كلمتا المرور متطابقتان!
+        </div>
+      </div>
+
+      <!-- زر الإرسال -->
+      <button type="submit"
+        [disabled]="merchantForm.invalid || passwordMismatch || !merchantEmail.valid || !phoneValid || !merchantUser.village"
+        class="w-full bg-green-600 dark:bg-green-700 text-white py-2 rounded-lg hover:bg-green-700 dark:hover:bg-green-800 transition duration-200"
+        [ngClass]="{'opacity-50 cursor-not-allowed': merchantForm.invalid || passwordMismatch || !merchantEmail.valid || !phoneValid || !merchantUser.village}">
+        إنشاء حساب كتاجر
       </button>
     </form>
   </div>

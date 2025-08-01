@@ -1,0 +1,73 @@
+<div class="max-w-6xl mx-auto p-4">
+  <h2 class="text-2xl font-bold mb-6">لوحة تحكم التاجر</h2>
+
+  <section class="mb-8">
+    <h3 class="text-xl font-semibold mb-4">منتجاتي</h3>
+    <table class="min-w-full border border-gray-300 rounded">
+      <thead>
+        <tr class="bg-gray-200">
+          <th class="border border-gray-300 px-4 py-2">صورة المنتج</th>
+          <th class="border border-gray-300 px-4 py-2">اسم المنتج</th>
+          <th class="border border-gray-300 px-4 py-2">الكمية</th>
+          <th class="border border-gray-300 px-4 py-2">الفئة</th>
+          <th class="border border-gray-300 px-4 py-2">الوصف</th>
+          <th class="border border-gray-300 px-4 py-2">سعر البيع</th>
+          <th class="border border-gray-300 px-4 py-2">سعر الشراء</th>
+          <th class="border border-gray-300 px-4 py-2">شعار التاجر</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let product of products">
+          <td class="border border-gray-300 px-4 py-2">
+            <img *ngIf="product.product_image" [src]="product.product_image" alt="صورة المنتج" class="w-16 h-16 object-cover" />
+            <span *ngIf="!product.product_image">لا توجد صورة</span>
+          </td>
+          <td class="border border-gray-300 px-4 py-2">{{ product.product_name }}</td>
+          <td class="border border-gray-300 px-4 py-2">{{ product.product_quantity }}</td>
+          <td class="border border-gray-300 px-4 py-2">{{ product.product_category }}</td>
+          <td class="border border-gray-300 px-4 py-2">{{ product.product_description }}</td>
+          <td class="border border-gray-300 px-4 py-2">{{ product.product_price }}</td>
+          <td class="border border-gray-300 px-4 py-2">{{ product.price_cost }}</td>
+          <td class="border border-gray-300 px-4 py-2">
+            <img *ngIf="product.merchantLogo" [src]="product.merchantLogo" alt="شعار التاجر" class="w-12 h-12 object-contain" />
+            <span *ngIf="!product.merchantLogo">لا يوجد شعار</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h3 class="text-xl font-semibold mb-4">الطلبات</h3>
+    <table class="min-w-full border border-gray-300 rounded">
+      <thead>
+        <tr class="bg-gray-200">
+          <th class="border border-gray-300 px-4 py-2">اسم العميل</th>
+          <th class="border border-gray-300 px-4 py-2">البريد الإلكتروني</th>
+          <th class="border border-gray-300 px-4 py-2">الهاتف</th>
+          <th class="border border-gray-300 px-4 py-2">العنوان</th>
+          <th class="border border-gray-300 px-4 py-2">المنتجات</th>
+          <th class="border border-gray-300 px-4 py-2">الحالة</th>
+          <th class="border border-gray-300 px-4 py-2">تاريخ الطلب</th>
+          <th class="border border-gray-300 px-4 py-2">السعر الإجمالي</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let order of orders">
+          <td class="border border-gray-300 px-4 py-2">{{ order.customerName }}</td>
+          <td class="border border-gray-300 px-4 py-2">{{ order.email }}</td>
+          <td class="border border-gray-300 px-4 py-2">{{ order.phone }}</td>
+          <td class="border border-gray-300 px-4 py-2">{{ order.address }}</td>
+          <td class="border border-gray-300 px-4 py-2">
+            <ul>
+              <li *ngFor="let product of order.products">{{ product.product_name }} ({{ product.product_quantity }})</li>
+            </ul>
+          </td>
+          <td class="border border-gray-300 px-4 py-2">{{ order.status }}</td>
+          <td class="border border-gray-300 px-4 py-2">{{ order.orderDate | date:'short' }}</td>
+          <td class="border border-gray-300 px-4 py-2">{{ order.totalAmount }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+</div>

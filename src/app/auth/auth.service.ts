@@ -73,6 +73,10 @@ export class AuthService {
     });
   }
 
+  registerMerchant(formData: FormData): Observable<any> {
+    return this.http.post(`${this.apiUrl}/merchant/register`, formData);
+  }
+
   login(email: string, password: string): Observable<User> {
     return this.http.post<User>(`${this.apiUrl}/users/login`, { email, password }).pipe(
       tap((user: User) => {

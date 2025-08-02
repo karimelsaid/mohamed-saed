@@ -1,11 +1,15 @@
 import { Component, EventEmitter, Input, Output, ViewChild, ElementRef, HostListener } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { faSearch, faFilter } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 
 @Component({
   selector: 'app-search-bar',
   templateUrl: './search-bar.component.html',
   styleUrls: ['./search-bar.component.css'],
-  standalone: false
+  standalone: true,
+  imports: [CommonModule, FormsModule, FontAwesomeModule]
 })
 export class SearchBarComponent {
   @Input() allBooks: any[] = [];

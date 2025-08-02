@@ -22,6 +22,7 @@ import { RegisterComponent } from './auth/register/register.component';
 import { UserOrdersComponent } from './user-orders/user-orders.component';
 import { PrintComponent } from './print/print.component';
 import { BookDetailsComponent } from './book-details/book-details.component';
+import { MerchantDashboardComponent } from './merchant/merchant-dashboard.component';
 
 
 import { AboutComponent } from './about/about.component';
@@ -43,6 +44,7 @@ const routes: Routes = [
   { path: 'Dictionaries-References', component: QamosComponent },
   { path: 'ControlPanel', component: AdminDashboardComponent },
   { path: 'admin/merchants', component: AdminMerchantsComponent },
+  { path: 'merchant/dashboard', component: MerchantDashboardComponent },
   { path: 'book/:name', component: BookDetailsComponent },
   { path: '', redirectTo: '/Home', pathMatch: 'full' },  // الصفحة الرئيسية هي "home" افتراضيًا
   { path: 'research', component: SearchResultsComponent }, // المسار الذي نوجه إليه المستخدم عند البحث

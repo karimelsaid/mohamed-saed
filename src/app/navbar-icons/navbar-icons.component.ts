@@ -1,47 +1,72 @@
-import { Component, OnInit, ChangeDetectorRef, ViewChild } from '@angular/core';
-import { Router, NavigationEnd } from '@angular/router';
-import { faHeart, faFilePdf, faCartPlus, faClipboardList, faTachometerAlt, faBell, faTrash, faUser } from '@fortawesome/free-solid-svg-icons';
-import { DataService } from '../services/data.service';
+import { Component, OnInit, ViewChild, ChangeDetectorRef, Output, EventEmitter, ElementRef, HostListener, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
+import { Router, RouterLink, RouterLinkActive, NavigationEnd } from '@angular/router';
+import { CommonModule } from '@angular/common';
+import { faBars, faClose, faHome, faBook, faFilePdf, faUser, faChevronUp, faChevronDown, faSearch, faHeart, faCartPlus, faClipboardList, faTachometerAlt, faBell, faTrash, faStore, faFilter } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import { AccountModalComponent } from '../auth/account-modal/account-modal.component';
 import { AuthService } from '../auth/auth.service';
 import { NotificationService, Notification } from '../services/notification.service';
-import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
-import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { SharedModule } from '../shared/shared.module';
+import { DataService } from '../services/data.service';
 
 @Component({
   selector: 'app-navbar-icons',
-  standalone: true,
-  imports: [CommonModule, RouterModule, FontAwesomeModule, SharedModule],
   templateUrl: './navbar-icons.component.html',
-  styleUrls: ['./navbar-icons.component.css']
+  styleUrls: ['./navbar-icons.component.css'],
+  standalone: true,
+  imports: [CommonModule, RouterLink, RouterLinkActive, FontAwesomeModule, AccountModalComponent],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA]
 })
 export class NavbarIconsComponent implements OnInit {
   @ViewChild('accountModal') accountModal!: any;
+  @ViewChild('inputElement') inputElement!: ElementRef;
+  @Output() searchExecuted = new EventEmitter<{ query: string, filter: string }>();
 
-
-  faHeart = faHeart;
+  faFilter = faFilter;
+  faBars = faBars;
+  faClose = faClose;
+  faHome = faHome;
+  faBook = faBook;
   faFilePdf = faFilePdf;
+  faUser = faUser;
+  faChevronDown = faChevronDown;
+  faChevronUp = faChevronUp;
+  faSearch = faSearch;
+  faHeart = faHeart;
   faCartPlus = faCartPlus;
   faClipboardList = faClipboardList;
   faTachometerAlt = faTachometerAlt;
   faBell = faBell;
   faTrash = faTrash;
-  faUser = faUser;
+  faStore = faStore;
 
+  openBars = false;
+  scrollBook = true;
+  y: number = 0;
+  searchQuery: string = ''; // القيمة المدخلة في خانة البحث
+  searchResults: any[] = []; // نتائج البحث المعروضة
+  allBooks: any[] = []; // جميع الكتب في الموقع
   isLoggedIn: boolean = false;
+  show = false;
   favoritesCount: number = 0;
   cartCount: number = 0;
   orderCount: number = 0;
   isAdmin: boolean = false;
+  isMerchant: boolean = false; // New property for merchant check
 
+  showAccountModal: boolean = false;
+
+  // Notification related
   notifications: (Notification & { removing?: boolean })[] = [];
   showNotificationsDropdown: boolean = false;
   unreadCount: number = 0;
 
+  // Add these properties to track active states
   isOrdersActive: boolean = false;
   isAccountActive: boolean = false;
-  showAccountModal: boolean = false;
+
+  isDarkMode: boolean = false; // Track dark mode state
+  showFilterDropdown: boolean = false;
+  selectedFilter: string = 'all';
 
   constructor(
     private router: Router,
@@ -55,6 +80,7 @@ export class NavbarIconsComponent implements OnInit {
     this.authService.user$.subscribe((user) => {
       this.isLoggedIn = !!user;
       this.isAdmin = user?.email === 'admin@example.com';
+      this.isMerchant = user?.role === 'merchant'; // Set merchant flag
 
       if (user) {
         this.authService.loadUserData(user.id);
@@ -93,6 +119,120 @@ export class NavbarIconsComponent implements OnInit {
     });
   }
 
+  toggleFilterDropdown() {
+    this.showFilterDropdown = !this.showFilterDropdown;
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent) {
+    const target = event.target as HTMLElement;
+    const clickedInsideMenu = target.closest('.rtl.md\\:hidden.z-50.relative.text-blue-950.dark\\:text-blue-100');
+    const clickedOnBarsIcon = target.closest('.fa-bars');
+    if (!clickedInsideMenu && !clickedOnBarsIcon) {
+      this.openBars = false;
+    }
+  }
+
+  selectFilter(filter: string) {
+    this.selectedFilter = filter;
+    this.showFilterDropdown = false;
+    this.onSearchExecuted({ query: this.searchQuery.trim(), filter: this.selectedFilter });
+  }
+
+  onSearchExecuted(event: { query: string; filter: string }) {
+    const query = event.query;
+    const filter = event.filter;
+    this.searchQuery = query;
+    this.selectedFilter = filter;
+    this.router.navigate(['/research'], { queryParams: { q: query, filter: filter } });
+  }
+
+  emitSearch() {
+    this.searchExecuted.emit({ query: this.searchQuery.trim(), filter: this.selectedFilter });
+  }
+  toggleDarkMode(): void {
+    this.isDarkMode = !this.isDarkMode;
+    localStorage.setItem('darkMode', this.isDarkMode.toString());
+    if (this.isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }
+
+  toggleAccountModal(): void {
+    this.showAccountModal = !this.showAccountModal;
+    this.isAccountActive = this.showAccountModal;
+  }
+
+  closeAccountModal(): void {
+    this.showAccountModal = false;
+    this.isAccountActive = false;
+    this.cdr.markForCheck();
+  }
+
+  exitBarsrow(): void {
+    setTimeout(() => (this.scrollBook = !this.scrollBook), 50);
+  }
+
+  exitBars(): void {
+    setTimeout(() => (this.openBars = !this.openBars), 50);
+  }
+
+  onSearch(): void {
+    if (this.searchQuery.trim()) {
+      this.router.navigate(['/research'], { queryParams: { q: this.searchQuery.trim(), filter: this.selectedFilter } });
+      this.searchResults = []; // إخفاء الاقتراحات بعد تنفيذ البحث
+    }
+  }
+
+  selectSuggestion(productName: string): void {
+    this.searchQuery = productName;
+    this.searchResults = [];
+    this.onSearch(); // تنفيذ البحث تلقائيًا
+  }
+
+  private normalizeArabic(text: string): string {
+    return text
+      .replace(/[أإآ]/g, 'ا')
+      .replace(/[هة]/g, 'ه')
+      // Remove special characters except numbers and letters
+      .replace(/[^0-9a-zA-Z\u0600-\u06FF\s]/g, '')
+      // Remove extra spaces
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  // دالة التعامل مع الضغط على Enter
+  onEnterPress(event: KeyboardEvent): void {
+    if (event.key === 'Enter') {
+      this.onSearch(); // استدعاء دالة البحث عند الضغط على Enter
+      this.searchResults = []; // إخفاء الاقتراحات بعد الضغط على Enter
+      this.inputElement.nativeElement.blur(); // إزالة التركيز من حقل البحث بعد الضغط على Enter
+    }
+  }
+
+  @HostListener('window:resize', ['$event'])
+  onResize(event: any): void {
+    this.y = window.innerWidth;
+    if (this.y >= 768) {  // md breakpoint and above
+      this.openBars = true;
+    } else {
+      this.openBars = false;
+    }
+  }
+
+  closeModal(): void {
+    this.show = false;
+  }
+
+  goToOrders(): void {
+    this.closeModal();
+    this.router.navigate(['/requests']);
+    this.isOrdersActive = true;
+  }
+
+  // Notification methods
   toggleNotificationsDropdown(): void {
     this.showNotificationsDropdown = !this.showNotificationsDropdown;
   }
@@ -119,7 +259,7 @@ export class NavbarIconsComponent implements OnInit {
       });
     }).unsubscribe();
   }
-
+  
   openAccountModal(): void {
     this.accountModal.openModal();
     this.showAccountModal = true;

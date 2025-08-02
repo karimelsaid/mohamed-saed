@@ -1,14 +1,20 @@
 import { Component, HostListener, OnInit, ViewChild, ChangeDetectorRef, Output, EventEmitter } from '@angular/core';
 import { Router } from '@angular/router';
+import { CommonModule } from '@angular/common';
+import { RouterLink, RouterLinkActive } from '@angular/router';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { faBars, faClose, faHome, faBook, faFilePdf, faUser, faChevronUp, faChevronDown, faSearch,faHeart,faCartPlus,faClipboardList, faTachometerAlt, faBell, faTrash,faFilter } from '@fortawesome/free-solid-svg-icons';
 import { DataService } from '../services/data.service';
 import { AccountModalComponent } from '../auth/account-modal/account-modal.component';
 import { AuthService } from '../auth/auth.service';
 import { NotificationService, Notification } from '../services/notification.service';
+import { NavbarIconsComponent } from '../navbar-icons/navbar-icons.component';
+import { SearchBarComponent } from '../search-bar/search-bar.component';
 
 @Component({
   selector: 'app-navbar',
-  standalone: false,
+  standalone: true,
+  imports: [CommonModule, RouterLink, RouterLinkActive, FontAwesomeModule, AccountModalComponent, NavbarIconsComponent, SearchBarComponent],
   templateUrl: './navbar.component.html',
   styleUrls: ['./navbar.component.css']
 })
@@ -64,7 +70,7 @@ faFilter = faFilter;
    toggleFilterDropdown() {
     this.showFilterDropdown = !this.showFilterDropdown;
   }
-  
+
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent) {
     const target = event.target as HTMLElement;
@@ -87,7 +93,7 @@ faFilter = faFilter;
     this.selectedFilter = filter;
     this.router.navigate(['/research'], { queryParams: { q: query, filter: filter } });
   }
-  
+
   emitSearch() {
     this.searchExecuted.emit({ query: this.searchQuery.trim(), filter: this.selectedFilter });
   }
@@ -134,7 +140,7 @@ faFilter = faFilter;
     private notificationService: NotificationService,
     private cdr: ChangeDetectorRef
   ) {}
-  
+
   ngOnInit(): void {
     // Initialize dark mode from localStorage, default to false (light mode)
     const darkModeStored = localStorage.getItem('darkMode');

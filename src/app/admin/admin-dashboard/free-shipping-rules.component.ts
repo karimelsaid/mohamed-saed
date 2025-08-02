@@ -7,6 +7,7 @@ import { FreeShippingService, FreeShippingRules } from '../../services/free-ship
   selector: 'app-free-shipping-rules',
   templateUrl: './free-shipping-rules.component.html',
   styleUrls: ['./free-shipping-rules.component.css'],
+  standalone: true,
   imports: [CommonModule, FormsModule]
 })
 export class FreeShippingRulesComponent implements OnInit {

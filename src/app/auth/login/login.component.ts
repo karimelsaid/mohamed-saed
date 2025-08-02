@@ -96,7 +96,15 @@ export class LoginComponent {
           this.authService.setLoginStatus(true);
           this.authService.setUser(response.user);
 
-          setTimeout(() => this.router.navigate(['/']), 1000);
+          setTimeout(() => {
+            if (response.user.role === 'merchant') {
+              this.router.navigate(['/merchant/dashboard']);
+            } else if (response.user.role === 'admin') {
+              this.router.navigate(['/ControlPanel']);
+            } else {
+              this.router.navigate(['/Home']);
+            }
+          }, 1000);
         } else {
           this.message = '❌ حدث خطأ أثناء تسجيل الدخول';
           this.isSuccess = false;

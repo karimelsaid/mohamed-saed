@@ -18,9 +18,12 @@ const upload = multer({
 });
 
 // Register a new merchant
+const User = require('../models/User.model');
+const bcrypt = require('bcrypt');
+
 async function registerMerchant(req, res) {
   try {
-    const { name, email, phone, governorate, city, village, taxNumber } = req.body;
+    const { name, email, phone, governorate, city, village, taxNumber, password } = req.body;
     if (!name || !email) {
       return res.status(400).json({ success: false, message: 'Name and email are required' });
     }
@@ -29,6 +32,12 @@ async function registerMerchant(req, res) {
     const existingMerchant = await Merchant.findOne({ email });
     if (existingMerchant) {
       return res.status(400).json({ success: false, message: 'Merchant with this email already exists' });
+    }
+
+    // Check if user with email already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ success: false, message: 'User with this email already exists' });
     }
 
     let logoPath = '';
@@ -64,6 +73,21 @@ async function registerMerchant(req, res) {
     });
 
     await merchant.save();
+
+    // Create user account for merchant with role 'merchant'
+    const userPassword = password || 'defaultPassword123'; // Use provided password or default
+    const hashedPassword = await bcrypt.hash(userPassword, 12);
+    const user = new User({
+      username: name,
+      email,
+      password: hashedPassword,
+      phone,
+      governorate,
+      city,
+      village,
+      role: 'merchant'
+    });
+    await user.save();
 
     res.json({ success: true, message: 'Merchant registered successfully. Awaiting admin approval.' });
   } catch (error) {

@@ -1,12 +1,15 @@
 import { Component, OnInit, Output, EventEmitter } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { faUserCircle, faEnvelope, faPhoneAlt, faSignOutAlt, faSignInAlt, faUserPlus, faClipboardList } from '@fortawesome/free-solid-svg-icons';
 import { AuthService } from '../auth.service';
 import { ChangeDetectorRef } from '@angular/core';
 
 @Component({
   selector: 'app-account-modal',
-  standalone: false,
+  standalone: true,
+  imports: [CommonModule, FontAwesomeModule],
   templateUrl: './account-modal.component.html',
   styleUrls: ['./account-modal.component.css']
 })

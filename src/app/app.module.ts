@@ -10,7 +10,6 @@ import { AamalComponent } from './book-list/aamal/aamal.component';
 import { FitComponent } from './book-list/fit/fit.component';
 import { FenonComponent } from './book-list/fenon/fenon.component';
 import { ChildComponent } from './book-list/child/child.component';
-import { NavbarComponent } from './navbar/navbar.component';
 import {FontAwesomeModule} from '@fortawesome/angular-fontawesome';
 import { PrintComponent } from './print/print.component'
 import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
@@ -19,18 +18,15 @@ import { QamosComponent } from './book-list/qamos/qamos.component';
 import {FormsModule} from '@angular/forms';
 import { SearchResultsComponent } from './search-results/search-results.component';
 import { HomePageComponent } from './home-page/home-page.component';
-import { LoginComponent } from './auth/login/login.component';
-import { RegisterComponent } from './auth/register/register.component';
 import { SharedModule } from './shared/shared.module';
 import { FavoritesComponent } from './favorites/favorites.component';
 import { AdminDashboardComponent } from './admin/admin-dashboard/admin-dashboard.component';
 import { LocationStrategy, PathLocationStrategy } from '@angular/common';
-import { SearchBarComponent } from './search-bar/search-bar.component';
 import { ChatWindowComponent } from './components/chat-window/chat-window.component';
-import { NavbarIconsComponent } from './navbar-icons/navbar-icons.component';
 import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
-import { FreeShippingRulesComponent } from './admin/admin-dashboard/free-shipping-rules.component';
-import { AdminMerchantsComponent } from './admin/admin-merchants.component';
+import { NavbarModule } from './navbar/navbar.module';
+import { NavbarIconsModule } from './navbar-icons/navbar-icons.module';
+import { SearchBarModule } from './search-bar/search-bar.module';
 
 @NgModule({
   declarations: [
@@ -42,14 +38,12 @@ import { AdminMerchantsComponent } from './admin/admin-merchants.component';
     FitComponent,
     FenonComponent,
     ChildComponent,
-    NavbarComponent,
     PrintComponent,
     TarekhComponent,
     QamosComponent,
     SearchResultsComponent,
     HomePageComponent,
     FavoritesComponent,
-    SearchBarComponent,
     ChatWindowComponent,
     AdminDashboardComponent
   ],
@@ -61,11 +55,9 @@ import { AdminMerchantsComponent } from './admin/admin-merchants.component';
     FormsModule,
     SharedModule,
     NgxSkeletonLoaderModule,
-    RegisterComponent,
-    LoginComponent,
-    NavbarIconsComponent,
-    FreeShippingRulesComponent,
-    AdminMerchantsComponent
+    NavbarModule,
+    NavbarIconsModule,
+    SearchBarModule
   ],
   providers: [
     provideHttpClient(withInterceptorsFromDi()), // استخدام provideHttpClient بدلاً من HttpClientModule

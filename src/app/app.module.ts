@@ -27,6 +27,7 @@ import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
 import { NavbarModule } from './navbar/navbar.module';
 import { NavbarIconsModule } from './navbar-icons/navbar-icons.module';
 import { SearchBarModule } from './search-bar/search-bar.module';
+import { AdminMerchantsModule } from './admin/admin-merchants/admin-merchants.module';
 
 @NgModule({
   declarations: [
@@ -57,7 +58,8 @@ import { SearchBarModule } from './search-bar/search-bar.module';
     NgxSkeletonLoaderModule,
     NavbarModule,
     NavbarIconsModule,
-    SearchBarModule
+    SearchBarModule,
+    AdminMerchantsModule
   ],
   providers: [
     provideHttpClient(withInterceptorsFromDi()), // استخدام provideHttpClient بدلاً من HttpClientModule

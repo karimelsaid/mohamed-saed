@@ -1,7 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { environment } from '../../environments/environment';
-import { CommonModule } from '@angular/common';
+import { environment } from '../../../environments/environment';
 
 interface Merchant {
   _id: string;
@@ -14,10 +13,10 @@ interface Merchant {
 
 @Component({
   selector: 'app-admin-merchants',
-  standalone: true,
+  standalone: false,
   templateUrl: './admin-merchants.component.html',
   styleUrls: ['./admin-merchants.component.css'],
-  imports: [CommonModule]
+  encapsulation: ViewEncapsulation.None
 })
 export class AdminMerchantsComponent implements OnInit {
   merchants: Merchant[] = [];

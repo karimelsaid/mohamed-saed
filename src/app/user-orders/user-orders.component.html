@@ -115,7 +115,7 @@
   <div *ngFor="let order of orders; let i = index"
        [ngClass]="i % 2 === 0 ? 'bg-blue-50 dark:bg-[#0a1325]' : 'bg-white dark:bg-gray-900'"
        class="p-4 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 transition-all duration-300 hover:shadow-lg">
-    
+
     <!-- الحالة -->
     <div class="flex justify-between items-center mb-2">
       <div class="text-sm font-semibold text-gray-600 dark:text-gray-300">الحالة:</div>
@@ -181,8 +181,8 @@
 </div>
 
 <!-- Pagination controls -->
-<div class="flex justify-center mt-4 space-x-4">
+<div class="flex justify-center mt-4 space-x-4 mb-32 md:mb-4">
   <button (click)="prevPage()" [disabled]="currentPage === 1" class="px-3 py-1 bg-gray-300 dark:bg-gray-700 rounded disabled:opacity-50">السابق</button>
-  <span class="dark:text-gray-200">صفحة {{ currentPage }}</span>
-  <button (click)="nextPage()" [disabled]="orders.length < pageSize" class="px-3 py-1 bg-gray-300 dark:bg-gray-700 rounded disabled:opacity-50">التالي</button>
+  <span class="dark:text-gray-200">صفحة {{ currentPage }} من {{ totalPages() }}</span>
+  <button (click)="nextPage()" [disabled]="currentPage === totalPages()" class="px-3 py-1 bg-gray-300 dark:bg-gray-700 rounded disabled:opacity-50">التالي</button>
 </div>

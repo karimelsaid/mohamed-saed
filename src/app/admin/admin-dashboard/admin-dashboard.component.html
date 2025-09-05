@@ -344,7 +344,7 @@
 
   <p *ngIf="products.length === 0" class="text-center text-gray-500 dark:text-gray-400 py-6">لا توجد منتجات حالياً</p>
   <!-- Pagination controls for products -->
-  <div class="flex justify-center mt-4 space-x-4 items-center">
+  <div class="flex justify-center mt-4 space-x-4 items-center mb-32 md:mb-0">
     <button (click)="prevProductsPage()" [disabled]="productsPage === 1" class="px-3 py-1 bg-gray-300 dark:bg-gray-600 rounded disabled:opacity-50">السابق</button>
     <span class="text-gray-900 dark:text-gray-200">صفحة {{ productsPage }} من {{ totalProductsPages() }}</span>
     <button (click)="nextProductsPage()" [disabled]="productsPage === totalProductsPages()" class="px-3 py-1 bg-gray-300 dark:bg-gray-600 rounded disabled:opacity-50">التالي</button>
@@ -433,7 +433,7 @@
     </div>
 
     <!-- تصميم الجدول للشاشات المتوسطة والكبيرة -->
-    <div class="hidden sm:block overflow-x-auto">
+    <div class="hidden sm:block">
       <table class="min-w-full bg-white dark:bg-gray-800 rounded-lg shadow-md text-sm mx-auto">
         <thead>
           <tr class="bg-blue-100 dark:bg-[#0a1325] text-blue-700 dark:text-blue-400 uppercase text-xs font-semibold">
@@ -516,12 +516,12 @@
         </tbody>
   </table>
 
-  <!-- Pagination controls for orders -->
-  <div *ngIf="currentView === 'orders'" class="flex justify-center mt-4 space-x-4">
-    <button (click)="ordersPage = ordersPage - 1; loadOrders()" [disabled]="ordersPage === 1" class="px-3 py-1 bg-gray-300 dark:bg-gray-600 rounded disabled:opacity-50">السابق</button>
-    <span class="text-gray-900 dark:text-gray-200">صفحة {{ ordersPage }}</span>
-    <button (click)="ordersPage = ordersPage + 1; loadOrders()" [disabled]="orders.length < ordersPageSize" class="px-3 py-1 bg-gray-300 dark:bg-gray-600 rounded disabled:opacity-50">التالي</button>
-  </div>
+</div>
+<!-- Pagination controls for orders -->
+<div *ngIf="currentView === 'orders'" class="flex justify-center mt-4 space-x-4 items-center mb-32 md:mb-4">
+  <button (click)="prevOrdersPage()" [disabled]="ordersPage === 1" class="px-3 py-1 bg-gray-300 dark:bg-gray-600 rounded disabled:opacity-50 border">السابق</button>
+  <span class="text-gray-900 dark:text-gray-200">صفحة {{ ordersPage }} من {{ totalOrdersPages() }}</span>
+  <button (click)="nextOrdersPage()" [disabled]="ordersPage === totalOrdersPages()" class="px-3 py-1 bg-gray-300 dark:bg-gray-600 rounded disabled:opacity-50">التالي</button>
 </div>
 
     <p *ngIf="orders.length === 0" class="text-center text-gray-500 dark:text-gray-400 py-6">لا توجد طلبات حالياً</p>
@@ -582,9 +582,9 @@
   </div>
 
   <!-- Pagination controls for requestedBooks -->
-  <div class="flex justify-center mt-4 space-x-4">
+  <div class="flex justify-center mt-4 space-x-4 mb-32 md:mb-0">
     <button (click)="requestedBooksPage = requestedBooksPage - 1; fetchRequestedBooks()" [disabled]="requestedBooksPage === 1" class="px-3 py-1 bg-gray-300 dark:bg-gray-600 rounded disabled:opacity-50">السابق</button>
-    <span class="text-gray-900 dark:text-gray-200">صفحة {{ requestedBooksPage }}</span>
+    <span class="text-gray-900 dark:text-gray-200">صفحة{{ requestedBooksPage }}</span>
     <button (click)="requestedBooksPage = requestedBooksPage + 1; fetchRequestedBooks()" [disabled]="requestedBooks.length < requestedBooksPageSize" class="px-3 py-1 bg-gray-300 dark:bg-gray-600 rounded disabled:opacity-50">التالي</button>
   </div>
 </div>
@@ -706,7 +706,7 @@
   </div>
 
   <!-- Pagination controls for printOrders -->
-  <div class="flex justify-center mt-4 space-x-4">
+  <div class="flex justify-center mt-4 space-x-4 mb-32 md:mb-0">
     <button (click)="printOrdersPage = printOrdersPage - 1; loadPrintOrders()" [disabled]="printOrdersPage === 1" class="px-3 py-1 bg-gray-300 dark:bg-gray-600 rounded disabled:opacity-50">السابق</button>
     <span class="text-gray-900 dark:text-gray-200">صفحة {{ printOrdersPage }}</span>
     <button (click)="printOrdersPage = printOrdersPage + 1; loadPrintOrders()" [disabled]="printOrders.length < printOrdersPageSize" class="px-3 py-1 bg-gray-300 dark:bg-gray-600 rounded disabled:opacity-50">التالي</button>

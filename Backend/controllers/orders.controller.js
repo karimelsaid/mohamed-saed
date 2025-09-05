@@ -2,8 +2,12 @@ const User = require('../models/User.model');
 
 exports.submitOrder = async (req, res) => {
   try {
-    const { userId, products, totalAmount,shippingCost } = req.body;
-    
+    const { userId, products, totalAmount, shippingCost } = req.body;
+
+    if (!userId || !products || !totalAmount) {
+      return res.status(400).json({ message: 'Missing required fields: userId, products, totalAmount' });
+    }
+
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
@@ -31,14 +35,14 @@ exports.submitOrder = async (req, res) => {
     // Get the _id of the newly added order subdocument
     const addedOrder = user.orders[user.orders.length - 1];
 
-    res.status(201).json({ 
+    res.status(201).json({
       message: 'Order submitted successfully',
       orderId: addedOrder._id
     });
   } catch (error) {
-    res.status(500).json({ 
+    res.status(500).json({
       message: 'Error submitting order',
-      error: error.message 
+      error: error.message
     });
   }
 };
@@ -47,7 +51,7 @@ exports.getUserOrders = async (req, res) => {
   try {
     const { userId } = req.params;
     const user = await User.findById(userId).select('orders');
-    
+
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
@@ -71,9 +75,9 @@ exports.getUserOrders = async (req, res) => {
 
     res.status(200).json(transformedOrders);
   } catch (error) {
-    res.status(500).json({ 
+    res.status(500).json({
       message: 'Error getting orders',
-      error: error.message 
+      error: error.message
     });
   }
 };
@@ -193,7 +197,7 @@ exports.deleteOrder = async (req, res) => {
       console.error('Order not found in user orders for order ID:', orderId); // Log for debugging
       return res.status(404).json({ message: 'Order not found in user orders' });
     }
-    
+
     // Remove the order from the user's orders
     user.orders.splice(orderIndex, 1);
     await user.save();

@@ -14,7 +14,7 @@ import { SearchBarComponent } from '../search-bar/search-bar.component';
 @Component({
   selector: 'app-navbar',
   standalone: true,
-  imports: [CommonModule, RouterLink, RouterLinkActive, FontAwesomeModule, AccountModalComponent, NavbarIconsComponent, SearchBarComponent],
+  imports: [CommonModule, RouterLink, RouterLinkActive, FontAwesomeModule, NavbarIconsComponent, SearchBarComponent],
   templateUrl: './navbar.component.html',
   styleUrls: ['./navbar.component.css']
 })

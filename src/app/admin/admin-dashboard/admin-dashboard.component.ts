@@ -7,8 +7,8 @@ import { take } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { NotificationService } from '../../services/notification.service';
 import * as XLSX from 'xlsx';
-import { AdminMerchantsComponent } from '../admin-merchants.component';
-import { FreeShippingRulesComponent } from './free-shipping-rules.component';
+import { AdminMerchantsComponent } from '../admin-merchants/admin-merchants.component';
+import { FreeShippingRulesComponent } from './free-shipping/free-shipping-rules.component';
 
 interface Order {
   _id: string;
@@ -103,6 +103,7 @@ interface PrintOrder {
 
 export class AdminDashboardComponent implements OnInit {
   orders: GroupedOrder[] = [];
+  allOrders: GroupedOrder[] = [];
   requestedBooks: RequestedBook[] = [];
   isAdmin: boolean = false;
   currentView: 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' = 'orders';
@@ -651,13 +652,39 @@ export class AdminDashboardComponent implements OnInit {
           });
         });
 
-        const allOrders = Object.values(groupedOrdersMap).sort((a, b) => new Date(a.orderDate).getTime() - new Date(b.orderDate).getTime());
-        this.orders = allOrders.slice((this.ordersPage - 1) * this.ordersPageSize, this.ordersPage * this.ordersPageSize);
+        this.allOrders = Object.values(groupedOrdersMap).sort((a, b) => new Date(a.orderDate).getTime() - new Date(b.orderDate).getTime());
+        this.updateOrdersPage();
       },
       error: (err) => {
         console.error('Error loading orders:', err);
       }
     });
+  }
+
+  updateOrdersPage(): void {
+    const start = (this.ordersPage - 1) * this.ordersPageSize;
+    const end = this.ordersPage * this.ordersPageSize;
+    this.orders = this.allOrders.slice(start, end);
+  }
+
+  nextOrdersPage(): void {
+    if (this.ordersPage < this.totalOrdersPages()) {
+      this.ordersPage++;
+      this.updateOrdersPage();
+      this.scrollToTop();
+    }
+  }
+
+  prevOrdersPage(): void {
+    if (this.ordersPage > 1) {
+      this.ordersPage--;
+      this.updateOrdersPage();
+      this.scrollToTop();
+    }
+  }
+
+  totalOrdersPages(): number {
+    return Math.ceil(this.allOrders.length / this.ordersPageSize);
   }
 
   fetchRequestedBooks(): void {

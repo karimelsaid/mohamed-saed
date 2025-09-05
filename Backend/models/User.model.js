@@ -2,14 +2,21 @@ const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema({
   username: { type: String, required: true },
-  email: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
   password: { type: String, required: function() { return !this.googleId; } },
   phone: { type: String, required: function() { return !this.googleId; } },
   governorate: { type: String, required: function() { return !this.googleId; } }, // المحافظة
   city: { type: String, required: function() { return !this.googleId; } },       // المدينة
   village: { type: String, required: function() { return !this.googleId; } },                    // القرية (إجباري)
   googleId: { type: String, required: false, unique: true, sparse: true },
-  role: { type: String, required: true, default: 'user' }, // دور المستخدم
+
+  // حقول التاجر الجديدة
+  role: { type: String, required: true, default: 'user', enum: ['user', 'merchant', 'admin'] },
+  taxNumber: { type: String },
+  logo: { type: String },
+  approved: { type: Boolean, default: false },
+  merchantName: { type: String },
+
   favorites: [{ type: String }], // مصفوفة فيها ID الكتب المفضلة
   cart: [{ type: String }],      // مصفوفة فيها ID الكتب في السلة
   orders: [{
@@ -62,6 +69,8 @@ const userSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now },
     relatedId: { type: String } // e.g., orderId or suggestionId
   }]
-});
+}, { timestamps: true });
+
+module.exports = mongoose.model('User', userSchema);
 
 module.exports = mongoose.model('User', userSchema);

@@ -153,6 +153,46 @@ export class RegisterComponent {
     }
   }
 
+  // Check if buyer form is valid
+  get isBuyerFormValid(): boolean {
+    // Ensure all validations are up to date
+    this.validateName();
+    this.validateEmail();
+    this.validatePassword();
+    this.checkPasswordMatch();
+    this.validatePhone();
+    
+    const isValid = !!(
+      this.user.username.trim() &&
+      this.user.email.trim() &&
+      this.emailValid &&
+      this.user.password.length >= 8 &&
+      !this.passwordInvalid &&
+      !this.passwordMismatch &&
+      this.phoneValid &&
+      this.user.governorate &&
+      this.user.city
+    );
+    
+    return isValid;
+  }
+
+  // Check if merchant form is valid
+  get isMerchantFormValid(): boolean {
+    return !!(
+      this.merchantUser.libraryName.trim() &&
+      this.merchantUser.email.trim() &&
+      this.emailValid &&
+      this.merchantUser.password.length >= 6 &&
+      !this.passwordInvalid &&
+      !this.passwordMismatch &&
+      this.phoneValid &&
+      this.merchantUser.governorate &&
+      this.merchantUser.city &&
+      this.merchantUser.logoFile
+    );
+  }
+
   // دالة التسجيل
   onRegister() {
     if (this.isMerchantRegistration) {
@@ -168,7 +208,7 @@ export class RegisterComponent {
     this.validatePhone();
     this.validateEmail();
 
-    if (this.passwordMismatch || this.passwordInvalid || !this.phoneValid || !this.emailValid) {
+    if (!this.isBuyerFormValid) {
       this.message = '❌ هناك خطأ في البيانات المدخلة. يرجى التحقق من جميع الحقول.';
       return;
     }
@@ -191,8 +231,8 @@ export class RegisterComponent {
         this.router.navigate(['/login']);
       },
       error: (error) => {
-        if (error.status === 400 && error.error.message === 'هذا البريد الإلكتروني مسجل من قبل.') {
-          this.message = '❌ هذا البريد الإلكتروني مسجل من قبل.';
+        if (error.status === 400 && error.error.message) {
+          this.message = `❌ ${error.error.message}`;
         } else {
           this.message = '❌ حدث خطأ أثناء إنشاء الحساب. يرجى المحاولة لاحقًا.';
         }
@@ -207,18 +247,8 @@ export class RegisterComponent {
     this.validatePhone();
     this.validateEmail();
 
-    if (this.passwordMismatch || this.passwordInvalid || !this.phoneValid || !this.emailValid) {
+    if (!this.isMerchantFormValid) {
       this.message = '❌ هناك خطأ في البيانات المدخلة. يرجى التحقق من جميع الحقول.';
-      return;
-    }
-
-    if (!this.merchantUser.libraryName) {
-      this.message = '❌ يرجى إدخال اسم المكتبة.';
-      return;
-    }
-
-    if (!this.merchantUser.logoFile) {
-      this.message = '❌ يرجى رفع شعار المكتبة.';
       return;
     }
 
@@ -233,7 +263,9 @@ export class RegisterComponent {
     formData.append('city', this.merchantUser.city);
     formData.append('village', this.merchantUser.village || '');
     formData.append('taxNumber', this.merchantUser.taxNumber || '');
-    formData.append('logo', this.merchantUser.logoFile);
+    if (this.merchantUser.logoFile) {
+      formData.append('logo', this.merchantUser.logoFile);
+    }
 
     this.authService.registerMerchant(formData).subscribe({
       next: (response) => {
@@ -241,8 +273,8 @@ export class RegisterComponent {
         this.router.navigate(['/login']);
       },
       error: (error) => {
-        if (error.status === 400 && error.error.message === 'هذا البريد الإلكتروني مسجل من قبل.') {
-          this.message = '❌ هذا البريد الإلكتروني مسجل من قبل.';
+        if (error.status === 400 && error.error.message) {
+          this.message = `❌ ${error.error.message}`;
         } else {
           this.message = '❌ حدث خطأ أثناء إنشاء الحساب. يرجى المحاولة لاحقًا.';
         }

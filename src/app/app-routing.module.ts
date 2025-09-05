@@ -16,7 +16,7 @@ import { CartComponent } from './cart/cart.component';
 import { FavoritesComponent } from './favorites/favorites.component';
 import { AdminDashboardComponent } from './admin/admin-dashboard/admin-dashboard.component';
 import { NotFoundComponent } from './not-found/not-found.component';
-import { AdminMerchantsComponent } from './admin/admin-merchants.component';
+import { AdminMerchantsComponent } from './admin/admin-merchants/admin-merchants.component';
 import { LoginComponent } from './auth/login/login.component';
 import { RegisterComponent } from './auth/register/register.component';
 import { UserOrdersComponent } from './user-orders/user-orders.component';

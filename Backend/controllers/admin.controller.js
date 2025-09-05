@@ -3,6 +3,7 @@ const fs = require('fs');
 const multer = require('multer');
 const sharp = require('sharp');
 const { addProductToExcel, categoryMap, downloadAndConvertExcel, updateExcelFromJson } = require('../services/excel.service');
+const sitemapService = require('../services/sitemap.service');
 
 const PromotionDate = require('../models/PromotionDate.model');
 
@@ -105,7 +106,7 @@ async function addProduct(req, res) {
     // await updateExcelFromJson(process.env.GOOGLE_DRIVE_FILE_ID);
 
     // Update sitemap.xml after product addition
-    await generateSitemap();
+    sitemapService.generateSitemap();
 
     res.json({ success: true, message: 'Product added successfully', barcode });
   } catch (error) {

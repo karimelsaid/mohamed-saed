@@ -5,9 +5,7 @@ import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { AccountModalComponent } from '../auth/account-modal/account-modal.component';
 import { LoginComponent } from '../auth/login/login.component';
 import { RegisterComponent } from '../auth/register/register.component';
-import { FreeShippingRulesComponent } from '../admin/admin-dashboard/free-shipping-rules.component';
-import { AdminMerchantsComponent } from '../admin/admin-merchants.component';
-
+import { FreeShippingRulesComponent } from '../admin/admin-dashboard/free-shipping/free-shipping-rules.component';
 @NgModule({
   imports: [
     CommonModule,
@@ -16,15 +14,13 @@ import { AdminMerchantsComponent } from '../admin/admin-merchants.component';
     AccountModalComponent,
     LoginComponent,
     RegisterComponent,
-    FreeShippingRulesComponent,
-    AdminMerchantsComponent
+    FreeShippingRulesComponent
   ],
   exports: [
     AccountModalComponent, // 👈 علشان نقدر نستخدمه بره
     LoginComponent,
     RegisterComponent,
-    FreeShippingRulesComponent,
-    AdminMerchantsComponent
+    FreeShippingRulesComponent
   ]
 })
 export class SharedModule { }

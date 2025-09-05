@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { FreeShippingService, FreeShippingRules } from '../../services/free-shipping.service';
+import { FreeShippingService, FreeShippingRules } from '../../../services/free-shipping.service';
 
 @Component({
   selector: 'app-free-shipping-rules',

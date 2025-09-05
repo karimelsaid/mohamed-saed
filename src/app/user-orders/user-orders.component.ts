@@ -53,6 +53,7 @@ interface Order {
 })
 export class UserOrdersComponent implements OnInit {
   orders: Order[] = [];
+  allOrders: Order[] = []; // Store all orders for client-side pagination
   loading: boolean = false;
   error: string = '';
 
@@ -79,9 +80,9 @@ export class UserOrdersComponent implements OnInit {
     this.loading = true;
     this.http.get<Order[]>(`${environment.apiBaseUrl}/orders/user-orders/${userId}`).subscribe({
       next: (data) => {
+        this.allOrders = data; // Store all orders
         this.totalOrders = data.length;
-        // Show all orders without slicing for pagination to handle printProjects display correctly
-        this.orders = data;
+        this.updateOrdersPage(); // Update displayed orders for current page
         this.loading = false;
       },
       error: (err) => {
@@ -90,6 +91,16 @@ export class UserOrdersComponent implements OnInit {
         console.error('Error loading user orders:', err);
       }
     });
+  }
+
+  updateOrdersPage(): void {
+    const startIndex = (this.currentPage - 1) * this.pageSize;
+    const endIndex = startIndex + this.pageSize;
+    this.orders = this.allOrders.slice(startIndex, endIndex);
+  }
+
+  totalPages(): number {
+    return Math.ceil(this.totalOrders / this.pageSize);
   }
 
   loadRatedBooks(userId: string): void {
@@ -105,7 +116,7 @@ export class UserOrdersComponent implements OnInit {
   }
 
   applyRatingsToOrders(): void {
-    this.orders.forEach(order => {
+    this.allOrders.forEach(order => {
       order.products.forEach(product => {
         const ratedBook = this.ratedBooks.find(rb => rb.bookId === product.bookId);
         if (ratedBook) {
@@ -113,6 +124,8 @@ export class UserOrdersComponent implements OnInit {
         }
       });
     });
+    // Re-apply to current page orders
+    this.updateOrdersPage();
   }
 
   submitRating(bookId: string, rating: number): void {
@@ -144,21 +157,19 @@ export class UserOrdersComponent implements OnInit {
   }
 
   nextPage(): void {
-    this.currentPage++;
-    if (this.userId) {
-      this.loadOrders(this.userId);
+    if (this.currentPage < this.totalPages()) {
+      this.currentPage++;
+      this.updateOrdersPage();
+      this.scrollToTop();
     }
-    this.scrollToTop();
   }
 
   prevPage(): void {
     if (this.currentPage > 1) {
       this.currentPage--;
-      if (this.userId) {
-        this.loadOrders(this.userId);
-      }
+      this.updateOrdersPage();
+      this.scrollToTop();
     }
-    this.scrollToTop();
   }
 
   scrollToTop(): void {
@@ -169,10 +180,11 @@ export class UserOrdersComponent implements OnInit {
     console.log(`Cancelling order with ID: ${orderId}`); // Log the order ID
     this.http.patch(`${environment.apiBaseUrl}/orders/update-status/${orderId}`, { status: 'تم الإلغاء' }).subscribe({
       next: () => {
-        // No need to filter out the order, just update the status
-        const order = this.orders.find(order => order._id === orderId);
+        // Update the status in allOrders and refresh current page
+        const order = this.allOrders.find(order => order._id === orderId);
         if (order) {
           order.status = 'تم الإلغاء'; // Update the status locally
+          this.updateOrdersPage(); // Refresh current page display
         }
       },
       error: (err) => {
@@ -190,7 +202,7 @@ export class UserOrdersComponent implements OnInit {
     const options: Intl.DateTimeFormatOptions = { weekday: 'long', year: 'numeric', month: 'numeric', day: 'numeric' };
     return `من ${new Intl.DateTimeFormat('ar-EG', options).format(startDate)} إلى ${new Intl.DateTimeFormat('ar-EG', options).format(endDate)}`;
   }
-  
+
   calculatePrintProjectExpectedDeliveryDate(createdAt: string): string {
     const date = new Date(createdAt);
     const startDate = new Date(date);

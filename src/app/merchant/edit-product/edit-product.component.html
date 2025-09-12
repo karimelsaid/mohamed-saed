@@ -1,0 +1,202 @@
+تم<div class="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 mt-6 md:mt-32 mb-32 md:mb-20">
+  <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+
+    <!-- Header -->
+    <div class="mb-8">
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
+            تعديل المنتج
+          </h1>
+          <p class="mt-2 text-gray-600 dark:text-gray-400">
+            قم بتعديل بيانات المنتج الخاص بك
+          </p>
+        </div>
+        <button
+          (click)="cancel()"
+          class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+        >
+          <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+          </svg>
+          العودة
+        </button>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div *ngIf="loading" class="flex items-center justify-center py-12">
+      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <span class="mr-3 text-gray-600 dark:text-gray-400">جاري تحميل المنتج...</span>
+    </div>
+
+    <!-- Form -->
+    <div *ngIf="!loading" class="bg-white dark:bg-gray-800 shadow-sm rounded-xl border border-gray-200 dark:border-gray-700">
+      <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">بيانات المنتج</h2>
+      </div>
+      <div class="p-6">
+        <form (ngSubmit)="saveProduct()" class="space-y-6">
+
+          <!-- Product Name -->
+          <div>
+            <label for="product_name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              اسم المنتج <span class="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              id="product_name"
+              [(ngModel)]="product.product_name"
+              name="product_name"
+              required
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+              placeholder="أدخل اسم المنتج"
+            >
+          </div>
+
+          <!-- Product Price -->
+          <div>
+            <label for="product_price" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              السعر <span class="text-red-500">*</span>
+            </label>
+            <input
+              type="number"
+              id="product_price"
+              [(ngModel)]="product.product_price"
+              name="product_price"
+              required
+              min="0"
+              step="0.01"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+              placeholder="أدخل السعر"
+            >
+          </div>
+
+          <!-- Product Quantity -->
+          <div>
+            <label for="product_quantity" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              الكمية <span class="text-red-500">*</span>
+            </label>
+            <input
+              type="number"
+              id="product_quantity"
+              [(ngModel)]="product.product_quantity"
+              name="product_quantity"
+              required
+              min="0"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+              placeholder="أدخل الكمية"
+            >
+          </div>
+
+          <!-- Product Category -->
+          <div>
+            <label for="product_category" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              الفئة <span class="text-red-500">*</span>
+            </label>
+            <select
+              id="product_category"
+              [(ngModel)]="product.product_category"
+              name="product_category"
+              required
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+            >
+              <option value="">اختر الفئة</option>
+              <option *ngFor="let category of categories" [value]="category">{{ category }}</option>
+            </select>
+          </div>
+
+          <!-- Product Description -->
+          <div>
+            <label for="product_description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              الوصف
+            </label>
+            <textarea
+              id="product_description"
+              [(ngModel)]="product.product_description"
+              name="product_description"
+              rows="4"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+              placeholder="أدخل وصف المنتج"
+            ></textarea>
+          </div>
+
+          <!-- Product Image -->
+          <div>
+            <label for="product_image" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              صورة المنتج
+            </label>
+            <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 dark:border-gray-600 border-dashed rounded-lg hover:border-gray-400 dark:hover:border-gray-500 transition-colors duration-200">
+              <div class="space-y-1 text-center">
+                <div *ngIf="!imagePreview && !product.product_image" class="flex text-sm text-gray-600 dark:text-gray-400">
+                  <label for="product_image" class="relative cursor-pointer bg-white dark:bg-gray-800 rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500">
+                    <span>اختر صورة جديدة</span>
+                    <input id="product_image" name="product_image" type="file" accept="image/*" (change)="onFileSelected($event)" class="sr-only">
+                  </label>
+                  <p class="pl-1">أو اسحب وأفلت</p>
+                </div>
+                <div *ngIf="imagePreview" class="flex flex-col items-center">
+                  <img [src]="imagePreview" alt="Product preview" class="w-32 h-32 object-cover rounded-lg mb-2">
+                  <button type="button" (click)="selectedFile = null; imagePreview = null" class="text-red-600 hover:text-red-800 text-sm">إزالة الصورة الجديدة</button>
+                </div>
+                <div *ngIf="!imagePreview && product.product_image" class="flex flex-col items-center">
+                  <img [src]="'/uploads/books/' + product.product_image" alt="Current product image" class="w-32 h-32 object-cover rounded-lg mb-2">
+                  <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">الصورة الحالية</p>
+                  <label for="product_image" class="relative cursor-pointer bg-white dark:bg-gray-800 rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500">
+                    <span>تغيير الصورة</span>
+                    <input id="product_image" name="product_image" type="file" accept="image/*" (change)="onFileSelected($event)" class="sr-only">
+                  </label>
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-400">
+                  PNG, JPG, GIF حتى 1 ميجابايت
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Status Display -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              الحالة
+            </label>
+            <span
+              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+              [ngClass]="{
+                'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300': product.status === 'pending',
+                'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300': product.status === 'approved',
+                'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300': product.status === 'rejected'
+              }"
+            >
+              {{ product.status === 'pending' ? 'معلق' : (product.status === 'approved' ? 'معتمد' : 'مرفوض') }}
+            </span>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              لا يمكن تعديل الحالة من هنا. يتم تحديثها من قبل الإدارة.
+            </p>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex justify-end space-x-3 space-x-reverse">
+            <button
+              type="button"
+              (click)="cancel()"
+              class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              إلغاء
+            </button>
+            <button
+              type="submit"
+              [disabled]="saving"
+              class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <svg *ngIf="saving" class="animate-spin -ml-1 mr-3 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              {{ saving ? 'جاري الحفظ...' : 'حفظ التغييرات' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

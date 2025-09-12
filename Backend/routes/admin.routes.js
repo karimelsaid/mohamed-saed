@@ -1,6 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const adminController = require('../controllers/admin.controller');
+const authenticateAdmin = require('../middleware/admin.auth');
+
+// Apply authentication to all admin routes
+router.use(authenticateAdmin);
 
 // Route to add new product with image upload
 router.post('/add-product', adminController.upload.single('image'), adminController.addProduct);
@@ -42,8 +46,15 @@ router.get('/promotion-dates', adminController.getPromotionDates);
 
 router.get('/merchants', adminController.listMerchants);
 router.patch('/merchants/:merchantId/approval', adminController.updateMerchantApproval);
+router.patch('/merchants/:merchantId/suspension', adminController.updateMerchantSuspension);
+router.get('/merchants/:merchantId/products', adminController.getMerchantProductsByMerchant);
+router.get('/merchant-products', adminController.listMerchantProducts);
+router.patch('/products/:productId/approval', adminController.updateProductApproval);
 
 router.get('/free-shipping-rules', adminController.getFreeShippingRules);
 router.post('/free-shipping-rules', adminController.saveFreeShippingRules);
+
+router.get('/product-update-requests', adminController.getProductUpdateRequests);
+router.patch('/product-update-requests/:requestId', adminController.updateProductUpdateRequest);
 
 module.exports = router;

@@ -21,6 +21,7 @@ const loginMerchant = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
 
+    // Allow login even if user is suspended, but not if not approved
     if (!user.approved) {
       return res.status(403).json({ success: false, message: 'Merchant account pending approval' });
     }
@@ -36,6 +37,7 @@ const loginMerchant = async (req, res) => {
       token,
       merchant: {
         _id: user._id,
+        merchantName: user.merchantName || user.username,
         name: user.username,
         email: user.email,
         phone: user.phone,
@@ -43,7 +45,9 @@ const loginMerchant = async (req, res) => {
         city: user.city,
         village: user.village,
         taxNumber: user.taxNumber,
-        logo: user.logo
+        logo: user.logo,
+        approved: user.approved,
+        suspended: user.suspended || false
       }
     });
   } catch (error) {

@@ -1,21 +1,21 @@
 <div class="bg-blue-950 dark:bg-[#0a1325] p-4 fixed top-0 w-full h-auto z-50 shadow-lg">
 <div class="flex place-items-center justify-around">
-    
+
     <div routerLink="/" class="cursor-pointer">
       <img class="w-10 sm:w-14 not" src="logoname2.png" alt="Logo">
     </div>
 
       <app-navbar-icons class="hidden md:block"></app-navbar-icons>
-      
+
       <div class="block md:hidden">
-        
+
 <div class="search-bar-container relative flex justify-center">
-          <app-search-bar 
-            [allBooks]="allBooks" 
+          <app-search-bar
+            [allBooks]="allBooks"
             (searchExecuted)="onSearchExecuted($event)">
           </app-search-bar>
         </div>
-      
+
       </div>
                 <!-- Dark Mode Toggle Button -->
       <div class="flex flex-col sm:flex-row items-center cursor-pointer ml-4" title="تبديل الوضع الداكن">
@@ -44,7 +44,7 @@
                   <fa-icon [ngClass]="{hidden:scrollBook}" class="text-xs mx-2 sm:mx-0 mb-1" [icon]="faChevronUp"></fa-icon>
               </span>
           </div>
-  
+
           <ul [ngClass]="{hidden:scrollBook}" class="absolute bg-blue-100 text-blue-950 font-bold dark:text-blue-100 dark:bg-[#0a1325] right-36 md:right-[220px] top-20 rounded-sm w-40 lg:w-80 fade-in">
             <div (click)="exitBarsrow()" routerLinkActive="text-orange-400" routerLink="/Islamic" class="cursor-pointer flex p-2 items-end sm:items-center hover:bg-blue-950 hover:text-blue-100 dark:hover:bg-blue-100 dark:hover:text-blue-950">
               <li>دينية</li>
@@ -94,11 +94,11 @@
             <div (click)="exitBarsrow();exitBars()" class="flex items-end md:items-center cursor-pointer" routerLink="/print">
              <fa-icon routerLinkActive="active" class="m-1 text-2xl md:text-md text-right" [icon]="faFilePdf"></fa-icon>
              <span class="list">إطبعلي</span>
-            </div>    
+            </div>
 
             <!-- <div class="flex items-end md:items-center cursor-pointer" (click)="scrollBook=!scrollBook">
                 <fa-icon routerLinkActive="active" class="m-1 text-2xl md:text-md text-right" [icon]="faBook"></fa-icon>
-                      
+
             <span class="list">كتب
                 <fa-icon [ngClass]="{hidden:!scrollBook}" class="text-xs mx-2 md:mx-0 mb-1" [icon]="faChevronDown"></fa-icon>
                 <fa-icon [ngClass]="{hidden:scrollBook}" class="text-xs mx-2 md:mx-0 mb-1" [icon]="faChevronUp"></fa-icon>
@@ -135,9 +135,9 @@
             </div>
           </ul>
         </div>
-        
+
       </div>
-      
+
       </div>
       </div>
   </div>

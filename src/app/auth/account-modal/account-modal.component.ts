@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { faUserCircle, faEnvelope, faPhoneAlt, faSignOutAlt, faSignInAlt, faUserPlus, faClipboardList } from '@fortawesome/free-solid-svg-icons';
 import { AuthService } from '../auth.service';
+import { MerchantAuthService } from '../../services/merchant-auth.service';
 import { ChangeDetectorRef } from '@angular/core';
 
 @Component({
@@ -26,6 +27,7 @@ export class AccountModalComponent implements OnInit {
 
   show = false;
   isLoggedIn: boolean = false;
+  isMerchantLoggedIn: boolean = false;
 
   user: any = {
     username: '',
@@ -33,7 +35,14 @@ export class AccountModalComponent implements OnInit {
     phone: ''
   };
 
-  constructor(private router: Router, private authService: AuthService, private cdRef: ChangeDetectorRef) { }
+  merchant: any = null;
+
+  constructor(
+    private router: Router,
+    private authService: AuthService,
+    private merchantAuthService: MerchantAuthService,
+    private cdRef: ChangeDetectorRef
+  ) { }
 
   ngOnInit() {
     // اسمع لتحديثات تسجيل الدخول
@@ -47,6 +56,27 @@ export class AccountModalComponent implements OnInit {
         this.user = user;
       }
     });
+
+    // استمع لتحديثات تسجيل دخول التاجر
+    this.merchantAuthService.isLoggedIn$.subscribe(status => {
+      this.isMerchantLoggedIn = status;
+      if (!status) {
+        this.merchant = null;
+      } else if (status && (!this.merchant || !this.merchant.email)) {
+        // If merchant is logged in but data is not loaded, try to load it
+        this.refreshMerchantData();
+      }
+    });
+
+    // استمع لتحديث بيانات التاجر
+    this.merchantAuthService.merchant$.subscribe(merchant => {
+      this.merchant = merchant;
+    });
+
+    // Load merchant data if merchant is logged in but data is missing
+    if (this.merchantAuthService.isAuthenticated() && (!this.merchant || !this.merchant.email)) {
+      this.refreshMerchantData();
+    }
   }
 
   loadUserData(userId: string) {
@@ -60,6 +90,32 @@ export class AccountModalComponent implements OnInit {
 
   openModal() {
     this.show = true;
+    // Refresh merchant data if merchant is logged in
+    if (this.isMerchantLoggedIn) {
+      // If merchant data is not loaded, refresh it
+      if (!this.merchant || !this.merchant.email) {
+        this.refreshMerchantData();
+      }
+    }
+  }
+
+  refreshMerchantData() {
+    this.merchantAuthService.getCurrentMerchantFromAPI().subscribe({
+      next: (response) => {
+        if (response.success && response.merchant) {
+          const merchantData = response.merchant;
+          // Update the merchant auth service state
+          this.merchantAuthService['merchantSubject'].next(merchantData);
+          // Update local storage
+          localStorage.setItem('merchant_data', JSON.stringify(merchantData));
+          this.merchant = merchantData;
+          this.cdRef.detectChanges();
+        }
+      },
+      error: (error) => {
+        // Handle error silently
+      }
+    });
   }
 
   closeModal() {
@@ -77,8 +133,38 @@ export class AccountModalComponent implements OnInit {
     this.router.navigate(['/register']);
   }
 
+  goToMerchantDashboard() {
+    this.closeModal();
+    this.router.navigate(['/merchant/dashboard']);
+  }
+
   logout() {
-    this.authService.logout();
+    // Check if merchant is logged in and logout accordingly
+    if (this.isMerchantLoggedIn) {
+      // Clear local state first
+      this.isMerchantLoggedIn = false;
+      this.merchant = null;
+
+      // Use public method to clear auth state
+      this.merchantAuthService.performLogout();
+
+      // Try to notify backend about logout (optional)
+      this.merchantAuthService.logout().subscribe({
+        next: () => {
+          // Merchant logged out successfully
+        },
+        error: (error) => {
+          // Backend logout failed, but local logout completed
+        }
+      });
+
+      // Also logout from regular user session if exists
+      if (this.isLoggedIn) {
+        this.authService.logout();
+      }
+    } else {
+      this.authService.logout();
+    }
     this.closeModal();
     this.router.navigate(['/']);
   }

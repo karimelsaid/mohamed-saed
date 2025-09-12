@@ -45,7 +45,7 @@ export class QamosComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.isLoading = true;
     this.dataService.getData().subscribe(data => {
-      this.books = data.filter((book: Book) => book.product_category.includes('قواميس'));
+this.books = data.filter((book: Book) => book.product_category.includes('قواميس ومراجع'));
       this.totalPages = Math.ceil(this.books.length / this.booksPerPage);
       this.updatePage();
       this.startCountdown();

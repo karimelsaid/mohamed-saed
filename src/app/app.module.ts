@@ -20,14 +20,17 @@ import { SearchResultsComponent } from './search-results/search-results.componen
 import { HomePageComponent } from './home-page/home-page.component';
 import { SharedModule } from './shared/shared.module';
 import { FavoritesComponent } from './favorites/favorites.component';
-import { AdminDashboardComponent } from './admin/admin-dashboard/admin-dashboard.component';
 import { LocationStrategy, PathLocationStrategy } from '@angular/common';
 import { ChatWindowComponent } from './components/chat-window/chat-window.component';
 import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
 import { NavbarModule } from './navbar/navbar.module';
 import { NavbarIconsModule } from './navbar-icons/navbar-icons.module';
 import { SearchBarModule } from './search-bar/search-bar.module';
-import { AdminMerchantsModule } from './admin/admin-merchants/admin-merchants.module';
+import { HTTP_INTERCEPTORS } from '@angular/common/http';
+import { MerchantAuthInterceptor } from './interceptors/merchant-auth.interceptor';
+import { AdminAuthInterceptor } from './interceptors/admin-auth.interceptor';
+import { AdminModule } from './admin/admin.module';
+import { MerchantDashboardComponent } from './merchant/dashboard/dashboard.component';
 
 @NgModule({
   declarations: [
@@ -45,8 +48,7 @@ import { AdminMerchantsModule } from './admin/admin-merchants/admin-merchants.mo
     SearchResultsComponent,
     HomePageComponent,
     FavoritesComponent,
-    ChatWindowComponent,
-    AdminDashboardComponent
+    ChatWindowComponent
   ],
   imports: [
     BrowserModule,
@@ -59,11 +61,14 @@ import { AdminMerchantsModule } from './admin/admin-merchants/admin-merchants.mo
     NavbarModule,
     NavbarIconsModule,
     SearchBarModule,
-    AdminMerchantsModule
+    AdminModule,
+    MerchantDashboardComponent
   ],
   providers: [
     provideHttpClient(withInterceptorsFromDi()), // استخدام provideHttpClient بدلاً من HttpClientModule
-    { provide: LocationStrategy, useClass: PathLocationStrategy }
+    { provide: LocationStrategy, useClass: PathLocationStrategy },
+    { provide: HTTP_INTERCEPTORS, useClass: MerchantAuthInterceptor, multi: true },
+    { provide: HTTP_INTERCEPTORS, useClass: AdminAuthInterceptor, multi: true }
   ],
   bootstrap: [AppComponent]
 })

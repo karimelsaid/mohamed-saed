@@ -16,13 +16,11 @@ import { CartComponent } from './cart/cart.component';
 import { FavoritesComponent } from './favorites/favorites.component';
 import { AdminDashboardComponent } from './admin/admin-dashboard/admin-dashboard.component';
 import { NotFoundComponent } from './not-found/not-found.component';
-import { AdminMerchantsComponent } from './admin/admin-merchants/admin-merchants.component';
 import { LoginComponent } from './auth/login/login.component';
 import { RegisterComponent } from './auth/register/register.component';
 import { UserOrdersComponent } from './user-orders/user-orders.component';
 import { PrintComponent } from './print/print.component';
 import { BookDetailsComponent } from './book-details/book-details.component';
-import { MerchantDashboardComponent } from './merchant/merchant-dashboard.component';
 
 
 import { AboutComponent } from './about/about.component';
@@ -30,6 +28,10 @@ import { PrivacyPolicyComponent } from './privacy-policy/privacy-policy.componen
 import { TermsConditionsComponent } from './terms-conditions/terms-conditions.component';
 import { ForgotPasswordComponent } from './auth/forgot-password/forgot-password.component';
 import { ResetPasswordComponent } from './auth/reset-password/reset-password.component';
+import { MerchantDashboardComponent } from './merchant/dashboard/dashboard.component';
+import { AddProductComponent } from './merchant/add-product/add-product.component';
+import { EditProductComponent } from './merchant/edit-product/edit-product.component';
+import { MerchantAuthGuard } from './guards/merchant-auth.guard';
 
 const routes: Routes = [
   { path: 'Home', component: HomePageComponent },
@@ -43,8 +45,9 @@ const routes: Routes = [
   { path: 'History-Biographies', component: TarekhComponent },
   { path: 'Dictionaries-References', component: QamosComponent },
   { path: 'ControlPanel', component: AdminDashboardComponent },
-  { path: 'admin/merchants', component: AdminMerchantsComponent },
-  { path: 'merchant/dashboard', component: MerchantDashboardComponent },
+  { path: 'merchant/dashboard', component: MerchantDashboardComponent, canActivate: [MerchantAuthGuard] },
+  { path: 'merchant/add-product', component: AddProductComponent, canActivate: [MerchantAuthGuard] },
+  { path: 'merchant/edit-product/:id', component: EditProductComponent, canActivate: [MerchantAuthGuard] },
   { path: 'book/:name', component: BookDetailsComponent },
   { path: '', redirectTo: '/Home', pathMatch: 'full' },  // الصفحة الرئيسية هي "home" افتراضيًا
   { path: 'research', component: SearchResultsComponent }, // المسار الذي نوجه إليه المستخدم عند البحث

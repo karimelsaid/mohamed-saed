@@ -44,7 +44,7 @@ export class TatwerComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.isLoading = true;
     this.dataService.getData().subscribe(data => {
-      this.books = data.filter((book: Book) => book.product_category.includes('تطوير'));
+this.books = data.filter((book: Book) => book.product_category.includes('تطوير الذات وعلم النفس'));
       this.totalPages = Math.ceil(this.books.length / this.booksPerPage);
       this.updatePage();
       this.startCountdown();

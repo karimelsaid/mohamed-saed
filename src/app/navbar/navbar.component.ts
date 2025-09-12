@@ -7,6 +7,7 @@ import { faBars, faClose, faHome, faBook, faFilePdf, faUser, faChevronUp, faChev
 import { DataService } from '../services/data.service';
 import { AccountModalComponent } from '../auth/account-modal/account-modal.component';
 import { AuthService } from '../auth/auth.service';
+import { MerchantAuthService } from '../services/merchant-auth.service';
 import { NotificationService, Notification } from '../services/notification.service';
 import { NavbarIconsComponent } from '../navbar-icons/navbar-icons.component';
 import { SearchBarComponent } from '../search-bar/search-bar.component';
@@ -65,9 +66,10 @@ faFilter = faFilter;
 
   isDarkMode: boolean = false; // Track dark mode state
   showFilterDropdown: boolean = false;
-   selectedFilter: string = 'all';
+    selectedFilter: string = 'all';
+    user: any = null; // Current user data
 
-   toggleFilterDropdown() {
+    toggleFilterDropdown() {
     this.showFilterDropdown = !this.showFilterDropdown;
   }
 
@@ -79,8 +81,7 @@ faFilter = faFilter;
     if (!clickedInsideMenu && !clickedOnBarsIcon) {
       this.openBars = false;
     }
-  }
-  selectFilter(filter: string) {
+  }  selectFilter(filter: string) {
     this.selectedFilter = filter;
     this.showFilterDropdown = false;
     this.onSearchExecuted({ query: this.searchQuery.trim(), filter: this.selectedFilter });
@@ -137,6 +138,7 @@ faFilter = faFilter;
     private router: Router,
     private dataService: DataService,
     private authService: AuthService,
+    private merchantAuthService: MerchantAuthService,
     private notificationService: NotificationService,
     private cdr: ChangeDetectorRef
   ) {}
@@ -159,15 +161,49 @@ faFilter = faFilter;
       this.allBooks = data;
     });
 
+    // الاشتراك في تحديثات المستخدمين العاديين
     this.authService.user$.subscribe((user) => {
-      this.isLoggedIn = !!user;
-      this.isAdmin = user?.email === 'admin@example.com';
+      this.user = user;
+      this.updateLoginStatus();
+    });
 
-      if (user) {
-        this.authService.loadUserData(user.id);
+    // الاشتراك في تحديثات التجار
+    this.merchantAuthService.merchant$.subscribe((merchant) => {
+      if (merchant) {
+        this.user = { ...merchant, role: 'merchant' };
+      }
+      this.updateLoginStatus();
+      this.cdr.markForCheck();
+    });
+
+    this.merchantAuthService.isLoggedIn$.subscribe((isMerchantLoggedIn) => {
+      if (isMerchantLoggedIn) {
+        const merchant = this.merchantAuthService.getCurrentMerchant();
+        if (merchant) {
+          this.user = { ...merchant, role: 'merchant' };
+        }
+      }
+      this.updateLoginStatus();
+      this.cdr.markForCheck();
+    });
+  }
+
+  updateLoginStatus() {
+    const isUserLoggedIn = !!this.user && this.user.role !== 'merchant';
+    const isMerchantLoggedIn = this.merchantAuthService.isAuthenticated();
+
+    this.isLoggedIn = isUserLoggedIn || isMerchantLoggedIn;
+    this.isAdmin = this.user?.email === 'admin@example.com';
+
+    this.cdr.markForCheck();
+
+    if (this.user) {
+      if (this.user.role !== 'merchant') {
+        // Load user data for regular users
+        this.authService.loadUserData(this.user.id);
 
         // Load orders explicitly on user login to update orderCount
-        this.dataService.loadOrders(user.id).subscribe();
+        this.dataService.loadOrders(this.user.id).subscribe();
 
         // الاشتراك في تحديثات المفضلة والسلة والطلبات
         this.authService.favoriteBookIds.subscribe((favorites) => {
@@ -191,23 +227,23 @@ faFilter = faFilter;
         });
 
         // Load notifications initially
-        this.notificationService.refreshNotifications(user.id);
-
-        // Subscribe to router events to update active states for orders and account
-        this.router.events.subscribe((event) => {
-          // Only update on NavigationEnd event
-          if (event.constructor.name === 'NavigationEnd') {
-            const currentUrl = this.router.url;
-            this.isOrdersActive = this.router.isActive('/requests', true);
-            // For account, if modal is open, set active, else false
-            this.isAccountActive = this.showAccountModal;
-            this.cdr.markForCheck();
-          }
-        });
-
-        this.onResize(window); // تحديد حالة القائمة الجانبية بناءً على حجم الشاشة عند تحميل الصفحة
+        this.notificationService.refreshNotifications(this.user.id);
       }
-    });
+
+      // Subscribe to router events to update active states for orders and account
+      this.router.events.subscribe((event) => {
+        // Only update on NavigationEnd event
+        if (event.constructor.name === 'NavigationEnd') {
+          const currentUrl = this.router.url;
+          this.isOrdersActive = this.router.isActive('/requests', true);
+          // For account, if modal is open, set active, else false
+          this.isAccountActive = this.showAccountModal;
+          this.cdr.markForCheck();
+        }
+      });
+
+      this.onResize(window); // تحديد حالة القائمة الجانبية بناءً على حجم الشاشة عند تحميل الصفحة
+    }
   }
 
   loadNotifications(userId: string): void {

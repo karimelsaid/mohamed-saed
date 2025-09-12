@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, BehaviorSubject } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
@@ -59,11 +59,21 @@ export class MerchantAuthService {
   }
 
   logout(): Observable<any> {
+    // Clear local authentication state immediately
+    this.clearMerchantAuth();
+
+    // Try to notify backend about logout (optional)
     return this.http.post(`${this.apiUrl}/merchant/logout`, {}).pipe(
-      tap(() => {
-        this.clearMerchantAuth();
+      tap({
+        next: () => console.log('Backend logout successful'),
+        error: (error) => console.log('Backend logout failed, but local logout completed', error)
       })
     );
+  }
+
+  // Public method to handle complete logout
+  performLogout(): void {
+    this.clearMerchantAuth();
   }
 
   private setMerchantAuth(token: string, merchant: any) {
@@ -91,13 +101,23 @@ export class MerchantAuthService {
 
   isAuthenticated(): boolean {
     const token = this.getToken();
-    if (!token) return false;
-    
+    if (!token) {
+      return false;
+    }
+
     try {
       // Check if token is expired
       const payload = JSON.parse(atob(token.split('.')[1]));
-      return payload.exp * 1000 > Date.now();
-    } catch {
+      const isExpired = payload.exp * 1000 <= Date.now();
+
+      if (isExpired) {
+        this.performLogout();
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      this.performLogout();
       return false;
     }
   }
@@ -111,5 +131,68 @@ export class MerchantAuthService {
       return 'حدث خطأ في الاتصال بالخادم. يرجى التحقق من اتصالك بالإنترنت.';
     }
     return 'حدث خطأ أثناء المصادقة. يرجى المحاولة مرة أخرى.';
+  }
+
+  getCurrentMerchantFromAPI(): Observable<any> {
+    const token = this.getToken();
+    let headers = new HttpHeaders();
+    if (token) {
+      headers = headers.set('Authorization', `Bearer ${token}`);
+    }
+    return this.http.get(`${this.apiUrl}/merchant/current`, { headers });
+  }
+
+  getMerchantProducts(): Observable<any> {
+    const token = this.getToken();
+    let headers = new HttpHeaders();
+    if (token) {
+      headers = headers.set('Authorization', `Bearer ${token}`);
+    }
+    return this.http.get(`${this.apiUrl}/merchant/products`, { headers });
+  }
+
+  getMerchantOrders(): Observable<any> {
+    const token = this.getToken();
+    let headers = new HttpHeaders();
+    if (token) {
+      headers = headers.set('Authorization', `Bearer ${token}`);
+    }
+    return this.http.get(`${this.apiUrl}/merchant/orders`, { headers });
+  }
+
+  addMerchantProduct(productData: FormData): Observable<any> {
+    const token = this.getToken();
+    let headers = new HttpHeaders();
+    if (token) {
+      headers = headers.set('Authorization', `Bearer ${token}`);
+    }
+    return this.http.post(`${this.apiUrl}/merchant/products`, productData, { headers });
+  }
+
+  submitProductUpdateRequest(productId: string, updateData: any): Observable<any> {
+    const token = this.getToken();
+    let headers = new HttpHeaders();
+    if (token) {
+      headers = headers.set('Authorization', `Bearer ${token}`);
+    }
+    return this.http.post(`${this.apiUrl}/merchant/products/${productId}/update-request`, updateData, { headers });
+  }
+
+  getMerchantUpdateRequests(): Observable<any> {
+    const token = this.getToken();
+    let headers = new HttpHeaders();
+    if (token) {
+      headers = headers.set('Authorization', `Bearer ${token}`);
+    }
+    return this.http.get(`${this.apiUrl}/merchant/update-requests`, { headers });
+  }
+
+  deleteMerchantProduct(productId: string): Observable<any> {
+    const token = this.getToken();
+    let headers = new HttpHeaders();
+    if (token) {
+      headers = headers.set('Authorization', `Bearer ${token}`);
+    }
+    return this.http.delete(`${this.apiUrl}/merchant/products/${productId}`, { headers });
   }
 }

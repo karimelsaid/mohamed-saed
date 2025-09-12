@@ -39,7 +39,7 @@ export class IslamicComponent implements OnInit, OnDestroy {
 ngOnInit(): void {
   this.isLoading = true;
   this.dataService.getData().subscribe(data => {
-this.books = data.filter((book: Book) => book.product_category.includes('ديني'));
+this.books = data.filter((book: Book) => book.product_category.includes('كتب دينية'));
       this.totalPages = Math.ceil(this.books.length / this.booksPerPage);
       this.updatePage();
       this.startCountdown();

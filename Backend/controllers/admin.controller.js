@@ -407,7 +407,7 @@ async function syncJsonToExcel(req, res) {
   }
 }
 
-async function batchUpdateProducts(req, res) {
+async function batchUpdateProductsMain(req, res) {
   try {
     const products = req.body.products;
     if (!Array.isArray(products) || products.length === 0) {
@@ -467,9 +467,9 @@ async function batchUpdateProducts(req, res) {
     // Update output.json by re-running downloadAndConvertExcel
     await downloadAndConvertExcel(fileId);
 
-    res.json({ success: true, message: 'Batch update of products successful' });
+    res.json({ success: true, message: 'Batch update of products in main file successful' });
   } catch (error) {
-    console.error('Error in batchUpdateProducts:', error);
+    console.error('Error in batchUpdateProductsMain:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 }
@@ -587,13 +587,24 @@ async function saveFreeShippingRules(req, res) {
   }
 }
 
-const Merchant = require('../models/Merchant.model');
+const User = require('../models/User.model');
+const Product = require('../models/Product.model');
 
 // Admin: List all merchants
 async function listMerchants(req, res) {
   try {
-    const merchants = await Merchant.find().sort({ createdAt: -1 });
-    res.json({ success: true, merchants });
+    const merchants = await User.find({ role: 'merchant' }).sort({ createdAt: -1 });
+    // Map to match frontend interface
+    const mappedMerchants = merchants.map(merchant => ({
+      _id: merchant._id,
+      name: merchant.merchantName || merchant.username,
+      email: merchant.email,
+      logo: merchant.logo,
+      approved: merchant.approved,
+      suspended: merchant.suspended || false,
+      createdAt: merchant.createdAt
+    }));
+    res.json({ success: true, merchants: mappedMerchants });
   } catch (error) {
     console.error('Error in listMerchants:', error);
     res.status(500).json({ success: false, message: 'Server error' });
@@ -608,8 +619,8 @@ async function updateMerchantApproval(req, res) {
     if (typeof approved !== 'boolean') {
       return res.status(400).json({ success: false, message: 'Approved must be boolean' });
     }
-    const merchant = await Merchant.findById(merchantId);
-    if (!merchant) {
+    const merchant = await User.findById(merchantId);
+    if (!merchant || merchant.role !== 'merchant') {
       return res.status(404).json({ success: false, message: 'Merchant not found' });
     }
     merchant.approved = approved;
@@ -617,6 +628,335 @@ async function updateMerchantApproval(req, res) {
     res.json({ success: true, message: `Merchant ${approved ? 'approved' : 'rejected'} successfully` });
   } catch (error) {
     console.error('Error in updateMerchantApproval:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+}
+
+// Admin: List all merchant products (including pending)
+async function listMerchantProducts(req, res) {
+  try {
+    const products = await Product.find().populate('merchantId', 'username email').sort({ createdAt: -1 });
+    res.json({ success: true, products });
+  } catch (error) {
+    console.error('Error in listMerchantProducts:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+}
+
+// Admin: Approve or reject product
+const ProductUpdateRequest = require('../models/ProductUpdateRequest.model');
+
+async function updateProductApproval(req, res) {
+  try {
+    const { productId } = req.params;
+    const { status } = req.body; // 'approved' or 'rejected'
+    if (!['approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ success: false, message: 'Status must be approved or rejected' });
+    }
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({ success: false, message: 'Product not found' });
+    }
+
+    // Extract barcode from product image filename (remove .webp extension)
+    const barcode = product.product_image ? product.product_image.replace('.webp', '') : productId;
+
+    if (status === 'rejected') {
+      // Remove product from Excel file if rejected
+      const fileId = process.env.GOOGLE_DRIVE_FILE_ID;
+      if (fileId) {
+        const client = await require('../config/drive').auth.getClient();
+        const drive = require('googleapis').google.drive({ version: 'v3', auth: client });
+
+        const resDrive = await drive.files.get({
+          fileId,
+          alt: 'media',
+        }, { responseType: 'arraybuffer' });
+
+        const buffer = Buffer.from(resDrive.data);
+        const xlsx = require('xlsx');
+        const workbook = xlsx.read(buffer, { type: 'buffer' });
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        let json = xlsx.utils.sheet_to_json(sheet);
+
+        // Find and remove product by barcode (not MongoDB ID)
+        const productIndex = json.findIndex(p => String(p.products_id) === String(barcode));
+        if (productIndex !== -1) {
+          json.splice(productIndex, 1);
+
+          // Convert JSON back to sheet
+          const newSheet = xlsx.utils.json_to_sheet(json);
+          workbook.Sheets[sheetName] = newSheet;
+
+          // Write workbook to buffer
+          const wbout = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+
+          // Upload updated Excel file back to Google Drive
+          await drive.files.update({
+            fileId,
+            media: {
+              mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+              body: wbout
+            }
+          });
+
+          // Update output.json by re-running downloadAndConvertExcel
+          await downloadAndConvertExcel(fileId);
+
+          // Update the update file to keep in sync
+          await updateExcelFromJson(process.env.GOOGLE_DRIVE_FILE_update);
+        }
+      }
+
+      // Delete product image if exists
+      const uploadDir = path.join(__dirname, '../uploads/books');
+      const imagePath = path.join(uploadDir, product.product_image || (barcode + '.webp'));
+      if (fs.existsSync(imagePath)) {
+        fs.unlinkSync(imagePath);
+      }
+    }
+
+    product.status = status;
+    await product.save();
+
+    if (status === 'approved') {
+      // Determine category prefix
+      let categoryPrefix = '';
+      if (categoryMap.hasOwnProperty(product.product_category)) {
+        if (product.product_category === 'رواية') {
+          categoryPrefix = 'رواية-';
+        } else if (product.product_category === 'تنمية') {
+          categoryPrefix = 'تنمية-';
+        } else if (product.product_category === 'ديني') {
+          categoryPrefix = 'ديني-';
+        } else if (product.product_category === 'قاموس') {
+          categoryPrefix = 'قاموس-';
+        } else if (product.product_category === 'صحة') {
+          categoryPrefix = 'صحة-';
+        } else if (product.product_category === 'اعمال') {
+          categoryPrefix = 'اعمال-';
+        } else if (product.product_category === 'فن') {
+          categoryPrefix = 'فن-';
+        } else if (product.product_category === 'تاريخ') {
+          categoryPrefix = 'تاريخ-';
+        } else if (product.product_category === 'تربية') {
+          categoryPrefix = 'تربية-';
+        }
+      }
+
+      // Prepare product data
+      const productData = {
+        barcode,
+        product_name: product.product_name,
+        product_quantity: product.product_quantity,
+        product_category: product.product_category,
+        product_description: product.product_description,
+        categoryPrefix,
+        product_price: product.product_price,
+        price_cost: product.price_cost,
+        createdAt: product.createdAt.toISOString()
+      };
+
+      // Add product to Excel
+      await addProductToExcel(productData);
+
+      // Update Excel files
+      await updateExcelFromJson(process.env.GOOGLE_DRIVE_FILE_ID);
+      await updateExcelFromJson(process.env.GOOGLE_DRIVE_FILE_update);
+    }
+
+    // Update sitemap after approval/rejection
+    sitemapService.generateSitemap();
+
+    // If approved, check for any pending update requests and reject them automatically
+    if (status === 'approved') {
+      const pendingRequests = await ProductUpdateRequest.find({ productId, status: 'pending' });
+      for (const request of pendingRequests) {
+        request.status = 'rejected';
+        request.reviewedAt = new Date();
+        await request.save();
+      }
+    }
+
+    res.json({ success: true, message: `Product ${status} successfully` });
+  } catch (error) {
+    console.error('Error in updateProductApproval:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+}
+
+// Admin: Get products for a specific merchant
+async function getMerchantProductsByMerchant(req, res) {
+  try {
+    const { merchantId } = req.params;
+    const products = await Product.find({ merchantId }).sort({ createdAt: -1 });
+    res.json({ success: true, products });
+  } catch (error) {
+    console.error('Error in getMerchantProductsByMerchant:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+}
+
+// Admin: Suspend or activate merchant account
+async function updateMerchantSuspension(req, res) {
+  try {
+    const { merchantId } = req.params;
+    const { suspended } = req.body;
+    if (typeof suspended !== 'boolean') {
+      return res.status(400).json({ success: false, message: 'Suspended must be boolean' });
+    }
+    const merchant = await User.findById(merchantId);
+    if (!merchant || merchant.role !== 'merchant') {
+      return res.status(404).json({ success: false, message: 'Merchant not found' });
+    }
+    merchant.suspended = suspended;
+    await merchant.save();
+    res.json({ success: true, message: `Merchant account ${suspended ? 'suspended' : 'activated'} successfully` });
+  } catch (error) {
+    console.error('Error in updateMerchantSuspension:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+}
+
+// Admin: Get all product update requests
+async function getProductUpdateRequests(req, res) {
+  try {
+    const ProductUpdateRequest = require('../models/ProductUpdateRequest.model');
+
+    const requests = await ProductUpdateRequest.find()
+      .populate('productId')
+      .populate('merchantId', 'username email')
+      .sort({ createdAt: -1 });
+
+    res.json({ success: true, requests });
+  } catch (error) {
+    console.error('Error in getProductUpdateRequests:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+}
+
+// Admin: Approve or reject product update request
+async function updateProductUpdateRequest(req, res) {
+  try {
+    const { requestId } = req.params;
+    const { status } = req.body; // 'approved' or 'rejected'
+
+    if (!['approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ success: false, message: 'Status must be approved or rejected' });
+    }
+
+    const ProductUpdateRequest = require('../models/ProductUpdateRequest.model');
+    const Product = require('../models/Product.model');
+
+    const request = await ProductUpdateRequest.findById(requestId);
+    if (!request) {
+      return res.status(404).json({ success: false, message: 'Update request not found' });
+    }
+
+    if (request.status !== 'pending') {
+      return res.status(400).json({ success: false, message: 'Request has already been processed' });
+    }
+
+    if (status === 'approved') {
+      // Update the product with new data
+      const product = await Product.findById(request.productId);
+      if (!product) {
+        return res.status(404).json({ success: false, message: 'Product not found' });
+      }
+
+      // Update product fields
+      product.product_name = request.updatedProduct.product_name;
+      product.product_quantity = request.updatedProduct.product_quantity;
+      product.product_category = request.updatedProduct.product_category;
+      product.product_description = request.updatedProduct.product_description;
+      product.product_price = request.updatedProduct.product_price;
+      product.price_cost = request.updatedProduct.price_cost;
+
+      await product.save();
+
+      // Update Excel file
+      const barcode = product.product_image ? product.product_image.replace('.webp', '') : product._id;
+      const fileId = process.env.GOOGLE_DRIVE_FILE_ID;
+
+      if (fileId) {
+        const client = await require('../config/drive').auth.getClient();
+        const drive = require('googleapis').google.drive({ version: 'v3', auth: client });
+
+        const resDrive = await drive.files.get({
+          fileId,
+          alt: 'media',
+        }, { responseType: 'arraybuffer' });
+
+        const buffer = Buffer.from(resDrive.data);
+        const xlsx = require('xlsx');
+        const workbook = xlsx.read(buffer, { type: 'buffer' });
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        let json = xlsx.utils.sheet_to_json(sheet);
+
+        // Find and update product in Excel
+        const productIndex = json.findIndex(p => String(p.products_id) === String(barcode));
+        if (productIndex !== -1) {
+          json[productIndex].product_name = product.product_name;
+          json[productIndex].product_quantity = product.product_quantity;
+          json[productIndex].product_category = product.product_category;
+          json[productIndex].product_description = product.product_description;
+          json[productIndex].product_price = product.product_price;
+          json[productIndex].price_cost = product.price_cost;
+
+          // Convert JSON back to sheet
+          const newSheet = xlsx.utils.json_to_sheet(json);
+          workbook.Sheets[sheetName] = newSheet;
+
+          // Write workbook to buffer
+          const wbout = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+
+          // Upload updated Excel file back to Google Drive
+          await drive.files.update({
+            fileId,
+            media: {
+              mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+              body: wbout
+            }
+          });
+
+          // Update output.json
+          await downloadAndConvertExcel(fileId);
+          await updateExcelFromJson(process.env.GOOGLE_DRIVE_FILE_update);
+        }
+      }
+
+      // Update sitemap
+      sitemapService.generateSitemap();
+
+      // Remove the approved update request from the list by deleting it
+      await ProductUpdateRequest.findByIdAndDelete(requestId);
+    } else {
+      // If rejected, just update the request status and save
+      request.status = status;
+      request.reviewedAt = new Date();
+      request.reviewedBy = req.admin ? req.admin._id : null;
+      await request.save();
+    }
+
+    res.json({ success: true, message: `Product update request ${status} successfully` });
+  } catch (error) {
+    console.error('Error in updateProductUpdateRequest:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+}
+
+// Admin: Get products for a specific merchant
+async function getMerchantProducts(req, res) {
+  try {
+    const { merchantId } = req.params;
+    const Product = require('../models/Product.model');
+
+    const products = await Product.find({ merchantId }).sort({ createdAt: -1 });
+    res.json({ success: true, products });
+  } catch (error) {
+    console.error('Error in getMerchantProducts:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 }
@@ -630,10 +970,18 @@ module.exports = {
   deleteProduct,
   syncJsonToExcel,
   batchUpdateProducts,
+  batchUpdateProductsMain,
   getPromotionDates,
   updatePromotionDates,
   getFreeShippingRules,
   saveFreeShippingRules,
   listMerchants,
-  updateMerchantApproval
+  updateMerchantApproval,
+  listMerchantProducts,
+  updateProductApproval,
+  updateMerchantSuspension,
+  getProductUpdateRequests,
+  updateProductUpdateRequest,
+  getMerchantProducts,
+  getMerchantProductsByMerchant
 };

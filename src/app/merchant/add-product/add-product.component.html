@@ -1,0 +1,314 @@
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 mt-6 md:mt-32 mb-32 md:mb-20">
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+
+    <!-- Header -->
+    <div class="mb-8">
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+            إضافة منتج جديد
+          </h1>
+          <p class="text-gray-600 dark:text-gray-400">
+            أضف منتجك الجديد وابدأ في بيعه للعملاء
+          </p>
+        </div>
+        <button
+          (click)="cancel()"
+          class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+        >
+          <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+          </svg>
+          العودة للوحة التحكم
+        </button>
+      </div>
+    </div>
+
+    <!-- Form Card -->
+    <div class="bg-white dark:bg-gray-800 shadow-sm rounded-xl border border-gray-200 dark:border-gray-700">
+      <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">تفاصيل المنتج</h2>
+      </div>
+
+      <form [formGroup]="productForm" (ngSubmit)="onSubmit()" class="p-6 space-y-6">
+
+        <!-- Product Name -->
+        <div>
+          <label for="product_name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            اسم المنتج <span class="text-red-500">*</span>
+          </label>
+          <div class="relative">
+            <input
+              type="text"
+              id="product_name"
+              formControlName="product_name"
+              class="block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors duration-200"
+              placeholder="أدخل اسم المنتج"
+              [class.border-red-500]="productForm.get('product_name')?.invalid && productForm.get('product_name')?.touched"
+            />
+            <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+              <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+              </svg>
+            </div>
+          </div>
+          <div *ngIf="productForm.get('product_name')?.invalid && productForm.get('product_name')?.touched"
+               class="mt-2 text-sm text-red-600 dark:text-red-400 flex items-center">
+            <svg class="w-4 h-4 ml-1" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+            </svg>
+            اسم المنتج مطلوب
+          </div>
+        </div>
+
+        <!-- Price and Quantity Row -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Product Price -->
+          <div>
+            <label for="product_price" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              السعر (ج.م) <span class="text-red-500">*</span>
+            </label>
+            <div class="relative">
+              <input
+                type="number"
+                id="product_price"
+                formControlName="product_price"
+                class="block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors duration-200"
+                placeholder="0.00"
+                min="0"
+                step="0.01"
+                [class.border-red-500]="productForm.get('product_price')?.invalid && productForm.get('product_price')?.touched"
+              />
+              <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                <span class="text-gray-500 dark:text-gray-400 text-sm">ج.م</span>
+              </div>
+            </div>
+            <div *ngIf="productForm.get('product_price')?.invalid && productForm.get('product_price')?.touched"
+                 class="mt-2 text-sm text-red-600 dark:text-red-400 flex items-center">
+              <svg class="w-4 h-4 ml-1" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+              </svg>
+              السعر مطلوب ويجب أن يكون أكبر من 0
+            </div>
+          </div>
+
+          <!-- Stock Quantity -->
+          <div>
+            <label for="stock_quantity" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              الكمية المتاحة
+            </label>
+            <div class="relative">
+              <input
+                type="number"
+                id="stock_quantity"
+                formControlName="stock_quantity"
+                class="block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors duration-200"
+                placeholder="0"
+                min="0"
+              />
+              <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Category -->
+        <div>
+          <label for="category" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            الفئة
+          </label>
+          <div class="relative">
+            <select
+              id="category"
+              formControlName="category"
+              class="block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors duration-200"
+            >
+              <option value="">اختر الفئة</option>
+              <option value="كتب">كتب</option>
+              <option value="أدوات مكتبية">أدوات مكتبية</option>
+              <option value="إلكترونيات">إلكترونيات</option>
+              <option value="ملابس">ملابس</option>
+              <option value="أخرى">أخرى</option>
+            </select>
+            <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+              <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Book Category (shown only if category is كتب) -->
+        <div *ngIf="productForm.get('category')?.value === 'كتب'">
+          <label for="book_category" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            فئة الكتاب <span class="text-red-500">*</span>
+          </label>
+          <div class="relative">
+            <select
+              id="book_category"
+              formControlName="book_category"
+              class="block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors duration-200"
+              [class.border-red-500]="productForm.get('book_category')?.invalid && productForm.get('book_category')?.touched"
+            >
+              <option value="">اختر فئة الكتاب</option>
+              <option *ngFor="let cat of bookCategories" [value]="cat">{{ cat }}</option>
+            </select>
+            <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+              <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+              </svg>
+            </div>
+          </div>
+          <div *ngIf="productForm.get('book_category')?.invalid && productForm.get('book_category')?.touched"
+               class="mt-2 text-sm text-red-600 dark:text-red-400 flex items-center">
+            <svg class="w-4 h-4 ml-1" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+            </svg>
+            فئة الكتاب مطلوبة
+          </div>
+        </div>
+
+        <!-- Price Cost -->
+        <div>
+          <label for="price_cost" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            تكلفة السعر (ج.م)
+          </label>
+          <div class="relative">
+            <input
+              type="number"
+              id="price_cost"
+              formControlName="price_cost"
+              class="block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors duration-200"
+              placeholder="0.00"
+              min="0"
+              step="0.01"
+            />
+            <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+              <span class="text-gray-500 dark:text-gray-400 text-sm">ج.م</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Product Image -->
+        <div>
+          <label for="product_image" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            صورة المنتج <span class="text-red-500">*</span>
+          </label>
+          <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 dark:border-gray-600 border-dashed rounded-lg hover:border-gray-400 dark:hover:border-gray-500 transition-colors duration-200">
+            <div class="space-y-1 text-center">
+              <div *ngIf="!imagePreview" class="flex text-sm text-gray-600 dark:text-gray-400">
+                <label for="product_image" class="relative cursor-pointer bg-white dark:bg-gray-800 rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500">
+                  <span>اختر صورة</span>
+                  <input id="product_image" name="product_image" type="file" accept="image/*" (change)="onFileSelected($event)" class="sr-only">
+                </label>
+                <p class="pl-1">أو اسحب وأفلت</p>
+              </div>
+              <div *ngIf="imagePreview" class="flex flex-col items-center">
+                <img [src]="imagePreview" alt="Product preview" class="w-32 h-32 object-cover rounded-lg mb-2">
+                <button type="button" (click)="selectedFile = null; imagePreview = null" class="text-red-600 hover:text-red-800 text-sm">إزالة الصورة</button>
+              </div>
+              <p class="text-xs text-gray-500 dark:text-gray-400">
+                PNG, JPG, GIF حتى 1 ميجابايت
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Product Description -->
+        <div>
+          <label for="product_description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            وصف المنتج <span class="text-red-500">*</span>
+          </label>
+          <textarea
+            id="product_description"
+            formControlName="product_description"
+            rows="4"
+            class="block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors duration-200 resize-none"
+            placeholder="اكتب وصفاً مفصلاً للمنتج..."
+            [class.border-red-500]="productForm.get('product_description')?.invalid && productForm.get('product_description')?.touched"
+          ></textarea>
+          <div *ngIf="productForm.get('product_description')?.invalid && productForm.get('product_description')?.touched"
+               class="mt-2 text-sm text-red-600 dark:text-red-400 flex items-center">
+            <svg class="w-4 h-4 ml-1" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+            </svg>
+            وصف المنتج مطلوب
+          </div>
+          <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+            وصف المنتج يساعد العملاء في فهم المنتج بشكل أفضل
+          </p>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="flex flex-col sm:flex-row sm:justify-end sm:space-x-4 space-y-3 sm:space-y-0 pt-6 border-t border-gray-200 dark:border-gray-700">
+          <button
+            type="button"
+            (click)="cancel()"
+            class="w-full sm:w-auto inline-flex justify-center items-center px-6 py-3 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+          >
+            <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+            إلغاء
+          </button>
+          <button
+            type="submit"
+            [disabled]="productForm.invalid || loading"
+            class="w-full sm:w-auto inline-flex justify-center items-center px-6 py-3 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+          >
+            <svg *ngIf="loading" class="animate-spin -ml-1 mr-3 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <svg *ngIf="!loading" class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+            </svg>
+            <span *ngIf="loading">جاري الإضافة...</span>
+            <span *ngIf="!loading">إضافة المنتج</span>
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Help Section -->
+    <div class="mt-8 bg-blue-50 dark:bg-blue-900/20 rounded-lg p-6 border border-blue-200 dark:border-blue-800">
+      <div class="flex">
+        <div class="flex-shrink-0">
+          <svg class="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+          </svg>
+        </div>
+        <div class="mr-3">
+          <h3 class="text-sm font-medium text-blue-800 dark:text-blue-200">
+            نصائح لإضافة منتج ناجح
+          </h3>
+          <div class="mt-2 text-sm text-blue-700 dark:text-blue-300">
+            <ul class="list-disc list-inside space-y-1">
+              <li>استخدم اسم واضح ومميز للمنتج</li>
+              <li>اكتب وصفاً مفصلاً يتضمن المواصفات والفوائد</li>
+              <li>حدد سعر تنافسي مناسب للسوق</li>
+              <li>أضف صور عالية الجودة للمنتج</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Success Modal -->
+<app-modal-dialog
+  [isOpen]="showSuccessModal"
+  [title]="modalTitle"
+  [message]="modalMessage"
+  [confirmText]="confirmButtonText"
+  [cancelText]="cancelButtonText"
+  [showCancel]="true"
+  [type]="'success'"
+  (confirmed)="onConfirm && onConfirm()"
+  (cancelled)="onCancel && onCancel()"
+  (closed)="showSuccessModal = false">
+</app-modal-dialog>

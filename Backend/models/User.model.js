@@ -15,6 +15,7 @@ const userSchema = new mongoose.Schema({
   taxNumber: { type: String },
   logo: { type: String },
   approved: { type: Boolean, default: false },
+  suspended: { type: Boolean, default: false }, // إيقاف الحساب مؤقتاً
   merchantName: { type: String },
 
   favorites: [{ type: String }], // مصفوفة فيها ID الكتب المفضلة

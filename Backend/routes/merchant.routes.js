@@ -13,6 +13,9 @@ router.post('/logout', merchantAuthController.logoutMerchant);
 router.get('/current', authenticateMerchant, merchantController.getCurrentMerchant);
 router.get('/products', authenticateMerchant, merchantController.getMerchantProducts);
 router.get('/orders', authenticateMerchant, merchantController.getMerchantOrders);
-router.post('/products', authenticateMerchant, merchantController.productUpload.single('product_image'), merchantController.addProduct);
+router.post('/products', authenticateMerchant, merchantController.productUpload.single('image'), merchantController.addProduct);
+router.delete('/products/:productId', authenticateMerchant, merchantController.deleteProduct);
+router.post('/products/:productId/update-request', authenticateMerchant, merchantController.submitProductUpdateRequest);
+router.get('/update-requests', authenticateMerchant, merchantController.getMerchantUpdateRequests);
 
 module.exports = router;

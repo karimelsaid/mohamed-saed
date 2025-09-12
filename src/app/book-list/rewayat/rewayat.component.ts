@@ -45,7 +45,7 @@ export class RewayatComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.isLoading = true;
     this.dataService.getData().subscribe(data => {
-      this.books = data.filter((book: Book) => book.product_category.includes('روايات'));
+this.books = data.filter((book: Book) => book.product_category.includes('روايات وقصص'));
       this.totalPages = Math.ceil(this.books.length / this.booksPerPage);
       this.updatePage();
       this.startCountdown();

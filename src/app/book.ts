@@ -13,4 +13,7 @@ export interface Book {
   remainingTime?: string; // خاصية اختيارية لعرض الوقت المتبقي للعرض
   product_discount_percent?: number; // خاصية اختيارية لنسبة الخصم
   product_description?: string; // إضافة وصف المنتج كخاصية اختيارية
+  merchantId?: string; // معرف التاجر
+  merchantName?: string; // اسم التاجر
+  merchantLogo?: string; // شعار التاجر
 }

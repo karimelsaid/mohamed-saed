@@ -54,17 +54,17 @@ async function createAccount(req, res) {
     // التحقق من رقم الهاتف المصري
     const egyptPhoneRegex = /^(010|011|012|015)[0-9]{8}$/;
     if (!egyptPhoneRegex.test(phone)) {
-      return res.status(400).json({ 
-        message: 'رقم الهاتف غير صالح، يجب أن يبدأ بـ 010 أو 011 أو 012 أو 015 ويحتوي على 11 رقمًا.' 
+      return res.status(400).json({
+        message: 'رقم الهاتف غير صالح، يجب أن يبدأ بـ 010 أو 011 أو 012 أو 015 ويحتوي على 11 رقمًا.'
       });
     }
 
     // تشفير كلمة المرور وإنشاء الحساب
     const hashedPassword = await bcrypt.hash(password, 12);
-    const newUser = new User({ 
-      username, 
-      email, 
-      password: hashedPassword, 
+    const newUser = new User({
+      username,
+      email,
+      password: hashedPassword,
       phone,
       governorate,
       city,
@@ -92,6 +92,17 @@ async function login(req, res) {
       return res.status(401).json({ message: 'كلمة المرور غير صحيحة' });
     }
 
+    // Generate JWT token for admin users
+    let token = null;
+    if (user.role === 'admin') {
+      const jwt = require('jsonwebtoken');
+      token = jwt.sign(
+        { userId: user._id, email: user.email, role: user.role },
+        process.env.JWT_SECRET || 'your-secret-key',
+        { expiresIn: '7d' }
+      );
+    }
+
     res.status(200).json({
       message: 'تم تسجيل الدخول بنجاح',
       user: {
@@ -99,7 +110,8 @@ async function login(req, res) {
         username: user.username,
         email: user.email,
         phone: user.phone,
-        role: user.role
+        role: user.role,
+        token: token // Include token for admin users
       }
     });
   } catch (error) {

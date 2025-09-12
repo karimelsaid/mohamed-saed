@@ -17,6 +17,16 @@ const authenticateMerchant = async (req, res, next) => {
     }
 
     req.merchant = merchant;
+
+    // Allow getCurrentMerchant even if not approved
+    if (req.originalUrl.includes('/current') && req.method === 'GET') {
+      return next();
+    }
+
+    if (!merchant.approved) {
+      return res.status(403).json({ success: false, message: 'حساب التاجر غير مفعل. يرجى انتظار موافقة الإدارة.' });
+    }
+
     next();
   } catch (error) {
     console.error('Auth middleware error:', error);

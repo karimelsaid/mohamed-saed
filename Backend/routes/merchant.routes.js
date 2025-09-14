@@ -11,6 +11,7 @@ router.post('/logout', merchantAuthController.logoutMerchant);
 
 // Protected routes (must come before parameterized routes)
 router.get('/current', authenticateMerchant, merchantController.getCurrentMerchant);
+router.put('/profile', authenticateMerchant, merchantController.upload.single('logo'), merchantController.updateMerchantProfile);
 router.get('/products', authenticateMerchant, merchantController.getMerchantProducts);
 router.get('/orders', authenticateMerchant, merchantController.getMerchantOrders);
 router.post('/products', authenticateMerchant, merchantController.productUpload.single('image'), merchantController.addProduct);

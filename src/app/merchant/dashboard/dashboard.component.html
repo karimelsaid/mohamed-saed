@@ -210,15 +210,24 @@
 
     <!-- Merchant Info Section -->
     <div class="bg-white dark:bg-gray-800 shadow-sm rounded-xl border border-gray-200 dark:border-gray-700 mb-8">
-      <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+      <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
         <h2 class="text-lg font-semibold text-gray-900 dark:text-white">معلومات التاجر</h2>
+        <button
+          (click)="toggleEditMode()"
+          class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-blue-600 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900 dark:text-blue-400 dark:hover:bg-blue-800 transition-colors duration-200"
+        >
+          <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+          </svg>
+          {{ isEditMode ? 'إلغاء التعديل' : 'تعديل المعلومات' }}
+        </button>
       </div>
       <div class="p-6">
         <div *ngIf="loadingMerchant" class="flex items-center justify-center py-8">
           <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           <span class="mr-3 text-gray-600 dark:text-gray-400">جاري التحميل...</span>
         </div>
-        <div *ngIf="!loadingMerchant" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div *ngIf="!loadingMerchant && !isEditMode" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div class="flex flex-col">
             <span class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">الاسم</span>
             <span class="text-gray-900 dark:text-white font-medium">{{ merchant?.merchantName || merchant?.name || 'غير محدد' }}</span>
@@ -244,6 +253,109 @@
             <span class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">تاريخ التسجيل</span>
             <span class="text-gray-900 dark:text-white">{{ merchant?.createdAt ? (merchant.createdAt | date:'short') : 'غير محدد' }}</span>
           </div>
+        </div>
+        <div *ngIf="!loadingMerchant && isEditMode">
+          <form (ngSubmit)="onSubmitProfileUpdate()" class="space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الاسم</label>
+                <input
+                  id="name"
+                  type="text"
+                  [(ngModel)]="editForm.name"
+                  name="name"
+                  required
+                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label for="phone" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">رقم الهاتف</label>
+                <input
+                  id="phone"
+                  type="text"
+                  [(ngModel)]="editForm.phone"
+                  name="phone"
+                  (input)="validatePhone()"
+                  class="w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                  [class.border-red-500]="phoneTouched && !phoneValid && editForm.phone.trim()"
+                  [class.border-gray-300]="!phoneTouched || phoneValid || !editForm.phone.trim()"
+                  [class.dark:border-gray-600]="!phoneTouched || phoneValid || !editForm.phone.trim()"
+                  [class.dark:border-red-500]="phoneTouched && !phoneValid && editForm.phone.trim()"
+                />
+                <div *ngIf="phoneTouched && !phoneValid && editForm.phone.trim()" class="mt-1 text-sm text-red-600 dark:text-red-400">
+                  يرجى إدخال رقم هاتف صحيح (مثال: 01012345678)
+                </div>
+                <div *ngIf="phoneTouched && phoneValid && editForm.phone.trim()" class="mt-1 text-sm text-green-600 dark:text-green-400">
+                  رقم الهاتف صحيح
+                </div>
+              </div>
+              <div>
+                <label for="taxNumber" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الرقم الضريبي</label>
+                <input
+                  id="taxNumber"
+                  type="text"
+                  [(ngModel)]="editForm.taxNumber"
+                  name="taxNumber"
+                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              <div class="md:col-span-2">
+                <label for="bio" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">السيرة الذاتية</label>
+                <textarea
+                  id="bio"
+                  [(ngModel)]="editForm.bio"
+                  name="bio"
+                  rows="4"
+                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                  placeholder="اكتب وصفًا عن نشاطك التجاري..."
+                ></textarea>
+              </div>
+            </div>
+            <div>
+              <label for="logo" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">اللوجو</label>
+              <input
+                id="logo"
+                type="file"
+                (change)="onFileSelected($event)"
+                accept="image/png, image/jpeg"
+                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+              />
+              <div *ngIf="logoPreview" class="mt-2">
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">معاينة اللوجو الجديد:</p>
+                <img [src]="logoPreview" alt="Logo Preview" class="w-20 h-20 object-cover rounded-md border border-gray-300 dark:border-gray-600" />
+              </div>
+              <div *ngIf="merchant?.logo && !logoPreview" class="mt-2">
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">اللوجو الحالي:</p>
+                <img [src]="getLogoUrl(merchant.logo)" alt="Current Logo" class="w-20 h-20 object-cover rounded-md border border-gray-300 dark:border-gray-600" />
+              </div>
+            </div>
+            <div class="flex items-center justify-end gap-4">
+              <button
+                type="button"
+                (click)="isEditMode = false"
+                class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors duration-200"
+              >
+                إلغاء
+              </button>
+              <button
+                type="submit"
+                [disabled]="updatingProfile"
+                class="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+              >
+                <span *ngIf="updatingProfile" class="flex items-center">
+                  <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  جاري التحديث...
+                </span>
+                <span *ngIf="!updatingProfile">حفظ التغييرات</span>
+              </button>
+            </div>
+            <div *ngIf="updateMessage" class="mt-4 p-4 rounded-md" [ngClass]="updateMessageColor === 'green' ? 'bg-green-50 text-green-800 dark:bg-green-900 dark:text-green-300' : 'bg-red-50 text-red-800 dark:bg-red-900 dark:text-red-300'">
+              {{ updateMessage }}
+            </div>
+          </form>
         </div>
       </div>
     </div>

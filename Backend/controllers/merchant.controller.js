@@ -232,11 +232,9 @@ async function getCurrentMerchant(req, res) {
         name: merchant.username,
         email: merchant.email,
         phone: merchant.phone,
-        governorate: merchant.governorate,
-        city: merchant.city,
-        village: merchant.village,
         taxNumber: merchant.taxNumber,
         logo: merchant.logo,
+        bio: merchant.bio,
         approved: merchant.approved,
         isApproved: merchant.approved,
         suspended: merchant.suspended || false,
@@ -537,6 +535,7 @@ async function getMerchantById(req, res) {
         city: merchant.city,
         village: merchant.village,
         logo: merchant.logo,
+        bio: merchant.bio,
         createdAt: merchant.createdAt
       }
     });
@@ -574,6 +573,82 @@ async function getProductsByMerchantId(req, res) {
   }
 }
 
+async function updateMerchantProfile(req, res) {
+  try {
+    const merchantId = req.merchant._id;
+    const { name, phone, taxNumber, bio } = req.body;
+
+    // Find the merchant
+    const merchant = await User.findById(merchantId);
+    if (!merchant) {
+      return res.status(404).json({ success: false, message: 'Merchant not found' });
+    }
+
+    // Handle logo upload if provided
+    let logoPath = merchant.logo; // Keep existing logo by default
+    if (req.file) {
+      // Sanitize merchant name for folder name (not used here but kept for consistency)
+      const merchantName = name || merchant.username;
+      // Save logo image in uploads/merchants folder
+      const uploadDir = path.join(__dirname, '../uploads/merchants');
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+      const filename = `merchant_logo_${Date.now()}.webp`;
+      const filepath = path.join(uploadDir, filename);
+
+      await sharp(req.file.buffer)
+        .resize({ width: 300 }) // Resize logo width to max 300px
+        .webp({ quality: 80 })
+        .toFile(filepath);
+
+      logoPath = filename;
+
+      // Delete old logo file if exists
+      if (merchant.logo) {
+        const oldLogoPath = path.join(uploadDir, merchant.logo);
+        if (fs.existsSync(oldLogoPath)) {
+          fs.unlinkSync(oldLogoPath);
+        }
+      }
+    }
+
+    // Update merchant data
+    merchant.username = name || merchant.username;
+    merchant.merchantName = name || merchant.merchantName;
+    merchant.phone = phone || merchant.phone;
+    merchant.taxNumber = taxNumber || merchant.taxNumber;
+    merchant.bio = bio || merchant.bio;
+    merchant.logo = logoPath;
+
+    await merchant.save();
+
+    res.json({
+      success: true,
+      message: 'Profile updated successfully',
+      merchant: {
+        _id: merchant._id,
+        merchantName: merchant.merchantName || merchant.username,
+        name: merchant.username,
+        email: merchant.email,
+        phone: merchant.phone,
+        taxNumber: merchant.taxNumber,
+        logo: merchant.logo,
+        bio: merchant.bio,
+        approved: merchant.approved,
+        suspended: merchant.suspended || false,
+        createdAt: merchant.createdAt
+      }
+    });
+  } catch (error) {
+    console.error('Error in updateMerchantProfile:', error);
+    if (error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ success: false, message: 'Logo file size exceeds 1 MB limit' });
+    }
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+}
+
 module.exports = {
   upload,
   registerMerchant,
@@ -587,5 +662,6 @@ module.exports = {
   deleteProduct,
   bulkDeleteProducts,
   getMerchantById,
-  getProductsByMerchantId
+  getProductsByMerchantId,
+  updateMerchantProfile
 };

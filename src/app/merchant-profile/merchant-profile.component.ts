@@ -1,11 +1,118 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
+import { MerchantAuthService } from '../services/merchant-auth.service';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
+import { environment } from '../../environments/environment';
 
 @Component({
   selector: 'app-merchant-profile',
-  imports: [],
+  standalone: true,
+  imports: [CommonModule, FormsModule],
   templateUrl: './merchant-profile.component.html',
   styleUrl: './merchant-profile.component.css'
 })
-export class MerchantProfileComponent {
+export class MerchantProfileComponent implements OnInit {
+  merchant: any = {};
+  loading = false;
+  message = '';
+  messageColor = 'black';
+  logoPreview: string | null = null;
+  selectedFile: File | null = null;
 
+  constructor(private merchantAuthService: MerchantAuthService, private router: Router) {}
+
+  ngOnInit(): void {
+    this.loadMerchantData();
+  }
+
+  loadMerchantData() {
+    this.loading = true;
+    this.merchantAuthService.getCurrentMerchantFromAPI().subscribe({
+      next: (res: any) => {
+        this.merchant = res.merchant || res;
+        this.loading = false;
+      },
+      error: (error: any) => {
+        this.loading = false;
+        this.showMessage('فشل في تحميل بيانات التاجر', 'red');
+        if (error.status === 401 || error.status === 403) {
+          this.merchantAuthService.performLogout();
+          this.router.navigate(['/login']);
+        }
+      }
+    });
+  }
+
+  onFileSelected(event: any) {
+    const file = event.target.files[0];
+    if (file) {
+      this.selectedFile = file;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        this.logoPreview = e.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  onSubmit() {
+    if (!this.merchant.name) {
+      this.showMessage('الاسم مطلوب', 'red');
+      return;
+    }
+
+    this.loading = true;
+    const formData = new FormData();
+    formData.append('name', this.merchant.name);
+    formData.append('phone', this.merchant.phone || '');
+    formData.append('governorate', this.merchant.governorate || '');
+    formData.append('city', this.merchant.city || '');
+    formData.append('village', this.merchant.village || '');
+    formData.append('taxNumber', this.merchant.taxNumber || '');
+
+    if (this.selectedFile) {
+      formData.append('logo', this.selectedFile);
+    }
+
+    const token = this.merchantAuthService.getToken();
+    const headers = { Authorization: `Bearer ${token}` };
+
+    fetch(`${environment.apiBaseUrl}/merchant/profile`, {
+      method: 'PUT',
+      headers: headers,
+      body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+      this.loading = false;
+      if (data.success) {
+        this.showMessage('تم تحديث البيانات بنجاح', 'green');
+        this.merchant = data.merchant;
+        this.logoPreview = null;
+        this.selectedFile = null;
+        // Update local storage
+        localStorage.setItem('merchant_data', JSON.stringify(data.merchant));
+      } else {
+        this.showMessage(data.message || 'فشل في تحديث البيانات', 'red');
+      }
+    })
+    .catch(error => {
+      this.loading = false;
+      this.showMessage('حدث خطأ أثناء التحديث', 'red');
+      console.error('Error updating profile:', error);
+    });
+  }
+
+  getLogoUrl(logo: string): string {
+    return `${environment.apiBaseUrl}/uploads/merchants/${logo}`;
+  }
+
+  private showMessage(msg: string, color: string) {
+    this.message = msg;
+    this.messageColor = color;
+    setTimeout(() => {
+      this.message = '';
+    }, 5000);
+  }
 }

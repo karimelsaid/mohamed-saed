@@ -41,6 +41,45 @@ export class MerchantDashboardComponent implements OnInit {
   currentPage = 1;
   itemsPerPage = 20;
 
+  // Edit mode properties
+  isEditMode = false;
+  editForm: any = {
+    name: '',
+    phone: '',
+    taxNumber: '',
+    bio: '',
+    logoFile: null
+  };
+  logoPreview: string | null = null;
+  updatingProfile = false;
+  updateMessage = '';
+  updateMessageColor = 'green';
+
+  // Validation properties
+  phoneValid: boolean = false;
+  phoneTouched: boolean = false;
+
+  // Initialize edit form with current merchant data
+  private initializeEditForm() {
+    this.editForm.name = this.merchant?.merchantName || this.merchant?.name || '';
+    this.editForm.phone = this.merchant?.phone || '';
+    this.editForm.taxNumber = this.merchant?.taxNumber || '';
+    this.editForm.bio = this.merchant?.bio || ''; // Ensure bio is loaded correctly
+    this.editForm.logoFile = null;
+    this.logoPreview = null;
+    this.updateMessage = '';
+    // Reset validation states
+    this.phoneValid = false;
+    this.phoneTouched = false;
+  }
+
+  // التحقق من رقم الهاتف
+  validatePhone() {
+    const egyptPhoneRegex = /^(010|011|012|015)[0-9]{8}$/;
+    this.phoneTouched = true;
+    this.phoneValid = egyptPhoneRegex.test(this.editForm.phone);
+  }
+
   constructor(private merchantAuthService: MerchantAuthService, private router: Router) {}
 
   ngOnInit(): void {
@@ -98,6 +137,11 @@ export class MerchantDashboardComponent implements OnInit {
       next: (res: any) => {
         this.merchant = res.merchant || res;
         this.loadingMerchant = false;
+
+        // Initialize edit form if in edit mode
+        if (this.isEditMode) {
+          this.initializeEditForm();
+        }
 
         // If merchant account is suspended, redirect to home page immediately
         if (this.merchant.suspended) {
@@ -309,5 +353,82 @@ export class MerchantDashboardComponent implements OnInit {
       this.showModal('خطأ في الحذف الجماعي', 'حدث خطأ أثناء حذف بعض المنتجات. يرجى المحاولة مرة أخرى.', 'error');
       console.error('Error bulk deleting products:', error);
     });
+  }
+
+  // Edit mode methods
+  onSubmitProfileUpdate() {
+    // Validate phone before submitting
+    this.validatePhone();
+
+    if (!this.phoneValid && this.editForm.phone.trim()) {
+      this.updateMessage = 'يرجى إدخال رقم هاتف صحيح (مثال: 01012345678)';
+      this.updateMessageColor = 'red';
+      return;
+    }
+
+    this.updatingProfile = true;
+    this.updateMessage = '';
+    this.updateMessageColor = 'green';
+
+    const formData = new FormData();
+
+    // Add form fields - always include bio even if empty to allow clearing it
+    if (this.editForm.name) formData.append('name', this.editForm.name);
+    if (this.editForm.phone) formData.append('phone', this.editForm.phone);
+    if (this.editForm.taxNumber) formData.append('taxNumber', this.editForm.taxNumber);
+    formData.append('bio', this.editForm.bio || ''); // Always send bio field
+
+    // Add logo file if selected
+    if (this.editForm.logoFile) {
+      formData.append('logo', this.editForm.logoFile);
+    }
+
+    this.merchantAuthService.updateMerchantProfile(formData).subscribe({
+      next: (res: any) => {
+        this.updatingProfile = false;
+        this.updateMessage = 'تم تحديث المعلومات بنجاح!';
+        this.updateMessageColor = 'green';
+        this.isEditMode = false;
+        this.logoPreview = null;
+        // Refresh merchant data
+        this.loadMerchantData();
+      },
+      error: (error: any) => {
+        this.updatingProfile = false;
+        this.updateMessage = 'حدث خطأ أثناء تحديث المعلومات. يرجى المحاولة مرة أخرى.';
+        this.updateMessageColor = 'red';
+        console.error('Error updating profile:', error);
+      }
+    });
+  }
+
+  onFileSelected(event: any) {
+    const file = event.target.files[0];
+    if (file) {
+      this.editForm.logoFile = file;
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        this.logoPreview = e.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  getLogoUrl(logo: string): string {
+    if (!logo) return '';
+    // Construct the full URL to the logo image served statically at /uploads/merchants/
+    return `/uploads/merchants/${logo}`;
+  }
+
+  toggleEditMode() {
+    this.isEditMode = !this.isEditMode;
+    if (this.isEditMode) {
+      // Initialize form with current merchant data when entering edit mode
+      this.initializeEditForm();
+    } else {
+      this.logoPreview = null;
+      this.updateMessage = '';
+    }
   }
 }

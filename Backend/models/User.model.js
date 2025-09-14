@@ -14,6 +14,7 @@ const userSchema = new mongoose.Schema({
   role: { type: String, required: true, default: 'user', enum: ['user', 'merchant', 'admin'] },
   taxNumber: { type: String },
   logo: { type: String },
+  bio: { type: String }, // نبذة تعريفية عن التاجر
   approved: { type: Boolean, default: false },
   suspended: { type: Boolean, default: false }, // إيقاف الحساب مؤقتاً
   merchantName: { type: String },

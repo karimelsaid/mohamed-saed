@@ -1,1 +1,40 @@
-<p>merchant-profile works!</p>
+<form (ngSubmit)="onSubmit()" *ngIf="merchant">
+  <div>
+    <label for="name">الاسم</label>
+    <input id="name" type="text" [(ngModel)]="merchant.name" name="name" required />
+  </div>
+  <div>
+    <label for="phone">رقم الهاتف</label>
+    <input id="phone" type="text" [(ngModel)]="merchant.phone" name="phone" />
+  </div>
+  <div>
+    <label for="governorate">المحافظة</label>
+    <input id="governorate" type="text" [(ngModel)]="merchant.governorate" name="governorate" />
+  </div>
+  <div>
+    <label for="city">المدينة</label>
+    <input id="city" type="text" [(ngModel)]="merchant.city" name="city" />
+  </div>
+  <div>
+    <label for="village">القرية</label>
+    <input id="village" type="text" [(ngModel)]="merchant.village" name="village" />
+  </div>
+  <div>
+    <label for="taxNumber">الرقم الضريبي</label>
+    <input id="taxNumber" type="text" [(ngModel)]="merchant.taxNumber" name="taxNumber" />
+  </div>
+  <div>
+    <label for="logo">اللوجو</label>
+    <input id="logo" type="file" (change)="onFileSelected($event)" accept="image/png, image/jpeg" />
+  </div>
+  <div *ngIf="logoPreview">
+    <p>معاينة اللوجو الجديد:</p>
+    <img [src]="logoPreview" alt="Logo Preview" style="max-width: 200px; max-height: 200px;" />
+  </div>
+  <div *ngIf="merchant.logo && !logoPreview">
+    <p>اللوجو الحالي:</p>
+    <img [src]="getLogoUrl(merchant.logo)" alt="Current Logo" style="max-width: 200px; max-height: 200px;" />
+  </div>
+  <button type="submit" [disabled]="loading">حفظ التغييرات</button>
+  <p *ngIf="message" [style.color]="messageColor">{{ message }}</p>
+</form>

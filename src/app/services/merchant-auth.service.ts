@@ -213,4 +213,17 @@ export class MerchantAuthService {
     }
     return this.http.get(`${this.apiUrl}/merchant/${id}/products`, { headers });
   }
+
+  updateMerchantProfile(profileData: FormData): Observable<any> {
+    const token = this.getToken();
+    let headers = new HttpHeaders();
+    if (token) {
+      headers = headers.set('Authorization', `Bearer ${token}`);
+    }
+    return this.http.put(`${this.apiUrl}/merchant/profile`, profileData, { headers });
+  }
+
+  getApiUrl(): string {
+    return this.apiUrl;
+  }
 }

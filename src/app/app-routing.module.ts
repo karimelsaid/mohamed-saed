@@ -31,11 +31,12 @@ import { ResetPasswordComponent } from './auth/reset-password/reset-password.com
 import { MerchantDashboardComponent } from './merchant/dashboard/dashboard.component';
 import { AddProductComponent } from './merchant/add-product/add-product.component';
 import { EditProductComponent } from './merchant/edit-product/edit-product.component';
+import { MerchantProfileComponent } from './merchant/merchant-profile/merchant-profile.component';
 import { MerchantAuthGuard } from './guards/merchant-auth.guard';
 
 const routes: Routes = [
   { path: 'Home', component: HomePageComponent },
-  { path: 'Business-Marketing-Finance', component: ChildComponent },
+  { path: 'Business-Marketing-Finance', component: AamalComponent },
   { path: 'Education-children', component: ChildComponent },
   { path: 'Arts-crafts', component: FenonComponent },
   { path: 'HealthMedicineScience', component: FitComponent },
@@ -48,6 +49,7 @@ const routes: Routes = [
   { path: 'merchant/dashboard', component: MerchantDashboardComponent, canActivate: [MerchantAuthGuard] },
   { path: 'merchant/add-product', component: AddProductComponent, canActivate: [MerchantAuthGuard] },
   { path: 'merchant/edit-product/:id', component: EditProductComponent, canActivate: [MerchantAuthGuard] },
+  { path: 'merchant/:id', component: MerchantProfileComponent },
   { path: 'book/:name', component: BookDetailsComponent },
   { path: '', redirectTo: '/Home', pathMatch: 'full' },  // الصفحة الرئيسية هي "home" افتراضيًا
   { path: 'research', component: SearchResultsComponent }, // المسار الذي نوجه إليه المستخدم عند البحث

@@ -48,7 +48,7 @@ export class AamalComponent implements OnInit, OnDestroy {
   this.dataService.getData().subscribe(data => {
     console.log('Raw data received:', data); // Debug raw data
 
-    // Filter books by category 'أعمال'
+    // Filter books by category 'اعمال'
     let filteredBooks = data.filter((book: Book) => book.product_category.includes('أعمال'));
 
     // Debug promotionEndDate values before processing

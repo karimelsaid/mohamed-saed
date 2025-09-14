@@ -1,5 +1,5 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterModule } from '@angular/router';
 import { DataService } from '../services/data.service';
 import { Book } from '../book';
 import { CommonModule, NgIf } from '@angular/common';
@@ -16,7 +16,7 @@ import { environment } from '../../environments/environment';
 @Component({
   selector: 'app-book-details',
   standalone: true,
-  imports: [CommonModule, NgIf, CheckoutModalComponent, SharedModule, FontAwesomeModule],
+  imports: [CommonModule, NgIf, CheckoutModalComponent, SharedModule, FontAwesomeModule, RouterModule],
   templateUrl: './book-details.component.html',
   styleUrls: ['./book-details.component.css']
 })
@@ -117,8 +117,8 @@ export class BookDetailsComponent implements OnInit {
       console.error('Failed to copy: ', err);
     });
   }
-  
-  
+
+
   handleImageError(event: any) {
     const imageElement = event.target;
 

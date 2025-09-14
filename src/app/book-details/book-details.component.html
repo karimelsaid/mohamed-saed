@@ -3,6 +3,10 @@
   <div *ngIf="error" class="text-center text-red-600 dark:text-red-500 font-bold">{{ error }}</div>
   <div *ngIf="book" class="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-lg p-6 relative">
     <h2 class="text-3xl font-bold mb-4 mt-1 text-gray-900 dark:text-gray-100">{{ book.product_name }}</h2>
+        <!-- اسم التاجر -->
+        <div *ngIf="book.merchantName" class="mb-2">
+          <a [routerLink]="['/merchant', book.merchantId]" class="text-sm text-gray-600 dark:text-gray-400 hover:underline cursor-pointer">بواسطة {{ book.merchantName }}</a>
+        </div>
         <!-- شريط الخصم -->
         <div class="absolute top-2 right-2 bg-red-600 dark:bg-red-700 text-white text-xs font-bold px-2 py-1 rounded shadow-md dark:shadow-lg z-10">
           {{ book.product_discount_percent }}% خصم
@@ -13,12 +17,12 @@
             <fa-icon [icon]="faShareAlt" class="text-gray-700 dark:text-gray-300 h-5 w-5"></fa-icon>
           </button>
         </div>
-        
+
         <!-- رسالة تأكيد النسخ -->
         <div *ngIf="showCopySuccess" class="fixed top-20 right-10 bg-green-500 text-white px-4 py-2 rounded shadow-lg z-50">
           تم نسخ الرابط
         </div>
-        
+
         <!-- السعر -->
         <div class="flex items-center space-x-2 mb-2">
           <p class="text-green-600 dark:text-green-400 font-bold text-lg mb-2">{{ book.product_price }} EGP</p>
@@ -69,7 +73,7 @@
 
 <app-account-modal #accountModal></app-account-modal>
 
-<app-checkout-modal 
+<app-checkout-modal
   *ngIf="showCheckoutModal"
   [bookId]="book?.products_id"
   (close)="showCheckoutModal = false">

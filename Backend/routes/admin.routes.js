@@ -21,6 +21,9 @@ router.post('/products/:barcode/image', adminController.upload.single('image'), 
 // Route to delete product
 router.delete('/products/:barcode', adminController.deleteProduct);
 
+// Route to bulk delete products
+router.delete('/products', adminController.bulkDeleteProducts);
+
 // Route to sync output.json to Excel and upload to Google Drive
 router.post('/sync-json-to-excel', adminController.syncJsonToExcel);
 

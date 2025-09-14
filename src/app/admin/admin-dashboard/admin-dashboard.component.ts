@@ -135,6 +135,9 @@ export class AdminDashboardComponent implements OnInit {
   sortField: keyof Product | '' = '';
   sortDirection: 'asc' | 'desc' = 'asc';
 
+  // Multi-select properties
+  selectedProducts: Set<string> = new Set();
+
   backendBaseUrl: string = environment.apiBaseUrl;
   uploadsBaseUrl: string = environment.uploadsBaseUrl;
 
@@ -201,6 +204,15 @@ export class AdminDashboardComponent implements OnInit {
         this.router.navigate(['/']);
       }
     });
+  }
+
+  toggleSelectAll(event: Event): void {
+    const checkbox = event.target as HTMLInputElement;
+    if (checkbox.checked) {
+      this.products.forEach(product => this.selectedProducts.add(product.products_id));
+    } else {
+      this.selectedProducts.clear();
+    }
   }
 
   switchView(view: 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval'): void {
@@ -500,6 +512,58 @@ export class AdminDashboardComponent implements OnInit {
     }
   }
 
+  // Multi-select methods
+  toggleProductSelection(productId: string): void {
+    if (this.selectedProducts.has(productId)) {
+      this.selectedProducts.delete(productId);
+    } else {
+      this.selectedProducts.add(productId);
+    }
+  }
+
+  isProductSelected(productId: string): boolean {
+    return this.selectedProducts.has(productId);
+  }
+
+  selectAllProducts(): void {
+    if (this.isAllProductsSelected()) {
+      this.selectedProducts.clear();
+    } else {
+      this.products.forEach(product => {
+        this.selectedProducts.add(product.products_id);
+      });
+    }
+  }
+
+  isAllProductsSelected(): boolean {
+    return this.products.length > 0 && this.products.every(product => this.selectedProducts.has(product.products_id));
+  }
+
+  isSomeProductsSelected(): boolean {
+    return this.selectedProducts.size > 0 && this.selectedProducts.size < this.products.length;
+  }
+
+  bulkDeleteSelectedProducts(): void {
+    const selectedIds = Array.from(this.selectedProducts);
+    if (selectedIds.length === 0) {
+      alert('يرجى اختيار منتجات لحذفها');
+      return;
+    }
+    if (confirm(`هل أنت متأكد من حذف ${selectedIds.length} منتج نهائياً؟ سيتم حذف الصور أيضاً.`)) {
+      this.http.delete(`${this.backendBaseUrl}/admin/products`, { body: { barcodes: selectedIds } }).subscribe({
+        next: () => {
+          alert('تم حذف المنتجات المحددة بنجاح');
+          this.selectedProducts.clear();
+          this.loadProducts();
+        },
+        error: (err) => {
+          console.error('Error bulk deleting products:', err);
+          alert('حدث خطأ أثناء حذف المنتجات');
+        }
+      });
+    }
+  }
+
   handleImageError(event: any) {
     const imageElement = event.target;
 
@@ -551,7 +615,7 @@ export class AdminDashboardComponent implements OnInit {
       // Update products one by one
       importedProducts.forEach((prod) => {
         if (prod.products_id) {
-          this.updateProduct(prod);
+          this.updateProduct(prod as Product);
         }
       });
       alert('تم استيراد وتحديث المنتجات من ملف Excel');

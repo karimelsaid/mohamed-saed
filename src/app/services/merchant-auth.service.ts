@@ -195,4 +195,22 @@ export class MerchantAuthService {
     }
     return this.http.delete(`${this.apiUrl}/merchant/products/${productId}`, { headers });
   }
+
+  getMerchantById(id: string): Observable<any> {
+    const token = this.getToken();
+    let headers = new HttpHeaders();
+    if (token) {
+      headers = headers.set('Authorization', `Bearer ${token}`);
+    }
+    return this.http.get(`${this.apiUrl}/merchant/${id}`, { headers });
+  }
+
+  getProductsByMerchantId(id: string): Observable<any> {
+    const token = this.getToken();
+    let headers = new HttpHeaders();
+    if (token) {
+      headers = headers.set('Authorization', `Bearer ${token}`);
+    }
+    return this.http.get(`${this.apiUrl}/merchant/${id}/products`, { headers });
+  }
 }

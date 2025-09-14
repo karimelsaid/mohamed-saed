@@ -8,6 +8,15 @@ const bcrypt = require('bcrypt');
 const { addProductToExcel, categoryMap, downloadAndConvertExcel, updateExcelFromJson } = require('../services/excel.service');
 const sitemapService = require('../services/sitemap.service');
 
+// Mapping for merchant categories to standard categories
+const merchantCategoryMap = {
+  'أعمال وإدارة': 'أعمال وتسويق ومالية',
+  'تنمية بشرية': 'تطوير الذات وعلم النفس',
+  'فنون وثقافة': 'فنون وحرف',
+  'تربية وتعليم': 'تربية وأطفال',
+  'أخرى': 'غير مصنف'
+};
+
 // Reverse categoryMap for mapping full names to short keys
 const reverseCategoryMap = {};
 for (const [key, value] of Object.entries(categoryMap)) {
@@ -128,7 +137,11 @@ async function addProduct(req, res) {
 
     // Generate barcode if not present
     const barcode = generateRandomBarcode();
-    const { product_name, product_quantity, product_category, product_description, product_price, price_cost } = req.body;
+    let { product_name, product_quantity, product_category, product_description, product_price, price_cost } = req.body;
+
+    // Map merchant category to standard category
+    product_category = merchantCategoryMap[product_category] || product_category;
+
     if (!product_name || !product_quantity || !product_category || !product_description || product_description.trim() === '') {
       return res.status(400).json({ success: false, message: 'Missing required fields or product description is empty' });
     }
@@ -491,6 +504,76 @@ async function bulkDeleteProducts(req, res) {
   }
 }
 
+async function getMerchantById(req, res) {
+  try {
+    const { id } = req.params;
+
+    const merchant = await User.findById(id);
+
+    if (!merchant) {
+      return res.status(404).json({
+        success: false,
+        message: 'Merchant not found'
+      });
+    }
+
+    // Only return approved merchants and basic public information
+    if (!merchant.approved) {
+      return res.status(404).json({
+        success: false,
+        message: 'Merchant not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      merchant: {
+        _id: merchant._id,
+        merchantName: merchant.merchantName || merchant.username,
+        name: merchant.username,
+        email: merchant.email,
+        phone: merchant.phone,
+        governorate: merchant.governorate,
+        city: merchant.city,
+        village: merchant.village,
+        logo: merchant.logo,
+        createdAt: merchant.createdAt
+      }
+    });
+  } catch (error) {
+    console.error('Error in getMerchantById:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error loading merchant data'
+    });
+  }
+}
+
+async function getProductsByMerchantId(req, res) {
+  try {
+    const { id } = req.params;
+
+    // Check if merchant exists and is approved
+    const merchant = await User.findById(id);
+    if (!merchant || !merchant.approved) {
+      return res.status(404).json({ success: false, message: 'Merchant not found' });
+    }
+
+    const Product = require('../models/Product.model');
+
+    // Only return approved products for public viewing
+    const products = await Product.find({
+      merchantId: id,
+      status: 'approved'
+    }).sort({ createdAt: -1 });
+
+    res.json({ success: true, products });
+  } catch (error) {
+    console.error('Error in getProductsByMerchantId:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+}
+
 module.exports = {
   upload,
   registerMerchant,
@@ -502,5 +585,7 @@ module.exports = {
   submitProductUpdateRequest,
   getMerchantUpdateRequests,
   deleteProduct,
-  bulkDeleteProducts
+  bulkDeleteProducts,
+  getMerchantById,
+  getProductsByMerchantId
 };

@@ -220,6 +220,13 @@
     >
       حفظ الكل
     </button>
+    <button
+      (click)="bulkDeleteSelectedProducts()"
+      [disabled]="selectedProducts.size === 0"
+      class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded mb-2 disabled:opacity-50"
+    >
+      حذف المحدد ({{ selectedProducts.size }})
+    </button>
   </div>
     <div class="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <input
@@ -248,6 +255,9 @@
     <table class="min-w-full bg-white dark:bg-gray-800 rounded-lg shadow-md text-sm mx-auto hidden sm:table">
       <thead>
         <tr class="bg-blue-100 dark:bg-[#0a1325] text-blue-700 dark:text-blue-400 uppercase text-xs font-semibold">
+          <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">
+            <input type="checkbox" (change)="selectAllProducts()" [checked]="isAllProductsSelected()" [indeterminate]="isSomeProductsSelected()" />
+          </th>
           <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">صورة المنتج</th>
           <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">اسم المنتج</th>
           <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">الكمية</th>
@@ -261,6 +271,9 @@
       </thead>
       <tbody *ngIf="products.length > 0">
         <tr *ngFor="let product of products; let i = index" [ngClass]="{'bg-blue-50 dark:bg-[#0a1325]': i % 2 === 0, 'bg-white dark:bg-gray-800': i % 2 !== 0}">
+          <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700">
+            <input type="checkbox" [checked]="selectedProducts.has(product.products_id)" (change)="toggleProductSelection(product.products_id)" />
+          </td>
           <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700">
             <img *ngIf="product.product_image" [src]="uploadsBaseUrl + '/' + product.product_image" alt="صورة المنتج" class="w-16 h-16 object-cover mx-auto rounded" (error)="handleImageError($event)" />
             <span *ngIf="!product.product_image">لا توجد صورة</span>
@@ -289,12 +302,14 @@
             <input type="file" (change)="replaceProductImage(product, $any($event.target).files ? $any($event.target).files[0] : null)" accept="image/*" class="w-full" />
           </td>
           <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700">
-            <button (click)="updateProduct(product)" [disabled]="!hasProductChanged(product)" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-1 px-3 rounded disabled:opacity-50">
-              حفظ
-            </button>
-            <button (click)="deleteProduct(product)" class="ml-2 bg-red-600 hover:bg-red-700 text-white font-semibold py-1 px-3 rounded">
-              حذف
-            </button>
+            <div class="flex justify-center space-x-2">
+              <button (click)="updateProduct(product)" [disabled]="!hasProductChanged(product)" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-1 px-3 rounded disabled:opacity-50">
+                حفظ
+              </button>
+              <button (click)="deleteProduct(product)" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-1 px-3 rounded">
+                حذف
+              </button>
+            </div>
           </td>
         </tr>
       </tbody>
@@ -304,7 +319,8 @@
   <!-- Responsive grid layout for small screens -->
   <div *ngIf="products.length > 0" class="sm:hidden flex flex-col gap-4 max-w-md mx-auto">
     <div *ngFor="let product of products" class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 space-y-3">
-      <div class="flex justify-center">
+      <div class="flex justify-between items-center">
+        <input type="checkbox" [checked]="selectedProducts.has(product.products_id)" (change)="toggleProductSelection(product.products_id)" class="w-4 h-4" />
         <img *ngIf="product.product_image" [src]="uploadsBaseUrl + '/' + product.product_image" alt="صورة المنتج" class="w-16 h-16 object-cover rounded" (error)="handleImageError($event)" />
         <span *ngIf="!product.product_image" class="text-gray-500 dark:text-gray-400">لا توجد صورة</span>
       </div>

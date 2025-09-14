@@ -8942,30 +8942,16 @@
     "product_discount_percent": 65
   },
   {
-    "products_id": "648284086309",
-    "product_name": "ممممممم",
-    "product_price": 69,
-    "price_cost": 22,
-    "product_quantity": 2,
-    "product_category": "كتب دينية",
-    "product_description": "سسس",
-    "product_image": "648284086309",
-    "promotionEndDate": "2026-01-31T00:00:00.000Z",
-    "product_price_before_discount": 189,
-    "rival": true,
-    "product_discount_percent": 65
-  },
-  {
-    "products_id": "682104565157",
-    "product_name": "شششششش",
-    "product_price": 219,
+    "products_id": "432617795705",
+    "product_name": "11111",
+    "product_price": 2129,
     "price_cost": 21,
     "product_quantity": 21,
-    "product_category": "قواميس ومراجع",
-    "product_description": "يسش",
-    "product_image": "682104565157",
+    "product_category": "أعمال وتسويق ومالية",
+    "product_description": "يثيث",
+    "product_image": "432617795705",
     "promotionEndDate": "2026-01-31T00:00:00.000Z",
-    "product_price_before_discount": 589,
+    "product_price_before_discount": 5859,
     "rival": true,
     "product_discount_percent": 65
   }

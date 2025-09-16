@@ -404,18 +404,20 @@
         <div><strong>رقم الطلب:</strong> {{ order._id }}</div>
         <div><strong>تاريخ الطلب:</strong> {{ formatOrderDate(order.orderDate) }}</div>
         <div><strong>الحالة:</strong>
-          <span class="inline-block px-2 py-1 rounded-full text-xs font-semibold" [ngClass]="{
-            'text-yellow-500': order.status === 'قيد الإنتظار',
-            'text-orange-500': order.status === 'تم الشحن',
-            'text-green-500': order.status === 'تم التسليم',
-            'text-red-500': order.status === 'تم الإلغاء',
-            'dark:text-yellow-400': order.status === 'قيد الإنتظار',
-            'dark:text-orange-400': order.status === 'تم الشحن',
-            'dark:text-green-400': order.status === 'تم التسليم',
-            'dark:text-red-400': order.status === 'تم الإلغاء'
-          }">
-            {{ order.status }}
-          </span>
+                <span class="inline-block px-2 py-1 rounded-full text-xs font-semibold" [ngClass]="{
+                  'text-yellow-500': order.status === 'قيد الإنتظار',
+                  'text-orange-500': order.status === 'تم الشحن',
+                  'text-blue-500': order.status === 'تم الاستلام',
+                  'text-green-500': order.status === 'تم التسليم',
+                  'text-red-500': order.status === 'تم الإلغاء',
+                  'dark:text-yellow-400': order.status === 'قيد الإنتظار',
+                  'dark:text-orange-400': order.status === 'تم الشحن',
+                  'dark:text-blue-400': order.status === 'تم الاستلام',
+                  'dark:text-green-400': order.status === 'تم التسليم',
+                  'dark:text-red-400': order.status === 'تم الإلغاء'
+                }">
+                  {{ order.status }}
+                </span>
         </div>
 
         <div>
@@ -436,6 +438,12 @@
                   </button>
                   <button
                     *ngIf="order.status === 'تم الشحن'"
+                    (click)="confirmShipment(order._id, 'تم الاستلام')"
+                    class="w-full bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-semibold py-1 px-3 rounded">
+                    الاستلام
+                  </button>
+                  <button
+                    *ngIf="order.status === 'تم الاستلام'"
                     (click)="confirmShipment(order._id, 'تم التسليم')"
                     class="w-full bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700 text-white font-semibold py-1 px-3 rounded">
                     تمت
@@ -487,10 +495,12 @@
                 <span class="inline-block px-2 py-1 rounded-full text-xs font-semibold" [ngClass]="{
                   'text-yellow-500': order.status === 'قيد الإنتظار',
                   'text-orange-500': order.status === 'تم الشحن',
+                  'text-blue-500': order.status === 'تم الاستلام',
                   'text-green-500': order.status === 'تم التسليم',
                   'text-red-500': order.status === 'تم الإلغاء',
                   'dark:text-yellow-400': order.status === 'قيد الإنتظار',
                   'dark:text-orange-400': order.status === 'تم الشحن',
+                  'dark:text-blue-400': order.status === 'تم الاستلام',
                   'dark:text-green-400': order.status === 'تم التسليم',
                   'dark:text-red-400': order.status === 'تم الإلغاء'
                 }">
@@ -511,6 +521,13 @@
 
                   <button
                     *ngIf="order.status === 'تم الشحن'"
+                    (click)="confirmShipment(order._id, 'تم الاستلام')"
+                    class="w-full bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-semibold py-1 px-3 rounded">
+                    الاستلام
+                  </button>
+
+                  <button
+                    *ngIf="order.status === 'تم الاستلام'"
                     (click)="confirmShipment(order._id, 'تم التسليم')"
                     class="w-full bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700 text-white font-semibold py-1 px-3 rounded">
                     تمت

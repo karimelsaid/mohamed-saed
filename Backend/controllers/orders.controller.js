@@ -160,7 +160,7 @@ exports.updateOrderStatus = async (req, res) => {
     }
 
     // Validate status value
-    const validStatuses = ['قيد الإنتظار', 'تم الإلغاء', 'تم الشحن', 'تم التسليم'];
+    const validStatuses = ['قيد الإنتظار', 'تم الإلغاء', 'تم الشحن', 'تم الاستلام', 'تم التسليم'];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ message: 'Invalid status value' });
     }
@@ -177,6 +177,9 @@ exports.updateOrderStatus = async (req, res) => {
     switch (status) {
       case 'تم الشحن':
         notificationMessage = `تم شحن الطلب رقم ${orderId}`;
+        break;
+      case 'تم الاستلام':
+        notificationMessage = `تم استلام الطلب رقم ${orderId} من التاجر`;
         break;
       case 'تم التسليم':
         notificationMessage = `تم تسليم الطلب رقم ${orderId}`;

@@ -35,6 +35,12 @@ export class MerchantDashboardComponent implements OnInit {
     type: 'info' as 'info' | 'warning' | 'error' | 'success'
   };
 
+  // Loading modal properties
+  loadingModal = {
+    isOpen: false,
+    message: 'جاري تحديث الطلبات...'
+  };
+
   // Multi-select properties
   selectedProducts: Set<string> = new Set();
 
@@ -531,5 +537,55 @@ export class MerchantDashboardComponent implements OnInit {
       }
     }
     return '';
+  }
+
+  confirmShipment(order: any, newStatus: string): void {
+    let confirmMessage = '';
+    let successMessage = '';
+
+    switch (newStatus) {
+      case 'تم الشحن':
+        confirmMessage = 'هل أنت متأكد من أن الطلب تم شحنه بنجاح؟ سيتم تحديث حالة الطلب.';
+        successMessage = 'تم تحديث حالة الطلب إلى تم الشحن.';
+        break;
+      case 'تم الاستلام':
+        confirmMessage = 'هل أنت متأكد من استلام المنتج من التاجر؟ سيتم تحديث حالة الطلب.';
+        successMessage = 'تم تحديث حالة الطلب إلى تم الاستلام.';
+        break;
+      case 'تم التسليم':
+        confirmMessage = 'هل أنت متأكد من أن الطلب تم تسليمه بنجاح؟ سيتم تحديث حالة الطلب.';
+        successMessage = 'تم تحديث حالة الطلب إلى تم التسليم.';
+        break;
+      case 'تم الإلغاء':
+        confirmMessage = 'هل أنت متأكد من إلغاء الطلب؟ سيتم تحديث حالة الطلب.';
+        successMessage = 'تم إلغاء الطلب.';
+        break;
+      default:
+        confirmMessage = 'هل أنت متأكد من تحديث حالة الطلب؟';
+        successMessage = 'تم تحديث حالة الطلب.';
+    }
+
+    if (confirm(confirmMessage)) {
+      this.http.patch(`${environment.apiBaseUrl}/orders/update-status/${order._id}`, { status: newStatus }).subscribe({
+        next: () => {
+          alert(successMessage);
+          this.loadOrders();
+        },
+        error: (error) => {
+          alert('حدث خطأ أثناء تحديث حالة الطلب');
+          console.error('Error updating order status:', error);
+        }
+      });
+    }
+  }
+
+  refreshOrders(): void {
+    this.loadingModal.isOpen = true;
+    this.loadingModal.message = 'جاري تحديث الطلبات...';
+    this.loadOrders();
+    // Close modal after loading
+    setTimeout(() => {
+      this.loadingModal.isOpen = false;
+    }, 2000); // Close after 2 seconds
   }
 }

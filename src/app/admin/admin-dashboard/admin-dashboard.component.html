@@ -2,7 +2,10 @@
 
 <div class="flex flex-wrap justify-center gap-4 mb-6 ">
   <button (click)="switchView('orders')" [class.bg-blue-600]="currentView === 'orders'" class="px-4 py-2 rounded text-white bg-blue-400 hover:bg-blue-600 transition">
-    الطلبات
+    طلبات الموقع
+  </button>
+  <button (click)="switchView('merchantOrders')" [class.bg-blue-600]="currentView === 'merchantOrders'" class="px-4 py-2 rounded text-white bg-blue-400 hover:bg-blue-600 transition">
+    طلبات التجار
   </button>
   <button (click)="switchView('requestedBooks')" [class.bg-blue-600]="currentView === 'requestedBooks'" class="px-4 py-2 rounded text-white bg-blue-400 hover:bg-blue-600 transition">
     اقتراحات الكتب
@@ -392,8 +395,10 @@
 
 
 <!-- عرض الطلبات -->
-<div *ngIf="currentView === 'orders'">
+<div *ngIf="currentView === 'orders' || currentView === 'merchantOrders'">
   <div class="px-2 sm:px-10 mb-32 md:mb-0">
+    <h3 *ngIf="currentView === 'orders'" class="text-xl font-bold mb-4 text-gray-900 dark:text-gray-200">طلبات الموقع</h3>
+    <h3 *ngIf="currentView === 'merchantOrders'" class="text-xl font-bold mb-4 text-gray-900 dark:text-gray-200">طلبات التجار</h3>
 
     <!-- تصميم عرض الطلبات في الشاشات الصغيرة -->
     <div class="sm:hidden space-y-6">
@@ -437,13 +442,13 @@
                     اشحن
                   </button>
                   <button
-                    *ngIf="order.status === 'تم الشحن'"
+                    *ngIf="order.status === 'تم الشحن' && order.isMerchantOrder"
                     (click)="confirmShipment(order._id, 'تم الاستلام')"
                     class="w-full bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-semibold py-1 px-3 rounded">
                     الاستلام
                   </button>
                   <button
-                    *ngIf="order.status === 'تم الاستلام'"
+                    *ngIf="(order.status === 'تم الاستلام' && order.isMerchantOrder) || (order.status === 'تم الشحن' && !order.isMerchantOrder)"
                     (click)="confirmShipment(order._id, 'تم التسليم')"
                     class="w-full bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700 text-white font-semibold py-1 px-3 rounded">
                     تمت
@@ -520,14 +525,14 @@
                   </button>
 
                   <button
-                    *ngIf="order.status === 'تم الشحن'"
+                    *ngIf="order.status === 'تم الشحن' && order.isMerchantOrder"
                     (click)="confirmShipment(order._id, 'تم الاستلام')"
                     class="w-full bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-semibold py-1 px-3 rounded">
                     الاستلام
                   </button>
 
                   <button
-                    *ngIf="order.status === 'تم الاستلام'"
+                    *ngIf="(order.status === 'تم الاستلام' && order.isMerchantOrder) || (order.status === 'تم الشحن' && !order.isMerchantOrder)"
                     (click)="confirmShipment(order._id, 'تم التسليم')"
                     class="w-full bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700 text-white font-semibold py-1 px-3 rounded">
                     تمت
@@ -558,7 +563,7 @@
 
 </div>
 <!-- Pagination controls for orders -->
-<div *ngIf="currentView === 'orders'" class="flex justify-center mt-4 space-x-4 items-center mb-32 md:mb-4">
+<div *ngIf="currentView === 'orders' || currentView === 'merchantOrders'" class="flex justify-center mt-4 space-x-4 items-center mb-32 md:mb-4">
   <button (click)="prevOrdersPage()" [disabled]="ordersPage === 1" class="px-3 py-1 bg-gray-300 dark:bg-gray-600 rounded disabled:opacity-50 border">السابق</button>
   <span class="text-gray-900 dark:text-gray-200">صفحة {{ ordersPage }} من {{ totalOrdersPages() }}</span>
   <button (click)="nextOrdersPage()" [disabled]="ordersPage === totalOrdersPages()" class="px-3 py-1 bg-gray-300 dark:bg-gray-600 rounded disabled:opacity-50">التالي</button>
@@ -623,9 +628,9 @@
 
   <!-- Pagination controls for requestedBooks -->
   <div class="flex justify-center mt-4 space-x-4 mb-32 md:mb-0">
-    <button (click)="requestedBooksPage = requestedBooksPage - 1; fetchRequestedBooks()" [disabled]="requestedBooksPage === 1" class="px-3 py-1 bg-gray-300 dark:bg-gray-600 rounded disabled:opacity-50">السابق</button>
+    <button (click)="prevRequestedBooksPage()" [disabled]="requestedBooksPage === 1" class="px-3 py-1 bg-gray-300 dark:bg-gray-600 rounded disabled:opacity-50">السابق</button>
     <span class="text-gray-900 dark:text-gray-200">صفحة{{ requestedBooksPage }}</span>
-    <button (click)="requestedBooksPage = requestedBooksPage + 1; fetchRequestedBooks()" [disabled]="requestedBooks.length < requestedBooksPageSize" class="px-3 py-1 bg-gray-300 dark:bg-gray-600 rounded disabled:opacity-50">التالي</button>
+    <button (click)="nextRequestedBooksPage()" [disabled]="requestedBooks.length < requestedBooksPageSize" class="px-3 py-1 bg-gray-300 dark:bg-gray-600 rounded disabled:opacity-50">التالي</button>
   </div>
 </div>
 
@@ -747,8 +752,8 @@
 
   <!-- Pagination controls for printOrders -->
   <div class="flex justify-center mt-4 space-x-4 mb-32 md:mb-0">
-    <button (click)="printOrdersPage = printOrdersPage - 1; loadPrintOrders()" [disabled]="printOrdersPage === 1" class="px-3 py-1 bg-gray-300 dark:bg-gray-600 rounded disabled:opacity-50">السابق</button>
+    <button (click)="prevPrintOrdersPage()" [disabled]="printOrdersPage === 1" class="px-3 py-1 bg-gray-300 dark:bg-gray-600 rounded disabled:opacity-50">السابق</button>
     <span class="text-gray-900 dark:text-gray-200">صفحة {{ printOrdersPage }}</span>
-    <button (click)="printOrdersPage = printOrdersPage + 1; loadPrintOrders()" [disabled]="printOrders.length < printOrdersPageSize" class="px-3 py-1 bg-gray-300 dark:bg-gray-600 rounded disabled:opacity-50">التالي</button>
+    <button (click)="nextPrintOrdersPage()" [disabled]="printOrders.length < printOrdersPageSize" class="px-3 py-1 bg-gray-300 dark:bg-gray-600 rounded disabled:opacity-50">التالي</button>
   </div>
 </div>

@@ -20,6 +20,7 @@ interface Order {
   status: string;
   orderDate: string;
   totalAmount: number;
+  isMerchantOrder?: boolean;
 }
 
 interface RequestedBook {
@@ -63,6 +64,7 @@ interface GroupedOrder {
   status: string;
   orderDate: string;
   totalAmount: number;
+  isMerchantOrder?: boolean;
 }
 
 interface PrintOrder {
@@ -105,7 +107,7 @@ export class AdminDashboardComponent implements OnInit {
   allOrders: GroupedOrder[] = [];
   requestedBooks: RequestedBook[] = [];
   isAdmin: boolean = false;
-  currentView: 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' = 'orders';
+  currentView: 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' = 'orders';
 
   manualPromotionStartDate: string = '';
   manualPromotionEndDate: string = '';
@@ -215,9 +217,10 @@ export class AdminDashboardComponent implements OnInit {
     }
   }
 
-  switchView(view: 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval'): void {
+  switchView(view: 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders'): void {
     this.currentView = view;
-    if (view === 'orders') {
+    if (view === 'orders' || view === 'merchantOrders') {
+      this.ordersPage = 1; // Reset page when switching views
       this.loadOrders();
     } else if (view === 'requestedBooks') {
       this.fetchRequestedBooks();
@@ -693,43 +696,54 @@ export class AdminDashboardComponent implements OnInit {
   }
 
   loadOrders(): void {
-    this.http.get<Order[]>(`${environment.apiBaseUrl}/orders/all`).subscribe({
-      next: (data) => {
-        const groupedOrdersMap: { [key: string]: GroupedOrder } = {};
+    this.authService.user$.pipe(take(1)).subscribe(user => {
+      const merchantId = user ? user.id : '';
+      const params = merchantId ? `?merchantId=${merchantId}` : '';
+      this.http.get<Order[]>(`${environment.apiBaseUrl}/orders/all${params}`).subscribe({
+        next: (data) => {
+          const groupedOrdersMap: { [key: string]: GroupedOrder } = {};
 
-        data.forEach(order => {
-          if (!groupedOrdersMap[order._id]) {
-            groupedOrdersMap[order._id] = {
-              _id: order._id,
-              customerName: order.customerName,
-              email: order.email,
-              phone: order.phone,
-              address: order.address,
-              products: [],
-              status: order.status,
-              orderDate: order.orderDate,
-              totalAmount: order.totalAmount
-            };
-          }
-          groupedOrdersMap[order._id].products.push({
-            product_name: order.book,
-            product_quantity: order.quantity
+          data.forEach(order => {
+            if (!groupedOrdersMap[order._id]) {
+              groupedOrdersMap[order._id] = {
+                _id: order._id,
+                customerName: order.customerName,
+                email: order.email,
+                phone: order.phone,
+                address: order.address,
+                products: [],
+                status: order.status,
+                orderDate: order.orderDate,
+                totalAmount: order.totalAmount,
+                isMerchantOrder: order.isMerchantOrder || false
+              };
+            }
+            groupedOrdersMap[order._id].products.push({
+              product_name: order.book,
+              product_quantity: order.quantity
+            });
           });
-        });
 
-        this.allOrders = Object.values(groupedOrdersMap).sort((a, b) => new Date(a.orderDate).getTime() - new Date(b.orderDate).getTime());
-        this.updateOrdersPage();
-      },
-      error: (err) => {
-        console.error('Error loading orders:', err);
-      }
+          this.allOrders = Object.values(groupedOrdersMap).sort((a, b) => new Date(a.orderDate).getTime() - new Date(b.orderDate).getTime());
+          this.updateOrdersPage();
+        },
+        error: (err) => {
+          console.error('Error loading orders:', err);
+        }
+      });
     });
   }
 
   updateOrdersPage(): void {
+    let filteredOrders = this.allOrders;
+    if (this.currentView === 'orders') {
+      filteredOrders = this.allOrders.filter(order => !order.isMerchantOrder); // show only non-merchant orders
+    } else if (this.currentView === 'merchantOrders') {
+      filteredOrders = this.allOrders.filter(order => order.isMerchantOrder);
+    }
     const start = (this.ordersPage - 1) * this.ordersPageSize;
     const end = this.ordersPage * this.ordersPageSize;
-    this.orders = this.allOrders.slice(start, end);
+    this.orders = filteredOrders.slice(start, end);
   }
 
   nextOrdersPage(): void {
@@ -749,7 +763,13 @@ export class AdminDashboardComponent implements OnInit {
   }
 
   totalOrdersPages(): number {
-    return Math.ceil(this.allOrders.length / this.ordersPageSize);
+    let filteredCount = this.allOrders.length;
+    if (this.currentView === 'orders') {
+      filteredCount = this.allOrders.filter(order => !order.isMerchantOrder).length; // count only non-merchant orders
+    } else if (this.currentView === 'merchantOrders') {
+      filteredCount = this.allOrders.filter(order => order.isMerchantOrder).length;
+    }
+    return Math.ceil(filteredCount / this.ordersPageSize);
   }
 
   fetchRequestedBooks(): void {

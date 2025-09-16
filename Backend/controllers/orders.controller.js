@@ -113,6 +113,7 @@ exports.getUserOrders = async (req, res) => {
 
 exports.getAllOrders = async (req, res) => {
   try {
+    const { merchantId } = req.query;
     const users = await User.find().select('orders username email phone');
     let allOrders = [];
     users.forEach(user => {
@@ -127,11 +128,24 @@ exports.getAllOrders = async (req, res) => {
             address: `${order.shippingAddress.governorate}, ${order.shippingAddress.city}, ${order.shippingAddress.village},Phone: ${order.shippingAddress.phone}`, // Add this line
             status: order.status,
             orderDate: order.date,
-            totalAmount: order.totalAmount  // Added totalAmount here
+            totalAmount: order.totalAmount,  // Added totalAmount here
+            isMerchantOrder: false // default
           });
         });
       });
     });
+
+    // Always fetch products with merchantId to set isMerchantOrder
+    const productsWithMerchant = await Product.find({ merchantId: { $exists: true, $ne: null } }).select('product_name product_image merchantId');
+
+    allOrders.forEach(order => {
+      const book = order.book;
+      const product = productsWithMerchant.find(p => p.product_name === book || (p.product_image && p.product_image.replace('.webp', '') === book));
+      if (product) {
+        order.isMerchantOrder = true;
+      }
+    });
+
     res.status(200).json(allOrders);
   } catch (error) {
     res.status(500).json({

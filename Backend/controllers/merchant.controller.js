@@ -4,6 +4,7 @@ const multer = require('multer');
 const sharp = require('sharp');
 const User = require('../models/User.model');
 const Product = require('../models/Product.model');
+const Order = require('../models/Order.model');
 const bcrypt = require('bcrypt');
 const { addProductToExcel, categoryMap, downloadAndConvertExcel, updateExcelFromJson } = require('../services/excel.service');
 const sitemapService = require('../services/sitemap.service');
@@ -235,6 +236,7 @@ async function getCurrentMerchant(req, res) {
         taxNumber: merchant.taxNumber,
         logo: merchant.logo,
         bio: merchant.bio,
+        preparationTime: merchant.preparationTime,
         approved: merchant.approved,
         isApproved: merchant.approved,
         suspended: merchant.suspended || false,
@@ -266,12 +268,121 @@ async function getMerchantProducts(req, res) {
 async function getMerchantOrders(req, res) {
   try {
     const merchantId = req.merchant._id;
-    const Order = require('../models/Order.model');
 
-    const orders = await Order.find({ merchantId }).sort({ createdAt: -1 });
-    res.json({ success: true, orders });
+    // Find all products that belong to this merchant
+    const Product = require('../models/Product.model');
+    const merchantProducts = await Product.find({ merchantId }).select('_id product_image');
+
+    if (merchantProducts.length === 0) {
+      return res.json({ success: true, orders: [] });
+    }
+
+    // Get product IDs and barcodes
+    const productIds = merchantProducts.map(p => p._id.toString());
+    const productBarcodes = merchantProducts.map(p => p.product_image ? p.product_image.replace('.webp', '') : '');
+
+    // Find all users and their orders
+    const users = await User.find().select('orders username email phone');
+    let merchantOrders = [];
+
+    users.forEach(user => {
+      user.orders.forEach(order => {
+        // Check if any product in the order belongs to this merchant
+        const hasMerchantProduct = order.products.some(product => {
+          const bookId = product.bookId || product.book;
+          return productIds.includes(bookId) || productBarcodes.includes(bookId);
+        });
+
+        if (hasMerchantProduct) {
+          // Transform products to show product names instead of barcodes
+          const transformedProducts = order.products.map(product => ({
+            book: product.bookName ? product.bookName : product.book,
+            bookId: product.bookId || '',
+            quantity: product.quantity,
+            price: product.price || 0
+          }));
+
+          // Transform the order to match the expected format
+          merchantOrders.push({
+            _id: order._id,
+            customerName: user.username,
+            email: user.email,
+            phone: user.phone,
+            address: `${order.shippingAddress.governorate}, ${order.shippingAddress.city}, ${order.shippingAddress.village}`,
+            products: transformedProducts,
+            status: order.status,
+            totalAmount: order.totalAmount,
+            orderDate: order.date,
+            preparationTime: order.preparationTime || 1, // Use saved preparation time
+            createdAt: order.date
+          });
+        }
+      });
+    });
+
+    // Sort by creation date (most recent first)
+    merchantOrders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    res.json({ success: true, orders: merchantOrders });
   } catch (error) {
     console.error('Error in getMerchantOrders:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+}
+
+async function deleteMerchantOrder(req, res) {
+  try {
+    const { orderId } = req.params;
+    const merchantId = req.merchant._id;
+
+    // Find all products that belong to this merchant
+    const Product = require('../models/Product.model');
+    const merchantProducts = await Product.find({ merchantId }).select('_id product_image');
+
+    if (merchantProducts.length === 0) {
+      return res.status(404).json({ success: false, message: 'No products found for this merchant' });
+    }
+
+    // Get product IDs and barcodes
+    const productIds = merchantProducts.map(p => p._id.toString());
+    const productBarcodes = merchantProducts.map(p => p.product_image ? p.product_image.replace('.webp', '') : '');
+
+    // Find the user who has this order
+    const user = await User.findOne({ 'orders._id': orderId });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    // Find the order in the user's orders array
+    const orderIndex = user.orders.findIndex(order => order._id.toString() === orderId);
+    if (orderIndex === -1) {
+      return res.status(404).json({ success: false, message: 'Order not found in user orders' });
+    }
+
+    const order = user.orders[orderIndex];
+
+    // Check if any product in the order belongs to this merchant
+    const hasMerchantProduct = order.products.some(product => {
+      const bookId = product.bookId || product.book;
+      return productIds.includes(bookId) || productBarcodes.includes(bookId);
+    });
+
+    if (!hasMerchantProduct) {
+      return res.status(403).json({ success: false, message: 'Order does not contain your products' });
+    }
+
+    // Only allow deletion of cancelled orders
+    if (order.status !== 'تم الإلغاء') {
+      return res.status(400).json({ success: false, message: 'Only cancelled orders can be deleted' });
+    }
+
+    // Remove the order from the user's orders array
+    user.orders.splice(orderIndex, 1);
+    await user.save();
+
+    res.json({ success: true, message: 'Order deleted successfully' });
+  } catch (error) {
+    console.error('Error in deleteMerchantOrder:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 }
@@ -576,7 +687,7 @@ async function getProductsByMerchantId(req, res) {
 async function updateMerchantProfile(req, res) {
   try {
     const merchantId = req.merchant._id;
-    const { name, phone, taxNumber, bio } = req.body;
+    const { name, phone, taxNumber, bio, preparationTime } = req.body;
 
     // Find the merchant
     const merchant = await User.findById(merchantId);
@@ -620,6 +731,7 @@ async function updateMerchantProfile(req, res) {
     merchant.taxNumber = taxNumber || merchant.taxNumber;
     merchant.bio = bio || merchant.bio;
     merchant.logo = logoPath;
+    merchant.preparationTime = preparationTime || merchant.preparationTime || 1;
 
     await merchant.save();
 
@@ -635,6 +747,7 @@ async function updateMerchantProfile(req, res) {
         taxNumber: merchant.taxNumber,
         logo: merchant.logo,
         bio: merchant.bio,
+        preparationTime: merchant.preparationTime,
         approved: merchant.approved,
         suspended: merchant.suspended || false,
         createdAt: merchant.createdAt
@@ -649,6 +762,43 @@ async function updateMerchantProfile(req, res) {
   }
 }
 
+async function getRecentOrdersForMerchant(req, res) {
+  try {
+    const merchantId = req.merchant._id;
+    // Find all products that belong to this merchant
+    const Product = require('../models/Product.model');
+    const merchantProducts = await Product.find({ merchantId }).select('_id');
+
+    if (merchantProducts.length === 0) {
+      return res.json({ success: true, orders: [] });
+    }
+
+    const productIds = merchantProducts.map(p => p._id.toString());
+
+    // Find orders that contain these products
+    const orders = await Order.find({ 'products.productId': { $in: productIds } })
+      .sort({ orderDate: -1 })
+      .limit(5)
+      .lean();
+
+    // Calculate expected delivery date for each order using saved preparationTime
+    const ordersWithDeliveryDate = orders.map(order => {
+      const preparationTime = order.preparationTime || 1;
+      const deliveryDate = new Date(order.orderDate);
+      deliveryDate.setDate(deliveryDate.getDate() + preparationTime);
+      return {
+        ...order,
+        expectedDeliveryDate: deliveryDate
+      };
+    });
+
+    res.json({ success: true, orders: ordersWithDeliveryDate });
+  } catch (error) {
+    console.error('Error fetching recent orders:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+}
+
 module.exports = {
   upload,
   registerMerchant,
@@ -657,6 +807,8 @@ module.exports = {
   getCurrentMerchant,
   getMerchantProducts,
   getMerchantOrders,
+  getRecentOrdersForMerchant,
+  deleteMerchantOrder,
   submitProductUpdateRequest,
   getMerchantUpdateRequests,
   deleteProduct,

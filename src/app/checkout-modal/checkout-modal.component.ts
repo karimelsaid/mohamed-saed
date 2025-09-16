@@ -295,15 +295,15 @@ export class CheckoutModalComponent implements OnInit {
 
   handleImageError(event: any) {
     const imageElement = event.target;
-  
+
     if (!imageElement.errorStep) {
       imageElement.errorStep = 1;
     } else {
       imageElement.errorStep++;
     }
-  
+
     const imageName = imageElement.src.split('/').pop().split('.')[0];
-  
+
 switch (imageElement.errorStep) {
       case 1:
         imageElement.src = this.uploadsBaseUrl + `/${imageName}.webp`;
@@ -322,12 +322,12 @@ switch (imageElement.errorStep) {
 
   decreaseQuantity(item: any): void {
     if (!item.quantity) item.quantity = 1;
-    
+
     if (item.quantity <= 1) {
       this.showAlert(item, 'الحد الأدنى للكمية هو 1');
       return;
     }
-    
+
     item.quantity--;
     this.calculateShippingCost();
     this.calculateTotalPrice();
@@ -335,12 +335,12 @@ switch (imageElement.errorStep) {
 
   increaseQuantity(item: any): void {
     if (!item.quantity) item.quantity = 1;
-    
+
     if (item.quantity >= item.product_quantity) {
       this.showAlert(item, 'لا يمكن زيادة الكمية عن ' + item.product_quantity);
       return;
     }
-    
+
     item.quantity++;
     this.calculateShippingCost();
     this.calculateTotalPrice();
@@ -348,10 +348,10 @@ switch (imageElement.errorStep) {
 
   showAlert(item: any, msg: string): void {
     if (!item) return;
-    
+
     item.message = msg;
     item.showMessage = true;
-    
+
     setTimeout(() => {
       if (item) {
         item.showMessage = false;
@@ -439,9 +439,9 @@ this.dataService.updateUserProfile(this.userProfile).subscribe({
 completePurchase(): void {
   const purchasedItems = this.cartItems
     .filter(item => item.product_quantity > 0);
-  
+
   const purchasedBookIds = purchasedItems.map(item => item.products_id);
-  
+
   this.authService.user$.pipe(take(1)).subscribe(currentUser => {
     if (currentUser) {
       const orderData = {
@@ -453,7 +453,8 @@ completePurchase(): void {
           price: parseFloat(item.product_price)
         })),
         shippingCost: this.shippingCost,
-        totalAmount: this.totalPrice
+        totalAmount: this.totalPrice,
+        merchantId: purchasedItems[0]?.merchantId
       };
 
       this.dataService.submitOrder(orderData).subscribe({

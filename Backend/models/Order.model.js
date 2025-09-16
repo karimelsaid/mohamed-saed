@@ -48,6 +48,12 @@ const orderSchema = new mongoose.Schema({
   orderDate: {
     type: Date,
     default: Date.now
+  },
+  preparationTime: {
+    type: Number,
+    default: 1,
+    min: 1,
+    max: 30
   }
 }, {
   timestamps: true

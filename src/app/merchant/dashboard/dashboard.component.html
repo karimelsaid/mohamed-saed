@@ -82,71 +82,11 @@
               <p class="text-sm text-gray-600 dark:text-gray-400">
                 <span class="font-medium">تاريخ الطلب:</span> {{ request.createdAt | date:'short' }}
               </p>
-        </div>
-
-        <!-- Pagination Controls -->
-        <div *ngIf="!loadingProducts && products.length > 0 && totalPages > 1" class="flex items-center justify-center mt-6 space-x-2 space-x-reverse">
-          <button
-            (click)="prevPage()"
-            [disabled]="currentPage === 1"
-            class="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-700 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-600"
-          >
-            السابق
-          </button>
-          <div class="flex space-x-1 space-x-reverse">
-            <button
-              *ngFor="let page of [].constructor(totalPages); let i = index"
-              (click)="goToPage(i + 1)"
-              [class.bg-blue-600]="currentPage === i + 1"
-              [class.text-white]="currentPage === i + 1"
-              class="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-600"
-            >
-              {{ i + 1 }}
-            </button>
+            </div>
           </div>
-          <button
-            (click)="nextPage()"
-            [disabled]="currentPage === totalPages"
-            class="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-700 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-600"
-          >
-            التالي
-          </button>
-        </div>
-
-        <!-- Pagination Controls -->
-        <div *ngIf="totalPages > 1" class="flex items-center justify-between mt-6 px-6 pb-6">
-          <button
-            (click)="prevPage()"
-            [disabled]="currentPage === 1"
-            class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-          >
-            السابق
-          </button>
-
-          <div class="flex items-center gap-1">
-            <button
-              *ngFor="let page of [].constructor(totalPages); let i = index"
-              (click)="goToPage(i + 1)"
-              [class.bg-blue-600]="currentPage === i + 1"
-              [class.text-white]="currentPage === i + 1"
-              class="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors duration-200"
-            >
-              {{ i + 1 }}
-            </button>
-          </div>
-
-          <button
-            (click)="nextPage()"
-            [disabled]="currentPage === totalPages"
-            class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-          >
-            التالي
-          </button>
         </div>
       </div>
     </div>
-  </div>
-</div>
 
     <!-- Stats Cards -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -227,7 +167,7 @@
           <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           <span class="mr-3 text-gray-600 dark:text-gray-400">جاري التحميل...</span>
         </div>
-        <div *ngIf="!loadingMerchant && !isEditMode" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div *ngIf="!loadingMerchant && !isEditMode" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           <div class="flex flex-col">
             <span class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">الاسم</span>
             <span class="text-gray-900 dark:text-white font-medium">{{ merchant?.merchantName || merchant?.name || 'غير محدد' }}</span>
@@ -252,6 +192,10 @@
           <div class="flex flex-col">
             <span class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">تاريخ التسجيل</span>
             <span class="text-gray-900 dark:text-white">{{ merchant?.createdAt ? (merchant.createdAt | date:'short') : 'غير محدد' }}</span>
+          </div>
+          <div class="flex flex-col">
+            <span class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">مدة تجهيز الطلب</span>
+            <span class="text-gray-900 dark:text-white">{{ merchant?.preparationTime || 1 }} يوم</span>
           </div>
         </div>
         <div *ngIf="!loadingMerchant && isEditMode">
@@ -309,6 +253,18 @@
                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
                   placeholder="اكتب وصفًا عن نشاطك التجاري..."
                 ></textarea>
+              </div>
+              <div>
+                <label for="preparationTime" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">مدة تجهيز الطلب</label>
+                <select
+                  id="preparationTime"
+                  [(ngModel)]="editForm.preparationTime"
+                  name="preparationTime"
+                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                >
+                  <option [value]="1">1 يوم</option>
+                  <option [value]="2">2 يوم</option>
+                </select>
               </div>
             </div>
             <div>
@@ -566,37 +522,99 @@
           <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">ستظهر طلباتك هنا عندما يقوم العملاء بشراء منتجاتك</p>
         </div>
         <div *ngIf="!loadingOrders && orders.length > 0" class="space-y-4">
-          <div *ngFor="let order of orders.slice(0, 5)" class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
-            <div class="flex items-center justify-between mb-3">
-              <h3 class="text-lg font-semibold text-gray-900 dark:text-white">طلب #{{ order._id.slice(-8) }}</h3>
-              <span
-                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
-                [ngClass]="{
-                  'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300': order.status === 'pending',
-                  'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300': order.status === 'processing',
-                  'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300': order.status === 'shipped',
-                  'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300': order.status === 'delivered',
-                  'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300': order.status === 'cancelled'
-                }"
-              >
-                {{ order.status === 'pending' ? 'معلق' :
-                   order.status === 'processing' ? 'قيد المعالجة' :
-                   order.status === 'shipped' ? 'تم الشحن' :
-                   order.status === 'delivered' ? 'تم التسليم' : 'ملغي' }}
-              </span>
+          <div *ngFor="let order of orders.slice(0, 5)" class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600 hover:shadow-md transition-shadow duration-200">
+            <!-- Order Header -->
+            <div class="flex items-center justify-between mb-4">
+              <div class="flex items-center gap-3">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">طلب #{{ order._id.slice(-8) }}</h3>
+                <span
+                  class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium"
+                  [ngClass]="{
+                    'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300': order.status === 'قيد الإنتظار',
+                    'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300': order.status === 'قيد المعالجة',
+                    'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300': order.status === 'تم الشحن',
+                    'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300': order.status === 'تم التسليم',
+                    'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300': order.status === 'تم الإلغاء'
+                  }"
+                >
+                  {{ order.status === 'قيد الإنتظار' ? 'معلق' :
+                     order.status === 'قيد المعالجة' ? 'قيد المعالجة' :
+                     order.status === 'تم الشحن' ? 'مندوب الشحن في طريقه إليك لإستلام المنتج' :
+                     order.status === 'تم التسليم' ? 'تم التسليم' :
+                     order.status === 'تم الإلغاء' ? 'ملغي' : 'غير محدد' }}
+                </span>
+              </div>
+              <div class="flex items-center gap-2">
+                <button
+                  *ngIf="order.status === 'تم الإلغاء'"
+                  (click)="deleteOrder(order)"
+                  class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-200"
+                  title="حذف الطلب"
+                >
+                  <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                  حذف
+                </button>
+              </div>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">العميل</p>
-                <p class="text-gray-900 dark:text-white">{{ order.customerName }}</p>
+
+            <!-- Order Details Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+              <div class="bg-white dark:bg-gray-600 rounded-md p-3">
+                <p class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">العميل</p>
+                <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ order.customerName }}</p>
               </div>
-              <div>
-                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">المبلغ الإجمالي</p>
-                <p class="text-gray-900 dark:text-white font-semibold">{{ order.totalAmount }} ج.م</p>
+              <div class="bg-white dark:bg-gray-600 rounded-md p-3">
+                <p class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">المبلغ الإجمالي</p>
+                <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ order.totalAmount }} ج.م</p>
               </div>
-              <div>
-                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">تاريخ الطلب</p>
-                <p class="text-gray-900 dark:text-white">{{ order.orderDate | date:'short' }}</p>
+              <div class="bg-white dark:bg-gray-600 rounded-md p-3">
+                <p class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">تاريخ الطلب</p>
+                <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ order.orderDate | date:'short' }}</p>
+              </div>
+              <div class="bg-white dark:bg-gray-600 rounded-md p-3">
+                <p class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">تاريخ التسليم المتوقع</p>
+                <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ calculateDeliveryDate(order.orderDate, order.preparationTime) | date:'short' }}</p>
+              </div>
+              <div class="bg-white dark:bg-gray-600 rounded-md p-3">
+                <p class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">عدد المنتجات</p>
+                <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ order.products?.length || 0 }}</p>
+              </div>
+            </div>
+
+            <!-- Products Summary -->
+            <div *ngIf="order.products && order.products.length > 0" class="border-t border-gray-200 dark:border-gray-600 pt-3">
+              <p class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">المنتجات المطلوبة:</p>
+              <div class="flex flex-wrap gap-2">
+                <span
+                  *ngFor="let product of order.products.slice(0, 3)"
+                  class="inline-flex items-center px-2 py-1 rounded-md text-xs bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-300"
+                >
+                  <a
+                    [routerLink]="['/product', product.bookId]"
+                    class="hover:text-blue-800 dark:hover:text-blue-200 transition-colors duration-200"
+                    title="عرض تفاصيل المنتج"
+                  >
+                    {{ product.book }}
+                  </a>
+                  ({{ product.quantity }})
+                  <a
+                    [routerLink]="['/product', product.bookId]"
+                    class="ml-1 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 transition-colors duration-200"
+                    title="عرض تفاصيل المنتج"
+                  >
+                    <svg class="w-3 h-3 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                    </svg>
+                  </a>
+                </span>
+                <span
+                  *ngIf="order.products.length > 3"
+                  class="inline-flex items-center px-2 py-1 rounded-md text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
+                >
+                  +{{ order.products.length - 3 }} أخرى
+                </span>
               </div>
             </div>
           </div>

@@ -196,6 +196,15 @@ export class MerchantAuthService {
     return this.http.delete(`${this.apiUrl}/merchant/products/${productId}`, { headers });
   }
 
+  deleteMerchantOrder(orderId: string): Observable<any> {
+    const token = this.getToken();
+    let headers = new HttpHeaders();
+    if (token) {
+      headers = headers.set('Authorization', `Bearer ${token}`);
+    }
+    return this.http.delete(`${this.apiUrl}/merchant/orders/${orderId}`, { headers });
+  }
+
   getMerchantById(id: string): Observable<any> {
     const token = this.getToken();
     let headers = new HttpHeaders();

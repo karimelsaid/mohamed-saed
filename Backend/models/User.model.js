@@ -18,11 +18,13 @@ const userSchema = new mongoose.Schema({
   approved: { type: Boolean, default: false },
   suspended: { type: Boolean, default: false }, // إيقاف الحساب مؤقتاً
   merchantName: { type: String },
+  preparationTime: { type: Number, default: 1 }, // مدة تجهيز الطلب (1 أو 2 يوم)
 
   favorites: [{ type: String }], // مصفوفة فيها ID الكتب المفضلة
   cart: [{ type: String }],      // مصفوفة فيها ID الكتب في السلة
   orders: [{
     date: { type: Date, default: Date.now },
+    preparationTime: { type: Number, default: 1 }, // حفظ مدة تجهيز الطلب وقت الشراء
     products: [{
       bookId: String,
       bookName: String,

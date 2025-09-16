@@ -8942,17 +8942,17 @@
     "product_discount_percent": 65
   },
   {
-    "products_id": "432617795705",
+    "products_id": "160124305568",
     "product_name": "11111",
-    "product_price": 2129,
-    "price_cost": 21,
-    "product_quantity": 21,
-    "product_category": "أعمال وتسويق ومالية",
-    "product_description": "يثيث",
-    "product_image": "432617795705",
+    "product_price": 9,
+    "price_cost": 1,
+    "product_quantity": 1,
+    "product_category": "كتب دينية",
+    "product_description": "ضص",
+    "product_image": "160124305568",
     "promotionEndDate": "2026-01-31T00:00:00.000Z",
-    "product_price_before_discount": 5859,
+    "product_price_before_discount": 29,
     "rival": true,
-    "product_discount_percent": 65
+    "product_discount_percent": 70
   }
 ]

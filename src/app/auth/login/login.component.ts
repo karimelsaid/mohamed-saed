@@ -117,13 +117,13 @@ export class LoginComponent {
                     this.router.navigate(['/Home']);
                   }, 1000);
                 } else {
-                  this.message = '❌ فشل تسجيل الدخول كتاجر';
+                  this.message = '❌ فشل تسجيل الدخول كتاجر ... يجب الموافقة علي الحساب أولا حاول مرة اخري خلال بضع ساعات';
                   this.isSuccess = false;
                 }
               },
               error: (err: any) => {
                 console.error('Merchant login error:', err);
-                this.message = '❌ فشل تسجيل الدخول كتاجر';
+                this.message = '❌ فشل تسجيل الدخول كتاجر ... يجب الموافقة علي الحساب أولا حاول مرة اخري خلال بضع ساعات';
                 this.isSuccess = false;
               }
             });

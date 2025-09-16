@@ -1,11 +1,17 @@
 const User = require('../models/User.model');
+const Product = require('../models/Product.model');
 
 exports.submitOrder = async (req, res) => {
   try {
-    const { userId, products, totalAmount, shippingCost } = req.body;
+    const { userId, products, totalAmount, shippingCost, preparationTime: reqPreparationTime, merchantId } = req.body;
 
     if (!userId || !products || !totalAmount) {
       return res.status(400).json({ message: 'Missing required fields: userId, products, totalAmount' });
+    }
+
+    // Validate products array structure
+    if (!Array.isArray(products) || products.length === 0) {
+      return res.status(400).json({ message: 'Products must be a non-empty array' });
     }
 
     const user = await User.findById(userId);
@@ -20,11 +26,33 @@ exports.submitOrder = async (req, res) => {
       phone: user.phone
     };
 
+    // Get preparationTime from request, or from merchant if merchantId provided
+    let preparationTime = reqPreparationTime || 1;
+    if (!reqPreparationTime && merchantId) {
+      try {
+        const merchant = await User.findById(merchantId);
+        if (merchant && merchant.preparationTime) {
+          preparationTime = merchant.preparationTime;
+        }
+      } catch (err) {
+        console.warn('Error fetching merchant preparation time:', err.message);
+      }
+    }
+
+    // Ensure products match schema structure
+    const validatedProducts = products.map(product => ({
+      bookId: product.bookId || product.book || '',
+      bookName: product.bookName || product.book || '',
+      quantity: product.quantity || 1,
+      price: product.price || 0
+    }));
+
     const newOrder = {
       date: new Date(),
-      products,
+      preparationTime,
+      products: validatedProducts,
       totalAmount,
-      shippingCost,
+      shippingCost: shippingCost || 0,
       shippingAddress,
       status: 'قيد الإنتظار'
     };
@@ -40,8 +68,9 @@ exports.submitOrder = async (req, res) => {
       orderId: addedOrder._id
     });
   } catch (error) {
+    console.error('Error submitting order:', error);
     res.status(500).json({
-      message: 'Error submitting order',
+      message: 'حدث خطأ أثناء إتمام الشراء، يرجى المحاولة مرة أخرى',
       error: error.message
     });
   }

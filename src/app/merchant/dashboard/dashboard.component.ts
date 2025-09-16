@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { MerchantAuthService } from '../../services/merchant-auth.service';
-import { Router } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ModalDialogComponent } from '../../shared/modal-dialog/modal-dialog.component';
@@ -8,7 +8,7 @@ import { ModalDialogComponent } from '../../shared/modal-dialog/modal-dialog.com
 @Component({
   selector: 'app-merchant-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, ModalDialogComponent],
+  imports: [CommonModule, FormsModule, RouterModule, ModalDialogComponent],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.css']
 })
@@ -48,7 +48,8 @@ export class MerchantDashboardComponent implements OnInit {
     phone: '',
     taxNumber: '',
     bio: '',
-    logoFile: null
+    logoFile: null,
+    preparationTime: 1
   };
   logoPreview: string | null = null;
   updatingProfile = false;
@@ -65,6 +66,7 @@ export class MerchantDashboardComponent implements OnInit {
     this.editForm.phone = this.merchant?.phone || '';
     this.editForm.taxNumber = this.merchant?.taxNumber || '';
     this.editForm.bio = this.merchant?.bio || ''; // Ensure bio is loaded correctly
+    this.editForm.preparationTime = this.merchant?.preparationTime || 1;
     this.editForm.logoFile = null;
     this.logoPreview = null;
     this.updateMessage = '';
@@ -194,12 +196,24 @@ export class MerchantDashboardComponent implements OnInit {
 
   loadOrders() {
     this.loadingOrders = true;
+    console.log('Loading orders for merchant...');
     this.merchantAuthService.getMerchantOrders().subscribe({
       next: (res: any) => {
+        console.log('Orders API response:', res);
+        console.log('Response type:', typeof res);
+        console.log('Response keys:', Object.keys(res));
+        if (res.orders) {
+          console.log('res.orders exists:', res.orders);
+          console.log('res.orders type:', typeof res.orders);
+          console.log('res.orders length:', Array.isArray(res.orders) ? res.orders.length : 'not an array');
+        }
         this.orders = res.orders || res || [];
+        console.log('Orders loaded:', this.orders.length, 'orders');
+        console.log('Final orders array:', this.orders);
         this.loadingOrders = false;
       },
       error: (error: any) => {
+        console.error('Error loading orders:', error);
         this.loadingOrders = false;
 
         // Handle authentication errors
@@ -251,6 +265,15 @@ export class MerchantDashboardComponent implements OnInit {
       `هل أنت متأكد من حذف المنتج "${product.product_name}"؟ لا يمكن التراجع عن هذا الإجراء.`,
       'warning',
       () => this.confirmDeleteProduct(product)
+    );
+  }
+
+  deleteOrder(order: any) {
+    this.showModal(
+      'تأكيد الحذف',
+      `هل أنت متأكد من حذف الطلب رقم "${order._id}"؟ لا يمكن التراجع عن هذا الإجراء.`,
+      'warning',
+      () => this.confirmDeleteOrder(order)
     );
   }
 
@@ -340,6 +363,20 @@ export class MerchantDashboardComponent implements OnInit {
     });
   }
 
+  private confirmDeleteOrder(order: any) {
+    this.merchantAuthService.deleteMerchantOrder(order._id).subscribe({
+      next: () => {
+        this.showModal('نجح الحذف', 'تم حذف الطلب بنجاح.', 'success');
+        // Refresh order list after deletion
+        this.loadOrders();
+      },
+      error: (error) => {
+        this.showModal('خطأ في الحذف', 'حدث خطأ أثناء حذف الطلب. يرجى المحاولة مرة أخرى.', 'error');
+        console.error('Error deleting order:', error);
+      }
+    });
+  }
+
   private confirmBulkDelete() {
     const deletePromises = Array.from(this.selectedProducts).map(productId =>
       this.merchantAuthService.deleteMerchantProduct(productId).toPromise()
@@ -377,6 +414,7 @@ export class MerchantDashboardComponent implements OnInit {
     if (this.editForm.phone) formData.append('phone', this.editForm.phone);
     if (this.editForm.taxNumber) formData.append('taxNumber', this.editForm.taxNumber);
     formData.append('bio', this.editForm.bio || ''); // Always send bio field
+    formData.append('preparationTime', this.editForm.preparationTime.toString()); // Always send preparationTime
 
     // Add logo file if selected
     if (this.editForm.logoFile) {
@@ -430,5 +468,15 @@ export class MerchantDashboardComponent implements OnInit {
       this.logoPreview = null;
       this.updateMessage = '';
     }
+  }
+
+  calculateDeliveryDate(orderDate: string, preparationTime: number): string {
+    if (!orderDate || !preparationTime) {
+      return '';
+    }
+    const prepDays = preparationTime;
+    const orderDateObj = new Date(orderDate);
+    orderDateObj.setDate(orderDateObj.getDate() + prepDays);
+    return orderDateObj.toLocaleDateString();
   }
 }

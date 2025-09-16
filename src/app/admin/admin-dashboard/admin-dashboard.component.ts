@@ -868,6 +868,10 @@ export class AdminDashboardComponent implements OnInit {
         confirmMessage = 'هل أنت متأكد من أن الطلب تم شحنه بنجاح؟ سيتم تحديث حالة الطلب.';
         successMessage = 'تم تحديث حالة الطلب إلى تم الشحن.';
         break;
+      case 'تم الاستلام':
+        confirmMessage = 'هل أنت متأكد من استلام المنتج من التاجر؟ سيتم تحديث حالة الطلب.';
+        successMessage = 'تم تحديث حالة الطلب إلى تم الاستلام.';
+        break;
       case 'تم التسليم':
         confirmMessage = 'هل أنت متأكد من أن الطلب تم تسليمه بنجاح؟ سيتم تحديث حالة الطلب.';
         successMessage = 'تم تحديث حالة الطلب إلى تم التسليم.';
@@ -894,6 +898,7 @@ export class AdminDashboardComponent implements OnInit {
           });
            const statusVerbMap: { [key: string]: string } = {
             'تم الشحن': 'شحن',
+            'تم الاستلام': 'استلام',
             'تم التسليم': 'تسليم',
             'تم الإلغاء': 'إلغاء'
           };

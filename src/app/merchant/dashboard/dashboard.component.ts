@@ -4,6 +4,8 @@ import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ModalDialogComponent } from '../../shared/modal-dialog/modal-dialog.component';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-merchant-dashboard',
@@ -82,7 +84,10 @@ export class MerchantDashboardComponent implements OnInit {
     this.phoneValid = egyptPhoneRegex.test(this.editForm.phone);
   }
 
-  constructor(private merchantAuthService: MerchantAuthService, private router: Router) {}
+  uploadsBaseUrl = environment.uploadsBaseUrl;
+  private booksList: any = {};
+
+  constructor(private merchantAuthService: MerchantAuthService, private router: Router, private http: HttpClient) {}
 
   ngOnInit(): void {
     // Refresh merchant data first to get latest approval status
@@ -90,6 +95,7 @@ export class MerchantDashboardComponent implements OnInit {
     this.loadProducts();
     this.loadOrders();
     this.loadUpdateRequests();
+    this.loadBooksList();
   }
 
   get pendingProductsCount(): number {
@@ -478,5 +484,52 @@ export class MerchantDashboardComponent implements OnInit {
     const orderDateObj = new Date(orderDate);
     orderDateObj.setDate(orderDateObj.getDate() + prepDays);
     return orderDateObj.toLocaleDateString();
+  }
+
+  encodeURIComponent(value: string): string {
+    return encodeURIComponent(value);
+  }
+
+  handleImageError(event: any) {
+    const imageElement = event.target;
+
+    if (!imageElement.errorStep) {
+      imageElement.errorStep = 1;
+    } else {
+      imageElement.errorStep++;
+    }
+
+    const imageName = imageElement.src.split('/').pop().split('.')[0];
+
+    switch (imageElement.errorStep) {
+      case 1:
+        imageElement.src = this.uploadsBaseUrl + `/${imageName}.webp`;
+        break;
+      case 2:
+        imageElement.src = this.uploadsBaseUrl + `/${imageName}.png`;
+        break;
+      case 3:
+        imageElement.src = this.uploadsBaseUrl + `/${imageName}.jpg`;
+        break;
+      default:
+        imageElement.src = this.uploadsBaseUrl + '/default.png';
+        break;
+    }
+  }
+
+  loadBooksList() {
+    this.http.get('/json/books_list.json').subscribe(data => {
+      this.booksList = data;
+    });
+  }
+
+  getBookImage(bookTitle: string): string {
+    for (const category in this.booksList) {
+      const book = this.booksList[category].find((b: any) => b.title === bookTitle);
+      if (book && book.image_url) {
+        return `/uploads/books/${book.image_url}`;
+      }
+    }
+    return '';
   }
 }

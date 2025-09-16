@@ -295,12 +295,24 @@ async function getMerchantOrders(req, res) {
 
         if (hasMerchantProduct) {
           // Transform products to show product names instead of barcodes
-          const transformedProducts = order.products.map(product => ({
-            book: product.bookName ? product.bookName : product.book,
-            bookId: product.bookId || '',
-            quantity: product.quantity,
-            price: product.price || 0
-          }));
+          const transformedProducts = order.products.map(product => {
+            // Find the corresponding product to get the image
+            const merchantProduct = merchantProducts.find(mp => {
+              const bookId = product.bookId || product.book;
+              return mp._id.toString() === bookId || mp.product_image?.replace('.webp', '') === bookId;
+            });
+
+            return {
+              book: product.bookName ? product.bookName : product.book,
+              bookId: product.bookId || '',
+              quantity: product.quantity,
+              price: product.price || 0,
+              product_image: merchantProduct?.product_image || ''
+            };
+          });
+
+          // Calculate total amount for merchant's products only
+          const merchantTotalAmount = transformedProducts.reduce((sum, product) => sum + (product.price * product.quantity), 0);
 
           // Transform the order to match the expected format
           merchantOrders.push({
@@ -311,7 +323,7 @@ async function getMerchantOrders(req, res) {
             address: `${order.shippingAddress.governorate}, ${order.shippingAddress.city}, ${order.shippingAddress.village}`,
             products: transformedProducts,
             status: order.status,
-            totalAmount: order.totalAmount,
+            totalAmount: merchantTotalAmount,
             orderDate: order.date,
             preparationTime: order.preparationTime || 1, // Use saved preparation time
             createdAt: order.date

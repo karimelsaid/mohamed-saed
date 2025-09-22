@@ -96,12 +96,40 @@ export class MerchantDashboardComponent implements OnInit {
   constructor(private merchantAuthService: MerchantAuthService, private router: Router, private http: HttpClient) {}
 
   ngOnInit(): void {
+    // Check if merchant is authenticated first
+    if (!this.merchantAuthService.isAuthenticated()) {
+      this.router.navigate(['/login']);
+      return;
+    }
+
     // Refresh merchant data first to get latest approval status
     this.loadMerchantData();
     this.loadProducts();
     this.loadOrders();
     this.loadUpdateRequests();
     this.loadBooksList();
+  }
+
+  // Check if merchant account is approved
+  isMerchantApproved(): boolean {
+    return this.merchant?.approved && !this.merchant?.suspended;
+  }
+
+  // Check if merchant account is pending approval
+  isMerchantPending(): boolean {
+    // Don't show pending warning if merchant data is still loading
+    if (this.loadingMerchant) {
+      return false;
+    }
+
+    // Don't show pending warning if merchant is approved
+    if (this.merchant?.approved && !this.merchant?.suspended) {
+      return false;
+    }
+
+    // Show pending warning only if explicitly not approved and not suspended
+    // and merchant data has been loaded
+    return !this.merchant?.approved && !this.merchant?.suspended;
   }
 
   get pendingProductsCount(): number {
@@ -208,24 +236,12 @@ export class MerchantDashboardComponent implements OnInit {
 
   loadOrders() {
     this.loadingOrders = true;
-    console.log('Loading orders for merchant...');
     this.merchantAuthService.getMerchantOrders().subscribe({
       next: (res: any) => {
-        console.log('Orders API response:', res);
-        console.log('Response type:', typeof res);
-        console.log('Response keys:', Object.keys(res));
-        if (res.orders) {
-          console.log('res.orders exists:', res.orders);
-          console.log('res.orders type:', typeof res.orders);
-          console.log('res.orders length:', Array.isArray(res.orders) ? res.orders.length : 'not an array');
-        }
         this.orders = res.orders || res || [];
-        console.log('Orders loaded:', this.orders.length, 'orders');
-        console.log('Final orders array:', this.orders);
         this.loadingOrders = false;
       },
       error: (error: any) => {
-        console.error('Error loading orders:', error);
         this.loadingOrders = false;
 
         // Handle authentication errors
@@ -370,7 +386,6 @@ export class MerchantDashboardComponent implements OnInit {
       },
       error: (error) => {
         this.showModal('خطأ في الحذف', 'حدث خطأ أثناء حذف المنتج. يرجى المحاولة مرة أخرى.', 'error');
-        console.error('Error deleting product:', error);
       }
     });
   }
@@ -384,7 +399,6 @@ export class MerchantDashboardComponent implements OnInit {
       },
       error: (error) => {
         this.showModal('خطأ في الحذف', 'حدث خطأ أثناء حذف الطلب. يرجى المحاولة مرة أخرى.', 'error');
-        console.error('Error deleting order:', error);
       }
     });
   }
@@ -400,7 +414,6 @@ export class MerchantDashboardComponent implements OnInit {
       this.selectedProducts.clear();
     }).catch((error) => {
       this.showModal('خطأ في الحذف الجماعي', 'حدث خطأ أثناء حذف بعض المنتجات. يرجى المحاولة مرة أخرى.', 'error');
-      console.error('Error bulk deleting products:', error);
     });
   }
 
@@ -447,7 +460,6 @@ export class MerchantDashboardComponent implements OnInit {
         this.updatingProfile = false;
         this.updateMessage = 'حدث خطأ أثناء تحديث المعلومات. يرجى المحاولة مرة أخرى.';
         this.updateMessageColor = 'red';
-        console.error('Error updating profile:', error);
       }
     });
   }
@@ -573,7 +585,6 @@ export class MerchantDashboardComponent implements OnInit {
         },
         error: (error) => {
           alert('حدث خطأ أثناء تحديث حالة الطلب');
-          console.error('Error updating order status:', error);
         }
       });
     }

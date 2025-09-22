@@ -14,7 +14,7 @@ export class MerchantAuthInterceptor implements HttpInterceptor {
 
   intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
     // Only intercept merchant API calls
-    if (req.url.includes('/api/merchant')) {
+    if (req.url.includes('/merchant')) {
       const token = this.merchantAuthService.getToken();
 
       if (token) {

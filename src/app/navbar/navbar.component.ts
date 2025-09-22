@@ -52,6 +52,7 @@ faFilter = faFilter;
   cartCount: number = 0;
   orderCount: number = 0;
   isAdmin: boolean = false;
+  isMerchant: boolean = false;
 
   showAccountModal: boolean = false;
 
@@ -165,12 +166,16 @@ faFilter = faFilter;
     this.authService.user$.subscribe((user) => {
       this.user = user;
       this.updateLoginStatus();
+      this.cdr.markForCheck(); // Ensure view updates immediately
     });
 
     // الاشتراك في تحديثات التجار
     this.merchantAuthService.merchant$.subscribe((merchant) => {
       if (merchant) {
         this.user = { ...merchant, role: 'merchant' };
+        this.isMerchant = true;
+      } else {
+        this.isMerchant = false;
       }
       this.updateLoginStatus();
       this.cdr.markForCheck();
@@ -181,7 +186,10 @@ faFilter = faFilter;
         const merchant = this.merchantAuthService.getCurrentMerchant();
         if (merchant) {
           this.user = { ...merchant, role: 'merchant' };
+          this.isMerchant = true;
         }
+      } else {
+        this.isMerchant = false;
       }
       this.updateLoginStatus();
       this.cdr.markForCheck();
@@ -195,15 +203,23 @@ faFilter = faFilter;
     this.isLoggedIn = isUserLoggedIn || isMerchantLoggedIn;
     this.isAdmin = this.user?.email === 'admin@example.com';
 
+    // Force immediate view update
     this.cdr.markForCheck();
+
+    // Additional check to ensure admin button appears immediately
+    setTimeout(() => {
+      this.cdr.markForCheck();
+    }, 100);
 
     if (this.user) {
       if (this.user.role !== 'merchant') {
         // Load user data for regular users
-        this.authService.loadUserData(this.user.id);
+        if (this.user.id) {
+          this.authService.loadUserData(this.user.id);
 
-        // Load orders explicitly on user login to update orderCount
-        this.dataService.loadOrders(this.user.id).subscribe();
+          // Load orders explicitly on user login to update orderCount
+          this.dataService.loadOrders(this.user.id).subscribe();
+        }
 
         // الاشتراك في تحديثات المفضلة والسلة والطلبات
         this.authService.favoriteBookIds.subscribe((favorites) => {
@@ -227,7 +243,9 @@ faFilter = faFilter;
         });
 
         // Load notifications initially
-        this.notificationService.refreshNotifications(this.user.id);
+        if (this.user.id) {
+          this.notificationService.refreshNotifications(this.user.id);
+        }
       }
 
       // Subscribe to router events to update active states for orders and account
@@ -257,7 +275,7 @@ faFilter = faFilter;
   markNotificationAsRead(notification: Notification): void {
     if (notification.read) return;
     this.authService.user$.subscribe(user => {
-      if (!user) return;
+      if (!user || !user.id) return;
       this.notificationService.markAsRead(user.id, notification._id).subscribe(() => {
         notification.read = true;
         this.unreadCount = this.notifications.filter(n => !n.read).length;
@@ -268,7 +286,7 @@ faFilter = faFilter;
 
   deleteNotification(notification: Notification): void {
     this.authService.user$.subscribe(user => {
-      if (!user) return;
+      if (!user || !user.id) return;
       this.notificationService.deleteNotification(user.id, notification._id).subscribe(() => {
         // Remove the notification from the local array
         this.notifications = this.notifications.filter(n => n._id !== notification._id);

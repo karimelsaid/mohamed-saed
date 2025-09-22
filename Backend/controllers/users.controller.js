@@ -72,7 +72,17 @@ async function createAccount(req, res) {
     });
     await newUser.save();
 
-    res.status(201).json({ message: 'تم إنشاء الحساب بنجاح' });
+    // Return user data for auto-login (similar to login response)
+    res.status(201).json({
+      message: 'تم إنشاء الحساب بنجاح',
+      user: {
+        id: newUser._id,
+        username: newUser.username,
+        email: newUser.email,
+        phone: newUser.phone,
+        role: newUser.role
+      }
+    });
   } catch (error) {
     res.status(500).json({ message: 'حدث خطأ أثناء إنشاء الحساب', error });
   }

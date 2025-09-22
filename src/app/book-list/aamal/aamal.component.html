@@ -113,7 +113,7 @@
   [icon]="faShareAlt"
   class="text-gray-400 cursor-pointer hover:text-green-700 dark:hover:text-green-600 text-xl"
   title="نسخ رابط الكتاب">
-</fa-icon>
+          </fa-icon>
 
 <div *ngIf="showCopySuccess && copiedBookId === book.products_id" class="absolute top-0 right-0 bg-green-500 text-white px-2 py-1 rounded text-xs font-semibold">
   تم نسخ الرابط
@@ -130,21 +130,43 @@
 </div>
 
 <!-- أزرار التنقل بين الصفحات -->
-<div class="flex justify-center mt-4 mb-32 md:mb-0">
+<div class="flex justify-center mt-4 mb-32 md:mb-0 space-x-2 rtl:space-x-reverse">
   <button
-    class="bg-gray-300 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-600"
-    (click)="changePage('next')"
-    [disabled]="currentPage === totalPages">
-    التالي
+    class="bg-gray-300 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg"
+    (click)="currentPage > 1 ? changePage('previous') : null"
+    [class.hover:bg-gray-400]="currentPage > 1"
+    [class.dark:hover:bg-gray-600]="currentPage > 1"
+    [class.cursor-not-allowed]="currentPage <= 1"
+    [class.opacity-50]="currentPage <= 1">
+    السابق
   </button>
 
-  <span class="mx-4 text-lg text-gray-900 dark:text-gray-100">صفحة {{ currentPage }} من {{ totalPages }}</span>
+  <ng-container *ngFor="let page of getDisplayedPages()">
+    <button
+      *ngIf="typeof page === 'number'"
+      class="px-2 py-[1px] sm:px-3 sm:py-1  rounded-lg border border-gray-300 dark:border-gray-600"
+      [ngClass]="{
+        'bg-blue-600 text-white dark:bg-blue-700': page === currentPage,
+        'bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700': page !== currentPage
+      }"
+      (click)="onPageClick(page)">
+      {{ page }}
+    </button>
+    <span
+      *ngIf="typeof page === 'string'"
+      class="px-2 py-[1px] sm:px-3 sm:py-1  text-gray-500 dark:text-gray-400">
+      {{ page }}
+    </span>
+  </ng-container>
 
   <button
-    class="bg-gray-300 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-600"
-    (click)="changePage('previous')"
-    [disabled]="currentPage === 1">
-    السابق
+    class="bg-gray-300 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg"
+    (click)="currentPage < totalPages ? changePage('next') : null"
+    [class.hover:bg-gray-400]="currentPage < totalPages"
+    [class.dark:hover:bg-gray-600]="currentPage < totalPages"
+    [class.cursor-not-allowed]="currentPage >= totalPages"
+    [class.opacity-50]="currentPage >= totalPages">
+    التالي
   </button>
 </div>
 

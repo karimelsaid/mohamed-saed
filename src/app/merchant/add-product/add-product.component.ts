@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { MerchantAuthService } from '../../services/merchant-auth.service';
 import { Router } from '@angular/router';
@@ -12,11 +12,13 @@ import { ModalDialogComponent } from '../../shared/modal-dialog/modal-dialog.com
   templateUrl: './add-product.component.html',
   styleUrls: ['./add-product.component.css']
 })
-export class AddProductComponent {
+export class AddProductComponent implements OnInit {
   productForm: FormGroup;
   loading = false;
   selectedFile: File | null = null;
   imagePreview: string | null = null;
+  isApproved = false;
+  isLoading = true;
 
   // Modal properties
   showSuccessModal = false;
@@ -56,6 +58,47 @@ export class AddProductComponent {
     });
   }
 
+  ngOnInit() {
+    this.checkMerchantApproval();
+  }
+
+  private checkMerchantApproval() {
+    // Get current merchant data from service
+    const currentMerchant = this.merchantAuthService.getCurrentMerchant();
+
+    if (currentMerchant) {
+      this.isApproved = currentMerchant.approved || false;
+      this.isLoading = false;
+
+      if (!this.isApproved) {
+        console.log('🔍 Unapproved merchant trying to access add-product component');
+        alert('حسابك قيد المراجعة من قبل الإدارة. لا يمكنك إضافة منتجات حتى يتم الموافقة على حسابك.');
+        this.router.navigate(['/merchant/dashboard']);
+        return;
+      }
+    } else {
+      // If no merchant data in localStorage, fetch from API
+      this.merchantAuthService.getCurrentMerchantFromAPI().subscribe({
+        next: (response) => {
+          this.isApproved = response.merchant?.approved || false;
+          this.isLoading = false;
+
+          if (!this.isApproved) {
+            console.log('🔍 Unapproved merchant trying to access add-product component');
+            alert('حسابك قيد المراجعة من قبل الإدارة. لا يمكنك إضافة منتجات حتى يتم الموافقة على حسابك.');
+            this.router.navigate(['/merchant/dashboard']);
+          }
+        },
+        error: (error) => {
+          console.error('❌ Error fetching merchant data in component:', error);
+          this.isLoading = false;
+          alert('حدث خطأ في تحميل بيانات الحساب. يرجى تسجيل الدخول مرة أخرى.');
+          this.router.navigate(['/login']);
+        }
+      });
+    }
+  }
+
   onFileSelected(event: any) {
     const file = event.target.files[0];
     if (file) {
@@ -69,6 +112,13 @@ export class AddProductComponent {
   }
 
   onSubmit() {
+    // Double-check approval status before submitting
+    if (!this.isApproved) {
+      alert('حسابك قيد المراجعة من قبل الإدارة. لا يمكنك إضافة منتجات حتى يتم الموافقة على حسابك.');
+      this.router.navigate(['/merchant/dashboard']);
+      return;
+    }
+
     if (this.productForm.valid && this.selectedFile) {
       this.loading = true;
       const formData = new FormData();
@@ -95,7 +145,14 @@ export class AddProductComponent {
         error: (error) => {
           console.error('Error adding product:', error);
           this.loading = false;
-          alert('فشل في إضافة المنتج. يرجى المحاولة مرة أخرى.');
+
+          // Handle specific error cases
+          if (error.status === 403 && error.error?.message?.includes('قيد المراجعة')) {
+            alert('حسابك قيد المراجعة من قبل الإدارة. لا يمكنك إضافة منتجات حتى يتم الموافقة على حسابك.');
+            this.router.navigate(['/merchant/dashboard']);
+          } else {
+            alert('فشل في إضافة المنتج. يرجى المحاولة مرة أخرى.');
+          }
         }
       });
     } else {

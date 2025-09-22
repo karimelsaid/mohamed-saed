@@ -47,8 +47,26 @@ const routes: Routes = [
   { path: 'Dictionaries-References', component: QamosComponent },
   { path: 'ControlPanel', component: AdminDashboardComponent },
   { path: 'merchant/dashboard', component: MerchantDashboardComponent, canActivate: [MerchantAuthGuard] },
-  { path: 'merchant/add-product', component: AddProductComponent, canActivate: [MerchantAuthGuard] },
-  { path: 'merchant/edit-product/:id', component: EditProductComponent, canActivate: [MerchantAuthGuard] },
+  {
+    path: 'merchant/add-product',
+    component: AddProductComponent,
+    canActivate: [MerchantAuthGuard],
+    data: {
+      requiresApproval: true,
+      title: 'إضافة منتج',
+      description: 'صفحة إضافة منتج جديد - متاحة للتجار المعتمدين فقط'
+    }
+  },
+  {
+    path: 'merchant/edit-product/:id',
+    component: EditProductComponent,
+    canActivate: [MerchantAuthGuard],
+    data: {
+      requiresApproval: true,
+      title: 'تعديل منتج',
+      description: 'صفحة تعديل المنتجات - متاحة للتجار المعتمدين فقط'
+    }
+  },
   { path: 'merchant/:id', component: MerchantProfileComponent },
   { path: 'book/:name', component: BookDetailsComponent },
   { path: '', redirectTo: '/Home', pathMatch: 'full' },  // الصفحة الرئيسية هي "home" افتراضيًا

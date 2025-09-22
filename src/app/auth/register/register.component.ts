@@ -161,7 +161,7 @@ export class RegisterComponent {
     this.validatePassword();
     this.checkPasswordMatch();
     this.validatePhone();
-    
+
     const isValid = !!(
       this.user.username.trim() &&
       this.user.email.trim() &&
@@ -173,7 +173,7 @@ export class RegisterComponent {
       this.user.governorate &&
       this.user.city
     );
-    
+
     return isValid;
   }
 
@@ -227,8 +227,8 @@ export class RegisterComponent {
     )
     .subscribe({
       next: (response) => {
-        this.message = '✅ تم إنشاء الحساب بنجاح!';
-        this.router.navigate(['/login']);
+        this.message = '✅ تم إنشاء الحساب وتسجيل الدخول بنجاح!';
+        this.router.navigate(['/']);
       },
       error: (error) => {
         if (error.status === 400 && error.error.message) {
@@ -269,8 +269,8 @@ export class RegisterComponent {
 
     this.authService.registerMerchant(formData).subscribe({
       next: (response) => {
-        this.message = '✅ تم إنشاء حساب التاجر بنجاح! في انتظار موافقة الأدمن.';
-        this.router.navigate(['/login']);
+        this.message = '✅ تم إنشاء حساب التاجر وتسجيل الدخول بنجاح! في انتظار موافقة الأدمن.';
+        this.router.navigate(['/']);
       },
       error: (error) => {
         if (error.status === 400 && error.error.message) {

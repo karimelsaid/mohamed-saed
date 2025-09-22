@@ -2,8 +2,49 @@
 <div class="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 mt-6 md:mt-32 mb-32 md:mb-20">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
+    <!-- Pending Approval Warning Section -->
+    <div *ngIf="isMerchantPending()" class="mb-4">
+      <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-6">
+        <div class="flex items-start">
+          <div class="flex-shrink-0">
+            <svg class="w-6 h-6 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+            </svg>
+          </div>
+          <div class="mr-4 flex-1">
+            <h3 class="text-lg font-semibold text-yellow-800 dark:text-yellow-200 mb-2">
+              حسابك في انتظار الموافقة
+            </h3>
+            <p class="text-yellow-700 dark:text-yellow-300 mb-4">
+              تم إنشاء حسابك بنجاح وتسجيل دخولك تلقائياً. ومع ذلك، يجب الموافقة على حسابك من قبل فريق الإدارة قبل أن تتمكن من استخدام جميع وظائف لوحة التحكم.
+            </p>
+            <div class="bg-yellow-100 dark:bg-yellow-900/40 rounded-lg p-4 border border-yellow-300 dark:border-yellow-700">
+              <h4 class="font-medium text-yellow-800 dark:text-yellow-200 mb-2">ما يمكنك فعله الآن:</h4>
+              <ul class="list-disc list-inside text-sm text-yellow-700 dark:text-yellow-300 space-y-1">
+                <li>عرض معلومات حسابك وتعديلها</li>
+                <li>عرض قائمة المنتجات (إن وجدت)</li>
+                <li>الانتظار للموافقة على الحساب</li>
+              </ul>
+            </div>
+            <div class="bg-yellow-100 dark:bg-yellow-900/40 rounded-lg p-4 border border-yellow-300 dark:border-yellow-700 mt-4">
+              <h4 class="font-medium text-yellow-800 dark:text-yellow-200 mb-2">ما لا يمكنك فعله حتى الموافقة:</h4>
+              <ul class="list-disc list-inside text-sm text-yellow-700 dark:text-yellow-300 space-y-1">
+                <li>إضافة منتجات جديدة</li>
+                <li>تعديل أو حذف المنتجات الموجودة</li>
+                <li>إدارة الطلبات</li>
+                <li>تحديث حالة الطلبات</li>
+              </ul>
+            </div>
+            <p class="text-sm text-yellow-600 dark:text-yellow-400 mt-4">
+              <strong>ملاحظة:</strong> سيتم مراجعة حسابك خلال بضع ساعات. ستتلقى إشعاراً عند الموافقة على حسابك.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Header Section -->
-    <div class="mb-8">
+    <div class="mb-8" *ngIf="!isMerchantPending()">
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">
@@ -16,7 +57,10 @@
         <div class="mt-4 sm:mt-0">
           <button
             (click)="addProduct()"
+            [disabled]="isMerchantPending()"
             class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200 shadow-sm"
+            [class.opacity-50]="isMerchantPending()"
+            [class.cursor-not-allowed]="isMerchantPending()"
           >
             <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
@@ -24,12 +68,11 @@
             إضافة منتج جديد
           </button>
         </div>
-
       </div>
     </div>
 
     <!-- Product Update Requests Section -->
-    <div class="bg-white dark:bg-gray-800 shadow-sm rounded-xl border border-gray-200 dark:border-gray-700 mb-8">
+    <div *ngIf="!isMerchantPending()" class="bg-white dark:bg-gray-800 shadow-sm rounded-xl border border-gray-200 dark:border-gray-700 mb-8">
       <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
         <h2 class="text-lg font-semibold text-gray-900 dark:text-white">طلبات تحديث المنتجات</h2>
       </div>
@@ -89,7 +132,7 @@
     </div>
 
     <!-- Stats Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8" *ngIf="!isMerchantPending()">
       <!-- Products Count -->
       <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm rounded-xl border border-gray-200 dark:border-gray-700">
         <div class="p-6">
@@ -149,7 +192,7 @@
     </div>
 
     <!-- Merchant Info Section -->
-    <div class="bg-white dark:bg-gray-800 shadow-sm rounded-xl border border-gray-200 dark:border-gray-700 mb-8">
+    <div *ngIf="!isMerchantPending()" class="bg-white dark:bg-gray-800 shadow-sm rounded-xl border border-gray-200 dark:border-gray-700 mb-8">
       <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
         <h2 class="text-lg font-semibold text-gray-900 dark:text-white">معلومات التاجر</h2>
         <button
@@ -317,7 +360,7 @@
     </div>
 
     <!-- Products Section -->
-    <div class="bg-white dark:bg-gray-800 shadow-sm rounded-xl border border-gray-200 dark:border-gray-700 mb-8">
+    <div *ngIf="!isMerchantPending()" class="bg-white dark:bg-gray-800 shadow-sm rounded-xl border border-gray-200 dark:border-gray-700 mb-8">
       <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
         <div class="flex items-center gap-4">
           <h2 class="text-lg font-semibold text-gray-900 dark:text-white">المنتجات</h2>
@@ -505,7 +548,7 @@
     </div>
 
     <!-- Orders Section -->
-    <div class="bg-white dark:bg-gray-800 shadow-sm rounded-xl border border-gray-200 dark:border-gray-700">
+    <div *ngIf="!isMerchantPending()" class="bg-white dark:bg-gray-800 shadow-sm rounded-xl border border-gray-200 dark:border-gray-700">
       <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
         <h2 class="text-lg font-semibold text-gray-900 dark:text-white">الطلبات الأخيرة</h2>
       </div>

@@ -97,33 +97,28 @@ export class LoginComponent {
             // For merchants, call the merchant login API to get token
             this.merchantAuthService.login(this.email, this.password).subscribe({
               next: (merchantResponse: any) => {
-                if (merchantResponse.success) {
-                  // Set both regular auth service and merchant auth service
-                  const merchantUser = {
-                    id: merchantResponse.merchant._id,
-                    email: merchantResponse.merchant.email,
-                    role: 'merchant',
-                    username: merchantResponse.merchant.name,
-                    phone: merchantResponse.merchant.phone
-                  };
-                  localStorage.setItem('user', JSON.stringify(merchantUser));
-                  this.authService.setLoginStatus(true);
-                  this.authService.setUser(merchantUser);
+                // Set both regular auth service and merchant auth service
+                const merchantUser = {
+                  id: merchantResponse.merchant._id,
+                  email: merchantResponse.merchant.email,
+                  role: 'merchant',
+                  username: merchantResponse.merchant.name,
+                  phone: merchantResponse.merchant.phone
+                };
+                localStorage.setItem('user', JSON.stringify(merchantUser));
+                this.authService.setLoginStatus(true);
+                this.authService.setUser(merchantUser);
 
-                  this.message = '✅ تم تسجيل الدخول كتاجر بنجاح';
-                  this.isSuccess = true;
-                  // Redirect to home page after successful login
-                  setTimeout(() => {
-                    this.router.navigate(['/Home']);
-                  }, 1000);
-                } else {
-                  this.message = '❌ فشل تسجيل الدخول كتاجر ... يجب الموافقة علي الحساب أولا حاول مرة اخري خلال بضع ساعات';
-                  this.isSuccess = false;
-                }
+                this.message = '✅ تم تسجيل الدخول كتاجر بنجاح';
+                this.isSuccess = true;
+                // Redirect to home page after successful login
+                setTimeout(() => {
+                  this.router.navigate(['/Home']);
+                }, 1000);
               },
               error: (err: any) => {
                 console.error('Merchant login error:', err);
-                this.message = '❌ فشل تسجيل الدخول كتاجر ... يجب الموافقة علي الحساب أولا حاول مرة اخري خلال بضع ساعات';
+                this.message = '❌ حدث خطأ أثناء تسجيل الدخول. يرجى المحاولة مرة أخرى.';
                 this.isSuccess = false;
               }
             });

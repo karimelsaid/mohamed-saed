@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable, BehaviorSubject } from 'rxjs';
-import { tap } from 'rxjs/operators';
+import { Observable, BehaviorSubject, throwError } from 'rxjs';
+import { tap, catchError } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 
 interface MerchantAuthResponse {
@@ -17,6 +17,31 @@ interface MerchantAuthResponse {
     village?: string;
     taxNumber?: string;
     logo?: string;
+    approved?: boolean;
+    suspended?: boolean;
+    bio?: string;
+    preparationTime?: number;
+    createdAt?: string;
+  };
+}
+
+interface MerchantCurrentResponse {
+  success: boolean;
+  merchant: {
+    _id: string;
+    name: string;
+    email: string;
+    phone?: string;
+    governorate?: string;
+    city?: string;
+    village?: string;
+    taxNumber?: string;
+    logo?: string;
+    approved?: boolean;
+    suspended?: boolean;
+    bio?: string;
+    preparationTime?: number;
+    createdAt?: string;
   };
 }
 
@@ -43,8 +68,11 @@ export class MerchantAuthService {
     const merchantData = localStorage.getItem(this.merchantDataKey);
 
     if (token && merchantData) {
-      this.isLoggedInSubject.next(true);
-      this.merchantSubject.next(JSON.parse(merchantData));
+      // Add small delay to ensure navbar is ready to listen for changes
+      setTimeout(() => {
+        this.isLoggedInSubject.next(true);
+        this.merchantSubject.next(JSON.parse(merchantData));
+      }, 50);
     }
   }
 
@@ -74,6 +102,14 @@ export class MerchantAuthService {
   // Public method to handle complete logout
   performLogout(): void {
     this.clearMerchantAuth();
+  }
+
+  // Public method to set merchant authentication from external services
+  public setMerchantAuthFromExternal(token: string, merchant: any): void {
+    // Add small delay to ensure navbar is ready to listen for changes
+    setTimeout(() => {
+      this.setMerchantAuth(token, merchant);
+    }, 100);
   }
 
   private setMerchantAuth(token: string, merchant: any) {
@@ -114,7 +150,6 @@ export class MerchantAuthService {
         this.performLogout();
         return false;
       }
-
       return true;
     } catch (error) {
       this.performLogout();
@@ -133,13 +168,26 @@ export class MerchantAuthService {
     return 'حدث خطأ أثناء المصادقة. يرجى المحاولة مرة أخرى.';
   }
 
-  getCurrentMerchantFromAPI(): Observable<any> {
+  getCurrentMerchantFromAPI(): Observable<MerchantCurrentResponse> {
     const token = this.getToken();
+
     let headers = new HttpHeaders();
     if (token) {
       headers = headers.set('Authorization', `Bearer ${token}`);
     }
-    return this.http.get(`${this.apiUrl}/merchant/current`, { headers });
+
+    return this.http.get<MerchantCurrentResponse>(`${this.apiUrl}/merchant/current`, { headers }).pipe(
+      tap((response: MerchantCurrentResponse) => {
+
+        // Update localStorage with fresh merchant data including approval status
+        if (response && response.merchant) {
+          this.setMerchantAuth(token!, response.merchant);
+        }
+      }),
+      catchError(error => {
+        return throwError(error);
+      })
+    );
   }
 
   getMerchantProducts(): Observable<any> {

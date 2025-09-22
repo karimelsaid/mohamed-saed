@@ -5,6 +5,7 @@ import { faBars, faClose, faHome, faBook, faFilePdf, faUser, faChevronUp, faChev
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { AccountModalComponent } from '../auth/account-modal/account-modal.component';
 import { AuthService } from '../auth/auth.service';
+import { MerchantAuthService } from '../services/merchant-auth.service';
 import { NotificationService, Notification } from '../services/notification.service';
 import { DataService } from '../services/data.service';
 
@@ -72,20 +73,24 @@ export class NavbarIconsComponent implements OnInit {
     private router: Router,
     private dataService: DataService,
     private authService: AuthService,
+    private merchantAuthService: MerchantAuthService,
     private notificationService: NotificationService,
     private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
+    // Check both AuthService and MerchantAuthService for user state
     this.authService.user$.subscribe((user) => {
       this.isLoggedIn = !!user;
       this.isAdmin = user?.email === 'admin@example.com';
-      this.isMerchant = user?.role === 'merchant'; // Set merchant flag
+      this.isMerchant = user?.role === 'merchant'; // Set merchant flag from regular user
 
-      if (user) {
+      if (user && user.id) {
         this.authService.loadUserData(user.id);
 
-        this.dataService.loadOrders(user.id).subscribe();
+        if (user.id) {
+          this.dataService.loadOrders(user.id).subscribe();
+        }
 
         this.authService.favoriteBookIds.subscribe((favorites) => {
           this.favoritesCount = favorites.length;
@@ -106,7 +111,9 @@ export class NavbarIconsComponent implements OnInit {
           this.cdr.markForCheck();
         });
 
-        this.notificationService.refreshNotifications(user.id);
+        if (user && user.id) {
+          this.notificationService.refreshNotifications(user.id);
+        }
 
         this.router.events.subscribe((event) => {
           if (event instanceof NavigationEnd) {
@@ -115,6 +122,47 @@ export class NavbarIconsComponent implements OnInit {
             this.cdr.markForCheck();
           }
         });
+      }
+
+      this.cdr.markForCheck(); // Ensure view updates immediately
+
+      // Additional check to ensure admin button appears immediately
+      setTimeout(() => {
+        this.cdr.markForCheck();
+      }, 100);
+    });
+
+    // Also check MerchantAuthService for merchant state
+    this.merchantAuthService.merchant$.subscribe((merchant) => {
+      if (merchant) {
+        this.isLoggedIn = true;
+        this.isMerchant = true; // Set merchant flag from merchant service
+        this.cdr.markForCheck();
+
+        // Additional check to ensure merchant button appears immediately
+        setTimeout(() => {
+          this.cdr.markForCheck();
+        }, 50);
+      } else {
+        this.isMerchant = false;
+        this.cdr.markForCheck();
+      }
+    });
+
+    // Check if user is authenticated as merchant
+    this.merchantAuthService.isLoggedIn$.subscribe((isLoggedIn) => {
+      if (isLoggedIn) {
+        this.isLoggedIn = true;
+        this.isMerchant = true;
+        this.cdr.markForCheck();
+
+        // Additional check to ensure merchant button appears immediately
+        setTimeout(() => {
+          this.cdr.markForCheck();
+        }, 50);
+      } else {
+        this.isMerchant = false;
+        this.cdr.markForCheck();
       }
     });
   }
@@ -240,7 +288,7 @@ export class NavbarIconsComponent implements OnInit {
   markNotificationAsRead(notification: Notification): void {
     if (notification.read) return;
     this.authService.user$.subscribe(user => {
-      if (!user) return;
+      if (!user || !user.id) return;
       this.notificationService.markAsRead(user.id, notification._id).subscribe(() => {
         notification.read = true;
         this.unreadCount = this.notifications.filter(n => !n.read).length;
@@ -251,7 +299,7 @@ export class NavbarIconsComponent implements OnInit {
 
   deleteNotification(notification: Notification): void {
     this.authService.user$.subscribe(user => {
-      if (!user) return;
+      if (!user || !user.id) return;
       this.notificationService.deleteNotification(user.id, notification._id).subscribe(() => {
         this.notifications = this.notifications.filter(n => n._id !== notification._id);
         this.unreadCount = this.notifications.filter(n => !n.read).length;
@@ -259,7 +307,7 @@ export class NavbarIconsComponent implements OnInit {
       });
     }).unsubscribe();
   }
-  
+
   openAccountModal(): void {
     this.accountModal.openModal();
     this.showAccountModal = true;

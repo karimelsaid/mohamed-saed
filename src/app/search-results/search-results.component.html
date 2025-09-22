@@ -1,7 +1,7 @@
 
 <div class="pt-10 md:pt-40 p-3 text-center text-2xl font-bold text-amber-600 dark:text-amber-400">نتيجة البحث</div>
 
-<div *ngIf="isLoading" class="pt-10 md:pt-40 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 mx-8 gap-4">
+<div *ngIf="isLoading" class="pt-10 md:pt-10 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 mx-8 gap-4">
   <div *ngFor="let skeleton of [].constructor(10); let i = index" class="flex dark:bg-gray-800 rounded-2xl shadow dark:shadow-lg dark:shadow-black/50 p-4 mb-4 fade-in relative"
   [style.animationDelay]="i * 400 + 'ms'">
     <div class="absolute top-2 left-2 bg-gray-300 dark:bg-gray-700 rounded w-12 h-6 animate-pulse"></div>
@@ -24,8 +24,8 @@
   </div>
 </div>
 
-<div *ngIf="!isLoading" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 mx-8 gap-4">
-  <div *ngFor="let book of books ;let i = index" class="flex dark:bg-gray-800 rounded-2xl shadow dark:shadow-lg dark:shadow-black/50 p-4 mb-4 fade-in relative"
+<div *ngIf="!isLoading" class="pt-10 md:pt-10 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 mx-8 gap-4">
+  <div *ngFor="let book of paginatedBooks ; let i = index" class="flex dark:bg-gray-800 rounded-2xl shadow dark:shadow-lg dark:shadow-black/50 p-4 mb-4 fade-in relative"
   [style.animationDelay]="i * 400 + 'ms'">
       <!-- شريط الخصم -->
       <div *ngIf="book.rival && book.product_discount_percent" class="absolute top-2 left-2 bg-red-600 dark:bg-red-700 text-white text-xs font-bold px-2 py-1 rounded shadow-md dark:shadow-lg z-10">
@@ -168,20 +168,42 @@
 
 
 <!-- أزرار التنقل بين الصفحات -->
-<div class="flex justify-center items-center mt-4 mx-4 mb-32 md:mb-0">
+<div class="flex justify-center mt-4 mb-32 md:mb-0 space-x-2 rtl:space-x-reverse">
   <button
-    (click)="prevPage()"
-    [disabled]="currentPage === 1"
-    class="px-4 py-2 bg-gray-300 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg disabled:bg-gray-200 dark:disabled:bg-gray-600">
-    رجوع
+    class="bg-gray-300 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg"
+    (click)="currentPage > 1 ? changePage('previous') : null"
+    [class.hover:bg-gray-400]="currentPage > 1"
+    [class.dark:hover:bg-gray-600]="currentPage > 1"
+    [class.cursor-not-allowed]="currentPage <= 1"
+    [class.opacity-50]="currentPage <= 1">
+    السابق
   </button>
 
-  <span class="text-sm mx-4 text-gray-600 dark:text-gray-300">الصفحة {{ currentPage }} من {{ totalBooks / booksPerPage | number: '1.0-0' }}</span>
+  <ng-container *ngFor="let page of getDisplayedPages()">
+    <button
+      *ngIf="typeof page === 'number'"
+      class="px-2 py-[1px] sm:px-3 sm:py-1  rounded-lg border border-gray-300 dark:border-gray-600"
+      [ngClass]="{
+        'bg-blue-600 text-white dark:bg-blue-700': page === currentPage,
+        'bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700': page !== currentPage
+      }"
+      (click)="onPageClick(page)">
+      {{ page }}
+    </button>
+    <span
+      *ngIf="typeof page === 'string'"
+      class="px-2 py-[1px] sm:px-3 sm:py-1  text-gray-500 dark:text-gray-400">
+      {{ page }}
+    </span>
+  </ng-container>
 
   <button
-    (click)="nextPage()"
-    [disabled]="currentPage * booksPerPage >= totalBooks"
-    class="px-4 py-2 bg-gray-300 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg disabled:bg-gray-200 dark:disabled:bg-gray-600">
+    class="bg-gray-300 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg"
+    (click)="currentPage < totalPages ? changePage('next') : null"
+    [class.hover:bg-gray-400]="currentPage < totalPages"
+    [class.dark:hover:bg-gray-600]="currentPage < totalPages"
+    [class.cursor-not-allowed]="currentPage >= totalPages"
+    [class.opacity-50]="currentPage >= totalPages">
     التالي
   </button>
 </div>

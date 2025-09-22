@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { DataService } from '../services/data.service';
 import { Book } from '../book';
 import { faHeart, faCartPlus, faShareAlt } from '@fortawesome/free-solid-svg-icons';
@@ -21,10 +21,12 @@ export class SearchResultsComponent implements OnInit {
   faStar = faStar;
   faStarRegular = faStarRegular;
   books: Book[] = []; // كل الكتب
+  paginatedBooks: Book[] = []; // الكتب المعروضة في الصفحة الحالية
   searchQuery: string = ''; // نص البحث
   currentPage: number = 1; // الصفحة الحالية
-  booksPerPage = 10; // عدد الكتب في الصفحة
+  booksPerPage = 12; // عدد الكتب في الصفحة
   totalBooks = 0; // إجمالي الكتب التي تطابق البحث
+  totalPages = 1; // إجمالي عدد الصفحات
   showLoginPrompt = false;
   faShareAlt = faShareAlt;
   showCopySuccess = false;
@@ -42,7 +44,7 @@ export class SearchResultsComponent implements OnInit {
 
   isLoading = false; // Add loading flag
 
-  constructor(private dataService: DataService, private route: ActivatedRoute, private authService: AuthService, private http: HttpClient) {}
+  constructor(private dataService: DataService, private route: ActivatedRoute, private router: Router, private authService: AuthService, private http: HttpClient) {}
 
   ngOnInit(): void {
     this.fetchRatingsForBooks();
@@ -50,6 +52,7 @@ export class SearchResultsComponent implements OnInit {
     this.route.queryParams.subscribe(params => {
       this.searchQuery = params['q'] || ''; // تأكد من وجود قيمة
       this.filterType = params['filter'] || 'all';
+      this.currentPage = parseInt(params['page'] || '1', 10); // قراءة رقم الصفحة من الـ URL
       this.searchBooks();
     });
   }
@@ -68,12 +71,12 @@ export class SearchResultsComponent implements OnInit {
       console.error('Failed to copy: ', err);
     });
   }
-  
+
     // Updated method to generate book slug without encoding to keep readable characters in URL
     getBookSlug(bookName: string): string {
       return bookName.trim().replace(/\s+/g, '-');
     }
-    
+
   fetchRatingsForBooks(): void {
     this.books.forEach(book => {
       if (book.products_id) {
@@ -105,7 +108,7 @@ this.http.get<{ bookId: string; averageRating: number; ratingCount: number }>(`$
     }
     return 0;
   }
-  
+
   getRatingCount(book: Book): number {
     if (book.products_id && this.ratings[book.products_id]) {
       return this.ratings[book.products_id].ratingCount;
@@ -242,11 +245,11 @@ this.http.get<{ bookId: string; averageRating: number; ratingCount: number }>(`$
     this.isLoading = true; // Set loading true before data fetch
     if (this.filterType === 'recentlyAdded') {
       this.dataService.getRecentBooks().subscribe(data => {
+        this.books = data;
         this.totalBooks = data.length;
-        this.currentPage = Math.min(this.currentPage, Math.ceil(this.totalBooks / this.booksPerPage));
-        const startIndex = (this.currentPage - 1) * this.booksPerPage;
-        const endIndex = this.currentPage * this.booksPerPage;
-        this.books = data.slice(startIndex, endIndex);
+        this.totalPages = Math.ceil(this.totalBooks / this.booksPerPage);
+        this.currentPage = Math.min(this.currentPage, this.totalPages);
+        this.updatePage();
         this.fetchRatingsForBooks();
         this.isLoading = false; // Set loading false after data fetch
       });
@@ -269,8 +272,11 @@ this.http.get<{ bookId: string; averageRating: number; ratingCount: number }>(`$
           if (!aStarts && bStarts) return 1;
           return 0;
         });
+        this.books = filteredBooks;
         this.totalBooks = filteredBooks.length;
-        this.books = filteredBooks.slice((this.currentPage - 1) * this.booksPerPage, this.currentPage * this.booksPerPage);
+        this.totalPages = Math.ceil(this.totalBooks / this.booksPerPage);
+        this.currentPage = Math.min(this.currentPage, this.totalPages);
+        this.updatePage();
         this.fetchRatingsForBooks(); // Fetch ratings after books are loaded
         this.isLoading = false; // Set loading false after data fetch
       });
@@ -321,5 +327,106 @@ switch (imageElement.errorStep) {
         imageElement.src = this.uploadsBaseUrl + '/default.png';
         break;
     }
+  }
+
+  // دالة تحديث الصفحة الحالية
+  updatePage(): void {
+    const startIndex = (this.currentPage - 1) * this.booksPerPage;
+    const endIndex = startIndex + this.booksPerPage;
+    this.paginatedBooks = this.books.slice(startIndex, endIndex);
+  }
+
+  // دالة تغيير الصفحة
+  changePage(direction: string): void {
+    if (direction === 'previous' && this.currentPage > 1) {
+      this.currentPage--;
+    } else if (direction === 'next' && this.currentPage < this.totalPages) {
+      this.currentPage++;
+    }
+    this.updatePage();
+    this.scrollToTop();
+    this.updateURL();
+  }
+
+  // دالة النقر على رقم الصفحة
+  onPageClick(page: number | string): void {
+    if (typeof page === 'number') {
+      this.currentPage = page;
+      this.updatePage();
+      this.scrollToTop();
+      this.updateURL();
+    }
+  }
+
+  // دالة تحديث الـ URL
+  updateURL(): void {
+    const queryParams: any = {
+      q: this.searchQuery,
+      filter: this.filterType
+    };
+
+    if (this.currentPage > 1) {
+      queryParams.page = this.currentPage;
+    }
+
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: queryParams,
+      queryParamsHandling: 'merge'
+    });
+  }
+
+  // دالة العودة إلى أعلى الصفحة
+  scrollToTop(): void {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // دالة الحصول على أرقام الصفحات المعروضة
+  getDisplayedPages(): (number | string)[] {
+    const totalPages = this.totalPages || 1;
+    const currentPage = this.currentPage || 1;
+    const maxPagesToShow = 5;
+
+    // If total pages is less than or equal to max pages to show, return all pages
+    if (totalPages <= maxPagesToShow) {
+      const pages: (number | string)[] = [];
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+      return pages;
+    }
+
+    const pages: (number | string)[] = [];
+    const leftOffset = Math.floor(maxPagesToShow / 2);
+    const rightOffset = maxPagesToShow - leftOffset - 1;
+
+    // Always show first page
+    pages.push(1);
+
+    // Calculate start and end of middle section
+    let startPage = Math.max(2, currentPage - leftOffset);
+    let endPage = Math.min(totalPages - 1, currentPage + rightOffset);
+
+    // Add ellipsis after first page if there's a gap
+    if (startPage > 2) {
+      pages.push('...');
+    }
+
+    // Add middle pages
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(i);
+    }
+
+    // Add ellipsis before last page if there's a gap
+    if (endPage < totalPages - 1) {
+      pages.push('...');
+    }
+
+    // Always show last page
+    if (totalPages > 1) {
+      pages.push(totalPages);
+    }
+
+    return pages;
   }
 }

@@ -4,6 +4,7 @@ import { Observable, BehaviorSubject } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { User } from './user.model';
 import { environment } from '../../environments/environment';
+import { MerchantAuthService } from '../services/merchant-auth.service';
 
 @Injectable({
   providedIn: 'root'
@@ -19,7 +20,7 @@ export class AuthService {
   private userSubject = new BehaviorSubject<User | null>(null);
   user$ = this.userSubject.asObservable();
 
-  constructor(private http: HttpClient) {
+  constructor(private http: HttpClient, private merchantAuthService: MerchantAuthService) {
     this.checkInitialLogin();
   }
 
@@ -39,8 +40,11 @@ export class AuthService {
   private checkInitialLogin() {
     const userData = localStorage.getItem('user');
     if (userData) {
-      this.isLoggedInSubject.next(true);
-      this.userSubject.next(JSON.parse(userData));
+      // Add small delay to ensure navbar is ready to listen for changes
+      setTimeout(() => {
+        this.isLoggedInSubject.next(true);
+        this.userSubject.next(JSON.parse(userData));
+      }, 50);
     }
   }
 
@@ -49,9 +53,12 @@ export class AuthService {
   }
 
   setUser(user: any) {
-    this.userSubject.next(user);
-    this.setLoginStatus(true);
-    localStorage.setItem('user', JSON.stringify(user));
+    // Add small delay to ensure navbar is ready to listen for changes
+    setTimeout(() => {
+      this.userSubject.next(user);
+      this.setLoginStatus(true);
+      localStorage.setItem('user', JSON.stringify(user));
+    }, 100);
   }
 
   clearUser() {
@@ -62,19 +69,40 @@ export class AuthService {
   }
 
   createAccount(username: string, email: string, password: string, phone: string, governorate: string, city: string, village: string = ''): Observable<any> {
-    return this.http.post(`${this.apiUrl}/users/create-account`, { 
-      username, 
-      email, 
-      password, 
+    return this.http.post(`${this.apiUrl}/users/create-account`, {
+      username,
+      email,
+      password,
       phone,
       governorate,
       city,
       village
-    });
+    }).pipe(
+      tap((response: any) => {
+        // If the response contains user data, automatically log in the user
+        if (response && response.user) {
+          console.log('🧠 تم إنشاء الحساب وتسجيل الدخول تلقائياً:', response.user);
+          this.setUser(response.user);
+          this.loadUserData(response.user.id);
+        }
+      })
+    );
   }
 
   registerMerchant(formData: FormData): Observable<any> {
-    return this.http.post(`${this.apiUrl}/merchant/register`, formData);
+    return this.http.post(`${this.apiUrl}/merchant/register`, formData).pipe(
+      tap((response: any) => {
+        // If the response contains merchant data and token, automatically log in the merchant
+        if (response && response.success && response.token && response.merchant) {
+          console.log('🧠 تم إنشاء حساب التاجر وتسجيل الدخول تلقائياً:', response.merchant);
+          // Use MerchantAuthService to properly handle merchant authentication
+          this.merchantAuthService.setMerchantAuthFromExternal(response.token, response.merchant);
+          // Also set in regular user service for compatibility
+          this.setUser(response.merchant);
+          this.loadUserData(response.merchant._id);
+        }
+      })
+    );
   }
 
   login(email: string, password: string): Observable<User> {
@@ -86,7 +114,7 @@ export class AuthService {
       })
     );
   }
-  
+
   logout() {
     this.clearUser();
     this.clearFavoritesAndCart();

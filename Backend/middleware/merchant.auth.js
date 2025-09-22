@@ -23,7 +23,18 @@ const authenticateMerchant = async (req, res, next) => {
       return next();
     }
 
+    // Allow basic endpoints during development (for testing purposes)
+    const allowedDuringDevelopment = ['/products', '/orders', '/update-requests'];
+    const isDevelopmentAllowed = allowedDuringDevelopment.some(endpoint =>
+      req.originalUrl.includes(endpoint) && req.method === 'GET'
+    );
+
     if (!merchant.approved) {
+      // In development, allow access to basic endpoints for testing
+      if (process.env.NODE_ENV !== 'production' && isDevelopmentAllowed) {
+        return next();
+      }
+
       return res.status(403).json({ success: false, message: 'حساب التاجر غير مفعل. يرجى انتظار موافقة الإدارة.' });
     }
 

@@ -1,4 +1,5 @@
 import { Component, ViewChild, OnInit, OnDestroy } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
 import { DataService } from '../../services/data.service';
 import { Book } from '../../book';
 import { faHeart, faCartPlus, faShareAlt } from '@fortawesome/free-solid-svg-icons';
@@ -31,24 +32,79 @@ export class ChildComponent implements OnInit, OnDestroy {
 
   ratings: { [bookId: string]: any } = {};
 
-    private countdownInterval: any;
+  private countdownInterval: any;
   faShareAlt = faShareAlt;
   showCopySuccess: boolean = false;
   copiedBookId: string | null = null;
   isLoading: boolean = true;
 
-  constructor(private dataService: DataService, private authService: AuthService, private http: HttpClient) { }
+  constructor(private dataService: DataService, private route: ActivatedRoute, private router: Router, private authService: AuthService, private http: HttpClient) { }
 
   ngOnInit(): void {
     this.isLoading = true;
+
+    // قراءة رقم الصفحة من الـ URL
+    this.route.queryParams.subscribe(params => {
+      this.currentPage = parseInt(params['page'] || '1', 10);
+    });
+
     this.dataService.getData().subscribe(data => {
       this.books = data.filter((book: Book) => book.product_category.includes('تربية'));
       this.totalPages = Math.ceil(this.books.length / this.booksPerPage);
+      this.currentPage = Math.min(this.currentPage, this.totalPages); // التأكد من أن الصفحة الحالية صحيحة
       this.updatePage();
       this.startCountdown();
       this.fetchRatingsForBooks();
       this.isLoading = false;
     });
+  }
+
+   getDisplayedPages(): (number | string)[] {
+    const totalPages = this.totalPages || 1;
+    const currentPage = this.currentPage || 1;
+    const maxPagesToShow = 5;
+
+    // If total pages is less than or equal to max pages to show, return all pages
+    if (totalPages <= maxPagesToShow) {
+      const pages: (number | string)[] = [];
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+      return pages;
+    }
+
+    const pages: (number | string)[] = [];
+    const leftOffset = Math.floor(maxPagesToShow / 2);
+    const rightOffset = maxPagesToShow - leftOffset - 1;
+
+    // Always show first page
+    pages.push(1);
+
+    // Calculate start and end of middle section
+    let startPage = Math.max(2, currentPage - leftOffset);
+    let endPage = Math.min(totalPages - 1, currentPage + rightOffset);
+
+    // Add ellipsis after first page if there's a gap
+    if (startPage > 2) {
+      pages.push('...');
+    }
+
+    // Add middle pages
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(i);
+    }
+
+    // Add ellipsis before last page if there's a gap
+    if (endPage < totalPages - 1) {
+      pages.push('...');
+    }
+
+    // Always show last page
+    if (totalPages > 1) {
+      pages.push(totalPages);
+    }
+
+    return pages;
   }
   copyBookLink(book: Book): void {
     if (!book) return;
@@ -121,9 +177,18 @@ export class ChildComponent implements OnInit, OnDestroy {
   }
 
   updatePage(): void {
-    const startIndex = (this.currentPage - 1) * this.booksPerPage;
-    const endIndex = startIndex + this.booksPerPage;
-    this.paginatedBooks = this.books.slice(startIndex, endIndex);
+const startIndex = (this.currentPage - 1) * this.booksPerPage;
+const endIndex = startIndex + this.booksPerPage;
+this.paginatedBooks = this.books.slice(startIndex, endIndex);
+}
+
+  onPageClick(page: number | string): void {
+    if (typeof page === 'number') {
+      this.currentPage = page;
+      this.updatePage();
+      this.scrollToTop();
+      this.updateURL();
+    }
   }
 
   changePage(direction: string): void {
@@ -134,10 +199,26 @@ export class ChildComponent implements OnInit, OnDestroy {
     }
     this.updatePage();
     this.scrollToTop();
+    this.updateURL();
   }
 
   scrollToTop(): void {
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // دالة تحديث الـ URL
+  updateURL(): void {
+    const queryParams: any = {};
+
+    if (this.currentPage > 1) {
+      queryParams.page = this.currentPage;
+    }
+
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: queryParams,
+      queryParamsHandling: 'merge'
+    });
   }
 
   addToFavorites(bookId: string): void {

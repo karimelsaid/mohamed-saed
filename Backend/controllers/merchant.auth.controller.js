@@ -21,10 +21,7 @@ const loginMerchant = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
 
-    // Allow login even if user is suspended, but not if not approved
-    if (!user.approved) {
-      return res.status(403).json({ success: false, message: 'Merchant account pending approval' });
-    }
+    // Allow login for all merchants regardless of approval status
 
     const token = jwt.sign(
       { merchantId: user._id, email: user.email },

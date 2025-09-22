@@ -101,7 +101,35 @@ async function registerMerchant(req, res) {
 
     await merchant.save();
 
-    res.json({ success: true, message: 'Merchant registered successfully. Awaiting admin approval.' });
+    // Generate JWT token for auto-login
+    const jwt = require('jsonwebtoken');
+    const token = jwt.sign(
+      { merchantId: merchant._id, email: merchant.email },
+      process.env.JWT_SECRET || 'your-secret-key',
+      { expiresIn: '7d' }
+    );
+
+    // Return user data for auto-login (similar to login response)
+    res.json({
+      success: true,
+      message: 'Merchant registered successfully. Awaiting admin approval.',
+      token,
+      merchant: {
+        _id: merchant._id,
+        merchantName: merchant.merchantName || merchant.username,
+        name: merchant.username,
+        email: merchant.email,
+        phone: merchant.phone,
+        governorate: merchant.governorate,
+        city: merchant.city,
+        village: merchant.village,
+        taxNumber: merchant.taxNumber,
+        logo: merchant.logo,
+        approved: merchant.approved,
+        suspended: merchant.suspended || false,
+        role: 'merchant' // Add role property for frontend identification
+      }
+    });
   } catch (error) {
     console.error('Error in registerMerchant:', error);
     if (error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE') {
@@ -260,7 +288,7 @@ async function getMerchantProducts(req, res) {
     const products = await Product.find({ merchantId }).sort({ createdAt: -1 });
     res.json({ success: true, products });
   } catch (error) {
-    console.error('Error in getMerchantProducts:', error);
+    console.error('❌ Error in getMerchantProducts:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 }

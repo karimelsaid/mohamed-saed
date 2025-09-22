@@ -43,12 +43,14 @@ export class MerchantManagementComponent implements OnInit {
     this.loading = true;
     this.adminService.getMerchants().subscribe({
       next: (res: any) => {
-        this.merchants = res.merchants;
+        this.merchants = res.merchants || [];
         this.loading = false;
       },
-      error: () => {
-        alert('فشل في تحميل التجار');
+      error: (error) => {
+        console.error('Error loading merchants:', error);
         this.loading = false;
+        // Show user-friendly error message instead of alert
+        alert(error.message || 'فشل في تحميل التجار');
       }
     });
   }
@@ -60,8 +62,9 @@ export class MerchantManagementComponent implements OnInit {
           alert('تم الموافقة على التاجر بنجاح');
           this.loadMerchants();
         },
-        error: () => {
-          alert('فشل في الموافقة على التاجر');
+        error: (error) => {
+          console.error('Error approving merchant:', error);
+          alert(error.message || 'فشل في الموافقة على التاجر');
         }
       });
     }
@@ -74,8 +77,9 @@ export class MerchantManagementComponent implements OnInit {
           alert('تم رفض التاجر بنجاح');
           this.loadMerchants();
         },
-        error: () => {
-          alert('فشل في رفض التاجر');
+        error: (error) => {
+          console.error('Error rejecting merchant:', error);
+          alert(error.message || 'فشل في رفض التاجر');
         }
       });
     }
@@ -88,8 +92,9 @@ export class MerchantManagementComponent implements OnInit {
           alert('تم إيقاف التاجر بنجاح');
           this.loadMerchants();
         },
-        error: () => {
-          alert('فشل في إيقاف التاجر');
+        error: (error) => {
+          console.error('Error suspending merchant:', error);
+          alert(error.message || 'فشل في إيقاف التاجر');
         }
       });
     }
@@ -102,8 +107,9 @@ export class MerchantManagementComponent implements OnInit {
           alert('تم تفعيل التاجر بنجاح');
           this.loadMerchants();
         },
-        error: () => {
-          alert('فشل في تفعيل التاجر');
+        error: (error) => {
+          console.error('Error activating merchant:', error);
+          alert(error.message || 'فشل في تفعيل التاجر');
         }
       });
     }
@@ -117,12 +123,13 @@ export class MerchantManagementComponent implements OnInit {
 
     this.adminService.getMerchantProductsByMerchant(merchant._id).subscribe({
       next: (res: any) => {
-        this.merchantProducts = res.products;
+        this.merchantProducts = res.products || [];
         this.loadingProducts = false;
       },
-      error: () => {
-        alert('فشل في تحميل منتجات التاجر');
+      error: (error) => {
+        console.error('Error loading merchant products:', error);
         this.loadingProducts = false;
+        alert(error.message || 'فشل في تحميل منتجات التاجر');
       }
     });
   }
@@ -182,8 +189,9 @@ export class MerchantManagementComponent implements OnInit {
           alert('تمت الموافقة على المنتج بنجاح');
           this.viewMerchantProducts(this.selectedMerchant);
         },
-        error: () => {
-          alert('فشل في الموافقة على المنتج');
+        error: (error) => {
+          console.error('Error approving product:', error);
+          alert(error.message || 'فشل في الموافقة على المنتج');
         }
       });
     }
@@ -196,8 +204,9 @@ export class MerchantManagementComponent implements OnInit {
           alert('تم رفض المنتج بنجاح');
           this.viewMerchantProducts(this.selectedMerchant);
         },
-        error: () => {
-          alert('فشل في رفض المنتج');
+        error: (error) => {
+          console.error('Error rejecting product:', error);
+          alert(error.message || 'فشل في رفض المنتج');
         }
       });
     }
@@ -214,9 +223,10 @@ export class MerchantManagementComponent implements OnInit {
         this.productUpdateRequests = res.requests || [];
         this.loadingUpdateRequests = false;
       },
-      error: () => {
-        alert('فشل في تحميل طلبات تحديث المنتجات');
+      error: (error) => {
+        console.error('Error loading product update requests:', error);
         this.loadingUpdateRequests = false;
+        alert(error.message || 'فشل في تحميل طلبات تحديث المنتجات');
       }
     });
   }
@@ -234,8 +244,9 @@ export class MerchantManagementComponent implements OnInit {
           alert('تمت الموافقة على طلب التحديث بنجاح');
           this.viewProductUpdateRequests();
         },
-        error: () => {
-          alert('فشل في الموافقة على طلب التحديث');
+        error: (error) => {
+          console.error('Error approving update request:', error);
+          alert(error.message || 'فشل في الموافقة على طلب التحديث');
         }
       });
     }
@@ -248,8 +259,9 @@ export class MerchantManagementComponent implements OnInit {
           alert('تم رفض طلب التحديث بنجاح');
           this.viewProductUpdateRequests();
         },
-        error: () => {
-          alert('فشل في رفض طلب التحديث');
+        error: (error) => {
+          console.error('Error rejecting update request:', error);
+          alert(error.message || 'فشل في رفض طلب التحديث');
         }
       });
     }

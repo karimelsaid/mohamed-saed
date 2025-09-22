@@ -248,7 +248,7 @@ export class AdminDashboardComponent implements OnInit {
         }
       },
       error: (err) => {
-        console.error('Error loading promotion dates:', err);
+        // Error handled silently
       }
     });
   }
@@ -275,7 +275,7 @@ export class AdminDashboardComponent implements OnInit {
         }
       },
       error: (err) => {
-        console.error('Error saving promotion dates:', err);
+        // Error handled silently
         alert('حدث خطأ أثناء حفظ تواريخ العرض.');
       }
     });
@@ -303,7 +303,19 @@ export class AdminDashboardComponent implements OnInit {
         }
       },
       error: (err) => {
-        console.error('Error loading products:', err);
+        let errorMessage = 'فشل في تحميل المنتجات';
+
+        if (err.status === 404) {
+          errorMessage = 'نقطة النهاية غير موجودة. يرجى التحقق من إعدادات الخادم.';
+        } else if (err.status === 401) {
+          errorMessage = 'غير مصرح لك بالوصول. يرجى تسجيل الدخول كمدير.';
+        } else if (err.status === 500) {
+          errorMessage = 'خطأ في الخادم. يرجى المحاولة لاحقاً.';
+        } else if (err.message) {
+          errorMessage = `خطأ: ${err.message}`;
+        }
+
+        alert(errorMessage);
       }
     });
   }
@@ -358,7 +370,6 @@ export class AdminDashboardComponent implements OnInit {
     const start = (this.productsPage - 1) * this.productsPageSize;
     const end = this.productsPage * this.productsPageSize;
     this.products = this.filteredProducts.slice(start, end);
-    console.log('updateProductsPage called, productsPage:', this.productsPage, 'products count:', this.products.length);
   }
 
   nextProductsPage(): void {
@@ -378,15 +389,12 @@ export class AdminDashboardComponent implements OnInit {
     const target = event.target as HTMLSelectElement;
     if (!target) return;
     const value = target.value as keyof Product | '';
-    console.log('onSortFieldChange called with value:', value);
     if (value === this.sortField) {
       // Toggle direction
       this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
-      console.log('Toggled sortDirection to:', this.sortDirection);
     } else {
       this.sortField = value;
       this.sortDirection = 'asc';
-      console.log('Changed sortField to:', this.sortField, 'and reset sortDirection to asc');
     }
     this.productsPage = 1;
     this.updateProductsPage();
@@ -394,7 +402,6 @@ export class AdminDashboardComponent implements OnInit {
 
   toggleSortDirection(): void {
     this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
-    console.log('toggleSortDirection called, new sortDirection:', this.sortDirection);
     this.updateProductsPage();
   }
 
@@ -425,7 +432,6 @@ export class AdminDashboardComponent implements OnInit {
         this.loadProducts();
       },
       error: (err) => {
-        console.error('Error updating product:', err);
         alert('حدث خطأ أثناء تحديث بيانات المنتج');
       }
     });
@@ -454,15 +460,15 @@ export class AdminDashboardComponent implements OnInit {
         // Call sync-json-to-excel to update Excel file after batch update
         this.http.post(`${this.backendBaseUrl}/admin/sync-json-to-excel`, {}).subscribe({
           next: () => {
-            console.log('Excel file updated after batch update');
+            // Excel file updated after batch update
           },
           error: (err) => {
-            console.error('Error updating Excel file after batch update:', err);
+            // Error updating Excel file after batch update
           }
         });
       },
       error: (err) => {
-        console.error('Error batch updating products:', err);
+        // Error batch updating products
         alert('حدث خطأ أثناء حفظ التغييرات');
       }
     });
@@ -494,7 +500,7 @@ export class AdminDashboardComponent implements OnInit {
         this.loadProducts();
       },
       error: (err) => {
-        console.error('Error replacing product image:', err);
+        // Error replacing product image
         alert('حدث خطأ أثناء تحديث صورة المنتج');
       }
     });
@@ -502,14 +508,23 @@ export class AdminDashboardComponent implements OnInit {
 
   deleteProduct(product: Product): void {
     if (confirm('هل أنت متأكد من حذف هذا المنتج نهائياً؟ سيتم حذف الصورة أيضاً.')) {
-      this.http.delete(`/api/admin/products/${product.products_id}`).subscribe({
+      this.http.delete(`${this.backendBaseUrl}/admin/products/${product.products_id}`).subscribe({
         next: () => {
           alert('تم حذف المنتج بنجاح');
           this.loadProducts();
         },
         error: (err) => {
-          console.error('Error deleting product:', err);
-          alert('حدث خطأ أثناء حذف المنتج');
+          let errorMessage = 'حدث خطأ أثناء حذف المنتج';
+
+          if (err.status === 404) {
+            errorMessage = 'المنتج غير موجود أو تم حذفه مسبقاً.';
+          } else if (err.status === 401) {
+            errorMessage = 'غير مصرح لك بالحذف. يرجى تسجيل الدخول كمدير.';
+          } else if (err.status === 500) {
+            errorMessage = 'خطأ في الخادم. يرجى المحاولة لاحقاً.';
+          }
+
+          alert(errorMessage);
         }
       });
     }
@@ -560,7 +575,6 @@ export class AdminDashboardComponent implements OnInit {
           this.loadProducts();
         },
         error: (err) => {
-          console.error('Error bulk deleting products:', err);
           alert('حدث خطأ أثناء حذف المنتجات');
         }
       });
@@ -663,7 +677,6 @@ export class AdminDashboardComponent implements OnInit {
         },
         error: (error) => {
           alert('حدث خطأ أثناء تحديث حالة طلب الطباعة');
-          console.error('Error updating print order status:', error);
         }
       });
     }
@@ -728,7 +741,7 @@ export class AdminDashboardComponent implements OnInit {
           this.updateOrdersPage();
         },
         error: (err) => {
-          console.error('Error loading orders:', err);
+          // Error handled silently
         }
       });
     });
@@ -778,7 +791,7 @@ export class AdminDashboardComponent implements OnInit {
         this.requestedBooks = data.slice((this.requestedBooksPage - 1) * this.requestedBooksPageSize, this.requestedBooksPage * this.requestedBooksPageSize);
       },
       error: (err) => {
-        console.error('Error loading requested books:', err);
+        // Error handled silently
       }
     });
   }
@@ -792,7 +805,7 @@ export class AdminDashboardComponent implements OnInit {
         }
       },
       error: (err) => {
-        console.error('Error loading print orders:', err);
+        // Error handled silently
       }
     });
   }
@@ -839,7 +852,6 @@ export class AdminDashboardComponent implements OnInit {
     if (confirm(`هل أنت متأكد من تغيير حالة الاقتراح إلى ${newStatus ? 'تم إضافته' : 'لم يتم إضافته' }؟`)) {
       this.http.patch(`${environment.apiBaseUrl}/users/requested-books/${suggestion.userId}/${suggestion._id}`, { added: newStatus }).subscribe({
         next: (response) => {
-          console.log('Response from updateRequestedBookStatus API:', response);
           suggestion.added = newStatus;
           alert('تم تحديث حالة الاقتراح بنجاح');
           this.authService.user$.pipe(take(1)).subscribe(user => {
@@ -850,7 +862,6 @@ export class AdminDashboardComponent implements OnInit {
                     const bookStatusMessage = newStatus ? `تم إضافة اقتراح الكتاب "${suggestion.bookName}"` : `تم إزالة اقتراح الكتاب "${suggestion.bookName}"`;
         },
         error: (error) => {
-          console.error('Error updating requested book status:', error);
           alert('حدث خطأ أثناء تحديث حالة الاقتراح');
         }
       });
@@ -859,9 +870,7 @@ export class AdminDashboardComponent implements OnInit {
 
   deleteRequestedBook(suggestionId: string, userId: string): void {
     if (confirm('هل أنت متأكد من حذف هذا الاقتراح نهائياً؟')) {
-      const url = `${environment.apiBaseUrl}/users/requested-books/${userId}/${suggestionId}`;
-      console.log('Deleting suggestion with URL:', url);
-      this.http.delete(url).subscribe({
+      this.http.delete(`${environment.apiBaseUrl}/users/requested-books/${userId}/${suggestionId}`).subscribe({
         next: () => {
           alert('تم حذف الاقتراح بنجاح');
           this.fetchRequestedBooks();
@@ -873,7 +882,6 @@ export class AdminDashboardComponent implements OnInit {
         },
         error: (err) => {
           alert('حدث خطأ أثناء حذف الاقتراح');
-          console.error('Error deleting suggestion:', err);
         }
       });
     }
@@ -947,7 +955,6 @@ export class AdminDashboardComponent implements OnInit {
         },
         error: (err) => {
           alert('حدث خطأ أثناء حذف الطلب.');
-          console.error('Error deleting order:', err);
         }
       });
     }
@@ -962,7 +969,6 @@ export class AdminDashboardComponent implements OnInit {
         },
         error: (err) => {
           alert('حدث خطأ أثناء حذف طلب الطباعة');
-          console.error('Error deleting print order:', err);
         }
       });
     }
@@ -1058,7 +1064,6 @@ export class AdminDashboardComponent implements OnInit {
         this.uploading = false;
         this.uploadProgress = 0;
         this.uploadSuccess = false;
-        console.error('Error adding product:', error);
         alert('حدث خطأ أثناء إضافة المنتج.');
       }
     });

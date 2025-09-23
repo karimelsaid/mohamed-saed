@@ -1,6 +1,7 @@
 import { Component, ViewChild, ElementRef } from '@angular/core';
 import { Router } from '@angular/router';
 import { faChevronLeft, faChevronRight, faSearch } from '@fortawesome/free-solid-svg-icons';
+import { faGooglePlay } from '@fortawesome/free-brands-svg-icons';
 import { DataService } from './services/data.service';
 
 @Component({
@@ -11,10 +12,12 @@ import { DataService } from './services/data.service';
 })
 export class AppComponent {
   title = 'kenouz';  // Added title property to fix the error
+  currentYear = new Date().getFullYear(); // السنة الحالية
 
   faChevronLeft = faChevronLeft;
   faChevronRight = faChevronRight;
   faSearch = faSearch;
+  faGooglePlay = faGooglePlay;
   outOn = false;
   isSearchPage: boolean = false; // متغير لتحديد إذا كانت الصفحة هي صفحة البحث
 

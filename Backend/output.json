@@ -8942,20 +8942,6 @@
     "product_discount_percent": 65
   },
   {
-    "products_id": "160124305568",
-    "product_name": "11111",
-    "product_price": 9,
-    "price_cost": 1,
-    "product_quantity": 1,
-    "product_category": "كتب دينية",
-    "product_description": "ضص",
-    "product_image": "160124305568",
-    "promotionEndDate": "2026-01-31T00:00:00.000Z",
-    "product_price_before_discount": 29,
-    "rival": true,
-    "product_discount_percent": 70
-  },
-  {
     "products_id": "514145342784",
     "product_name": "علم النفس و الكيمياء",
     "product_price": 199,
@@ -9456,6 +9442,34 @@
     "product_image": "032407687581",
     "promotionEndDate": "2026-01-31T00:00:00.000Z",
     "product_price_before_discount": 249,
+    "rival": true,
+    "product_discount_percent": 65
+  },
+  {
+    "products_id": "743907983873",
+    "product_name": "لا تقلق",
+    "product_price": 89,
+    "price_cost": 545,
+    "product_quantity": 3,
+    "product_category": "روايات وقصص",
+    "product_description": "دليل عملي وملهم يساعدك على فهم جذور القلق والتغلب عليه بثقة ووعي. من تجربة شخصية عاشها المعالج النفسي المتخصص، يقدم الكتاب استراتيجيات مدعومة علميًا لفهم أعراض القلق البدنية والنفسية، أنواع الرهاب ونوبات الذعر، وكيفية التشخيص الدقيق لها.",
+    "product_image": "743907983873",
+    "promotionEndDate": "2026-01-31T00:00:00.000Z",
+    "product_price_before_discount": 249,
+    "rival": true,
+    "product_discount_percent": 65
+  },
+  {
+    "products_id": "336085489303",
+    "product_name": "سيكولوجية الرحيل",
+    "product_price": 199,
+    "price_cost": 555,
+    "product_quantity": 1,
+    "product_category": "روايات وقصص",
+    "product_description": " كيف نرحل ونتجاوز ونترك أعباء الماضي خلف ظهورنا، يستكشف ديمون زهاريادس المعركة الداخلية التي نواجهها جميعًا، تلك المعركة للتغلب على الذكريات والأفكار التي تستنزف طاقاتنا دون أن تجلب لنا أي نفع",
+    "product_image": "336085489303",
+    "promotionEndDate": "2026-01-31T00:00:00.000Z",
+    "product_price_before_discount": 549,
     "rival": true,
     "product_discount_percent": 65
   }

@@ -6,6 +6,7 @@ import { AccountModalComponent } from '../auth/account-modal/account-modal.compo
 import { LoginComponent } from '../auth/login/login.component';
 import { RegisterComponent } from '../auth/register/register.component';
 import { FreeShippingRulesComponent } from '../admin/admin-dashboard/free-shipping/free-shipping-rules.component';
+import { ModalDialogComponent } from './modal-dialog/modal-dialog.component';
 @NgModule({
   imports: [
     CommonModule,
@@ -14,13 +15,15 @@ import { FreeShippingRulesComponent } from '../admin/admin-dashboard/free-shippi
     AccountModalComponent,
     LoginComponent,
     RegisterComponent,
-    FreeShippingRulesComponent
+    FreeShippingRulesComponent,
+    ModalDialogComponent
   ],
   exports: [
     AccountModalComponent, // 👈 علشان نقدر نستخدمه بره
     LoginComponent,
     RegisterComponent,
-    FreeShippingRulesComponent
+    FreeShippingRulesComponent,
+    ModalDialogComponent
   ]
 })
 export class SharedModule { }

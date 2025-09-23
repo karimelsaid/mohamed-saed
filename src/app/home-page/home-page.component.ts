@@ -20,6 +20,26 @@ export class HomePageComponent implements OnInit, OnDestroy {
   getBookSlug(bookName: string): string {
     return bookName.trim().replace(/\s+/g, '-');
   }
+
+  // Methods for print service examples
+  getPrintDescription(index: number): string {
+    const descriptions = [
+      'غلاف ورقي عالي الجودة مع لمعان فاخر ومتانة استثنائية',
+      'غلاف كرتوني قوي مقاوم للتلف والرطوبة مع تصميم أنيق',
+      'غلاف فاخر مدهب بطباعة ذهبية ولمسات فنية راقية'
+    ];
+    return descriptions[index] || '';
+  }
+
+  getPrintFeature(index: number, featureIndex: number): string {
+    const features = [
+      ['جودة عالية', 'متين', 'لامع'],
+      ['مقاوم للرطوبة', 'قوي', 'أنيق'],
+      ['فاخر', 'مذهب', 'فني']
+    ];
+    return features[index]?.[featureIndex] || '';
+  }
+
   categories = [
     { id: 'Islamic', name: 'كتب دينية', image: this.uploadsBaseUrl + '/islamic.png' },
     { id: 'Self-development-psychology', name: 'تطوير الذات وعلم النفس', image: this.uploadsBaseUrl + '/tatwer.webp' },

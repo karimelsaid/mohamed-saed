@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { HttpClient, HttpEventType } from '@angular/common/http';
 import { AuthService } from '../../auth/auth.service';
 import { Router } from '@angular/router';
@@ -6,8 +6,11 @@ import { DataService } from '../../services/data.service';
 import { take } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { NotificationService } from '../../services/notification.service';
+import { ModalDialogComponent } from '../../shared/modal-dialog/modal-dialog.component';
+import { ModalService, ModalConfig } from '../../services/modal.service';
 import * as XLSX from 'xlsx';
 import { FreeShippingRulesComponent } from './free-shipping/free-shipping-rules.component';
+import { Subscription } from 'rxjs';
 
 interface Order {
   _id: string;
@@ -161,6 +164,26 @@ export class AdminDashboardComponent implements OnInit {
 
   readonly MAX_IMAGE_SIZE_BYTES = 1024 * 1024; // 1 MB
 
+  // Modal properties for component's modal system
+  modalOpen: boolean = false;
+  modalTitle: string = '';
+  modalMessage: string = '';
+  modalType: 'info' | 'warning' | 'error' | 'success' = 'info';
+  modalConfirmText: string = 'تأكيد';
+  modalCancelText: string = 'إلغاء';
+  modalShowCancel: boolean = true;
+  pendingAction: (() => void) | null = null;
+
+  // Modal service properties (separate from component modal)
+  modalServiceOpen: boolean = false;
+  modalServiceTitle: string = '';
+  modalServiceMessage: string = '';
+  modalServiceType: 'info' | 'warning' | 'error' | 'success' = 'info';
+  modalServiceConfirmText: string = 'تأكيد';
+  modalServiceCancelText: string = 'إلغاء';
+  modalServiceShowCancel: boolean = true;
+  modalServiceAction: (() => void) | null = null;
+
   categories: string[] = [
     'روايات وقصص',
     'تطوير الذات وعلم النفس',
@@ -186,12 +209,15 @@ export class AdminDashboardComponent implements OnInit {
     'تربية وأطفال': 'تربية'
   };
 
+  private modalServiceSubscription?: Subscription;
+
   constructor(
     private http: HttpClient,
     private authService: AuthService,
     private router: Router,
     private dataService: DataService,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private modalService: ModalService
   ) {}
 
   ngOnInit(): void {
@@ -206,6 +232,24 @@ export class AdminDashboardComponent implements OnInit {
         this.router.navigate(['/']);
       }
     });
+
+    // Subscribe to modal service events (separate from component modal system)
+    this.modalServiceSubscription = this.modalService.modal$.subscribe(modalConfig => {
+      this.modalServiceOpen = true;
+      this.modalServiceTitle = modalConfig.title;
+      this.modalServiceMessage = modalConfig.message;
+      this.modalServiceType = modalConfig.type;
+      this.modalServiceConfirmText = modalConfig.confirmText || 'تأكيد';
+      this.modalServiceCancelText = modalConfig.cancelText || 'إلغاء';
+      this.modalServiceShowCancel = modalConfig.showCancel || false;
+      this.modalServiceAction = modalConfig.action || null;
+    });
+  }
+
+  ngOnDestroy(): void {
+    if (this.modalServiceSubscription) {
+      this.modalServiceSubscription.unsubscribe();
+    }
   }
 
   toggleSelectAll(event: Event): void {
@@ -255,11 +299,11 @@ export class AdminDashboardComponent implements OnInit {
 
   savePromotionDates(): void {
     if (!this.manualPromotionStartDate || !this.manualPromotionEndDate) {
-      alert('يرجى إدخال تاريخ بداية ونهاية العرض.');
+      this.showErrorModal('يرجى إدخال تاريخ بداية ونهاية العرض.');
       return;
     }
     if (this.manualPromotionEndDate <= this.manualPromotionStartDate) {
-      alert('يجب أن يكون تاريخ نهاية العرض بعد تاريخ البداية.');
+      this.showErrorModal('يجب أن يكون تاريخ نهاية العرض بعد تاريخ البداية.');
       return;
     }
     const payload = {
@@ -269,14 +313,14 @@ export class AdminDashboardComponent implements OnInit {
     this.http.post(`${this.backendBaseUrl}/admin/update-promotion-dates`, payload).subscribe({
       next: (response: any) => {
         if (response.success) {
-          alert('تم حفظ تواريخ العرض بنجاح.');
+          this.showSuccessModal('تم حفظ تواريخ العرض بنجاح.');
         } else {
-          alert('حدث خطأ أثناء حفظ تواريخ العرض.');
+          this.showErrorModal('حدث خطأ أثناء حفظ تواريخ العرض.');
         }
       },
       error: (err) => {
         // Error handled silently
-        alert('حدث خطأ أثناء حفظ تواريخ العرض.');
+        this.showErrorModal('حدث خطأ أثناء حفظ تواريخ العرض.');
       }
     });
   }
@@ -315,7 +359,7 @@ export class AdminDashboardComponent implements OnInit {
           errorMessage = `خطأ: ${err.message}`;
         }
 
-        alert(errorMessage);
+        this.showErrorModal(errorMessage);
       }
     });
   }
@@ -428,11 +472,11 @@ export class AdminDashboardComponent implements OnInit {
     };
     this.http.patch(`${this.backendBaseUrl}/admin/products/${product.products_id}`, updateData).subscribe({
       next: () => {
-        alert('تم تحديث بيانات المنتج بنجاح');
+        this.showSuccessModal('تم تحديث بيانات المنتج بنجاح');
         this.loadProducts();
       },
       error: (err) => {
-        alert('حدث خطأ أثناء تحديث بيانات المنتج');
+        this.showErrorModal('حدث خطأ أثناء تحديث بيانات المنتج');
       }
     });
   }
@@ -440,7 +484,7 @@ export class AdminDashboardComponent implements OnInit {
   saveAllProducts(): void {
     const changedProducts = this.allProducts.filter(p => this.hasProductChanged(p));
     if (changedProducts.length === 0) {
-      alert('لا توجد تغييرات لحفظها.');
+      this.showErrorModal('لا توجد تغييرات لحفظها.');
       return;
     }
     const updatePayload = { products: changedProducts.map(p => ({
@@ -455,7 +499,7 @@ export class AdminDashboardComponent implements OnInit {
 
     this.http.post(`${this.backendBaseUrl}/admin/products/batch-update`, updatePayload).subscribe({
       next: () => {
-        alert('تم حفظ جميع التغييرات بنجاح');
+        this.showSuccessModal('تم حفظ جميع التغييرات بنجاح');
         this.loadProducts();
         // Call sync-json-to-excel to update Excel file after batch update
         this.http.post(`${this.backendBaseUrl}/admin/sync-json-to-excel`, {}).subscribe({
@@ -469,7 +513,7 @@ export class AdminDashboardComponent implements OnInit {
       },
       error: (err) => {
         // Error batch updating products
-        alert('حدث خطأ أثناء حفظ التغييرات');
+        this.showErrorModal('حدث خطأ أثناء حفظ التغييرات');
       }
     });
   }
@@ -489,45 +533,25 @@ export class AdminDashboardComponent implements OnInit {
 
   replaceProductImage(product: Product, file: File | null): void {
     if (!file) {
-      alert('يرجى اختيار صورة جديدة للمنتج');
+      this.showErrorModal('يرجى اختيار صورة جديدة للمنتج');
       return;
     }
     const formData = new FormData();
     formData.append('image', file);
     this.http.post(`${this.backendBaseUrl}/admin/products/${product.products_id}/image`, formData).subscribe({
       next: () => {
-        alert('تم تحديث صورة المنتج بنجاح');
+        this.showSuccessModal('تم تحديث صورة المنتج بنجاح');
         this.loadProducts();
       },
       error: (err) => {
         // Error replacing product image
-        alert('حدث خطأ أثناء تحديث صورة المنتج');
+        this.showErrorModal('حدث خطأ أثناء تحديث صورة المنتج');
       }
     });
   }
 
   deleteProduct(product: Product): void {
-    if (confirm('هل أنت متأكد من حذف هذا المنتج نهائياً؟ سيتم حذف الصورة أيضاً.')) {
-      this.http.delete(`${this.backendBaseUrl}/admin/products/${product.products_id}`).subscribe({
-        next: () => {
-          alert('تم حذف المنتج بنجاح');
-          this.loadProducts();
-        },
-        error: (err) => {
-          let errorMessage = 'حدث خطأ أثناء حذف المنتج';
-
-          if (err.status === 404) {
-            errorMessage = 'المنتج غير موجود أو تم حذفه مسبقاً.';
-          } else if (err.status === 401) {
-            errorMessage = 'غير مصرح لك بالحذف. يرجى تسجيل الدخول كمدير.';
-          } else if (err.status === 500) {
-            errorMessage = 'خطأ في الخادم. يرجى المحاولة لاحقاً.';
-          }
-
-          alert(errorMessage);
-        }
-      });
-    }
+    this.deleteProductWithModal(product);
   }
 
   // Multi-select methods
@@ -562,23 +586,7 @@ export class AdminDashboardComponent implements OnInit {
   }
 
   bulkDeleteSelectedProducts(): void {
-    const selectedIds = Array.from(this.selectedProducts);
-    if (selectedIds.length === 0) {
-      alert('يرجى اختيار منتجات لحذفها');
-      return;
-    }
-    if (confirm(`هل أنت متأكد من حذف ${selectedIds.length} منتج نهائياً؟ سيتم حذف الصور أيضاً.`)) {
-      this.http.delete(`${this.backendBaseUrl}/admin/products`, { body: { barcodes: selectedIds } }).subscribe({
-        next: () => {
-          alert('تم حذف المنتجات المحددة بنجاح');
-          this.selectedProducts.clear();
-          this.loadProducts();
-        },
-        error: (err) => {
-          alert('حدث خطأ أثناء حذف المنتجات');
-        }
-      });
-    }
+    this.bulkDeleteSelectedProductsWithModal();
   }
 
   handleImageError(event: any) {
@@ -635,7 +643,7 @@ export class AdminDashboardComponent implements OnInit {
           this.updateProduct(prod as Product);
         }
       });
-      alert('تم استيراد وتحديث المنتجات من ملف Excel');
+      this.showSuccessModal('تم استيراد وتحديث المنتجات من ملف Excel');
       this.loadProducts();
     };
     reader.readAsBinaryString(file);
@@ -666,7 +674,7 @@ export class AdminDashboardComponent implements OnInit {
     if (confirm(confirmMessage)) {
       this.http.patch(`${this.backendBaseUrl}/print/update-status/${userId}/${orderId}`, { status: newStatus }).subscribe({
         next: () => {
-          alert(successMessage);
+          this.showSuccessModal(successMessage);
           this.loadPrintOrders();
           this.loadNotifications();
           this.authService.user$.pipe(take(1)).subscribe(user => {
@@ -676,7 +684,7 @@ export class AdminDashboardComponent implements OnInit {
           });
         },
         error: (error) => {
-          alert('حدث خطأ أثناء تحديث حالة طلب الطباعة');
+          this.showErrorModal('حدث خطأ أثناء تحديث حالة طلب الطباعة');
         }
       });
     }
@@ -853,7 +861,7 @@ export class AdminDashboardComponent implements OnInit {
       this.http.patch(`${environment.apiBaseUrl}/users/requested-books/${suggestion.userId}/${suggestion._id}`, { added: newStatus }).subscribe({
         next: (response) => {
           suggestion.added = newStatus;
-          alert('تم تحديث حالة الاقتراح بنجاح');
+          this.showSuccessModal('تم تحديث حالة الاقتراح بنجاح');
           this.authService.user$.pipe(take(1)).subscribe(user => {
             if (user && user.id) {
               this.notificationService.refreshNotifications(user.id);
@@ -862,32 +870,17 @@ export class AdminDashboardComponent implements OnInit {
                     const bookStatusMessage = newStatus ? `تم إضافة اقتراح الكتاب "${suggestion.bookName}"` : `تم إزالة اقتراح الكتاب "${suggestion.bookName}"`;
         },
         error: (error) => {
-          alert('حدث خطأ أثناء تحديث حالة الاقتراح');
+          this.showErrorModal('حدث خطأ أثناء تحديث حالة الاقتراح');
         }
       });
     }
   }
 
   deleteRequestedBook(suggestionId: string, userId: string): void {
-    if (confirm('هل أنت متأكد من حذف هذا الاقتراح نهائياً؟')) {
-      this.http.delete(`${environment.apiBaseUrl}/users/requested-books/${userId}/${suggestionId}`).subscribe({
-        next: () => {
-          alert('تم حذف الاقتراح بنجاح');
-          this.fetchRequestedBooks();
-          this.authService.user$.pipe(take(1)).subscribe(user => {
-            if (user && user.id) {
-              this.notificationService.refreshNotifications(user.id);
-            }
-          });
-        },
-        error: (err) => {
-          alert('حدث خطأ أثناء حذف الاقتراح');
-        }
-      });
-    }
+    this.deleteRequestedBookWithModal(suggestionId, userId);
   }
 
-  confirmShipment(orderId: string, newStatus: string): void {
+  confirmShipmentWithModal(orderId: string, newStatus: string): void {
     let confirmMessage = '';
     let successMessage = '';
 
@@ -913,10 +906,10 @@ export class AdminDashboardComponent implements OnInit {
         successMessage = 'تم تحديث حالة الطلب.';
     }
 
-    if (confirm(confirmMessage)) {
+    const action = () => {
       this.http.patch(`${environment.apiBaseUrl}/orders/update-status/${orderId}`, { status: newStatus }).subscribe({
         next: () => {
-          alert(successMessage);
+          this.showSuccessModal(successMessage);
           this.loadOrders();
           this.loadNotifications();
           this.authService.user$.pipe(take(1)).subscribe(user => {
@@ -931,44 +924,43 @@ export class AdminDashboardComponent implements OnInit {
             'تم الإلغاء': 'إلغاء'
           };
           const verb = statusVerbMap[newStatus] || 'تحديث';
-        }
-      });
-    }
-  }
-
-  deleteOrder(orderId: string): void {
-    if (confirm('هل أنت متأكد أنك تريد حذف هذا الطلب؟')) {
-      this.http.delete(`${environment.apiBaseUrl}/orders/delete/${orderId}`).subscribe({
-        next: () => {
-          alert('تم حذف الطلب بنجاح');
-          this.loadOrders();
-          this.authService.user$.pipe(take(1)).subscribe(user => {
-            if (user && user.id) {
-              this.notificationService.refreshNotifications(user.id);
-            }
-          });
-          this.authService.user$.pipe(take(1)).subscribe(user => {
-            if (user && user.id) {
-              this.dataService.loadOrders(user.id).subscribe();
-            }
-          });
         },
         error: (err) => {
-          alert('حدث خطأ أثناء حذف الطلب.');
+          this.showErrorModal('حدث خطأ أثناء تحديث حالة الطلب.');
         }
       });
-    }
+    };
+
+    this.openModal(
+      'تأكيد تحديث الحالة',
+      confirmMessage,
+      'warning',
+      'تأكيد',
+      'إلغاء',
+      true,
+      action
+    );
+  }
+
+  confirmShipment(orderId: string, newStatus: string): void {
+    this.confirmShipmentWithModal(orderId, newStatus);
+  }
+
+
+
+  deleteOrder(orderId: string): void {
+    this.deleteOrderWithModal(orderId);
   }
 
   deletePrintOrder(userId: string, orderId: string): void {
     if (confirm('هل أنت متأكد من حذف طلب الطباعة؟')) {
       this.http.delete(`${this.backendBaseUrl}/print/delete-print-order/${userId}/${orderId}`).subscribe({
         next: () => {
-          alert('تم حذف طلب الطباعة بنجاح');
+          this.showSuccessModal('تم حذف طلب الطباعة بنجاح');
           this.loadPrintOrders();
         },
         error: (err) => {
-          alert('حدث خطأ أثناء حذف طلب الطباعة');
+          this.showErrorModal('حدث خطأ أثناء حذف طلب الطباعة');
         }
       });
     }
@@ -995,6 +987,11 @@ export class AdminDashboardComponent implements OnInit {
   }
 
   submitAddProduct(): void {
+    // Prevent multiple simultaneous submissions
+    if (this.uploading) {
+      return;
+    }
+
     this.imageError = null;
     if (!this.selectedFile) {
       this.imageError = 'يرجى اختيار صورة المنتج.';
@@ -1010,7 +1007,7 @@ export class AdminDashboardComponent implements OnInit {
       this.product.product_price === null ||
       this.product.price_cost === null
     ) {
-      alert('يرجى ملء جميع الحقول المطلوبة بشكل صحيح.');
+      this.showErrorModal('يرجى ملء جميع الحقول المطلوبة بشكل صحيح.');
       return;
     }
 
@@ -1041,31 +1038,307 @@ export class AdminDashboardComponent implements OnInit {
         } else if (event.type === 4) { // HttpEventType.Response
           this.uploadSuccess = true;
           this.uploading = false;
-          // Removed alert for successful upload as requested
-          // Reset form
-          this.product = {
-            product_name: '',
-            product_quantity: 1,
-            product_category: '',
-            product_description: '',
-            product_price: 0,
-            price_cost: 0
-          };
-          this.selectedFile = null;
-          this.imageError = null;
-          this.switchView('orders');
+
+          // Store the current product data for potential reuse
+          const currentProductData = { ...this.product };
+          const currentFile = this.selectedFile;
+
+          // Reset form immediately to prevent duplicate submissions
+          this.resetProductForm();
+
+          // Show success modal with options
+          this.showProductAddedModal(currentProductData, currentFile);
+
+          // Auto-hide success modal after 3 seconds
           setTimeout(() => {
             this.uploadSuccess = false;
-            this.uploadProgress = 0;
-          }, 1000);
+          }, 3000);
         }
       },
       error: (error) => {
         this.uploading = false;
         this.uploadProgress = 0;
         this.uploadSuccess = false;
-        alert('حدث خطأ أثناء إضافة المنتج.');
+        this.showErrorModal('حدث خطأ أثناء إضافة المنتج.');
       }
     });
+  }
+
+  private resetProductForm(): void {
+    this.product = {
+      product_name: '',
+      product_quantity: 1,
+      product_category: '',
+      product_description: '',
+      product_price: 0,
+      price_cost: 0
+    };
+    this.selectedFile = null;
+    this.imageError = null;
+  }
+
+  // Modal methods
+  openModal(title: string, message: string, type: 'info' | 'warning' | 'error' | 'success' = 'info', confirmText: string = 'تأكيد', cancelText: string = 'إلغاء', showCancel: boolean = true, action?: () => void): void {
+    this.modalTitle = title;
+    this.modalMessage = message;
+    this.modalType = type;
+    this.modalConfirmText = confirmText;
+    this.modalCancelText = cancelText;
+    this.modalShowCancel = showCancel;
+    this.pendingAction = action || null;
+    this.modalOpen = true;
+  }
+
+  closeModal(): void {
+    this.modalOpen = false;
+    this.modalTitle = '';
+    this.modalMessage = '';
+    this.modalType = 'info';
+    this.modalConfirmText = 'تأكيد';
+    this.modalCancelText = 'إلغاء';
+    this.modalShowCancel = true;
+    this.pendingAction = null;
+  }
+
+  confirmModal(): void {
+    if (this.pendingAction) {
+      this.pendingAction();
+    }
+    this.closeModal();
+  }
+
+  // Modal service methods (separate from component modal)
+  confirmModalService(): void {
+    if (this.modalServiceAction) {
+      this.modalServiceAction();
+    }
+    this.closeModalService();
+  }
+
+  closeModalService(): void {
+    this.modalServiceOpen = false;
+    this.modalServiceTitle = '';
+    this.modalServiceMessage = '';
+    this.modalServiceType = 'info';
+    this.modalServiceConfirmText = 'تأكيد';
+    this.modalServiceCancelText = 'إلغاء';
+    this.modalServiceShowCancel = true;
+    this.modalServiceAction = null;
+  }
+
+  // Enhanced delete methods using modal
+  deleteProductWithModal(product: Product): void {
+    const action = () => {
+      this.http.delete(`${this.backendBaseUrl}/admin/products/${product.products_id}`).subscribe({
+        next: () => {
+          this.showSuccessModal('تم حذف المنتج بنجاح');
+          this.loadProducts();
+        },
+        error: (err) => {
+          let errorMessage = 'حدث خطأ أثناء حذف المنتج';
+
+          if (err.status === 404) {
+            errorMessage = 'المنتج غير موجود أو تم حذفه مسبقاً.';
+          } else if (err.status === 401) {
+            errorMessage = 'غير مصرح لك بالحذف. يرجى تسجيل الدخول كمدير.';
+          } else if (err.status === 500) {
+            errorMessage = 'خطأ في الخادم. يرجى المحاولة لاحقاً.';
+          }
+
+          this.showErrorModal(errorMessage);
+        }
+      });
+    };
+
+    this.openModal(
+      'تأكيد الحذف',
+      'هل أنت متأكد من حذف هذا المنتج نهائياً؟ سيتم حذف الصورة أيضاً.',
+      'warning',
+      'حذف',
+      'إلغاء',
+      true,
+      action
+    );
+  }
+
+  bulkDeleteSelectedProductsWithModal(): void {
+    const selectedIds = Array.from(this.selectedProducts);
+    if (selectedIds.length === 0) {
+      this.showErrorModal('يرجى اختيار منتجات لحذفها');
+      return;
+    }
+
+    const action = () => {
+      this.http.delete(`${this.backendBaseUrl}/admin/products`, { body: { barcodes: selectedIds } }).subscribe({
+        next: () => {
+          this.showSuccessModal('تم حذف المنتجات المحددة بنجاح');
+          this.selectedProducts.clear();
+          this.loadProducts();
+        },
+        error: (err) => {
+          this.showErrorModal('حدث خطأ أثناء حذف المنتجات');
+        }
+      });
+    };
+
+    this.openModal(
+      'تأكيد الحذف الجماعي',
+      `هل أنت متأكد من حذف ${selectedIds.length} منتج نهائياً؟ سيتم حذف الصور أيضاً.`,
+      'warning',
+      'حذف الكل',
+      'إلغاء',
+      true,
+      action
+    );
+  }
+
+  deleteOrderWithModal(orderId: string): void {
+    const action = () => {
+      this.http.delete(`${environment.apiBaseUrl}/orders/delete/${orderId}`).subscribe({
+        next: () => {
+          this.showSuccessModal('تم حذف الطلب بنجاح');
+          this.loadOrders();
+          this.loadNotifications();
+          this.authService.user$.pipe(take(1)).subscribe(user => {
+            if (user && user.id) {
+              this.notificationService.refreshNotifications(user.id);
+            }
+          });
+          this.authService.user$.pipe(take(1)).subscribe(user => {
+            if (user && user.id) {
+              this.dataService.loadOrders(user.id).subscribe();
+            }
+          });
+        },
+        error: (err) => {
+          this.showErrorModal('حدث خطأ أثناء حذف الطلب.');
+        }
+      });
+    };
+
+    this.openModal(
+      'تأكيد الحذف',
+      'هل أنت متأكد أنك تريد حذف هذا الطلب؟',
+      'warning',
+      'حذف',
+      'إلغاء',
+      true,
+      action
+    );
+  }
+
+  deletePrintOrderWithModal(userId: string, orderId: string): void {
+    const action = () => {
+      this.http.delete(`${this.backendBaseUrl}/print/delete-print-order/${userId}/${orderId}`).subscribe({
+        next: () => {
+          this.showSuccessModal('تم حذف طلب الطباعة بنجاح');
+          this.loadPrintOrders();
+        },
+        error: (err) => {
+          this.showErrorModal('حدث خطأ أثناء حذف طلب الطباعة');
+        }
+      });
+    };
+
+    this.openModal(
+      'تأكيد الحذف',
+      'هل أنت متأكد من حذف طلب الطباعة؟',
+      'warning',
+      'حذف',
+      'إلغاء',
+      true,
+      action
+    );
+  }
+
+  deleteRequestedBookWithModal(suggestionId: string, userId: string): void {
+    const action = () => {
+      this.http.delete(`${environment.apiBaseUrl}/users/requested-books/${userId}/${suggestionId}`).subscribe({
+        next: () => {
+          this.showSuccessModal('تم حذف الاقتراح بنجاح');
+          this.fetchRequestedBooks();
+          this.authService.user$.pipe(take(1)).subscribe(user => {
+            if (user && user.id) {
+              this.notificationService.refreshNotifications(user.id);
+            }
+          });
+        },
+        error: (err) => {
+          this.showErrorModal('حدث خطأ أثناء حذف الاقتراح');
+        }
+      });
+    };
+
+    this.openModal(
+      'تأكيد الحذف',
+      'هل أنت متأكد من حذف هذا الاقتراح نهائياً؟',
+      'warning',
+      'حذف',
+      'إلغاء',
+      true,
+      action
+    );
+  }
+
+  // Helper methods for showing different modal types
+  showSuccessModal(message: string): void {
+    this.openModal('نجح العملية', message, 'success', 'موافق', '', false);
+  }
+
+  showErrorModal(message: string): void {
+    this.openModal('خطأ', message, 'error', 'موافق', '', false);
+  }
+
+  showInfoModal(title: string, message: string): void {
+    this.openModal(title, message, 'info', 'موافق', '', false);
+  }
+
+  showWarningModal(title: string, message: string, action?: () => void): void {
+    this.openModal(title, message, 'warning', 'تأكيد', 'إلغاء', true, action || undefined);
+  }
+
+  showProductAddedModal(productData: any, file: File | null): void {
+    // Prevent multiple modals from opening
+    if (this.modalOpen) {
+      return;
+    }
+
+    const action = () => {
+      // Reset form and stay on add product page
+      this.product = { ...productData };
+      this.selectedFile = file;
+      this.switchView('addProduct');
+      this.closeModal();
+    };
+
+    const goToDashboardAction = () => {
+      // Reset form and go to dashboard
+      this.product = {
+        product_name: '',
+        product_quantity: 1,
+        product_category: '',
+        product_description: '',
+        product_price: 0,
+        price_cost: 0
+      };
+      this.selectedFile = null;
+      this.imageError = null;
+      this.switchView('orders');
+      this.closeModal();
+    };
+
+    // Show the selection modal immediately without the blocking success modal
+    this.modalService.openModal({
+      title: 'تم إضافة المنتج بنجاح',
+      message: 'تم إضافة المنتج بنجاح! ماذا تريد أن تفعل؟',
+      type: 'success',
+      confirmText: 'إضافة منتج جديد بنفس البيانات',
+      cancelText: 'الذهاب إلى لوحة التحكم',
+      showCancel: true,
+      action: action
+    });
+
+    // Store the dashboard action for the cancel button
+    this.pendingAction = goToDashboardAction;
   }
 }

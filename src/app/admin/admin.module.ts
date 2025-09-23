@@ -8,6 +8,7 @@ import { AdminDashboardComponent } from './admin-dashboard/admin-dashboard.compo
 import { MerchantManagementComponent } from './merchant-management/merchant-management.component';
 import { ProductApprovalComponent } from './product-approval/product-approval.component';
 import { FreeShippingRulesComponent } from './admin-dashboard/free-shipping/free-shipping-rules.component';
+import { ModalDialogComponent } from '../shared/modal-dialog/modal-dialog.component';
 
 @NgModule({
   declarations: [
@@ -20,7 +21,8 @@ import { FreeShippingRulesComponent } from './admin-dashboard/free-shipping/free
     FontAwesomeModule,
     MerchantManagementComponent,
     ProductApprovalComponent,
-    FreeShippingRulesComponent
+    FreeShippingRulesComponent,
+    ModalDialogComponent
   ],
   exports: [
     AdminDashboardComponent,

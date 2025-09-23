@@ -376,6 +376,18 @@ export class MerchantDashboardComponent implements OnInit {
     );
   }
 
+  bulkDeleteSelectedProductsWithModal() {
+    const selectedCount = this.selectedProducts.size;
+    if (selectedCount === 0) return;
+
+    this.showModal(
+      'تأكيد الحذف الجماعي',
+      `هل أنت متأكد من حذف ${selectedCount} منتج${selectedCount > 1 ? '' : ''}؟ لا يمكن التراجع عن هذا الإجراء.`,
+      'warning',
+      () => this.confirmBulkDelete()
+    );
+  }
+
   private confirmDeleteProduct(product: any) {
     this.merchantAuthService.deleteMerchantProduct(product._id).subscribe({
       next: () => {
@@ -598,5 +610,77 @@ export class MerchantDashboardComponent implements OnInit {
     setTimeout(() => {
       this.loadingModal.isOpen = false;
     }, 2000); // Close after 2 seconds
+  }
+
+  confirmShipmentWithModal(order: any, newStatus: string): void {
+    let title = '';
+    let message = '';
+    let confirmText = 'تأكيد';
+    let type: 'info' | 'warning' | 'error' | 'success' = 'info';
+
+    switch (newStatus) {
+      case 'تم الشحن':
+        title = 'تأكيد الشحن';
+        message = 'هل أنت متأكد من أن الطلب تم شحنه بنجاح؟ سيتم تحديث حالة الطلب.';
+        confirmText = 'تأكيد الشحن';
+        type = 'info';
+        break;
+      case 'تم الاستلام':
+        title = 'تأكيد الاستلام';
+        message = 'هل أنت متأكد من استلام المنتج من التاجر؟ سيتم تحديث حالة الطلب.';
+        confirmText = 'تأكيد الاستلام';
+        type = 'info';
+        break;
+      case 'تم التسليم':
+        title = 'تأكيد التسليم';
+        message = 'هل أنت متأكد من أن الطلب تم تسليمه بنجاح؟ سيتم تحديث حالة الطلب.';
+        confirmText = 'تأكيد التسليم';
+        type = 'success';
+        break;
+      case 'تم الإلغاء':
+        title = 'تأكيد الإلغاء';
+        message = 'هل أنت متأكد من إلغاء الطلب؟ سيتم تحديث حالة الطلب.';
+        confirmText = 'إلغاء الطلب';
+        type = 'warning';
+        break;
+      default:
+        title = 'تأكيد تحديث الحالة';
+        message = 'هل أنت متأكد من تحديث حالة الطلب؟';
+        confirmText = 'تأكيد';
+        type = 'info';
+    }
+
+    this.showModal(
+      title,
+      message,
+      type,
+      () => this.confirmShipmentAction(order, newStatus)
+    );
+  }
+
+  private confirmShipmentAction(order: any, newStatus: string): void {
+    this.http.patch(`${environment.apiBaseUrl}/orders/update-status/${order._id}`, { status: newStatus }).subscribe({
+      next: () => {
+        this.showModal('نجح التحديث', `تم تحديث حالة الطلب إلى ${newStatus}.`, 'success');
+        this.loadOrders();
+      },
+      error: (error) => {
+        this.showModal('خطأ في التحديث', 'حدث خطأ أثناء تحديث حالة الطلب. يرجى المحاولة مرة أخرى.', 'error');
+      }
+    });
+  }
+
+  deleteOrderWithModal(order: any): void {
+    this.showModal(
+      'تأكيد الحذف',
+      `هل أنت متأكد من حذف الطلب رقم "${order._id.slice(-8)}"؟ لا يمكن التراجع عن هذا الإجراء.`,
+      'warning',
+      () => this.confirmDeleteOrder(order)
+    );
+  }
+
+  viewOrderDetails(order: any): void {
+    // Navigate to order details page or show modal with order details
+    this.router.navigate(['/merchant/order-details', order._id]);
   }
 }

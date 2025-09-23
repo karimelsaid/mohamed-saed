@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { FreeShippingService, FreeShippingRules } from '../../../services/free-shipping.service';
+import { ModalService } from '../../../services/modal.service';
 
 @Component({
   selector: 'app-free-shipping-rules',
@@ -23,7 +24,7 @@ export class FreeShippingRulesComponent implements OnInit {
   loading: boolean = false;
   errorMessage: string = '';
 
-  constructor(private freeShippingService: FreeShippingService) {}
+  constructor(private freeShippingService: FreeShippingService, private modalService: ModalService) {}
 
   ngOnInit(): void {
     this.loadRules();
@@ -63,12 +64,12 @@ export class FreeShippingRulesComponent implements OnInit {
     };
     this.freeShippingService.saveRules(rules).subscribe({
       next: () => {
-        alert('تم حفظ قواعد الشحن المجاني بنجاح');
+        this.modalService.showSuccess('تم حفظ قواعد الشحن المجاني بنجاح');
         this.loading = false;
       },
       error: (error) => {
         console.error('Error saving free shipping rules:', error);
-        alert('حدث خطأ أثناء حفظ قواعد الشحن المجاني');
+        this.modalService.showError('حدث خطأ أثناء حفظ قواعد الشحن المجاني');
         this.loading = false;
       }
     });

@@ -77,27 +77,78 @@
       </div>
   </div>
 </div>
-<!-- اقسام المكتبه -->
-<h1 class="mb-10">أمثلة على الشكل النهائي لخدمة الطباعة</h1>
-<div class="grid md:flex justify-around gap-8 mb-12 px-4">
-  <div
-    class="print-image-container"
-    *ngFor="let img of printImages; let i = index"
-  >
-    <div class="rotating-dashed-rays"></div>
-    <div class="print-image-shadow"></div>
-    <img
-      [src]="img"
-      alt="Print example {{ i + 1 }}"
-      class="print-image w-[150px] sm:w-[180px] md:w-[220px]"
-      [style.transform]="printImageTransforms[i]"
-      draggable="false"
-    />
-      <div class="book-cover-title text-center mt-2 font-bold text-lg text-gray-800 dark:text-gray-200">
-    {{ printImageTitles[i] }}
+<!-- أمثلة على الشكل النهائي لخدمة الطباعة -->
+<section class="py-16 bg-gradient-to-br from-slate-50 to-blue-50 dark:from-gray-900 dark:to-gray-800">
+  <div class="container mx-auto px-4">
+    <div class="text-center mb-12">
+      <h1 class="text-4xl md:text-5xl font-bold text-gray-800 dark:text-white mb-4">
+        أمثلة على الشكل النهائي لخدمة الطباعة
+      </h1>
+      <p class="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+        اختر من بين خيارات الطباعة المتنوعة للحصول على أفضل جودة لكتبك
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+      <div
+        class="print-image-container group"
+        *ngFor="let img of printImages; let i = index"
+      >
+        <div class="rotating-dashed-rays opacity-20 group-hover:opacity-40 transition-opacity duration-500"></div>
+        <div class="print-image-shadow"></div>
+
+        <!-- البطاقة الرئيسية -->
+        <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden group-hover:scale-105 border border-gray-100 dark:border-gray-700">
+          <div class="p-6 text-center">
+            <!-- الصورة -->
+            <div class="relative mb-6">
+              <img
+                [src]="img"
+                alt="Print example {{ i + 1 }}"
+                class="print-image w-full max-w-[200px] mx-auto h-48 object-contain transition-transform duration-500 group-hover:scale-110"
+                [style.transform]="printImageTransforms[i]"
+                draggable="false"
+              />
+            </div>
+
+            <!-- العنوان -->
+            <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-2">
+              {{ printImageTitles[i] }}
+            </h3>
+
+            <!-- الوصف -->
+            <p class="text-gray-600 dark:text-gray-300 text-sm mb-6 leading-relaxed min-h-[3rem] flex items-center">
+              {{ getPrintDescription(i) }}
+            </p>
+
+            <!-- المميزات -->
+            <div class="flex flex-wrap justify-center gap-2 mb-6">
+              <span class="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs rounded-full">
+                {{ getPrintFeature(i, 0) }}
+              </span>
+              <span class="px-3 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs rounded-full">
+                {{ getPrintFeature(i, 1) }}
+              </span>
+              <span class="px-3 py-1 bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200 text-xs rounded-full">
+                {{ getPrintFeature(i, 2) }}
+              </span>
+            </div>
+
+            <!-- زر الطلب -->
+            <button
+              [routerLink]="['/print']"
+              class="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center justify-center gap-2">
+              <span>اطلب الآن</span>
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
-  </div>
-</div>
+</section>
 
 <h1 class="mb-10">أقسام المكتبة</h1>
 <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-4 px-4 mb-32 md:mb-6">

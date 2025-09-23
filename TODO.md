@@ -1,53 +1,26 @@
-# إصلاح مشكلة التعرف على التاجر فوراً بعد التسجيل
+# Phase 3: Replace Remaining alert()/confirm() Calls
 
-## المشكلة المحلولة:
-- عند إنشاء حساب تاجر، كان النظام يقوم بتسجيل الدخول التلقائي لكن لم يتعرف على أنه تاجر
-- كان التاجر مضطراً لإعادة تسجيل الدخول ليتم التعرف عليه كتاجر
+## Task: Replace all remaining alert()/confirm() method calls with modal versions
 
-## الحل المطبق:
+### Method Replacements Needed:
+1. [ ] `deleteProduct(product)` → `deleteProductWithModal(product)` (2 instances)
+2. [ ] `bulkDeleteSelectedProducts()` → `bulkDeleteSelectedProductsWithModal()` (1 instance)
+3. [ ] `confirmShipment(order._id, 'تم الشحن')` → `confirmShipmentWithModal(order._id, 'تم الشحن')` (2 instances)
+4. [ ] `confirmShipment(order._id, 'تم الاستلام')` → `confirmShipmentWithModal(order._id, 'تم الاستلام')` (2 instances)
+5. [ ] `confirmShipment(order._id, 'تم التسليم')` → `confirmShipmentWithModal(order._id, 'تم التسليم')` (2 instances)
+6. [ ] `confirmShipment(order._id, 'تم الإلغاء')` → `confirmShipmentWithModal(order._id, 'تم الإلغاء')` (2 instances)
+7. [ ] `deleteOrder(order._id)` → `deleteOrderWithModal(order._id)` (2 instances)
+8. [ ] `toggleAddedStatus(suggestion)` → `toggleAddedStatusWithModal(suggestion)` (2 instances)
+9. [ ] `deleteRequestedBook(suggestion._id, suggestion.userId)` → `deleteRequestedBookWithModal(suggestion._id, suggestion.userId)` (2 instances)
+10. [ ] `confirmPrintOrderShipment(printOrder.userId, printOrder.orderId, 'تم الشحن')` → `confirmPrintOrderShipmentWithModal(printOrder.userId, printOrder.orderId, 'تم الشحن')` (1 instance)
 
-### ✅ الملفات المُعدّلة:
 
-1. **`src/app/auth/auth.service.ts`**:
-   - إضافة `MerchantAuthService` كـ dependency
-   - تعديل دالة `registerMerchant()` لاستخدام `MerchantAuthService`
-   - إضافة استدعاء `setMerchantAuthFromExternal()` لحفظ بيانات التاجر في المكان الصحيح
+11. [ ] `confirmPrintOrderShipment(printOrder.userId, printOrder.orderId, 'تم التسليم')` → `confirmPrintOrderShipmentWithModal(printOrder.userId, printOrder.orderId, 'تم التسليم')` (1 instance)
+12. [ ] `confirmPrintOrderShipment(printOrder.userId, printOrder.orderId, 'تم الإلغاء')` → `confirmPrintOrderShipmentWithModal(printOrder.userId, printOrder.orderId, 'تم الإلغاء')` (1 instance)
+13. [ ] `deletePrintOrder(printOrder.userId, printOrder.orderId)` → `deletePrintOrderWithModal(printOrder.userId, printOrder.orderId)` (2 instances)
 
-2. **`src/app/services/merchant-auth.service.ts`**:
-   - إضافة دالة عامة `setMerchantAuthFromExternal()` للسماح للخدمات الأخرى بحفظ بيانات التاجر
+I'll continue tracking the remaining method replacements, focusing on the print order shipment and deletion methods. The next set of tasks involves converting the remaining print order-related method calls to their modal equivalents, ensuring consistent user interaction across the application.
 
-### ✅ كيف يعمل الحل الآن:
+The final steps will involve systematically updating the method calls in the HTML template, replacing the old alert/confirm methods with their corresponding modal versions. This will improve the user experience by providing more consistent and informative interaction patterns.
 
-1. عند تسجيل تاجر جديد:
-   - يتم استدعاء `registerMerchant()` في `AuthService`
-   - يتم حفظ بيانات التاجر في `MerchantAuthService` باستخدام `setMerchantAuthFromExternal()`
-   - يتم حفظ البيانات في `localStorage` تحت المفاتيح الصحيحة (`merchant_token` و `merchant_data`)
-   - يتم تحديث `BehaviorSubject` في `MerchantAuthService` لإشعار جميع المكونات
-
-2. عند التحقق من الهوية:
-   - `MerchantAuthGuard` يتحقق من `MerchantAuthService` ويجد البيانات في المكان الصحيح
-   - يتم التعرف على التاجر فوراً دون الحاجة لإعادة تسجيل الدخول
-
-## الاختبار المطلوب:
-
-### اختبار التسجيل:
-- [ ] إنشاء حساب تاجر جديد
-- [ ] التحقق من تسجيل الدخول التلقائي
-- [ ] التحقق من التعرف على التاجر فوراً
-- [ ] التحقق من ظهور مميزات التاجر في الواجهة
-
-### اختبار الوظائف:
-- [ ] الوصول إلى صفحات التاجر المحمية
-- [ ] إضافة منتجات جديدة
-- [ ] عرض الطلبات
-- [ ] تحديث الملف الشخصي
-
-### اختبار تسجيل الخروج:
-- [ ] تسجيل الخروج من حساب التاجر
-- [ ] التحقق من مسح جميع البيانات
-- [ ] عدم القدرة على الوصول للصفحات المحمية بعد تسجيل الخروج
-
-## ملاحظات:
-- الحل يحافظ على التوافق مع النظام الحالي
-- يتم حفظ البيانات في كل من `AuthService` و `MerchantAuthService` للتوافق
-- التحقق من صحة الـ token يتم بشكل تلقائي
+I'll methodically work through each method replacement, ensuring each instance is correctly updated to use the new modal-based approach.</create_file>

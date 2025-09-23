@@ -48,6 +48,34 @@
       </button>
   </div>
 </div>
+
+<!-- Component Modal Dialog -->
+<app-modal-dialog
+  [isOpen]="modalOpen"
+  [title]="modalTitle"
+  [message]="modalMessage"
+  [type]="modalType"
+  [confirmText]="modalConfirmText"
+  [cancelText]="modalCancelText"
+  [showCancel]="modalShowCancel"
+  (confirmed)="confirmModal()"
+  (cancelled)="closeModal()"
+  (closed)="closeModal()">
+</app-modal-dialog>
+
+<!-- Modal Service Dialog (separate from component modal) -->
+<app-modal-dialog
+  [isOpen]="modalServiceOpen"
+  [title]="modalServiceTitle"
+  [message]="modalServiceMessage"
+  [type]="modalServiceType"
+  [confirmText]="modalServiceConfirmText"
+  [cancelText]="modalServiceCancelText"
+  [showCancel]="modalServiceShowCancel"
+  (confirmed)="confirmModalService()"
+  (cancelled)="closeModalService()"
+  (closed)="closeModalService()">
+</app-modal-dialog>
 </div>
 
 <div *ngIf="currentView === 'addProduct'" class="px-4 sm:px-10 max-w-3xl mx-auto mb-32 md:mb-0">
@@ -224,7 +252,7 @@
       حفظ الكل
     </button>
     <button
-      (click)="bulkDeleteSelectedProducts()"
+      (click)="bulkDeleteSelectedProductsWithModal()"
       [disabled]="selectedProducts.size === 0"
       class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded mb-2 disabled:opacity-50"
     >
@@ -309,7 +337,7 @@
               <button (click)="updateProduct(product)" [disabled]="!hasProductChanged(product)" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-1 px-3 rounded disabled:opacity-50">
                 حفظ
               </button>
-              <button (click)="deleteProduct(product)" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-1 px-3 rounded">
+              <button (click)="deleteProductWithModal(product)" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-1 px-3 rounded">
                 حذف
               </button>
             </div>
@@ -361,7 +389,7 @@
         <button (click)="updateProduct(product)" [disabled]="!hasProductChanged(product)" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-1 px-3 rounded disabled:opacity-50">
           حفظ
         </button>
-        <button (click)="deleteProduct(product)" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-1 px-3 rounded">
+        <button (click)="deleteProductWithModal(product)" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-1 px-3 rounded">
           حذف
         </button>
       </div>
@@ -377,16 +405,22 @@
   </div>
 </div>
 
-<!-- Floating upload progress indicator -->
-<div *ngIf="uploading || uploadSuccess" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 mb-32 md:mb-0">
+<!-- Floating upload progress indicator (only shows during upload) -->
+<div *ngIf="uploading" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 mb-32 md:mb-0">
   <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-80 max-w-full text-center shadow-lg">
-    <div *ngIf="uploading" class="text-blue-600 dark:text-blue-400 font-semibold">
+    <div class="text-blue-600 dark:text-blue-400 font-semibold">
       جاري الرفع... {{ uploadProgress }}%
       <div class="w-full bg-gray-200 rounded-full h-4 mt-2">
         <div class="bg-blue-600 h-4 rounded-full transition-all duration-300 ease-in-out" [style.width.%]="uploadProgress"></div>
       </div>
     </div>
-    <div *ngIf="uploadSuccess" class="text-green-600 dark:text-green-400 font-semibold flex flex-col items-center space-y-2">
+  </div>
+</div>
+
+<!-- Floating upload success indicator (only shows after successful upload) -->
+<div *ngIf="uploadSuccess" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 mb-32 md:mb-0">
+  <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-80 max-w-full text-center shadow-lg">
+    <div class="text-green-600 dark:text-green-400 font-semibold flex flex-col items-center space-y-2">
       <fa-icon [icon]="['fas', 'check-circle']" class="text-6xl animate-scale-up"></fa-icon>
       <div>تم الرفع بنجاح!</div>
     </div>
@@ -460,6 +494,7 @@
                     إلغاء
                   </button>
                   <button
+                    *ngIf="order.status === 'تم الإلغاء'"
                     (click)="deleteOrder(order._id)"
                     class="w-full bg-gray-700 hover:bg-black dark:bg-gray-800 dark:hover:bg-black text-white font-semibold py-1 px-3 rounded">
                     حذف
@@ -545,7 +580,9 @@
                     إلغاء
                   </button>
 
+
                   <button
+                    *ngIf="order.status === 'تم الإلغاء'"
                     (click)="deleteOrder(order._id)"
                     class="w-full bg-gray-700 hover:bg-black dark:bg-gray-800 dark:hover:bg-black text-white font-semibold py-1 px-3 rounded">
                     حذف

@@ -1,72 +1,85 @@
-<div class="rtl book-details-container p-4 max-w-4xl mx-auto pt-10 md:pt-40 mb-32 md:mb-0">
-  <div *ngIf="loading" class="text-center text-gray-500 dark:text-gray-400">جارٍ تحميل بيانات الكتاب...</div>
-  <div *ngIf="error" class="text-center text-red-600 dark:text-red-500 font-bold">{{ error }}</div>
-  <div *ngIf="book" class="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-lg p-6 relative">
-    <h2 class="text-3xl font-bold mb-4 mt-1 text-gray-900 dark:text-gray-100">{{ book.product_name }}</h2>
-        <!-- اسم التاجر -->
-        <div *ngIf="book.merchantName" class="mb-2">
-          <a [routerLink]="['/merchant', book.merchantId]" class="text-sm text-gray-600 dark:text-gray-400 hover:underline cursor-pointer">بواسطة {{ book.merchantName }}</a>
-        </div>
+<div class="rtl book-details-container max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 md:pt-40 mb-32 md:mb-0">
+  <div *ngIf="loading" class="text-center text-gray-500 dark:text-gray-400 py-8">جارٍ تحميل بيانات الكتاب...</div>
+  <div *ngIf="error" class="text-center text-red-600 dark:text-red-500 font-bold py-8">{{ error }}</div>
+  <div *ngIf="book" class="bg-white dark:bg-gray-800 rounded-xl shadow-lg dark:shadow-2xl p-6 sm:p-8 relative overflow-hidden border-2 border-blue-200 dark:border-blue-800">
+    <!-- Background gradient for appeal -->
+    <div class="absolute inset-0 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-700 opacity-60"></div>
+    <div class="relative z-10">
+      <h2 class="text-2xl sm:text-3xl font-bold mb-4 mt-1 text-gray-900 dark:text-gray-100 leading-tight">{{ book.product_name }}</h2>
+      <!-- اسم التاجر -->
+      <div *ngIf="book.merchantName" class="mb-4">
+        <a [routerLink]="['/merchant', book.merchantId]" class="text-sm text-blue-600 dark:text-blue-400 hover:underline cursor-pointer font-medium">بواسطة {{ book.merchantName }}</a>
+      </div>
+      <div class="relative mb-8">
+        <img [src]="uploadsBaseUrl + '/' + book.product_image + '.jpg'" alt="{{ book.product_name }}" (error)="handleImageError($event)" class="w-full max-w-md h-auto mx-auto rounded-xl shadow-xl dark:shadow-2xl transform hover:scale-105 transition-transform duration-300" />
         <!-- شريط الخصم -->
-        <div class="absolute top-2 right-2 bg-red-600 dark:bg-red-700 text-white text-xs font-bold px-2 py-1 rounded shadow-md dark:shadow-lg z-10">
+        <div class="absolute -top-4 -left-4 bg-gradient-to-r from-red-500 to-red-600 dark:from-red-600 dark:to-red-700 text-white text-sm font-bold px-4 py-3 rounded-full shadow-lg z-20 animate-pulse transform">
           {{ book.product_discount_percent }}% خصم
         </div>
-        <div class="relative inline-block">
-<img [src]="uploadsBaseUrl + '/' + book.product_image + '.jpg'" alt="{{ book.product_name }}" (error)="handleImageError($event)" class="w-64 h-auto mb-4 mx-auto rounded-lg shadow-md dark:shadow-lg" />
-          <button (click)="copyBookLink()" title="نسخ رابط الكتاب" class="absolute top-2 right-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-full p-2 shadow-md dark:shadow-lg">
-            <fa-icon [icon]="faShareAlt" class="text-gray-700 dark:text-gray-300 h-5 w-5"></fa-icon>
-          </button>
-        </div>
+        <button (click)="copyBookLink()" title="نسخ رابط الكتاب" class="absolute bottom-3 left-3 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-full p-3 shadow-lg transform hover:scale-110 transition-transform">
+          <fa-icon [icon]="faShareAlt" class="text-gray-700 dark:text-gray-300 h-6 w-6"></fa-icon>
+        </button>
+      </div>
 
-        <!-- رسالة تأكيد النسخ -->
-        <div *ngIf="showCopySuccess" class="fixed top-20 right-10 bg-green-500 text-white px-4 py-2 rounded shadow-lg z-50">
-          تم نسخ الرابط
-        </div>
+      <!-- رسالة تأكيد النسخ -->
+      <div *ngIf="showCopySuccess" class="fixed top-20 right-10 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-bounce">
+        تم نسخ الرابط
+      </div>
 
-        <!-- السعر -->
-        <div class="flex items-center space-x-2 mb-2">
-          <p class="text-green-600 dark:text-green-400 font-bold text-lg mb-2">{{ book.product_price }} EGP</p>
-          <p class="text-gray-400 dark:text-gray-500 line-through text-sm mb-2">
-            {{ (book.product_price * 1.75) | number:'1.0-0' }} EGP
-          </p>
-        </div>
-    <p class="mb-2 text-gray-900 dark:text-gray-100"><strong>الكمية المتوفرة:</strong> {{ book.product_quantity }}</p>
-    <p class="mb-2 text-gray-900 dark:text-gray-100"><strong>التصنيف:</strong> {{ book.product_category }}</p>
+      <!-- السعر -->
+      <div class="flex flex-col sm:flex-row sm:items-center sm:space-x-4 mb-6 bg-green-50 dark:bg-green-900 p-4 rounded-lg">
+        <p class="text-green-600 dark:text-green-400 font-bold text-2xl mb-2">{{ book.product_price }} EGP</p>
+        <p class="text-gray-500 dark:text-gray-400 line-through text-lg mb-2">
+          {{ (book.product_price * 1.75) | number:'1.0-0' }} EGP
+        </p>
+        <span class="text-green-700 dark:text-green-300 font-semibold">توفير كبير!</span>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+        <p class="text-gray-700 dark:text-gray-300 font-medium"><strong>الكمية المتوفرة:</strong> {{ book.product_quantity }}</p>
+        <p class="text-gray-700 dark:text-gray-300 font-medium"><strong>التصنيف:</strong> {{ book.product_category }}</p>
+      </div>
 
-    <!-- New product description section -->
-    <div *ngIf="book.product_description" class="mb-4 text-gray-800 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded p-4 bg-gray-50 dark:bg-gray-700">
-      <h3 class="text-xl font-semibold mb-2">وصف الكتاب</h3>
-      <p class="whitespace-pre-line">{{ book.product_description }}</p>
+      <!-- New product description section -->
+      <div *ngIf="book.product_description" class="mb-8 text-gray-700 dark:text-gray-300 border-2 border-gray-300 dark:border-gray-600 rounded-xl p-6 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 shadow-inner relative">
+        <div class="absolute top-0 left-0 w-16 h-16 bg-gradient-to-br from-blue-200 to-indigo-300 dark:from-blue-800 dark:to-indigo-900 rounded-full opacity-20 transform -translate-x-8 -translate-y-8"></div>
+        <h3 class="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100 relative z-10">وصف الكتاب</h3>
+        <div class="relative z-10">
+          <p class="whitespace-pre-line leading-relaxed text-lg font-medium text-gray-800 dark:text-gray-200 italic">{{ book.product_description }}</p>
+        </div>
+      </div>
+
+      <!-- Average Rating Display -->
+      <div class="mb-8 flex items-center gap-3 bg-yellow-50 dark:bg-gray-800 p-4 rounded-lg">
+        <ng-container *ngFor="let star of [1,2,3,4,5]">
+          <span class="w-7 flex justify-center">
+            <fa-icon *ngIf="star <= roundedAverageRating()" [icon]="faStar" class="text-yellow-500 h-6 w-6"></fa-icon>
+            <fa-icon *ngIf="star > roundedAverageRating()" [icon]="faStarRegular" class="text-gray-400 dark:text-gray-500 h-6 w-6"></fa-icon>
+          </span>
+        </ng-container>
+        <span class="text-lg text-gray-700 dark:text-gray-300 font-semibold">({{ ratingCount }} تقييم)</span>
+      </div>
+
+      <div *ngIf="book.product_quantity == 0" class="text-gray-700 dark:text-gray-300 mb-6 p-4 bg-red-50 dark:bg-red-900 rounded-lg">
+        هذا الكتاب غير متوفر حالياً<br>
+        <span class="text-gray-600 dark:text-gray-400 text-sm">متوقع توافره خلال 3-5 أيام عمل</span>
+      </div>
+      <button *ngIf="book.product_quantity > 0" (click)="onBuyNowClick()" class="w-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 dark:from-blue-700 dark:via-indigo-700 dark:to-purple-700 text-white px-8 py-4 rounded-xl hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 dark:hover:from-blue-800 dark:hover:via-indigo-800 dark:hover:to-purple-800 transition-all duration-300 transform hover:scale-105 shadow-xl font-bold text-lg animate-pulse">
+        اشترِ الآن واحصل على الخصم!
+      </button>
     </div>
-
-    <!-- Average Rating Display -->
-    <div class="mb-2 flex items-center gap-2">
-      <ng-container *ngFor="let star of [1,2,3,4,5]">
-        <span class="w-6 flex justify-center">
-          <fa-icon *ngIf="star <= roundedAverageRating()" [icon]="faStar" class="text-yellow-400 h-5 w-5"></fa-icon>
-          <fa-icon *ngIf="star > roundedAverageRating()" [icon]="faStarRegular" class="text-gray-300 dark:text-gray-600 h-5 w-5"></fa-icon>
-        </span>
-      </ng-container>
-      <span class="text-sm text-gray-600 dark:text-gray-300">({{ ratingCount }} تقييم)</span>
-    </div>
-
-<span *ngIf="book.product_quantity == 0" class="text-gray-900 dark:text-gray-100">
-  هذا الكتاب غير متوفر حالياً<br>
-  <span class="text-gray-500 dark:text-gray-400 text-xs">متوقع توافره خلال 3-5 أيام عمل</span>
-</span>
-<button *ngIf="book.product_quantity > 0" (click)="onBuyNowClick()" class="bg-blue-600 dark:bg-[#0a1325] text-white px-4 py-1 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-800 transition">
-  شراء الآن
-</button>
   </div>
 </div>
 
-<div *ngIf="showLoginPrompt" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-50">
-  <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg dark:shadow-lg text-center">
-    <h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">يرجى تسجيل الدخول أولاً</h3>
-    <p class="mb-4 text-gray-900 dark:text-gray-100">لإضافة الكتب إلى السلة أو المفضلة، يجب عليك تسجيل الدخول أو إنشاء حساب جديد.</p>
-    <div class="flex justify-center gap-4">
-      <button (click)="closeLoginPrompt()" class="bg-gray-300 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg">إغلاق</button>
-      <button (click)="openAccountModal()" class="bg-blue-500 dark:bg-[#0a1325] text-white px-4 py-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-800">تسجيل الدخول أو إنشاء حساب</button>
+<div *ngIf="showLoginPrompt" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-50 p-4">
+  <div class="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-xl shadow-xl dark:shadow-2xl text-center max-w-md mx-auto relative overflow-hidden">
+    <div class="absolute inset-0 bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 opacity-50"></div>
+    <div class="relative z-10">
+      <h3 class="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">يرجى تسجيل الدخول أولاً</h3>
+      <p class="mb-6 text-gray-700 dark:text-gray-300 leading-relaxed">لإضافة الكتب إلى السلة أو المفضلة، يجب عليك تسجيل الدخول أو إنشاء حساب جديد.</p>
+      <div class="flex flex-col sm:flex-row justify-center gap-4">
+        <button (click)="closeLoginPrompt()" class="bg-gray-300 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-6 py-3 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-600 transition duration-200">إغلاق</button>
+        <button (click)="openAccountModal()" class="bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-700 dark:to-indigo-700 text-white px-6 py-3 rounded-lg hover:from-blue-700 hover:to-indigo-700 dark:hover:from-blue-800 dark:hover:to-indigo-800 transition duration-200 font-semibold">تسجيل الدخول أو إنشاء حساب</button>
+      </div>
     </div>
   </div>
 </div>

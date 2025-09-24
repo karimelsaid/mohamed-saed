@@ -3,7 +3,7 @@ import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { faBars, faClose, faHome, faBook, faFilePdf, faUser, faChevronUp, faChevronDown, faSearch,faHeart,faCartPlus,faClipboardList, faTachometerAlt, faBell, faTrash,faFilter } from '@fortawesome/free-solid-svg-icons';
+import { faBars, faClose, faHome, faBook, faFilePdf, faUser, faChevronUp, faChevronDown, faSearch,faHeart,faCartPlus,faClipboardList, faTachometerAlt, faBell, faTrash,faFilter, faMosque, faBrain, faScroll, faChartLine, faHeartbeat, faBookOpen, faChild, faHistory, faPalette } from '@fortawesome/free-solid-svg-icons';
 import { DataService } from '../services/data.service';
 import { AccountModalComponent } from '../auth/account-modal/account-modal.component';
 import { AuthService } from '../auth/auth.service';
@@ -39,6 +39,15 @@ faFilter = faFilter;
   faTachometerAlt = faTachometerAlt;
   faBell = faBell;
   faTrash = faTrash;
+  faMosque = faMosque;
+  faBrain = faBrain;
+  faScroll = faScroll;
+  faChartLine = faChartLine;
+  faHeartbeat = faHeartbeat;
+  faBookOpen = faBookOpen;
+  faChild = faChild;
+  faHistory = faHistory;
+  faPalette = faPalette;
 
   openBars = false;
   scrollBook = true;
@@ -77,12 +86,14 @@ faFilter = faFilter;
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent) {
     const target = event.target as HTMLElement;
-    const clickedInsideMenu = target.closest('.rtl.md\\:hidden.z-50.relative.text-blue-950.dark\\:text-blue-100');
+    const clickedInsideMenu = target.closest('.mobile-menu-panel');
     const clickedOnBarsIcon = target.closest('.fa-bars');
     if (!clickedInsideMenu && !clickedOnBarsIcon) {
       this.openBars = false;
     }
-  }  selectFilter(filter: string) {
+  }
+
+  selectFilter(filter: string) {
     this.selectedFilter = filter;
     this.showFilterDropdown = false;
     this.onSearchExecuted({ query: this.searchQuery.trim(), filter: this.selectedFilter });

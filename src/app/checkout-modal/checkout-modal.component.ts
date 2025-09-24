@@ -52,6 +52,7 @@ export class CheckoutModalComponent implements OnInit {
   phoneTouched: boolean = false;
   locationValid: boolean = true;
   errorMessage: string = '';
+  currentStep: number = 1;
 
   freeShippingRules: FreeShippingRules = {
     minQuantity: 3,
@@ -291,6 +292,18 @@ export class CheckoutModalComponent implements OnInit {
 
   onClose(): void {
     this.close.emit();
+  }
+
+  nextStep(): void {
+    if (this.currentStep < 3) {
+      this.currentStep++;
+    }
+  }
+
+  previousStep(): void {
+    if (this.currentStep > 1) {
+      this.currentStep--;
+    }
   }
 
   handleImageError(event: any) {

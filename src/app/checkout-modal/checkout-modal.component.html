@@ -1,19 +1,44 @@
-<div class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 overflow-auto">
-    <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-2xl absolute top-0 ">
-      <h2 class="text-2xl font-bold m-4 text-gray-900 dark:text-gray-200">إتمام عملية الشراء</h2>
-      
-      <div class="mb-6 max-h-96 overflow-y-auto">
-        <div *ngFor="let item of cartItems" class="flex items-center justify-between py-3 border-b border-gray-300 dark:border-gray-700">
+<div class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 overflow-auto p-4" (click)="onClose()">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 sm:p-8 w-full max-w-4xl relative" (click)="$event.stopPropagation()">
+      <!-- Close Button -->
+      <button (click)="onClose()" class="absolute top-4 right-4 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-2xl font-bold z-10">
+        &times;
+      </button>
+      <!-- Progress Indicator -->
+      <div class="flex items-center justify-center mb-6">
+        <div class="flex items-center space-x-4">
           <div class="flex items-center">
-            <div class="w-16 h-16 rounded mr-4 overflow-hidden flex items-center justify-center bg-gray-100 dark:bg-gray-700">
-              <img [src]="uploadsBaseUrl + '/' + item.product_image + '.jpg'" 
+            <div [ngClass]="{'bg-blue-600 text-white': currentStep >= 1, 'bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300': currentStep < 1}" class="w-8 h-8 rounded-full flex items-center justify-center">1</div>
+            <span class="ml-2 text-sm font-medium" [ngClass]="{'text-gray-700 dark:text-gray-300': currentStep >= 1, 'text-gray-500 dark:text-gray-400': currentStep < 1}">السلة</span>
+          </div>
+          <div [ngClass]="{'bg-blue-600': currentStep >= 2, 'bg-gray-300 dark:bg-gray-600': currentStep < 2}" class="w-8 h-0.5"></div>
+          <div class="flex items-center">
+            <div [ngClass]="{'bg-blue-600 text-white': currentStep >= 2, 'bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300': currentStep < 2}" class="w-8 h-8 rounded-full flex items-center justify-center">2</div>
+            <span class="ml-2 text-sm font-medium" [ngClass]="{'text-gray-700 dark:text-gray-300': currentStep >= 2, 'text-gray-500 dark:text-gray-400': currentStep < 2}">العنوان</span>
+          </div>
+          <div [ngClass]="{'bg-blue-600': currentStep >= 3, 'bg-gray-300 dark:bg-gray-600': currentStep < 3}" class="w-8 h-0.5"></div>
+          <div class="flex items-center">
+            <div [ngClass]="{'bg-blue-600 text-white': currentStep >= 3, 'bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300': currentStep < 3}" class="w-8 h-8 rounded-full flex items-center justify-center">3</div>
+            <span class="ml-2 text-sm font-medium" [ngClass]="{'text-gray-700 dark:text-gray-300': currentStep >= 3, 'text-gray-500 dark:text-gray-400': currentStep < 3}">الدفع</span>
+          </div>
+        </div>
+      </div>
+      <h2 class="text-2xl sm:text-3xl font-bold mb-6 text-center text-gray-900 dark:text-gray-200">إتمام عملية الشراء</h2>
+
+      <!-- Step 1: Cart Items -->
+      <div *ngIf="currentStep === 1" class="mb-8 max-h-96 overflow-y-auto bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+        <h3 class="text-xl font-bold mb-4 text-gray-900 dark:text-gray-200">السلة</h3>
+        <div *ngFor="let item of cartItems" class="flex items-center justify-between py-4 border-b border-gray-200 dark:border-gray-600 last:border-b-0">
+          <div class="flex items-center">
+            <div class="w-20 h-20 rounded-lg mr-4 overflow-hidden flex items-center justify-center bg-gray-100 dark:bg-gray-600 shadow-md">
+              <img [src]="uploadsBaseUrl + '/' + item.product_image + '.jpg'"
                    class="max-w-full max-h-full object-contain"
                    (error)="handleImageError($event)">
             </div>
             <div class="flex-1">
-              <h3 class="font-medium text-gray-800 dark:text-gray-200">{{item.product_name}}</h3>
-              <p class="text-gray-600 dark:text-gray-400 font-medium">{{item.product_price}} EGP</p>
-              
+              <h3 class="font-semibold text-lg text-gray-800 dark:text-gray-200">{{item.product_name}}</h3>
+              <p class="text-green-600 dark:text-green-400 font-bold text-lg">{{item.product_price}} EGP</p>
+
               <div *ngIf="item.product_quantity <= 0" class="relative opacity-50 grayscale">
                 <div class="absolute inset-0 flex items-center pointer-events-none">
                   <div class="w-full border-t-2 border-red-400 border-dashed"></div>
@@ -28,22 +53,20 @@
                   </p>
                 </div>
               </div>
-              
-              <div *ngIf="item.product_quantity > 0" class="flex items-center mt-3 space-x-2">
-                <button (click)="decreaseQuantity(item)" 
-                        class="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 w-8 h-8 flex items-center justify-center rounded-full 
-                               transition-colors duration-200 border border-gray-200 dark:border-gray-600">
+
+              <div *ngIf="item.product_quantity > 0" class="flex items-center mt-4 space-x-2 sm:space-x-3">
+                <button (click)="decreaseQuantity(item)"
+                        class="bg-blue-600 hover:bg-blue-700 text-white w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-full transition-colors duration-200 shadow-md text-sm sm:text-base">
                   -
                 </button>
-                <span class="w-8 text-center font-medium text-gray-900 dark:text-gray-200">{{item.quantity || 1}}</span>
-                <button (click)="increaseQuantity(item)" 
-                        class="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 w-8 h-8 flex items-center justify-center rounded-full 
-                               transition-colors duration-200 border border-gray-200 dark:border-gray-600">
+                <span class="w-10 sm:w-12 text-center font-bold text-base sm:text-lg text-gray-900 dark:text-gray-200">{{item.quantity || 1}}</span>
+                <button (click)="increaseQuantity(item)"
+                        class="bg-blue-600 hover:bg-blue-700 text-white w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-full transition-colors duration-200 shadow-md text-sm sm:text-base">
                   +
                 </button>
-                <span class="text-xs text-gray-500 dark:text-gray-400 ml-2">(المتاح: {{item.product_quantity}})</span>
+                <span class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 ml-2 sm:ml-3">(المتاح: {{item.product_quantity}})</span>
               </div>
-              <div *ngIf="item.showMessage" 
+              <div *ngIf="item.showMessage"
                    class="mt-1 px-2 py-1 bg-red-50 dark:bg-red-900 text-red-600 dark:text-red-400 text-xs rounded animate-pulse">
                 <i class="fas fa-exclamation-circle mr-1"></i>
                 {{item.message}}
@@ -51,33 +74,39 @@
             </div>
           </div>
         </div>
+        <div class="flex justify-end mt-4">
+          <button (click)="nextStep()"
+                  class="bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors shadow-md font-semibold">
+            التالي
+          </button>
+        </div>
       </div>
-  
-  <!-- عرض عنوان ورقم الهاتف بشكل مشابه لمكون إنشاء حساب مع إمكانية التعديل -->
-  <div class="mb-32 md:mb-4" *ngIf="userProfile">
-    <h3 class="text-lg font-bold mb-2 text-gray-900 dark:text-gray-200">عنوانك ورقم هاتفك</h3>
-    <div *ngIf="!isEditingAddress" class="mb-2">
-      <div class="flex space-x-4 mb-2">
-        <div class="flex-1">
-          <label class="block mb-1 text-sm font-medium text-gray-900 dark:text-gray-300">المحافظة</label>
+
+  <!-- Step 2: Address -->
+  <div *ngIf="currentStep === 2 && userProfile" class="mb-8">
+    <h3 class="text-xl font-bold mb-4 text-gray-900 dark:text-gray-200">العنوان</h3>
+    <div *ngIf="!isEditingAddress" class="mb-4">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+        <div>
+          <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">المحافظة</label>
           <input type="text" [value]="userProfile.governorate" disabled
-                 class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 cursor-not-allowed text-gray-900 dark:text-gray-200" />
+                 class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 cursor-not-allowed text-gray-900 dark:text-gray-200 shadow-sm" />
         </div>
-        <div class="flex-1">
-          <label class="block mb-1 text-sm font-medium text-gray-900 dark:text-gray-300">المدينة</label>
+        <div>
+          <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">المدينة</label>
           <input type="text" [value]="userProfile.city" disabled
-                 class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 cursor-not-allowed text-gray-900 dark:text-gray-200" />
+                 class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 cursor-not-allowed text-gray-900 dark:text-gray-200 shadow-sm" />
         </div>
-        <div class="flex-1">
-          <label class="block mb-1 text-sm font-medium text-gray-900 dark:text-gray-300">تفاصيل العنوان</label>
+        <div>
+          <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">تفاصيل العنوان</label>
           <input type="text" [value]="userProfile.village" disabled
-                 class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 cursor-not-allowed text-gray-900 dark:text-gray-200" />
+                 class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 cursor-not-allowed text-gray-900 dark:text-gray-200 shadow-sm" />
         </div>
       </div>
-      <div class="mb-2">
-        <label class="block mb-1 text-sm font-medium text-gray-900 dark:text-gray-300">رقم الهاتف</label>
+      <div class="mb-4">
+        <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">رقم الهاتف</label>
         <input type="text" [value]="userProfile.phone" disabled
-               class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 cursor-not-allowed text-gray-900 dark:text-gray-200" />
+               class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 cursor-not-allowed text-gray-900 dark:text-gray-200 shadow-sm" />
       </div>
       <label class="flex items-center mt-2 text-gray-900 dark:text-gray-200 relative">
         <input type="checkbox" [(ngModel)]="isAddressConfirmed" class="mr-2" />
@@ -92,96 +121,124 @@
         تعديل البيانات ورقم الهاتف
       </button>
     </div>
-    <div *ngIf="isEditingAddress && editedUserProfile" class="mb-2">
-      <div class="flex space-x-4 mb-2">
-        <div class="flex-1">
-          <label class="block mb-1 text-sm font-medium text-gray-900 dark:text-gray-300">المحافظة</label>
+    <div *ngIf="isEditingAddress && editedUserProfile" class="mb-4">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+        <div>
+          <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">المحافظة</label>
           <input list="governoratesList" type="text" [(ngModel)]="editedUserProfile.governorate" (change)="onGovernorateChange()"
-                 class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200" />
+                 class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 shadow-sm" />
           <datalist id="governoratesList">
             <option *ngFor="let gov of governorates" [value]="gov.governorate_name"></option>
           </datalist>
         </div>
-        <div class="flex-1">
-          <label class="block mb-1 text-sm font-medium text-gray-900 dark:text-gray-300">المدينة</label>
+        <div>
+          <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">المدينة</label>
           <input list="citiesList" type="text" [(ngModel)]="editedUserProfile.city"
                  (input)="validateLocation()"
-                 class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200" />
+                 class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 shadow-sm" />
           <datalist id="citiesList">
             <option *ngFor="let city of cities" [value]="city"></option>
           </datalist>
         </div>
-        <div class="flex-1">
-          <label class="block mb-1 text-sm font-medium text-gray-900 dark:text-gray-300">تفاصيل العنوان</label>
+        <div>
+          <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">تفاصيل العنوان</label>
           <input type="text" [(ngModel)]="editedUserProfile.village"
-                 class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200" />
+                 class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 shadow-sm" />
         </div>
       </div>
-        <div class="mb-2">
-          <label class="block mb-1 text-sm font-medium text-gray-900 dark:text-gray-300">رقم الهاتف</label>
-          <input type="text" [(ngModel)]="editedUserProfile.phone"
-                 (input)="validatePhone()"
-                 [ngClass]="{
-                   'border-blue-500 focus:ring-blue-500': phoneValid && phoneTouched,
-                   'border-red-500 focus:ring-red-500': !phoneValid && phoneTouched
-                 }"
-                 class="w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200" />
-          <div *ngIf="!phoneValid && phoneTouched" class="text-red-500 dark:text-red-400 text-sm mt-1">
-            ❌ رقم الهاتف غير صالح. يجب أن يبدأ بـ 010 أو 011 أو 012 أو 015 ويحتوي على 11 رقمًا.
-          </div>
-          <div *ngIf="phoneValid && phoneTouched" class="text-blue-500 dark:text-blue-400 text-sm mt-1">
-            ✔️ رقم الهاتف صحيح!
-          </div>
+      <div class="mb-4">
+        <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">رقم الهاتف</label>
+        <input type="text" [(ngModel)]="editedUserProfile.phone"
+               (input)="validatePhone()"
+               [ngClass]="{
+                 'border-blue-500 focus:ring-blue-500': phoneValid && phoneTouched,
+                 'border-red-500 focus:ring-red-500': !phoneValid && phoneTouched
+               }"
+               class="w-full px-4 py-3 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 shadow-sm" />
+        <div *ngIf="!phoneValid && phoneTouched" class="text-red-500 dark:text-red-400 text-sm mt-1">
+          ❌ رقم الهاتف غير صالح. يجب أن يبدأ بـ 010 أو 011 أو 012 أو 015 ويحتوي على 11 رقمًا.
         </div>
+        <div *ngIf="phoneValid && phoneTouched" class="text-blue-500 dark:text-blue-400 text-sm mt-1">
+          ✔️ رقم الهاتف صحيح!
+        </div>
+      </div>
       <div class="flex space-x-4">
         <button (click)="saveEditAddress()"
                 [disabled]="!phoneValid || !phoneTouched || !locationValid"
-                class="bg-green-600 dark:bg-green-700 text-white py-2 px-4 rounded hover:bg-green-700 dark:hover:bg-green-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                class="bg-green-600 dark:bg-green-700 text-white py-3 px-6 rounded-lg hover:bg-green-700 dark:hover:bg-green-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md">
           حفظ
         </button>
         <button (click)="cancelEditAddress()"
-                class="bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-gray-200 py-2 px-4 rounded hover:bg-gray-400 dark:hover:bg-gray-700 transition-colors">
+                class="bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-gray-200 py-3 px-6 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-700 transition-colors shadow-md">
           إلغاء
         </button>
       </div>
     </div>
-  
-      <div class="border-t border-gray-300 dark:border-gray-700 pt-4">
-        <div class="flex justify-between mb-2">
-          <span class="text-gray-900 dark:text-gray-200">تكلفة الشحن:</span>
-          <span class="text-gray-900 dark:text-gray-200">{{shippingCost}} EGP</span>
-        </div>
-        <div *ngIf="freeShippingRules.freeShippingEnabled" class="text-sm text-green-600 dark:text-green-400 mb-2 flex items-center space-x-2 rtl:space-x-reverse">
-          <fa-icon [icon]="faCheck" class="text-green-600 dark:text-green-400"></fa-icon>
-          <span>{{ freeShippingMessage }}</span>
-        </div>
-        <div class="flex justify-between mb-4">
-          <span class="font-bold text-gray-900 dark:text-gray-200">المجموع:</span>
-          <span class="font-bold text-gray-900 dark:text-gray-200">{{totalPrice}} EGP</span>
-        </div>
-  
-        <div class="grid grid-cols-2 gap-4 relative z-10">
-          <button (click)="onClose()" 
-                  class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 py-2 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
-            إلغاء
-          </button>
-  <button (click)="completePurchase()" 
-          [disabled]="!hasPurchasableItems || !isAddressConfirmed || !isAddressComplete"
-          class="bg-blue-600 text-white py-2 rounded hover:bg-blue-700 dark:hover:bg-blue-800 transition-colors relative z-20 disabled:bg-gray-400 disabled:cursor-not-allowed">
-    إتمام الشراء
-  </button>
-        </div>
-      </div>
+    <div class="flex justify-between mt-4">
+      <button (click)="previousStep()"
+              class="bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-gray-200 py-3 px-6 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-700 transition-colors shadow-md font-semibold">
+        السابق
+      </button>
+      <button (click)="nextStep()"
+              [disabled]="!isAddressConfirmed || !isAddressComplete"
+              class="bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors shadow-md font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed">
+        التالي
+      </button>
+    </div>
+  </div>
+
+  <!-- Step 3: Payment -->
+  <div *ngIf="currentStep === 3" class="border-t-2 border-gray-300 dark:border-gray-600 pt-6 bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+    <h3 class="text-xl font-bold mb-4 text-gray-900 dark:text-gray-200">الدفع</h3>
+    <div class="flex justify-between mb-3">
+      <span class="text-gray-700 dark:text-gray-300 font-medium">تكلفة الشحن:</span>
+      <span class="text-gray-900 dark:text-gray-200 font-semibold">{{shippingCost}} EGP</span>
+    </div>
+    <div *ngIf="freeShippingRules.freeShippingEnabled" class="text-sm text-green-600 dark:text-green-400 mb-3 flex items-center space-x-2 rtl:space-x-reverse bg-green-50 dark:bg-green-900 p-2 rounded-lg">
+      <fa-icon [icon]="faCheck" class="text-green-600 dark:text-green-400"></fa-icon>
+      <span>{{ freeShippingMessage }}</span>
+    </div>
+    <div class="flex justify-between mb-6">
+      <span class="font-bold text-xl text-gray-900 dark:text-gray-200">المجموع:</span>
+      <span class="font-bold text-xl text-gray-900 dark:text-gray-200">{{totalPrice}} EGP</span>
     </div>
 
+    <div class="grid grid-cols-2 gap-4">
+      <button (click)="onClose()"
+              class="bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-gray-200 py-3 px-6 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-700 transition-colors shadow-md font-semibold">
+        إلغاء
+      </button>
+      <button (click)="completePurchase()"
+              [disabled]="!hasPurchasableItems || !isAddressConfirmed || !isAddressComplete"
+              class="bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-700 dark:to-indigo-700 text-white py-3 px-6 rounded-lg hover:from-blue-700 hover:to-indigo-700 dark:hover:from-blue-800 dark:hover:to-indigo-800 transition-colors shadow-lg font-bold text-lg disabled:bg-gray-400 disabled:cursor-not-allowed transform hover:scale-105">
+        إتمام الشراء
+      </button>
+    </div>
+    <!-- Security Badge -->
+    <div class="mt-4 text-center">
+      <div class="flex items-center justify-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
+        <fa-icon [icon]="faCheck" class="text-green-600"></fa-icon>
+        <span>دفع آمن ومضمون</span>
+      </div>
+    </div>
+    <div class="flex justify-start mt-4">
+      <button (click)="previousStep()"
+              class="bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-gray-200 py-3 px-6 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-700 transition-colors shadow-md font-semibold">
+        السابق
+      </button>
+    </div>
   </div>
-  
+
   <!-- رسالة النجاح -->
-  <div *ngIf="showSuccessMessage" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
-    <div class="bg-white dark:bg-gray-800 rounded-2xl p-8 max-w-md w-full mx-4 text-center animate__animated animate__bounceIn">
-      <div class="text-6xl mb-4">🎉</div>
-      <h3 class="text-2xl font-bold text-green-600 dark:text-green-400 mb-2">تمت عملية الشراء بنجاح!</h3>
-      <p class="text-gray-600 dark:text-gray-400 mb-6">📚 سيتم تحديث سلة التسوق تلقائياً</p>
+  <div *ngIf="showSuccessMessage" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl p-8 max-w-md w-full mx-4 text-center shadow-2xl relative overflow-hidden">
+      <div class="absolute inset-0 bg-gradient-to-br from-green-50 to-blue-50 dark:from-gray-900 dark:to-gray-800 opacity-50"></div>
+      <div class="relative z-10">
+        <div class="text-6xl mb-4 animate-bounce">🎉</div>
+        <h3 class="text-2xl font-bold text-green-600 dark:text-green-400 mb-2">تمت عملية الشراء بنجاح!</h3>
+        <p class="text-gray-600 dark:text-gray-400 mb-6">📚 سيتم تحديث سلة التسوق تلقائياً</p>
+        <button (click)="onClose()" class="bg-green-600 text-white py-2 px-6 rounded-lg hover:bg-green-700 transition-colors shadow-md">إغلاق</button>
+      </div>
     </div>
   </div>
 </div>

@@ -21,72 +21,96 @@
   </div>
 </div>
 <!-- وصل حديثاً -->
-<div class="h-[330px] sm:h-[450px] py-4 overflow-hidden">
-  <h1 class="text-2xl font-bold text-center mb-4">وصل حديثاً</h1>
-
-  <div *ngIf="isLoading" class="flex space-x-4 overflow-hidden px-4">
-    <ngx-skeleton-loader count="5" appearance="circle" [theme]="{ width: '150px', height: '300px' }" class="rounded-lg"></ngx-skeleton-loader>
-  </div>
-
-<div *ngIf="!isLoading" class="relative w-full mx-auto overflow-hidden"
-  (mouseenter)="isHovered = true"
-  (mouseleave)="isHovered = false"
-  (touchstart)="onTouchStart($event)"
-  (touchmove)="onTouchMove($event)"
-  (touchend)="onTouchEnd()"
-  >
-<!-- زر السابق -->
-<button
-  (click)="scrollPrev()"
-  class="absolute left-2 top-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 rounded-full shadow dark:shadow-lg w-10 h-10 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 z-10">
-  <fa-icon [icon]="faChevronLeft" class="text-gray-700 dark:text-gray-300 text-lg"></fa-icon>
-</button>
-
-<!-- زر التالي -->
-<button
-  (click)="scrollNext()"
-  class="absolute right-2 top-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 rounded-full shadow dark:shadow-lg w-10 h-10 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 z-10">
-  <fa-icon [icon]="faChevronRight" class="text-gray-700 dark:text-gray-300 text-lg"></fa-icon>
-</button>
-
-<div
-  class="flex carousel-track gap-4 sm:gap-1 transition-transform duration-700 ease-in-out"
-  [style.transform]="transformStyle"
->
-
-<div
-        *ngFor="let book of visibleBooks"
-        class="w-1/3 sm:w-1/2 md:w-1/3 lg:w-1/4 p-0 shrink-0"
-      >
-         <!-- صورة الكتاب -->
-<div [routerLink]="['/book', getBookSlug(book.product_name)]"
-      class="relative w-full sm:w-[160px] md:w-[240px] h-full sm:h-[300px] md:h-[350px] lg:h-[400px] bg-cover bg-center rounded-lg shadow-lg dark:shadow-black/50 hover:contrast-75 cursor-pointer overflow-hidden">
-<img [routerLink]="['/book', getBookSlug(book.product_name)]"
-      [src]="uploadsBaseUrl + '/' + book.product_image + '.jpg'"
-      (error)="handleImageError($event)"
-      [alt]="book.product_name"
-      class="rounded-lg w-full sm:w-[160px] md:w-[240px] h-full sm:h-[300px] md:h-[350px] lg:h-[370px] cursor-pointer object-cover object-center"
-/>
-    <!-- <h2
-    class="bg-amber-800 text-white p-2 absolute top-0 right-0 text-[10px] sm:text-sm"
-  >
-    {{ book.product_name }}
-  </h2> -->
+<section class="py-16 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800">
+  <div class="container mx-auto px-4">
+    <div class="relative mb-8 text-center">
+      <div class="relative inline-block p-4 rounded-2xl bg-gradient-to-r from-white/95 via-gray-50/95 to-white/95 backdrop-blur-sm border-2 border-gray-200/50 shadow-lg mb-4">
+        <h1 class="w-auto text-3xl sm:text-4xl lg:text-5xl font-bold text-center bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent drop-shadow-sm">
+          وصل حديثاً
+        </h1>
       </div>
+      <div class="flex items-center justify-center gap-4 mb-6">
+        <div class="w-16 h-1 bg-gradient-to-r from-blue-300 to-purple-500 rounded-full"></div>
+        <div class="w-4 h-4 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full animate-pulse"></div>
+        <div class="w-16 h-1 bg-gradient-to-r from-purple-500 to-blue-300 rounded-full"></div>
+      </div>
+    </div>
+
+    <div *ngIf="isLoading" class="flex space-x-4 overflow-hidden px-4 justify-center">
+      <ngx-skeleton-loader count="5" appearance="circle" [theme]="{ width: '150px', height: '300px' }" class="rounded-lg"></ngx-skeleton-loader>
+    </div>
+
+    <div *ngIf="!isLoading" class="relative w-full mx-auto overflow-hidden"
+      (mouseenter)="isHovered = true"
+      (mouseleave)="isHovered = false"
+      (touchstart)="onTouchStart($event)"
+      (touchmove)="onTouchMove($event)"
+      (touchend)="onTouchEnd()"
+      >
+      <!-- زر السابق -->
+      <button
+        (click)="scrollPrev()"
+        class="absolute left-2 top-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 rounded-full shadow dark:shadow-lg w-10 h-10 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 z-10">
+        <fa-icon [icon]="faChevronLeft" class="text-gray-700 dark:text-gray-300 text-lg"></fa-icon>
+      </button>
+
+      <!-- زر التالي -->
+      <button
+        (click)="scrollNext()"
+        class="absolute right-2 top-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 rounded-full shadow dark:shadow-lg w-10 h-10 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 z-10">
+        <fa-icon [icon]="faChevronRight" class="text-gray-700 dark:text-gray-300 text-lg"></fa-icon>
+      </button>
+
+      <div
+        class="flex carousel-track gap-4 sm:gap-1 transition-transform duration-700 ease-in-out"
+        [style.transform]="transformStyle"
+        >
+
+        <div
+          *ngFor="let book of visibleBooks"
+          class="w-1/3 sm:w-1/2 md:w-1/3 lg:w-1/4 p-0 shrink-0"
+          >
+          <!-- صورة الكتاب -->
+          <div [routerLink]="['/book', getBookSlug(book.product_name)]"
+            class="relative w-full sm:w-[160px] md:w-[240px] h-full sm:h-[300px] md:h-[350px] lg:h-[400px] bg-cover bg-center rounded-lg shadow-lg dark:shadow-black/50 hover:contrast-75 cursor-pointer overflow-hidden">
+            <img [routerLink]="['/book', getBookSlug(book.product_name)]"
+              [src]="uploadsBaseUrl + '/' + book.product_image + '.jpg'"
+              (error)="handleImageError($event)"
+              [alt]="book.product_name"
+              class="rounded-lg w-full sm:w-[160px] md:w-[240px] h-full sm:h-[300px] md:h-[350px] lg:h-[370px] cursor-pointer object-cover object-center"
+              />
+            <!-- <h2
+              class="bg-amber-800 text-white p-2 absolute top-0 right-0 text-[10px] sm:text-sm"
+              >
+              {{ book.product_name }}
+            </h2> -->
+          </div>
         </div>
       </div>
+    </div>
   </div>
-</div>
+</section>
 <!-- أمثلة على الشكل النهائي لخدمة الطباعة -->
 <section class="py-16 bg-gradient-to-br from-slate-50 to-blue-50 dark:from-gray-900 dark:to-gray-800">
   <div class="container mx-auto px-4">
     <div class="text-center mb-12">
-      <h1 class="text-4xl md:text-5xl font-bold text-gray-800 dark:text-white mb-4">
-        أمثلة على الشكل النهائي لخدمة الطباعة
-      </h1>
-      <p class="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-        اختر من بين خيارات الطباعة المتنوعة للحصول على أفضل جودة لكتبك
-      </p>
+      <div class="relative inline-block mb-6 p-8 rounded-3xl bg-gradient-to-r from-white/95 via-gray-50/95 to-white/95 backdrop-blur-sm border-2 border-gray-200/50 shadow-lg">
+        <h1 class="w-auto text-4xl md:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 bg-clip-text text-transparent drop-shadow-lg">
+          أمثلة على الشكل النهائي لخدمة الطباعة
+        </h1>
+</div>
+<div class="flex items-center justify-center gap-4 mb-6">
+<div class="w-16 h-1 bg-gradient-to-r from-emerald-300 to-emerald-500 rounded-full"></div>
+<div class="w-4 h-4 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-full animate-pulse"></div>
+<div class="w-16 h-1 bg-gradient-to-r from-emerald-500 to-emerald-300 rounded-full"></div>
+</div>
+      <div class="relative">
+        <p class="text-lg md:text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto leading-relaxed">
+          اختر من بين خيارات الطباعة المتنوعة للحصول على أفضل جودة لكتبك
+        </p>
+        <div class="absolute -top-2 -left-4 w-8 h-8 bg-gradient-to-r from-emerald-400 to-teal-400 rounded-full opacity-20 animate-pulse"></div>
+        <div class="absolute -top-2 -right-4 w-6 h-6 bg-gradient-to-r from-cyan-400 to-blue-400 rounded-full opacity-20 animate-pulse delay-300"></div>
+      </div>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
@@ -150,7 +174,21 @@
   </div>
 </section>
 
-<h1 class="mb-10">أقسام المكتبة</h1>
+<div class="relative mb-12">
+  <div class="text-center">
+    <div class="relative inline-block p-6 rounded-3xl bg-gradient-to-r from-white/95 via-gray-50/95 to-white/95 backdrop-blur-sm border-2 border-gray-200/50 shadow-lg mb-4">
+      <h1 class="w-auto text-3xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 bg-clip-text text-transparent drop-shadow-sm">
+        أقسام المكتبة
+      </h1>
+    </div>
+    <div class="flex items-center justify-center gap-4 mb-6">
+      <div class="w-16 h-1 bg-gradient-to-r from-blue-300 to-blue-500 rounded-full"></div>
+      <div class="w-4 h-4 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full animate-pulse"></div>
+      <div class="w-16 h-1 bg-gradient-to-r from-blue-500 to-blue-300 rounded-full"></div>
+    </div>
+  </div>
+</div>
+
 <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-4 px-4 mb-32 md:mb-6">
     <div
     *ngFor="let category of categories; let i = index"

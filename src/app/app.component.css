@@ -1,6 +1,10 @@
 .out{
-  transform: translateX(20px);
+  transform: translateX(45px);
   transition: all ease-out .5s;
+  -webkit-transform: translateX(45px);
+  -moz-transform: translateX(45px);
+  -ms-transform: translateX(45px);
+  -o-transform: translateX(45px);
 }
 .on{
   transform: translateX(-40px);

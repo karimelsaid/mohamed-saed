@@ -65,7 +65,7 @@
   <footer class="relative overflow-hidden bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 dark:from-slate-950 dark:via-blue-950 dark:to-indigo-950 text-white mt-auto">
     <!-- خلفية مزخرفة -->
 <div class="absolute inset-0 opacity-40 bg-gradient-to-br from-transparent via-white/5 to-transparent"></div>
-+    <div class="absolute inset-0 opacity-30" style="background-image: radial-gradient(circle at 25% 25%, rgba(255,255,255,0.1) 2px, transparent 2px), radial-gradient(circle at 75% 75%, rgba(255,255,255,0.1) 2px, transparent 2px); background-size: 60px 60px;"></div>
+   <div class="absolute inset-0 opacity-30" style="background-image: radial-gradient(circle at 25% 25%, rgba(255,255,255,0.1) 2px, transparent 2px), radial-gradient(circle at 75% 75%, rgba(255,255,255,0.1) 2px, transparent 2px); background-size: 60px 60px;"></div>
  
     <div class="relative container mx-auto px-4 py-12 sm:py-16 lg:py-20">
       <!-- الشعار والوصف -->
@@ -143,13 +143,13 @@
       </div>
 
       <!-- الروابط السريعة -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 mb-12 sm:mb-16">
-        <div class="text-center sm:text-right">
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8 mb-8 sm:mb-16">
+        <div class="text-center">
           <h4 class="text-lg sm:text-xl font-semibold mb-4 text-blue-300">روابط مهمة</h4>
           <ul class="space-y-3">
             <li>
               <a [routerLink]="'/عن-الموقع'"
-                 class="text-gray-300 hover:text-blue-400 transition-colors duration-300 flex items-center justify-center sm:justify-end gap-2 group">
+                 class="text-gray-300 hover:text-blue-400 transition-colors duration-300 flex items-center justify-center gap-2 group">
                 <span>عن الموقع</span>
                 <svg class="w-4 h-4 transform group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
@@ -158,7 +158,7 @@
             </li>
             <li>
               <a [routerLink]="'/سياسة-الخصوصية'"
-                 class="text-gray-300 hover:text-blue-400 transition-colors duration-300 flex items-center justify-center sm:justify-end gap-2 group">
+                 class="text-gray-300 hover:text-blue-400 transition-colors duration-300 flex items-center justify-center gap-2 group">
                 <span>سياسة الخصوصية</span>
                 <svg class="w-4 h-4 transform group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
@@ -167,7 +167,7 @@
             </li>
             <li>
               <a [routerLink]="'/الشروط-والاحكام'"
-                 class="text-gray-300 hover:text-blue-400 transition-colors duration-300 flex items-center justify-center sm:justify-end gap-2 group">
+                 class="text-gray-300 hover:text-blue-400 transition-colors duration-300 flex items-center justify-center gap-2 group">
                 <span>الشروط والأحكام</span>
                 <svg class="w-4 h-4 transform group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
@@ -202,10 +202,16 @@
                 <span class="text-sm">📷</span>
               </a>
             </div>
+            <div class="flex justify-center gap-4">
+              <span class="text-xs text-gray-400">فيسبوك</span>
+              <span class="text-xs text-gray-400">تليجرام</span>
+              <span class="text-xs text-gray-400">واتساب</span>
+              <span class="text-xs text-gray-400">إنستجرام</span>
+            </div>
           </div>
         </div>
 
-        <div class="text-center sm:text-left">
+        <div class="text-center hidden md:block">
           <h4 class="text-lg sm:text-xl font-semibold mb-4 text-emerald-300">خدماتنا</h4>
           <ul class="space-y-3">
             <li class="text-gray-300 hover:text-emerald-400 transition-colors duration-300">📚 آلاف الكتب المتنوعة</li>
@@ -216,8 +222,19 @@
         </div>
       </div>
 
+        <div class="text-center md:hidden mb-8 sm:mb-16">
+          <h4 class="text-lg sm:text-xl font-semibold mb-4 text-emerald-300">خدماتنا</h4>
+          <ul class="space-y-3">
+            <li class="text-gray-300 hover:text-emerald-400 transition-colors duration-300">📚 آلاف الكتب المتنوعة</li>
+            <li class="text-gray-300 hover:text-emerald-400 transition-colors duration-300">🚚 توصيل سريع وآمن</li>
+            <li class="text-gray-300 hover:text-emerald-400 transition-colors duration-300">💳 دفع إلكتروني آمن</li>
+            <li class="text-gray-300 hover:text-emerald-400 transition-colors duration-300">🎯 عروض وخصومات مميزة</li>
+          </ul>
+        </div>
+
+
       <!-- إشعار حقوق الملكية الفكرية -->
-      <div class="border-t border-white/10 pt-8">
+      <div class="border-t border-white/10 pt-8 mb-12 sm:mb-4">
         <div class="text-center">
           <p class="text-sm text-gray-400 leading-relaxed max-w-4xl mx-auto">
             <span class="inline-block w-2 h-2 bg-yellow-400 rounded-full ml-2"></span>

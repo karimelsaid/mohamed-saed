@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { AdminService } from '../../services/admin.service';
 import { CommonModule } from '@angular/common';
+import { ModalService } from '../../services/modal.service';
 
 @Component({
   selector: 'app-product-approval',
@@ -18,7 +19,7 @@ export class ProductApprovalComponent implements OnInit {
   successMessage = '';
   approvedCount = 0;
 
-  constructor(private adminService: AdminService) {}
+  constructor(private adminService: AdminService, private modalService: ModalService) {}
 
   ngOnInit(): void {
     this.loadProducts();
@@ -60,7 +61,7 @@ export class ProductApprovalComponent implements OnInit {
       },
       error: () => {
         this.approvingProducts.delete(productId);
-        alert('فشل في الموافقة على المنتج');
+        this.showErrorModal('فشل في الموافقة على المنتج');
       }
     });
   }
@@ -71,12 +72,23 @@ export class ProductApprovalComponent implements OnInit {
         this.loadProducts();
       },
       error: () => {
-        alert('فشل في رفض المنتج');
+        this.showErrorModal('فشل في رفض المنتج');
       }
     });
   }
 
   isApproving(productId: string): boolean {
     return this.approvingProducts.has(productId);
+  }
+
+  // Helper methods for showing modals
+  showErrorModal(message: string): void {
+    this.modalService.openModal({
+      title: 'خطأ',
+      message: message,
+      type: 'error',
+      confirmText: 'موافق',
+      showCancel: false
+    });
   }
 }

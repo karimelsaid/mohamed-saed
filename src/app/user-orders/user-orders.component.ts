@@ -6,6 +6,7 @@ import { take } from 'rxjs/operators';
 import { FormsModule } from '@angular/forms';
 import { environment } from '../../environments/environment';
 import { PaymentService } from '../services/payment.service';
+import { ModalService } from '../services/modal.service';
 
 interface RatedBook {
   bookId: string;
@@ -64,7 +65,7 @@ export class UserOrdersComponent implements OnInit {
   userId: string = '';
   ratedBooks: RatedBook[] = [];
 
-  constructor(private http: HttpClient, private authService: AuthService, private paymentService: PaymentService) {}
+  constructor(private http: HttpClient, private authService: AuthService, private paymentService: PaymentService, private modalService: ModalService) {}
 
   ngOnInit(): void {
     this.authService.user$.subscribe(user => {
@@ -140,10 +141,11 @@ export class UserOrdersComponent implements OnInit {
           this.ratedBooks.push({ bookId, rating });
         }
         this.applyRatingsToOrders();
-        alert('تم إرسال التقييم بنجاح');
+        this.showSuccessModal('تم إرسال التقييم بنجاح');
       },
       error: (err) => {
         console.error('Error submitting rating:', err);
+        this.showErrorModal('فشل في إرسال التقييم. يرجى المحاولة مرة أخرى');
       }
     });
   }
@@ -215,7 +217,7 @@ export class UserOrdersComponent implements OnInit {
 
   resumePayment(order: Order): void {
     if (!this.userId) {
-      alert('يجب تسجيل الدخول لإتمام الدفع');
+      this.showErrorModal('يجب تسجيل الدخول لإتمام الدفع');
       return;
     }
 
@@ -230,14 +232,35 @@ export class UserOrdersComponent implements OnInit {
           if (paymentResponse.sessionUrl) {
             window.location.href = paymentResponse.sessionUrl;
           } else {
-            alert('فشل في الحصول على رابط الدفع');
+            this.showErrorModal('فشل في الحصول على رابط الدفع');
           }
         },
         error: (paymentError) => {
           console.error('خطأ في إنشاء طلب الدفع:', paymentError);
-          alert('حدث خطأ أثناء إنشاء طلب الدفع، يرجى المحاولة مرة أخرى');
+          this.showErrorModal('حدث خطأ أثناء إنشاء طلب الدفع، يرجى المحاولة مرة أخرى');
         }
       });
+    });
+  }
+
+  // Helper methods for showing modals
+  showSuccessModal(message: string): void {
+    this.modalService.openModal({
+      title: 'نجح العملية',
+      message: message,
+      type: 'success',
+      confirmText: 'موافق',
+      showCancel: false
+    });
+  }
+
+  showErrorModal(message: string): void {
+    this.modalService.openModal({
+      title: 'خطأ',
+      message: message,
+      type: 'error',
+      confirmText: 'موافق',
+      showCancel: false
     });
   }
 }

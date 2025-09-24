@@ -3,6 +3,8 @@ import { Router } from '@angular/router';
 import { faChevronLeft, faChevronRight, faSearch } from '@fortawesome/free-solid-svg-icons';
 import { faGooglePlay } from '@fortawesome/free-brands-svg-icons';
 import { DataService } from './services/data.service';
+import { ModalService, ModalConfig } from './services/modal.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-root',
@@ -24,8 +26,10 @@ export class AppComponent {
   allBooks: any[] = []; // جميع الكتب في الموقع
 
   isDarkMode: boolean = false; // Track dark mode state
+  modalConfig: ModalConfig | null = null;
+  private modalSubscription: Subscription | null = null;
 
-  constructor(private router: Router, private dataService: DataService) {}
+  constructor(private router: Router, private dataService: DataService, private modalService: ModalService) {}
 
   ngOnInit(): void {
     // تحقق من وجود صفحة البحث في المسار
@@ -57,6 +61,11 @@ export class AppComponent {
       this.isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
     }
     this.updateDarkModeClass();
+
+    // Subscribe to modal service
+    this.modalSubscription = this.modalService.modal$.subscribe(config => {
+      this.modalConfig = config;
+    });
   }
 
   toggleDarkMode(): void {
@@ -90,5 +99,15 @@ export class AppComponent {
     }).catch(() => {
       alert('فشل نسخ الرقم');
     });
+  }
+
+  ngOnDestroy(): void {
+    if (this.modalSubscription) {
+      this.modalSubscription.unsubscribe();
+    }
+  }
+
+  closeModal(): void {
+    this.modalConfig = null;
   }
 }

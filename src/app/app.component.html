@@ -326,3 +326,18 @@
 </div>
 
 <app-navbar-icons class="block md:hidden bg-blue-950 dark:bg-[#0a1325] p-4 shadow-inner bottom-0 w-full fixed z-50"></app-navbar-icons>
+
+<!-- Global Modal Dialog -->
+<app-modal-dialog
+  *ngIf="modalConfig"
+  [isOpen]="!!modalConfig"
+  [title]="modalConfig.title || ''"
+  [message]="modalConfig.message || ''"
+  [confirmText]="modalConfig.confirmText || 'موافق'"
+  [cancelText]="modalConfig.cancelText || 'إلغاء'"
+  [showCancel]="modalConfig.showCancel || false"
+  [type]="modalConfig.type || 'info'"
+  (confirmed)="modalConfig.action?.() ?? closeModal()"
+  (cancelled)="closeModal()"
+  (closed)="closeModal()">
+</app-modal-dialog>

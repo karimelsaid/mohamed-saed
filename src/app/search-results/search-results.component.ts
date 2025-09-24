@@ -8,6 +8,7 @@ import { faStar as faStarRegular } from '@fortawesome/free-regular-svg-icons';
 import { AuthService } from '../auth/auth.service';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
+import { ModalService } from '../services/modal.service';
 @Component({
   selector: 'app-search-results',
   templateUrl: './search-results.component.html',
@@ -44,7 +45,7 @@ export class SearchResultsComponent implements OnInit {
 
   isLoading = false; // Add loading flag
 
-  constructor(private dataService: DataService, private route: ActivatedRoute, private router: Router, private authService: AuthService, private http: HttpClient) {}
+  constructor(private dataService: DataService, private route: ActivatedRoute, private router: Router, private authService: AuthService, private http: HttpClient, private modalService: ModalService) {}
 
   ngOnInit(): void {
     this.fetchRatingsForBooks();
@@ -132,7 +133,7 @@ this.http.get<{ bookId: string; averageRating: number; ratingCount: number }>(`$
   // Method to submit the book request
   submitBookRequest(): void {
     if (!this.requestedBookName.trim()) {
-      alert('يرجى إدخال اسم الكتاب');
+      this.showErrorModal('يرجى إدخال اسم الكتاب');
       return;
     }
 
@@ -142,7 +143,7 @@ this.http.get<{ bookId: string; averageRating: number; ratingCount: number }>(`$
     const userId = userData.id;
 
     if (!userId) {
-      alert('يرجى تسجيل الدخول لإرسال الطلب');
+      this.showErrorModal('يرجى تسجيل الدخول لإرسال الطلب');
       this.isRequestSubmitting = false;
       return;
     }
@@ -157,7 +158,7 @@ this.http.get<{ bookId: string; averageRating: number; ratingCount: number }>(`$
         }, 2000);
       },
       error: (err: any) => {
-        alert('حدث خطأ أثناء إرسال الطلب. حاول مرة أخرى.');
+        this.showErrorModal('حدث خطأ أثناء إرسال الطلب. حاول مرة أخرى.');
         this.isRequestSubmitting = false;
       }
     });
@@ -428,5 +429,16 @@ switch (imageElement.errorStep) {
     }
 
     return pages;
+  }
+
+  // Helper methods for showing modals
+  showErrorModal(message: string): void {
+    this.modalService.openModal({
+      title: 'خطأ',
+      message: message,
+      type: 'error',
+      confirmText: 'موافق',
+      showCancel: false
+    });
   }
 }

@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { AdminService } from '../../services/admin.service';
 import { CommonModule } from '@angular/common';
+import { ModalService } from '../../services/modal.service';
 
 @Component({
   selector: 'app-merchant-management',
@@ -33,7 +34,7 @@ export class MerchantManagementComponent implements OnInit {
   productUpdateRequests: any[] = [];
   loadingUpdateRequests = false;
 
-  constructor(private adminService: AdminService) {}
+  constructor(private adminService: AdminService, private modalService: ModalService) {}
 
   ngOnInit(): void {
     this.loadMerchants();
@@ -50,7 +51,7 @@ export class MerchantManagementComponent implements OnInit {
         console.error('Error loading merchants:', error);
         this.loading = false;
         // Show user-friendly error message instead of alert
-        alert(error.message || 'فشل في تحميل التجار');
+        this.showErrorModal(error.message || 'فشل في تحميل التجار');
       }
     });
   }
@@ -59,12 +60,12 @@ export class MerchantManagementComponent implements OnInit {
     if (confirm('هل أنت متأكد من الموافقة على هذا التاجر؟')) {
       this.adminService.updateMerchantApproval(merchant._id, true).subscribe({
         next: () => {
-          alert('تم الموافقة على التاجر بنجاح');
+          this.showSuccessModal('تم الموافقة على التاجر بنجاح');
           this.loadMerchants();
         },
         error: (error) => {
           console.error('Error approving merchant:', error);
-          alert(error.message || 'فشل في الموافقة على التاجر');
+          this.showErrorModal(error.message || 'فشل في الموافقة على التاجر');
         }
       });
     }
@@ -74,12 +75,12 @@ export class MerchantManagementComponent implements OnInit {
     if (confirm('هل أنت متأكد من رفض هذا التاجر؟')) {
       this.adminService.updateMerchantApproval(merchant._id, false).subscribe({
         next: () => {
-          alert('تم رفض التاجر بنجاح');
+          this.showSuccessModal('تم رفض التاجر بنجاح');
           this.loadMerchants();
         },
         error: (error) => {
           console.error('Error rejecting merchant:', error);
-          alert(error.message || 'فشل في رفض التاجر');
+          this.showErrorModal(error.message || 'فشل في رفض التاجر');
         }
       });
     }
@@ -89,12 +90,12 @@ export class MerchantManagementComponent implements OnInit {
     if (confirm('هل أنت متأكد من إيقاف هذا التاجر؟')) {
       this.adminService.updateMerchantSuspension(merchant._id, true).subscribe({
         next: () => {
-          alert('تم إيقاف التاجر بنجاح');
+          this.showSuccessModal('تم إيقاف التاجر بنجاح');
           this.loadMerchants();
         },
         error: (error) => {
           console.error('Error suspending merchant:', error);
-          alert(error.message || 'فشل في إيقاف التاجر');
+          this.showErrorModal(error.message || 'فشل في إيقاف التاجر');
         }
       });
     }
@@ -104,12 +105,12 @@ export class MerchantManagementComponent implements OnInit {
     if (confirm('هل أنت متأكد من تفعيل هذا التاجر؟')) {
       this.adminService.updateMerchantSuspension(merchant._id, false).subscribe({
         next: () => {
-          alert('تم تفعيل التاجر بنجاح');
+          this.showSuccessModal('تم تفعيل التاجر بنجاح');
           this.loadMerchants();
         },
         error: (error) => {
           console.error('Error activating merchant:', error);
-          alert(error.message || 'فشل في تفعيل التاجر');
+          this.showErrorModal(error.message || 'فشل في تفعيل التاجر');
         }
       });
     }
@@ -129,7 +130,7 @@ export class MerchantManagementComponent implements OnInit {
       error: (error) => {
         console.error('Error loading merchant products:', error);
         this.loadingProducts = false;
-        alert(error.message || 'فشل في تحميل منتجات التاجر');
+        this.showErrorModal(error.message || 'فشل في تحميل منتجات التاجر');
       }
     });
   }
@@ -178,7 +179,7 @@ export class MerchantManagementComponent implements OnInit {
       };
     }
 
-    alert('تم حفظ التغييرات بنجاح');
+    this.showSuccessModal('تم حفظ التغييرات بنجاح');
     this.closeEditModal();
   }
 
@@ -186,12 +187,12 @@ export class MerchantManagementComponent implements OnInit {
     if (confirm('هل أنت متأكد من الموافقة على هذا المنتج؟')) {
       this.adminService.updateProductApproval(product._id, 'approved').subscribe({
         next: () => {
-          alert('تمت الموافقة على المنتج بنجاح');
+          this.showSuccessModal('تمت الموافقة على المنتج بنجاح');
           this.viewMerchantProducts(this.selectedMerchant);
         },
         error: (error) => {
           console.error('Error approving product:', error);
-          alert(error.message || 'فشل في الموافقة على المنتج');
+          this.showErrorModal(error.message || 'فشل في الموافقة على المنتج');
         }
       });
     }
@@ -201,12 +202,12 @@ export class MerchantManagementComponent implements OnInit {
     if (confirm('هل أنت متأكد من رفض هذا المنتج؟')) {
       this.adminService.updateProductApproval(product._id, 'rejected').subscribe({
         next: () => {
-          alert('تم رفض المنتج بنجاح');
+          this.showSuccessModal('تم رفض المنتج بنجاح');
           this.viewMerchantProducts(this.selectedMerchant);
         },
         error: (error) => {
           console.error('Error rejecting product:', error);
-          alert(error.message || 'فشل في رفض المنتج');
+          this.showErrorModal(error.message || 'فشل في رفض المنتج');
         }
       });
     }
@@ -226,7 +227,7 @@ export class MerchantManagementComponent implements OnInit {
       error: (error) => {
         console.error('Error loading product update requests:', error);
         this.loadingUpdateRequests = false;
-        alert(error.message || 'فشل في تحميل طلبات تحديث المنتجات');
+        this.showErrorModal(error.message || 'فشل في تحميل طلبات تحديث المنتجات');
       }
     });
   }
@@ -241,12 +242,12 @@ export class MerchantManagementComponent implements OnInit {
     if (confirm('هل أنت متأكد من الموافقة على طلب تحديث هذا المنتج؟')) {
       this.adminService.updateProductUpdateRequest(request._id, 'approved').subscribe({
         next: () => {
-          alert('تمت الموافقة على طلب التحديث بنجاح');
+          this.showSuccessModal('تمت الموافقة على طلب التحديث بنجاح');
           this.viewProductUpdateRequests();
         },
         error: (error) => {
           console.error('Error approving update request:', error);
-          alert(error.message || 'فشل في الموافقة على طلب التحديث');
+          this.showErrorModal(error.message || 'فشل في الموافقة على طلب التحديث');
         }
       });
     }
@@ -256,14 +257,35 @@ export class MerchantManagementComponent implements OnInit {
     if (confirm('هل أنت متأكد من رفض طلب تحديث هذا المنتج؟')) {
       this.adminService.updateProductUpdateRequest(request._id, 'rejected').subscribe({
         next: () => {
-          alert('تم رفض طلب التحديث بنجاح');
+          this.showSuccessModal('تم رفض طلب التحديث بنجاح');
           this.viewProductUpdateRequests();
         },
         error: (error) => {
           console.error('Error rejecting update request:', error);
-          alert(error.message || 'فشل في رفض طلب التحديث');
+          this.showErrorModal(error.message || 'فشل في رفض طلب التحديث');
         }
       });
     }
+  }
+
+  // Helper methods for showing modals
+  showSuccessModal(message: string): void {
+    this.modalService.openModal({
+      title: 'نجح العملية',
+      message: message,
+      type: 'success',
+      confirmText: 'موافق',
+      showCancel: false
+    });
+  }
+
+  showErrorModal(message: string): void {
+    this.modalService.openModal({
+      title: 'خطأ',
+      message: message,
+      type: 'error',
+      confirmText: 'موافق',
+      showCancel: false
+    });
   }
 }

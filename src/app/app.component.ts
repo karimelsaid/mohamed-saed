@@ -36,6 +36,13 @@ export class AppComponent {
       }
     });
 
+    // Scroll to top on navigation
+    this.router.events.subscribe((event: any) => {
+      if (event.urlAfterRedirects) {
+        window.scrollTo(0, 0);
+      }
+    });
+
     // Load allBooks data here
     this.dataService.getData().subscribe((data: any) => {
       this.allBooks = data;

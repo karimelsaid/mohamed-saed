@@ -371,8 +371,7 @@ body:hover .geometric-shape {
 
     /* Parallax effect on scroll */
     body {
-        transform: translateZ(0);
-        will-change: transform;
+        /* Removed transform to fix fixed positioning */
     }
 }
 

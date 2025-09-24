@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { AuthService } from '../auth/auth.service';
 import { CommonModule, NgForOf } from '@angular/common';
 import { take } from 'rxjs/operators';
@@ -64,6 +64,7 @@ export class UserOrdersComponent implements OnInit {
 
   userId: string = '';
   ratedBooks: RatedBook[] = [];
+  showArchived: boolean = false;
 
   constructor(private http: HttpClient, private authService: AuthService, private paymentService: PaymentService, private modalService: ModalService) {}
 
@@ -79,7 +80,11 @@ export class UserOrdersComponent implements OnInit {
 
   loadOrders(userId: string): void {
     this.loading = true;
-    this.http.get<Order[]>(`${environment.apiBaseUrl}/orders/user-orders/${userId}`).subscribe({
+    let httpParams = new HttpParams();
+    if (this.showArchived) {
+      httpParams = httpParams.set('includeArchived', 'true');
+    }
+    this.http.get<Order[]>(`${environment.apiBaseUrl}/orders/user-orders/${userId}`, { params: httpParams }).subscribe({
       next: (data) => {
         this.allOrders = data; // Store all orders
         this.totalOrders = data.length;
@@ -195,6 +200,36 @@ export class UserOrdersComponent implements OnInit {
     });
   }
 
+  archiveOrder(orderId: string): void {
+    console.log(`Archiving order with ID: ${orderId}`); // Log the order ID
+    this.http.patch(`${environment.apiBaseUrl}/orders/update-status/${orderId}`, { status: 'مؤرشف' }).subscribe({
+      next: () => {
+        // Reload orders to filter out archived
+        this.loadOrders(this.userId);
+        this.showSuccessModal('تم أرشفة الطلب بنجاح');
+      },
+      error: (err) => {
+        console.error('Error archiving order:', err);
+        this.showErrorModal('فشل في أرشفة الطلب. يرجى المحاولة مرة أخرى');
+      }
+    });
+  }
+
+  restoreOrder(orderId: string): void {
+    console.log(`Restoring order with ID: ${orderId}`); // Log the order ID
+    this.http.patch(`${environment.apiBaseUrl}/orders/update-status/${orderId}`, { status: 'تم التسليم' }).subscribe({
+      next: () => {
+        // Reload orders
+        this.loadOrders(this.userId);
+        this.showSuccessModal('تم استعادة الطلب بنجاح');
+      },
+      error: (err) => {
+        console.error('Error restoring order:', err);
+        this.showErrorModal('فشل في استعادة الطلب. يرجى المحاولة مرة أخرى');
+      }
+    });
+  }
+
   calculateExpectedDeliveryDate(orderDate: string): string {
     const date = new Date(orderDate);
     const startDate = new Date(date);
@@ -262,5 +297,10 @@ export class UserOrdersComponent implements OnInit {
       confirmText: 'موافق',
       showCancel: false
     });
+  }
+
+  toggleArchived(): void {
+    this.showArchived = !this.showArchived;
+    this.loadOrders(this.userId);
   }
 }

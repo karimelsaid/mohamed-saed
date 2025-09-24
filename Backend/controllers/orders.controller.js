@@ -79,28 +79,31 @@ exports.submitOrder = async (req, res) => {
 exports.getUserOrders = async (req, res) => {
   try {
     const { userId } = req.params;
+    const { includeArchived } = req.query;
     const user = await User.findById(userId).select('orders');
 
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Transform orders to replace product.book with product.bookName or product.bookId
-    const transformedOrders = user.orders.map(order => {
-      const transformedProducts = order.products.map(product => ({
-        book: product.bookName ? product.bookName : product.book,
-        bookId: product.bookId || '',  // Added bookId here for frontend
-        quantity: product.quantity
-      }));
-      return {
-        _id: order._id,
-        products: transformedProducts,
-        printProjects: order.printProjects || [], // Include printProjects in response
-        status: order.status,
-        orderDate: order.date,
-        totalAmount: order.totalAmount,  // Added totalAmount here
-      };
-    });
+    // Transform orders to replace product.book with product.bookName or product.bookId, filter out archived unless requested
+    const transformedOrders = user.orders
+      .filter(order => includeArchived === 'true' || order.status !== 'مؤرشف')
+      .map(order => {
+        const transformedProducts = order.products.map(product => ({
+          book: product.bookName ? product.bookName : product.book,
+          bookId: product.bookId || '',  // Added bookId here for frontend
+          quantity: product.quantity
+        }));
+        return {
+          _id: order._id,
+          products: transformedProducts,
+          printProjects: order.printProjects || [], // Include printProjects in response
+          status: order.status,
+          orderDate: order.date,
+          totalAmount: order.totalAmount,  // Added totalAmount here
+        };
+      });
 
     res.status(200).json(transformedOrders);
   } catch (error) {
@@ -174,7 +177,7 @@ exports.updateOrderStatus = async (req, res) => {
     }
 
     // Validate status value
-    const validStatuses = ['قيد الإنتظار', 'تم الإلغاء', 'تم الشحن', 'تم الاستلام', 'تم التسليم'];
+    const validStatuses = ['قيد الإنتظار', 'تم الإلغاء', 'تم الشحن', 'تم الاستلام', 'تم التسليم', 'مؤرشف'];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ message: 'Invalid status value' });
     }

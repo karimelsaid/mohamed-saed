@@ -1,36 +1,14 @@
-# Admin Components Modal Integration - Task Completion
+# TODO: Add Archive Button for Delivered Orders
 
-## Task Overview
-Replace all `alert()` calls in admin components with user-friendly modal dialogs using the ModalService.
+## Completed Tasks
+- [x] Update backend valid statuses to include 'مؤرشف'
+- [x] Modify getUserOrders to filter out archived orders by default, but include when includeArchived=true
+- [x] Add archiveOrder method in user-orders.component.ts
+- [x] Add archive button in HTML for status 'تم التسليم'
+- [x] Add showArchived property and toggleArchived method
+- [x] Add toggle button in HTML to show/hide archived orders
+- [x] Add restoreOrder method for restoring archived orders
+- [x] Add restore button for status 'مؤرشف'
 
-## Components Updated
-- [x] `src/app/admin/merchant-management/merchant-management.component.ts`
-- [x] `src/app/admin/product-approval/product-approval.component.ts`
-
-## Changes Made
-
-### Merchant Management Component
-- [x] Added ModalService import
-- [x] Updated constructor to inject ModalService
-- [x] Added helper methods: `showSuccessModal()` and `showErrorModal()`
-- [x] Replaced all alert() calls with appropriate modal calls:
-  - Success messages for approvals, rejections, suspensions, activations
-  - Error messages for failed operations
-  - Product save confirmations
-
-### Product Approval Component
-- [x] Added ModalService import
-- [x] Updated constructor to inject ModalService
-- [x] Added helper method: `showErrorModal()`
-- [x] Replaced alert() calls for approval/rejection failures with modal dialogs
-
-## Benefits
-- Improved user experience with consistent modal dialogs
-- Better accessibility and visual feedback
-- Consistent error handling across admin components
-- Maintains existing functionality while enhancing UI/UX
-
-## Testing Recommendations
-- Test all admin operations (approve/reject merchants, approve/reject products)
-- Verify modal dialogs appear correctly for both success and error scenarios
-- Ensure no functionality is broken by the changes
+## Pending Tasks
+- [ ] Test the functionality: archive, toggle view, restore

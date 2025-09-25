@@ -1,25 +1,62 @@
-<div class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 overflow-auto p-4" (click)="onClose()">
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 sm:p-8 w-full max-w-4xl relative" (click)="$event.stopPropagation()">
+<div class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4" (click)="onClose()">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 sm:p-8 w-full max-w-4xl max-h-[90vh] overflow-y-auto relative" (click)="$event.stopPropagation()">
       <!-- Close Button -->
       <button (click)="onClose()" class="absolute top-4 right-4 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-2xl font-bold z-10">
         &times;
       </button>
       <!-- Progress Indicator -->
-      <div class="flex items-center justify-center mb-6">
-        <div class="flex items-center space-x-4">
-          <div class="flex items-center">
-            <div [ngClass]="{'bg-blue-600 text-white': currentStep >= 1, 'bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300': currentStep < 1}" class="w-8 h-8 rounded-full flex items-center justify-center">1</div>
-            <span class="ml-2 text-sm font-medium" [ngClass]="{'text-gray-700 dark:text-gray-300': currentStep >= 1, 'text-gray-500 dark:text-gray-400': currentStep < 1}">السلة</span>
+      <div class="mb-6">
+        <!-- Mobile Layout (Vertical) -->
+        <div class="block sm:hidden">
+          <div class="flex flex-col items-center space-y-4 mb-6">
+            <div class="flex items-center space-x-4 rtl:space-x-reverse w-full max-w-xs justify-between">
+              <div class="flex flex-col items-center space-y-1">
+                <div [ngClass]="{'bg-blue-600 text-white': currentStep >= 1, 'bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300': currentStep < 1}" class="w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold">
+                  <span class="text-sm">1</span>
+                </div>
+                <span class="text-xs font-medium text-center" [ngClass]="{'text-gray-700 dark:text-gray-300': currentStep >= 1, 'text-gray-500 dark:text-gray-400': currentStep < 1}">السلة</span>
+              </div>
+              <div class="flex-1 h-0.5 mx-2 bg-gray-300 dark:bg-gray-600" [ngClass]="{'bg-blue-600': currentStep >= 2}"></div>
+              <div class="flex flex-col items-center space-y-1">
+                <div [ngClass]="{'bg-blue-600 text-white': currentStep >= 2, 'bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300': currentStep < 2}" class="w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold">
+                  <span class="text-sm">2</span>
+                </div>
+                <span class="text-xs font-medium text-center" [ngClass]="{'text-gray-700 dark:text-gray-300': currentStep >= 2, 'text-gray-500 dark:text-gray-400': currentStep < 2}">العنوان</span>
+              </div>
+              <div class="flex-1 h-0.5 mx-2 bg-gray-300 dark:bg-gray-600" [ngClass]="{'bg-blue-600': currentStep >= 3}"></div>
+              <div class="flex flex-col items-center space-y-1">
+                <div [ngClass]="{'bg-blue-600 text-white': currentStep >= 3, 'bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300': currentStep < 3}" class="w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold">
+                  <span class="text-sm">3</span>
+                </div>
+                <span class="text-xs font-medium text-center" [ngClass]="{'text-gray-700 dark:text-gray-300': currentStep >= 3, 'text-gray-500 dark:text-gray-400': currentStep < 3}">الدفع</span>
+              </div>
+            </div>
           </div>
-          <div [ngClass]="{'bg-blue-600': currentStep >= 2, 'bg-gray-300 dark:bg-gray-600': currentStep < 2}" class="w-8 h-0.5"></div>
-          <div class="flex items-center">
-            <div [ngClass]="{'bg-blue-600 text-white': currentStep >= 2, 'bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300': currentStep < 2}" class="w-8 h-8 rounded-full flex items-center justify-center">2</div>
-            <span class="ml-2 text-sm font-medium" [ngClass]="{'text-gray-700 dark:text-gray-300': currentStep >= 2, 'text-gray-500 dark:text-gray-400': currentStep < 2}">العنوان</span>
-          </div>
-          <div [ngClass]="{'bg-blue-600': currentStep >= 3, 'bg-gray-300 dark:bg-gray-600': currentStep < 3}" class="w-8 h-0.5"></div>
-          <div class="flex items-center">
-            <div [ngClass]="{'bg-blue-600 text-white': currentStep >= 3, 'bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300': currentStep < 3}" class="w-8 h-8 rounded-full flex items-center justify-center">3</div>
-            <span class="ml-2 text-sm font-medium" [ngClass]="{'text-gray-700 dark:text-gray-300': currentStep >= 3, 'text-gray-500 dark:text-gray-400': currentStep < 3}">الدفع</span>
+        </div>
+
+        <!-- Desktop Layout (Horizontal) -->
+        <div class="hidden sm:flex items-center justify-center">
+          <div class="flex items-center space-x-2 sm:space-x-4">
+            <div class="flex items-center">
+              <div [ngClass]="{'bg-blue-600 text-white': currentStep >= 1, 'bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300': currentStep < 1}" class="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-sm font-bold">
+                <span class="text-xs sm:text-sm">1</span>
+              </div>
+              <span class="ml-2 text-sm font-medium" [ngClass]="{'text-gray-700 dark:text-gray-300': currentStep >= 1, 'text-gray-500 dark:text-gray-400': currentStep < 1}">السلة</span>
+            </div>
+            <div [ngClass]="{'bg-blue-600': currentStep >= 2, 'bg-gray-300 dark:bg-gray-600': currentStep < 2}" class="w-8 sm:w-12 h-0.5"></div>
+            <div class="flex items-center">
+              <div [ngClass]="{'bg-blue-600 text-white': currentStep >= 2, 'bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300': currentStep < 2}" class="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-sm font-bold">
+                <span class="text-xs sm:text-sm">2</span>
+              </div>
+              <span class="ml-2 text-sm font-medium" [ngClass]="{'text-gray-700 dark:text-gray-300': currentStep >= 2, 'text-gray-500 dark:text-gray-400': currentStep < 2}">العنوان</span>
+            </div>
+            <div [ngClass]="{'bg-blue-600': currentStep >= 3, 'bg-gray-300 dark:bg-gray-600': currentStep < 3}" class="w-8 sm:w-12 h-0.5"></div>
+            <div class="flex items-center">
+              <div [ngClass]="{'bg-blue-600 text-white': currentStep >= 3, 'bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300': currentStep < 3}" class="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-sm font-bold">
+                <span class="text-xs sm:text-sm">3</span>
+              </div>
+              <span class="ml-2 text-sm font-medium" [ngClass]="{'text-gray-700 dark:text-gray-300': currentStep >= 3, 'text-gray-500 dark:text-gray-400': currentStep < 3}">الدفع</span>
+            </div>
           </div>
         </div>
       </div>
@@ -209,9 +246,13 @@
         إلغاء
       </button>
       <button (click)="completePurchase()"
-              [disabled]="!hasPurchasableItems || !isAddressConfirmed || !isAddressComplete"
-              class="bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-700 dark:to-indigo-700 text-white py-3 px-6 rounded-lg hover:from-blue-700 hover:to-indigo-700 dark:hover:from-blue-800 dark:hover:to-indigo-800 transition-colors shadow-lg font-bold text-lg disabled:bg-gray-400 disabled:cursor-not-allowed transform hover:scale-105">
-        إتمام الشراء
+              [disabled]="!hasPurchasableItems || !isAddressConfirmed || !isAddressComplete || isProcessing"
+              class="bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-700 dark:to-indigo-700 text-white py-3 px-6 rounded-lg hover:from-blue-700 hover:to-indigo-700 dark:hover:from-blue-800 dark:hover:to-indigo-800 transition-colors shadow-lg font-bold text-lg disabled:bg-gray-400 disabled:cursor-not-allowed transform hover:scale-105 flex items-center justify-center">
+        <svg *ngIf="isProcessing" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        {{ isProcessing ? 'جاري المعالجة...' : 'إتمام الشراء' }}
       </button>
     </div>
     <!-- Security Badge -->
@@ -229,15 +270,22 @@
     </div>
   </div>
 
-  <!-- رسالة النجاح -->
-  <div *ngIf="showSuccessMessage" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+  <!-- نافذة تأكيد الشراء -->
+  <div *ngIf="showPurchaseConfirmation" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
     <div class="bg-white dark:bg-gray-800 rounded-2xl p-8 max-w-md w-full mx-4 text-center shadow-2xl relative overflow-hidden">
-      <div class="absolute inset-0 bg-gradient-to-br from-green-50 to-blue-50 dark:from-gray-900 dark:to-gray-800 opacity-50"></div>
+      <div class="absolute inset-0 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800 opacity-50"></div>
       <div class="relative z-10">
-        <div class="text-6xl mb-4 animate-bounce">🎉</div>
-        <h3 class="text-2xl font-bold text-green-600 dark:text-green-400 mb-2">تمت عملية الشراء بنجاح!</h3>
-        <p class="text-gray-600 dark:text-gray-400 mb-6">📚 سيتم تحديث سلة التسوق تلقائياً</p>
-        <button (click)="onClose()" class="bg-green-600 text-white py-2 px-6 rounded-lg hover:bg-green-700 transition-colors shadow-md">إغلاق</button>
+        <div class="text-6xl mb-4 animate-pulse">💳</div>
+        <h3 class="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-4">تم الشراء بنجاح!</h3>
+        <p class="text-gray-600 dark:text-gray-400 mb-6 leading-relaxed">سيتم توجيهك إلى صفحة الدفع الآمنة لحظياً. يرجى عدم إغلاق الصفحة أو الضغط مرة أخرى.</p>
+        <div class="flex flex-col sm:flex-row gap-3 justify-center">
+          <button (click)="executePurchase()" class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 px-6 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg font-semibold">
+            متابعة إلى الدفع
+          </button>
+          <button (click)="cancelPurchase()" class="bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-gray-200 py-3 px-6 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-700 transition-colors shadow-md">
+            إلغاء
+          </button>
+        </div>
       </div>
     </div>
   </div>

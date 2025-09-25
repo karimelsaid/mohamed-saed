@@ -52,23 +52,19 @@ export class BookDetailsComponent implements OnInit {
 
   ngOnInit(): void {
     this.route.paramMap.subscribe(paramMap => {
-      let name = paramMap.get('name');
-      if (name !== null) {
-        const trimmedName = name.trim();
-        console.log('BookDetailsComponent: name from URL:', trimmedName);
+      let id = paramMap.get('id');
+      if (id !== null) {
+        const trimmedId = id.trim();
+        console.log('BookDetailsComponent: id from URL:', trimmedId);
         this.loading = true;
         this.error = null;
         this.dataService.getData().subscribe({
           next: (books: Book[]) => {
             console.log('BookDetailsComponent: number of books fetched:', books.length);
-            console.log('BookDetailsComponent: searching for book with name:', trimmedName);
-            this.book = books.find(b => {
-              const safeName = this.getBookSlug(b.product_name);
-              console.log(`Checking book name: ${safeName}`);
-              return safeName === trimmedName;
-            });
+            console.log('BookDetailsComponent: searching for book with id:', trimmedId);
+            this.book = books.find(b => b.products_id.toString() === trimmedId);
             if (!this.book) {
-              console.warn('BookDetailsComponent: book not found for name:', trimmedName);
+              console.warn('BookDetailsComponent: book not found for id:', trimmedId);
               this.error = 'الكتاب غير موجود';
               this.loading = false;
             } else {
@@ -81,7 +77,7 @@ export class BookDetailsComponent implements OnInit {
           }
         });
       } else {
-        this.error = 'اسم الكتاب غير موجود في الرابط';
+        this.error = 'معرف الكتاب غير موجود في الرابط';
         this.loading = false;
       }
     });
@@ -109,7 +105,7 @@ export class BookDetailsComponent implements OnInit {
   // دالة نسخ الرابط
   copyBookLink(): void {
     if (!this.book) return;
-    const url = window.location.origin + '/book/' + this.getBookSlug(this.book.product_name);
+    const url = window.location.origin + '/book/' + this.book.products_id + '/' + this.getBookSlug(this.book.product_name);
     navigator.clipboard.writeText(url).then(() => {
       this.showCopySuccess = true;
       setTimeout(() => this.showCopySuccess = false, 2000);

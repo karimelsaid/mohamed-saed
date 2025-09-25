@@ -28,6 +28,8 @@ export class CheckoutModalComponent implements OnInit {
   shippingCost: number = 0;
   isLoading = true;
   showSuccessMessage: boolean = false;
+  showPurchaseConfirmation: boolean = false;
+  isProcessing: boolean = false;
   faCheck = faCheck;
   faHandPointLeft = faHandPointLeft
   // بيانات المستخدم
@@ -450,6 +452,13 @@ this.dataService.updateUserProfile(this.userProfile).subscribe({
   }
 
 completePurchase(): void {
+  this.isProcessing = true;
+  this.showPurchaseConfirmation = true;
+}
+
+executePurchase(): void {
+  this.showPurchaseConfirmation = false;
+
   const purchasedItems = this.cartItems
     .filter(item => item.product_quantity > 0);
 
@@ -483,27 +492,36 @@ completePurchase(): void {
                   window.location.href = paymentResponse.sessionUrl;
                 } else {
                   alert('فشل في الحصول على رابط الدفع');
+                  this.isProcessing = false;
                 }
               },
               error: (paymentError) => {
                 console.error('خطأ في إنشاء طلب الدفع:', paymentError);
                 alert('حدث خطأ أثناء إنشاء طلب الدفع، يرجى المحاولة مرة أخرى');
+                this.isProcessing = false;
               }
             });
           } else {
             alert('بيانات الطلب غير مكتملة للدفع');
+            this.isProcessing = false;
           }
 
           // باقي الكود كما هو لتحديث العنوان، السلة، والطلبات
         },
         error: (err) => {
           alert('حدث خطأ أثناء إتمام الشراء، يرجى المحاولة مرة أخرى');
+          this.isProcessing = false;
         }
       });
     } else {
       alert('يجب تسجيل الدخول لإتمام الشراء');
     }
   });
+}
+
+cancelPurchase(): void {
+  this.showPurchaseConfirmation = false;
+  this.isProcessing = false;
 }
 
 }

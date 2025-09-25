@@ -308,6 +308,18 @@ export class NavbarIconsComponent implements OnInit {
     }).unsubscribe();
   }
 
+  handleNotificationClick(notification: Notification): void {
+    // Mark as read
+    this.markNotificationAsRead(notification);
+
+    // Navigate based on type
+    if (notification.type === 'order') {
+      this.router.navigate(['/requests']);
+      this.showNotificationsDropdown = false; // Close dropdown
+    }
+    // Add more types if needed
+  }
+
   openAccountModal(): void {
     this.accountModal.openModal();
     this.showAccountModal = true;

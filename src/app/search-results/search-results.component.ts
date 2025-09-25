@@ -60,7 +60,8 @@ export class SearchResultsComponent implements OnInit {
   // دالة نسخ رابط الكتاب
   copyBookLink(book: Book): void {
     if (!book) return;
-    const url = window.location.origin + '/book/' + this.getBookSlug(book.product_name);
+      const url = window.location.origin + '/book/' + book.products_id + '/' + this.getBookSlug(book.product_name);
+
     navigator.clipboard.writeText(url).then(() => {
       this.showCopySuccess = true;
       this.copiedBookId = book.products_id;

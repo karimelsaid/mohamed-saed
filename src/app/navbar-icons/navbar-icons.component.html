@@ -52,44 +52,96 @@
           class="absolute sm:-top-1/2 right-0 bg-red-600 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center cursor-pointer">
       {{ unreadCount }}
     </span>
-<!-- Notifications Dropdown -->
+
+<!-- Notifications Dropdown mobile -->
     <div *ngIf="showNotificationsDropdown"
-      class="rtl absolute right-2 sm:right-4 bottom-16 md:top-full mt-4 w-56 md:w-80 max-h-96 bg-white dark:bg-gray-800  dark:border-gray-700 rounded-2xl shadow-xl z-50 flex flex-col"
+      class="rtl md:hidden block absolute -right-8 sm:right-4 bottom-16 md:top-full mt-4 w-64 md:w-80 max-h-96 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-2xl z-50 overflow-hidden"
+      style="box-shadow: 0 10px 25px rgba(0,0,0,0.1);"
     >
-      <div *ngIf="notifications.length === 0" class="p-4 text-center text-gray-700 dark:text-gray-300 text-sm bg-white dark:bg-gray-800">
-        لا توجد إشعارات
+
+      <!-- Header -->
+      <div class="bg-gray-50 dark:bg-gray-700 px-4 py-3 border-b border-gray-200 dark:border-gray-600">
+        <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">الإشعارات</h3>
       </div>
 
-      <div
-        *ngFor="let notification of notifications"
-        class="p-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 transition-colors cursor-pointer"
-        [ngClass]="{ 'bg-gray-100 dark:bg-gray-700': !notification.read }"
-        (click)="markNotificationAsRead(notification)"
-      >
-        <div class="text-sm text-gray-800 dark:text-gray-200 flex-1">
-          {{ notification.message }}
-        </div>
+      <!-- No notifications -->
+      <div *ngIf="notifications.length === 0" class="p-4 text-center text-gray-500 dark:text-gray-400 text-sm">
+        لا توجد إشعارات جديدة
+      </div>
 
-        <div class="flex gap-3 text-sm">
-          <button
-            class="text-blue-500 hover:text-blue-700 transition"
-            (click)="markNotificationAsRead(notification); $event.stopPropagation();"
-          >
-            وضع كمقروء
-          </button>
-          <button
-            class="text-red-500 hover:text-red-700 transition"
-            (click)="deleteNotification(notification); $event.stopPropagation();"
-            title="حذف الإشعار"
-          >
-            <fa-icon [icon]="faTrash"></fa-icon>
-          </button>
+      <!-- Notifications list -->
+      <div class="max-h-80 overflow-y-auto">
+        <div
+          *ngFor="let notification of notifications"
+          class="p-4 border-b border-gray-100 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+          [ngClass]="{ 'bg-blue-50 dark:bg-blue-900/20': !notification.read }"
+          (click)="handleNotificationClick(notification)"
+        >
+          <div class="flex justify-between items-start">
+            <div class="flex-1 text-sm text-gray-800 dark:text-gray-200 leading-relaxed">
+              {{ notification.message }}
+            </div>
+            <button
+              class="text-red-500 hover:text-red-700 transition ml-2 flex-shrink-0"
+              (click)="deleteNotification(notification); $event.stopPropagation();"
+              title="حذف الإشعار"
+            >
+              <fa-icon [icon]="faTrash" class="text-xs"></fa-icon>
+            </button>
+          </div>
+          <div class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+            {{ notification.createdAt ? (notification.createdAt | date:'short') : 'غير محدد' }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+<!-- Notifications Dropdown -->
+    <div *ngIf="showNotificationsDropdown"
+      class="rtl hidden md:block absolute right-2 sm:right-4 top-full mt-4 w-64 md:w-80 max-h-96 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-2xl z-50 overflow-hidden"
+      style="box-shadow: 0 10px 25px rgba(0,0,0,0.1);"
+    >
+
+      <!-- Header -->
+      <div class="bg-gray-50 dark:bg-gray-700 px-4 py-3 border-b border-gray-200 dark:border-gray-600">
+        <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">الإشعارات</h3>
+      </div>
+
+      <!-- No notifications -->
+      <div *ngIf="notifications.length === 0" class="p-4 text-center text-gray-500 dark:text-gray-400 text-sm">
+        لا توجد إشعارات جديدة
+      </div>
+
+      <!-- Notifications list -->
+      <div class="max-h-80 overflow-y-auto">
+        <div
+          *ngFor="let notification of notifications"
+          class="p-4 border-b border-gray-100 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+          [ngClass]="{ 'bg-blue-50 dark:bg-blue-900/20': !notification.read }"
+          (click)="handleNotificationClick(notification)"
+        >
+          <div class="flex justify-between items-start">
+            <div class="flex-1 text-sm text-gray-800 dark:text-gray-200 leading-relaxed">
+              {{ notification.message }}
+            </div>
+            <button
+              class="text-red-500 hover:text-red-700 transition ml-2 flex-shrink-0"
+              (click)="deleteNotification(notification); $event.stopPropagation();"
+              title="حذف الإشعار"
+            >
+              <fa-icon [icon]="faTrash" class="text-xs"></fa-icon>
+            </button>
+          </div>
+          <div class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+            {{ notification.createdAt ? (notification.createdAt | date:'short') : 'غير محدد' }}
+          </div>
         </div>
       </div>
     </div>
 
 
   </div>
+
   <!-- ايقونة requests -->
    <div class="md:flex">
      <div class="relative flex flex-col sm:flex-row items-center cursor-pointer " [ngClass]="{'text-orange-400': isOrdersActive}"  routerLink="/requests" >
@@ -131,4 +183,8 @@
     <span [ngClass]="{'text-orange-400': merchantLink.isActive, 'text-white dark:text-gray-300': !merchantLink.isActive}" class="ml-1 text-sm sm:text-x text-centers">التحكم</span>
   </div>
 </div>
+
+<!-- Backdrop for closing notifications -->
+<div *ngIf="showNotificationsDropdown" class="fixed inset-0 bg-black bg-opacity-50 z-40" (click)="toggleNotificationsDropdown()"></div>
+
 <app-account-modal #accountModal (modalClosed)="showAccountModal = false"></app-account-modal>

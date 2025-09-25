@@ -68,7 +68,7 @@ const routes: Routes = [
     }
   },
   { path: 'merchant/:id', component: MerchantProfileComponent },
-  { path: 'book/:name', component: BookDetailsComponent },
+  { path: 'book/:id/:name?', component: BookDetailsComponent },
   { path: '', redirectTo: '/Home', pathMatch: 'full' },  // الصفحة الرئيسية هي "home" افتراضيًا
   { path: 'research', component: SearchResultsComponent }, // المسار الذي نوجه إليه المستخدم عند البحث
   { path: 'basket', component: CartComponent },

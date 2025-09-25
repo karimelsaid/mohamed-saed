@@ -142,6 +142,8 @@ export class AdminDashboardComponent implements OnInit {
 
   // Multi-select properties
   selectedProducts: Set<string> = new Set();
+  selectedOrders: Set<string> = new Set();
+  showArchived: boolean = false;
 
   backendBaseUrl: string = environment.apiBaseUrl;
   uploadsBaseUrl: string = environment.uploadsBaseUrl;
@@ -720,7 +722,8 @@ export class AdminDashboardComponent implements OnInit {
     this.authService.user$.pipe(take(1)).subscribe(user => {
       const merchantId = user ? user.id : '';
       const params = merchantId ? `?merchantId=${merchantId}` : '';
-      this.http.get<Order[]>(`${environment.apiBaseUrl}/orders/all${params}`).subscribe({
+      const archivedParam = this.showArchived ? '&includeArchived=true' : '';
+      this.http.get<Order[]>(`${environment.apiBaseUrl}/orders/all${params}${archivedParam}`).subscribe({
         next: (data) => {
           const groupedOrdersMap: { [key: string]: GroupedOrder } = {};
 
@@ -753,6 +756,41 @@ export class AdminDashboardComponent implements OnInit {
         }
       });
     });
+  }
+
+  toggleShowArchived(): void {
+    this.showArchived = !this.showArchived;
+    this.loadOrders();
+  }
+
+  archiveOrder(orderId: string): void {
+    const action = () => {
+      this.http.patch(`${environment.apiBaseUrl}/orders/update-status/${orderId}`, { status: 'مؤرشف' }).subscribe({
+        next: () => {
+          this.showSuccessModal('تم أرشفة الطلب بنجاح');
+          this.loadOrders();
+          this.loadNotifications();
+          this.authService.user$.pipe(take(1)).subscribe(user => {
+            if (user && user.id) {
+              this.notificationService.refreshNotifications(user.id);
+            }
+          });
+        },
+        error: (err) => {
+          this.showErrorModal('حدث خطأ أثناء أرشفة الطلب.');
+        }
+      });
+    };
+
+    this.openModal(
+      'تأكيد الأرشفة',
+      'هل أنت متأكد من أرشفة هذا الطلب؟',
+      'warning',
+      'أرشفة',
+      'إلغاء',
+      true,
+      action
+    );
   }
 
   updateOrdersPage(): void {
@@ -1184,6 +1222,137 @@ export class AdminDashboardComponent implements OnInit {
     this.openModal(
       'تأكيد الحذف الجماعي',
       `هل أنت متأكد من حذف ${selectedIds.length} منتج نهائياً؟ سيتم حذف الصور أيضاً.`,
+      'warning',
+      'حذف الكل',
+      'إلغاء',
+      true,
+      action
+    );
+  }
+
+  // Order multi-select methods
+  toggleOrderSelection(orderId: string): void {
+    if (this.selectedOrders.has(orderId)) {
+      this.selectedOrders.delete(orderId);
+    } else {
+      this.selectedOrders.add(orderId);
+    }
+  }
+
+  isOrderSelected(orderId: string): boolean {
+    return this.selectedOrders.has(orderId);
+  }
+
+  selectAllOrders(): void {
+    if (this.isAllOrdersSelected()) {
+      this.selectedOrders.clear();
+    } else {
+      this.orders.forEach(order => {
+        this.selectedOrders.add(order._id);
+      });
+    }
+  }
+
+  isAllOrdersSelected(): boolean {
+    return this.orders.length > 0 && this.orders.every(order => this.selectedOrders.has(order._id));
+  }
+
+  isSomeOrdersSelected(): boolean {
+    return this.selectedOrders.size > 0 && this.selectedOrders.size < this.orders.length;
+  }
+
+  bulkUpdateOrderStatus(newStatus: string): void {
+    const selectedIds = Array.from(this.selectedOrders);
+    if (selectedIds.length === 0) {
+      this.showErrorModal('يرجى اختيار طلبات لتحديثها');
+      return;
+    }
+
+    let confirmMessage = '';
+    let successMessage = '';
+
+    switch (newStatus) {
+      case 'تم الشحن':
+        confirmMessage = `هل أنت متأكد من شحن ${selectedIds.length} طلب؟`;
+        successMessage = 'تم تحديث حالة الطلبات المحددة إلى تم الشحن.';
+        break;
+      case 'تم الإلغاء':
+        confirmMessage = `هل أنت متأكد من إلغاء ${selectedIds.length} طلب؟`;
+        successMessage = 'تم إلغاء الطلبات المحددة.';
+        break;
+      default:
+        confirmMessage = `هل أنت متأكد من تحديث حالة ${selectedIds.length} طلب إلى ${newStatus}؟`;
+        successMessage = `تم تحديث حالة الطلبات المحددة إلى ${newStatus}.`;
+    }
+
+    const action = () => {
+      // Update each order individually since backend might not support bulk update
+      let completed = 0;
+      selectedIds.forEach(orderId => {
+        this.http.patch(`${environment.apiBaseUrl}/orders/update-status/${orderId}`, { status: newStatus }).subscribe({
+          next: () => {
+            completed++;
+            if (completed === selectedIds.length) {
+              this.showSuccessModal(successMessage);
+              this.selectedOrders.clear();
+              this.loadOrders();
+              this.loadNotifications();
+              this.authService.user$.pipe(take(1)).subscribe(user => {
+                if (user && user.id) {
+                  this.notificationService.refreshNotifications(user.id);
+                }
+              });
+            }
+          },
+          error: (err) => {
+            this.showErrorModal('حدث خطأ أثناء تحديث حالة الطلبات.');
+          }
+        });
+      });
+    };
+
+    this.openModal(
+      'تأكيد تحديث الحالة الجماعي',
+      confirmMessage,
+      'warning',
+      'تأكيد',
+      'إلغاء',
+      true,
+      action
+    );
+  }
+
+  bulkDeleteSelectedOrders(): void {
+    const selectedIds = Array.from(this.selectedOrders);
+    if (selectedIds.length === 0) {
+      this.showErrorModal('يرجى اختيار طلبات لحذفها');
+      return;
+    }
+
+    const action = () => {
+      // Call backend bulk delete endpoint with all selected order IDs
+      this.http.delete(`${environment.apiBaseUrl}/orders/bulk-delete`, { body: { orderIds: selectedIds } }).subscribe({
+        next: () => {
+          this.showSuccessModal('تم حذف الطلبات المحددة بنجاح');
+          this.selectedOrders.clear();
+          this.loadOrders();
+          this.loadNotifications();
+          this.authService.user$.pipe(take(1)).subscribe(user => {
+            if (user && user.id) {
+              this.notificationService.refreshNotifications(user.id);
+              this.dataService.loadOrders(user.id).subscribe();
+            }
+          });
+        },
+        error: (err) => {
+          this.showErrorModal('حدث خطأ أثناء حذف الطلبات.');
+        }
+      });
+    };
+
+    this.openModal(
+      'تأكيد الحذف الجماعي',
+      `هل أنت متأكد من حذف ${selectedIds.length} طلب نهائياً؟`,
       'warning',
       'حذف الكل',
       'إلغاء',

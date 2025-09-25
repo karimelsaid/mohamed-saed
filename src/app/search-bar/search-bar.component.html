@@ -1,41 +1,63 @@
-<div class="md:fixed w-full md:bg-gray-200/50 md:dark:bg-gray-900 md:z-30">
-    <div class="search-bar-container relative max-w-5xl md:p-4 flex justify-center md:pt-24 mx-auto">
-      <div class="relative w-full max-w-full">
-        <input 
-          [(ngModel)]="searchQuery"
-          (keyup)="onSearchKeyup()" 
-          (keydown)="onEnterPress($event)" 
-          #inputElement
-          type="text" 
-          placeholder="ابحث عن كتاب..."
-          class="search-input w-60 md:w-full h-10 py-2 md:pr-4 pl-4 text-sm border border-gray-300 dark:border-gray-700 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-gray-100 neon-border"
-        />
-        
-        <!-- عرض الاقتراحات إذا كانت موجودة -->
-        <div *ngIf="showSuggestions" class="absolute w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 mt-1 rounded-md max-h-60 overflow-y-auto z-50">
-          <ul>
-            <li 
-              *ngFor="let result of searchResults"
-              (click)="selectSuggestion(result.product_name)"
-              class="p-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-100"
-            >
-              {{ result.product_name }}
-            </li>
-          </ul>
+<div class="md:fixed w-full md:bg-gradient-to-r md:from-blue-50 md:to-indigo-100 md:dark:from-gray-800 md:dark:to-gray-900 md:z-30 md:shadow-lg">
+  <div class="search-bar-container relative max-w-5xl md:p-4 flex justify-center md:pt-24 mx-auto">
+    <div class="relative w-full max-w-4xl">
+      <!-- Search Input Container -->
+      <div class="relative flex items-center bg-white dark:bg-gray-800 rounded-full shadow-md hover:shadow-lg transition-shadow duration-300 border border-gray-200 dark:border-gray-700">
+        <!-- Search Icon -->
+        <div class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-400 dark:text-gray-500">
+          <fa-icon [icon]="faSearch" class="text-lg"></fa-icon>
         </div>
-        
-          
-          <!-- أيقونة الفلتر -->
-          <div class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 dark:text-gray-300 hover:text-blue-600 cursor-pointer" (click)="toggleFilterDropdown()">
-            <fa-icon [icon]="faFilter" class="text-sm"></fa-icon>
-          </div>
-          <!-- قائمة الفلتر -->
-          <div *ngIf="showFilterDropdown" class="absolute right-0 mt-2 md:mt-10 w-48 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md shadow-lg z-50">
-            <ul>
-              <li (click)="selectFilter('recentlyAdded')" class="p-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-100">المضاف حديثًا</li>
-              <li (click)="selectFilter('all')" class="p-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-100">الكل</li>
-            </ul>
-          </div>
+
+        <!-- Input Field -->
+        <input
+          [(ngModel)]="searchQuery"
+          (keyup)="onSearchKeyup()"
+          (keydown)="onEnterPress($event)"
+          #inputElement
+          type="text"
+          placeholder="ابحث عن كتاب..."
+          class="w-full h-12 pl-12 pr-12 py-3 text-sm bg-transparent rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200"
+        />
+
+        <!-- Filter Icon -->
+        <div class="absolute inset-y-0 right-0 flex items-center pr-4 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer transition-colors duration-200" (click)="toggleFilterDropdown()">
+          <fa-icon [icon]="faFilter" class="text-lg"></fa-icon>
         </div>
       </div>
+
+      <!-- Suggestions Dropdown -->
+      <div *ngIf="showSuggestions" class="absolute w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 mt-2 rounded-lg shadow-xl max-h-60 overflow-y-auto z-50 animate-fade-in">
+        <ul class="divide-y divide-gray-100 dark:divide-gray-700">
+          <li
+            *ngFor="let result of searchResults"
+            (click)="selectSuggestion(result.product_name)"
+            class="p-3 cursor-pointer hover:bg-blue-50 dark:hover:bg-gray-700 dark:text-gray-100 transition-colors duration-150 first:rounded-t-lg last:rounded-b-lg"
+          >
+            <div class="flex items-center">
+              <fa-icon [icon]="faBook" class="text-blue-500 mr-3"></fa-icon>
+              <span class="font-medium">{{ result.product_name }}</span>
+            </div>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Filter Dropdown -->
+      <div *ngIf="showFilterDropdown" class="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-50 animate-fade-in">
+        <ul class="divide-y divide-gray-100 dark:divide-gray-700">
+          <li (click)="selectFilter('recentlyAdded')" class="p-3 cursor-pointer hover:bg-blue-50 dark:hover:bg-gray-700 dark:text-gray-100 transition-colors duration-150 first:rounded-t-lg">
+            <div class="flex items-center">
+              <fa-icon [icon]="faClock" class="text-green-500 mr-3"></fa-icon>
+              <span>المضاف حديثًا</span>
+            </div>
+          </li>
+          <li (click)="selectFilter('all')" class="p-3 cursor-pointer hover:bg-blue-50 dark:hover:bg-gray-700 dark:text-gray-100 transition-colors duration-150 last:rounded-b-lg">
+            <div class="flex items-center">
+              <fa-icon [icon]="faList" class="text-blue-500 mr-3"></fa-icon>
+              <span>الكل</span>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
 </div>

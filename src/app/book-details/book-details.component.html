@@ -22,8 +22,13 @@
       </div>
 
       <!-- رسالة تأكيد النسخ -->
-      <div *ngIf="showCopySuccess" class="fixed top-20 right-10 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-bounce">
-        تم نسخ الرابط
+      <div *ngIf="showCopySuccess" class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-green-500 to-green-600 text-white px-6 py-3 rounded-xl shadow-2xl z-50 animate-pulse border-2 border-white">
+        <div class="flex items-center gap-2">
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+          </svg>
+          تم نسخ الرابط بنجاح!
+        </div>
       </div>
 
       <!-- السعر -->

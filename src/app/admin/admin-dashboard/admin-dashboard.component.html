@@ -434,9 +434,55 @@
     <h3 *ngIf="currentView === 'orders'" class="text-xl font-bold mb-4 text-gray-900 dark:text-gray-200">طلبات الموقع</h3>
     <h3 *ngIf="currentView === 'merchantOrders'" class="text-xl font-bold mb-4 text-gray-900 dark:text-gray-200">طلبات التجار</h3>
 
+    <!-- Bulk action buttons for orders -->
+    <div class="mb-4 flex justify-between items-center">
+      <div class="flex gap-2 flex-wrap">
+        <button
+          (click)="bulkUpdateOrderStatus('تم الشحن')"
+          [disabled]="selectedOrders.size === 0"
+          class="bg-orange-600 hover:bg-orange-700 text-white font-semibold py-2 px-4 rounded disabled:opacity-50"
+        >
+          شحن المحدد ({{ selectedOrders.size }})
+        </button>
+        <button
+          (click)="bulkUpdateOrderStatus('تم التسليم')"
+          [disabled]="selectedOrders.size === 0"
+          class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded disabled:opacity-50"
+        >
+          تم التسليم ({{ selectedOrders.size }})
+        </button>
+        <button
+          (click)="bulkUpdateOrderStatus('تم الإلغاء')"
+          [disabled]="selectedOrders.size === 0"
+          class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded disabled:opacity-50"
+        >
+          إلغاء المحدد ({{ selectedOrders.size }})
+        </button>
+      </div>
+      <div class="flex gap-2">
+        <button
+          (click)="toggleShowArchived()"
+          class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded"
+        >
+          {{ showArchived ? 'إخفاء المؤرشفة' : 'عرض المؤرشفة' }}
+        </button>
+        <button
+          (click)="bulkDeleteSelectedOrders()"
+          [disabled]="selectedOrders.size === 0"
+          class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded disabled:opacity-50"
+        >
+          حذف المحدد ({{ selectedOrders.size }})
+        </button>
+      </div>
+    </div>
+
     <!-- تصميم عرض الطلبات في الشاشات الصغيرة -->
     <div class="sm:hidden space-y-6">
       <div *ngFor="let order of orders; let orderIndex = index" class="bg-white shadow-md rtl rounded-lg p-4 space-y-3 dark:bg-gray-800" [ngClass]="{'bg-blue-50 dark:bg-[#0a1325]': orderIndex % 2 === 0, 'bg-white dark:bg-gray-800': orderIndex % 2 !== 0}">
+        <div class="flex items-center space-x-2 mb-2">
+          <input type="checkbox" [checked]="selectedOrders.has(order._id)" (change)="toggleOrderSelection(order._id)" class="w-4 h-4" />
+          <span class="text-sm font-semibold">تحديد الطلب</span>
+        </div>
         <div><strong>اسم العميل:</strong> {{ order.customerName }}</div>
         <div><strong>البريد الإلكتروني:</strong> {{ order.email }}</div>
         <div><strong>العنوان:</strong> {{ order.address }}</div>
@@ -499,6 +545,13 @@
                     class="w-full bg-gray-700 hover:bg-black dark:bg-gray-800 dark:hover:bg-black text-white font-semibold py-1 px-3 rounded">
                     حذف
                   </button>
+                  <button
+                    *ngIf="order.status === 'تم الإلغاء'"
+                    (click)="archiveOrder(order._id)"
+                    class="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-1 px-3 rounded">
+                    أرشف
+                  </button>
+        </div>
         </div>
       </div>
     </div>
@@ -508,6 +561,9 @@
       <table class="min-w-full bg-white dark:bg-gray-800 rounded-lg shadow-md text-sm mx-auto">
         <thead>
           <tr class="bg-blue-100 dark:bg-[#0a1325] text-blue-700 dark:text-blue-400 uppercase text-xs font-semibold">
+            <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">
+              <input type="checkbox" (change)="selectAllOrders()" [checked]="isAllOrdersSelected()" [indeterminate]="isSomeOrdersSelected()" />
+            </th>
             <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">بيانات العميل</th>
             <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">الكتب</th>
             <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">الكمية</th>
@@ -520,6 +576,9 @@
         <tbody *ngIf="orders.length > 0">
           <ng-container *ngFor="let order of orders; let orderIndex = index">
             <tr [ngClass]="{'bg-blue-50 dark:bg-[#0a1325]': orderIndex % 2 === 0, 'bg-white dark:bg-gray-800': orderIndex % 2 !== 0}">
+              <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700" [attr.rowspan]="order.products.length">
+                <input type="checkbox" [checked]="selectedOrders.has(order._id)" (change)="toggleOrderSelection(order._id)" />
+              </td>
               <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700 rtl" [attr.rowspan]="order.products.length">
                 <div><strong>اسم العميل:</strong> {{ order.customerName }}</div>
                 <div><strong>البريد الإلكتروني:</strong> {{ order.email }}</div>
@@ -587,6 +646,13 @@
                     class="w-full bg-gray-700 hover:bg-black dark:bg-gray-800 dark:hover:bg-black text-white font-semibold py-1 px-3 rounded">
                     حذف
                   </button>
+
+                  <button
+                    *ngIf="order.status === 'تم التسليم'"
+                    (click)="archiveOrder(order._id)"
+                    class="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-1 px-3 rounded">
+                    أرشف
+                  </button>
                 </div>
               </td>
             </tr>
@@ -608,7 +674,7 @@
 
     <p *ngIf="orders.length === 0" class="text-center text-gray-500 dark:text-gray-400 py-6">لا توجد طلبات حالياً</p>
   </div>
-</div>
+
 
 <!-- عرض اقتراحات الكتب -->
 <div *ngIf="currentView === 'requestedBooks'" class="px-2 sm:px-10 mb-32 md:mb-0">

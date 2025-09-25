@@ -116,11 +116,15 @@ exports.getUserOrders = async (req, res) => {
 
 exports.getAllOrders = async (req, res) => {
   try {
-    const { merchantId } = req.query;
+    const { merchantId, includeArchived } = req.query;
     const users = await User.find().select('orders username email phone');
     let allOrders = [];
     users.forEach(user => {
       user.orders.forEach(order => {
+        // Filter out archived orders unless explicitly requested
+        if (includeArchived !== 'true' && order.status === 'مؤرشف') {
+          return;
+        }
         order.products.forEach(product => {
           allOrders.push({
             _id: order._id,
@@ -256,6 +260,53 @@ exports.deleteOrder = async (req, res) => {
     console.error('Error deleting order:', error); // Log the error for debugging
     res.status(500).json({
       message: 'Error deleting order',
+      error: error.message
+    });
+  }
+};
+
+// Bulk delete orders
+exports.bulkDeleteOrders = async (req, res) => {
+  try {
+    const { orderIds } = req.body;
+
+    if (!orderIds || !Array.isArray(orderIds) || orderIds.length === 0) {
+      return res.status(400).json({ message: 'orderIds must be a non-empty array' });
+    }
+
+    // Group orderIds by user to avoid multiple saves per user
+    const userOrderMap = new Map();
+
+    // Find users for each orderId and group orders by user
+    for (const orderId of orderIds) {
+      const user = await User.findOne({ 'orders._id': orderId });
+      if (user) {
+        if (!userOrderMap.has(user._id.toString())) {
+          userOrderMap.set(user._id.toString(), { user, orderIds: [] });
+        }
+        userOrderMap.get(user._id.toString()).orderIds.push(orderId);
+      }
+    }
+
+    // Delete orders per user and save once per user
+    const results = [];
+    for (const [userId, { user, orderIds: userOrderIds }] of userOrderMap) {
+      // Remove orders from user's orders array
+      user.orders = user.orders.filter(order => !userOrderIds.includes(order._id.toString()));
+      await user.save();
+      results.push({ userId, deletedCount: userOrderIds.length });
+    }
+
+    const totalDeleted = results.reduce((sum, result) => sum + result.deletedCount, 0);
+
+    res.status(200).json({
+      message: `Successfully deleted ${totalDeleted} orders`,
+      results
+    });
+  } catch (error) {
+    console.error('Error bulk deleting orders:', error);
+    res.status(500).json({
+      message: 'Error bulk deleting orders',
       error: error.message
     });
   }

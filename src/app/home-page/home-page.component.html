@@ -103,7 +103,7 @@
               <!-- Book Image Container -->
               <div class="relative aspect-[3/4] overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 flex-shrink-0">
                 <img
-                  [routerLink]="['/book', getBookSlug(book.product_name)]"
+                  [routerLink]="['/book', book.products_id, getBookSlug(book.product_name)]"
                   [src]="uploadsBaseUrl + '/' + book.product_image + '.jpg'"
                   (error)="handleImageError($event)"
                   [alt]="book.product_name"
@@ -124,7 +124,7 @@
                   <div class="text-center text-white transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
                     <h3 class="font-bold text-sm mb-2 line-clamp-2">{{ book.product_name }}</h3>
                     <button
-                      [routerLink]="['/book', getBookSlug(book.product_name)]"
+                      [routerLink]="['/book', book.products_id, getBookSlug(book.product_name)]"
                       class="bg-white/20 backdrop-blur-sm text-white border border-white/30 px-4 py-2 rounded-lg text-sm font-medium hover:bg-white/30 transition-colors">
                       عرض الكتاب
                     </button>
@@ -156,7 +156,7 @@
                     {{ book.product_price || 'مجاني' }}
                   </span>
                   <button
-                    [routerLink]="['/book', getBookSlug(book.product_name)]"
+                    [routerLink]="['/book', book.products_id, getBookSlug(book.product_name)]"
                     class="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-300 hover:shadow-lg">
                     قراءة
                   </button>
@@ -185,8 +185,7 @@
     <div class="text-center mb-12">
       <div class="relative inline-block mb-6 p-8 rounded-3xl bg-gradient-to-r from-white/95 via-gray-50/95 to-white/95 backdrop-blur-sm border-2 border-gray-200/50 shadow-lg">
         <h1 class="w-auto text-4xl md:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 bg-clip-text text-transparent drop-shadow-lg">
-          أمثلة على الشكل النهائي لخدمة الطباعة
-        </h1>
+خدمات الطباعة        </h1>
 </div>
 <div class="flex items-center justify-center gap-4 mb-6">
 <div class="w-16 h-1 bg-gradient-to-r from-emerald-300 to-emerald-500 rounded-full"></div>

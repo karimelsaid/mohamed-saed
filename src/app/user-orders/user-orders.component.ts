@@ -299,6 +299,29 @@ export class UserOrdersComponent implements OnInit {
     });
   }
 
+  deleteOrder(orderId: string): void {
+    this.modalService.openModal({
+      title: 'تأكيد الحذف',
+      message: 'هل أنت متأكد من حذف هذا الطلب نهائياً؟ لا يمكن التراجع عن هذا الإجراء.',
+      type: 'warning',
+      confirmText: 'حذف',
+      cancelText: 'إلغاء',
+      showCancel: true,
+      action: () => {
+        this.http.delete(`${environment.apiBaseUrl}/orders/delete/${orderId}`).subscribe({
+          next: () => {
+            this.loadOrders(this.userId);
+            this.showSuccessModal('تم حذف الطلب بنجاح');
+          },
+          error: (err) => {
+            console.error('Error deleting order:', err);
+            this.showErrorModal('فشل في حذف الطلب. يرجى المحاولة مرة أخرى');
+          }
+        });
+      }
+    });
+  }
+
   toggleArchived(): void {
     this.showArchived = !this.showArchived;
     this.loadOrders(this.userId);

@@ -1,7 +1,7 @@
 import { Component, EventEmitter, Input, Output, ViewChild, ElementRef, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { faSearch, faFilter } from '@fortawesome/free-solid-svg-icons';
+import { faSearch, faFilter, faBook, faClock, faList } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 
 @Component({
@@ -17,6 +17,9 @@ export class SearchBarComponent {
 
   faSearch = faSearch;
   faFilter = faFilter;
+  faBook = faBook;
+  faClock = faClock;
+  faList = faList;
   searchQuery: string = '';
   searchResults: any[] = [];
   showFilterDropdown: boolean = false;

@@ -7523,7 +7523,7 @@
     "product_description": "كتاب \"أصول الإيمان في ضوء الكتاب والسنة\" هو كتاب موجز يتناول أصول العقيدة الإسلامية وأسسها ومفاهيمها الأساسية، مع تقديم الأدلة والشواهد من الكتاب والسنة. يهدف الكتاب إلى تيسير فهم العقيدة الإسلامية للمسلمين، وتقديمها بطريقة مبسطة وواضحة. ",
     "product_image": "103464340336",
     "promotionEndDate": "2026-01-31T00:00:00.000Z",
-    "product_price_before_discount": 529,
+    "product_price_before_discount": 519,
     "rival": true,
     "product_discount_percent": 65
   },
@@ -9470,20 +9470,6 @@
     "product_image": "336085489303",
     "promotionEndDate": "2026-01-31T00:00:00.000Z",
     "product_price_before_discount": 549,
-    "rival": true,
-    "product_discount_percent": 65
-  },
-  {
-    "products_id": "324364191844",
-    "product_name": "2121",
-    "product_price": 29,
-    "price_cost": 21,
-    "product_quantity": 1,
-    "product_category": "صحة وطب وعلوم",
-    "product_description": "يشس",
-    "product_image": "324364191844",
-    "promotionEndDate": "2026-01-31T00:00:00.000Z",
-    "product_price_before_discount": 79,
     "rival": true,
     "product_discount_percent": 65
   }

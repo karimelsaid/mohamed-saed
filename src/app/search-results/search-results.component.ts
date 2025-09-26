@@ -39,7 +39,7 @@ export class SearchResultsComponent implements OnInit {
   requestedAuthorName = '';
   requestSuccessMessage = '';
   isRequestSubmitting = false;
-  ratings: { [bookId: string]: any } = {};
+  // ratings: { [bookId: string]: any } = {}; // No longer needed since ratings come with books data
 
   filterType = 'all';
 
@@ -48,7 +48,6 @@ export class SearchResultsComponent implements OnInit {
   constructor(private dataService: DataService, private route: ActivatedRoute, private router: Router, private authService: AuthService, private http: HttpClient, private modalService: ModalService) {}
 
   ngOnInit(): void {
-    this.fetchRatingsForBooks();
     // نحصل على قيمة البحث من الـ queryParams
     this.route.queryParams.subscribe(params => {
       this.searchQuery = params['q'] || ''; // تأكد من وجود قيمة
@@ -79,43 +78,12 @@ export class SearchResultsComponent implements OnInit {
       return bookName.trim().replace(/\s+/g, '-');
     }
 
-  fetchRatingsForBooks(): void {
-    this.books.forEach(book => {
-      if (book.products_id) {
-
-
-this.http.get<{ bookId: string; averageRating: number; ratingCount: number }>(`${environment.apiBaseUrl}/users/average-rating/${book.products_id}`)
-          .subscribe({
-            next: (res) => {
-              this.ratings[book.products_id] = {
-                averageRating: res.averageRating,
-                ratingCount: res.ratingCount
-              };
-            },
-            error: (err) => {
-              console.error('Error fetching average rating for book', book.products_id, err);
-              this.ratings[book.products_id] = {
-                averageRating: 0,
-                ratingCount: 0
-              };
-            }
-          });
-      }
-    });
-  }
-
   getAverageRating(book: Book): number {
-    if (book.products_id && this.ratings[book.products_id]) {
-      return Math.round(this.ratings[book.products_id].averageRating);
-    }
-    return 0;
+    return book.averageRating ? Math.round(book.averageRating) : 0;
   }
 
   getRatingCount(book: Book): number {
-    if (book.products_id && this.ratings[book.products_id]) {
-      return this.ratings[book.products_id].ratingCount;
-    }
-    return 0;
+    return book.ratingCount || 0;
   }
 
   // Method to open the request modal
@@ -246,17 +214,16 @@ this.http.get<{ bookId: string; averageRating: number; ratingCount: number }>(`$
   searchBooks(): void {
     this.isLoading = true; // Set loading true before data fetch
     if (this.filterType === 'recentlyAdded') {
-      this.dataService.getRecentBooks().subscribe(data => {
+      this.dataService.getRecentBooks().subscribe((data) => {
         this.books = data;
         this.totalBooks = data.length;
         this.totalPages = Math.ceil(this.totalBooks / this.booksPerPage);
         this.currentPage = Math.min(this.currentPage, this.totalPages);
         this.updatePage();
-        this.fetchRatingsForBooks();
-        this.isLoading = false; // Set loading false after data fetch
+        this.isLoading = false; // Set loading false after all data is loaded
       });
     } else {
-      this.dataService.getData().subscribe(data => {
+      this.dataService.getData().subscribe((data) => {
         const normalizedQuery = this.normalizeArabic(this.searchQuery.toLowerCase());
         const filteredBooks = data.filter((book: Book) => {
           if (!book.product_name || typeof book.product_name !== 'string') {
@@ -279,8 +246,7 @@ this.http.get<{ bookId: string; averageRating: number; ratingCount: number }>(`$
         this.totalPages = Math.ceil(this.totalBooks / this.booksPerPage);
         this.currentPage = Math.min(this.currentPage, this.totalPages);
         this.updatePage();
-        this.fetchRatingsForBooks(); // Fetch ratings after books are loaded
-        this.isLoading = false; // Set loading false after data fetch
+        this.isLoading = false; // Set loading false after all data is loaded
       });
     }
   }

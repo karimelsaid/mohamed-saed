@@ -16,4 +16,6 @@ export interface Book {
   merchantId?: string; // معرف التاجر
   merchantName?: string; // اسم التاجر
   merchantLogo?: string; // شعار التاجر
+  averageRating?: number; // متوسط التقييم
+  ratingCount?: number; // عدد التقييمات
 }

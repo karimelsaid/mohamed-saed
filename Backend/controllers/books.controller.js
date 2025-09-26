@@ -35,6 +35,37 @@ async function getExcelData(req, res) {
           }
         });
 
+        // Enrich with ratings data
+        const User = require('../models/User.model');
+        const ratingsData = await User.aggregate([
+          { $unwind: '$ratedBooks' },
+          {
+            $group: {
+              _id: '$ratedBooks.bookId',
+              averageRating: { $avg: '$ratedBooks.rating' },
+              ratingCount: { $sum: 1 }
+            }
+          }
+        ]);
+
+        const ratingsMap = {};
+        ratingsData.forEach(rating => {
+          ratingsMap[rating._id] = {
+            averageRating: rating.averageRating,
+            ratingCount: rating.ratingCount
+          };
+        });
+
+        jsonData.forEach(book => {
+          if (ratingsMap[book.products_id]) {
+            book.averageRating = ratingsMap[book.products_id].averageRating;
+            book.ratingCount = ratingsMap[book.products_id].ratingCount;
+          } else {
+            book.averageRating = 0;
+            book.ratingCount = 0;
+          }
+        });
+
         res.json(jsonData);
       } catch (error) {
         res.status(500).json({
@@ -83,6 +114,37 @@ async function getRecentBooks(req, res) {
           if (productMap[book.products_id]) {
             book.merchantId = productMap[book.products_id].merchantId;
             book.merchantName = productMap[book.products_id].merchantName;
+          }
+        });
+
+        // Enrich with ratings data
+        const User = require('../models/User.model');
+        const ratingsData = await User.aggregate([
+          { $unwind: '$ratedBooks' },
+          {
+            $group: {
+              _id: '$ratedBooks.bookId',
+              averageRating: { $avg: '$ratedBooks.rating' },
+              ratingCount: { $sum: 1 }
+            }
+          }
+        ]);
+
+        const ratingsMap = {};
+        ratingsData.forEach(rating => {
+          ratingsMap[rating._id] = {
+            averageRating: rating.averageRating,
+            ratingCount: rating.ratingCount
+          };
+        });
+
+        recentBooks.forEach(book => {
+          if (ratingsMap[book.products_id]) {
+            book.averageRating = ratingsMap[book.products_id].averageRating;
+            book.ratingCount = ratingsMap[book.products_id].ratingCount;
+          } else {
+            book.averageRating = 0;
+            book.ratingCount = 0;
           }
         });
 

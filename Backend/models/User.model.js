@@ -48,6 +48,8 @@ const userSchema = new mongoose.Schema({
     totalAmount: Number,
     paymentSessionUrl: { type: String, default: null },
     status: { type: String, default: 'قيد الإنتظار' }, // pending, shipped, completed,cancelled
+    isPickup: { type: Boolean, default: false },
+    pickupLocation: { type: String },
     shippingAddress: {
       governorate: String,
       city: String,

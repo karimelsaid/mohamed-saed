@@ -5,7 +5,7 @@ import { PaymentService } from '../services/payment.service';
 import { map, take } from 'rxjs/operators';
 import { User } from '../auth/user.model';
 import governoratesData from '../../../public/json/egypt-governorates.json';
-import {faCheck , faHandPointLeft} from '@fortawesome/free-solid-svg-icons';
+import {faCheck , faHandPointRight} from '@fortawesome/free-solid-svg-icons';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
@@ -31,12 +31,14 @@ export class CheckoutModalComponent implements OnInit {
   showPurchaseConfirmation: boolean = false;
   isProcessing: boolean = false;
   faCheck = faCheck;
-  faHandPointLeft = faHandPointLeft
+  faHandPointRight = faHandPointRight
   // بيانات المستخدم
   userProfile: User | null = null;
   isAddressConfirmed: boolean = false;
   isEditingAddress: boolean = false;
   editedUserProfile: User | null = null;
+  isPickup: boolean = false;
+  pickupLocation: string = 'https://maps.app.goo.gl/Ms3sHBp6EDgjAb3G6';
 
   private cartItemsLoaded: boolean = false;
   private freeShippingRulesLoaded: boolean = false;
@@ -110,6 +112,7 @@ export class CheckoutModalComponent implements OnInit {
   }
 
   get isAddressComplete(): boolean {
+    if (this.isPickup) return true;
     if (!this.editedUserProfile) return false;
     const governorate = this.editedUserProfile?.governorate ?? '';
     const city = this.editedUserProfile?.city ?? '';
@@ -215,6 +218,11 @@ export class CheckoutModalComponent implements OnInit {
   }
 
   calculateShippingCost(): void {
+    if (this.isPickup) {
+      this.shippingCost = 0;
+      this.calculateTotalPrice();
+      return;
+    }
     console.log('calculateShippingCost called');
     console.log('freeShippingRules object:', this.freeShippingRules);
     console.log('freeShippingEnabled:', this.freeShippingRules.freeShippingEnabled);
@@ -388,6 +396,13 @@ switch (imageElement.errorStep) {
     }
   }
 
+  onDeliveryTypeChange() {
+    this.calculateShippingCost();
+    this.calculateTotalPrice();
+    // Reset address confirmation when switching delivery types
+    this.isAddressConfirmed = false;
+  }
+
   onGovernorateChange() {
     if (this.editedUserProfile) {
       const selectedGov = this.governorates.find(g => g.governorate_name === this.editedUserProfile!.governorate);
@@ -476,7 +491,9 @@ executePurchase(): void {
         })),
         shippingCost: this.shippingCost,
         totalAmount: this.totalPrice,
-        merchantId: purchasedItems[0]?.merchantId
+        merchantId: purchasedItems[0]?.merchantId,
+        isPickup: this.isPickup,
+        pickupLocation: this.isPickup ? this.pickupLocation : null
       };
 
       this.dataService.submitOrder(orderData).subscribe({

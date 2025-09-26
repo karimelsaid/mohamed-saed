@@ -56,7 +56,7 @@
 
 @keyframes hand-pointing-horizontal {
   0%, 100% { transform: translateX(0); }
-  50% { transform: translateX(10px); }
+  50% { transform: translateX(-10px); -webkit-transform: translateX(-10px); -moz-transform: translateX(-10px); -ms-transform: translateX(-10px); -o-transform: translateX(-10px); }
 }
 
 .animate-hand-pointing {

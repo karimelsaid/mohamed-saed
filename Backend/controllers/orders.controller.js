@@ -3,7 +3,7 @@ const Product = require('../models/Product.model');
 
 exports.submitOrder = async (req, res) => {
   try {
-    const { userId, products, totalAmount, shippingCost, preparationTime: reqPreparationTime, merchantId } = req.body;
+    const { userId, products, totalAmount, shippingCost, preparationTime: reqPreparationTime, merchantId, isPickup, pickupLocation } = req.body;
 
     if (!userId || !products || !totalAmount) {
       return res.status(400).json({ message: 'Missing required fields: userId, products, totalAmount' });
@@ -53,7 +53,9 @@ exports.submitOrder = async (req, res) => {
       products: validatedProducts,
       totalAmount,
       shippingCost: shippingCost || 0,
-      shippingAddress,
+      isPickup: isPickup || false,
+      pickupLocation: isPickup ? pickupLocation : null,
+      shippingAddress: isPickup ? null : shippingAddress,
       status: 'قيد الإنتظار'
     };
 
@@ -132,7 +134,7 @@ exports.getAllOrders = async (req, res) => {
             customerName: user.username,
             email: user.email,
             quantity: product.quantity,
-            address: `${order.shippingAddress.governorate}, ${order.shippingAddress.city}, ${order.shippingAddress.village},Phone: ${order.shippingAddress.phone}`, // Add this line
+            address: order.isPickup ? `استلام من المكتبة: ${order.pickupLocation}` : `${order.shippingAddress.governorate}, ${order.shippingAddress.city}, ${order.shippingAddress.village},Phone: ${order.shippingAddress.phone}`, // Add this line
             status: order.status,
             orderDate: order.date,
             totalAmount: order.totalAmount,  // Added totalAmount here

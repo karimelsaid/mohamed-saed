@@ -41,15 +41,15 @@ export class HomePageComponent implements OnInit, OnDestroy {
   }
 
   categories = [
-    { id: 'Islamic', name: 'كتب دينية', image: this.uploadsBaseUrl + '/islamic.png' },
+    { id: 'Islamic', name: 'كتب دينية', image: this.uploadsBaseUrl + '/islamic.webp' },
     { id: 'Self-development-psychology', name: 'تطوير الذات وعلم النفس', image: this.uploadsBaseUrl + '/tatwer.webp' },
-    { id: 'Novels-stories', name: 'روايات وقصص', image: this.uploadsBaseUrl + '/rewayat.jpg' },
-    { id: 'Business-Marketing-Finance', name: 'أعمال وتسويق ومالية', image: this.uploadsBaseUrl + '/aamal.png' },
-    { id: 'HealthMedicineScience', name: 'صحة وطب وعلوم', image: this.uploadsBaseUrl + '/fit.jpg' },
-    { id: 'Dictionaries-References', name: 'قواميس ومراجع', image: this.uploadsBaseUrl + '/qamos.jpg' },
-    { id: 'Education-children', name: 'تربية وأطفال', image: this.uploadsBaseUrl + '/child.jpg' },
-    { id: 'History-Biographies', name: 'تاريخ وسير ذاتية', image: this.uploadsBaseUrl + '/tarekh.png' },
-    { id: 'Arts-crafts', name: 'فنون وحرف', image: this.uploadsBaseUrl + '/fenon.jpg' }
+    { id: 'Novels-stories', name: 'روايات وقصص', image: this.uploadsBaseUrl + '/rewayat.webp' },
+    { id: 'Business-Marketing-Finance', name: 'أعمال وتسويق ومالية', image: this.uploadsBaseUrl + '/aamal.webp' },
+    { id: 'HealthMedicineScience', name: 'صحة وطب وعلوم', image: this.uploadsBaseUrl + '/fit.webp' },
+    { id: 'Dictionaries-References', name: 'قواميس ومراجع', image: this.uploadsBaseUrl + '/qamos.webp' },
+    { id: 'Education-children', name: 'تربية وأطفال', image: this.uploadsBaseUrl + '/child.webp' },
+    { id: 'History-Biographies', name: 'تاريخ وسير ذاتية', image: this.uploadsBaseUrl + '/tarekh.webp' },
+    { id: 'Arts-crafts', name: 'فنون وحرف', image: this.uploadsBaseUrl + '/fenon.webp' }
   ];
 
   books: any[] = [];
@@ -270,7 +270,7 @@ export class HomePageComponent implements OnInit, OnDestroy {
         imageElement.src = this.uploadsBaseUrl + `/${imageName}.jpg`;
         break;
       default:
-        imageElement.src = this.uploadsBaseUrl + '/default.png';
+        imageElement.src = this.uploadsBaseUrl + '/default.webp';
         break;
     }
   }

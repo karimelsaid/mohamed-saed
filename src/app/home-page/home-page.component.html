@@ -179,19 +179,65 @@
     </div>
   </div>
 </section>
+
+<div class="relative mb-12">
+  <div class="text-center">
+    <div class="relative inline-block p-6 rounded-3xl bg-gradient-to-r from-white/95 via-gray-50/95 to-white/95 backdrop-blur-sm border-2 border-gray-200/50 shadow-lg mb-4">
+      <h1 class="w-auto text-3xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 bg-clip-text text-transparent drop-shadow-sm">
+        أقسام المكتبة
+      </h1>
+    </div>
+    <div class="flex items-center justify-center gap-4 mb-6">
+      <div class="w-16 h-1 bg-gradient-to-r from-blue-300 to-blue-500 rounded-full"></div>
+      <div class="w-4 h-4 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full animate-pulse"></div>
+      <div class="w-16 h-1 bg-gradient-to-r from-blue-500 to-blue-300 rounded-full"></div>
+    </div>
+
+    <p class="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto leading-relaxed">
+      تصفح مختلف أقسام مكتبتنا الإلكترونية واكتشف الكتب المتنوعة في كل مجال
+    </p>
+  </div>
+</div>
+
+<div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-4 px-4 mb-32 md:mb-6">
+    <div
+    *ngFor="let category of categories; let i = index"
+    class="relative group h-32 rounded-xl overflow-hidden shadow-lg transform transition-transform duration-300 hover:scale-105 hover:shadow-2xl cursor-pointer fade-in"
+    [style.animationDelay]="i * 200 + 'ms'"
+    >
+    <a
+    [routerLink]="['/', category.id]"
+    class="relative group h-32 rounded-xl overflow-hidden shadow-lg transform transition-transform duration-300 hover:scale-105 hover:shadow-2xl cursor-pointer block"
+  >
+    <img
+      [src]="category.image"
+      alt="{{ category.name }}"
+      class="w-full h-full object-cover brightness-75 group-hover:brightness-50 transition duration-300"
+    />
+    <div
+      class="absolute inset-0 flex items-center justify-center bg-black/40 group-hover:bg-black/60 transition duration-300"
+    >
+      <h2 class="text-white text-lg sm:text-xl font-semibold tracking-wide drop-shadow-md">
+        {{ category.name }}
+      </h2>
+    </div>
+  </a>
+      </div>
+</div>
+
 <!-- أمثلة على الشكل النهائي لخدمة الطباعة -->
 <section class="py-16">
   <div class="container mx-auto px-4">
     <div class="text-center mb-12">
       <div class="relative inline-block mb-6 p-8 rounded-3xl bg-gradient-to-r from-white/95 via-gray-50/95 to-white/95 backdrop-blur-sm border-2 border-gray-200/50 shadow-lg">
         <h1 class="w-auto text-4xl md:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 bg-clip-text text-transparent drop-shadow-lg">
-خدمات الطباعة        </h1>
-</div>
-<div class="flex items-center justify-center gap-4 mb-6">
-<div class="w-16 h-1 bg-gradient-to-r from-emerald-300 to-emerald-500 rounded-full"></div>
-<div class="w-4 h-4 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-full animate-pulse"></div>
-<div class="w-16 h-1 bg-gradient-to-r from-emerald-500 to-emerald-300 rounded-full"></div>
-</div>
+خدمات الطباعة</h1>
+      </div>
+      <div class="flex items-center justify-center gap-4 mb-6">
+        <div class="w-16 h-1 bg-gradient-to-r from-emerald-300 to-emerald-500 rounded-full"></div>
+        <div class="w-4 h-4 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-full animate-pulse"></div>
+        <div class="w-16 h-1 bg-gradient-to-r from-emerald-500 to-emerald-300 rounded-full"></div>
+      </div>
       <div class="relative">
         <p class="text-lg md:text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto leading-relaxed">
           اختر من بين خيارات الطباعة المتنوعة للحصول على أفضل جودة لكتبك
@@ -262,47 +308,4 @@
   </div>
 </section>
 
-<div class="relative mb-12">
-  <div class="text-center">
-    <div class="relative inline-block p-6 rounded-3xl bg-gradient-to-r from-white/95 via-gray-50/95 to-white/95 backdrop-blur-sm border-2 border-gray-200/50 shadow-lg mb-4">
-      <h1 class="w-auto text-3xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 bg-clip-text text-transparent drop-shadow-sm">
-        أقسام المكتبة
-      </h1>
-    </div>
-    <div class="flex items-center justify-center gap-4 mb-6">
-      <div class="w-16 h-1 bg-gradient-to-r from-blue-300 to-blue-500 rounded-full"></div>
-      <div class="w-4 h-4 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full animate-pulse"></div>
-      <div class="w-16 h-1 bg-gradient-to-r from-blue-500 to-blue-300 rounded-full"></div>
-    </div>
 
-    <p class="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto leading-relaxed">
-      تصفح مختلف أقسام مكتبتنا الإلكترونية واكتشف الكتب المتنوعة في كل مجال
-    </p>
-  </div>
-</div>
-
-<div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-4 px-4 mb-32 md:mb-6">
-    <div
-    *ngFor="let category of categories; let i = index"
-    class="relative group h-32 rounded-xl overflow-hidden shadow-lg transform transition-transform duration-300 hover:scale-105 hover:shadow-2xl cursor-pointer fade-in"
-    [style.animationDelay]="i * 200 + 'ms'"
-    >
-    <a
-    [routerLink]="['/', category.id]"
-    class="relative group h-32 rounded-xl overflow-hidden shadow-lg transform transition-transform duration-300 hover:scale-105 hover:shadow-2xl cursor-pointer block"
-  >
-    <img
-      [src]="category.image"
-      alt="{{ category.name }}"
-      class="w-full h-full object-cover brightness-75 group-hover:brightness-50 transition duration-300"
-    />
-    <div
-      class="absolute inset-0 flex items-center justify-center bg-black/40 group-hover:bg-black/60 transition duration-300"
-    >
-      <h2 class="text-white text-lg sm:text-xl font-semibold tracking-wide drop-shadow-md">
-        {{ category.name }}
-      </h2>
-    </div>
-  </a>
-      </div>
-</div>

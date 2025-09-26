@@ -325,7 +325,7 @@ switch (imageElement.errorStep) {
         imageElement.src = this.uploadsBaseUrl + `/${imageName}.jpg`;
         break;
       default:
-        imageElement.src = this.uploadsBaseUrl + '/default.png';
+        imageElement.src = this.uploadsBaseUrl + '/default.webp';
         break;
     }
   }

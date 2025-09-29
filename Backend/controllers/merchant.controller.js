@@ -34,6 +34,12 @@ function generateRandomBarcode(length = 12) {
   return result;
 }
 
+// Helper function to get merchant upload directory
+function getMerchantUploadDir(merchantUsername, barcode) {
+  const sanitizedUsername = merchantUsername.replace(/[^a-zA-Z0-9-_]/g, '_');
+  return path.join(__dirname, 'uploads/books', 'merchant_' + sanitizedUsername, barcode);
+}
+
 // Multer setup for logo upload
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -64,13 +70,13 @@ async function registerMerchant(req, res) {
     let logoPath = '';
     if (req.file) {
       // Sanitize merchant name for folder name
-      const merchantName = req.body.name.replace(/[^a-zA-Z0-9-_]/g, '_');
-      // Save logo image in uploads/merchants folder
-      const uploadDir = path.join(__dirname, '../uploads/merchants');
+      const sanitizedUsername = req.body.name.replace(/[^a-zA-Z0-9-_]/g, '_');
+      // Save logo image in uploads/books/merchant_username/logo/ folder
+      const uploadDir = path.join(__dirname, '../uploads/books', 'merchant_' + sanitizedUsername, 'logo');
       if (!fs.existsSync(uploadDir)) {
         fs.mkdirSync(uploadDir, { recursive: true });
       }
-      const filename = `merchant_logo_${Date.now()}.webp`;
+      const filename = `logo.webp`;
       const filepath = path.join(uploadDir, filename);
 
       await sharp(req.file.buffer)
@@ -78,13 +84,13 @@ async function registerMerchant(req, res) {
         .webp({ quality: 80 })
         .toFile(filepath);
 
-      logoPath = filename; // Store just filename since folder is fixed
+      logoPath = `merchant_${sanitizedUsername}/logo/logo.webp`; // Store path relative to uploads/books/
     }
 
     const userPassword = password || 'defaultPassword123';
     const hashedPassword = await bcrypt.hash(userPassword, 12);
 
-    const merchant = new User({
+    const merchantData = {
       username: name,
       email,
       password: hashedPassword,
@@ -94,10 +100,16 @@ async function registerMerchant(req, res) {
       village,
       role: 'merchant',
       taxNumber,
-      logo: logoPath,
       approved: false,
       merchantName: name
-    });
+    };
+
+    // Only set logo if a file was uploaded
+    if (logoPath) {
+      merchantData.logo = logoPath;
+    }
+
+    const merchant = new User(merchantData);
 
     await merchant.save();
 
@@ -180,12 +192,13 @@ async function addProduct(req, res) {
     }
 
     // Compress and save image using sharp
-    const filename = barcode + '.webp';
-    const uploadDir = path.join(__dirname, '../uploads/books');
+    const sanitizedUsername = req.merchant.username.replace(/[^a-zA-Z0-9-_]/g, '_');
+    const imagePath = 'merchant_' + sanitizedUsername + '/' + barcode + '/' + barcode + '.webp';
+    const uploadDir = getMerchantUploadDir(req.merchant.username, barcode);
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
-    const filepath = path.join(uploadDir, filename);
+    const filepath = path.join(uploadDir, barcode + '.webp');
 
     await sharp(req.file.buffer)
       .resize({ width: 800 }) // Resize width to max 800px, maintain aspect ratio
@@ -221,7 +234,7 @@ async function addProduct(req, res) {
       product_description,
       product_price: parseFloat(product_price) || 0,
       price_cost: parseFloat(price_cost) || 0,
-      product_image: filename,
+      product_image: imagePath,
       status: 'pending',
       merchantId: req.merchant._id,
       createdAt: new Date()
@@ -307,7 +320,7 @@ async function getMerchantOrders(req, res) {
 
     // Get product IDs and barcodes
     const productIds = merchantProducts.map(p => p._id.toString());
-    const productBarcodes = merchantProducts.map(p => p.product_image ? p.product_image.replace('.webp', '') : '');
+    const productBarcodes = merchantProducts.map(p => p.product_image ? p.product_image.split('/').pop().replace('.webp', '') : '');
 
     // Find all users and their orders
     const users = await User.find().select('orders username email phone');
@@ -327,7 +340,7 @@ async function getMerchantOrders(req, res) {
             // Find the corresponding product to get the image
             const merchantProduct = merchantProducts.find(mp => {
               const bookId = product.bookId || product.book;
-              return mp._id.toString() === bookId || mp.product_image?.replace('.webp', '') === bookId;
+              return mp._id.toString() === bookId || mp.product_image?.split('/').pop().replace('.webp', '') === bookId;
             });
 
             return {
@@ -385,7 +398,7 @@ async function deleteMerchantOrder(req, res) {
 
     // Get product IDs and barcodes
     const productIds = merchantProducts.map(p => p._id.toString());
-    const productBarcodes = merchantProducts.map(p => p.product_image ? p.product_image.replace('.webp', '') : '');
+    const productBarcodes = merchantProducts.map(p => p.product_image ? p.product_image.split('/').pop().replace('.webp', '') : '');
 
     // Find the user who has this order
     const user = await User.findOne({ 'orders._id': orderId });
@@ -492,7 +505,7 @@ async function deleteProduct(req, res) {
 
     // Delete product image if exists
     if (product.product_image) {
-      const uploadDir = path.join(__dirname, '../uploads/books');
+      const uploadDir = path.join(__dirname, 'uploads/books');
       const imagePath = path.join(uploadDir, product.product_image);
       if (fs.existsSync(imagePath)) {
         fs.unlinkSync(imagePath);
@@ -501,7 +514,7 @@ async function deleteProduct(req, res) {
 
     // If product was approved, remove from Excel and update Google Drive
     if (product.status === 'approved') {
-      const barcode = product.product_image ? product.product_image.replace('.webp', '') : productId;
+      const barcode = product.product_image ? product.product_image.split('/').pop().replace('.webp', '') : productId;
       const fileId = process.env.GOOGLE_DRIVE_FILE_ID;
 
       if (fileId) {
@@ -580,7 +593,7 @@ async function bulkDeleteProducts(req, res) {
     // Delete product images
     for (const product of products) {
       if (product.product_image) {
-        const uploadDir = path.join(__dirname, '../uploads/books');
+        const uploadDir = path.join(__dirname, 'uploads/books');
         const imagePath = path.join(uploadDir, product.product_image);
         if (fs.existsSync(imagePath)) {
           fs.unlinkSync(imagePath);
@@ -611,7 +624,7 @@ async function bulkDeleteProducts(req, res) {
 
         // Remove all approved products from Excel
         for (const product of approvedProducts) {
-          const barcode = product.product_image ? product.product_image.replace('.webp', '') : product._id;
+          const barcode = product.product_image ? product.product_image.split('/').pop().replace('.webp', '') : product._id;
           const productIndex = json.findIndex(p => String(p.products_id) === String(barcode));
           if (productIndex !== -1) {
             json.splice(productIndex, 1);
@@ -729,52 +742,112 @@ async function updateMerchantProfile(req, res) {
     const merchantId = req.merchant._id;
     const { name, phone, taxNumber, bio, preparationTime } = req.body;
 
+    // Removed console logs for cleaner output
+    // console.log('🔄 Starting updateMerchantProfile for merchant:', merchantId);
+    // console.log('📝 Request body:', { name, phone, taxNumber, bio, preparationTime });
+    // console.log('📁 File received:', req.file ? 'YES' : 'NO');
+    // if (req.file) {
+    //   console.log('📁 File details:', { originalname: req.file.originalname, mimetype: req.file.mimetype, size: req.file.size });
+    // }
+
     // Find the merchant
     const merchant = await User.findById(merchantId);
     if (!merchant) {
+      // console.log('❌ Merchant not found:', merchantId);
       return res.status(404).json({ success: false, message: 'Merchant not found' });
     }
 
+    // console.log('👤 Current merchant logo:', merchant.logo);
+
     // Handle logo upload if provided
-    let logoPath = merchant.logo; // Keep existing logo by default
+    let logoPath = undefined; // Don't set logo by default
     if (req.file) {
-      // Sanitize merchant name for folder name (not used here but kept for consistency)
-      const merchantName = name || merchant.username;
-      // Save logo image in uploads/merchants folder
-      const uploadDir = path.join(__dirname, '../uploads/merchants');
+      // console.log('🖼️ Processing logo upload...');
+      // console.log('📁 File details:', {
+      //   fieldname: req.file.fieldname,
+      //   originalname: req.file.originalname,
+      //   encoding: req.file.encoding,
+      //   mimetype: req.file.mimetype,
+      //   size: req.file.size,
+      //   bufferLength: req.file.buffer ? req.file.buffer.length : 'NO BUFFER'
+      // });
+
+      // Sanitize merchant name for folder name
+      const sanitizedUsername = (name || merchant.username).replace(/[^a-zA-Z0-9-_]/g, '_');
+      // console.log('📁 Sanitized username:', sanitizedUsername);
+
+      // Save logo image in uploads/books/merchant_username/logo/ folder
+      const uploadDir = path.join(__dirname, '../uploads/books', 'merchant_' + sanitizedUsername, 'logo');
+      // console.log('📁 Upload directory:', uploadDir);
+
       if (!fs.existsSync(uploadDir)) {
         fs.mkdirSync(uploadDir, { recursive: true });
+        // console.log('📁 Created upload directory');
       }
-      const filename = `merchant_logo_${Date.now()}.webp`;
+
+      const filename = `logo.webp`;
       const filepath = path.join(uploadDir, filename);
+      // console.log('📁 File path:', filepath);
 
-      await sharp(req.file.buffer)
-        .resize({ width: 300 }) // Resize logo width to max 300px
-        .webp({ quality: 80 })
-        .toFile(filepath);
+      try {
+        // console.log('🔄 Starting Sharp processing...');
+        await sharp(req.file.buffer)
+          .resize({ width: 300 }) // Resize logo width to max 300px
+          .webp({ quality: 80 })
+          .toFile(filepath);
+        // console.log('✅ Logo processed and saved successfully');
+      } catch (sharpError) {
+        // console.error('❌ Sharp processing error:', sharpError);
+        // Try to save the original file as fallback
+        try {
+          // console.log('🔄 Trying to save original file as fallback...');
+          fs.writeFileSync(filepath.replace('.webp', '.jpg'), req.file.buffer);
+          logoPath = `merchant_${sanitizedUsername}/logo/logo.jpg`;
+          // console.log('✅ Original file saved as JPG fallback');
+        } catch (fallbackError) {
+          // console.error('❌ Fallback save also failed:', fallbackError);
+          throw sharpError; // Re-throw the original error
+        }
+      }
 
-      logoPath = filename;
+      logoPath = `merchant_${sanitizedUsername}/logo/logo.webp`; // Store path relative to uploads/books/
+      // console.log('🖼️ Logo path set to:', logoPath);
 
       // Delete old logo file if exists
       if (merchant.logo) {
-        const oldLogoPath = path.join(uploadDir, merchant.logo);
+        const oldLogoPath = path.join(__dirname, 'uploads/books', merchant.logo);
+        // console.log('🗑️ Checking old logo path:', oldLogoPath);
         if (fs.existsSync(oldLogoPath)) {
           fs.unlinkSync(oldLogoPath);
+          // console.log('🗑️ Deleted old logo file');
+        } else {
+          // console.log('🗑️ Old logo file not found');
         }
       }
+    } else {
+      // console.log('🖼️ No logo file provided');
     }
 
     // Update merchant data
+    // console.log('📝 Updating merchant data...');
     merchant.username = name || merchant.username;
     merchant.merchantName = name || merchant.merchantName;
     merchant.phone = phone || merchant.phone;
     merchant.taxNumber = taxNumber || merchant.taxNumber;
     merchant.bio = bio || merchant.bio;
-    merchant.logo = logoPath;
+    if (logoPath !== undefined) {
+      // console.log('🖼️ Setting new logo path:', logoPath);
+      merchant.logo = logoPath;
+    } else {
+      // console.log('🖼️ Logo path not changed');
+    }
     merchant.preparationTime = preparationTime || merchant.preparationTime || 1;
 
+    // console.log('💾 Saving merchant...');
     await merchant.save();
+    // console.log('✅ Merchant saved successfully');
 
+    // console.log('📤 Sending response...');
     res.json({
       success: true,
       message: 'Profile updated successfully',
@@ -793,8 +866,9 @@ async function updateMerchantProfile(req, res) {
         createdAt: merchant.createdAt
       }
     });
+    // console.log('✅ Response sent successfully');
   } catch (error) {
-    console.error('Error in updateMerchantProfile:', error);
+    console.error('❌ Error in updateMerchantProfile:', error);
     if (error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE') {
       return res.status(400).json({ success: false, message: 'Logo file size exceeds 1 MB limit' });
     }

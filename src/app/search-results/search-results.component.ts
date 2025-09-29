@@ -269,33 +269,7 @@ export class SearchResultsComponent implements OnInit {
     }
   }
 
-  // دالة التعامل مع الخطأ في تحميل الصورة
-  handleImageError(event: any) {
-    const imageElement = event.target;
 
-    if (!imageElement.errorStep) {
-      imageElement.errorStep = 1;
-    } else {
-      imageElement.errorStep++;
-    }
-
-    const imageName = imageElement.src.split('/').pop().split('.')[0];
-
-switch (imageElement.errorStep) {
-      case 1:
-        imageElement.src = this.uploadsBaseUrl + `/${imageName}.webp`;
-        break;
-      case 2:
-        imageElement.src = this.uploadsBaseUrl + `/${imageName}.png`;
-        break;
-      case 3:
-        imageElement.src = this.uploadsBaseUrl + `/${imageName}.jpg`;
-        break;
-      default:
-        imageElement.src = this.uploadsBaseUrl + '/default.webp';
-        break;
-    }
-  }
 
   // دالة تحديث الصفحة الحالية
   updatePage(): void {

@@ -17,6 +17,12 @@ function generateRandomBarcode(length = 12) {
   return result;
 }
 
+// Helper function to get admin upload directory
+function getAdminUploadDir(adminUsername, barcode) {
+  const sanitizedUsername = adminUsername.replace(/[^a-zA-Z0-9-_]/g, '_');
+  return path.join(__dirname, '../uploads/books', 'admin_' + sanitizedUsername, barcode);
+}
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 1024 * 1024 }, // 1 MB
@@ -45,18 +51,34 @@ async function addProduct(req, res) {
       return res.status(400).json({ success: false, message: 'Image file is required' });
     }
 
-    // Compress and save image using sharp
-    const filename = barcode + '.webp';
-    const uploadDir = path.join(__dirname, '../uploads/books');
+    // Compress and save image in multiple formats using sharp
+    const uploadDir = getAdminUploadDir(req.admin.username, barcode);
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
-    const filepath = path.join(uploadDir, filename);
 
+    // WebP
+    const webpPath = path.join(uploadDir, barcode + '.webp');
     await sharp(req.file.buffer)
       .resize({ width: 800 }) // Resize width to max 800px, maintain aspect ratio
-      .webp({ quality: 80 }) // Convert to webp with quality 80
-      .toFile(filepath);
+      .webp({ quality: 80 })
+      .toFile(webpPath);
+
+    // PNG
+    const pngPath = path.join(uploadDir, barcode + '.png');
+    await sharp(req.file.buffer)
+      .resize({ width: 800 })
+      .png({ quality: 80 })
+      .toFile(pngPath);
+
+    // JPG
+    const jpgPath = path.join(uploadDir, barcode + '.jpg');
+    await sharp(req.file.buffer)
+      .resize({ width: 800 })
+      .jpeg({ quality: 80 })
+      .toFile(jpgPath);
+
+    const filename = barcode + '.webp';
 
     // Determine category prefix based on categoryMap keys
     let categoryPrefix = '';
@@ -83,6 +105,8 @@ async function addProduct(req, res) {
     }
 
     // Prepare product data
+    const adminName = req.admin.username.replace(/[^a-zA-Z0-9-_]/g, '_');
+    const image_path = '/uploads/books/admin_' + adminName + '/' + barcode + '/' + filename;
     const productData = {
       barcode,
       product_name,
@@ -92,6 +116,8 @@ async function addProduct(req, res) {
       categoryPrefix,
       product_price: parseFloat(product_price) || 0,
       price_cost: parseFloat(price_cost) || 0,
+      image_path,
+      product_image: filename,
       createdAt: new Date().toISOString() // Add createdAt field with current timestamp
     };
 
@@ -288,7 +314,7 @@ async function replaceProductImage(req, res) {
       return res.status(400).json({ success: false, message: 'Image file is required' });
     }
 
-    const uploadDir = path.join(__dirname, '../uploads/books');
+    const uploadDir = getAdminUploadDir(req.admin.username, barcode);
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
@@ -316,7 +342,7 @@ async function deleteProduct(req, res) {
 
   try {
     // Delete product image file if exists
-    const uploadDir = path.join(__dirname, '../uploads/books');
+    const uploadDir = getAdminUploadDir(req.admin.username, barcode);
     const imagePath = path.join(uploadDir, barcode + '.webp');
     if (fs.existsSync(imagePath)) {
       fs.unlinkSync(imagePath);
@@ -400,8 +426,8 @@ async function bulkDeleteProducts(req, res) {
     }
 
     // Delete product image files if they exist
-    const uploadDir = path.join(__dirname, '../uploads/books');
     for (const barcode of barcodes) {
+      const uploadDir = getAdminUploadDir(req.admin.username, barcode);
       const imagePath = path.join(uploadDir, barcode + '.webp');
       if (fs.existsSync(imagePath)) {
         fs.unlinkSync(imagePath);

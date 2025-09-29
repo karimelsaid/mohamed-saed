@@ -18,13 +18,15 @@ async function getExcelData(req, res) {
 
         // Enrich with merchant info
         const Product = require('../models/Product.model');
-        const approvedProducts = await Product.find({ status: 'approved' }).populate('merchantId', 'merchantName username');
+        const approvedProducts = await Product.find({ status: 'approved' }).populate('merchantId', 'merchantName username logo');
         const productMap = {};
         approvedProducts.forEach(product => {
           const barcode = product.product_image.replace('.webp', '');
           productMap[barcode] = {
             merchantId: product.merchantId._id,
-            merchantName: product.merchantId.merchantName || product.merchantId.username
+            merchantName: product.merchantId.merchantName || product.merchantId.username,
+            merchantLogo: product.merchantId.logo,
+            product_image: product.product_image
           };
         });
 
@@ -32,6 +34,8 @@ async function getExcelData(req, res) {
           if (productMap[book.products_id]) {
             book.merchantId = productMap[book.products_id].merchantId;
             book.merchantName = productMap[book.products_id].merchantName;
+            book.merchantLogo = productMap[book.products_id].merchantLogo;
+            book.product_image = productMap[book.products_id].product_image;
           }
         });
 
@@ -100,13 +104,15 @@ async function getRecentBooks(req, res) {
 
         // Enrich with merchant info
         const Product = require('../models/Product.model');
-        const approvedProducts = await Product.find({ status: 'approved' }).populate('merchantId', 'merchantName username');
+        const approvedProducts = await Product.find({ status: 'approved' }).populate('merchantId', 'merchantName username logo');
         const productMap = {};
         approvedProducts.forEach(product => {
           const barcode = product.product_image.replace('.webp', '');
           productMap[barcode] = {
             merchantId: product.merchantId._id,
-            merchantName: product.merchantId.merchantName || product.merchantId.username
+            merchantName: product.merchantId.merchantName || product.merchantId.username,
+            merchantLogo: product.merchantId.logo,
+            product_image: product.product_image
           };
         });
 
@@ -114,6 +120,8 @@ async function getRecentBooks(req, res) {
           if (productMap[book.products_id]) {
             book.merchantId = productMap[book.products_id].merchantId;
             book.merchantName = productMap[book.products_id].merchantName;
+            book.merchantLogo = productMap[book.products_id].merchantLogo;
+            book.product_image = productMap[book.products_id].product_image;
           }
         });
 

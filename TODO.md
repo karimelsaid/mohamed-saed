@@ -1,13 +1,9 @@
-# TODO List for Checkout Modal Improvements
+# TODO: Fix Upload Path in Merchant Controller
 
 ## Completed Tasks
-- [x] Add `isProcessing` property to component
-- [x] Update `completePurchase()` to set `isProcessing = true`
-- [x] Update `cancelPurchase()` to set `isProcessing = false`
-- [x] Update `executePurchase()` error handlers to set `isProcessing = false`
-- [x] Modify button in HTML to be disabled when `isProcessing` is true
-- [x] Add spinner and "جاري المعالجة..." text when processing
-- [x] Add `isProcessing` to button disabled condition
+- [x] Fixed upload path in `updateMerchantProfile` function from `../../uploads/books` to `../uploads/books`
+- [x] Verified no other instances of incorrect paths in JavaScript files
+- [x] Confirmed admin paths in excel.service.js are intentionally different
 
 ## Summary
-All tasks have been completed successfully. The checkout modal now properly disables the purchase button during processing, shows a loading spinner, and prevents multiple submissions.
+The issue was in the `updateMerchantProfile` function where the path to the uploads directory was incorrectly set to `../../uploads/books` instead of `../uploads/books`. This has been corrected to ensure proper file path resolution from the Backend/controllers/ directory.

@@ -33,7 +33,7 @@
   </div>
   <div *ngIf="merchant.logo && !logoPreview">
     <p>اللوجو الحالي:</p>
-    <img [src]="getLogoUrl(merchant.logo)" alt="Current Logo" style="max-width: 200px; max-height: 200px;" />
+    <img [src]="getLogoUrl(merchant.logo)" [attr.data-timestamp]="logoTimestamp" alt="Current Logo" style="max-width: 200px; max-height: 200px;" (error)="onLogoError($event)" />
   </div>
   <button type="submit" [disabled]="loading">حفظ التغييرات</button>
   <p *ngIf="message" [style.color]="messageColor">{{ message }}</p>

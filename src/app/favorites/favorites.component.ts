@@ -29,7 +29,7 @@ export class FavoritesComponent implements OnInit {
     return this.authService.isInCart(bookId);
   }
 
-  
+
   addToCart(bookId: string): void {
     const userData = JSON.parse(localStorage.getItem('user') || '{}');
     const userId = userData.id;
@@ -111,30 +111,5 @@ export class FavoritesComponent implements OnInit {
     });
   }
 
-  handleImageError(event: any) {
-    const imageElement = event.target;
-  
-    if (!imageElement.errorStep) {
-      imageElement.errorStep = 1;
-    } else {
-      imageElement.errorStep++;
-    }
-  
-    const imageName = imageElement.src.split('/').pop().split('.')[0];
-  
-switch (imageElement.errorStep) {
-      case 1:
-        imageElement.src = this.uploadsBaseUrl + `/${imageName}.webp`;
-        break;
-      case 2:
-        imageElement.src = this.uploadsBaseUrl + `/${imageName}.png`;
-        break;
-      case 3:
-        imageElement.src = this.uploadsBaseUrl + `/${imageName}.jpg`;
-        break;
-      default:
-        imageElement.src = this.uploadsBaseUrl + '/default.webp';
-        break;
-    }
-  }
+
 }

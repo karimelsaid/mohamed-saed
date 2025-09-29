@@ -102,10 +102,11 @@
 
               <!-- Book Image Container -->
               <div class="relative aspect-[3/4] overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 flex-shrink-0">
+                <!-- Loading Skeleton -->
+                <div *ngIf="!book.loaded" class="absolute inset-0 bg-gray-300 dark:bg-gray-600 animate-pulse rounded-lg"></div>
                 <img
                   [routerLink]="['/book', book.products_id, getBookSlug(book.product_name)]"
-                  [src]="uploadsBaseUrl + '/' + book.product_image + '.jpg'"
-                  (error)="handleImageError($event)"
+              [src]="book.image_path || uploadsBaseUrl + '/' + (book.product_image || book.products_id) + '.webp'"
                   [alt]="book.product_name"
                   class="w-full h-full object-cover object-center transition-all duration-500 group-hover:scale-110"
                   loading="lazy"

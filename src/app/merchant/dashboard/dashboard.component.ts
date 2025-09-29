@@ -491,8 +491,8 @@ export class MerchantDashboardComponent implements OnInit {
 
   getLogoUrl(logo: string): string {
     if (!logo) return '';
-    // Construct the full URL to the logo image served statically at /uploads/merchants/
-    return `/uploads/merchants/${logo}`;
+    // Construct the full URL to the logo image served statically at /uploads/books/
+    return `/uploads/books/${logo}`;
   }
 
   toggleEditMode() {
@@ -520,32 +520,7 @@ export class MerchantDashboardComponent implements OnInit {
     return encodeURIComponent(value);
   }
 
-  handleImageError(event: any) {
-    const imageElement = event.target;
 
-    if (!imageElement.errorStep) {
-      imageElement.errorStep = 1;
-    } else {
-      imageElement.errorStep++;
-    }
-
-    const imageName = imageElement.src.split('/').pop().split('.')[0];
-
-    switch (imageElement.errorStep) {
-      case 1:
-        imageElement.src = this.uploadsBaseUrl + `/${imageName}.webp`;
-        break;
-      case 2:
-        imageElement.src = this.uploadsBaseUrl + `/${imageName}.png`;
-        break;
-      case 3:
-        imageElement.src = this.uploadsBaseUrl + `/${imageName}.jpg`;
-        break;
-      default:
-        imageElement.src = this.uploadsBaseUrl + '/default.webp';
-        break;
-    }
-  }
 
   loadBooksList() {
     this.http.get('/json/books_list.json').subscribe(data => {

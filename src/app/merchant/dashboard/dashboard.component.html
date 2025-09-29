@@ -325,7 +325,7 @@
               </div>
               <div *ngIf="merchant?.logo && !logoPreview" class="mt-2">
                 <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">اللوجو الحالي:</p>
-                <img [src]="getLogoUrl(merchant.logo)" alt="Current Logo" class="w-20 h-20 object-cover rounded-md border border-gray-300 dark:border-gray-600" (error)="handleImageError($event)" />
+                <img [src]="getLogoUrl(merchant.logo)" alt="Current Logo" class="w-20 h-20 object-cover rounded-md border border-gray-300 dark:border-gray-600" />
               </div>
             </div>
             <div class="flex items-center justify-end gap-4">
@@ -718,9 +718,8 @@
                 >
                   <img
                     class="w-16 h-16 mr-1 rounded object-cover"
-                    [src]="uploadsBaseUrl + '/' + product.product_image"
+                    [src]="(uploadsBaseUrl + '/' + product.product_image).replace('.jpg', '.webp')"
                     alt="صورة الكتاب"
-                    (error)="handleImageError($event)"
                   />
                   <a
                     [routerLink]="['/book', product.book]"

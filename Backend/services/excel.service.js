@@ -77,6 +77,7 @@ async function downloadAndConvertExcel(fileId, promotionStartDateStr, promotionE
   }
 
     product.product_image = product_id;
+    product.image_path = `/uploads/books/admin__karim_mohamed__/${product_id}/${product_id}.webp`;
 
     // Add promotionEndDate property for frontend countdown
     product.promotionEndDate = promoEndDate.toISOString();

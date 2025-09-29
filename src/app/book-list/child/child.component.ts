@@ -135,7 +135,7 @@ export class ChildComponent implements OnInit, OnDestroy {
   fetchRatingsForBooks(): void {
     this.books.forEach(book => {
       if (book.products_id) {
-        this.http.get<{ bookId: string; averageRating: number; ratingCount: number }>(`http://localhost:3000/api/users/average-rating/${book.products_id}`)
+        this.http.get<{ bookId: string; averageRating: number; ratingCount: number }>(`${environment.apiBaseUrl}/users/average-rating/${book.products_id}`)
           .subscribe({
             next: (res) => {
               this.ratings[book.products_id] = {
@@ -302,32 +302,7 @@ this.paginatedBooks = this.books.slice(startIndex, endIndex);
     }
   }
 
-  handleImageError(event: any) {
-    const imageElement = event.target;
 
-    if (!imageElement.errorStep) {
-      imageElement.errorStep = 1;
-    } else {
-      imageElement.errorStep++;
-    }
-
-    const imageName = imageElement.src.split('/').pop().split('.')[0];
-
-switch (imageElement.errorStep) {
-      case 1:
-        imageElement.src = this.uploadsBaseUrl + `/${imageName}.webp`;
-        break;
-      case 2:
-        imageElement.src = this.uploadsBaseUrl + `/${imageName}.png`;
-        break;
-      case 3:
-        imageElement.src = this.uploadsBaseUrl + `/${imageName}.jpg`;
-        break;
-      default:
-        imageElement.src = this.uploadsBaseUrl + '/default.webp';
-        break;
-    }
-  }
 
   startCountdown() {
     if (this.books.length === 0) {

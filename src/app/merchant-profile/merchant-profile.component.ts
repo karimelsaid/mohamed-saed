@@ -19,6 +19,7 @@ export class MerchantProfileComponent implements OnInit {
   messageColor = 'black';
   logoPreview: string | null = null;
   selectedFile: File | null = null;
+  logoTimestamp: number = Date.now();
 
   constructor(private merchantAuthService: MerchantAuthService, private router: Router) {}
 
@@ -91,6 +92,7 @@ export class MerchantProfileComponent implements OnInit {
         this.merchant = data.merchant;
         this.logoPreview = null;
         this.selectedFile = null;
+        this.logoTimestamp = Date.now(); // Force logo re-render
         // Update local storage
         localStorage.setItem('merchant_data', JSON.stringify(data.merchant));
       } else {
@@ -105,7 +107,13 @@ export class MerchantProfileComponent implements OnInit {
   }
 
   getLogoUrl(logo: string): string {
-    return `${environment.apiBaseUrl}/uploads/merchants/${logo}`;
+    return `${environment.apiBaseUrl}/uploads/books/${logo}?t=${this.logoTimestamp}`;
+  }
+
+  onLogoError(event: any) {
+    // Log error but don't hide the image
+    console.error('Logo failed to load', event);
+    this.showMessage('فشل في تحميل اللوجو الحالي', 'red');
   }
 
   private showMessage(msg: string, color: string) {

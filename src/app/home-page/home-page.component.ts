@@ -102,7 +102,7 @@ export class HomePageComponent implements OnInit, OnDestroy {
 
     this.dataService.getData().subscribe((data: any) => {
       const lastFiftyBooks = data.slice(-50);
-      this.books = this.shuffleArray(lastFiftyBooks);
+      this.books = lastFiftyBooks.map((book: any) => ({ ...book, loaded: false })); // Remove shuffle to respect backend sorting
       this.visibleBooks = [...this.books, ...this.books.slice(0, this.booksToShow)];
       this.bookCoverTitles = this.visibleBooks.map((_, i) => {
         const titles = ['غلاف ورقي سميك', 'غلاف كرتوني', 'غلاف فاخر مدهب'];
@@ -248,32 +248,7 @@ export class HomePageComponent implements OnInit, OnDestroy {
     }
   }
 
-  handleImageError(event: any) {
-    const imageElement = event.target;
 
-    if (!imageElement.errorStep) {
-      imageElement.errorStep = 1;
-    } else {
-      imageElement.errorStep++;
-    }
-
-    const imageName = imageElement.src.split('/').pop().split('.')[0];
-
-    switch (imageElement.errorStep) {
-      case 1:
-        imageElement.src = this.uploadsBaseUrl + `/${imageName}.webp`;
-        break;
-      case 2:
-        imageElement.src = this.uploadsBaseUrl + `/${imageName}.png`;
-        break;
-      case 3:
-        imageElement.src = this.uploadsBaseUrl + `/${imageName}.jpg`;
-        break;
-      default:
-        imageElement.src = this.uploadsBaseUrl + '/default.webp';
-        break;
-    }
-  }
 
 
   //  <div

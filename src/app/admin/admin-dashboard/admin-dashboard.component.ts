@@ -45,6 +45,7 @@ interface Product {
   product_price: number;
   price_cost: number;
   product_image?: string;
+  image_path?: string;
   promotionEndDate?: string;
   product_price_before_discount?: number;
   product_discount_percent?: number;
@@ -591,32 +592,7 @@ export class AdminDashboardComponent implements OnInit {
     this.bulkDeleteSelectedProductsWithModal();
   }
 
-  handleImageError(event: any) {
-    const imageElement = event.target;
 
-    if (!imageElement.errorStep) {
-      imageElement.errorStep = 1;
-    } else {
-      imageElement.errorStep++;
-    }
-
-    const imageName = imageElement.src.split('/').pop().split('.')[0];
-
-    switch (imageElement.errorStep) {
-      case 1:
-        imageElement.src = this.uploadsBaseUrl + `/${imageName}.webp`;
-        break;
-      case 2:
-        imageElement.src = this.uploadsBaseUrl + `/${imageName}.png`;
-        break;
-      case 3:
-        imageElement.src = this.uploadsBaseUrl + `/${imageName}.jpg`;
-        break;
-      default:
-        imageElement.src = this.uploadsBaseUrl + '/default.webp';
-        break;
-    }
-  }
 
   exportProductsToExcel(): void {
     const worksheet = XLSX.utils.json_to_sheet(this.products);

@@ -36,7 +36,7 @@ function generateRandomBarcode(length = 12) {
 
 // Helper function to get merchant upload directory
 function getMerchantUploadDir(merchantUsername, barcode) {
-  const sanitizedUsername = merchantUsername.replace(/[^a-zA-Z0-9-_]/g, '_');
+  const sanitizedUsername = merchantUsername.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
   return path.join(__dirname, 'uploads/books', 'merchant_' + sanitizedUsername, barcode);
 }
 
@@ -57,7 +57,7 @@ const upload = multer({
 async function registerMerchant(req, res) {
   try {
     const { name, email, phone, governorate, city, village, taxNumber, password } = req.body;
-    if (!name || !email) {
+    if (!name || !name.trim() || !email) {
       return res.status(400).json({ success: false, message: 'Name and email are required' });
     }
 
@@ -69,8 +69,8 @@ async function registerMerchant(req, res) {
 
     let logoPath = '';
     if (req.file) {
-      // Sanitize merchant name for folder name
-      const sanitizedUsername = req.body.name.replace(/[^a-zA-Z0-9-_]/g, '_');
+      // Sanitize merchant name for folder name, allowing Arabic letters
+      const sanitizedUsername = req.body.name.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
       // Save logo image in uploads/books/merchant_username/logo/ folder
       const uploadDir = path.join(__dirname, '../uploads/books', 'merchant_' + sanitizedUsername, 'logo');
       if (!fs.existsSync(uploadDir)) {
@@ -192,7 +192,7 @@ async function addProduct(req, res) {
     }
 
     // Compress and save image using sharp
-    const sanitizedUsername = req.merchant.username.replace(/[^a-zA-Z0-9-_]/g, '_');
+    const sanitizedUsername = req.merchant.username.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
     const imagePath = 'merchant_' + sanitizedUsername + '/' + barcode + '/' + barcode + '.webp';
     const uploadDir = getMerchantUploadDir(req.merchant.username, barcode);
     if (!fs.existsSync(uploadDir)) {
@@ -773,7 +773,7 @@ async function updateMerchantProfile(req, res) {
       // });
 
       // Sanitize merchant name for folder name
-      const sanitizedUsername = (name || merchant.username).replace(/[^a-zA-Z0-9-_]/g, '_');
+      const sanitizedUsername = (name || merchant.username).replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
       // console.log('📁 Sanitized username:', sanitizedUsername);
 
       // Save logo image in uploads/books/merchant_username/logo/ folder

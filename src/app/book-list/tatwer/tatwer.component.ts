@@ -114,8 +114,39 @@ getDisplayedPages(): (number | string)[] {
     });
 
     this.dataService.getData().subscribe(data => {
-      this.books = data.filter((book: Book) => book.product_category.includes('تطوير الذات وعلم النفس'));
-      this.totalPages = Math.ceil(this.books.length / this.booksPerPage);
+      console.log('Raw data received:', data); // Debug raw data
+
+      // Filter books by category 'تطوير الذات وعلم النفس'
+      let filteredBooks = data.filter((book: Book) => book.product_category.includes('تطوير الذات وعلم النفس'));
+
+      // Debug promotionEndDate values before processing
+      filteredBooks.forEach((book: Book) => {
+        console.log(`Book: ${book.product_name}, promotionEndDate raw: ${book.promotionEndDate}`);
+      });
+
+      // Parse promotionEndDate and update rival flag based on current date
+      const now = new Date().getTime();
+      filteredBooks = filteredBooks.map((book: Book) => {
+        if (book.promotionEndDate) {
+          const promoEnd = new Date(book.promotionEndDate).getTime();
+          console.log(`Now: ${now}, PromoEnd: ${promoEnd}, PromoEnd > Now: ${promoEnd > now}`);
+          book.rival = promoEnd > now;
+        } else {
+          book.rival = false;
+        }
+        // Ensure product_discount_percent is a number
+        book.product_discount_percent = Number(book.product_discount_percent) || 0;
+        return book;
+      });
+
+      this.books = filteredBooks;
+
+      console.log('Loaded books with updated rival flags:', this.books);
+      this.books.forEach((book: Book) => {
+        console.log(`Book: ${book.product_name}, rival: ${book.rival}, discount: ${book.product_discount_percent}, promotionEndDate: ${book.promotionEndDate}`);
+      });
+
+      this.totalPages = Math.ceil(this.books.length / this.booksPerPage); // حساب عدد الصفحات
       this.currentPage = Math.min(this.currentPage, this.totalPages); // التأكد من أن الصفحة الحالية صحيحة
       this.updatePage();
       this.startCountdown();
@@ -303,6 +334,39 @@ this.paginatedBooks = this.books.slice(startIndex, endIndex);
   }
 
 
+
+  getBookImageUrl(book: any): string {
+    let imagePath = book.product_image ? String(book.product_image) : '';
+    if (!imagePath) {
+      if (book.merchantName) {
+        imagePath = 'merchant_' + book.merchantName + '/' + book.products_id + '/' + book.products_id + '.webp';
+      } else {
+        imagePath = 'admin__karim_mohamed__/' + book.products_id + '/' + book.products_id + '.webp';
+      }
+    } else {
+      if (imagePath.includes('/')) {
+        const parts = imagePath.split('/');
+        if (imagePath.includes('merchant_')) {
+          imagePath = parts.slice(-3).join('/');
+        } else if (imagePath.includes('admin__')) {
+          imagePath = parts.slice(-3).join('/');
+        } else {
+          imagePath = parts[parts.length - 1];
+        }
+      } else {
+        if (!imagePath.includes('.') && /^\d+$/.test(imagePath)) {
+          if (book.merchantName) {
+            imagePath = 'merchant_' + book.merchantName + '/' + imagePath + '/' + imagePath + '.webp';
+          } else {
+            imagePath = 'admin__karim_mohamed__/' + imagePath + '/' + imagePath + '.webp';
+          }
+        } else if (!imagePath.includes('.')) {
+          imagePath += '.webp';
+        }
+      }
+    }
+    return this.uploadsBaseUrl + '/' + imagePath;
+  }
 
   startCountdown() {
     if (this.books.length === 0) {

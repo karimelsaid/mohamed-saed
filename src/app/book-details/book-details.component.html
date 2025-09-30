@@ -11,7 +11,7 @@
         <a [routerLink]="['/merchant', book.merchantId]" class="text-sm text-blue-600 dark:text-blue-400 hover:underline cursor-pointer font-medium">بواسطة {{ book.merchantName }}</a>
       </div>
       <div class="relative mb-8">
-        <img [src]="uploadsBaseUrl + '/' + book.product_image" alt="{{ book.product_name }}" class="w-full max-w-md h-auto mx-auto rounded-xl shadow-xl dark:shadow-2xl transform hover:scale-105 transition-transform duration-300" />
+        <img [src]="getBookImageUrl(book)" alt="{{ book.product_name }}" class="w-full max-w-md h-auto mx-auto rounded-xl shadow-xl dark:shadow-2xl transform hover:scale-105 transition-transform duration-300" />
         <!-- شريط الخصم -->
         <div class="absolute -top-4 -left-4 bg-gradient-to-r from-red-500 to-red-600 dark:from-red-600 dark:to-red-700 text-white text-sm font-bold px-4 py-3 rounded-full shadow-lg z-20 animate-pulse transform">
           {{ book.product_discount_percent }}% خصم

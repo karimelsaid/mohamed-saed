@@ -1,9 +1,10 @@
-# TODO: Fix Upload Path in Merchant Controller
-
-## Completed Tasks
-- [x] Fixed upload path in `updateMerchantProfile` function from `../../uploads/books` to `../uploads/books`
-- [x] Verified no other instances of incorrect paths in JavaScript files
-- [x] Confirmed admin paths in excel.service.js are intentionally different
-
-## Summary
-The issue was in the `updateMerchantProfile` function where the path to the uploads directory was incorrectly set to `../../uploads/books` instead of `../uploads/books`. This has been corrected to ensure proper file path resolution from the Backend/controllers/ directory.
+- [x] Add separate variables in register.component.ts: buyerConfirmPassword, merchantConfirmPassword, buyerPasswordMismatch, merchantPasswordMismatch, buyerPasswordValid, merchantPasswordValid, buyerPasswordInvalid, merchantPasswordInvalid, buyerPasswordTouched, merchantPasswordTouched.
+- [x] Create checkBuyerPasswordMatch() and checkMerchantPasswordMatch() functions.
+- [x] Create validateBuyerPassword() and validateMerchantPassword() functions.
+- [x] Update isBuyerFormValid and isMerchantFormValid to use respective flags and fix merchant password length to >=8.
+- [x] Update register.component.html: Change confirmPassword ngModel to buyerConfirmPassword for buyer form, merchantConfirmPassword for merchant form.
+- [x] Update error messages in HTML to use buyerPasswordMismatch and merchantPasswordMismatch.
+- [x] Update password input (input) events to call respective validate functions.
+- [x] Update registerBuyer and registerMerchant to use respective functions.
+- [x] Test buyer registration.
+- [x] Test merchant registration.

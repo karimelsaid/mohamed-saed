@@ -8510,7 +8510,7 @@
     "product_description": "كتاب \"الأربعون النووية\" للإمام النووي هو مجموعة من اثنين وأربعين حديثاً نبوياً شريفاً، اختارها الإمام النووي بعناية لتكون جامعة لقواعد الدين وأصول الإسلام. التزم النووي في جمعها أن تكون صحيحة، وذكر أن كل حديث منها يمثل قاعدة عظيمة من قواعد الدين. الكتاب يعتبر مرجعاً مهماً في الحديث النبوي، حيث يشتمل على جوامع الكلم التي تعكس جوهر التعاليم النبوية والقيم الإسلامية الأساسية. ",
     "product_image": "856652900408",
     "promotionEndDate": "2026-01-31T00:00:00.000Z",
-    "product_price_before_discount": 529,
+    "product_price_before_discount": 519,
     "rival": true,
     "product_discount_percent": 65,
     "image_path": "/uploads/books/admin__karim_mohamed__/856652900408/856652900408.webp"
@@ -10149,36 +10149,6 @@
     "rival": true,
     "product_discount_percent": 65,
     "image_path": "/uploads/books/admin__karim_mohamed__/336085489303/336085489303.webp"
-  },
-  {
-    "products_id": "509917151599",
-    "product_name": "111",
-    "product_price": 19,
-    "price_cost": 12,
-    "product_quantity": 1,
-    "product_category": "أعمال وتسويق ومالية",
-    "product_description": "شسش",
-    "product_image": "509917151599",
-    "promotionEndDate": "2026-01-31T00:00:00.000Z",
-    "product_price_before_discount": 59,
-    "rival": true,
-    "product_discount_percent": 70,
-    "image_path": "/uploads/books/admin__karim_mohamed__/509917151599/509917151599.webp"
-  },
-  {
-    "products_id": "852246206414",
-    "product_name": "غلاف جميل وكتاب عجيب",
-    "product_price": 139,
-    "price_cost": 80,
-    "product_quantity": 1,
-    "product_category": "روايات وقصص",
-    "product_description": "شش",
-    "product_image": "852246206414",
-    "promotionEndDate": "2026-01-31T00:00:00.000Z",
-    "product_price_before_discount": 389,
-    "rival": true,
-    "product_discount_percent": 65,
-    "image_path": "/uploads/books/admin__karim_mohamed__/852246206414/852246206414.webp"
   },
   {
     "products_id": "027475087408",

@@ -21,6 +21,39 @@ export class HomePageComponent implements OnInit, OnDestroy {
     return bookName.trim().replace(/\s+/g, '-');
   }
 
+  getBookImageUrl(book: any): string {
+    let imagePath = book.product_image ? String(book.product_image) : '';
+    if (!imagePath) {
+      if (book.merchantName) {
+        imagePath = 'merchant_' + book.merchantName + '/' + book.products_id + '/' + book.products_id + '.webp';
+      } else {
+        imagePath = 'admin__karim_mohamed__/' + book.products_id + '/' + book.products_id + '.webp';
+      }
+    } else {
+      if (imagePath.includes('/')) {
+        const parts = imagePath.split('/');
+        if (imagePath.includes('merchant_')) {
+          imagePath = parts.slice(-3).join('/');
+        } else if (imagePath.includes('admin__')) {
+          imagePath = parts.slice(-3).join('/');
+        } else {
+          imagePath = parts[parts.length - 1];
+        }
+      } else {
+        if (!imagePath.includes('.') && /^\d+$/.test(imagePath)) {
+          if (book.merchantName) {
+            imagePath = 'merchant_' + book.merchantName + '/' + imagePath + '/' + imagePath + '.webp';
+          } else {
+            imagePath = 'admin__karim_mohamed__/' + imagePath + '/' + imagePath + '.webp';
+          }
+        } else if (!imagePath.includes('.')) {
+          imagePath += '.webp';
+        }
+      }
+    }
+    return this.uploadsBaseUrl + '/' + imagePath;
+  }
+
   // Methods for print service examples
   getPrintDescription(index: number): string {
     const descriptions = [
@@ -100,9 +133,9 @@ export class HomePageComponent implements OnInit, OnDestroy {
     this.isLoading = true;
     this.updateBooksToShow();
 
-    this.dataService.getData().subscribe((data: any) => {
-      const lastFiftyBooks = data.slice(-50);
-      this.books = lastFiftyBooks.map((book: any) => ({ ...book, loaded: false })); // Remove shuffle to respect backend sorting
+    this.dataService.getRecentBooks().subscribe((data: any) => {
+      // Shuffle the books array to display them randomly
+      this.books = this.shuffleArray(data).map((book: any) => ({ ...book, loaded: false }));
       this.visibleBooks = [...this.books, ...this.books.slice(0, this.booksToShow)];
       this.bookCoverTitles = this.visibleBooks.map((_, i) => {
         const titles = ['غلاف ورقي سميك', 'غلاف كرتوني', 'غلاف فاخر مدهب'];

@@ -65,7 +65,7 @@
       <!-- Book Image Section -->
       <div class="relative w-full h-32 sm:h-40 md:h-48 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center p-3 md:p-4">
         <img
-          [src]="uploadsBaseUrl + '/' + book.product_image + '.webp'"
+          [src]="getBookImageUrl(book)"
           [alt]="book.product_name"
           class="max-w-full max-h-full object-contain rounded-lg md:rounded-xl shadow-md group-hover:scale-105 transition-transform duration-300"
           data-attempt="0"

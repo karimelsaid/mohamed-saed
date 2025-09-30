@@ -44,11 +44,16 @@ export class RegisterComponent {
     logoFile: null as File | null
   };
 
-  confirmPassword: string = '';
-  passwordMismatch: boolean = false;
-  passwordTouched: boolean = false;
-  passwordValid: boolean = false;
-  passwordInvalid: boolean = false;
+  buyerConfirmPassword: string = '';
+  merchantConfirmPassword: string = '';
+  buyerPasswordMismatch: boolean = false;
+  merchantPasswordMismatch: boolean = false;
+  buyerPasswordTouched: boolean = false;
+  merchantPasswordTouched: boolean = false;
+  buyerPasswordValid: boolean = false;
+  merchantPasswordValid: boolean = false;
+  buyerPasswordInvalid: boolean = false;
+  merchantPasswordInvalid: boolean = false;
   phoneValid: boolean = false;
   usernameValid: boolean = false;
   phoneTouched: boolean = false;
@@ -119,16 +124,28 @@ export class RegisterComponent {
    validateName() {
     this.usernameValid = this.user.username.trim().length > 0;
   }
-  // التحقق من تطابق كلمة المرور
-  checkPasswordMatch() {
-    this.passwordMismatch = this.user.password !== this.confirmPassword;
+  // التحقق من تطابق كلمة المرور للمشتري
+  checkBuyerPasswordMatch() {
+    this.buyerPasswordMismatch = this.user.password !== this.buyerConfirmPassword;
   }
 
-  // التحقق من كلمة المرور (منع المسافات والتحقق من الطول)
-  validatePassword() {
+  // التحقق من تطابق كلمة المرور للتاجر
+  checkMerchantPasswordMatch() {
+    this.merchantPasswordMismatch = this.merchantUser.password !== this.merchantConfirmPassword;
+  }
+
+  // التحقق من كلمة المرور للمشتري (منع المسافات والتحقق من الطول)
+  validateBuyerPassword() {
     const regex = /\s/;
-    this.passwordInvalid = regex.test(this.user.password) || this.user.password.length < 8;
-    this.passwordValid = !this.passwordInvalid;
+    this.buyerPasswordInvalid = regex.test(this.user.password) || this.user.password.length < 8;
+    this.buyerPasswordValid = !this.buyerPasswordInvalid;
+  }
+
+  // التحقق من كلمة المرور للتاجر (منع المسافات والتحقق من الطول)
+  validateMerchantPassword() {
+    const regex = /\s/;
+    this.merchantPasswordInvalid = regex.test(this.merchantUser.password) || this.merchantUser.password.length < 8;
+    this.merchantPasswordValid = !this.merchantPasswordInvalid;
   }
 
   // التحقق من رقم الهاتف
@@ -158,8 +175,8 @@ export class RegisterComponent {
     // Ensure all validations are up to date
     this.validateName();
     this.validateEmail();
-    this.validatePassword();
-    this.checkPasswordMatch();
+    this.validateBuyerPassword();
+    this.checkBuyerPasswordMatch();
     this.validatePhone();
 
     const isValid = !!(
@@ -167,8 +184,8 @@ export class RegisterComponent {
       this.user.email.trim() &&
       this.emailValid &&
       this.user.password.length >= 8 &&
-      !this.passwordInvalid &&
-      !this.passwordMismatch &&
+      !this.buyerPasswordInvalid &&
+      !this.buyerPasswordMismatch &&
       this.phoneValid &&
       this.user.governorate &&
       this.user.city
@@ -179,13 +196,16 @@ export class RegisterComponent {
 
   // Check if merchant form is valid
   get isMerchantFormValid(): boolean {
+    this.validateMerchantPassword();
+    this.checkMerchantPasswordMatch();
+
     return !!(
       this.merchantUser.libraryName.trim() &&
       this.merchantUser.email.trim() &&
       this.emailValid &&
-      this.merchantUser.password.length >= 6 &&
-      !this.passwordInvalid &&
-      !this.passwordMismatch &&
+      this.merchantUser.password.length >= 8 &&
+      !this.merchantPasswordInvalid &&
+      !this.merchantPasswordMismatch &&
       this.phoneValid &&
       this.merchantUser.governorate &&
       this.merchantUser.city &&
@@ -203,8 +223,8 @@ export class RegisterComponent {
   }
 
   registerBuyer() {
-    this.checkPasswordMatch();
-    this.validatePassword();
+    this.checkBuyerPasswordMatch();
+    this.validateBuyerPassword();
     this.validatePhone();
     this.validateEmail();
 
@@ -242,8 +262,8 @@ export class RegisterComponent {
   }
 
   registerMerchant() {
-    this.checkPasswordMatch();
-    this.validatePassword();
+    this.checkMerchantPasswordMatch();
+    this.validateMerchantPassword();
     this.validatePhone();
     this.validateEmail();
 

@@ -37,7 +37,7 @@ function generateRandomBarcode(length = 12) {
 // Helper function to get merchant upload directory
 function getMerchantUploadDir(merchantUsername, barcode) {
   const sanitizedUsername = merchantUsername.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
-  return path.join(__dirname, 'uploads/books', 'merchant_' + sanitizedUsername, barcode);
+  return path.join(__dirname, '../uploads/books', 'merchant_' + sanitizedUsername, barcode);
 }
 
 // Multer setup for logo upload
@@ -534,7 +534,12 @@ async function deleteProduct(req, res) {
         let json = xlsx.utils.sheet_to_json(sheet);
 
         // Find and remove product by barcode
-        const productIndex = json.findIndex(p => String(p.products_id) === String(barcode));
+        const productIndex = json.findIndex(p => {
+          if (!p.products_id) return false;
+          const pId = String(p.products_id).trim();
+          const bId = String(barcode).trim();
+          return pId === bId || Number(pId) === Number(bId) || pId === String(Number(bId)) || String(Number(pId)) === bId;
+        });
         if (productIndex !== -1) {
           json.splice(productIndex, 1);
 
@@ -625,7 +630,12 @@ async function bulkDeleteProducts(req, res) {
         // Remove all approved products from Excel
         for (const product of approvedProducts) {
           const barcode = product.product_image ? product.product_image.split('/').pop().replace('.webp', '') : product._id;
-          const productIndex = json.findIndex(p => String(p.products_id) === String(barcode));
+          const productIndex = json.findIndex(p => {
+            if (!p.products_id) return false;
+            const pId = String(p.products_id).trim();
+            const bId = String(barcode).trim();
+            return pId === bId || Number(pId) === Number(bId) || pId === String(Number(bId)) || String(Number(pId)) === bId;
+          });
           if (productIndex !== -1) {
             json.splice(productIndex, 1);
           }

@@ -189,7 +189,12 @@ async function updateProduct(req, res) {
     let json = xlsx.utils.sheet_to_json(sheet);
 
     // Find product by barcode and update fields
-    const productIndex = json.findIndex(p => p.products_id === barcode);
+    const productIndex = json.findIndex(p => {
+      if (!p.products_id) return false;
+      const pId = String(p.products_id).trim();
+      const bId = String(barcode).trim();
+      return pId === bId || Number(pId) === Number(bId) || pId === String(Number(bId)) || String(Number(pId)) === bId;
+    });
     if (productIndex === -1) {
       return res.status(404).json({ success: false, message: 'Product not found' });
     }
@@ -263,7 +268,12 @@ async function batchUpdateProducts(req, res) {
 
     // Update products in JSON
     products.forEach(update => {
-      const productIndex = json.findIndex(p => p.products_id === update.products_id);
+      const productIndex = json.findIndex(p => {
+        if (!p.products_id) return false;
+        const pId = String(p.products_id).trim();
+        const bId = String(update.products_id).trim();
+        return pId === bId || Number(pId) === Number(bId) || pId === String(Number(bId)) || String(Number(pId)) === bId;
+      });
       if (productIndex !== -1) {
         if (update.product_name !== undefined) json[productIndex].product_name = update.product_name;
         if (update.product_quantity !== undefined) json[productIndex].product_quantity = update.product_quantity;
@@ -341,11 +351,10 @@ async function deleteProduct(req, res) {
   }
 
   try {
-    // Delete product image file if exists
+    // Delete product folder if exists
     const uploadDir = getAdminUploadDir(req.admin.username, barcode);
-    const imagePath = path.join(uploadDir, barcode + '.webp');
-    if (fs.existsSync(imagePath)) {
-      fs.unlinkSync(imagePath);
+    if (fs.existsSync(uploadDir)) {
+      fs.rmSync(uploadDir, { recursive: true, force: true });
     }
 
     // Download current Excel file
@@ -372,7 +381,9 @@ async function deleteProduct(req, res) {
     // Find product by barcode and remove it with flexible comparison
     const productIndex = json.findIndex(p => {
       if (!p.products_id) return false;
-      return String(p.products_id).trim() === String(barcode).trim();
+      const pId = String(p.products_id).trim();
+      const bId = String(barcode).trim();
+      return pId === bId || Number(pId) === Number(bId) || pId === String(Number(bId)) || String(Number(pId)) === bId;
     });
     if (productIndex === -1) {
       return res.status(404).json({ success: false, message: 'Product not found' });
@@ -425,12 +436,11 @@ async function bulkDeleteProducts(req, res) {
       return res.status(400).json({ success: false, message: 'Barcodes array is required and must not be empty' });
     }
 
-    // Delete product image files if they exist
+    // Delete product folders if they exist
     for (const barcode of barcodes) {
       const uploadDir = getAdminUploadDir(req.admin.username, barcode);
-      const imagePath = path.join(uploadDir, barcode + '.webp');
-      if (fs.existsSync(imagePath)) {
-        fs.unlinkSync(imagePath);
+      if (fs.existsSync(uploadDir)) {
+        fs.rmSync(uploadDir, { recursive: true, force: true });
       }
     }
 
@@ -460,7 +470,9 @@ async function bulkDeleteProducts(req, res) {
     for (const barcode of barcodes) {
       const productIndex = json.findIndex(p => {
         if (!p.products_id) return false;
-        return String(p.products_id).trim() === String(barcode).trim();
+        const pId = String(p.products_id).trim();
+        const bId = String(barcode).trim();
+        return pId === bId || Number(pId) === Number(bId) || pId === String(Number(bId)) || String(Number(pId)) === bId;
       });
       if (productIndex !== -1) {
         json.splice(productIndex, 1);
@@ -561,7 +573,12 @@ async function batchUpdateProductsMain(req, res) {
 
     // Update products in JSON
     products.forEach(update => {
-      const productIndex = json.findIndex(p => p.products_id === update.products_id);
+      const productIndex = json.findIndex(p => {
+        if (!p.products_id) return false;
+        const pId = String(p.products_id).trim();
+        const bId = String(update.products_id).trim();
+        return pId === bId || Number(pId) === Number(bId) || pId === String(Number(bId)) || String(Number(pId)) === bId;
+      });
       if (productIndex !== -1) {
         if (update.product_name !== undefined) json[productIndex].product_name = update.product_name;
         if (update.product_quantity !== undefined) json[productIndex].product_quantity = update.product_quantity;
@@ -805,7 +822,12 @@ async function updateProductApproval(req, res) {
         let json = xlsx.utils.sheet_to_json(sheet);
 
         // Find and remove product by barcode (not MongoDB ID)
-        const productIndex = json.findIndex(p => String(p.products_id) === String(barcode));
+        const productIndex = json.findIndex(p => {
+          if (!p.products_id) return false;
+          const pId = String(p.products_id).trim();
+          const bId = String(barcode).trim();
+          return pId === bId || Number(pId) === Number(bId) || pId === String(Number(bId)) || String(Number(pId)) === bId;
+        });
         if (productIndex !== -1) {
           json.splice(productIndex, 1);
 
@@ -1020,7 +1042,12 @@ async function updateProductUpdateRequest(req, res) {
         let json = xlsx.utils.sheet_to_json(sheet);
 
         // Find and update product in Excel
-        const productIndex = json.findIndex(p => String(p.products_id) === String(barcode));
+        const productIndex = json.findIndex(p => {
+          if (!p.products_id) return false;
+          const pId = String(p.products_id).trim();
+          const bId = String(barcode).trim();
+          return pId === bId || Number(pId) === Number(bId) || pId === String(Number(bId)) || String(Number(pId)) === bId;
+        });
         if (productIndex !== -1) {
           json[productIndex].product_name = product.product_name;
           json[productIndex].product_quantity = product.product_quantity;

@@ -51,6 +51,7 @@ interface Product {
   product_discount_percent?: number;
   createdAt?: string; // Added creation date for sorting by recently added
   fileOrder?: number; // Added to track order in file for sorting
+  merchantName?: string; // Added for merchant products
 }
 
 interface OrderProduct {
@@ -1440,6 +1441,17 @@ export class AdminDashboardComponent implements OnInit {
 
   showWarningModal(title: string, message: string, action?: () => void): void {
     this.openModal(title, message, 'warning', 'تأكيد', 'إلغاء', true, action || undefined);
+  }
+
+  getProductImageUrl(product: Product): string {
+    if (product.image_path) {
+      const parts = product.image_path.split('/');
+      const relativePath = parts.slice(-3).join('/');
+      return this.uploadsBaseUrl + '/' + relativePath;
+    } else if (product.product_image) {
+      return this.uploadsBaseUrl + '/' + product.product_image;
+    }
+    return '';
   }
 
   showProductAddedModal(productData: any, file: File | null): void {

@@ -10151,33 +10151,18 @@
     "image_path": "/uploads/books/admin__karim_mohamed__/336085489303/336085489303.webp"
   },
   {
-    "products_id": "027475087408",
-    "product_name": "122",
+    "products_id": "merchant_kenouz/978103062714/978103062714",
+    "product_name": "11",
     "product_price": 9,
-    "price_cost": 0,
-    "product_quantity": 1,
-    "product_category": "قواميس ومراجع",
-    "product_description": "شسييشس",
-    "product_image": "027475087408",
+    "price_cost": 1,
+    "product_quantity": 0,
+    "product_category": "أعمال وتسويق ومالية",
+    "product_description": "h",
+    "product_image": "merchant_kenouz/978103062714/978103062714",
     "promotionEndDate": "2026-01-31T00:00:00.000Z",
     "product_price_before_discount": 29,
     "rival": true,
     "product_discount_percent": 70,
-    "image_path": "/uploads/books/admin__karim_mohamed__/027475087408/027475087408.webp"
-  },
-  {
-    "products_id": "merchant_kenouz/816682291024/816682291024",
-    "product_name": "يس",
-    "product_price": 29,
-    "price_cost": 21,
-    "product_quantity": 12,
-    "product_category": "قواميس ومراجع",
-    "product_description": "ث12",
-    "product_image": "merchant_kenouz/816682291024/816682291024",
-    "promotionEndDate": "2026-01-31T00:00:00.000Z",
-    "product_price_before_discount": 79,
-    "rival": true,
-    "product_discount_percent": 65,
-    "image_path": "/uploads/books/admin__karim_mohamed__/merchant_kenouz/816682291024/816682291024/merchant_kenouz/816682291024/816682291024.webp"
+    "image_path": "/uploads/books/merchant_kenouz/merchant_kenouz/978103062714/978103062714/merchant_kenouz/978103062714/978103062714.webp"
   }
 ]

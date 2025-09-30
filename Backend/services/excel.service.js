@@ -59,25 +59,51 @@ async function downloadAndConvertExcel(fileId, promotionStartDateStr, promotionE
     return !(product.product_quantity < 0);
   });
 
-  const updatedData = filteredJson.map(product => {
+  const updatedData = [];
+  for (const product of filteredJson) {
     const product_id = product.products_id;
     let name = product.product_name || '';
-  // Prefer product_category field if valid
-  let category = null;
-  if (product.product_category && Object.values(categoryMap).includes(product.product_category)) {
-    category = product.product_category;
-  } else {
-    let categoryKey = name.split('-')[0].trim();
-    category = categoryMap[categoryKey] || 'غير مصنف';
-  }
-  product.product_category = category;
+    // Prefer product_category field if valid
+    let category = null;
+    if (product.product_category && Object.values(categoryMap).includes(product.product_category)) {
+      category = product.product_category;
+    } else {
+      let categoryKey = name.split('-')[0].trim();
+      category = categoryMap[categoryKey] || 'غير مصنف';
+    }
+    product.product_category = category;
 
-  if (name.includes('-')) {
-    product.product_name = name.split('-').slice(1).join('-').trim();
-  }
+    if (name.includes('-')) {
+      product.product_name = name.split('-').slice(1).join('-').trim();
+    }
 
     product.product_image = product_id;
-    product.image_path = `/uploads/books/admin__karim_mohamed__/${product_id}/${product_id}.webp`;
+
+    // Check if this is a merchant product by looking it up in the database
+    const Product = require('../models/Product.model');
+    const User = require('../models/User.model');
+
+    try {
+      const dbProduct = await Product.findOne({ product_image: product_id + '.webp' });
+      if (dbProduct && dbProduct.merchantId) {
+        // This is a merchant product, get merchant username
+        const merchant = await User.findById(dbProduct.merchantId);
+        if (merchant) {
+          const sanitizedUsername = merchant.username.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
+          product.image_path = `/uploads/books/merchant_${sanitizedUsername}/${product_id}/${product_id}.webp`;
+        } else {
+          // Merchant not found, fallback to admin path
+          product.image_path = `/uploads/books/admin__karim_mohamed__/${product_id}/${product_id}.webp`;
+        }
+      } else {
+        // This is an admin product
+        product.image_path = `/uploads/books/admin__karim_mohamed__/${product_id}/${product_id}.webp`;
+      }
+    } catch (error) {
+      console.error('Error checking product merchant:', error);
+      // Fallback to admin path on error
+      product.image_path = `/uploads/books/admin__karim_mohamed__/${product_id}/${product_id}.webp`;
+    }
 
     // Add promotionEndDate property for frontend countdown
     product.promotionEndDate = promoEndDate.toISOString();
@@ -167,8 +193,8 @@ async function downloadAndConvertExcel(fileId, promotionStartDateStr, promotionE
     }
     product.product_discount_percent = roundUpToNearestFive(discountPercent);
 
-    return product;
-  });
+    updatedData.push(product);
+  }
 
   console.log('✅ Excel data updated with image, category, and discount percent.');
   fs.writeFileSync('output.json', JSON.stringify(updatedData, null, 2));

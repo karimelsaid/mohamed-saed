@@ -758,14 +758,14 @@
 
 <!-- Modal Dialog -->
 <app-modal-dialog
-  *ngIf="modalConfig.isOpen"
-  [title]="modalConfig.title"
-  [message]="modalConfig.message"
-  [confirmText]="modalConfig.confirmText"
-  [cancelText]="modalConfig.cancelText"
-  [showCancel]="modalConfig.showCancel"
-  [type]="modalConfig.type"
-  (confirmed)="onModalConfirm()"
-  (cancelled)="onModalCancel()"
-  (closed)="onModalClose()">
+  [isOpen]="modalOpen"
+  [title]="modalTitle"
+  [message]="modalMessage"
+  [confirmText]="modalConfirmText"
+  [cancelText]="modalCancelText"
+  [showCancel]="modalShowCancel"
+  [type]="modalType"
+  (confirmed)="confirmModal()"
+  (cancelled)="closeModal()"
+  (closed)="closeModal()">
 </app-modal-dialog>

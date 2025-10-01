@@ -24,16 +24,15 @@ export class MerchantDashboardComponent implements OnInit {
   loadingOrders = false;
   loadingUpdateRequests = false;
 
-  // Modal properties
-  modalConfig = {
-    isOpen: false,
-    title: '',
-    message: '',
-    confirmText: 'تأكيد',
-    cancelText: 'إلغاء',
-    showCancel: true,
-    type: 'info' as 'info' | 'warning' | 'error' | 'success'
-  };
+  // Modal properties for component's modal system
+  modalOpen: boolean = false;
+  modalTitle: string = '';
+  modalMessage: string = '';
+  modalType: 'info' | 'warning' | 'error' | 'success' = 'info';
+  modalConfirmText: string = 'تأكيد';
+  modalCancelText: string = 'إلغاء';
+  modalShowCancel: boolean = true;
+  pendingAction: (() => void) | null = null;
 
   // Loading modal properties
   loadingModal = {
@@ -288,52 +287,52 @@ export class MerchantDashboardComponent implements OnInit {
   }
 
   deleteProduct(product: any) {
-    this.showModal(
+    this.openModal(
       'تأكيد الحذف',
       `هل أنت متأكد من حذف المنتج "${product.product_name}"؟ لا يمكن التراجع عن هذا الإجراء.`,
       'warning',
+      'تأكيد',
+      'إلغاء',
+      true,
       () => this.confirmDeleteProduct(product)
     );
   }
 
   deleteOrder(order: any) {
-    this.showModal(
+    this.openModal(
       'تأكيد الحذف',
       `هل أنت متأكد من حذف الطلب رقم "${order._id}"؟ لا يمكن التراجع عن هذا الإجراء.`,
       'warning',
+      'تأكيد',
+      'إلغاء',
+      true,
       () => this.confirmDeleteOrder(order)
     );
   }
 
   // Modal methods
-  showModal(title: string, message: string, type: 'info' | 'warning' | 'error' | 'success' = 'info', onConfirm?: () => void) {
-    this.modalConfig = {
-      isOpen: true,
-      title,
-      message,
-      confirmText: 'تأكيد',
-      cancelText: 'إلغاء',
-      showCancel: true,
-      type
-    };
-    this.onConfirmCallback = onConfirm;
+  openModal(title: string, message: string, type: 'info' | 'warning' | 'error' | 'success' = 'info', confirmText: string = 'تأكيد', cancelText: string = 'إلغاء', showCancel: boolean = true, onConfirm?: () => void) {
+    this.modalTitle = title;
+    this.modalMessage = message;
+    this.modalType = type;
+    this.modalConfirmText = confirmText;
+    this.modalCancelText = cancelText;
+    this.modalShowCancel = showCancel;
+    this.pendingAction = onConfirm || null;
+    this.modalOpen = true;
   }
 
-  onModalConfirm() {
-    if (this.onConfirmCallback) {
-      this.onConfirmCallback();
+  closeModal() {
+    this.modalOpen = false;
+    this.pendingAction = null;
+  }
+
+  confirmModal() {
+    if (this.pendingAction) {
+      this.pendingAction();
     }
+    this.closeModal();
   }
-
-  onModalCancel() {
-    this.modalConfig.isOpen = false;
-  }
-
-  onModalClose() {
-    this.modalConfig.isOpen = false;
-  }
-
-  private onConfirmCallback?: () => void;
 
   // Multi-select methods
   toggleProductSelection(productId: string) {
@@ -368,10 +367,13 @@ export class MerchantDashboardComponent implements OnInit {
     const selectedCount = this.selectedProducts.size;
     if (selectedCount === 0) return;
 
-    this.showModal(
+    this.openModal(
       'تأكيد الحذف الجماعي',
       `هل أنت متأكد من حذف ${selectedCount} منتج${selectedCount > 1 ? '' : ''}؟ لا يمكن التراجع عن هذا الإجراء.`,
       'warning',
+      'تأكيد',
+      'إلغاء',
+      true,
       () => this.confirmBulkDelete()
     );
   }
@@ -380,10 +382,13 @@ export class MerchantDashboardComponent implements OnInit {
     const selectedCount = this.selectedProducts.size;
     if (selectedCount === 0) return;
 
-    this.showModal(
+    this.openModal(
       'تأكيد الحذف الجماعي',
       `هل أنت متأكد من حذف ${selectedCount} منتج${selectedCount > 1 ? '' : ''}؟ لا يمكن التراجع عن هذا الإجراء.`,
       'warning',
+      'تأكيد',
+      'إلغاء',
+      true,
       () => this.confirmBulkDelete()
     );
   }
@@ -391,13 +396,13 @@ export class MerchantDashboardComponent implements OnInit {
   private confirmDeleteProduct(product: any) {
     this.merchantAuthService.deleteMerchantProduct(product._id).subscribe({
       next: () => {
-        this.showModal('نجح الحذف', 'تم حذف المنتج بنجاح.', 'success');
+        this.openModal('نجح الحذف', 'تم حذف المنتج بنجاح.', 'success', 'تأكيد', 'إغلاق', false);
         // Refresh product list after deletion
         this.loadProducts();
         this.selectedProducts.clear();
       },
       error: (error) => {
-        this.showModal('خطأ في الحذف', 'حدث خطأ أثناء حذف المنتج. يرجى المحاولة مرة أخرى.', 'error');
+        this.openModal('خطأ في الحذف', 'حدث خطأ أثناء حذف المنتج. يرجى المحاولة مرة أخرى.', 'error', 'تأكيد', 'إغلاق', false);
       }
     });
   }
@@ -405,12 +410,12 @@ export class MerchantDashboardComponent implements OnInit {
   private confirmDeleteOrder(order: any) {
     this.merchantAuthService.deleteMerchantOrder(order._id).subscribe({
       next: () => {
-        this.showModal('نجح الحذف', 'تم حذف الطلب بنجاح.', 'success');
+        this.openModal('نجح الحذف', 'تم حذف الطلب بنجاح.', 'success', 'تأكيد', 'إغلاق', false);
         // Refresh order list after deletion
         this.loadOrders();
       },
       error: (error) => {
-        this.showModal('خطأ في الحذف', 'حدث خطأ أثناء حذف الطلب. يرجى المحاولة مرة أخرى.', 'error');
+        this.openModal('خطأ في الحذف', 'حدث خطأ أثناء حذف الطلب. يرجى المحاولة مرة أخرى.', 'error', 'تأكيد', 'إغلاق', false);
       }
     });
   }
@@ -421,11 +426,11 @@ export class MerchantDashboardComponent implements OnInit {
     );
 
     Promise.all(deletePromises).then(() => {
-      this.showModal('نجح الحذف الجماعي', `تم حذف ${this.selectedProducts.size} منتج بنجاح.`, 'success');
+      this.openModal('نجح الحذف الجماعي', `تم حذف ${this.selectedProducts.size} منتج بنجاح.`, 'success', 'تأكيد', 'إغلاق', false);
       this.loadProducts();
       this.selectedProducts.clear();
     }).catch((error) => {
-      this.showModal('خطأ في الحذف الجماعي', 'حدث خطأ أثناء حذف بعض المنتجات. يرجى المحاولة مرة أخرى.', 'error');
+      this.openModal('خطأ في الحذف الجماعي', 'حدث خطأ أثناء حذف بعض المنتجات. يرجى المحاولة مرة أخرى.', 'error', 'تأكيد', 'إغلاق', false);
     });
   }
 
@@ -625,10 +630,13 @@ export class MerchantDashboardComponent implements OnInit {
         type = 'info';
     }
 
-    this.showModal(
+    this.openModal(
       title,
       message,
       type,
+      confirmText,
+      'إلغاء',
+      true,
       () => this.confirmShipmentAction(order, newStatus)
     );
   }
@@ -636,20 +644,23 @@ export class MerchantDashboardComponent implements OnInit {
   private confirmShipmentAction(order: any, newStatus: string): void {
     this.http.patch(`${environment.apiBaseUrl}/orders/update-status/${order._id}`, { status: newStatus }).subscribe({
       next: () => {
-        this.showModal('نجح التحديث', `تم تحديث حالة الطلب إلى ${newStatus}.`, 'success');
+        this.openModal('نجح التحديث', `تم تحديث حالة الطلب إلى ${newStatus}.`, 'success', 'تأكيد', 'إغلاق', false);
         this.loadOrders();
       },
       error: (error) => {
-        this.showModal('خطأ في التحديث', 'حدث خطأ أثناء تحديث حالة الطلب. يرجى المحاولة مرة أخرى.', 'error');
+        this.openModal('خطأ في التحديث', 'حدث خطأ أثناء تحديث حالة الطلب. يرجى المحاولة مرة أخرى.', 'error', 'تأكيد', 'إغلاق', false);
       }
     });
   }
 
   deleteOrderWithModal(order: any): void {
-    this.showModal(
+    this.openModal(
       'تأكيد الحذف',
       `هل أنت متأكد من حذف الطلب رقم "${order._id.slice(-8)}"؟ لا يمكن التراجع عن هذا الإجراء.`,
       'warning',
+      'تأكيد',
+      'إلغاء',
+      true,
       () => this.confirmDeleteOrder(order)
     );
   }

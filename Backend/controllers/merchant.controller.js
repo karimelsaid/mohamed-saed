@@ -503,12 +503,13 @@ async function deleteProduct(req, res) {
       return res.status(404).json({ success: false, message: 'Product not found or does not belong to you' });
     }
 
-    // Delete product image if exists
+    // Delete product folder if exists
     if (product.product_image) {
-      const uploadDir = path.join(__dirname, 'uploads/books');
-      const imagePath = path.join(uploadDir, product.product_image);
-      if (fs.existsSync(imagePath)) {
-        fs.unlinkSync(imagePath);
+      const uploadDir = path.join(__dirname, '../uploads/books');
+      const productFolder = path.dirname(product.product_image); // Gets 'merchant_username/barcode'
+      const folderPath = path.join(uploadDir, productFolder);
+      if (fs.existsSync(folderPath)) {
+        fs.rmSync(folderPath, { recursive: true, force: true });
       }
     }
 
@@ -595,13 +596,14 @@ async function bulkDeleteProducts(req, res) {
       return res.status(404).json({ success: false, message: 'Some products not found or do not belong to you' });
     }
 
-    // Delete product images
+    // Delete product folders
     for (const product of products) {
       if (product.product_image) {
-        const uploadDir = path.join(__dirname, 'uploads/books');
-        const imagePath = path.join(uploadDir, product.product_image);
-        if (fs.existsSync(imagePath)) {
-          fs.unlinkSync(imagePath);
+        const uploadDir = path.join(__dirname, '../uploads/books');
+        const productFolder = path.dirname(product.product_image); // Gets 'merchant_username/barcode'
+        const folderPath = path.join(uploadDir, productFolder);
+        if (fs.existsSync(folderPath)) {
+          fs.rmSync(folderPath, { recursive: true, force: true });
         }
       }
     }

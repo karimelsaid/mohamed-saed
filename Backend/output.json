@@ -10163,6 +10163,36 @@
     "product_price_before_discount": 29,
     "rival": true,
     "product_discount_percent": 70,
-    "image_path": "/uploads/books/merchant_kenouz/merchant_kenouz/978103062714/978103062714/merchant_kenouz/978103062714/978103062714.webp"
+    "image_path": "/uploads/books/admin__karim_mohamed__/merchant_kenouz/978103062714/978103062714/merchant_kenouz/978103062714/978103062714.webp"
+  },
+  {
+    "products_id": "merchant_kenouz/403454621791/403454621791",
+    "product_name": "22",
+    "product_price": 9,
+    "price_cost": 2,
+    "product_quantity": 0,
+    "product_category": "تاريخ وسير ذاتية",
+    "product_description": "2",
+    "product_image": "merchant_kenouz/403454621791/403454621791",
+    "image_path": "/uploads/books/merchant_kenouz/merchant_kenouz/403454621791/403454621791/merchant_kenouz/403454621791/403454621791.webp",
+    "promotionEndDate": "2026-01-31T00:00:00.000Z",
+    "product_price_before_discount": 9,
+    "rival": true,
+    "product_discount_percent": 0
+  },
+  {
+    "products_id": "merchant_kenouz/403454621791/403454621791",
+    "product_name": "22",
+    "product_price": 9,
+    "price_cost": 2,
+    "product_quantity": 0,
+    "product_category": "تاريخ وسير ذاتية",
+    "product_description": "2",
+    "product_image": "merchant_kenouz/403454621791/403454621791",
+    "image_path": "/uploads/books/merchant_kenouz/merchant_kenouz/403454621791/403454621791/merchant_kenouz/403454621791/403454621791.webp",
+    "promotionEndDate": "2026-01-31T00:00:00.000Z",
+    "product_price_before_discount": 9,
+    "rival": true,
+    "product_discount_percent": 0
   }
 ]

@@ -347,7 +347,7 @@ async function deleteProduct(req, res) {
   }
 
   try {
-    // Delete product folder if exists
+    // Delete product folder if exists (admin uploads)
     const uploadDir = getAdminUploadDir(req.admin.username, barcode);
     if (fs.existsSync(uploadDir)) {
       fs.rmSync(uploadDir, { recursive: true, force: true });
@@ -384,6 +384,8 @@ async function deleteProduct(req, res) {
     if (productIndex === -1) {
       return res.status(404).json({ success: false, message: 'Product not found' });
     }
+    // Get product data before removing
+    const productData = json[productIndex];
     json.splice(productIndex, 1);
 
     // Convert JSON back to sheet
@@ -415,10 +417,34 @@ async function deleteProduct(req, res) {
       return res.status(500).json({ success: false, message: 'Error updating output.json after Excel update' });
     }
 
-    // Delete from Product model if exists
+    // Delete from Product model if exists (admin product)
     await Product.deleteMany({ product_image: barcode + '.webp' });
 
-    res.json({ success: true, message: 'Product deleted successfully' });
+    // Now delete from merchant's products and uploads folder
+    const User = require('../models/User.model');
+    const ProductModel = require('../models/Product.model');
+
+    // Find the product in DB by product_image or barcode
+    const merchantProduct = await ProductModel.findOne({ product_image: { $regex: barcode } });
+    if (merchantProduct) {
+      const merchantId = merchantProduct.merchantId;
+      if (merchantId) {
+        // Find merchant username
+        const merchantUser = await User.findById(merchantId);
+        if (merchantUser && merchantUser.username) {
+          const merchantUsername = merchantUser.username;
+          // Construct merchant upload directory path
+          const merchantUploadDir = path.join(__dirname, '../uploads/books', 'merchant_' + merchantUsername.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_'), barcode);
+          if (fs.existsSync(merchantUploadDir)) {
+            fs.rmSync(merchantUploadDir, { recursive: true, force: true });
+          }
+        }
+      }
+      // Delete the product from merchant's products collection
+      await ProductModel.deleteOne({ _id: merchantProduct._id });
+    }
+
+    res.json({ success: true, message: 'Product deleted successfully from admin and merchant' });
   } catch (error) {
     console.error('Error deleting product:', error);
     res.status(500).json({ success: false, message: 'Server error' });
@@ -509,12 +535,39 @@ async function bulkDeleteProducts(req, res) {
       return res.status(500).json({ success: false, message: 'Error updating output.json after Excel update' });
     }
 
-    // Delete from Product model for each barcode
+    // Delete from Product model for each barcode (admin products)
     for (const bc of barcodes) {
       await Product.deleteMany({ product_image: bc + '.webp' });
     }
 
-    res.json({ success: true, message: `${deletedCount} products deleted successfully` });
+    // Now delete from merchant's products and uploads folders
+    const User = require('../models/User.model');
+    const ProductModel = require('../models/Product.model');
+
+    // Find all merchant products that match the barcodes
+    const merchantProducts = await ProductModel.find({ product_image: { $in: barcodes.map(bc => new RegExp(bc)) } });
+
+    for (const product of merchantProducts) {
+      const merchantId = product.merchantId;
+      if (merchantId) {
+        // Find merchant username
+        const merchantUser = await User.findById(merchantId);
+        if (merchantUser && merchantUser.username) {
+          const merchantUsername = merchantUser.username;
+          const barcode = product.product_image ? product.product_image.split('/').pop().replace('.webp', '') : product._id;
+          // Construct merchant upload directory path
+          const merchantUploadDir = path.join(__dirname, '../uploads/books', 'merchant_' + merchantUsername.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_'), barcode);
+          if (fs.existsSync(merchantUploadDir)) {
+            fs.rmSync(merchantUploadDir, { recursive: true, force: true });
+          }
+        }
+      }
+    }
+
+    // Delete the merchant products from database
+    await ProductModel.deleteMany({ product_image: { $in: barcodes.map(bc => new RegExp(bc)) } });
+
+    res.json({ success: true, message: `${deletedCount} products deleted successfully from admin and merchant` });
   } catch (error) {
     console.error('Error in bulkDeleteProducts:', error);
     res.status(500).json({ success: false, message: 'Server error' });

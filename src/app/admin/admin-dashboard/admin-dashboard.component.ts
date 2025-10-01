@@ -162,6 +162,8 @@ export class AdminDashboardComponent implements OnInit {
   };
 
   selectedFiles: File[] = [];
+  selectedFilesPreviews: string[] = [];
+  mainImageIndex: number = 0;
   imageError: string | null = null;
 
   uploading: boolean = false;
@@ -1006,6 +1008,33 @@ export class AdminDashboardComponent implements OnInit {
         }
       }
       this.selectedFiles.push(...files);
+      this.generatePreviews(files);
+    }
+  }
+
+  generatePreviews(files: File[]): void {
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        if (e.target?.result) {
+          this.selectedFilesPreviews.push(e.target.result as string);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  selectMainImage(index: number): void {
+    this.mainImageIndex = index;
+  }
+
+  removeImage(index: number): void {
+    this.selectedFiles.splice(index, 1);
+    this.selectedFilesPreviews.splice(index, 1);
+    if (this.mainImageIndex === index) {
+      this.mainImageIndex = 0;
+    } else if (this.mainImageIndex > index) {
+      this.mainImageIndex--;
     }
   }
 
@@ -1017,7 +1046,7 @@ export class AdminDashboardComponent implements OnInit {
 
     this.imageError = null;
     if (!this.selectedFiles.length) {
-      this.imageError = 'يرجى اختيار صورة المنتج.';
+      this.imageError = 'يرجى اختيار صورة واحدة على الأقل.';
       return;
     }
 
@@ -1037,8 +1066,9 @@ export class AdminDashboardComponent implements OnInit {
     // Convert full category name to short key before sending
     const shortCategory = this.categoryReverseMap[this.product.product_category] || this.product.product_category;
 
+    const reorderedFiles = [this.selectedFiles[this.mainImageIndex], ...this.selectedFiles.filter((_, i) => i !== this.mainImageIndex)];
     const formData = new FormData();
-    for (const file of this.selectedFiles) {
+    for (const file of reorderedFiles) {
       formData.append('image', file);
     }
     formData.append('product_name', this.product.product_name);
@@ -1099,6 +1129,7 @@ export class AdminDashboardComponent implements OnInit {
       price_cost: 0
     };
     this.selectedFiles = [];
+    this.selectedFilesPreviews = [];
     this.imageError = null;
   }
 
@@ -1474,6 +1505,7 @@ export class AdminDashboardComponent implements OnInit {
       // Reset form and stay on add product page
       this.product = { ...productData };
       this.selectedFiles = files;
+      this.generatePreviews(files);
       this.switchView('addProduct');
       this.closeModal();
     };

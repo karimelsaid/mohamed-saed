@@ -17,58 +17,74 @@ async function getExcelData(req, res) {
         const jsonData = JSON.parse(data);
 
         // Enrich with merchant info
-        const Product = require('../models/Product.model');
-        const approvedProducts = await Product.find({ status: 'approved' }).populate('merchantId', 'merchantName username logo');
-        const productMap = {};
-        approvedProducts.forEach(product => {
-          const barcode = product.product_image.replace('.webp', '');
-          productMap[barcode] = {
-            merchantId: product.merchantId._id,
-            merchantName: product.merchantId.merchantName || product.merchantId.username,
-            merchantLogo: product.merchantId.logo,
-            product_image: product.product_image
-          };
-        });
+        try {
+          const Product = require('../models/Product.model');
+          const approvedProducts = await Product.find({ status: 'approved' }).populate('merchantId', 'merchantName username logo');
+          const productMap = {};
+          approvedProducts.forEach(product => {
+            if (product.product_image) {
+              const barcode = product.product_image.replace('.webp', '');
+              productMap[barcode] = {
+                merchantId: product.merchantId._id,
+                merchantName: product.merchantId.merchantName || product.merchantId.username,
+                merchantLogo: product.merchantId.logo,
+                product_image: product.product_image
+              };
+            }
+          });
 
-        jsonData.forEach(book => {
-          if (productMap[book.products_id]) {
-            book.merchantId = productMap[book.products_id].merchantId;
-            book.merchantName = productMap[book.products_id].merchantName;
-            book.merchantLogo = productMap[book.products_id].merchantLogo;
-            book.product_image = productMap[book.products_id].product_image;
-          }
-        });
+          jsonData.forEach(book => {
+            if (productMap[book.products_id]) {
+              book.merchantId = productMap[book.products_id].merchantId;
+              book.merchantName = productMap[book.products_id].merchantName;
+              book.merchantLogo = productMap[book.products_id].merchantLogo;
+              book.product_image = productMap[book.products_id].product_image;
+            }
+          });
+        } catch (enrichError) {
+          console.error('Error enriching with merchant info:', enrichError);
+          // Continue without merchant info
+        }
 
         // Enrich with ratings data
-        const User = require('../models/User.model');
-        const ratingsData = await User.aggregate([
-          { $unwind: '$ratedBooks' },
-          {
-            $group: {
-              _id: '$ratedBooks.bookId',
-              averageRating: { $avg: '$ratedBooks.rating' },
-              ratingCount: { $sum: 1 }
+        try {
+          const User = require('../models/User.model');
+          const ratingsData = await User.aggregate([
+            { $unwind: '$ratedBooks' },
+            {
+              $group: {
+                _id: '$ratedBooks.bookId',
+                averageRating: { $avg: '$ratedBooks.rating' },
+                ratingCount: { $sum: 1 }
+              }
             }
-          }
-        ]);
+          ]);
 
-        const ratingsMap = {};
-        ratingsData.forEach(rating => {
-          ratingsMap[rating._id] = {
-            averageRating: rating.averageRating,
-            ratingCount: rating.ratingCount
-          };
-        });
+          const ratingsMap = {};
+          ratingsData.forEach(rating => {
+            ratingsMap[rating._id] = {
+              averageRating: rating.averageRating,
+              ratingCount: rating.ratingCount
+            };
+          });
 
-        jsonData.forEach(book => {
-          if (ratingsMap[book.products_id]) {
-            book.averageRating = ratingsMap[book.products_id].averageRating;
-            book.ratingCount = ratingsMap[book.products_id].ratingCount;
-          } else {
+          jsonData.forEach(book => {
+            if (ratingsMap[book.products_id]) {
+              book.averageRating = ratingsMap[book.products_id].averageRating;
+              book.ratingCount = ratingsMap[book.products_id].ratingCount;
+            } else {
+              book.averageRating = 0;
+              book.ratingCount = 0;
+            }
+          });
+        } catch (ratingError) {
+          console.error('Error enriching with ratings:', ratingError);
+          // Set default ratings
+          jsonData.forEach(book => {
             book.averageRating = 0;
             book.ratingCount = 0;
-          }
-        });
+          });
+        }
 
         res.json(jsonData);
       } catch (error) {
@@ -103,58 +119,74 @@ async function getRecentBooks(req, res) {
         const recentBooks = jsonData.slice(-50).reverse(); // آخر 50 كتابًا مع عكس الترتيب لعرض الأحدث أولاً
 
         // Enrich with merchant info
-        const Product = require('../models/Product.model');
-        const approvedProducts = await Product.find({ status: 'approved' }).populate('merchantId', 'merchantName username logo');
-        const productMap = {};
-        approvedProducts.forEach(product => {
-          const barcode = product.product_image.replace('.webp', '');
-          productMap[barcode] = {
-            merchantId: product.merchantId._id,
-            merchantName: product.merchantId.merchantName || product.merchantId.username,
-            merchantLogo: product.merchantId.logo,
-            product_image: product.product_image
-          };
-        });
+        try {
+          const Product = require('../models/Product.model');
+          const approvedProducts = await Product.find({ status: 'approved' }).populate('merchantId', 'merchantName username logo');
+          const productMap = {};
+          approvedProducts.forEach(product => {
+            if (product.product_image) {
+              const barcode = product.product_image.replace('.webp', '');
+              productMap[barcode] = {
+                merchantId: product.merchantId._id,
+                merchantName: product.merchantId.merchantName || product.merchantId.username,
+                merchantLogo: product.merchantId.logo,
+                product_image: product.product_image
+              };
+            }
+          });
 
-        recentBooks.forEach(book => {
-          if (productMap[book.products_id]) {
-            book.merchantId = productMap[book.products_id].merchantId;
-            book.merchantName = productMap[book.products_id].merchantName;
-            book.merchantLogo = productMap[book.products_id].merchantLogo;
-            book.product_image = productMap[book.products_id].product_image;
-          }
-        });
+          recentBooks.forEach(book => {
+            if (productMap[book.products_id]) {
+              book.merchantId = productMap[book.products_id].merchantId;
+              book.merchantName = productMap[book.products_id].merchantName;
+              book.merchantLogo = productMap[book.products_id].merchantLogo;
+              book.product_image = productMap[book.products_id].product_image;
+            }
+          });
+        } catch (enrichError) {
+          console.error('Error enriching with merchant info:', enrichError);
+          // Continue without merchant info
+        }
 
         // Enrich with ratings data
-        const User = require('../models/User.model');
-        const ratingsData = await User.aggregate([
-          { $unwind: '$ratedBooks' },
-          {
-            $group: {
-              _id: '$ratedBooks.bookId',
-              averageRating: { $avg: '$ratedBooks.rating' },
-              ratingCount: { $sum: 1 }
+        try {
+          const User = require('../models/User.model');
+          const ratingsData = await User.aggregate([
+            { $unwind: '$ratedBooks' },
+            {
+              $group: {
+                _id: '$ratedBooks.bookId',
+                averageRating: { $avg: '$ratedBooks.rating' },
+                ratingCount: { $sum: 1 }
+              }
             }
-          }
-        ]);
+          ]);
 
-        const ratingsMap = {};
-        ratingsData.forEach(rating => {
-          ratingsMap[rating._id] = {
-            averageRating: rating.averageRating,
-            ratingCount: rating.ratingCount
-          };
-        });
+          const ratingsMap = {};
+          ratingsData.forEach(rating => {
+            ratingsMap[rating._id] = {
+              averageRating: rating.averageRating,
+              ratingCount: rating.ratingCount
+            };
+          });
 
-        recentBooks.forEach(book => {
-          if (ratingsMap[book.products_id]) {
-            book.averageRating = ratingsMap[book.products_id].averageRating;
-            book.ratingCount = ratingsMap[book.products_id].ratingCount;
-          } else {
+          recentBooks.forEach(book => {
+            if (ratingsMap[book.products_id]) {
+              book.averageRating = ratingsMap[book.products_id].averageRating;
+              book.ratingCount = ratingsMap[book.products_id].ratingCount;
+            } else {
+              book.averageRating = 0;
+              book.ratingCount = 0;
+            }
+          });
+        } catch (ratingError) {
+          console.error('Error enriching with ratings:', ratingError);
+          // Set default ratings
+          recentBooks.forEach(book => {
             book.averageRating = 0;
             book.ratingCount = 0;
-          }
-        });
+          });
+        }
 
         res.json(recentBooks);
       } catch (error) {

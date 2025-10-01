@@ -105,6 +105,7 @@
           id="image"
           (change)="onFileSelected($event)"
           accept="image/*"
+          multiple
           required
           [ngClass]="{
             'border-red-500': imageError,
@@ -122,6 +123,15 @@
           <ul class="list-disc pr-5 mt-1">
             <li *ngFor="let file of selectedFiles">{{ file.name }}</li>
           </ul>
+        </div>
+        <div *ngIf="selectedFilesPreviews.length > 0" class="mt-4">
+          <h4 class="text-lg font-semibold mb-2 text-gray-700 dark:text-gray-300">معاينة الصور:</h4>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div *ngFor="let preview of selectedFilesPreviews; let i = index" class="relative">
+              <img [src]="preview" class="w-full h-32 object-cover rounded-lg border">
+              <button (click)="removeImage(i)" class="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs">×</button>
+            </div>
+          </div>
         </div>
       </div>
       <!-- Product Name -->

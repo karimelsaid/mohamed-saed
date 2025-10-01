@@ -1,6 +1,7 @@
 const { google } = require('googleapis');
 const xlsx = require('xlsx');
 const fs = require('fs');
+const path = require('path');
 const { auth } = require('../config/drive');
 
 // تصنيفات الكتب
@@ -197,7 +198,7 @@ async function downloadAndConvertExcel(fileId, promotionStartDateStr, promotionE
   }
 
   console.log('✅ Excel data updated with image, category, and discount percent.');
-  fs.writeFileSync('output.json', JSON.stringify(updatedData, null, 2));
+  fs.writeFileSync(path.join(__dirname, '..', 'output.json'), JSON.stringify(updatedData, null, 2));
   return updatedData;
 }
 
@@ -280,7 +281,7 @@ async function uploadExcelFromJson(createCopy = false) {
     }
 
     // Read output.json
-    const jsonData = JSON.parse(fs.readFileSync('output.json', 'utf-8'));
+    const jsonData = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'output.json'), 'utf-8'));
 
     // Convert JSON to sheet
     const worksheet = xlsx.utils.json_to_sheet(jsonData);
@@ -338,7 +339,7 @@ async function updateExcelFromJson(fileId) {
     }
 
     // Read output.json
-    const jsonData = JSON.parse(fs.readFileSync('output.json', 'utf-8'));
+    const jsonData = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'output.json'), 'utf-8'));
 
     const client = await auth.getClient();
     const drive = google.drive({ version: 'v3', auth: client });
@@ -371,7 +372,7 @@ async function updateExcelFromJson(fileId) {
   }
 }
 
-module.exports = { 
+module.exports = {
   downloadAndConvertExcel,
   categoryMap,
   addProductToExcel,

@@ -1,6 +1,8 @@
-- [ ] Create books component to display the catalog
-- [ ] Add Arabic RTL support
-- [ ] Integrate static JSON data
-- [ ] Update routing to include books page
-- [ ] Style the catalog with Tailwind
-- [ ] Test the component display
+# TODO: Apply getBookImageUrl method to checkout-modal
+
+## Completed Tasks
+- [x] Add getBookImageUrl method to checkout-modal.component.ts
+- [x] Update HTML to use [src]="getBookImageUrl(item)" for product images
+
+## Summary
+Applied the getBookImageUrl method from other components to checkout-modal to ensure correct display of admin and merchant product images using proper URL construction.

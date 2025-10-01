@@ -68,7 +68,7 @@
         <div *ngFor="let item of cartItems" class="flex items-center justify-between py-4 border-b border-gray-200 dark:border-gray-600 last:border-b-0">
           <div class="flex items-center">
             <div class="w-20 h-20 rounded-lg mr-4 overflow-hidden flex items-center justify-center bg-gray-100 dark:bg-gray-600 shadow-md">
-              <img [src]="uploadsBaseUrl + '/' + item.product_image + '.webp'"
+              <img [src]="getBookImageUrl(item)"
                    class="max-w-full max-h-full object-contain">
             </div>
             <div class="flex-1">

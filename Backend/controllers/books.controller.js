@@ -1,11 +1,12 @@
 const { downloadAndConvertExcel } = require('../services/excel.service');
 const fs = require('fs');
+const path = require('path');
 const FILE_ID = '1N6rRpXCZRnmw4Os9HK9X-tKS9ZWKOI9M';
 
 // جلب بيانات الكتب من ملف Excel
 async function getExcelData(req, res) {
   try {
-    fs.readFile('output.json', 'utf8', async (err, data) => {
+    fs.readFile(path.join(__dirname, '..', 'output.json'), 'utf8', async (err, data) => {
       if (err) {
         return res.status(500).json({
           message: 'حدث خطأ أثناء قراءة الملف',
@@ -105,7 +106,7 @@ async function getExcelData(req, res) {
 // دالة جديدة لإرجاع آخر 50 كتابًا مضافًا
 async function getRecentBooks(req, res) {
   try {
-    fs.readFile('output.json', 'utf8', async (err, data) => {
+    fs.readFile(path.join(__dirname, '..', 'output.json'), 'utf8', async (err, data) => {
       if (err) {
         return res.status(500).json({
           message: 'حدث خطأ أثناء قراءة الملف',

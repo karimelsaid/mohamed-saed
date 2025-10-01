@@ -11,6 +11,8 @@ import { ModalService, ModalConfig } from '../../services/modal.service';
 import * as XLSX from 'xlsx';
 import { FreeShippingRulesComponent } from './free-shipping/free-shipping-rules.component';
 import { Subscription } from 'rxjs';
+import { FaIconLibrary } from '@fortawesome/angular-fontawesome';
+import { faShoppingCart, faStore, faBook, faPrint, faPlus, faEdit, faTruck, faUsers, faCheckCircle } from '@fortawesome/free-solid-svg-icons';
 
 interface Order {
   _id: string;
@@ -159,14 +161,14 @@ export class AdminDashboardComponent implements OnInit {
     price_cost: 0
   };
 
-  selectedFile: File | null = null;
+  selectedFiles: File[] = [];
   imageError: string | null = null;
 
   uploading: boolean = false;
   uploadProgress: number = 0;
   uploadSuccess: boolean = false;
 
-  readonly MAX_IMAGE_SIZE_BYTES = 1024 * 1024; // 1 MB
+  readonly MAX_IMAGE_SIZE_BYTES = 3 * 1024 * 1024; // 3 MB
 
   // Modal properties for component's modal system
   modalOpen: boolean = false;
@@ -221,10 +223,13 @@ export class AdminDashboardComponent implements OnInit {
     private router: Router,
     private dataService: DataService,
     private notificationService: NotificationService,
-    private modalService: ModalService
+    private modalService: ModalService,
+    private library: FaIconLibrary
   ) {}
 
   ngOnInit(): void {
+    this.library.addIcons(faShoppingCart, faStore, faBook, faPrint, faPlus, faEdit, faTruck, faUsers, faCheckCircle);
+
     this.authService.user$.subscribe(user => {
       if (user && user.email === 'admin@example.com' && user.role === 'admin') {
         this.isAdmin = true;
@@ -985,19 +990,22 @@ export class AdminDashboardComponent implements OnInit {
     this.imageError = null;
     const input = event.target as HTMLInputElement | null;
     if (input && input.files && input.files.length > 0) {
-      const file = input.files[0];
-      const validImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/svg+xml'];
-      if (!validImageTypes.includes(file.type)) {
-        this.imageError = 'يرجى تحميل ملف صورة صالح (JPEG, PNG, GIF, WEBP, BMP, SVG).';
-        this.selectedFile = null;
-      } else if (file.size > this.MAX_IMAGE_SIZE_BYTES) {
-        this.imageError = `حجم الصورة أكبر من 1 ميجابايت. يرجى تحميل صورة أصغر.`;
-        this.selectedFile = null;
-      } else {
-        this.selectedFile = file;
+      const files = Array.from(input.files);
+      if (files.length + this.selectedFiles.length > 3) {
+        this.imageError = 'يمكنك تحميل حتى 3 صور فقط.';
+        return;
       }
-    } else {
-      this.selectedFile = null;
+      for (const file of files) {
+        const validImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/svg+xml'];
+        if (!validImageTypes.includes(file.type)) {
+          this.imageError = 'يرجى تحميل ملف صورة صالح (JPEG, PNG, GIF, WEBP, BMP, SVG).';
+          return;
+        } else if (file.size > this.MAX_IMAGE_SIZE_BYTES) {
+          this.imageError = `حجم الصورة أكبر من 3 ميجابايت. يرجى تحميل صورة أصغر.`;
+          return;
+        }
+      }
+      this.selectedFiles.push(...files);
     }
   }
 
@@ -1008,7 +1016,7 @@ export class AdminDashboardComponent implements OnInit {
     }
 
     this.imageError = null;
-    if (!this.selectedFile) {
+    if (!this.selectedFiles.length) {
       this.imageError = 'يرجى اختيار صورة المنتج.';
       return;
     }
@@ -1030,7 +1038,9 @@ export class AdminDashboardComponent implements OnInit {
     const shortCategory = this.categoryReverseMap[this.product.product_category] || this.product.product_category;
 
     const formData = new FormData();
-    formData.append('image', this.selectedFile);
+    for (const file of this.selectedFiles) {
+      formData.append('image', file);
+    }
     formData.append('product_name', this.product.product_name);
     formData.append('product_quantity', this.product.product_quantity.toString());
     formData.append('product_category', shortCategory);
@@ -1056,13 +1066,13 @@ export class AdminDashboardComponent implements OnInit {
 
           // Store the current product data for potential reuse
           const currentProductData = { ...this.product };
-          const currentFile = this.selectedFile;
+          const currentFiles = [...this.selectedFiles];
 
           // Reset form immediately to prevent duplicate submissions
           this.resetProductForm();
 
           // Show success modal with options
-          this.showProductAddedModal(currentProductData, currentFile);
+          this.showProductAddedModal(currentProductData, currentFiles);
 
           // Auto-hide success modal after 3 seconds
           setTimeout(() => {
@@ -1088,7 +1098,7 @@ export class AdminDashboardComponent implements OnInit {
       product_price: 0,
       price_cost: 0
     };
-    this.selectedFile = null;
+    this.selectedFiles = [];
     this.imageError = null;
   }
 
@@ -1454,7 +1464,7 @@ export class AdminDashboardComponent implements OnInit {
     return '';
   }
 
-  showProductAddedModal(productData: any, file: File | null): void {
+  showProductAddedModal(productData: any, files: File[]): void {
     // Prevent multiple modals from opening
     if (this.modalOpen) {
       return;
@@ -1463,7 +1473,7 @@ export class AdminDashboardComponent implements OnInit {
     const action = () => {
       // Reset form and stay on add product page
       this.product = { ...productData };
-      this.selectedFile = file;
+      this.selectedFiles = files;
       this.switchView('addProduct');
       this.closeModal();
     };
@@ -1478,7 +1488,7 @@ export class AdminDashboardComponent implements OnInit {
         product_price: 0,
         price_cost: 0
       };
-      this.selectedFile = null;
+      this.selectedFiles = [];
       this.imageError = null;
       this.switchView('orders');
       this.closeModal();

@@ -25,7 +25,7 @@ function getAdminUploadDir(adminUsername, barcode) {
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 1024 * 1024 }, // 1 MB
+  limits: { fileSize: 3 * 1024 * 1024 }, // 5 MB
   fileFilter: (req, file, cb) => {
     // Accept only image files
     if (!file.mimetype.startsWith('image/')) {
@@ -47,7 +47,7 @@ async function addProduct(req, res) {
       return res.status(400).json({ success: false, message: 'Missing required fields' });
     }
 
-    if (!req.file) {
+    if (!req.files || req.files.length === 0) {
       return res.status(400).json({ success: false, message: 'Image file is required' });
     }
 
@@ -57,28 +57,24 @@ async function addProduct(req, res) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
 
-    // WebP
-    const webpPath = path.join(uploadDir, barcode + '.webp');
-    await sharp(req.file.buffer)
-      .resize({ width: 800 }) // Resize width to max 800px, maintain aspect ratio
-      .webp({ quality: 80 })
-      .toFile(webpPath);
+    const isMultiple = req.files.length > 1;
+    const filenames = [];
 
-    // PNG
-    const pngPath = path.join(uploadDir, barcode + '.png');
-    await sharp(req.file.buffer)
-      .resize({ width: 800 })
-      .png({ quality: 80 })
-      .toFile(pngPath);
+    for (let i = 0; i < req.files.length; i++) {
+      const file = req.files[i];
+      const suffix = isMultiple ? (i === 0 ? '' : '_' + i) : '';
 
-    // JPG
-    const jpgPath = path.join(uploadDir, barcode + '.jpg');
-    await sharp(req.file.buffer)
-      .resize({ width: 800 })
-      .jpeg({ quality: 80 })
-      .toFile(jpgPath);
+      // WebP
+      const webpPath = path.join(uploadDir, barcode + suffix + '.webp');
+      await sharp(file.buffer)
+        .resize({ width: 800 }) // Resize width to max 800px, maintain aspect ratio
+        .webp({ quality: 80 })
+        .toFile(webpPath);
 
-    const filename = barcode + '.webp';
+      filenames.push(barcode + suffix + '.webp');
+    }
+
+    const filename = filenames[0];
 
     // Determine category prefix based on categoryMap keys
     let categoryPrefix = '';
@@ -138,7 +134,7 @@ async function addProduct(req, res) {
   } catch (error) {
     console.error('Error in addProduct:', error);
     if (error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE') {
-      return res.status(400).json({ success: false, message: 'Image file size exceeds 1 MB limit' });
+      return res.status(400).json({ success: false, message: 'Image file size exceeds 3 MB limit' });
     }
     res.status(500).json({ success: false, message: 'Server error' });
   }

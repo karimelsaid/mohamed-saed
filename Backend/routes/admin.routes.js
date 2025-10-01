@@ -7,7 +7,7 @@ const authenticateAdmin = require('../middleware/admin.auth');
 router.use(authenticateAdmin);
 
 // Route to add new product with image upload
-router.post('/add-product', adminController.upload.single('image'), adminController.addProduct);
+router.post('/add-product', adminController.upload.array('image', 3), adminController.addProduct);
 
 // Route to list all products
 router.get('/products', adminController.listProducts);

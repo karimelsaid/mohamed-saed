@@ -36,6 +36,8 @@ export class BookDetailsComponent implements OnInit {
 
   averageRating: number = 0;
   ratingCount: number = 0;
+  selectedImageIndex: number = 0;
+  availableImages: string[] = [];
 
   constructor(
     private route: ActivatedRoute,
@@ -68,6 +70,7 @@ export class BookDetailsComponent implements OnInit {
               this.error = 'الكتاب غير موجود';
               this.loading = false;
             } else {
+              this.loadAvailableImages();
               this.fetchAverageRating(this.book.products_id.toString());
             }
           },
@@ -169,5 +172,67 @@ export class BookDetailsComponent implements OnInit {
 
   roundedAverageRating(): number {
     return Math.round(this.averageRating);
+  }
+
+  private async loadAvailableImages(): Promise<void> {
+    if (!this.book) return;
+    const potentialImages = [
+      this.getImageUrl(this.book.product_image, this.book),
+      this.getImageUrl(this.book.product_image + '_1.webp', this.book),
+      this.getImageUrl(this.book.product_image + '_2.webp', this.book)
+    ];
+    this.availableImages = [];
+    for (const url of potentialImages) {
+      if (await this.checkImageExists(url)) {
+        this.availableImages.push(url);
+      }
+    }
+    this.selectedImageIndex = 0;
+  }
+
+  private checkImageExists(url: string): Promise<boolean> {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(true);
+      img.onerror = () => resolve(false);
+      img.src = url;
+    });
+  }
+
+  // Helper to get URL for a specific image path
+  private getImageUrl(imagePath: string, book: Book): string {
+    let path = imagePath;
+    if (path.includes('/')) {
+      const parts = path.split('/');
+      if (path.includes('merchant_')) {
+        path = parts.slice(-3).join('/');
+      } else if (path.includes('admin__')) {
+        path = parts.slice(-3).join('/');
+      } else {
+        path = parts[parts.length - 1];
+      }
+    } else {
+      if (!path.includes('.') && /^\d+$/.test(path)) {
+        // Extract id for folder, handle suffixes like _2
+        const id = path.split('_')[0];
+        const filename = path + '.webp';
+        if (book.merchantName) {
+          path = 'merchant_' + book.merchantName + '/' + id + '/' + filename;
+        } else {
+          path = 'admin__karim_mohamed__/' + id + '/' + filename;
+        }
+      } else if (path.includes('.') && /^\d+_\d+\.webp$/.test(path)) {
+        // Handle additional images like 768078245796_1.webp
+        const id = path.split('_')[0];
+        if (book.merchantName) {
+          path = 'merchant_' + book.merchantName + '/' + id + '/' + path;
+        } else {
+          path = 'admin__karim_mohamed__/' + id + '/' + path;
+        }
+      } else if (!path.includes('.')) {
+        path += '.webp';
+      }
+    }
+    return this.uploadsBaseUrl + '/' + path;
   }
 }

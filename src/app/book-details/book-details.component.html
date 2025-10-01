@@ -1,4 +1,4 @@
-<div class="rtl book-details-container max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 md:pt-40 mb-32 md:mb-0">
+<div class="rtl book-details-container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 md:pt-40 mb-32 md:mb-0">
   <div *ngIf="loading" class="text-center text-gray-500 dark:text-gray-400 py-8">جارٍ تحميل بيانات الكتاب...</div>
   <div *ngIf="error" class="text-center text-red-600 dark:text-red-500 font-bold py-8">{{ error }}</div>
   <div *ngIf="book" class="bg-white dark:bg-gray-800 rounded-xl shadow-lg dark:shadow-2xl p-6 sm:p-8 relative overflow-hidden border-2 border-blue-200 dark:border-blue-800">
@@ -10,16 +10,38 @@
       <div *ngIf="book.merchantName" class="mb-4">
         <a [routerLink]="['/merchant', book.merchantId]" class="text-sm text-blue-600 dark:text-blue-400 hover:underline cursor-pointer font-medium">بواسطة {{ book.merchantName }}</a>
       </div>
-      <div class="relative mb-8">
-        <img [src]="getBookImageUrl(book)" alt="{{ book.product_name }}" class="w-full max-w-md h-auto mx-auto rounded-xl shadow-xl dark:shadow-2xl transform hover:scale-105 transition-transform duration-300" />
-        <!-- شريط الخصم -->
-        <div class="absolute -top-4 -left-4 bg-gradient-to-r from-red-500 to-red-600 dark:from-red-600 dark:to-red-700 text-white text-sm font-bold px-4 py-3 rounded-full shadow-lg z-20 animate-pulse transform">
-          {{ book.product_discount_percent }}% خصم
+
+      <!-- Amazon-like layout: left images, right details -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <!-- Left: Image Gallery -->
+        <div class="flex flex-col items-center">
+          <!-- Main Image -->
+          <div class="relative mb-4">
+            <img [src]="availableImages[selectedImageIndex] || ''" alt="{{ book.product_name }}" class="w-full max-w-md h-96 object-contain rounded-xl shadow-xl dark:shadow-2xl transform hover:scale-105 transition-transform duration-300 border-4 border-white dark:border-gray-700" />
+            <!-- شريط الخصم -->
+            <div class="absolute -top-4 -left-4 bg-gradient-to-r from-red-500 to-red-600 dark:from-red-600 dark:to-red-700 text-white text-sm font-bold px-4 py-3 rounded-full shadow-lg z-20 animate-pulse transform">
+              {{ book.product_discount_percent }}% خصم
+            </div>
+            <button (click)="copyBookLink()" title="نسخ رابط الكتاب" class="absolute bottom-3 left-3 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-full p-3 shadow-lg transform hover:scale-110 transition-transform">
+              <fa-icon [icon]="faShareAlt" class="text-gray-700 dark:text-gray-300 h-6 w-6"></fa-icon>
+            </button>
+          </div>
+          <!-- Thumbnails -->
+          <div *ngIf="availableImages.length > 1" class="w-full max-w-md">
+            <div class="flex gap-2 overflow-x-auto pb-2" style="scrollbar-width: thin;">
+              <img *ngFor="let img of availableImages; let i = index"
+                   [src]="img"
+                   alt="صورة {{ i + 1 }}"
+                   (click)="selectedImageIndex = i"
+                   class="flex-shrink-0 w-16 h-16 object-cover rounded-lg cursor-pointer border-2 transition-all duration-200 hover:shadow-md"
+                   [class.border-blue-500]="i === selectedImageIndex"
+                   [class.border-gray-300]="i !== selectedImageIndex" />
+            </div>
+          </div>
         </div>
-        <button (click)="copyBookLink()" title="نسخ رابط الكتاب" class="absolute bottom-3 left-3 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-full p-3 shadow-lg transform hover:scale-110 transition-transform">
-          <fa-icon [icon]="faShareAlt" class="text-gray-700 dark:text-gray-300 h-6 w-6"></fa-icon>
-        </button>
-      </div>
+
+        <!-- Right: Product Details -->
+        <div class="flex flex-col">
 
       <!-- رسالة تأكيد النسخ -->
       <div *ngIf="showCopySuccess" class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-green-500 to-green-600 text-white px-6 py-3 rounded-xl shadow-2xl z-50 animate-pulse border-2 border-white">
@@ -68,9 +90,11 @@
         هذا الكتاب غير متوفر حالياً<br>
         <span class="text-gray-600 dark:text-gray-400 text-sm">متوقع توافره خلال 3-5 أيام عمل</span>
       </div>
-      <button *ngIf="book.product_quantity > 0" (click)="onBuyNowClick()" class="w-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 dark:from-blue-700 dark:via-indigo-700 dark:to-purple-700 text-white px-8 py-4 rounded-xl hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 dark:hover:from-blue-800 dark:hover:via-indigo-800 dark:hover:to-purple-800 transition-all duration-300 transform hover:scale-105 shadow-xl font-bold text-lg animate-pulse">
-        اشترِ الآن واحصل على الخصم!
-      </button>
+          <button *ngIf="book.product_quantity > 0" (click)="onBuyNowClick()" class="w-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 dark:from-blue-700 dark:via-indigo-700 dark:to-purple-700 text-white px-8 py-4 rounded-xl hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 dark:hover:from-blue-800 dark:hover:via-indigo-800 dark:hover:to-purple-800 transition-all duration-300 transform hover:scale-105 shadow-xl font-bold text-lg animate-pulse">
+            اشترِ الآن واحصل على الخصم!
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </div>

@@ -6,6 +6,7 @@ export interface Book {
   product_quantity: number;
   product_category: string;
   product_image: string;
+  product_images?: string[]; // Array of image paths for multiple images
   image_path: string; // مسار الصورة الكامل من الخلفية
   product_price_before_discount: number;
   rival?: boolean; // خاصية اختيارية لتحديد حالة العرض

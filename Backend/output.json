@@ -10149,5 +10149,20 @@
     "rival": true,
     "product_discount_percent": 65,
     "image_path": "/uploads/books/admin__karim_mohamed__/336085489303/336085489303.webp"
+  },
+  {
+    "products_id": "768078245796",
+    "product_name": "ش",
+    "product_price": 9,
+    "price_cost": 0,
+    "product_quantity": 1,
+    "product_category": "قواميس ومراجع",
+    "product_description": "ش",
+    "product_image": "768078245796",
+    "promotionEndDate": "2026-01-31T00:00:00.000Z",
+    "product_price_before_discount": 9,
+    "rival": true,
+    "product_discount_percent": 0,
+    "image_path": "/uploads/books/admin__karim_mohamed__/768078245796/768078245796.webp"
   }
 ]

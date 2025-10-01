@@ -1,5 +1,5 @@
 <div class="rtl fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4" (click)="onClose()">
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 sm:p-8 w-full max-w-4xl max-h-[90vh] overflow-y-auto relative" (click)="$event.stopPropagation()">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-4 sm:p-6 lg:p-8 w-full max-w-2xl sm:max-w-3xl lg:max-w-4xl max-h-[90vh] overflow-y-auto relative" (click)="$event.stopPropagation()">
       <!-- Close Button -->
       <button (click)="onClose()" class="absolute top-4 right-4 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-2xl font-bold z-10">
         &times;
@@ -60,7 +60,7 @@
           </div>
         </div>
       </div>
-      <h2 class="text-2xl sm:text-3xl font-bold mb-6 text-center text-gray-900 dark:text-gray-200">إتمام عملية الشراء</h2>
+      <h2 class="text-xl sm:text-2xl lg:text-3xl font-bold mb-6 text-center text-gray-900 dark:text-gray-200">إتمام عملية الشراء</h2>
 
       <!-- Step 1: Cart Items -->
       <div *ngIf="currentStep === 1" class="mb-8 max-h-96 overflow-y-auto bg-gray-50 dark:bg-gray-700 rounded-lg p-4">

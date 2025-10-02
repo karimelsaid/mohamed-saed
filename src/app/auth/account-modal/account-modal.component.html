@@ -1,5 +1,5 @@
-<div *ngIf="show" class="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-  <div class="bg-white dark:bg-gray-800 shadow-xl rounded-lg p-6 w-full max-w-sm text-center border border-gray-200 dark:border-gray-700 relative animate-fade-in">
+<div *ngIf="show" class="fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm flex items-center justify-center z-50" (click)="closeModal()">
+  <div class="bg-white dark:bg-gray-800 shadow-xl rounded-lg p-6 w-full max-w-sm text-center border border-gray-200 dark:border-gray-700 relative animate-fade-in" (click)="$event.stopPropagation()">
     <h3 class="text-gray-800 dark:text-gray-200 font-bold text-lg mb-4">أهلاً بك في مكتبة كنوز 📚</h3>
 
     <!-- إذا كان المستخدم مسجلاً للدخول -->

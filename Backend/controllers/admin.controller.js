@@ -143,8 +143,29 @@ async function addProduct(req, res) {
 // New API to list all products
 async function listProducts(req, res) {
   try {
-    // Use the main file ID to update output.json and list products
-    const products = await downloadAndConvertExcel(process.env.GOOGLE_DRIVE_FILE_ID);
+    const fs = require('fs');
+    const path = require('path');
+    const outputPath = path.join(__dirname, '..', 'output.json');
+    let products;
+
+    // Check if output.json exists and is less than 5 minutes old
+    if (fs.existsSync(outputPath)) {
+      const stats = fs.statSync(outputPath);
+      const now = new Date().getTime();
+      const fileTime = stats.mtime.getTime();
+      const fiveMinutes = 5 * 60 * 1000;
+      if (now - fileTime < fiveMinutes) {
+        // Read from cache
+        products = JSON.parse(fs.readFileSync(outputPath, 'utf-8'));
+      } else {
+        // File is old, download fresh
+        products = await downloadAndConvertExcel(process.env.GOOGLE_DRIVE_FILE_ID);
+      }
+    } else {
+      // File doesn't exist, download
+      products = await downloadAndConvertExcel(process.env.GOOGLE_DRIVE_FILE_ID);
+    }
+
     // Do not map product_category back to short keys, send as is
     res.json({ success: true, products });
   } catch (error) {

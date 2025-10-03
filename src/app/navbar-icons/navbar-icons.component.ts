@@ -1,7 +1,7 @@
 import { Component, OnInit, ViewChild, ChangeDetectorRef, Output, EventEmitter, ElementRef, HostListener, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, NavigationEnd } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { faBars, faClose, faHome, faBook, faFilePdf, faUser, faChevronUp, faChevronDown, faSearch, faHeart, faCartPlus, faClipboardList, faTachometerAlt, faBell, faTrash, faStore, faFilter } from '@fortawesome/free-solid-svg-icons';
+import { faBars, faClose, faHome, faBook, faFilePdf, faUser, faChevronUp, faChevronDown, faSearch, faHeart, faCartPlus, faClipboardList, faTachometerAlt, faBell, faTrash, faStore, faFilter, faExpand } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { AccountModalComponent } from '../auth/account-modal/account-modal.component';
 import { AuthService } from '../auth/auth.service';
@@ -39,6 +39,7 @@ export class NavbarIconsComponent implements OnInit {
   faBell = faBell;
   faTrash = faTrash;
   faStore = faStore;
+  faExpand = faExpand;
 
   openBars = false;
   scrollBook = true;
@@ -66,6 +67,7 @@ export class NavbarIconsComponent implements OnInit {
   isAccountActive: boolean = false;
 
   isDarkMode: boolean = false; // Track dark mode state
+  isFullScreen: boolean = false; // Track full screen state
   showFilterDropdown: boolean = false;
   selectedFilter: string = 'all';
 
@@ -79,6 +81,7 @@ export class NavbarIconsComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.isFullScreen = !!document.fullscreenElement;
     // Check both AuthService and MerchantAuthService for user state
     this.authService.user$.subscribe((user) => {
       this.isLoggedIn = !!user;
@@ -324,6 +327,20 @@ export class NavbarIconsComponent implements OnInit {
     this.accountModal.openModal();
     this.showAccountModal = true;
     this.isAccountActive = true;
+    this.cdr.markForCheck();
+  }
+
+  toggleFullScreen(): void {
+    if (!this.isFullScreen) {
+      document.documentElement.requestFullscreen();
+    } else {
+      document.exitFullscreen();
+    }
+  }
+
+  @HostListener('document:fullscreenchange', ['$event'])
+  onFullScreenChange(): void {
+    this.isFullScreen = !!document.fullscreenElement;
     this.cdr.markForCheck();
   }
 }

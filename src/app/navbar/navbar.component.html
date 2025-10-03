@@ -1,5 +1,5 @@
 <div class="bg-gradient-to-r from-blue-900 via-blue-800 to-indigo-900 dark:from-gray-900 dark:via-blue-950 dark:to-gray-900 p-4 fixed top-0 w-full h-auto z-50 shadow-2xl">
-<div class="flex place-items-center justify-around">
+<div class="flex items-center justify-around">
 
     <div routerLink="/" class="cursor-pointer transition-transform duration-300 hover:scale-105">
       <img class="w-10 sm:w-14 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300" src="logoname2.png" alt="Logo">
@@ -8,30 +8,16 @@
       <app-navbar-icons class="hidden md:block"></app-navbar-icons>
 
       <div class="block md:hidden">
-
-<div class="search-bar-container relative flex justify-center">
+        <div class="search-bar-container relative flex justify-center">
           <app-search-bar
             [allBooks]="allBooks"
             (searchExecuted)="onSearchExecuted($event)">
           </app-search-bar>
         </div>
-
-      </div>
-                <!-- Dark Mode Toggle Button -->
-      <div class="flex flex-col sm:flex-row items-center cursor-pointer ml-4" title="تبديل الوضع الداكن">
-      <button (click)="toggleDarkMode()" class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full shadow-md focus:outline-none transition-colors duration-300 p-2">
-      <fa-icon *ngIf="isDarkMode" [icon]="faMoon" class="text-lg"></fa-icon>
-      <fa-icon *ngIf="!isDarkMode" [icon]="faSun" class="text-lg text-yellow-600"></fa-icon>
-      </button>
-      </div>
-      <div>
-          <fa-icon (click)="openBars=!openBars" [ngClass]="{hidden:openBars}" class="md:hidden font-bold text-xl text-white cursor-pointer bg-gradient-to-r from-orange-400 to-orange-500 dark:from-orange-500 dark:to-orange-600 rounded-full p-2 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 animate-pulse" [icon]="faBars"></fa-icon>
-
-          <fa-icon (click)="openBars=!openBars" [ngClass]="{hidden:!openBars}" class="md:hidden cursor-pointer text-2xl text-orange-300 dark:text-orange-400" [icon]="faClose"></fa-icon>
       </div>
 
       <div class="hidden md:block text-[12px] lg:text-xs text-white dark:text-gray-300 md:mr-12 lg:mr-14 rtl font-bold">
-          <div class="grid h-1/2 sm:flex sm:gap-4 md:gap-10">
+          <div class="grid h-1/2 sm:flex sm:gap-4 md:gap-6 justify-start">
 
           <div class="flex items-end sm:items-center cursor-pointer px-3 py-2 rounded-lg hover:bg-white/10 transition-all duration-300 hover:scale-105" routerLink="/Home" routerLinkActive="text-blue-400 bg-white/20" [routerLinkActiveOptions]="{exact:true}">
                 <fa-icon class="m-1 text-2xl sm:text-sm text-right transition-transform duration-300" [icon]="faHome"></fa-icon>
@@ -66,7 +52,7 @@
 
               <div (click)="exitBarsrow()" class="cursor-pointer flex items-center px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group" routerLinkActive="text-orange-400" routerLink="/Self-development-psychology">
                 <fa-icon class="text-green-600 dark:text-green-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200" [icon]="faBrain"></fa-icon>
-                <li class="text-sm font-medium">تطوير الذات وعلم النفس</li> 
+                <li class="text-sm font-medium">تطوير الذات وعلم النفس</li>
               </div>
 
               <div (click)="exitBarsrow()" class="cursor-pointer flex items-center px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group" routerLinkActive="text-orange-400" routerLink="/Novels-stories">
@@ -112,7 +98,31 @@
           </ul>
         </div>
       </div>
-    </div>
+
+      <!-- Buttons Group -->
+      <div class="flex items-center gap-2">
+        <!-- Dark Mode Toggle Button -->
+        <div class="flex flex-col sm:flex-row items-center cursor-pointer" title="تبديل الوضع الداكن">
+          <button (click)="toggleDarkMode()" class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full shadow-md focus:outline-none transition-colors duration-300 p-2">
+            <fa-icon *ngIf="isDarkMode" [icon]="faMoon" class="text-lg"></fa-icon>
+            <fa-icon *ngIf="!isDarkMode" [icon]="faSun" class="text-lg text-yellow-600"></fa-icon>
+          </button>
+        </div>
+
+        <!-- Full Screen Toggle Button -->
+        <div class="flex flex-col sm:flex-row items-center cursor-pointer" title="تبديل الشاشة الكاملة">
+          <button (click)="toggleFullScreen()" class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full shadow-md focus:outline-none transition-colors duration-300 p-2">
+            <fa-icon [icon]="faExpand" class="text-lg"></fa-icon>
+          </button>
+        </div>
+
+        <!-- Bars Icon -->
+        <div>
+          <fa-icon (click)="openBars=!openBars" [ngClass]="{hidden:openBars}" class="md:hidden font-bold text-xl text-white cursor-pointer bg-gradient-to-r from-orange-400 to-orange-500 dark:from-orange-500 dark:to-orange-600 rounded-full p-2 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 animate-pulse" [icon]="faBars"></fa-icon>
+          <fa-icon (click)="openBars=!openBars" [ngClass]="{hidden:!openBars}" class="md:hidden cursor-pointer text-2xl text-orange-300 dark:text-orange-400" [icon]="faClose"></fa-icon>
+        </div>
+      </div>
+</div>
 
     <!-- Mobile Header -->
     <div class="rtl md:hidden z-40 relative">

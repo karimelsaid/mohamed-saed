@@ -131,11 +131,11 @@ export class AuthService {
   }
 
   removeFromCart(userId: string, bookId: string): Observable<any> {
-    return this.http.delete(`${this.apiUrl}/users/remove-from-cart/${userId}/${bookId}`);
+    return this.http.delete(`${this.apiUrl}/users/remove-from-cart/${userId}/${encodeURIComponent(bookId)}`);
   }
 
   removeFromFavorites(userId: string, bookId: string): Observable<any> {
-    return this.http.delete(`${this.apiUrl}/users/remove-from-favorites/${userId}/${bookId}`);
+    return this.http.delete(`${this.apiUrl}/users/remove-from-favorites/${userId}/${encodeURIComponent(bookId)}`);
   }
 
   loadUserData(userId: string) {

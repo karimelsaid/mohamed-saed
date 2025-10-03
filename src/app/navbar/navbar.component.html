@@ -48,7 +48,7 @@
           <!-- Desktop Dropdown Overlay -->
           <div *ngIf="!scrollBook" class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-40" (click)="scrollBook=true"></div>
 
-          <ul [ngClass]="{hidden:scrollBook}" class="absolute bg-white dark:bg-[#0a1325] text-blue-950 dark:text-blue-100 right-36 md:right-[220px] top-20 rounded-lg shadow-2xl border border-blue-200 dark:border-blue-800 w-48 lg:w-80 overflow-hidden transform transition-all duration-300 ease-in-out z-50 opacity-0 scale-95 transition-opacity transition-transform duration-200" [style.opacity]="scrollBook ? '0' : '1'" [style.transform]="scrollBook ? 'scale(0.95)' : 'scale(1)'" (click)="$event.stopPropagation()">
+          <ul [ngClass]="{hidden:scrollBook}" class="absolute bg-white dark:bg-[#0a1325] text-blue-950 dark:text-blue-100 right-36 md:right-[220px] top-20 rounded-lg shadow-2xl border border-blue-200 dark:border-blue-800 w-48 lg:w-80 overflow-hidden transform transition-all duration-300 ease-in-out z-50 opacity-0 scale-95" [style.opacity]="scrollBook ? '0' : '1'" [style.transform]="scrollBook ? 'scale(0.95)' : 'scale(1)'" (click)="$event.stopPropagation()">
             <!-- Header -->
             <div class="bg-gradient-to-r from-blue-600 to-blue-800 dark:from-blue-700 dark:to-blue-900 text-white px-4 py-3">
               <div class="flex items-center">

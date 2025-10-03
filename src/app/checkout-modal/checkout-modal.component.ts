@@ -300,6 +300,16 @@ export class CheckoutModalComponent implements OnInit {
     return this.cartItems.some(item => item.product_quantity > 0);
   }
 
+  get hasMerchantProducts(): boolean {
+    const result = this.cartItems.some(item => item.merchantId && item.merchantId.trim() !== '');
+    console.log('hasMerchantProducts:', result, 'cartItems:', this.cartItems.map(item => ({ id: item.products_id, merchantId: item.merchantId, merchantName: item.merchantName })));
+    return result;
+  }
+
+  get pickupLocationText(): string {
+    return this.hasMerchantProducts ? 'استلام مجاني من التاجر' : 'استلام مجاني من المكتبة';
+  }
+
   onClose(): void {
     this.close.emit();
   }

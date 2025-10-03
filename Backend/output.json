@@ -10160,9 +10160,24 @@
     "product_description": "ش",
     "product_image": "768078245796",
     "promotionEndDate": "2026-01-31T00:00:00.000Z",
+    "product_price_before_discount": 29,
+    "rival": true,
+    "product_discount_percent": 70,
+    "image_path": "/uploads/books/admin__karim_mohamed__/768078245796/768078245796.webp"
+  },
+  {
+    "products_id": "merchant_kenouz/190917172447/190917172447",
+    "product_name": "1111",
+    "product_price": 9,
+    "price_cost": 1,
+    "product_quantity": 3,
+    "product_category": "تطوير الذات وعلم النفس",
+    "product_description": "1",
+    "product_image": "merchant_kenouz/190917172447/190917172447",
+    "promotionEndDate": "2026-01-31T00:00:00.000Z",
     "product_price_before_discount": 9,
     "rival": true,
     "product_discount_percent": 0,
-    "image_path": "/uploads/books/admin__karim_mohamed__/768078245796/768078245796.webp"
+    "image_path": "/uploads/books/merchant_kenouz/merchant_kenouz/190917172447/190917172447/merchant_kenouz/190917172447/190917172447.webp"
   }
 ]

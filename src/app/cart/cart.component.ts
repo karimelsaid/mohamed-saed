@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { AuthService } from '../auth/auth.service';
 import { DataService } from '../services/data.service';
-import { map } from 'rxjs/operators';
+import { map, take } from 'rxjs/operators';
 import { CommonModule, NgIf } from '@angular/common';
 import { CheckoutModalComponent } from '../checkout-modal/checkout-modal.component';
 import { environment } from '../../environments/environment';
@@ -104,7 +104,7 @@ this.router.navigate(['/']);
     this.cartBooks = this.cartBooks.filter(book => book.products_id !== bookId);
     this.calculateTotal();
 
-    this.authService.user$.subscribe(user => {
+    this.authService.user$.pipe(take(1)).subscribe(user => {
       const userId = user?.id;
       if (userId) {
         this.authService.removeFromCart(userId, bookId).subscribe({

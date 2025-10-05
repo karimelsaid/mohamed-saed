@@ -86,7 +86,7 @@ export class TutorialService {
         title: 'الكتب الجديدة',
         description: 'اكتشف أحدث الكتب المضافة إلى المكتبة',
         element: '.tutorial-recent-books',
-        position: 'top',
+        position: 'bottom',
         action: () => {
           this.router.navigate(['/Home']);
         }
@@ -116,7 +116,7 @@ export class TutorialService {
         title: 'خدمات الطباعة',
         description: 'اطلب طباعة كتبك الخاصة بجودة عالية وأسعار مناسبة',
         element: '.tutorial-create-project',
-        position: 'top',
+        position: 'bottom',
         action: () => {
           // Navigate to print route first
           this.router.navigate(['/print']).then(() => {

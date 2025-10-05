@@ -2,7 +2,7 @@
 <div *ngIf="isVisible" class="fixed inset-0 bg-gradient-to-br from-black/70 via-black/60 to-black/70 dark:from-black/80 dark:via-black/70 dark:to-black/80 z-[999] backdrop-blur-sm" (click)="skipTutorial()"></div>
 
 <!-- Tutorial Modal -->
-<div *ngIf="isVisible" class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-[1001] p-4 animate-in fade-in-0 zoom-in-95 duration-300">
+<div *ngIf="isVisible" class="fixed bottom-0 left-1/2 transform -translate-x-1/2 z-[1001] p-4 animate-in fade-in-0 zoom-in-95 duration-300" [ngClass]="positionClass">
   <div class="relative bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl rounded-2xl max-w-lg w-[85vw] sm:w-[80vw] shadow-2xl dark:shadow-slate-900/60 border border-white/20 dark:border-slate-700/50 overflow-hidden">
 
     <!-- Decorative Background Gradient -->

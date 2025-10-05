@@ -24,6 +24,7 @@ export class TutorialComponent implements OnInit, OnDestroy {
   totalSteps = 0;
   highlightedElement: HTMLElement | null = null;
   pointerElement: HTMLElement | null = null;
+  positionClass = '';
 
   private subscription: Subscription | null = null;
 
@@ -42,9 +43,11 @@ export class TutorialComponent implements OnInit, OnDestroy {
 
       if (this.isVisible && this.currentStep) {
         this.highlightElement();
+        this.setPositionClass();
         this.scrollToElement();
       } else {
         this.removeHighlight();
+        this.positionClass = '';
       }
     });
   }
@@ -99,9 +102,34 @@ export class TutorialComponent implements OnInit, OnDestroy {
     if (this.highlightedElement) {
       this.highlightedElement.scrollIntoView({
         behavior: 'smooth',
-        block: 'center',
+        block: 'start',
         inline: 'center'
       });
+    }
+  }
+
+  private setPositionClass(): void {
+    if (!this.currentStep || !this.currentStep.position) {
+      this.positionClass = '';
+      return;
+    }
+    switch (this.currentStep.position) {
+      case 'top':
+        this.positionClass = 'top-0 bottom-auto -translate-y-0';
+        break;
+      case 'bottom':
+        this.positionClass = 'bottom-0 top-auto -translate-y-0';
+        break;
+      case 'left':
+        this.positionClass = 'left-0 right-auto -translate-x-0';
+        break;
+      case 'right':
+        this.positionClass = 'right-0 left-auto -translate-x-0';
+        break;
+      case 'center':
+      default:
+        this.positionClass = 'top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2';
+        break;
     }
   }
 

@@ -127,7 +127,7 @@
 <!-- التنقل بين الصفحات -->
  <app-navbar></app-navbar>
 
-<app-search-bar [allBooks]="allBooks" (searchExecuted)="onSearchExecuted($event)"></app-search-bar>
+<app-search-bar class="tutorial-search" [allBooks]="allBooks" (searchExecuted)="onSearchExecuted($event)"></app-search-bar>
 
 <div class="flex flex-col min-h-screen">
   <div class="flex-grow">
@@ -341,3 +341,6 @@
   (cancelled)="closeModal()"
   (closed)="closeModal()">
 </app-modal-dialog>
+
+<!-- Tutorial Component -->
+<app-tutorial class="z-50"></app-tutorial>

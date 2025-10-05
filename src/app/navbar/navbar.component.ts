@@ -2,8 +2,9 @@ import { Component, HostListener, OnInit, ViewChild, ChangeDetectorRef, Output, 
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { faBars, faClose, faHome, faBook, faFilePdf, faUser, faChevronUp, faChevronDown, faSearch,faHeart,faCartPlus,faClipboardList, faTachometerAlt, faBell, faTrash,faFilter, faMosque, faBrain, faScroll, faChartLine, faHeartbeat, faBookOpen, faChild, faHistory, faPalette, faMoon, faSun, faExpand } from '@fortawesome/free-solid-svg-icons';
+import { faBars, faClose, faHome, faBook, faFilePdf, faUser, faChevronUp, faChevronDown, faSearch,faHeart,faCartPlus,faClipboardList, faTachometerAlt, faBell, faTrash,faFilter, faMosque, faBrain, faScroll, faChartLine, faHeartbeat, faBookOpen, faChild, faHistory, faPalette, faMoon, faSun, faExpand, faClock, faList } from '@fortawesome/free-solid-svg-icons';
 import { DataService } from '../services/data.service';
 import { AccountModalComponent } from '../auth/account-modal/account-modal.component';
 import { AuthService } from '../auth/auth.service';
@@ -15,7 +16,7 @@ import { SearchBarComponent } from '../search-bar/search-bar.component';
 @Component({
   selector: 'app-navbar',
   standalone: true,
-  imports: [CommonModule, RouterLink, RouterLinkActive, FontAwesomeModule, NavbarIconsComponent, SearchBarComponent],
+  imports: [CommonModule, RouterLink, RouterLinkActive, FormsModule, FontAwesomeModule, NavbarIconsComponent, SearchBarComponent],
   templateUrl: './navbar.component.html',
   styleUrls: ['./navbar.component.css']
 })

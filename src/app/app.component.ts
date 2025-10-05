@@ -4,6 +4,7 @@ import { faChevronLeft, faChevronRight, faSearch } from '@fortawesome/free-solid
 import { faGooglePlay } from '@fortawesome/free-brands-svg-icons';
 import { DataService } from './services/data.service';
 import { ModalService, ModalConfig } from './services/modal.service';
+import { TutorialService } from './services/tutorial.service';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -29,7 +30,7 @@ export class AppComponent {
   modalConfig: ModalConfig | null = null;
   private modalSubscription: Subscription | null = null;
 
-  constructor(private router: Router, private dataService: DataService, private modalService: ModalService) {}
+  constructor(private router: Router, private dataService: DataService, private modalService: ModalService, private tutorialService: TutorialService) {}
 
   ngOnInit(): void {
     // تحقق من وجود صفحة البحث في المسار
@@ -61,6 +62,14 @@ export class AppComponent {
       this.isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
     }
     this.updateDarkModeClass();
+
+    // Reset and start tutorial unconditionally to show the tutorial window always, unless permanently disabled
+    if (!this.tutorialService.isTutorialDisabledPermanently()) {
+      this.tutorialService.resetTutorial();
+      setTimeout(() => {
+        this.tutorialService.startTutorial();
+      }, 5000); // Show tutorial after 5 seconds delay
+    }
 
     // Subscribe to modal service
     this.modalSubscription = this.modalService.modal$.subscribe(config => {

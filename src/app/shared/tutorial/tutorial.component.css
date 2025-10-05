@@ -1,0 +1,129 @@
+.tutorial-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.6);
+  z-index: 999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem;
+}
+
+.tutorial-window {
+  background: white;
+  border-radius: 8px;
+  max-width: 400px;
+  width: 100%;
+  box-shadow: 0 0 15px rgba(0,0,0,0.3);
+  position: relative;
+  padding: 1rem 1.5rem;
+  text-align: center;
+}
+
+.tutorial-window.center {
+  /* Centered by default */
+}
+
+.tutorial-window.top {
+  align-self: flex-start;
+  margin-top: 2rem;
+}
+
+.tutorial-window.bottom {
+  align-self: flex-end;
+  margin-bottom: 2rem;
+}
+
+.tutorial-window.left {
+  margin-right: auto;
+  align-self: center;
+}
+
+.tutorial-window.right {
+  margin-left: auto;
+  align-self: center;
+}
+
+.tutorial-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.close-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 1.2rem;
+}
+
+.tutorial-content {
+  margin-bottom: 1rem;
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+.tutorial-footer {
+  display: flex;
+  justify-content: space-between;
+}
+
+.tutorial-footer button {
+  background-color: #007bff;
+  border: none;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+}
+
+.tutorial-footer button[disabled] {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.tutorial-footer fa-icon {
+  margin: 0 0.3rem;
+}
+
+.tutorial-progress {
+  height: 5px;
+  background-color: #e0e0e0;
+  border-radius: 3px;
+  margin-top: 1rem;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  background-color: #007bff;
+  width: 0%;
+  transition: width 0.3s ease;
+}
+
+.tutorial-highlight {
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.5), 0 0 0 8px rgba(59, 130, 246, 0.3), 0 0 20px rgba(59, 130, 246, 0.6);
+  border-radius: 8px;
+  animation: tutorial-glow 2s ease-in-out infinite alternate;
+  transition: all 0.3s ease;
+}
+
+.dark .tutorial-highlight {
+  box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.5), 0 0 0 8px rgba(96, 165, 250, 0.3), 0 0 20px rgba(96, 165, 250, 0.6);
+}
+
+@keyframes tutorial-glow {
+  from {
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.5), 0 0 0 8px rgba(59, 130, 246, 0.3), 0 0 20px rgba(59, 130, 246, 0.6);
+  }
+  to {
+    box-shadow: 0 0 0 6px rgba(59, 130, 246, 0.7), 0 0 0 12px rgba(59, 130, 246, 0.4), 0 0 30px rgba(59, 130, 246, 0.8);
+  }
+}

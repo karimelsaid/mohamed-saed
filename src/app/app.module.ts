@@ -29,8 +29,10 @@ import { SearchBarModule } from './search-bar/search-bar.module';
 import { HTTP_INTERCEPTORS } from '@angular/common/http';
 import { MerchantAuthInterceptor } from './interceptors/merchant-auth.interceptor';
 import { AdminAuthInterceptor } from './interceptors/admin-auth.interceptor';
+
 import { AdminModule } from './admin/admin.module';
 import { MerchantDashboardComponent } from './merchant/dashboard/dashboard.component';
+import { TutorialComponent } from './shared/tutorial/tutorial.component';
 
 @NgModule({
   declarations: [
@@ -62,7 +64,8 @@ import { MerchantDashboardComponent } from './merchant/dashboard/dashboard.compo
     NavbarIconsModule,
     SearchBarModule,
     AdminModule,
-    MerchantDashboardComponent
+    MerchantDashboardComponent,
+    TutorialComponent
   ],
   providers: [
     provideHttpClient(withInterceptorsFromDi()), // استخدام provideHttpClient بدلاً من HttpClientModule

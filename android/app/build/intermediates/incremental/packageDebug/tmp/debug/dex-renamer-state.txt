@@ -1,19 +1,22 @@
-#Fri Aug 01 02:21:53 EEST 2025
+#Sun Oct 05 13:46:42 EEST 2025
 base.0=D\:\\My projects\\Kenouz\\android\\app\\build\\intermediates\\dex\\debug\\mergeExtDexDebug\\classes.dex
 base.1=D\:\\My projects\\Kenouz\\android\\app\\build\\intermediates\\dex\\debug\\mergeLibDexDebug\\2\\classes.dex
-base.2=D\:\\My projects\\Kenouz\\android\\app\\build\\intermediates\\dex\\debug\\mergeLibDexDebug\\5\\classes.dex
-base.3=D\:\\My projects\\Kenouz\\android\\app\\build\\intermediates\\dex\\debug\\mergeLibDexDebug\\8\\classes.dex
-base.4=D\:\\My projects\\Kenouz\\android\\app\\build\\intermediates\\dex\\debug\\mergeProjectDexDebug\\0\\classes.dex
-base.5=D\:\\My projects\\Kenouz\\android\\app\\build\\intermediates\\dex\\debug\\mergeProjectDexDebug\\2\\classes.dex
+base.2=D\:\\My projects\\Kenouz\\android\\app\\build\\intermediates\\dex\\debug\\mergeLibDexDebug\\4\\classes.dex
+base.3=D\:\\My projects\\Kenouz\\android\\app\\build\\intermediates\\dex\\debug\\mergeLibDexDebug\\5\\classes.dex
+base.4=D\:\\My projects\\Kenouz\\android\\app\\build\\intermediates\\dex\\debug\\mergeLibDexDebug\\8\\classes.dex
+base.5=D\:\\My projects\\Kenouz\\android\\app\\build\\intermediates\\dex\\debug\\mergeProjectDexDebug\\0\\classes.dex
+base.6=D\:\\My projects\\Kenouz\\android\\app\\build\\intermediates\\dex\\debug\\mergeProjectDexDebug\\2\\classes.dex
 path.0=classes.dex
 path.1=2/classes.dex
-path.2=5/classes.dex
-path.3=8/classes.dex
-path.4=0/classes.dex
-path.5=2/classes.dex
+path.2=4/classes.dex
+path.3=5/classes.dex
+path.4=8/classes.dex
+path.5=0/classes.dex
+path.6=2/classes.dex
 renamed.0=classes.dex
 renamed.1=classes2.dex
 renamed.2=classes3.dex
 renamed.3=classes4.dex
 renamed.4=classes5.dex
 renamed.5=classes6.dex
+renamed.6=classes7.dex

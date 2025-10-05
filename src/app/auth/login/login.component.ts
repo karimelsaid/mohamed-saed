@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, AfterViewInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -6,6 +6,8 @@ import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../auth.service';
 import { MerchantAuthService } from '../../services/merchant-auth.service';
 import { environment } from '../../../environments/environment';
+import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
+import { Capacitor } from '@capacitor/core';
 
 import { RouterModule } from '@angular/router';
 
@@ -16,11 +18,12 @@ import { RouterModule } from '@angular/router';
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.css']
 })
-export class LoginComponent {
+export class LoginComponent implements OnInit, AfterViewInit {
   email: string = '';
   password: string = '';
   message: string = '';
   isSuccess: boolean = false;
+  isAndroid = Capacitor.getPlatform() === 'android';
 
   constructor(
     private router: Router,
@@ -29,8 +32,20 @@ export class LoginComponent {
     private merchantAuthService: MerchantAuthService
   ) {}
 
+  ngOnInit() {
+    if (this.isAndroid) {
+      GoogleAuth.initialize({
+        clientId: environment.androidGoogleClientId,
+        scopes: ['profile', 'email'],
+        grantOfflineAccess: true,
+      });
+    }
+  }
+
   ngAfterViewInit() {
-    this.loadGoogleScript();
+    if (!this.isAndroid) {
+      this.loadGoogleScript();
+    }
   }
 
   navigateToForgotPassword() {
@@ -39,6 +54,34 @@ export class LoginComponent {
         console.error('Navigation to forgot-password failed');
       }
     });
+  }
+
+  async googleSignIn() {
+    if (this.isAndroid) {
+      try {
+        const result = await GoogleAuth.signIn();
+        const idToken = result.authentication.idToken;
+        this.authService.googleSignIn(idToken).subscribe({
+          next: (user) => {
+            this.message = '✅ تم تسجيل الدخول باستخدام حساب Google بنجاح!';
+            this.router.navigate(['/']);
+          },
+          error: (error) => {
+            if (error.status === 400 && error.error.message) {
+              this.message = `❌ ${error.error.message}`;
+            } else {
+              this.message = '❌ فشل تسجيل الدخول باستخدام حساب Google. يرجى المحاولة مرة أخرى.';
+            }
+            console.error('Google sign-in error:', error);
+          }
+        });
+      } catch (error) {
+        this.message = '❌ فشل تسجيل الدخول باستخدام حساب Google. يرجى المحاولة مرة أخرى.';
+        console.error('Google sign-in error:', error);
+      }
+    } else {
+      // For web, the button click will trigger the web flow, but since we have the div, it's handled by Google script
+    }
   }
 
   loadGoogleScript() {

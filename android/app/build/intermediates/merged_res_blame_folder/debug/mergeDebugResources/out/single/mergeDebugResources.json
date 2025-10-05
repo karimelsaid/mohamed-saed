@@ -1,174 +1,174 @@
 [
     {
-        "merged": "com.kenouz.bookstore2.app-debug-27:/drawable-land-xhdpi_splash.png.flat",
-        "source": "com.kenouz.bookstore2.app-main-29:/drawable-land-xhdpi/splash.png"
+        "merged": "com.kenouz.bookstore2.app-debug-30:/xml_config.xml.flat",
+        "source": "com.kenouz.bookstore2.app-main-32:/xml/config.xml"
     },
     {
-        "merged": "com.kenouz.bookstore2.app-debug-27:/mipmap-hdpi_ic_launcher_monochrome.png.flat",
-        "source": "com.kenouz.bookstore2.app-main-29:/mipmap-hdpi/ic_launcher_monochrome.png"
+        "merged": "com.kenouz.bookstore2.app-debug-30:/xml_file_paths.xml.flat",
+        "source": "com.kenouz.bookstore2.app-main-32:/xml/file_paths.xml"
     },
     {
-        "merged": "com.kenouz.bookstore2.app-debug-27:/mipmap-xhdpi_ic_launcher_monochrome.png.flat",
-        "source": "com.kenouz.bookstore2.app-main-29:/mipmap-xhdpi/ic_launcher_monochrome.png"
+        "merged": "com.kenouz.bookstore2.app-debug-30:/drawable-land-hdpi_splash.png.flat",
+        "source": "com.kenouz.bookstore2.app-main-32:/drawable-land-hdpi/splash.png"
     },
     {
-        "merged": "com.kenouz.bookstore2.app-debug-27:/mipmap-xxhdpi_ic_launcher_round.png.flat",
-        "source": "com.kenouz.bookstore2.app-main-29:/mipmap-xxhdpi/ic_launcher_round.png"
+        "merged": "com.kenouz.bookstore2.app-debug-30:/mipmap-xxxhdpi_ic_launcher_monochrome.png.flat",
+        "source": "com.kenouz.bookstore2.app-main-32:/mipmap-xxxhdpi/ic_launcher_monochrome.png"
     },
     {
-        "merged": "com.kenouz.bookstore2.app-debug-27:/xml_file_paths.xml.flat",
-        "source": "com.kenouz.bookstore2.app-main-29:/xml/file_paths.xml"
+        "merged": "com.kenouz.bookstore2.app-debug-30:/mipmap-xxhdpi_ic_launcher_round.png.flat",
+        "source": "com.kenouz.bookstore2.app-main-32:/mipmap-xxhdpi/ic_launcher_round.png"
     },
     {
-        "merged": "com.kenouz.bookstore2.app-debug-27:/mipmap-hdpi_ic_launcher_round.png.flat",
-        "source": "com.kenouz.bookstore2.app-main-29:/mipmap-hdpi/ic_launcher_round.png"
+        "merged": "com.kenouz.bookstore2.app-debug-30:/drawable-port-xxhdpi_splash.png.flat",
+        "source": "com.kenouz.bookstore2.app-main-32:/drawable-port-xxhdpi/splash.png"
     },
     {
-        "merged": "com.kenouz.bookstore2.app-debug-27:/mipmap-mdpi_ic_launcher_monochrome.png.flat",
-        "source": "com.kenouz.bookstore2.app-main-29:/mipmap-mdpi/ic_launcher_monochrome.png"
+        "merged": "com.kenouz.bookstore2.app-debug-30:/mipmap-mdpi_ic_launcher.png.flat",
+        "source": "com.kenouz.bookstore2.app-main-32:/mipmap-mdpi/ic_launcher.png"
     },
     {
-        "merged": "com.kenouz.bookstore2.app-debug-27:/mipmap-anydpi-v26_ic_launcher.xml.flat",
-        "source": "com.kenouz.bookstore2.app-main-29:/mipmap-anydpi-v26/ic_launcher.xml"
+        "merged": "com.kenouz.bookstore2.app-debug-30:/drawable-land-xhdpi_splash.png.flat",
+        "source": "com.kenouz.bookstore2.app-main-32:/drawable-land-xhdpi/splash.png"
     },
     {
-        "merged": "com.kenouz.bookstore2.app-debug-27:/mipmap-xxxhdpi_ic_launcher_monochrome.png.flat",
-        "source": "com.kenouz.bookstore2.app-main-29:/mipmap-xxxhdpi/ic_launcher_monochrome.png"
+        "merged": "com.kenouz.bookstore2.app-debug-30:/drawable-port-xxxhdpi_splash.png.flat",
+        "source": "com.kenouz.bookstore2.app-main-32:/drawable-port-xxxhdpi/splash.png"
     },
     {
-        "merged": "com.kenouz.bookstore2.app-debug-27:/drawable-port-hdpi_splash.png.flat",
-        "source": "com.kenouz.bookstore2.app-main-29:/drawable-port-hdpi/splash.png"
+        "merged": "com.kenouz.bookstore2.app-debug-30:/mipmap-hdpi_ic_launcher_background.png.flat",
+        "source": "com.kenouz.bookstore2.app-main-32:/mipmap-hdpi/ic_launcher_background.png"
     },
     {
-        "merged": "com.kenouz.bookstore2.app-debug-27:/mipmap-xxhdpi_ic_launcher_monochrome.png.flat",
-        "source": "com.kenouz.bookstore2.app-main-29:/mipmap-xxhdpi/ic_launcher_monochrome.png"
+        "merged": "com.kenouz.bookstore2.app-debug-30:/drawable-land-mdpi_splash.png.flat",
+        "source": "com.kenouz.bookstore2.app-main-32:/drawable-land-mdpi/splash.png"
     },
     {
-        "merged": "com.kenouz.bookstore2.app-debug-27:/drawable-land-xxxhdpi_splash.png.flat",
-        "source": "com.kenouz.bookstore2.app-main-29:/drawable-land-xxxhdpi/splash.png"
+        "merged": "com.kenouz.bookstore2.app-debug-30:/drawable-anydpi-v24_ic_launcher_foreground.xml.flat",
+        "source": "com.kenouz.bookstore2.app-pngs-26:/drawable-anydpi-v24/ic_launcher_foreground.xml"
     },
     {
-        "merged": "com.kenouz.bookstore2.app-debug-27:/mipmap-mdpi_ic_launcher.png.flat",
-        "source": "com.kenouz.bookstore2.app-main-29:/mipmap-mdpi/ic_launcher.png"
+        "merged": "com.kenouz.bookstore2.app-debug-30:/mipmap-hdpi_ic_launcher_foreground.png.flat",
+        "source": "com.kenouz.bookstore2.app-main-32:/mipmap-hdpi/ic_launcher_foreground.png"
     },
     {
-        "merged": "com.kenouz.bookstore2.app-debug-27:/drawable-port-mdpi_splash.png.flat",
-        "source": "com.kenouz.bookstore2.app-main-29:/drawable-port-mdpi/splash.png"
+        "merged": "com.kenouz.bookstore2.app-debug-30:/mipmap-xxxhdpi_ic_launcher_foreground.png.flat",
+        "source": "com.kenouz.bookstore2.app-main-32:/mipmap-xxxhdpi/ic_launcher_foreground.png"
     },
     {
-        "merged": "com.kenouz.bookstore2.app-debug-27:/drawable-land-xxhdpi_splash.png.flat",
-        "source": "com.kenouz.bookstore2.app-main-29:/drawable-land-xxhdpi/splash.png"
+        "merged": "com.kenouz.bookstore2.app-debug-30:/mipmap-xhdpi_ic_launcher_round.png.flat",
+        "source": "com.kenouz.bookstore2.app-main-32:/mipmap-xhdpi/ic_launcher_round.png"
     },
     {
-        "merged": "com.kenouz.bookstore2.app-debug-27:/mipmap-mdpi_ic_launcher_foreground.png.flat",
-        "source": "com.kenouz.bookstore2.app-main-29:/mipmap-mdpi/ic_launcher_foreground.png"
+        "merged": "com.kenouz.bookstore2.app-debug-30:/mipmap-xxhdpi_ic_launcher.png.flat",
+        "source": "com.kenouz.bookstore2.app-main-32:/mipmap-xxhdpi/ic_launcher.png"
     },
     {
-        "merged": "com.kenouz.bookstore2.app-debug-27:/mipmap-xhdpi_ic_launcher.png.flat",
-        "source": "com.kenouz.bookstore2.app-main-29:/mipmap-xhdpi/ic_launcher.png"
+        "merged": "com.kenouz.bookstore2.app-debug-30:/mipmap-mdpi_ic_launcher_foreground.png.flat",
+        "source": "com.kenouz.bookstore2.app-main-32:/mipmap-mdpi/ic_launcher_foreground.png"
     },
     {
-        "merged": "com.kenouz.bookstore2.app-debug-27:/mipmap-xhdpi_ic_launcher_foreground.png.flat",
-        "source": "com.kenouz.bookstore2.app-main-29:/mipmap-xhdpi/ic_launcher_foreground.png"
+        "merged": "com.kenouz.bookstore2.app-debug-30:/mipmap-xxxhdpi_ic_launcher_round.png.flat",
+        "source": "com.kenouz.bookstore2.app-main-32:/mipmap-xxxhdpi/ic_launcher_round.png"
     },
     {
-        "merged": "com.kenouz.bookstore2.app-debug-27:/mipmap-hdpi_ic_launcher.png.flat",
-        "source": "com.kenouz.bookstore2.app-main-29:/mipmap-hdpi/ic_launcher.png"
+        "merged": "com.kenouz.bookstore2.app-debug-30:/drawable-port-mdpi_splash.png.flat",
+        "source": "com.kenouz.bookstore2.app-main-32:/drawable-port-mdpi/splash.png"
     },
     {
-        "merged": "com.kenouz.bookstore2.app-debug-27:/mipmap-xxxhdpi_ic_launcher.png.flat",
-        "source": "com.kenouz.bookstore2.app-main-29:/mipmap-xxxhdpi/ic_launcher.png"
+        "merged": "com.kenouz.bookstore2.app-debug-30:/mipmap-anydpi-v26_ic_launcher.xml.flat",
+        "source": "com.kenouz.bookstore2.app-main-32:/mipmap-anydpi-v26/ic_launcher.xml"
     },
     {
-        "merged": "com.kenouz.bookstore2.app-debug-27:/mipmap-anydpi-v26_ic_launcher_round.xml.flat",
-        "source": "com.kenouz.bookstore2.app-main-29:/mipmap-anydpi-v26/ic_launcher_round.xml"
+        "merged": "com.kenouz.bookstore2.app-debug-30:/mipmap-mdpi_ic_launcher_monochrome.png.flat",
+        "source": "com.kenouz.bookstore2.app-main-32:/mipmap-mdpi/ic_launcher_monochrome.png"
     },
     {
-        "merged": "com.kenouz.bookstore2.app-debug-27:/layout_activity_main.xml.flat",
-        "source": "com.kenouz.bookstore2.app-main-29:/layout/activity_main.xml"
+        "merged": "com.kenouz.bookstore2.app-debug-30:/mipmap-mdpi_ic_launcher_background.png.flat",
+        "source": "com.kenouz.bookstore2.app-main-32:/mipmap-mdpi/ic_launcher_background.png"
     },
     {
-        "merged": "com.kenouz.bookstore2.app-debug-27:/mipmap-xxxhdpi_ic_launcher_foreground.png.flat",
-        "source": "com.kenouz.bookstore2.app-main-29:/mipmap-xxxhdpi/ic_launcher_foreground.png"
+        "merged": "com.kenouz.bookstore2.app-debug-30:/mipmap-xxxhdpi_ic_launcher_background.png.flat",
+        "source": "com.kenouz.bookstore2.app-main-32:/mipmap-xxxhdpi/ic_launcher_background.png"
     },
     {
-        "merged": "com.kenouz.bookstore2.app-debug-27:/mipmap-xhdpi_ic_launcher_background.png.flat",
-        "source": "com.kenouz.bookstore2.app-main-29:/mipmap-xhdpi/ic_launcher_background.png"
+        "merged": "com.kenouz.bookstore2.app-debug-30:/drawable_ic_launcher_background.xml.flat",
+        "source": "com.kenouz.bookstore2.app-main-32:/drawable/ic_launcher_background.xml"
     },
     {
-        "merged": "com.kenouz.bookstore2.app-debug-27:/mipmap-xxxhdpi_ic_launcher_background.png.flat",
-        "source": "com.kenouz.bookstore2.app-main-29:/mipmap-xxxhdpi/ic_launcher_background.png"
+        "merged": "com.kenouz.bookstore2.app-debug-30:/mipmap-hdpi_ic_launcher.png.flat",
+        "source": "com.kenouz.bookstore2.app-main-32:/mipmap-hdpi/ic_launcher.png"
     },
     {
-        "merged": "com.kenouz.bookstore2.app-debug-27:/drawable_ic_launcher_background.xml.flat",
-        "source": "com.kenouz.bookstore2.app-main-29:/drawable/ic_launcher_background.xml"
+        "merged": "com.kenouz.bookstore2.app-debug-30:/mipmap-mdpi_ic_launcher_round.png.flat",
+        "source": "com.kenouz.bookstore2.app-main-32:/mipmap-mdpi/ic_launcher_round.png"
     },
     {
-        "merged": "com.kenouz.bookstore2.app-debug-27:/mipmap-mdpi_ic_launcher_background.png.flat",
-        "source": "com.kenouz.bookstore2.app-main-29:/mipmap-mdpi/ic_launcher_background.png"
+        "merged": "com.kenouz.bookstore2.app-debug-30:/mipmap-hdpi_ic_launcher_monochrome.png.flat",
+        "source": "com.kenouz.bookstore2.app-main-32:/mipmap-hdpi/ic_launcher_monochrome.png"
     },
     {
-        "merged": "com.kenouz.bookstore2.app-debug-27:/drawable-port-xxxhdpi_splash.png.flat",
-        "source": "com.kenouz.bookstore2.app-main-29:/drawable-port-xxxhdpi/splash.png"
+        "merged": "com.kenouz.bookstore2.app-debug-30:/mipmap-anydpi-v26_ic_launcher_round.xml.flat",
+        "source": "com.kenouz.bookstore2.app-main-32:/mipmap-anydpi-v26/ic_launcher_round.xml"
     },
     {
-        "merged": "com.kenouz.bookstore2.app-debug-27:/mipmap-hdpi_ic_launcher_background.png.flat",
-        "source": "com.kenouz.bookstore2.app-main-29:/mipmap-hdpi/ic_launcher_background.png"
+        "merged": "com.kenouz.bookstore2.app-debug-30:/drawable-port-hdpi_splash.png.flat",
+        "source": "com.kenouz.bookstore2.app-main-32:/drawable-port-hdpi/splash.png"
     },
     {
-        "merged": "com.kenouz.bookstore2.app-debug-27:/drawable_splash.png.flat",
-        "source": "com.kenouz.bookstore2.app-main-29:/drawable/splash.png"
+        "merged": "com.kenouz.bookstore2.app-debug-30:/drawable-land-xxhdpi_splash.png.flat",
+        "source": "com.kenouz.bookstore2.app-main-32:/drawable-land-xxhdpi/splash.png"
     },
     {
-        "merged": "com.kenouz.bookstore2.app-debug-27:/drawable-land-hdpi_splash.png.flat",
-        "source": "com.kenouz.bookstore2.app-main-29:/drawable-land-hdpi/splash.png"
+        "merged": "com.kenouz.bookstore2.app-debug-30:/layout_activity_main.xml.flat",
+        "source": "com.kenouz.bookstore2.app-main-32:/layout/activity_main.xml"
     },
     {
-        "merged": "com.kenouz.bookstore2.app-debug-27:/drawable-port-xhdpi_splash.png.flat",
-        "source": "com.kenouz.bookstore2.app-main-29:/drawable-port-xhdpi/splash.png"
+        "merged": "com.kenouz.bookstore2.app-debug-30:/mipmap-hdpi_ic_launcher_round.png.flat",
+        "source": "com.kenouz.bookstore2.app-main-32:/mipmap-hdpi/ic_launcher_round.png"
     },
     {
-        "merged": "com.kenouz.bookstore2.app-debug-27:/drawable-land-mdpi_splash.png.flat",
-        "source": "com.kenouz.bookstore2.app-main-29:/drawable-land-mdpi/splash.png"
+        "merged": "com.kenouz.bookstore2.app-debug-30:/mipmap-xhdpi_ic_launcher_background.png.flat",
+        "source": "com.kenouz.bookstore2.app-main-32:/mipmap-xhdpi/ic_launcher_background.png"
     },
     {
-        "merged": "com.kenouz.bookstore2.app-debug-27:/drawable-anydpi-v24_ic_launcher_foreground.xml.flat",
-        "source": "com.kenouz.bookstore2.app-pngs-23:/drawable-anydpi-v24/ic_launcher_foreground.xml"
+        "merged": "com.kenouz.bookstore2.app-debug-30:/mipmap-xhdpi_ic_launcher_monochrome.png.flat",
+        "source": "com.kenouz.bookstore2.app-main-32:/mipmap-xhdpi/ic_launcher_monochrome.png"
     },
     {
-        "merged": "com.kenouz.bookstore2.app-debug-27:/mipmap-mdpi_ic_launcher_round.png.flat",
-        "source": "com.kenouz.bookstore2.app-main-29:/mipmap-mdpi/ic_launcher_round.png"
+        "merged": "com.kenouz.bookstore2.app-debug-30:/mipmap-xxxhdpi_ic_launcher.png.flat",
+        "source": "com.kenouz.bookstore2.app-main-32:/mipmap-xxxhdpi/ic_launcher.png"
     },
     {
-        "merged": "com.kenouz.bookstore2.app-debug-27:/mipmap-xhdpi_ic_launcher_round.png.flat",
-        "source": "com.kenouz.bookstore2.app-main-29:/mipmap-xhdpi/ic_launcher_round.png"
+        "merged": "com.kenouz.bookstore2.app-debug-30:/mipmap-xhdpi_ic_launcher_foreground.png.flat",
+        "source": "com.kenouz.bookstore2.app-main-32:/mipmap-xhdpi/ic_launcher_foreground.png"
     },
     {
-        "merged": "com.kenouz.bookstore2.app-debug-27:/mipmap-hdpi_ic_launcher_foreground.png.flat",
-        "source": "com.kenouz.bookstore2.app-main-29:/mipmap-hdpi/ic_launcher_foreground.png"
+        "merged": "com.kenouz.bookstore2.app-debug-30:/mipmap-xxhdpi_ic_launcher_background.png.flat",
+        "source": "com.kenouz.bookstore2.app-main-32:/mipmap-xxhdpi/ic_launcher_background.png"
     },
     {
-        "merged": "com.kenouz.bookstore2.app-debug-27:/xml_config.xml.flat",
-        "source": "com.kenouz.bookstore2.app-main-29:/xml/config.xml"
+        "merged": "com.kenouz.bookstore2.app-debug-30:/drawable_splash.png.flat",
+        "source": "com.kenouz.bookstore2.app-main-32:/drawable/splash.png"
     },
     {
-        "merged": "com.kenouz.bookstore2.app-debug-27:/mipmap-xxhdpi_ic_launcher_background.png.flat",
-        "source": "com.kenouz.bookstore2.app-main-29:/mipmap-xxhdpi/ic_launcher_background.png"
+        "merged": "com.kenouz.bookstore2.app-debug-30:/drawable-port-xhdpi_splash.png.flat",
+        "source": "com.kenouz.bookstore2.app-main-32:/drawable-port-xhdpi/splash.png"
     },
     {
-        "merged": "com.kenouz.bookstore2.app-debug-27:/mipmap-xxxhdpi_ic_launcher_round.png.flat",
-        "source": "com.kenouz.bookstore2.app-main-29:/mipmap-xxxhdpi/ic_launcher_round.png"
+        "merged": "com.kenouz.bookstore2.app-debug-30:/mipmap-xxhdpi_ic_launcher_monochrome.png.flat",
+        "source": "com.kenouz.bookstore2.app-main-32:/mipmap-xxhdpi/ic_launcher_monochrome.png"
     },
     {
-        "merged": "com.kenouz.bookstore2.app-debug-27:/mipmap-xxhdpi_ic_launcher_foreground.png.flat",
-        "source": "com.kenouz.bookstore2.app-main-29:/mipmap-xxhdpi/ic_launcher_foreground.png"
+        "merged": "com.kenouz.bookstore2.app-debug-30:/drawable-land-xxxhdpi_splash.png.flat",
+        "source": "com.kenouz.bookstore2.app-main-32:/drawable-land-xxxhdpi/splash.png"
     },
     {
-        "merged": "com.kenouz.bookstore2.app-debug-27:/mipmap-xxhdpi_ic_launcher.png.flat",
-        "source": "com.kenouz.bookstore2.app-main-29:/mipmap-xxhdpi/ic_launcher.png"
+        "merged": "com.kenouz.bookstore2.app-debug-30:/mipmap-xhdpi_ic_launcher.png.flat",
+        "source": "com.kenouz.bookstore2.app-main-32:/mipmap-xhdpi/ic_launcher.png"
     },
     {
-        "merged": "com.kenouz.bookstore2.app-debug-27:/drawable-port-xxhdpi_splash.png.flat",
-        "source": "com.kenouz.bookstore2.app-main-29:/drawable-port-xxhdpi/splash.png"
+        "merged": "com.kenouz.bookstore2.app-debug-30:/mipmap-xxhdpi_ic_launcher_foreground.png.flat",
+        "source": "com.kenouz.bookstore2.app-main-32:/mipmap-xxhdpi/ic_launcher_foreground.png"
     }
 ]

@@ -1,10 +1,12 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, OnInit, AfterViewInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../auth.service';
 import { Router } from '@angular/router';
 import governoratesData from '../../../../public/json/egypt-governorates.json';
 import { environment } from '../../../environments/environment';
+import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
+import { Capacitor } from '@capacitor/core';
 
 @Component({
   selector: 'app-register',
@@ -13,12 +15,13 @@ import { environment } from '../../../environments/environment';
   templateUrl: './register.component.html',
   styleUrls: ['./register.component.css']
 })
-export class RegisterComponent {
+export class RegisterComponent implements OnInit, AfterViewInit {
   governorates: any[] = governoratesData.governorates;
   buyerCities: string[] = [];
   merchantCities: string[] = [];
 
   isMerchantRegistration: boolean = false;
+  isAndroid = Capacitor.getPlatform() === 'android';
 
   // Buyer user data
   user = {
@@ -63,8 +66,20 @@ export class RegisterComponent {
 
   constructor(private authService: AuthService, private router: Router) {}
 
+  ngOnInit() {
+    if (this.isAndroid) {
+      GoogleAuth.initialize({
+        clientId: environment.androidGoogleClientId,
+        scopes: ['profile', 'email'],
+        grantOfflineAccess: true,
+      });
+    }
+  }
+
   ngAfterViewInit() {
-    this.loadGoogleScript();
+    if (!this.isAndroid) {
+      this.loadGoogleScript();
+    }
   }
 
   loadGoogleScript() {
@@ -89,15 +104,43 @@ export class RegisterComponent {
     );
   }
 
+  async googleSignIn() {
+    if (this.isAndroid) {
+      try {
+        const result = await GoogleAuth.signIn();
+        const idToken = result.authentication.idToken;
+        this.authService.googleSignIn(idToken).subscribe({
+          next: (user) => {
+            this.message = '✅ تم إنشاء الحساب وتسجيل الدخول باستخدام حساب Google بنجاح!';
+            this.router.navigate(['/']);
+          },
+          error: (error) => {
+            if (error.status === 400 && error.error.message) {
+              this.message = `❌ ${error.error.message}`;
+            } else {
+              this.message = '❌ فشل إنشاء الحساب باستخدام حساب Google. يرجى المحاولة مرة أخرى.';
+            }
+            console.error('Google sign-in error:', error);
+          }
+        });
+      } catch (error) {
+        this.message = '❌ فشل إنشاء الحساب باستخدام حساب Google. يرجى المحاولة مرة أخرى.';
+        console.error('Google sign-in error:', error);
+      }
+    } else {
+      // For web, handled by script
+    }
+  }
+
   handleGoogleCredentialResponse(response: any) {
     const idToken = response.credential;
     this.authService.googleSignIn(idToken).subscribe({
       next: (user) => {
-        this.message = '✅ تم تسجيل الدخول باستخدام حساب Google بنجاح!';
+        this.message = '✅ تم إنشاء الحساب وتسجيل الدخول باستخدام حساب Google بنجاح!';
         this.router.navigate(['/']);
       },
       error: (error) => {
-        this.message = '❌ فشل تسجيل الدخول باستخدام حساب Google. يرجى المحاولة مرة أخرى.';
+        this.message = '❌ فشل إنشاء الحساب باستخدام حساب Google. يرجى المحاولة مرة أخرى.';
         console.error('Google sign-in error:', error);
       }
     });

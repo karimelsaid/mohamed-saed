@@ -1,5 +1,5 @@
 <div class="rtl fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4" (click)="onClose()">
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-4 sm:p-6 lg:p-8 w-full max-w-2xl sm:max-w-3xl lg:max-w-4xl max-h-[90vh] overflow-y-auto relative" (click)="$event.stopPropagation()">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-2 sm:p-6 lg:p-8 w-full max-w-lg sm:max-w-3xl lg:max-w-4xl max-h-[70vh] overflow-y-auto relative" (click)="$event.stopPropagation()">
       <!-- Close Button -->
       <button (click)="onClose()" class="absolute top-4 right-4 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-2xl font-bold z-10">
         &times;
@@ -11,14 +11,14 @@
           <div class="flex flex-col items-center space-y-4 mb-6">
             <div class="flex items-center space-x-4 rtl:space-x-reverse w-full max-w-xs justify-between">
               <div class="flex flex-col items-center space-y-1">
-                <div [ngClass]="{'bg-blue-600 text-white': currentStep >= 1, 'bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300': currentStep < 1}" class="w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold">
+                <div [ngClass]="{'bg-blue-600 text-white': currentStep >= 1, 'bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300': currentStep < 1}" class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold">
                   <span class="text-sm">1</span>
                 </div>
                 <span class="text-xs font-medium text-center" [ngClass]="{'text-gray-700 dark:text-gray-300': currentStep >= 1, 'text-gray-500 dark:text-gray-400': currentStep < 1}">السلة</span>
               </div>
               <div class="flex-1 h-0.5 mx-2 bg-gray-300 dark:bg-gray-600" [ngClass]="{'bg-blue-600': currentStep >= 2}"></div>
               <div class="flex flex-col items-center space-y-1">
-                <div [ngClass]="{'bg-blue-600 text-white': currentStep >= 2, 'bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300': currentStep < 2}" class="w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold">
+                <div [ngClass]="{'bg-blue-600 text-white': currentStep >= 2, 'bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300': currentStep < 2}" class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold">
                   <span class="text-sm">2</span>
                 </div>
                 <span class="text-xs font-medium text-center" [ngClass]="{'text-gray-700 dark:text-gray-300': currentStep >= 2, 'text-gray-500 dark:text-gray-400': currentStep < 2}">العنوان</span>
@@ -60,11 +60,11 @@
           </div>
         </div>
       </div>
-      <h2 class="text-xl sm:text-2xl lg:text-3xl font-bold mb-6 text-center text-gray-900 dark:text-gray-200">إتمام عملية الشراء</h2>
+      <h2 class="text-lg sm:text-2xl lg:text-3xl font-bold mb-6 text-center text-gray-900 dark:text-gray-200">إتمام عملية الشراء</h2>
 
       <!-- Step 1: Cart Items -->
       <div *ngIf="currentStep === 1" class="mb-8 max-h-96 overflow-y-auto bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-        <h3 class="text-xl font-bold mb-4 text-gray-900 dark:text-gray-200">السلة</h3>
+        <h3 class="text-lg font-bold mb-4 text-gray-900 dark:text-gray-200">السلة</h3>
         <div *ngFor="let item of cartItems" class="flex items-center justify-between py-4 border-b border-gray-200 dark:border-gray-600 last:border-b-0">
           <div class="flex items-center">
             <div class="w-20 h-20 rounded-lg mr-4 overflow-hidden flex items-center justify-center bg-gray-100 dark:bg-gray-600 shadow-md">
@@ -120,7 +120,7 @@
 
   <!-- Step 2: Address -->
   <div *ngIf="currentStep === 2 && userProfile" class="mb-8">
-    <h3 class="text-xl font-bold mb-4 text-gray-900 dark:text-gray-200">العنوان</h3>
+    <h3 class="text-lg font-bold mb-4 text-gray-900 dark:text-gray-200">العنوان</h3>
     <!-- Delivery Type Selection -->
     <div class="mb-6">
       <label class="block mb-4 text-sm font-medium text-gray-700 dark:text-gray-300">نوع التسليم</label>
@@ -300,7 +300,7 @@
 
   <!-- Step 3: Payment -->
   <div *ngIf="currentStep === 3" class="border-t-2 border-gray-300 dark:border-gray-600 pt-6 bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-    <h3 class="text-xl font-bold mb-4 text-gray-900 dark:text-gray-200">الدفع</h3>
+    <h3 class="text-lg font-bold mb-4 text-gray-900 dark:text-gray-200">الدفع</h3>
     <div class="flex justify-between mb-3">
       <span class="text-gray-700 dark:text-gray-300 font-medium">تكلفة الشحن:</span>
       <span class="text-gray-900 dark:text-gray-200 font-semibold">{{shippingCost}} EGP</span>

@@ -1,14 +1,15 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { DataService } from '../services/data.service';
 import { Book } from '../book';
-import { faHeart, faCartPlus, faShareAlt } from '@fortawesome/free-solid-svg-icons';
+import { faHeart, faCartPlus, faShareAlt, faSignInAlt } from '@fortawesome/free-solid-svg-icons';
 import { faStar } from '@fortawesome/free-solid-svg-icons';
 import { faStar as faStarRegular } from '@fortawesome/free-regular-svg-icons';
 import { AuthService } from '../auth/auth.service';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 import { ModalService } from '../services/modal.service';
+import { AccountModalComponent } from '../auth/account-modal/account-modal.component';
 @Component({
   selector: 'app-search-results',
   templateUrl: './search-results.component.html',
@@ -20,6 +21,7 @@ export class SearchResultsComponent implements OnInit {
   faHeart = faHeart;
   faCartPlus = faCartPlus;
   faStar = faStar;
+  faSignInAlt = faSignInAlt
   faStarRegular = faStarRegular;
   books: Book[] = []; // كل الكتب
   paginatedBooks: Book[] = []; // الكتب المعروضة في الصفحة الحالية
@@ -42,8 +44,11 @@ export class SearchResultsComponent implements OnInit {
   // ratings: { [bookId: string]: any } = {}; // No longer needed since ratings come with books data
 
   filterType = 'all';
+  showFirst = false; // Flag to show only the first item
 
   isLoading = false; // Add loading flag
+
+  @ViewChild(AccountModalComponent, { static: false }) accountModal?: AccountModalComponent;
 
   constructor(private dataService: DataService, private route: ActivatedRoute, private router: Router, private authService: AuthService, private http: HttpClient, private modalService: ModalService) {}
 
@@ -53,6 +58,7 @@ export class SearchResultsComponent implements OnInit {
       this.searchQuery = params['q'] || ''; // تأكد من وجود قيمة
       this.filterType = params['filter'] || 'all';
       this.currentPage = parseInt(params['page'] || '1', 10); // قراءة رقم الصفحة من الـ URL
+      this.showFirst = params['showFirst'] === 'true'; // قراءة قيمة showFirst من الـ URL
       this.searchBooks();
     });
   }
@@ -173,18 +179,20 @@ export class SearchResultsComponent implements OnInit {
       if (this.isFavorite(bookId)) {
         this.authService.removeFromFavorites(userId, bookId).subscribe({
           next: res => {
-            console.log('تم الحذف من المفضلة', res);
             this.loadUserData(userId);
           },
-          error: err => console.error('خطأ في الحذف من المفضلة', err)
+          error: err => {
+            this.showErrorModal('حدث خطأ أثناء إزالة الكتاب من المفضلة');
+          }
         });
       } else {
         this.authService.addToFavorites(userId, bookId).subscribe({
           next: res => {
-            console.log('تمت الإضافة إلى المفضلة', res);
             this.loadUserData(userId);
           },
-          error: err => console.error('خطأ في الإضافة إلى المفضلة', err)
+          error: err => {
+            this.showErrorModal('حدث خطأ أثناء إضافة الكتاب إلى المفضلة');
+          }
         });
       }
     } else {
@@ -206,18 +214,20 @@ export class SearchResultsComponent implements OnInit {
       if (this.isInCart(bookId)) {
         this.authService.removeFromCart(userId, bookId).subscribe({
           next: res => {
-            console.log('تم الحذف من السلة', res);
             this.loadUserData(userId);
           },
-          error: err => console.error('خطأ في الحذف من السلة', err)
+          error: err => {
+            this.showErrorModal('حدث خطأ أثناء إزالة الكتاب من السلة');
+          }
         });
       } else {
         this.authService.addToCart(userId, bookId).subscribe({
           next: res => {
-            console.log('تمت الإضافة إلى السلة', res);
             this.loadUserData(userId);
           },
-          error: err => console.error('خطأ في الإضافة إلى السلة', err)
+          error: err => {
+            this.showErrorModal('حدث خطأ أثناء إضافة الكتاب إلى السلة');
+          }
         });
       }
     } else {
@@ -306,9 +316,13 @@ export class SearchResultsComponent implements OnInit {
 
   // دالة تحديث الصفحة الحالية
   updatePage(): void {
-    const startIndex = (this.currentPage - 1) * this.booksPerPage;
-    const endIndex = startIndex + this.booksPerPage;
-    this.paginatedBooks = this.books.slice(startIndex, endIndex);
+    if (this.showFirst && this.books.length > 0) {
+      this.paginatedBooks = [this.books[0]];
+    } else {
+      const startIndex = (this.currentPage - 1) * this.booksPerPage;
+      const endIndex = startIndex + this.booksPerPage;
+      this.paginatedBooks = this.books.slice(startIndex, endIndex);
+    }
   }
 
   // دالة تغيير الصفحة
@@ -414,5 +428,14 @@ export class SearchResultsComponent implements OnInit {
       confirmText: 'موافق',
       showCancel: false
     });
+  }
+
+  closeLoginPrompt(): void {
+    this.showLoginPrompt = false;
+  }
+
+  openAccountModal(): void {
+    this.closeLoginPrompt();
+    this.accountModal?.openModal();
   }
 }

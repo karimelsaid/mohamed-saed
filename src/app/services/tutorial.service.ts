@@ -65,22 +65,22 @@ export class TutorialService {
         id: 'categories',
         title: 'فئات الكتب',
         description: 'تصفح مجموعة واسعة من فئات الكتب المتنوعة من الدينية إلى التعليمية',
-        element: '.grid.grid-cols-2',
+        element: '.photoliperary',
+        position: 'bottom',
+       action: () => {
+          this.router.navigate(['/Home']);
+        }
+      },
+      {
+        id: 'search',
+        title: 'البحث المتقدم',
+        description: 'ابحث عن الكتب بسهولة باستخدام شريط البحث في الأعلى',
+        element: '.tutorial-search',
         position: 'bottom',
         action: () => {
           this.router.navigate(['/Home']);
         }
       },
-  {
-    id: 'search',
-    title: 'البحث المتقدم',
-    description: 'ابحث عن الكتب بسهولة باستخدام شريط البحث في الأعلى',
-    element: '.tutorial-search',
-    position: 'bottom',
-    action: () => {
-      this.router.navigate(['/Home']);
-    }
-  },
       {
         id: 'recent-books',
         title: 'الكتب الجديدة',
@@ -95,10 +95,10 @@ export class TutorialService {
         id: 'cart-favorites',
         title: 'السلة والمفضلة',
         description: 'أضف الكتب إلى سلة التسوق أو قائمة المفضلة لشرائها لاحقاً',
-        element: 'app-navbar',
+        element: '.grid.grid-cols-1.sm\\:grid-cols-2.md\\:grid-cols-3',
         position: 'bottom',
         action: () => {
-          this.router.navigate(['/Home']);
+          this.router.navigate(['/research'], { queryParams: { filter: 'all', showFirst: 'true' } });
         }
       },
       {

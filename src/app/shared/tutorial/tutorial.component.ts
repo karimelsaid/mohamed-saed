@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy, ElementRef, Renderer2 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { TutorialService, TutorialStep } from '../../services/tutorial.service';
 import { Subscription } from 'rxjs';
 import { faChevronLeft, faChevronRight, faTimes, faPlay } from '@fortawesome/free-solid-svg-icons';
@@ -31,7 +32,8 @@ export class TutorialComponent implements OnInit, OnDestroy {
   constructor(
     private tutorialService: TutorialService,
     private elementRef: ElementRef,
-    private renderer: Renderer2
+    private renderer: Renderer2,
+    private router: Router
   ) {}
 
   ngOnInit(): void {
@@ -134,6 +136,11 @@ export class TutorialComponent implements OnInit, OnDestroy {
   }
 
   nextStep(): void {
+    // Clean up URL if leaving cart-favorites step
+    const currentStep = this.tutorialService.getCurrentStep();
+    if (currentStep && currentStep.id === 'cart-favorites') {
+      this.router.navigate(['/research'], { queryParams: { filter: 'all' } });
+    }
     this.tutorialService.nextStep();
   }
 
@@ -142,6 +149,11 @@ export class TutorialComponent implements OnInit, OnDestroy {
   }
 
   skipTutorial(): void {
+    // Clean up URL if skipping during cart-favorites step
+    const currentStep = this.tutorialService.getCurrentStep();
+    if (currentStep && currentStep.id === 'cart-favorites') {
+      this.router.navigate(['/research'], { queryParams: { filter: 'all' } });
+    }
     this.tutorialService.skipTutorial();
   }
 

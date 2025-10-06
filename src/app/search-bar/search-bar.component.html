@@ -1,4 +1,4 @@
-<div class="md:fixed w-full md:shadow-lg">
+<div class="md:fixed w-full md:shadow-lg z-50">
   <div class="search-bar-container relative max-w-5xl flex justify-center md:top-24 mx-auto">
     <div class="relative w-full max-w-4xl">
       <!-- Search Input Container -->
@@ -42,7 +42,7 @@
       </div>
 
       <!-- Filter Dropdown -->
-      <div *ngIf="showFilterDropdown" class="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-50 animate-fade-in">
+      <div *ngIf="showFilterDropdown" class="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-[1003] animate-fade-in">
         <ul class="divide-y divide-gray-100 dark:divide-gray-700">
           <li (click)="selectFilter('recentlyAdded')" class="p-3 cursor-pointer hover:bg-blue-50 dark:hover:bg-gray-700 dark:text-gray-100 transition-colors duration-150 first:rounded-t-lg">
             <div class="flex items-center">

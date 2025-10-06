@@ -12,16 +12,13 @@
     <div class="relative px-6 pt-6 pb-4">
       <div class="flex justify-between items-start mb-4">
         <div class="flex-1">
-          <div class="inline-flex items-center gap-2 px-3 py-1 bg-gradient-to-r from-blue-100 to-purple-100 dark:from-blue-900/50 dark:to-purple-900/50 rounded-full text-xs font-medium text-blue-700 dark:text-blue-300 mb-3">
+          <div class="text-[10px] sm:text-xl inline-flex items-center gap-2 px-1 py-1 bg-gradient-to-r from-blue-100 to-purple-100 dark:from-blue-900/50 dark:to-purple-900/50 rounded-full font-medium text-blue-700 dark:text-blue-300 mb-3">
             <div class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
             خطوة {{ currentStepIndex + 1 }} من {{ totalSteps }}
           </div>
-          <h3 class="text-xl sm:text-2xl font-bold bg-gradient-to-r from-gray-900 via-blue-900 to-purple-900 dark:from-white dark:via-blue-100 dark:to-purple-100 bg-clip-text text-transparent leading-tight">
-            {{ currentStep?.title }}
-          </h3>
         </div>
         <div class="flex gap-1 ml-4">
-          <span (click)="disableTutorialPermanently()" class="p-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-all duration-200 group">عدم الإظهار مرة أخرى</span>
+          <span (click)="disableTutorialPermanently()" class="text-xs p-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-all duration-200 group">عدم الإظهار مرة أخرى</span>
           <button
             class="p-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-all duration-200 group"
             (click)="disableTutorialPermanently()"
@@ -31,7 +28,6 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21"></path>
               </svg>
           </button>
-          
           <button
             class="p-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-all duration-200 group"
             (click)="skipTutorial()"
@@ -40,8 +36,10 @@
           </button>
         </div>
       </div>
+      <h3 class="rtl text-sm text-center sm:text-xl md:text-2xl font-bold bg-gradient-to-r from-gray-900 via-blue-900 to-purple-900 dark:from-white dark:via-blue-100 dark:to-purple-100 bg-clip-text text-transparent leading-tight">
+        {{ currentStep?.title }}
+      </h3>
     </div>
-
     <!-- Content Section -->
     <div class="relative px-6 pb-6">
       <div class="mb-6">

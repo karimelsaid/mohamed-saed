@@ -102,16 +102,6 @@ export class TutorialService {
         }
       },
       {
-        id: 'user-account',
-        title: 'حسابك الشخصي',
-        description: 'سجل دخولك أو أنشئ حساباً جديداً للوصول إلى جميع المميزات',
-        element: 'app-navbar',
-        position: 'bottom',
-        action: () => {
-          this.router.navigate(['/Home']);
-        }
-      },
-      {
         id: 'print-services',
         title: 'خدمات الطباعة',
         description: 'اطلب طباعة كتبك الخاصة بجودة عالية وأسعار مناسبة',
@@ -128,6 +118,16 @@ export class TutorialService {
               }
             }, 50); // Wait for navigation to complete
           });
+        }
+      },
+      {
+        id: 'user-account',
+        title: 'حسابك الشخصي',
+        description: 'سجل دخولك أو أنشئ حساباً جديداً للوصول إلى جميع المميزات',
+        element: 'app-navbar',
+        position: 'bottom',
+        action: () => {
+          this.router.navigate(['/Home']);
         }
       },
       {

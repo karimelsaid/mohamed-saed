@@ -1,8 +1,12 @@
 const bcrypt = require('bcrypt');
 const User = require('../models/User.model');
+const Referral = require('../models/Referral.model');
 const mongoose = require('mongoose');
+const fs = require('fs');
+const path = require('path');
 const { OAuth2Client } = require('google-auth-library');
 const client = new OAuth2Client('933338292435-c9bk3oo6i1oe3qkhkvp8crflmthhg0kc.apps.googleusercontent.com');
+const PaymentRequest = require('../models/PaymentRequest.model');
 
 // Function to update user profile and sync orders' shippingAddress
 async function updateUserProfile(req, res) {
@@ -42,7 +46,7 @@ async function updateUserProfile(req, res) {
 
 
 async function createAccount(req, res) {
-  const { username, email, password, phone, governorate, city, village } = req.body;
+  const { username, email, password, phone, governorate, city, village, referralCode, bookId } = req.body;
 
   try {
     // التحقق من البريد الإلكتروني
@@ -439,7 +443,7 @@ async function getRatedBooks(req, res) {
 }
 
 async function googleSignIn(req, res) {
-  const { idToken } = req.body;
+  const { idToken, referralCode } = req.body;
 
   try {
     const ticket = await client.verifyIdToken({
@@ -469,6 +473,22 @@ async function googleSignIn(req, res) {
         googleId
       });
       await user.save();
+
+      // Handle referral if referralCode is provided
+      if (referralCode) {
+        const referrer = await User.findOne({ referralCode });
+        if (referrer && referrer._id.toString() !== user._id.toString()) {
+          const existingReferral = await Referral.findOne({ referrerId: referrer._id, referredId: user._id });
+          if (!existingReferral) {
+            const referral = new Referral({
+              referrerId: referrer._id,
+              referredId: user._id,
+              status: 'pending'
+            });
+            await referral.save();
+          }
+        }
+      }
     } else if (!user.googleId) {
       // Update existing user to add googleId if not present
       user.googleId = googleId;
@@ -589,6 +609,137 @@ async function resetPassword(req, res) {
   }
 }
 
+async function generateReferralLink(req, res) {
+  const { userId, bookId, bookName } = req.body;
+  if (!userId || !bookId || !bookName) {
+    return res.status(400).json({ message: 'User ID, Book ID, and Book Name are required' });
+  }
+
+  try {
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    if (!user.referralCode) {
+      user.referralCode = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      await user.save();
+    }
+
+    const baseUrl = process.env.NODE_ENV === 'production' ? 'https://kenouz.org' : 'http://localhost:4200';
+    const bookSlug = getBookSlug(bookName);
+    const link = `${baseUrl}/book/${bookId}/${bookSlug}?ref=${user.referralCode}`;
+    res.json({ link });
+  } catch (error) {
+    console.error('Error generating referral link:', error);
+    res.status(500).json({ message: 'Error generating link' });
+  }
+}
+
+async function getReferralBalance(req, res) {
+  const { userId } = req.params;
+  try {
+    const user = await User.findById(userId).select('referralBalance referralCode');
+    if (!user.referralCode) {
+      user.referralCode = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      await user.save();
+    }
+    res.json({ balance: user.referralBalance, referralCode: user.referralCode });
+  } catch (error) {
+    res.status(500).json({ message: 'Error' });
+  }
+}
+
+function getBookSlug(bookName) {
+  if (!bookName) return '';
+  return bookName
+    .toString()
+    .toLowerCase() // Convert to lowercase
+    .trim()
+    .replace(/\s+/g, '-') // Replace spaces with -
+    .replace(/[^\w\u0621-\u064A\u0660-\u0669\u06F0-\u06F9\-]+/g, '') // Keep Arabic, numbers, and hyphen
+    .replace(/\-\-+/g, '-'); // Replace multiple - with single -
+}
+
+async function getReferrals(req, res) {
+  console.log("[getReferrals] Fetching referrals for user:", req.params.userId);
+  const { userId } = req.params;
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    return res.status(400).json({ message: 'معرف مستخدم غير صالح' });
+  }
+
+  // Load all products from output.json into a map for quick lookup
+  const productsData = fs.readFileSync(path.join(__dirname, '..', 'output.json'), 'utf-8');
+  const allProducts = JSON.parse(productsData);
+  const productMap = new Map(
+    allProducts.filter(p => p.products_id != null).map(p => [p.products_id.toString(), p])
+  );
+
+  try {
+    const referrals = await Referral.find({ referrerId: userId })
+      .sort({ createdAt: -1 }) // Sort by most recent
+      .populate('referredId', 'username'); // جلب اسم المستخدم المُحال
+
+    const formattedReferrals = referrals.map(ref => {
+      const book = ref.bookId ? productMap.get(ref.bookId.toString()) : null;
+
+      return {
+        _id: ref._id,
+        referredId: ref.referredId,
+        bookName: book ? book.product_name : 'منتج غير معروف',
+        bookLink: book ? `/book/${book.products_id}/${getBookSlug(book.product_name)}` : '#',
+        status: ref.status,
+        earned: ref.earned,
+        createdAt: ref.createdAt,
+      };
+    });
+
+    console.log(`[getReferrals] Found and formatted ${formattedReferrals.length} referrals.`);
+    res.json({ referrals: formattedReferrals });
+  } catch (error) {
+    console.error('خطأ في جلب الإحالات:', error);
+    res.status(500).json({ message: 'خطأ في الخادم أثناء جلب الإحالات' });
+  }
+}
+
+async function requestPayment(req, res) {
+  const { userId } = req.body;
+  try {
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    if (user.referralBalance <= 0) {
+      return res.status(400).json({ message: 'لا يوجد رصيد لطلب دفعه.' });
+    }
+
+    // Check if there is already a pending request for this user
+    const existingRequest = await PaymentRequest.findOne({ userId, status: 'pending' });
+    if (existingRequest) {
+      return res.status(400).json({ message: 'لديك بالفعل طلب دفع معلق.' });
+    }
+
+    const newPaymentRequest = new PaymentRequest({
+      userId: user._id,
+      amount: user.referralBalance,
+      status: 'pending'
+    });
+
+    await newPaymentRequest.save();
+
+    // Add notification to the user saying request sent
+    user.notifications.push({
+      message: `تم إرسال طلب دفع للرصيد: ${user.referralBalance.toFixed(2)} جنيه`,
+      type: 'payment_request',
+      read: false,
+      createdAt: new Date()
+    });
+    await user.save();
+
+    res.json({ message: 'تم إرسال طلب الدفع بنجاح' });
+  } catch (error) {
+    console.error('Error requesting payment:', error);
+    res.status(500).json({ message: 'حدث خطأ أثناء طلب الدفع' });
+  }
+}
+
 module.exports = {
   createAccount,
   login,
@@ -640,5 +791,9 @@ module.exports = {
     }
   },
   checkEmailExists,
-  resetPassword
+  resetPassword,
+  generateReferralLink,
+  getReferralBalance,
+  getReferrals,
+  requestPayment
 };

@@ -37,6 +37,10 @@
     <fa-icon [icon]="['fas', 'check-circle']"></fa-icon>
     موافقة المنتجات
   </button>
+  <button (click)="switchView('paymentRequests')" [class.bg-blue-600]="currentView === 'paymentRequests'" class="px-4 py-3 rounded-lg text-white bg-blue-400 hover:bg-blue-600 transition flex items-center justify-center gap-2 shadow-md hover:shadow-lg">
+    <fa-icon [icon]="['fas', 'money-bill-wave']"></fa-icon>
+    طلبات الدفع
+  </button>
 </div>
 
 <div class="promotion-date-controls my-6 max-w-md mx-auto p-4 border rounded bg-gray-50 dark:bg-gray-800">
@@ -85,6 +89,10 @@
   (cancelled)="closeModalService()"
   (closed)="closeModalService()">
 </app-modal-dialog>
+</div>
+
+<div *ngIf="currentView === 'paymentRequests'" class="mb-28 md:mb-0">
+  <app-payment-requests></app-payment-requests>
 </div>
 
 <div *ngIf="currentView === 'addProduct'" class="px-4 sm:px-10 max-w-4xl mx-auto mb-32 md:mb-0">

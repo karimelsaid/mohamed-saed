@@ -6,6 +6,7 @@ const { addProductToExcel, categoryMap, downloadAndConvertExcel, updateExcelFrom
 const sitemapService = require('../services/sitemap.service');
 
 const PromotionDate = require('../models/PromotionDate.model');
+const PaymentRequest = require('../models/PaymentRequest.model');
 
 // Helper function to generate random barcode string
 function generateRandomBarcode(length = 12) {
@@ -1182,6 +1183,47 @@ async function getMerchantProducts(req, res) {
   }
 }
 
+async function getPaymentRequests(req, res) {
+  try {
+    const requests = await PaymentRequest.find()
+      .populate('userId', 'username email phone')
+      .sort({ requestedAt: -1 });
+    res.json({ success: true, requests });
+  } catch (error) {
+    console.error('Error fetching payment requests:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+}
+
+async function updatePaymentRequestStatus(req, res) {
+  try {
+    const { requestId } = req.params;
+    const { status } = req.body;
+
+    if (!['completed', 'rejected'].includes(status)) {
+      return res.status(400).json({ success: false, message: 'الحالة يجب أن تكون completed أو rejected' });
+    }
+
+    const request = await PaymentRequest.findById(requestId);
+    if (!request) {
+      return res.status(404).json({ success: false, message: 'لم يتم العثور على طلب الدفع' });
+    }
+
+    request.status = status;
+    request.processedAt = new Date();
+    await request.save();
+
+    if (status === 'completed') {
+      await User.findByIdAndUpdate(request.userId, { $set: { referralBalance: 0 } });
+    }
+
+    res.json({ success: true, message: `تم تحديث حالة الطلب إلى ${status}` });
+  } catch (error) {
+    console.error('Error updating payment request status:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+}
+
 module.exports = {
   upload,
   addProduct,
@@ -1205,5 +1247,7 @@ module.exports = {
   getProductUpdateRequests,
   updateProductUpdateRequest,
   getMerchantProducts,
-  getMerchantProductsByMerchant
+  getMerchantProductsByMerchant,
+  getPaymentRequests,
+  updatePaymentRequestStatus
 };

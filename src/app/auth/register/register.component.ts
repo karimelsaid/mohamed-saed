@@ -109,7 +109,8 @@ export class RegisterComponent implements OnInit, AfterViewInit {
       try {
         const result = await GoogleAuth.signIn();
         const idToken = result.authentication.idToken;
-        this.authService.googleSignIn(idToken).subscribe({
+        const referralCode = localStorage.getItem('referralCode');
+        this.authService.googleSignIn(idToken, referralCode || undefined).subscribe({
           next: (user) => {
             this.message = '✅ تم إنشاء الحساب وتسجيل الدخول باستخدام حساب Google بنجاح!';
             this.router.navigate(['/']);
@@ -134,7 +135,8 @@ export class RegisterComponent implements OnInit, AfterViewInit {
 
   handleGoogleCredentialResponse(response: any) {
     const idToken = response.credential;
-    this.authService.googleSignIn(idToken).subscribe({
+    const referralCode = localStorage.getItem('referralCode');
+    this.authService.googleSignIn(idToken, referralCode || undefined).subscribe({
       next: (user) => {
         this.message = '✅ تم إنشاء الحساب وتسجيل الدخول باستخدام حساب Google بنجاح!';
         this.router.navigate(['/']);
@@ -279,6 +281,8 @@ export class RegisterComponent implements OnInit, AfterViewInit {
     this.message = ''; // Clear previous messages
     console.log('تم التسجيل بالبيانات:', this.user);
 
+    const referralCode = localStorage.getItem('referralCode');
+
     this.authService.createAccount(
       this.user.username,
       this.user.email,
@@ -286,7 +290,8 @@ export class RegisterComponent implements OnInit, AfterViewInit {
       this.user.phone,
       this.user.governorate,
       this.user.city,
-      this.user.village || ''
+      this.user.village || '',
+      referralCode || undefined
     )
     .subscribe({
       next: (response) => {

@@ -24,8 +24,12 @@ export class AuthService {
     this.checkInitialLogin();
   }
 
-  googleSignIn(idToken: string): Observable<User> {
-    return this.http.post<User>(`${this.apiUrl}/users/google-signin`, { idToken }).pipe(
+  googleSignIn(idToken: string, referralCode?: string): Observable<User> {
+    const body: any = { idToken };
+    if (referralCode) {
+      body.referralCode = referralCode;
+    }
+    return this.http.post<User>(`${this.apiUrl}/users/google-signin`, body).pipe(
       tap((user: User) => {
         this.setUser(user);
       })
@@ -68,8 +72,8 @@ export class AuthService {
     this.userSubject.next(null);
   }
 
-  createAccount(username: string, email: string, password: string, phone: string, governorate: string, city: string, village: string = ''): Observable<any> {
-    return this.http.post(`${this.apiUrl}/users/create-account`, {
+  createAccount(username: string, email: string, password: string, phone: string, governorate: string, city: string, village: string = '', referralCode?: string): Observable<any> {
+    const body: any = {
       username,
       email,
       password,
@@ -77,10 +81,17 @@ export class AuthService {
       governorate,
       city,
       village
-    }).pipe(
+    };
+    if (referralCode) {
+      body.referralCode = referralCode;
+    }
+    return this.http.post(`${this.apiUrl}/users/create-account`, body).pipe(
       tap((response: any) => {
         // If the response contains user data, automatically log in the user
         if (response && response.user) {
+          localStorage.removeItem('referralCode');
+          localStorage.removeItem('referralBookId');
+          console.log('[Auth] Account created. Cleared any existing referral data from localStorage.');
           console.log('🧠 تم إنشاء الحساب وتسجيل الدخول تلقائياً:', response.user);
           this.setUser(response.user);
           this.loadUserData(response.user.id);
@@ -108,6 +119,9 @@ export class AuthService {
   login(email: string, password: string): Observable<User> {
     return this.http.post<User>(`${this.apiUrl}/users/login`, { email, password }).pipe(
       tap((user: User) => {
+        localStorage.removeItem('referralCode');
+        localStorage.removeItem('referralBookId');
+        console.log('[Auth] User logged in. Cleared any existing referral data from localStorage.');
         console.log('🧠 المستخدم الراجع من السيرفر:', user);
         this.setUser(user);
         this.loadUserData(user.id);
@@ -116,8 +130,16 @@ export class AuthService {
   }
 
   logout() {
-    this.clearUser();
-    this.clearFavoritesAndCart();
+    // Clear user data from BehaviorSubjects
+    this.userSubject.next(null);
+    this.isLoggedInSubject.next(false);
+    this.favoriteBookIds.next([]);
+    this.cartBookIds.next([]);
+
+    // Clear user and referral data from localStorage
+    localStorage.removeItem('user');
+    localStorage.removeItem('referralCode');
+    localStorage.removeItem('referralBookId');
   }
 
   addToCart(userId: string, bookId: string): Observable<any> {

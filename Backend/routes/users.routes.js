@@ -23,7 +23,11 @@ const {
   markNotificationAsRead,
   deleteNotification,
   checkEmailExists,
-  resetPassword
+  resetPassword,
+  generateReferralLink,
+  getReferralBalance,
+  getReferrals,
+  requestPayment
 } = require('../controllers/users.controller');
 
 // مسارات المستخدمين
@@ -73,5 +77,11 @@ router.delete('/notifications/:userId/:notificationId', deleteNotification);
 
 router.post('/check-email', checkEmailExists);
 router.put('/reset-password', resetPassword);
+
+// Referral routes
+router.post('/generate-referral-link', generateReferralLink);
+router.get('/referral-balance/:userId', getReferralBalance);
+router.get('/referrals/:userId', getReferrals);
+router.post('/request-payment', requestPayment);
 
 module.exports = router;

@@ -5,7 +5,8 @@ export interface User {
     phone: string;
     governorate: string;
     city: string;
-    village?: string;
+    village: string;
+    referralCode?: string;
     address?: string;
     favorites: string[];
     cart: string[];

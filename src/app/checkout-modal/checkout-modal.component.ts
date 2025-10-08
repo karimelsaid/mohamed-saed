@@ -466,6 +466,10 @@ executePurchase(): void {
 
   this.authService.user$.pipe(take(1)).subscribe(currentUser => {
     if (currentUser) {
+      console.log('[Checkout] Preparing order data...');
+      const referralCode = localStorage.getItem('referralCode');
+      const bookId = localStorage.getItem('referralBookId');
+      console.log(`[Checkout] Retrieved from localStorage - referralCode: ${referralCode}, bookId: ${bookId}`);
       const orderData = {
         userId: currentUser.id,
         products: purchasedItems.map(item => ({
@@ -478,11 +482,20 @@ executePurchase(): void {
         totalAmount: this.totalPrice,
         merchantId: purchasedItems[0]?.merchantId,
         isPickup: this.isPickup,
-        pickupLocation: this.isPickup ? this.pickupLocation : null
+        pickupLocation: this.isPickup ? this.pickupLocation : null,
+        referralCode: referralCode,
+        bookId: bookId // This is the products_id from localStorage
       };
 
+      console.log('[Checkout] Submitting order with data:', orderData);
       this.dataService.submitOrder(orderData).subscribe({
         next: (response: any) => {
+          // Clear referral data after successful order submission
+          if (referralCode) {
+            localStorage.removeItem('referralCode');
+            localStorage.removeItem('referralBookId');
+          }
+
           const orderId = response.orderId;
           const currency = 'EGP'; // يمكن تعديل العملة حسب الحاجة
           const merchantRedirect = window.location.origin + '/payment-success'; // رابط إعادة التوجيه بعد الدفع

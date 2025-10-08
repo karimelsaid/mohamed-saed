@@ -3,6 +3,7 @@ require('./loadEnv');
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
+const session = require('express-session');
 const cron = require('node-cron');
 const fs = require('fs');
 const path = require('path');
@@ -45,6 +46,24 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
+
+// Session middleware
+app.use(session({
+  secret: 'your-secret-key',
+  resave: false,
+  saveUninitialized: true,
+  cookie: { secure: false }
+}));
+
+// Middleware to handle referral code
+app.use((req, res, next) => {
+  if (req.query.ref) {
+    req.session.referrerCode = req.query.ref;
+  }
+  next();
+});
+
+
 
 
 // Dedicated route to serve files with Content-Disposition attachment to force download

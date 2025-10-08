@@ -21,6 +21,7 @@ import { RegisterComponent } from './auth/register/register.component';
 import { UserOrdersComponent } from './user-orders/user-orders.component';
 import { PrintComponent } from './print/print.component';
 import { BookDetailsComponent } from './book-details/book-details.component';
+import { ReferralsComponent } from './referrals/referrals.component';
 
 
 import { AboutComponent } from './about/about.component';
@@ -33,6 +34,7 @@ import { AddProductComponent } from './merchant/add-product/add-product.componen
 import { EditProductComponent } from './merchant/edit-product/edit-product.component';
 import { MerchantProfileComponent } from './merchant/merchant-profile/merchant-profile.component';
 import { MerchantAuthGuard } from './guards/merchant-auth.guard';
+import { PaymentRequestsComponent } from './admin/payment-requests/payment-requests.component';
 
 const routes: Routes = [
   { path: 'Home', component: HomePageComponent },
@@ -78,6 +80,7 @@ const routes: Routes = [
   { path: 'forgot-password', component: ForgotPasswordComponent },
   { path: 'reset-password', component: ResetPasswordComponent },
   { path: 'requests', component: UserOrdersComponent },
+  { path: 'referrals', component: ReferralsComponent },
   { path: 'print', component: PrintComponent },
 
   { path: 'عن-الموقع', component: AboutComponent },

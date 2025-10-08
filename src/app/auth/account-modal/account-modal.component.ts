@@ -2,10 +2,12 @@ import { Component, OnInit, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { faUserCircle, faEnvelope, faPhoneAlt, faSignOutAlt, faSignInAlt, faUserPlus, faClipboardList } from '@fortawesome/free-solid-svg-icons';
+import { faUserCircle, faEnvelope, faPhoneAlt, faSignOutAlt, faSignInAlt, faUserPlus, faClipboardList, faMoneyBillWave, faLink } from '@fortawesome/free-solid-svg-icons';
 import { AuthService } from '../auth.service';
 import { MerchantAuthService } from '../../services/merchant-auth.service';
 import { ChangeDetectorRef } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-account-modal',
@@ -24,6 +26,8 @@ export class AccountModalComponent implements OnInit {
   faSignInAlt = faSignInAlt;
   faUserPlus = faUserPlus;
   faClipboardList = faClipboardList;
+  faMoneyBillWave = faMoneyBillWave;
+  faLink = faLink;
 
   show = false;
   isLoggedIn: boolean = false;
@@ -37,11 +41,14 @@ export class AccountModalComponent implements OnInit {
 
   merchant: any = null;
 
+  referralBalance: number = 0;
+
   constructor(
     private router: Router,
     private authService: AuthService,
     private merchantAuthService: MerchantAuthService,
-    private cdRef: ChangeDetectorRef
+    private cdRef: ChangeDetectorRef,
+    private http: HttpClient
   ) { }
 
   ngOnInit() {
@@ -54,6 +61,7 @@ export class AccountModalComponent implements OnInit {
     this.authService.user$.subscribe(user => {
       if (user) {
         this.user = user;
+        this.loadReferralBalance();
       }
     });
 
@@ -90,12 +98,26 @@ export class AccountModalComponent implements OnInit {
 
   openModal() {
     this.show = true;
+    this.loadReferralBalance();
     // Refresh merchant data if merchant is logged in
     if (this.isMerchantLoggedIn) {
       // If merchant data is not loaded, refresh it
       if (!this.merchant || !this.merchant.email) {
         this.refreshMerchantData();
       }
+    }
+  }
+
+  loadReferralBalance() {
+    if (this.user && this.user.id) {
+      this.http.get(`${environment.apiBaseUrl}/users/referral-balance/${this.user.id}`).subscribe({
+        next: (response: any) => {
+          this.referralBalance = response.balance;
+        },
+        error: (error) => {
+          console.error('Error loading referral balance:', error);
+        }
+      });
     }
   }
 
@@ -136,6 +158,11 @@ export class AccountModalComponent implements OnInit {
   goToMerchantDashboard() {
     this.closeModal();
     this.router.navigate(['/merchant/dashboard']);
+  }
+
+  viewReferrals() {
+    this.closeModal();
+    this.router.navigate(['/referrals']);
   }
 
   logout() {

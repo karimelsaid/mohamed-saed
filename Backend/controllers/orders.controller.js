@@ -1,9 +1,13 @@
 const User = require('../models/User.model');
+const mongoose = require('mongoose');
+const fs = require('fs');
+const path = require('path');
 const Product = require('../models/Product.model');
+const Referral = require('../models/Referral.model');
 
 exports.submitOrder = async (req, res) => {
   try {
-    const { userId, products, totalAmount, shippingCost, preparationTime: reqPreparationTime, merchantId, isPickup, pickupLocation } = req.body;
+    const { userId, products, totalAmount, shippingCost, preparationTime: reqPreparationTime, merchantId, isPickup, pickupLocation, referralCode, bookId } = req.body;
 
     if (!userId || !products || !totalAmount) {
       return res.status(400).json({ message: 'Missing required fields: userId, products, totalAmount' });
@@ -64,6 +68,58 @@ exports.submitOrder = async (req, res) => {
 
     // Get the _id of the newly added order subdocument
     const addedOrder = user.orders[user.orders.length - 1];
+
+    // Handle referral creation for this specific order
+    if (referralCode && bookId) {
+      console.log(`[Referral Submit] Attempting to create referral. Code: ${referralCode}, BookID: ${bookId}, UserID: ${userId}`);
+      const referrer = await User.findOne({ referralCode });
+      // Ensure user is not referring themselves
+      if (referrer && referrer._id.toString() !== userId.toString()) {
+        console.log(`[Referral Submit] Found referrer: ${referrer.username} (${referrer._id})`);
+
+        let product;
+        // Try finding by MongoDB's _id first (for merchant products)
+        if (mongoose.Types.ObjectId.isValid(bookId)) {
+          product = await Product.findById(bookId);
+        }
+
+        // If not found, try finding by products_id (for main excel products)
+        if (!product) {
+          product = await Product.findOne({ products_id: bookId });
+        }
+
+        // If still not found, check the output.json file
+        if (!product) {
+          try {
+            const productsData = fs.readFileSync(path.join(__dirname, '..', 'output.json'), 'utf-8');
+            const allProducts = JSON.parse(productsData);
+            product = allProducts.find(p => p.products_id === bookId);
+          } catch (fileError) {
+            console.error('[Referral Submit] Error reading output.json:', fileError);
+          }
+        }
+        if (!product) {
+          console.log(`[Referral Submit] Product with ID ${bookId} not found. Cannot create referral.`);
+          // Continue without creating a referral, but don't block the order.
+        } else {
+        const newReferral = new Referral({
+          referrerId: referrer._id,
+          referredId: userId,
+            bookId: bookId, // Use the original bookId (products_id)
+          orderId: addedOrder._id, // Link referral to this specific order
+          status: 'pending',
+          earned: 0
+        });
+        console.log('[Referral Submit] New referral object to be saved:', newReferral);
+        await newReferral.save();
+        console.log(`[Referral Submit] Successfully saved referral for order ${addedOrder._id}`);
+        }
+      } else if (!referrer) {
+        console.log(`[Referral Submit] No referrer found for code: ${referralCode}`);
+      } else {
+        console.log(`[Referral Submit] User ${userId} tried to refer themselves. No referral created.`);
+      }
+    }
 
     res.status(201).json({
       message: 'Order submitted successfully',
@@ -193,6 +249,33 @@ exports.updateOrderStatus = async (req, res) => {
     // Clear paymentSessionUrl if order is cancelled or completed
     if (status === 'تم الإلغاء' || status === 'تم التسليم') {
       order.paymentSessionUrl = null;
+    }
+
+    // Handle referral completion if order is received or delivered
+    if (status === 'تم الاستلام' || status === 'تم التسليم') {
+      console.log(`[Referral Update] Order ${orderId} status is now '${status}'. Checking for referral.`);
+      // Find a pending referral for this user. Ideally, this should be more specific
+      // if a user can be referred multiple times. We now find it by the exact orderId.
+      const referral = await Referral.findOne({ orderId: orderId, status: 'pending' });
+      if (referral) {
+        console.log(`[Referral Update] Found pending referral:`, referral);
+        const commission = order.totalAmount * 0.05;
+
+        referral.status = 'completed';
+        referral.earned = commission; // Save the earned amount to the referral record
+        referral.orderId = orderId; // Link the referral to the specific order
+        await referral.save();
+        console.log(`[Referral Update] Referral ${referral._id} updated to 'completed' with earned: ${commission}`);
+
+        // Add balance to referrer
+        const referrer = await User.findById(referral.referrerId);
+        if (referrer) {
+          console.log(`[Referral Update] Found referrer ${referrer.username} to update balance. Current balance: ${referrer.referralBalance}`);
+          referrer.referralBalance = (referrer.referralBalance || 0) + commission;
+          await referrer.save();
+          console.log(`[Referral Update] Referrer ${referrer.username}'s new balance: ${referrer.referralBalance}`);
+        }
+      }
     }
 
     // Create notification message based on status

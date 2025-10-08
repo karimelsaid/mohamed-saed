@@ -74,7 +74,9 @@ const userSchema = new mongoose.Schema({
     read: { type: Boolean, default: false },
     createdAt: { type: Date, default: Date.now },
     relatedId: { type: String } // e.g., orderId or suggestionId
-  }]
+  }],
+  referralCode: { type: String, unique: true, sparse: true },
+  referralBalance: { type: Number, default: 0 }
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', userSchema);

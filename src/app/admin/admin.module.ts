@@ -12,11 +12,12 @@ import { ModalDialogComponent } from '../shared/modal-dialog/modal-dialog.compon
 
 @NgModule({
   declarations: [
-    AdminDashboardComponent
+
   ],
   imports: [
     CommonModule,
     FormsModule,
+    AdminDashboardComponent,
     HttpClientModule,
     FontAwesomeModule,
     MerchantManagementComponent,
@@ -25,7 +26,6 @@ import { ModalDialogComponent } from '../shared/modal-dialog/modal-dialog.compon
     ModalDialogComponent
   ],
   exports: [
-    AdminDashboardComponent,
     MerchantManagementComponent,
     ProductApprovalComponent
   ]

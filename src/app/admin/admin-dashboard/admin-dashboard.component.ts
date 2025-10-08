@@ -1,18 +1,23 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { HttpClient, HttpEventType } from '@angular/common/http';
 import { AuthService } from '../../auth/auth.service';
-import { Router } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { DataService } from '../../services/data.service';
 import { take } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { NotificationService } from '../../services/notification.service';
 import { ModalDialogComponent } from '../../shared/modal-dialog/modal-dialog.component';
 import { ModalService, ModalConfig } from '../../services/modal.service';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { MerchantManagementComponent } from '../merchant-management/merchant-management.component';
+import { ProductApprovalComponent } from '../product-approval/product-approval.component';
 import * as XLSX from 'xlsx';
 import { FreeShippingRulesComponent } from './free-shipping/free-shipping-rules.component';
 import { Subscription } from 'rxjs';
-import { FaIconLibrary } from '@fortawesome/angular-fontawesome';
+import { FaIconLibrary, FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { faShoppingCart, faStore, faBook, faPrint, faPlus, faEdit, faTruck, faUsers, faCheckCircle } from '@fortawesome/free-solid-svg-icons';
+import { PaymentRequestsComponent } from '../payment-requests/payment-requests.component';
 
 interface Order {
   _id: string;
@@ -102,7 +107,18 @@ interface PrintOrder {
 
 @Component({
   selector: 'app-admin-dashboard',
-  standalone : false,
+  standalone : true,
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterModule,
+    FontAwesomeModule,
+    ModalDialogComponent,
+    FreeShippingRulesComponent,
+    MerchantManagementComponent,
+    ProductApprovalComponent,
+    PaymentRequestsComponent
+  ],
   templateUrl: './admin-dashboard.component.html',
   styleUrls: ['./admin-dashboard.component.css']
 })
@@ -113,8 +129,8 @@ export class AdminDashboardComponent implements OnInit {
   orders: GroupedOrder[] = [];
   allOrders: GroupedOrder[] = [];
   requestedBooks: RequestedBook[] = [];
-  isAdmin: boolean = false;
-  currentView: 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' = 'orders';
+  isAdmin: boolean = false; // Add paymentRequests to the type union
+  currentView: 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' = 'orders';
 
   manualPromotionStartDate: string = '';
   manualPromotionEndDate: string = '';
@@ -263,7 +279,7 @@ export class AdminDashboardComponent implements OnInit {
     }
   }
 
-  toggleSelectAll(event: Event): void {
+  toggleSelectAll(event: Event): void { // Add paymentRequests to the type union
     const checkbox = event.target as HTMLInputElement;
     if (checkbox.checked) {
       this.products.forEach(product => this.selectedProducts.add(product.products_id));
@@ -272,7 +288,7 @@ export class AdminDashboardComponent implements OnInit {
     }
   }
 
-  switchView(view: 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders'): void {
+  switchView(view: 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests'): void {
     this.currentView = view;
     if (view === 'orders' || view === 'merchantOrders') {
       this.ordersPage = 1; // Reset page when switching views
@@ -291,6 +307,8 @@ export class AdminDashboardComponent implements OnInit {
       // No data loading needed for newPage currently
     } else if (view === 'freeShippingRules') {
       // No data loading needed currently for freeShippingRules
+    } else if (view === 'paymentRequests') {
+      // The component will load its own data
     }
   }
 

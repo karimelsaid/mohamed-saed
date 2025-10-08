@@ -1,5 +1,6 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
 import { ActivatedRoute, RouterModule } from '@angular/router';
+import { take } from 'rxjs/operators';
 import { DataService } from '../services/data.service';
 import { Book } from '../book';
 import { CommonModule, NgIf } from '@angular/common';
@@ -12,6 +13,7 @@ import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { faStar, faShareAlt } from '@fortawesome/free-solid-svg-icons';
 import { faStar as faStarRegular } from '@fortawesome/free-regular-svg-icons';
 import { environment } from '../../environments/environment';
+import { SlugService } from '../services/slug.service';
 
 @Component({
   selector: 'app-book-details',
@@ -39,24 +41,20 @@ export class BookDetailsComponent implements OnInit {
   selectedImageIndex: number = 0;
   availableImages: string[] = [];
 
+  private bookId: string | null = null;
   constructor(
     private route: ActivatedRoute,
     private dataService: DataService,
     private authService: AuthService,
-    private http: HttpClient
+    private http: HttpClient,
+    private slugService: SlugService
   ) { }
-
-  // Add method to generate slug same as tatwer component
-  getBookSlug(bookName: string | undefined | null): string {
-    if (!bookName) return '';
-    return bookName.trim().replace(/\s+/g, '-');
-  }
 
   ngOnInit(): void {
     this.route.paramMap.subscribe(paramMap => {
-      let id = paramMap.get('id');
-      if (id !== null) {
-        const trimmedId = id.trim();
+      this.bookId = paramMap.get('id');
+      if (this.bookId !== null) {
+        const trimmedId = this.bookId.trim();
         console.log('BookDetailsComponent: id from URL:', trimmedId);
         this.loading = true;
         this.error = null;
@@ -71,6 +69,7 @@ export class BookDetailsComponent implements OnInit {
               this.loading = false;
             } else {
               this.loadAvailableImages();
+              this.handleReferral(); // Handle referral after book is loaded
               this.fetchAverageRating(this.book.products_id.toString());
             }
           },
@@ -83,6 +82,25 @@ export class BookDetailsComponent implements OnInit {
         this.error = 'معرف الكتاب غير موجود في الرابط';
         this.loading = false;
       }
+    });
+  }
+
+  private handleReferral(): void {
+    this.authService.user$.pipe(take(1)).subscribe(currentUser => {
+      this.route.queryParams.pipe(take(1)).subscribe(params => {
+        const referralCode = params['ref'];
+        if (referralCode && this.bookId) {
+          // Prevent user from using their own referral code
+          if (currentUser && currentUser.referralCode === referralCode) {
+            console.log('[Referral] User is trying to use their own referral link. Ignoring.');
+            return;
+          }
+
+          localStorage.setItem('referralCode', referralCode);
+          localStorage.setItem('referralBookId', this.bookId); // Use products_id
+          console.log(`[Referral] Referral code '${referralCode}' and bookId '${this.bookId}' saved to localStorage.`);
+        }
+      });
     });
   }
 
@@ -136,7 +154,13 @@ export class BookDetailsComponent implements OnInit {
   // دالة نسخ الرابط
   copyBookLink(): void {
     if (!this.book) return;
-    const url = window.location.origin + '/book/' + this.book.products_id + '/' + this.getBookSlug(this.book.product_name);
+    let url = window.location.origin + '/book/' + this.book.products_id + '/' + this.slugService.getBookSlug(this.book.product_name);
+    // Check if there is a referral code in the current URL and append it
+    const currentUrl = new URL(window.location.href);
+    const refCode = currentUrl.searchParams.get('ref');
+    if (refCode) {
+      url += `?ref=${refCode}`;
+    }
     navigator.clipboard.writeText(url).then(() => {
       this.showCopySuccess = true;
       setTimeout(() => this.showCopySuccess = false, 2000);

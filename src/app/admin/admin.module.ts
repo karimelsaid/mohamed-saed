@@ -9,21 +9,23 @@ import { MerchantManagementComponent } from './merchant-management/merchant-mana
 import { ProductApprovalComponent } from './product-approval/product-approval.component';
 import { FreeShippingRulesComponent } from './admin-dashboard/free-shipping/free-shipping-rules.component';
 import { ModalDialogComponent } from '../shared/modal-dialog/modal-dialog.component';
+import { PaymentRequestsComponent } from './payment-requests/payment-requests.component';
 
 @NgModule({
   declarations: [
-
   ],
   imports: [
     CommonModule,
     FormsModule,
-    AdminDashboardComponent,
     HttpClientModule,
     FontAwesomeModule,
+    // Standalone components are imported here
+    AdminDashboardComponent,
     MerchantManagementComponent,
     ProductApprovalComponent,
     FreeShippingRulesComponent,
-    ModalDialogComponent
+    ModalDialogComponent,
+    PaymentRequestsComponent
   ],
   exports: [
     MerchantManagementComponent,

@@ -1185,41 +1185,25 @@ async function getMerchantProducts(req, res) {
 
 async function getPaymentRequests(req, res) {
   try {
-    const requests = await PaymentRequest.find()
-      .populate('userId', 'username email phone')
-      .sort({ requestedAt: -1 });
+    const usersWithRequests = await User.find({ 'paymentRequests.0': { $exists: true } })
+      .select('username email phone paymentRequests')
+      .lean();
+
+    const requests = usersWithRequests.flatMap(user =>
+      user.paymentRequests.map(req => ({
+        ...req,
+        userId: {
+          _id: user._id,
+          username: user.username,
+          email: user.email,
+          phone: user.phone,
+        }
+      }))
+    ).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
     res.json({ success: true, requests });
   } catch (error) {
     console.error('Error fetching payment requests:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
-}
-
-async function updatePaymentRequestStatus(req, res) {
-  try {
-    const { requestId } = req.params;
-    const { status } = req.body;
-
-    if (!['completed', 'rejected'].includes(status)) {
-      return res.status(400).json({ success: false, message: 'الحالة يجب أن تكون completed أو rejected' });
-    }
-
-    const request = await PaymentRequest.findById(requestId);
-    if (!request) {
-      return res.status(404).json({ success: false, message: 'لم يتم العثور على طلب الدفع' });
-    }
-
-    request.status = status;
-    request.processedAt = new Date();
-    await request.save();
-
-    if (status === 'completed') {
-      await User.findByIdAndUpdate(request.userId, { $set: { referralBalance: 0 } });
-    }
-
-    res.json({ success: true, message: `تم تحديث حالة الطلب إلى ${status}` });
-  } catch (error) {
-    console.error('Error updating payment request status:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 }
@@ -1248,6 +1232,5 @@ module.exports = {
   updateProductUpdateRequest,
   getMerchantProducts,
   getMerchantProductsByMerchant,
-  getPaymentRequests,
-  updatePaymentRequestStatus
+  getPaymentRequests
 };

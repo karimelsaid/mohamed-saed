@@ -2,13 +2,14 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { faCopy, faShareAlt, faMoneyBillWave, faLink, faTimes } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome'; 
+import { faCopy, faShareAlt, faMoneyBillWaveAlt, faLink, faTimes } from '@fortawesome/free-solid-svg-icons';
 import { AuthService } from '../auth/auth.service';
 import { FormsModule } from '@angular/forms';
 import { DataService } from '../services/data.service';
 import { Book } from '../book';
 import { environment } from '../../environments/environment';
+import { switchMap, take } from 'rxjs/operators';
 
 @Component({
   selector: 'app-referrals',
@@ -20,7 +21,7 @@ import { environment } from '../../environments/environment';
 export class ReferralsComponent implements OnInit {
   faCopy = faCopy;
   faShareAlt = faShareAlt;
-  faMoneyBillWave = faMoneyBillWave;
+  faMoneyBillWave = faMoneyBillWaveAlt;
   faLink = faLink;
   faTimes = faTimes;
 
@@ -30,6 +31,7 @@ export class ReferralsComponent implements OnInit {
   currentBookId: string = '';
   referralLink: string = '';
   bookName: string = '';
+  isRequestingPayment = false; // Add this property
 
   constructor(
     private http: HttpClient,
@@ -70,16 +72,31 @@ export class ReferralsComponent implements OnInit {
   }
 
   requestPayment() {
-    this.authService.user$.subscribe(user => {
-      if (user && user.id) {
-        this.http.post(`${environment.apiBaseUrl}/users/request-payment`, { userId: user.id }).subscribe({
-          next: (response: any) => {
-            alert('تم إرسال طلب الدفع بنجاح');
-          },
-          error: (error) => {
-            console.error('Error requesting payment:', error);
-          }
-        });
+    if (this.isRequestingPayment) {
+      return;
+    }
+    this.isRequestingPayment = true;
+    console.log('Starting payment request...');
+
+    this.authService.user$.pipe(
+      take(1), // Get the current user value once and then unsubscribe
+      switchMap(user => {
+        if (!user || !user.id) {
+          throw new Error('User not logged in');
+        }
+        return this.http.post(`${environment.apiBaseUrl}/users/request-payment`, { userId: user.id });
+      })
+    ).subscribe({
+      next: (response: any) => {
+        console.log('Payment request successful:', response);
+        alert('تم إرسال طلب الدفع بنجاح');
+        this.isRequestingPayment = false;
+        this.authService.user$.pipe(take(1)).subscribe(user => user && this.loadReferralData(user.id)); // Refresh balance
+      },
+      error: (error) => {
+        console.error('Payment request failed:', error);
+        alert(`فشل طلب الدفع: ${error.error?.message || 'حدث خطأ غير متوقع'}`);
+        this.isRequestingPayment = false;
       }
     });
   }

@@ -20,6 +20,7 @@ const printRoutes = require('./routes/print.routes');
 const chatAiRoutes = require('./routes/chat-ai.routes');
 const adminRoutes = require('./routes/admin.routes');
 const merchantRoutes = require('./routes/merchant.routes');
+const paymentRequestsRoutes = require('./routes/payment-requests.routes'); // استيراد مسارات طلبات الدفع
 const app = express();
 const port = process.env.PORT || 3000;
 const isProduction = process.env.NODE_ENV === 'production';
@@ -113,7 +114,7 @@ connectDB().catch(err => {
 app.use('/api/users', usersRoutes);
 app.use('/api/books', booksRoutes);
 app.use('/api/orders', ordersRoutes);
-app.use('/api', paymentRoutes);
+app.use('/api/payment', paymentRoutes); // تعديل المسار ليكون أكثر تحديداً
 
 app.use('/api/chat-ai', chatAiRoutes);
 app.use('/api/admin', adminRoutes);
@@ -121,6 +122,9 @@ app.use('/api/merchant', merchantRoutes);
 
 // Delete print order and associated file
 const mongoose = require('mongoose');
+// تسجيل مسار طلبات الدفع
+app.use('/api/payment-requests', paymentRequestsRoutes);
+
 const User = require('./models/User.model');
 const { ObjectId } = mongoose.Types;
 

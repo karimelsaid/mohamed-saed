@@ -1,9 +1,22 @@
 import { Component, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { environment } from '../../../environments/environment';
 import { CommonModule } from '@angular/common';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { faCheck, faTimes } from '@fortawesome/free-solid-svg-icons';
+import { environment } from '../../../environments/environment';
+
+interface PaymentRequest {
+  _id: string;
+  userId: {
+    _id: string;
+    username: string;
+    email: string;
+    phone: string;
+  };
+  amount: number;
+  status: 'pending' | 'completed' | 'rejected';
+  createdAt: string;
+}
 
 @Component({
   selector: 'app-payment-requests',
@@ -13,8 +26,8 @@ import { faCheck, faTimes } from '@fortawesome/free-solid-svg-icons';
   styleUrls: ['./payment-requests.component.css']
 })
 export class PaymentRequestsComponent implements OnInit {
-  requests: any[] = [];
-  isLoading = true;
+  requests: PaymentRequest[] = [];
+  isLoading = false;
   faCheck = faCheck;
   faTimes = faTimes;
 
@@ -26,36 +39,40 @@ export class PaymentRequestsComponent implements OnInit {
 
   loadPaymentRequests(): void {
     this.isLoading = true;
-    this.http.get<any>(`${environment.apiBaseUrl}/admin/payment-requests`).subscribe({
-      next: (response) => {
-        this.requests = response.requests;
-        this.isLoading = false;
-      },
-      error: (error) => {
-        console.error('Error loading payment requests:', error);
-        this.isLoading = false;
-      }
-    });
+    this.http.get<{ success: boolean, requests: PaymentRequest[] }>(`${environment.apiBaseUrl}/admin/payment-requests`)
+      .subscribe({
+        next: (data) => {
+          this.requests = data.requests;
+          this.isLoading = false;
+        },
+        error: (err) => {
+          // Enhanced error logging
+          console.error('Error fetching payment requests:', err.message, 'Status:', err.status, 'URL:', err.url);
+          this.isLoading = false;
+        }
+      });
   }
 
   updateRequestStatus(requestId: string, status: 'completed' | 'rejected'): void {
-    this.http.patch<any>(`${environment.apiBaseUrl}/admin/payment-requests/${requestId}`, { status }).subscribe({
-      next: () => {
-        const request = this.requests.find(r => r._id === requestId);
-        if (request) {
-          request.status = status;
+    this.http.patch(`${environment.apiBaseUrl}/payment-requests/${requestId}`, { status })
+      .subscribe({
+        next: () => {
+          alert('تم تحديث حالة الطلب بنجاح');
+          this.loadPaymentRequests(); // Refresh the list
+        },
+        error: (err) => {
+          console.error('Error updating request status:', err);
+          alert('فشل تحديث حالة الطلب');
         }
-      },
-      error: (error) => {
-        console.error(`Error updating request status to ${status}:`, error);
-        alert('حدث خطأ أثناء تحديث حالة الطلب.');
-      }
-    });
+      });
   }
 
   getStatusClass(status: string): string {
-    if (status === 'completed') return 'bg-green-100 text-green-800';
-    if (status === 'rejected') return 'bg-red-100 text-red-800';
-    return 'bg-yellow-100 text-yellow-800';
+    switch (status) {
+      case 'pending': return 'bg-yellow-200 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300';
+      case 'completed': return 'bg-green-200 text-green-800 dark:bg-green-900/50 dark:text-green-300';
+      case 'rejected': return 'bg-red-200 text-red-800 dark:bg-red-900/50 dark:text-red-300';
+      default: return 'bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
+    }
   }
 }

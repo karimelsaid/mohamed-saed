@@ -60,4 +60,7 @@ router.post('/free-shipping-rules', adminController.saveFreeShippingRules);
 router.get('/product-update-requests', adminController.getProductUpdateRequests);
 router.patch('/product-update-requests/:requestId', adminController.updateProductUpdateRequest);
 
+// Route to get all payment requests
+router.get('/payment-requests', adminController.getPaymentRequests);
+
 module.exports = router;

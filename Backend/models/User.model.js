@@ -1,5 +1,13 @@
 const mongoose = require('mongoose');
 
+const paymentRequestSchema = new mongoose.Schema({
+  amount: { type: Number, required: true },
+  status: { type: String, required: true, enum: ['pending', 'completed', 'rejected'], default: 'pending' },
+  createdAt: { type: Date, default: Date.now },
+  processedAt: { type: Date }
+});
+
+
 const userSchema = new mongoose.Schema({
   username: { type: String, required: true },
   email: { type: String, required: true, unique: true },
@@ -76,7 +84,8 @@ const userSchema = new mongoose.Schema({
     relatedId: { type: String } // e.g., orderId or suggestionId
   }],
   referralCode: { type: String, unique: true, sparse: true },
-  referralBalance: { type: Number, default: 0 }
+  referralBalance: { type: Number, default: 0 },
+  paymentRequests: [paymentRequestSchema]
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', userSchema);

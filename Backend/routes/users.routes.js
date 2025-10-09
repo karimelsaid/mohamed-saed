@@ -28,7 +28,7 @@ const {
   getReferralBalance,
   getReferrals,
   requestPayment
-} = require('../controllers/users.controller');
+} = require('../controllers/users.controller'); // Removed getPaymentRequests
 
 // مسارات المستخدمين
 router.post('/create-account', createAccount);

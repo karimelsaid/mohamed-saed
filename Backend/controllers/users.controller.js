@@ -6,7 +6,6 @@ const fs = require('fs');
 const path = require('path');
 const { OAuth2Client } = require('google-auth-library');
 const client = new OAuth2Client('933338292435-c9bk3oo6i1oe3qkhkvp8crflmthhg0kc.apps.googleusercontent.com');
-const PaymentRequest = require('../models/PaymentRequest.model');
 
 // Function to update user profile and sync orders' shippingAddress
 async function updateUserProfile(req, res) {
@@ -702,6 +701,7 @@ async function getReferrals(req, res) {
 
 async function requestPayment(req, res) {
   const { userId } = req.body;
+  let amountToRequest = 0; // متغير لتخزين المبلغ المطلوب
   try {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: 'User not found' });
@@ -711,22 +711,23 @@ async function requestPayment(req, res) {
     }
 
     // Check if there is already a pending request for this user
-    const existingRequest = await PaymentRequest.findOne({ userId, status: 'pending' });
+    const existingRequest = user.paymentRequests.find(req => req.status === 'pending');
     if (existingRequest) {
       return res.status(400).json({ message: 'لديك بالفعل طلب دفع معلق.' });
     }
 
-    const newPaymentRequest = new PaymentRequest({
-      userId: user._id,
-      amount: user.referralBalance,
-      status: 'pending'
-    });
+    amountToRequest = user.referralBalance; // تخزين الرصيد قبل تصفيره
 
-    await newPaymentRequest.save();
+    // Add the new payment request to the user's document
+    user.paymentRequests.push({ amount: amountToRequest, status: 'pending' });
+
+    // Reset user's referral balance to 0
+    user.referralBalance = 0; // الآن يمكننا تصفير الرصيد بأمان
 
     // Add notification to the user saying request sent
     user.notifications.push({
-      message: `تم إرسال طلب دفع للرصيد: ${user.referralBalance.toFixed(2)} جنيه`,
+      // استخدام المتغير الذي يحتوي على المبلغ الصحيح
+      message: `تم إرسال طلب دفع للرصيد: ${amountToRequest.toFixed(2)} جنيه`,
       type: 'payment_request',
       read: false,
       createdAt: new Date()
@@ -795,5 +796,6 @@ module.exports = {
   generateReferralLink,
   getReferralBalance,
   getReferrals,
-  requestPayment
+  requestPayment,
+  // Note: updatePaymentRequestStatus will be in its own controller for better separation of concerns.
 };

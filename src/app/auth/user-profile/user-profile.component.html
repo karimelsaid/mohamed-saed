@@ -1,0 +1,107 @@
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4 md:mt-40 mt-10">
+  <div class="w-full max-w-2xl bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 space-y-8">
+    <div class="text-center">
+      <h2 class="text-3xl font-bold text-gray-900 dark:text-white">إعدادات الحساب</h2>
+      <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">قم بتحديث معلومات ملفك الشخصي.</p>
+    </div>
+
+    <div *ngIf="isLoading" class="text-center">
+      <p class="text-gray-500 dark:text-gray-400">جاري تحميل البيانات...</p>
+    </div>
+
+    <div *ngIf="!isLoading">
+      <div class="flex justify-end mb-4">
+        <button *ngIf="!isEditingAddress" (click)="toggleEdit(true)" class="bg-blue-600 text-white py-2 px-5 rounded-lg hover:bg-blue-700 transition-colors shadow-md font-semibold">
+          تعديل
+        </button>
+      </div>
+
+      <form [formGroup]="profileForm" (ngSubmit)="onSubmit()" class="space-y-6">
+        <div>
+          <label for="username" class="block text-sm font-medium text-gray-700 dark:text-gray-300 text-right">اسم المستخدم</label>
+          <input id="username" type="text" formControlName="username" required
+                 [ngClass]="{'bg-gray-100 dark:bg-gray-900 cursor-not-allowed': !isEditingAddress, 'bg-gray-50 dark:bg-gray-700': isEditingAddress}"
+                 class="mt-1 block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm text-right">
+        </div>
+
+        <div>
+          <label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 text-right">البريد الإلكتروني</label>
+          <input id="email" type="email" formControlName="email"
+                 class="mt-1 block w-full px-4 py-3 bg-gray-200 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl shadow-sm sm:text-sm text-gray-500 dark:text-gray-400 cursor-not-allowed text-right"
+                 readonly>
+        </div>
+
+        <div>
+          <label for="phone" class="block text-sm font-medium text-gray-700 dark:text-gray-300 text-right">رقم الهاتف</label>
+          <input id="phone" type="tel" formControlName="phone" required (input)="validatePhone()"
+                 [ngClass]="{
+                   'bg-gray-100 dark:bg-gray-900 cursor-not-allowed': !isEditingAddress,
+                   'bg-gray-50 dark:bg-gray-700': isEditingAddress,
+                   'border-red-500 focus:ring-red-500': !phoneValid && phoneTouched && isEditingAddress,
+                   'border-blue-500 focus:ring-blue-500': phoneValid && phoneTouched && isEditingAddress
+                 }"
+                 class="mt-1 block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl shadow-sm focus:outline-none sm:text-sm text-right">
+          <div *ngIf="!phoneValid && phoneTouched && isEditingAddress" class="text-red-500 text-xs mt-1 text-right">
+            رقم هاتف مصري صالح مطلوب (11 رقم يبدأ بـ 010, 011, 012, أو 015).
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div>
+            <label for="governorate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 text-right">المحافظة</label>
+            <input *ngIf="!isEditingAddress" type="text" formControlName="governorate"
+                   class="mt-1 block w-full px-4 py-3 bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl shadow-sm cursor-not-allowed sm:text-sm text-right">
+            <select *ngIf="isEditingAddress" id="governorate" formControlName="governorate" (change)="onGovernorateChange()"
+                    class="mt-1 block w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm text-right">
+              <option value="" disabled>اختر محافظة</option>
+              <option *ngFor="let gov of governorates" [value]="gov.governorate_name">{{gov.governorate_name}}</option>
+            </select>
+          </div>
+          <div>
+            <label for="city" class="block text-sm font-medium text-gray-700 dark:text-gray-300 text-right">المدينة / المركز</label>
+            <input *ngIf="!isEditingAddress" type="text" formControlName="city"
+                   class="mt-1 block w-full px-4 py-3 bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl shadow-sm cursor-not-allowed sm:text-sm text-right">
+            <select *ngIf="isEditingAddress" id="city" formControlName="city" (change)="validateLocation()"
+                    [disabled]="!profileForm.get('governorate')?.value"
+                    class="mt-1 block w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm text-right disabled:bg-gray-200 disabled:cursor-not-allowed">
+              <option value="" disabled>اختر مدينة</option>
+              <option *ngFor="let city of cities" [value]="city">{{city}}</option>
+            </select>
+          </div>
+          <div>
+            <label for="village" class="block text-sm font-medium text-gray-700 dark:text-gray-300 text-right">القرية / العنوان</label>
+            <input id="village" type="text" formControlName="village"
+                   [ngClass]="{'bg-gray-100 dark:bg-gray-900 cursor-not-allowed': !isEditingAddress, 'bg-gray-50 dark:bg-gray-700': isEditingAddress}"
+                   class="mt-1 block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm text-right">
+            <div *ngIf="profileForm.get('village')?.invalid && profileForm.get('village')?.touched && isEditingAddress"
+                 class="text-red-500 text-xs mt-1 text-right">
+              تفاصيل العنوان مطلوبة.
+            </div>
+          </div>
+        </div>
+
+        <div *ngIf="errorMessage" class="bg-red-100 dark:bg-red-900/30 border-r-4 border-red-500 text-red-700 dark:text-red-300 p-4 rounded-lg" role="alert">
+          <p class="font-bold">خطأ</p>
+          <p>{{ errorMessage }}</p>
+        </div>
+
+        <div *ngIf="successMessage" class="bg-green-100 dark:bg-green-900/30 border-r-4 border-green-500 text-green-700 dark:text-green-300 p-4 rounded-lg" role="alert">
+          <p class="font-bold">نجاح</p>
+          <p>{{ successMessage }}</p>
+        </div>
+
+        <div *ngIf="isEditingAddress" class="flex space-x-4">
+          <button type="submit" [disabled]="profileForm.invalid || isSubmitting || !locationValid"
+                  class="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-lg text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-105">
+            <span *ngIf="!isSubmitting">حفظ التغييرات</span>
+            <span *ngIf="isSubmitting">جاري الحفظ...</span>
+          </button>
+          <button type="button" (click)="toggleEdit(false)"
+                  class="w-full flex justify-center py-3 px-4 border border-gray-300 rounded-xl shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+            إلغاء
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

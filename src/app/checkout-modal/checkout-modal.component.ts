@@ -501,6 +501,7 @@ executePurchase(): void {
           const merchantRedirect = window.location.origin + '/payment-success'; // رابط إعادة التوجيه بعد الدفع
 
           if (orderId && this.userProfile && this.userProfile.email) {
+            // تأكد من أن payment.service.ts يستخدم المسار الصحيح: /api/payment/create-payment
             this.paymentService.createPayment(orderId, this.totalPrice, currency, this.userProfile.email, merchantRedirect).subscribe({
               next: (paymentResponse: any) => {
                 if (paymentResponse.sessionUrl) {

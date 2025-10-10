@@ -18,6 +18,7 @@ import { AdminDashboardComponent } from './admin/admin-dashboard/admin-dashboard
 import { NotFoundComponent } from './not-found/not-found.component';
 import { LoginComponent } from './auth/login/login.component';
 import { RegisterComponent } from './auth/register/register.component';
+import { UserProfileComponent } from './auth/user-profile/user-profile.component';
 import { UserOrdersComponent } from './user-orders/user-orders.component';
 import { PrintComponent } from './print/print.component';
 import { BookDetailsComponent } from './book-details/book-details.component';
@@ -78,6 +79,7 @@ const routes: Routes = [
   { path: 'login', component: LoginComponent },
   { path: 'register', component: RegisterComponent },
   { path: 'forgot-password', component: ForgotPasswordComponent },
+  { path: 'profile', component: UserProfileComponent },
   { path: 'reset-password', component: ResetPasswordComponent },
   { path: 'requests', component: UserOrdersComponent },
   { path: 'referrals', component: ReferralsComponent },
@@ -86,7 +88,6 @@ const routes: Routes = [
   { path: 'عن-الموقع', component: AboutComponent },
   { path: 'سياسة-الخصوصية', component: PrivacyPolicyComponent },
   { path: 'الشروط-والاحكام', component: TermsConditionsComponent },
-
   { path: '**', component: NotFoundComponent }
 ];
 

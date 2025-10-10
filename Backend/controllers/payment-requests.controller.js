@@ -1,5 +1,50 @@
 const User = require('../models/User.model');
 
+exports.requestPayment = async (req, res) => {
+  const { userId } = req.body;
+  let amountToRequest = 0;
+  try {
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (user.referralBalance <= 0) {
+      return res.status(400).json({ message: 'لا يوجد رصيد لطلب دفعه.' });
+    }
+
+    if (!user.phone) {
+      return res.status(400).json({ message: 'يجب إكمال بيانات ملفك الشخصي وإضافة رقم هاتف قبل طلب الدفع.' });
+    }
+
+    const existingRequest = user.paymentRequests.find(req => req.status === 'pending');
+    if (existingRequest) {
+      return res.status(400).json({ message: 'لديك بالفعل طلب دفع معلق.' });
+    }
+
+    amountToRequest = user.referralBalance;
+
+    user.paymentRequests.push({ amount: amountToRequest, status: 'pending' });
+
+    user.referralBalance = 0;
+
+    user.notifications.push({
+      message: `تم إرسال طلب دفع للرصيد: ${amountToRequest.toFixed(2)} جنيه`,
+      type: 'payment_request',
+      read: false,
+      createdAt: new Date()
+    });
+
+    await user.save();
+
+    res.json({ message: 'تم إرسال طلب الدفع بنجاح' });
+  } catch (error) {
+    console.error('Error requesting payment:', error);
+    res.status(500).json({ message: 'حدث خطأ أثناء طلب الدفع', error: error.message });
+  }
+};
+
+
 exports.updatePaymentRequestStatus = async (req, res) => {
   const { requestId } = req.params;
   const { status } = req.body;

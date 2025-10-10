@@ -56,9 +56,13 @@ export class PaymentRequestsComponent implements OnInit {
   updateRequestStatus(requestId: string, status: 'completed' | 'rejected'): void {
     this.http.patch(`${environment.apiBaseUrl}/payment-requests/${requestId}`, { status })
       .subscribe({
-        next: () => {
+        next: (response: any) => {
           alert('تم تحديث حالة الطلب بنجاح');
-          this.loadPaymentRequests(); // Refresh the list
+          // تحديث الطلب في الواجهة فوراً بدلاً من إعادة تحميل القائمة بالكامل
+          const index = this.requests.findIndex(req => req._id === requestId);
+          if (index !== -1) {
+            this.requests[index].status = status;
+          }
         },
         error: (err) => {
           console.error('Error updating request status:', err);

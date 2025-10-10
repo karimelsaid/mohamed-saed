@@ -1,14 +1,15 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { FontAwesomeModule } from '@fortawesome/angular-fontawesome'; 
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { faCopy, faShareAlt, faMoneyBillWaveAlt, faLink, faTimes } from '@fortawesome/free-solid-svg-icons';
 import { AuthService } from '../auth/auth.service';
 import { FormsModule } from '@angular/forms';
 import { DataService } from '../services/data.service';
 import { Book } from '../book';
 import { environment } from '../../environments/environment';
+import { User } from '../auth/user.model';
 import { switchMap, take } from 'rxjs/operators';
 
 @Component({
@@ -19,6 +20,8 @@ import { switchMap, take } from 'rxjs/operators';
   styleUrls: ['./referrals.component.css']
 })
 export class ReferralsComponent implements OnInit {
+  @Output() closeModalEvent = new EventEmitter<void>();
+
   faCopy = faCopy;
   faShareAlt = faShareAlt;
   faMoneyBillWave = faMoneyBillWaveAlt;
@@ -32,6 +35,7 @@ export class ReferralsComponent implements OnInit {
   referralLink: string = '';
   bookName: string = '';
   isRequestingPayment = false; // Add this property
+  user: User | null = null;
 
   constructor(
     private http: HttpClient,
@@ -42,6 +46,7 @@ export class ReferralsComponent implements OnInit {
 
   ngOnInit() {
     this.authService.user$.subscribe(user => {
+      this.user = user;
       if (user && user.id) {
         this.loadReferralData(user.id);
       }
@@ -84,7 +89,7 @@ export class ReferralsComponent implements OnInit {
         if (!user || !user.id) {
           throw new Error('User not logged in');
         }
-        return this.http.post(`${environment.apiBaseUrl}/users/request-payment`, { userId: user.id });
+        return this.http.post(`${environment.apiBaseUrl}/payment-requests/request`, { userId: user.id });
       })
     ).subscribe({
       next: (response: any) => {
@@ -152,5 +157,6 @@ export class ReferralsComponent implements OnInit {
   closeModal() {
     this.referralLink = '';
     this.currentBookId = '';
+    this.closeModalEvent.emit();
   }
 }

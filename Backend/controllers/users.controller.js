@@ -123,7 +123,11 @@ async function login(req, res) {
         username: user.username,
         email: user.email,
         phone: user.phone,
-        role: user.role,
+        role: user.role, // Add address fields to the login response
+        governorate: user.governorate,
+        city: user.city,
+        village: user.village,
+        referralCode: user.referralCode,
         token: token // Include token for admin users
       }
     });
@@ -499,7 +503,11 @@ async function googleSignIn(req, res) {
       username: user.username,
       email: user.email,
       phone: user.phone,
-      role: user.role
+      role: user.role,
+      governorate: user.governorate,
+      city: user.city,
+      village: user.village,
+      referralCode: user.referralCode
     });
   } catch (error) {
     console.error('Error during Google sign-in:', error);
@@ -699,46 +707,13 @@ async function getReferrals(req, res) {
   }
 }
 
+/**
+ * @deprecated This function has been moved to payment-requests.controller.js and will be removed in a future version.
+ * It is kept here temporarily to prevent the server from crashing due to old route references.
+ * Please update your routes in `users.routes.js` to remove any calls to this function.
+ */
 async function requestPayment(req, res) {
-  const { userId } = req.body;
-  let amountToRequest = 0; // متغير لتخزين المبلغ المطلوب
-  try {
-    const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ message: 'User not found' });
-
-    if (user.referralBalance <= 0) {
-      return res.status(400).json({ message: 'لا يوجد رصيد لطلب دفعه.' });
-    }
-
-    // Check if there is already a pending request for this user
-    const existingRequest = user.paymentRequests.find(req => req.status === 'pending');
-    if (existingRequest) {
-      return res.status(400).json({ message: 'لديك بالفعل طلب دفع معلق.' });
-    }
-
-    amountToRequest = user.referralBalance; // تخزين الرصيد قبل تصفيره
-
-    // Add the new payment request to the user's document
-    user.paymentRequests.push({ amount: amountToRequest, status: 'pending' });
-
-    // Reset user's referral balance to 0
-    user.referralBalance = 0; // الآن يمكننا تصفير الرصيد بأمان
-
-    // Add notification to the user saying request sent
-    user.notifications.push({
-      // استخدام المتغير الذي يحتوي على المبلغ الصحيح
-      message: `تم إرسال طلب دفع للرصيد: ${amountToRequest.toFixed(2)} جنيه`,
-      type: 'payment_request',
-      read: false,
-      createdAt: new Date()
-    });
-    await user.save();
-
-    res.json({ message: 'تم إرسال طلب الدفع بنجاح' });
-  } catch (error) {
-    console.error('Error requesting payment:', error);
-    res.status(500).json({ message: 'حدث خطأ أثناء طلب الدفع' });
-  }
+  res.status(410).json({ message: 'This endpoint is deprecated. Please use /api/payment-requests/request instead.' });
 }
 
 module.exports = {
@@ -796,6 +771,5 @@ module.exports = {
   generateReferralLink,
   getReferralBalance,
   getReferrals,
-  requestPayment,
-  // Note: updatePaymentRequestStatus will be in its own controller for better separation of concerns.
+  requestPayment, // Re-add temporarily to avoid crash
 };

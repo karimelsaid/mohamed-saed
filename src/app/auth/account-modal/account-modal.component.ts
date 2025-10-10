@@ -2,17 +2,18 @@ import { Component, OnInit, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { faUserCircle, faEnvelope, faPhoneAlt, faSignOutAlt, faSignInAlt, faUserPlus, faClipboardList, faMoneyBillWave, faLink } from '@fortawesome/free-solid-svg-icons';
+import { faUserCircle, faEnvelope, faPhoneAlt, faSignOutAlt, faSignInAlt, faUserPlus, faClipboardList, faMoneyBillWave, faLink, faMapMarkerAlt } from '@fortawesome/free-solid-svg-icons';
 import { AuthService } from '../auth.service';
 import { MerchantAuthService } from '../../services/merchant-auth.service';
 import { ChangeDetectorRef } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { ReferralsComponent } from '../../referrals/referrals.component';
 import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-account-modal',
   standalone: true,
-  imports: [CommonModule, FontAwesomeModule],
+  imports: [CommonModule, FontAwesomeModule, ReferralsComponent],
   templateUrl: './account-modal.component.html',
   styleUrls: ['./account-modal.component.css']
 })
@@ -28,8 +29,10 @@ export class AccountModalComponent implements OnInit {
   faClipboardList = faClipboardList;
   faMoneyBillWave = faMoneyBillWave;
   faLink = faLink;
+  faMapMarkerAlt = faMapMarkerAlt; // This was missing
 
   show = false;
+  showReferralModal = false;
   isLoggedIn: boolean = false;
   isMerchantLoggedIn: boolean = false;
 
@@ -161,8 +164,19 @@ export class AccountModalComponent implements OnInit {
   }
 
   viewReferrals() {
+    this.showReferralModal = true;
+    this.show = false; // إخفاء نافذة الحساب الرئيسية
+  }
+
+  handleReferralModalClose() {
+    this.showReferralModal = false;
+    this.show = true;
+    this.cdRef.detectChanges(); // Force change detection
+  }
+
+  goToProfile() {
     this.closeModal();
-    this.router.navigate(['/referrals']);
+    this.router.navigate(['/profile']);
   }
 
   logout() {

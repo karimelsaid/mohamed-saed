@@ -76,16 +76,18 @@ async function createAccount(req, res) {
     await newUser.save();
 
     // Return user data for auto-login (similar to login response)
-    res.status(201).json({
+    const responsePayload = {
       message: 'تم إنشاء الحساب بنجاح',
       user: {
         id: newUser._id,
         username: newUser.username,
         email: newUser.email,
         phone: newUser.phone,
-        role: newUser.role
+        role: newUser.role,
+        bookId: bookId // إعادة bookId للواجهة الأمامية
       }
-    });
+    };
+    res.status(201).json(responsePayload);
   } catch (error) {
     res.status(500).json({ message: 'حدث خطأ أثناء إنشاء الحساب', error });
   }
@@ -667,7 +669,6 @@ function getBookSlug(bookName) {
 }
 
 async function getReferrals(req, res) {
-  console.log("[getReferrals] Fetching referrals for user:", req.params.userId);
   const { userId } = req.params;
   if (!mongoose.Types.ObjectId.isValid(userId)) {
     return res.status(400).json({ message: 'معرف مستخدم غير صالح' });
@@ -699,7 +700,6 @@ async function getReferrals(req, res) {
       };
     });
 
-    console.log(`[getReferrals] Found and formatted ${formattedReferrals.length} referrals.`);
     res.json({ referrals: formattedReferrals });
   } catch (error) {
     console.error('خطأ في جلب الإحالات:', error);

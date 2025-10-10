@@ -2,7 +2,7 @@ import { Component, OnInit, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { faUserCircle, faEnvelope, faPhoneAlt, faSignOutAlt, faSignInAlt, faUserPlus, faClipboardList, faMoneyBillWave, faLink, faMapMarkerAlt } from '@fortawesome/free-solid-svg-icons';
+import { faUserCircle, faEnvelope, faPhone, faRightFromBracket, faRightToBracket, faUserPlus, faClipboardList, faMoneyBillWave, faLink, faMapMarkerAlt } from '@fortawesome/free-solid-svg-icons';
 import { AuthService } from '../auth.service';
 import { MerchantAuthService } from '../../services/merchant-auth.service';
 import { ChangeDetectorRef } from '@angular/core';
@@ -22,14 +22,14 @@ export class AccountModalComponent implements OnInit {
 
   faUserCircle = faUserCircle;
   faEnvelope = faEnvelope;
-  faPhoneAlt = faPhoneAlt;
-  faSignOutAlt = faSignOutAlt;
-  faSignInAlt = faSignInAlt;
+  faPhone = faPhone;
+  faRightFromBracket = faRightFromBracket;
+  faRightToBracket = faRightToBracket;
   faUserPlus = faUserPlus;
   faClipboardList = faClipboardList;
   faMoneyBillWave = faMoneyBillWave;
   faLink = faLink;
-  faMapMarkerAlt = faMapMarkerAlt; // This was missing
+  faMapMarkerAlt = faMapMarkerAlt;
 
   show = false;
   showReferralModal = false;

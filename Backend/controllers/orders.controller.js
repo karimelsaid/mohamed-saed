@@ -71,11 +71,9 @@ exports.submitOrder = async (req, res) => {
 
     // Handle referral creation for this specific order
     if (referralCode && bookId) {
-      console.log(`[Referral Submit] Attempting to create referral. Code: ${referralCode}, BookID: ${bookId}, UserID: ${userId}`);
       const referrer = await User.findOne({ referralCode });
       // Ensure user is not referring themselves
       if (referrer && referrer._id.toString() !== userId.toString()) {
-        console.log(`[Referral Submit] Found referrer: ${referrer.username} (${referrer._id})`);
 
         let product;
         // Try finding by MongoDB's _id first (for merchant products)
@@ -99,25 +97,21 @@ exports.submitOrder = async (req, res) => {
           }
         }
         if (!product) {
-          console.log(`[Referral Submit] Product with ID ${bookId} not found. Cannot create referral.`);
           // Continue without creating a referral, but don't block the order.
         } else {
         const newReferral = new Referral({
           referrerId: referrer._id,
           referredId: userId,
-            bookId: bookId, // Use the original bookId (products_id)
+            bookId: product.products_id || bookId, // Use the original bookId (products_id)
           orderId: addedOrder._id, // Link referral to this specific order
           status: 'pending',
           earned: 0
         });
-        console.log('[Referral Submit] New referral object to be saved:', newReferral);
         await newReferral.save();
-        console.log(`[Referral Submit] Successfully saved referral for order ${addedOrder._id}`);
         }
       } else if (!referrer) {
-        console.log(`[Referral Submit] No referrer found for code: ${referralCode}`);
+        // console.log(`[Referral Submit] No referrer found for code: ${referralCode}`);
       } else {
-        console.log(`[Referral Submit] User ${userId} tried to refer themselves. No referral created.`);
       }
     }
 
@@ -253,27 +247,30 @@ exports.updateOrderStatus = async (req, res) => {
 
     // Handle referral completion if order is received or delivered
     if (status === 'تم الاستلام' || status === 'تم التسليم') {
-      console.log(`[Referral Update] Order ${orderId} status is now '${status}'. Checking for referral.`);
       // Find a pending referral for this user. Ideally, this should be more specific
       // if a user can be referred multiple times. We now find it by the exact orderId.
       const referral = await Referral.findOne({ orderId: orderId, status: 'pending' });
       if (referral) {
-        console.log(`[Referral Update] Found pending referral:`, referral);
-        const commission = order.totalAmount * 0.05;
+        // Find the specific product in the order that was referred
+        const referredProduct = order.products.find(p => p.bookId === referral.bookId);
 
-        referral.status = 'completed';
-        referral.earned = commission; // Save the earned amount to the referral record
-        referral.orderId = orderId; // Link the referral to the specific order
-        await referral.save();
-        console.log(`[Referral Update] Referral ${referral._id} updated to 'completed' with earned: ${commission}`);
+        if (!referredProduct) {
+          console.error(`[Referral Error] Referred product with bookId ${referral.bookId} not found in order ${orderId}`);
+          // If the product isn't found, we can't calculate commission. Skip for now.
+        } else {
+          const commission = referredProduct.price * 0.05;
 
-        // Add balance to referrer
-        const referrer = await User.findById(referral.referrerId);
-        if (referrer) {
-          console.log(`[Referral Update] Found referrer ${referrer.username} to update balance. Current balance: ${referrer.referralBalance}`);
-          referrer.referralBalance = (referrer.referralBalance || 0) + commission;
-          await referrer.save();
-          console.log(`[Referral Update] Referrer ${referrer.username}'s new balance: ${referrer.referralBalance}`);
+          referral.status = 'completed';
+          referral.earned = commission; // Save the earned amount to the referral record
+          await referral.save();
+
+          // Add balance to referrer
+          const referrer = await User.findById(referral.referrerId);
+          if (referrer) {
+            console.log(`[Referral Update] Found referrer ${referrer.username} to update balance. Current balance: ${referrer.referralBalance}`);
+            referrer.referralBalance = (referrer.referralBalance || 0) + commission;
+            await referrer.save();
+          }
         }
       }
     }

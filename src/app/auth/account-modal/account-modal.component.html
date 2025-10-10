@@ -1,4 +1,6 @@
-<app-referrals *ngIf="showReferralModal" (closeModalEvent)="handleReferralModalClose()"></app-referrals>
+<div *ngIf="showReferralModal">
+  <app-referrals (closeModalEvent)="handleReferralModalClose()"></app-referrals>
+</div>
 
 <div *ngIf="show" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 dark:bg-opacity-80 backdrop-blur-sm" (click)="closeModal()">
   <div class="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl p-8 w-full max-w-md mx-4 transform transition-all duration-300 scale-100 animate-in fade-in-0 zoom-in-95" (click)="$event.stopPropagation()">
@@ -44,7 +46,7 @@
           </div>
           <div class="flex items-center justify-end space-x-2" *ngIf="user.phone">
             <span>{{ user.phone }}</span>
-            <fa-icon [icon]="faPhoneAlt" class="text-gray-500"></fa-icon>
+            <fa-icon [icon]="faPhone" class="text-gray-500"></fa-icon>
           </div>
           <div class="flex items-center justify-end space-x-2" *ngIf="user.governorate && user.city">
             <span>
@@ -93,7 +95,7 @@
           </div>
           <div class="flex items-center justify-end space-x-2" *ngIf="merchant?.phone">
             <span>{{ merchant?.phone || 'غير محدد' }}</span>
-            <fa-icon [icon]="faPhoneAlt" class="text-gray-500"></fa-icon>
+            <fa-icon [icon]="faPhone" class="text-gray-500"></fa-icon>
           </div>
         </div>
         <div class="mb-4">
@@ -118,7 +120,7 @@
       <button
         (click)="logout()"
         class="w-full px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-xl transition-all duration-200 font-bold shadow-lg hover:shadow-xl transform hover:scale-105 flex items-center justify-center space-x-2">
-        <fa-icon [icon]="faSignOutAlt"></fa-icon>
+        <fa-icon [icon]="faRightFromBracket"></fa-icon>
         <span>تسجيل الخروج</span>
       </button>
     </div>

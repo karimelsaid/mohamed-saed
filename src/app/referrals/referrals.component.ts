@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { faCopy, faShareAlt, faMoneyBillWaveAlt, faLink, faTimes } from '@fortawesome/free-solid-svg-icons';
+import { faCopy, faShareAlt, faMoneyBillWave, faLink, faTimes } from '@fortawesome/free-solid-svg-icons';
 import { AuthService } from '../auth/auth.service';
 import { FormsModule } from '@angular/forms';
 import { DataService } from '../services/data.service';
@@ -24,7 +24,7 @@ export class ReferralsComponent implements OnInit {
 
   faCopy = faCopy;
   faShareAlt = faShareAlt;
-  faMoneyBillWave = faMoneyBillWaveAlt;
+  faMoneyBillWave = faMoneyBillWave;
   faLink = faLink;
   faTimes = faTimes;
 
@@ -36,6 +36,8 @@ export class ReferralsComponent implements OnInit {
   bookName: string = '';
   isRequestingPayment = false; // Add this property
   user: User | null = null;
+  allBooks: Book[] = [];
+  filteredBooks: Book[] = [];
 
   constructor(
     private http: HttpClient,
@@ -49,6 +51,12 @@ export class ReferralsComponent implements OnInit {
       this.user = user;
       if (user && user.id) {
         this.loadReferralData(user.id);
+      }
+    });
+    this.dataService.getData().subscribe(books => {
+      if (books) {
+        this.allBooks = books;
+        this.filteredBooks = books;
       }
     });
   }
@@ -81,7 +89,6 @@ export class ReferralsComponent implements OnInit {
       return;
     }
     this.isRequestingPayment = true;
-    console.log('Starting payment request...');
 
     this.authService.user$.pipe(
       take(1), // Get the current user value once and then unsubscribe
@@ -93,7 +100,6 @@ export class ReferralsComponent implements OnInit {
       })
     ).subscribe({
       next: (response: any) => {
-        console.log('Payment request successful:', response);
         alert('تم إرسال طلب الدفع بنجاح');
         this.isRequestingPayment = false;
         this.authService.user$.pipe(take(1)).subscribe(user => user && this.loadReferralData(user.id)); // Refresh balance
@@ -158,5 +164,22 @@ export class ReferralsComponent implements OnInit {
     this.referralLink = '';
     this.currentBookId = '';
     this.closeModalEvent.emit();
+  }
+
+  copyId(bookId: string) {
+    navigator.clipboard.writeText(bookId);
+    alert('تم نسخ رقم الكتاب!');
+  }
+
+  filterBooks(value: string) {
+    const searchTerm = value.toLowerCase();
+    if (!searchTerm) {
+      this.filteredBooks = this.allBooks;
+    } else {
+      this.filteredBooks = this.allBooks.filter(book =>
+        (book.product_name && book.product_name.toLowerCase().includes(searchTerm)) ||
+        (book.products_id && book.products_id.toString().toLowerCase().includes(searchTerm))
+      );
+    }
   }
 }

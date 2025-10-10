@@ -754,112 +754,66 @@ async function updateMerchantProfile(req, res) {
     const merchantId = req.merchant._id;
     const { name, phone, taxNumber, bio, preparationTime } = req.body;
 
-    // Removed console logs for cleaner output
-    // console.log('🔄 Starting updateMerchantProfile for merchant:', merchantId);
-    // console.log('📝 Request body:', { name, phone, taxNumber, bio, preparationTime });
-    // console.log('📁 File received:', req.file ? 'YES' : 'NO');
-    // if (req.file) {
-    //   console.log('📁 File details:', { originalname: req.file.originalname, mimetype: req.file.mimetype, size: req.file.size });
-    // }
-
     // Find the merchant
     const merchant = await User.findById(merchantId);
     if (!merchant) {
-      // console.log('❌ Merchant not found:', merchantId);
       return res.status(404).json({ success: false, message: 'Merchant not found' });
     }
-
-    // console.log('👤 Current merchant logo:', merchant.logo);
 
     // Handle logo upload if provided
     let logoPath = undefined; // Don't set logo by default
     if (req.file) {
-      // console.log('🖼️ Processing logo upload...');
-      // console.log('📁 File details:', {
-      //   fieldname: req.file.fieldname,
-      //   originalname: req.file.originalname,
-      //   encoding: req.file.encoding,
-      //   mimetype: req.file.mimetype,
-      //   size: req.file.size,
-      //   bufferLength: req.file.buffer ? req.file.buffer.length : 'NO BUFFER'
-      // });
-
       // Sanitize merchant name for folder name
       const sanitizedUsername = (name || merchant.username).replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
-      // console.log('📁 Sanitized username:', sanitizedUsername);
 
       // Save logo image in uploads/books/merchant_username/logo/ folder
       const uploadDir = path.join(__dirname, '../uploads/books', 'merchant_' + sanitizedUsername, 'logo');
-      // console.log('📁 Upload directory:', uploadDir);
 
       if (!fs.existsSync(uploadDir)) {
         fs.mkdirSync(uploadDir, { recursive: true });
-        // console.log('📁 Created upload directory');
       }
 
       const filename = `logo.webp`;
       const filepath = path.join(uploadDir, filename);
-      // console.log('📁 File path:', filepath);
 
       try {
-        // console.log('🔄 Starting Sharp processing...');
         await sharp(req.file.buffer)
           .resize({ width: 300 }) // Resize logo width to max 300px
           .webp({ quality: 80 })
           .toFile(filepath);
-        // console.log('✅ Logo processed and saved successfully');
       } catch (sharpError) {
-        // console.error('❌ Sharp processing error:', sharpError);
         // Try to save the original file as fallback
         try {
-          // console.log('🔄 Trying to save original file as fallback...');
           fs.writeFileSync(filepath.replace('.webp', '.jpg'), req.file.buffer);
           logoPath = `merchant_${sanitizedUsername}/logo/logo.jpg`;
-          // console.log('✅ Original file saved as JPG fallback');
         } catch (fallbackError) {
-          // console.error('❌ Fallback save also failed:', fallbackError);
           throw sharpError; // Re-throw the original error
         }
       }
 
       logoPath = `merchant_${sanitizedUsername}/logo/logo.webp`; // Store path relative to uploads/books/
-      // console.log('🖼️ Logo path set to:', logoPath);
 
       // Delete old logo file if exists
       if (merchant.logo) {
         const oldLogoPath = path.join(__dirname, 'uploads/books', merchant.logo);
-        // console.log('🗑️ Checking old logo path:', oldLogoPath);
         if (fs.existsSync(oldLogoPath)) {
           fs.unlinkSync(oldLogoPath);
-          // console.log('🗑️ Deleted old logo file');
-        } else {
-          // console.log('🗑️ Old logo file not found');
         }
       }
-    } else {
-      // console.log('🖼️ No logo file provided');
     }
 
     // Update merchant data
-    // console.log('📝 Updating merchant data...');
     merchant.username = name || merchant.username;
     merchant.merchantName = name || merchant.merchantName;
     merchant.phone = phone || merchant.phone;
     merchant.taxNumber = taxNumber || merchant.taxNumber;
     merchant.bio = bio || merchant.bio;
     if (logoPath !== undefined) {
-      // console.log('🖼️ Setting new logo path:', logoPath);
       merchant.logo = logoPath;
-    } else {
-      // console.log('🖼️ Logo path not changed');
     }
     merchant.preparationTime = preparationTime || merchant.preparationTime || 1;
 
-    // console.log('💾 Saving merchant...');
     await merchant.save();
-    // console.log('✅ Merchant saved successfully');
-
-    // console.log('📤 Sending response...');
     res.json({
       success: true,
       message: 'Profile updated successfully',
@@ -878,7 +832,6 @@ async function updateMerchantProfile(req, res) {
         createdAt: merchant.createdAt
       }
     });
-    // console.log('✅ Response sent successfully');
   } catch (error) {
     console.error('❌ Error in updateMerchantProfile:', error);
     if (error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE') {

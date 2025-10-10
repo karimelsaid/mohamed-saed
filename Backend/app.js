@@ -72,8 +72,6 @@ app.get('/uploads/:filename', (req, res) => {
   const encodedFilename = req.params.filename;
   const filename = decodeURIComponent(encodedFilename);
   const filePath = path.join(__dirname, 'uploads', filename);
-  console.log(`Download request for filename: ${filename}`);
-  console.log(`Resolved file path: ${filePath}`);
   fs.access(filePath, fs.constants.F_OK, (err) => {
     if (err) {
       console.error('File does not exist:', filePath);

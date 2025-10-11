@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, AfterViewInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../auth.service';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import governoratesData from '../../../../public/json/egypt-governorates.json';
 import { environment } from '../../../environments/environment';
 import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
@@ -63,10 +63,17 @@ export class RegisterComponent implements OnInit, AfterViewInit {
   emailValid: boolean = false;
   emailTouched: boolean = false;
   message: string = '';
+  private returnUrl: string = '/';
 
-  constructor(private authService: AuthService, private router: Router) {}
+  constructor(private authService: AuthService, private router: Router, private route: ActivatedRoute) {}
 
   ngOnInit() {
+    // اقرأ returnUrl من الرابط
+    this.route.queryParams.subscribe(params => {
+      // إذا كان returnUrl هو صفحة التسجيل نفسها، وجه للصفحة الرئيسية
+      this.returnUrl = params['returnUrl'] && !params['returnUrl'].includes('/register') ? params['returnUrl'] : '/';
+    });
+
     if (this.isAndroid) {
       GoogleAuth.initialize({
         clientId: environment.androidGoogleClientId,
@@ -112,8 +119,8 @@ export class RegisterComponent implements OnInit, AfterViewInit {
         const referralCode = localStorage.getItem('referralCode');
         this.authService.googleSignIn(idToken, referralCode || undefined).subscribe({
           next: (user) => {
-            this.message = '✅ تم إنشاء الحساب وتسجيل الدخول باستخدام حساب Google بنجاح!';
-            this.router.navigate(['/']);
+            this.message = '✅ تم تسجيل الدخول بنجاح! جارِ توجيهك...';
+            this.router.navigateByUrl(this.returnUrl);
           },
           error: (error) => {
             if (error.status === 400 && error.error.message) {
@@ -138,8 +145,8 @@ export class RegisterComponent implements OnInit, AfterViewInit {
     const referralCode = localStorage.getItem('referralCode');
     this.authService.googleSignIn(idToken, referralCode || undefined).subscribe({
       next: (user) => {
-        this.message = '✅ تم إنشاء الحساب وتسجيل الدخول باستخدام حساب Google بنجاح!';
-        this.router.navigate(['/']);
+        this.message = '✅ تم تسجيل الدخول بنجاح! جارِ توجيهك...';
+        this.router.navigateByUrl(this.returnUrl);
       },
       error: (error) => {
         this.message = '❌ فشل إنشاء الحساب باستخدام حساب Google. يرجى المحاولة مرة أخرى.';
@@ -295,8 +302,8 @@ export class RegisterComponent implements OnInit, AfterViewInit {
     )
     .subscribe({
       next: (response) => {
-        this.message = '✅ تم إنشاء الحساب وتسجيل الدخول بنجاح!';
-        this.router.navigate(['/']);
+        this.message = '✅ تم إنشاء الحساب بنجاح! جارِ توجيهك...';
+        this.router.navigateByUrl(this.returnUrl);
       },
       error: (error) => {
         if (error.status === 400 && error.error.message) {
@@ -337,8 +344,8 @@ export class RegisterComponent implements OnInit, AfterViewInit {
 
     this.authService.registerMerchant(formData).subscribe({
       next: (response) => {
-        this.message = '✅ تم إنشاء حساب التاجر وتسجيل الدخول بنجاح! في انتظار موافقة الأدمن.';
-        this.router.navigate(['/']);
+        this.message = '✅ تم إنشاء حساب التاجر بنجاح! جارِ توجيهك...';
+        this.router.navigateByUrl(this.returnUrl);
       },
       error: (error) => {
         if (error.status === 400 && error.error.message) {

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { HttpClient, HttpEventType } from '@angular/common/http';
 import { AuthService } from '../../auth/auth.service';
 import { Router, RouterModule } from '@angular/router';
@@ -16,8 +16,9 @@ import * as XLSX from 'xlsx';
 import { FreeShippingRulesComponent } from './free-shipping/free-shipping-rules.component';
 import { Subscription } from 'rxjs';
 import { FaIconLibrary, FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { faShoppingCart, faStore, faBook, faPrint, faPlus, faEdit, faTruck, faUsers, faCheckCircle } from '@fortawesome/free-solid-svg-icons';
+import { faShoppingCart, faStore, faBook, faPrint, faPlus, faEdit, faTruck, faUsers, faCheckCircle, faMoneyBillWave, faSitemap, faPlusCircle, faImage, faTag, faHashtag, faList, faDollarSign, faAlignLeft, faExclamationTriangle } from '@fortawesome/free-solid-svg-icons';
 import { PaymentRequestsComponent } from '../payment-requests/payment-requests.component';
+import { UserHierarchyComponent } from '../user-hierarchy/user-hierarchy.component';
 
 interface Order {
   _id: string;
@@ -117,20 +118,18 @@ interface PrintOrder {
     FreeShippingRulesComponent,
     MerchantManagementComponent,
     ProductApprovalComponent,
-    PaymentRequestsComponent
+    PaymentRequestsComponent,
+    UserHierarchyComponent
   ],
   templateUrl: './admin-dashboard.component.html',
   styleUrls: ['./admin-dashboard.component.css']
 })
-
-
-
 export class AdminDashboardComponent implements OnInit {
   orders: GroupedOrder[] = [];
   allOrders: GroupedOrder[] = [];
   requestedBooks: RequestedBook[] = [];
   isAdmin: boolean = false; // Add paymentRequests to the type union
-  currentView: 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' = 'orders';
+  currentView: 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' = 'orders';
 
   manualPromotionStartDate: string = '';
   manualPromotionEndDate: string = '';
@@ -163,6 +162,21 @@ export class AdminDashboardComponent implements OnInit {
   // Multi-select properties
   selectedProducts: Set<string> = new Set();
   selectedOrders: Set<string> = new Set();
+
+  // Icons
+  faShoppingCart = faShoppingCart;
+  faStore = faStore;
+  faBook = faBook;
+  faPrint = faPrint;
+  faPlus = faPlus;
+  faEdit = faEdit;
+  faTruck = faTruck;
+  faUsers = faUsers;
+  faCheckCircle = faCheckCircle;
+  faMoneyBillWave = faMoneyBillWave;
+  faSitemap = faSitemap;
+
+
   showArchived: boolean = false;
 
   backendBaseUrl: string = environment.apiBaseUrl;
@@ -242,12 +256,15 @@ export class AdminDashboardComponent implements OnInit {
     private dataService: DataService,
     private notificationService: NotificationService,
     private modalService: ModalService,
-    private library: FaIconLibrary
-  ) {}
+    private cdr: ChangeDetectorRef,
+    library: FaIconLibrary
+  ) {
+    library.addIcons(
+      faShoppingCart, faStore, faBook, faPrint, faPlus, faEdit, faTruck, faUsers, faCheckCircle, faMoneyBillWave, faSitemap, faPlusCircle, faImage, faTag, faHashtag, faList, faDollarSign, faAlignLeft, faExclamationTriangle
+    );
+  }
 
   ngOnInit(): void {
-    this.library.addIcons(faShoppingCart, faStore, faBook, faPrint, faPlus, faEdit, faTruck, faUsers, faCheckCircle);
-
     this.authService.user$.subscribe(user => {
       if (user && user.email === 'admin@example.com' && user.role === 'admin') {
         this.isAdmin = true;
@@ -288,7 +305,7 @@ export class AdminDashboardComponent implements OnInit {
     }
   }
 
-  switchView(view: 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests'): void {
+  switchView(view: 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy'): void {
     this.currentView = view;
     if (view === 'orders' || view === 'merchantOrders') {
       this.ordersPage = 1; // Reset page when switching views
@@ -308,6 +325,8 @@ export class AdminDashboardComponent implements OnInit {
     } else if (view === 'freeShippingRules') {
       // No data loading needed currently for freeShippingRules
     } else if (view === 'paymentRequests') {
+      // The component will load its own data
+    } else if (view === 'userHierarchy') {
       // The component will load its own data
     }
   }

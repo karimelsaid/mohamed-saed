@@ -1,6 +1,6 @@
 import { Component, OnInit, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { faUserCircle, faEnvelope, faPhone, faRightFromBracket, faRightToBracket, faUserPlus, faClipboardList, faMoneyBillWave, faLink, faMapMarkerAlt } from '@fortawesome/free-solid-svg-icons';
 import { AuthService } from '../auth.service';
@@ -45,13 +45,15 @@ export class AccountModalComponent implements OnInit {
   merchant: any = null;
 
   referralBalance: number = 0;
+  private returnUrl: string = '/';
 
   constructor(
     private router: Router,
     private authService: AuthService,
     private merchantAuthService: MerchantAuthService,
     private cdRef: ChangeDetectorRef,
-    private http: HttpClient
+    private http: HttpClient,
+    private route: ActivatedRoute // حقن ActivatedRoute
   ) { }
 
   ngOnInit() {
@@ -88,6 +90,11 @@ export class AccountModalComponent implements OnInit {
     if (this.merchantAuthService.isAuthenticated() && (!this.merchant || !this.merchant.email)) {
       this.refreshMerchantData();
     }
+
+    // قراءة returnUrl من query parameters عند تحميل الصفحة
+    this.route.queryParams.subscribe(params => {
+      this.returnUrl = params['returnUrl'] || '/';
+    });
   }
 
   loadUserData(userId: string) {
@@ -150,12 +157,14 @@ export class AccountModalComponent implements OnInit {
 
   goToLogin() {
     this.closeModal();
-    this.router.navigate(['/login']);
+    // Pass the current URL as a returnUrl query parameter
+    this.router.navigate(['/login'], { queryParams: { returnUrl: this.router.url } });
   }
 
   goToRegister() {
     this.closeModal();
-    this.router.navigate(['/register']);
+    // Pass the current URL as a returnUrl query parameter
+    this.router.navigate(['/register'], { queryParams: { returnUrl: this.router.url } });
   }
 
   goToMerchantDashboard() {

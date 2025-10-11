@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { faCopy, faShareAlt, faMoneyBillWave, faLink, faTimes } from '@fortawesome/free-solid-svg-icons';
+import { faCopy, faShareAlt, faMoneyBillWave, faLink, faTimes, faGlobe } from '@fortawesome/free-solid-svg-icons';
 import { AuthService } from '../auth/auth.service';
 import { FormsModule } from '@angular/forms';
 import { DataService } from '../services/data.service';
@@ -27,6 +27,7 @@ export class ReferralsComponent implements OnInit {
   faMoneyBillWave = faMoneyBillWave;
   faLink = faLink;
   faTimes = faTimes;
+  faGlobe = faGlobe;
 
   referralBalance: number = 0;
   referralCode: string = '';
@@ -142,6 +143,21 @@ export class ReferralsComponent implements OnInit {
       });
     })
   }
+
+  generateGeneralReferralLink() {
+    this.authService.user$.pipe(take(1)).subscribe(user => {
+      if (user && user.referralCode) {
+        // The base URL of your application
+        const baseUrl = window.location.origin;
+        // Construct the general referral link for registration
+        this.referralLink = `${baseUrl}/register?ref=${user.referralCode}`;
+      } else {
+        alert('لا يمكن إنشاء رابط الإحالة. الرجاء المحاولة مرة أخرى.');
+        console.error('User or referral code is missing.');
+      }
+    });
+  }
+
 
   copyLink() {
     navigator.clipboard.writeText(this.referralLink);

@@ -1,6 +1,6 @@
 import { Component, OnInit, AfterViewInit } from '@angular/core';
-import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { Router, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../auth.service';
@@ -24,15 +24,23 @@ export class LoginComponent implements OnInit, AfterViewInit {
   message: string = '';
   isSuccess: boolean = false;
   isAndroid = Capacitor.getPlatform() === 'android';
+  private returnUrl: string = '/';
 
   constructor(
     private router: Router,
     private http: HttpClient,
     private authService: AuthService,
-    private merchantAuthService: MerchantAuthService
+    private merchantAuthService: MerchantAuthService,
+    private route: ActivatedRoute
   ) {}
 
   ngOnInit() {
+    // اقرأ returnUrl من الرابط
+    this.route.queryParams.subscribe(params => {
+      // إذا كان returnUrl هو صفحة تسجيل الدخول نفسها، وجه للصفحة الرئيسية
+      this.returnUrl = params['returnUrl'] && !params['returnUrl'].includes('/login') ? params['returnUrl'] : '/';
+    });
+
     if (this.isAndroid) {
       GoogleAuth.initialize({
         clientId: environment.androidGoogleClientId,
@@ -63,8 +71,8 @@ export class LoginComponent implements OnInit, AfterViewInit {
         const idToken = result.authentication.idToken;
         this.authService.googleSignIn(idToken).subscribe({
           next: (user) => {
-            this.message = '✅ تم تسجيل الدخول باستخدام حساب Google بنجاح!';
-            this.router.navigate(['/']);
+            this.message = '✅ تم تسجيل الدخول بنجاح! جارِ توجيهك...';
+            this.router.navigateByUrl(this.returnUrl);
           },
           error: (error) => {
             if (error.status === 400 && error.error.message) {
@@ -110,8 +118,8 @@ export class LoginComponent implements OnInit, AfterViewInit {
     const idToken = response.credential;
     this.authService.googleSignIn(idToken).subscribe({
       next: (user) => {
-        this.message = '✅ تم تسجيل الدخول باستخدام حساب Google بنجاح!';
-        this.router.navigate(['/']);
+        this.message = '✅ تم تسجيل الدخول بنجاح! جارِ توجيهك...';
+        this.router.navigateByUrl(this.returnUrl);
       },
       error: (error) => {
         this.message = '❌ فشل تسجيل الدخول باستخدام حساب Google. يرجى المحاولة مرة أخرى.';
@@ -154,9 +162,9 @@ export class LoginComponent implements OnInit, AfterViewInit {
 
                 this.message = '✅ تم تسجيل الدخول كتاجر بنجاح';
                 this.isSuccess = true;
-                // Redirect to home page after successful login
+                // Redirect after successful login
                 setTimeout(() => {
-                  this.router.navigate(['/Home']);
+                  this.router.navigateByUrl(this.returnUrl);
                 }, 1000);
               },
               error: (err: any) => {
@@ -171,10 +179,11 @@ export class LoginComponent implements OnInit, AfterViewInit {
             this.authService.setUser(response.user);
 
             setTimeout(() => {
-              if (response.user.role === 'admin') {
+              // If returnUrl is the default, check for admin role, otherwise respect returnUrl
+              if (this.returnUrl === '/' && response.user.role === 'admin') {
                 this.router.navigate(['/ControlPanel']);
               } else {
-                this.router.navigate(['/Home']);
+                this.router.navigateByUrl(this.returnUrl);
               }
             }, 1000);
           }

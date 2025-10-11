@@ -7,7 +7,7 @@ require('dotenv').config();
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || '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';
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
-const SITEMAP_PATH = path.resolve(__dirname, '../dist/browser/sitemap.xml');
+const BOOKS_JSON_PATH = path.resolve(__dirname, '../output.json');
 
 let cachedBooks = null;
 
@@ -22,34 +22,25 @@ const KENOUZ_LIBRARY_INFO = `
 `;
 
 /**
- * تحميل وتحليل ملف sitemap.xml لاستخراج بيانات الكتب
+ * تحميل وتحليل ملف output.json لاستخراج بيانات الكتب
  */
-async function loadSitemapBooks() {
+async function loadBooksData() {
   if (cachedBooks) {
     return cachedBooks;
   }
   try {
-    const xmlData = fs.readFileSync(SITEMAP_PATH, 'utf-8');
-    const parser = new xml2js.Parser();
-    const result = await parser.parseStringPromise(xmlData);
-    const urls = result.urlset.url || [];
-    // استخراج روابط الكتب فقط (تحتوي على /book/ في الرابط)
-    const books = urls
-      .map(u => u.loc && u.loc[0])
-      .filter(loc => loc && loc.includes('/book/'))
-      .map(loc => {
-        // استخراج اسم الكتاب من الرابط (بعد /book/)
-        const parts = loc.split('/book/');
-        const titleSlug = parts[1] || '';
-        // تحويل العنوان من slug إلى نص قابل للقراءة (استبدال - بمسافة)
-        const title = decodeURIComponent(titleSlug).replace(/-/g, ' ');
-        // حاليا لا يوجد وصف، يمكن إضافة حقل description إذا توفر
-        return { title, url: loc, description: '' };
-      });
+    const jsonData = fs.readFileSync(BOOKS_JSON_PATH, 'utf-8');
+    const booksData = JSON.parse(jsonData);
+    const books = booksData.map(book => ({
+      title: book.product_name,
+      description: book.product_description,
+      // Construct the URL based on product ID and name for SEO-friendly URLs
+      url: `https://kenouz.org/book/${book.products_id}/${encodeURIComponent(book.product_name.replace(/\s+/g, '-'))}`
+    }));
     cachedBooks = books;
     return books;
   } catch (error) {
-    console.error('خطأ في تحميل أو تحليل sitemap.xml:', error);
+    console.error('خطأ في تحميل أو تحليل output.json:', error);
     return [];
   }
 }
@@ -161,7 +152,7 @@ exports.sendMessage = async (req, res) => {
     }
 
     // تحميل بيانات الكتب من sitemap
-    const books = await loadSitemapBooks();
+    const books = await loadBooksData();
 
     // تحقق إذا كان الاستعلام يحتوي على كلمات مفتاحية لتوصية الكتب
     const bookKeywords = ['كتاب', 'كتب', 'recommend', 'book', 'suggest', 'ترشح', 'قراءة', 'قرأت'];

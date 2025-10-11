@@ -1,0 +1,45 @@
+<div class="px-4 sm:px-10 max-w-5xl mx-auto mb-32 md:mb-0">
+  <div class="bg-white dark:bg-gray-800 shadow-2xl rounded-3xl p-6 sm:p-8 border border-gray-200 dark:border-gray-700">
+    <h3 class="text-2xl sm:text-3xl font-extrabold text-center mb-8 text-gray-800 dark:text-gray-200 flex items-center justify-center gap-3">
+      <fa-icon [icon]="faSitemap" class="text-blue-500"></fa-icon>
+      هيكلية المستخدمين
+    </h3>
+
+    <div *ngIf="isLoading" class="text-center py-12">
+      <fa-icon [icon]="faSpinner" class="text-blue-500 text-4xl"></fa-icon>
+      <p class="mt-4 text-gray-600 dark:text-gray-400">جاري تحميل البيانات...</p>
+    </div>
+
+    <div *ngIf="!isLoading && userHierarchy.length === 0" class="text-center py-12">
+      <fa-icon [icon]="faExclamationTriangle" class="text-yellow-500 text-4xl"></fa-icon>
+      <p class="mt-4 text-gray-500 dark:text-gray-400">لا توجد بيانات لعرضها.</p>
+    </div>
+
+    <div *ngIf="!isLoading && userHierarchy.length > 0" class="space-y-2">
+      <ng-container *ngTemplateOutlet="userNodeTemplate; context: { nodes: userHierarchy }"></ng-container>
+    </div>
+  </div>
+</div>
+
+<ng-template #userNodeTemplate let-nodes="nodes">
+  <div *ngFor="let node of nodes" class="user-node" [style.margin-right.px]="node.level * 25">
+    <div
+      (click)="toggleNode(node)"
+      class="flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors duration-200"
+      [ngClass]="{
+        'bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50': node.children.length > 0,
+        'bg-gray-50 dark:bg-gray-700/50': node.children.length === 0
+      }">
+      <div class="flex items-center space-x-3 rtl">
+        <span class="font-semibold text-gray-800 dark:text-gray-200">{{ node.username }}</span>
+        <span class="text-sm text-gray-500 dark:text-gray-400">({{ node.email }})</span>
+      </div>
+      <div *ngIf="node.children.length > 0" class="text-gray-500 dark:text-gray-400 transition-transform duration-300" [class.rotate-90]="node.expanded">
+        <fa-icon [icon]="faChevronLeft" class="text-xs"></fa-icon>
+      </div>
+    </div>
+    <div *ngIf="node.expanded && node.children.length > 0" class="mt-2 space-y-2 animate-fade-in-down">
+      <ng-container *ngTemplateOutlet="userNodeTemplate; context: { nodes: node.children }"></ng-container>
+    </div>
+  </div>
+</ng-template>

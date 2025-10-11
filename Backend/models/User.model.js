@@ -7,7 +7,6 @@ const paymentRequestSchema = new mongoose.Schema({
   processedAt: { type: Date }
 });
 
-
 const userSchema = new mongoose.Schema({
   username: { type: String, required: true },
   email: { type: String, required: true, unique: true },
@@ -85,9 +84,8 @@ const userSchema = new mongoose.Schema({
   }],
   referralCode: { type: String, unique: true, sparse: true },
   referralBalance: { type: Number, default: 0 },
+  referredBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   paymentRequests: [paymentRequestSchema]
 }, { timestamps: true });
-
-module.exports = mongoose.model('User', userSchema);
 
 module.exports = mongoose.model('User', userSchema);

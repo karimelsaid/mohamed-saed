@@ -7,6 +7,7 @@ const sitemapService = require('../services/sitemap.service');
 
 const PromotionDate = require('../models/PromotionDate.model');
 const PaymentRequest = require('../models/PaymentRequest.model');
+const Referral = require('../models/Referral.model');
 
 // Helper function to generate random barcode string
 function generateRandomBarcode(length = 12) {
@@ -1208,6 +1209,96 @@ async function getPaymentRequests(req, res) {
   }
 }
 
+async function userHierarchy(req, res) {
+  try {
+    const users = await User.find({}, 'username email phone governorate city village referralCode referralBalance role createdAt');
+    const referrals = await Referral.find({}).populate('referrerId', 'username');
+
+    const referralMap = new Map();
+    referrals.forEach(ref => {
+      referralMap.set(ref.referredId.toString(), ref.referrerId);
+    });
+
+    // Get counts for each user
+    const userIds = users.map(u => u._id);
+    const Order = require('../models/Order.model');
+
+    const ordersCounts = await Order.aggregate([
+      { $match: { userId: { $in: userIds } } },
+      { $group: { _id: '$userId', count: { $sum: 1 } } }
+    ]);
+
+    const favoritesCounts = await User.aggregate([
+      { $match: { _id: { $in: userIds } } },
+      { $project: { favoritesCount: { $size: '$favorites' } } }
+    ]);
+
+    const ordersMap = new Map(ordersCounts.map(o => [o._id.toString(), o.count]));
+    const favoritesMap = new Map(favoritesCounts.map(f => [f._id.toString(), f.favoritesCount]));
+
+    const usersWithReferredBy = users.map(user => {
+      const referrer = referralMap.get(user._id.toString());
+      return {
+        _id: user._id,
+        username: user.username,
+        email: user.email,
+        phone: user.phone,
+        governorate: user.governorate,
+        city: user.city,
+        village: user.village,
+        referralCode: user.referralCode,
+        referralBalance: user.referralBalance,
+        role: user.role,
+        createdAt: user.createdAt,
+        ordersCount: ordersMap.get(user._id.toString()) || 0,
+        favoritesCount: favoritesMap.get(user._id.toString()) || 0,
+        referredBy: (referrer && user.role !== 'admin') ? { _id: referrer._id, username: referrer.username } : null
+      };
+    });
+
+    res.json(usersWithReferredBy);
+  } catch (error) {
+    console.error('Error in userHierarchy:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+}
+
+async function getStats(req, res) {
+  try {
+    // Get total users
+    const totalUsers = await User.countDocuments();
+
+    // Get total products from output.json
+    const fs = require('fs');
+    const path = require('path');
+    const outputPath = path.join(__dirname, '..', 'output.json');
+    let totalProducts = 0;
+    if (fs.existsSync(outputPath)) {
+      const products = JSON.parse(fs.readFileSync(outputPath, 'utf-8'));
+      totalProducts = products.length;
+    }
+
+    // For now, set others to 0 as models not available
+    const totalOrders = 0;
+    const totalLikes = 0;
+    const totalCartItems = 0;
+
+    res.json({
+      success: true,
+      stats: {
+        totalUsers,
+        totalProducts,
+        totalOrders,
+        totalLikes,
+        totalCartItems
+      }
+    });
+  } catch (error) {
+    console.error('Error in getStats:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+}
+
 module.exports = {
   upload,
   addProduct,
@@ -1232,5 +1323,7 @@ module.exports = {
   updateProductUpdateRequest,
   getMerchantProducts,
   getMerchantProductsByMerchant,
-  getPaymentRequests
+  getPaymentRequests,
+  userHierarchy,
+  getStats
 };

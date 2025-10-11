@@ -163,6 +163,17 @@ export class AdminDashboardComponent implements OnInit {
   selectedProducts: Set<string> = new Set();
   selectedOrders: Set<string> = new Set();
 
+  // Stats properties
+  totalOrders: number = 0;
+  totalProducts: number = 0;
+  totalLikes: number = 0;
+  totalCartItems: number = 0;
+  totalUsers: number = 0;
+
+  // Filter properties for products
+  filterOptions: string[] = [];
+  currentFilter: string = 'جميع الفئات';
+
   // Icons
   faShoppingCart = faShoppingCart;
   faStore = faStore;
@@ -271,6 +282,7 @@ export class AdminDashboardComponent implements OnInit {
         this.loadOrders();
         this.loadPromotionDates();
         this.loadNotifications();
+        this.loadStats();
       } else {
         this.isAdmin = false;
         this.router.navigate(['/']);
@@ -288,6 +300,9 @@ export class AdminDashboardComponent implements OnInit {
       this.modalServiceShowCancel = modalConfig.showCancel || false;
       this.modalServiceAction = modalConfig.action || null;
     });
+
+    // Initialize filter options
+    this.filterOptions = ['جميع الفئات', ...this.categories];
   }
 
   ngOnDestroy(): void {
@@ -329,6 +344,23 @@ export class AdminDashboardComponent implements OnInit {
     } else if (view === 'userHierarchy') {
       // The component will load its own data
     }
+  }
+
+  loadStats(): void {
+    this.http.get<{ success: boolean; stats: { totalUsers: number; totalProducts: number; totalOrders: number; totalLikes: number; totalCartItems: number } }>(`${this.backendBaseUrl}/admin/stats`).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.totalUsers = response.stats.totalUsers;
+          this.totalProducts = response.stats.totalProducts;
+          this.totalOrders = response.stats.totalOrders;
+          this.totalLikes = response.stats.totalLikes;
+          this.totalCartItems = response.stats.totalCartItems;
+        }
+      },
+      error: (err) => {
+        // Error handled silently
+      }
+    });
   }
 
   loadPromotionDates(): void {

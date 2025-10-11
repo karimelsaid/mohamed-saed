@@ -63,4 +63,10 @@ router.patch('/product-update-requests/:requestId', adminController.updateProduc
 // Route to get all payment requests
 router.get('/payment-requests', adminController.getPaymentRequests);
 
+// Route to get user hierarchy
+router.get('/user-hierarchy', adminController.userHierarchy);
+
+// Route to get admin stats
+router.get('/stats', adminController.getStats);
+
 module.exports = router;

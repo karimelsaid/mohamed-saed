@@ -1,19 +1,9 @@
-# Referral System Implementation
+# TODO: Fix Referral System Issues
 
-## Completed Tasks
-- [x] Create Referral model with referrerId, referredId, status, createdAt
-- [x] Add referralCode and referralBalance fields to User model
-- [x] Implement generateReferralLink function in users.controller.js
-- [x] Implement getReferralBalance function in users.controller.js
-- [x] Implement getReferrals function in users.controller.js
-- [x] Add getReferrals to exports in users.controller.js
-- [x] Add getReferrals route in users.routes.js
-- [x] Add getReferrals to destructuring in users.routes.js
-- [x] Handle referral creation in createAccount and googleSignIn
-- [x] Update referral status and add balance when order is delivered in updateOrderStatus
-
-## Pending Tasks
-- [ ] Test the referral system end-to-end
-- [ ] Add frontend integration for referral links and balance display
-- [ ] Add admin panel to view all referrals
-- [ ] Implement referral balance withdrawal functionality
+## Steps to Complete:
+- [ ] Update googleSignIn in Backend/controllers/users.controller.js to handle referrals like createAccount (create Referral with 'completed', earned:5, update balance, set referredBy).
+- [ ] Enhance getReferrals in Backend/controllers/users.controller.js to filter only 'completed' status and add total earned calculation.
+- [ ] Update userHierarchy in Backend/controllers/admin.controller.js to populate referredId in Referral query and add direct referrals count per user.
+- [ ] Add getAllReferrals function in Backend/controllers/admin.controller.js to fetch all Referrals for admin panel.
+- [ ] Add route /admin/referrals in Backend/routes/admin.routes.js calling getAllReferrals.
+- [ ] Test changes: Restart backend, simulate signup with referral, verify balance, hierarchy, and admin visibility.

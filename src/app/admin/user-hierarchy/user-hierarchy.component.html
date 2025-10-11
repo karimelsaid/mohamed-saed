@@ -1,44 +1,107 @@
 <div class="px-4 sm:px-10 max-w-5xl mx-auto mb-32 md:mb-0">
-  <div class="bg-white dark:bg-gray-800 shadow-2xl rounded-3xl p-6 sm:p-8 border border-gray-200 dark:border-gray-700">
-    <h3 class="text-2xl sm:text-3xl font-extrabold text-center mb-8 text-gray-800 dark:text-gray-200 flex items-center justify-center gap-3">
-      <fa-icon [icon]="faSitemap" class="text-blue-500"></fa-icon>
+  <div class="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 shadow-2xl rounded-3xl p-8 sm:p-10 border border-gray-200 dark:border-gray-700">
+    <h3 class="text-3xl sm:text-4xl font-extrabold text-center mb-10 text-gray-800 dark:text-gray-200 flex items-center justify-center gap-4 shadow-lg rounded-lg p-4 bg-white dark:bg-gray-700">
+      <fa-icon [icon]="faSitemap" class="text-blue-500 text-4xl"></fa-icon>
       هيكلية المستخدمين
     </h3>
 
-    <div *ngIf="isLoading" class="text-center py-12">
-      <fa-icon [icon]="faSpinner" class="text-blue-500 text-4xl"></fa-icon>
+    <div *ngIf="isLoading" class="text-center py-12 animate-fade-in">
+      <fa-icon [icon]="faSpinner" class="text-blue-500 text-4xl animate-pulse"></fa-icon>
       <p class="mt-4 text-gray-600 dark:text-gray-400">جاري تحميل البيانات...</p>
     </div>
 
-    <div *ngIf="!isLoading && userHierarchy.length === 0" class="text-center py-12">
+    <div *ngIf="!isLoading && userHierarchy.length === 0" class="text-center py-12 animate-fade-in shadow-inner rounded-lg bg-gray-50 dark:bg-gray-700">
       <fa-icon [icon]="faExclamationTriangle" class="text-yellow-500 text-4xl"></fa-icon>
       <p class="mt-4 text-gray-500 dark:text-gray-400">لا توجد بيانات لعرضها.</p>
     </div>
 
-    <div *ngIf="!isLoading && userHierarchy.length > 0" class="space-y-2">
-      <ng-container *ngTemplateOutlet="userNodeTemplate; context: { nodes: userHierarchy }"></ng-container>
+    <div class="mb-6 bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md">
+      <div class="flex items-center gap-4 mb-4">
+        <fa-icon [icon]="faSearch" class="text-gray-500"></fa-icon>
+        <input type="text" [(ngModel)]="searchTerm" placeholder="البحث عن مستخدم..." class="flex-1 p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="flex items-center gap-2">
+          <fa-icon [icon]="faCartPlus" class="text-purple-500"></fa-icon>
+          <input type="number" [(ngModel)]="filterOrders" placeholder="عدد الطلبات" class="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+        </div>
+        <div class="flex items-center gap-2">
+          <fa-icon [icon]="faHeart" class="text-red-500"></fa-icon>
+          <input type="number" [(ngModel)]="filterFavorites" placeholder="عدد المفضلة" class="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500">
+        </div>
+      </div>
+    </div>
+
+    <div *ngIf="!isLoading && userHierarchy.length > 0" class="space-y-4">
+      <ng-container *ngTemplateOutlet="userNodeTemplate; context: { nodes: filteredHierarchy }"></ng-container>
     </div>
   </div>
 </div>
 
 <ng-template #userNodeTemplate let-nodes="nodes">
-  <div *ngFor="let node of nodes" class="user-node" [style.margin-right.px]="node.level * 25">
+  <div *ngFor="let node of nodes" class="user-node" [style.margin-left.px]="node.level * 20" [class.border-l-2]="node.level > 0" [class.border-gray-300]="node.level > 0" [class.dark:border-gray-600]="node.level > 0" [class.pl-4]="node.level > 0">
     <div
-      (click)="toggleNode(node)"
-      class="flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors duration-200"
+      class="p-6 rounded-xl shadow-md cursor-pointer transition-all duration-300 border border-gray-200 dark:border-gray-600"
       [ngClass]="{
         'bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50': node.children.length > 0,
-        'bg-gray-50 dark:bg-gray-700/50': node.children.length === 0
-      }">
-      <div class="flex items-center space-x-3 rtl">
-        <span class="font-semibold text-gray-800 dark:text-gray-200">{{ node.username }}</span>
-        <span class="text-sm text-gray-500 dark:text-gray-400">({{ node.email }})</span>
+        'bg-gray-50 dark:bg-gray-700/50': node.children.length === 0,
+        'bg-green-50 dark:bg-green-900/30': node.role === 'admin'
+      }"
+      (click)="toggleNode(node)">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center space-x-4 rtl">
+          <div class="w-12 h-12 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold text-lg">
+            {{ node.username.charAt(0).toUpperCase() }}
+          </div>
+          <div>
+            <span class="font-bold text-gray-800 dark:text-gray-200 text-lg">{{ node.username }}</span>
+            <span class="text-sm text-gray-500 dark:text-gray-400 block">({{ node.email }})</span>
+          </div>
+          <span *ngIf="node.role" class="px-3 py-1 text-xs rounded-full bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-100 flex items-center gap-1">
+            <fa-icon [icon]="faShield" class="text-xs"></fa-icon>
+            {{ node.role }}
+          </span>
+        </div>
+        <div *ngIf="node.children.length > 0" class="text-gray-500 dark:text-gray-400 transition-transform duration-300" [class.rotate-90]="node.expanded">
+          <fa-icon [icon]="faChevronLeft" class="text-lg"></fa-icon>
+        </div>
       </div>
-      <div *ngIf="node.children.length > 0" class="text-gray-500 dark:text-gray-400 transition-transform duration-300" [class.rotate-90]="node.expanded">
-        <fa-icon [icon]="faChevronLeft" class="text-xs"></fa-icon>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm divide-y divide-gray-200 dark:divide-gray-600">
+        <div *ngIf="node.phone" class="flex justify-between py-2">
+          <span class="font-medium text-gray-600 dark:text-gray-400 flex items-center gap-2"><fa-icon [icon]="faPhone" class="text-xs"></fa-icon> الهاتف:</span>
+          <span class="text-gray-800 dark:text-gray-200">{{ node.phone }}</span>
+        </div>
+        <div *ngIf="node.governorate" class="flex justify-between py-2">
+          <span class="font-medium text-gray-600 dark:text-gray-400 flex items-center gap-2"><fa-icon [icon]="faMapMarkerAlt" class="text-xs"></fa-icon> المحافظة:</span>
+          <span class="text-gray-800 dark:text-gray-200">{{ node.governorate }}</span>
+        </div>
+        <div *ngIf="node.city" class="flex justify-between py-2">
+          <span class="font-medium text-gray-600 dark:text-gray-400 flex items-center gap-2"><fa-icon [icon]="faMapMarkerAlt" class="text-xs"></fa-icon> المدينة:</span>
+          <span class="text-gray-800 dark:text-gray-200">{{ node.city }}</span>
+        </div>
+        <div *ngIf="node.village" class="flex justify-between py-2">
+          <span class="font-medium text-gray-600 dark:text-gray-400 flex items-center gap-2"><fa-icon [icon]="faMapMarkerAlt" class="text-xs"></fa-icon> القرية:</span>
+          <span class="text-gray-800 dark:text-gray-200">{{ node.village }}</span>
+        </div>
+        <div *ngIf="node.referralCode" class="flex justify-between py-2">
+          <span class="font-medium text-gray-600 dark:text-gray-400 flex items-center gap-2"><fa-icon [icon]="faCode" class="text-xs"></fa-icon> كود الإحالة:</span>
+          <span class="text-gray-800 dark:text-gray-200">{{ node.referralCode }}</span>
+        </div>
+        <div *ngIf="node.referralBalance !== undefined" class="flex justify-between py-2">
+          <span class="font-medium text-gray-600 dark:text-gray-400 flex items-center gap-2"><fa-icon [icon]="faWallet" class="text-xs"></fa-icon> رصيد الإحالة:</span>
+          <span class="text-gray-800 dark:text-gray-200">{{ node.referralBalance }}</span>
+        </div>
+        <div *ngIf="node.role" class="flex justify-between py-2">
+          <span class="font-medium text-gray-600 dark:text-gray-400 flex items-center gap-2"><fa-icon [icon]="faUser" class="text-xs"></fa-icon> الدور:</span>
+          <span class="text-gray-800 dark:text-gray-200">{{ node.role }}</span>
+        </div>
+        <div *ngIf="node.createdAt" class="flex justify-between py-2">
+          <span class="font-medium text-gray-600 dark:text-gray-400 flex items-center gap-2"><fa-icon [icon]="faCalendar" class="text-xs"></fa-icon> تاريخ الإنشاء:</span>
+          <span class="text-gray-800 dark:text-gray-200">{{ node.createdAt | date:'short' }}</span>
+        </div>
       </div>
     </div>
-    <div *ngIf="node.expanded && node.children.length > 0" class="mt-2 space-y-2 animate-fade-in-down">
+    <div *ngIf="node.expanded && node.children.length > 0" class="mt-4 ml-6 border-l-2 border-gray-300 dark:border-gray-600 pl-4 animate-fade-in">
       <ng-container *ngTemplateOutlet="userNodeTemplate; context: { nodes: node.children }"></ng-container>
     </div>
   </div>

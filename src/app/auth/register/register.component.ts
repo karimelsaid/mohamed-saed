@@ -72,6 +72,10 @@ export class RegisterComponent implements OnInit, AfterViewInit {
     this.route.queryParams.subscribe(params => {
       // إذا كان returnUrl هو صفحة التسجيل نفسها، وجه للصفحة الرئيسية
       this.returnUrl = params['returnUrl'] && !params['returnUrl'].includes('/register') ? params['returnUrl'] : '/';
+      // حفظ رمز الإحالة في localStorage إذا كان موجودًا
+      if (params['ref']) {
+        localStorage.setItem('referralCode', params['ref']);
+      }
     });
 
     if (this.isAndroid) {

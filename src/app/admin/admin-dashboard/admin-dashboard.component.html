@@ -1,5 +1,34 @@
 <h2 class="text-3xl font-extrabold mb-6 pt-10 md:pt-40 text-center text-blue-700 dark:text-blue-400">لوحة تحكم الأدمن</h2>
 
+<!-- Stats Cards -->
+<div class="mx-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
+  <div class="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-4 text-center border border-gray-200 dark:border-gray-700">
+    <fa-icon [icon]="['fas', 'users']" class="text-blue-500 text-2xl mb-2"></fa-icon>
+    <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-200">المستخدمين</h3>
+    <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">{{ totalUsers }}</p>
+  </div>
+  <div class="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-4 text-center border border-gray-200 dark:border-gray-700">
+    <fa-icon [icon]="['fas', 'store']" class="text-green-500 text-2xl mb-2"></fa-icon>
+    <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-200">المنتجات</h3>
+    <p class="text-2xl font-bold text-green-600 dark:text-green-400">{{ totalProducts }}</p>
+  </div>
+  <div class="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-4 text-center border border-gray-200 dark:border-gray-700">
+    <fa-icon [icon]="['fas', 'shopping-cart']" class="text-orange-500 text-2xl mb-2"></fa-icon>
+    <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-200">الطلبات</h3>
+    <p class="text-2xl font-bold text-orange-600 dark:text-orange-400">{{ totalOrders }}</p>
+  </div>
+  <div class="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-4 text-center border border-gray-200 dark:border-gray-700">
+    <fa-icon [icon]="['fas', 'heart']" class="text-red-500 text-2xl mb-2"></fa-icon>
+    <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-200">الإعجابات</h3>
+    <p class="text-2xl font-bold text-red-600 dark:text-red-400">{{ totalLikes }}</p>
+  </div>
+  <div class="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-4 text-center border border-gray-200 dark:border-gray-700">
+    <fa-icon [icon]="['fas', 'cart-plus']" class="text-purple-500 text-2xl mb-2"></fa-icon>
+    <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-200">عناصر السلة</h3>
+    <p class="text-2xl font-bold text-purple-600 dark:text-purple-400">{{ totalCartItems }}</p>
+  </div>
+</div>
+
 <div class="mx-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-6">
   <button (click)="switchView('orders')" [class.bg-blue-600]="currentView === 'orders'" class="px-4 py-3 rounded-lg text-white bg-blue-400 hover:bg-blue-600 transition flex items-center justify-center gap-2 shadow-md hover:shadow-lg">
     <fa-icon [icon]="['fas', 'shopping-cart']"></fa-icon>

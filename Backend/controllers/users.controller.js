@@ -75,6 +75,37 @@ async function createAccount(req, res) {
     });
     await newUser.save();
 
+    // Generate referral code if not present
+    if (!newUser.referralCode) {
+      newUser.referralCode = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      await newUser.save();
+    }
+
+    // Handle referral if referralCode is provided
+    if (referralCode) {
+      const referrer = await User.findOne({ referralCode });
+      if (referrer && referrer._id.toString() !== newUser._id.toString()) {
+        const existingReferral = await Referral.findOne({ referrerId: referrer._id, referredId: newUser._id });
+        if (!existingReferral) {
+          const referral = new Referral({
+            referrerId: referrer._id,
+            referredId: newUser._id,
+            status: 'completed', // Since signup is completed
+            earned: 2
+          });
+          await referral.save();
+
+          // Update referrer's balance
+          referrer.referralBalance += 2;
+          await referrer.save();
+
+          // Set referredBy on new user
+          newUser.referredBy = referrer._id;
+          await newUser.save();
+        }
+      }
+    }
+
     // Return user data for auto-login (similar to login response)
     const responsePayload = {
       message: 'تم إنشاء الحساب بنجاح',
@@ -479,6 +510,12 @@ async function googleSignIn(req, res) {
       });
       await user.save();
 
+      // Generate referral code if not present
+      if (!user.referralCode) {
+        user.referralCode = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        await user.save();
+      }
+
       // Handle referral if referralCode is provided
       if (referralCode) {
         const referrer = await User.findOne({ referralCode });
@@ -488,9 +525,18 @@ async function googleSignIn(req, res) {
             const referral = new Referral({
               referrerId: referrer._id,
               referredId: user._id,
-              status: 'pending'
+              status: 'completed', // Set to completed for rewards
+              earned: 2
             });
             await referral.save();
+
+            // Update referrer's balance
+            referrer.referralBalance += 2;
+            await referrer.save();
+
+            // Set referredBy on new user
+            user.referredBy = referrer._id;
+            await user.save();
           }
         }
       }

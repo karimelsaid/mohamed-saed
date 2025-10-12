@@ -165,7 +165,8 @@ async function login(req, res) {
       }
     });
   } catch (error) {
-    res.status(500).json({ message: 'حدث خطأ أثناء تسجيل الدخول', error });
+    console.error('Error in login:', error);
+    res.status(500).json({ message: 'حدث خطأ أثناء تسجيل الدخول', error: error.message });
   }
 }
 

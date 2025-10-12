@@ -27,6 +27,7 @@ const {
   generateReferralLink,
   getReferralBalance,
   getReferrals,
+  deleteReferral,
   requestPayment
 } = require('../controllers/users.controller'); // Removed getPaymentRequests
 
@@ -82,6 +83,7 @@ router.put('/reset-password', resetPassword);
 router.post('/generate-referral-link', generateReferralLink);
 router.get('/referral-balance/:userId', getReferralBalance);
 router.get('/referrals/:userId', getReferrals);
+router.delete('/referrals/:userId/:referralId', deleteReferral);
 router.post('/request-payment', requestPayment);
 
 module.exports = router;

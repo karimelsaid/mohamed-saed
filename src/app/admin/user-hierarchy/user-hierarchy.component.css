@@ -1,7 +1,57 @@
 /* Add custom styles for the user hierarchy component here */
 
+.tree-container {
+  position: relative;
+}
+
 .user-node {
+  position: relative;
+}
+
+.user-card {
   transition: all 0.3s ease-in-out;
+  cursor: pointer;
+}
+
+.user-card:hover {
+  transform: translateY(-2px);
+}
+
+.tree-line {
+  z-index: 1;
+}
+
+.children-container {
+  position: relative;
+}
+
+.children-container::before {
+  content: '';
+  position: absolute;
+  left: -16px;
+  top: 0;
+  width: 16px;
+  height: 2px;
+  background-color: #d1d5db;
+}
+
+.dark .children-container::before {
+  background-color: #4b5563;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .animate-fade-in-down {
@@ -16,5 +66,25 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .user-card {
+    padding: 1rem;
+  }
+
+  .children-container {
+    margin-left: 1rem;
+  }
+
+  .children-container::before {
+    left: -8px;
+    width: 8px;
+  }
+
+  .tree-line {
+    left: 1.5rem;
   }
 }

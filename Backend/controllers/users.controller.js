@@ -753,6 +753,26 @@ async function getReferrals(req, res) {
   }
 }
 
+async function deleteReferral(req, res) {
+  const { userId, referralId } = req.params;
+
+  try {
+    // First, check if the referral exists and belongs to the user
+    const referral = await Referral.findOne({ _id: referralId, referrerId: userId });
+    if (!referral) {
+      return res.status(404).json({ message: 'Referral not found' });
+    }
+
+    // Delete the referral from the Referral collection
+    await Referral.findByIdAndDelete(referralId);
+
+    res.json({ message: 'Referral deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting referral:', error);
+    res.status(500).json({ message: 'حدث خطأ أثناء حذف الإحالة' });
+  }
+}
+
 /**
  * @deprecated This function has been moved to payment-requests.controller.js and will be removed in a future version.
  * It is kept here temporarily to prevent the server from crashing due to old route references.
@@ -817,5 +837,6 @@ module.exports = {
   generateReferralLink,
   getReferralBalance,
   getReferrals,
+  deleteReferral,
   requestPayment, // Re-add temporarily to avoid crash
 };

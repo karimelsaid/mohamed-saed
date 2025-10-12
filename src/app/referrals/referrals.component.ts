@@ -198,4 +198,23 @@ export class ReferralsComponent implements OnInit {
       );
     }
   }
+
+  deleteReferral(referralId: string) {
+    if (confirm('هل أنت متأكد من حذف هذه الإحالة؟')) {
+      this.authService.user$.pipe(take(1)).subscribe(user => {
+        if (user && user.id) {
+          this.http.delete(`${environment.apiBaseUrl}/users/referrals/${user.id}/${referralId}`).subscribe({
+            next: (response: any) => {
+              alert('تم حذف الإحالة بنجاح');
+              this.loadReferralData(user.id); // Refresh the list
+            },
+            error: (error) => {
+              console.error('Error deleting referral:', error);
+              alert('حدث خطأ أثناء حذف الإحالة');
+            }
+          });
+        }
+      });
+    }
+  }
 }

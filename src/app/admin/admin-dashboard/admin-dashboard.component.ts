@@ -16,7 +16,7 @@ import * as XLSX from 'xlsx';
 import { FreeShippingRulesComponent } from './free-shipping/free-shipping-rules.component';
 import { Subscription } from 'rxjs';
 import { FaIconLibrary, FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { faShoppingCart, faStore, faBook, faPrint, faPlus, faEdit, faTruck, faUsers, faCheckCircle, faMoneyBillWave, faSitemap, faPlusCircle, faImage, faTag, faHashtag, faList, faDollarSign, faAlignLeft, faExclamationTriangle } from '@fortawesome/free-solid-svg-icons';
+import { faShoppingCart, faStore, faBook, faPrint, faPlus, faEdit, faTruck, faUsers, faCheckCircle, faMoneyBillWave, faSitemap, faPlusCircle, faImage, faTag, faHashtag, faList, faDollarSign, faAlignLeft, faExclamationTriangle, faCartPlus, faHeart } from '@fortawesome/free-solid-svg-icons';
 import { PaymentRequestsComponent } from '../payment-requests/payment-requests.component';
 import { UserHierarchyComponent } from '../user-hierarchy/user-hierarchy.component';
 
@@ -271,7 +271,7 @@ export class AdminDashboardComponent implements OnInit {
     library: FaIconLibrary
   ) {
     library.addIcons(
-      faShoppingCart, faStore, faBook, faPrint, faPlus, faEdit, faTruck, faUsers, faCheckCircle, faMoneyBillWave, faSitemap, faPlusCircle, faImage, faTag, faHashtag, faList, faDollarSign, faAlignLeft, faExclamationTriangle
+      faShoppingCart, faStore, faBook, faPrint, faPlus, faEdit, faTruck, faUsers, faCheckCircle, faMoneyBillWave, faSitemap, faPlusCircle, faImage, faTag, faHashtag, faList, faDollarSign, faAlignLeft, faExclamationTriangle, faCartPlus, faHeart
     );
   }
 
@@ -352,7 +352,6 @@ export class AdminDashboardComponent implements OnInit {
         if (response.success) {
           this.totalUsers = response.stats.totalUsers;
           this.totalProducts = response.stats.totalProducts;
-          this.totalOrders = response.stats.totalOrders;
           this.totalLikes = response.stats.totalLikes;
           this.totalCartItems = response.stats.totalCartItems;
         }
@@ -802,6 +801,7 @@ export class AdminDashboardComponent implements OnInit {
           });
 
           this.allOrders = Object.values(groupedOrdersMap).sort((a, b) => new Date(a.orderDate).getTime() - new Date(b.orderDate).getTime());
+          this.totalOrders = this.allOrders.length;
           this.updateOrdersPage();
         },
         error: (err) => {

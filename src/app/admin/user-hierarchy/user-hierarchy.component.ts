@@ -56,6 +56,7 @@ export class UserHierarchyComponent implements OnInit {
   searchTerm: string = '';
   filterOrders: number = 0;
   filterFavorites: number = 0;
+  expandedNodes: Map<string, boolean> = new Map();
 
   constructor(private http: HttpClient, library: FaIconLibrary) {
     // Register icons to ensure they are available in the template
@@ -116,7 +117,8 @@ export class UserHierarchyComponent implements OnInit {
   }
 
   toggleNode(node: UserNode) {
-    node.expanded = !node.expanded;
+    const current = this.expandedNodes.get(node._id) || false;
+    this.expandedNodes.set(node._id, !current);
   }
 
   get filteredHierarchy() {

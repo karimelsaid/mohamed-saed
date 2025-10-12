@@ -1,4 +1,4 @@
-<div class="px-4 sm:px-10 max-w-5xl mx-auto mb-32 md:mb-0">
+<div class="px-4 sm:px-10 max-w-6xl mx-auto mb-32 md:mb-0">
   <div class="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 shadow-2xl rounded-3xl p-8 sm:p-10 border border-gray-200 dark:border-gray-700">
     <h3 class="text-3xl sm:text-4xl font-extrabold text-center mb-10 text-gray-800 dark:text-gray-200 flex items-center justify-center gap-4 shadow-lg rounded-lg p-4 bg-white dark:bg-gray-700">
       <fa-icon [icon]="faSitemap" class="text-blue-500 text-4xl"></fa-icon>
@@ -32,76 +32,100 @@
       </div>
     </div>
 
-    <div *ngIf="!isLoading && userHierarchy.length > 0" class="space-y-4">
+    <div *ngIf="!isLoading && userHierarchy.length > 0" class="tree-container">
       <ng-container *ngTemplateOutlet="userNodeTemplate; context: { nodes: filteredHierarchy }"></ng-container>
     </div>
   </div>
 </div>
 
 <ng-template #userNodeTemplate let-nodes="nodes">
-  <div *ngFor="let node of nodes" class="user-node" [style.margin-left.px]="node.level * 20" [class.border-l-2]="node.level > 0" [class.border-gray-300]="node.level > 0" [class.dark:border-gray-600]="node.level > 0" [class.pl-4]="node.level > 0">
-    <div
-      class="p-6 rounded-xl shadow-md cursor-pointer transition-all duration-300 border border-gray-200 dark:border-gray-600"
-      [ngClass]="{
-        'bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50': node.children.length > 0,
-        'bg-gray-50 dark:bg-gray-700/50': node.children.length === 0,
-        'bg-green-50 dark:bg-green-900/30': node.role === 'admin'
-      }"
-      (click)="toggleNode(node)">
-      <div class="flex items-center justify-between mb-4">
-        <div class="flex items-center space-x-4 rtl">
-          <div class="w-12 h-12 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold text-lg">
-            {{ node.username.charAt(0).toUpperCase() }}
+  <div *ngFor="let node of nodes; let i = index; let isLast = last" class="user-node relative">
+    <!-- Tree line for children -->
+    <div *ngIf="node.children.length > 0 && expandedNodes.get(node._id)" class="tree-line absolute left-6 top-16 w-0.5 bg-gray-300 dark:bg-gray-600 h-full"></div>
+
+    <!-- User Card -->
+    <div class="user-card bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-200 dark:border-gray-700 p-6 mb-4 relative overflow-hidden">
+      <!-- Background gradient for admins -->
+      <div *ngIf="node.role === 'admin'" class="absolute inset-0 bg-gradient-to-r from-green-400 to-blue-500 opacity-10 rounded-2xl"></div>
+
+      <div class="relative z-10">
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center space-x-4 rtl">
+            <!-- Avatar -->
+            <div class="w-14 h-14 bg-gradient-to-br from-blue-500 to-purple-600 text-white rounded-full flex items-center justify-center font-bold text-xl shadow-md">
+              {{ node.username.charAt(0).toUpperCase() }}
+            </div>
+            <!-- User Info -->
+            <div>
+              <h4 class="font-bold text-gray-800 dark:text-gray-200 text-xl">{{ node.username }}</h4>
+              <p class="text-sm text-gray-500 dark:text-gray-400">{{ node.email }}</p>
+              <div class="flex items-center gap-2 mt-1">
+                <span *ngIf="node.role" class="px-2 py-1 text-xs rounded-full bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-100 flex items-center gap-1">
+                  <fa-icon [icon]="faShield" class="text-xs"></fa-icon>
+                  {{ node.role }}
+                </span>
+                <span class="px-2 py-1 text-xs rounded-full bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-100">
+                  {{ node.children.length }} إحالات
+                </span>
+              </div>
+            </div>
           </div>
-          <div>
-            <span class="font-bold text-gray-800 dark:text-gray-200 text-lg">{{ node.username }}</span>
-            <span class="text-sm text-gray-500 dark:text-gray-400 block">({{ node.email }})</span>
+          <!-- Expand/Collapse Button -->
+          <div class="flex items-center gap-4">
+            <div *ngIf="node.referralBalance !== undefined" class="text-center">
+              <p class="text-sm text-gray-500 dark:text-gray-400">رصيد الإحالة</p>
+              <p class="font-bold text-green-600 dark:text-green-400">{{ node.referralBalance }}</p>
+            </div>
+            <button *ngIf="node.children.length > 0" (click)="toggleNode(node)" class="p-2 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+              <fa-icon [icon]="faChevronLeft" class="text-lg transition-transform duration-300" [class.rotate-90]="expandedNodes.get(node._id)"></fa-icon>
+            </button>
           </div>
-          <span *ngIf="node.role" class="px-3 py-1 text-xs rounded-full bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-100 flex items-center gap-1">
-            <fa-icon [icon]="faShield" class="text-xs"></fa-icon>
-            {{ node.role }}
-          </span>
         </div>
-        <div *ngIf="node.children.length > 0" class="text-gray-500 dark:text-gray-400 transition-transform duration-300" [class.rotate-90]="node.expanded">
-          <fa-icon [icon]="faChevronLeft" class="text-lg"></fa-icon>
-        </div>
-      </div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm divide-y divide-gray-200 dark:divide-gray-600">
-        <div *ngIf="node.phone" class="flex justify-between py-2">
-          <span class="font-medium text-gray-600 dark:text-gray-400 flex items-center gap-2"><fa-icon [icon]="faPhone" class="text-xs"></fa-icon> الهاتف:</span>
-          <span class="text-gray-800 dark:text-gray-200">{{ node.phone }}</span>
-        </div>
-        <div *ngIf="node.governorate" class="flex justify-between py-2">
-          <span class="font-medium text-gray-600 dark:text-gray-400 flex items-center gap-2"><fa-icon [icon]="faMapMarkerAlt" class="text-xs"></fa-icon> المحافظة:</span>
-          <span class="text-gray-800 dark:text-gray-200">{{ node.governorate }}</span>
-        </div>
-        <div *ngIf="node.city" class="flex justify-between py-2">
-          <span class="font-medium text-gray-600 dark:text-gray-400 flex items-center gap-2"><fa-icon [icon]="faMapMarkerAlt" class="text-xs"></fa-icon> المدينة:</span>
-          <span class="text-gray-800 dark:text-gray-200">{{ node.city }}</span>
-        </div>
-        <div *ngIf="node.village" class="flex justify-between py-2">
-          <span class="font-medium text-gray-600 dark:text-gray-400 flex items-center gap-2"><fa-icon [icon]="faMapMarkerAlt" class="text-xs"></fa-icon> القرية:</span>
-          <span class="text-gray-800 dark:text-gray-200">{{ node.village }}</span>
-        </div>
-        <div *ngIf="node.referralCode" class="flex justify-between py-2">
-          <span class="font-medium text-gray-600 dark:text-gray-400 flex items-center gap-2"><fa-icon [icon]="faCode" class="text-xs"></fa-icon> كود الإحالة:</span>
-          <span class="text-gray-800 dark:text-gray-200">{{ node.referralCode }}</span>
-        </div>
-        <div *ngIf="node.referralBalance !== undefined" class="flex justify-between py-2">
-          <span class="font-medium text-gray-600 dark:text-gray-400 flex items-center gap-2"><fa-icon [icon]="faWallet" class="text-xs"></fa-icon> رصيد الإحالة:</span>
-          <span class="text-gray-800 dark:text-gray-200">{{ node.referralBalance }}</span>
-        </div>
-        <div *ngIf="node.role" class="flex justify-between py-2">
-          <span class="font-medium text-gray-600 dark:text-gray-400 flex items-center gap-2"><fa-icon [icon]="faUser" class="text-xs"></fa-icon> الدور:</span>
-          <span class="text-gray-800 dark:text-gray-200">{{ node.role }}</span>
-        </div>
-        <div *ngIf="node.createdAt" class="flex justify-between py-2">
-          <span class="font-medium text-gray-600 dark:text-gray-400 flex items-center gap-2"><fa-icon [icon]="faCalendar" class="text-xs"></fa-icon> تاريخ الإنشاء:</span>
-          <span class="text-gray-800 dark:text-gray-200">{{ node.createdAt | date:'short' }}</span>
+
+        <!-- Detailed Info -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+          <div *ngIf="node.phone" class="flex justify-between items-center">
+            <span class="font-medium text-gray-600 dark:text-gray-400 flex items-center gap-2">
+              <fa-icon [icon]="faPhone" class="text-xs"></fa-icon> الهاتف
+            </span>
+            <span class="text-gray-800 dark:text-gray-200">{{ node.phone }}</span>
+          </div>
+          <div *ngIf="node.governorate" class="flex justify-between items-center">
+            <span class="font-medium text-gray-600 dark:text-gray-400 flex items-center gap-2">
+              <fa-icon [icon]="faMapMarkerAlt" class="text-xs"></fa-icon> المحافظة
+            </span>
+            <span class="text-gray-800 dark:text-gray-200">{{ node.governorate }}</span>
+          </div>
+          <div *ngIf="node.city" class="flex justify-between items-center">
+            <span class="font-medium text-gray-600 dark:text-gray-400 flex items-center gap-2">
+              <fa-icon [icon]="faMapMarkerAlt" class="text-xs"></fa-icon> المدينة
+            </span>
+            <span class="text-gray-800 dark:text-gray-200">{{ node.city }}</span>
+          </div>
+          <div *ngIf="node.village" class="flex justify-between items-center">
+            <span class="font-medium text-gray-600 dark:text-gray-400 flex items-center gap-2">
+              <fa-icon [icon]="faMapMarkerAlt" class="text-xs"></fa-icon> القرية
+            </span>
+            <span class="text-gray-800 dark:text-gray-200">{{ node.village }}</span>
+          </div>
+          <div *ngIf="node.referralCode" class="flex justify-between items-center">
+            <span class="font-medium text-gray-600 dark:text-gray-400 flex items-center gap-2">
+              <fa-icon [icon]="faCode" class="text-xs"></fa-icon> كود الإحالة
+            </span>
+            <span class="text-gray-800 dark:text-gray-200 font-mono">{{ node.referralCode }}</span>
+          </div>
+          <div *ngIf="node.createdAt" class="flex justify-between items-center">
+            <span class="font-medium text-gray-600 dark:text-gray-400 flex items-center gap-2">
+              <fa-icon [icon]="faCalendar" class="text-xs"></fa-icon> تاريخ الإنشاء
+            </span>
+            <span class="text-gray-800 dark:text-gray-200">{{ node.createdAt | date:'short' }}</span>
+          </div>
         </div>
       </div>
     </div>
-    <div *ngIf="node.expanded && node.children.length > 0" class="mt-4 ml-6 border-l-2 border-gray-300 dark:border-gray-600 pl-4 animate-fade-in">
+
+    <!-- Children -->
+    <div *ngIf="expandedNodes.get(node._id) && node.children.length > 0" class="children-container ml-8 relative">
       <ng-container *ngTemplateOutlet="userNodeTemplate; context: { nodes: node.children }"></ng-container>
     </div>
   </div>

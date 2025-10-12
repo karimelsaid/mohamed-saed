@@ -1278,10 +1278,26 @@ async function getStats(req, res) {
       totalProducts = products.length;
     }
 
-    // For now, set others to 0 as models not available
-    const totalOrders = 0;
-    const totalLikes = 0;
-    const totalCartItems = 0;
+    // Calculate total orders
+    const ordersResult = await User.aggregate([
+      { $project: { ordersSize: { $size: '$orders' } } },
+      { $group: { _id: null, total: { $sum: '$ordersSize' } } }
+    ]);
+    const totalOrders = ordersResult.length > 0 ? ordersResult[0].total : 0;
+
+    // Calculate total likes (favorites)
+    const likesResult = await User.aggregate([
+      { $project: { favoritesSize: { $size: '$favorites' } } },
+      { $group: { _id: null, total: { $sum: '$favoritesSize' } } }
+    ]);
+    const totalLikes = likesResult.length > 0 ? likesResult[0].total : 0;
+
+    // Calculate total cart items
+    const cartItemsResult = await User.aggregate([
+      { $project: { cartSize: { $size: '$cart' } } },
+      { $group: { _id: null, total: { $sum: '$cartSize' } } }
+    ]);
+    const totalCartItems = cartItemsResult.length > 0 ? cartItemsResult[0].total : 0;
 
     res.json({
       success: true,

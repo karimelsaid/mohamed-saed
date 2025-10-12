@@ -1,4 +1,5 @@
 const User = require('../models/User.model');
+const Referral = require('../models/Referral.model');
 
 exports.requestPayment = async (req, res) => {
   const { userId } = req.body;
@@ -77,6 +78,13 @@ exports.updatePaymentRequestStatus = async (req, res) => {
     let message = '';
     if (status === 'completed') {
       message = `تمت الموافقة على طلب الدفع الخاص بك بمبلغ ${request.amount.toFixed(2)} جنيه.`;
+
+      // Update all referrals to 'paid' status when payment is approved
+      const updateResult = await Referral.updateMany(
+        { referrerId: user._id.toString() },
+        { status: 'paid' }
+      );
+      console.log(`Updated ${updateResult.modifiedCount} referrals to 'paid' for user ${user._id}`);
     } else { // status === 'rejected'
       message = `تم رفض طلب الدفع الخاص بك بمبلغ ${request.amount.toFixed(2)} جنيه.`;
       // Restore balance if rejected

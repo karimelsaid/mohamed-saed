@@ -60,6 +60,16 @@ async function downloadAndConvertExcel(fileId, promotionStartDateStr, promotionE
     return !(product.product_quantity < 0);
   });
 
+  // Preload all merchant products and merchants for fast lookup
+  const Product = require('../models/Product.model');
+  const User = require('../models/User.model');
+
+  const allMerchantProducts = await Product.find({ merchantId: { $exists: true } }, 'product_image merchantId');
+  const merchantProductMap = new Map(allMerchantProducts.map(p => [p.product_image, p.merchantId.toString()]));
+
+  const allMerchants = await User.find({ role: 'merchant' }, '_id username');
+  const merchantMap = new Map(allMerchants.map(m => [m._id.toString(), m.username]));
+
   const updatedData = [];
   for (const product of filteredJson) {
     const product_id = product.products_id;
@@ -80,29 +90,19 @@ async function downloadAndConvertExcel(fileId, promotionStartDateStr, promotionE
 
     product.product_image = product_id;
 
-    // Check if this is a merchant product by looking it up in the database
-    const Product = require('../models/Product.model');
-    const User = require('../models/User.model');
-
-    try {
-      const dbProduct = await Product.findOne({ product_image: product_id + '.webp' });
-      if (dbProduct && dbProduct.merchantId) {
-        // This is a merchant product, get merchant username
-        const merchant = await User.findById(dbProduct.merchantId);
-        if (merchant) {
-          const sanitizedUsername = merchant.username.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
-          product.image_path = `/uploads/books/merchant_${sanitizedUsername}/${product_id}/${product_id}.webp`;
-        } else {
-          // Merchant not found, fallback to admin path
-          product.image_path = `/uploads/books/admin__karim_mohamed__/${product_id}/${product_id}.webp`;
-        }
+    // Check if this is a merchant product using preloaded maps
+    const merchantId = merchantProductMap.get(product_id + '.webp');
+    if (merchantId) {
+      const merchantUsername = merchantMap.get(merchantId);
+      if (merchantUsername) {
+        const sanitizedUsername = merchantUsername.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
+        product.image_path = `/uploads/books/merchant_${sanitizedUsername}/${product_id}/${product_id}.webp`;
       } else {
-        // This is an admin product
+        // Merchant not found, fallback to admin path
         product.image_path = `/uploads/books/admin__karim_mohamed__/${product_id}/${product_id}.webp`;
       }
-    } catch (error) {
-      console.error('Error checking product merchant:', error);
-      // Fallback to admin path on error
+    } else {
+      // This is an admin product
       product.image_path = `/uploads/books/admin__karim_mohamed__/${product_id}/${product_id}.webp`;
     }
 

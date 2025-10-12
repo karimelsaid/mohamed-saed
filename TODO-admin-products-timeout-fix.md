@@ -10,9 +10,9 @@
 - Optionally increase nginx proxy_read_timeout to 120s as fallback.
 
 ## Steps
-- [ ] Modify `downloadAndConvertExcel` to preload merchant products map.
-- [ ] Replace individual DB queries with map lookups.
-- [ ] Update nginx config to increase proxy_read_timeout if needed.
+- [x] Modify `downloadAndConvertExcel` to preload merchant products map.
+- [x] Replace individual DB queries with map lookups.
+- [x] Skipped nginx timeout increase as optimization should suffice.
 - [ ] Test the endpoint to ensure it responds within timeout.
 - [ ] Monitor performance and adjust cache time if necessary.
 

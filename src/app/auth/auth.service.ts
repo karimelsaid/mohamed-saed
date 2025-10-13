@@ -191,6 +191,10 @@ export class AuthService {
     this.cartBookIds.next([]);
   }
 
+  clearCart(): void {
+    this.cartBookIds.next([]);
+  }
+
   getUserProfile(userId: string) {
     return this.http.get<User>(`${this.apiUrl}/users/profile/${userId}`);
   }

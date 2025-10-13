@@ -352,11 +352,16 @@
         <div class="text-6xl mb-4 animate-pulse">💳</div>
         <h3 class="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-4">تم الشراء بنجاح!</h3>
         <p class="text-gray-600 dark:text-gray-400 mb-6 leading-relaxed">سيتم توجيهك إلى صفحة الدفع الآمنة لحظياً. يرجى عدم إغلاق الصفحة أو الضغط مرة أخرى.</p>
-        <div class="flex flex-col sm:flex-row gap-3 justify-center">
-          <button (click)="executePurchase()" class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 px-6 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg font-semibold">
-            متابعة إلى الدفع
-          </button>
-          <button (click)="cancelPurchase()" class="bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-gray-200 py-3 px-6 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-700 transition-colors shadow-md">
+        <div class="flex flex-col gap-3 justify-center">
+          <div class="flex flex-col sm:flex-row gap-3 justify-center">
+            <button (click)="executePurchase()" class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-2 px-4 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg font-semibold">
+              متابعة إلى الدفع
+            </button>
+            <button (click)="executeCashOnDelivery()" class="bg-gradient-to-r from-green-600 to-green-700 text-white py-2 px-4 rounded-lg hover:from-green-700 hover:to-green-800 transition-all shadow-lg font-semibold">
+              دفع عند الإستلام
+            </button>
+          </div>
+          <button (click)="cancelPurchase()" class="bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-gray-200 py-2 px-4 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-700 transition-colors shadow-md">
             إلغاء
           </button>
         </div>

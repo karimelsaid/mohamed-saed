@@ -540,6 +540,64 @@ executePurchase(): void {
     this.isProcessing = false;
   }
 
+  executeCashOnDelivery(): void {
+    this.showPurchaseConfirmation = false;
+
+    const purchasedItems = this.cartItems
+      .filter(item => item.product_quantity > 0);
+
+    const purchasedBookIds = purchasedItems.map(item => item.products_id);
+
+    this.authService.user$.pipe(take(1)).subscribe(currentUser => {
+      if (currentUser) {
+        console.log('[Checkout] Preparing COD order data...');
+        const referralCode = localStorage.getItem('referralCode');
+        const bookId = localStorage.getItem('referralBookId');
+        console.log(`[Checkout] Retrieved from localStorage - referralCode: ${referralCode}, bookId: ${bookId}`);
+        const orderData = {
+          userId: currentUser.id,
+          products: purchasedItems.map(item => ({
+            bookId: item.products_id,
+            bookName: item.product_name,
+            quantity: item.quantity || 1,
+            price: parseFloat(item.product_price)
+          })),
+          shippingCost: this.shippingCost,
+          totalAmount: this.totalPrice,
+          merchantId: purchasedItems[0]?.merchantId,
+          isPickup: this.isPickup,
+          pickupLocation: this.isPickup ? this.pickupLocation : null,
+          referralCode: referralCode,
+          bookId: bookId, // This is the products_id from localStorage
+          paymentMethod: 'cod' // Add payment method for COD
+        };
+
+        console.log('[Checkout] Submitting COD order with data:', orderData);
+        this.dataService.submitOrder(orderData).subscribe({
+          next: (response: any) => {
+            // Clear referral data after successful order submission
+            if (referralCode) {
+              localStorage.removeItem('referralCode');
+              localStorage.removeItem('referralBookId');
+            }
+
+
+
+            // Close modal and redirect to requests page
+            this.onClose();
+            window.location.href = '/requests';
+          },
+          error: (err) => {
+            alert('حدث خطأ أثناء إتمام الشراء، يرجى المحاولة مرة أخرى');
+            this.isProcessing = false;
+          }
+        });
+      } else {
+        alert('يجب تسجيل الدخول لإتمام الشراء');
+      }
+    });
+  }
+
   getBookImageUrl(book: any): string {
     let imagePath = book.product_image ? String(book.product_image) : '';
     if (!imagePath) {

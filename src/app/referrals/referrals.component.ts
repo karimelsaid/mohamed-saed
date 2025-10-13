@@ -1,7 +1,7 @@
 import { Component, OnInit, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { Router } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { faCopy, faShareAlt, faMoneyBillWave, faLink, faTimes, faGlobe } from '@fortawesome/free-solid-svg-icons';
 import { AuthService } from '../auth/auth.service';
@@ -15,12 +15,14 @@ import { switchMap, take } from 'rxjs/operators';
 @Component({
   selector: 'app-referrals',
   standalone: true,
-  imports: [CommonModule, FontAwesomeModule, FormsModule],
+  imports: [CommonModule, FontAwesomeModule, FormsModule, RouterModule],
   templateUrl: './referrals.component.html',
   styleUrls: ['./referrals.component.css']
 })
 export class ReferralsComponent implements OnInit {
+  decodeURIComponent = decodeURIComponent;
   @Output() closeModalEvent = new EventEmitter<void>();
+  @Output() closeAllModalsEvent = new EventEmitter<void>();
 
   faCopy = faCopy;
   faShareAlt = faShareAlt;
@@ -146,11 +148,11 @@ export class ReferralsComponent implements OnInit {
 
   generateGeneralReferralLink() {
     this.authService.user$.pipe(take(1)).subscribe(user => {
-      if (user && user.referralCode) {
+      if (user && this.referralCode) {
         // The base URL of your application
         const baseUrl = window.location.origin;
         // Construct the general referral link for registration
-        this.referralLink = `${baseUrl}/register?ref=${user.referralCode}`;
+        this.referralLink = `${baseUrl}/register?ref=${this.referralCode}`;
       } else {
         alert('لا يمكن إنشاء رابط الإحالة. الرجاء المحاولة مرة أخرى.');
         console.error('User or referral code is missing.');
@@ -160,16 +162,21 @@ export class ReferralsComponent implements OnInit {
 
 
   copyLink() {
-    navigator.clipboard.writeText(this.referralLink);
+    const decodedUrl = decodeURIComponent(this.referralLink);
+    navigator.clipboard.writeText(decodedUrl);
     alert('تم نسخ الرابط!');
   }
 
   shareLink() {
     if (navigator.share) {
+      const isGeneralReferral = this.referralLink.includes('/register?ref=');
+      const urlObj = new URL(this.referralLink);
+      const decodedPathname = decodeURIComponent(urlObj.pathname);
+      const decodedUrl = urlObj.origin + decodedPathname + urlObj.search;
       navigator.share({
-        title: 'شارك هذا الكتاب',
-        text: 'تحقق من هذا الكتاب المثير!',
-        url: this.referralLink
+        title: isGeneralReferral ? 'انضم إلى موقعنا' : 'شارك هذا الكتاب',
+        text: isGeneralReferral ? 'انضم إلى موقعنا واحصل على عروض رائعة!' : 'تحقق من هذا الكتاب المثير!',
+        url: decodedUrl
       });
     } else {
       this.copyLink();
@@ -180,6 +187,10 @@ export class ReferralsComponent implements OnInit {
     this.referralLink = '';
     this.currentBookId = '';
     this.closeModalEvent.emit();
+  }
+
+  closeAllModals() {
+    this.closeAllModalsEvent.emit();
   }
 
   copyId(bookId: string) {

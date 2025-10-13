@@ -85,6 +85,14 @@ const userSchema = new mongoose.Schema({
   referralCode: { type: String, unique: true, sparse: true },
   referralBalance: { type: Number, default: 0 },
   referredBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  urgencyRequests: [{
+    bookId: { type: String, required: true },
+    bookName: { type: String, required: true },
+    merchantId: { type: String },
+    merchantName: { type: String },
+    requestedAt: { type: Date, default: Date.now },
+    status: { type: String, default: 'pending', enum: ['pending', 'fulfilled'] }
+  }],
   paymentRequests: [paymentRequestSchema]
 }, { timestamps: true });
 

@@ -774,6 +774,107 @@ async function deleteReferral(req, res) {
   }
 }
 
+async function submitUrgencyRequest(req, res) {
+  const { userId, bookId, bookName, merchantId, merchantName } = req.body;
+
+  if (!userId || !bookId || !bookName) {
+    return res.status(400).json({ message: 'userId, bookId, and bookName are required' });
+  }
+
+  try {
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: 'المستخدم غير موجود' });
+
+    // Check if urgency request already exists for this book
+    const existingRequest = user.urgencyRequests.find(req => req.bookId === bookId && req.status === 'pending');
+    if (existingRequest) {
+      return res.status(400).json({ message: 'لقد قمت بطلب استعجال لهذا الكتاب من قبل' });
+    }
+
+    user.urgencyRequests.push({
+      bookId,
+      bookName,
+      merchantId,
+      merchantName,
+      requestedAt: new Date(),
+      status: 'pending'
+    });
+
+    await user.save();
+    res.status(200).json({ message: 'تم إرسال طلب الاستعجال بنجاح' });
+  } catch (error) {
+    console.error('Error submitting urgency request:', error);
+    res.status(500).json({ message: 'حدث خطأ أثناء إرسال طلب الاستعجال', error });
+  }
+}
+
+// New controller to get all urgency requests from all users
+async function getAllUrgencyRequests(req, res) {
+  try {
+    const users = await User.find({}, 'urgencyRequests username');
+    let allUrgencyRequests = [];
+    users.forEach(user => {
+      if (user.urgencyRequests && user.urgencyRequests.length > 0) {
+        allUrgencyRequests = allUrgencyRequests.concat(user.urgencyRequests.map(req => ({
+          _id: req._id,
+          userId: user._id,
+          username: user.username,
+          bookId: req.bookId,
+          bookName: req.bookName,
+          merchantId: req.merchantId,
+          merchantName: req.merchantName,
+          requestedAt: req.requestedAt,
+          status: req.status
+        })));
+      }
+    });
+    res.status(200).json(allUrgencyRequests);
+  } catch (error) {
+    console.error('Error fetching urgency requests:', error);
+    res.status(500).json({ message: 'حدث خطأ أثناء جلب طلبات الاستعجال', error });
+  }
+}
+
+// Controller to update the status of an urgency request
+async function updateUrgencyRequestStatus(req, res) {
+  const { userId, requestId } = req.params;
+  const { status } = req.body;
+
+  if (!['pending', 'fulfilled'].includes(status)) {
+    return res.status(400).json({ message: 'الحالة يجب أن تكون pending أو fulfilled' });
+  }
+
+  try {
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'المستخدم غير موجود' });
+    }
+
+    const urgencyRequest = user.urgencyRequests.id(requestId);
+    if (!urgencyRequest) {
+      return res.status(404).json({ message: 'طلب الاستعجال غير موجود' });
+    }
+
+    urgencyRequest.status = status;
+
+    // Add notification to user
+    user.notifications.push({
+      message: status === 'fulfilled' ? `تم توفير الكتاب "${urgencyRequest.bookName}"` : `تم تحديث حالة طلب الاستعجال للكتاب "${urgencyRequest.bookName}"`,
+      type: 'urgency',
+      read: false,
+      createdAt: new Date(),
+      relatedId: requestId
+    });
+
+    await user.save();
+
+    res.status(200).json({ message: 'تم تحديث حالة طلب الاستعجال بنجاح' });
+  } catch (error) {
+    console.error('Error updating urgency request status:', error);
+    res.status(500).json({ message: 'حدث خطأ أثناء تحديث حالة طلب الاستعجال', error });
+  }
+}
+
 /**
  * @deprecated This function has been moved to payment-requests.controller.js and will be removed in a future version.
  * It is kept here temporarily to prevent the server from crashing due to old route references.
@@ -839,5 +940,8 @@ module.exports = {
   getReferralBalance,
   getReferrals,
   deleteReferral,
+  submitUrgencyRequest,
+  getAllUrgencyRequests,
+  updateUrgencyRequestStatus,
   requestPayment, // Re-add temporarily to avoid crash
 };

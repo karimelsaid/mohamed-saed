@@ -1,7 +1,14 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   darkMode: 'class', // Enable class-based dark mode
-  content: ['./src/**/*.{html,ts}'],
+  content: [
+    './src/**/*.{html,ts}',
+  ],
+  // Add safelist to prevent purging of dynamically used classes or complex animations
+  safelist: [
+    { pattern: /bg-(blue|gray|red|green|yellow)-(100|200|300|400|500|600|700|800|900)/ },
+    { pattern: /text-(blue|gray|red|green|yellow)-(100|200|300|400|500|600|700|800|900)/ },
+  ],
   theme: {
     extend: {
       animation: {
@@ -17,4 +24,3 @@ module.exports = {
   },
   plugins: [],
 }
-

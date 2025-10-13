@@ -183,6 +183,12 @@ export class AccountModalComponent implements OnInit {
     this.cdRef.detectChanges(); // Force change detection
   }
 
+  handleCloseAllModals() {
+    this.showReferralModal = false;
+    this.show = false;
+    this.modalClosed.emit();
+  }
+
   goToProfile() {
     this.closeModal();
     this.router.navigate(['/profile']);

@@ -93,6 +93,9 @@
           <button *ngIf="book.product_quantity > 0" (click)="onBuyNowClick()" class="w-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 dark:from-blue-700 dark:via-indigo-700 dark:to-purple-700 text-white px-8 py-4 rounded-xl hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 dark:hover:from-blue-800 dark:hover:via-indigo-800 dark:hover:to-purple-800 transition-all duration-300 transform hover:scale-105 shadow-xl font-bold text-lg animate-pulse">
             اشترِ الآن واحصل على الخصم!
           </button>
+          <button *ngIf="book.product_quantity == 0" (click)="requestUrgency()" class="w-full bg-gradient-to-r from-orange-500 to-red-500 dark:from-orange-600 dark:to-red-600 text-white px-8 py-4 rounded-xl hover:from-orange-600 hover:to-red-600 dark:hover:from-orange-700 dark:hover:to-red-700 transition-all duration-300 transform hover:scale-105 shadow-xl font-bold text-lg animate-pulse">
+            طلب استعجال التوفر
+          </button>
         </div>
       </div>
     </div>

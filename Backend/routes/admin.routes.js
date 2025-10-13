@@ -69,4 +69,13 @@ router.get('/user-hierarchy', adminController.userHierarchy);
 // Route to get admin stats
 router.get('/stats', adminController.getStats);
 
+// Route to get all urgency requests
+router.get('/urgency-requests', adminController.getAllUrgencyRequests);
+
+// Route to update urgency request status
+router.patch('/urgency-requests/:requestId', adminController.updateUrgencyRequestStatus);
+
+// Route to delete urgency request
+router.delete('/urgency-requests/:requestId', adminController.deleteUrgencyRequest);
+
 module.exports = router;

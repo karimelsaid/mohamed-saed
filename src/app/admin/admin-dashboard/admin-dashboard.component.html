@@ -1,7 +1,7 @@
 <h2 class="text-3xl font-extrabold mb-6 pt-10 md:pt-40 text-center text-blue-700 dark:text-blue-400">لوحة تحكم الأدمن</h2>
 
 <!-- Stats Cards -->
-<div class="mx-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
+<div class="mx-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
   <div class="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-4 text-center border border-gray-200 dark:border-gray-700">
     <fa-icon [icon]="['fas', 'users']" class="text-blue-500 text-2xl mb-2"></fa-icon>
     <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-200">المستخدمين</h3>
@@ -74,6 +74,10 @@
     <fa-icon [icon]="['fas', 'sitemap']"></fa-icon>
     هيكلية المستخدمين
   </button>
+  <button (click)="switchView('urgencyRequests')" [class.bg-blue-600]="currentView === 'urgencyRequests'" class="px-4 py-3 rounded-lg text-white bg-blue-400 hover:bg-blue-600 transition flex items-center justify-center gap-2 shadow-md hover:shadow-lg">
+    <fa-icon [icon]="['fas', 'exclamation-triangle']"></fa-icon>
+    طلبات الطوارئ
+  </button>
 </div>
 
 <div class="promotion-date-controls my-6 max-w-md mx-auto p-4 border rounded bg-gray-50 dark:bg-gray-800">
@@ -94,6 +98,7 @@
       </button>
   </div>
 </div>
+</div>  
 
 <!-- Component Modal Dialog -->
 <app-modal-dialog
@@ -122,7 +127,6 @@
   (cancelled)="closeModalService()"
   (closed)="closeModalService()">
 </app-modal-dialog>
-</div>
 
 <div *ngIf="currentView === 'paymentRequests'" class="mb-28 md:mb-0">
   <app-payment-requests></app-payment-requests>
@@ -989,5 +993,66 @@
     <button (click)="prevPrintOrdersPage()" [disabled]="printOrdersPage === 1" class="px-3 py-1 bg-gray-300 dark:bg-gray-600 rounded disabled:opacity-50">السابق</button>
     <span class="text-gray-900 dark:text-gray-200">صفحة {{ printOrdersPage }}</span>
     <button (click)="nextPrintOrdersPage()" [disabled]="printOrders.length < printOrdersPageSize" class="px-3 py-1 bg-gray-300 dark:bg-gray-600 rounded disabled:opacity-50">التالي</button>
+  </div>
+</div>
+
+<!-- عرض طلبات الطوارئ -->
+<div *ngIf="currentView === 'urgencyRequests'" class="px-2 sm:px-10 mb-32 md:mb-0">
+  <h3 class="text-xl font-bold mb-4 text-gray-900 dark:text-gray-200">طلبات الطوارئ</h3>
+  <!-- Table for medium and larger screens -->
+  <table class="min-w-full bg-white dark:bg-gray-800 rounded-lg shadow-md text-sm mx-auto hidden sm:table">
+    <thead>
+      <tr class="bg-blue-100 dark:bg-[#0a1325] text-blue-700 dark:text-blue-400 uppercase text-xs font-semibold">
+        <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">اسم الكتاب</th>
+        <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">التاجر</th>
+        <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">صاحب الطلب</th>
+        <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">تم التنفيذ</th>
+        <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">تاريخ الطلب</th>
+      </tr>
+    </thead>
+    <tbody *ngIf="urgencyRequests.length > 0">
+      <tr *ngFor="let request of urgencyRequests; let i = index" [ngClass]="{'bg-blue-50 dark:bg-[#0a1325]': i % 2 === 0, 'bg-white dark:bg-gray-800': i % 2 !== 0}">
+        <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700">{{ request.bookName }}</td>
+        <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700">{{ request.merchantName || 'غير محدد' }}</td>
+        <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700">{{ request.username }}</td>
+        <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700">
+          <button
+            (click)="toggleFulfilled(request)"
+            class="px-3 py-1 rounded text-white"
+            [ngClass]="request.fulfilled ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'"
+          >
+            {{ request.fulfilled ? 'إلغاء التنفيذ' : 'تنفيذ' }}
+          </button>
+        </td>
+        <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700">{{ formatOrderDate(request.requestedAt) }}</td>
+      </tr>
+    </tbody>
+    <p *ngIf="urgencyRequests.length === 0" class="text-center text-gray-500 dark:text-gray-400 py-6">لا توجد طلبات طوارئ حالياً</p>
+  </table>
+
+  <!-- List for small screens -->
+  <div class="sm:hidden space-y-4">
+    <div *ngFor="let request of urgencyRequests; let i = index" [ngClass]="{'bg-blue-50 dark:bg-[#0a1325]': i % 2 === 0, 'bg-white dark:bg-gray-800': i % 2 !== 0}" class="rounded-lg p-4 shadow-md dark:shadow-lg">
+      <div><strong>اسم الكتاب:</strong> {{ request.bookName }}</div>
+      <div><strong>التاجر:</strong> {{ request.merchantName || 'غير محدد' }}</div>
+      <div><strong>صاحب الطلب:</strong> {{ request.username }}</div>
+      <div>
+        <strong>تم التنفيذ:</strong>
+        <input type="checkbox" [checked]="request.fulfilled" (click)="$event.preventDefault(); toggleFulfilled(request)" />
+      </div>
+      <div><strong>تاريخ الطلب:</strong> {{ formatOrderDate(request.requestedAt) }}</div>
+      <div class="mt-2">
+        <button (click)="deleteUrgencyRequestWithModal(request._id, request.userId)" class="bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 text-white px-3 py-1 rounded w-full">
+          حذف
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pagination controls for urgencyRequests -->
+  <div class="flex justify-center mt-4 space-x-4 mb-32 md:mb-0">
+    <button (click)="prevUrgencyRequestsPage()" [disabled]="urgencyRequestsPage === 1" class="px-3 py-1 bg-gray-300 dark:bg-gray-600 rounded disabled:opacity-50">السابق</button>
+    <span class="text-gray-900 dark:text-gray-200">صفحة {{ urgencyRequestsPage }} من {{ totalUrgencyRequestsPages() }}</span>
+    <button (click)="nextUrgencyRequestsPage()" [disabled]="urgencyRequests.length < urgencyRequestsPageSize" class="px-3 py-1 bg-gray-300 dark:bg-gray-600 rounded disabled:opacity-50">التالي</button>
   </div>
 </div>

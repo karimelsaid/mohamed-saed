@@ -1315,6 +1315,143 @@ async function getStats(req, res) {
   }
 }
 
+async function getAllUrgencyRequests(req, res) {
+  try {
+    const usersWithRequests = await User.find({ 'urgencyRequests.0': { $exists: true } })
+      .select('username urgencyRequests')
+      .lean();
+
+    const urgencyRequests = usersWithRequests.flatMap(user =>
+      user.urgencyRequests.map(req => ({
+        _id: req._id,
+        bookId: req.bookId,
+        bookName: req.bookName,
+        merchantId: req.merchantId,
+        merchantName: req.merchantName,
+        userId: user._id,
+        username: user.username,
+        requestedAt: req.requestedAt,
+        fulfilled: req.fulfilled
+      }))
+    ).sort((a, b) => new Date(b.requestedAt) - new Date(a.requestedAt));
+
+    res.json({ success: true, urgencyRequests });
+  } catch (error) {
+    console.error('Error fetching urgency requests:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+}
+
+async function updateUrgencyRequestStatus(req, res) {
+  try {
+    const { requestId } = req.params;
+    const { fulfilled } = req.body;
+
+    const user = await User.findOne({ 'urgencyRequests._id': requestId });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Urgency request not found' });
+    }
+
+    const request = user.urgencyRequests.id(requestId);
+    if (!request) {
+      return res.status(404).json({ success: false, message: 'Urgency request not found' });
+    }
+
+    request.fulfilled = fulfilled;
+
+    // If fulfilled, update product quantity in Excel and delete the request
+    if (fulfilled) {
+      const barcode = request.bookId;
+      if (barcode) {
+        // Download current Excel file
+        const fileId = process.env.GOOGLE_DRIVE_FILE_ID;
+        if (!fileId) {
+          return res.status(500).json({ success: false, message: 'Missing Google Drive file ID' });
+        }
+
+        const client = await require('../config/drive').auth.getClient();
+        const drive = require('googleapis').google.drive({ version: 'v3', auth: client });
+
+        const resDrive = await drive.files.get({
+          fileId,
+          alt: 'media',
+        }, { responseType: 'arraybuffer' });
+
+        const buffer = Buffer.from(resDrive.data);
+        const xlsx = require('xlsx');
+        const workbook = xlsx.read(buffer, { type: 'buffer' });
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        let json = xlsx.utils.sheet_to_json(sheet);
+
+        // Find product by barcode and increase quantity by 5
+        const productIndex = json.findIndex(p => {
+          if (!p.products_id) return false;
+          const pId = String(p.products_id).trim();
+          const bId = String(barcode).trim();
+          return pId === bId || Number(pId) === Number(bId) || pId === String(Number(bId)) || String(Number(pId)) === bId;
+        });
+
+        if (productIndex !== -1) {
+          const currentQuantity = parseInt(json[productIndex].product_quantity, 10) || 0;
+          json[productIndex].product_quantity = currentQuantity + 5;
+
+          // Convert JSON back to sheet
+          const newSheet = xlsx.utils.json_to_sheet(json);
+          workbook.Sheets[sheetName] = newSheet;
+
+          // Write workbook to buffer
+          const wbout = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+
+          // Upload updated Excel file back to Google Drive
+          await drive.files.update({
+            fileId,
+            media: {
+              mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+              body: wbout
+            }
+          });
+
+          // Update output.json by re-running downloadAndConvertExcel
+          await downloadAndConvertExcel(fileId);
+
+          // Update the update file to keep in sync
+          await updateExcelFromJson(process.env.GOOGLE_DRIVE_FILE_update);
+        }
+      }
+
+      // Delete the urgency request after fulfilling
+      user.urgencyRequests.pull(requestId);
+    }
+
+    await user.save();
+
+    res.json({ success: true, message: 'Urgency request status updated successfully' });
+  } catch (error) {
+    console.error('Error updating urgency request status:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+}
+
+async function deleteUrgencyRequest(req, res) {
+  try {
+    const { requestId } = req.params;
+
+    const user = await User.findOne({ 'urgencyRequests._id': requestId });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Urgency request not found' });
+    }
+
+    user.urgencyRequests.pull(requestId);
+    await user.save();
+
+    res.json({ success: true, message: 'Urgency request deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting urgency request:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+}
+
 module.exports = {
   upload,
   addProduct,
@@ -1341,5 +1478,8 @@ module.exports = {
   getMerchantProductsByMerchant,
   getPaymentRequests,
   userHierarchy,
-  getStats
+  getStats,
+  getAllUrgencyRequests,
+  updateUrgencyRequestStatus,
+  deleteUrgencyRequest
 };

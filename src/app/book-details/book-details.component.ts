@@ -176,6 +176,48 @@ export class BookDetailsComponent implements OnInit {
     this.showLoginPrompt = false; // إغلاق النافذة العائمة
   }
 
+  requestUrgency(): void {
+    this.authService.isLoggedIn$.subscribe(status => {
+      if (status) {
+        this.submitUrgencyRequest();
+      } else {
+        this.showLoginPrompt = true;
+      }
+    });
+  }
+
+  submitUrgencyRequest(): void {
+    if (!this.book) return;
+
+    this.authService.user$.pipe(take(1)).subscribe(user => {
+      if (!user) {
+        alert('يجب تسجيل الدخول لإرسال طلب استعجال');
+        this.showLoginPrompt = true;
+        return;
+      }
+
+      const urgencyRequest = {
+        userId: user!.id,
+        bookId: this.book!.products_id,
+        bookName: this.book!.product_name,
+        merchantId: this.book!.merchantId || null,
+        merchantName: this.book!.merchantName || null,
+        requestedAt: new Date().toISOString()
+      };
+
+      this.http.post(`${environment.apiBaseUrl}/users/urgency-requests`, urgencyRequest).subscribe({
+        next: (response: any) => {
+          alert('تم إرسال طلب الاستعجال بنجاح. سيتم إشعارك عند توفر الكتاب.');
+        },
+        error: (error: any) => {
+          console.error('Error submitting urgency request:', error);
+          const errorMessage = error.error?.message || 'حدث خطأ أثناء إرسال طلب الاستعجال. يرجى المحاولة مرة أخرى.';
+          alert(errorMessage);
+        }
+      });
+    });
+  }
+
   openAccountModal() {
     if (this.accountModal) {
       this.accountModal.openModal();

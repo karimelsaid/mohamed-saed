@@ -106,6 +106,18 @@ interface PrintOrder {
   fileIndex: number; // Added to fix TypeScript error
 }
 
+interface UrgencyRequest {
+  _id: string;
+  bookId: string;
+  bookName: string;
+  merchantId: string | null;
+  merchantName: string | null;
+  userId: string;
+  username: string;
+  requestedAt: string;
+  fulfilled?: boolean;
+}
+
 @Component({
   selector: 'app-admin-dashboard',
   standalone : true,
@@ -129,7 +141,7 @@ export class AdminDashboardComponent implements OnInit {
   allOrders: GroupedOrder[] = [];
   requestedBooks: RequestedBook[] = [];
   isAdmin: boolean = false; // Add paymentRequests to the type union
-  currentView: 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' = 'orders';
+  currentView: 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' = 'orders';
 
   manualPromotionStartDate: string = '';
   manualPromotionEndDate: string = '';
@@ -147,6 +159,13 @@ export class AdminDashboardComponent implements OnInit {
   printOrdersPageSize: number = 10;
 
   printOrders: PrintOrder[] = [];
+
+  // Pagination state for urgencyRequests
+  urgencyRequestsPage: number = 1;
+  urgencyRequestsPageSize: number = 10;
+
+  urgencyRequests: UrgencyRequest[] = [];
+  allUrgencyRequests: UrgencyRequest[] = [];
 
   allProducts: Product[] = [];
   originalProducts: Product[] = [];
@@ -320,7 +339,7 @@ export class AdminDashboardComponent implements OnInit {
     }
   }
 
-  switchView(view: 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy'): void {
+  switchView(view: 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests'): void {
     this.currentView = view;
     if (view === 'orders' || view === 'merchantOrders') {
       this.ordersPage = 1; // Reset page when switching views
@@ -343,6 +362,9 @@ export class AdminDashboardComponent implements OnInit {
       // The component will load its own data
     } else if (view === 'userHierarchy') {
       // The component will load its own data
+    } else if (view === 'urgencyRequests') {
+      this.urgencyRequestsPage = 1;
+      this.loadUrgencyRequests();
     }
   }
 
@@ -907,6 +929,46 @@ export class AdminDashboardComponent implements OnInit {
         // Error handled silently
       }
     });
+  }
+
+  loadUrgencyRequests(): void {
+    this.http.get<{ success: boolean; urgencyRequests: UrgencyRequest[] }>(`${this.backendBaseUrl}/admin/urgency-requests`).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.allUrgencyRequests = response.urgencyRequests;
+          this.updateUrgencyRequestsPage();
+        }
+      },
+      error: (err) => {
+        // Error handled silently
+      }
+    });
+  }
+
+  updateUrgencyRequestsPage(): void {
+    const start = (this.urgencyRequestsPage - 1) * this.urgencyRequestsPageSize;
+    const end = this.urgencyRequestsPage * this.urgencyRequestsPageSize;
+    this.urgencyRequests = this.allUrgencyRequests.slice(start, end);
+  }
+
+  nextUrgencyRequestsPage(): void {
+    if (this.urgencyRequestsPage < this.totalUrgencyRequestsPages()) {
+      this.urgencyRequestsPage++;
+      this.updateUrgencyRequestsPage();
+      this.scrollToTop();
+    }
+  }
+
+  prevUrgencyRequestsPage(): void {
+    if (this.urgencyRequestsPage > 1) {
+      this.urgencyRequestsPage--;
+      this.updateUrgencyRequestsPage();
+      this.scrollToTop();
+    }
+  }
+
+  totalUrgencyRequestsPages(): number {
+    return Math.ceil(this.allUrgencyRequests.length / this.urgencyRequestsPageSize);
   }
 
   getDownloadUrl(printOrder: PrintOrder): string {
@@ -1608,5 +1670,42 @@ export class AdminDashboardComponent implements OnInit {
 
     // Store the dashboard action for the cancel button
     this.pendingAction = goToDashboardAction;
+  }
+
+  toggleFulfilled(request: UrgencyRequest): void {
+    const newFulfilled = !request.fulfilled;
+    this.http.patch(`${this.backendBaseUrl}/admin/urgency-requests/${request._id}`, { fulfilled: newFulfilled }).subscribe({
+      next: () => {
+        request.fulfilled = newFulfilled;
+        this.showSuccessModal('تم تحديث حالة الطلب بنجاح');
+      },
+      error: (err) => {
+        this.showErrorModal('حدث خطأ أثناء تحديث حالة الطلب');
+      }
+    });
+  }
+
+  deleteUrgencyRequestWithModal(requestId: string, userId: string): void {
+    const action = () => {
+      this.http.delete(`${this.backendBaseUrl}/admin/urgency-requests/${requestId}`).subscribe({
+        next: () => {
+          this.showSuccessModal('تم حذف طلب الطوارئ بنجاح');
+          this.loadUrgencyRequests();
+        },
+        error: (err) => {
+          this.showErrorModal('حدث خطأ أثناء حذف طلب الطوارئ');
+        }
+      });
+    };
+
+    this.openModal(
+      'تأكيد الحذف',
+      'هل أنت متأكد من حذف طلب الطوارئ؟',
+      'warning',
+      'حذف',
+      'إلغاء',
+      true,
+      action
+    );
   }
 }

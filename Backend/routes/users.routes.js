@@ -28,6 +28,9 @@ const {
   getReferralBalance,
   getReferrals,
   deleteReferral,
+  submitUrgencyRequest,
+  getAllUrgencyRequests,
+  updateUrgencyRequestStatus,
   requestPayment
 } = require('../controllers/users.controller'); // Removed getPaymentRequests
 
@@ -84,6 +87,12 @@ router.post('/generate-referral-link', generateReferralLink);
 router.get('/referral-balance/:userId', getReferralBalance);
 router.get('/referrals/:userId', getReferrals);
 router.delete('/referrals/:userId/:referralId', deleteReferral);
+router.post('/urgency-requests', submitUrgencyRequest);
+
+// Add routes for urgency requests
+router.get('/urgency-requests', getAllUrgencyRequests);
+router.patch('/urgency-requests/:userId/:requestId', updateUrgencyRequestStatus);
+
 router.post('/request-payment', requestPayment);
 
 module.exports = router;

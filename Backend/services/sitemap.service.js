@@ -54,9 +54,11 @@ class SitemapService extends EventEmitter {
 
       // Generate sitemap XML content
       const urls = books.map(book => {
-        // Use slugified product_name only for URL
         const slug = slugify(book.product_name || '');
-        const loc = baseUrl + slug;
+        // Handle inconsistent product ID keys ('product_id' or 'products_id')
+        const productId = book.product_id || book.products_id;
+        // Construct the URL with the correct structure: /book/id/slug
+        const loc = `${baseUrl}${productId}/${slug}`;
         const lastmod = new Date().toISOString();
         return `
   <url>

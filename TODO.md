@@ -1,3 +1,0 @@
-- [x] Make account-modal smaller on small screens and add close button at top right
-- [x] Make referrals modal smaller on small screens and add close button at top right
-- [ ] Test the modals on small screens to ensure they appear centered and fully visible

@@ -302,44 +302,87 @@
     </div>
     <!-- Post Office Section -->
     <div *ngIf="isPostOffice" class="mb-4">
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-        <div>
-          <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">المحافظة</label>
-          <input list="postOfficeGovernoratesList" type="text" [(ngModel)]="postOfficeGovernorate" (change)="onPostOfficeGovernorateChange()"
-                 class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 shadow-sm" />
-          <datalist id="postOfficeGovernoratesList">
-            <option *ngFor="let gov of governorates" [value]="gov.governorate_name"></option>
-          </datalist>
+      <div *ngIf="!isEditingPostOffice" class="mb-4">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+          <div>
+            <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">المحافظة</label>
+            <input type="text" [value]="postOfficeGovernorate" disabled
+                   class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 cursor-not-allowed text-gray-900 dark:text-gray-200 shadow-sm" />
+          </div>
+          <div>
+            <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">المدينة</label>
+            <input type="text" [value]="postOfficeCity" disabled
+                   class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 cursor-not-allowed text-gray-900 dark:text-gray-200 shadow-sm" />
+          </div>
+          <div>
+            <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">عنوان أقرب مكتب بريد</label>
+            <input type="text" [value]="postOfficeAddress" disabled
+                   class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 cursor-not-allowed text-gray-900 dark:text-gray-200 shadow-sm" />
+          </div>
         </div>
-        <div>
-          <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">المدينة</label>
-          <input list="postOfficeCitiesList" type="text" [(ngModel)]="postOfficeCity"
-                 class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 shadow-sm" />
-          <datalist id="postOfficeCitiesList">
-            <option *ngFor="let city of postOfficeCities" [value]="city"></option>
-          </datalist>
+        <div class="mb-4">
+          <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">اسم مكتب البريد (اختياري)</label>
+          <input type="text" [value]="postOfficeName" disabled
+                 class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 cursor-not-allowed text-gray-900 dark:text-gray-200 shadow-sm" />
         </div>
-        <div>
-          <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">عنوان أقرب مكتب بريد</label>
-          <input type="text" [(ngModel)]="postOfficeAddress" placeholder="أدخل عنوان أقرب مكتب بريد"
+        <label class="relative flex items-center mt-2 cursor-pointer group">
+          <input type="checkbox" [(ngModel)]="isAddressConfirmed" class="sr-only peer" />
+          <div class="w-5 h-5 border-2 border-gray-300 dark:border-gray-600 rounded mr-3 peer-checked:border-purple-500 peer-checked:bg-purple-500 peer-checked:shadow-md transition-all flex items-center justify-center">
+            <svg class="w-3 h-3 text-white opacity-0 peer-checked:opacity-100 transition-opacity" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+            </svg>
+          </div>
+          <span class="text-gray-900 dark:text-gray-200 peer-checked:text-purple-600 dark:peer-checked:text-purple-400 transition-colors">حدد هذا الخيار إذا كنت متأكدًا من المعلومات</span>
+          <fa-icon [icon]="faHandPointRight" class="ml-2 animate-hand-pointing text-purple-600 dark:text-yellow-400 group-hover:scale-110 transition-transform"></fa-icon>
+        </label>
+        <button
+          *ngIf="!isAddressConfirmed"
+          (click)="onEditPostOffice()"
+          class="mt-2 bg-purple-500 dark:bg-purple-600 text-white py-2 px-4 rounded hover:bg-purple-600 dark:hover:bg-purple-700 transition-colors"
+        >
+          تعديل بيانات مكتب البريد
+        </button>
+      </div>
+      <div *ngIf="isEditingPostOffice" class="mb-4">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+          <div>
+            <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">المحافظة</label>
+            <input list="postOfficeGovernoratesList" type="text" [(ngModel)]="postOfficeGovernorate" (change)="onPostOfficeGovernorateChange()"
+                   class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 shadow-sm" />
+            <datalist id="postOfficeGovernoratesList">
+              <option *ngFor="let gov of governorates" [value]="gov.governorate_name"></option>
+            </datalist>
+          </div>
+          <div>
+            <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">المدينة</label>
+            <input list="postOfficeCitiesList" type="text" [(ngModel)]="postOfficeCity"
+                   class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 shadow-sm" />
+            <datalist id="postOfficeCitiesList">
+              <option *ngFor="let city of postOfficeCities" [value]="city"></option>
+            </datalist>
+          </div>
+          <div>
+            <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">عنوان أقرب مكتب بريد</label>
+            <input type="text" [(ngModel)]="postOfficeAddress" placeholder="أدخل عنوان أقرب مكتب بريد"
+                   class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 shadow-sm" />
+          </div>
+        </div>
+        <div class="mb-4">
+          <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">اسم مكتب البريد (اختياري)</label>
+          <input type="text" [(ngModel)]="postOfficeName" placeholder="أدخل اسم مكتب البريد"
                  class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 shadow-sm" />
+        </div>
+        <div class="flex space-x-4">
+          <button (click)="saveEditPostOffice()"
+                  class="bg-green-600 dark:bg-green-700 text-white py-3 px-6 rounded-lg hover:bg-green-700 dark:hover:bg-green-800 transition-colors shadow-md">
+            حفظ
+          </button>
+          <button (click)="cancelEditPostOffice()"
+                  class="bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-gray-200 py-3 px-6 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-700 transition-colors shadow-md">
+            إلغاء
+          </button>
         </div>
       </div>
-      <div class="mb-4">
-        <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">اسم مكتب البريد (اختياري)</label>
-        <input type="text" [(ngModel)]="postOfficeName" placeholder="أدخل اسم مكتب البريد"
-               class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 shadow-sm" />
-      </div>
-      <label class="relative flex items-center mt-2 cursor-pointer group">
-        <input type="checkbox" [(ngModel)]="isAddressConfirmed" class="sr-only peer" />
-        <div class="w-5 h-5 border-2 border-gray-300 dark:border-gray-600 rounded mr-3 peer-checked:border-purple-500 peer-checked:bg-purple-500 peer-checked:shadow-md transition-all flex items-center justify-center">
-          <svg class="w-3 h-3 text-white opacity-0 peer-checked:opacity-100 transition-opacity" fill="currentColor" viewBox="0 0 20 20">
-            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-          </svg>
-        </div>
-        <span class="text-gray-900 dark:text-gray-200 peer-checked:text-purple-600 dark:peer-checked:text-purple-400 transition-colors">حدد هذا الخيار إذا كنت متأكدًا من المعلومات</span>
-        <fa-icon [icon]="faHandPointRight" class="ml-2 animate-hand-pointing text-purple-600 dark:text-yellow-400 group-hover:scale-110 transition-transform"></fa-icon>
-      </label>
     </div>
     <div class="flex justify-between mt-4">
       <button (click)="previousStep()"

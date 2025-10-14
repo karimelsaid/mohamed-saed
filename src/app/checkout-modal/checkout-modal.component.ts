@@ -46,6 +46,7 @@ export class CheckoutModalComponent implements OnInit {
   postOfficeCity: string = '';
   postOfficeAddress: string = '';
   postOfficeCities: string[] = [];
+  isEditingPostOffice: boolean = false;
 
   private cartItemsLoaded: boolean = false;
   private freeShippingRulesLoaded: boolean = false;
@@ -412,16 +413,25 @@ export class CheckoutModalComponent implements OnInit {
   onDeliveryTypeChange() {
     this.isPickup = this.deliveryType === 'pickup';
     this.isPostOffice = this.deliveryType === 'postOffice';
+    if (this.isPostOffice && this.userProfile) {
+      // Set post office fields to match user profile
+      this.postOfficeGovernorate = this.userProfile!.governorate || '';
+      this.postOfficeCity = this.userProfile!.city || '';
+      this.onPostOfficeGovernorateChange(); // Update cities list
+      this.isEditingPostOffice = false; // Start with disabled fields
+    } else {
+      // Reset post office fields when changing delivery type
+      this.postOfficeName = '';
+      this.postOfficeGovernorate = '';
+      this.postOfficeCity = '';
+      this.postOfficeAddress = '';
+      this.postOfficeCities = [];
+      this.isEditingPostOffice = false;
+    }
     this.calculateShippingCost();
     this.calculateTotalPrice();
     // Reset address confirmation when switching delivery types
     this.isAddressConfirmed = false;
-    // Reset post office fields when changing delivery type
-    this.postOfficeName = '';
-    this.postOfficeGovernorate = '';
-    this.postOfficeCity = '';
-    this.postOfficeAddress = '';
-    this.postOfficeCities = [];
   }
 
   onPostOfficeGovernorateChange() {
@@ -483,14 +493,63 @@ export class CheckoutModalComponent implements OnInit {
     this.isEditingAddress = false;
 
     // Call service to persist changes to backend
-this.dataService.updateUserProfile(this.userProfile).subscribe({
+    this.dataService.updateUserProfile(this.userProfile).subscribe({
       next: () => {
         console.log('User profile updated successfully');
         this.errorMessage = '';
+        // Update post office fields if currently selected
+        if (this.isPostOffice) {
+          this.postOfficeGovernorate = this.userProfile!.governorate || '';
+          this.postOfficeCity = this.userProfile!.city || '';
+          this.onPostOfficeGovernorateChange();
+        }
       },
       error: (error: any) => {
         console.error('Error updating user profile:', error);
         this.errorMessage = 'حدث خطأ أثناء تحديث البيانات، يرجى المحاولة مرة أخرى';
+      }
+    });
+  }
+
+  onEditPostOffice() {
+    this.isEditingPostOffice = true;
+  }
+
+  cancelEditPostOffice() {
+    this.isEditingPostOffice = false;
+    if (this.userProfile) {
+      this.postOfficeGovernorate = this.userProfile.governorate || '';
+      this.postOfficeCity = this.userProfile.city || '';
+      this.onPostOfficeGovernorateChange();
+    }
+  }
+
+  saveEditPostOffice() {
+    if (!this.userProfile) return;
+
+    // Validate governorate and city
+    const govValid = this.governorates.some(g => g.governorate_name === this.postOfficeGovernorate);
+    const cityValid = this.postOfficeCities.includes(this.postOfficeCity);
+
+    if (!govValid || !cityValid) {
+      alert('يرجى اختيار محافظة ومدينة صحيحة');
+      return;
+    }
+
+    // Update userProfile with post office data
+    this.userProfile.governorate = this.postOfficeGovernorate;
+    this.userProfile.city = this.postOfficeCity;
+    this.editedUserProfile = { ...this.userProfile };
+
+    // Call service to persist changes to backend
+    this.dataService.updateUserProfile(this.userProfile).subscribe({
+      next: () => {
+        console.log('User profile updated successfully from post office edit');
+        this.isEditingPostOffice = false;
+      },
+      error: (error: any) => {
+        console.error('Error updating user profile from post office edit:', error);
+        alert('حدث خطأ أثناء تحديث البيانات، يرجى المحاولة مرة أخرى');
       }
     });
   }

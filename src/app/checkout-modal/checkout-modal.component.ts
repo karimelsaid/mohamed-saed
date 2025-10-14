@@ -514,6 +514,18 @@ executePurchase(): void {
       const referralCode = localStorage.getItem('referralCode');
       const bookId = localStorage.getItem('referralBookId');
       console.log(`[Checkout] Retrieved from localStorage - referralCode: ${referralCode}, bookId: ${bookId}`);
+
+      // Construct address dynamically based on delivery type
+      let address = '';
+      if (this.isPickup) {
+        address = this.pickupLocation;
+      } else if (this.isPostOffice) {
+        address = `شحن عبر مكاتب البريد: ${this.postOfficeGovernorate}, ${this.postOfficeCity}, ${this.postOfficeAddress}, اسم المكتب: ${this.postOfficeName}, رقم الهاتف: ${this.userProfile?.phone}`;
+      } else {
+        // Home delivery
+        address = `${this.editedUserProfile?.governorate}, ${this.editedUserProfile?.city}, ${this.editedUserProfile?.village}, رقم الهاتف: ${this.userProfile?.phone}`;
+      }
+
       const orderData = {
         userId: currentUser.id,
         products: purchasedItems.map(item => ({
@@ -525,10 +537,15 @@ executePurchase(): void {
         shippingCost: this.shippingCost,
         totalAmount: this.totalPrice,
         merchantId: purchasedItems[0]?.merchantId,
+        address: address,
         isPickup: this.isPickup,
         pickupLocation: this.isPickup ? this.pickupLocation : null,
         isPostOffice: this.isPostOffice,
+        postOfficeGovernorate: this.isPostOffice ? this.postOfficeGovernorate : null,
+        postOfficeCity: this.isPostOffice ? this.postOfficeCity : null,
+        postOfficeAddress: this.isPostOffice ? this.postOfficeAddress : null,
         postOfficeName: this.isPostOffice ? this.postOfficeName : null,
+        phone: this.userProfile?.phone,
         referralCode: referralCode,
         bookId: bookId // This is the products_id from localStorage
       };
@@ -594,31 +611,48 @@ executePurchase(): void {
 
     const purchasedBookIds = purchasedItems.map(item => item.products_id);
 
-    this.authService.user$.pipe(take(1)).subscribe(currentUser => {
-      if (currentUser) {
-        console.log('[Checkout] Preparing COD order data...');
-        const referralCode = localStorage.getItem('referralCode');
-        const bookId = localStorage.getItem('referralBookId');
-        console.log(`[Checkout] Retrieved from localStorage - referralCode: ${referralCode}, bookId: ${bookId}`);
-        const orderData = {
-          userId: currentUser.id,
-          products: purchasedItems.map(item => ({
-            bookId: item.products_id,
-            bookName: item.product_name,
-            quantity: item.quantity || 1,
-            price: parseFloat(item.product_price)
-          })),
-          shippingCost: this.shippingCost,
-          totalAmount: this.totalPrice,
-          merchantId: purchasedItems[0]?.merchantId,
-          isPickup: this.isPickup,
-          pickupLocation: this.isPickup ? this.pickupLocation : null,
-          isPostOffice: this.isPostOffice,
-          postOfficeName: this.isPostOffice ? this.postOfficeName : null,
-          referralCode: referralCode,
-          bookId: bookId, // This is the products_id from localStorage
-          paymentMethod: 'cod' // Add payment method for COD
-        };
+  this.authService.user$.pipe(take(1)).subscribe(currentUser => {
+    if (currentUser) {
+      console.log('[Checkout] Preparing COD order data...');
+      const referralCode = localStorage.getItem('referralCode');
+      const bookId = localStorage.getItem('referralBookId');
+      console.log(`[Checkout] Retrieved from localStorage - referralCode: ${referralCode}, bookId: ${bookId}`);
+
+      // Construct address dynamically based on delivery type
+      let address = '';
+      if (this.isPickup) {
+        address = this.pickupLocation;
+      } else if (this.isPostOffice) {
+        address = `شحن عبر مكاتب البريد: ${this.postOfficeGovernorate}, ${this.postOfficeCity}, ${this.postOfficeAddress}, اسم المكتب: ${this.postOfficeName}, رقم الهاتف: ${this.userProfile?.phone}`;
+      } else {
+        // Home delivery
+        address = `${this.editedUserProfile?.governorate}, ${this.editedUserProfile?.city}, ${this.editedUserProfile?.village}, رقم الهاتف: ${this.userProfile?.phone}`;
+      }
+
+      const orderData = {
+        userId: currentUser.id,
+        products: purchasedItems.map(item => ({
+          bookId: item.products_id,
+          bookName: item.product_name,
+          quantity: item.quantity || 1,
+          price: parseFloat(item.product_price)
+        })),
+        shippingCost: this.shippingCost,
+        totalAmount: this.totalPrice,
+        merchantId: purchasedItems[0]?.merchantId,
+        address: address,
+        isPickup: this.isPickup,
+        pickupLocation: this.isPickup ? this.pickupLocation : null,
+        isPostOffice: this.isPostOffice,
+        postOfficeGovernorate: this.isPostOffice ? this.postOfficeGovernorate : null,
+        postOfficeCity: this.isPostOffice ? this.postOfficeCity : null,
+        postOfficeAddress: this.isPostOffice ? this.postOfficeAddress : null,
+        postOfficeName: this.isPostOffice ? this.postOfficeName : null,
+        phone: this.userProfile?.phone,
+        referralCode: referralCode,
+        bookId: bookId, // This is the products_id from localStorage
+        paymentMethod: 'cod' // Add payment method for COD
+      };
 
         console.log('[Checkout] Submitting COD order with data:', orderData);
         this.dataService.submitOrder(orderData).subscribe({

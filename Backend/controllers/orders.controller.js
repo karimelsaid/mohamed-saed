@@ -7,7 +7,7 @@ const Referral = require('../models/Referral.model');
 
 exports.submitOrder = async (req, res) => {
   try {
-    const { userId, products, totalAmount, shippingCost, preparationTime: reqPreparationTime, merchantId, isPickup, pickupLocation, referralCode, bookId } = req.body;
+    const { userId, products, totalAmount, shippingCost, preparationTime: reqPreparationTime, merchantId, isPickup, pickupLocation, isPostOffice, referralCode, bookId, address } = req.body;
 
     if (!userId || !products || !totalAmount) {
       return res.status(400).json({ message: 'Missing required fields: userId, products, totalAmount' });
@@ -29,6 +29,13 @@ exports.submitOrder = async (req, res) => {
       village: user.village,
       phone: user.phone
     };
+
+    const postOffice = isPostOffice ? {
+      governorate: req.body.postOfficeGovernorate,
+      city: req.body.postOfficeCity,
+      address: req.body.postOfficeAddress,
+      name: req.body.postOfficeName
+    } : null;
 
     // Get preparationTime from request, or from merchant if merchantId provided
     let preparationTime = reqPreparationTime || 1;
@@ -60,6 +67,8 @@ exports.submitOrder = async (req, res) => {
       isPickup: isPickup || false,
       pickupLocation: isPickup ? pickupLocation : null,
       shippingAddress: isPickup ? null : shippingAddress,
+      postOffice: isPostOffice ? postOffice : null,
+      address: address ? address + ' - ' + user.phone : null,
       status: 'قيد الإنتظار'
     };
 
@@ -184,7 +193,10 @@ exports.getAllOrders = async (req, res) => {
             customerName: user.username,
             email: user.email,
             quantity: product.quantity,
-            address: order.isPickup ? `استلام من المكتبة: ${order.pickupLocation}` : `${order.shippingAddress.governorate}, ${order.shippingAddress.city}, ${order.shippingAddress.village},Phone: ${order.shippingAddress.phone}`, // Add this line
+            address: (() => {
+              const baseAddress = order.isPickup ? `استلام من المكتبة: ${order.pickupLocation}` : order.postOffice ? `شحن عبر مكاتب البريد: ${order.postOffice.governorate}, ${order.postOffice.city}, ${order.postOffice.address}, ${order.postOffice.name ? 'اسم المكتب: ' + order.postOffice.name : ''}` : `${order.shippingAddress.governorate}, ${order.shippingAddress.city}, ${order.shippingAddress.village}`;
+              return baseAddress + ' - ' + user.phone;
+            })(), // Always construct base address and append phone
             status: order.status,
             orderDate: order.date,
             totalAmount: order.totalAmount,  // Added totalAmount here

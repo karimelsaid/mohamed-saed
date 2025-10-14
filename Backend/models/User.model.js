@@ -62,7 +62,14 @@ const userSchema = new mongoose.Schema({
       city: String,
       village: String,
       phone:String
-    }
+    },
+    postOffice: {
+      governorate: String,
+      city: String,
+      address: String,
+      name: String
+    },
+    address: String
   }],
   requestedBooks: [{
     bookName: { type: String, required: true },

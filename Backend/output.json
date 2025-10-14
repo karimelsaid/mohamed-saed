@@ -10644,5 +10644,50 @@
     "rival": true,
     "product_discount_percent": 65,
     "image_path": "/uploads/books/admin__karim_mohamed__/871252938245/871252938245.webp"
+  },
+  {
+    "products_id": "389307234626",
+    "product_name": "شرح العقيدة الطحاوية",
+    "product_price": 399,
+    "price_cost": 420,
+    "product_quantity": 2,
+    "product_category": "روايات وقصص",
+    "product_description": "كتاب يوضح عقيدة أهل السنة والجماعة كما وردت في الكتاب والسنة. يركز الشرح على توضيح أصول الدين والمعتقدات الأساسية في الإسلام بطريقة تجمع بين النصوص الشرعية والأدلة العقلية",
+    "product_image": "389307234626",
+    "promotionEndDate": "2025-10-20T00:00:00.000Z",
+    "product_price_before_discount": 1099,
+    "rival": true,
+    "product_discount_percent": 65,
+    "image_path": "/uploads/books/admin__karim_mohamed__/389307234626/389307234626.webp"
+  },
+  {
+    "products_id": "818300684764",
+    "product_name": "ناقة صالحة",
+    "product_price": 89,
+    "price_cost": 70,
+    "product_quantity": 1,
+    "product_category": "روايات وقصص",
+    "product_description": "رواية قصيرة مستوحاة من أحداث تاريخية في بادية الكويت، تروي قصة حب مستحيلة بين الشاعر دخيل بن أسمر وصالحة آل مهروس",
+    "product_image": "818300684764",
+    "promotionEndDate": "2025-10-20T00:00:00.000Z",
+    "product_price_before_discount": 249,
+    "rival": true,
+    "product_discount_percent": 65,
+    "image_path": "/uploads/books/admin__karim_mohamed__/818300684764/818300684764.webp"
+  },
+  {
+    "products_id": "321838396195",
+    "product_name": "اللؤلؤ والمرجان",
+    "product_price": 449,
+    "price_cost": 430,
+    "product_quantity": 1,
+    "product_category": "كتب دينية",
+    "product_description": "يجمع هذا الكتاب الأحاديث التي اتفق عليها صحيحا الإمامين البخاري ومسلم، وهي أحاديث تعد في أعلى درجات الصحة. ويتميز الكتاب بجمع الأحاديث التي تترابط في موضوع واحد، مع ذكر الفرق بين الروايات المختلفة لتسهيل فهمها وحفظها. ",
+    "product_image": "321838396195",
+    "promotionEndDate": "2025-10-20T00:00:00.000Z",
+    "product_price_before_discount": 1239,
+    "rival": true,
+    "product_discount_percent": 65,
+    "image_path": "/uploads/books/admin__karim_mohamed__/321838396195/321838396195.webp"
   }
 ]

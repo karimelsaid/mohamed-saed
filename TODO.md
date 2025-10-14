@@ -1,8 +1,12 @@
-# TODO: Add Cash on Delivery Option to Checkout Modal
+# TODO: Add Post Office Shipping Option
 
 ## Tasks
-- [ ] Add "دفع عند الإستلام" button in the purchase confirmation modal HTML
-- [ ] Add executeCashOnDelivery method in checkout-modal.component.ts
-- [ ] Update orderData to include paymentMethod: 'cod' for COD orders
-- [ ] Handle COD order submission: submit order, clear referral data, redirect to success page or show success message
-- [ ] Test the COD flow to ensure orders are completed without payment redirect
+- [x] Add `isPostOffice` boolean property to TS component
+- [x] Add `postOfficeName` string property to TS component
+- [x] Update `onDeliveryTypeChange` to reset address confirmation on type change
+- [x] Modify `calculateShippingCost` to use `post_office_cost` when `isPostOffice` is true
+- [x] Update `isAddressComplete` getter to validate `postOfficeName` when `isPostOffice`
+- [ ] Add third radio button for "شحن عبر مكاتب البريد" in HTML
+- [ ] Add input field for post office name in HTML when post office option is selected
+- [x] Update `submitOrder` to include `postOfficeName` in order data
+- [ ] Test the new shipping option functionality

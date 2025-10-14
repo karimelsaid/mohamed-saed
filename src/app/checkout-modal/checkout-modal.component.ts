@@ -37,8 +37,15 @@ export class CheckoutModalComponent implements OnInit {
   isAddressConfirmed: boolean = false;
   isEditingAddress: boolean = false;
   editedUserProfile: User | null = null;
+  deliveryType: string = 'delivery';
   isPickup: boolean = false;
   pickupLocation: string = 'https://maps.app.goo.gl/Ms3sHBp6EDgjAb3G6';
+  isPostOffice: boolean = false;
+  postOfficeName: string = '';
+  postOfficeGovernorate: string = '';
+  postOfficeCity: string = '';
+  postOfficeAddress: string = '';
+  postOfficeCities: string[] = [];
 
   private cartItemsLoaded: boolean = false;
   private freeShippingRulesLoaded: boolean = false;
@@ -113,6 +120,11 @@ export class CheckoutModalComponent implements OnInit {
 
   get isAddressComplete(): boolean {
     if (this.isPickup) return true;
+    if (this.isPostOffice) {
+      return this.postOfficeGovernorate.trim().length > 0 &&
+             this.postOfficeCity.trim().length > 0 &&
+             this.postOfficeAddress.trim().length > 0;
+    }
     if (!this.editedUserProfile) return false;
     const governorate = this.editedUserProfile?.governorate ?? '';
     const city = this.editedUserProfile?.city ?? '';
@@ -220,6 +232,22 @@ export class CheckoutModalComponent implements OnInit {
   calculateShippingCost(): void {
     if (this.isPickup) {
       this.shippingCost = 0;
+      this.calculateTotalPrice();
+      return;
+    }
+    if (this.isPostOffice) {
+      // Use post_office_cost for post office shipping
+      const governorateName = this.editedUserProfile?.governorate || this.userProfile?.governorate;
+      if (governorateName) {
+        const governorate = this.governorates.find(g => g.governorate_name === governorateName);
+        if (governorate && governorate.post_office_cost) {
+          this.shippingCost = parseFloat(governorate.post_office_cost);
+        } else {
+          this.shippingCost = 0;
+        }
+      } else {
+        this.shippingCost = 0;
+      }
       this.calculateTotalPrice();
       return;
     }
@@ -382,10 +410,26 @@ export class CheckoutModalComponent implements OnInit {
   }
 
   onDeliveryTypeChange() {
+    this.isPickup = this.deliveryType === 'pickup';
+    this.isPostOffice = this.deliveryType === 'postOffice';
     this.calculateShippingCost();
     this.calculateTotalPrice();
     // Reset address confirmation when switching delivery types
     this.isAddressConfirmed = false;
+    // Reset post office fields when changing delivery type
+    this.postOfficeName = '';
+    this.postOfficeGovernorate = '';
+    this.postOfficeCity = '';
+    this.postOfficeAddress = '';
+    this.postOfficeCities = [];
+  }
+
+  onPostOfficeGovernorateChange() {
+    const selectedGov = this.governorates.find(g => g.governorate_name === this.postOfficeGovernorate);
+    this.postOfficeCities = selectedGov ? selectedGov.cities : [];
+    if (!this.postOfficeCities.includes(this.postOfficeCity)) {
+      this.postOfficeCity = '';
+    }
   }
 
   onGovernorateChange() {
@@ -483,6 +527,8 @@ executePurchase(): void {
         merchantId: purchasedItems[0]?.merchantId,
         isPickup: this.isPickup,
         pickupLocation: this.isPickup ? this.pickupLocation : null,
+        isPostOffice: this.isPostOffice,
+        postOfficeName: this.isPostOffice ? this.postOfficeName : null,
         referralCode: referralCode,
         bookId: bookId // This is the products_id from localStorage
       };
@@ -567,6 +613,8 @@ executePurchase(): void {
           merchantId: purchasedItems[0]?.merchantId,
           isPickup: this.isPickup,
           pickupLocation: this.isPickup ? this.pickupLocation : null,
+          isPostOffice: this.isPostOffice,
+          postOfficeName: this.isPostOffice ? this.postOfficeName : null,
           referralCode: referralCode,
           bookId: bookId, // This is the products_id from localStorage
           paymentMethod: 'cod' // Add payment method for COD

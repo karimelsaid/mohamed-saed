@@ -184,10 +184,14 @@ export class AdminDashboardComponent implements OnInit {
 
   // Stats properties
   totalOrders: number = 0;
+  totalMerchantOrders: number = 0;
   totalProducts: number = 0;
   totalLikes: number = 0;
   totalCartItems: number = 0;
   totalUsers: number = 0;
+  totalRequestedBooks: number = 0;
+  totalPrintOrders: number = 0;
+  totalUrgencyRequests: number = 0;
 
   // Filter properties for products
   filterOptions: string[] = [];
@@ -823,7 +827,8 @@ export class AdminDashboardComponent implements OnInit {
           });
 
           this.allOrders = Object.values(groupedOrdersMap).sort((a, b) => new Date(a.orderDate).getTime() - new Date(b.orderDate).getTime());
-          this.totalOrders = this.allOrders.length;
+          this.totalOrders = this.allOrders.filter(order => !order.isMerchantOrder).length;
+          this.totalMerchantOrders = this.allOrders.filter(order => order.isMerchantOrder).length;
           this.updateOrdersPage();
         },
         error: (err) => {

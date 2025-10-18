@@ -38,6 +38,32 @@ import { MerchantAuthGuard } from './guards/merchant-auth.guard';
 import { PaymentRequestsComponent } from './admin/payment-requests/payment-requests.component';
 
 const routes: Routes = [
+  {
+    path: 'merchant',
+    children: [
+      { path: 'dashboard', component: MerchantDashboardComponent, canActivate: [MerchantAuthGuard] },
+      {
+        path: 'add-product',
+        component: AddProductComponent,
+        canActivate: [MerchantAuthGuard],
+        data: {
+          requiresApproval: true,
+          title: 'إضافة منتج',
+          description: 'صفحة إضافة منتج جديد - متاحة للتجار المعتمدين فقط'
+        }
+      },
+      {
+        path: 'edit-product/:id',
+        component: EditProductComponent,
+        canActivate: [MerchantAuthGuard],
+        data: {
+          requiresApproval: true,
+          title: 'تعديل منتج',
+          description: 'صفحة تعديل المنتجات - متاحة للتجار المعتمدين فقط'
+        }
+      },
+    ]
+  },
   { path: 'Home', component: HomePageComponent },
   { path: 'Business-Marketing-Finance', component: AamalComponent },
   { path: 'Education-children', component: ChildComponent },
@@ -49,28 +75,6 @@ const routes: Routes = [
   { path: 'History-Biographies', component: TarekhComponent },
   { path: 'Dictionaries-References', component: QamosComponent },
   { path: 'ControlPanel', component: AdminDashboardComponent },
-  { path: 'merchant/dashboard', component: MerchantDashboardComponent, canActivate: [MerchantAuthGuard] },
-  {
-    path: 'merchant/add-product',
-    component: AddProductComponent,
-    canActivate: [MerchantAuthGuard],
-    data: {
-      requiresApproval: true,
-      title: 'إضافة منتج',
-      description: 'صفحة إضافة منتج جديد - متاحة للتجار المعتمدين فقط'
-    }
-  },
-  {
-    path: 'merchant/edit-product/:id',
-    component: EditProductComponent,
-    canActivate: [MerchantAuthGuard],
-    data: {
-      requiresApproval: true,
-      title: 'تعديل منتج',
-      description: 'صفحة تعديل المنتجات - متاحة للتجار المعتمدين فقط'
-    }
-  },
-  { path: 'merchant/:id', component: MerchantProfileComponent },
   { path: 'book/:id/:name?', component: BookDetailsComponent },
   { path: '', redirectTo: '/Home', pathMatch: 'full' },  // الصفحة الرئيسية هي "home" افتراضيًا
   { path: 'research', component: SearchResultsComponent }, // المسار الذي نوجه إليه المستخدم عند البحث
@@ -88,6 +92,8 @@ const routes: Routes = [
   { path: 'عن-الموقع', component: AboutComponent },
   { path: 'سياسة-الخصوصية', component: PrivacyPolicyComponent },
   { path: 'الشروط-والاحكام', component: TermsConditionsComponent },
+  // يجب أن يكون هذا المسار قرب النهاية لتجنب التعارض مع المسارات الثابتة الأخرى
+  { path: ':username', component: MerchantProfileComponent },
   { path: '**', component: NotFoundComponent }
 ];
 

@@ -15,6 +15,12 @@ const userSchema = new mongoose.Schema({
   governorate: { type: String, required: function() { return !this.googleId; } }, // المحافظة
   city: { type: String, required: function() { return !this.googleId; } },       // المدينة
   village: { type: String, required: function() { return !this.googleId; } },                    // القرية (إجباري)
+  postOffice: {
+    governorate: String,
+    city: String,
+    address: String,
+    name: String
+  },
   googleId: { type: String, required: false, unique: true, sparse: true },
 
   // حقول التاجر الجديدة
@@ -58,10 +64,20 @@ const userSchema = new mongoose.Schema({
     isPickup: { type: Boolean, default: false },
     pickupLocation: { type: String },
     shippingAddress: {
+      deliveryType: String,
+      pickupLocation: String,
       governorate: String,
       city: String,
       village: String,
-      phone:String
+      phone: String,
+      name: String, // For post office name
+      address: String, // For post office address
+      postOffice: {
+        governorate: String,
+        city: String,
+        address: String,
+        name: String
+      }
     },
     postOffice: {
       governorate: String,

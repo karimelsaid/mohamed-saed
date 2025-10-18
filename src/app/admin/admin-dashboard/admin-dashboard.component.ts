@@ -86,11 +86,20 @@ interface PrintOrder {
   username: string;
   email: string;
   phone: string;
-  address: string;
+  address: string; // Keep for backward compatibility if needed
+  shippingAddress?: {
+    deliveryType: 'pickup' | 'postOffice' | 'delivery';
+    pickupLocation?: string;
+    governorate?: string;
+    city?: string;
+    village?: string;
+    name?: string;
+    address?: string; // For post office address
+  };
   status: string;
   orderDate: string;
   totalAmount: number;
-  printProject: {
+  printProjects: {
     filename: string;
     filepath: string;
     size: string;
@@ -102,8 +111,7 @@ interface PrintOrder {
     projectTitle: string;
     estimatedPrice: number;
     createdAt: Date;
-  };
-  fileIndex: number; // Added to fix TypeScript error
+  }[];
 }
 
 interface UrgencyRequest {
@@ -159,6 +167,7 @@ export class AdminDashboardComponent implements OnInit {
   printOrdersPageSize: number = 10;
 
   printOrders: PrintOrder[] = [];
+  allPrintOrders: PrintOrder[] = [];
 
   // Pagination state for urgencyRequests
   urgencyRequestsPage: number = 1;
@@ -181,6 +190,7 @@ export class AdminDashboardComponent implements OnInit {
   // Multi-select properties
   selectedProducts: Set<string> = new Set();
   selectedOrders: Set<string> = new Set();
+  selectedPrintOrders: Set<string> = new Set();
 
   // Stats properties
   totalOrders: number = 0;
@@ -349,8 +359,11 @@ export class AdminDashboardComponent implements OnInit {
       this.ordersPage = 1; // Reset page when switching views
       this.loadOrders();
     } else if (view === 'requestedBooks') {
+      console.log('Switching to requestedBooks view');
       this.fetchRequestedBooks();
     } else if (view === 'printOrders') {
+      console.log('Switching to printOrders view');
+      this.printOrdersPage = 1;
       this.loadPrintOrders();
     } else if (view === 'products') {
       this.loadProducts();
@@ -923,17 +936,28 @@ export class AdminDashboardComponent implements OnInit {
   }
 
   loadPrintOrders(): void {
+    console.log('Loading print orders...');
     this.http.get<{ success: boolean; printOrders: PrintOrder[] }>(`${environment.apiBaseUrl}/print/all-print-orders`).subscribe({
       next: (response) => {
+        console.log('Received response for print orders:', response);
         if (response.success) {
-          const allPrintOrders = response.printOrders;
-          this.printOrders = allPrintOrders.slice((this.printOrdersPage - 1) * this.printOrdersPageSize, this.printOrdersPage * this.printOrdersPageSize);
+          this.allPrintOrders = response.printOrders;
+          this.updatePrintOrdersPage();
+        } else {
+          this.allPrintOrders = [];
+          console.warn('API call for print orders was not successful:', response);
         }
       },
       error: (err) => {
-        // Error handled silently
+        console.error('Error loading print orders:', err);
       }
     });
+  }
+
+  updatePrintOrdersPage(): void {
+    const start = (this.printOrdersPage - 1) * this.printOrdersPageSize;
+    const end = this.printOrdersPage * this.printOrdersPageSize;
+    this.printOrders = this.allPrintOrders.slice(start, end);
   }
 
   loadUrgencyRequests(): void {
@@ -976,21 +1000,27 @@ export class AdminDashboardComponent implements OnInit {
     return Math.ceil(this.allUrgencyRequests.length / this.urgencyRequestsPageSize);
   }
 
-  getDownloadUrl(printOrder: PrintOrder): string {
+  getDownloadUrl(userId: string, orderId: string, fileIndex: number): string {
     // Construct the download URL using userId, orderId, and fileIndex
-    return `${environment.apiBaseUrl}/print/download-file/${printOrder.userId}/${printOrder.orderId}/${printOrder.fileIndex}`;
+    return `${environment.apiBaseUrl}/print/download-file/${userId}/${orderId}/${fileIndex}`;
+  }
+
+  totalPrintOrdersPages(): number {
+    return Math.ceil(this.allPrintOrders.length / this.printOrdersPageSize);
   }
 
   nextPrintOrdersPage(): void {
-    this.printOrdersPage++;
-    this.loadPrintOrders();
-    this.scrollToTop();
+    if (this.printOrdersPage < this.totalPrintOrdersPages()) {
+      this.printOrdersPage++;
+      this.updatePrintOrdersPage();
+      this.scrollToTop();
+    }
   }
 
   prevPrintOrdersPage(): void {
     if (this.printOrdersPage > 1) {
       this.printOrdersPage--;
-      this.loadPrintOrders();
+      this.updatePrintOrdersPage();
     }
     this.scrollToTop();
   }
@@ -1708,6 +1738,77 @@ export class AdminDashboardComponent implements OnInit {
       'هل أنت متأكد من حذف طلب الطوارئ؟',
       'warning',
       'حذف',
+      'إلغاء',
+      true,
+      action
+    );
+  }
+
+  // Print order multi-select methods
+  togglePrintOrderSelection(orderId: string): void {
+    if (this.selectedPrintOrders.has(orderId)) {
+      this.selectedPrintOrders.delete(orderId);
+    } else {
+      this.selectedPrintOrders.add(orderId);
+    }
+  }
+
+  isPrintOrderSelected(orderId: string): boolean {
+    return this.selectedPrintOrders.has(orderId);
+  }
+
+  selectAllPrintOrders(): void {
+    if (this.isAllPrintOrdersSelected()) {
+      this.selectedPrintOrders.clear();
+    } else {
+      this.printOrders.forEach(order => {
+        this.selectedPrintOrders.add(order.orderId);
+      });
+    }
+  }
+
+  isAllPrintOrdersSelected(): boolean {
+    return this.printOrders.length > 0 && this.printOrders.every(order => this.selectedPrintOrders.has(order.orderId));
+  }
+
+  isSomePrintOrdersSelected(): boolean {
+    return this.selectedPrintOrders.size > 0 && this.selectedPrintOrders.size < this.printOrders.length;
+  }
+
+  bulkDeleteSelectedPrintOrders(): void {
+    const selectedIds = Array.from(this.selectedPrintOrders);
+    if (selectedIds.length === 0) {
+      this.showErrorModal('يرجى اختيار طلبات طباعة لحذفها');
+      return;
+    }
+
+    const action = () => {
+      let completed = 0;
+      selectedIds.forEach(orderId => {
+        const order = this.printOrders.find(o => o.orderId === orderId);
+        if (order) {
+          this.http.delete(`${this.backendBaseUrl}/print/delete-print-order/${order.userId}/${orderId}`).subscribe({
+            next: () => {
+              completed++;
+              if (completed === selectedIds.length) {
+                this.showSuccessModal('تم حذف طلبات الطباعة المحددة بنجاح');
+                this.selectedPrintOrders.clear();
+                this.loadPrintOrders();
+              }
+            },
+            error: (err) => {
+              this.showErrorModal('حدث خطأ أثناء حذف طلبات الطباعة.');
+            }
+          });
+        }
+      });
+    };
+
+    this.openModal(
+      'تأكيد الحذف الجماعي',
+      `هل أنت متأكد من حذف ${selectedIds.length} طلب طباعة نهائياً؟`,
+      'warning',
+      'حذف الكل',
       'إلغاء',
       true,
       action

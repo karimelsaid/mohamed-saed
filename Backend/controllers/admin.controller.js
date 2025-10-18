@@ -970,18 +970,26 @@ async function updateProductApproval(req, res) {
         product_quantity: product.product_quantity,
         product_category: product.product_category,
         product_description: product.product_description,
-        categoryPrefix,
+        categoryPrefix, // Pass category prefix
         product_price: product.product_price,
         price_cost: product.price_cost,
-        createdAt: product.createdAt.toISOString()
+        createdAt: product.createdAt.toISOString(),
+        merchantId: product.merchantId // Pass merchantId to be used by excel service
       };
 
       // Add product to Excel
-      await addProductToExcel(productData);
+      await addProductToExcel(productData, product.merchantId);
 
       // Update Excel files
       await updateExcelFromJson(process.env.GOOGLE_DRIVE_FILE_ID);
       await updateExcelFromJson(process.env.GOOGLE_DRIVE_FILE_update);
+    }
+
+    // If product is approved, ensure it's saved to the Product collection with status 'approved'
+    // This is crucial for the enrichment process later.
+    if (status === 'approved') {
+      const productToSave = new Product({ ...product.toObject(), _id: undefined, __v: undefined, status: 'approved' });
+      await productToSave.save();
     }
 
     // Update sitemap after approval/rejection

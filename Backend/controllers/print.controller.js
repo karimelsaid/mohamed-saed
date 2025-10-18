@@ -149,7 +149,8 @@ exports.uploadPrintProjects = async (req, res) => {
           copies: data.copies,
           coverType: data.coverType,
           printColor: data.printColor,
-          size: data.size
+          size: data.size,
+          paperColor: data.paperColor
         });
 
         totalEstimatedPrice += estimatedPrice;
@@ -160,6 +161,7 @@ exports.uploadPrintProjects = async (req, res) => {
           size: data.size,
           coverType: data.coverType,
           printColor: data.printColor,
+          paperColor: data.paperColor,
           pages: data.pages,
           copies: data.copies,
           notes: data.notes || '',
@@ -169,20 +171,46 @@ exports.uploadPrintProjects = async (req, res) => {
         });
       }
 
+      // Parse shippingAddress from the request body
+      const shippingDetails = JSON.parse(req.body.shippingAddress || '{}');
+
+      // Build shipping address object for the order
+      const shippingAddress = { ...shippingDetails }; // Copy all details initially
+      shippingAddress.phone = shippingDetails.phone || user.phone;
+
+      if (shippingDetails.deliveryType === 'pickup') {
+        shippingAddress.pickupLocation = shippingDetails.pickupLocation || 'https://maps.app.goo.gl/Ms3sHBp6EDgjAb3G6'; // Set default if not provided
+      } else if (shippingDetails.deliveryType === 'postOffice') {
+        shippingAddress.governorate = shippingDetails.governorate || user.governorate;
+        shippingAddress.city = shippingDetails.city || user.city;
+        shippingAddress.postOffice = user.postOffice; // Include user's postOffice details
+        shippingAddress.name = user.postOffice?.name || shippingDetails.name;
+        shippingAddress.address = user.postOffice?.address || shippingDetails.address;
+
+        // Save postOffice details to user profile for reuse
+        user.postOffice = {
+          governorate: shippingDetails.governorate,
+          city: shippingDetails.city,
+          address: shippingDetails.address,
+          name: shippingDetails.name
+        };
+        await user.save(); // Save the user profile with postOffice details
+      } else {
+        // Home delivery
+        shippingAddress.governorate = shippingDetails.governorate || user.governorate;
+        shippingAddress.city = shippingDetails.city || user.city;
+        shippingAddress.village = shippingDetails.village || user.village;
+      }
+
       // Save order in user.orders with embedded print projects info
       const newOrder = {
         date: new Date(),
         products: [], // no book products in this order
         printProjects: printProjects,
-        shippingCost: 0,
-        totalAmount: totalEstimatedPrice,
+        shippingCost: shippingDetails.shippingCost || 0,
+        totalAmount: shippingDetails.totalAmount || totalEstimatedPrice,
         status: 'قيد الإنتظار',
-        shippingAddress: {
-          governorate: user.governorate,
-          city: user.city,
-          village: user.village,
-          phone: user.phone
-        }
+        shippingAddress: shippingAddress
       };
 
       user.orders.push(newOrder);
@@ -209,42 +237,45 @@ function sanitizeFilename(filename) {
 }
 
 exports.getAllPrintOrders = async (req, res) => {
-  try {
-    // Find all users with orders containing printProjects
-    const usersWithPrintOrders = await User.find({ 'orders.printProjects': { $exists: true, $ne: [] } });
+    try {
+        console.log('Backend: Fetching all print orders...');
+        // Find all users and select necessary fields
+        const users = await User.find({
+            "orders": {
+                "$elemMatch": { "printProjects": { "$exists": true, "$ne": [] } }
+            }
+        })
+            .select('username email phone orders')
+            .lean();
 
-    const printOrders = [];
+        console.log(`Backend: Found ${users.length} users with potential print orders.`);
+        // Flatten the print orders from all users into a single array
+        const allPrintOrders = users.flatMap(user =>
+            user.orders
+                .filter(order => order.printProjects && order.printProjects.length > 0) // Filter for print orders
+                .map(order => ({
+                    orderId: order._id,
+                    userId: user._id,
+                    username: user.username,
+                    email: user.email,
+                    phone: order.shippingAddress?.phone || user.phone,
+                    shippingAddress: order.shippingAddress, // Pass the full shipping address object
+                    status: order.status,
+                    orderDate: order.date,
+                    totalAmount: order.totalAmount,
+                    printProjects: order.printProjects.map(p => ({ ...p, filename: sanitizeFilename(p.filename) }))
+                }))
+        );
 
-    usersWithPrintOrders.forEach(user => {
-      user.orders.forEach(order => {
-        if (order.printProjects && order.printProjects.length > 0) {
-          order.printProjects.forEach((printProject, index) => {
-            // Sanitize filename before sending
-            const sanitizedFilename = sanitizeFilename(printProject.filename);
-            const sanitizedPrintProject = { ...printProject.toObject(), filename: sanitizedFilename };
+        allPrintOrders.sort((a, b) => new Date(b.orderDate) - new Date(a.orderDate));
 
-            printOrders.push({
-              orderId: order._id,
-              userId: user._id,
-              username: user.username || user.email,
-              email: user.email,
-              phone: user.phone,
-              address: `${user.governorate}, ${user.city}, ${user.village}`,
-              status: order.status,
-              orderDate: order.date,
-              totalAmount: order.totalAmount,
-              printProject: sanitizedPrintProject,
-              fileIndex: index
-            });
-          });
-        }
-      });
-    });
+        console.log(`Backend: Total print orders found: ${allPrintOrders.length}`);
 
-    res.status(200).json({ success: true, printOrders: printOrders });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Server error', error: error.message });
-  }
+        res.json({ success: true, printOrders: allPrintOrders });
+    } catch (error) {
+        console.error('Error fetching all print orders:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
 };
 
 // New controller method to download a file associated with a print order
@@ -303,7 +334,7 @@ exports.downloadPrintFile = async (req, res) => {
   }
 };
 
- 
+
 // New method to update print order status
 exports.updatePrintOrderStatus = async (req, res) => {
   try {

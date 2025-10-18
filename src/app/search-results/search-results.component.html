@@ -57,8 +57,10 @@
 
         <!-- اسم التاجر -->
         <div *ngIf="book.merchantName" class="mb-2 flex items-center gap-2">
-          <img *ngIf="book.merchantLogo" [src]="'/uploads/books/' + book.merchantLogo" alt="شعار التاجر" class="w-6 h-6 object-cover rounded-full" />
-          <span [routerLink]="['/merchant', book.merchantId]" class="text-sm text-gray-600 dark:text-gray-400 cursor-pointer hover:underline">بواسطة {{ book.merchantName }}</span>
+          <ng-container *ngIf="getMerchantLogoUrl(book) as logoUrl">
+            <img [src]="logoUrl" alt="شعار التاجر" class="w-6 h-6 object-cover rounded-full" />
+          </ng-container>
+          <span [routerLink]="['/', book.merchantName]" class="text-sm text-gray-600 dark:text-gray-400 cursor-pointer hover:underline">بواسطة {{ book.merchantName }}</span>
         </div>
 
         <!-- السعر -->

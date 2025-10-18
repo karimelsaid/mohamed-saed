@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { MerchantAuthService } from '../../services/merchant-auth.service';
+import { environment } from '../../../environments/environment';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 
@@ -12,47 +13,90 @@ import { RouterModule } from '@angular/router';
   imports: [CommonModule, RouterModule]
 })
 export class MerchantProfileComponent implements OnInit {
-  merchantId: string | null = null;
+  username: string | null = null;
   merchant: any = null;
   products: any[] = [];
   loading = false;
   error: string | null = null;
-  uploadsBaseUrl = '/uploads'; // Add this property for image base URL
+  uploadsBaseUrl = environment.uploadsBaseUrl; // Use environment variable
 
   constructor(private route: ActivatedRoute, private merchantAuthService: MerchantAuthService) {}
 
   ngOnInit(): void {
-    this.merchantId = this.route.snapshot.paramMap.get('id');
-    if (this.merchantId) {
-      this.loadMerchantData(this.merchantId);
-      this.loadMerchantProducts(this.merchantId);
-    } else {
-      this.error = 'معرف التاجر غير موجود.';
-    }
+    this.route.paramMap.subscribe(params => {
+      this.username = params.get('username');
+      if (this.username) {
+        this.loadMerchantData(this.username);
+      } else {
+        this.error = 'اسم التاجر غير موجود.';
+        this.loading = false;
+      }
+    });
   }
 
-  loadMerchantData(id: string) {
+  loadMerchantData(username: string) {
     this.loading = true;
-    this.merchantAuthService.getMerchantById(id).subscribe({
+    this.error = null;
+    this.merchantAuthService.getMerchantByUsername(username).subscribe({
       next: (res: any) => {
-        this.merchant = res.merchant || res;
-        this.loading = false;
+        if (res.success && res.merchant) {
+          this.merchant = res.merchant;
+          this.loadMerchantProducts(this.merchant._id); // Load products using the ID
+        } else {
+          this.error = res.message || 'لا يمكن العثور على التاجر.';
+          this.loading = false;
+        }
       },
       error: (err: any) => {
-        this.error = 'فشل في تحميل بيانات التاجر.';
+        console.error('Error loading merchant data:', err);
+        this.error = 'لا يمكن العثور على التاجر.';
         this.loading = false;
       }
     });
   }
 
   loadMerchantProducts(id: string) {
-    this.merchantAuthService.getProductsByMerchantId(id).subscribe({
+    this.merchantAuthService.getProductsByMerchantId(id).subscribe({ // This function remains the same
       next: (res: any) => {
         this.products = res.products || res || [];
+        this.loading = false; // Stop loading after products are fetched
       },
       error: (err: any) => {
         this.error = 'فشل في تحميل منتجات التاجر.';
+        this.loading = false;
       }
     });
+  }
+
+  getProductImageUrl(product: any): string {
+    // This logic is now consistent with other working components like search-results.
+    let imagePath = product.image_path || product.product_image || '';
+    const merchantName = product.merchantName || (this.merchant ? (this.merchant.merchantName || this.merchant.name) : null);
+
+    // If a full path is already provided in image_path, use it directly.
+    if (imagePath && imagePath.startsWith('/uploads/books/')) {
+      // The path is already correct, just return it.
+      return imagePath;
+    }
+
+    // If not, build the path from scratch
+    const imageId = product.products_id || product.product_image;
+    if (!imageId) {
+      return '/assets/placeholder-book.jpg';
+    }
+
+    let finalPath;
+    if (merchantName) {
+      finalPath = `merchant_${merchantName}/${imageId}/${imageId}.webp`;
+    } else {
+      // Fallback to admin path if no merchant name is found
+      finalPath = `admin__karim_mohamed__/${imageId}/${imageId}.webp`;
+    }
+
+    // Construct the full path, ensuring not to duplicate '/books/'
+    // uploadsBaseUrl is likely '/uploads' or '/uploads/books'
+    // The final path should be /uploads/books/merchant_...
+    const fullPath = `${this.uploadsBaseUrl}/${finalPath}`.replace('/books/books/', '/books/');
+    return fullPath;
   }
 }

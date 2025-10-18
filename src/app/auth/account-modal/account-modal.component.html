@@ -3,7 +3,7 @@
 </div>
 
 <div *ngIf="show" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 dark:bg-opacity-80 backdrop-blur-sm" (click)="closeModal()">
-  <div class="mt-20 bg-white dark:bg-gray-800 rounded-3xl shadow-2xl p-2 sm:p-6 md:p-8 w-full max-w-xs sm:max-w-md mx-4 transform transition-all duration-300 scale-100 animate-in fade-in-0 zoom-in-95 max-h-[80vh] relative" (click)="$event.stopPropagation()">
+  <div class="mt-20 md:mt-0 bg-white dark:bg-gray-800 rounded-3xl shadow-2xl p-2 sm:p-6 md:p-8 w-full max-w-xs sm:max-w-md mx-4 transform transition-all duration-300 scale-100 animate-in fade-in-0 zoom-in-95 max-h-[80vh] md:max-h-[90vh] relative" (click)="$event.stopPropagation()">
 
     <!-- Close Button -->
     <button (click)="closeModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors" title="إغلاق">
@@ -85,8 +85,8 @@
       </button>
 
       <!-- معلومات التاجر -->
-      <div *ngIf="isMerchantLoggedIn" class="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 mb-4">
-        <div class="flex items-center space-x-3 mb-3">
+      <div *ngIf="isMerchantLoggedIn" class="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-2">
+        <div class="flex items-center space-x-3">
           <div class="w-10 h-10 bg-gradient-to-r from-green-500 to-green-600 rounded-full flex items-center justify-center">
             <fa-icon [icon]="faUserCircle" class="text-white text-lg"></fa-icon>
           </div>
@@ -95,7 +95,7 @@
             <p class="text-sm text-gray-600 dark:text-gray-400">تاجر</p>
           </div>
         </div>
-        <div class="space-y-2 text-sm text-gray-600 dark:text-gray-400 mb-3">
+        <div class="space-y-2 text-sm text-gray-600 dark:text-gray-400 mb-1">
           <div class="flex items-center justify-end space-x-2">
             <span>{{ merchant?.email || 'غير محدد' }}</span>
             <fa-icon [icon]="faEnvelope" class="text-gray-500"></fa-icon>
@@ -105,7 +105,7 @@
             <fa-icon [icon]="faPhone" class="text-gray-500"></fa-icon>
           </div>
         </div>
-        <div class="mb-4">
+        <div class="mb-1">
           <p class="text-sm text-green-600 dark:text-green-400 flex items-center justify-end space-x-2" *ngIf="merchant?.approved && !merchant?.suspended">
             <span>✓ حسابك معتمد من الإدارة</span>
           </p>
@@ -118,7 +118,7 @@
         </div>
         <button
           (click)="goToMerchantDashboard()"
-          class="w-full mb-3 px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-xl transition-all duration-200 font-bold shadow-lg hover:shadow-xl transform hover:scale-105 flex items-center justify-center space-x-2">
+          class="w-full mb-1 px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-xl transition-all duration-200 font-bold shadow-lg hover:shadow-xl transform hover:scale-105 flex items-center justify-center space-x-2">
           <fa-icon [icon]="faClipboardList"></fa-icon>
           <span>لوحة تحكم التاجر</span>
         </button>
@@ -153,13 +153,13 @@
           <span>إنشاء حساب</span>
         </button>
       </div>
-    </ng-template>
 
-    <!-- Footer Note -->
-    <div class="mt-6 pt-4 border-t border-gray-200 dark:border-gray-600">
-      <p class="text-xs text-gray-500 dark:text-gray-400 text-center">
-        انضم إلينا للوصول إلى جميع الميزات
-      </p>
-    </div>
+      <!-- Footer Note -->
+      <div class="mt-6 pt-4 border-t border-gray-200 dark:border-gray-600">
+        <p class="text-xs text-gray-500 dark:text-gray-400 text-center">
+          انضم إلينا للوصول إلى جميع الميزات
+        </p>
+      </div>
+    </ng-template>
   </div>
 </div>

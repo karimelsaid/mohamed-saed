@@ -10,7 +10,7 @@ const client = new OAuth2Client('933338292435-c9bk3oo6i1oe3qkhkvp8crflmthhg0kc.a
 // Function to update user profile and sync orders' shippingAddress
 async function updateUserProfile(req, res) {
   const { userId } = req.params;
-  const { username, email, phone, governorate, city, village } = req.body;
+  const { username, email, phone, governorate, city, village, postOffice } = req.body;
 
   try {
     const user = await User.findById(userId);
@@ -25,6 +25,9 @@ async function updateUserProfile(req, res) {
     if (governorate) user.governorate = governorate;
     if (city) user.city = city;
     if (village) user.village = village;
+    if (postOffice) {
+      user.postOffice = postOffice;
+    }
 
     // Update all orders' shippingAddress fields to keep in sync
     user.orders.forEach(order => {
@@ -254,7 +257,8 @@ async function getUserProfile(req, res) {
       phone: user.phone,
       governorate: user.governorate,
       city: user.city,
-      village: user.village
+      village: user.village,
+      postOffice: user.postOffice
     });
   } catch (error) {
     res.status(500).json({ message: 'حدث خطأ أثناء جلب بيانات الملف الشخصي', error });

@@ -23,9 +23,8 @@ async function getExcelData(req, res) {
           const approvedProducts = await Product.find({ status: 'approved' }).populate('merchantId', 'merchantName username logo');
           const productMap = {};
           approvedProducts.forEach(product => {
-            if (product.product_image) {
-              const barcode = product.product_image.replace('.webp', '');
-              productMap[barcode] = {
+            if (product.products_id) { // Use products_id as the key
+              productMap[product.products_id] = {
                 merchantId: product.merchantId._id,
                 merchantName: product.merchantId.merchantName || product.merchantId.username,
                 merchantLogo: product.merchantId.logo,
@@ -39,7 +38,7 @@ async function getExcelData(req, res) {
               book.merchantId = productMap[book.products_id].merchantId;
               book.merchantName = productMap[book.products_id].merchantName;
               book.merchantLogo = productMap[book.products_id].merchantLogo;
-              book.product_image = productMap[book.products_id].product_image;
+              book.product_image = book.products_id; // Ensure product_image is the ID
             }
           });
         } catch (enrichError) {
@@ -125,9 +124,8 @@ async function getRecentBooks(req, res) {
           const approvedProducts = await Product.find({ status: 'approved' }).populate('merchantId', 'merchantName username logo');
           const productMap = {};
           approvedProducts.forEach(product => {
-            if (product.product_image) {
-              const barcode = product.product_image.replace('.webp', '');
-              productMap[barcode] = {
+            if (product.products_id) { // Use products_id as the key
+              productMap[product.products_id] = {
                 merchantId: product.merchantId._id,
                 merchantName: product.merchantId.merchantName || product.merchantId.username,
                 merchantLogo: product.merchantId.logo,
@@ -141,7 +139,7 @@ async function getRecentBooks(req, res) {
               book.merchantId = productMap[book.products_id].merchantId;
               book.merchantName = productMap[book.products_id].merchantName;
               book.merchantLogo = productMap[book.products_id].merchantLogo;
-              book.product_image = productMap[book.products_id].product_image;
+              book.product_image = book.products_id; // Ensure product_image is the ID
             }
           });
         } catch (enrichError) {

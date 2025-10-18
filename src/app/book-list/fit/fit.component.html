@@ -79,8 +79,9 @@
           </p>
         </div>
         <!-- اسم التاجر -->
-        <div *ngIf="book.merchantName" class="mb-2">
-          <a [routerLink]="['/merchant', book.merchantId]" class="text-sm text-gray-600 dark:text-gray-400 hover:underline cursor-pointer">بواسطة {{ book.merchantName }}</a>
+        <div *ngIf="book.merchantName" class="mb-2 flex gap-2">
+          <img [src]="this.uploadsBaseUrl + '/' + book.merchantLogo" alt="شعار التاجر" class="w-6 h-6 object-cover rounded-full" />
+          <a [routerLink]="['/', book.merchantName]" class="text-sm text-gray-600 dark:text-gray-400 hover:underline cursor-pointer">بواسطة {{ book.merchantName }}</a>
         </div>
         <!-- الفئة -->
         <!-- <p class="text-sm text-gray-500 mb-3">{{ book.product_category }}</p> -->

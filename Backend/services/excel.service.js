@@ -63,12 +63,9 @@ async function downloadAndConvertExcel(fileId, promotionStartDateStr, promotionE
   // Preload all merchant products and merchants for fast lookup
   const Product = require('../models/Product.model');
   const User = require('../models/User.model');
-
-  const allMerchantProducts = await Product.find({ merchantId: { $exists: true } }, 'product_image merchantId');
-  const merchantProductMap = new Map(allMerchantProducts.map(p => [p.product_image, p.merchantId.toString()]));
-
-  const allMerchants = await User.find({ role: 'merchant' }, '_id username');
-  const merchantMap = new Map(allMerchants.map(m => [m._id.toString(), m.username]));
+  const allMerchants = await User.find({ role: 'merchant' }, '_id username logo');
+  // Create a map from merchantId to username for quick lookup
+  const merchantMap = new Map(allMerchants.map(m => [m._id.toString(), { username: m.username, logo: m.logo }]));
 
   const updatedData = [];
   for (const product of filteredJson) {
@@ -90,13 +87,16 @@ async function downloadAndConvertExcel(fileId, promotionStartDateStr, promotionE
 
     product.product_image = product_id;
 
-    // Check if this is a merchant product using preloaded maps
-    const merchantId = merchantProductMap.get(product_id + '.webp');
+    // Check if the product has a merchantId directly from the Excel data
+    const merchantId = product.merchantId ? product.merchantId.toString() : null;
+
     if (merchantId) {
-      const merchantUsername = merchantMap.get(merchantId);
-      if (merchantUsername) {
-        const sanitizedUsername = merchantUsername.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
+      const merchantData = merchantMap.get(merchantId);
+      if (merchantData) {
+        const sanitizedUsername = merchantData.username.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
         product.image_path = `/uploads/books/merchant_${sanitizedUsername}/${product_id}/${product_id}.webp`;
+        product.merchantName = merchantData.username; // Add merchant name to the product data
+        product.merchantLogo = merchantData.logo; // Add merchant logo to the product data
       } else {
         // Merchant not found, fallback to admin path
         product.image_path = `/uploads/books/admin__karim_mohamed__/${product_id}/${product_id}.webp`;
@@ -203,7 +203,7 @@ async function downloadAndConvertExcel(fileId, promotionStartDateStr, promotionE
 }
 
 // New function to add product to Excel file and update output.json
-async function addProductToExcel(productData) {
+async function addProductToExcel(productData, merchantId = null) {
   try {
     const fileId = process.env.GOOGLE_DRIVE_FILE_ID;
     if (!fileId) {
@@ -234,7 +234,8 @@ async function addProductToExcel(productData) {
       product_category: productData.product_category,
       product_description: productData.product_description || '',
       product_price: productData.product_price || 0,
-      price_cost: productData.price_cost || 0
+      price_cost: productData.price_cost || 0,
+      merchantId: productData.merchantId ? productData.merchantId.toString() : '' // Add merchantId to the new row
     };
 
     // Add new row to JSON

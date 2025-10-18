@@ -11,4 +11,10 @@ export interface User {
     favorites: string[];
     cart: string[];
     role: string;
+    postOffice?: {
+        governorate: string;
+        city: string;
+        name: string;
+        address: string;
+    };
 }

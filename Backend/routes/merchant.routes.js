@@ -21,6 +21,7 @@ router.post('/products/:productId/update-request', authenticateMerchant, merchan
 router.get('/update-requests', authenticateMerchant, merchantController.getMerchantUpdateRequests);
 
 // Parameterized routes (must come last)
+router.get('/by-name/:username', merchantController.getMerchantByUsername);
 router.get('/:id/products', merchantController.getProductsByMerchantId);
 router.get('/:id', merchantController.getMerchantById);
 

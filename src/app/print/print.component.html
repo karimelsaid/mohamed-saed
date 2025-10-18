@@ -356,8 +356,214 @@
               </div>
             </div>
 
-            <!-- Form Actions -->
+            <!-- Shipping Options Section -->
             <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+              <h3 class="text-xl font-bold text-gray-800 dark:text-gray-200 mb-6 flex items-center">
+                <svg class="w-6 h-6 mr-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                </svg>
+                خيارات التسليم والشحن
+              </h3>
+
+              <!-- Delivery Type Selection -->
+              <div class="mb-6">
+                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">
+                  <span class="flex items-center">
+                    <svg class="w-5 h-5 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                    اختر طريقة التسليم
+                  </span>
+                </label>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <!-- Home Delivery -->
+                  <div class="relative">
+                    <input type="radio" id="delivery" name="deliveryType" value="delivery" [(ngModel)]="deliveryType" (change)="onDeliveryTypeChange()"
+                           class="sr-only peer">
+                    <label for="delivery" class="block p-4 bg-white dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-xl cursor-pointer hover:border-blue-500 peer-checked:border-blue-500 peer-checked:bg-blue-50 dark:peer-checked:bg-blue-900/20 transition-all duration-200">
+                      <div class="flex items-center">
+                        <svg class="w-6 h-6 mr-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                        </svg>
+                        <div>
+                          <div class="font-semibold text-gray-900 dark:text-gray-100">توصيل للمنزل</div>
+                          <div class="text-sm text-gray-600 dark:text-gray-400">توصيل إلى عنوانك</div>
+                        </div>
+                      </div>
+                    </label>
+                  </div>
+
+                  <!-- Pickup -->
+                  <div class="relative">
+                    <input type="radio" id="pickup" name="deliveryType" value="pickup" [(ngModel)]="deliveryType" (change)="onDeliveryTypeChange()"
+                           class="sr-only peer">
+                    <label for="pickup" class="block p-4 bg-white dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-xl cursor-pointer hover:border-green-500 peer-checked:border-green-500 peer-checked:bg-green-50 dark:peer-checked:bg-green-900/20 transition-all duration-200">
+                      <div class="flex items-center">
+                        <svg class="w-6 h-6 mr-3 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                        </svg>
+                        <div>
+                          <div class="font-semibold text-gray-900 dark:text-gray-100">استلام من المكان</div>
+                          <div class="text-sm text-gray-600 dark:text-gray-400">استلام مجاني</div>
+                        </div>
+                      </div>
+                    </label>
+                  </div>
+
+                  <!-- Post Office -->
+                  <div class="relative">
+                    <input type="radio" id="postOffice" name="deliveryType" value="postOffice" [(ngModel)]="deliveryType" (change)="onDeliveryTypeChange()"
+                           class="sr-only peer">
+                    <label for="postOffice" class="block p-4 bg-white dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-xl cursor-pointer hover:border-orange-500 peer-checked:border-orange-500 peer-checked:bg-orange-50 dark:peer-checked:bg-orange-900/20 transition-all duration-200">
+                      <div class="flex items-center">
+                        <svg class="w-6 h-6 mr-3 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                        </svg>
+                        <div>
+                          <div class="font-semibold text-gray-900 dark:text-gray-100">مكاتب البريد</div>
+                          <div class="text-sm text-gray-600 dark:text-gray-400">شحن عبر البريد</div>
+                        </div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Address Section for Home Delivery -->
+              <div *ngIf="deliveryType === 'delivery'" class="mt-6 bg-gray-50 dark:bg-gray-700/50 p-6 rounded-xl border border-gray-200 dark:border-gray-600">
+                <div class="flex justify-between items-center mb-4">
+                  <h4 class="text-lg font-semibold text-gray-800 dark:text-gray-200 flex items-center">
+                    <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                    عنوان التوصيل
+                  </h4>
+                  <button type="button" *ngIf="!isEditingAddress" (click)="onEditAddress()" class="px-4 py-2 text-sm bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors">
+                    تعديل
+                  </button>
+                </div>
+                <div *ngIf="userProfile">
+                  <div *ngIf="!isEditingAddress" class="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-600 text-sm">
+                    <p class="text-gray-700 dark:text-gray-300"><strong class="font-medium">المحافظة:</strong> {{ userProfile.governorate }}</p>
+                    <p class="text-gray-700 dark:text-gray-300 mt-1"><strong class="font-medium">المدينة:</strong> {{ userProfile.city }}</p>
+                    <p class="text-gray-700 dark:text-gray-300 mt-1"><strong class="font-medium">القرية/الحي:</strong> {{ userProfile.village }}</p>
+                    <p class="text-gray-700 dark:text-gray-300 mt-1"><strong class="font-medium">رقم الهاتف:</strong> {{ userProfile.phone }}</p>
+                  </div>
+                  <div *ngIf="isEditingAddress" class="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">المحافظة</label>
+                        <select [(ngModel)]="editedUserProfile!.governorate" name="editGov" (change)="onGovernorateChange()" class="w-full p-2 border rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600" required>
+                          <option value="" disabled>اختر المحافظة</option>
+                          <option *ngFor="let gov of governorates" [value]="gov.governorate_name">{{ gov.governorate_name }}</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">المدينة</label>
+                        <select [(ngModel)]="editedUserProfile!.city" name="editCity" class="w-full p-2 border rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600" required>
+                          <option value="" disabled>اختر المدينة</option>
+                          <option *ngFor="let city of cities" [value]="city">{{ city }}</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">القرية/الحي</label>
+                        <input type="text" [(ngModel)]="editedUserProfile!.village" name="editVillage" class="w-full p-2 border rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                      </div>
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">رقم الهاتف</label>
+                        <input type="text" [(ngModel)]="editedUserProfile!.phone" name="editPhone" (input)="validatePhone()" class="w-full p-2 border rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                      </div>
+                    </div>
+                    <div class="mt-4 flex space-x-2 rtl:space-x-reverse">
+                      <button (click)="saveEditAddress()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">حفظ</button>
+                      <button (click)="cancelEditAddress()" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">إلغاء</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Pickup Location Section -->
+              <div *ngIf="deliveryType === 'pickup'" class="mt-6 bg-gray-50 dark:bg-gray-700/50 p-6 rounded-xl border border-gray-200 dark:border-gray-600">
+                <h4 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4 flex items-center">
+                  <svg class="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                  مكان الاستلام
+                </h4>
+                <div class="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
+                  <p class="text-gray-700 dark:text-gray-300">يمكنك استلام طلبك من مقرنا في <a [href]="pickupLocation" target="_blank" class="text-blue-600 hover:underline">هذا الموقع</a>.</p>
+                </div>
+              </div>
+
+              <!-- Post Office Section -->
+              <div *ngIf="deliveryType === 'postOffice'" class="mt-6 bg-gray-50 dark:bg-gray-700/50 p-6 rounded-xl border border-gray-200 dark:border-gray-600">
+                <div class="flex justify-between items-center mb-4">
+                  <h4 class="text-lg font-semibold text-gray-800 dark:text-gray-200 flex items-center">
+                    <svg class="w-5 h-5 mr-2 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                    تفاصيل مكتب البريد
+                  </h4>
+                  <button type="button" *ngIf="!isEditingPostOffice" (click)="onEditPostOffice()" class="px-4 py-2 text-sm bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300 rounded-lg hover:bg-orange-200 dark:hover:bg-orange-800 transition-colors">
+                    تعديل
+                  </button>
+                </div>
+                <div *ngIf="userProfile">
+                  <div *ngIf="!isEditingPostOffice" class="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-600 text-sm">
+                    <p class="text-gray-700 dark:text-gray-300"><strong class="font-medium">المحافظة:</strong> {{ userProfile.postOffice?.governorate || userProfile.governorate }}</p>
+                    <p class="text-gray-700 dark:text-gray-300 mt-1"><strong class="font-medium">المدينة:</strong> {{ userProfile.postOffice?.city || userProfile.city }}</p>
+                    <p class="text-gray-700 dark:text-gray-300 mt-1"><strong class="font-medium">اسم المكتب:</strong> {{ userProfile.postOffice?.name || 'غير محدد' }}</p>
+                    <p class="text-gray-700 dark:text-gray-300 mt-1"><strong class="font-medium">العنوان:</strong> {{ userProfile.postOffice?.address || 'غير محدد' }}</p>
+                  </div>
+                  <div *ngIf="isEditingPostOffice" class="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">المحافظة</label>
+                        <select [(ngModel)]="postOfficeGovernorate" name="postOfficeGov" (change)="onPostOfficeGovernorateChange()" class="w-full p-2 border rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600" required>
+                          <option value="" disabled>اختر المحافظة</option>
+                          <option *ngFor="let gov of governorates" [value]="gov.governorate_name">{{ gov.governorate_name }}</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">المدينة</label>
+                        <select [(ngModel)]="postOfficeCity" name="postOfficeCity" class="w-full p-2 border rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600" required>
+                          <option value="" disabled>اختر المدينة</option>
+                          <option *ngFor="let city of postOfficeCities" [value]="city">{{ city }}</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">اسم المكتب</label>
+                        <input type="text" [(ngModel)]="postOfficeName" name="postOfficeName" required class="w-full p-2 border rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                      </div>
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">العنوان</label>
+                        <input type="text" [(ngModel)]="postOfficeAddress" name="postOfficeAddress" required class="w-full p-2 border rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                      </div>
+                    </div>
+                    <div class="mt-4 flex space-x-2 rtl:space-x-reverse">
+                      <button type="button" (click)="saveEditPostOffice()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">حفظ</button>
+                      <button type="button" (click)="cancelEditPostOffice()" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">إلغاء</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Total Price Summary -->
+              <div class="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
+                <h4 class="text-lg font-semibold text-blue-800 dark:text-blue-200 mb-4">ملخص الطلب</h4>
+                <div class="space-y-2">
+                  <div class="flex justify-between">
+                    <span class="text-gray-700 dark:text-gray-300">سعر الطباعة:</span>
+                    <span class="font-semibold text-gray-900 dark:text-gray-100">{{ totalPrice - shippingCost }} جنيه</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-gray-700 dark:text-gray-300">رسوم الشحن:</span>
+                    <span class="font-semibold text-gray-900 dark:text-gray-100">{{ shippingCost }} جنيه</span>
+                  </div>
+                  <hr class="border-gray-300 dark:border-gray-600">
+                  <div class="flex justify-between text-lg font-bold">
+                    <span class="text-blue-800 dark:text-blue-200">الإجمالي:</span>
+                    <span class="text-blue-600 dark:text-blue-400">{{ totalPrice }} جنيه</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Form Actions -->
               <div *ngIf="errorMessage" class="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
                 <div class="flex items-center">
                   <svg class="w-6 h-6 mr-3 text-red-600" fill="currentColor" viewBox="0 0 20 20">
@@ -487,4 +693,5 @@
     </div>
   </div>
 
-
+  <!-- Auth Modal -->
+  <app-account-modal #accountModal (modalClosed)="closeAuthModal()"></app-account-modal>

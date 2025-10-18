@@ -262,6 +262,10 @@ export class MerchantAuthService {
     return this.http.get(`${this.apiUrl}/merchant/${id}`, { headers });
   }
 
+  getMerchantByUsername(username: string): Observable<any> {
+    return this.http.get(`${this.apiUrl}/merchant/by-name/${username}`);
+  }
+
   getProductsByMerchantId(id: string): Observable<any> {
     const token = this.getToken();
     let headers = new HttpHeaders();

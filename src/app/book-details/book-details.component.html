@@ -8,7 +8,7 @@
       <h2 class="text-2xl sm:text-3xl font-bold mb-4 mt-1 text-gray-900 dark:text-gray-100 leading-tight">{{ book.product_name }}</h2>
       <!-- اسم التاجر -->
       <div *ngIf="book.merchantName" class="mb-4">
-        <a [routerLink]="['/merchant', book.merchantId]" class="text-sm text-blue-600 dark:text-blue-400 hover:underline cursor-pointer font-medium">بواسطة {{ book.merchantName }}</a>
+        <a [routerLink]="['/', book.merchantName]" class="text-sm text-blue-600 dark:text-blue-400 hover:underline cursor-pointer font-medium">بواسطة {{ book.merchantName }}</a>
       </div>
 
       <!-- Amazon-like layout: left images, right details -->

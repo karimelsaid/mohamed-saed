@@ -234,7 +234,8 @@ async function addProduct(req, res) {
       product_description,
       product_price: parseFloat(product_price) || 0,
       price_cost: parseFloat(price_cost) || 0,
-      product_image: imagePath,
+      products_id: barcode, // حفظ الباركود الرقمي فقط
+      product_image: barcode, // حفظ الباركود الرقمي فقط
       status: 'pending',
       merchantId: req.merchant._id,
       createdAt: new Date()
@@ -724,6 +725,52 @@ async function getMerchantById(req, res) {
   }
 }
 
+async function getMerchantByUsername(req, res) {
+  try {
+    const { username } = req.params;
+
+    // Find merchant by username
+    const merchant = await User.findOne({ username: username });
+
+    if (!merchant || merchant.role !== 'merchant') {
+      return res.status(404).json({
+        success: false,
+        message: 'Merchant not found'
+      });
+    }
+
+    // Only return approved merchants and basic public information
+    if (!merchant.approved) {
+      return res.status(404).json({
+        success: false,
+        message: 'Merchant not found or not approved'
+      });
+    }
+
+    res.json({
+      success: true,
+      merchant: {
+        _id: merchant._id,
+        merchantName: merchant.merchantName || merchant.username,
+        name: merchant.merchantName || merchant.username,
+        email: merchant.email,
+        phone: merchant.phone,
+        governorate: merchant.governorate,
+        city: merchant.city,
+        village: merchant.village,
+        logo: merchant.logo,
+        bio: merchant.bio,
+      }
+    });
+  } catch (error) {
+    console.error('Error in getMerchantByUsername:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error loading merchant data'
+    });
+  }
+}
+
 async function getProductsByMerchantId(req, res) {
   try {
     const { id } = req.params;
@@ -893,6 +940,7 @@ module.exports = {
   deleteProduct,
   bulkDeleteProducts,
   getMerchantById,
+  getMerchantByUsername,
   getProductsByMerchantId,
   updateMerchantProfile
 };

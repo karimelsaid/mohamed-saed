@@ -186,23 +186,26 @@ exports.getAllOrders = async (req, res) => {
         if (includeArchived !== 'true' && order.status === 'مؤرشف') {
           return;
         }
-        order.products.forEach(product => {
-          allOrders.push({
-            _id: order._id,
-            book: product.bookName ? product.bookName : product.bookId,
-            customerName: user.username,
-            email: user.email,
-            quantity: product.quantity,
-            address: (() => {
-              const baseAddress = order.isPickup ? `استلام من المكتبة: ${order.pickupLocation}` : order.postOffice ? `شحن عبر مكاتب البريد: ${order.postOffice.governorate}, ${order.postOffice.city}, ${order.postOffice.address}, ${order.postOffice.name ? 'اسم المكتب: ' + order.postOffice.name : ''}` : `${order.shippingAddress.governorate}, ${order.shippingAddress.city}, ${order.shippingAddress.village}`;
-              return baseAddress + ' - ' + user.phone;
-            })(), // Always construct base address and append phone
-            status: order.status,
-            orderDate: order.date,
-            totalAmount: order.totalAmount,  // Added totalAmount here
-            isMerchantOrder: false // default
+        // Handle book products
+        if (order.products && order.products.length > 0) {
+          order.products.forEach(product => {
+            allOrders.push({
+              _id: order._id,
+              book: product.bookName ? product.bookName : product.bookId,
+              customerName: user.username,
+              email: user.email,
+              quantity: product.quantity,
+              address: (() => {
+                const baseAddress = order.isPickup ? `استلام من المكتبة: ${order.pickupLocation}` : order.postOffice ? `شحن عبر مكاتب البريد: ${order.postOffice.governorate}, ${order.postOffice.city}, ${order.postOffice.address}, ${order.postOffice.name ? 'اسم المكتب: ' + order.postOffice.name : ''}` : `${order.shippingAddress.governorate}, ${order.shippingAddress.city}, ${order.shippingAddress.village}`;
+                return baseAddress + ' - ' + user.phone;
+              })(), // Always construct base address and append phone
+              status: order.status,
+              orderDate: order.date,
+              totalAmount: order.totalAmount,  // Added totalAmount here
+              isMerchantOrder: false // default
+            });
           });
-        });
+        }
       });
     });
 

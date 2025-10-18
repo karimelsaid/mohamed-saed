@@ -166,6 +166,14 @@ export class CheckoutModalComponent implements OnInit {
               this.phoneTouched = egyptPhoneRegex.test(this.editedUserProfile.phone);
               this.phoneValid = this.phoneTouched;
             }
+            // Set post office details from user profile
+            if (this.userProfile?.postOffice) {
+              this.postOfficeGovernorate = this.userProfile.postOffice.governorate || '';
+              this.postOfficeCity = this.userProfile.postOffice.city || '';
+              this.postOfficeName = this.userProfile.postOffice.name || '';
+              this.postOfficeAddress = this.userProfile.postOffice.address || '';
+              this.onPostOfficeGovernorateChange();
+            }
           },
           error: (err) => {
             console.error('خطأ في جلب بيانات المستخدم:', err);
@@ -527,30 +535,37 @@ export class CheckoutModalComponent implements OnInit {
   saveEditPostOffice() {
     if (!this.userProfile) return;
 
-    // Validate governorate and city
+    // Validate governorate, city, and required fields
     const govValid = this.governorates.some(g => g.governorate_name === this.postOfficeGovernorate);
     const cityValid = this.postOfficeCities.includes(this.postOfficeCity);
+    const addressValid = this.postOfficeAddress.trim().length > 0;
+    const nameValid = this.postOfficeName.trim().length > 0;
 
     if (!govValid || !cityValid) {
       alert('يرجى اختيار محافظة ومدينة صحيحة');
       return;
     }
 
-    // Update userProfile with post office data
-    this.userProfile.governorate = this.postOfficeGovernorate;
-    this.userProfile.city = this.postOfficeCity;
-    this.editedUserProfile = { ...this.userProfile };
+    if (!addressValid || !nameValid) {
+      alert('يرجى إدخال اسم المكتب وعنوانه');
+      return;
+    }
 
-    // Call service to persist changes to backend
+    // Update userProfile with post office data
+    this.userProfile.postOffice = {
+      name: this.postOfficeName,
+      address: this.postOfficeAddress,
+      governorate: this.postOfficeGovernorate,
+      city: this.postOfficeCity
+    };
+
+    this.editedUserProfile = { ...this.userProfile };
+    this.isEditingPostOffice = false;
+
+    // Save post office details to user profile immediately
     this.dataService.updateUserProfile(this.userProfile).subscribe({
-      next: () => {
-        console.log('User profile updated successfully from post office edit');
-        this.isEditingPostOffice = false;
-      },
-      error: (error: any) => {
-        console.error('Error updating user profile from post office edit:', error);
-        alert('حدث خطأ أثناء تحديث البيانات، يرجى المحاولة مرة أخرى');
-      }
+      next: () => console.log('Post office details saved to user profile.'),
+      error: (err: any) => console.error('Failed to save post office details:', err)
     });
   }
 
@@ -740,36 +755,18 @@ executePurchase(): void {
   }
 
   getBookImageUrl(book: any): string {
-    let imagePath = book.product_image ? String(book.product_image) : '';
-    if (!imagePath) {
-      if (book.merchantName) {
-        imagePath = 'merchant_' + book.merchantName + '/' + book.products_id + '/' + book.products_id + '.webp';
-      } else {
-        imagePath = 'admin__karim_mohamed__/' + book.products_id + '/' + book.products_id + '.webp';
-      }
-    } else {
-      if (imagePath.includes('/')) {
-        const parts = imagePath.split('/');
-        if (imagePath.includes('merchant_')) {
-          imagePath = parts.slice(-3).join('/');
-        } else if (imagePath.includes('admin__')) {
-          imagePath = parts.slice(-3).join('/');
-        } else {
-          imagePath = parts[parts.length - 1];
-        }
-      } else {
-        if (!imagePath.includes('.') && /^\d+$/.test(imagePath)) {
-          if (book.merchantName) {
-            imagePath = 'merchant_' + book.merchantName + '/' + book.products_id + '/' + imagePath + '.webp';
-          } else {
-            imagePath = 'admin__karim_mohamed__/' + imagePath + '/' + imagePath + '.webp';
-          }
-        } else if (!imagePath.includes('.')) {
-          imagePath += '.webp';
-        }
-      }
+    const imageId = book.product_image || book.products_id;
+    if (!imageId) {
+      return '/assets/placeholder-book.jpg';
     }
-    return this.uploadsBaseUrl + '/' + imagePath;
+
+    let imagePath;
+    if (book.merchantName) {
+      imagePath = `merchant_${book.merchantName}/${imageId}/${imageId}.webp`;
+    } else {
+      imagePath = `admin__karim_mohamed__/${imageId}/${imageId}.webp`;
+    }
+    return `${this.uploadsBaseUrl}/${imagePath}`;
   }
 
 }

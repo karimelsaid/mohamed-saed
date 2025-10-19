@@ -425,6 +425,28 @@ async function deleteRequestedBook(req, res) {
   }
 }
 
+async function getUserPrintOrders(req, res) {
+  try {
+    const user = await User.findById(req.params.userId).lean();
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const printOrders = user.orders
+      .filter(order =>
+        order.printProjects &&
+        order.printProjects.length > 0 &&
+        order.status === 'تم التسليم')
+      .sort((a, b) => new Date(b.date) - new Date(a.date)); // Sort by most recent
+
+    res.status(200).json(printOrders);
+  } catch (error) {
+    console.error('Error fetching user print orders:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+}
+
+
 async function submitBookRating(req, res) {
   const { userId, bookId, rating } = req.body;
 
@@ -911,6 +933,7 @@ module.exports = {
   deleteNotification,
   // Add new method to get average rating for a book
   getAverageRating: async (req, res) => {
+    console.log('getAverageRating called');
     try {
       const bookId = req.params.bookId;
       if (!bookId) {
@@ -948,4 +971,5 @@ module.exports = {
   getAllUrgencyRequests,
   updateUrgencyRequestStatus,
   requestPayment, // Re-add temporarily to avoid crash
+  getUserPrintOrders,
 };

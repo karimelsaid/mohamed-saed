@@ -1,5 +1,6 @@
 import { Component, OnInit, ViewChild, ChangeDetectorRef } from '@angular/core';
 import { HttpClient, HttpEventType } from '@angular/common/http';
+import { Router } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
 import { ModalService } from '../services/modal.service';
 import { AccountModalComponent } from '../auth/account-modal/account-modal.component';
@@ -16,6 +17,9 @@ import { take } from 'rxjs/operators';
   styleUrls: ['./print.component.css']
 })
 export class PrintComponent implements OnInit {
+  currentStep: number = 1;
+  totalSteps: number = 3;
+
   projects: any[] = [];
   userId: string = ''; // سيتم تعيينه من خدمة المصادقة
   uploadResponse: any = null;
@@ -23,6 +27,12 @@ export class PrintComponent implements OnInit {
   uploadProgress: number = 0;
   uploadSuccess: boolean = false;
   errorMessage: string = '';
+  showModal: boolean = false;
+  modalType: 'success' | 'error' = 'success';
+  modalMessage: string = '';
+
+  showPreviousProjects: boolean = false;
+  previousOrders: any[] = [];
 
   validationErrors: any[] = [];
   isLoggedIn: boolean = false;
@@ -65,6 +75,7 @@ export class PrintComponent implements OnInit {
 
   constructor(
     private http: HttpClient,
+    private router: Router,
     private authService: AuthService,
     private modalService: ModalService,
     private freeShippingService: FreeShippingService,
@@ -78,6 +89,7 @@ export class PrintComponent implements OnInit {
       if (user) {
         this.loadUserProfile();
       } else {
+        this.previousOrders = [];
         this.userProfile = null;
         this.editedUserProfile = null;
         this.shippingCost = 0;
@@ -85,6 +97,37 @@ export class PrintComponent implements OnInit {
       }
     });
     this.loadFreeShippingRules();
+  }
+
+  togglePreviousProjects() {
+    this.showPreviousProjects = !this.showPreviousProjects;
+    if (this.showPreviousProjects && this.userId) {
+      this.loadPreviousOrders();
+    }
+  }
+
+  loadPreviousOrders() {
+    this.http.get<any[]>(`/api/users/${this.userId}/print-orders`).subscribe({
+      next: (orders) => {
+        this.previousOrders = orders;
+      },
+      error: (err) => {
+        console.error('Failed to load previous orders:', err);
+        this.modalMessage = 'فشل في تحميل المشاريع السابقة.';
+        this.modalType = 'error';
+        this.showModal = true;
+      }
+    });
+  }
+
+  reorderProject(project: any) {
+    const newProject = { ...project, file: null, estimatedPrice: 0 };
+    delete newProject.filename;
+    delete newProject.filepath;
+    delete newProject.createdAt;
+    delete newProject._id;
+    this.projects = [newProject];
+    this.showPreviousProjects = false;
   }
 
   addProject() {
@@ -101,6 +144,42 @@ export class PrintComponent implements OnInit {
       estimatedPrice: 0 // Add estimatedPrice property
     });
     this.validationErrors.push({});
+  }
+
+  nextStep() {
+    if (this.canGoNext()) {
+      this.currentStep++;
+      window.scrollTo(0, 0);
+    }
+  }
+
+  prevStep() {
+    if (this.currentStep > 1) {
+      this.currentStep--;
+      window.scrollTo(0, 0);
+    }
+  }
+
+  canGoNext(): boolean {
+    if (this.currentStep === 1) {
+      return this.projects.length > 0 && this.validateProjects();
+    } else if (this.currentStep === 2) {
+      return this.isAddressComplete;
+    }
+    return true;
+  }
+
+  goToStep(step: number) {
+    if (step >= 1 && step <= this.totalSteps) {
+      // Allow going back to previous steps
+      if (step < this.currentStep) {
+        this.currentStep = step;
+        window.scrollTo(0, 0);
+      } else if (step > this.currentStep && this.canGoNext()) {
+        this.currentStep = step;
+        window.scrollTo(0, 0);
+      }
+    }
   }
 
   removeProject(index: number) {
@@ -174,14 +253,35 @@ export class PrintComponent implements OnInit {
   }
 
   calculatePrice(project: any) {
-    // Updated price calculation logic to match backend
-    let basePricePerPage = 0.25; // base price per page in currency units
+    // 1. Printing cost per page
+    let printingCostPerPage = 0;
     if (project.printColor === 'أبيض وأسود') {
-      basePricePerPage = 0.40;
+      printingCostPerPage = 0.40;
     } else if (project.printColor === 'ألوان') {
-      basePricePerPage = 0.90;
+      printingCostPerPage = 0.90;
     }
 
+    // 2. Paper cost per page
+    const pages = project.pages || 0;
+    let paperCostPerA4Sheet = 0;
+    if (project.size === 'B5') {
+      if (project.paperColor === '#FFFFFF') { // White
+        paperCostPerA4Sheet = 0.20;
+      } else if (project.paperColor === '#DED5AF') { // Yellow
+        paperCostPerA4Sheet = 0.25;
+      } else if (project.paperColor === '#F5F5DC') { // Creamy
+        paperCostPerA4Sheet = 0.35;
+      }
+    } else if (project.paperColor === '#FFFFFF') { // White
+      paperCostPerA4Sheet = 0.30;
+    } else if (project.paperColor === '#DED5AF') { // Yellow
+      paperCostPerA4Sheet = 0.40;
+    } else if (project.paperColor === '#F5F5DC') { // Creamy
+      paperCostPerA4Sheet = 0.50;
+    }
+    const pagesPerA4Sheet = (project.size === 'A5') ? 4 : 2; // A4 and B5 both use 2 pages per A4 sheet
+
+    // 3. Cover price
     let coverPrice = 0;
     if (project.coverType === 'غلاف ورقي') {
       coverPrice = 25;
@@ -191,27 +291,10 @@ export class PrintComponent implements OnInit {
       coverPrice = 100;
     }
 
-    let sizeMultiplier = 1;
-    if (project.size === 'A4') {
-      sizeMultiplier = 1;
-    } else if (project.size === 'A5') {
-      sizeMultiplier = 0.8;
-    } else if (project.size === 'B5') {
-      sizeMultiplier = 0.95;
-    }
-
-    let paperColorPrice = 0;
-    if (project.paperColor === '#DED5AF') { // yellow paper
-      paperColorPrice = 0.10;
-    } else if (project.paperColor === '#FFFFFF') { // white paper default
-      paperColorPrice = 0;
-    }
-
-    const pages = project.pages || 0;
-    const copies = project.copies || 0;
-
-    const price = ((pages * basePricePerPage) + coverPrice + paperColorPrice) * copies * sizeMultiplier;
-    return Math.round(price * 100) / 100; // round to 2 decimals
+    const copies = project.copies || 0;    const numberOfA4Sheets = Math.ceil(pages / pagesPerA4Sheet);
+    const totalPaperCost = numberOfA4Sheets * paperCostPerA4Sheet;    const totalPrintingCost = pages * printingCostPerPage;
+    const price = (totalPaperCost + totalPrintingCost + coverPrice) * copies;
+    return Math.ceil(price); // Round up to the nearest integer
   }
 
   updateEstimatedPrice(index: number) {
@@ -219,6 +302,21 @@ export class PrintComponent implements OnInit {
     project.estimatedPrice = this.calculatePrice(project);
   }
 
+  deleteOrder(orderId: string, index: number) {
+    if (!confirm('هل أنت متأكد من رغبتك في حذف هذا الطلب؟ لا يمكن التراجع عن هذا الإجراء.')) {
+      return;
+    }
+    this.http.delete(`/api/print/orders/${this.userId}/${orderId}`).subscribe({
+      next: () => {
+        this.previousOrders.splice(index, 1);
+      },
+      error: (err) => {
+        this.modalMessage = 'فشل حذف الطلب. يرجى المحاولة مرة أخرى.';
+        this.modalType = 'error';
+        this.showModal = true;
+      }
+    });
+  }
   onProjectChange(index: number) {
     this.updateEstimatedPrice(index);
     this.calculateTotalPrice();
@@ -349,7 +447,7 @@ export class PrintComponent implements OnInit {
 
   calculateTotalPrice(): void {
     const itemsTotal = this.projects.reduce((total, project) => total + (project.estimatedPrice || 0), 0);
-    this.totalPrice = itemsTotal + this.shippingCost;
+    this.totalPrice = Math.ceil(itemsTotal + this.shippingCost);
   }
 
   onDeliveryTypeChange() {
@@ -540,22 +638,24 @@ export class PrintComponent implements OnInit {
     }
 
     if (this.projects.length === 0) {
-      alert('أدخل مشروع الطباعة أولا');
+      this.showModal = true;
+      this.modalType = 'error';
+      this.modalMessage = 'أدخل مشروع الطباعة أولاً';
       return;
     }
 
     if (!this.validateProjects()) {
-      this.errorMessage = 'يجب اكمال البيانات';
+      this.showModal = true;
+      this.modalType = 'error';
+      this.modalMessage = 'يجب إكمال البيانات';
       return;
-    } else {
-      this.errorMessage = '';
     }
 
     if (!this.isAddressComplete) {
-      this.errorMessage = 'يجب إكمال بيانات الشحن قبل إرسال الطلب';
+      this.showModal = true;
+      this.modalType = 'error';
+      this.modalMessage = 'يجب إكمال بيانات الشحن قبل إرسال الطلب';
       return;
-    } else {
-      this.errorMessage = '';
     }
 
     // Address confirmation removed as per user request
@@ -610,7 +710,6 @@ export class PrintComponent implements OnInit {
 
     this.uploading = true;
     this.uploadProgress = 0;
-    this.errorMessage = '';
     this.http.post('/api/print/upload', formData, {
       reportProgress: true,
       observe: 'events'
@@ -621,16 +720,32 @@ export class PrintComponent implements OnInit {
         } else if (event.type === HttpEventType.Response) {
           this.uploadResponse = event.body;
           this.uploading = false;
-          this.uploadSuccess = true;
-          setTimeout(() => {
-            this.uploadSuccess = false;
-          }, 1000);
+          this.showModal = true;
+          this.modalType = 'success';
+          this.modalMessage = 'تم إرسال الطلب بنجاح! سيتم التواصل معك قريباً.';
         }
       },
       error: (err) => {
-        this.errorMessage = err.error?.message || 'Upload failed';
         this.uploading = false;
+        this.showModal = true;
+        this.modalType = 'error';
+        this.modalMessage = err.error?.message || 'فشل في إرسال الطلب. يرجى المحاولة مرة أخرى.';
       }
     });
+  }
+
+  closeModal() {
+    this.showModal = false;
+  }
+
+  addNewProject() {
+    this.projects = [];
+    this.addProject();
+    this.currentStep = 1;
+    this.showModal = false;
+  }
+
+  goToHome() {
+    this.router.navigate(['/']);
   }
 }

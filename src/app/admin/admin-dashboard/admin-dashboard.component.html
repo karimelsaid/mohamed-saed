@@ -891,7 +891,7 @@
   <!-- Bulk action buttons for print orders -->
   <div class="mb-4 flex justify-between items-center">
     <button
-      (click)="bulkDeleteSelectedPrintOrders()"
+      (click)="bulkDeleteSelectedPrintOrders(selectedPrintOrders)"
       [disabled]="selectedPrintOrders.size === 0"
       class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded disabled:opacity-50"
     >

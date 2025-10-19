@@ -1775,8 +1775,8 @@ export class AdminDashboardComponent implements OnInit {
     return this.selectedPrintOrders.size > 0 && this.selectedPrintOrders.size < this.printOrders.length;
   }
 
-  bulkDeleteSelectedPrintOrders(): void {
-    const selectedIds = Array.from(this.selectedPrintOrders);
+  bulkDeleteSelectedPrintOrders(selectedOrders: Set<string>): void {
+    const selectedIds = Array.from(selectedOrders);
     if (selectedIds.length === 0) {
       this.showErrorModal('يرجى اختيار طلبات طباعة لحذفها');
       return;
@@ -1785,8 +1785,9 @@ export class AdminDashboardComponent implements OnInit {
     const action = () => {
       let completed = 0;
       selectedIds.forEach(orderId => {
-        const order = this.printOrders.find(o => o.orderId === orderId);
+        const order = this.allPrintOrders.find(o => o.orderId === orderId);
         if (order) {
+          console.log(`Attempting to delete print order: ${orderId} for user: ${order.userId}`);
           this.http.delete(`${this.backendBaseUrl}/print/delete-print-order/${order.userId}/${orderId}`).subscribe({
             next: () => {
               completed++;
@@ -1797,9 +1798,13 @@ export class AdminDashboardComponent implements OnInit {
               }
             },
             error: (err) => {
-              this.showErrorModal('حدث خطأ أثناء حذف طلبات الطباعة.');
+              console.error(`Error deleting print order ${orderId} for user ${order.userId}:`, err);
+              this.showErrorModal(`حدث خطأ أثناء حذف طلب الطباعة: ${orderId}. يرجى مراجعة الـ console لمزيد من التفاصيل.`);
             }
           });
+        } else {
+          console.error(`Could not find print order with ID: ${orderId} in allPrintOrders list.`);
+          this.showErrorModal(`لم يتم العثور على طلب الطباعة بالمعرف: ${orderId}`);
         }
       });
     };

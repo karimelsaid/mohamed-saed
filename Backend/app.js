@@ -133,36 +133,38 @@ app.delete('/api/print/delete-print-order/:userId/:orderId', async (req, res) =>
     return res.status(400).json({ success: false, message: 'Invalid user ID or order ID' });
   }
   try {
-    const user = await User.findById(userId);
-    if (!user) {
-      console.error('User not found for ID:', userId);
-      return res.status(404).json({ success: false, message: 'User not found' });
-    }
-    const orderIndex = user.orders.findIndex(order => order._id.equals(orderId));
-    if (orderIndex === -1) {
-      console.error('Print order not found for orderId:', orderId);
+    // First, find the user and the specific order to get file paths
+    const userWithOrder = await User.findOne(
+      { _id: userId, 'orders._id': orderId },
+      { 'orders.$': 1 } // Project only the matched order
+    ).lean();
+
+    if (!userWithOrder || !userWithOrder.orders || userWithOrder.orders.length === 0) {
       return res.status(404).json({ success: false, message: 'Print order not found' });
     }
-    const order = user.orders[orderIndex];
-    // Delete associated files for all printProjects in the order
-    if (order.printProjects && order.printProjects.length > 0) {
-      order.printProjects.forEach(printProject => {
-          if (printProject.filepath) {
-            // Use full filepath stored to delete the file
-            const filePath = printProject.filepath;
-            fs.unlink(filePath, (err) => {
-              if (err) {
-                console.error('Error deleting file:', err);
-              } else {
-                // console.log('Deleted file:', filePath);
-              }
-            });
-          }
-      });
+
+    const order = userWithOrder.orders[0];
+
+    // Use $pull to atomically remove the order from the array
+    const updateResult = await User.updateOne(
+      { _id: userId },
+      { $pull: { orders: { _id: orderId } } }
+    );
+
+    if (updateResult.modifiedCount === 0) {
+      // This might happen in a race condition if another request already deleted it
+      return res.status(404).json({ success: false, message: 'Print order not found or already deleted' });
     }
-    // Remove the order from user's orders array
-    user.orders.splice(orderIndex, 1);
-    await user.save();
+
+    // Now, delete associated files after successfully removing from DB
+    order.printProjects?.forEach(printProject => {
+      if (printProject.filepath) {
+        fs.unlink(printProject.filepath, (err) => {
+          if (err) console.error('Error deleting file:', err);
+        });
+      }
+    });
+
     res.json({ success: true, message: 'Print order and files deleted successfully' });
   } catch (error) {
     console.error('Error deleting print order:', error.stack || error);

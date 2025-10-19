@@ -9,6 +9,7 @@ const {
   removeFromCart,      // تأكد من وجودها
   getUserData,
   getUserProfile,
+  getUserPrintOrders,
   updateOrderShippingAddress,
   updateUserProfile,
   requestBook,
@@ -46,6 +47,9 @@ router.get('/user-data/:userId', getUserData);
 
 // جلب بيانات الملف الشخصي للمستخدم
 router.get('/profile/:userId', getUserProfile);
+
+// جلب طلبات الطباعة السابقة للمستخدم
+router.get('/:userId/print-orders', getUserPrintOrders);
 
 // تحديث بيانات الملف الشخصي للمستخدم (بما في ذلك تحديث عناوين الشحن في الطلبات)
 router.put('/update-profile/:userId', updateUserProfile);

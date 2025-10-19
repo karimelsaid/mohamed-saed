@@ -69,40 +69,49 @@ const upload = multer({ storage: storage, fileFilter: fileFilter }).array('files
 
 // Price calculation function
 function calculatePrice({ pages, copies, coverType, printColor, size, paperColor }) {
-  let basePricePerPage = 0.25; // base price per page in currency units
+  // 1. Printing cost per page
+  let printingCostPerPage = 0;
   if (printColor === 'أبيض وأسود') {
-    basePricePerPage = 0.40;
+    printingCostPerPage = 0.40;
   } else if (printColor === 'ألوان') {
-    basePricePerPage = 0.90;
+    printingCostPerPage = 0.90;
   }
 
+  // 2. Paper cost per page
+  let paperCostPerA4Sheet = 0;
+  if (size === 'B5') {
+    if (paperColor === '#FFFFFF') { // White
+      paperCostPerA4Sheet = 0.20;
+    } else if (paperColor === '#DED5AF') { // Yellow
+      paperCostPerA4Sheet = 0.25;
+    } else if (paperColor === '#F5F5DC') { // Creamy
+      paperCostPerA4Sheet = 0.35;
+    }
+  } else if (paperColor === '#FFFFFF') { // White
+    paperCostPerA4Sheet = 0.30;
+  } else if (paperColor === '#DED5AF') { // Yellow
+    paperCostPerA4Sheet = 0.40;
+  } else if (paperColor === '#F5F5DC') { // Creamy
+    paperCostPerA4Sheet = 0.50;
+  }
+  const pagesPerA4Sheet = (size === 'A5') ? 4 : 2; // A4 and B5 both use 2 pages per A4 sheet
+
+  // 3. Cover price
   let coverPrice = 0;
   if (coverType === 'غلاف ورقي') {
     coverPrice = 25;
   } else if (coverType === 'غلاف كرتوني') {
     coverPrice = 60;
-  }else if (coverType === 'غلاف جلد فاخر') {
+  } else if (coverType === 'غلاف جلد فاخر') {
     coverPrice = 100;
   }
 
-  let sizeMultiplier = 1;
-  if (size === 'A4') {
-    sizeMultiplier = 1;
-  } else if (size === 'A5') {
-    sizeMultiplier = 0.8;
-  }else if (size === 'B5') {
-    sizeMultiplier = 0.95;
-  }
-
-  let paperColorPrice = 0;
-  if (paperColor === '#DED5AF') { // yellow paper
-    paperColorPrice = 0.10;
-  } else if (paperColor === '#FFFFFF') { // white paper default
-    paperColorPrice = 0;
-  }
-
-  const price = ((pages * basePricePerPage) + coverPrice + paperColorPrice) * copies * sizeMultiplier;
-  return Math.round(price * 100) / 100; // round to 2 decimals
+  // 4. Total price calculation
+  const numberOfA4Sheets = Math.ceil(pages / pagesPerA4Sheet);
+  const totalPaperCost = numberOfA4Sheets * paperCostPerA4Sheet;
+  const totalPrintingCost = pages * printingCostPerPage;
+  const price = (totalPaperCost + totalPrintingCost + coverPrice) * copies;
+  return Math.ceil(price); // Round up to the nearest integer
 }
 
 exports.uploadPrintProjects = async (req, res) => {

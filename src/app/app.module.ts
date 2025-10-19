@@ -1,5 +1,6 @@
 import { NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
+import { AccountModalComponent } from './auth/account-modal/account-modal.component';
 import { RouterModule } from '@angular/router';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
@@ -45,7 +46,6 @@ import { TutorialComponent } from './shared/tutorial/tutorial.component';
     FitComponent,
     FenonComponent,
     ChildComponent,
-    PrintComponent,
     TarekhComponent,
     QamosComponent,
     SearchResultsComponent,
@@ -66,7 +66,8 @@ import { TutorialComponent } from './shared/tutorial/tutorial.component';
     SearchBarModule,
     AdminModule,
     MerchantDashboardComponent,
-    TutorialComponent
+    TutorialComponent,
+    AccountModalComponent
   ],
   providers: [
     provideHttpClient(withInterceptorsFromDi()), // استخدام provideHttpClient بدلاً من HttpClientModule

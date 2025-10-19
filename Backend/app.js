@@ -126,51 +126,11 @@ app.use('/api/payment-requests', paymentRequestsRoutes);
 const User = require('./models/User.model');
 const { ObjectId } = mongoose.Types;
 
-app.delete('/api/print/delete-print-order/:userId/:orderId', async (req, res) => {
-  const { userId, orderId } = req.params;
-  if (!ObjectId.isValid(userId) || !ObjectId.isValid(orderId)) {
-    console.error('Invalid user ID or order ID:', userId, orderId);
-    return res.status(400).json({ success: false, message: 'Invalid user ID or order ID' });
-  }
-  try {
-    // First, find the user and the specific order to get file paths
-    const userWithOrder = await User.findOne(
-      { _id: userId, 'orders._id': orderId },
-      { 'orders.$': 1 } // Project only the matched order
-    ).lean();
-
-    if (!userWithOrder || !userWithOrder.orders || userWithOrder.orders.length === 0) {
-      return res.status(404).json({ success: false, message: 'Print order not found' });
-    }
-
-    const order = userWithOrder.orders[0];
-
-    // Use $pull to atomically remove the order from the array
-    const updateResult = await User.updateOne(
-      { _id: userId },
-      { $pull: { orders: { _id: orderId } } }
-    );
-
-    if (updateResult.modifiedCount === 0) {
-      // This might happen in a race condition if another request already deleted it
-      return res.status(404).json({ success: false, message: 'Print order not found or already deleted' });
-    }
-
-    // Now, delete associated files after successfully removing from DB
-    order.printProjects?.forEach(printProject => {
-      if (printProject.filepath) {
-        fs.unlink(printProject.filepath, (err) => {
-          if (err) console.error('Error deleting file:', err);
-        });
-      }
-    });
-
-    res.json({ success: true, message: 'Print order and files deleted successfully' });
-  } catch (error) {
-    console.error('Error deleting print order:', error.stack || error);
-    res.status(500).json({ success: false, message: 'Server error deleting print order' });
-  }
-});
+// Directly define the print order deletion route here to ensure it's correct
+const printController = require('./controllers/print.controller');
+app.delete('/api/print/orders/:userId/:orderId', printController.deletePrintOrder);
+// Add the old route for admin dashboard compatibility
+app.delete('/api/print/delete-print-order/:userId/:orderId', printController.deletePrintOrder);
 
 // جدولة تحديث بيانات الكتب كل يوم
 cron.schedule('0 */2 * * *', () => {

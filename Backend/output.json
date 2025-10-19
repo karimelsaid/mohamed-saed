@@ -10689,23 +10689,5 @@
     "rival": true,
     "product_discount_percent": 65,
     "image_path": "/uploads/books/admin__karim_mohamed__/321838396195/321838396195.webp"
-  },
-  {
-    "products_id": "349549201831",
-    "product_name": "test",
-    "product_price": 9,
-    "price_cost": 1,
-    "product_quantity": 1,
-    "product_category": "تطوير الذات وعلم النفس",
-    "product_description": "1",
-    "product_image": "349549201831",
-    "promotionEndDate": "2025-10-20T00:00:00.000Z",
-    "product_price_before_discount": 29,
-    "rival": true,
-    "product_discount_percent": 70,
-    "image_path": "/uploads/books/merchant_kenouz/349549201831/349549201831.webp",
-    "merchantId": "68c7510b354f4f80b893e0a1",
-    "merchantName": "kenouz",
-    "merchantLogo": "merchant_kenouz/logo/logo.webp"
   }
 ]

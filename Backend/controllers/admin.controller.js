@@ -370,10 +370,26 @@ async function deleteProduct(req, res) {
   }
 
   try {
-    // Delete product folder if exists (admin uploads)
-    const uploadDir = getAdminUploadDir(req.admin.username, barcode);
-    if (fs.existsSync(uploadDir)) {
-      fs.rmSync(uploadDir, { recursive: true, force: true });
+    // Find the product in the output.json to determine if it's an admin or merchant product
+    const outputPath = path.join(__dirname, '..', 'output.json');
+    const products = JSON.parse(fs.readFileSync(outputPath, 'utf-8'));
+    const productInfo = products.find(p => String(p.products_id).trim() === String(barcode).trim());
+
+    if (productInfo && productInfo.merchantId) {
+      // It's a merchant product, find the merchant to build the correct path
+      const merchantUser = await User.findById(productInfo.merchantId);
+      if (merchantUser) {
+        const merchantUploadDir = path.join(__dirname, '../uploads/books', 'merchant_' + merchantUser.username.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_'), barcode);
+        if (fs.existsSync(merchantUploadDir)) {
+          fs.rmSync(merchantUploadDir, { recursive: true, force: true });
+        }
+      }
+    } else {
+      // It's an admin product
+      const adminUploadDir = getAdminUploadDir(req.admin.username, barcode);
+      if (fs.existsSync(adminUploadDir)) {
+        fs.rmSync(adminUploadDir, { recursive: true, force: true });
+      }
     }
 
     // Download current Excel file
@@ -440,32 +456,8 @@ async function deleteProduct(req, res) {
       return res.status(500).json({ success: false, message: 'Error updating output.json after Excel update' });
     }
 
-    // Delete from Product model if exists (admin product)
-    await Product.deleteMany({ product_image: barcode + '.webp' });
-
-    // Now delete from merchant's products and uploads folder
-    const User = require('../models/User.model');
-    const ProductModel = require('../models/Product.model');
-
-    // Find the product in DB by product_image or barcode
-    const merchantProduct = await ProductModel.findOne({ product_image: { $regex: barcode } });
-    if (merchantProduct) {
-      const merchantId = merchantProduct.merchantId;
-      if (merchantId) {
-        // Find merchant username
-        const merchantUser = await User.findById(merchantId);
-        if (merchantUser && merchantUser.username) {
-          const merchantUsername = merchantUser.username;
-          // Construct merchant upload directory path
-          const merchantUploadDir = path.join(__dirname, '../uploads/books', 'merchant_' + merchantUsername.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_'), barcode);
-          if (fs.existsSync(merchantUploadDir)) {
-            fs.rmSync(merchantUploadDir, { recursive: true, force: true });
-          }
-        }
-      }
-      // Delete the product from merchant's products collection
-      await ProductModel.deleteOne({ _id: merchantProduct._id });
-    }
+    // Delete from Product model (covers both admin and merchant products)
+    await require('../models/Product.model').deleteMany({ product_image: { $regex: barcode } });
 
     res.json({ success: true, message: 'Product deleted successfully from admin and merchant' });
   } catch (error) {

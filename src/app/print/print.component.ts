@@ -1,17 +1,21 @@
 import { Component, OnInit, ViewChild, ChangeDetectorRef } from '@angular/core';
 import { HttpClient, HttpEventType } from '@angular/common/http';
 import { Router } from '@angular/router';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { AuthService } from '../auth/auth.service';
-import { ModalService } from '../services/modal.service';
 import { AccountModalComponent } from '../auth/account-modal/account-modal.component';
 import { FreeShippingService, FreeShippingRules } from '../services/free-shipping.service';
 import { User } from '../auth/user.model';
 import governoratesData from '../../../public/json/egypt-governorates.json';
 import { take } from 'rxjs/operators';
-
-
 @Component({
-  standalone: false,
+  standalone: true,
+  imports: [
+    CommonModule,
+    FormsModule,
+    AccountModalComponent
+  ],
   selector: 'app-print',
   templateUrl: './print.component.html',
   styleUrls: ['./print.component.css']
@@ -29,6 +33,7 @@ export class PrintComponent implements OnInit {
   errorMessage: string = '';
   showModal: boolean = false;
   modalType: 'success' | 'error' = 'success';
+  showUploadModal: boolean = false;
   modalMessage: string = '';
 
   showPreviousProjects: boolean = false;
@@ -77,7 +82,6 @@ export class PrintComponent implements OnInit {
     private http: HttpClient,
     private router: Router,
     private authService: AuthService,
-    private modalService: ModalService,
     private freeShippingService: FreeShippingService,
     private cdr: ChangeDetectorRef
   ) {}
@@ -131,6 +135,13 @@ export class PrintComponent implements OnInit {
   }
 
   addProject() {
+    if (!this.isLoggedIn) {
+      this.showAuthModal = true;
+      if (this.accountModal) {
+        this.accountModal.openModal();
+      }
+      return;
+    }
     this.projects.push({
       file: null,
       size: '',
@@ -710,6 +721,7 @@ export class PrintComponent implements OnInit {
 
     this.uploading = true;
     this.uploadProgress = 0;
+    this.showUploadModal = true; // Show upload progress modal immediately
     this.http.post('/api/print/upload', formData, {
       reportProgress: true,
       observe: 'events'
@@ -719,6 +731,7 @@ export class PrintComponent implements OnInit {
           this.uploadProgress = Math.round(100 * event.loaded / event.total);
         } else if (event.type === HttpEventType.Response) {
           this.uploadResponse = event.body;
+          this.showUploadModal = false;
           this.uploading = false;
           this.showModal = true;
           this.modalType = 'success';
@@ -727,6 +740,7 @@ export class PrintComponent implements OnInit {
       },
       error: (err) => {
         this.uploading = false;
+        this.showUploadModal = false;
         this.showModal = true;
         this.modalType = 'error';
         this.modalMessage = err.error?.message || 'فشل في إرسال الطلب. يرجى المحاولة مرة أخرى.';

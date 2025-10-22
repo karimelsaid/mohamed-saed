@@ -165,6 +165,10 @@ function generateRobotsTxt() {
     content += '\nSitemap: https://kenouz.org/sitemap.xml\n';
 
     const robotsPath = path.join(__dirname, 'dist/browser/robots.txt');
+    const dir = path.dirname(robotsPath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
     fs.writeFileSync(robotsPath, content);
     console.log('✅ تم إنشاء ملف robots.txt بنجاح مع روابط ثابتة وكتب');
   } catch (error) {
@@ -172,29 +176,15 @@ function generateRobotsTxt() {
   }
 }
 
-// تقديم ملفات Angular في جميع الأوضاع (تطوير وإنتاج)
-app.use(express.static(path.join(__dirname, 'dist/browser')));
-
-// تقديم ملف robots.txt
-app.get('/robots.txt', (req, res) => {
-  res.type('text/plain');
-  res.sendFile(path.join(__dirname, 'dist/browser/robots.txt'));
-});
-
-// إضافة مسار لخدمة ملف sitemap.xml بنفس طريقة تقديم ملف robots.txt
-app.get('/sitemap.xml', (req, res) => {
-  res.type('text/plain');
-  res.sendFile(path.join(__dirname, 'dist/browser/sitemap.xml'));
-});
-
-// تعديل مسار catch-all لتجاهل طلبات /uploads/ وتوجيهها إلى Nginx مباشرة
-app.get('*', (req, res, next) => {
-  if (req.path.startsWith('/uploads/')) {
-    // تجاهل هذا الطلب ليتم التعامل معه من قبل Nginx
-    return next();
-  }
-  res.sendFile(path.join(__dirname, 'dist/browser/index.html'));
-});
+// في بيئة SSR، لم نعد بحاجة لتقديم ملفات Angular الثابتة أو مسار catch-all من هنا.
+// سيقوم خادم SSR (server.ts) بهذه المهمة.
+// app.use(express.static(path.join(__dirname, 'dist/browser')));
+// app.get('*', (req, res, next) => {
+//   if (req.path.startsWith('/uploads/')) {
+//     return next();
+//   }
+//   res.sendFile(path.join(__dirname, 'dist/browser/index.html'));
+// });
 
 // بدء السيرفر
 

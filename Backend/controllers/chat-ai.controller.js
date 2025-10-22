@@ -7,7 +7,9 @@ require('dotenv').config();
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || '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';
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
-const BOOKS_JSON_PATH = path.resolve(__dirname, '../output.json');
+// تعديل المسار ليكون متوافقًا مع بيئة الإنتاج بعد البناء
+// سيتم نسخ الملف إلى مجلد dist/server
+const BOOKS_JSON_PATH = path.resolve(__dirname, 'output.json');
 
 let cachedBooks = null;
 

@@ -42,6 +42,7 @@ export class PrintComponent implements OnInit {
   validationErrors: any[] = [];
   isLoggedIn: boolean = false;
   showAuthModal: boolean = false;
+  private modalOpened = false;
 
   @ViewChild(AccountModalComponent) accountModal!: AccountModalComponent;
 
@@ -103,6 +104,16 @@ export class PrintComponent implements OnInit {
     this.loadFreeShippingRules();
   }
 
+  ngAfterViewChecked(): void {
+    // This lifecycle hook ensures that the view is updated before we try to open the modal.
+    // It's a robust way to solve the "double click" issue.
+    if (this.showAuthModal && this.accountModal && !this.modalOpened) {
+      this.accountModal.openModal();
+      this.modalOpened = true;
+      this.cdr.detectChanges();
+    }
+  }
+
   togglePreviousProjects() {
     this.showPreviousProjects = !this.showPreviousProjects;
     if (this.showPreviousProjects && this.userId) {
@@ -137,9 +148,7 @@ export class PrintComponent implements OnInit {
   addProject() {
     if (!this.isLoggedIn) {
       this.showAuthModal = true;
-      if (this.accountModal) {
-        this.accountModal.openModal();
-      }
+      this.modalOpened = false; // Reset flag when trying to open the modal
       return;
     }
     this.projects.push({
@@ -217,6 +226,7 @@ export class PrintComponent implements OnInit {
 
   closeAuthModal() {
     this.showAuthModal = false;
+    this.modalOpened = false; // Reset flag when modal is closed
   }
 
   validateProjects(): boolean {

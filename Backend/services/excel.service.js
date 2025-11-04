@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const { auth } = require('../config/drive');
 
-// تصنيفات الكتب
+// تصنيفات الكتب والمنتجات الأخرى
 const categoryMap = {
   'رواية': 'روايات وقصص',
   'تنمية': 'تطوير الذات وعلم النفس',
@@ -14,8 +14,23 @@ const categoryMap = {
   'اعمال': 'أعمال وتسويق ومالية',
   'فن': 'فنون وحرف',
   'تاريخ': 'تاريخ وسير ذاتية',
-  'تربية': 'تربية وأطفال'
+  'تربية': 'تربية وأطفال',
+  'ادوات': 'أدوات مكتبية',
+  'الكترونيات': 'إلكترونيات',
+  'ملابس': 'ملابس',
+  'تجميل': 'التجميل والعناية الشخصية',
+  'احذية': 'الأحذية',
+  'اثاث': 'أثاث وديكور المنزل',
+  'العاب': 'هدية وألعاب',
+  'أقمشة': 'أقمشة',
+  'اخرى': 'غير مصنف (أخرى)'
 };
+
+// Reverse categoryMap for mapping full names to short keys
+const reverseCategoryMap = {};
+for (const [key, value] of Object.entries(categoryMap)) {
+  reverseCategoryMap[value] = key;
+}
 
 function roundUpToNearestFive(num) {
   return Math.ceil(num / 5) * 5;
@@ -376,6 +391,7 @@ async function updateExcelFromJson(fileId) {
 module.exports = {
   downloadAndConvertExcel,
   categoryMap,
+  reverseCategoryMap,
   addProductToExcel,
   uploadExcelFromJson,
   updateExcelFromJson

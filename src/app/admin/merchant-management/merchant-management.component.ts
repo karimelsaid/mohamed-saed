@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { AdminService } from '../../services/admin.service';
 import { CommonModule } from '@angular/common';
 import { ModalService } from '../../services/modal.service';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-merchant-management',
@@ -33,6 +34,8 @@ export class MerchantManagementComponent implements OnInit {
   showUpdateRequestsModal = false;
   productUpdateRequests: any[] = [];
   loadingUpdateRequests = false;
+
+  uploadsBaseUrl = environment.uploadsBaseUrl;
 
   constructor(private adminService: AdminService, private modalService: ModalService) {}
 
@@ -287,5 +290,57 @@ export class MerchantManagementComponent implements OnInit {
       confirmText: 'موافق',
       showCancel: false
     });
+  }
+
+    getProductImageUrl(product: any): string {
+    // This logic is now consistent with other working components like search-results.
+    let imagePath = product.image_path || product.product_image || '';
+    const merchantName = product.merchantName || (this.selectedMerchant ? (this.selectedMerchant.merchantName || this.selectedMerchant.name) : null);
+
+    // If a full path is already provided in image_path, use it directly.
+    if (imagePath && imagePath.startsWith('/uploads/books/')) {
+      // The path is already correct, just return it.
+      return imagePath;
+    }
+
+    // If not, build the path from scratch
+    const imageId = product.products_id || product.product_image;
+    if (!imageId) {
+      return '/assets/placeholder-book.jpg';
+    }
+
+    let finalPath;
+    if (merchantName) {
+      finalPath = `merchant_${merchantName}/${imageId}/${imageId}.webp`;
+    } else {
+      // Fallback to admin path if no merchant name is found
+      finalPath = `admin__karim_mohamed__/${imageId}/${imageId}.webp`;
+    }
+
+    // Construct the full path, ensuring not to duplicate '/books/'
+    // uploadsBaseUrl is likely '/uploads' or '/uploads/books'
+    // The final path should be /uploads/books/merchant_...
+    const fullPath = `${this.uploadsBaseUrl}/${finalPath}`.replace('/books/books/', '/books/');
+    return fullPath;
+  }
+
+  getMerchantLogoUrl(merchant: any): string {
+    const merchantName = merchant.name || merchant.username;
+    const logoId = merchant.logo || merchant.merchant_logo;
+
+    // If logoId is already a full path (contains '/'), use it directly
+    if (logoId && logoId.includes('/')) {
+      return `${this.uploadsBaseUrl}/${logoId}`.replace('/books/books/', '/books/');
+    }
+
+    let finalPath;
+    if (logoId) {
+      finalPath = `merchant_${merchantName}/${logoId}/${logoId}.webp`;
+    } else {
+      // Use default logo.webp in merchant's directory
+      finalPath = `merchant_${merchantName}/logo/logo.webp`;
+    }
+    const fullPath = `${this.uploadsBaseUrl}/${finalPath}`.replace('/books/books/', '/books/');
+    return fullPath;
   }
 }

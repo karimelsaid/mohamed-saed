@@ -14,6 +14,7 @@ const sitemapService = require('./services/sitemap.service'); // Added import fo
 // استيراد المسارات
 const usersRoutes = require('./routes/users.routes');
 const booksRoutes = require('./routes/books.routes');
+const productsRoutes = require('./routes/products.routes');
 const ordersRoutes = require('./routes/orders.routes');
 const paymentRoutes = require('./routes/payment.routes');
 const printRoutes = require('./routes/print.routes');
@@ -111,6 +112,7 @@ connectDB().catch(err => {
 // تسجيل المسارات
 app.use('/api/users', usersRoutes);
 app.use('/api/books', booksRoutes);
+app.use('/api/products', productsRoutes);
 app.use('/api/orders', ordersRoutes);
 app.use('/api/payment', paymentRoutes); // تعديل المسار ليكون أكثر تحديداً
 

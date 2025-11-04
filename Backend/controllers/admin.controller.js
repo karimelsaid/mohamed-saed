@@ -2,7 +2,7 @@ const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
 const sharp = require('sharp');
-const { addProductToExcel, categoryMap, downloadAndConvertExcel, updateExcelFromJson } = require('../services/excel.service');
+const { addProductToExcel, categoryMap, reverseCategoryMap, downloadAndConvertExcel, updateExcelFromJson } = require('../services/excel.service');
 const sitemapService = require('../services/sitemap.service');
 
 const PromotionDate = require('../models/PromotionDate.model');
@@ -78,27 +78,48 @@ async function addProduct(req, res) {
 
     const filename = filenames[0];
 
+    // Convert full category name to short key if necessary
+    const shortCategoryKey = reverseCategoryMap[product_category] || product_category;
+
     // Determine category prefix based on categoryMap keys
     let categoryPrefix = '';
-    if (categoryMap.hasOwnProperty(product_category)) {
-      if (product_category === 'رواية') {
+    if (categoryMap.hasOwnProperty(shortCategoryKey)) {
+      if (shortCategoryKey === 'رواية') {
         categoryPrefix = 'رواية-';
-      } else if (product_category === 'تنمية') {
+      } else if (shortCategoryKey === 'تنمية') {
         categoryPrefix = 'تنمية-';
-      } else if (product_category === 'ديني') {
+      } else if (shortCategoryKey === 'ديني') {
         categoryPrefix = 'ديني-';
-      } else if (product_category === 'قاموس') {
+      } else if (shortCategoryKey === 'قاموس') {
         categoryPrefix = 'قاموس-';
-      } else if (product_category === 'صحة') {
+      } else if (shortCategoryKey === 'صحة') {
         categoryPrefix = 'صحة-';
-      } else if (product_category === 'اعمال') {
+      } else if (shortCategoryKey === 'اعمال') {
         categoryPrefix = 'اعمال-';
-      } else if (product_category === 'فن') {
+      } else if (shortCategoryKey === 'فن') {
         categoryPrefix = 'فن-';
-      } else if (product_category === 'تاريخ') {
+      } else if (shortCategoryKey === 'تاريخ') {
         categoryPrefix = 'تاريخ-';
-      } else if (product_category === 'تربية') {
+      } else if (shortCategoryKey === 'تربية') {
         categoryPrefix = 'تربية-';
+      } else if (shortCategoryKey === 'ادوات') {
+        categoryPrefix = 'ادوات-';
+      } else if (shortCategoryKey === 'الكترونيات') {
+        categoryPrefix = 'الكترونيات-';
+      } else if (shortCategoryKey === 'ملابس') {
+        categoryPrefix = 'ملابس-';
+      } else if (shortCategoryKey === 'تجميل') {
+        categoryPrefix = 'تجميل-';
+      } else if (shortCategoryKey === 'احذية') {
+        categoryPrefix = 'احذية-';
+      } else if (shortCategoryKey === 'اثاث') { // without hamza
+        categoryPrefix = 'اثاث-';
+      } else if (shortCategoryKey === 'العاب') { // without hamza
+        categoryPrefix = 'العاب-';
+      } else if (shortCategoryKey === 'أقمشة') {
+        categoryPrefix = 'أقمشة-';
+      } else if (shortCategoryKey === 'اخرى') {
+        categoryPrefix = 'اخرى-';
       }
     }
 
@@ -109,7 +130,7 @@ async function addProduct(req, res) {
       barcode,
       product_name,
       product_quantity: parseInt(product_quantity, 10),
-      product_category,
+      product_category: shortCategoryKey,
       product_description,
       categoryPrefix,
       product_price: parseFloat(product_price) || 0,
@@ -841,7 +862,19 @@ async function updateMerchantApproval(req, res) {
 async function listMerchantProducts(req, res) {
   try {
     const products = await Product.find().populate('merchantId', 'username email').sort({ createdAt: -1 });
-    res.json({ success: true, products });
+
+    // Remove any potential duplicates based on barcode (normalized from product_image)
+    const uniqueProducts = [];
+    const seen = new Set();
+    for (const product of products) {
+      const barcode = product.product_image ? product.product_image.replace('.webp', '') : product._id.toString();
+      if (!seen.has(barcode)) {
+        seen.add(barcode);
+        uniqueProducts.push(product);
+      }
+    }
+
+    res.json({ success: true, products: uniqueProducts });
   } catch (error) {
     console.error('Error in listMerchantProducts:', error);
     res.status(500).json({ success: false, message: 'Server error' });
@@ -977,11 +1010,11 @@ async function updateProductApproval(req, res) {
       await updateExcelFromJson(process.env.GOOGLE_DRIVE_FILE_update);
     }
 
-    // If product is approved, ensure it's saved to the Product collection with status 'approved'
+    // If product is approved, update the product status in the Product collection
     // This is crucial for the enrichment process later.
     if (status === 'approved') {
-      const productToSave = new Product({ ...product.toObject(), _id: undefined, __v: undefined, status: 'approved' });
-      await productToSave.save();
+      product.status = 'approved';
+      await product.save();
     }
 
     // Update sitemap after approval/rejection
@@ -1452,6 +1485,82 @@ async function deleteUrgencyRequest(req, res) {
   }
 }
 
+async function updateProductQuantity(req, res) {
+  try {
+    const { barcode } = req.params;
+    const { product_quantity } = req.body;
+
+    if (!barcode) {
+      return res.status(400).json({ success: false, message: 'Missing product barcode' });
+    }
+
+    if (product_quantity === undefined || product_quantity < 0) {
+      return res.status(400).json({ success: false, message: 'Invalid product quantity' });
+    }
+
+    // Download current Excel file
+    const fileId = process.env.GOOGLE_DRIVE_FILE_ID;
+    if (!fileId) {
+      return res.status(500).json({ success: false, message: 'Missing Google Drive file ID' });
+    }
+
+    const client = await require('../config/drive').auth.getClient();
+    const drive = require('googleapis').google.drive({ version: 'v3', auth: client });
+
+    const resDrive = await drive.files.get({
+      fileId,
+      alt: 'media',
+    }, { responseType: 'arraybuffer' });
+
+    const buffer = Buffer.from(resDrive.data);
+    const xlsx = require('xlsx');
+    const workbook = xlsx.read(buffer, { type: 'buffer' });
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+    let json = xlsx.utils.sheet_to_json(sheet);
+
+    // Find product by barcode and update quantity
+    const productIndex = json.findIndex(p => {
+      if (!p.products_id) return false;
+      const pId = String(p.products_id).trim();
+      const bId = String(barcode).trim();
+      return pId === bId || Number(pId) === Number(bId) || pId === String(Number(bId)) || String(Number(pId)) === bId;
+    });
+    if (productIndex === -1) {
+      return res.status(404).json({ success: false, message: 'Product not found' });
+    }
+
+    json[productIndex].product_quantity = product_quantity;
+
+    // Convert JSON back to sheet
+    const newSheet = xlsx.utils.json_to_sheet(json);
+    workbook.Sheets[sheetName] = newSheet;
+
+    // Write workbook to buffer
+    const wbout = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+
+    // Upload updated Excel file back to Google Drive
+    await drive.files.update({
+      fileId,
+      media: {
+        mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        body: wbout
+      }
+    });
+
+    // Update output.json by re-running downloadAndConvertExcel
+    await downloadAndConvertExcel(fileId);
+
+    // Update the update file to keep in sync
+    await updateExcelFromJson(process.env.GOOGLE_DRIVE_FILE_update);
+
+    res.json({ success: true, message: 'Product quantity updated successfully' });
+  } catch (error) {
+    console.error('Error in updateProductQuantity:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+}
+
 module.exports = {
   upload,
   addProduct,
@@ -1481,5 +1590,6 @@ module.exports = {
   getStats,
   getAllUrgencyRequests,
   updateUrgencyRequestStatus,
-  deleteUrgencyRequest
+  deleteUrgencyRequest,
+  updateProductQuantity
 };

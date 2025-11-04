@@ -438,6 +438,14 @@
           <div *ngFor="let product of paginatedProducts" [ngClass]="viewMode === 'grid' ? 'bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600 hover:shadow-md transition-shadow duration-200' : 'bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600 hover:shadow-md transition-shadow duration-200'">
             <!-- Grid View Layout -->
             <div *ngIf="viewMode === 'grid'">
+              <!-- Product Image -->
+              <div class="mb-3">
+                <img
+                  class="w-full h-32 object-cover rounded-lg"
+                  [src]="getProductImageUrl(product)"
+                  alt="صورة المنتج"
+                />
+              </div>
               <div class="flex items-start justify-between mb-3">
                 <div class="flex items-center gap-2">
                   <!-- Product Checkbox -->
@@ -502,12 +510,19 @@
                   (change)="toggleProductSelection(product._id)"
                   class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 >
-                <div>
-                  <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ product.product_name }}</h3>
-                  <div class="flex gap-4 text-sm text-gray-600 dark:text-gray-400">
-                    <span><span class="font-medium">السعر:</span> {{ product.product_price }} ج.م</span>
-                    <span><span class="font-medium">الكمية:</span> {{ product.product_quantity }}</span>
-                    <span><span class="font-medium">الفئة:</span> {{ product.product_category }}</span>
+                <div class="flex items-center gap-3">
+                  <img
+                    class="w-16 h-16 object-cover rounded"
+                    [src]="getProductImageUrl(product)"
+                    alt="صورة المنتج"
+                  />
+                  <div>
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ product.product_name }}</h3>
+                    <div class="flex gap-4 text-sm text-gray-600 dark:text-gray-400">
+                      <span><span class="font-medium">السعر:</span> {{ product.product_price }} ج.م</span>
+                      <span><span class="font-medium">الكمية:</span> {{ product.product_quantity }}</span>
+                      <span><span class="font-medium">الفئة:</span> {{ product.product_category }}</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -718,7 +733,7 @@
                 >
                   <img
                     class="w-16 h-16 mr-1 rounded object-cover"
-                    [src]="(uploadsBaseUrl + '/' + product.product_image).replace('.jpg', '.webp')"
+                    [src]="('/uploads/books/' + product.product_image).replace('.jpg', '.webp')"
                     alt="صورة الكتاب"
                   />
                   <a

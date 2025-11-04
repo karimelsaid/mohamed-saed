@@ -144,10 +144,11 @@ interface UrgencyRequest {
   templateUrl: './admin-dashboard.component.html',
   styleUrls: ['./admin-dashboard.component.css']
 })
-export class AdminDashboardComponent implements OnInit {
+export class AdminDashboardComponent implements OnInit, OnDestroy {
   orders: GroupedOrder[] = [];
   allOrders: GroupedOrder[] = [];
   requestedBooks: RequestedBook[] = [];
+  allRequestedBooks: RequestedBook[] = [];
   isAdmin: boolean = false; // Add paymentRequests to the type union
   currentView: 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' = 'orders';
 
@@ -275,8 +276,40 @@ export class AdminDashboardComponent implements OnInit {
     'أعمال وتسويق ومالية',
     'فنون وحرف',
     'تاريخ وسير ذاتية',
-    'تربية وأطفال'
+    'تربية وأطفال',
+    'أدوات مكتبية',
+    'إلكترونيات',
+    'ملابس',
+    'التجميل والعناية الشخصية',
+    'الأحذية',
+    'أثاث وديكور المنزل',
+    'هدية وألعاب',
+    'أقمشة',
+    'غير مصنف'
   ];
+
+  // Map from short key to full category name
+  categoryMap: { [key: string]: string } = {
+    'رواية': 'روايات وقصص',
+    'تنمية': 'تطوير الذات وعلم النفس',
+    'ديني': 'كتب دينية',
+    'قاموس': 'قواميس ومراجع',
+    'صحة': 'صحة وطب وعلوم',
+    'اعمال': 'أعمال وتسويق ومالية',
+    'فن': 'فنون وحرف',
+    'تاريخ': 'تاريخ وسير ذاتية',
+    'تربية': 'تربية وأطفال',
+    'أدوات مكتبية': 'أدوات مكتبية',
+    'إلكترونيات': 'إلكترونيات',
+    'ملابس': 'ملابس',
+    'تجميل': 'التجميل والعناية الشخصية',
+    'احذية': 'الأحذية',
+    'اثاث': 'أثاث وديكور المنزل',
+    'العاب': 'هدية وألعاب',
+    'غير مصنف': 'غير مصنف',
+    'أقمشة': 'أقمشة',
+    'أخرى': 'غير مصنف'
+  };
 
   // Reverse map from full category name to short key
   categoryReverseMap: { [key: string]: string } = {
@@ -288,7 +321,16 @@ export class AdminDashboardComponent implements OnInit {
     'أعمال وتسويق ومالية': 'اعمال',
     'فنون وحرف': 'فن',
     'تاريخ وسير ذاتية': 'تاريخ',
-    'تربية وأطفال': 'تربية'
+    'تربية وأطفال': 'تربية',
+    'أدوات مكتبية': 'أدوات مكتبية',
+    'إلكترونيات': 'إلكترونيات',
+    'ملابس': 'ملابس',
+    'التجميل والعناية الشخصية': 'تجميل',
+    'الأحذية': 'احذية',
+    'أثاث وديكور المنزل': 'اثاث',
+    'هدية وألعاب': 'العاب',
+    'أقمشة': 'أقمشة',
+    'غير مصنف': 'اخرى'
   };
 
   private modalServiceSubscription?: Subscription;
@@ -399,6 +441,18 @@ export class AdminDashboardComponent implements OnInit {
         // Error handled silently
       }
     });
+
+    // Load urgency requests count
+    this.http.get<{ success: boolean; urgencyRequests: any[] }>(`${this.backendBaseUrl}/admin/urgency-requests`).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.totalUrgencyRequests = response.urgencyRequests.length;
+        }
+      },
+      error: (err) => {
+        // Error handled silently
+      }
+    });
   }
 
   loadPromotionDates(): void {
@@ -451,6 +505,10 @@ export class AdminDashboardComponent implements OnInit {
           response.products.forEach((p, index) => {
             if (p.product_category && typeof p.product_category === 'string') {
               p.product_category = p.product_category.trim();
+              // If it's a short key, map to full category name
+              if (this.categoryMap[p.product_category]) {
+                p.product_category = this.categoryMap[p.product_category];
+              }
             }
             // Ensure product_category is set to a valid category or default to first category
             if (!p.product_category || !this.categories.includes(p.product_category)) {
@@ -710,10 +768,91 @@ export class AdminDashboardComponent implements OnInit {
 
 
   exportProductsToExcel(): void {
-    const worksheet = XLSX.utils.json_to_sheet(this.products);
+    const worksheet = XLSX.utils.json_to_sheet(this.allProducts);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Products');
     XLSX.writeFile(workbook, 'products.xlsx');
+  }
+
+  exportAllDataToExcel(): void {
+    const workbook = XLSX.utils.book_new();
+
+    // Export Orders
+    const ordersWorksheet = XLSX.utils.json_to_sheet(this.allOrders.map(order => ({
+      'رقم الطلب': order._id,
+      'اسم العميل': order.customerName,
+      'البريد الإلكتروني': order.email,
+      'الهاتف': order.phone,
+      'العنوان': order.address,
+      'المنتجات': order.products.map(p => `${p.product_name} (${p.product_quantity})`).join(', '),
+      'الحالة': order.status,
+      'تاريخ الطلب': order.orderDate,
+      'السعر الإجمالي': order.totalAmount,
+      'طلب تاجر': order.isMerchantOrder ? 'نعم' : 'لا'
+    })));
+    XLSX.utils.book_append_sheet(workbook, ordersWorksheet, 'الطلبات');
+
+    // Export Products
+    const productsWorksheet = XLSX.utils.json_to_sheet(this.allProducts.map(product => ({
+      'اسم المنتج': product.product_name,
+      'الكمية': product.product_quantity,
+      'الفئة': product.product_category,
+      'الوصف': product.product_description,
+      'سعر البيع': product.product_price,
+      'سعر الشراء': product.price_cost,
+      'تاريخ الإنشاء': product.createdAt
+    })));
+    XLSX.utils.book_append_sheet(workbook, productsWorksheet, 'المنتجات');
+
+    // Export Requested Books
+    const requestedBooksWorksheet = XLSX.utils.json_to_sheet(this.allRequestedBooks.map(book => ({
+      'اسم الكتاب': book.bookName,
+      'اسم المؤلف': book.authorName || 'غير محدد',
+      'صاحب الاقتراح': book.username ? `${book.username} (${book.userId})` : 'غير معروف',
+      'تم إضافته': book.added ? 'نعم' : 'لا',
+      'تاريخ الطلب': book.dateRequested
+    })));
+    XLSX.utils.book_append_sheet(workbook, requestedBooksWorksheet, 'اقتراحات الكتب');
+
+    // Export Print Orders
+    const printOrdersWorksheet = XLSX.utils.json_to_sheet(this.allPrintOrders.map(order => ({
+      'رقم الطلب': order.orderId,
+      'اسم المستخدم': order.username,
+      'البريد الإلكتروني': order.email,
+      'الهاتف': order.phone,
+      'العنوان': order.address,
+      'الحالة': order.status,
+      'تاريخ الطلب': order.orderDate,
+      'السعر الإجمالي': order.totalAmount,
+      'المشاريع': order.printProjects.map(p => `${p.projectTitle} (${p.filename})`).join(', ')
+    })));
+    XLSX.utils.book_append_sheet(workbook, printOrdersWorksheet, 'طلبات الطباعة');
+
+    // Export Urgency Requests
+    const urgencyRequestsWorksheet = XLSX.utils.json_to_sheet(this.allUrgencyRequests.map(request => ({
+      'اسم الكتاب': request.bookName,
+      'التاجر': request.merchantName || 'غير محدد',
+      'صاحب الطلب': request.username,
+      'تم التنفيذ': request.fulfilled ? 'نعم' : 'لا',
+      'تاريخ الطلب': request.requestedAt
+    })));
+    XLSX.utils.book_append_sheet(workbook, urgencyRequestsWorksheet, 'طلبات الطوارئ');
+
+    // Export Stats Summary
+    const statsWorksheet = XLSX.utils.json_to_sheet([{
+      'إجمالي المستخدمين': this.totalUsers,
+      'إجمالي المنتجات': this.totalProducts,
+      'إجمالي الطلبات': this.totalOrders,
+      'إجمالي طلبات التجار': this.totalMerchantOrders,
+      'إجمالي الإعجابات': this.totalLikes,
+      'إجمالي عناصر السلة': this.totalCartItems,
+      'إجمالي اقتراحات الكتب': this.totalRequestedBooks,
+      'إجمالي طلبات الطباعة': this.totalPrintOrders,
+      'إجمالي طلبات الطوارئ': this.totalUrgencyRequests
+    }]);
+    XLSX.utils.book_append_sheet(workbook, statsWorksheet, 'الإحصائيات');
+
+    XLSX.writeFile(workbook, 'all_data_export.xlsx');
   }
 
   importProductsFromExcel(event: Event): void {
@@ -927,6 +1066,7 @@ export class AdminDashboardComponent implements OnInit {
   fetchRequestedBooks(): void {
     this.http.get<RequestedBook[]>(`${environment.apiBaseUrl}/users/requested-books`).subscribe({
       next: (data) => {
+        this.allRequestedBooks = data; // Store all requested books
         this.requestedBooks = data.slice((this.requestedBooksPage - 1) * this.requestedBooksPageSize, this.requestedBooksPage * this.requestedBooksPageSize);
       },
       error: (err) => {

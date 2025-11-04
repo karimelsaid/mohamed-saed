@@ -15,7 +15,27 @@ const merchantCategoryMap = {
   'تنمية بشرية': 'تطوير الذات وعلم النفس',
   'فنون وثقافة': 'فنون وحرف',
   'تربية وتعليم': 'تربية وأطفال',
-  'أخرى': 'غير مصنف'
+  'أدوات مكتبية': 'أدوات مكتبية',
+  'إلكترونيات': 'إلكترونيات',
+  'ملابس': 'ملابس',
+  'أخرى': 'غير مصنف',
+  'رواية': 'روايات وقصص',
+  'ديني': 'كتب دينية',
+  'قاموس': 'قواميس ومراجع',
+  'صحة': 'صحة وطب وعلوم',
+  'اعمال': 'أعمال وتسويق ومالية',
+  'فن': 'فنون وحرف',
+  'تاريخ': 'تاريخ وسير ذاتية',
+  'تربية': 'تربية وأطفال',
+  'ادوات': 'أدوات مكتبية',
+  'تجميل': 'التجميل والعناية الشخصية',
+  'احذية': 'الأحذية',
+  'اثاث': 'أثاث وديكور المنزل',
+  'العاب': 'هداية وألعاب',
+  'أقمشة': 'أقمشة',
+  'أثاث': 'أثاث وديكور المنزل',
+  'ألعاب': 'هدية وألعاب',
+  'أقمشة': 'أقمشة',
 };
 
 // Reverse categoryMap for mapping full names to short keys
@@ -300,7 +320,19 @@ async function getMerchantProducts(req, res) {
     const Product = require('../models/Product.model');
 
     const products = await Product.find({ merchantId }).sort({ createdAt: -1 });
-    res.json({ success: true, products });
+
+    // Remove duplicates based on product_name and product_category, keeping the latest (first in sorted list)
+    const uniqueProducts = [];
+    const seen = new Set();
+    for (const product of products) {
+      const key = product.product_name + '|' + product.product_category;
+      if (!seen.has(key)) {
+        seen.add(key);
+        uniqueProducts.push(product);
+      }
+    }
+
+    res.json({ success: true, products: uniqueProducts });
   } catch (error) {
     console.error('❌ Error in getMerchantProducts:', error);
     res.status(500).json({ success: false, message: 'Server error' });
@@ -506,8 +538,10 @@ async function deleteProduct(req, res) {
 
     // Delete product folder if exists
     if (product.product_image) {
+      const sanitizedUsername = req.merchant.username.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
+      const barcode = product.product_image ? product.product_image.split('/').pop().replace('.webp', '') : productId;
       const uploadDir = path.join(__dirname, '../uploads/books');
-      const productFolder = path.dirname(product.product_image); // Gets 'merchant_username/barcode'
+      const productFolder = `merchant_${sanitizedUsername}/${barcode}`;
       const folderPath = path.join(uploadDir, productFolder);
       if (fs.existsSync(folderPath)) {
         fs.rmSync(folderPath, { recursive: true, force: true });
@@ -600,8 +634,10 @@ async function bulkDeleteProducts(req, res) {
     // Delete product folders
     for (const product of products) {
       if (product.product_image) {
+        const sanitizedUsername = req.merchant.username.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
+        const barcode = product.product_image ? product.product_image.split('/').pop().replace('.webp', '') : product._id;
         const uploadDir = path.join(__dirname, '../uploads/books');
-        const productFolder = path.dirname(product.product_image); // Gets 'merchant_username/barcode'
+        const productFolder = `merchant_${sanitizedUsername}/${barcode}`;
         const folderPath = path.join(uploadDir, productFolder);
         if (fs.existsSync(folderPath)) {
           fs.rmSync(folderPath, { recursive: true, force: true });

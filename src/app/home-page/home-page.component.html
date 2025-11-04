@@ -47,7 +47,7 @@
       </div>
 
       <p class="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto leading-relaxed">
-        اكتشف أحدث الإصدارات والكتب المضافة حديثاً إلى مكتبتنا الإلكترونية
+        🛍️ وصل حديثاً | اكتشف الآن مجموعة متنوعة من المنتجات والخدمات الجديدة في كل الأقسام!
       </p>
     </div>
 
@@ -183,6 +183,37 @@
   </div>
 </section>
 
+<!-- Categories Section -->
+<section class="py-16 bg-amber-50 dark:bg-gray-900">
+  <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+    <!-- Section Title -->
+    <div class="text-center mb-12">
+      <h2 class="text-4xl md:text-5xl font-bold text-gray-800 dark:text-white mb-4">
+        تصفح حسب الفئة
+      </h2>
+      <div class="flex items-center justify-center gap-4">
+        <div class="w-16 h-1 bg-gradient-to-r from-amber-300 to-amber-500 dark:from-amber-600 dark:to-amber-700 rounded-full"></div>
+        <div class="w-4 h-4 bg-gradient-to-r from-amber-500 to-amber-600 dark:from-amber-700 dark:to-amber-800 rounded-full animate-pulse"></div>
+        <div class="w-16 h-1 bg-gradient-to-r from-amber-500 to-amber-300 dark:from-amber-800 dark:to-amber-600 rounded-full"></div>
+      </div>
+    </div>
+
+    <!-- Categories Grid -->
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+      <div
+        *ngFor="let category of newCategories"
+        class="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300 p-6 text-center hover:bg-amber-50 dark:hover:bg-gray-700 cursor-pointer group"
+        (click)="onCategoryClick(category)">
+        <div class="mb-4">
+          <fa-icon [icon]="category.icon" class="text-4xl text-amber-600 dark:text-amber-400 group-hover:text-amber-700 dark:group-hover:text-amber-300 transition-colors"></fa-icon>
+        </div>
+        <h3 class="text-lg font-semibold text-gray-800 dark:text-white group-hover:text-gray-900 dark:group-hover:text-gray-100">{{ category.name }}</h3>
+        <p *ngIf="!category.hasProducts" class="text-sm text-gray-500 dark:text-gray-400 mt-2">لا يوجد منتجات في الوقت الحالي سيتم اضافته قريبا</p>
+      </div>
+    </div>
+  </div>
+</section>
+
 <div class="relative mb-12">
   <div class="text-center">
     <div class="relative inline-block p-6 rounded-3xl bg-gradient-to-r from-white/95 via-gray-50/95 to-white/95 backdrop-blur-sm border-2 border-gray-200/50 shadow-lg mb-4">
@@ -202,7 +233,7 @@
   </div>
 </div>
 
-<div class="photoliperary grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-4 px-4 mb-32 md:mb-6">
+<div id="library-sections" class="photoliperary grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-4 px-4 mb-32 md:mb-6">
     <div
     *ngFor="let category of categories; let i = index"
     class="relative group h-32 rounded-xl overflow-hidden shadow-lg transform transition-transform duration-300 hover:scale-105 hover:shadow-2xl cursor-pointer fade-in"
@@ -227,6 +258,8 @@
   </a>
       </div>
 </div>
+
+
 
 <!-- أمثلة على الشكل النهائي لخدمة الطباعة -->
 <section class="py-16">

@@ -36,6 +36,15 @@ import { EditProductComponent } from './merchant/edit-product/edit-product.compo
 import { MerchantProfileComponent } from './merchant/merchant-profile/merchant-profile.component';
 import { MerchantAuthGuard } from './guards/merchant-auth.guard';
 import { PaymentRequestsComponent } from './admin/payment-requests/payment-requests.component';
+import { OfficeSuppliesComponent } from './book-list/office-supplies/office-supplies.component';
+import { ElectronicsComponent } from './book-list/electronics/electronics.component';
+import { ClothingComponent } from './book-list/clothing/clothing.component';
+import { CosmeticsComponent } from './book-list/cosmetics/cosmetics.component';
+import { ShoesComponent } from './book-list/shoes/shoes.component';
+import { FurnitureComponent } from './book-list/furniture/furniture.component';
+import { GamesComponent } from './book-list/games/games.component';
+import { FabricsComponent } from './book-list/fabrics/fabrics.component';
+import { OthersComponent } from './book-list/others/others.component';
 
 const routes: Routes = [
   {
@@ -88,6 +97,15 @@ const routes: Routes = [
   { path: 'requests', component: UserOrdersComponent },
   { path: 'referrals', component: ReferralsComponent },
   { path: 'print', component: PrintComponent },
+  { path: 'office-supplies', component: OfficeSuppliesComponent },
+  { path: 'electronics', component: ElectronicsComponent },
+  { path: 'clothing', component: ClothingComponent },
+  { path: 'cosmetics', component: CosmeticsComponent },
+  { path: 'shoes', component: ShoesComponent },
+  { path: 'furniture', component: FurnitureComponent },
+  { path: 'games', component: GamesComponent },
+  { path: 'fabrics', component: FabricsComponent },
+  { path: 'others', component: OthersComponent },
 
   { path: 'عن-الموقع', component: AboutComponent },
   { path: 'سياسة-الخصوصية', component: PrivacyPolicyComponent },

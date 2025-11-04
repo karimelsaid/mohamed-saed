@@ -161,15 +161,15 @@
 
     <!-- التاجر -->
     <form *ngIf="isMerchantRegistration" (ngSubmit)="onRegister()" #merchantForm="ngForm" enctype="multipart/form-data" class="mt-6">
-      <!-- اسم المكتبة -->
+      <!-- اسم المنشئه -->
       <div class="mb-4">
-        <label class="block mb-1 text-sm font-medium text-gray-900 dark:text-gray-300">اسم المكتبة</label>
+        <label class="block mb-1 text-sm font-medium text-gray-900 dark:text-gray-300">اسم المنشئه</label>
         <input type="text" name="libraryName" [(ngModel)]="merchantUser.libraryName" required
           class="w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400" #libraryNameInput="ngModel"/>
       </div>
       <!-- رسائل خطأ -->
       <div *ngIf="libraryNameInput.invalid && libraryNameInput.touched" class="text-red-500 dark:text-red-400 text-sm">
-        ❌ اسم المكتبة يجب أن لا يكون فارغًا.
+        ❌ اسم المنشئه يجب أن لا يكون فارغًا.
       </div>
 
       <!-- البريد الإلكتروني -->
@@ -251,9 +251,9 @@
           class="w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400" />
       </div>
 
-      <!-- رفع شعار المكتبة -->
+      <!-- رفع شعار المنشئه -->
       <div class="mb-4">
-        <label class="block mb-1 text-sm font-medium text-gray-900 dark:text-gray-300">شعار المكتبة</label>
+        <label class="block mb-1 text-sm font-medium text-gray-900 dark:text-gray-300">شعار المنشئه</label>
 <input type="file" (change)="merchantUser.logoFile = $any($event.target).files && $any($event.target).files.length > 0 ? $any($event.target).files[0] : null" accept="image/*"
           class="w-full text-gray-900 dark:text-gray-200" />
       </div>

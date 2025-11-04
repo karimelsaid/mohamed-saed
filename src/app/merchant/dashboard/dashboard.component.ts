@@ -3,6 +3,8 @@ import { MerchantAuthService } from '../../services/merchant-auth.service';
 import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ProductStateService } from '../../services/product-state.service';
+import { Subscription } from 'rxjs';
 import { ModalDialogComponent } from '../../shared/modal-dialog/modal-dialog.component';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
@@ -10,7 +12,7 @@ import { environment } from '../../../environments/environment';
 @Component({
   selector: 'app-merchant-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, ModalDialogComponent],
+  imports: [CommonModule, FormsModule, RouterModule, ModalDialogComponent,],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.css']
 })
@@ -23,6 +25,8 @@ export class MerchantDashboardComponent implements OnInit {
   loadingProducts = false;
   loadingOrders = false;
   loadingUpdateRequests = false;
+
+  private productsSubscription!: Subscription;
 
   // Modal properties for component's modal system
   modalOpen: boolean = false;
@@ -92,7 +96,11 @@ export class MerchantDashboardComponent implements OnInit {
   uploadsBaseUrl = environment.uploadsBaseUrl;
   private booksList: any = {};
 
-  constructor(private merchantAuthService: MerchantAuthService, private router: Router, private http: HttpClient) {}
+  constructor(
+    private merchantAuthService: MerchantAuthService,
+    private router: Router,
+    private http: HttpClient,
+    private productStateService: ProductStateService) {}
 
   ngOnInit(): void {
     // Check if merchant is authenticated first
@@ -107,6 +115,10 @@ export class MerchantDashboardComponent implements OnInit {
     this.loadOrders();
     this.loadUpdateRequests();
     this.loadBooksList();
+
+    this.productsSubscription = this.productStateService.products$.subscribe(products => {
+      this.loadProducts();
+    });
   }
 
   // Check if merchant account is approved
@@ -214,7 +226,15 @@ export class MerchantDashboardComponent implements OnInit {
     this.loadingProducts = true;
     this.merchantAuthService.getMerchantProducts().subscribe({
       next: (res: any) => {
-        this.products = res.products || res || [];
+        let products = res.products || res || [];
+        // Remove duplicates based on _id to ensure unique products
+        const uniqueProductsMap = new Map();
+        for (const product of products) {
+          if (product._id) {
+            uniqueProductsMap.set(product._id, product);
+          }
+        }
+        this.products = Array.from(uniqueProductsMap.values());
         this.currentPage = 1; // Reset to first page when loading products
         this.loadingProducts = false;
       },
@@ -541,6 +561,38 @@ export class MerchantDashboardComponent implements OnInit {
       }
     }
     return '';
+  }
+
+  getProductImageUrl(product: any): string {
+    // This logic is now consistent with other working components like search-results.
+    let imagePath = product.image_path || product.product_image || '';
+    const merchantName = product.merchantName || (this.merchant ? (this.merchant.merchantName || this.merchant.name) : null);
+
+    // If a full path is already provided in image_path, use it directly.
+    if (imagePath && imagePath.startsWith('/uploads/books/')) {
+      // The path is already correct, just return it.
+      return imagePath;
+    }
+
+    // If not, build the path from scratch
+    const imageId = product.products_id || product.product_image;
+    if (!imageId) {
+      return '/assets/placeholder-book.jpg';
+    }
+
+    let finalPath;
+    if (merchantName) {
+      finalPath = `merchant_${merchantName}/${imageId}/${imageId}.webp`;
+    } else {
+      // Fallback to admin path if no merchant name is found
+      finalPath = `admin__karim_mohamed__/${imageId}/${imageId}.webp`;
+    }
+
+    // Construct the full path, ensuring not to duplicate '/books/'
+    // uploadsBaseUrl is likely '/uploads' or '/uploads/books'
+    // The final path should be /uploads/books/merchant_...
+    const fullPath = `${this.uploadsBaseUrl}/${finalPath}`.replace('/books/books/', '/books/');
+    return fullPath;
   }
 
   confirmShipment(order: any, newStatus: string): void {

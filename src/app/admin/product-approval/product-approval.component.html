@@ -1,34 +1,120 @@
-<div class="container mx-auto p-4">
-  <h1 class="text-2xl font-bold mb-4">إدارة منتجات التجار</h1>
-
-  <div *ngIf="loading" class="text-center">جاري التحميل...</div>
-  <div *ngIf="error" class="text-red-500">{{ error }}</div>
-
-  <!-- Success Toast Notification -->
-  <div *ngIf="showSuccessToast" class="fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded shadow-lg z-50">
-    {{ successMessage }}
-  </div>
-
-  <div class="grid gap-4">
-    <div *ngFor="let product of products" class="bg-white p-4 rounded shadow">
-      <h2 class="text-lg font-semibold">{{ product.product_name }}</h2>
-      <p>الوصف: {{ product.product_description }}</p>
-      <p>السعر: {{ product.product_price }} ج.م</p>
-      <p>التاجر: {{ product.merchantId?.username || 'غير محدد' }}</p>
-      <div class="mt-2">
-        <button
-          (click)="approveProduct(product._id)"
-          [disabled]="isApproving(product._id)"
-          class="bg-green-500 text-white px-4 py-2 rounded mr-2 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {{ isApproving(product._id) ? 'جاري الموافقة...' : 'موافقة' }}
-        </button>
-        <button (click)="rejectProduct(product._id)" class="bg-red-500 text-white px-4 py-2 rounded">رفض</button>
+<div class="min-h-screen bg-gray-50">
+  <!-- Header Section -->
+  <div class="bg-white shadow-sm border-b">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-3xl font-bold text-gray-900">إدارة منتجات التجار</h1>
+          <p class="mt-1 text-sm text-gray-600">مراجعة وإدارة منتجات التجار المعلقة للموافقة</p>
+        </div>
       </div>
     </div>
   </div>
 
-  <div *ngIf="products.length === 0 && !loading" class="text-center mt-4">
-    لا توجد منتجات معلقة للموافقة
+  <!-- Main Content -->
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Loading State -->
+    <div *ngIf="loading" class="flex items-center justify-center py-12">
+      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <span class="ml-3 text-lg text-gray-600">جاري تحميل المنتجات...</span>
+    </div>
+
+    <!-- Error State -->
+    <div *ngIf="error" class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+      <div class="flex">
+        <div class="flex-shrink-0">
+          <svg class="h-5 w-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+          </svg>
+        </div>
+        <div class="mr-3">
+          <h3 class="text-sm font-medium text-red-800">خطأ في تحميل المنتجات</h3>
+          <div class="mt-2 text-sm text-red-700">{{ error }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Success Toast Notification -->
+    <div *ngIf="showSuccessToast" class="fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 flex items-center">
+      <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+      </svg>
+      {{ successMessage }}
+    </div>
+
+    <!-- Empty State -->
+    <div *ngIf="!loading && !error && products.length === 0" class="text-center py-12">
+      <svg class="mx-auto h-24 w-24 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+      </svg>
+      <h3 class="mt-4 text-lg font-medium text-gray-900">لا توجد منتجات معلقة</h3>
+      <p class="mt-2 text-gray-500">لم يتم العثور على أي منتجات معلقة للموافقة حالياً.</p>
+    </div>
+
+    <!-- Products Grid -->
+    <div *ngIf="!loading && !error && products.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div *ngFor="let product of products" class="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200 overflow-hidden">
+        <!-- Product Image -->
+        <div class="aspect-w-16 aspect-h-9 bg-gray-100">
+          <img
+            [src]="getProductImageUrl(product)"
+            alt="{{ product.product_name }}"
+            class="w-full h-48 object-cover"
+            onerror="this.src='/assets/placeholder-book.jpg'"
+          >
+        </div>
+
+        <!-- Product Details -->
+        <div class="p-6">
+          <div class="flex items-start justify-between mb-4">
+            <div class="flex-1">
+              <h3 class="text-lg font-semibold text-gray-900 mb-1">{{ product.product_name }}</h3>
+              <p class="text-sm text-gray-600 mb-2">التاجر: {{ product.merchantId?.username || 'غير محدد' }}</p>
+              <div class="flex items-center gap-2">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                  معلق
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Product Info -->
+          <div class="space-y-3 mb-4">
+            <div class="flex justify-between items-center">
+              <span class="text-sm font-medium text-gray-600">السعر:</span>
+              <span class="text-sm text-gray-900">{{ product.product_price }} ج.م</span>
+            </div>
+          </div>
+
+          <div class="bg-gray-50 p-3 rounded-lg mb-4">
+            <span class="text-sm font-medium text-gray-600">الوصف:</span>
+            <p class="mt-1 text-sm text-gray-900 line-clamp-2">{{ product.product_description }}</p>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex gap-3">
+            <button
+              (click)="approveProduct(product._id)"
+              [disabled]="isApproving(product._id)"
+              class="flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+              </svg>
+              {{ isApproving(product._id) ? 'جاري الموافقة...' : 'موافقة' }}
+            </button>
+            <button
+              (click)="rejectProduct(product._id)"
+              class="flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-200"
+            >
+              <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+              رفض
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>

@@ -1,6 +1,7 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
 import { DataService } from '../services/data.service';
-import { faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons';
+import { faChevronLeft, faChevronRight, faBook, faTools, faLaptop, faTshirt, faSpa, faShoePrints, faCouch, faGamepad, faThLarge, faEllipsisH } from '@fortawesome/free-solid-svg-icons';
 import { environment } from '../../environments/environment';
 
 
@@ -94,6 +95,30 @@ export class HomePageComponent implements OnInit, OnDestroy {
   intervalId: any;
   faChevronLeft = faChevronLeft;
   faChevronRight = faChevronRight;
+  faBook = faBook;
+  faTools = faTools;
+  faLaptop = faLaptop;
+  faTshirt = faTshirt;
+  faSpa = faSpa;
+  faShoePrints = faShoePrints;
+  faCouch = faCouch;
+  faGamepad = faGamepad;
+  faThLarge = faThLarge;
+  faEllipsisH = faEllipsisH;
+
+  // New categories for "تصفح حسب الفئة" section
+  newCategories = [
+    { id: 'books', name: 'كتب', icon: faBook, hasProducts: false, categoryFilter: ['كتب دينية', 'تطوير الذات وعلم النفس', 'روايات وقصص', 'أعمال', 'صحة وطب وعلوم', 'قواميس ومراجع', 'تربية', 'تاريخ وسير ذاتية', 'فن'] },
+    { id: 'office-supplies', name: 'أدوات مكتبية', icon: faTools, hasProducts: false, categoryFilter: ['أدوات مكتبية'] },
+    { id: 'electronics', name: 'إلكترونيات', icon: faLaptop, hasProducts: false, categoryFilter: ['إلكترونيات'] },
+    { id: 'clothing', name: 'ملابس', icon: faTshirt, hasProducts: false, categoryFilter: ['ملابس'] },
+    { id: 'cosmetics', name: 'تجميل', icon: faSpa, hasProducts: false, categoryFilter: ['تجميل'] },
+    { id: 'shoes', name: 'أحذية', icon: faShoePrints, hasProducts: false, categoryFilter: ['أحذية'] },
+    { id: 'furniture', name: 'أثاث', icon: faCouch, hasProducts: false, categoryFilter: ['أثاث'] },
+    { id: 'games', name: 'ألعاب', icon: faGamepad, hasProducts: false, categoryFilter: ['ألعاب'] },
+    { id: 'fabrics', name: 'أقمشة', icon: faThLarge, hasProducts: false, categoryFilter: ['أقمشة'] },
+    { id: 'others', name: 'أخرى', icon: faEllipsisH, hasProducts: false, categoryFilter: ['أخرى'] }
+  ];
 
   // New property for binding transform style
   transformStyle = '';
@@ -118,7 +143,7 @@ export class HomePageComponent implements OnInit, OnDestroy {
   touchCurrentX: number | null = null;
   isTouchScrolling: boolean = false;
 
-  constructor(private dataService: DataService) {}
+  constructor(private dataService: DataService, private router: Router) {}
 
   private shuffleArray(array: any[]): any[] {
     const shuffled = array.slice();
@@ -144,6 +169,11 @@ export class HomePageComponent implements OnInit, OnDestroy {
       this.updateTransform();
       this.startAutoScroll();
       this.isLoading = false;
+    });
+
+    // Load all products to check which categories have products
+    this.dataService.getData().subscribe((allProducts: any) => {
+      this.updateCategoryAvailability(allProducts);
     });
 
     // Set promo images based on screen width
@@ -296,61 +326,21 @@ export class HomePageComponent implements OnInit, OnDestroy {
   //   (touchcancel)="stopDrag(i)"
   //   (touchmove)="onDrag($event, i)"
 
-  // 3D interaction methods for print images
-  // startDrag(event: MouseEvent | TouchEvent, index: number): void {
-  //   event.preventDefault();
-  //   this.isDragging[index] = true;
-  //   // Clear any pending reset timeout when dragging starts
-  //   if (this.resetTimeouts[index]) {
-  //     clearTimeout(this.resetTimeouts[index]);
-  //     this.resetTimeouts[index] = null;
-  //   }
-  //   if (event instanceof MouseEvent) {
-  //     this.lastX[index] = event.clientX;
-  //     this.lastY[index] = event.clientY;
-  //   } else if (event instanceof TouchEvent) {
-  //     this.lastX[index] = event.touches[0].clientX;
-  //     this.lastY[index] = event.touches[0].clientY;
-  //   }
-  // }
+  updateCategoryAvailability(allProducts: any[]): void {
+    this.newCategories.forEach(category => {
+      const hasProducts = allProducts.some((product: any) =>
+        category.categoryFilter.some((filter: string) =>
+          product.product_category && product.product_category.includes(filter)
+        )
+      );
+      category.hasProducts = hasProducts;
+    });
+  }
 
-  // stopDrag(index: number): void {
-  //   this.isDragging[index] = false;
-  //   // Reset rotation to default after 2 seconds delay when dragging stops
-  //   this.resetTimeouts[index] = setTimeout(() => {
-  //     this.rotationX[index] = 0;
-  //     this.rotationY[index] = 0;
-  //     this.printImageTransforms[index] = 'rotateX(0deg) rotateY(0deg)';
-  //     this.resetTimeouts[index] = null;
-  //   }, 2000);
-  // }
-
-  // onDrag(event: MouseEvent | TouchEvent, index: number): void {
-  //   if (!this.isDragging[index]) return;
-  //   event.preventDefault();
-  //   let currentX: number;
-  //   let currentY: number;
-  //   if (event instanceof MouseEvent) {
-  //     currentX = event.clientX;
-  //     currentY = event.clientY;
-  //   } else if (event instanceof TouchEvent) {
-  //     currentX = event.touches[0].clientX;
-  //     currentY = event.touches[0].clientY;
-  //   } else {
-  //     return;
-  //   }
-  //   const deltaX = currentX - this.lastX[index];
-  //   const deltaY = currentY - this.lastY[index];
-  //   this.lastX[index] = currentX;
-  //   this.lastY[index] = currentY;
-
-  //   // Update rotation angles with some sensitivity factor
-  //   this.rotationY[index] += deltaX * 0.5;
-  //   this.rotationX[index] -= deltaY * 0.5;
-
-  //   // Clamp rotationX to avoid flipping too far
-  //   this.rotationX[index] = Math.max(Math.min(this.rotationX[index], 30), -30);
-
-  //   this.printImageTransforms[index] = `rotateX(${this.rotationX[index]}deg) rotateY(${this.rotationY[index]}deg)`;
-  // }
+  onCategoryClick(category: any): void {
+    if (category.hasProducts) {
+      // Navigate to category page
+      this.router.navigate(['/', category.id]);
+    }
+  }
 }

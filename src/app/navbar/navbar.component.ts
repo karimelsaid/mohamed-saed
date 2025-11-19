@@ -4,7 +4,7 @@ import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { faBars, faClose, faHome, faBook, faFilePdf, faUser, faChevronUp, faChevronDown, faSearch,faHeart,faCartPlus,faClipboardList, faTachometerAlt, faBell, faTrash,faFilter, faMosque, faBrain, faScroll, faChartLine, faHeartbeat, faBookOpen, faChild, faHistory, faPalette, faMoon, faSun, faExpand, faClock, faList } from '@fortawesome/free-solid-svg-icons';
+import { faBars, faClose, faHome, faShoppingCart, faBook, faFilePdf, faUser, faChevronUp, faChevronDown, faSearch,faHeart,faCartPlus,faClipboardList, faTachometerAlt, faBell, faTrash,faFilter, faMosque, faBrain, faScroll, faChartLine, faHeartbeat, faBookOpen, faChild, faHistory, faPalette, faMoon, faSun, faExpand, faClock, faList, faBolt, faTshirt, faMagic, faShoePrints, faChair, faGamepad, faCut, faEllipsisH } from '@fortawesome/free-solid-svg-icons';
 import { DataService } from '../services/data.service';
 import { AccountModalComponent } from '../auth/account-modal/account-modal.component';
 import { AuthService } from '../auth/auth.service';
@@ -29,6 +29,7 @@ faFilter = faFilter;
   faClose = faClose;
   faHome = faHome;
   faBook = faBook;
+  faShoppingCart = faShoppingCart;
   faFilePdf = faFilePdf;
   faUser = faUser;
   faChevronDown = faChevronDown;
@@ -52,9 +53,18 @@ faFilter = faFilter;
   faMoon = faMoon;
   faSun = faSun;
   faExpand = faExpand;
+  faBolt = faBolt;
+  faTshirt = faTshirt;
+  faMagic = faMagic;
+  faShoePrints = faShoePrints;
+  faChair = faChair;
+  faGamepad = faGamepad;
+  faCut = faCut;
+  faEllipsisH = faEllipsisH;
 
   openBars = false;
   scrollBook = true;
+  scrollProducts = true;
   y: number = 0;
   searchQuery: string = ''; // القيمة المدخلة في خانة البحث
   searchResults: any[] = []; // نتائج البحث المعروضة
@@ -135,7 +145,7 @@ faFilter = faFilter;
     }
   }
 
-  @HostListener('document:fullscreenchange', ['$event'])
+  @HostListener('document:fullscreenchange')
   onFullScreenChange() {
     this.isFullScreen = !!document.fullscreenElement;
   }
@@ -160,6 +170,10 @@ faFilter = faFilter;
 
   exitBarsrow(): void {
     setTimeout(() => (this.scrollBook = !this.scrollBook), 50);
+  }
+
+  exitProductsrow(): void {
+    setTimeout(() => (this.scrollProducts = !this.scrollProducts), 50);
   }
 
   exitBars(): void {

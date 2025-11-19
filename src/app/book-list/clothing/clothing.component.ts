@@ -10,6 +10,28 @@ import { AccountModalComponent } from '../../auth/account-modal/account-modal.co
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 
+// Category mapping
+const CATEGORY_ROUTES: { [key: string]: string } = {
+  'أدوات مكتبية': 'office-supplies',
+  'إلكترونيات': 'electronics',
+  'ملابس': 'clothing',
+  'التجميل والعناية الشخصية': 'cosmetics',
+  'الأحذية': 'shoes',
+  'أثاث': 'furniture',
+  'ألعاب': 'games',
+  'أقمشة': 'fabrics',
+  'كتب': 'book',
+  'روايات وقصص': 'book',
+  'تطوير الذات وعلم النفس': 'book',
+  'كتب دينية': 'book',
+  'أعمال وتسويق ومالية': 'book',
+  'صحة وطب وعلوم': 'book',
+  'تاريخ وسير ذاتية': 'book',
+  'تربية وأطفال': 'book',
+  'فنون وحرف': 'book',
+  'قواامس ومراجع': 'book'
+};
+
 @Component({
   selector: 'app-clothing',
   standalone: false,
@@ -90,7 +112,7 @@ export class ClothingComponent implements OnInit, OnDestroy {
 
   copyProductLink(product: Book): void {
     if (!product) return;
-    const url = window.location.origin + '/book/' + product.products_id + '/' + this.getProductSlug(product.product_name);
+    const url = window.location.origin + '/' + this.getProductRoute(product).join('/');
 
     navigator.clipboard.writeText(url).then(() => {
       this.showCopySuccess = true;
@@ -104,9 +126,43 @@ export class ClothingComponent implements OnInit, OnDestroy {
     });
   }
 
+  getProductRoute(product: Book): string[] {
+    const slug = this.getProductSlug(product.product_name);
+    const rawCategory = (product.product_category || '').trim();
+    let route = CATEGORY_ROUTES[rawCategory];
+
+    if (!route && rawCategory) {
+      const norm = rawCategory.replace(/\s+/g, '').toLowerCase();
+      for (const key of Object.keys(CATEGORY_ROUTES)) {
+        const kNorm = key.replace(/\s+/g, '').toLowerCase();
+        if (norm.includes(kNorm) || kNorm.includes(norm) || rawCategory.includes(key) || key.includes(rawCategory)) {
+          route = CATEGORY_ROUTES[key];
+          break;
+        }
+      }
+    }
+
+    if (!route) route = 'others';
+    console.log('getProductRoute - Product:', product.product_name, 'RawCategory:', rawCategory, 'ResolvedRoute:', route);
+    return ['/', route, product.products_id, slug];
+  }
+
   // Updated method to generate product slug without encoding to keep readable characters in URL
   getProductSlug(productName: string): string {
     return productName.trim().replace(/\s+/g, '-');
+  }
+
+  // Legacy method name for compatibility
+  getBookImageUrl(book: any): string {
+    let imagePath = book.product_image ? String(book.product_image) : '';
+    if (!imagePath) {
+      if (book.merchantName) {
+        imagePath = 'merchant_' + book.merchantName + '/' + book.products_id + '/' + book.products_id + '.webp';
+      } else {
+        imagePath = 'admin__karim_mohamed__/' + book.products_id + '/' + book.products_id + '.webp';
+      }
+    }
+    return environment.uploadsBaseUrl + '/' + imagePath;
   }
 
   ngOnDestroy(): void {
@@ -331,39 +387,6 @@ export class ClothingComponent implements OnInit, OnDestroy {
     } else {
       console.warn('Account modal is not available yet.');
     }
-  }
-
-  getBookImageUrl(product: any): string {
-    let imagePath = product.product_image ? String(product.product_image) : '';
-    if (!imagePath) {
-      if (product.merchantName) {
-        imagePath = 'merchant_' + product.merchantName + '/' + product.products_id + '/' + product.products_id + '.webp';
-      } else {
-        imagePath = 'admin__karim_mohamed__/' + product.products_id + '/' + product.products_id + '.webp';
-      }
-    } else {
-      if (imagePath.includes('/')) {
-        const parts = imagePath.split('/');
-        if (imagePath.includes('merchant_')) {
-          imagePath = parts.slice(-3).join('/');
-        } else if (imagePath.includes('admin__')) {
-          imagePath = parts.slice(-3).join('/');
-        } else {
-          imagePath = parts[parts.length - 1];
-        }
-      } else {
-        if (!imagePath.includes('.') && /^\d+$/.test(imagePath)) {
-          if (product.merchantName) {
-            imagePath = 'merchant_' + product.merchantName + '/' + imagePath + '/' + imagePath + '.webp';
-          } else {
-            imagePath = 'admin__karim_mohamed__/' + imagePath + '/' + imagePath + '.webp';
-          }
-        } else if (!imagePath.includes('.')) {
-          imagePath += '.webp';
-        }
-      }
-    }
-    return this.uploadsBaseUrl + '/' + imagePath;
   }
 
   startCountdown() {

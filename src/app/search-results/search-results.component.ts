@@ -262,6 +262,68 @@ export class SearchResultsComponent implements OnInit {
       .trim();
   }
 
+  // Levenshtein distance for fuzzy matching
+  private levenshtein(a: string, b: string): number {
+    const m = a.length, n = b.length;
+    if (m === 0) return n;
+    if (n === 0) return m;
+    const dp = new Array(n + 1).fill(0).map(() => 0);
+    for (let j = 0; j <= n; j++) dp[j] = j;
+    for (let i = 1; i <= m; i++) {
+      let prev = dp[0];
+      dp[0] = i;
+      for (let j = 1; j <= n; j++) {
+        const temp = dp[j];
+        const cost = a.charAt(i - 1) === b.charAt(j - 1) ? 0 : 1;
+        dp[j] = Math.min(dp[j] + 1, dp[j - 1] + 1, prev + cost);
+        prev = temp;
+      }
+    }
+    return dp[n];
+  }
+
+  // Similarity score between 0..1
+  private similarity(a: string, b: string): number {
+    if (!a || !b) return 0;
+    const dist = this.levenshtein(a, b);
+    const maxLen = Math.max(a.length, b.length);
+    if (maxLen === 0) return 0;
+    const sim = 1 - dist / maxLen;
+    return Math.max(0, sim);
+  }
+
+  // Score a book based on matching query against product fields
+  private scoreBook(book: Book, query: string): number {
+    const q = this.normalizeArabic(query.toLowerCase());
+    if (!q) return 0;
+
+    let bestScore = 0;
+    const anyBook = book as any;
+    const fields = [
+      anyBook.product_name || '',
+      anyBook.sku || '',
+      anyBook.category || '',
+      anyBook.tags ? (Array.isArray(anyBook.tags) ? anyBook.tags.join(' ') : String(anyBook.tags)) : '',
+      anyBook.description || ''
+    ];
+
+    for (const f of fields) {
+      if (!f) continue;
+      const nf = this.normalizeArabic(f.toLowerCase());
+      if (nf.includes(q)) {
+        // exact substring match -> high score
+        const pos = nf.indexOf(q);
+        const score = 1 + (pos === 0 ? 0.5 : 0) + Math.min(0.4, 0.4 / (pos + 1));
+        bestScore = Math.max(bestScore, score);
+      } else {
+        // fallback to fuzzy similarity
+        const sim = this.similarity(q, nf);
+        bestScore = Math.max(bestScore, sim);
+      }
+    }
+    return bestScore;
+  }
+
   searchBooks(): void {
     this.isLoading = true; // Set loading true before data fetch
     if (this.filterType === 'recentlyAdded') {
@@ -275,25 +337,31 @@ export class SearchResultsComponent implements OnInit {
       });
     } else {
       this.dataService.getData().subscribe((data) => {
-        const normalizedQuery = this.normalizeArabic(this.searchQuery.toLowerCase());
-        const filteredBooks = data.filter((book: Book) => {
-          if (!book.product_name || typeof book.product_name !== 'string') {
-            return false;
+        // Use fuzzy matching with scoring instead of strict substring matching
+        const scoredBooks: Array<{ book: Book; score: number }> = [];
+
+        for (const book of data) {
+          if (!book || typeof book.product_name !== 'string') continue;
+          const score = this.scoreBook(book, this.searchQuery);
+          // Accept books with reasonable score (0.45+ threshold)
+          if (score >= 0.45) {
+            scoredBooks.push({ book, score });
           }
-          const normalizedProductName = this.normalizeArabic(book.product_name.toLowerCase());
-          return normalizedProductName.includes(normalizedQuery);
-        });
-        // Sort filteredBooks to prioritize books starting with the exact original query
+        }
+
+        // Sort by score, then by name starting with query
         const originalQueryLower = this.searchQuery.toLowerCase();
-        filteredBooks.sort((a: Book, b: Book) => {
-          const aStarts = a.product_name.toLowerCase().startsWith(originalQueryLower);
-          const bStarts = b.product_name.toLowerCase().startsWith(originalQueryLower);
-          if (aStarts && !bStarts) return -1;
-          if (!aStarts && bStarts) return 1;
-          return 0;
+        scoredBooks.sort((a, b) => {
+          const aName = a.book.product_name.toLowerCase();
+          const bName = b.book.product_name.toLowerCase();
+          const aStarts = aName.startsWith(originalQueryLower) ? 1 : 0;
+          const bStarts = bName.startsWith(originalQueryLower) ? 1 : 0;
+          if (aStarts !== bStarts) return bStarts - aStarts;
+          return b.score - a.score;
         });
-        this.books = filteredBooks;
-        this.totalBooks = filteredBooks.length;
+
+        this.books = scoredBooks.map(sb => sb.book);
+        this.totalBooks = this.books.length;
         this.totalPages = Math.ceil(this.totalBooks / this.booksPerPage);
         this.currentPage = Math.min(this.currentPage, this.totalPages);
         this.updatePage();

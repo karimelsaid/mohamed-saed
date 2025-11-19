@@ -15,21 +15,45 @@ const categoryMap = {
   'فن': 'فنون وحرف',
   'تاريخ': 'تاريخ وسير ذاتية',
   'تربية': 'تربية وأطفال',
-  'ادوات': 'أدوات مكتبية',
-  'الكترونيات': 'إلكترونيات',
+  'أدوات مكتبية': 'أدوات مكتبية',
+  'إلكترونيات': 'إلكترونيات',
   'ملابس': 'ملابس',
   'تجميل': 'التجميل والعناية الشخصية',
   'احذية': 'الأحذية',
   'اثاث': 'أثاث وديكور المنزل',
   'العاب': 'هدية وألعاب',
   'أقمشة': 'أقمشة',
-  'اخرى': 'غير مصنف (أخرى)'
+  'غير مصنف': 'غير مصنف'
+};
+
+// خريطة الحقول الخاصة بكل فئة
+const categoryFieldsMap = {
+  'روايات وقصص': ['author', 'publisher', 'pages', 'coverType', 'language', 'publishYear'],
+  'تطوير الذات وعلم النفس': ['author', 'publisher', 'pages', 'coverType', 'language', 'publishYear'],
+  'كتب دينية': ['author', 'publisher', 'pages', 'coverType', 'language', 'publishYear'],
+  'قواميس ومراجع': ['author', 'publisher', 'pages', 'coverType', 'language', 'publishYear'],
+  'صحة وطب وعلوم': ['author', 'publisher', 'pages', 'coverType', 'language', 'publishYear'],
+  'أعمال وتسويق ومالية': ['author', 'publisher', 'pages', 'coverType', 'language', 'publishYear'],
+  'فنون وحرف': ['author', 'publisher', 'pages', 'coverType', 'language', 'publishYear'],
+  'تاريخ وسير ذاتية': ['author', 'publisher', 'pages', 'coverType', 'language', 'publishYear'],
+  'تربية وأطفال': ['author', 'publisher', 'pages', 'coverType', 'language', 'publishYear'],
+  'أدوات مكتبية': ['stationeryType', 'material', 'color', 'size', 'brand'],
+  'إلكترونيات': ['electronicsType', 'model', 'specs', 'warranty'],
+  'ملابس': ['clothingType', 'season', 'originCountry'],
+  'التجميل والعناية الشخصية': ['cosmeticsType', 'sizeWeight', 'ingredients', 'suitableFor'],
+  'الأحذية': ['shoeType'],
+  'أثاث وديكور المنزل': ['furnitureType', 'length', 'width', 'height', 'deliveryMethod'],
+  'هدية وألعاب': ['toyType', 'ageGroup', 'safety'],
+  'أقمشة': ['fabricType', 'width', 'length', 'usage'],
+  'غير مصنف': ['suggestedCategory']
 };
 
 // Reverse categoryMap for mapping full names to short keys
 const reverseCategoryMap = {};
 for (const [key, value] of Object.entries(categoryMap)) {
-  reverseCategoryMap[value] = key;
+  if (value !== 'غير مصنف') { // Avoid overwriting 'غير مصنف'
+    reverseCategoryMap[value] = key;
+  }
 }
 
 function roundUpToNearestFive(num) {
@@ -241,7 +265,7 @@ async function addProductToExcel(productData, merchantId = null) {
     // Convert sheet to JSON
     let json = xlsx.utils.sheet_to_json(sheet);
 
-    // Prepare new product row
+    // Prepare new product row with all fields including category-specific ones
     const newRow = {
       products_id: productData.barcode,
       product_name: productData.categoryPrefix ? productData.categoryPrefix + productData.product_name : productData.product_name,
@@ -250,7 +274,42 @@ async function addProductToExcel(productData, merchantId = null) {
       product_description: productData.product_description || '',
       product_price: productData.product_price || 0,
       price_cost: productData.price_cost || 0,
-      merchantId: productData.merchantId ? productData.merchantId.toString() : '' // Add merchantId to the new row
+      merchantId: productData.merchantId ? productData.merchantId.toString() : '',
+      author: productData.author || '',
+      publisher: productData.publisher || '',
+      pages: productData.pages || '',
+      coverType: productData.coverType || '',
+      language: productData.language || '',
+      publishYear: productData.publishYear || '',
+      stationeryType: productData.stationeryType || '',
+      material: productData.material || '',
+      color: productData.color || '',
+      size: productData.size || '',
+      brand: productData.brand || '',
+      electronicsType: productData.electronicsType || '',
+      model: productData.model || '',
+      specs: productData.specs || '',
+      warranty: productData.warranty || '',
+      clothingType: productData.clothingType || '',
+      season: productData.season || '',
+      originCountry: productData.originCountry || '',
+      cosmeticsType: productData.cosmeticsType || '',
+      sizeWeight: productData.sizeWeight || '',
+      ingredients: productData.ingredients || '',
+      suitableFor: productData.suitableFor || '',
+      shoeType: productData.shoeType || '',
+      furnitureType: productData.furnitureType || '',
+      height: productData.height || '',
+      deliveryMethod: productData.deliveryMethod || '',
+      toyType: productData.toyType || '',
+      ageGroup: productData.ageGroup || '',
+      safety: productData.safety || '',
+      fabricType: productData.fabricType || '',
+      width: productData.width || '',
+      length: productData.length || '',
+      usage: productData.usage || '',
+      suggestedCategory: productData.suggestedCategory || '',
+      createdAt: productData.createdAt || new Date().toISOString()
     };
 
     // Add new row to JSON
@@ -392,6 +451,7 @@ module.exports = {
   downloadAndConvertExcel,
   categoryMap,
   reverseCategoryMap,
+  categoryFieldsMap,
   addProductToExcel,
   uploadExcelFromJson,
   updateExcelFromJson

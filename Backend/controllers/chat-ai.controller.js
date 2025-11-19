@@ -36,6 +36,20 @@ async function loadBooksData() {
     const books = booksData.map(book => ({
       title: book.product_name,
       description: book.product_description,
+      category: book.product_category,
+      price: book.product_price,
+      quantity: book.product_quantity,
+      author: book.author,
+      publisher: book.publisher,
+      pages: book.pages,
+      coverType: book.coverType,
+      language: book.language,
+      publishYear: book.publishYear,
+      stationeryType: book.stationeryType,
+      material: book.material,
+      color: book.color,
+      size: book.size,
+      brand: book.brand,
       // Construct the URL based on product ID and name for SEO-friendly URLs
       url: `https://kenouz.org/book/${book.products_id}/${encodeURIComponent(book.product_name.replace(/\s+/g, '-'))}`
     }));

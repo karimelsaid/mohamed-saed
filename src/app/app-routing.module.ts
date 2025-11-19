@@ -85,6 +85,7 @@ const routes: Routes = [
   { path: 'Dictionaries-References', component: QamosComponent },
   { path: 'ControlPanel', component: AdminDashboardComponent },
   { path: 'book/:id/:name?', component: BookDetailsComponent },
+  { path: 'product/:id/:name?', component: BookDetailsComponent },
   { path: '', redirectTo: '/Home', pathMatch: 'full' },  // الصفحة الرئيسية هي "home" افتراضيًا
   { path: 'research', component: SearchResultsComponent }, // المسار الذي نوجه إليه المستخدم عند البحث
   { path: 'basket', component: CartComponent },
@@ -97,6 +98,17 @@ const routes: Routes = [
   { path: 'requests', component: UserOrdersComponent },
   { path: 'referrals', component: ReferralsComponent },
   { path: 'print', component: PrintComponent },
+  // Routes with parameters must come before routes without parameters
+  { path: 'electronics/:id/:name?', component: BookDetailsComponent },
+  { path: 'clothing/:id/:name?', component: BookDetailsComponent },
+  { path: 'cosmetics/:id/:name?', component: BookDetailsComponent },
+  { path: 'shoes/:id/:name?', component: BookDetailsComponent },
+  { path: 'furniture/:id/:name?', component: BookDetailsComponent },
+  { path: 'games/:id/:name?', component: BookDetailsComponent },
+  { path: 'fabrics/:id/:name?', component: BookDetailsComponent },
+  { path: 'office-supplies/:id/:name?', component: BookDetailsComponent },
+  { path: 'others/:id/:name?', component: BookDetailsComponent },
+  // Routes without parameters come after
   { path: 'office-supplies', component: OfficeSuppliesComponent },
   { path: 'electronics', component: ElectronicsComponent },
   { path: 'clothing', component: ClothingComponent },

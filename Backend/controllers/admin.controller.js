@@ -44,7 +44,25 @@ async function addProduct(req, res) {
       req.generatedBarcode = generateRandomBarcode();
     }
     const barcode = req.generatedBarcode;
-    const { product_name, product_quantity, product_category, product_description, product_price, price_cost } = req.body;
+    const {
+      product_name,
+      product_quantity,
+      product_category,
+      product_description,
+      product_price,
+      price_cost,
+      author, publisher, pages, coverType, language, publishYear, // Book fields
+      stationeryType, material, color, size, brand, // Stationery fields
+      electronicsType, model, specs, warranty, // Electronics fields
+      clothingType, season, originCountry, // Clothing fields
+      cosmeticsType, sizeWeight, ingredients, suitableFor, // Cosmetics fields
+      shoeType, // Shoe fields
+      furnitureType, height, deliveryMethod, // Furniture fields
+      toyType, ageGroup, safety, // Toy fields
+      fabricType, width, length, usage, // Fabric fields
+      suggestedCategory // Unclassified fields
+    } = req.body;
+
     if (!product_name || !product_quantity || !product_category) {
       return res.status(400).json({ success: false, message: 'Missing required fields' });
     }
@@ -137,6 +155,40 @@ async function addProduct(req, res) {
       price_cost: parseFloat(price_cost) || 0,
       image_path,
       product_image: filename,
+      author: author || '',
+      publisher: publisher || '',
+      pages: pages || '',
+      coverType: coverType || '',
+      language: language || '',
+      publishYear: publishYear || '',
+      stationeryType: stationeryType || '',
+      material: material || '',
+      color: color || '',
+      size: size || '',
+      brand: brand || '',
+      electronicsType: electronicsType || '',
+      model: model || '',
+      specs: specs || '',
+      warranty: warranty || '',
+      clothingType: clothingType || '',
+      season: season || '',
+      originCountry: originCountry || '',
+      cosmeticsType: cosmeticsType || '',
+      sizeWeight: sizeWeight || '',
+      ingredients: ingredients || '',
+      suitableFor: suitableFor || '',
+      shoeType: shoeType || '',
+      furnitureType: furnitureType || '',
+      height: height || '',
+      deliveryMethod: deliveryMethod || '',
+      toyType: toyType || '',
+      ageGroup: ageGroup || '',
+      safety: safety || '',
+      fabricType: fabricType || '',
+      width: width || '',
+      length: length || '',
+      usage: usage || '',
+      suggestedCategory: suggestedCategory || '',
       createdAt: new Date().toISOString() // Add createdAt field with current timestamp
     };
 

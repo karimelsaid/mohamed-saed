@@ -1,11 +1,11 @@
-# Fix Duplicate Products in Merchant Dashboard
+# TODO: Implement 3D Book Cards in Book Details Component
 
-## Completed Tasks
-- [x] Analyze the issue: Merchants seeing duplicate products in their dashboard
-- [x] Identify the root cause: Deduplication logic in getMerchantProducts was based on product_image (barcode), but duplicates might have same name/category
-- [x] Update deduplication logic: Change to remove duplicates based on product_name + product_category, keeping the latest
-- [x] Edit Backend/controllers/merchant.controller.js to implement the fix
+## Tasks
+- [x] Add 3D book CSS styles to book-details.component.css
+- [x] Add isBookCategory and isArabicText methods to book-details.component.ts
+- [x] Modify related products HTML to conditionally render 3D books for book categories
+- [x] Test the component to ensure 3D books display correctly
 
-## Next Steps
-- [ ] Test the fix by checking if duplicates are removed in merchant dashboard
-- [ ] If needed, apply similar fix to admin controller for consistency
+## Status
+- [x] Plan confirmed by user
+- [x] All tasks completed successfully

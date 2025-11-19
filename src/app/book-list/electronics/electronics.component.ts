@@ -10,6 +10,28 @@ import { AccountModalComponent } from '../../auth/account-modal/account-modal.co
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 
+// Category mapping
+const CATEGORY_ROUTES: { [key: string]: string } = {
+  'أدوات مكتبية': 'office-supplies',
+  'إلكترونيات': 'electronics',
+  'ملابس': 'clothing',
+  'التجميل والعناية الشخصية': 'cosmetics',
+  'الأحذية': 'shoes',
+  'أثاث': 'furniture',
+  'ألعاب': 'games',
+  'أقمشة': 'fabrics',
+  'كتب': 'book',
+  'روايات وقصص': 'book',
+  'تطوير الذات وعلم النفس': 'book',
+  'كتب دينية': 'book',
+  'أعمال وتسويق ومالية': 'book',
+  'صحة وطب وعلوم': 'book',
+  'تاريخ وسير ذاتية': 'book',
+  'تربية وأطفال': 'book',
+  'فنون وحرف': 'book',
+  'قواامس ومراجع': 'book'
+};
+
 @Component({
   selector: 'app-electronics',
   standalone: false,
@@ -90,7 +112,7 @@ export class ElectronicsComponent implements OnInit, OnDestroy {
 
   copyProductLink(product: Book): void {
     if (!product) return;
-    const url = window.location.origin + '/book/' + product.products_id + '/' + this.getProductSlug(product.product_name);
+    const url = window.location.origin + '/' + this.getProductRoute(product).join('/');
 
     navigator.clipboard.writeText(url).then(() => {
       this.showCopySuccess = true;
@@ -102,6 +124,31 @@ export class ElectronicsComponent implements OnInit, OnDestroy {
     }).catch(err => {
       console.error('Failed to copy: ', err);
     });
+  }
+
+  getProductRoute(product: Book): string[] {
+    const slug = this.getProductSlug(product.product_name);
+    const rawCategory = (product.product_category || '').trim();
+
+    // Try exact map first
+    let route = CATEGORY_ROUTES[rawCategory];
+
+    // Normalize and try fuzzy matching if exact not found
+    if (!route && rawCategory) {
+      const norm = rawCategory.replace(/\s+/g, '').toLowerCase();
+      for (const key of Object.keys(CATEGORY_ROUTES)) {
+        const kNorm = key.replace(/\s+/g, '').toLowerCase();
+        if (norm.includes(kNorm) || kNorm.includes(norm) || rawCategory.includes(key) || key.includes(rawCategory)) {
+          route = CATEGORY_ROUTES[key];
+          break;
+        }
+      }
+    }
+
+    if (!route) route = 'others';
+
+    console.log('getProductRoute - Product:', product.product_name, 'RawCategory:', rawCategory, 'ResolvedRoute:', route);
+    return ['/', route, product.products_id, slug];
   }
 
   // Updated method to generate product slug without encoding to keep readable characters in URL

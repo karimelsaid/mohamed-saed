@@ -1,5 +1,5 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
-import { ActivatedRoute, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { take } from 'rxjs/operators';
 import { DataService } from '../services/data.service';
 import { Book } from '../book';
@@ -40,10 +40,13 @@ export class BookDetailsComponent implements OnInit {
   ratingCount: number = 0;
   selectedImageIndex: number = 0;
   availableImages: string[] = [];
+  relatedProducts: Book[] = [];
 
   private bookId: string | null = null;
+  private allBooks: Book[] = [];
   constructor(
     private route: ActivatedRoute,
+    private router: Router,
     private dataService: DataService,
     private authService: AuthService,
     private http: HttpClient,
@@ -62,6 +65,7 @@ export class BookDetailsComponent implements OnInit {
           next: (books: Book[]) => {
             console.log('BookDetailsComponent: number of books fetched:', books.length);
             console.log('BookDetailsComponent: searching for book with id:', trimmedId);
+            this.allBooks = books;
             this.book = books.find(b => b.products_id.toString() === trimmedId);
             if (!this.book) {
               console.warn('BookDetailsComponent: book not found for id:', trimmedId);
@@ -71,6 +75,14 @@ export class BookDetailsComponent implements OnInit {
               this.loadAvailableImages();
               this.handleReferral(); // Handle referral after book is loaded
               this.fetchAverageRating(this.book.products_id.toString());
+              this.loadRelatedProducts();
+              // Check if accessed via /product/ and redirect to category-specific URL
+              this.route.url.subscribe(urlSegments => {
+                if (urlSegments.length > 0 && urlSegments[0].path === 'product') {
+                  const categoryRoute = this.getProductRoute(this.book!);
+                  this.router.navigate(categoryRoute, { replaceUrl: true });
+                }
+              });
             }
           },
           error: (err) => {
@@ -154,7 +166,8 @@ export class BookDetailsComponent implements OnInit {
   // دالة نسخ الرابط
   copyBookLink(): void {
     if (!this.book) return;
-    let url = window.location.origin + '/book/' + this.book.products_id + '/' + this.slugService.getBookSlug(this.book.product_name);
+    const categoryRoute = this.getProductRoute(this.book);
+    let url = window.location.origin + '/' + categoryRoute.join('/');
     // Check if there is a referral code in the current URL and append it
     const currentUrl = new URL(window.location.href);
     const refCode = currentUrl.searchParams.get('ref');
@@ -300,5 +313,92 @@ export class BookDetailsComponent implements OnInit {
       }
     }
     return this.uploadsBaseUrl + '/' + path;
+  }
+
+  // Load related products based on category and merchant
+  private loadRelatedProducts(): void {
+    if (!this.book) return;
+    const currentProductId = this.book.products_id;
+    const currentCategory = this.book.product_category;
+    const currentMerchant = this.book.merchantName;
+
+    // Find related products: same category, different product, limit to 8
+    const related = this.allBooks.filter(p => {
+      const isSameCategory = p.product_category === currentCategory;
+      const isDifferentProduct = p.products_id !== currentProductId;
+
+      // Prioritize same merchant and category, fallback to just same category
+      return isSameCategory && isDifferentProduct;
+    }).sort((a, b) => {
+      // Sort: same merchant first, then by discount, then by newest
+      const aSameMerchant = a.merchantName === currentMerchant ? 1 : 0;
+      const bSameMerchant = b.merchantName === currentMerchant ? 1 : 0;
+      if (aSameMerchant !== bSameMerchant) return bSameMerchant - aSameMerchant;
+
+      const aDiscount = a.product_discount_percent || 0;
+      const bDiscount = b.product_discount_percent || 0;
+      if (aDiscount !== bDiscount) return bDiscount - aDiscount;
+
+      return 0;
+    }).slice(0, 8);
+
+    this.relatedProducts = related;
+  }
+
+  // Navigate to a related product's details page
+  navigateToProduct(product: Book): void {
+    const categoryRoute = this.getProductRoute(product);
+    this.router.navigate(categoryRoute);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // Helper method to get the correct route based on product category
+  getProductRoute(product: Book): string[] {
+    const slug = this.slugService.getBookSlug(product.product_name);
+    const categoryRoutes: { [key: string]: string } = {
+      'أدوات مكتبية': 'office-supplies',
+      'إلكترونيات': 'electronics',
+      'ملابس': 'clothing',
+      'التجميل والعناية الشخصية': 'cosmetics',
+      'الأحذية': 'shoes',
+      'أثاث': 'furniture',
+      'ألعاب': 'games',
+      'أقمشة': 'fabrics',
+      'كتب': 'book',
+      'روايات وقصص': 'book',
+      'تطوير الذات وعلم النفس': 'book',
+      'كتب دينية': 'book',
+      'أعمال وتسويق ومالية': 'book',
+      'صحة وطب وعلوم': 'book',
+      'تاريخ وسير ذاتية': 'book',
+      'تربية وأطفال': 'book',
+      'فنون وحرف': 'book',
+      'قواميس ومراجع': 'book'
+    };
+    const route = categoryRoutes[product.product_category] || 'others';
+    return [route, product.products_id, slug];
+  }
+
+  // Check if product is a book category
+  isBookCategory(category: string): boolean {
+    const bookCategories = [
+      'كتب',
+      'روايات وقصص',
+      'تطوير الذات وعلم النفس',
+      'كتب دينية',
+      'أعمال وتسويق ومالية',
+      'صحة وطب وعلوم',
+      'تاريخ وسير ذاتية',
+      'تربية وأطفال',
+      'فنون وحرف',
+      'قواميس ومراجع'
+    ];
+    return bookCategories.includes(category);
+  }
+
+  // Check if text is Arabic (for RTL book styling)
+  isArabicText(text: string): boolean {
+    const arabicRegex = /[\u0600-\u06FF]/;
+    return arabicRegex.test(text);
   }
 }

@@ -196,8 +196,15 @@ exports.getAllOrders = async (req, res) => {
               email: user.email,
               quantity: product.quantity,
               address: (() => {
-                const baseAddress = order.isPickup ? `استلام من المكتبة: ${order.pickupLocation}` : order.postOffice ? `شحن عبر مكاتب البريد: ${order.postOffice.governorate}, ${order.postOffice.city}, ${order.postOffice.address}, ${order.postOffice.name ? 'اسم المكتب: ' + order.postOffice.name : ''}` : `${order.shippingAddress.governorate}, ${order.shippingAddress.city}, ${order.shippingAddress.village}`;
-                return baseAddress + ' - ' + user.phone;
+                let baseAddress = '';
+                if (order.isPickup) {
+                  baseAddress = `استلام من المكتبة: ${order.pickupLocation}`;
+                } else if (order.postOffice && order.postOffice.governorate) {
+                  baseAddress = `شحن عبر مكاتب البريد: ${order.postOffice.governorate}, ${order.postOffice.city}, ${order.postOffice.address || ''}${order.postOffice.name ? ' - اسم المكتب: ' + order.postOffice.name : ''}`;
+                } else { // delivery
+                  baseAddress = `${order.shippingAddress?.governorate || ''}, ${order.shippingAddress?.city || ''}, ${order.shippingAddress?.village || ''}`;
+                }
+                return baseAddress + (user.phone ? ' - ' + user.phone : '');
               })(), // Always construct base address and append phone
               status: order.status,
               orderDate: order.date,

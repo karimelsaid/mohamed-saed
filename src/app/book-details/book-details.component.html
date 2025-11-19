@@ -17,15 +17,26 @@
         <div class="flex flex-col items-center">
           <!-- Main Image -->
           <div class="relative mb-4">
-            <img [src]="availableImages[selectedImageIndex] || ''" alt="{{ book.product_name }}" class="w-full max-w-md h-96 object-contain rounded-xl shadow-xl dark:shadow-2xl transform hover:scale-105 transition-transform duration-300 border-4 border-white dark:border-gray-700" />
+            <!-- 3D Book Display (for book categories) -->
+            <div *ngIf="isBookCategory(book.product_category); else defaultImage" class="main-book-container">
+              <div class="book main-book" [class.book-rtl]="isArabicText(book.product_name)">
+                <img [src]="availableImages[selectedImageIndex] || ''" [alt]="book.product_name" />
+              </div>
+            </div>
+            <!-- Default Image Display (for other categories) -->
+            <ng-template #defaultImage>
+              <img [src]="availableImages[selectedImageIndex] || ''" alt="{{ book.product_name }}" class="w-full max-w-md h-96 object-contain rounded-xl shadow-xl dark:shadow-2xl transform hover:scale-105 transition-transform duration-300 border-4 border-white dark:border-gray-700" />
+            </ng-template>
+
             <!-- شريط الخصم -->
-            <div class="absolute -top-4 -left-4 bg-gradient-to-r from-red-500 to-red-600 dark:from-red-600 dark:to-red-700 text-white text-sm font-bold px-4 py-3 rounded-full shadow-lg z-20 animate-pulse transform">
+            <div *ngIf="(book.product_discount_percent || 0) > 0" class="absolute -top-4 -left-4 bg-gradient-to-r from-red-500 to-red-600 dark:from-red-600 dark:to-red-700 text-white text-sm font-bold px-4 py-3 rounded-full shadow-lg z-20 animate-pulse transform">
               {{ book.product_discount_percent }}% خصم
             </div>
             <button (click)="copyBookLink()" title="نسخ رابط الكتاب" class="absolute bottom-3 left-3 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-full p-3 shadow-lg transform hover:scale-110 transition-transform">
               <fa-icon [icon]="faShareAlt" class="text-gray-700 dark:text-gray-300 h-6 w-6"></fa-icon>
             </button>
           </div>
+
           <!-- Thumbnails -->
           <div *ngIf="availableImages.length > 1" class="w-full max-w-md">
             <div class="flex gap-2 overflow-x-auto pb-2" style="scrollbar-width: thin;">
@@ -69,10 +80,144 @@
       <!-- New product description section -->
       <div *ngIf="book.product_description" class="mb-8 text-gray-700 dark:text-gray-300 border-2 border-gray-300 dark:border-gray-600 rounded-xl p-6 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 shadow-inner relative">
         <div class="absolute top-0 left-0 w-16 h-16 bg-gradient-to-br from-blue-200 to-indigo-300 dark:from-blue-800 dark:to-indigo-900 rounded-full opacity-20 transform -translate-x-8 -translate-y-8"></div>
-        <h3 class="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100 relative z-10">وصف الكتاب</h3>
+        <h3 class="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100 relative z-10">وصف {{ ['كتب', 'روايات وقصص', 'تطوير الذات وعلم النفس', 'كتب دينية', 'أعمال وتسويق ومالية', 'صحة وطب وعلوم', 'تاريخ وسير ذاتية', 'تربية وأطفال', 'فنون وحرف', 'قواميس ومراجع'].includes(book.product_category) ? 'الكتاب' : 'المنتج' }}</h3>
         <div class="relative z-10">
           <p class="whitespace-pre-line leading-relaxed text-lg font-medium text-gray-800 dark:text-gray-200 italic">{{ book.product_description }}</p>
         </div>
+      </div>
+
+      <!-- Additional Details Based on Category -->
+      <div [ngSwitch]="book.product_category" class="mb-8">
+        <!-- 📚 كتب (موحد لجميع تصنيفات الكتب) -->
+        <ng-container *ngSwitchCase="'كتب'">
+        <ng-container *ngSwitchCase="'روايات وقصص'">
+        <ng-container *ngSwitchCase="'تطوير الذات وعلم النفس'">
+        <ng-container *ngSwitchCase="'كتب دينية'">
+        <ng-container *ngSwitchCase="'أعمال وتسويق ومالية'">
+        <ng-container *ngSwitchCase="'صحة وطب وعلوم'">
+        <ng-container *ngSwitchCase="'تاريخ وسير ذاتية'">
+        <ng-container *ngSwitchCase="'تربية وأطفال'">
+        <ng-container *ngSwitchCase="'فنون وحرف'">
+        <ng-container *ngSwitchCase="'قواميس ومراجع'">
+          <div class="bg-gradient-to-br from-gray-50 to-blue-100 dark:from-gray-700 dark:to-blue-900 p-6 rounded-xl shadow-md border border-gray-200 dark:border-gray-700">
+            <h4 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+              <i class="fas fa-book-open text-blue-500"></i> تفاصيل المنتج - كتب
+            </h4>
+            <ul class="space-y-3 text-gray-700 dark:text-gray-300">
+              <li *ngIf="book.author" class="flex items-center gap-2"><i class="fas fa-user-edit w-4 text-center text-gray-500"></i><strong>المؤلف:</strong> {{ book.author }}</li>
+              <li *ngIf="book.publisher" class="flex items-center gap-2"><i class="fas fa-building w-4 text-center text-gray-500"></i><strong>دار النشر:</strong> {{ book.publisher }}</li>
+              <li *ngIf="book.pages" class="flex items-center gap-2"><i class="fas fa-file-alt w-4 text-center text-gray-500"></i><strong>عدد الصفحات:</strong> {{ book.pages }}</li>
+              <li *ngIf="book.coverType" class="flex items-center gap-2"><i class="fas fa-book w-4 text-center text-gray-500"></i><strong>نوع الغلاف:</strong> {{ book.coverType }}</li>
+              <li *ngIf="book.language" class="flex items-center gap-2"><i class="fas fa-language w-4 text-center text-gray-500"></i><strong>اللغة:</strong> {{ book.language }}</li>
+              <li *ngIf="book.publishYear" class="flex items-center gap-2"><i class="fas fa-calendar-alt w-4 text-center text-gray-500"></i><strong>سنة النشر:</strong> {{ book.publishYear }}</li>
+            </ul>
+            <div class="mt-6 pt-4 border-t border-gray-300 dark:border-gray-600">
+              <h5 class="font-bold text-gray-800 dark:text-gray-200 mb-2">لماذا تقرأ هذا الكتاب؟</h5>
+              <p class="text-sm text-gray-600 dark:text-gray-400">انغمس في عالم من المعرفة والمتعة. هذا الكتاب ليس مجرد صفحات، بل هو رحلة فكرية تثري عقلك وروحك.</p>
+            </div>
+          </div>
+        </ng-container>
+        </ng-container>
+        </ng-container>
+        </ng-container>
+        </ng-container>
+        </ng-container>
+        </ng-container>
+        </ng-container>
+        </ng-container>
+        </ng-container>
+
+        <!-- ✏️ أدوات مكتبية -->
+        <ng-container *ngSwitchCase="'أدوات مكتبية'">
+          <div *ngIf="book.stationeryType || book.material || book.color || book.size || book.brand"
+               class="bg-gradient-to-br from-gray-50 to-green-100 dark:from-gray-700 dark:to-green-900 p-6 rounded-xl shadow-md border border-gray-200 dark:border-gray-700">
+          <h4 *ngIf="book.stationeryType || book.material || book.color || book.size || book.brand" class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+            <i class="fas fa-pencil-ruler text-green-500"></i> تفاصيل المنتج
+          </h4>
+          <ul class="space-y-3 text-gray-700 dark:text-gray-300">
+            <li *ngIf="book.stationeryType" class="flex items-center gap-2"><i class="fas fa-tag w-4 text-center text-gray-500"></i><strong>النوع:</strong> {{ book.stationeryType }}</li>
+            <li *ngIf="book.material" class="flex items-center gap-2"><i class="fas fa-gem w-4 text-center text-gray-500"></i><strong>الخامة:</strong> {{ book.material }}</li>
+            <li *ngIf="book.color" class="flex items-center gap-2"><i class="fas fa-palette w-4 text-center text-gray-500"></i><strong>اللون:</strong> {{ book.color }}</li>
+            <li *ngIf="book.size" class="flex items-center gap-2"><i class="fas fa-ruler-combined w-4 text-center text-gray-500"></i><strong>المقاس/السعة:</strong> {{ book.size }}</li>
+            <li *ngIf="book.brand" class="flex items-center gap-2"><i class="fas fa-copyright w-4 text-center text-gray-500"></i><strong>الماركة:</strong> {{ book.brand }}</li>
+          </ul>
+           <div class="mt-6 pt-4 border-t border-gray-300 dark:border-gray-600">
+              <h5 class="font-bold text-gray-800 dark:text-gray-200 mb-2">لماذا تشتري هذا المنتج؟</h5>
+              <p class="text-sm text-gray-600 dark:text-gray-400">أضف لمسة من الجودة والتنظيم لمكتبك. تصميم أنيق ومواد متينة تضمن لك أفضل أداء.</p>
+            </div>
+          </div>
+        </ng-container>
+        <!-- ⚡ إلكترونيات -->
+        <ng-container *ngSwitchCase="'إلكترونيات'">
+          <div *ngIf="book.brand || book.electronicsType || book.model || book.specs || book.warranty" class="bg-gradient-to-br from-gray-50 to-indigo-100 dark:from-gray-700 dark:to-indigo-900 p-6 rounded-xl shadow-md border border-gray-200 dark:border-gray-700">
+            <h4 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+              <i class="fas fa-bolt text-indigo-500"></i> تفاصيل المنتج
+            </h4>
+            <ul class="space-y-3 text-gray-700 dark:text-gray-300">
+              <li *ngIf="book.brand" class="flex items-center gap-2"><i class="fas fa-copyright w-4 text-center text-gray-500"></i><strong>الماركة:</strong> {{ book.brand }}</li>
+              <li *ngIf="book.electronicsType" class="flex items-center gap-2"><i class="fas fa-tag w-4 text-center text-gray-500"></i><strong>النوع:</strong> {{ book.electronicsType }}</li>
+              <li *ngIf="book.model" class="flex items-center gap-2"><i class="fas fa-laptop-code w-4 text-center text-gray-500"></i><strong>الموديل:</strong> {{ book.model }}</li>
+              <li *ngIf="book.specs" class="flex items-center gap-2"><i class="fas fa-cogs w-4 text-center text-gray-500"></i><strong>المواصفات:</strong> {{ book.specs }}</li>
+              <li *ngIf="book.warranty" class="flex items-center gap-2"><i class="fas fa-shield-alt w-4 text-center text-gray-500"></i><strong>الضمان:</strong> {{ book.warranty }}</li>
+            </ul>
+          </div>
+        </ng-container>
+
+        <!-- 👕 ملابس -->
+        <ng-container *ngSwitchCase="'ملابس'">
+          <div *ngIf="book.clothingType || book.size || book.color || book.material || book.season || book.originCountry" class="bg-gradient-to-br from-gray-50 to-pink-100 dark:from-gray-700 dark:to-pink-900 p-6 rounded-xl shadow-md border border-gray-200 dark:border-gray-700">
+            <h4 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+              <i class="fas fa-tshirt text-pink-500"></i> تفاصيل المنتج
+            </h4>
+            <ul class="space-y-3 text-gray-700 dark:text-gray-300">
+              <li *ngIf="book.clothingType" class="flex items-center gap-2"><i class="fas fa-tag w-4 text-center text-gray-500"></i><strong>النوع:</strong> {{ book.clothingType }}</li>
+              <li *ngIf="book.size" class="flex items-center gap-2"><i class="fas fa-ruler-horizontal w-4 text-center text-gray-500"></i><strong>المقاس:</strong> {{ book.size }}</li>
+              <li *ngIf="book.color" class="flex items-center gap-2"><i class="fas fa-palette w-4 text-center text-gray-500"></i><strong>اللون:</strong> {{ book.color }}</li>
+              <li *ngIf="book.material" class="flex items-center gap-2"><i class="fas fa-gem w-4 text-center text-gray-500"></i><strong>الخامة:</strong> {{ book.material }}</li>
+              <li *ngIf="book.season" class="flex items-center gap-2"><i class="fas fa-cloud-sun w-4 text-center text-gray-500"></i><strong>الموسم:</strong> {{ book.season }}</li>
+              <li *ngIf="book.originCountry" class="flex items-center gap-2"><i class="fas fa-flag w-4 text-center text-gray-500"></i><strong>بلد المنشأ:</strong> {{ book.originCountry }}</li>
+            </ul>
+          </div>
+        </ng-container>
+
+        <!-- 💄 تجميل -->
+        <ng-container *ngSwitchCase="'التجميل والعناية الشخصية'">
+          <div *ngIf="book.cosmeticsType || book.brand || book.sizeWeight || book.ingredients || book.suitableFor || book.originCountry" class="bg-gradient-to-br from-gray-50 to-purple-100 dark:from-gray-700 dark:to-purple-900 p-6 rounded-xl shadow-md border border-gray-200 dark:border-gray-700">
+            <h4 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+              <i class="fas fa-magic text-purple-500"></i> تفاصيل المنتج
+            </h4>
+            <ul class="space-y-3 text-gray-700 dark:text-gray-300">
+              <li *ngIf="book.cosmeticsType" class="flex items-center gap-2"><i class="fas fa-tag w-4 text-center text-gray-500"></i><strong>النوع:</strong> {{ book.cosmeticsType }}</li>
+              <li *ngIf="book.brand" class="flex items-center gap-2"><i class="fas fa-copyright w-4 text-center text-gray-500"></i><strong>الماركة:</strong> {{ book.brand }}</li>
+              <li *ngIf="book.sizeWeight" class="flex items-center gap-2"><i class="fas fa-weight-hanging w-4 text-center text-gray-500"></i><strong>الحجم/الوزن:</strong> {{ book.sizeWeight }}</li>
+              <li *ngIf="book.ingredients" class="flex items-center gap-2"><i class="fas fa-flask w-4 text-center text-gray-500"></i><strong>المكونات:</strong> {{ book.ingredients }}</li>
+              <li *ngIf="book.suitableFor" class="flex items-center gap-2"><i class="fas fa-user-check w-4 text-center text-gray-500"></i><strong>مناسب لـ:</strong> {{ book.suitableFor }}</li>
+              <li *ngIf="book.originCountry" class="flex items-center gap-2"><i class="fas fa-flag w-4 text-center text-gray-500"></i><strong>بلد المنشأ:</strong> {{ book.originCountry }}</li>
+            </ul>
+          </div>
+        </ng-container>
+
+        <!-- 👟 أحذية -->
+        <ng-container *ngSwitchCase="'الأحذية'">
+          <div *ngIf="book.shoeType || book.size || book.color || book.material || book.season || book.originCountry" class="bg-gradient-to-br from-gray-50 to-yellow-100 dark:from-gray-700 dark:to-yellow-900 p-6 rounded-xl shadow-md border border-gray-200 dark:border-gray-700">
+            <h4 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+              <i class="fas fa-shoe-prints text-yellow-500"></i> تفاصيل المنتج
+            </h4>
+            <ul class="space-y-3 text-gray-700 dark:text-gray-300">
+              <li *ngIf="book.shoeType" class="flex items-center gap-2"><i class="fas fa-tag w-4 text-center text-gray-500"></i><strong>النوع:</strong> {{ book.shoeType }}</li>
+              <li *ngIf="book.size" class="flex items-center gap-2"><i class="fas fa-ruler-horizontal w-4 text-center text-gray-500"></i><strong>المقاس:</strong> {{ book.size }}</li>
+              <li *ngIf="book.color" class="flex items-center gap-2"><i class="fas fa-palette w-4 text-center text-gray-500"></i><strong>اللون:</strong> {{ book.color }}</li>
+              <li *ngIf="book.material" class="flex items-center gap-2"><i class="fas fa-gem w-4 text-center text-gray-500"></i><strong>الخامة:</strong> {{ book.material }}</li>
+              <li *ngIf="book.season" class="flex items-center gap-2"><i class="fas fa-cloud-sun w-4 text-center text-gray-500"></i><strong>الموسم:</strong> {{ book.season }}</li>
+              <li *ngIf="book.originCountry" class="flex items-center gap-2"><i class="fas fa-flag w-4 text-center text-gray-500"></i><strong>بلد المنشأ:</strong> {{ book.originCountry }}</li>
+            </ul>
+          </div>
+        </ng-container>
+
+        <!-- 🧩 غير مصنف وباقي التصنيفات -->
+        <!-- This will be empty, effectively hiding the section if no other case matches -->
+        <div *ngSwitchDefault></div>
+
       </div>
 
       <!-- Average Rating Display -->
@@ -101,6 +246,244 @@
     </div>
   </div>
 </div>
+
+<!-- Related Products Section -->
+<div *ngIf="relatedProducts.length > 0" class="mt-20 mb-16 bg-gradient-to-b from-transparent via-blue-50 to-transparent dark:via-gray-900/30">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <!-- Section Header with Psychological Messaging -->
+    <div class="mb-12 text-center">
+      <div class="inline-block mb-4">
+        <span class="text-5xl animate-bounce">🎁</span>
+      </div>
+      <h2 class="text-4xl sm:text-5xl font-black bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 dark:from-blue-400 dark:via-indigo-400 dark:to-purple-400 bg-clip-text text-transparent mb-3">
+        منتجات قد تعجبك أيضاً
+      </h2>
+      <p class="text-lg text-gray-600 dark:text-gray-400 font-medium mb-2">
+        اكتشف اختيارات شبيهة اختارها آلاف العملاء
+      </p>
+      <div class="flex justify-center gap-4 flex-wrap mt-4">
+        <span class="inline-flex items-center gap-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-3 py-1 rounded-full text-xs font-semibold">
+          <span>✓</span> أسعار منافسة
+        </span>
+        <span class="inline-flex items-center gap-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 px-3 py-1 rounded-full text-xs font-semibold">
+          <span>★</span> عالية التقييم
+        </span>
+        <span class="inline-flex items-center gap-1 bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 px-3 py-1 rounded-full text-xs font-semibold">
+          <span>⚡</span> سريع التوصيل
+        </span>
+      </div>
+    </div>
+
+    <!-- Related Products Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-5">
+      <div *ngFor="let product of relatedProducts; let i = index" [style.animation]="'fadeInUp 0.6s ease-out ' + (i * 0.1) + 's both'">
+        <!-- 3D Book Card (for book categories) -->
+        <div *ngIf="isBookCategory(product.product_category); else defaultProductCard" class="book-container" (click)="navigateToProduct(product)">
+          <div class="book" [class.book-rtl]="isArabicText(product.product_name)">
+            <img [src]="getBookImageUrl(product)" [alt]="product.product_name" />
+            <!-- Badges -->
+            <div class="absolute top-2 left-2 z-20">
+              <div *ngIf="(product.product_discount_percent || 0) > 0" class="bg-gradient-to-br from-red-500 to-red-600 text-white px-2 py-1 rounded-full text-xs font-bold shadow-lg mb-2">
+                -{{ product.product_discount_percent }}%
+              </div>
+            </div>
+            <div class="absolute top-2 right-2 z-20">
+              <div *ngIf="(product.product_quantity || 0) > 0 && (product.product_quantity || 0) <= 3"
+                   class="bg-gradient-to-r from-orange-500 to-red-500 text-white px-2 py-1 rounded-full text-xs font-bold shadow-lg animate-pulse mb-2">
+                ⚠️ متبقي {{ product.product_quantity }}
+              </div>
+              <div *ngIf="(product.product_quantity || 0) === 0"
+                   class="bg-gray-500 text-white px-2 py-1 rounded-full text-xs font-semibold shadow-lg mb-2">
+                نفد المخزون
+              </div>
+            </div>
+          </div>
+          <!-- Book Info Overlay -->
+          <div class="book-info">
+            <h3 class="font-bold text-white text-sm line-clamp-2 mb-2">{{ product.product_name }}</h3>
+            <!-- Rating -->
+            <div class="flex items-center gap-1 text-xs text-yellow-300 mb-2">
+              <ng-container *ngFor="let star of [1,2,3,4,5]">
+                <fa-icon [icon]="star <= (product.averageRating || 0) ? faStar : faStarRegular"></fa-icon>
+              </ng-container>
+              <span class="text-gray-200">({{ product.ratingCount || 0 }})</span>
+            </div>
+            <!-- Price -->
+            <div class="text-lg font-black text-green-400 mb-1">{{ product.product_price }} EGP</div>
+            <div *ngIf="(product.product_discount_percent || 0) > 0" class="text-xs text-gray-300 line-through">
+              {{ (product.product_price * 1.75) | number:'1.0-0' }} EGP
+            </div>
+          </div>
+        </div>
+
+        <!-- Default Product Card (for other categories) -->
+        <ng-template #defaultProductCard>
+          <div (click)="navigateToProduct(product)" class="group relative bg-white dark:bg-gray-800 rounded-3xl shadow-xl dark:shadow-2xl hover:shadow-2xl dark:hover:shadow-3xl transition-all duration-500 transform hover:-translate-y-3 overflow-hidden border-2 border-gray-100 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600">
+            <div class="relative h-56 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 overflow-hidden">
+              <img [src]="getBookImageUrl(product)" [alt]="product.product_name" class="w-full h-full object-cover group-hover:scale-125 transition-transform duration-500 ease-out">
+              <div *ngIf="(product.product_discount_percent || 0) > 0" class="absolute top-3 left-3 bg-gradient-to-br from-red-500 to-red-600 text-white px-3 py-1.5 rounded-full text-sm font-black shadow-lg transform group-hover:scale-125 transition-transform duration-300">
+                -{{ product.product_discount_percent }}%
+              </div>
+              <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <span class="text-white font-bold text-lg">عرض سريع</span>
+              </div>
+            </div>
+            <div class="p-5">
+              <h3 class="font-bold text-gray-900 dark:text-gray-100 line-clamp-2 mb-3 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors text-sm leading-tight">
+                {{ product.product_name }}
+              </h3>
+              <div class="mb-3 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-3 rounded-xl border border-green-200 dark:border-green-700/30">
+                <p class="text-lg font-black text-green-600 dark:text-green-400">
+                  {{ product.product_price }} EGP
+                </p>
+                <p *ngIf="(product.product_discount_percent || 0) > 0" class="text-xs text-gray-500 dark:text-gray-400 line-through">
+                  {{ (product.product_price * 1.75) | number:'1.0-0' }} EGP
+                </p>
+              </div>
+            </div>
+          </div>
+        </ng-template>
+      </div>
+    </div>
+
+    <!-- Trust/Confidence Badges at Bottom -->
+    <div class="mt-12 text-center">
+      <p class="text-gray-600 dark:text-gray-400 mb-4 font-medium">ثق في اختيارك ✨</p>
+      <div class="flex justify-center gap-8 flex-wrap">
+        <div class="text-center">
+          <div class="text-3xl mb-1">🛡️</div>
+          <p class="text-xs text-gray-600 dark:text-gray-400">ضمان 100%</p>
+        </div>
+        <div class="text-center">
+          <div class="text-3xl mb-1">🚚</div>
+          <p class="text-xs text-gray-600 dark:text-gray-400">توصيل سريع</p>
+        </div>
+        <div class="text-center">
+          <div class="text-3xl mb-1">💰</div>
+          <p class="text-xs text-gray-600 dark:text-gray-400">أفضل الأسعار</p>
+        </div>
+        <div class="text-center">
+          <div class="text-3xl mb-1">⭐</div>
+          <p class="text-xs text-gray-600 dark:text-gray-400">آلاف الآراء</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CSS Animation -->
+<style>
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .main-book-container {
+    width: 300px; /* Adjust width for main book */
+    height: 420px; /* Adjust height for main book */
+    perspective: 1500px;
+  }
+
+  .main-book {
+    cursor: default; /* Remove pointer cursor from main book */
+  }
+
+  .book-container {
+    width: 180px; /* Adjust width as needed */
+    height: 250px; /* Adjust height as needed */
+    perspective: 1000px;
+    margin: 1rem auto;
+  }
+
+  .book {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    transform-style: preserve-3d;
+    transform: rotateY(-25deg);
+    transition: transform 0.8s ease;
+    cursor: pointer;
+  }
+
+  .book:hover {
+    transform: rotateY(0deg);
+    box-shadow: 0 35px 60px -15px rgba(0, 0, 0, 0.3);
+  }
+
+  /* RTL Book Styling */
+  .book.book-rtl {
+    transform: rotateY(25deg);
+  }
+
+  .book.book-rtl:hover {
+    transform: rotateY(0deg);
+  }
+
+  .book.book-rtl img {
+    border-radius: 5px 2px 2px 5px;
+  }
+  /* End of RTL Book Styling */
+
+
+  .book img {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 2px 5px 5px 2px;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+  }
+
+  .book.book-rtl::before { /* RTL Spine */
+    right: 0;
+    left: auto;
+    background: linear-gradient(-90deg, #2d3748, #4a5568);
+    transform: translateX(100%) rotateY(-90deg);
+    transform-origin: right;
+  }
+
+  .book::after { /* Pages */
+    content: '';
+    position: absolute;
+    top: 0;
+    top: 2px;
+    right: 0;
+    width: 100%;
+    height: 98%;
+    background: #edf2f7; /* dark:bg-gray-200 */
+    transform: translateZ(-25px); /* Same as spine width */
+    border-radius: 2px 5px 5px 2px;
+    box-shadow: -5px 5px 15px rgba(0,0,0,0.15);
+    background: linear-gradient(to right, #d1d5db, #e5e7eb, #d1d5db);
+    transform: translateZ(-30px);
+    box-shadow: -10px 0 20px 5px rgba(0,0,0,0.2);
+  }
+
+  .book-info {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
+    color: white;
+    padding: 1rem;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    border-radius: 0 0 5px 5px;
+  }
+
+  .book:hover .book-info {
+    opacity: 1;
+    transform: translateY(0);
+  }
+</style>
 
 <div *ngIf="showLoginPrompt" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-50 p-4">
   <div class="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-xl shadow-xl dark:shadow-2xl text-center max-w-md mx-auto relative overflow-hidden">

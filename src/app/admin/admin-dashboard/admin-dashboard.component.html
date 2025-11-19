@@ -1,5 +1,18 @@
 <h2 class="text-3xl font-extrabold mb-6 pt-10 md:pt-40 text-center text-blue-700 dark:text-blue-400">لوحة تحكم الأدمن</h2>
 
+<!-- Progress Modal -->
+<div *ngIf="progressModalOpen" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+  <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-80 max-w-full text-center shadow-lg">
+    <div class="text-blue-600 dark:text-blue-400 font-semibold flex items-center justify-center">
+      <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      </svg>
+      {{ progressModalMessage }}
+    </div>
+  </div>
+</div>
+
 <!-- Stats Cards -->
 <div class="mx-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
   <div class="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-4 text-center border border-gray-200 dark:border-gray-700">
@@ -101,8 +114,8 @@
       <button (click)="savePromotionDates()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded">
         حفظ
       </button>
+    </div>
   </div>
-</div>
 </div>
 
 <!-- Component Modal Dialog -->
@@ -119,20 +132,6 @@
   (closed)="closeModal()">
 </app-modal-dialog>
 
-<!-- Modal Service Dialog (separate from component modal) -->
-<app-modal-dialog
-  [isOpen]="modalServiceOpen"
-  [title]="modalServiceTitle"
-  [message]="modalServiceMessage"
-  [type]="modalServiceType"
-  [confirmText]="modalServiceConfirmText"
-  [cancelText]="modalServiceCancelText"
-  [showCancel]="modalServiceShowCancel"
-  (confirmed)="confirmModalService()"
-  (cancelled)="closeModalService()"
-  (closed)="closeModalService()">
-</app-modal-dialog>
-
 <div *ngIf="currentView === 'paymentRequests'" class="mb-28 md:mb-0">
   <app-payment-requests></app-payment-requests>
 </div>
@@ -147,7 +146,46 @@
       <fa-icon [icon]="['fas', 'plus-circle']" class="text-blue-500 mr-3"></fa-icon>
       إضافة منتج جديد
     </h3>
-    <form (ngSubmit)="submitAddProduct()" #addProductForm="ngForm" enctype="multipart/form-data" class="space-y-6">
+    <form (ngSubmit)="submitAddProduct()" #addProductForm="ngForm" class="space-y-6">
+      <!-- Category Selection First -->
+      <div>
+        <label for="product_category" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center">
+          <fa-icon [icon]="['fas', 'list']" class="text-blue-500 ml-2"></fa-icon>
+          الفئة
+        </label>
+        <!-- Main Category Dropdown -->
+        <select
+          id="main_category"
+          [(ngModel)]="selectedMainCategory"
+          name="main_category"
+          required
+          (change)="product.product_category = (selectedMainCategory !== 'كتب' ? selectedMainCategory : '')"
+          class="w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:border-transparent dark:bg-gray-700 dark:text-gray-200 transition duration-200"
+        >
+          <option value="" disabled selected>اختر الفئة أولاً</option>
+          <option *ngFor="let cat of mainCategories" [value]="cat">{{ cat }}</option>
+        </select>
+      </div>
+
+      <!-- Sub-category for Books -->
+      <div *ngIf="selectedMainCategory === 'كتب'">
+        <label for="product_category" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center">
+          <fa-icon [icon]="['fas', 'list']" class="text-blue-500 ml-2"></fa-icon>
+          تصنيف الكتاب
+        </label>
+        <select
+          id="product_category"
+          [(ngModel)]="product.product_category"
+          name="product_category"
+          required
+          class="w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:border-transparent dark:bg-gray-700 dark:text-gray-200 transition duration-200"
+        >
+          <option value="" disabled selected>اختر تصنيف الكتاب</option>
+          <option *ngFor="let subCat of bookSubCategories" [value]="subCat">{{ subCat }}</option>
+        </select>
+      </div>
+
+      <div *ngIf="product.product_category" class="space-y-6">
       <!-- Image Upload Section -->
       <div class="bg-gray-50 dark:bg-gray-700 rounded-xl p-6 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500 transition-colors duration-200">
         <label for="image" class="block text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center">
@@ -160,10 +198,10 @@
           (change)="onFileSelected($event)"
           accept="image/*"
           multiple
-          required
+          [required]="selectedFiles.length === 0 && imageUrls.length === 0"
           [ngClass]="{
             'border-red-500': imageError,
-            'border-blue-500': !imageError && selectedFiles.length > 0
+            'border-blue-500': !imageError && (selectedFiles.length > 0 || imageUrls.length > 0)
           }"
           class="w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-gray-200 transition duration-200 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
         />
@@ -171,30 +209,49 @@
           <fa-icon [icon]="['fas', 'exclamation-triangle']" class="ml-1"></fa-icon>
           {{ imageError }}
         </p>
-        <div *ngIf="selectedFiles.length > 0" class="text-green-600 text-sm mt-2 dark:text-green-400">
+        <div *ngIf="selectedFiles.length > 0 || imageUrls.length > 0" class="text-green-600 text-sm mt-2 dark:text-green-400">
           <fa-icon [icon]="['fas', 'check-circle']" class="ml-1"></fa-icon>
-          تم اختيار {{ selectedFiles.length }} ملف(ات):
+          تم اختيار {{ selectedFiles.length + imageUrls.length }} ملف(ات):
           <ul class="list-disc pr-5 mt-1">
             <li *ngFor="let file of selectedFiles">{{ file.name }}</li>
+            <li *ngFor="let url of imageUrls">رابط خارجي</li>
           </ul>
         </div>
-        <div *ngIf="selectedFilesPreviews.length > 0" class="mt-4">
+        <div *ngIf="selectedFilesPreviews.length > 0 || imageUrls.length > 0" class="mt-4">
           <h4 class="text-lg font-semibold mb-2 text-gray-700 dark:text-gray-300">معاينة الصور:</h4>
           <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div *ngFor="let preview of selectedFilesPreviews; let i = index" class="relative">
               <img [src]="preview" class="w-full h-32 object-cover rounded-lg border">
-              <button (click)="removeImage(i)" class="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs">×</button>
+              <button type="button" (click)="removeImage(i)" class="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs">×</button>
+            </div>
+            <div *ngFor="let url of imageUrls; let i = index" class="relative">
+              <img [src]="url" crossorigin="anonymous" class="w-full h-32 object-cover rounded-lg border" (error)="onImageUrlError(i)">
+              <button type="button" (click)="removeImageUrl(i)" class="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs">×</button>
             </div>
           </div>
         </div>
+
+        <!-- Drag and Drop Area -->
+        <div class="mt-4 border-t pt-4 border-gray-300 dark:border-gray-600">
+          <div
+            class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center hover:border-blue-400 dark:hover:border-blue-500 transition-colors duration-200"
+            (dragover)="onDragOver($event)"
+            (dragleave)="onDragLeave($event)"
+            (drop)="onDrop($event)"
+            [class.border-blue-500]="isDragOver"
+          >
+            <fa-icon [icon]="['fas', 'cloud-upload-alt']" class="text-gray-400 text-4xl mb-4"></fa-icon>
+            <p class="text-gray-600 dark:text-gray-400 mb-2">اسحب وأفلت الصور من المتصفح هنا</p>
+            <p class="text-sm text-gray-500 dark:text-gray-500">أو استخدم زر اختيار الملفات أعلاه</p>
+          </div>
+        </div>
       </div>
-      <!-- Product Name -->
-      <div>
-        <label for="product_name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center">
-          <fa-icon [icon]="['fas', 'tag']" class="text-blue-500 ml-2"></fa-icon>
-          اسم المنتج
-        </label>
-        <input
+
+      <!-- Dynamic fields based on category -->
+      <div [ngSwitch]="product.product_category">
+        <!-- 📚 الكتب -->
+        <ng-container *ngSwitchDefault>
+          <div><label for="product_name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">العنوان</label><input
           type="text"
           id="product_name"
           [(ngModel)]="product.product_name"
@@ -202,21 +259,103 @@
           required
           #productName="ngModel"
           [ngClass]="{
-            'border-red-500 focus:ring-red-500': productName.invalid && (productName.dirty || productName.touched),
-            'border-blue-500 focus:ring-blue-500': productName.valid && (productName.dirty || productName.touched),
-            'border-gray-300 dark:border-gray-600': !productName.dirty && !productName.touched
+            'border-red-500': productName.invalid && productName.touched, 'border-gray-300': !productName.touched
           }"
-          class="w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:border-transparent dark:bg-gray-700 dark:text-gray-200 transition duration-200"
-          placeholder="أدخل اسم المنتج"
-        />
-        <p *ngIf="productName.invalid && (productName.dirty || productName.touched)" class="text-red-500 text-sm mt-1 dark:text-red-400 flex items-center">
-          <fa-icon [icon]="['fas', 'exclamation-triangle']" class="ml-1"></fa-icon>
-          يرجى إدخال اسم المنتج.
-        </p>
+          class="w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:border-transparent dark:bg-gray-700 dark:text-gray-200 transition duration-200" placeholder="أدخل العنوان"/></div>
+          <div><label for="author" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">المؤلف</label><input type="text" id="author" [(ngModel)]="product.author" name="author" class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="اسم المؤلف (اختياري)"/></div>
+          <div><label for="publisher" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">دار النشر</label><input type="text" id="publisher" [(ngModel)]="product.publisher" name="publisher" class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="دار النشر (اختياري)"/></div>
+          <div><label for="pages" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">عدد الصفحات</label><input type="number" id="pages" [(ngModel)]="product.pages" name="pages" class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="عدد الصفحات (اختياري)"/></div>
+          <div><label for="coverType" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">نوع الغلاف</label><select id="coverType" [(ngModel)]="product.coverType" name="coverType" class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700"><option value="ورقي">ورقي</option><option value="كرتوني">كرتوني</option><option value="إلكتروني">إلكتروني</option></select></div>
+          <div><label for="language" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">اللغة</label><input type="text" id="language" [(ngModel)]="product.language" name="language" class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="اللغة (اختياري)"/></div>
+          <div><label for="publishYear" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">سنة النشر</label><input type="number" id="publishYear" [(ngModel)]="product.publishYear" name="publishYear" class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="سنة النشر (اختياري)"/></div>
+        </ng-container>
+
+        <!-- ✏️ أدوات مكتبية -->
+        <div *ngSwitchCase="'أدوات مكتبية'" class="space-y-6">
+          <div><label for="product_name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الاسم</label><input type="text" id="product_name" [(ngModel)]="product.product_name" name="product_name" required class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="اسم الأداة"/></div>
+          <div><label for="stationeryType" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">النوع</label><select id="stationeryType" [(ngModel)]="product.stationeryType" name="stationeryType" class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700"><option>قلم</option><option>دفتر</option><option>ملف</option><option>أداة فنية</option><option>أخرى</option></select></div>
+          <div><label for="material" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الخامة</label><input type="text" id="material" [(ngModel)]="product.material" name="material" class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="بلاستيك, معدن, ورق..."/></div>
+          <div><label for="color" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">اللون</label><input type="text" id="color" [(ngModel)]="product.color" name="color" class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="اللون"/></div>
+          <div><label for="size" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">المقاس أو السعة</label><input type="text" id="size" [(ngModel)]="product.size" name="size" class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="A4, A5..."/></div>
+          <div><label for="brand" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الماركة</label><input type="text" id="brand" [(ngModel)]="product.brand" name="brand" class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="الماركة"/></div>
+        </div>
+
+        <!-- ⚡ إلكترونيات -->
+        <div *ngSwitchCase="'إلكترونيات'" class="space-y-6">
+          <div><label for="product_name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الاسم</label><input type="text" id="product_name" [(ngModel)]="product.product_name" name="product_name" required class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="اسم الجهاز"/></div>
+          <div><label for="brand" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الماركة</label><input type="text" id="brand" [(ngModel)]="product.brand" name="brand" class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="الماركة"/></div>
+          <div><label for="electronicsType" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">النوع</label><input type="text" id="electronicsType" [(ngModel)]="product.electronicsType" name="electronicsType" class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="موبايل, لابتوب..."/></div>
+          <div><label for="model" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الموديل</label><input type="text" id="model" [(ngModel)]="product.model" name="model" class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="الموديل"/></div>
+          <div><label for="specs" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">المواصفات الأساسية</label><textarea id="specs" [(ngModel)]="product.specs" name="specs" rows="3" class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="رام – ذاكرة – بطارية..."></textarea></div>
+          <div><label for="warranty" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الضمان</label><input type="text" id="warranty" [(ngModel)]="product.warranty" name="warranty" class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="مدة الضمان"/></div>
+        </div>
+
+        <!-- 👕 ملابس -->
+        <div *ngSwitchCase="'ملابس'" class="space-y-6">
+          <div><label for="product_name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الاسم</label><input type="text" id="product_name" [(ngModel)]="product.product_name" name="product_name" required class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="اسم القطعة"/></div>
+          <div><label for="clothingType" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">النوع</label><select id="clothingType" [(ngModel)]="product.clothingType" name="clothingType" class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700"><option>رجالي</option><option>حريمي</option><option>أطفال</option></select></div>
+          <div><label for="size" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">المقاس</label><select id="size" [(ngModel)]="product.size" name="size" class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700"><option>S</option><option>M</option><option>L</option><option>XL</option><option>XXL</option></select></div>
+          <div><label for="color" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">اللون</label><input type="text" id="color" [(ngModel)]="product.color" name="color" class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="اللون"/></div>
+          <div><label for="material" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الخامة</label><input type="text" id="material" [(ngModel)]="product.material" name="material" class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="قطن, بوليستر..."/></div>
+          <div><label for="season" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الموسم</label><select id="season" [(ngModel)]="product.season" name="season" class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700"><option>صيفي</option><option>شتوي</option><option>كليهما</option></select></div>
+          <div><label for="originCountry" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">بلد المنشأ</label><input type="text" id="originCountry" [(ngModel)]="product.originCountry" name="originCountry" class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="بلد المنشأ"/></div>
+        </div>        <!-- 💄 تجميل -->
+        <div *ngSwitchCase="'التجميل والعناية الشخصية'" class="space-y-6">
+          <div><label for="product_name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الاسم</label><input type="text" id="product_name" [(ngModel)]="product.product_name" name="product_name" required class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="اسم المنتج"/></div>
+          <div><label for="cosmeticsType" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">النوع</label><input type="text" id="cosmeticsType" [(ngModel)]="product['cosmeticsType']" name="cosmeticsType" class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="مكياج, عناية بالبشرة..."/></div>
+          <div><label for="brand" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الماركة</label><input type="text" id="brand" [(ngModel)]="product.brand" name="brand" class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="الماركة"/></div>
+          <div><label for="sizeWeight" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الحجم أو الوزن</label><input type="text" id="sizeWeight" [(ngModel)]="product['sizeWeight']" name="sizeWeight" class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="الحجم أو الوزن"/></div>
+          <div><label for="ingredients" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">المكونات (اختياري)</label><textarea id="ingredients" [(ngModel)]="product['ingredients']" name="ingredients" rows="2" class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700"></textarea></div>
+          <div><label for="suitableFor" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">مناسب لـ</label><select id="suitableFor" [(ngModel)]="product['suitableFor']" name="suitableFor" class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700"><option>النساء</option><option>الرجال</option><option>الأطفال</option><option>الجميع</option></select></div>
+        </div>
+
+        <!-- 👟 أحذية -->
+        <div *ngSwitchCase="'الأحذية'" class="space-y-6">
+          <div><label for="product_name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الاسم</label><input type="text" id="product_name" [(ngModel)]="product.product_name" name="product_name" required class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="اسم الحذاء"/></div>
+          <div><label for="shoeType" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">النوع</label><select id="shoeType" [(ngModel)]="product['shoeType']" name="shoeType" class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700"><option>رجالي</option><option>حريمي</option><option>أطفال</option></select></div>
+          <div><label for="size" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">المقاس</label><select id="size" [(ngModel)]="product.size" name="size" class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700"><option>36</option><option>37</option><option>38</option><option>39</option><option>40</option><option>41</option><option>42</option><option>43</option><option>44</option><option>45</option></select></div>
+        </div>
+
+        <!-- 🛋️ أثاث -->
+        <div *ngSwitchCase="'أثاث وديكور المنزل'" class="space-y-6">
+          <div><label for="product_name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الاسم</label><input type="text" id="product_name" [(ngModel)]="product.product_name" name="product_name" required class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="اسم قطعة الأثاث"/></div>
+          <div><label for="furnitureType" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">النوع</label><input type="text" id="furnitureType" [(ngModel)]="product['furnitureType']" name="furnitureType" class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="كرسي, طاولة..."/></div>
+         <div><label for="dimensions" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الأبعاد (سم)</label><input type="text" id="dimensions" [(ngModel)]="product.dimensions" name="dimensions" class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="مثال: 120x60x75"/></div>
+          <div><label for="material" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الخامة</label><input type="text" id="material" [(ngModel)]="product.material" name="material" class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="خشب, معدن..."/></div>
+          <div><label for="color" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">اللون</label><input type="text" id="color" [(ngModel)]="product.color" name="color" class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="اللون"/></div>
+          <div><label for="deliveryMethod" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">طريقة التوصيل</label><select id="deliveryMethod" [(ngModel)]="product['deliveryMethod']" name="deliveryMethod" class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700"><option>مجمع</option><option>يحتاج تجميع</option></select></div>
+          <div><label for="warranty" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الضمان</label><input type="text" id="warranty" [(ngModel)]="product.warranty" name="warranty" class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="مدة الضمان"/></div>
+        </div>
+
+        <!-- 🧸 ألعاب -->
+        <div *ngSwitchCase="'هدية وألعاب'" class="space-y-6">
+          <div><label for="product_name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الاسم</label><input type="text" id="product_name" [(ngModel)]="product.product_name" name="product_name" required class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="اسم اللعبة"/></div>
+          <div><label for="ageGroup" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الفئة العمرية</label><input type="text" id="ageGroup" [(ngModel)]="product['ageGroup']" name="ageGroup" class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="الفئة العمرية المناسبة"/></div>
+          <div><label for="toyType" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">النوع</label><input type="text" id="toyType" [(ngModel)]="product['toyType']" name="toyType" class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="ذكاء, تعليمية..."/></div>
+          <div><label for="material" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الخامة</label><input type="text" id="material" [(ngModel)]="product.material" name="material" class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="بلاستيك, قماش..."/></div>
+          <div><label for="safety" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الأمان</label><input type="text" id="safety" [(ngModel)]="product['safety']" name="safety" class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="معتمد, آمن للأطفال..."/></div>
+        </div>
+
+        <!-- 🧵 أقمشة -->
+        <div *ngSwitchCase="'أقمشة'" class="space-y-6">
+          <div><label for="product_name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الاسم</label><input type="text" id="product_name" [(ngModel)]="product.product_name" name="product_name" required class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="اسم القماش"/></div>
+          <div><label for="fabricType" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">النوع</label><input type="text" id="fabricType" [(ngModel)]="product['fabricType']" name="fabricType" class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="مشجر, سادة..."/></div>
+          <div><label for="material" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الخامة</label><input type="text" id="material" [(ngModel)]="product.material" name="material" class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="قطن, حرير..."/></div>
+          <div><label for="season" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الموسم</label><select id="season" [(ngModel)]="product.season" name="season" class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700"><option>صيفي</option><option>شتوي</option><option>كليهما</option></select></div>
+          <div><label for="width" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">العرض (بالمتر)</label><input type="number" id="width" [(ngModel)]="product['width']" name="width" class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="العرض"/></div>
+          <div><label for="originCountry" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">بلد المنشأ</label><input type="text" id="originCountry" [(ngModel)]="product.originCountry" name="originCountry" class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="بلد المنشأ"/></div>
+          <div><label for="usage" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الاستخدام المناسب</label><input type="text" id="usage" [(ngModel)]="product['usage']" name="usage" class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="فساتين, عبايات..."/></div>
+        </div>
+
+        <!-- 🧩 أخرى -->
+        <div *ngSwitchCase="'غير مصنف'" class="space-y-6">
+          <div><label for="product_name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الاسم</label><input type="text" id="product_name" [(ngModel)]="product.product_name" name="product_name" required class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="اسم المنتج"/></div>
+          <div><label for="suggestedCategory" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الفئة المقترحة</label><input type="text" id="suggestedCategory" [(ngModel)]="product['suggestedCategory']" name="suggestedCategory" class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="الفئة المقترحة"/></div>
+        </div>
       </div>
-      <!-- Quantity and Category Row -->
+
+      <!-- Common fields for all categories -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <!-- Quantity -->
         <div>
           <label for="product_quantity" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center">
             <fa-icon [icon]="['fas', 'hashtag']" class="text-blue-500 ml-2"></fa-icon>
@@ -231,53 +370,19 @@
             min="1"
             #productQuantity="ngModel"
             [ngClass]="{
-              'border-red-500 focus:ring-red-500': productQuantity.invalid && (productQuantity.dirty || productQuantity.touched),
-              'border-blue-500 focus:ring-blue-500': productQuantity.valid && (productQuantity.dirty || productQuantity.touched),
-              'border-gray-300 dark:border-gray-600': !productQuantity.dirty && !productQuantity.touched
+              'border-red-500': productQuantity.invalid && productQuantity.touched, 'border-gray-300': !productQuantity.touched
             }"
             class="w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:border-transparent dark:bg-gray-700 dark:text-gray-200 transition duration-200"
             placeholder="أدخل الكمية"
           />
-          <p *ngIf="productQuantity.invalid && (productQuantity.dirty || productQuantity.touched)" class="text-red-500 text-sm mt-1 dark:text-red-400 flex items-center">
-            <fa-icon [icon]="['fas', 'exclamation-triangle']" class="ml-1"></fa-icon>
-            يرجى إدخال كمية صحيحة (1 أو أكثر).
-          </p>
-        </div>
-        <!-- Category -->
-        <div>
-          <label for="product_category" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center">
-            <fa-icon [icon]="['fas', 'list']" class="text-blue-500 ml-2"></fa-icon>
-            الفئة
-          </label>
-          <select
-            id="product_category"
-            [(ngModel)]="product.product_category"
-            name="product_category"
-            required
-            #productCategory="ngModel"
-            [ngClass]="{
-              'border-red-500 focus:ring-red-500': productCategory.invalid && (productCategory.dirty || productCategory.touched),
-              'border-blue-500 focus:ring-blue-500': productCategory.valid && (productCategory.dirty || productCategory.touched),
-              'border-gray-300 dark:border-gray-600': !productCategory.dirty && !productCategory.touched
-            }"
-            class="w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:border-transparent dark:bg-gray-700 dark:text-gray-200 transition duration-200"
-          >
-            <option value="" disabled selected>اختر الفئة</option>
-            <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
-          </select>
-          <p *ngIf="productCategory.invalid && (productCategory.dirty || productCategory.touched)" class="text-red-500 text-sm mt-1 dark:text-red-400 flex items-center">
-            <fa-icon [icon]="['fas', 'exclamation-triangle']" class="ml-1"></fa-icon>
-            يرجى اختيار الفئة.
-          </p>
         </div>
       </div>
-      <!-- Prices Row -->
+
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <!-- Selling Price -->
         <div>
           <label for="product_price" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center">
-            <fa-icon [icon]="['fas', 'dollar-sign']" class="text-green-500 ml-2"></fa-icon>
-            سعر البيع
+            <fa-icon [icon]="['fas', 'dollar-sign']" class="text-green-500 ml-2"></fa-icon> {{ product.product_category === 'أقمشة' ? 'السعر بالمتر' : 'سعر البيع' }}
           </label>
           <input
             type="number"
@@ -289,17 +394,11 @@
             step="0.01"
             #productPrice="ngModel"
             [ngClass]="{
-              'border-red-500 focus:ring-red-500': productPrice.invalid && (productPrice.dirty || productPrice.touched),
-              'border-blue-500 focus:ring-blue-500': productPrice.valid && (productPrice.dirty || productPrice.touched),
-              'border-gray-300 dark:border-gray-600': !productPrice.dirty && !productPrice.touched
+              'border-red-500': productPrice.invalid && productPrice.touched, 'border-gray-300': !productPrice.touched
             }"
             class="w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:border-transparent dark:bg-gray-700 dark:text-gray-200 transition duration-200"
-            placeholder="أدخل سعر البيع"
+            [placeholder]="product.product_category === 'أقمشة' ? 'أدخل السعر بالمتر' : 'أدخل سعر البيع'"
           />
-          <p *ngIf="productPrice.invalid && (productPrice.dirty || productPrice.touched)" class="text-red-500 text-sm mt-1 dark:text-red-400 flex items-center">
-            <fa-icon [icon]="['fas', 'exclamation-triangle']" class="ml-1"></fa-icon>
-            يرجى إدخال سعر بيع صحيح.
-          </p>
         </div>
         <!-- Cost Price -->
         <div>
@@ -317,24 +416,18 @@
             step="0.01"
             #priceCost="ngModel"
             [ngClass]="{
-              'border-red-500 focus:ring-red-500': priceCost.invalid && (priceCost.dirty || priceCost.touched),
-              'border-blue-500 focus:ring-blue-500': priceCost.valid && (priceCost.dirty || priceCost.touched),
-              'border-gray-300 dark:border-gray-600': !priceCost.dirty && !priceCost.touched
+              'border-red-500': priceCost.invalid && priceCost.touched, 'border-gray-300': !priceCost.touched
             }"
             class="w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:border-transparent dark:bg-gray-700 dark:text-gray-200 transition duration-200"
             placeholder="أدخل سعر الشراء"
           />
-          <p *ngIf="priceCost.invalid && (priceCost.dirty || priceCost.touched)" class="text-red-500 text-sm mt-1 dark:text-red-400 flex items-center">
-            <fa-icon [icon]="['fas', 'exclamation-triangle']" class="ml-1"></fa-icon>
-            يرجى إدخال سعر شراء صحيح.
-          </p>
         </div>
       </div>
       <!-- Description -->
       <div>
         <label for="product_description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center">
           <fa-icon [icon]="['fas', 'align-left']" class="text-blue-500 ml-2"></fa-icon>
-          وصف الكتاب
+          الوصف
         </label>
         <textarea
           id="product_description"
@@ -344,17 +437,11 @@
           required
           #productDescription="ngModel"
           [ngClass]="{
-            'border-red-500 focus:ring-red-500': productDescription.invalid && (productDescription.dirty || productDescription.touched),
-            'border-blue-500 focus:ring-blue-500': productDescription.valid && (productDescription.dirty || productDescription.touched),
-            'border-gray-300 dark:border-gray-600': !productDescription.dirty && !productDescription.touched
+            'border-red-500': productDescription.invalid && productDescription.touched, 'border-gray-300': !productDescription.touched
           }"
           class="w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:border-transparent dark:bg-gray-700 dark:text-gray-200 transition duration-200 resize-vertical"
           placeholder="أدخل وصف المنتج"
         ></textarea>
-        <p *ngIf="productDescription.invalid && (productDescription.dirty || productDescription.touched)" class="text-red-500 text-sm mt-1 dark:text-red-400 flex items-center">
-          <fa-icon [icon]="['fas', 'exclamation-triangle']" class="ml-1"></fa-icon>
-          يرجى إدخال وصف المنتج.
-        </p>
       </div>
       <!-- Submit Button -->
       <button
@@ -365,9 +452,11 @@
         <fa-icon [icon]="['fas', 'plus']" class="ml-2"></fa-icon>
         إضافة المنتج
       </button>
+      </div>
     </form>
-  </div>
+    </div>
 </div>
+
 
 <div *ngIf="currentView === 'freeShippingRules'" class="mb-28 md:mb-0">
   <app-free-shipping-rules></app-free-shipping-rules>
@@ -431,119 +520,159 @@
       </div>
     </div>
   <div class="overflow-x-auto">
-    <table class="min-w-full bg-white dark:bg-gray-800 rounded-lg shadow-md text-sm mx-auto hidden sm:table">
-      <thead>
-        <tr class="bg-blue-100 dark:bg-[#0a1325] text-blue-700 dark:text-blue-400 uppercase text-xs font-semibold">
-          <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">
-            <input type="checkbox" (change)="selectAllProducts()" [checked]="isAllProductsSelected()" [indeterminate]="isSomeProductsSelected()" />
-          </th>
-          <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">صورة المنتج</th>
-          <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">اسم المنتج</th>
-          <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">الكمية</th>
-          <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">الفئة</th>
-          <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">الوصف</th>
-          <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">سعر البيع</th>
-          <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">سعر الشراء</th>
-          <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">تعديل الصورة</th>
-          <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">إجراءات</th>
-        </tr>
-      </thead>
-      <tbody *ngIf="products.length > 0">
-        <tr *ngFor="let product of products; let i = index" [ngClass]="{'bg-blue-50 dark:bg-[#0a1325]': i % 2 === 0, 'bg-white dark:bg-gray-800': i % 2 !== 0}">
-          <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700">
-            <input type="checkbox" [checked]="selectedProducts.has(product.products_id)" (change)="toggleProductSelection(product.products_id)" />
-          </td>
-          <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700">
-<img *ngIf="product.product_image" [src]="getProductImageUrl(product)" alt="صورة المنتج" class="w-16 h-16 object-cover mx-auto rounded" />
-            <span *ngIf="!product.product_image">لا توجد صورة</span>
-          </td>
-          <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700">
-            <input [(ngModel)]="product.product_name" class="w-full border rounded px-2 py-1 dark:bg-gray-700 dark:text-gray-200" />
-          </td>
-          <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700">
-            <input type="number" [(ngModel)]="product.product_quantity" min="0" class="w-full border rounded px-2 py-1 dark:bg-gray-700 dark:text-gray-200" />
-          </td>
-          <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700">
-            <select [(ngModel)]="product.product_category" class="w-full border rounded px-2 py-1 dark:bg-gray-700 dark:text-gray-200">
-              <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
-            </select>
-          </td>
-          <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700">
-            <textarea [(ngModel)]="product.product_description" rows="2" class="w-full border rounded px-2 py-1 dark:bg-gray-700 dark:text-gray-200"></textarea>
-          </td>
-          <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700">
-            <input type="number" [(ngModel)]="product.product_price" min="0" step="0.01" class="w-full border rounded px-2 py-1 dark:bg-gray-700 dark:text-gray-200" />
-          </td>
-          <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700">
-            <input type="number" [(ngModel)]="product.price_cost" min="0" step="0.01" class="w-full border rounded px-2 py-1 dark:bg-gray-700 dark:text-gray-200" />
-          </td>
-          <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700">
-            <input type="file" (change)="replaceProductImage(product, $any($event.target).files ? $any($event.target).files[0] : null)" accept="image/*" class="w-full" />
-          </td>
-          <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700">
-            <div class="flex justify-center space-x-2">
-              <button (click)="updateProduct(product)" [disabled]="!hasProductChanged(product)" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-1 px-3 rounded disabled:opacity-50">
-                حفظ
-              </button>
-              <button (click)="deleteProductWithModal(product)" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-1 px-3 rounded">
-                حذف
-              </button>
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+    <!-- New Product Card Layout -->
+    <div class="flex flex-col gap-6">
+      <div *ngFor="let product of products; let i = index" class="relative bg-white dark:bg-gray-800 shadow-lg rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
 
-  <!-- Responsive grid layout for small screens -->
-  <div *ngIf="products.length > 0" class="sm:hidden flex flex-col gap-4 max-w-md mx-auto">
-    <div *ngFor="let product of products" class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 space-y-3">
-      <div class="flex justify-between items-center">
-        <input type="checkbox" [checked]="selectedProducts.has(product.products_id)" (change)="toggleProductSelection(product.products_id)" class="w-4 h-4" />
-<img *ngIf="product.product_image" [src]="getProductImageUrl(product)" alt="صورة المنتج" class="w-16 h-16 object-cover rounded" />
-        <span *ngIf="!product.product_image" class="text-gray-500 dark:text-gray-400">لا توجد صورة</span>
-      </div>
-      <div>
-        <label class="block font-semibold mb-1">اسم المنتج</label>
-        <input [(ngModel)]="product.product_name" class="w-full border rounded px-2 py-1 dark:bg-gray-700 dark:text-gray-200" />
-      </div>
-      <div>
-        <label class="block font-semibold mb-1">الكمية</label>
-        <input type="number" [(ngModel)]="product.product_quantity" min="0" class="w-full border rounded px-2 py-1 dark:bg-gray-700 dark:text-gray-200" />
-      </div>
-      <div>
-        <label class="block font-semibold mb-1">الفئة</label>
-        <select [(ngModel)]="product.product_category" class="w-full border rounded px-2 py-1 dark:bg-gray-700 dark:text-gray-200">
-          <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
-        </select>
-      </div>
-      <div>
-        <label class="block font-semibold mb-1">الوصف</label>
-        <textarea [(ngModel)]="product.product_description" rows="2" class="w-full border rounded px-2 py-1 dark:bg-gray-700 dark:text-gray-200"></textarea>
-      </div>
-      <div>
-        <label class="block font-semibold mb-1">سعر البيع</label>
-        <input type="number" [(ngModel)]="product.product_price" min="0" step="0.01" class="w-full border rounded px-2 py-1 dark:bg-gray-700 dark:text-gray-200" />
-      </div>
-      <div>
-        <label class="block font-semibold mb-1">سعر الشراء</label>
-        <input type="number" [(ngModel)]="product.price_cost" min="0" step="0.01" class="w-full border rounded px-2 py-1 dark:bg-gray-700 dark:text-gray-200" />
-      </div>
-      <div>
-        <label class="block font-semibold mb-1">تعديل الصورة</label>
-        <input type="file" (change)="replaceProductImage(product, $any($event.target).files ? $any($event.target).files[0] : null)" accept="image/*" class="w-full" />
-      </div>
-      <div class="flex space-x-2 rtl">
-        <button (click)="updateProduct(product)" [disabled]="!hasProductChanged(product)" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-1 px-3 rounded disabled:opacity-50">
-          حفظ
-        </button>
-        <button (click)="deleteProductWithModal(product)" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-1 px-3 rounded">
-          حذف
-        </button>
+        <!-- Checkbox for selection -->
+        <div class="absolute top-2 right-2 z-10">
+          <input type="checkbox" [checked]="isProductSelected(product.products_id)" (change)="toggleProductSelection(product.products_id)" class="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+        </div>
+
+        <!-- Card Header: Image, Name, Price, Main Actions -->
+        <div class="p-4 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <img [src]="getProductImageUrl(product)" [alt]="product.product_name" class="w-24 h-24 object-cover rounded-md border dark:border-gray-600">
+
+          <div class="flex-grow">
+            <h3 *ngIf="!product.editMode" class="text-xl font-bold text-gray-800 dark:text-gray-100">{{ product.product_name }}</h3>
+            <input *ngIf="product.editMode" type="text" [(ngModel)]="product.product_name" class="text-xl font-bold bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-2 w-full">
+
+            <p class="text-gray-500 dark:text-gray-400">الرقم التعريفي: {{ product.products_id }}</p>
+
+            <div class="flex items-baseline gap-2 mt-2">
+              <p *ngIf="!product.editMode" class="text-2xl font-bold text-blue-600 dark:text-blue-400">{{ product.product_price }} جنيه</p>
+              <input *ngIf="product.editMode" type="number" [(ngModel)]="product.product_price" class="text-2xl font-bold bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-2 w-32">
+
+              <p *ngIf="product.product_price_before_discount && product.product_price_before_discount > product.product_price" class="text-sm text-gray-500 line-through">{{ product.product_price_before_discount }} جنيه</p>
+            </div>
+          </div>
+
+          <div class="flex flex-col sm:flex-row gap-2 self-start sm:self-center">
+            <button (click)="product.editMode ? updateProduct(product) : (product.editMode = true)"
+                [disabled]="product.isSaving"
+                class="px-4 py-2 text-sm font-medium rounded-md transition-colors flex items-center justify-center w-24"
+                [ngClass]="product.editMode ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'">
+                <span *ngIf="!product.editMode">تعديل</span>
+                <span *ngIf="product.editMode && !product.isSaving">حفظ</span>
+                <span *ngIf="product.editMode && product.isSaving" class="flex items-center">
+                  <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                  جارٍ الحفظ...
+                </span>
+            </button>
+            <button (click)="product.detailsOpen = !product.detailsOpen" class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-md">
+                <span *ngIf="!product.detailsOpen">عرض التفاصيل</span>
+                <span *ngIf="product.detailsOpen">إخفاء التفاصيل</span>
+            </button>
+            <button (click)="deleteProductWithModal(product)" class="px-4 py-2 text-sm font-medium bg-red-600 hover:bg-red-700 text-white rounded-md">
+              حذف
+            </button>
+          </div>
+        </div>
+
+        <!-- Card Body: Additional Details (collapsible) -->
+        <div *ngIf="product.detailsOpen" class="border-t border-gray-200 dark:border-gray-700 p-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+                <!-- Basic Details Section -->
+                <div class="col-span-1 md:col-span-2 lg:col-span-3 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
+                    <h4 class="font-bold text-lg mb-2 text-gray-700 dark:text-gray-200">تفاصيل أساسية</h4>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                        <div>
+                            <label class="font-semibold text-gray-600 dark:text-gray-300">التصنيف:</label>
+                            <p *ngIf="!product.editMode" class="text-gray-800 dark:text-gray-100">{{ product.product_category }}</p>
+                            <select *ngIf="product.editMode" [(ngModel)]="product.product_category" class="mt-1 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-1 w-full">
+                              <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="font-semibold text-gray-600 dark:text-gray-300">الكمية:</label>
+                            <p *ngIf="!product.editMode" class="text-gray-800 dark:text-gray-100">{{ product.product_quantity }}</p>
+                            <input *ngIf="product.editMode" type="number" [(ngModel)]="product.product_quantity" class="mt-1 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-1 w-full">
+                        </div>
+                        <div>
+                            <label class="font-semibold text-gray-600 dark:text-gray-300">سعر التكلفة:</label>
+                            <p *ngIf="!product.editMode" class="text-gray-800 dark:text-gray-100">{{ product.price_cost }} جنيه</p>
+                            <input *ngIf="product.editMode" type="number" [(ngModel)]="product.price_cost" class="mt-1 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-1 w-full">
+                        </div>
+                        <div class="sm:col-span-2 md:col-span-3">
+                            <label class="font-semibold text-gray-600 dark:text-gray-300">الوصف:</label>
+                            <p *ngIf="!product.editMode" class="text-gray-800 dark:text-gray-100 whitespace-pre-wrap">{{ product.product_description }}</p>
+                            <textarea *ngIf="product.editMode" [(ngModel)]="product.product_description" rows="3" class="mt-1 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-1 w-full"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Category-specific Details (Tabs) -->
+                <div class="col-span-1 md:col-span-2 lg:col-span-3 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
+                    <h4 class="font-bold text-lg mb-3 text-gray-700 dark:text-gray-200">تفاصيل إضافية</h4>
+
+                    <!-- You can implement a tab system here using a component property like 'activeTab' for each product -->
+                    <!-- For simplicity, this example shows all fields. You can wrap them in *ngIf based on product.product_category -->
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                      <!-- Book Details -->
+                      <ng-container *ngIf="categoryFieldsMap[product.product_category || '']?.includes('author')">
+                        <div><label class="font-semibold text-gray-600 dark:text-gray-300">المؤلف:</label><p *ngIf="!product.editMode">{{ product['author'] || '-' }}</p><input *ngIf="product.editMode" type="text" [(ngModel)]="product['author']" class="mt-1 bg-gray-100 dark:bg-gray-700 border rounded p-1 w-full"></div>
+                        <div><label class="font-semibold text-gray-600 dark:text-gray-300">الناشر:</label><p *ngIf="!product.editMode">{{ product['publisher'] || '-' }}</p><input *ngIf="product.editMode" type="text" [(ngModel)]="product['publisher']" class="mt-1 bg-gray-100 dark:bg-gray-700 border rounded p-1 w-full"></div>
+                        <div><label class="font-semibold text-gray-600 dark:text-gray-300">عدد الصفحات:</label><p *ngIf="!product.editMode">{{ product['pages'] || '-' }}</p><input *ngIf="product.editMode" type="text" [(ngModel)]="product['pages']" class="mt-1 bg-gray-100 dark:bg-gray-700 border rounded p-1 w-full"></div>
+                      </ng-container>
+
+                      <!-- Stationery Details -->
+<ng-container *ngIf="categoryFieldsMap[product.product_category || '']?.includes('stationeryType')">
+                        <div><label class="font-semibold text-gray-600 dark:text-gray-300">نوع الأداة:</label><p *ngIf="!product.editMode">{{ product['stationeryType'] || '-' }}</p><input *ngIf="product.editMode" type="text" [(ngModel)]="product['stationeryType']" class="mt-1 bg-gray-100 dark:bg-gray-700 border rounded p-1 w-full"></div>
+                        <div><label class="font-semibold text-gray-600 dark:text-gray-300">الخامة:</label><p *ngIf="!product.editMode">{{ product['material'] || '-' }}</p><input *ngIf="product.editMode" type="text" [(ngModel)]="product['material']" class="mt-1 bg-gray-100 dark:bg-gray-700 border rounded p-1 w-full"></div>
+                        <div><label class="font-semibold text-gray-600 dark:text-gray-300">اللون:</label><p *ngIf="!product.editMode">{{ product['color'] || '-' }}</p><input *ngIf="product.editMode" type="text" [(ngModel)]="product['color']" class="mt-1 bg-gray-100 dark:bg-gray-700 border rounded p-1 w-full"></div>
+                        <div><label class="font-semibold text-gray-600 dark:text-gray-300">المقاس:</label><p *ngIf="!product.editMode">{{ product['size'] || '-' }}</p><input *ngIf="product.editMode" type="text" [(ngModel)]="product['size']" class="mt-1 bg-gray-100 dark:bg-gray-700 border rounded p-1 w-full"></div>
+                        <div><label class="font-semibold text-gray-600 dark:text-gray-300">الماركة:</label><p *ngIf="!product.editMode">{{ product['brand'] || '-' }}</p><input *ngIf="product.editMode" type="text" [(ngModel)]="product['brand']" class="mt-1 bg-gray-100 dark:bg-gray-700 border rounded p-1 w-full"></div>
+                      </ng-container>
+
+                      <!-- Electronics Details -->
+                      <ng-container *ngIf="categoryFieldsMap[product.product_category || '']?.includes('electronicsType')">
+                        <div><label class="font-semibold text-gray-600 dark:text-gray-300">نوع الجهاز:</label><p *ngIf="!product.editMode">{{ product['electronicsType'] || '-' }}</p><input *ngIf="product.editMode" type="text" [(ngModel)]="product['electronicsType']" class="mt-1 bg-gray-100 dark:bg-gray-700 border rounded p-1 w-full"></div>
+                        <div><label class="font-semibold text-gray-600 dark:text-gray-300">الموديل:</label><p *ngIf="!product.editMode">{{ product['model'] || '-' }}</p><input *ngIf="product.editMode" type="text" [(ngModel)]="product['model']" class="mt-1 bg-gray-100 dark:bg-gray-700 border rounded p-1 w-full"></div>
+                        <div><label class="font-semibold text-gray-600 dark:text-gray-300">المواصفات:</label><p *ngIf="!product.editMode">{{ product['specs'] || '-' }}</p><input *ngIf="product.editMode" type="text" [(ngModel)]="product['specs']" class="mt-1 bg-gray-100 dark:bg-gray-700 border rounded p-1 w-full"></div>
+                        <div><label class="font-semibold text-gray-600 dark:text-gray-300">الضمان:</label><p *ngIf="!product.editMode">{{ product['warranty'] || '-' }}</p><input *ngIf="product.editMode" type="text" [(ngModel)]="product['warranty']" class="mt-1 bg-gray-100 dark:bg-gray-700 border rounded p-1 w-full"></div>
+                      </ng-container>
+
+                      <!-- Clothing Details -->
+                      <ng-container *ngIf="categoryFieldsMap[product.product_category || '']?.includes('clothingType')">
+                        <div><label class="font-semibold text-gray-600 dark:text-gray-300">النوع:</label><p *ngIf="!product.editMode">{{ product['clothingType'] || '-' }}</p><input *ngIf="product.editMode" type="text" [(ngModel)]="product['clothingType']" class="mt-1 bg-gray-100 dark:bg-gray-700 border rounded p-1 w-full"></div>
+                        <div><label class="font-semibold text-gray-600 dark:text-gray-300">الموسم:</label><p *ngIf="!product.editMode">{{ product['season'] || '-' }}</p><input *ngIf="product.editMode" type="text" [(ngModel)]="product['season']" class="mt-1 bg-gray-100 dark:bg-gray-700 border rounded p-1 w-full"></div>
+                        <div><label class="font-semibold text-gray-600 dark:text-gray-300">بلد المنشأ:</label><p *ngIf="!product.editMode">{{ product['originCountry'] || '-' }}</p><input *ngIf="product.editMode" type="text" [(ngModel)]="product['originCountry']" class="mt-1 bg-gray-100 dark:bg-gray-700 border rounded p-1 w-full"></div>
+                      </ng-container>
+
+                      <!-- Fabric Details -->
+                      <ng-container *ngIf="categoryFieldsMap[product.product_category || '']?.includes('fabricType')">
+                         <div><label class="font-semibold text-gray-600 dark:text-gray-300">نوع القماش:</label><p *ngIf="!product.editMode">{{ product['fabricType'] || '-' }}</p><input *ngIf="product.editMode" type="text" [(ngModel)]="product['fabricType']" class="mt-1 bg-gray-100 dark:bg-gray-700 border rounded p-1 w-full"></div>
+                         <div><label class="font-semibold text-gray-600 dark:text-gray-300">العرض:</label><p *ngIf="!product.editMode">{{ product['width'] || '-' }}</p><input *ngIf="product.editMode" type="text" [(ngModel)]="product['width']" class="mt-1 bg-gray-100 dark:bg-gray-700 border rounded p-1 w-full"></div>
+                         <div><label class="font-semibold text-gray-600 dark:text-gray-300">الطول:</label><p *ngIf="!product.editMode">{{ product['length'] || '-' }}</p><input *ngIf="product.editMode" type="text" [(ngModel)]="product['length']" class="mt-1 bg-gray-100 dark:bg-gray-700 border rounded p-1 w-full"></div>
+                         <div><label class="font-semibold text-gray-600 dark:text-gray-300">الاستخدام:</label><p *ngIf="!product.editMode">{{ product['usage'] || '-' }}</p><input *ngIf="product.editMode" type="text" [(ngModel)]="product['usage']" class="mt-1 bg-gray-100 dark:bg-gray-700 border rounded p-1 w-full"></div>
+                      </ng-container>
+
+                      <!-- Furniture-specific dimensions -->
+                      <ng-container *ngIf="product.product_category === 'أثاث وديكور المنزل'">
+                        <div><label class="font-semibold text-gray-600 dark:text-gray-300">نوع الأثاث:</label><p *ngIf="!product.editMode">{{ product['furnitureType'] || '-' }}</p><input *ngIf="product.editMode" type="text" [(ngModel)]="product['furnitureType']" class="mt-1 bg-gray-100 dark:bg-gray-700 border rounded p-1 w-full"></div>
+                        <div><label class="font-semibold text-gray-600 dark:text-gray-300">الطول (سم):</label><p *ngIf="!product.editMode">{{ product['length'] || '-' }}</p><input *ngIf="product.editMode" type="number" [(ngModel)]="product['length']" class="mt-1 bg-gray-100 dark:bg-gray-700 border rounded p-1 w-full"></div>
+                        <div><label class="font-semibold text-gray-600 dark:text-gray-300">الارتفاع (سم):</label><p *ngIf="!product.editMode">{{ product['height'] || '-' }}</p><input *ngIf="product.editMode" type="number" [(ngModel)]="product['height']" class="mt-1 bg-gray-100 dark:bg-gray-700 border rounded p-1 w-full"></div>
+                        <div><label class="font-semibold text-gray-600 dark:text-gray-300">طريقة التوصيل:</label><p *ngIf="!product.editMode">{{ product['deliveryMethod'] || '-' }}</p><input *ngIf="product.editMode" type="text" [(ngModel)]="product['deliveryMethod']" class="mt-1 bg-gray-100 dark:bg-gray-700 border rounded p-1 w-full"></div>
+                      </ng-container>
+
+                      <!-- Toys Details -->
+                      <ng-container *ngIf="categoryFieldsMap[product.product_category || '']?.includes('toyType')">
+                        <div><label class="font-semibold text-gray-600 dark:text-gray-300">نوع اللعبة:</label><p *ngIf="!product.editMode">{{ product['toyType'] || '-' }}</p><input *ngIf="product.editMode" type="text" [(ngModel)]="product['toyType']" class="mt-1 bg-gray-100 dark:bg-gray-700 border rounded p-1 w-full"></div>
+                        <div><label class="font-semibold text-gray-600 dark:text-gray-300">الفئة العمرية:</label><p *ngIf="!product.editMode">{{ product['ageGroup'] || '-' }}</p><input *ngIf="product.editMode" type="text" [(ngModel)]="product['ageGroup']" class="mt-1 bg-gray-100 dark:bg-gray-700 border rounded p-1 w-full"></div>
+                        <div><label class="font-semibold text-gray-600 dark:text-gray-300">معايير السلامة:</label><p *ngIf="!product.editMode">{{ product['safety'] || '-' }}</p><input *ngIf="product.editMode" type="text" [(ngModel)]="product['safety']" class="mt-1 bg-gray-100 dark:bg-gray-700 border rounded p-1 w-full"></div>
+                      </ng-container>
+                </div>
+                    <!-- Uncategorized Details -->
+                    <ng-container *ngIf="product.product_category === 'غير مصنف'">
+                      <div><label class="font-semibold text-gray-600 dark:text-gray-300">الفئة المقترحة:</label><p *ngIf="!product.editMode">{{ product['suggestedCategory'] || '-' }}</p><input *ngIf="product.editMode" type="text" [(ngModel)]="product['suggestedCategory']" class="mt-1 bg-gray-100 dark:bg-gray-700 border rounded p-1 w-full"></div>
+                    </ng-container>
+            </div>
+        </div>
       </div>
     </div>
   </div>
-
   <p *ngIf="products.length === 0" class="text-center text-gray-500 dark:text-gray-400 py-6">لا توجد منتجات حالياً</p>
   <!-- Pagination controls for products -->
   <div class="flex justify-center mt-4 space-x-4 items-center mb-32 md:mb-0">
@@ -552,29 +681,7 @@
     <button (click)="nextProductsPage()" [disabled]="productsPage === totalProductsPages()" class="px-3 py-1 bg-gray-300 dark:bg-gray-600 rounded disabled:opacity-50">التالي</button>
   </div>
 </div>
-
-<!-- Floating upload progress indicator (only shows during upload) -->
-<div *ngIf="uploading" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 mb-32 md:mb-0">
-  <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-80 max-w-full text-center shadow-lg">
-    <div class="text-blue-600 dark:text-blue-400 font-semibold">
-      جاري الرفع... {{ uploadProgress }}%
-      <div class="w-full bg-gray-200 rounded-full h-4 mt-2">
-        <div class="bg-blue-600 h-4 rounded-full transition-all duration-300 ease-in-out" [style.width.%]="uploadProgress"></div>
-      </div>
-    </div>
-  </div>
 </div>
-
-<!-- Floating upload success indicator (only shows after successful upload) -->
-<div *ngIf="uploadSuccess" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 mb-32 md:mb-0">
-  <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-80 max-w-full text-center shadow-lg">
-    <div class="text-green-600 dark:text-green-400 font-semibold flex flex-col items-center space-y-2">
-      <fa-icon [icon]="['fas', 'check-circle']" class="text-6xl animate-scale-up"></fa-icon>
-      <div>تم الرفع بنجاح!</div>
-    </div>
-  </div>
-</div>
-
 
 <!-- عرض الطلبات -->
 <div *ngIf="currentView === 'orders' || currentView === 'merchantOrders'">
@@ -1101,5 +1208,27 @@
     <button (click)="prevUrgencyRequestsPage()" [disabled]="urgencyRequestsPage === 1" class="px-3 py-1 bg-gray-300 dark:bg-gray-600 rounded disabled:opacity-50">السابق</button>
     <span class="text-gray-900 dark:text-gray-200">صفحة {{ urgencyRequestsPage }} من {{ totalUrgencyRequestsPages() }}</span>
     <button (click)="nextUrgencyRequestsPage()" [disabled]="urgencyRequests.length < urgencyRequestsPageSize" class="px-3 py-1 bg-gray-300 dark:bg-gray-600 rounded disabled:opacity-50">التالي</button>
+  </div>
+</div>
+
+<!-- Floating upload progress indicator (only shows during upload) -->
+<div *ngIf="uploading" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 mb-32 md:mb-0">
+  <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-80 max-w-full text-center shadow-lg">
+    <div class="text-blue-600 dark:text-blue-400 font-semibold">
+      جاري الرفع... {{ uploadProgress }}%
+      <div class="w-full bg-gray-200 rounded-full h-4 mt-2">
+        <div class="bg-blue-600 h-4 rounded-full transition-all duration-300 ease-in-out" [style.width.%]="uploadProgress"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Floating upload success indicator (only shows after successful upload) -->
+<div *ngIf="uploadSuccess" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 mb-32 md:mb-0">
+  <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-80 max-w-full text-center shadow-lg">
+    <div class="text-green-600 dark:text-green-400 font-semibold flex flex-col items-center space-y-2">
+      <fa-icon [icon]="['fas', 'check-circle']" class="text-6xl animate-scale-up"></fa-icon>
+      <div>تم الرفع بنجاح!</div>
+    </div>
   </div>
 </div>

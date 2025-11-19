@@ -7,7 +7,7 @@ import { take } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { NotificationService } from '../../services/notification.service';
 import { ModalDialogComponent } from '../../shared/modal-dialog/modal-dialog.component';
-import { ModalService, ModalConfig } from '../../services/modal.service';
+import { ModalService } from '../../services/modal.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MerchantManagementComponent } from '../merchant-management/merchant-management.component';
@@ -15,7 +15,7 @@ import { ProductApprovalComponent } from '../product-approval/product-approval.c
 import * as XLSX from 'xlsx';
 import { FreeShippingRulesComponent } from './free-shipping/free-shipping-rules.component';
 import { Subscription } from 'rxjs';
-import { FaIconLibrary, FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import { FaIconLibrary, FontAwesomeModule, FaIconComponent } from '@fortawesome/angular-fontawesome';
 import { faShoppingCart, faStore, faBook, faPrint, faPlus, faEdit, faTruck, faUsers, faCheckCircle, faMoneyBillWave, faSitemap, faPlusCircle, faImage, faTag, faHashtag, faList, faDollarSign, faAlignLeft, faExclamationTriangle, faCartPlus, faHeart } from '@fortawesome/free-solid-svg-icons';
 import { PaymentRequestsComponent } from '../payment-requests/payment-requests.component';
 import { UserHierarchyComponent } from '../user-hierarchy/user-hierarchy.component';
@@ -58,8 +58,12 @@ interface Product {
   product_price_before_discount?: number;
   product_discount_percent?: number;
   createdAt?: string; // Added creation date for sorting by recently added
+  editMode?: boolean; // For toggling edit mode on product cards
+  detailsOpen?: boolean; // For toggling details visibility on product cards
+  isSaving?: boolean; // To show saving progress
   fileOrder?: number; // Added to track order in file for sorting
   merchantName?: string; // Added for merchant products
+  [key: string]: any; // Allow any string as a key
 }
 
 interface OrderProduct {
@@ -227,25 +231,153 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   backendBaseUrl: string = environment.apiBaseUrl;
   uploadsBaseUrl: string = environment.uploadsBaseUrl;
 
-  product = {
-    product_name: '',
-    product_quantity: 1,
+  product: any = {
     product_category: '',
+    product_quantity: 1,
+    product_name: '',
     product_description: '',
     product_price: 0,
-    price_cost: 0
+    price_cost: 0,
+    author: '',
+    publisher: '',
+    pages: '',
+    coverType: '',
+    language: '',
+    publishYear: '',
+    stationeryType: '',
+    material: '',
+    color: '',
+    size: '',
+    brand: '',
+    electronicsType: '',
+    model: '',
+    specs: '',
+    warranty: '',
+    clothingType: '',
+    season: '',
+    originCountry: '',
+    cosmeticsType: '',
+    sizeWeight: '',
+    ingredients: '',
+    suitableFor: '',
+    shoeType: '',
+    furnitureType: '',
+    height: '',
+    deliveryMethod: '',
+    toyType: '',
+    ageGroup: '',
+    safety: '',
+    fabricType: '',
+    width: '',
+    length: '',
+    usage: '',
+    suggestedCategory: ''
   };
-
   selectedFiles: File[] = [];
   selectedFilesPreviews: string[] = [];
   mainImageIndex: number = 0;
   imageError: string | null = null;
+
+  imageUrl: string = '';
+  imageUrls: string[] = [];
+
+
 
   uploading: boolean = false;
   uploadProgress: number = 0;
   uploadSuccess: boolean = false;
 
   readonly MAX_IMAGE_SIZE_BYTES = 3 * 1024 * 1024; // 3 MB
+
+  isDragOver: boolean = false;
+
+  onDragOver(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragOver = true;
+  }
+
+  onDragLeave(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragOver = false;
+  }
+
+  onDrop(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragOver = false;
+
+    const files = event.dataTransfer?.files;
+    const items = event.dataTransfer?.items;
+
+    if (files && files.length > 0) {
+      // Handle dropped files
+      const validFiles = Array.from(files).filter(file => {
+        const validImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/svg+xml'];
+        return validImageTypes.includes(file.type) && file.size <= this.MAX_IMAGE_SIZE_BYTES;
+      });
+
+      if (validFiles.length > 0) {
+        if (validFiles.length + this.selectedFiles.length > 3) {
+          this.imageError = 'يمكنك تحميل حتى 3 صور فقط.';
+          return;
+        }
+        this.selectedFiles.push(...validFiles);
+        this.generatePreviews(validFiles);
+      }
+    } else if (items) {
+      // Handle dropped URLs from browser tabs
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.kind === 'string' && item.type === 'text/uri-list') {
+          item.getAsString((url) => {
+            this.addImageFromUrlDirect(url);
+          });
+        }
+      }
+    }
+  }
+
+  addImageFromUrlDirect(url: string): void {
+    if (this.imageUrls.length >= 3) {
+      this.imageError = 'يمكنك إضافة حتى 3 روابط صور فقط.';
+      return;
+    }
+
+    try {
+      new URL(url);
+      if (!this.imageUrls.includes(url)) {
+        this.imageUrls.push(url);
+      }
+    } catch (error) {
+      // Invalid URL, ignore
+    }
+  }
+
+  addImageFromUrl(): void {
+    if (this.imageUrls.length >= 3) {
+      this.imageError = 'يمكنك إضافة حتى 3 روابط صور فقط.';
+      return;
+    }
+
+    if (!this.imageUrl) {
+      this.imageError = 'يرجى إدخال رابط صورة صالح.';
+      return;
+    }
+
+    try {
+      new URL(this.imageUrl);
+      if (!this.imageUrls.includes(this.imageUrl)) {
+        this.imageUrls.push(this.imageUrl);
+        this.imageUrl = ''; // Clear the input
+      } else {
+        this.imageError = 'هذا الرابط موجود بالفعل.';
+      }
+    } catch (error) {
+      this.imageError = 'رابط الصورة غير صالح.';
+    }
+  }
 
   // Modal properties for component's modal system
   modalOpen: boolean = false;
@@ -256,6 +388,10 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   modalCancelText: string = 'إلغاء';
   modalShowCancel: boolean = true;
   pendingAction: (() => void) | null = null;
+
+  // Progress modal properties
+  progressModalOpen: boolean = false;
+  progressModalMessage: string = 'جاري الحفظ...';
 
   // Modal service properties (separate from component modal)
   modalServiceOpen: boolean = false;
@@ -288,6 +424,32 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     'غير مصنف'
   ];
 
+  mainCategories: string[] = [
+    'كتب',
+    'أدوات مكتبية',
+    'إلكترونيات',
+    'ملابس',
+    'التجميل والعناية الشخصية',
+    'الأحذية',
+    'أثاث وديكور المنزل',
+    'هدية وألعاب',
+    'أقمشة',
+    'غير مصنف'
+  ];
+
+  bookSubCategories: string[] = [
+    'روايات وقصص',
+    'تطوير الذات وعلم النفس',
+    'كتب دينية',
+    'قواميس ومراجع',
+    'صحة وطب وعلوم',
+    'أعمال وتسويق ومالية',
+    'فنون وحرف',
+    'تاريخ وسير ذاتية',
+    'تربية وأطفال',
+  ];
+
+  selectedMainCategory: string = '';
   // Map from short key to full category name
   categoryMap: { [key: string]: string } = {
     'رواية': 'روايات وقصص',
@@ -330,7 +492,29 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     'أثاث وديكور المنزل': 'اثاث',
     'هدية وألعاب': 'العاب',
     'أقمشة': 'أقمشة',
-    'غير مصنف': 'اخرى'
+    'غير مصنف': 'غير مصنف'
+  };
+
+  // Map from category to specific fields
+  categoryFieldsMap: { [key: string]: string[] } = {
+    'روايات وقصص': ['author', 'publisher', 'pages', 'coverType', 'language', 'publishYear'],
+    'تطوير الذات وعلم النفس': ['author', 'publisher', 'pages', 'coverType', 'language', 'publishYear'],
+    'كتب دينية': ['author', 'publisher', 'pages', 'coverType', 'language', 'publishYear'],
+    'قواميس ومراجع': ['author', 'publisher', 'pages', 'coverType', 'language', 'publishYear'],
+    'صحة وطب وعلوم': ['author', 'publisher', 'pages', 'coverType', 'language', 'publishYear'],
+    'أعمال وتسويق ومالية': ['author', 'publisher', 'pages', 'coverType', 'language', 'publishYear'],
+    'فنون وحرف': ['author', 'publisher', 'pages', 'coverType', 'language', 'publishYear'],
+    'تاريخ وسير ذاتية': ['author', 'publisher', 'pages', 'coverType', 'language', 'publishYear'],
+    'تربية وأطفال': ['author', 'publisher', 'pages', 'coverType', 'language', 'publishYear'],
+    'أدوات مكتبية': ['stationeryType', 'material', 'color', 'size', 'brand'],
+    'إلكترونيات': ['electronicsType', 'model', 'specs', 'warranty'],
+    'ملابس': ['clothingType', 'season', 'originCountry'],
+    'التجميل والعناية الشخصية': ['cosmeticsType', 'sizeWeight', 'ingredients', 'suitableFor'],
+    'الأحذية': ['shoeType'],
+    'أثاث وديكور المنزل': ['furnitureType', 'length', 'width', 'height', 'deliveryMethod'],
+    'هدية وألعاب': ['toyType', 'ageGroup', 'safety'],
+    'أقمشة': ['fabricType', 'width', 'length', 'usage'],
+    'غير مصنف': ['suggestedCategory']
   };
 
   private modalServiceSubscription?: Subscription;
@@ -516,6 +700,9 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
             }
             // Add fileOrder property based on index in the file
             p.fileOrder = index;
+            p.editMode = false; // Initialize editMode for each product
+            p.isSaving = false; // Initialize isSaving for each product
+            p.detailsOpen = false; // Initialize detailsOpen for each product
           });
           this.allProducts = response.products;
           this.originalProducts = JSON.parse(JSON.stringify(response.products)); // deep copy for change detection
@@ -638,26 +825,45 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   }
 
   updateProduct(product: Product): void {
+    this.showProgressModal('جاري تحديث المنتج...');
+    product.isSaving = true; // Start saving indicator
     const updateData = {
       product_name: product.product_name,
       product_quantity: product.product_quantity,
       product_category: product.product_category,
       product_description: product.product_description,
       product_price: product.product_price,
-      price_cost: product.price_cost
+      price_cost: product.price_cost,
+      ...this.getCategorySpecificData(product) // Include category-specific fields
     };
     this.http.patch(`${this.backendBaseUrl}/admin/products/${product.products_id}`, updateData).subscribe({
       next: () => {
+        this.closeProgressModal();
         this.showSuccessModal('تم تحديث بيانات المنتج بنجاح');
         this.loadProducts();
+        product.isSaving = false; // Stop saving indicator on success
+        product.editMode = false; // Exit edit mode
       },
       error: (err) => {
+        this.closeProgressModal();
         this.showErrorModal('حدث خطأ أثناء تحديث بيانات المنتج');
       }
     });
   }
 
+  private getCategorySpecificData(product: Product): any {
+    const data: any = {};
+    const fields = this.categoryFieldsMap[product.product_category || ''] || [];
+    fields.forEach(field => {
+      if (product[field] !== undefined) {
+        data[field] = product[field];
+      }
+    });
+    return data;
+  }
+
   saveAllProducts(): void {
+    this.showProgressModal('جاري حفظ جميع التغييرات...');
     const changedProducts = this.allProducts.filter(p => this.hasProductChanged(p));
     if (changedProducts.length === 0) {
       this.showErrorModal('لا توجد تغييرات لحفظها.');
@@ -675,6 +881,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
     this.http.post(`${this.backendBaseUrl}/admin/products/batch-update`, updatePayload).subscribe({
       next: () => {
+        this.closeProgressModal();
         this.showSuccessModal('تم حفظ جميع التغييرات بنجاح');
         this.loadProducts();
         // Call sync-json-to-excel to update Excel file after batch update
@@ -688,6 +895,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
         });
       },
       error: (err) => {
+        this.closeProgressModal();
         // Error batch updating products
         this.showErrorModal('حدث خطأ أثناء حفظ التغييرات');
       }
@@ -1344,6 +1552,18 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     }
   }
 
+
+
+  removeImageUrl(index: number): void {
+    this.imageUrls.splice(index, 1);
+  }
+
+  onImageUrlError(index: number): void {
+    // Handle URL error, e.g., remove invalid URL
+    this.imageUrls.splice(index, 1);
+    this.showErrorModal('رابط الصورة غير صالح أو غير متاح.');
+  }
+
   submitAddProduct(): void {
     // Prevent multiple simultaneous submissions
     if (this.uploading) {
@@ -1351,20 +1571,13 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     }
 
     this.imageError = null;
-    if (!this.selectedFiles.length) {
-      this.imageError = 'يرجى اختيار صورة واحدة على الأقل.';
+    if (!this.selectedFiles.length && !this.imageUrls.length) {
+      this.imageError = 'يرجى اختيار صورة واحدة على الأقل أو إضافة رابط صورة.';
       return;
     }
 
     // Additional validation for required fields
-    if (
-      !this.product.product_name ||
-      !this.product.product_quantity ||
-      !this.product.product_category ||
-      !this.product.product_description ||
-      this.product.product_price === null ||
-      this.product.price_cost === null
-    ) {
+    if (!this.product.product_name || !this.product.product_category) {
       this.showErrorModal('يرجى ملء جميع الحقول المطلوبة بشكل صحيح.');
       return;
     }
@@ -1372,17 +1585,27 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     // Convert full category name to short key before sending
     const shortCategory = this.categoryReverseMap[this.product.product_category] || this.product.product_category;
 
-    const reorderedFiles = [this.selectedFiles[this.mainImageIndex], ...this.selectedFiles.filter((_, i) => i !== this.mainImageIndex)];
+    const reorderedFiles = this.selectedFiles.length > 0 ? [this.selectedFiles[this.mainImageIndex], ...this.selectedFiles.filter((_, i) => i !== this.mainImageIndex)] : [];
     const formData = new FormData();
+
     for (const file of reorderedFiles) {
       formData.append('image', file);
     }
-    formData.append('product_name', this.product.product_name);
-    formData.append('product_quantity', this.product.product_quantity.toString());
-    formData.append('product_category', shortCategory);
-    formData.append('product_description', this.product.product_description);
-    formData.append('product_price', this.product.product_price.toString());
-    formData.append('price_cost', this.product.price_cost.toString());
+
+    // Append image URLs if any
+    this.imageUrls.forEach(url => {
+      formData.append('imageUrls', url);
+    });
+
+    // The product_category is now part of the dynamic product object,
+
+    // Append all other dynamic properties from the product object
+    for (const key in this.product) {
+      if (Object.prototype.hasOwnProperty.call(this.product, key) && !formData.has(key)) {
+        const value = this.product[key];
+        formData.append(key, value !== null && value !== undefined ? value : '');
+      }
+    }
 
     this.uploading = true;
     this.uploadProgress = 0;
@@ -1403,6 +1626,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
           // Store the current product data for potential reuse
           const currentProductData = { ...this.product };
           const currentFiles = [...this.selectedFiles];
+          const currentUrls = [...this.imageUrls];
 
           // Reset form immediately to prevent duplicate submissions
           this.resetProductForm();
@@ -1427,15 +1651,59 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
   private resetProductForm(): void {
     this.product = {
+      products_id: '',
       product_name: '',
+      product_price: 0,
+      price_cost: 0,
       product_quantity: 1,
       product_category: '',
       product_description: '',
-      product_price: 0,
-      price_cost: 0
+      product_image: '',
+      promotionEndDate: '',
+      product_price_before_discount: 0,
+      rival: '',
+      product_discount_percent: 0,
+      image_path: '',
+      merchantId: '',
+      author: '',
+      publisher: '',
+      pages: '',
+      coverType: '',
+      language: '',
+      publishYear: '',
+      stationeryType: '',
+      material: '',
+      color: '',
+      size: '',
+      brand: '',
+      electronicsType: '',
+      model: '',
+      specs: '',
+      warranty: '',
+      clothingType: '',
+      season: '',
+      originCountry: '',
+      cosmeticsType: '',
+      sizeWeight: '',
+      ingredients: '',
+      suitableFor: '',
+      shoeType: '',
+      furnitureType: '',
+      height: '',
+      deliveryMethod: '',
+      toyType: '',
+      ageGroup: '',
+      safety: '',
+      fabricType: '',
+      width: '',
+      length: '',
+      usage: '',
+      suggestedCategory: ''
     };
     this.selectedFiles = [];
     this.selectedFilesPreviews = [];
+    this.imageUrls = [];
+    this.imageUrl = '';
     this.imageError = null;
   }
 
@@ -1506,6 +1774,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
           } else if (err.status === 500) {
             errorMessage = 'خطأ في الخادم. يرجى المحاولة لاحقاً.';
           }
+          this.closeProgressModal();
 
           this.showErrorModal(errorMessage);
         }
@@ -1531,13 +1800,19 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     }
 
     const action = () => {
+      this.showProgressModal(`جاري حذف ${selectedIds.length} منتجات...`);
       this.http.delete(`${this.backendBaseUrl}/admin/products`, { body: { barcodes: selectedIds } }).subscribe({
         next: () => {
-          this.showSuccessModal('تم حذف المنتجات المحددة بنجاح');
           this.selectedProducts.clear();
           this.loadProducts();
+          // Close modal after a short delay to ensure loadProducts completes
+          setTimeout(() => {
+            this.closeProgressModal();
+            this.showSuccessModal('تم حذف المنتجات المحددة بنجاح');
+          }, 500);
         },
         error: (err) => {
+          this.closeProgressModal();
           this.showErrorModal('حدث خطأ أثناء حذف المنتجات');
         }
       });
@@ -1802,22 +2077,14 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   }
 
   showProductAddedModal(productData: any, files: File[]): void {
-    // Prevent multiple modals from opening
-    if (this.modalOpen) {
-      return;
-    }
-
     const action = () => {
-      // Reset form and stay on add product page
       this.product = { ...productData };
       this.selectedFiles = files;
       this.generatePreviews(files);
       this.switchView('addProduct');
-      this.closeModal();
     };
 
     const goToDashboardAction = () => {
-      // Reset form and go to dashboard
       this.product = {
         product_name: '',
         product_quantity: 1,
@@ -1829,22 +2096,20 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       this.selectedFiles = [];
       this.imageError = null;
       this.switchView('orders');
-      this.closeModal();
     };
 
-    // Show the selection modal immediately without the blocking success modal
-    this.modalService.openModal({
-      title: 'تم إضافة المنتج بنجاح',
-      message: 'تم إضافة المنتج بنجاح! ماذا تريد أن تفعل؟',
-      type: 'success',
-      confirmText: 'إضافة منتج جديد بنفس البيانات',
-      cancelText: 'الذهاب إلى لوحة التحكم',
-      showCancel: true,
-      action: action
-    });
+    this.openModal(
+      'تم إضافة المنتج بنجاح',
+      'تم إضافة المنتج بنجاح! ماذا تريد أن تفعل؟',
+      'success',
+      'إضافة منتج جديد بنفس البيانات',
+      'الذهاب إلى لوحة التحكم',
+      true,
+      goToDashboardAction // Set the cancel action
+    );
 
-    // Store the dashboard action for the cancel button
-    this.pendingAction = goToDashboardAction;
+    // This is a bit of a workaround to handle the second action for the cancel button
+    this.pendingAction = action; // Set the confirm action
   }
 
   toggleFulfilled(request: UrgencyRequest): void {
@@ -1958,5 +2223,14 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       true,
       action
     );
+  }
+
+  showProgressModal(message: string): void {
+    this.progressModalMessage = message;
+    this.progressModalOpen = true;
+  }
+
+  closeProgressModal(): void {
+    this.progressModalOpen = false;
   }
 }

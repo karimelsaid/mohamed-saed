@@ -15,7 +15,7 @@
           (keydown)="onEnterPress($event)"
           #inputElement
           type="text"
-          placeholder="ابحث عن كتاب..."
+          placeholder="ابحث عن منتج، اسم، كود أو تصنيف..."
           class="w-full h-12 pl-12 pr-12 py-3 text-sm bg-transparent rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200"
         />
 
@@ -30,12 +30,18 @@
         <ul class="divide-y divide-gray-100 dark:divide-gray-700">
           <li
             *ngFor="let result of searchResults"
-            (click)="selectSuggestion(result.product_name)"
+            (click)="selectSuggestion(result.item.product_name || result.item.name || '')"
             class="p-3 cursor-pointer hover:bg-blue-50 dark:hover:bg-gray-700 dark:text-gray-100 transition-colors duration-150 first:rounded-t-lg last:rounded-b-lg"
           >
-            <div class="flex items-center">
-              <fa-icon [icon]="faBook" class="text-blue-500 mr-3"></fa-icon>
-              <span class="font-medium">{{ result.product_name }}</span>
+            <div class="flex items-center justify-between">
+              <div class="flex items-center">
+                <fa-icon [icon]="faBook" class="text-blue-500 mr-3"></fa-icon>
+                <span class="font-medium" [innerHTML]="result.highlighted"></span>
+              </div>
+              <div class="text-xs text-gray-500 dark:text-gray-400 ml-4">
+                <span *ngIf="result.item.sku">{{ result.item.sku }}</span>
+                <span *ngIf="result.item.category"> • {{ result.item.category }}</span>
+              </div>
             </div>
           </li>
         </ul>

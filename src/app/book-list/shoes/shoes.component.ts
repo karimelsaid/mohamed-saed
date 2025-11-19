@@ -10,6 +10,27 @@ import { AccountModalComponent } from '../../auth/account-modal/account-modal.co
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 
+const CATEGORY_ROUTES: { [key: string]: string } = {
+  'أدوات مكتبية': 'office-supplies',
+  'إلكترونيات': 'electronics',
+  'ملابس': 'clothing',
+  'التجميل والعناية الشخصية': 'cosmetics',
+  'الأحذية': 'shoes',
+  'أثاث': 'furniture',
+  'ألعاب': 'games',
+  'أقمشة': 'fabrics',
+  'كتب': 'book',
+  'روايات وقصص': 'book',
+  'تطوير الذات وعلم النفس': 'book',
+  'كتب دينية': 'book',
+  'أعمال وتسويق ومالية': 'book',
+  'صحة وطب وعلوم': 'book',
+  'تاريخ وسير ذاتية': 'book',
+  'تربية وأطفال': 'book',
+  'فنون وحرف': 'book',
+  'قواامس ومراجع': 'book'
+};
+
 @Component({
   selector: 'app-shoes',
   standalone: false,
@@ -90,7 +111,7 @@ export class ShoesComponent implements OnInit, OnDestroy {
 
   copyProductLink(product: Book): void {
     if (!product) return;
-    const url = window.location.origin + '/book/' + product.products_id + '/' + this.getProductSlug(product.product_name);
+    const url = window.location.origin + '/' + this.getProductRoute(product).join('/');
 
     navigator.clipboard.writeText(url).then(() => {
       this.showCopySuccess = true;
@@ -107,6 +128,27 @@ export class ShoesComponent implements OnInit, OnDestroy {
   // Updated method to generate product slug without encoding to keep readable characters in URL
   getProductSlug(productName: string): string {
     return productName.trim().replace(/\s+/g, '-');
+  }
+
+  getProductRoute(product: Book): string[] {
+    const slug = this.getProductSlug(product.product_name);
+    const rawCategory = (product.product_category || '').trim();
+    let route = CATEGORY_ROUTES[rawCategory];
+
+    if (!route && rawCategory) {
+      const norm = rawCategory.replace(/\s+/g, '').toLowerCase();
+      for (const key of Object.keys(CATEGORY_ROUTES)) {
+        const kNorm = key.replace(/\s+/g, '').toLowerCase();
+        if (norm.includes(kNorm) || kNorm.includes(norm) || rawCategory.includes(key) || key.includes(rawCategory)) {
+          route = CATEGORY_ROUTES[key];
+          break;
+        }
+      }
+    }
+
+    if (!route) route = 'others';
+    console.log('getProductRoute - Product:', product.product_name, 'RawCategory:', rawCategory, 'ResolvedRoute:', route);
+    return ['/', route, product.products_id, slug];
   }
 
   ngOnDestroy(): void {

@@ -5,7 +5,7 @@ import { PaymentService } from '../services/payment.service';
 import { map, take } from 'rxjs/operators';
 import { User } from '../auth/user.model';
 import governoratesData from '../../../public/json/egypt-governorates.json';
-import {faCheck , faHandPointRight} from '@fortawesome/free-solid-svg-icons';
+import { faCheck, faHandPointRight } from '@fortawesome/free-solid-svg-icons';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
@@ -81,7 +81,7 @@ export class CheckoutModalComponent implements OnInit {
     private dataService: DataService,
     private paymentService: PaymentService,
     private freeShippingService: FreeShippingService
-  ) {}
+  ) { }
 
   loadFreeShippingRules(): void {
     this.freeShippingService.getRules().subscribe({
@@ -123,8 +123,8 @@ export class CheckoutModalComponent implements OnInit {
     if (this.isPickup) return true;
     if (this.isPostOffice) {
       return this.postOfficeGovernorate.trim().length > 0 &&
-             this.postOfficeCity.trim().length > 0 &&
-             this.postOfficeAddress.trim().length > 0;
+        this.postOfficeCity.trim().length > 0 &&
+        this.postOfficeAddress.trim().length > 0;
     }
     if (!this.editedUserProfile) return false;
     const governorate = this.editedUserProfile?.governorate ?? '';
@@ -569,108 +569,108 @@ export class CheckoutModalComponent implements OnInit {
     });
   }
 
-completePurchase(): void {
-  this.isProcessing = true;
-  this.showPurchaseConfirmation = true;
-}
+  completePurchase(): void {
+    this.isProcessing = true;
+    this.showPurchaseConfirmation = true;
+  }
 
-executePurchase(): void {
-  this.showPurchaseConfirmation = false;
+  executePurchase(): void {
+    this.showPurchaseConfirmation = false;
 
-  const purchasedItems = this.cartItems
-    .filter(item => item.product_quantity > 0);
+    const purchasedItems = this.cartItems
+      .filter(item => item.product_quantity > 0);
 
-  const purchasedBookIds = purchasedItems.map(item => item.products_id);
+    const purchasedBookIds = purchasedItems.map(item => item.products_id);
 
-  this.authService.user$.pipe(take(1)).subscribe(currentUser => {
-    if (currentUser) {
-      console.log('[Checkout] Preparing order data...');
-      const referralCode = localStorage.getItem('referralCode');
-      const bookId = localStorage.getItem('referralBookId');
-      console.log(`[Checkout] Retrieved from localStorage - referralCode: ${referralCode}, bookId: ${bookId}`);
+    this.authService.user$.pipe(take(1)).subscribe(currentUser => {
+      if (currentUser) {
+        console.log('[Checkout] Preparing order data...');
+        const referralCode = localStorage.getItem('referralCode');
+        const bookId = localStorage.getItem('referralBookId');
+        console.log(`[Checkout] Retrieved from localStorage - referralCode: ${referralCode}, bookId: ${bookId}`);
 
-      // Construct address dynamically based on delivery type
-      let address = '';
-      if (this.isPickup) {
-        address = this.pickupLocation;
-      } else if (this.isPostOffice) {
-        address = `شحن عبر مكاتب البريد: ${this.postOfficeGovernorate}, ${this.postOfficeCity}, ${this.postOfficeAddress}, اسم المكتب: ${this.postOfficeName}, رقم الهاتف: ${this.userProfile?.phone}`;
-      } else {
-        // Home delivery
-        address = `${this.editedUserProfile?.governorate}, ${this.editedUserProfile?.city}, ${this.editedUserProfile?.village}, رقم الهاتف: ${this.userProfile?.phone}`;
-      }
+        // Construct address dynamically based on delivery type
+        let address = '';
+        if (this.isPickup) {
+          address = this.pickupLocation;
+        } else if (this.isPostOffice) {
+          address = `شحن عبر مكاتب البريد: ${this.postOfficeGovernorate}, ${this.postOfficeCity}, ${this.postOfficeAddress}, اسم المكتب: ${this.postOfficeName}, رقم الهاتف: ${this.userProfile?.phone}`;
+        } else {
+          // Home delivery
+          address = `${this.editedUserProfile?.governorate}, ${this.editedUserProfile?.city}, ${this.editedUserProfile?.village}, رقم الهاتف: ${this.userProfile?.phone}`;
+        }
 
-      const orderData = {
-        userId: currentUser.id,
-        products: purchasedItems.map(item => ({
-          bookId: item.products_id,
-          bookName: item.product_name,
-          quantity: item.quantity || 1,
-          price: parseFloat(item.product_price)
-        })),
-        shippingCost: this.shippingCost,
-        totalAmount: this.totalPrice,
-        merchantId: purchasedItems[0]?.merchantId,
-        address: address,
-        isPickup: this.isPickup,
-        pickupLocation: this.isPickup ? this.pickupLocation : null,
-        isPostOffice: this.isPostOffice,
-        postOfficeGovernorate: this.isPostOffice ? this.postOfficeGovernorate : null,
-        postOfficeCity: this.isPostOffice ? this.postOfficeCity : null,
-        postOfficeAddress: this.isPostOffice ? this.postOfficeAddress : null,
-        postOfficeName: this.isPostOffice ? this.postOfficeName : null,
-        phone: this.userProfile?.phone,
-        referralCode: referralCode,
-        bookId: bookId // This is the products_id from localStorage
-      };
+        const orderData = {
+          userId: currentUser.id,
+          products: purchasedItems.map(item => ({
+            bookId: item.products_id,
+            bookName: item.product_name,
+            quantity: item.quantity || 1,
+            price: parseFloat(item.product_price)
+          })),
+          shippingCost: this.shippingCost,
+          totalAmount: this.totalPrice,
+          merchantId: purchasedItems[0]?.merchantId,
+          address: address,
+          isPickup: this.isPickup,
+          pickupLocation: this.isPickup ? this.pickupLocation : null,
+          isPostOffice: this.isPostOffice,
+          postOfficeGovernorate: this.isPostOffice ? this.postOfficeGovernorate : null,
+          postOfficeCity: this.isPostOffice ? this.postOfficeCity : null,
+          postOfficeAddress: this.isPostOffice ? this.postOfficeAddress : null,
+          postOfficeName: this.isPostOffice ? this.postOfficeName : null,
+          phone: this.userProfile?.phone,
+          referralCode: referralCode,
+          bookId: bookId // This is the products_id from localStorage
+        };
 
-      console.log('[Checkout] Submitting order with data:', orderData);
-      this.dataService.submitOrder(orderData).subscribe({
-        next: (response: any) => {
-          // Clear referral data after successful order submission
-          if (referralCode) {
-            localStorage.removeItem('referralCode');
-            localStorage.removeItem('referralBookId');
-          }
+        console.log('[Checkout] Submitting order with data:', orderData);
+        this.dataService.submitOrder(orderData).subscribe({
+          next: (response: any) => {
+            // Clear referral data after successful order submission
+            if (referralCode) {
+              localStorage.removeItem('referralCode');
+              localStorage.removeItem('referralBookId');
+            }
 
-          const orderId = response.orderId;
-          const currency = 'EGP'; // يمكن تعديل العملة حسب الحاجة
-          const merchantRedirect = window.location.origin + '/payment-success'; // رابط إعادة التوجيه بعد الدفع
+            const orderId = response.orderId;
+            const currency = 'EGP'; // يمكن تعديل العملة حسب الحاجة
+            const merchantRedirect = window.location.origin + '/payment-success'; // رابط إعادة التوجيه بعد الدفع
 
-          if (orderId && this.userProfile && this.userProfile.email) {
-            // تأكد من أن payment.service.ts يستخدم المسار الصحيح: /api/payment/create-payment
-            this.paymentService.createPayment(orderId, this.totalPrice, currency, this.userProfile.email, merchantRedirect).subscribe({
-              next: (paymentResponse: any) => {
-                if (paymentResponse.sessionUrl) {
-                  window.location.href = paymentResponse.sessionUrl;
-                } else {
-                  alert('فشل في الحصول على رابط الدفع');
+            if (orderId && this.userProfile && this.userProfile.email) {
+              // تأكد من أن payment.service.ts يستخدم المسار الصحيح: /api/payment/create-payment
+              this.paymentService.createPayment(orderId, this.totalPrice, currency, this.userProfile.email, merchantRedirect).subscribe({
+                next: (paymentResponse: any) => {
+                  if (paymentResponse.sessionUrl) {
+                    window.location.href = paymentResponse.sessionUrl;
+                  } else {
+                    alert('فشل في الحصول على رابط الدفع');
+                    this.isProcessing = false;
+                  }
+                },
+                error: (paymentError) => {
+                  console.error('خطأ في إنشاء طلب الدفع:', paymentError);
+                  alert('حدث خطأ أثناء إنشاء طلب الدفع، يرجى المحاولة مرة أخرى');
                   this.isProcessing = false;
                 }
-              },
-              error: (paymentError) => {
-                console.error('خطأ في إنشاء طلب الدفع:', paymentError);
-                alert('حدث خطأ أثناء إنشاء طلب الدفع، يرجى المحاولة مرة أخرى');
-                this.isProcessing = false;
-              }
-            });
-          } else {
-            alert('بيانات الطلب غير مكتملة للدفع');
+              });
+            } else {
+              alert('بيانات الطلب غير مكتملة للدفع');
+              this.isProcessing = false;
+            }
+
+            // باقي الكود كما هو لتحديث العنوان، السلة، والطلبات
+          },
+          error: (err) => {
+            alert('حدث خطأ أثناء إتمام الشراء، يرجى المحاولة مرة أخرى');
             this.isProcessing = false;
           }
-
-          // باقي الكود كما هو لتحديث العنوان، السلة، والطلبات
-        },
-        error: (err) => {
-          alert('حدث خطأ أثناء إتمام الشراء، يرجى المحاولة مرة أخرى');
-          this.isProcessing = false;
-        }
-      });
-    } else {
-      alert('يجب تسجيل الدخول لإتمام الشراء');
-    }
-  });
-}
+        });
+      } else {
+        alert('يجب تسجيل الدخول لإتمام الشراء');
+      }
+    });
+  }
 
   cancelPurchase(): void {
     this.showPurchaseConfirmation = false;
@@ -685,48 +685,48 @@ executePurchase(): void {
 
     const purchasedBookIds = purchasedItems.map(item => item.products_id);
 
-  this.authService.user$.pipe(take(1)).subscribe(currentUser => {
-    if (currentUser) {
-      console.log('[Checkout] Preparing COD order data...');
-      const referralCode = localStorage.getItem('referralCode');
-      const bookId = localStorage.getItem('referralBookId');
-      console.log(`[Checkout] Retrieved from localStorage - referralCode: ${referralCode}, bookId: ${bookId}`);
+    this.authService.user$.pipe(take(1)).subscribe(currentUser => {
+      if (currentUser) {
+        console.log('[Checkout] Preparing COD order data...');
+        const referralCode = localStorage.getItem('referralCode');
+        const bookId = localStorage.getItem('referralBookId');
+        console.log(`[Checkout] Retrieved from localStorage - referralCode: ${referralCode}, bookId: ${bookId}`);
 
-      // Construct address dynamically based on delivery type
-      let address = '';
-      if (this.isPickup) {
-        address = this.pickupLocation;
-      } else if (this.isPostOffice) {
-        address = `شحن عبر مكاتب البريد: ${this.postOfficeGovernorate}, ${this.postOfficeCity}, ${this.postOfficeAddress}, اسم المكتب: ${this.postOfficeName}, رقم الهاتف: ${this.userProfile?.phone}`;
-      } else {
-        // Home delivery
-        address = `${this.editedUserProfile?.governorate}, ${this.editedUserProfile?.city}, ${this.editedUserProfile?.village}, رقم الهاتف: ${this.userProfile?.phone}`;
-      }
+        // Construct address dynamically based on delivery type
+        let address = '';
+        if (this.isPickup) {
+          address = this.pickupLocation;
+        } else if (this.isPostOffice) {
+          address = `شحن عبر مكاتب البريد: ${this.postOfficeGovernorate}, ${this.postOfficeCity}, ${this.postOfficeAddress}, اسم المكتب: ${this.postOfficeName}, رقم الهاتف: ${this.userProfile?.phone}`;
+        } else {
+          // Home delivery
+          address = `${this.editedUserProfile?.governorate}, ${this.editedUserProfile?.city}, ${this.editedUserProfile?.village}, رقم الهاتف: ${this.userProfile?.phone}`;
+        }
 
-      const orderData = {
-        userId: currentUser.id,
-        products: purchasedItems.map(item => ({
-          bookId: item.products_id,
-          bookName: item.product_name,
-          quantity: item.quantity || 1,
-          price: parseFloat(item.product_price)
-        })),
-        shippingCost: this.shippingCost,
-        totalAmount: this.totalPrice,
-        merchantId: purchasedItems[0]?.merchantId,
-        address: address,
-        isPickup: this.isPickup,
-        pickupLocation: this.isPickup ? this.pickupLocation : null,
-        isPostOffice: this.isPostOffice,
-        postOfficeGovernorate: this.isPostOffice ? this.postOfficeGovernorate : null,
-        postOfficeCity: this.isPostOffice ? this.postOfficeCity : null,
-        postOfficeAddress: this.isPostOffice ? this.postOfficeAddress : null,
-        postOfficeName: this.isPostOffice ? this.postOfficeName : null,
-        phone: this.userProfile?.phone,
-        referralCode: referralCode,
-        bookId: bookId, // This is the products_id from localStorage
-        paymentMethod: 'cod' // Add payment method for COD
-      };
+        const orderData = {
+          userId: currentUser.id,
+          products: purchasedItems.map(item => ({
+            bookId: item.products_id,
+            bookName: item.product_name,
+            quantity: item.quantity || 1,
+            price: parseFloat(item.product_price)
+          })),
+          shippingCost: this.shippingCost,
+          totalAmount: this.totalPrice,
+          merchantId: purchasedItems[0]?.merchantId,
+          address: address,
+          isPickup: this.isPickup,
+          pickupLocation: this.isPickup ? this.pickupLocation : null,
+          isPostOffice: this.isPostOffice,
+          postOfficeGovernorate: this.isPostOffice ? this.postOfficeGovernorate : null,
+          postOfficeCity: this.isPostOffice ? this.postOfficeCity : null,
+          postOfficeAddress: this.isPostOffice ? this.postOfficeAddress : null,
+          postOfficeName: this.isPostOffice ? this.postOfficeName : null,
+          phone: this.userProfile?.phone,
+          referralCode: referralCode,
+          bookId: bookId, // This is the products_id from localStorage
+          paymentMethod: 'cod' // Add payment method for COD
+        };
 
         console.log('[Checkout] Submitting COD order with data:', orderData);
         this.dataService.submitOrder(orderData).subscribe({
@@ -762,7 +762,8 @@ executePurchase(): void {
 
     let imagePath;
     if (book.merchantName) {
-      imagePath = `merchant_${book.merchantName}/${imageId}/${imageId}.webp`;
+      const sanitizedMerchantName = book.merchantName.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
+      imagePath = `merchant_${sanitizedMerchantName}/${imageId}/${imageId}.webp`;
     } else {
       imagePath = `admin__karim_mohamed__/${imageId}/${imageId}.webp`;
     }

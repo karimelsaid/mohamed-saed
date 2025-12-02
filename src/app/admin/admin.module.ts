@@ -10,6 +10,7 @@ import { ProductApprovalComponent } from './product-approval/product-approval.co
 import { FreeShippingRulesComponent } from './admin-dashboard/free-shipping/free-shipping-rules.component';
 import { ModalDialogComponent } from '../shared/modal-dialog/modal-dialog.component';
 import { PaymentRequestsComponent } from './payment-requests/payment-requests.component';
+import { AmazonPriceCalculatorComponent } from './amazon-price-calculator/amazon-price-calculator.component';
 
 @NgModule({
   declarations: [
@@ -25,7 +26,8 @@ import { PaymentRequestsComponent } from './payment-requests/payment-requests.co
     ProductApprovalComponent,
     FreeShippingRulesComponent,
     ModalDialogComponent,
-    PaymentRequestsComponent
+    PaymentRequestsComponent,
+    AmazonPriceCalculatorComponent
   ],
   exports: [
     MerchantManagementComponent,

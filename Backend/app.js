@@ -39,7 +39,7 @@ app.use((req, res, next) => {
 });
 
 // إعداد CORS للسماح بالمصادر المناسبة
-const allowedOrigins = ['https://kenouz.org', 'https://www.kenouz.org'];
+const allowedOrigins = ['https://knoozbook.com', 'https://www.knoozbook.com'];
 if (!isProduction) {
   allowedOrigins.push('http://localhost:4200');
 }
@@ -164,7 +164,7 @@ function generateRobotsTxt() {
       content += `Allow: /${route}\n`;
     });
 
-    content += '\nSitemap: https://kenouz.org/sitemap.xml\n';
+    content += '\nSitemap: https://knoozbook.com/sitemap.xml\n';
 
     const robotsPath = path.join(__dirname, 'dist/browser/robots.txt');
     const dir = path.dirname(robotsPath);

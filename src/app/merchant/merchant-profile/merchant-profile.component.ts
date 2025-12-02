@@ -20,7 +20,7 @@ export class MerchantProfileComponent implements OnInit {
   error: string | null = null;
   uploadsBaseUrl = environment.uploadsBaseUrl; // Use environment variable
 
-  constructor(private route: ActivatedRoute, private merchantAuthService: MerchantAuthService) {}
+  constructor(private route: ActivatedRoute, private merchantAuthService: MerchantAuthService) { }
 
   ngOnInit(): void {
     this.route.paramMap.subscribe(params => {
@@ -69,13 +69,11 @@ export class MerchantProfileComponent implements OnInit {
   }
 
   getProductImageUrl(product: any): string {
-    // This logic is now consistent with other working components like search-results.
     let imagePath = product.image_path || product.product_image || '';
     const merchantName = product.merchantName || (this.merchant ? (this.merchant.merchantName || this.merchant.name) : null);
 
     // If a full path is already provided in image_path, use it directly.
     if (imagePath && imagePath.startsWith('/uploads/books/')) {
-      // The path is already correct, just return it.
       return imagePath;
     }
 
@@ -85,18 +83,84 @@ export class MerchantProfileComponent implements OnInit {
       return '/assets/placeholder-book.jpg';
     }
 
-    let finalPath;
-    if (merchantName) {
-      finalPath = `merchant_${merchantName}/${imageId}/${imageId}.webp`;
-    } else {
-      // Fallback to admin path if no merchant name is found
-      finalPath = `admin__karim_mohamed__/${imageId}/${imageId}.webp`;
+    let finalPath = String(imageId);
+
+    // Check if it's just an ID or has extension
+    if (!finalPath.includes('/') && !finalPath.includes('.')) {
+      // It's just an ID
+      const id = finalPath;
+      if (merchantName) {
+        const sanitizedMerchantName = merchantName.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
+        finalPath = `merchant_${sanitizedMerchantName}/${id}/${id}.webp`;
+      } else {
+        finalPath = `admin__karim_mohamed__/${id}/${id}.webp`;
+      }
+    } else if (!finalPath.includes('/')) {
+      // It has an extension or suffix (e.g. 123.webp or 123_1.webp)
+      // Try to extract ID
+      const id = finalPath.split('.')[0].split('_')[0];
+      if (merchantName) {
+        const sanitizedMerchantName = merchantName.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
+        finalPath = `merchant_${sanitizedMerchantName}/${id}/${finalPath}`;
+      } else {
+        finalPath = `admin__karim_mohamed__/${id}/${finalPath}`;
+      }
     }
 
-    // Construct the full path, ensuring not to duplicate '/books/'
-    // uploadsBaseUrl is likely '/uploads' or '/uploads/books'
-    // The final path should be /uploads/books/merchant_...
-    const fullPath = `${this.uploadsBaseUrl}/${finalPath}`.replace('/books/books/', '/books/');
-    return fullPath;
+    // Construct the full path
+    // uploadsBaseUrl is likely '/uploads/books' or similar. 
+    // We want to avoid double slashes and ensure correct structure.
+    return `${this.uploadsBaseUrl}/${finalPath}`.replace('/books/books/', '/books/');
+  }
+
+  getBookSlug(bookName: string): string {
+    return bookName.trim().replace(/\s+/g, '-');
+  }
+
+  getProductRoute(product: any): any[] {
+    const slug = this.getBookSlug(product.product_name);
+    const categoryRoutes: { [key: string]: string } = {
+      'أدوات مكتبية': 'office-supplies',
+      'إلكترونيات': 'electronics',
+      'ملابس': 'clothing',
+      'التجميل والعناية الشخصية': 'cosmetics',
+      'الأحذية': 'shoes',
+      'أثاث': 'furniture',
+      'ألعاب': 'games',
+      'أقمشة': 'fabrics',
+      'كتب': 'book',
+      'روايات وقصص': 'book',
+      'تطوير الذات وعلم النفس': 'book',
+      'كتب دينية': 'book',
+      'أعمال وتسويق ومالية': 'book',
+      'صحة وطب وعلوم': 'book',
+      'تاريخ وسير ذاتية': 'book',
+      'تربية وأطفال': 'book',
+      'فنون وحرف': 'book',
+      'قواميس ومراجع': 'book'
+    };
+
+    const category = (product.product_category || '').trim();
+    let route = categoryRoutes[category];
+
+    if (!route) {
+      route = 'others';
+    }
+
+    let productId = product.products_id;
+
+    if (!productId && product.product_image) {
+      const imagePath = String(product.product_image);
+      // If it's a simple filename or ID, try to extract the ID
+      if (!imagePath.includes('/')) {
+        productId = imagePath.split('.')[0].split('_')[0];
+      }
+    }
+
+    if (!productId) {
+      productId = product._id || product.id;
+    }
+
+    return ['/' + route, productId, slug];
   }
 }

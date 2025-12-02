@@ -19,6 +19,7 @@ import { FaIconLibrary, FontAwesomeModule, FaIconComponent } from '@fortawesome/
 import { faShoppingCart, faStore, faBook, faPrint, faPlus, faEdit, faTruck, faUsers, faCheckCircle, faMoneyBillWave, faSitemap, faPlusCircle, faImage, faTag, faHashtag, faList, faDollarSign, faAlignLeft, faExclamationTriangle, faCartPlus, faHeart } from '@fortawesome/free-solid-svg-icons';
 import { PaymentRequestsComponent } from '../payment-requests/payment-requests.component';
 import { UserHierarchyComponent } from '../user-hierarchy/user-hierarchy.component';
+import { AmazonPriceCalculatorComponent } from '../amazon-price-calculator/amazon-price-calculator.component';
 
 interface Order {
   _id: string;
@@ -132,7 +133,7 @@ interface UrgencyRequest {
 
 @Component({
   selector: 'app-admin-dashboard',
-  standalone : true,
+  standalone: true,
   imports: [
     CommonModule,
     FormsModule,
@@ -143,7 +144,8 @@ interface UrgencyRequest {
     MerchantManagementComponent,
     ProductApprovalComponent,
     PaymentRequestsComponent,
-    UserHierarchyComponent
+    UserHierarchyComponent,
+    AmazonPriceCalculatorComponent
   ],
   templateUrl: './admin-dashboard.component.html',
   styleUrls: ['./admin-dashboard.component.css']
@@ -154,7 +156,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   requestedBooks: RequestedBook[] = [];
   allRequestedBooks: RequestedBook[] = [];
   isAdmin: boolean = false; // Add paymentRequests to the type union
-  currentView: 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' = 'orders';
+  currentView: 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' = 'orders';
 
   manualPromotionStartDate: string = '';
   manualPromotionEndDate: string = '';
@@ -579,7 +581,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     }
   }
 
-  switchView(view: 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests'): void {
+  switchView(view: 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator'): void {
     this.currentView = view;
     if (view === 'orders' || view === 'merchantOrders') {
       this.ordersPage = 1; // Reset page when switching views
@@ -869,15 +871,17 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       this.showErrorModal('لا توجد تغييرات لحفظها.');
       return;
     }
-    const updatePayload = { products: changedProducts.map(p => ({
-      products_id: p.products_id,
-      product_name: p.product_name,
-      product_quantity: p.product_quantity,
-      product_category: p.product_category,
-      product_description: p.product_description,
-      product_price: p.product_price,
-      price_cost: p.price_cost
-    }))};
+    const updatePayload = {
+      products: changedProducts.map(p => ({
+        products_id: p.products_id,
+        product_name: p.product_name,
+        product_quantity: p.product_quantity,
+        product_category: p.product_category,
+        product_description: p.product_description,
+        product_price: p.product_price,
+        price_cost: p.price_cost
+      }))
+    };
 
     this.http.post(`${this.backendBaseUrl}/admin/products/batch-update`, updatePayload).subscribe({
       next: () => {
@@ -1393,7 +1397,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
   toggleAddedStatus(suggestion: RequestedBook): void {
     const newStatus = !suggestion.added;
-    if (confirm(`هل أنت متأكد من تغيير حالة الاقتراح إلى ${newStatus ? 'تم إضافته' : 'لم يتم إضافته' }؟`)) {
+    if (confirm(`هل أنت متأكد من تغيير حالة الاقتراح إلى ${newStatus ? 'تم إضافته' : 'لم يتم إضافته'}؟`)) {
       this.http.patch(`${environment.apiBaseUrl}/users/requested-books/${suggestion.userId}/${suggestion._id}`, { added: newStatus }).subscribe({
         next: (response) => {
           suggestion.added = newStatus;
@@ -1403,7 +1407,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
               this.notificationService.refreshNotifications(user.id);
             }
           });
-                    const bookStatusMessage = newStatus ? `تم إضافة اقتراح الكتاب "${suggestion.bookName}"` : `تم إزالة اقتراح الكتاب "${suggestion.bookName}"`;
+          const bookStatusMessage = newStatus ? `تم إضافة اقتراح الكتاب "${suggestion.bookName}"` : `تم إزالة اقتراح الكتاب "${suggestion.bookName}"`;
         },
         error: (error) => {
           this.showErrorModal('حدث خطأ أثناء تحديث حالة الاقتراح');
@@ -1453,7 +1457,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
               this.notificationService.refreshNotifications(user.id);
             }
           });
-           const statusVerbMap: { [key: string]: string } = {
+          const statusVerbMap: { [key: string]: string } = {
             'تم الشحن': 'شحن',
             'تم الاستلام': 'استلام',
             'تم التسليم': 'تسليم',
@@ -2066,14 +2070,36 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   }
 
   getProductImageUrl(product: Product): string {
-    if (product.image_path) {
-      const parts = product.image_path.split('/');
-      const relativePath = parts.slice(-3).join('/');
-      return this.uploadsBaseUrl + '/' + relativePath;
-    } else if (product.product_image) {
-      return this.uploadsBaseUrl + '/' + product.product_image;
+    // This logic is now consistent with other working components like search-results.
+    let imagePath = product.image_path || product.product_image || '';
+    const merchantName = product.merchantName;
+
+    // If a full path is already provided in image_path, use it directly.
+    if (imagePath && imagePath.startsWith('/uploads/books/')) {
+      // The path is already correct, just return it.
+      return imagePath;
     }
-    return '';
+
+    // If not, build the path from scratch
+    const imageId = product.products_id || product.product_image;
+    if (!imageId) {
+      return '/assets/placeholder-book.jpg';
+    }
+
+    let finalPath;
+    if (merchantName) {
+      const sanitizedMerchantName = merchantName.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
+      finalPath = `merchant_${sanitizedMerchantName}/${imageId}/${imageId}.webp`;
+    } else {
+      // Fallback to admin path if no merchant name is found
+      finalPath = `admin__karim_mohamed__/${imageId}/${imageId}.webp`;
+    }
+
+    // Construct the full path, ensuring not to duplicate '/books/'
+    // uploadsBaseUrl is likely '/uploads' or '/uploads/books'
+    // The final path should be /uploads/books/merchant_...
+    const fullPath = `${this.uploadsBaseUrl}/${finalPath}`.replace('/books/books/', '/books/');
+    return fullPath;
   }
 
   showProductAddedModal(productData: any, files: File[]): void {

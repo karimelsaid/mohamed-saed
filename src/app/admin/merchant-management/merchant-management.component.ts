@@ -37,7 +37,7 @@ export class MerchantManagementComponent implements OnInit {
 
   uploadsBaseUrl = environment.uploadsBaseUrl;
 
-  constructor(private adminService: AdminService, private modalService: ModalService) {}
+  constructor(private adminService: AdminService, private modalService: ModalService) { }
 
   ngOnInit(): void {
     this.loadMerchants();
@@ -292,7 +292,7 @@ export class MerchantManagementComponent implements OnInit {
     });
   }
 
-    getProductImageUrl(product: any): string {
+  getProductImageUrl(product: any): string {
     // This logic is now consistent with other working components like search-results.
     let imagePath = product.image_path || product.product_image || '';
     const merchantName = product.merchantName || (this.selectedMerchant ? (this.selectedMerchant.merchantName || this.selectedMerchant.name) : null);
@@ -311,7 +311,8 @@ export class MerchantManagementComponent implements OnInit {
 
     let finalPath;
     if (merchantName) {
-      finalPath = `merchant_${merchantName}/${imageId}/${imageId}.webp`;
+      const sanitizedMerchantName = merchantName.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
+      finalPath = `merchant_${sanitizedMerchantName}/${imageId}/${imageId}.webp`;
     } else {
       // Fallback to admin path if no merchant name is found
       finalPath = `admin__karim_mohamed__/${imageId}/${imageId}.webp`;
@@ -335,10 +336,12 @@ export class MerchantManagementComponent implements OnInit {
 
     let finalPath;
     if (logoId) {
-      finalPath = `merchant_${merchantName}/${logoId}/${logoId}.webp`;
+      const sanitizedMerchantName = merchantName.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
+      finalPath = `merchant_${sanitizedMerchantName}/${logoId}/${logoId}.webp`;
     } else {
       // Use default logo.webp in merchant's directory
-      finalPath = `merchant_${merchantName}/logo/logo.webp`;
+      const sanitizedMerchantName = merchantName.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
+      finalPath = `merchant_${sanitizedMerchantName}/logo/logo.webp`;
     }
     const fullPath = `${this.uploadsBaseUrl}/${finalPath}`.replace('/books/books/', '/books/');
     return fullPath;

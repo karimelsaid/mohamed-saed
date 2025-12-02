@@ -135,7 +135,8 @@ export class BookDetailsComponent implements OnInit {
     let imagePath = book.product_image ? String(book.product_image) : '';
     if (!imagePath) {
       if (book.merchantName) {
-        imagePath = 'merchant_' + book.merchantName + '/' + book.products_id + '/' + book.products_id + '.webp';
+        const sanitizedMerchantName = book.merchantName.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
+        imagePath = 'merchant_' + sanitizedMerchantName + '/' + book.products_id + '/' + book.products_id + '.webp';
       } else {
         imagePath = 'admin__karim_mohamed__/' + book.products_id + '/' + book.products_id + '.webp';
       }
@@ -143,7 +144,14 @@ export class BookDetailsComponent implements OnInit {
       if (imagePath.includes('/')) {
         const parts = imagePath.split('/');
         if (imagePath.includes('merchant_')) {
-          imagePath = parts.slice(-3).join('/');
+          const filename = parts[parts.length - 1];
+          const id = parts[parts.length - 2];
+          if (book.merchantName) {
+            const sanitizedMerchantName = book.merchantName.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
+            imagePath = 'merchant_' + sanitizedMerchantName + '/' + id + '/' + filename;
+          } else {
+            imagePath = parts.slice(-3).join('/');
+          }
         } else if (imagePath.includes('admin__')) {
           imagePath = parts.slice(-3).join('/');
         } else {
@@ -152,7 +160,8 @@ export class BookDetailsComponent implements OnInit {
       } else {
         if (!imagePath.includes('.') && /^\d+$/.test(imagePath)) {
           if (book.merchantName) {
-            imagePath = 'merchant_' + book.merchantName + '/' + imagePath + '/' + imagePath + '.webp';
+            const sanitizedMerchantName = book.merchantName.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
+            imagePath = 'merchant_' + sanitizedMerchantName + '/' + imagePath + '/' + imagePath + '.webp';
           } else {
             imagePath = 'admin__karim_mohamed__/' + imagePath + '/' + imagePath + '.webp';
           }
@@ -284,7 +293,14 @@ export class BookDetailsComponent implements OnInit {
     if (path.includes('/')) {
       const parts = path.split('/');
       if (path.includes('merchant_')) {
-        path = parts.slice(-3).join('/');
+        const filename = parts[parts.length - 1];
+        const id = parts[parts.length - 2];
+        if (book.merchantName) {
+          const sanitizedMerchantName = book.merchantName.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
+          path = 'merchant_' + sanitizedMerchantName + '/' + id + '/' + filename;
+        } else {
+          path = parts.slice(-3).join('/');
+        }
       } else if (path.includes('admin__')) {
         path = parts.slice(-3).join('/');
       } else {
@@ -296,7 +312,8 @@ export class BookDetailsComponent implements OnInit {
         const id = path.split('_')[0];
         const filename = path + '.webp';
         if (book.merchantName) {
-          path = 'merchant_' + book.merchantName + '/' + id + '/' + filename;
+          const sanitizedMerchantName = book.merchantName.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
+          path = 'merchant_' + sanitizedMerchantName + '/' + id + '/' + filename;
         } else {
           path = 'admin__karim_mohamed__/' + id + '/' + filename;
         }
@@ -304,7 +321,8 @@ export class BookDetailsComponent implements OnInit {
         // Handle additional images like 768078245796_1.webp
         const id = path.split('_')[0];
         if (book.merchantName) {
-          path = 'merchant_' + book.merchantName + '/' + id + '/' + path;
+          const sanitizedMerchantName = book.merchantName.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
+          path = 'merchant_' + sanitizedMerchantName + '/' + id + '/' + path;
         } else {
           path = 'admin__karim_mohamed__/' + id + '/' + path;
         }

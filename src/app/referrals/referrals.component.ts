@@ -34,13 +34,13 @@ export class ReferralsComponent implements OnInit {
   referralBalance: number = 0;
   referralCode: string = '';
   referrals: any[] = [];
-  currentBookId: string = '';
+  currentProductId: string = '';
   referralLink: string = '';
-  bookName: string = '';
+  productName: string = '';
   isRequestingPayment = false; // Add this property
   user: User | null = null;
-  allBooks: Book[] = [];
-  filteredBooks: Book[] = [];
+  allProducts: Book[] = [];
+  filteredProducts: Book[] = [];
 
   constructor(
     private http: HttpClient,
@@ -56,10 +56,10 @@ export class ReferralsComponent implements OnInit {
         this.loadReferralData(user.id);
       }
     });
-    this.dataService.getData().subscribe(books => {
-      if (books) {
-        this.allBooks = books;
-        this.filteredBooks = books;
+    this.dataService.getData().subscribe(products => {
+      if (products) {
+        this.allProducts = products;
+        this.filteredProducts = products;
       }
     });
   }
@@ -115,35 +115,36 @@ export class ReferralsComponent implements OnInit {
     });
   }
 
-  generateReferralLink(bookId: string) {
-    this.currentBookId = bookId;
-    // First, get the book name from the data service
-    this.dataService.getData().subscribe((books: Book[]) => {
-      const book = books.find((b: Book) => b.products_id.toString() === bookId);
-      if (!book) {
-        alert('لم يتم العثور على الكتاب بالمعرف المدخل.');
+  generateReferralLink(productId: string) {
+    this.currentProductId = productId;
+    // First, get the product name from the data service
+    this.dataService.getData().subscribe((products: Book[]) => {
+      const product = products.find((p: Book) => p.products_id.toString() === productId);
+      if (!product) {
+        alert('لم يتم العثور على المنتج بالمعرف المدخل.');
         return;
       }
-      this.bookName = book.product_name;
+      this.productName = product.product_name;
 
-      // Now, generate the link with the book name
+      // Now, generate the link with the product name and category
       this.authService.user$.subscribe(user => {
         if (user && user.id) {
           this.http.post(`${environment.apiBaseUrl}/users/generate-referral-link`, {
             userId: user.id,
-            bookId,
-            bookName: this.bookName // Send book name to backend
+            productId,
+            productName: this.productName, // Send product name to backend
+            productCategory: product.product_category // Send category to backend
           }).subscribe({
-          next: (response: any) => {
-            this.referralLink = response.link;
-          },
-          error: (error) => {
-            console.error('Error generating referral link:', error);
-          }
-        });
+            next: (response: any) => {
+              this.referralLink = response.link;
+            },
+            error: (error) => {
+              console.error('Error generating referral link:', error);
+            }
+          });
         }
       });
-    })
+    });
   }
 
   generateGeneralReferralLink() {
@@ -160,7 +161,6 @@ export class ReferralsComponent implements OnInit {
     });
   }
 
-
   copyLink() {
     const decodedUrl = decodeURIComponent(this.referralLink);
     navigator.clipboard.writeText(decodedUrl);
@@ -174,8 +174,8 @@ export class ReferralsComponent implements OnInit {
       const decodedPathname = decodeURIComponent(urlObj.pathname);
       const decodedUrl = urlObj.origin + decodedPathname + urlObj.search;
       navigator.share({
-        title: isGeneralReferral ? 'انضم إلى موقعنا' : 'شارك هذا الكتاب',
-        text: isGeneralReferral ? 'انضم إلى موقعنا واحصل على عروض رائعة!' : 'تحقق من هذا الكتاب المثير!',
+        title: isGeneralReferral ? 'انضم إلى موقعنا' : 'شارك هذا المنتج',
+        text: isGeneralReferral ? 'انضم إلى موقعنا واحصل على عروض رائعة!' : 'تحقق من هذا المنتج المثير!',
         url: decodedUrl
       });
     } else {
@@ -185,7 +185,7 @@ export class ReferralsComponent implements OnInit {
 
   closeModal() {
     this.referralLink = '';
-    this.currentBookId = '';
+    this.currentProductId = '';
     this.closeModalEvent.emit();
   }
 
@@ -193,19 +193,19 @@ export class ReferralsComponent implements OnInit {
     this.closeAllModalsEvent.emit();
   }
 
-  copyId(bookId: string) {
-    navigator.clipboard.writeText(bookId);
-    alert('تم نسخ رقم الكتاب!');
+  copyId(productId: string) {
+    navigator.clipboard.writeText(productId);
+    alert('تم نسخ رقم المنتج!');
   }
 
-  filterBooks(value: string) {
+  filterProducts(value: string) {
     const searchTerm = value.toLowerCase();
     if (!searchTerm) {
-      this.filteredBooks = this.allBooks;
+      this.filteredProducts = this.allProducts;
     } else {
-      this.filteredBooks = this.allBooks.filter(book =>
-        (book.product_name && book.product_name.toLowerCase().includes(searchTerm)) ||
-        (book.products_id && book.products_id.toString().toLowerCase().includes(searchTerm))
+      this.filteredProducts = this.allProducts.filter(product =>
+        (product.product_name && product.product_name.toLowerCase().includes(searchTerm)) ||
+        (product.products_id && product.products_id.toString().toLowerCase().includes(searchTerm))
       );
     }
   }

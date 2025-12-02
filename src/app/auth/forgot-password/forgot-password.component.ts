@@ -18,7 +18,7 @@ export class ForgotPasswordComponent {
   error: string = '';
   isSuccess: boolean = false;
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   onSubmit() {
     this.message = '';
@@ -48,7 +48,7 @@ export class ForgotPasswordComponent {
   }
 
   sendResetEmail() {
-    const resetLink = `https://kenouz.org/reset-password?email=${encodeURIComponent(this.email)}`;
+    const resetLink = `https://knoozbook.com/reset-password?email=${encodeURIComponent(this.email)}`;
     const templateParams = {
       email: this.email,
       link: resetLink

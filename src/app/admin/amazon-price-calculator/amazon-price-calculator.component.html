@@ -1,0 +1,133 @@
+<div
+    class="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-6 border border-gray-200 dark:border-gray-700 max-w-4xl mx-auto">
+    <h2
+        class="text-2xl font-bold mb-6 text-center text-gray-800 dark:text-gray-100 flex items-center justify-center gap-2">
+        <fa-icon [icon]="['fab', 'amazon']" class="text-orange-500"></fa-icon>
+        حاسبة تسعير أمازون
+    </h2>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <!-- Inputs Section -->
+        <div class="space-y-4">
+            <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-300 border-b pb-2 mb-4">المدخلات</h3>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">تكلفة المنتج (Cost
+                    Price)</label>
+                <div class="relative rounded-md shadow-sm">
+                    <input type="number" [(ngModel)]="costPrice" (ngModelChange)="calculate()"
+                        class="block w-full pr-3 pl-12 py-2 border-gray-300 rounded-md focus:ring-orange-500 focus:border-orange-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        placeholder="0.00">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <span class="text-gray-500 sm:text-sm">EGP</span>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">نسبة الربح المستهدف (Net
+                    Profit %)</label>
+                <div class="relative rounded-md shadow-sm">
+                    <input type="number" [(ngModel)]="targetProfitPercent" (ngModelChange)="calculate()"
+                        class="block w-full pr-3 pl-12 py-2 border-gray-300 rounded-md focus:ring-orange-500 focus:border-orange-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        placeholder="50">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <span class="text-gray-500 sm:text-sm">%</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">عمولة أمازون</label>
+                    <div class="relative rounded-md shadow-sm">
+                        <input type="number" [(ngModel)]="amazonCommissionRate" (ngModelChange)="calculate()"
+                            class="block w-full pr-2 pl-8 py-1 text-sm border-gray-300 rounded-md focus:ring-orange-500 focus:border-orange-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                        <div class="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
+                            <span class="text-gray-500 text-xs">%</span>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">الضرائب</label>
+                    <div class="relative rounded-md shadow-sm">
+                        <input type="number" [(ngModel)]="taxRate" (ngModelChange)="calculate()"
+                            class="block w-full pr-2 pl-8 py-1 text-sm border-gray-300 rounded-md focus:ring-orange-500 focus:border-orange-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                        <div class="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
+                            <span class="text-gray-500 text-xs">%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">شحن العميل
+                        (COD)</label>
+                    <input type="number" [(ngModel)]="customerShippingFee" (ngModelChange)="calculate()"
+                        class="block w-full px-3 py-1 text-sm border-gray-300 rounded-md focus:ring-orange-500 focus:border-orange-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">شحن البائع</label>
+                    <input type="number" [(ngModel)]="sellerShippingFee" (ngModelChange)="calculate()"
+                        class="block w-full px-3 py-1 text-sm border-gray-300 rounded-md focus:ring-orange-500 focus:border-orange-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                </div>
+            </div>
+
+            <button (click)="calculate()"
+                class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded transition duration-200 mt-4">
+                إعادة الحساب
+            </button>
+        </div>
+
+        <!-- Results Section -->
+        <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+            <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-300 border-b pb-2 mb-4">النتائج المقترحة</h3>
+
+            <div class="mb-6 text-center">
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">سعر البيع المقترح على أمازون</p>
+                <div class="text-4xl font-extrabold text-blue-600 dark:text-blue-400">
+                    {{ sellingPrice | number:'1.0-2' }} <span class="text-lg">EGP</span>
+                </div>
+            </div>
+
+            <div class="space-y-3 text-sm">
+                <div class="flex justify-between items-center py-1 border-b border-gray-200 dark:border-gray-700">
+                    <span class="text-gray-600 dark:text-gray-400">إجمالي المدفوع من العميل (السعر + الشحن)</span>
+                    <span class="font-medium text-gray-800 dark:text-gray-200">{{ (sellingPrice + customerShippingFee) |
+                        number:'1.2-2' }} EGP</span>
+                </div>
+
+                <div class="flex justify-between items-center py-1 border-b border-gray-200 dark:border-gray-700">
+                    <span class="text-gray-600 dark:text-gray-400">عمولة أمازون ({{ amazonCommissionRate }}%)</span>
+                    <span class="font-medium text-red-500">-{{ commissionValue | number:'1.2-2' }} EGP</span>
+                </div>
+
+                <div class="flex justify-between items-center py-1 border-b border-gray-200 dark:border-gray-700">
+                    <span class="text-gray-600 dark:text-gray-400">الضرائب ({{ taxRate }}%)</span>
+                    <span class="font-medium text-red-500">-{{ taxValue | number:'1.2-2' }} EGP</span>
+                </div>
+
+                <div class="flex justify-between items-center py-1 border-b border-gray-200 dark:border-gray-700">
+                    <span class="text-gray-600 dark:text-gray-400">رسوم شحن البائع</span>
+                    <span class="font-medium text-red-500">-{{ sellerShippingFee | number:'1.2-2' }} EGP</span>
+                </div>
+
+                <div class="flex justify-between items-center py-2 mt-2 bg-green-50 dark:bg-green-900/20 px-2 rounded">
+                    <span class="font-bold text-green-700 dark:text-green-400">صافي التحويل لك (Net Payout)</span>
+                    <span class="font-bold text-green-700 dark:text-green-400">{{ netPayout | number:'1.2-2' }}
+                        EGP</span>
+                </div>
+
+                <div class="flex justify-between items-center py-1 px-2">
+                    <span class="text-gray-600 dark:text-gray-400">صافي الربح الفعلي</span>
+                    <span class="font-bold text-gray-800 dark:text-gray-200">
+                        {{ actualNetProfit | number:'1.2-2' }} EGP
+                        <span class="text-xs font-normal text-gray-500">({{ actualProfitPercent | number:'1.1-1'
+                            }}%)</span>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

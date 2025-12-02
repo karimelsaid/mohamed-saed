@@ -114,7 +114,8 @@ export class ProductApprovalComponent implements OnInit {
 
     let finalPath;
     if (merchantName) {
-      finalPath = `merchant_${merchantName}/${imageId}/${imageId}.webp`;
+      const sanitizedMerchantName = merchantName.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
+      finalPath = `merchant_${sanitizedMerchantName}/${imageId}/${imageId}.webp`;
     } else {
       // Fallback to admin path if no merchant name is found
       finalPath = `admin__karim_mohamed__/${imageId}/${imageId}.webp`;

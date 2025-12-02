@@ -4,6 +4,6 @@
 	"webDir": "Backend/dist/browser",
 	"bundledWebRuntime": false,
 	"server": {
-		"url": "https://kenouz.org"
+		"url": "https://knoozbook.com"
 	}
 }

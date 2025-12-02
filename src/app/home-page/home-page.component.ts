@@ -73,9 +73,16 @@ export class HomePageComponent implements OnInit, OnDestroy {
 
   getBookImageUrl(book: any): string {
     let imagePath = book.product_image ? String(book.product_image) : '';
+
+    // Helper to sanitize merchant name
+    const getSanitizedPath = (merchantName: string, id: string, filename: string) => {
+      const sanitizedMerchantName = merchantName.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
+      return 'merchant_' + sanitizedMerchantName + '/' + id + '/' + filename;
+    };
+
     if (!imagePath) {
       if (book.merchantName) {
-        imagePath = 'merchant_' + book.merchantName + '/' + book.products_id + '/' + book.products_id + '.webp';
+        imagePath = getSanitizedPath(book.merchantName, book.products_id, book.products_id + '.webp');
       } else {
         imagePath = 'admin__karim_mohamed__/' + book.products_id + '/' + book.products_id + '.webp';
       }
@@ -83,7 +90,14 @@ export class HomePageComponent implements OnInit, OnDestroy {
       if (imagePath.includes('/')) {
         const parts = imagePath.split('/');
         if (imagePath.includes('merchant_')) {
-          imagePath = parts.slice(-3).join('/');
+          // Reconstruct path with sanitized merchant name if possible
+          const filename = parts[parts.length - 1];
+          const id = parts[parts.length - 2];
+          if (book.merchantName) {
+            imagePath = getSanitizedPath(book.merchantName, id, filename);
+          } else {
+            imagePath = parts.slice(-3).join('/');
+          }
         } else if (imagePath.includes('admin__')) {
           imagePath = parts.slice(-3).join('/');
         } else {
@@ -92,9 +106,17 @@ export class HomePageComponent implements OnInit, OnDestroy {
       } else {
         if (!imagePath.includes('.') && /^\d+$/.test(imagePath)) {
           if (book.merchantName) {
-            imagePath = 'merchant_' + book.merchantName + '/' + imagePath + '/' + imagePath + '.webp';
+            imagePath = getSanitizedPath(book.merchantName, imagePath, imagePath + '.webp');
           } else {
             imagePath = 'admin__karim_mohamed__/' + imagePath + '/' + imagePath + '.webp';
+          }
+        } else if (imagePath.includes('.') && /^\d+_\d+\.webp$/.test(imagePath)) {
+          // Handle additional images like 768078245796_1.webp if they appear here (though usually main image is simple)
+          const id = imagePath.split('_')[0];
+          if (book.merchantName) {
+            imagePath = getSanitizedPath(book.merchantName, id, imagePath);
+          } else {
+            imagePath = 'admin__karim_mohamed__/' + id + '/' + imagePath;
           }
         } else if (!imagePath.includes('.')) {
           imagePath += '.webp';
@@ -327,7 +349,7 @@ export class HomePageComponent implements OnInit, OnDestroy {
   touchCurrentX: number | null = null;
   isTouchScrolling: boolean = false;
 
-  constructor(private dataService: DataService, private router: Router) {}
+  constructor(private dataService: DataService, private router: Router) { }
 
   private shuffleArray(array: any[]): any[] {
     const shuffled = array.slice();
@@ -504,11 +526,11 @@ export class HomePageComponent implements OnInit, OnDestroy {
   setPromoImages(): void {
     const width = window.innerWidth;
     if (width < 640) {
-      this.promoImages = ['smpanar1.jpg', 'smpanar2.jpg','smpanar3.jpg'];
+      this.promoImages = ['spanar1.jpg', 'spanar2.jpg', 'spanar3.jpg'];
     } else {
-      this.promoImages = ['panar1.jpg', 'panar4.jpg','panar3.jpg'];
-    }
-  }
+      this.promoImages = ['panar1.jpg', 'panar2.jpg', 'panar3.jpg'];
+    } 
+   }
 
 
 

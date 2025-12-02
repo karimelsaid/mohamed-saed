@@ -692,9 +692,13 @@ async function resetPassword(req, res) {
 }
 
 async function generateReferralLink(req, res) {
-  const { userId, bookId, bookName } = req.body;
-  if (!userId || !bookId || !bookName) {
-    return res.status(400).json({ message: 'User ID, Book ID, and Book Name are required' });
+  const { userId, productId, productName, productCategory } = req.body;
+  // Fallback for backward compatibility
+  const pId = productId || req.body.bookId;
+  const pName = productName || req.body.bookName;
+
+  if (!userId || !pId || !pName) {
+    return res.status(400).json({ message: 'User ID, Product ID, and Product Name are required' });
   }
 
   try {
@@ -706,14 +710,40 @@ async function generateReferralLink(req, res) {
       await user.save();
     }
 
-    const baseUrl = process.env.NODE_ENV === 'production' ? 'https://kenouz.org' : 'http://localhost:4200';
-    const bookSlug = getBookSlug(bookName);
-    const link = `${baseUrl}/book/${bookId}/${bookSlug}?ref=${user.referralCode}`;
+    const baseUrl = process.env.NODE_ENV === 'production' ? 'https://knoozbook.com' : 'http://localhost:4200';
+    const productSlug = getBookSlug(pName);
+    const routePrefix = getRoutePrefix(productCategory);
+
+    const link = `${baseUrl}/${routePrefix}/${pId}/${productSlug}?ref=${user.referralCode}`;
     res.json({ link });
   } catch (error) {
     console.error('Error generating referral link:', error);
     res.status(500).json({ message: 'Error generating link' });
   }
+}
+
+function getRoutePrefix(category) {
+  const categoryRoutes = {
+    'أدوات مكتبية': 'office-supplies',
+    'إلكترونيات': 'electronics',
+    'ملابس': 'clothing',
+    'التجميل والعناية الشخصية': 'cosmetics',
+    'الأحذية': 'shoes',
+    'أثاث': 'furniture',
+    'ألعاب': 'games',
+    'أقمشة': 'fabrics',
+    'كتب': 'book',
+    'روايات وقصص': 'book',
+    'تطوير الذات وعلم النفس': 'book',
+    'كتب دينية': 'book',
+    'أعمال وتسويق ومالية': 'book',
+    'صحة وطب وعلوم': 'book',
+    'تاريخ وسير ذاتية': 'book',
+    'تربية وأطفال': 'book',
+    'فنون وحرف': 'book',
+    'قواميس ومراجع': 'book'
+  };
+  return categoryRoutes[category] || 'others';
 }
 
 async function getReferralBalance(req, res) {
@@ -760,13 +790,21 @@ async function getReferrals(req, res) {
       .populate('referredId', 'username'); // جلب اسم المستخدم المُحال
 
     const formattedReferrals = referrals.map(ref => {
-      const book = ref.bookId ? productMap.get(ref.bookId.toString()) : null;
+      const product = ref.bookId ? productMap.get(ref.bookId.toString()) : null;
+      let productLink = '#';
+      let productName = 'منتج غير معروف';
+
+      if (product) {
+        productName = product.product_name;
+        const routePrefix = getRoutePrefix(product.product_category);
+        productLink = `/${routePrefix}/${product.products_id}/${getBookSlug(product.product_name)}`;
+      }
 
       return {
         _id: ref._id,
         referredId: ref.referredId,
-        bookName: book ? book.product_name : 'منتج غير معروف',
-        bookLink: book ? `/book/${book.products_id}/${getBookSlug(book.product_name)}` : '#',
+        productName: productName, // Renamed from bookName
+        productLink: productLink, // Renamed from bookLink
         status: ref.status,
         earned: ref.earned,
         createdAt: ref.createdAt,
@@ -933,7 +971,6 @@ module.exports = {
   deleteNotification,
   // Add new method to get average rating for a book
   getAverageRating: async (req, res) => {
-    console.log('getAverageRating called');
     try {
       const bookId = req.params.bookId;
       if (!bookId) {

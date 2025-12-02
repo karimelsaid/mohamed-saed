@@ -11,6 +11,36 @@ function slugify(text) {
     .replace(/-+$/, '');            // Trim - from end of text
 }
 
+// Mapping of Arabic category names to Angular route paths
+const categoryRouteMap = {
+  'أعمال وتسويق ومالية': 'book',
+  'تربية وأطفال': 'book',
+  'فنون وحرف': 'book',
+  'صحة وطب وعلوم': 'book',
+  'كتب دينية': 'book',
+  'روايات وقصص': 'book',
+  'تطوير الذات وعلم النفس': 'book',
+  'تاريخ وسير ذاتية': 'book',
+  'قواميس ومراجع': 'book',
+  'أدوات مكتبية': 'office-supplies',
+  'إلكترونيات': 'electronics',
+  'ملابس': 'clothing',
+  'التجميل والعناية الشخصية': 'cosmetics',
+  'أحذية': 'shoes',
+  'أثاث وديكور المنزل': 'furniture',
+  'هدية وألعاب': 'games',
+  'أقمشة': 'fabrics',
+  'أخرى': 'others',
+  'غير مصنف': 'others'
+};
+
+// Function to get the correct route path for a category
+function getCategoryRoute(category) {
+  if (!category) return 'book'; // Default fallback
+  // Return the mapped route or fallback to 'book'
+  return categoryRouteMap[category] || 'book';
+}
+
 class SitemapService extends EventEmitter {
   constructor() {
     super();
@@ -49,16 +79,18 @@ class SitemapService extends EventEmitter {
         return;
       }
 
-      // Base URL for books - adjust if needed
-      const baseUrl = 'https://kenouz.org/book/';
+      // Base URL - domain only
+      const baseUrl = 'https://knoozbook.com/';
 
       // Generate sitemap XML content
       const urls = books.map(book => {
         const slug = slugify(book.product_name || '');
         // Handle inconsistent product ID keys ('product_id' or 'products_id')
         const productId = book.product_id || book.products_id;
-        // Construct the URL with the correct structure: /book/id/slug
-        const loc = `${baseUrl}${productId}/${slug}`;
+        // Get category route (dynamic based on product category)
+        const categoryRoute = getCategoryRoute(book.product_category);
+        // Construct the URL with the correct structure: /category-route/id/slug
+        const loc = `${baseUrl}${categoryRoute}/${productId}/${slug}`;
         const lastmod = new Date().toISOString();
         return `
   <url>

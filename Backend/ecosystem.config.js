@@ -15,7 +15,7 @@ module.exports = {
       env_production: {
         NODE_ENV: 'production',
         PORT: 3000,
-        SITEMAP_BASE_URL: 'https://kenouz.org'
+        SITEMAP_BASE_URL: 'https://knoozbook.com'
       }
     }
   ]

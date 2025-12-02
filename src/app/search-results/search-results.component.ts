@@ -50,13 +50,15 @@ export class SearchResultsComponent implements OnInit {
 
   @ViewChild(AccountModalComponent, { static: false }) accountModal?: AccountModalComponent;
 
-  constructor(private dataService: DataService, private route: ActivatedRoute, private router: Router, private authService: AuthService, private http: HttpClient, private modalService: ModalService) {}
+  constructor(private dataService: DataService, private route: ActivatedRoute, private router: Router, private authService: AuthService, private http: HttpClient, private modalService: ModalService) { }
 
   ngOnInit(): void {
     // نحصل على قيمة البحث من الـ queryParams
     this.route.queryParams.subscribe(params => {
+      console.log('SearchResults: queryParams:', params);
       this.searchQuery = params['q'] || ''; // تأكد من وجود قيمة
       this.filterType = params['filter'] || 'all';
+      console.log('SearchResults: searchQuery:', this.searchQuery, 'filterType:', this.filterType);
       this.currentPage = parseInt(params['page'] || '1', 10); // قراءة رقم الصفحة من الـ URL
       this.showFirst = params['showFirst'] === 'true'; // قراءة قيمة showFirst من الـ URL
       this.searchBooks();
@@ -65,7 +67,7 @@ export class SearchResultsComponent implements OnInit {
   // دالة نسخ رابط الكتاب
   copyBookLink(book: Book): void {
     if (!book) return;
-      const url = window.location.origin + '/book/' + book.products_id + '/' + this.getBookSlug(book.product_name);
+    const url = window.location.origin + '/book/' + book.products_id + '/' + this.getBookSlug(book.product_name);
 
     navigator.clipboard.writeText(url).then(() => {
       this.showCopySuccess = true;
@@ -79,10 +81,43 @@ export class SearchResultsComponent implements OnInit {
     });
   }
 
-    // Updated method to generate book slug without encoding to keep readable characters in URL
-    getBookSlug(bookName: string): string {
-      return bookName.trim().replace(/\s+/g, '-');
+  // Updated method to generate book slug without encoding to keep readable characters in URL
+  getBookSlug(bookName: string): string {
+    return bookName.trim().replace(/\s+/g, '-');
+  }
+
+  getProductRoute(book: Book): any[] {
+    const slug = this.getBookSlug(book.product_name);
+    const categoryRoutes: { [key: string]: string } = {
+      'أدوات مكتبية': 'office-supplies',
+      'إلكترونيات': 'electronics',
+      'ملابس': 'clothing',
+      'التجميل والعناية الشخصية': 'cosmetics',
+      'الأحذية': 'shoes',
+      'أثاث': 'furniture',
+      'ألعاب': 'games',
+      'أقمشة': 'fabrics',
+      'كتب': 'book',
+      'روايات وقصص': 'book',
+      'تطوير الذات وعلم النفس': 'book',
+      'كتب دينية': 'book',
+      'أعمال وتسويق ومالية': 'book',
+      'صحة وطب وعلوم': 'book',
+      'تاريخ وسير ذاتية': 'book',
+      'تربية وأطفال': 'book',
+      'فنون وحرف': 'book',
+      'قواميس ومراجع': 'book'
+    };
+
+    const category = (book.product_category || '').trim();
+    let route = categoryRoutes[category];
+
+    if (!route) {
+      route = 'others';
     }
+
+    return ['/' + route, book.products_id, slug];
+  }
 
   getMerchantLogoUrl(book: Book): string {
     if (!book.merchantLogo) {
@@ -96,7 +131,8 @@ export class SearchResultsComponent implements OnInit {
     let imagePath = book.product_image ? String(book.product_image) : '';
     if (!imagePath) {
       if (book.merchantName) {
-        imagePath = 'merchant_' + book.merchantName + '/' + book.products_id + '/' + book.products_id + '.webp';
+        const sanitizedMerchantName = book.merchantName.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
+        imagePath = 'merchant_' + sanitizedMerchantName + '/' + book.products_id + '/' + book.products_id + '.webp';
       } else {
         imagePath = 'admin__karim_mohamed__/' + book.products_id + '/' + book.products_id + '.webp';
       }
@@ -113,7 +149,8 @@ export class SearchResultsComponent implements OnInit {
       } else {
         if (!imagePath.includes('.') && /^\d+$/.test(imagePath)) {
           if (book.merchantName) {
-            imagePath = 'merchant_' + book.merchantName + '/' + imagePath + '/' + imagePath + '.webp';
+            const sanitizedMerchantName = book.merchantName.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
+            imagePath = 'merchant_' + sanitizedMerchantName + '/' + imagePath + '/' + imagePath + '.webp';
           } else {
             imagePath = 'admin__karim_mohamed__/' + imagePath + '/' + imagePath + '.webp';
           }
@@ -313,6 +350,7 @@ export class SearchResultsComponent implements OnInit {
       if (nf.includes(q)) {
         // exact substring match -> high score
         const pos = nf.indexOf(q);
+        // higher score if starts with query
         const score = 1 + (pos === 0 ? 0.5 : 0) + Math.min(0.4, 0.4 / (pos + 1));
         bestScore = Math.max(bestScore, score);
       } else {
@@ -325,49 +363,64 @@ export class SearchResultsComponent implements OnInit {
   }
 
   searchBooks(): void {
-    this.isLoading = true; // Set loading true before data fetch
+    this.isLoading = true;
+    console.log('SearchResults: searchBooks called. searchQuery:', this.searchQuery, 'filterType:', this.filterType);
+
     if (this.filterType === 'recentlyAdded') {
       this.dataService.getRecentBooks().subscribe((data) => {
-        this.books = data;
-        this.totalBooks = data.length;
-        this.totalPages = Math.ceil(this.totalBooks / this.booksPerPage);
-        this.currentPage = Math.min(this.currentPage, this.totalPages);
-        this.updatePage();
-        this.isLoading = false; // Set loading false after all data is loaded
+        if (!this.searchQuery || this.searchQuery.trim() === '') {
+          this.books = data;
+        } else {
+          this.filterBooks(data);
+        }
+        this.finishSearch();
       });
     } else {
       this.dataService.getData().subscribe((data) => {
-        // Use fuzzy matching with scoring instead of strict substring matching
-        const scoredBooks: Array<{ book: Book; score: number }> = [];
-
-        for (const book of data) {
-          if (!book || typeof book.product_name !== 'string') continue;
-          const score = this.scoreBook(book, this.searchQuery);
-          // Accept books with reasonable score (0.45+ threshold)
-          if (score >= 0.45) {
-            scoredBooks.push({ book, score });
-          }
+        if (!this.searchQuery || this.searchQuery.trim() === '') {
+          this.books = data;
+        } else {
+          this.filterBooks(data);
         }
-
-        // Sort by score, then by name starting with query
-        const originalQueryLower = this.searchQuery.toLowerCase();
-        scoredBooks.sort((a, b) => {
-          const aName = a.book.product_name.toLowerCase();
-          const bName = b.book.product_name.toLowerCase();
-          const aStarts = aName.startsWith(originalQueryLower) ? 1 : 0;
-          const bStarts = bName.startsWith(originalQueryLower) ? 1 : 0;
-          if (aStarts !== bStarts) return bStarts - aStarts;
-          return b.score - a.score;
-        });
-
-        this.books = scoredBooks.map(sb => sb.book);
-        this.totalBooks = this.books.length;
-        this.totalPages = Math.ceil(this.totalBooks / this.booksPerPage);
-        this.currentPage = Math.min(this.currentPage, this.totalPages);
-        this.updatePage();
-        this.isLoading = false; // Set loading false after all data is loaded
+        this.finishSearch();
       });
     }
+  }
+
+  private filterBooks(data: Book[]): void {
+    // Use fuzzy matching with scoring instead of strict substring matching
+    const scoredBooks: Array<{ book: Book; score: number }> = [];
+
+    for (const book of data) {
+      if (!book || typeof book.product_name !== 'string') continue;
+      const score = this.scoreBook(book, this.searchQuery);
+      // Accept books with reasonable score (0.45+ threshold)
+      if (score >= 0.45) {
+        scoredBooks.push({ book, score });
+      }
+    }
+
+    // Sort by score, then by name starting with query
+    const originalQueryLower = this.searchQuery.toLowerCase();
+    scoredBooks.sort((a, b) => {
+      const aName = a.book.product_name.toLowerCase();
+      const bName = b.book.product_name.toLowerCase();
+      const aStarts = aName.startsWith(originalQueryLower) ? 1 : 0;
+      const bStarts = bName.startsWith(originalQueryLower) ? 1 : 0;
+      if (aStarts !== bStarts) return bStarts - aStarts;
+      return b.score - a.score;
+    });
+
+    this.books = scoredBooks.map(sb => sb.book);
+    console.log('SearchResults: filtered books count:', this.books.length);
+  }
+
+  private finishSearch(): void {
+    this.totalBooks = this.books.length;
+    this.totalPages = Math.ceil(this.totalBooks / this.booksPerPage);
+    this.currentPage = Math.min(this.currentPage, this.totalPages);
+    this.updatePage();
+    this.isLoading = false; // Set loading false after all data is loaded
   }
 
   // دالة الانتقال إلى الصفحة التالية

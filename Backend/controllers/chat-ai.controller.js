@@ -18,7 +18,7 @@ const KENOUZ_LIBRARY_INFO = `
 مكتبة كنوز
 العنوان: محافظة الدقهلية - مركز منية النصر - الرياض
 رقم الهاتف: 01094612729
-رابط الويب سايت: www.kenouz.org
+رابط الويب سايت: www.knoozbook.com
 أوقات العمل: من 9 صباحاً حتى 9 مساءً
 وهي أفضل وأول مكتبة إلكترونية في مصر مختصة في تجارة الكتب وطباعة ملفات PDF.
 `;
@@ -51,7 +51,7 @@ async function loadBooksData() {
       size: book.size,
       brand: book.brand,
       // Construct the URL based on product ID and name for SEO-friendly URLs
-      url: `https://kenouz.org/book/${book.products_id}/${encodeURIComponent(book.product_name.replace(/\s+/g, '-'))}`
+      url: `https://knoozbook.com/book/${book.products_id}/${encodeURIComponent(book.product_name.replace(/\s+/g, '-'))}`
     }));
     cachedBooks = books;
     return books;
@@ -95,7 +95,7 @@ function isKenouzLibraryQuery(query) {
   }
 
   // تحقق من وجود كلمة "المكتبة" مع كلمة أخرى ذات صلة
-  if (lowerQuery.includes('مكتبة'||'library'||'المكتبة'||'مكتبه'||'المكتبه')) {
+  if (lowerQuery.includes('مكتبة' || 'library' || 'المكتبة' || 'مكتبه' || 'المكتبه')) {
     const relatedWordsForLibrary = ['معلومات', 'عنوان', 'رقم', 'كنوز', 'هاتف', 'أوقات', 'مواعيد'];
     let count = 0;
     for (const word of relatedWordsForLibrary) {

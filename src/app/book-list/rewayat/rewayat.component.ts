@@ -29,7 +29,7 @@ export class RewayatComponent implements OnInit, OnDestroy {
   totalPages = 1;
   showLoginPrompt = false;
 
- getDisplayedPages(): (number | string)[] {
+  getDisplayedPages(): (number | string)[] {
     const totalPages = this.totalPages || 1;
     const currentPage = this.currentPage || 1;
     const maxPagesToShow = 5;
@@ -79,7 +79,7 @@ export class RewayatComponent implements OnInit, OnDestroy {
 
   ratings: { [bookId: string]: any } = {};
 
-    private countdownInterval: any;
+  private countdownInterval: any;
   faShareAlt = faShareAlt;
   showCopySuccess: boolean = false;
   copiedBookId: string | null = null;
@@ -157,7 +157,7 @@ export class RewayatComponent implements OnInit, OnDestroy {
   }
   copyBookLink(book: Book): void {
     if (!book) return;
-      const url = window.location.origin + '/book/' + book.products_id + '/' + this.getBookSlug(book.product_name);
+    const url = window.location.origin + '/book/' + book.products_id + '/' + this.getBookSlug(book.product_name);
 
     navigator.clipboard.writeText(url).then(() => {
       this.showCopySuccess = true;
@@ -186,7 +186,7 @@ export class RewayatComponent implements OnInit, OnDestroy {
       if (book.products_id) {
 
 
-this.http.get<{ bookId: string; averageRating: number; ratingCount: number }>(`${environment.apiBaseUrl}/users/average-rating/${book.products_id}`)
+        this.http.get<{ bookId: string; averageRating: number; ratingCount: number }>(`${environment.apiBaseUrl}/users/average-rating/${book.products_id}`)
           .subscribe({
             next: (res) => {
               this.ratings[book.products_id] = {
@@ -229,10 +229,10 @@ this.http.get<{ bookId: string; averageRating: number; ratingCount: number }>(`$
   }
 
   updatePage(): void {
-const startIndex = (this.currentPage - 1) * this.booksPerPage;
-const endIndex = startIndex + this.booksPerPage;
-this.paginatedBooks = this.books.slice(startIndex, endIndex);
-}
+    const startIndex = (this.currentPage - 1) * this.booksPerPage;
+    const endIndex = startIndex + this.booksPerPage;
+    this.paginatedBooks = this.books.slice(startIndex, endIndex);
+  }
 
   onPageClick(page: number | string): void {
     if (typeof page === 'number') {
@@ -338,7 +338,8 @@ this.paginatedBooks = this.books.slice(startIndex, endIndex);
     let imagePath = book.product_image ? String(book.product_image) : '';
     if (!imagePath) {
       if (book.merchantName) {
-        imagePath = 'merchant_' + book.merchantName + '/' + book.products_id + '/' + book.products_id + '.webp';
+        const sanitizedMerchantName = book.merchantName.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
+        imagePath = 'merchant_' + sanitizedMerchantName + '/' + book.products_id + '/' + book.products_id + '.webp';
       } else {
         imagePath = 'admin__karim_mohamed__/' + book.products_id + '/' + book.products_id + '.webp';
       }
@@ -355,7 +356,8 @@ this.paginatedBooks = this.books.slice(startIndex, endIndex);
       } else {
         if (!imagePath.includes('.') && /^\d+$/.test(imagePath)) {
           if (book.merchantName) {
-            imagePath = 'merchant_' + book.merchantName + '/' + imagePath + '/' + imagePath + '.webp';
+            const sanitizedMerchantName = book.merchantName.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
+            imagePath = 'merchant_' + sanitizedMerchantName + '/' + imagePath + '/' + imagePath + '.webp';
           } else {
             imagePath = 'admin__karim_mohamed__/' + imagePath + '/' + imagePath + '.webp';
           }

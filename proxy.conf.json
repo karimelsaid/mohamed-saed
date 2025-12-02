@@ -1,18 +1,18 @@
 {
   "/api": {
-    "target": "https://kenouz.org",
+    "target": "https://knoozbook.com",
     "secure": true,
     "changeOrigin": true,
     "logLevel": "debug"
   },
   "/uploads": {
-    "target": "https://kenouz.org",
+    "target": "https://knoozbook.com",
     "secure": true,
     "changeOrigin": true,
     "logLevel": "debug"
   },
   "/admin": {
-    "target": "https://kenouz.org",
+    "target": "https://knoozbook.com",
     "secure": true,
     "changeOrigin": true,
     "logLevel": "debug"

@@ -11,12 +11,12 @@ import { AamalComponent } from './book-list/aamal/aamal.component';
 import { FitComponent } from './book-list/fit/fit.component';
 import { FenonComponent } from './book-list/fenon/fenon.component';
 import { ChildComponent } from './book-list/child/child.component';
-import {FontAwesomeModule} from '@fortawesome/angular-fontawesome';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { PrintComponent } from './print/print.component'
 import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
 import { TarekhComponent } from './book-list/tarekh/tarekh.component';
 import { QamosComponent } from './book-list/qamos/qamos.component';
-import {FormsModule} from '@angular/forms';
+import { FormsModule } from '@angular/forms';
 import { SearchResultsComponent } from './search-results/search-results.component';
 import { HomePageComponent } from './home-page/home-page.component';
 import { SharedModule } from './shared/shared.module';
@@ -43,6 +43,7 @@ import { FurnitureComponent } from './book-list/furniture/furniture.component';
 import { GamesComponent } from './book-list/games/games.component';
 import { FabricsComponent } from './book-list/fabrics/fabrics.component';
 import { OthersComponent } from './book-list/others/others.component';
+import { BooksComponent } from './book-list/books/books.component';
 
 
 @NgModule({
@@ -69,7 +70,8 @@ import { OthersComponent } from './book-list/others/others.component';
     FurnitureComponent,
     GamesComponent,
     FabricsComponent,
-    OthersComponent
+    OthersComponent,
+    BooksComponent
   ],
   imports: [
     BrowserModule,

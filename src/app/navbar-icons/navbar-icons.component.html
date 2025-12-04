@@ -1,190 +1,141 @@
-<div class="flex space-x-2 lg:space-x-14 justify-around">
-  <!-- أيقونة المفضلة -->
-  <div routerLink="/Favorites" routerLinkActive="text-blue-400" [routerLinkActiveOptions]="{exact:true}" class="relative flex flex-col sm:flex-row items-center cursor-pointer" #favLink="routerLinkActive">
-    <fa-icon
-      [icon]="faHeart"
-      [ngClass]="{'text-blue-400': favLink.isActive, 'text-white dark:text-gray-300': !favLink.isActive}"
-      class="relative text-lg sm:text-base mb-1 sm:mb-0"
-      title="المفضلة">
+<div class="flex items-center justify-around w-full max-w-md mx-auto">
+
+  <!-- Favorites -->
+  <div routerLink="/Favorites" routerLinkActive="text-blue-600" [routerLinkActiveOptions]="{exact:true}"
+    class="relative group cursor-pointer p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+    #favLink="routerLinkActive">
+    <fa-icon [icon]="faHeart"
+      [ngClass]="{'text-blue-600': favLink.isActive, 'text-gray-600 dark:text-gray-300': !favLink.isActive}"
+      class="text-xl transition-colors" title="المفضلة">
     </fa-icon>
-    <span [ngClass]="{'text-blue-400': favLink.isActive, 'text-white dark:text-gray-300': !favLink.isActive}" class="text-sm sm:text-sm">المفضلة</span>
     <span *ngIf="favoritesCount > 0"
-          class="absolute sm:-top-1/2 right-0 bg-blue-600 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
+      class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center shadow-sm">
       {{ favoritesCount }}
     </span>
   </div>
 
-  <!-- أيقونة سلة المشتريات -->
-  <div routerLink="/basket" routerLinkActive="text-blue-400" [routerLinkActiveOptions]="{exact:true}" class="relative flex flex-col sm:flex-row items-center cursor-pointer" #cartLink="routerLinkActive">
-    <fa-icon
-     [icon]="faCartPlus"
-      [ngClass]="{'text-blue-400': cartLink.isActive, 'text-white dark:text-gray-300': !cartLink.isActive}"
-      class="relative text-lg sm:text-base mb-1 sm:mb-0"
-      title="السلة">
+  <!-- Cart -->
+  <div routerLink="/basket" routerLinkActive="text-blue-600" [routerLinkActiveOptions]="{exact:true}"
+    class="relative group cursor-pointer p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+    #cartLink="routerLinkActive">
+    <fa-icon [icon]="faCartPlus"
+      [ngClass]="{'text-blue-600': cartLink.isActive, 'text-gray-600 dark:text-gray-300': !cartLink.isActive}"
+      class="text-xl transition-colors" title="السلة">
     </fa-icon>
-    <span [ngClass]="{'text-blue-400': cartLink.isActive, 'text-white dark:text-gray-300': !cartLink.isActive}" class="text-sm sm:text-sm text-center">السلة</span>
     <span *ngIf="cartCount > 0"
-          class="absolute sm:-top-1/2 right-0 bg-blue-600 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
+      class="absolute -top-1 -right-1 bg-blue-600 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center shadow-sm">
       {{ cartCount }}
     </span>
   </div>
 
-    <!-- أيقونة print -->
-  <div class="relative flex flex-col sm:flex-row items-center cursor-pointer" routerLink="/print" routerLinkActive="text-blue-400" [routerLinkActiveOptions]="{exact:true}" #printLink="routerLinkActive">
-    <fa-icon
-      [icon]="faFilePdf"
-      [ngClass]="{'text-blue-400': printLink.isActive, 'text-white dark:text-gray-300': !printLink.isActive}"
-      class="relative text-lg sm:text-base mb-1 sm:mb-0"
-      title="إطبعلي">
+  <!-- Print Service -->
+  <div routerLink="/print" routerLinkActive="text-blue-600" [routerLinkActiveOptions]="{exact:true}"
+    class="relative group cursor-pointer p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+    #printLink="routerLinkActive">
+    <fa-icon [icon]="faFilePdf"
+      [ngClass]="{'text-blue-600': printLink.isActive, 'text-gray-600 dark:text-gray-300': !printLink.isActive}"
+      class="text-xl transition-colors" title="إطبعلي">
     </fa-icon>
-    <span [ngClass]="{'text-blue-400': printLink.isActive, 'text-white dark:text-gray-300': !printLink.isActive}" class="text-sm sm:text-sm">إطبعلي</span>
   </div>
 
-  <!-- Notification Icon -->
-  <div (click)="toggleNotificationsDropdown()" class="relative flex flex-col sm:flex-row items-center cursor-pointer ml-4">
-    <fa-icon
-      [icon]="faBell"
-      class="relative text-lg sm:text-base mb-1 sm:mb-0 text-white dark:text-gray-300"
-      title="الإشعارات">
+  <!-- Notifications -->
+  <div (click)="toggleNotificationsDropdown()"
+    class="relative group cursor-pointer p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+    <fa-icon [icon]="faBell" class="text-xl text-gray-600 dark:text-gray-300 transition-colors" title="الإشعارات">
     </fa-icon>
-    <span [ngClass]="{'text-orange-400': false, 'text-white dark:text-gray-300': true}" class="text-sm sm:text-sm ml-1">الإشعارات</span>
     <span *ngIf="unreadCount > 0"
-          class="absolute sm:-top-1/2 right-0 bg-red-600 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center cursor-pointer">
+      class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center shadow-sm">
       {{ unreadCount }}
     </span>
 
-<!-- Notifications Dropdown mobile -->
+    <!-- Notifications Dropdown -->
     <div *ngIf="showNotificationsDropdown"
-      class="rtl md:hidden block absolute -right-12 sm:right-4 bottom-16 md:top-full mt-4 w-64 md:w-80 max-h-96 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-2xl z-50 overflow-hidden"
-      style="box-shadow: 0 10px 25px rgba(0,0,0,0.1);"
-    >
-
-      <!-- Header -->
-      <div class="bg-gray-50 dark:bg-gray-700 px-4 py-3 border-b border-gray-200 dark:border-gray-600">
-        <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">الإشعارات</h3>
+      class="absolute left-1/2 -translate-x-1/2 w-80 max-h-96 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-2xl z-[1002] overflow-hidden ring-1 ring-black ring-opacity-5"
+      [ngClass]="isBottomNav ? 'bottom-full mb-2' : 'top-full mt-2'" (click)="$event.stopPropagation()">
+      <div
+        class="bg-gray-50 dark:bg-gray-700/50 px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
+        <h3 class="text-sm font-bold text-gray-800 dark:text-gray-200">الإشعارات</h3>
+        <span
+          class="text-xs text-gray-500 bg-white dark:bg-gray-600 px-2 py-1 rounded-full">{{notifications.length}}</span>
       </div>
 
-      <!-- No notifications -->
-      <div *ngIf="notifications.length === 0" class="p-4 text-center text-gray-500 dark:text-gray-400 text-sm">
-        لا توجد إشعارات جديدة
+      <div *ngIf="notifications.length === 0" class="p-8 text-center">
+        <div class="bg-gray-50 dark:bg-gray-700 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
+          <fa-icon [icon]="faBell" class="text-gray-400 text-xl"></fa-icon>
+        </div>
+        <p class="text-gray-500 dark:text-gray-400 text-sm">لا توجد إشعارات جديدة</p>
       </div>
 
-      <!-- Notifications list -->
       <div class="max-h-80 overflow-y-auto">
-        <div
-          *ngFor="let notification of notifications"
-          class="p-4 border-b border-gray-100 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
-          [ngClass]="{ 'bg-blue-50 dark:bg-blue-900/20': !notification.read }"
-          (click)="handleNotificationClick(notification)"
-        >
-          <div class="flex justify-between items-start">
-            <div class="flex-1 text-sm text-gray-800 dark:text-gray-200 leading-relaxed">
-              {{ notification.message }}
+        <div *ngFor="let notification of notifications"
+          class="p-4 border-b border-gray-50 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer relative group"
+          [ngClass]="{ 'bg-blue-50/50 dark:bg-blue-900/10': !notification.read }"
+          (click)="handleNotificationClick(notification)">
+          <div class="flex gap-3">
+            <div class="flex-shrink-0 mt-1">
+              <div class="w-2 h-2 rounded-full" [ngClass]="notification.read ? 'bg-gray-300' : 'bg-blue-500'"></div>
+            </div>
+            <div class="flex-1">
+              <p class="text-sm text-gray-800 dark:text-gray-200 leading-relaxed mb-1">{{ notification.message }}</p>
+              <span class="text-xs text-gray-400">{{ notification.createdAt ? (notification.createdAt | date:'short') :
+                'الآن' }}</span>
             </div>
             <button
-              class="text-red-500 hover:text-red-700 transition ml-2 flex-shrink-0"
-              (click)="deleteNotification(notification); $event.stopPropagation();"
-              title="حذف الإشعار"
-            >
+              class="opacity-0 group-hover:opacity-100 absolute top-2 left-2 text-gray-400 hover:text-red-500 transition-all p-1"
+              (click)="deleteNotification(notification); $event.stopPropagation();" title="حذف">
               <fa-icon [icon]="faTrash" class="text-xs"></fa-icon>
             </button>
-          </div>
-          <div class="text-xs text-gray-500 dark:text-gray-400 mt-2">
-            {{ notification.createdAt ? (notification.createdAt | date:'short') : 'غير محدد' }}
           </div>
         </div>
       </div>
     </div>
-
-<!-- Notifications Dropdown -->
-    <div *ngIf="showNotificationsDropdown"
-      class="rtl hidden md:block absolute right-2 sm:right-4 top-full mt-4 w-64 md:w-80 max-h-96 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-2xl z-50 overflow-hidden"
-      style="box-shadow: 0 10px 25px rgba(0,0,0,0.1);"
-    >
-
-      <!-- Header -->
-      <div class="bg-gray-50 dark:bg-gray-700 px-4 py-3 border-b border-gray-200 dark:border-gray-600">
-        <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">الإشعارات</h3>
-      </div>
-
-      <!-- No notifications -->
-      <div *ngIf="notifications.length === 0" class="p-4 text-center text-gray-500 dark:text-gray-400 text-sm">
-        لا توجد إشعارات جديدة
-      </div>
-
-      <!-- Notifications list -->
-      <div class="max-h-80 overflow-y-auto">
-        <div
-          *ngFor="let notification of notifications"
-          class="p-4 border-b border-gray-100 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
-          [ngClass]="{ 'bg-blue-50 dark:bg-blue-900/20': !notification.read }"
-          (click)="handleNotificationClick(notification)"
-        >
-          <div class="flex justify-between items-start">
-            <div class="flex-1 text-sm text-gray-800 dark:text-gray-200 leading-relaxed">
-              {{ notification.message }}
-            </div>
-            <button
-              class="text-red-500 hover:text-red-700 transition ml-2 flex-shrink-0"
-              (click)="deleteNotification(notification); $event.stopPropagation();"
-              title="حذف الإشعار"
-            >
-              <fa-icon [icon]="faTrash" class="text-xs"></fa-icon>
-            </button>
-          </div>
-          <div class="text-xs text-gray-500 dark:text-gray-400 mt-2">
-            {{ notification.createdAt ? (notification.createdAt | date:'short') : 'غير محدد' }}
-          </div>
-        </div>
-      </div>
-    </div>
-
-
   </div>
 
-  <!-- ايقونة requests -->
-   <div class="md:flex">
-     <div class="relative flex flex-col sm:flex-row items-center cursor-pointer " [ngClass]="{'text-orange-400': isOrdersActive}"  routerLink="/requests" >
-         <fa-icon
-         [icon]="faClipboardList"
-         [ngClass]="{'text-orange-400': isOrdersActive, 'text-white dark:text-gray-300': !isOrdersActive}"
-         class="relative text-lg sm:text-base mb-1 sm:mb-0"
-         title="طلباتي">
-         </fa-icon>
-         <span [ngClass]="{'text-orange-400': isOrdersActive, 'text-white dark:text-gray-300': !isOrdersActive}" class="text-sm sm:text-sm">طلباتي</span>
-     <span *ngIf="orderCount > 0"
-           class="absolute sm:-top-1/2 right-0 bg-blue-600 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
-         {{ orderCount }}
-     </span>
-     </div>
-   </div>
-  <!-- ايقونة الحساب -->
-   <div class="">
-     <div (click)="openAccountModal()" class="relative flex flex-col sm:flex-row items-center cursor-pointer" [ngClass]="{'text-orange-400': isAccountActive, 'text-white': !isAccountActive}">
-       <fa-icon
-         [icon]="faUser"
-         class="text-lg sm:text-base mb-1 sm:mb-0"
-         [ngClass]="{'text-orange-400': isAccountActive, 'text-white dark:text-gray-300': !isAccountActive}"
-         title="ايقونة الحساب">
-       </fa-icon>
-       <span [ngClass]="{'text-orange-400': isAccountActive, 'text-white dark:text-gray-300': !isAccountActive}" class="text-sm sm:text-sm">حسابي</span>
-     </div>
-   </div>
-
-  <!-- رابط لوحة التحكم للمسؤول فقط -->
-  <div *ngIf="isAdmin" routerLink="/ControlPanel" routerLinkActive="text-orange-400" [routerLinkActiveOptions]="{exact:true}" class="flex flex-col sm:flex-row items-center cursor-pointer ml-4 text-sm sm:text-base" #adminLink="routerLinkActive">
-    <fa-icon [icon]="faTachometerAlt" [ngClass]="{'text-orange-400': adminLink.isActive, 'text-white dark:text-gray-300': !adminLink.isActive}" class="text-lg sm:text-base mb-1 sm:mb-0" title="لوحة التحكم"></fa-icon>
-    <span [ngClass]="{'text-orange-400': adminLink.isActive, 'text-white dark:text-gray-300': !adminLink.isActive}" class="ml-1 text-sm sm:text-x text-centers">التحكم</span>
+  <!-- Orders -->
+  <div routerLink="/requests"
+    class="relative group cursor-pointer p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+    [ngClass]="{'text-blue-600': isOrdersActive}">
+    <fa-icon [icon]="faClipboardList"
+      [ngClass]="{'text-blue-600': isOrdersActive, 'text-gray-600 dark:text-gray-300': !isOrdersActive}"
+      class="text-xl transition-colors" title="طلباتي">
+    </fa-icon>
+    <span *ngIf="orderCount > 0"
+      class="absolute -top-1 -right-1 bg-blue-600 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center shadow-sm">
+      {{ orderCount }}
+    </span>
   </div>
 
-  <!-- رابط لوحة التحكم للتجار فقط -->
-  <div *ngIf="isMerchant" routerLink="/merchant/dashboard" routerLinkActive="text-orange-400" [routerLinkActiveOptions]="{exact:true}" class="flex flex-col sm:flex-row items-center cursor-pointer ml-4 text-sm sm:text-base" #merchantLink="routerLinkActive">
-    <fa-icon [icon]="faTachometerAlt" [ngClass]="{'text-orange-400': merchantLink.isActive, 'text-white dark:text-gray-300': !merchantLink.isActive}" class="text-lg sm:text-base mb-1 sm:mb-0" title="لوحة تحكم التاجر"></fa-icon>
-    <span [ngClass]="{'text-orange-400': merchantLink.isActive, 'text-white dark:text-gray-300': !merchantLink.isActive}" class="ml-1 text-sm sm:text-x text-centers">التحكم</span>
+  <!-- Account -->
+  <div (click)="onAccountClick()"
+    class="relative group cursor-pointer p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+    [ngClass]="{'text-blue-600': isAccountActive}">
+    <fa-icon [icon]="faUser" class="text-xl transition-colors"
+      [ngClass]="{'text-blue-600': isAccountActive, 'text-gray-600 dark:text-gray-300': !isAccountActive}"
+      title="حسابي">
+    </fa-icon>
   </div>
+
+  <!-- Admin Panel (Hidden on mobile bottom nav, shown only on desktop) -->
+  <div *ngIf="isAdmin" routerLink="/ControlPanel" routerLinkActive="text-blue-600"
+    [routerLinkActiveOptions]="{exact:true}"
+    class="flex relative group cursor-pointer p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+    #adminLink="routerLinkActive">
+    <fa-icon [icon]="faTachometerAlt"
+      [ngClass]="{'text-blue-600': adminLink.isActive, 'text-gray-600 dark:text-gray-300': !adminLink.isActive}"
+      class="text-xl transition-colors" title="لوحة التحكم"></fa-icon>
+  </div>
+
+  <!-- Merchant Panel (Hidden on mobile bottom nav, shown only on desktop) -->
+  <div *ngIf="isMerchant" routerLink="/merchant/dashboard" routerLinkActive="text-blue-600"
+    [routerLinkActiveOptions]="{exact:true}"
+    class="flex relative group cursor-pointer p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+    #merchantLink="routerLinkActive">
+    <fa-icon [icon]="faTachometerAlt"
+      [ngClass]="{'text-blue-600': merchantLink.isActive, 'text-gray-600 dark:text-gray-300': !merchantLink.isActive}"
+      class="text-xl transition-colors" title="لوحة تحكم التاجر"></fa-icon>
+  </div>
+
 </div>
 
 <!-- Backdrop for closing notifications -->
-<div *ngIf="showNotificationsDropdown" class="fixed inset-0 bg-black bg-opacity-50 z-40" (click)="toggleNotificationsDropdown()"></div>
-
-<app-account-modal #accountModal (modalClosed)="showAccountModal = false"></app-account-modal>
+<div *ngIf="showNotificationsDropdown" class="fixed inset-0 z-[1001]" (click)="toggleNotificationsDropdown()"></div>

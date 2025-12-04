@@ -1,0 +1,158 @@
+<div class="min-h-screen bg-gray-50 py-8 mt-10 md:mt-32" dir="rtl">
+    <div class="container mx-auto px-4">
+        <h1 class="text-3xl font-bold text-gray-800 mb-8 text-center">جميع الكتب</h1>
+
+        <!-- Loading State -->
+        <div *ngIf="isLoading" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+            <div *ngFor="let item of [1,2,3,4,5,6,7,8,9,10]" class="animate-pulse">
+                <div class="bg-gray-200 rounded-2xl aspect-[3/4] mb-4"></div>
+                <div class="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                <div class="h-3 bg-gray-200 rounded w-1/2"></div>
+            </div>
+        </div>
+
+        <!-- Empty State -->
+        <div *ngIf="!isLoading && books.length === 0" class="text-center py-20">
+            <div class="text-gray-400 text-6xl mb-4">
+                <fa-icon [icon]="faStar"></fa-icon>
+            </div>
+            <p class="text-gray-500 text-lg">لا توجد كتب متاحة حالياً</p>
+        </div>
+
+        <!-- Books Grid -->
+        <div *ngIf="!isLoading && books.length > 0"
+            class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+            <div *ngFor="let book of paginatedBooks"
+                class="group relative bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-gray-100">
+
+                <!-- Image Container -->
+                <div class="relative aspect-[3/4] overflow-hidden bg-gray-100">
+                    <a [routerLink]="['/book', book.products_id, getBookSlug(book.product_name)]">
+                        <img [src]="getBookImageUrl(book)" [alt]="book.product_name" loading="lazy"
+                            class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+                    </a>
+
+                    <!-- Badges -->
+                    <div *ngIf="book.product_discount_percent"
+                        class="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-md shadow-sm">
+                        -{{ book.product_discount_percent }}%
+                    </div>
+                    <div *ngIf="book.rival"
+                        class="absolute top-2 left-2 bg-yellow-400 text-black text-xs font-bold px-2 py-1 rounded-md shadow-sm">
+                        عرض خاص
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div
+                        class="absolute bottom-0 left-0 right-0 p-2 flex justify-center gap-2 translate-y-full group-hover:translate-y-0 transition-transform duration-300 bg-black/20 backdrop-blur-sm">
+                        <button (click)="addToCart(book.products_id)"
+                            class="w-8 h-8 rounded-full bg-white text-gray-700 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-colors"
+                            title="إضافة للسلة">
+                            <fa-icon [icon]="faCartPlus"></fa-icon>
+                        </button>
+                        <button (click)="addToFavorites(book.products_id)"
+                            class="w-8 h-8 rounded-full bg-white text-gray-700 flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors"
+                            title="إضافة للمفضلة">
+                            <fa-icon [icon]="faHeart" [class.text-red-500]="isFavorite(book.products_id)"></fa-icon>
+                        </button>
+                        <button (click)="copyBookLink(book)"
+                            class="w-8 h-8 rounded-full bg-white text-gray-700 flex items-center justify-center hover:bg-green-600 hover:text-white transition-colors"
+                            title="مشاركة">
+                            <fa-icon [icon]="faShareAlt"></fa-icon>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Content -->
+                <div class="p-4">
+                    <a [routerLink]="['/book', book.products_id, getBookSlug(book.product_name)]">
+                        <h3
+                            class="font-bold text-gray-800 text-sm mb-1 line-clamp-2 min-h-[2.5em] group-hover:text-blue-600 transition-colors">
+                            {{ book.product_name }}
+                        </h3>
+                    </a>
+                    <p class="text-xs text-gray-500 mb-2 line-clamp-1">{{ book.product_category }}</p>
+
+                    <!-- Rating -->
+                    <div class="flex items-center mb-2 text-yellow-400 text-xs">
+                        <ng-container *ngFor="let star of [1,2,3,4,5]">
+                            <fa-icon [icon]="star <= getAverageRating(book) ? faStar : faStarRegular"></fa-icon>
+                        </ng-container>
+                        <span class="text-gray-400 mr-1">({{ getRatingCount(book) }})</span>
+                    </div>
+
+                    <div class="flex items-center justify-between mt-2">
+                        <div class="flex flex-col">
+                            <span class="font-bold text-blue-600 text-lg">
+                                {{ book.product_price | number:'1.0-2' }} <span class="text-xs font-normal">ج.م</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Countdown -->
+                    <div *ngIf="book.remainingTime"
+                        class="mt-2 text-xs text-red-500 font-medium text-center bg-red-50 rounded py-1">
+                        {{ book.remainingTime }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        <div *ngIf="totalPages > 1" class="flex justify-center items-center mt-12 gap-2">
+            <button (click)="changePage('previous')" [disabled]="currentPage === 1"
+                class="px-4 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                السابق
+            </button>
+
+            <ng-container *ngFor="let page of getDisplayedPages()">
+                <button *ngIf="page !== '...'" (click)="onPageClick(page)"
+                    class="w-10 h-10 rounded-lg flex items-center justify-center transition-colors"
+                    [ngClass]="currentPage === page ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'">
+                    {{ page }}
+                </button>
+                <span *ngIf="page === '...'" class="text-gray-400">...</span>
+            </ng-container>
+
+            <button (click)="changePage('next')" [disabled]="currentPage === totalPages"
+                class="px-4 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                التالي
+            </button>
+        </div>
+    </div>
+
+    <!-- Login Prompt -->
+    <div *ngIf="showLoginPrompt"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-center transform transition-all scale-100">
+            <div
+                class="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center text-3xl mx-auto mb-6">
+                <fa-icon [icon]="faCartPlus"></fa-icon>
+            </div>
+            <h3 class="text-2xl font-bold text-gray-800 mb-2">تسجيل الدخول مطلوب</h3>
+            <p class="text-gray-500 mb-8">يرجى تسجيل الدخول لإضافة المنتجات إلى السلة أو المفضلة.</p>
+            <div class="flex gap-4">
+                <button (click)="closeLoginPrompt()"
+                    class="flex-1 px-6 py-3 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 font-medium transition-colors">
+                    إلغاء
+                </button>
+                <a routerLink="/login"
+                    class="flex-1 px-6 py-3 rounded-xl bg-blue-600 text-white hover:bg-blue-700 font-medium shadow-lg shadow-blue-600/20 transition-colors">
+                    تسجيل الدخول
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Copy Success Toast -->
+    <div *ngIf="showCopySuccess"
+        class="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-6 py-3 rounded-full shadow-lg z-50 flex items-center gap-2 animate-fade-in-up">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-400" fill="none" viewBox="0 0 24 24"
+            stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+        </svg>
+        <span>تم نسخ الرابط بنجاح</span>
+    </div>
+
+    <app-account-modal></app-account-modal>
+</div>

@@ -45,6 +45,7 @@ import { FurnitureComponent } from './book-list/furniture/furniture.component';
 import { GamesComponent } from './book-list/games/games.component';
 import { FabricsComponent } from './book-list/fabrics/fabrics.component';
 import { OthersComponent } from './book-list/others/others.component';
+import { BooksComponent } from './book-list/books/books.component';
 
 const routes: Routes = [
   {
@@ -74,6 +75,7 @@ const routes: Routes = [
     ]
   },
   { path: 'Home', component: HomePageComponent },
+  { path: 'books', component: BooksComponent },
   { path: 'Business-Marketing-Finance', component: AamalComponent },
   { path: 'Education-children', component: ChildComponent },
   { path: 'Arts-crafts', component: FenonComponent },

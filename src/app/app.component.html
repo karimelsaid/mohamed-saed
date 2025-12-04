@@ -1,39 +1,31 @@
 <!-- هذا المكان فقط يظهر عندما يكون هناك بحث -->
 <app-search-results *ngIf="isSearchPage"></app-search-results>
+
 <!-- زر التواصل - تصميم احترافي ومبهر -->
 <div [ngClass]="{'out':outOn,'on':!outOn}"
   class="z-50 fixed top-[20%] -left-10 transform transition-all duration-500 ease-in-out">
-  <!-- الحاوي الرئيسي مع تصميم متدرج ومتطور -->
   <div class="relative group">
-    <!-- خلفية متدرجة مع تأثير زجاجي -->
     <div
       class="absolute -inset-1 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 rounded-2xl blur opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse">
     </div>
-
-    <!-- الحاوي الرئيسي -->
     <div
       class="relative bg-gradient-to-br from-slate-900/95 via-blue-900/95 to-indigo-900/95 backdrop-blur-xl border border-white/10 rounded-2xl p-3 shadow-sm">
-      <!-- زر التحكم في الإغلاق/الفتح -->
       <div (click)="outOn=!outOn"
         class="absolute -right-6 top-1/2 transform -translate-y-1/2 w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-full flex items-center justify-center cursor-pointer shadow-sm transition-all duration-300 hover:scale-110 hover:shadow-lg">
         <fa-icon [ngClass]="{hidden:outOn}" class="text-white text-xs transition-transform duration-300"
-          [icon]="faChevronRight">
-        </fa-icon>
+          [icon]="faChevronRight"></fa-icon>
         <fa-icon [ngClass]="{hidden:!outOn}" class="text-white text-xs transition-transform duration-300"
-          [icon]="faChevronLeft">
-        </fa-icon>
+          [icon]="faChevronLeft"></fa-icon>
       </div>
 
-      <!-- شبكة الأيقونات -->
       <div class="grid gap-4">
-        <!-- يوتيوب -->
+        <!-- YouTube -->
         <div class="relative group/item">
           <a class="flex justify-center items-center w-12 h-12 rounded-xl bg-gradient-to-br from-red-600/20 to-red-800/20 hover:from-red-600/40 hover:to-red-800/40 border border-red-500/30 hover:border-red-400/50 transition-all duration-300 hover:scale-110 hover:shadow-md hover:shadow-red-500/25"
             target="_blank" href="https://YouTube.com/@knoozbook">
             <img class="w-6 h-6 transition-transform duration-300 group-hover/item:scale-110" src="ytupe.png"
-              alt="فيسبوك">
+              alt="YouTube">
           </a>
-          <!-- تلميح الأداة -->
           <div
             class="absolute left-full ml-3 top-1/2 transform -translate-y-1/2 opacity-0 group-hover/item:opacity-100 transition-all duration-300 pointer-events-none">
             <div
@@ -46,14 +38,13 @@
           </div>
         </div>
 
-        <!-- فيسبوك -->
+        <!-- Facebook -->
         <div class="relative group/item">
           <a class="flex justify-center items-center w-12 h-12 rounded-xl bg-gradient-to-br from-blue-600/20 to-blue-800/20 hover:from-blue-600/40 hover:to-blue-800/40 border border-blue-500/30 hover:border-blue-400/50 transition-all duration-300 hover:scale-110 hover:shadow-md hover:shadow-blue-500/25"
             target="_blank" href="https://www.facebook.com/share/1PaYoXPKAq">
             <img class="w-6 h-6 transition-transform duration-300 group-hover/item:scale-110" src="face.png"
-              alt="فيسبوك">
+              alt="Facebook">
           </a>
-          <!-- تلميح الأداة -->
           <div
             class="absolute left-full ml-3 top-1/2 transform -translate-y-1/2 opacity-0 group-hover/item:opacity-100 transition-all duration-300 pointer-events-none">
             <div
@@ -66,12 +57,12 @@
           </div>
         </div>
 
-        <!-- تليجرام -->
+        <!-- Telegram -->
         <div class="relative group/item">
           <a class="flex justify-center items-center w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 hover:from-blue-500/40 hover:to-cyan-500/40 border border-blue-400/30 hover:border-blue-300/50 transition-all duration-300 hover:scale-110 hover:shadow-md hover:shadow-blue-400/25"
             target="_blank" href="https://t.me/knoozbook">
             <img class="w-6 h-6 transition-transform duration-300 group-hover/item:scale-110" src="telegram.png"
-              alt="تليجرام">
+              alt="Telegram">
           </a>
           <div
             class="absolute left-full ml-3 top-1/2 transform -translate-y-1/2 opacity-0 group-hover/item:opacity-100 transition-all duration-300 pointer-events-none">
@@ -85,12 +76,12 @@
           </div>
         </div>
 
-        <!-- واتساب -->
+        <!-- WhatsApp -->
         <div class="relative group/item">
           <a class="flex justify-center items-center w-12 h-12 rounded-xl bg-gradient-to-br from-green-600/20 to-emerald-600/20 hover:from-green-600/40 hover:to-emerald-600/40 border border-green-500/30 hover:border-green-400/50 transition-all duration-300 hover:scale-110 hover:shadow-md hover:shadow-green-500/25"
             target="_blank" href="https://chat.whatsapp.com/KfgUWkKxGoM7yqoC6NBz8q?mode=wwt">
             <img class="w-6 h-6 transition-transform duration-300 group-hover/item:scale-110" src="whats.png"
-              alt="واتساب">
+              alt="WhatsApp">
           </a>
           <div
             class="absolute left-full ml-3 top-1/2 transform -translate-y-1/2 opacity-0 group-hover/item:opacity-100 transition-all duration-300 pointer-events-none">
@@ -104,12 +95,12 @@
           </div>
         </div>
 
-        <!-- إنستجرام -->
+        <!-- Instagram -->
         <div class="relative group/item">
           <a class="flex justify-center items-center w-12 h-12 rounded-xl bg-gradient-to-br from-pink-600/20 to-purple-600/20 hover:from-pink-600/40 hover:to-purple-600/40 border border-pink-500/30 hover:border-pink-400/50 transition-all duration-300 hover:scale-110 hover:shadow-md hover:shadow-pink-500/25"
             target="_blank" href="https://www.instagram.com/maktabat_kenouz?igsh=dmZqeDU0dzZ6ejBh">
             <img class="w-6 h-6 transition-transform duration-300 group-hover/item:scale-110" src="insta.png"
-              alt="إنستجرام">
+              alt="Instagram">
           </a>
           <div
             class="absolute left-full ml-3 top-1/2 transform -translate-y-1/2 opacity-0 group-hover/item:opacity-100 transition-all duration-300 pointer-events-none">
@@ -123,7 +114,7 @@
           </div>
         </div>
 
-        <!-- هاتف -->
+        <!-- Phone -->
         <div class="relative group/item">
           <div (click)="copyPhoneNumber()"
             class="flex justify-center items-center w-12 h-12 rounded-xl bg-gradient-to-br from-yellow-600/20 to-orange-600/20 hover:from-yellow-600/40 hover:to-orange-600/40 border border-yellow-500/30 hover:border-yellow-400/50 transition-all duration-300 hover:scale-110 hover:shadow-md hover:shadow-yellow-500/25 cursor-pointer"
@@ -142,7 +133,7 @@
           </div>
         </div>
 
-        <!-- متجر جوجل بلاي -->
+        <!-- Google Play -->
         <div class="relative group/item">
           <a class="flex justify-center items-center w-12 h-12 rounded-xl bg-gradient-to-br from-green-600/20 to-emerald-600/20 hover:from-green-600/40 hover:to-emerald-600/40 border border-green-500/30 hover:border-green-400/50 transition-all duration-300 hover:scale-110 hover:shadow-md hover:shadow-green-500/25"
             target="_blank"
@@ -150,8 +141,7 @@
             <fa-icon [icon]="faGooglePlay"
               class="w-6 h-6 text-white transition-transform duration-300 group-hover/item:scale-110"
               style="pointer-events: none; user-select: none; min-width: 24px; min-height: 24px; flex-shrink: 0;"
-              aria-hidden="true">
-            </fa-icon>
+              aria-hidden="true"></fa-icon>
           </a>
           <div
             class="absolute left-full ml-3 top-1/2 transform -translate-y-1/2 opacity-0 group-hover/item:opacity-100 transition-all duration-300 pointer-events-none">
@@ -165,242 +155,118 @@
           </div>
         </div>
       </div>
+      <!-- Arrow -->
+      <div
+        class="absolute right-0 top-1/2 transform -translate-y-1/2 -translate-x-1/2 w-0 h-0 border-r-4 border-r-gray-900 border-y-2 border-y-transparent">
+      </div>
     </div>
   </div>
 </div>
 
-<!-- التنقل بين الصفحات -->
 <app-navbar></app-navbar>
-
-<app-search-bar class="tutorial-search" [allBooks]="allBooks"
-  (searchExecuted)="onSearchExecuted($event)"></app-search-bar>
 
 <div class="flex flex-col min-h-screen">
   <div class="flex-grow">
     <router-outlet></router-outlet>
-    <!-- إضافة مكون الدردشة -->
     <app-chat-window></app-chat-window>
   </div>
 
-  <!-- Footer احترافي ومبهر -->
   <footer
-    class="relative overflow-hidden bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 dark:from-slate-950 dark:via-blue-950 dark:to-indigo-950 text-white mt-auto">
-    <!-- خلفية مزخرفة -->
-    <div class="absolute inset-0 opacity-40 bg-gradient-to-br from-transparent via-white/5 to-transparent"></div>
-    <div class="absolute inset-0 opacity-30"
-      style="background-image: radial-gradient(circle at 25% 25%, rgba(255,255,255,0.1) 2px, transparent 2px), radial-gradient(circle at 75% 75%, rgba(255,255,255,0.1) 2px, transparent 2px); background-size: 60px 60px;">
-    </div>
-
-    <div class="relative container mx-auto px-4 py-12 sm:py-16 lg:py-20">
-      <!-- الشعار والوصف -->
-      <div class="text-center mb-12 sm:mb-16">
-        <div
-          class="inline-block p-4 rounded-2xl bg-gradient-to-r from-blue-600/20 to-purple-600/20 backdrop-blur-sm border border-white/10 mb-6">
-          <h2
-            class="text-3xl sm:text-4xl lg:text-5xl lg:p-4 font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-2">
-            مكتبة كنوز
-          </h2>
-        </div>
-        <p class="text-base sm:text-lg lg:text-xl text-gray-300 max-w-2xl mx-auto leading-relaxed">
-          اكتشف واشتري أفضل الكتب من مكتبتنا المتنوعة
-          <span class="block mt-2 text-sm text-blue-300">📚 بوابتك إلى عالم المعرفة اللامحدود</span>
-        </p>
-      </div>
-
-      <!-- قسم تحميل التطبيق - تصميم مبهر -->
-      <div class="max-w-4xl mx-auto mb-12 sm:mb-16">
-        <div
-          class="bg-gradient-to-r from-green-600/10 to-emerald-600/10 backdrop-blur-sm border border-green-500/20 rounded-3xl p-6 sm:p-8 lg:p-10">
-          <div class="text-center mb-8">
-            <h3
-              class="rtl lg:p-4 text-2xl sm:text-3xl lg:text-4xl font-bold mb-3 bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">
-              حمّل تطبيق مكتبة كنوز الآن! 🚀
-            </h3>
-            <p class="text-sm sm:text-base lg:text-lg text-gray-300 leading-relaxed">
-              استمتع بتجربة تسوق أفضل للكتب مع تطبيقنا المتطور على الأندرويد
-            </p>
+    class="bg-slate-950 text-gray-300 pb-24 md:pb-10 py-8 lg:py-12 mt-auto border-t border-white/5 relative overflow-hidden text-center">
+    <div class="absolute inset-0 opacity-[0.03]"
+      style="background-image: radial-gradient(#ffffff 1px, transparent 1px); background-size: 32px 32px;"></div>
+    <div class="container mx-auto px-4 relative z-10">
+      <div class="grid grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-12">
+        <!-- Column 1 -->
+        <div class="col-span-2 lg:col-span-1 space-y-6">
+          <div class="flex flex-col items-center">
+            <h2 class="text-2xl font-bold text-white mb-2">مكتبة كنوز</h2>
+            <p class="text-sm text-gray-400 leading-relaxed max-w-xs mx-auto">بوابتك إلى عالم المعرفة. اكتشف آلاف الكتب
+              المتنوعة واستمتع بتجربة قراءة فريدة.</p>
           </div>
-
-          <div class="flex flex-col lg:flex-row gap-6 lg:gap-8 items-center justify-center">
-            <!-- زر التحميل الرئيسي -->
-            <a href="https://play.google.com/store/apps/details?id=com.kenouz.bookstore2&pcampaignid=web_share"
-              target="_blank"
-              class="group relative inline-flex items-center gap-4 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white px-8 py-4 sm:px-10 sm:py-5 rounded-2xl font-bold text-lg sm:text-xl transition-all duration-500 transform hover:scale-105 hover:shadow-2xl shadow-lg overflow-hidden">
-              <div
-                class="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000">
-              </div>
-              <fa-icon [icon]="faGooglePlay" class="w-7 h-7 sm:w-8 sm:h-8 relative z-10 text-white"
-                style="pointer-events: none; user-select: none; min-width: 32px; min-height: 32px; flex-shrink: 0;"
-                aria-hidden="true">
-              </fa-icon>
-              <div class="text-left relative z-10 text-white">
-                <div class="text-xs sm:text-sm opacity-90 mb-1">تحميل من</div>
-                <div class="font-bold">Google Play</div>
-              </div>
-            </a>
-
-            <!-- مميزات التطبيق -->
-            <div class="grid grid-cols-3 gap-3 sm:gap-4 lg:gap-6 text-center">
-              <div
-                class="flex flex-col items-center gap-2 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all duration-300">
-                <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-green-500/20 flex items-center justify-center">
-                  <svg class="w-5 h-5 sm:w-6 sm:h-6 text-green-400" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                      clip-rule="evenodd" />
-                  </svg>
+          <div class="pt-2">
+            <p class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">حمل التطبيق الآن</p>
+            <div class="flex justify-center gap-3">
+              <a href="https://play.google.com/store/apps/details?id=com.kenouz.bookstore2&pcampaignid=web_share"
+                target="_blank"
+                class="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 px-4 py-2 rounded-lg transition-all duration-300 group">
+                <fa-icon [icon]="faGooglePlay"
+                  class="text-gray-400 group-hover:text-green-400 transition-colors"></fa-icon>
+                <div class="text-left">
+                  <div class="text-[10px] leading-none text-gray-500">GET IT ON</div>
+                  <div class="text-sm font-semibold text-gray-200">Google Play</div>
                 </div>
-                <span class="text-xs sm:text-sm font-medium text-gray-300">مجاني</span>
-              </div>
-              <div
-                class="flex flex-col items-center gap-2 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all duration-300">
-                <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-blue-500/20 flex items-center justify-center">
-                  <svg class="w-5 h-5 sm:w-6 sm:h-6 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd"
-                      d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
-                      clip-rule="evenodd" />
-                  </svg>
-                </div>
-                <span class="text-xs sm:text-sm font-medium text-gray-300">آمن</span>
-              </div>
-              <div
-                class="flex flex-col items-center gap-2 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all duration-300">
-                <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-purple-500/20 flex items-center justify-center">
-                  <svg class="w-5 h-5 sm:w-6 sm:h-6 text-purple-400" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.293l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414z"
-                      clip-rule="evenodd" />
-                  </svg>
-                </div>
-                <span class="text-xs sm:text-sm font-medium text-gray-300">سريع</span>
-              </div>
+              </a>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- الروابط السريعة -->
-      <div class="grid grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8 mb-8 sm:mb-16">
-        <div class="text-center">
-          <h4 class="text-lg sm:text-xl font-semibold mb-4 text-blue-300">روابط مهمة</h4>
-          <ul class="space-y-3">
-            <li>
-              <a [routerLink]="'/عن-الموقع'"
-                class="text-gray-300 hover:text-blue-400 transition-colors duration-300 flex items-center justify-center gap-2 group">
-                <span>عن الموقع</span>
-                <svg class="w-4 h-4 transform group-hover:translate-x-1 transition-transform duration-300" fill="none"
-                  stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                </svg>
-              </a>
-            </li>
-            <li>
-              <a [routerLink]="'/سياسة-الخصوصية'"
-                class="text-gray-300 hover:text-blue-400 transition-colors duration-300 flex items-center justify-center gap-2 group">
-                <span>سياسة الخصوصية</span>
-                <svg class="w-4 h-4 transform group-hover:translate-x-1 transition-transform duration-300" fill="none"
-                  stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                </svg>
-              </a>
-            </li>
-            <li>
-              <a [routerLink]="'/الشروط-والاحكام'"
-                class="text-gray-300 hover:text-blue-400 transition-colors duration-300 flex items-center justify-center gap-2 group">
-                <span>الشروط والأحكام</span>
-                <svg class="w-4 h-4 transform group-hover:translate-x-1 transition-transform duration-300" fill="none"
-                  stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                </svg>
-              </a>
-            </li>
+        <!-- Column 2 -->
+        <div class="col-span-1">
+          <h3 class="text-white font-semibold mb-6">روابط سريعة</h3>
+          <ul class="space-y-3 text-sm inline-block text-right">
+            <li><a [routerLink]="'/عن-الموقع'"
+                class="hover:text-blue-400 transition-colors duration-200 flex items-center gap-2 justify-center lg:justify-start"><span
+                  class="w-1.5 h-1.5 rounded-full bg-blue-500/50"></span>عن المكتبة</a></li>
+            <li><a [routerLink]="'/سياسة-الخصوصية'"
+                class="hover:text-blue-400 transition-colors duration-200 flex items-center gap-2 justify-center lg:justify-start"><span
+                  class="w-1.5 h-1.5 rounded-full bg-blue-500/50"></span>سياسة الخصوصية</a></li>
+            <li><a [routerLink]="'/الشروط-والاحكام'"
+                class="hover:text-blue-400 transition-colors duration-200 flex items-center gap-2 justify-center lg:justify-start"><span
+                  class="w-1.5 h-1.5 rounded-full bg-blue-500/50"></span>الشروط والأحكام</a></li>
           </ul>
         </div>
 
-        <div class="text-center">
-          <h4 class="text-lg sm:text-xl font-semibold mb-4 text-purple-300">تواصل معنا</h4>
-          <div class="flex flex-col gap-3">
+        <!-- Column 3 -->
+        <div class="col-span-1">
+          <h3 class="text-white font-semibold mb-6">تواصل معنا</h3>
+          <div class="space-y-4 flex flex-col items-center">
             <a href="tel:01094612729"
-              class="text-gray-300 hover:text-purple-400 transition-colors duration-300 flex items-center justify-center gap-2 group">
-              <span>📞 01094612729</span>
+              class="flex items-center gap-3 text-gray-400 hover:text-white transition-colors group">
+              <div
+                class="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-blue-600/20 transition-colors">
+                <span>📞</span>
+              </div>
+              <span class="text-sm dir-ltr">01094612729</span>
             </a>
-            <div class="flex justify-center gap-4">
-              <a target="_blank" href="https://www.facebook.com/share/1PaYoXPKAq"
-                class="w-10 h-10 rounded-full bg-blue-600/20 hover:bg-blue-600/40 flex items-center justify-center transition-all duration-300 hover:scale-110">
-                <span class="text-sm">📘</span>
-              </a>
-              <a target="_blank" href="https://t.me/kenouz123"
-                class="w-10 h-10 rounded-full bg-blue-500/20 hover:bg-blue-500/40 flex items-center justify-center transition-all duration-300 hover:scale-110">
-                <span class="text-sm">✈️</span>
-              </a>
-              <a target="_blank" href="https://chat.whatsapp.com/KfgUWkKxGoM7yqoC6NBz8q?mode=wwt"
-                class="w-10 h-10 rounded-full bg-green-500/20 hover:bg-green-500/40 flex items-center justify-center transition-all duration-300 hover:scale-110">
-                <span class="text-sm">💬</span>
-              </a>
-              <a target="_blank" href="https://www.instagram.com/maktabet_kenouz/profilecard/?igsh=c2h4ZTFhejljMGlo"
-                class="w-10 h-10 rounded-full bg-pink-500/20 hover:bg-pink-500/40 flex items-center justify-center transition-all duration-300 hover:scale-110">
-                <span class="text-sm">📷</span>
-              </a>
-            </div>
-            <div class="flex justify-center gap-4">
-              <span class="text-xs text-gray-400">فيسبوك</span>
-              <span class="text-xs text-gray-400">تليجرام</span>
-              <span class="text-xs text-gray-400">واتساب</span>
-              <span class="text-xs text-gray-400">إنستجرام</span>
+            <div class="pt-4">
+              <div class="flex flex-wrap justify-center gap-3">
+                <a href="https://YouTube.com/@knoozbook" target="_blank"
+                  class="w-10 h-10 rounded-full bg-white/5 hover:bg-[#FF0000] hover:text-white flex items-center justify-center transition-all duration-300 hover:-translate-y-1"><fa-icon
+                    [icon]="faYoutube" class="text-lg"></fa-icon></a>
+                <a href="https://www.facebook.com/share/1PaYoXPKAq" target="_blank"
+                  class="w-10 h-10 rounded-full bg-white/5 hover:bg-[#1877F2] hover:text-white flex items-center justify-center transition-all duration-300 hover:-translate-y-1"><span
+                    class="text-lg">f</span></a>
+                <a href="https://t.me/kenouz123" target="_blank"
+                  class="w-10 h-10 rounded-full bg-white/5 hover:bg-[#229ED9] hover:text-white flex items-center justify-center transition-all duration-300 hover:-translate-y-1"><span
+                    class="text-lg">✈️</span></a>
+                <a href="https://chat.whatsapp.com/KfgUWkKxGoM7yqoC6NBz8q?mode=wwt" target="_blank"
+                  class="w-10 h-10 rounded-full bg-white/5 hover:bg-[#25D366] hover:text-white flex items-center justify-center transition-all duration-300 hover:-translate-y-1"><span
+                    class="text-lg">💬</span></a>
+                <a href="https://www.instagram.com/maktabet_kenouz/profilecard/?igsh=c2h4ZTFhejljMGlo" target="_blank"
+                  class="w-10 h-10 rounded-full bg-white/5 hover:bg-[#E1306C] hover:text-white flex items-center justify-center transition-all duration-300 hover:-translate-y-1"><span
+                    class="text-lg">📷</span></a>
+              </div>
             </div>
           </div>
         </div>
-
-        <div class="text-center hidden md:block">
-          <h4 class="text-lg sm:text-xl font-semibold mb-4 text-emerald-300">خدماتنا</h4>
-          <ul class="space-y-3">
-            <li class="text-gray-300 hover:text-emerald-400 transition-colors duration-300">📚 آلاف الكتب المتنوعة</li>
-            <li class="text-gray-300 hover:text-emerald-400 transition-colors duration-300">🚚 توصيل سريع وآمن</li>
-            <li class="text-gray-300 hover:text-emerald-400 transition-colors duration-300">💳 دفع إلكتروني آمن</li>
-            <li class="text-gray-300 hover:text-emerald-400 transition-colors duration-300">🎯 عروض وخصومات مميزة</li>
-          </ul>
-        </div>
       </div>
 
-      <div class="text-center md:hidden mb-8 sm:mb-16">
-        <h4 class="text-lg sm:text-xl font-semibold mb-4 text-emerald-300">خدماتنا</h4>
-        <ul class="space-y-3">
-          <li class="text-gray-300 hover:text-emerald-400 transition-colors duration-300">📚 آلاف الكتب المتنوعة</li>
-          <li class="text-gray-300 hover:text-emerald-400 transition-colors duration-300">🚚 توصيل سريع وآمن</li>
-          <li class="text-gray-300 hover:text-emerald-400 transition-colors duration-300">💳 دفع إلكتروني آمن</li>
-          <li class="text-gray-300 hover:text-emerald-400 transition-colors duration-300">🎯 عروض وخصومات مميزة</li>
-        </ul>
-      </div>
-
-
-      <!-- إشعار حقوق الملكية الفكرية -->
-      <div class="border-t border-white/10 pt-8 mb-12 sm:mb-4">
-        <div class="text-center">
-          <p class="text-sm text-gray-400 leading-relaxed max-w-4xl mx-auto">
-            <span class="inline-block w-2 h-2 bg-yellow-400 rounded-full ml-2"></span>
-            الموقع لا يتحمل مسؤولية حقوق الملكية الفكرية الخاصة بالكتب المعروضة، حيث يتم توفيرها من خلال موردين وشركاء
-            متنوعين.
-            نحن نعرض الكتب بغرض البيع فقط، وفي حال وجود أي انتهاك يرجى التواصل معنا لاتخاذ اللازم.
-          </p>
-          <p class="text-xs text-gray-500 mt-4">
-            © {{ currentYear }} مكتبة كنوز. جميع الحقوق محفوظة.
-          </p>
-        </div>
+      <div class="mt-8 pt-6 border-t border-white/5 text-center">
+        <p class="text-xs text-gray-500 mb-4 max-w-2xl mx-auto">الكتب المعروضة يتم توفيرها من خلال موردين متنوعين. نحن
+          منصة للبيع فقط، وفي حال وجود أي ملاحظات حول حقوق الملكية يرجى التواصل معنا.</p>
+        <p class="text-sm text-gray-400">© {{ currentYear }} مكتبة كنوز. جميع الحقوق محفوظة.</p>
       </div>
     </div>
   </footer>
 </div>
 
-<app-navbar-icons
-  class="block md:hidden bg-blue-950 dark:bg-[#0a1325] p-4 shadow-inner bottom-0 w-full fixed z-50"></app-navbar-icons>
-
-<!-- Global Modal Dialog -->
+<app-navbar-icons (accountClick)="openAccountModal()" [isBottomNav]="true"
+  class="fixed bottom-0 left-0 right-0 block md:hidden bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-t border-gray-100 dark:border-gray-800 p-4 shadow-lg z-50"></app-navbar-icons>
+<app-account-modal #accountModal></app-account-modal>
 <app-modal-dialog *ngIf="modalConfig" [isOpen]="!!modalConfig" [title]="modalConfig.title || ''"
   [message]="modalConfig.message || ''" [confirmText]="modalConfig.confirmText || 'موافق'"
   [cancelText]="modalConfig.cancelText || 'إلغاء'" [showCancel]="modalConfig.showCancel || false"
   [type]="modalConfig.type || 'info'" (confirmed)="modalConfig.action?.() ?? closeModal()" (cancelled)="closeModal()"
-  (closed)="closeModal()">
-</app-modal-dialog>
-
-<!-- Tutorial Component -->
+  (closed)="closeModal()"></app-modal-dialog>
 <app-tutorial class="z-50"></app-tutorial>

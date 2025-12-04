@@ -9,68 +9,7 @@
     <option name="autoReloadType" value="NONE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="20921426-b429-47a3-a7f4-6eb8d5c1262b" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/../public/logoname2.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../src/app/admin/amazon-price-calculator/amazon-price-calculator.component.html" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../src/app/admin/amazon-price-calculator/amazon-price-calculator.component.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Backend/app.js" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/app.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Backend/controllers/chat-ai.controller.js" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/controllers/chat-ai.controller.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Backend/controllers/users.controller.js" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/controllers/users.controller.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Backend/dist/browser/Shepherd.webp" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Backend/dist/browser/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/dist/browser/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Backend/dist/browser/logo.ico" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/dist/browser/logo.ico" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Backend/dist/browser/logoname2.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Backend/dist/browser/main-Y33I574P.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Backend/dist/browser/panar1.jpg" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/dist/browser/panar1.jpg" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Backend/dist/browser/panar3.jpg" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/dist/browser/panar3.jpg" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Backend/dist/browser/panar4.jpg" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/dist/browser/panar4.jpg" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Backend/dist/browser/robots.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Backend/dist/browser/sitemap.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Backend/dist/browser/smpanar1.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Backend/dist/browser/smpanar2.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Backend/dist/browser/smpanar3.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Backend/dist/browser/styles-XBYYHU6W.css" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Backend/ecosystem.config.js" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/ecosystem.config.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Backend/output.json" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/output.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Backend/services/sitemap.service.js" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/services/sitemap.service.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../TODO.md" beforeDir="false" afterPath="$PROJECT_DIR$/../TODO.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/app/build.gradle" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/assets/capacitor.config.json" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/capacitor.config.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../capacitor.config.json" beforeDir="false" afterPath="$PROJECT_DIR$/../capacitor.config.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../nginx-config-fixed.conf" beforeDir="false" afterPath="$PROJECT_DIR$/../nginx-config-fixed.conf" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../proxy.conf.json" beforeDir="false" afterPath="$PROJECT_DIR$/../proxy.conf.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../public/Shepherd.webp" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../public/logo.ico" beforeDir="false" afterPath="$PROJECT_DIR$/../public/logo.ico" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../public/logoname2.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../public/panar1.jpg" beforeDir="false" afterPath="$PROJECT_DIR$/../public/panar1.jpg" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../public/panar3.jpg" beforeDir="false" afterPath="$PROJECT_DIR$/../public/panar3.jpg" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../public/panar4.jpg" beforeDir="false" afterPath="$PROJECT_DIR$/../public/panar4.jpg" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../public/smpanar1.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../public/smpanar2.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../public/smpanar3.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../src/app/admin/admin-dashboard/admin-dashboard.component.html" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/admin/admin-dashboard/admin-dashboard.component.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../src/app/admin/admin-dashboard/admin-dashboard.component.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/admin/admin-dashboard/admin-dashboard.component.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../src/app/admin/admin.module.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/admin/admin.module.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../src/app/admin/merchant-management/merchant-management.component.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/admin/merchant-management/merchant-management.component.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../src/app/admin/product-approval/product-approval.component.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/admin/product-approval/product-approval.component.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../src/app/auth/forgot-password/forgot-password.component.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/auth/forgot-password/forgot-password.component.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../src/app/book-details/book-details.component.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/book-details/book-details.component.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../src/app/book-list/rewayat/rewayat.component.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/book-list/rewayat/rewayat.component.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../src/app/checkout-modal/checkout-modal.component.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/checkout-modal/checkout-modal.component.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../src/app/home-page/home-page.component.html" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/home-page/home-page.component.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../src/app/home-page/home-page.component.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/home-page/home-page.component.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../src/app/merchant/dashboard/dashboard.component.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/merchant/dashboard/dashboard.component.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../src/app/merchant/merchant-profile/merchant-profile.component.html" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/merchant/merchant-profile/merchant-profile.component.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../src/app/merchant/merchant-profile/merchant-profile.component.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/merchant/merchant-profile/merchant-profile.component.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../src/app/navbar/navbar.component.html" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/navbar/navbar.component.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../src/app/referrals/referrals.component.html" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/referrals/referrals.component.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../src/app/referrals/referrals.component.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/referrals/referrals.component.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../src/app/search-results/search-results.component.html" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/search-results/search-results.component.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../src/app/search-results/search-results.component.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/search-results/search-results.component.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../src/environments/environment.prod.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../src/environments/environment.prod.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../src/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/../src/index.html" afterDir="false" />
-    </list>
+    <list default="true" id="20921426-b429-47a3-a7f4-6eb8d5c1262b" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -115,7 +54,6 @@
     "RunOnceActivity.cidr.known.project.marker": "true",
     "RunOnceActivity.git.unshallow": "true",
     "RunOnceActivity.readMode.enableVisualFormatting": "true",
-    "android.gradle.sync.needed": "true",
     "cf.first.check.clang-format": "false",
     "cidr.known.project.marker": "true",
     "git-widget-placeholder": "main",

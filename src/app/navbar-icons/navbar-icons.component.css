@@ -1,0 +1,19 @@
+/* Ensure modals render at viewport level */
+:host {
+    position: static;
+}
+
+/* Force account modal to render at viewport level */
+:host ::ng-deep app-account-modal {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    z-index: 9999 !important;
+    pointer-events: none;
+}
+
+:host ::ng-deep app-account-modal>div {
+    pointer-events: auto;
+}

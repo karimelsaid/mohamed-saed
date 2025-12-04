@@ -1,10 +1,10 @@
-import { Component, HostListener, OnInit, ViewChild, ChangeDetectorRef, Output, EventEmitter } from '@angular/core';
+import { Component, HostListener, OnInit, ViewChild, ChangeDetectorRef } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { faBars, faClose, faHome, faShoppingCart, faBook, faFilePdf, faUser, faChevronUp, faChevronDown, faSearch,faHeart,faCartPlus,faClipboardList, faTachometerAlt, faBell, faTrash,faFilter, faMosque, faBrain, faScroll, faChartLine, faHeartbeat, faBookOpen, faChild, faHistory, faPalette, faMoon, faSun, faExpand, faClock, faList, faBolt, faTshirt, faMagic, faShoePrints, faChair, faGamepad, faCut, faEllipsisH } from '@fortawesome/free-solid-svg-icons';
+import { faBars, faClose, faHome, faShoppingCart, faBook, faFilePdf, faUser, faChevronUp, faChevronDown, faSearch, faHeart, faCartPlus, faClipboardList, faTachometerAlt, faBell, faTrash, faMosque, faBrain, faScroll, faChartLine, faHeartbeat, faBookOpen, faChild, faHistory, faPalette, faMoon, faSun, faExpand, faBolt, faTshirt, faMagic, faShoePrints, faChair, faGamepad, faCut, faEllipsisH } from '@fortawesome/free-solid-svg-icons';
 import { DataService } from '../services/data.service';
 import { AccountModalComponent } from '../auth/account-modal/account-modal.component';
 import { AuthService } from '../auth/auth.service';
@@ -16,15 +16,13 @@ import { SearchBarComponent } from '../search-bar/search-bar.component';
 @Component({
   selector: 'app-navbar',
   standalone: true,
-  imports: [CommonModule, RouterLink, RouterLinkActive, FormsModule, FontAwesomeModule, NavbarIconsComponent, SearchBarComponent],
+  imports: [CommonModule, RouterLink, RouterLinkActive, FormsModule, FontAwesomeModule, NavbarIconsComponent, SearchBarComponent, AccountModalComponent],
   templateUrl: './navbar.component.html',
   styleUrls: ['./navbar.component.css']
 })
 export class NavbarComponent implements OnInit {
   @ViewChild(AccountModalComponent) accountModal!: AccountModalComponent;
-  @ViewChild('inputElement') inputElement: any;
-   @Output() searchExecuted = new EventEmitter<{ query: string, filter: string }>();
-faFilter = faFilter;
+
   faBars = faBars;
   faClose = faClose;
   faHome = faHome;
@@ -66,8 +64,6 @@ faFilter = faFilter;
   scrollBook = true;
   scrollProducts = true;
   y: number = 0;
-  searchQuery: string = ''; // القيمة المدخلة في خانة البحث
-  searchResults: any[] = []; // نتائج البحث المعروضة
   allBooks: any[] = []; // جميع الكتب في الموقع
   isLoggedIn: boolean = false;
   show = false;
@@ -90,13 +86,11 @@ faFilter = faFilter;
 
   isDarkMode: boolean = false; // Track dark mode state
   isFullScreen: boolean = false; // Track full screen state
-  showFilterDropdown: boolean = false;
-    selectedFilter: string = 'all';
-    user: any = null; // Current user data
+  user: any = null; // Current user data
 
-    toggleFilterDropdown() {
-    this.showFilterDropdown = !this.showFilterDropdown;
-  }
+  // Search related
+  searchQuery: string = '';
+  selectedFilter: string = 'all';
 
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent) {
@@ -108,12 +102,6 @@ faFilter = faFilter;
     }
   }
 
-  selectFilter(filter: string) {
-    this.selectedFilter = filter;
-    this.showFilterDropdown = false;
-    this.onSearchExecuted({ query: this.searchQuery.trim(), filter: this.selectedFilter });
-  }
-
   onSearchExecuted(event: { query: string; filter: string }) {
     const query = event.query;
     const filter = event.filter;
@@ -122,9 +110,6 @@ faFilter = faFilter;
     this.router.navigate(['/research'], { queryParams: { q: query, filter: filter } });
   }
 
-  emitSearch() {
-    this.searchExecuted.emit({ query: this.searchQuery.trim(), filter: this.selectedFilter });
-  }
   toggleDarkMode(): void {
     this.isDarkMode = !this.isDarkMode;
     localStorage.setItem('darkMode', this.isDarkMode.toString());
@@ -187,7 +172,7 @@ faFilter = faFilter;
     private merchantAuthService: MerchantAuthService,
     private notificationService: NotificationService,
     private cdr: ChangeDetectorRef
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     // Initialize dark mode from localStorage, default to false (light mode)
@@ -339,63 +324,6 @@ faFilter = faFilter;
         this.cdr.markForCheck();
       });
     }).unsubscribe();
-  }
-
-  onSearch(): void {
-    if (this.searchQuery.trim()) {
-      this.router.navigate(['/research'], { queryParams: { q: this.searchQuery.trim(), filter: this.selectedFilter } });
-      this.searchResults = []; // إخفاء الاقتراحات بعد تنفيذ البحث
-    }
-  }
-
-  selectSuggestion(productName: string): void {
-    this.searchQuery = productName;
-    this.searchResults = [];
-    this.onSearch(); // تنفيذ البحث تلقائيًا
-  }
-
-  private normalizeArabic(text: string): string {
-    return text
-      .replace(/[أإآ]/g, 'ا')
-      .replace(/[هة]/g, 'ه')
-      // Remove special characters except numbers and letters
-      .replace(/[^0-9a-zA-Z\u0600-\u06FF\s]/g, '')
-      // Remove extra spaces
-      .replace(/\s+/g, ' ')
-      .trim();
-  }
-
-  onSearchKeyup(): void {
-    if (this.searchQuery.trim()) {
-      const normalizedQuery = this.normalizeArabic(this.searchQuery.toLowerCase());
-      this.searchResults = this.allBooks.filter((book) => {
-        if (!book.product_name || typeof book.product_name !== 'string') {
-          return false;
-        }
-        const normalizedProductName = this.normalizeArabic(book.product_name.toLowerCase());
-        return normalizedProductName.includes(normalizedQuery);
-      });
-      // Sort results to prioritize books starting with the exact original query
-      const originalQueryLower = this.searchQuery.toLowerCase();
-      this.searchResults.sort((a, b) => {
-        const aStarts = a.product_name.toLowerCase().startsWith(originalQueryLower);
-        const bStarts = b.product_name.toLowerCase().startsWith(originalQueryLower);
-        if (aStarts && !bStarts) return -1;
-        if (!aStarts && bStarts) return 1;
-        return 0;
-      });
-    } else {
-      this.searchResults = []; // إذا كان النص فارغًا، إخفاء النتائج
-    }
-  }
-
-  // دالة التعامل مع الضغط على Enter
-  onEnterPress(event: KeyboardEvent): void {
-    if (event.key === 'Enter') {
-      this.onSearch(); // استدعاء دالة البحث عند الضغط على Enter
-      this.searchResults = []; // إخفاء الاقتراحات بعد الضغط على Enter
-      this.inputElement.nativeElement.blur(); // إزالة التركيز من حقل البحث بعد الضغط على Enter
-    }
   }
 
   @HostListener('window:resize', ['$event'])

@@ -1,9 +1,8 @@
-import { Component, OnInit, ViewChild, ChangeDetectorRef, Output, EventEmitter, ElementRef, HostListener, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
+import { Component, OnInit, ViewChild, ChangeDetectorRef, Output, EventEmitter, ElementRef, HostListener, CUSTOM_ELEMENTS_SCHEMA, ViewEncapsulation, Input } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, NavigationEnd } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { faBars, faClose, faHome, faBook, faFilePdf, faUser, faChevronUp, faChevronDown, faSearch, faHeart, faCartPlus, faClipboardList, faTachometerAlt, faBell, faTrash, faStore, faFilter, faExpand } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { AccountModalComponent } from '../auth/account-modal/account-modal.component';
 import { AuthService } from '../auth/auth.service';
 import { MerchantAuthService } from '../services/merchant-auth.service';
 import { NotificationService, Notification } from '../services/notification.service';
@@ -14,13 +13,13 @@ import { DataService } from '../services/data.service';
   templateUrl: './navbar-icons.component.html',
   styleUrls: ['./navbar-icons.component.css'],
   standalone: true,
-  imports: [CommonModule, RouterLink, RouterLinkActive, FontAwesomeModule, AccountModalComponent],
-  schemas: [CUSTOM_ELEMENTS_SCHEMA]
+  imports: [CommonModule, RouterLink, RouterLinkActive, FontAwesomeModule],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
+  encapsulation: ViewEncapsulation.None
 })
 export class NavbarIconsComponent implements OnInit {
-  @ViewChild('accountModal') accountModal!: any;
-  @ViewChild('inputElement') inputElement!: ElementRef;
-  @Output() searchExecuted = new EventEmitter<{ query: string, filter: string }>();
+  @Output() accountClick = new EventEmitter<void>();
+  @Input() isBottomNav: boolean = false;
 
   faFilter = faFilter;
   faBars = faBars;
@@ -78,7 +77,7 @@ export class NavbarIconsComponent implements OnInit {
     private merchantAuthService: MerchantAuthService,
     private notificationService: NotificationService,
     private cdr: ChangeDetectorRef
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.isFullScreen = !!document.fullscreenElement;
@@ -198,9 +197,7 @@ export class NavbarIconsComponent implements OnInit {
     this.router.navigate(['/research'], { queryParams: { q: query, filter: filter } });
   }
 
-  emitSearch() {
-    this.searchExecuted.emit({ query: this.searchQuery.trim(), filter: this.selectedFilter });
-  }
+
   toggleDarkMode(): void {
     this.isDarkMode = !this.isDarkMode;
     localStorage.setItem('darkMode', this.isDarkMode.toString());
@@ -254,12 +251,10 @@ export class NavbarIconsComponent implements OnInit {
       .trim();
   }
 
-  // دالة التعامل مع الضغط على Enter
   onEnterPress(event: KeyboardEvent): void {
     if (event.key === 'Enter') {
-      this.onSearch(); // استدعاء دالة البحث عند الضغط على Enter
-      this.searchResults = []; // إخفاء الاقتراحات بعد الضغط على Enter
-      this.inputElement.nativeElement.blur(); // إزالة التركيز من حقل البحث بعد الضغط على Enter
+      this.onSearch();
+      this.searchResults = [];
     }
   }
 
@@ -323,9 +318,8 @@ export class NavbarIconsComponent implements OnInit {
     // Add more types if needed
   }
 
-  openAccountModal(): void {
-    this.accountModal.openModal();
-    this.showAccountModal = true;
+  onAccountClick(): void {
+    this.accountClick.emit();
     this.isAccountActive = true;
     this.cdr.markForCheck();
   }

@@ -1,0 +1,22 @@
+User-agent: *
+Disallow: /login
+Disallow: /register
+Disallow: /basket
+Disallow: /Favorites
+Disallow: /ControlPanel
+Allow: /book
+Allow: /Home
+Allow: /Business-Marketing-Finance
+Allow: /Education-children
+Allow: /Arts-crafts
+Allow: /HealthMedicineScience
+Allow: /Islamic
+Allow: /Novels-stories
+Allow: /Self-development-psychology
+Allow: /History-Biographies
+Allow: /Dictionaries-References
+Allow: /research
+Allow: /requests
+Allow: /print
+
+Sitemap: https://knoozbook.com/sitemap.xml

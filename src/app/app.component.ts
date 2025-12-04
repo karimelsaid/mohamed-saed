@@ -1,7 +1,7 @@
 import { Component, ViewChild, ElementRef } from '@angular/core';
 import { Router } from '@angular/router';
 import { faChevronLeft, faChevronRight, faSearch } from '@fortawesome/free-solid-svg-icons';
-import { faGooglePlay } from '@fortawesome/free-brands-svg-icons';
+import { faGooglePlay, faYoutube } from '@fortawesome/free-brands-svg-icons';
 import { DataService } from './services/data.service';
 import { ModalService, ModalConfig } from './services/modal.service';
 import { TutorialService } from './services/tutorial.service';
@@ -14,6 +14,8 @@ import { Subscription } from 'rxjs';
   styleUrl: './app.component.css'
 })
 export class AppComponent {
+  @ViewChild('accountModal') accountModal: any;
+
   title = 'kenouz';  // Added title property to fix the error
   currentYear = new Date().getFullYear(); // السنة الحالية
 
@@ -21,6 +23,7 @@ export class AppComponent {
   faChevronRight = faChevronRight;
   faSearch = faSearch;
   faGooglePlay = faGooglePlay;
+  faYoutube = faYoutube;
   outOn = false;
   isSearchPage: boolean = false; // متغير لتحديد إذا كانت الصفحة هي صفحة البحث
 
@@ -30,7 +33,7 @@ export class AppComponent {
   modalConfig: ModalConfig | null = null;
   private modalSubscription: Subscription | null = null;
 
-  constructor(private router: Router, private dataService: DataService, private modalService: ModalService, private tutorialService: TutorialService) {}
+  constructor(private router: Router, private dataService: DataService, private modalService: ModalService, private tutorialService: TutorialService) { }
 
   ngOnInit(): void {
     // تحقق من وجود صفحة البحث في المسار
@@ -118,5 +121,11 @@ export class AppComponent {
 
   closeModal(): void {
     this.modalConfig = null;
+  }
+
+  openAccountModal(): void {
+    if (this.accountModal) {
+      this.accountModal.openModal();
+    }
   }
 }

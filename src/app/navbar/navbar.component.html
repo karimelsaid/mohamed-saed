@@ -1,404 +1,524 @@
-<div class="bg-gradient-to-r from-blue-900 via-blue-800 to-indigo-900 dark:from-gray-900 dark:via-blue-950 dark:to-gray-900 p-4 fixed top-0 w-full h-auto z-[999] shadow-2xl">
-<div class="flex items-center justify-around">
+<div class="bg-white/95 dark:bg-gray-900/95 p-2 md:p-4 fixed top-0 w-full h-auto z-[999] shadow-2xl">
+  <div class="flex items-center justify-around">
 
     <div routerLink="/" class="cursor-pointer transition-transform duration-300 hover:scale-105">
-      <img class="w-10 sm:w-14 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300" src="logoname2.jpg" alt="Logo">
+      <img class="w-14 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300" src="logoname2.jpg"
+        alt="Logo">
     </div>
 
-      <app-navbar-icons class="hidden md:block"></app-navbar-icons>
+    <app-navbar-icons class="hidden md:block" [isBottomNav]="false"
+      (accountClick)="openAccountModal()"></app-navbar-icons>
 
-      <div class="block md:hidden">
-        <div class="search-bar-container relative flex justify-center">
-          <app-search-bar
-            [allBooks]="allBooks"
-            (searchExecuted)="onSearchExecuted($event)">
-          </app-search-bar>
-        </div>
+    <div
+      class="w-full md:absolute md:top-[72px] md:left-0 md:right-0 m-4 md:py-3 transition-all duration-300">
+      <div class="search-bar-container relative flex justify-center max-w-4xl mx-auto">
+        <app-search-bar class="w-full" [allBooks]="allBooks" (searchExecuted)="onSearchExecuted($event)">
+        </app-search-bar>
       </div>
+    </div>
 
-      <div class="hidden md:block text-[12px] text-white dark:text-gray-300 rtl font-bold">
-          <div class="grid h-1/2 sm:flex gap-1 justify-center items-center">
+    <div class="hidden md:block text-[12px] text-gray-600 dark:text-white/95 rtl font-bold">
+      <div class="grid h-1/2 sm:flex gap-1 justify-center items-center">
 
-          <div class="flex items-end sm:items-center cursor-pointer px-1 py-2 rounded-lg hover:bg-white/10 transition-all duration-300 hover:scale-105" routerLink="/Home" routerLinkActive="text-blue-400 bg-white/20" [routerLinkActiveOptions]="{exact:true}">
-                <fa-icon class="m-1 text-2xl sm:text-sm text-right transition-transform duration-300" [icon]="faHome"></fa-icon>
-                <span class="ml-1 text-sm sm:text-xs">الصفحه الرئيسيه</span>
-          </div>
-          <div class="flex items-end sm:items-center cursor-pointer px-1 py-2 rounded-lg hover:bg-white/10 transition-all duration-300 hover:scale-105" (click)="scrollBook=!scrollBook" [ngClass]="{'text-blue-400 bg-white/20': !scrollBook}">
-              <fa-icon class="m-1 text-2xl sm:text-sm text-right transition-transform duration-300" [icon]="faBook"></fa-icon>
-              <span class="ml-1 text-sm sm:text-xs">كتب
-                  <fa-icon [ngClass]="{hidden:!scrollBook}" class="text-xs mx-2 sm:mx-0 mb-1 transition-transform duration-300" [icon]="faChevronDown"></fa-icon>
-                  <fa-icon [ngClass]="{hidden:scrollBook}" class="text-xs mx-2 sm:mx-0 mb-1 transition-transform duration-300" [icon]="faChevronUp"></fa-icon>
-              </span>
-          </div>
-          <div class="flex items-end sm:items-center cursor-pointer px-1 py-2 rounded-lg hover:bg-white/10 transition-all duration-300 hover:scale-105" (click)="scrollProducts=!scrollProducts" [ngClass]="{'text-blue-400 bg-white/20': !scrollProducts}">
-              <fa-icon class="m-1 text-2xl sm:text-sm text-right transition-transform duration-300" [icon]="faShoppingCart"></fa-icon>
-              <span class="ml-1 text-sm sm:text-xs">المنتجات
-                  <fa-icon [ngClass]="{hidden:!scrollProducts}" class="text-xs mx-2 sm:mx-0 mb-1 transition-transform duration-300" [icon]="faChevronDown"></fa-icon>
-                  <fa-icon [ngClass]="{hidden:scrollProducts}" class="text-xs mx-2 sm:mx-0 mb-1 transition-transform duration-300" [icon]="faChevronUp"></fa-icon>
-              </span>
-          </div>
-
-          <!-- Desktop Dropdown Overlay -->
-          <div *ngIf="!scrollBook || !scrollProducts" class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-40" (click)="scrollBook=true; scrollProducts=true"></div>
-
-          <!-- Books Dropdown -->
-          <ul [ngClass]="{hidden:scrollBook}" class="absolute bg-white dark:bg-[#0a1325] text-blue-950 dark:text-blue-100 right-36 md:right-[220px] top-20 rounded-lg shadow-2xl border border-blue-200 dark:border-blue-800 w-48 lg:w-80 overflow-hidden transform transition-all duration-300 ease-in-out z-50 opacity-0 scale-95" [style.opacity]="scrollBook ? '0' : '1'" [style.transform]="scrollBook ? 'scale(0.95)' : 'scale(1)'" (click)="$event.stopPropagation()">
-            <!-- Header -->
-            <div class="bg-gradient-to-r from-blue-600 to-blue-800 dark:from-blue-700 dark:to-blue-900 text-white px-4 py-3">
-              <div class="flex items-center">
-                <fa-icon class="text-lg ml-2" [icon]="faBook"></fa-icon>
-                <span class="font-bold text-sm">أقسام الكتب</span>
-              </div>
-            </div>
-
-            <!-- Menu Items -->
-            <div class="py-2">
-              <div (click)="scrollBook = true" routerLinkActive="text-orange-400" routerLink="/Islamic" class="cursor-pointer flex items-center px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group">
-                <fa-icon class="text-blue-600 dark:text-blue-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200" [icon]="faMosque"></fa-icon>
-                <li class="text-sm font-medium">دينية</li>
-              </div>
-
-              <div (click)="scrollBook = true" class="cursor-pointer flex items-center px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group" routerLinkActive="text-orange-400" routerLink="/Self-development-psychology">
-                <fa-icon class="text-green-600 dark:text-green-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200" [icon]="faBrain"></fa-icon>
-                <li class="text-sm font-medium">تطوير الذات وعلم النفس</li>
-              </div>
-
-              <div (click)="scrollBook = true" class="cursor-pointer flex items-center px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group" routerLinkActive="text-orange-400" routerLink="/Novels-stories">
-                <fa-icon class="text-purple-600 dark:text-purple-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200" [icon]="faScroll"></fa-icon>
-                <li class="text-sm font-medium">روايات وقصص</li>
-              </div>
-
-              <div (click)="scrollBook = true" class="cursor-pointer flex items-center px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group" routerLinkActive="text-orange-400" routerLink="/Business-Marketing-Finance">
-                <fa-icon class="text-emerald-600 dark:text-emerald-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200" [icon]="faChartLine"></fa-icon>
-                <li class="text-sm font-medium">أعمال وتسويق ومالية</li>
-              </div>
-
-              <div (click)="scrollBook = true" class="cursor-pointer flex items-center px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group" routerLinkActive="text-orange-400" routerLink="/HealthMedicineScience">
-                <fa-icon class="text-red-600 dark:text-red-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200" [icon]="faHeartbeat"></fa-icon>
-                <li class="text-sm font-medium">صحة وطب وعلوم</li>
-              </div>
-
-              <div (click)="scrollBook = true" class="cursor-pointer flex items-center px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group" routerLinkActive="text-orange-400" routerLink="/Dictionaries-References">
-                <fa-icon class="text-indigo-600 dark:text-indigo-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200" [icon]="faBookOpen"></fa-icon>
-                <li class="text-sm font-medium">قواميس ومراجع</li>
-              </div>
-
-              <div (click)="scrollBook = true" class="cursor-pointer flex items-center px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group" routerLinkActive="text-orange-400" routerLink="/Education-children">
-                <fa-icon class="text-pink-600 dark:text-pink-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200" [icon]="faChild"></fa-icon>
-                <li class="text-sm font-medium">تربية وأطفال</li>
-              </div>
-
-              <div (click)="scrollBook = true" class="cursor-pointer flex items-center px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group" routerLinkActive="text-orange-400" routerLink="/History-Biographies">
-                <fa-icon class="text-amber-600 dark:text-amber-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200" [icon]="faHistory"></fa-icon>
-                <li class="text-sm font-medium">تاريخ وسير ذاتية</li>
-              </div>
-
-              <div (click)="scrollBook = true" class="cursor-pointer flex items-center px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group" routerLinkActive="text-orange-400" routerLink="/Arts-crafts">
-                <fa-icon class="text-teal-600 dark:text-teal-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200" [icon]="faPalette"></fa-icon>
-                <li class="text-sm font-medium">فنون وحرف</li>
-              </div>
-            </div>
-
-            <!-- Footer -->
-            <div class="border-t border-blue-200 dark:border-blue-800 bg-gradient-to-r from-orange-50 to-yellow-50 dark:from-orange-900/20 dark:to-yellow-900/20 px-4 py-3">
-              <p class="text-xs text-blue-600 dark:text-blue-400 text-center font-semibold">استكشف مجموعتنا المتنوعة من الكتب - عروض خاصة متاحة!</p>
-            </div>
-          </ul>
-
-          <!-- Products Dropdown -->
-          <ul [ngClass]="{hidden:scrollProducts}" class="absolute bg-white dark:bg-[#0a1325] text-blue-950 dark:text-blue-100 right-36 md:right-[220px] top-20 rounded-lg shadow-2xl border border-blue-200 dark:border-blue-800 w-48 lg:w-80 overflow-hidden transform transition-all duration-300 ease-in-out z-50 opacity-0 scale-95" [style.opacity]="scrollProducts ? '0' : '1'" [style.transform]="scrollProducts ? 'scale(0.95)' : 'scale(1)'" (click)="$event.stopPropagation()">
-            <!-- Header -->
-            <div class="bg-gradient-to-r from-blue-600 to-blue-800 dark:from-blue-700 dark:to-blue-900 text-white px-4 py-3">
-              <div class="flex items-center">
-                <fa-icon class="text-lg ml-2" [icon]="faShoppingCart"></fa-icon>
-                <span class="font-bold text-sm">أقسام المنتجات</span>
-              </div>
-            </div>
-
-            <!-- Menu Items -->
-            <div class="py-2 flex flex-wrap">
-              <div (click)="exitProductsrow()" routerLinkActive="text-orange-400" routerLink="/electronics" class="cursor-pointer flex items-center px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group w-1/2">
-                <fa-icon class="text-blue-600 dark:text-blue-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200" [icon]="faBolt"></fa-icon>
-                <li class="text-sm font-medium">إلكترونيات</li>
-              </div>
-
-              <div (click)="exitProductsrow()" class="cursor-pointer flex items-center px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group w-1/2" routerLinkActive="text-orange-400" routerLink="/clothing">
-                <fa-icon class="text-green-600 dark:text-green-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200" [icon]="faTshirt"></fa-icon>
-                <li class="text-sm font-medium">ملابس</li>
-              </div>
-
-              <div (click)="exitProductsrow()" class="cursor-pointer flex items-center px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group w-1/2" routerLinkActive="text-orange-400" routerLink="/cosmetics">
-                <fa-icon class="text-purple-600 dark:text-purple-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200" [icon]="faMagic"></fa-icon>
-                <li class="text-sm font-medium">العناية الشخصية</li>
-              </div>
-
-              <div (click)="exitProductsrow()" class="cursor-pointer flex items-center px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group w-1/2" routerLinkActive="text-orange-400" routerLink="/shoes">
-                <fa-icon class="text-emerald-600 dark:text-emerald-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200" [icon]="faShoePrints"></fa-icon>
-                <li class="text-sm font-medium">أحذية</li>
-              </div>
-
-              <div (click)="exitProductsrow()" class="cursor-pointer flex items-center px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group w-1/2" routerLinkActive="text-orange-400" routerLink="/furniture">
-                <fa-icon class="text-red-600 dark:text-red-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200" [icon]="faChair"></fa-icon>
-                <li class="text-sm font-medium">أثاث</li>
-              </div>
-
-              <div (click)="exitProductsrow()" class="cursor-pointer flex items-center px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group w-1/2" routerLinkActive="text-orange-400" routerLink="/games">
-                <fa-icon class="text-indigo-600 dark:text-indigo-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200" [icon]="faGamepad"></fa-icon>
-                <li class="text-sm font-medium">ألعاب</li>
-              </div>
-
-              <div (click)="exitProductsrow()" class="cursor-pointer flex items-center px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group w-1/2" routerLinkActive="text-orange-400" routerLink="/fabrics">
-                <fa-icon class="text-pink-600 dark:text-pink-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200" [icon]="faCut"></fa-icon>
-                <li class="text-sm font-medium">أقمشة</li>
-              </div>
-
-              <div (click)="exitProductsrow()" class="cursor-pointer flex items-center px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group w-1/2" routerLinkActive="text-orange-400" routerLink="/others">
-                <fa-icon class="text-amber-600 dark:text-amber-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200" [icon]="faEllipsisH"></fa-icon>
-                <li class="text-sm font-medium">أخرى</li>
-              </div>
-            </div>
-
-            <!-- Footer -->
-            <div class="border-t border-blue-200 dark:border-blue-800 bg-gradient-to-r from-orange-50 to-yellow-50 dark:from-orange-900/20 dark:to-yellow-900/20 px-4 py-3">
-              <p class="text-xs text-blue-600 dark:text-blue-400 text-center font-semibold">استكشف مجموعتنا المتنوعة من المنتجات - عروض خاصة متاحة!</p>
-            </div>
-          </ul>
+        <div
+          class="flex items-end sm:items-center cursor-pointer px-1 py-2 rounded-lg hover:bg-white/10 transition-all duration-300 hover:scale-105"
+          routerLink="/Home" routerLinkActive="text-blue-400 bg-white/20" [routerLinkActiveOptions]="{exact:true}">
+          <fa-icon class="m-1 text-2xl sm:text-sm text-right transition-transform duration-300"
+            [icon]="faHome"></fa-icon>
+          <span class="ml-1 text-sm sm:text-xs">الصفحه الرئيسيه</span>
         </div>
-      </div>
-
-      <!-- Buttons Group -->
-      <div class="flex items-center gap-2">
-        <!-- Dark Mode Toggle Button -->
-        <div class="flex flex-col sm:flex-row items-center cursor-pointer" title="تبديل الوضع الداكن">
-          <button (click)="toggleDarkMode()" class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full shadow-md focus:outline-none transition-colors duration-300 p-2">
-            <fa-icon *ngIf="isDarkMode" [icon]="faMoon" class="text-lg"></fa-icon>
-            <fa-icon *ngIf="!isDarkMode" [icon]="faSun" class="text-lg text-yellow-600"></fa-icon>
-          </button>
+        <div
+          class="flex items-end sm:items-center cursor-pointer px-1 py-2 rounded-lg hover:bg-white/10 transition-all duration-300 hover:scale-105"
+          (click)="scrollBook=!scrollBook" [ngClass]="{'text-blue-400 bg-white/20': !scrollBook}">
+          <fa-icon class="m-1 text-2xl sm:text-sm text-right transition-transform duration-300"
+            [icon]="faBook"></fa-icon>
+          <span class="ml-1 text-sm sm:text-xs">كتب
+            <fa-icon [ngClass]="{hidden:!scrollBook}"
+              class="text-xs mx-2 sm:mx-0 mb-1 transition-transform duration-300" [icon]="faChevronDown"></fa-icon>
+            <fa-icon [ngClass]="{hidden:scrollBook}" class="text-xs mx-2 sm:mx-0 mb-1 transition-transform duration-300"
+              [icon]="faChevronUp"></fa-icon>
+          </span>
+        </div>
+        <div
+          class="flex items-end sm:items-center cursor-pointer px-1 py-2 rounded-lg hover:bg-white/10 transition-all duration-300 hover:scale-105"
+          (click)="scrollProducts=!scrollProducts" [ngClass]="{'text-blue-400 bg-white/20': !scrollProducts}">
+          <fa-icon class="m-1 text-2xl sm:text-sm text-right transition-transform duration-300"
+            [icon]="faShoppingCart"></fa-icon>
+          <span class="ml-1 text-sm sm:text-xs">المنتجات
+            <fa-icon [ngClass]="{hidden:!scrollProducts}"
+              class="text-xs mx-2 sm:mx-0 mb-1 transition-transform duration-300" [icon]="faChevronDown"></fa-icon>
+            <fa-icon [ngClass]="{hidden:scrollProducts}"
+              class="text-xs mx-2 sm:mx-0 mb-1 transition-transform duration-300" [icon]="faChevronUp"></fa-icon>
+          </span>
         </div>
 
-        <!-- Full Screen Toggle Button -->
-        <div class="flex flex-col sm:flex-row items-center cursor-pointer" title="تبديل الشاشة الكاملة">
-          <button (click)="toggleFullScreen()" class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full shadow-md focus:outline-none transition-colors duration-300 p-2">
-            <fa-icon [icon]="faExpand" class="text-lg"></fa-icon>
-          </button>
-        </div>
+        <!-- Desktop Dropdown Overlay -->
+        <div *ngIf="!scrollBook || !scrollProducts" class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-40"
+          (click)="scrollBook=true; scrollProducts=true"></div>
 
-        <!-- Bars Icon -->
-        <div>
-          <fa-icon (click)="openBars=!openBars" [ngClass]="{hidden:openBars}" class="md:hidden font-bold text-xl text-white cursor-pointer bg-gradient-to-r from-orange-400 to-orange-500 dark:from-orange-500 dark:to-orange-600 rounded-full p-2 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 animate-pulse" [icon]="faBars"></fa-icon>
-          <fa-icon (click)="openBars=!openBars" [ngClass]="{hidden:!openBars}" class="md:hidden cursor-pointer text-2xl text-orange-300 dark:text-orange-400" [icon]="faClose"></fa-icon>
-        </div>
-      </div>
-</div>
-
-    <!-- Mobile Header -->
-    <div class="rtl md:hidden z-40 relative">
-      <!-- Mobile Menu Overlay -->
-      <div *ngIf="openBars"
-           class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-40"></div>
-
-      <!-- Mobile Menu Panel -->
-      <div [ngClass]="{'translate-x-0': openBars, 'translate-x-full': !openBars}"
-           class="mobile-menu-panel fixed top-0 right-0 h-full w-80 max-w-[85vw] bg-white dark:bg-[#0a1325] shadow-2xl transform transition-transform duration-300 ease-in-out z-50 overflow-y-auto"
-           (click)="$event.stopPropagation()">
-
-        <!-- Mobile Menu Header -->
-        <div class="bg-gradient-to-r from-blue-600 to-blue-800 dark:from-blue-700 dark:to-blue-900 text-white p-6">
-          <div class="flex items-center justify-between">
-            <div class="flex gap-4 items-center">
-              <img class="w-10 h-10 rounded-full mr-3" src="logoname2.jpg" alt="Logo">
-              <h2 class="text-lg font-bold">القائمة الرئيسية</h2>
-            </div>
-            <button (click)="exitBars()"
-                    class="p-2 rounded-full hover:bg-white hover:bg-opacity-20 transition-colors duration-200">
-              <fa-icon [icon]="faClose" class="text-xl"></fa-icon>
-            </button>
-          </div>
-        </div>
-
-        <!-- Mobile Menu Content -->
-        <div class="p-6 space-y-4">
-
-          <!-- Navigation Items -->
-          <div class="space-y-2">
-            <!-- Home -->
-            <div routerLink="/Home" routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
-                 class="flex gap-4 items-center p-4 rounded-xl cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all duration-200 group">
-              <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-800 mr-4 group-hover:scale-110 transition-transform duration-200">
-                <fa-icon [icon]="faHome" class="text-blue-600 dark:text-blue-400"></fa-icon>
-              </div>
-              <div>
-                <span class="font-medium text-gray-900 dark:text-white block">الصفحة الرئيسية</span>
-                <span class="text-sm text-gray-500 dark:text-gray-400">العودة للرئيسية</span>
-              </div>
-            </div>
-
-            <!-- Print Service -->
-            <div (click)="exitBarsrow();exitBars()" routerLink="/print" routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
-                 class="flex gap-4 items-center p-4 rounded-xl cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all duration-200 group">
-              <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-emerald-100 dark:bg-emerald-800 mr-4 group-hover:scale-110 transition-transform duration-200">
-                <fa-icon [icon]="faFilePdf" class="text-emerald-600 dark:text-emerald-400"></fa-icon>
-              </div>
-              <div>
-                <span class="font-medium text-gray-900 dark:text-white block">إطبعلي</span>
-                <span class="text-sm text-gray-500 dark:text-gray-400">خدمة الطباعة</span>
-              </div>
+        <!-- Books Dropdown -->
+        <ul [ngClass]="{hidden:scrollBook}"
+          class="absolute bg-white dark:bg-[#0a1325] text-blue-950 dark:text-blue-100 right-36 md:right-[220px] top-20 rounded-lg shadow-2xl border border-blue-200 dark:border-blue-800 w-48 lg:w-80 overflow-hidden transform transition-all duration-300 ease-in-out z-50 opacity-0 scale-95"
+          [style.opacity]="scrollBook ? '0' : '1'" [style.transform]="scrollBook ? 'scale(0.95)' : 'scale(1)'"
+          (click)="$event.stopPropagation()">
+          <!-- Header -->
+          <div
+            class="bg-gradient-to-r from-blue-600 to-blue-800 dark:from-blue-700 dark:to-blue-900 text-white px-4 py-3">
+            <div class="flex items-center">
+              <fa-icon class="text-lg ml-2" [icon]="faBook"></fa-icon>
+              <span class="font-bold text-sm">أقسام الكتب</span>
             </div>
           </div>
 
-          <!-- Divider -->
-          <div class="border-t border-gray-200 dark:border-gray-700 my-6"></div>
-
-          <!-- Book Categories Section -->
-          <div>
-            <div class="flex items-center mb-4">
-              <fa-icon [icon]="faBook" class="text-blue-600 dark:text-blue-400 ml-2"></fa-icon>
-              <h3 class="text-lg font-bold text-gray-900 dark:text-white">أقسام الكتب</h3>
+          <!-- Menu Items -->
+          <div class="py-2">
+            <div (click)="scrollBook = true" routerLinkActive="text-orange-400" routerLink="/Islamic"
+              class="cursor-pointer flex items-center px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group">
+              <fa-icon
+                class="text-blue-600 dark:text-blue-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"
+                [icon]="faMosque"></fa-icon>
+              <li class="text-sm font-medium">دينية</li>
             </div>
 
-            <div class="space-y-1">
-              <!-- Islamic -->
-              <div (click)="exitBars()" routerLink="/Islamic" routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
-                   class="flex items-center p-3 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group">
-                <fa-icon [icon]="faMosque" class="text-blue-600 dark:text-blue-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"></fa-icon>
-                <span class="font-medium text-gray-700 dark:text-gray-300">دينية</span>
-              </div>
-
-              <!-- Self Development -->
-              <div (click)="exitBars()" routerLink="/Self-development-psychology" routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
-                   class="flex items-center p-3 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group">
-                <fa-icon [icon]="faBrain" class="text-green-600 dark:text-green-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"></fa-icon>
-                <span class="font-medium text-gray-700 dark:text-gray-300">تطوير الذات وعلم النفس</span>
-              </div>
-
-              <!-- Novels -->
-              <div (click)="exitBars()" routerLink="/Novels-stories" routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
-                   class="flex items-center p-3 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group">
-                <fa-icon [icon]="faScroll" class="text-purple-600 dark:text-purple-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"></fa-icon>
-                <span class="font-medium text-gray-700 dark:text-gray-300">روايات وقصص</span>
-              </div>
-
-              <!-- Business -->
-              <div (click)="exitBars()" routerLink="/Business-Marketing-Finance" routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
-                   class="flex items-center p-3 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group">
-                <fa-icon [icon]="faChartLine" class="text-emerald-600 dark:text-emerald-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"></fa-icon>
-                <span class="font-medium text-gray-700 dark:text-gray-300">أعمال وتسويق ومالية</span>
-              </div>
-
-              <!-- Health -->
-              <div (click)="exitBars()" routerLink="/HealthMedicineScience" routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
-                   class="flex items-center p-3 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group">
-                <fa-icon [icon]="faHeartbeat" class="text-red-600 dark:text-red-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"></fa-icon>
-                <span class="font-medium text-gray-700 dark:text-gray-300">صحة وطب وعلوم</span>
-              </div>
-
-              <!-- Dictionaries -->
-              <div (click)="exitBars()" routerLink="/Dictionaries-References" routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
-                   class="flex items-center p-3 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group">
-                <fa-icon [icon]="faBookOpen" class="text-indigo-600 dark:text-indigo-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"></fa-icon>
-                <span class="font-medium text-gray-700 dark:text-gray-300">قواميس ومراجع</span>
-              </div>
-
-              <!-- Education -->
-              <div (click)="exitBars()" routerLink="/Education-children" routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
-                   class="flex items-center p-3 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group">
-                <fa-icon [icon]="faChild" class="text-pink-600 dark:text-pink-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"></fa-icon>
-                <span class="font-medium text-gray-700 dark:text-gray-300">تربية وأطفال</span>
-              </div>
-
-              <!-- History -->
-              <div (click)="exitBars()" routerLink="/History-Biographies" routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
-                   class="flex items-center p-3 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group">
-                <fa-icon [icon]="faHistory" class="text-amber-600 dark:text-amber-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"></fa-icon>
-                <span class="font-medium text-gray-700 dark:text-gray-300">تاريخ وسير ذاتية</span>
-              </div>
-
-              <!-- Arts -->
-              <div (click)="exitBars()" routerLink="/Arts-crafts" routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
-                   class="flex items-center p-3 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group">
-                <fa-icon [icon]="faPalette" class="text-teal-600 dark:text-teal-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"></fa-icon>
-                <span class="font-medium text-gray-700 dark:text-gray-300">فنون وحرف</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Divider -->
-          <div class="border-t border-gray-200 dark:border-gray-700 my-6"></div>
-
-          <!-- Product Categories Section -->
-          <div>
-            <div class="flex items-center mb-4">
-              <fa-icon [icon]="faShoppingCart" class="text-blue-600 dark:text-blue-400 ml-2"></fa-icon>
-              <h3 class="text-lg font-bold text-gray-900 dark:text-white">أقسام المنتجات</h3>
+            <div (click)="scrollBook = true"
+              class="cursor-pointer flex items-center px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group"
+              routerLinkActive="text-orange-400" routerLink="/Self-development-psychology">
+              <fa-icon
+                class="text-green-600 dark:text-green-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"
+                [icon]="faBrain"></fa-icon>
+              <li class="text-sm font-medium">تطوير الذات وعلم النفس</li>
             </div>
 
-            <div class="space-y-1">
-              <!-- Electronics -->
-              <div (click)="exitBars()" routerLink="/electronics" routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
-                   class="flex items-center p-3 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group">
-                <fa-icon [icon]="faBolt" class="text-blue-600 dark:text-blue-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"></fa-icon>
-                <span class="font-medium text-gray-700 dark:text-gray-300">إلكترونيات</span>
-              </div>
+            <div (click)="scrollBook = true"
+              class="cursor-pointer flex items-center px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group"
+              routerLinkActive="text-orange-400" routerLink="/Novels-stories">
+              <fa-icon
+                class="text-purple-600 dark:text-purple-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"
+                [icon]="faScroll"></fa-icon>
+              <li class="text-sm font-medium">روايات وقصص</li>
+            </div>
 
-              <!-- clothing -->
-              <div (click)="exitBars()" routerLink="/clothing" routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
-                   class="flex items-center p-3 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group">
-                <fa-icon [icon]="faTshirt" class="text-green-600 dark:text-green-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"></fa-icon>
-                <span class="font-medium text-gray-700 dark:text-gray-300">ملابس</span>
-              </div>
+            <div (click)="scrollBook = true"
+              class="cursor-pointer flex items-center px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group"
+              routerLinkActive="text-orange-400" routerLink="/Business-Marketing-Finance">
+              <fa-icon
+                class="text-emerald-600 dark:text-emerald-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"
+                [icon]="faChartLine"></fa-icon>
+              <li class="text-sm font-medium">أعمال وتسويق ومالية</li>
+            </div>
 
-              <!-- Cosmetics -->
-              <div (click)="exitBars()" routerLink="/cosmetics" routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
-                   class="flex items-center p-3 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group">
-                <fa-icon [icon]="faMagic" class="text-purple-600 dark:text-purple-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"></fa-icon>
-                <span class="font-medium text-gray-700 dark:text-gray-300">العناية الشخصية</span>
-              </div>
+            <div (click)="scrollBook = true"
+              class="cursor-pointer flex items-center px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group"
+              routerLinkActive="text-orange-400" routerLink="/HealthMedicineScience">
+              <fa-icon
+                class="text-red-600 dark:text-red-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"
+                [icon]="faHeartbeat"></fa-icon>
+              <li class="text-sm font-medium">صحة وطب وعلوم</li>
+            </div>
 
-              <!-- Shoes -->
-              <div (click)="exitBars()" routerLink="/shoes" routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
-                   class="flex items-center p-3 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group">
-                <fa-icon [icon]="faShoePrints" class="text-emerald-600 dark:text-emerald-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"></fa-icon>
-                <span class="font-medium text-gray-700 dark:text-gray-300">أحذية</span>
-              </div>
+            <div (click)="scrollBook = true"
+              class="cursor-pointer flex items-center px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group"
+              routerLinkActive="text-orange-400" routerLink="/Dictionaries-References">
+              <fa-icon
+                class="text-indigo-600 dark:text-indigo-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"
+                [icon]="faBookOpen"></fa-icon>
+              <li class="text-sm font-medium">قواميس ومراجع</li>
+            </div>
 
-              <!-- Furniture -->
-              <div (click)="exitBars()" routerLink="/furniture" routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
-                   class="flex items-center p-3 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group">
-                <fa-icon [icon]="faChair" class="text-red-600 dark:text-red-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"></fa-icon>
-                <span class="font-medium text-gray-700 dark:text-gray-300">أثاث</span>
-              </div>
+            <div (click)="scrollBook = true"
+              class="cursor-pointer flex items-center px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group"
+              routerLinkActive="text-orange-400" routerLink="/Education-children">
+              <fa-icon
+                class="text-pink-600 dark:text-pink-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"
+                [icon]="faChild"></fa-icon>
+              <li class="text-sm font-medium">تربية وأطفال</li>
+            </div>
 
-              <!-- Games -->
-              <div (click)="exitBars()" routerLink="/games" routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
-                   class="flex items-center p-3 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group">
-                <fa-icon [icon]="faGamepad" class="text-indigo-600 dark:text-indigo-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"></fa-icon>
-                <span class="font-medium text-gray-700 dark:text-gray-300">ألعاب</span>
-              </div>
+            <div (click)="scrollBook = true"
+              class="cursor-pointer flex items-center px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group"
+              routerLinkActive="text-orange-400" routerLink="/History-Biographies">
+              <fa-icon
+                class="text-amber-600 dark:text-amber-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"
+                [icon]="faHistory"></fa-icon>
+              <li class="text-sm font-medium">تاريخ وسير ذاتية</li>
+            </div>
 
-              <!-- Fabrics -->
-              <div (click)="exitBars()" routerLink="/fabrics" routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
-                   class="flex items-center p-3 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group">
-                <fa-icon [icon]="faCut" class="text-pink-600 dark:text-pink-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"></fa-icon>
-                <span class="font-medium text-gray-700 dark:text-gray-300">أقمشة</span>
-              </div>
-
-              <!-- Others -->
-              <div (click)="exitBars()" routerLink="/others" routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
-                   class="flex items-center p-3 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group">
-                <fa-icon [icon]="faEllipsisH" class="text-amber-600 dark:text-amber-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"></fa-icon>
-                <span class="font-medium text-gray-700 dark:text-gray-300">أخرى</span>
-              </div>
+            <div (click)="scrollBook = true"
+              class="cursor-pointer flex items-center px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group"
+              routerLinkActive="text-orange-400" routerLink="/Arts-crafts">
+              <fa-icon
+                class="text-teal-600 dark:text-teal-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"
+                [icon]="faPalette"></fa-icon>
+              <li class="text-sm font-medium">فنون وحرف</li>
             </div>
           </div>
 
           <!-- Footer -->
-          <div class="border-t border-gray-200 dark:border-gray-700 pt-4 mt-6">
-            <p class="text-sm text-gray-500 dark:text-gray-400 text-center">
-              استكشف مجموعتنا المتنوعة من الكتب والمنتجات والخدمات
-            </p>
+          <div
+            class="border-t border-blue-200 dark:border-blue-800 bg-gradient-to-r from-orange-50 to-yellow-50 dark:from-orange-900/20 dark:to-yellow-900/20 px-4 py-3">
+            <p class="text-xs text-blue-600 dark:text-blue-400 text-center font-semibold">استكشف مجموعتنا المتنوعة من
+              الكتب - عروض خاصة متاحة!</p>
           </div>
+        </ul>
+
+        <!-- Products Dropdown -->
+        <ul [ngClass]="{hidden:scrollProducts}"
+          class="absolute bg-white dark:bg-[#0a1325] text-blue-950 dark:text-blue-100 right-36 md:right-[220px] top-20 rounded-lg shadow-2xl border border-blue-200 dark:border-blue-800 w-48 lg:w-80 overflow-hidden transform transition-all duration-300 ease-in-out z-50 opacity-0 scale-95"
+          [style.opacity]="scrollProducts ? '0' : '1'" [style.transform]="scrollProducts ? 'scale(0.95)' : 'scale(1)'"
+          (click)="$event.stopPropagation()">
+          <!-- Header -->
+          <div
+            class="bg-gradient-to-r from-blue-600 to-blue-800 dark:from-blue-700 dark:to-blue-900 text-white px-4 py-3">
+            <div class="flex items-center">
+              <fa-icon class="text-lg ml-2" [icon]="faShoppingCart"></fa-icon>
+              <span class="font-bold text-sm">أقسام المنتجات</span>
+            </div>
+          </div>
+
+          <!-- Menu Items -->
+          <div class="py-2 flex flex-wrap">
+            <div (click)="exitProductsrow()" routerLinkActive="text-orange-400" routerLink="/electronics"
+              class="cursor-pointer flex items-center px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group w-1/2">
+              <fa-icon
+                class="text-blue-600 dark:text-blue-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"
+                [icon]="faBolt"></fa-icon>
+              <li class="text-sm font-medium">إلكترونيات</li>
+            </div>
+
+            <div (click)="exitProductsrow()"
+              class="cursor-pointer flex items-center px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group w-1/2"
+              routerLinkActive="text-orange-400" routerLink="/clothing">
+              <fa-icon
+                class="text-green-600 dark:text-green-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"
+                [icon]="faTshirt"></fa-icon>
+              <li class="text-sm font-medium">ملابس</li>
+            </div>
+
+            <div (click)="exitProductsrow()"
+              class="cursor-pointer flex items-center px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group w-1/2"
+              routerLinkActive="text-orange-400" routerLink="/cosmetics">
+              <fa-icon
+                class="text-purple-600 dark:text-purple-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"
+                [icon]="faMagic"></fa-icon>
+              <li class="text-sm font-medium">العناية الشخصية</li>
+            </div>
+
+            <div (click)="exitProductsrow()"
+              class="cursor-pointer flex items-center px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group w-1/2"
+              routerLinkActive="text-orange-400" routerLink="/shoes">
+              <fa-icon
+                class="text-emerald-600 dark:text-emerald-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"
+                [icon]="faShoePrints"></fa-icon>
+              <li class="text-sm font-medium">أحذية</li>
+            </div>
+
+            <div (click)="exitProductsrow()"
+              class="cursor-pointer flex items-center px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group w-1/2"
+              routerLinkActive="text-orange-400" routerLink="/furniture">
+              <fa-icon
+                class="text-red-600 dark:text-red-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"
+                [icon]="faChair"></fa-icon>
+              <li class="text-sm font-medium">أثاث</li>
+            </div>
+
+            <div (click)="exitProductsrow()"
+              class="cursor-pointer flex items-center px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group w-1/2"
+              routerLinkActive="text-orange-400" routerLink="/games">
+              <fa-icon
+                class="text-indigo-600 dark:text-indigo-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"
+                [icon]="faGamepad"></fa-icon>
+              <li class="text-sm font-medium">ألعاب</li>
+            </div>
+
+            <div (click)="exitProductsrow()"
+              class="cursor-pointer flex items-center px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group w-1/2"
+              routerLinkActive="text-orange-400" routerLink="/fabrics">
+              <fa-icon
+                class="text-pink-600 dark:text-pink-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"
+                [icon]="faCut"></fa-icon>
+              <li class="text-sm font-medium">أقمشة</li>
+            </div>
+
+            <div (click)="exitProductsrow()"
+              class="cursor-pointer flex items-center px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group w-1/2"
+              routerLinkActive="text-orange-400" routerLink="/others">
+              <fa-icon
+                class="text-amber-600 dark:text-amber-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"
+                [icon]="faEllipsisH"></fa-icon>
+              <li class="text-sm font-medium">أخرى</li>
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <div
+            class="border-t border-blue-200 dark:border-blue-800 bg-gradient-to-r from-orange-50 to-yellow-50 dark:from-orange-900/20 dark:to-yellow-900/20 px-4 py-3">
+            <p class="text-xs text-blue-600 dark:text-blue-400 text-center font-semibold">استكشف مجموعتنا المتنوعة من
+              المنتجات - عروض خاصة متاحة!</p>
+          </div>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Buttons Group -->
+    <div class="flex items-center gap-2">
+      <!-- Dark Mode Toggle Button -->
+      <div class="flex flex-col sm:flex-row items-center cursor-pointer" title="تبديل الوضع الداكن">
+        <button (click)="toggleDarkMode()"
+          class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full shadow-md focus:outline-none transition-colors duration-300 p-2">
+          <fa-icon *ngIf="isDarkMode" [icon]="faMoon" class="text-lg"></fa-icon>
+          <fa-icon *ngIf="!isDarkMode" [icon]="faSun" class="text-lg text-yellow-600"></fa-icon>
+        </button>
+      </div>
+
+      <!-- Full Screen Toggle Button -->
+      <div class="flex flex-col sm:flex-row items-center cursor-pointer" title="تبديل الشاشة الكاملة">
+        <button (click)="toggleFullScreen()"
+          class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full shadow-md focus:outline-none transition-colors duration-300 p-2">
+          <fa-icon [icon]="faExpand" class="text-lg"></fa-icon>
+        </button>
+      </div>
+
+      <!-- Bars Icon -->
+      <div>
+        <fa-icon (click)="openBars=!openBars" [ngClass]="{hidden:openBars}"
+          class="md:hidden font-bold text-xl text-white cursor-pointer bg-gradient-to-r from-orange-400 to-orange-500 dark:from-orange-500 dark:to-orange-600 rounded-full p-2 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 animate-pulse"
+          [icon]="faBars"></fa-icon>
+        <fa-icon (click)="openBars=!openBars" [ngClass]="{hidden:!openBars}"
+          class="md:hidden cursor-pointer text-2xl text-orange-300 dark:text-orange-400" [icon]="faClose"></fa-icon>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile Header -->
+  <div class="rtl md:hidden z-40 relative">
+    <!-- Mobile Menu Overlay -->
+    <div *ngIf="openBars" class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-40"></div>
+
+    <!-- Mobile Menu Panel -->
+    <div [ngClass]="{'translate-x-0': openBars, 'translate-x-full': !openBars}"
+      class="mobile-menu-panel fixed top-0 right-0 h-full w-80 max-w-[85vw] bg-white dark:bg-[#0a1325] shadow-2xl transform transition-transform duration-300 ease-in-out z-50 overflow-y-auto"
+      (click)="$event.stopPropagation()">
+
+      <!-- Mobile Menu Header -->
+      <div class="bg-gradient-to-r from-blue-600 to-blue-800 dark:from-blue-700 dark:to-blue-900 text-white p-6">
+        <div class="flex items-center justify-between">
+          <div class="flex gap-4 items-center">
+            <img class="w-10 h-10 rounded-full mr-3" src="logoname2.jpg" alt="Logo">
+            <h2 class="text-lg font-bold">القائمة الرئيسية</h2>
+          </div>
+          <button (click)="exitBars()"
+            class="p-2 rounded-full hover:bg-white hover:bg-opacity-20 transition-colors duration-200">
+            <fa-icon [icon]="faClose" class="text-xl"></fa-icon>
+          </button>
+        </div>
+      </div>
+
+      <!-- Mobile Menu Content -->
+      <div class="p-6 space-y-4">
+
+        <!-- Navigation Items -->
+        <div class="space-y-2">
+          <!-- Home -->
+          <div routerLink="/Home" routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
+            class="flex gap-4 items-center p-4 rounded-xl cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all duration-200 group">
+            <div
+              class="flex items-center justify-center w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-800 mr-4 group-hover:scale-110 transition-transform duration-200">
+              <fa-icon [icon]="faHome" class="text-blue-600 dark:text-blue-400"></fa-icon>
+            </div>
+            <div>
+              <span class="font-medium text-gray-900 dark:text-white block">الصفحة الرئيسية</span>
+              <span class="text-sm text-gray-500 dark:text-gray-400">العودة للرئيسية</span>
+            </div>
+          </div>
+
+          <!-- Print Service -->
+          <div (click)="exitBarsrow();exitBars()" routerLink="/print" routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
+            class="flex gap-4 items-center p-4 rounded-xl cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all duration-200 group">
+            <div
+              class="flex items-center justify-center w-10 h-10 rounded-lg bg-emerald-100 dark:bg-emerald-800 mr-4 group-hover:scale-110 transition-transform duration-200">
+              <fa-icon [icon]="faFilePdf" class="text-emerald-600 dark:text-emerald-400"></fa-icon>
+            </div>
+            <div>
+              <span class="font-medium text-gray-900 dark:text-white block">إطبعلي</span>
+              <span class="text-sm text-gray-500 dark:text-gray-400">خدمة الطباعة</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Divider -->
+        <div class="border-t border-gray-200 dark:border-gray-700 my-6"></div>
+
+        <!-- Book Categories Section -->
+        <div>
+          <div class="flex items-center mb-4">
+            <fa-icon [icon]="faBook" class="text-blue-600 dark:text-blue-400 ml-2"></fa-icon>
+            <h3 class="text-lg font-bold text-gray-900 dark:text-white">أقسام الكتب</h3>
+          </div>
+
+          <div class="space-y-1">
+            <!-- Islamic -->
+            <div (click)="exitBars()" routerLink="/Islamic" routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
+              class="flex items-center p-3 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group">
+              <fa-icon [icon]="faMosque"
+                class="text-blue-600 dark:text-blue-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"></fa-icon>
+              <span class="font-medium text-gray-700 dark:text-gray-300">دينية</span>
+            </div>
+
+            <!-- Self Development -->
+            <div (click)="exitBars()" routerLink="/Self-development-psychology"
+              routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
+              class="flex items-center p-3 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group">
+              <fa-icon [icon]="faBrain"
+                class="text-green-600 dark:text-green-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"></fa-icon>
+              <span class="font-medium text-gray-700 dark:text-gray-300">تطوير الذات وعلم النفس</span>
+            </div>
+
+            <!-- Novels -->
+            <div (click)="exitBars()" routerLink="/Novels-stories" routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
+              class="flex items-center p-3 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group">
+              <fa-icon [icon]="faScroll"
+                class="text-purple-600 dark:text-purple-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"></fa-icon>
+              <span class="font-medium text-gray-700 dark:text-gray-300">روايات وقصص</span>
+            </div>
+
+            <!-- Business -->
+            <div (click)="exitBars()" routerLink="/Business-Marketing-Finance"
+              routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
+              class="flex items-center p-3 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group">
+              <fa-icon [icon]="faChartLine"
+                class="text-emerald-600 dark:text-emerald-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"></fa-icon>
+              <span class="font-medium text-gray-700 dark:text-gray-300">أعمال وتسويق ومالية</span>
+            </div>
+
+            <!-- Health -->
+            <div (click)="exitBars()" routerLink="/HealthMedicineScience"
+              routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
+              class="flex items-center p-3 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group">
+              <fa-icon [icon]="faHeartbeat"
+                class="text-red-600 dark:text-red-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"></fa-icon>
+              <span class="font-medium text-gray-700 dark:text-gray-300">صحة وطب وعلوم</span>
+            </div>
+
+            <!-- Dictionaries -->
+            <div (click)="exitBars()" routerLink="/Dictionaries-References"
+              routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
+              class="flex items-center p-3 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group">
+              <fa-icon [icon]="faBookOpen"
+                class="text-indigo-600 dark:text-indigo-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"></fa-icon>
+              <span class="font-medium text-gray-700 dark:text-gray-300">قواميس ومراجع</span>
+            </div>
+
+            <!-- Education -->
+            <div (click)="exitBars()" routerLink="/Education-children" routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
+              class="flex items-center p-3 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group">
+              <fa-icon [icon]="faChild"
+                class="text-pink-600 dark:text-pink-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"></fa-icon>
+              <span class="font-medium text-gray-700 dark:text-gray-300">تربية وأطفال</span>
+            </div>
+
+            <!-- History -->
+            <div (click)="exitBars()" routerLink="/History-Biographies"
+              routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
+              class="flex items-center p-3 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group">
+              <fa-icon [icon]="faHistory"
+                class="text-amber-600 dark:text-amber-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"></fa-icon>
+              <span class="font-medium text-gray-700 dark:text-gray-300">تاريخ وسير ذاتية</span>
+            </div>
+
+            <!-- Arts -->
+            <div (click)="exitBars()" routerLink="/Arts-crafts" routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
+              class="flex items-center p-3 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group">
+              <fa-icon [icon]="faPalette"
+                class="text-teal-600 dark:text-teal-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"></fa-icon>
+              <span class="font-medium text-gray-700 dark:text-gray-300">فنون وحرف</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Divider -->
+        <div class="border-t border-gray-200 dark:border-gray-700 my-6"></div>
+
+        <!-- Product Categories Section -->
+        <div>
+          <div class="flex items-center mb-4">
+            <fa-icon [icon]="faShoppingCart" class="text-blue-600 dark:text-blue-400 ml-2"></fa-icon>
+            <h3 class="text-lg font-bold text-gray-900 dark:text-white">أقسام المنتجات</h3>
+          </div>
+
+          <div class="space-y-1">
+            <!-- Electronics -->
+            <div (click)="exitBars()" routerLink="/electronics" routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
+              class="flex items-center p-3 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group">
+              <fa-icon [icon]="faBolt"
+                class="text-blue-600 dark:text-blue-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"></fa-icon>
+              <span class="font-medium text-gray-700 dark:text-gray-300">إلكترونيات</span>
+            </div>
+
+            <!-- clothing -->
+            <div (click)="exitBars()" routerLink="/clothing" routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
+              class="flex items-center p-3 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group">
+              <fa-icon [icon]="faTshirt"
+                class="text-green-600 dark:text-green-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"></fa-icon>
+              <span class="font-medium text-gray-700 dark:text-gray-300">ملابس</span>
+            </div>
+
+            <!-- Cosmetics -->
+            <div (click)="exitBars()" routerLink="/cosmetics" routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
+              class="flex items-center p-3 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group">
+              <fa-icon [icon]="faMagic"
+                class="text-purple-600 dark:text-purple-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"></fa-icon>
+              <span class="font-medium text-gray-700 dark:text-gray-300">العناية الشخصية</span>
+            </div>
+
+            <!-- Shoes -->
+            <div (click)="exitBars()" routerLink="/shoes" routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
+              class="flex items-center p-3 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group">
+              <fa-icon [icon]="faShoePrints"
+                class="text-emerald-600 dark:text-emerald-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"></fa-icon>
+              <span class="font-medium text-gray-700 dark:text-gray-300">أحذية</span>
+            </div>
+
+            <!-- Furniture -->
+            <div (click)="exitBars()" routerLink="/furniture" routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
+              class="flex items-center p-3 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group">
+              <fa-icon [icon]="faChair"
+                class="text-red-600 dark:text-red-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"></fa-icon>
+              <span class="font-medium text-gray-700 dark:text-gray-300">أثاث</span>
+            </div>
+
+            <!-- Games -->
+            <div (click)="exitBars()" routerLink="/games" routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
+              class="flex items-center p-3 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group">
+              <fa-icon [icon]="faGamepad"
+                class="text-indigo-600 dark:text-indigo-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"></fa-icon>
+              <span class="font-medium text-gray-700 dark:text-gray-300">ألعاب</span>
+            </div>
+
+            <!-- Fabrics -->
+            <div (click)="exitBars()" routerLink="/fabrics" routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
+              class="flex items-center p-3 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group">
+              <fa-icon [icon]="faCut"
+                class="text-pink-600 dark:text-pink-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"></fa-icon>
+              <span class="font-medium text-gray-700 dark:text-gray-300">أقمشة</span>
+            </div>
+
+            <!-- Others -->
+            <div (click)="exitBars()" routerLink="/others" routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
+              class="flex items-center p-3 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group">
+              <fa-icon [icon]="faEllipsisH"
+                class="text-amber-600 dark:text-amber-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"></fa-icon>
+              <span class="font-medium text-gray-700 dark:text-gray-300">أخرى</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="border-t border-gray-200 dark:border-gray-700 pt-4 mt-6">
+          <p class="text-sm text-gray-500 dark:text-gray-400 text-center">
+            استكشف مجموعتنا المتنوعة من الكتب والمنتجات والخدمات
+          </p>
         </div>
       </div>
     </div>
-</div>
-
+  </div>
+</div><app-account-modal #accountModal></app-account-modal>

@@ -11,7 +11,7 @@
 Backend/node_modules
 npm-debug.log
 yarn-error.log
-books
+
 
 # IDEs and editors
 .idea/

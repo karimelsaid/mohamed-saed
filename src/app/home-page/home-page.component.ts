@@ -27,7 +27,7 @@ export class HomePageComponent implements OnInit {
   categories = [
     { id: 'all', name: 'الكل', icon: null },
     { id: 'books', name: 'كتب', icon: faBook, filter: ['كتب', 'روايات وقصص', 'تطوير الذات وعلم النفس', 'كتب دينية', 'قواميس ومراجع', 'صحة وطب وعلوم', 'أعمال وتسويق ومالية', 'فنون وحرف', 'تاريخ وسير ذاتية', 'تربية وأطفال'] },
-    { id: 'documents', name: 'مستندات', icon: faFileAlt, filter: ['مستندات'], comingSoon: true },
+    { id: 'print', name: 'طباعة', icon: faFileAlt, filter: ['مستندات'], comingSoon: true },
     { id: 'electronics', name: 'إلكترونيات', icon: faLaptop, filter: ['إلكترونيات'], comingSoon: true },
     { id: 'clothing', name: 'ملابس', icon: faTshirt, filter: ['ملابس'], comingSoon: true },
     { id: 'cosmetics', name: 'تجميل', icon: faSpa, filter: ['تجميل'], comingSoon: true },

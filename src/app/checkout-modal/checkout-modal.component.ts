@@ -11,13 +11,14 @@ import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { environment } from '../../environments/environment';
 import { FreeShippingService, FreeShippingRules } from '../services/free-shipping.service';
+import { PaymentModalComponent } from '../payment-modal/payment-modal.component';
 
 @Component({
   selector: 'app-checkout-modal',
   templateUrl: './checkout-modal.component.html',
   styleUrls: ['./checkout-modal.component.css'],
   standalone: true,
-  imports: [CommonModule, FormsModule, FontAwesomeModule]
+  imports: [CommonModule, FormsModule, FontAwesomeModule, PaymentModalComponent]
 })
 export class CheckoutModalComponent implements OnInit {
   uploadsBaseUrl = environment.uploadsBaseUrl;
@@ -47,6 +48,10 @@ export class CheckoutModalComponent implements OnInit {
   postOfficeAddress: string = '';
   postOfficeCities: string[] = [];
   isEditingPostOffice: boolean = false;
+
+  // New properties for Payment Modal
+  showPaymentModal: boolean = false;
+  paymentUrl: string = '';
 
   private cartItemsLoaded: boolean = false;
   private freeShippingRulesLoaded: boolean = false;
@@ -160,13 +165,11 @@ export class CheckoutModalComponent implements OnInit {
             this.updateCities();
             this.calculateShippingCost();
             this.calculateTotalPrice();
-            // Set phoneTouched to true if phone exists and is valid to enable dynamic validation
             if (this.editedUserProfile && this.editedUserProfile.phone) {
               const egyptPhoneRegex = /^(010|011|012|015)[0-9]{8}$/;
               this.phoneTouched = egyptPhoneRegex.test(this.editedUserProfile.phone);
               this.phoneValid = this.phoneTouched;
             }
-            // Set post office details from user profile
             if (this.userProfile?.postOffice) {
               this.postOfficeGovernorate = this.userProfile.postOffice.governorate || '';
               this.postOfficeCity = this.userProfile.postOffice.city || '';
@@ -186,12 +189,10 @@ export class CheckoutModalComponent implements OnInit {
   loadCartItems() {
     console.log('Loading cart items...');
     if (this.bookId) {
-      // Load only the book with the given bookId
       this.dataService.getData().pipe(
         map((books: any[]) => books.filter(book => book.products_id === this.bookId))
       ).subscribe({
         next: (filteredBooks) => {
-          // Ensure quantity is set to 1 if undefined
           this.cartItems = filteredBooks.map(item => ({
             ...item,
             quantity: item.quantity ?? 1
@@ -213,7 +214,6 @@ export class CheckoutModalComponent implements OnInit {
             map((books: any[]) => books.filter(book => bookIds.includes(book.products_id)))
           ).subscribe({
             next: (filteredBooks) => {
-              // Ensure quantity is set to 1 if undefined
               this.cartItems = filteredBooks.map(item => ({
                 ...item,
                 quantity: item.quantity ?? 1
@@ -245,7 +245,6 @@ export class CheckoutModalComponent implements OnInit {
       return;
     }
     if (this.isPostOffice) {
-      // Use post_office_cost for post office shipping
       const governorateName = this.editedUserProfile?.governorate || this.userProfile?.governorate;
       if (governorateName) {
         const governorate = this.governorates.find(g => g.governorate_name === governorateName);
@@ -261,10 +260,7 @@ export class CheckoutModalComponent implements OnInit {
       return;
     }
     console.log('calculateShippingCost called');
-    console.log('freeShippingRules object:', this.freeShippingRules);
-    console.log('freeShippingEnabled:', this.freeShippingRules.freeShippingEnabled);
     if (!this.freeShippingRules.freeShippingEnabled) {
-      // If free shipping is disabled, calculate shipping normally
       this.calculateShippingCostNormal();
       return;
     }
@@ -277,12 +273,6 @@ export class CheckoutModalComponent implements OnInit {
       return total;
     }, 0);
 
-    console.log('totalQuantity:', totalQuantity);
-    console.log('totalPrice:', totalPrice);
-    console.log('minQuantity:', this.freeShippingRules.minQuantity);
-    console.log('minOrderValue:', this.freeShippingRules.minOrderValue);
-
-    // Check free shipping conditions
     if (totalQuantity >= this.freeShippingRules.minQuantity && totalPrice >= this.freeShippingRules.minOrderValue) {
       this.shippingCost = 0;
       console.log('Free shipping applied, shippingCost set to 0');
@@ -290,7 +280,6 @@ export class CheckoutModalComponent implements OnInit {
       return;
     }
 
-    // Check governorate shipping cost if applicable
     const governorateName = this.editedUserProfile?.governorate || this.userProfile?.governorate;
     if (!governorateName) {
       this.shippingCost = 0;
@@ -303,7 +292,6 @@ export class CheckoutModalComponent implements OnInit {
     } else {
       this.shippingCost = 0;
     }
-    console.log('Shipping cost set to:', this.shippingCost);
     this.calculateTotalPrice();
   }
 
@@ -339,7 +327,6 @@ export class CheckoutModalComponent implements OnInit {
 
   get hasMerchantProducts(): boolean {
     const result = this.cartItems.some(item => item.merchantId && item.merchantId.trim() !== '');
-    console.log('hasMerchantProducts:', result, 'cartItems:', this.cartItems.map(item => ({ id: item.products_id, merchantId: item.merchantId, merchantName: item.merchantName })));
     return result;
   }
 
@@ -362,8 +349,6 @@ export class CheckoutModalComponent implements OnInit {
       this.currentStep--;
     }
   }
-
-
 
   decreaseQuantity(item: any): void {
     if (!item.quantity) item.quantity = 1;
@@ -404,7 +389,6 @@ export class CheckoutModalComponent implements OnInit {
     }, 2000);
   }
 
-  // تفعيل زر التعديل إذا لم يتم التأكيد
   onEditAddress() {
     this.isEditingAddress = true;
   }
@@ -422,13 +406,11 @@ export class CheckoutModalComponent implements OnInit {
     this.isPickup = this.deliveryType === 'pickup';
     this.isPostOffice = this.deliveryType === 'postOffice';
     if (this.isPostOffice && this.userProfile) {
-      // Set post office fields to match user profile
       this.postOfficeGovernorate = this.userProfile!.governorate || '';
       this.postOfficeCity = this.userProfile!.city || '';
-      this.onPostOfficeGovernorateChange(); // Update cities list
-      this.isEditingPostOffice = false; // Start with disabled fields
+      this.onPostOfficeGovernorateChange();
+      this.isEditingPostOffice = false;
     } else {
-      // Reset post office fields when changing delivery type
       this.postOfficeName = '';
       this.postOfficeGovernorate = '';
       this.postOfficeCity = '';
@@ -438,7 +420,6 @@ export class CheckoutModalComponent implements OnInit {
     }
     this.calculateShippingCost();
     this.calculateTotalPrice();
-    // Reset address confirmation when switching delivery types
     this.isAddressConfirmed = false;
   }
 
@@ -496,16 +477,13 @@ export class CheckoutModalComponent implements OnInit {
       return;
     }
 
-    // Update userProfile with edited data
     this.userProfile = { ...this.editedUserProfile };
     this.isEditingAddress = false;
 
-    // Call service to persist changes to backend
     this.dataService.updateUserProfile(this.userProfile).subscribe({
       next: () => {
         console.log('User profile updated successfully');
         this.errorMessage = '';
-        // Update post office fields if currently selected
         if (this.isPostOffice) {
           this.postOfficeGovernorate = this.userProfile!.governorate || '';
           this.postOfficeCity = this.userProfile!.city || '';
@@ -535,7 +513,6 @@ export class CheckoutModalComponent implements OnInit {
   saveEditPostOffice() {
     if (!this.userProfile) return;
 
-    // Validate governorate, city, and required fields
     const govValid = this.governorates.some(g => g.governorate_name === this.postOfficeGovernorate);
     const cityValid = this.postOfficeCities.includes(this.postOfficeCity);
     const addressValid = this.postOfficeAddress.trim().length > 0;
@@ -551,7 +528,6 @@ export class CheckoutModalComponent implements OnInit {
       return;
     }
 
-    // Update userProfile with post office data
     this.userProfile.postOffice = {
       name: this.postOfficeName,
       address: this.postOfficeAddress,
@@ -562,7 +538,6 @@ export class CheckoutModalComponent implements OnInit {
     this.editedUserProfile = { ...this.userProfile };
     this.isEditingPostOffice = false;
 
-    // Save post office details to user profile immediately
     this.dataService.updateUserProfile(this.userProfile).subscribe({
       next: () => console.log('Post office details saved to user profile.'),
       error: (err: any) => console.error('Failed to save post office details:', err)
@@ -589,14 +564,12 @@ export class CheckoutModalComponent implements OnInit {
         const bookId = localStorage.getItem('referralBookId');
         console.log(`[Checkout] Retrieved from localStorage - referralCode: ${referralCode}, bookId: ${bookId}`);
 
-        // Construct address dynamically based on delivery type
         let address = '';
         if (this.isPickup) {
           address = this.pickupLocation;
         } else if (this.isPostOffice) {
           address = `شحن عبر مكاتب البريد: ${this.postOfficeGovernorate}, ${this.postOfficeCity}, ${this.postOfficeAddress}, اسم المكتب: ${this.postOfficeName}, رقم الهاتف: ${this.userProfile?.phone}`;
         } else {
-          // Home delivery
           address = `${this.editedUserProfile?.governorate}, ${this.editedUserProfile?.city}, ${this.editedUserProfile?.village}, رقم الهاتف: ${this.userProfile?.phone}`;
         }
 
@@ -621,28 +594,28 @@ export class CheckoutModalComponent implements OnInit {
           postOfficeName: this.isPostOffice ? this.postOfficeName : null,
           phone: this.userProfile?.phone,
           referralCode: referralCode,
-          bookId: bookId // This is the products_id from localStorage
+          bookId: bookId
         };
 
         console.log('[Checkout] Submitting order with data:', orderData);
         this.dataService.submitOrder(orderData).subscribe({
           next: (response: any) => {
-            // Clear referral data after successful order submission
             if (referralCode) {
               localStorage.removeItem('referralCode');
               localStorage.removeItem('referralBookId');
             }
 
             const orderId = response.orderId;
-            const currency = 'EGP'; // يمكن تعديل العملة حسب الحاجة
-            const merchantRedirect = window.location.origin + '/payment-success'; // رابط إعادة التوجيه بعد الدفع
+            const currency = 'EGP';
+            const merchantRedirect = window.location.origin + '/order/callback';
 
             if (orderId && this.userProfile && this.userProfile.email) {
-              // تأكد من أن payment.service.ts يستخدم المسار الصحيح: /api/payment/create-payment
               this.paymentService.createPayment(orderId, this.totalPrice, currency, this.userProfile.email, merchantRedirect).subscribe({
                 next: (paymentResponse: any) => {
                   if (paymentResponse.sessionUrl) {
-                    window.location.href = paymentResponse.sessionUrl;
+                    this.paymentUrl = paymentResponse.sessionUrl;
+                    this.showPaymentModal = true;
+                    this.isProcessing = false;
                   } else {
                     alert('فشل في الحصول على رابط الدفع');
                     this.isProcessing = false;
@@ -658,8 +631,6 @@ export class CheckoutModalComponent implements OnInit {
               alert('بيانات الطلب غير مكتملة للدفع');
               this.isProcessing = false;
             }
-
-            // باقي الكود كما هو لتحديث العنوان، السلة، والطلبات
           },
           error: (err) => {
             alert('حدث خطأ أثناء إتمام الشراء، يرجى المحاولة مرة أخرى');
@@ -692,14 +663,12 @@ export class CheckoutModalComponent implements OnInit {
         const bookId = localStorage.getItem('referralBookId');
         console.log(`[Checkout] Retrieved from localStorage - referralCode: ${referralCode}, bookId: ${bookId}`);
 
-        // Construct address dynamically based on delivery type
         let address = '';
         if (this.isPickup) {
           address = this.pickupLocation;
         } else if (this.isPostOffice) {
           address = `شحن عبر مكاتب البريد: ${this.postOfficeGovernorate}, ${this.postOfficeCity}, ${this.postOfficeAddress}, اسم المكتب: ${this.postOfficeName}, رقم الهاتف: ${this.userProfile?.phone}`;
         } else {
-          // Home delivery
           address = `${this.editedUserProfile?.governorate}, ${this.editedUserProfile?.city}, ${this.editedUserProfile?.village}, رقم الهاتف: ${this.userProfile?.phone}`;
         }
 
@@ -724,22 +693,17 @@ export class CheckoutModalComponent implements OnInit {
           postOfficeName: this.isPostOffice ? this.postOfficeName : null,
           phone: this.userProfile?.phone,
           referralCode: referralCode,
-          bookId: bookId, // This is the products_id from localStorage
-          paymentMethod: 'cod' // Add payment method for COD
+          bookId: bookId,
+          paymentMethod: 'cod'
         };
 
         console.log('[Checkout] Submitting COD order with data:', orderData);
         this.dataService.submitOrder(orderData).subscribe({
           next: (response: any) => {
-            // Clear referral data after successful order submission
             if (referralCode) {
               localStorage.removeItem('referralCode');
               localStorage.removeItem('referralBookId');
             }
-
-
-
-            // Close modal and redirect to requests page
             this.onClose();
             window.location.href = '/requests';
           },
@@ -768,6 +732,28 @@ export class CheckoutModalComponent implements OnInit {
       imagePath = `admin__karim_mohamed__/${imageId}/${imageId}.webp`;
     }
     return `${this.uploadsBaseUrl}/${imagePath}`;
+  }
+
+  onPaymentModalClose(): void {
+    if (confirm('هل أنت متأكد من إلغاء عملية الدفع؟ سيظل طلبك معلقاً في قائمة الطلبات.')) {
+      this.showPaymentModal = false;
+      this.paymentUrl = '';
+      this.onClose(); // Close the checkout modal too
+      window.location.href = '/requests'; // Redirect to requests to see the pending order
+    }
+  }
+
+  onPaymentComplete(success: boolean): void {
+    this.showPaymentModal = false;
+    this.paymentUrl = '';
+
+    if (success) {
+      alert('تم الدفع بنجاح! سيتم توجيهك إلى صفحة طلباتك.');
+      this.onClose();
+      window.location.href = '/requests';
+    } else {
+      alert('فشلت عملية الدفع أو تم إلغاؤها.');
+    }
   }
 
 }

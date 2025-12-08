@@ -13,13 +13,14 @@ export class PaymentService {
 
   constructor(private http: HttpClient) { }
 
-  createPayment(orderId: string, amount: number, currency: string, customerEmail: string, merchantRedirect: string): Observable<{ sessionUrl: string }> {
+  createPayment(orderId: string, amount: number, currency: string, customerEmail: string, merchantRedirect: string, display: string = 'en'): Observable<{ sessionUrl: string }> {
     return this.http.post<{ sessionUrl: string }>(this.apiUrl, {
       orderId,
       amount,
       currency,
       customerEmail,
-      merchantRedirect
+      merchantRedirect,
+      display
     }).pipe(
       catchError(error => {
         console.error('Payment creation failed:', error);

@@ -25,12 +25,13 @@ com.kenouz.bookstore2.app-play-services-basement-17.1.1-23 C:\Users\karim\.gradl
 com.kenouz.bookstore2.app-fragment-1.8.4-24 C:\Users\karim\.gradle\caches\8.14\transforms\e07225989cb6b3f2b2f2d62a1b1c01fc\transformed\fragment-1.8.4\res
 com.kenouz.bookstore2.app-lifecycle-runtime-2.6.2-25 C:\Users\karim\.gradle\caches\8.14\transforms\ff82014f7b4f191c14d780ba098d9b32\transformed\lifecycle-runtime-2.6.2\res
 com.kenouz.bookstore2.app-pngs-26 D:\My projects\Kenouz\android\app\build\generated\res\pngs\debug
-com.kenouz.bookstore2.app-resValues-27 D:\My projects\Kenouz\android\app\build\generated\res\resValues\debug
-com.kenouz.bookstore2.app-packageDebugResources-28 D:\My projects\Kenouz\android\app\build\intermediates\incremental\debug\packageDebugResources\merged.dir
-com.kenouz.bookstore2.app-packageDebugResources-29 D:\My projects\Kenouz\android\app\build\intermediates\incremental\debug\packageDebugResources\stripped.dir
-com.kenouz.bookstore2.app-debug-30 D:\My projects\Kenouz\android\app\build\intermediates\merged_res\debug\mergeDebugResources
-com.kenouz.bookstore2.app-debug-31 D:\My projects\Kenouz\android\app\src\debug\res
-com.kenouz.bookstore2.app-main-32 D:\My projects\Kenouz\android\app\src\main\res
-com.kenouz.bookstore2.app-debug-33 D:\My projects\Kenouz\android\capacitor-cordova-android-plugins\build\intermediates\packaged_res\debug\packageDebugResources
-com.kenouz.bookstore2.app-debug-34 D:\My projects\Kenouz\node_modules\@capacitor\android\capacitor\build\intermediates\packaged_res\debug\packageDebugResources
-com.kenouz.bookstore2.app-debug-35 D:\My projects\Kenouz\node_modules\@codetrix-studio\capacitor-google-auth\android\build\intermediates\packaged_res\debug\packageDebugResources
+com.kenouz.bookstore2.app-res-27 D:\My projects\Kenouz\android\app\build\generated\res\processDebugGoogleServices
+com.kenouz.bookstore2.app-resValues-28 D:\My projects\Kenouz\android\app\build\generated\res\resValues\debug
+com.kenouz.bookstore2.app-packageDebugResources-29 D:\My projects\Kenouz\android\app\build\intermediates\incremental\debug\packageDebugResources\merged.dir
+com.kenouz.bookstore2.app-packageDebugResources-30 D:\My projects\Kenouz\android\app\build\intermediates\incremental\debug\packageDebugResources\stripped.dir
+com.kenouz.bookstore2.app-debug-31 D:\My projects\Kenouz\android\app\build\intermediates\merged_res\debug\mergeDebugResources
+com.kenouz.bookstore2.app-debug-32 D:\My projects\Kenouz\android\app\src\debug\res
+com.kenouz.bookstore2.app-main-33 D:\My projects\Kenouz\android\app\src\main\res
+com.kenouz.bookstore2.app-debug-34 D:\My projects\Kenouz\android\capacitor-cordova-android-plugins\build\intermediates\packaged_res\debug\packageDebugResources
+com.kenouz.bookstore2.app-debug-35 D:\My projects\Kenouz\node_modules\@capacitor\android\capacitor\build\intermediates\packaged_res\debug\packageDebugResources
+com.kenouz.bookstore2.app-debug-36 D:\My projects\Kenouz\node_modules\@codetrix-studio\capacitor-google-auth\android\build\intermediates\packaged_res\debug\packageDebugResources

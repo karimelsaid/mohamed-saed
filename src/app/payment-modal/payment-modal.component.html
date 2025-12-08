@@ -1,0 +1,22 @@
+<div class="fixed inset-0 z-[9999999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+    <div
+        class="bg-white dark:bg-gray-800 w-full max-w-4xl h-[90vh] rounded-2xl shadow-2xl relative overflow-hidden flex flex-col">
+        <!-- Header -->
+        <div
+            class="flex justify-between items-center p-4 border-b border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 z-10">
+            <h3 class="text-lg font-bold text-gray-800 dark:text-gray-200">الدفع الالكتروني</h3>
+            <button (click)="onClose()"
+                class="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                <fa-icon [icon]="faTimes" class="text-gray-500 dark:text-gray-400"></fa-icon>
+            </button>
+        </div>
+
+        <!-- Iframe Content -->
+        <div class="flex-1 w-full bg-gray-50 dark:bg-gray-900 relative">
+            <div *ngIf="!safeUrl" class="absolute inset-0 flex items-center justify-center">
+                <div class="animate-spin rounded-full h-12 w-12 border-4 border-indigo-500 border-t-transparent"></div>
+            </div>
+            <iframe *ngIf="safeUrl" [src]="safeUrl" class="w-full h-full border-0" allow="payment"></iframe>
+        </div>
+    </div>
+</div>

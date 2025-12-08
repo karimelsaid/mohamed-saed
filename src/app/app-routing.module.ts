@@ -46,6 +46,9 @@ import { GamesComponent } from './book-list/games/games.component';
 import { FabricsComponent } from './book-list/fabrics/fabrics.component';
 import { OthersComponent } from './book-list/others/others.component';
 import { BooksComponent } from './book-list/books/books.component';
+import { LibraryComponent } from './library/library.component';
+import { EpubReaderComponent } from './epub-reader/epub-reader.component';
+import { SubscriptionComponent } from './subscription/subscription.component';
 
 const routes: Routes = [
   {
@@ -100,6 +103,17 @@ const routes: Routes = [
   { path: 'requests', component: UserOrdersComponent },
   { path: 'referrals', component: ReferralsComponent },
   { path: 'print', component: PrintComponent },
+  { path: 'library', component: LibraryComponent },
+  { path: 'reader/:ebookId', component: EpubReaderComponent },
+  { path: 'subscription', component: SubscriptionComponent },
+  {
+    path: 'subscription/callback',
+    loadComponent: () => import('./subscription/subscription-callback/subscription-callback.component').then(m => m.SubscriptionCallbackComponent)
+  },
+  {
+    path: 'order/callback',
+    loadComponent: () => import('./checkout-modal/order-callback/order-callback.component').then(m => m.OrderCallbackComponent)
+  },
   // Routes with parameters must come before routes without parameters
   { path: 'electronics/:id/:name?', component: BookDetailsComponent },
   { path: 'clothing/:id/:name?', component: BookDetailsComponent },

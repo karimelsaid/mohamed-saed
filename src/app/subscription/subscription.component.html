@@ -1,0 +1,122 @@
+<div class="subscription-container">
+    <div class="subscription-header mt-10 md:mt-32">
+        <h1><i class="fas fa-crown"></i> اشتراك المكتبة الرقمية</h1>
+        <p>احصل على وصول غير محدود لآلاف الكتب الإلكترونية</p>
+    </div>
+
+    <!-- Success Message -->
+    <div class="alert success" *ngIf="success">
+        <i class="fas fa-check-circle"></i>
+        {{ success }}
+    </div>
+
+    <!-- Error Message -->
+    <div class="alert error" *ngIf="error">
+        <i class="fas fa-exclamation-circle"></i>
+        {{ error }}
+    </div>
+
+    <!-- Active Subscription -->
+    <div class="active-subscription" *ngIf="subscription && subscription.status === 'active'">
+        <div class="subscription-card active">
+            <div class="card-header">
+                <i class="fas fa-check-circle"></i>
+                <h2>اشتراكك نشط</h2>
+            </div>
+            <div class="card-body">
+                <div class="info-row">
+                    <span>الخطة:</span>
+                    <span>{{ subscription.plan === 'monthly' ? 'شهري' : 'سنوي' }}</span>
+                </div>
+                <div class="info-row">
+                    <span>ينتهي في:</span>
+                    <span>{{ subscription.endDate | date:'longDate':'':'ar' }}</span>
+                </div>
+                <div class="info-row">
+                    <span>الأيام المتبقية:</span>
+                    <span class="days-badge">{{ getRemainingDays() }} يوم</span>
+                </div>
+            </div>
+            <div class="card-actions">
+                <a routerLink="/library" class="btn primary">
+                    <i class="fas fa-book-reader"></i>
+                    الذهاب للمكتبة
+                </a>
+                <button class="btn secondary" (click)="cancelSubscription()">
+                    إلغاء الاشتراك
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Subscription Plans -->
+    <div class="plans-container" *ngIf="!subscription || subscription.status !== 'active'">
+        <h2>اختر خطتك</h2>
+
+        <div class="plans-grid">
+            <!-- Monthly Plan -->
+            <div class="plan-card" [class.selected]="selectedPlan === 'monthly'" (click)="selectPlan('monthly')">
+                <div class="plan-badge" *ngIf="selectedPlan === 'monthly'">
+                    <i class="fas fa-check"></i>
+                </div>
+                <div class="plan-header">
+                    <h3>شهري</h3>
+                    <div class="plan-price">
+                        <span class="price">{{ prices.monthly }}</span>
+                        <span class="currency">جنيه/شهر</span>
+                    </div>
+                </div>
+                <ul class="plan-features">
+                    <li><i class="fas fa-check"></i> وصول لجميع الكتب الإلكترونية</li>
+                    <li><i class="fas fa-check"></i> قارئ متطور مع ميزات كاملة</li>
+                    <li><i class="fas fa-check"></i> حفظ التقدم والإشارات المرجعية</li>
+                    <li><i class="fas fa-check"></i> خصم 10% على الكتب الورقية</li>
+                </ul>
+            </div>
+
+            <!-- Yearly Plan -->
+            <div class="plan-card yearly" [class.selected]="selectedPlan === 'yearly'" (click)="selectPlan('yearly')">
+                <div class="plan-badge" *ngIf="selectedPlan === 'yearly'">
+                    <i class="fas fa-check"></i>
+                </div>
+                <div class="best-value">
+                    <span>الأفضل قيمة</span>
+                </div>
+                <div class="plan-header">
+                    <h3>سنوي</h3>
+                    <div class="plan-price">
+                        <span class="price">{{ prices.yearly }}</span>
+                        <span class="currency">جنيه/سنة</span>
+                    </div>
+                    <div class="savings">وفر {{ (prices.monthly * 12) - prices.yearly }} جنيه</div>
+                </div>
+                <ul class="plan-features">
+                    <li><i class="fas fa-check"></i> جميع مميزات الخطة الشهرية</li>
+                    <li><i class="fas fa-check"></i> توفير 17% من التكلفة</li>
+                    <li><i class="fas fa-check"></i> أولوية في الدعم الفني</li>
+                    <li><i class="fas fa-check"></i> الوصول للإصدارات الجديدة أولاً</li>
+                </ul>
+            </div>
+        </div>
+
+        <button class="subscribe-btn" (click)="subscribe()" [disabled]="isLoading">
+            <span *ngIf="!isLoading">
+                <i class="fas fa-crown"></i>
+                اشترك الآن - {{ selectedPlan === 'monthly' ? prices.monthly : prices.yearly }} جنيه
+            </span>
+            <span *ngIf="isLoading">
+                <i class="fas fa-spinner fa-spin"></i>
+                جاري المعالجة...
+            </span>
+        </button>
+
+        <p class="terms-note">
+            بالاشتراك، أنت توافق على <a routerLink="/الشروط-والاحكام">الشروط والأحكام</a>
+        </p>
+    </div>
+
+    <!-- Payment Modal -->
+    <app-payment-modal *ngIf="showPaymentModal" [paymentUrl]="paymentUrl" (close)="onPaymentModalClose()"
+        (paymentComplete)="onPaymentComplete($event)">
+    </app-payment-modal>
+</div>

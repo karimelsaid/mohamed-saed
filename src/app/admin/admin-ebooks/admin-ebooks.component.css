@@ -1,0 +1,9 @@
+/* Component-specific styles */
+:host {
+    display: block;
+    width: 100%;
+}
+
+.spinner-border {
+    border-top-color: transparent;
+}

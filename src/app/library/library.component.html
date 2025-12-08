@@ -1,0 +1,181 @@
+<div class="library-container">
+    <!-- Header Section -->
+    <div class="library-header mt-10 md:mt-32">
+        <div class="header-content">
+            <h1 class="library-title">
+                <i class="fas fa-book-reader"></i>
+                المكتبة الرقمية
+            </h1>
+            <p class="library-subtitle">اكتشف آلاف الكتب الإلكترونية واقرأها في أي وقت ومن أي مكان</p>
+        </div>
+
+        <!-- Subscription Banner -->
+        <div class="subscription-banner" *ngIf="!hasActiveSubscription()">
+            <div class="banner-content">
+                <div class="banner-text">
+                    <h3><i class="fas fa-crown"></i> اشترك الآن واحصل على وصول غير محدود</h3>
+                    <p>اقرأ جميع الكتب الإلكترونية + خصم 10% على الكتب الورقية</p>
+                </div>
+                <a routerLink="/subscription" class="subscribe-btn">
+                    اشترك الآن
+                    <i class="fas fa-arrow-left"></i>
+                </a>
+            </div>
+        </div>
+
+        <div class="subscription-card" *ngIf="hasActiveSubscription()">
+            <div class="card-icon">
+                <i class="fas fa-crown"></i>
+            </div>
+            <div class="card-info">
+                <span class="plan-name">{{ getPlanDisplayName() }}</span>
+                <span class="plan-status">نشط</span>
+                <span class="plan-expiry">ينتهي في: {{ getSubscriptionEndDate() | date:'dd/MM/yyyy' }}</span>
+            </div>
+            <a routerLink="/subscription" class="renew-btn">تجديد</a>
+        </div>
+    </div>
+
+    <!-- Filters Section -->
+    <div class="filters-section">
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" [(ngModel)]="searchQuery" (input)="onSearch()" placeholder="ابحث عن كتاب، مؤلف..." />
+        </div>
+
+        <div class="filter-group">
+            <select [(ngModel)]="selectedCategory" (change)="onCategoryChange()">
+                <option value="">جميع الأقسام</option>
+                <option *ngFor="let cat of categories" [value]="cat">{{ getCategoryName(cat) }}</option>
+            </select>
+        </div>
+
+        <div class="view-mode-tabs">
+            <button [class.active]="viewMode === 'all'" (click)="setViewMode('all')">
+                <i class="fas fa-th"></i> الكل
+            </button>
+            <button [class.active]="viewMode === 'favorites'" (click)="setViewMode('favorites')">
+                <i class="fas fa-bookmark"></i> المحفوظات
+            </button>
+            <button [class.active]="viewMode === 'subscription'" (click)="setViewMode('subscription')">
+                <i class="fas fa-crown"></i> الاشتراك
+            </button>
+        </div>
+    </div>
+
+    <!-- Loading State -->
+    <div class="loading-state" *ngIf="isLoading">
+        <div class="loading-spinner"></div>
+        <p>جاري تحميل الكتب...</p>
+    </div>
+
+    <!-- Error State -->
+    <div class="error-state" *ngIf="error">
+        <i class="fas fa-exclamation-triangle"></i>
+        <p>{{ error }}</p>
+        <button (click)="loadData()">إعادة المحاولة</button>
+    </div>
+
+    <!-- Empty State -->
+    <!-- Enhanced Empty State -->
+    <div class="empty-state" *ngIf="!isLoading && !error && filteredEbooks.length === 0">
+        <div class="empty-icon-wrapper">
+            <i class="fas fa-book-open"></i>
+        </div>
+
+        <ng-container *ngIf="viewMode === 'owned'">
+            <h3>مكتبتك فارغة حالياً</h3>
+            <p>ابدأ رحلتك المعرفية الآن! تصفح المتجر لشراء كتبك المفضلة أو اشترك للوصول غير المحدود.</p>
+            <div class="empty-actions">
+                <a routerLink="/" class="primary-btn">تصفح الكتب</a>
+                <a routerLink="/subscription" class="secondary-btn">اشترك الآن</a>
+            </div>
+        </ng-container>
+
+        <ng-container *ngIf="viewMode !== 'owned'">
+            <h3>لم يتم العثور على نتائج</h3>
+            <p>جرب البحث بكلمات مختلفة أو تصفح جميع الأقسام</p>
+            <button (click)="loadData()" class="text-btn">عرض الكل</button>
+        </ng-container>
+    </div>
+
+    <!-- Ebooks Grid -->
+
+    <div class="ebooks-grid" *ngIf="!isLoading && !error && filteredEbooks.length > 0">
+        <div class="ebook-card" *ngFor="let ebook of filteredEbooks">
+            <div class="card-image">
+                <img [src]="getCoverImageUrl(ebook)" [alt]="ebook.title" loading="lazy" />
+
+                <div class="card-badges">
+                    <span class="badge owned" *ngIf="isOwned(ebook)">
+                        <i class="fas fa-check"></i> مملوك
+                    </span>
+                    <span class="badge locked" *ngIf="ebook.availableForSubscription && !hasAccess(ebook)">
+                        <i class="fas fa-lock"></i> اشتراك
+                    </span>
+
+                    <div class="ebook-meta">
+                        <span class="category">{{ getCategoryName(ebook.category) }}</span>
+                        <span class="pages" *ngIf="ebook.pages">
+                            <i class="fas fa-file-alt"></i> {{ ebook.pages }} صفحة
+                        </span>
+                    </div>
+                </div>
+                <div class="card-overlay desktop-only">
+                    <!-- Priority 1: Read Now (If has access) -->
+                    <a *ngIf="hasAccess(ebook)" [routerLink]="['/reader', ebook._id]" class="primary-overlay-btn">
+                        <i class="fas fa-book-open"></i>
+                        اقرأ الآن
+                    </a>
+
+                    <!-- Priority 2: Free Preview (If no access but mini version exists) -->
+                    <a *ngIf="!hasAccess(ebook) && hasMiniVersion(ebook)" [routerLink]="['/reader', ebook._id]"
+                        class="primary-overlay-btn">
+                        <i class="fas fa-eye"></i>
+                        معاينة مجانية
+                    </a>
+
+                    <!-- Priority 3: Subscription Required Msg (If no access and no mini version) -->
+                    <span *ngIf="ebook.availableForSubscription && !hasAccess(ebook) && !hasMiniVersion(ebook)"
+                        class="subscription-msg">
+                        <i class="fas fa-lock"></i>
+                        الاشتراك مطلوب
+                    </span>
+                </div>
+            </div>
+
+            <!-- Footer Actions: Bookmark & Paper Link (Icons) -->
+            <div class="card-actions-footer">
+                <!-- Paper Book Link (if exists) -->
+                <a *ngIf="ebook.relatedProductId" [routerLink]="['/book', ebook.relatedProductId, ebook.title]"
+                    class="action-icon-btn" title="الكتاب الورقي">
+                    <i class="fas fa-book"></i>
+                </a>
+
+                <!-- Bookmark Toggle -->
+                <button class="action-icon-btn" [class.active]="isFavorite(ebook)"
+                    (click)="toggleFavorite(ebook, $event)" title="حفظ في المحفوظات">
+                    <i [class]="isFavorite(ebook) ? 'fa-solid fa-bookmark' : 'fa-regular fa-bookmark'"></i>
+                </button>
+
+                <!-- Mobile Read Button (Visible only on mobile) -->
+                <a *ngIf="hasAccess(ebook)" [routerLink]="['/reader', ebook._id]"
+                    class="mobile-read-btn primary d-md-none">
+                    <i class="fas fa-play"></i> قراءة الآن
+                </a>
+                <a *ngIf="!hasAccess(ebook) && hasMiniVersion(ebook)" [routerLink]="['/reader', ebook._id]"
+                    class="mobile-read-btn d-md-none">
+                    <i class="fas fa-eye"></i> معاينة مجانية
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load More Section -->
+    <div class="load-more-section" *ngIf="hasMoreBooks && !isLoading && !error">
+        <button (click)="loadMore()" class="load-more-btn" [disabled]="isLoadingMore">
+            <span *ngIf="!isLoadingMore">تحميل المزيد</span>
+            <div *ngIf="isLoadingMore" class="spinner-small"></div>
+        </button>
+    </div>
+</div>

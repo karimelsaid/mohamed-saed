@@ -706,7 +706,6 @@ drawable notification_template_icon_bg
 drawable notification_template_icon_low_bg
 drawable notification_tile_bg
 drawable notify_panel_notification_icon_bg
-drawable splash
 drawable test_level_drawable
 drawable tooltip_frame_dark
 drawable tooltip_frame_light
@@ -1032,8 +1031,15 @@ string common_open_on_phone
 string common_signin_button_text
 string common_signin_button_text_long
 string custom_url_scheme
+string default_web_client_id
+string gcm_defaultSenderId
+string google_api_key
+string google_app_id
+string google_crash_reporting_api_key
+string google_storage_bucket
 string no_webview_text
 string package_name
+string project_id
 string search_menu_title
 string server_client_id
 string status_bar_notification_info_overflow

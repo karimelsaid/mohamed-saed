@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.kenouz.bookstore2.app-mergeDebugResources-28:/values-zh-rHK/values-zh-rHK.xml",
+            "outputFile": "com.kenouz.bookstore2.app-mergeDebugResources-29:/values-zh-rHK/values-zh-rHK.xml",
             "map": [
                 {
                     "source": "C:\\Users\\karim\\.gradle\\caches\\8.14\\transforms\\287781d3f80d1b2d3a38b084152c3635\\transformed\\core-1.15.0\\res\\values-zh-rHK\\values-zh-rHK.xml",

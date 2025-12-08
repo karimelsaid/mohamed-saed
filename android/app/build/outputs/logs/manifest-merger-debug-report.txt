@@ -15,6 +15,7 @@ ADDED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:2:1-48
 INJECTED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:2:1-48:12
 INJECTED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:2:1-48:12
 INJECTED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:2:1-48:12
+MERGED from [:capacitor-app] D:\My projects\Kenouz\node_modules\@capacitor\app\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:2:1-7:12
 MERGED from [:codetrix-studio-capacitor-google-auth] D:\My projects\Kenouz\node_modules\@codetrix-studio\capacitor-google-auth\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:2:1-10:12
 MERGED from [:capacitor-android] D:\My projects\Kenouz\node_modules\@capacitor\android\capacitor\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:2:1-7:12
 MERGED from [:capacitor-cordova-android-plugins] D:\My projects\Kenouz\android\capacitor-cordova-android-plugins\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:2:1-11:12
@@ -166,6 +167,8 @@ uses-sdk
 INJECTED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml reason: use-sdk injection requested
 INJECTED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml
 INJECTED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml
+MERGED from [:capacitor-app] D:\My projects\Kenouz\node_modules\@capacitor\app\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:5:5-44
+MERGED from [:capacitor-app] D:\My projects\Kenouz\node_modules\@capacitor\app\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:5:5-44
 MERGED from [:codetrix-studio-capacitor-google-auth] D:\My projects\Kenouz\node_modules\@codetrix-studio\capacitor-google-auth\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:5:5-44
 MERGED from [:codetrix-studio-capacitor-google-auth] D:\My projects\Kenouz\node_modules\@codetrix-studio\capacitor-google-auth\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:5:5-44
 MERGED from [:capacitor-android] D:\My projects\Kenouz\node_modules\@capacitor\android\capacitor\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:5:5-44

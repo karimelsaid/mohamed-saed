@@ -1,9 +1,6 @@
 {
 	"appId": "com.kenouz.bookstore2",
-	"appName": "Kenouz",
+	"appName": "knoozbook",
 	"webDir": "Backend/dist/browser",
-	"bundledWebRuntime": false,
-	"server": {
-		"url": "https://kenouz.org"
-	}
+	"bundledWebRuntime": false
 }

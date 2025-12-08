@@ -4,7 +4,7 @@ import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { faBars, faClose, faHome, faShoppingCart, faBook, faFilePdf, faUser, faChevronUp, faChevronDown, faSearch, faHeart, faCartPlus, faClipboardList, faTachometerAlt, faBell, faTrash, faMosque, faBrain, faScroll, faChartLine, faHeartbeat, faBookOpen, faChild, faHistory, faPalette, faMoon, faSun, faExpand, faBolt, faTshirt, faMagic, faShoePrints, faChair, faGamepad, faCut, faEllipsisH } from '@fortawesome/free-solid-svg-icons';
+import { faBars, faClose, faHome, faShoppingCart, faBook, faBookReader, faFilePdf, faUser, faChevronUp, faChevronDown, faSearch, faHeart, faCartPlus, faClipboardList, faTachometerAlt, faBell, faTrash, faMosque, faBrain, faScroll, faChartLine, faHeartbeat, faBookOpen, faChild, faHistory, faPalette, faMoon, faSun, faExpand, faBolt, faTshirt, faMagic, faShoePrints, faChair, faGamepad, faCut, faEllipsisH } from '@fortawesome/free-solid-svg-icons';
 import { DataService } from '../services/data.service';
 import { AccountModalComponent } from '../auth/account-modal/account-modal.component';
 import { AuthService } from '../auth/auth.service';
@@ -27,6 +27,7 @@ export class NavbarComponent implements OnInit {
   faClose = faClose;
   faHome = faHome;
   faBook = faBook;
+  faBookReader = faBookReader;
   faShoppingCart = faShoppingCart;
   faFilePdf = faFilePdf;
   faUser = faUser;

@@ -1,10 +1,14 @@
-import { Component, ViewChild, ElementRef } from '@angular/core';
+import { Component, ViewChild, ElementRef, NgZone } from '@angular/core';
 import { Router } from '@angular/router';
+import { Location } from '@angular/common'; // Import Location
+import { App } from '@capacitor/app'; // Import App
+import { Capacitor } from '@capacitor/core'; // Import Capacitor
 import { faChevronLeft, faChevronRight, faSearch } from '@fortawesome/free-solid-svg-icons';
 import { faGooglePlay, faYoutube } from '@fortawesome/free-brands-svg-icons';
 import { DataService } from './services/data.service';
 import { ModalService, ModalConfig } from './services/modal.service';
 import { TutorialService } from './services/tutorial.service';
+import { AppUpdateService } from './services/app-update.service'; // Import AppUpdateService
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -33,7 +37,42 @@ export class AppComponent {
   modalConfig: ModalConfig | null = null;
   private modalSubscription: Subscription | null = null;
 
-  constructor(private router: Router, private dataService: DataService, private modalService: ModalService, private tutorialService: TutorialService) { }
+  constructor(
+    private router: Router,
+    private dataService: DataService,
+    private modalService: ModalService,
+    private tutorialService: TutorialService,
+    private location: Location, // Inject Location
+    private ngZone: NgZone, // Inject NgZone
+    private appUpdateService: AppUpdateService // Inject AppUpdateService
+  ) {
+    this.initializeApp();
+  }
+
+  initializeApp() {
+    this.appUpdateService.checkForUpdate(); // Check for updates on startup
+    if (Capacitor.isNativePlatform()) {
+      App.addListener('backButton', ({ canGoBack }: { canGoBack: boolean }) => {
+        this.ngZone.run(() => {
+          if (this.router.url === '/' || this.router.url === '/home') {
+            App.exitApp();
+          } else {
+            if (canGoBack) {
+              this.location.back();
+            } else {
+              // Fallback if canGoBack is false but we are not on home
+              // (This happens sometimes in hybrid apps history)
+              if (window.history.length > 1) {
+                this.location.back();
+              } else {
+                App.exitApp();
+              }
+            }
+          }
+        });
+      });
+    }
+  }
 
   ngOnInit(): void {
     // تحقق من وجود صفحة البحث في المسار

@@ -1,37 +1,45 @@
 <div class="pt-10 md:pt-40 mb-24 md:mb-4">
-  <div class="max-w-md mx-auto mt-10 p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-300 dark:border-gray-700">
+  <div
+    class="max-w-md mx-auto mt-10 p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-300 dark:border-gray-700">
 
     <h2 class="text-2xl font-bold mb-4 text-center text-gray-900 dark:text-gray-200">إنشاء حساب</h2>
-  <div [class.hidden]="isMerchantRegistration" class="m-6 flex justify-center rtl">
-    <div *ngIf="!isAndroid" id="googleSignInDiv"></div>
-    <!-- <button *ngIf="isAndroid" (click)="googleSignIn()" class="w-full py-2 bg-white border border-gray-300 text-gray-700 rounded-lg font-semibold transition duration-200 hover:bg-gray-50 flex items-center justify-center">
-      <svg class="w-5 h-5 mr-2" viewBox="0 0 24 24">
-        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-      </svg>
-      إنشاء حساب باستخدام Google
-    </button> -->
-  </div>
+    <div [class.hidden]="isMerchantRegistration" class="m-6 flex justify-center rtl">
+      <div *ngIf="!isAndroid" id="googleSignInDiv"></div>
+      <button *ngIf="isAndroid" (click)="googleSignIn()"
+        class="w-full py-2 bg-white border border-gray-300 text-gray-700 rounded-lg font-semibold transition duration-200 hover:bg-gray-50 flex items-center justify-center">
+        <svg class="w-5 h-5 mr-2" viewBox="0 0 24 24">
+          <path fill="#4285F4"
+            d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+          <path fill="#34A853"
+            d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+          <path fill="#FBBC05"
+            d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+          <path fill="#EA4335"
+            d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+        </svg>
+        إنشاء حساب باستخدام Google
+      </button>
+    </div>
 
 
     <div class="flex justify-center mb-6 space-x-4 rtl space-x-reverse">
-      <button (click)="isMerchantRegistration = false" [class.bg-blue-600]="!isMerchantRegistration" [class.bg-gray-300]="isMerchantRegistration" class="px-4 py-2 rounded text-white">
+      <button (click)="isMerchantRegistration = false" [class.bg-blue-600]="!isMerchantRegistration"
+        [class.bg-gray-300]="isMerchantRegistration" class="px-4 py-2 rounded text-white">
         حساب مشتري
       </button>
-      <button (click)="isMerchantRegistration = true" [class.bg-blue-600]="isMerchantRegistration" [class.bg-gray-300]="!isMerchantRegistration" class="px-4 py-2 rounded text-white">
+      <button (click)="isMerchantRegistration = true" [class.bg-blue-600]="isMerchantRegistration"
+        [class.bg-gray-300]="!isMerchantRegistration" class="px-4 py-2 rounded text-white">
         حساب تاجر
       </button>
     </div>
 
-      <form *ngIf="!isMerchantRegistration" (ngSubmit)="onRegister()" #registerForm="ngForm">
+    <form *ngIf="!isMerchantRegistration" (ngSubmit)="onRegister()" #registerForm="ngForm">
       <!-- اسم المستخدم -->
       <div class="mb-4">
         <label class="block mb-1 text-sm font-medium text-gray-900 dark:text-gray-300">الاسم</label>
-        <input type="text" name="name" [(ngModel)]="user.username" required
-          (input)="validateName()"
-          class="w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400" #nameInput="ngModel"/>
+        <input type="text" name="name" [(ngModel)]="user.username" required (input)="validateName()"
+          class="w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+          #nameInput="ngModel" />
       </div>
       <!-- رسائل خطأ -->
       <div *ngIf="nameInput.invalid && nameInput.touched" class="text-red-500 dark:text-red-400 text-sm">
@@ -45,13 +53,12 @@
       <div class="mb-4">
         <label class="block mb-1 text-sm font-medium text-gray-900 dark:text-gray-300">البريد الإلكتروني</label>
         <input type="email" name="email" [(ngModel)]="user.email" required
-          [pattern]="'^[a-zA-Z0-9._%+-]+@[a-zAZ0-9.-]+\.[a-zA-Z]{2,}$'"
-          #email="ngModel"
+          [pattern]="'^[a-zA-Z0-9._%+-]+@[a-zAZ0-9.-]+\.[a-zA-Z]{2,}$'" #email="ngModel"
           class="w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 border rounded-lg border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
           [ngClass]="{
             'border-blue-500 focus:ring-blue-500': email.valid && email.touched,
             'border-red-500 focus:ring-red-500': email.invalid && email.touched
-          }" (input)="validateEmail()"/>
+          }" (input)="validateEmail()" />
 
         <!-- رسائل خطأ البريد الإلكتروني -->
         <div *ngIf="email.invalid && email.touched" class="text-red-500 dark:text-red-400 text-sm">
@@ -65,8 +72,7 @@
       <!-- رقم الهاتف -->
       <div class="mb-4">
         <label class="block mb-1 text-sm font-medium text-gray-900 dark:text-gray-300">رقم الهاتف</label>
-        <input type="tel" name="phone" [(ngModel)]="user.phone" required
-          (input)="validatePhone()"
+        <input type="tel" name="phone" [(ngModel)]="user.phone" required (input)="validatePhone()"
           class="w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 border rounded-lg border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
           [ngClass]="{
             'border-blue-500 focus:ring-blue-500': phoneValid && phoneTouched,
@@ -84,9 +90,8 @@
 
       <div class="mb-4">
         <label class="block mb-1 text-sm font-medium text-gray-900 dark:text-gray-300">المحافظة</label>
-        <select name="governorate" [(ngModel)]="user.governorate" required
-                (change)="onGovernorateChange('buyer')"
-                class="w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400">
+        <select name="governorate" [(ngModel)]="user.governorate" required (change)="onGovernorateChange('buyer')"
+          class="w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400">
           <option value="" disabled selected>اختر المحافظة</option>
           <option *ngFor="let gov of governorates" [value]="gov.governorate_name">
             {{ gov.governorate_name }}
@@ -97,9 +102,8 @@
       <!-- المدينة -->
       <div class="mb-4">
         <label class="block mb-1 text-sm font-medium text-gray-900 dark:text-gray-300">المدينة</label>
-      <select name="city" [(ngModel)]="user.city" required
-                [disabled]="!user.governorate"
-                class="w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400">
+        <select name="city" [(ngModel)]="user.city" required [disabled]="!user.governorate"
+          class="w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400">
           <option value="" disabled selected>اختر المدينة</option>
           <option *ngFor="let city of buyerCities" [value]="city">
             {{ city }}
@@ -117,7 +121,8 @@
       <!-- كلمة المرور -->
       <div class="mb-4" *ngIf="!isMerchantRegistration">
         <label class="block mb-1 text-sm font-medium text-gray-900 dark:text-gray-300">كلمة المرور</label>
-        <input type="password" name="password" [(ngModel)]="user.password" required minlength="8" (input)="validateBuyerPassword()"
+        <input type="password" name="password" [(ngModel)]="user.password" required minlength="8"
+          (input)="validateBuyerPassword()"
           class="w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 border rounded-lg border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
           [ngClass]="{
             'border-blue-500 focus:ring-blue-500': buyerPasswordValid && buyerPasswordTouched,
@@ -132,13 +137,12 @@
       <!-- تأكيد كلمة المرور -->
       <div class="mb-4" *ngIf="!isMerchantRegistration">
         <label class="block mb-1 text-sm font-medium text-gray-900 dark:text-gray-300">تأكيد كلمة المرور</label>
-        <input type="password" name="buyerConfirmPassword" [(ngModel)]="buyerConfirmPassword" required
-          [ngClass]="{
+        <input type="password" name="buyerConfirmPassword" [(ngModel)]="buyerConfirmPassword" required [ngClass]="{
             'border-red-500 focus:ring-red-500': buyerPasswordMismatch,
             'border-blue-500 focus:ring-blue-500': !buyerPasswordMismatch && buyerConfirmPassword
           }"
           class="w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 border rounded-lg border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
-          (blur)="buyerPasswordTouched = true" (input)="checkBuyerPasswordMatch()"/>
+          (blur)="buyerPasswordTouched = true" (input)="checkBuyerPasswordMatch()" />
 
         <!-- رسائل خطأ تطابق كلمة المرور -->
         <div *ngIf="buyerPasswordMismatch && buyerPasswordTouched" class="text-red-500 dark:text-red-400 text-sm">
@@ -150,8 +154,7 @@
       </div>
 
       <!-- زر الإرسال -->
-      <button type="submit"
-        [disabled]="!isBuyerFormValid"
+      <button type="submit" [disabled]="!isBuyerFormValid"
         class="w-full bg-blue-600 dark:bg-[#0a1325] text-white py-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-800 transition duration-200"
         [ngClass]="{'opacity-50 cursor-not-allowed': !isBuyerFormValid}">
         إنشاء الحساب
@@ -160,12 +163,14 @@
 
 
     <!-- التاجر -->
-    <form *ngIf="isMerchantRegistration" (ngSubmit)="onRegister()" #merchantForm="ngForm" enctype="multipart/form-data" class="mt-6">
+    <form *ngIf="isMerchantRegistration" (ngSubmit)="onRegister()" #merchantForm="ngForm" enctype="multipart/form-data"
+      class="mt-6">
       <!-- اسم المنشئه -->
       <div class="mb-4">
         <label class="block mb-1 text-sm font-medium text-gray-900 dark:text-gray-300">اسم المنشئه</label>
         <input type="text" name="libraryName" [(ngModel)]="merchantUser.libraryName" required
-          class="w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400" #libraryNameInput="ngModel"/>
+          class="w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+          #libraryNameInput="ngModel" />
       </div>
       <!-- رسائل خطأ -->
       <div *ngIf="libraryNameInput.invalid && libraryNameInput.touched" class="text-red-500 dark:text-red-400 text-sm">
@@ -176,13 +181,12 @@
       <div class="mb-4">
         <label class="block mb-1 text-sm font-medium text-gray-900 dark:text-gray-300">البريد الإلكتروني</label>
         <input type="email" name="email" [(ngModel)]="merchantUser.email" required
-          [pattern]="'^[a-zA-Z0-9._%+-]+@[a-zAZ0-9.-]+\.[a-zA-Z]{2,}$'"
-          #merchantEmail="ngModel"
+          [pattern]="'^[a-zA-Z0-9._%+-]+@[a-zAZ0-9.-]+\.[a-zA-Z]{2,}$'" #merchantEmail="ngModel"
           class="w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 border rounded-lg border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
           [ngClass]="{
             'border-blue-500 focus:ring-blue-500': merchantEmail.valid && merchantEmail.touched,
             'border-red-500 focus:ring-red-500': merchantEmail.invalid && merchantEmail.touched
-          }" (input)="validateEmail()"/>
+          }" (input)="validateEmail()" />
 
         <!-- رسائل خطأ البريد الإلكتروني -->
         <div *ngIf="merchantEmail.invalid && merchantEmail.touched" class="text-red-500 dark:text-red-400 text-sm">
@@ -196,8 +200,7 @@
       <!-- رقم الهاتف -->
       <div class="mb-4">
         <label class="block mb-1 text-sm font-medium text-gray-900 dark:text-gray-300">رقم الهاتف</label>
-        <input type="tel" name="phone" [(ngModel)]="merchantUser.phone" required
-          (input)="validatePhone()"
+        <input type="tel" name="phone" [(ngModel)]="merchantUser.phone" required (input)="validatePhone()"
           class="w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 border rounded-lg border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
           [ngClass]="{
             'border-blue-500 focus:ring-blue-500': phoneValid && phoneTouched,
@@ -215,8 +218,8 @@
       <div class="mb-4">
         <label class="block mb-1 text-sm font-medium text-gray-900 dark:text-gray-300">المحافظة</label>
         <select name="governorate" [(ngModel)]="merchantUser.governorate" required
-                (change)="onGovernorateChange('merchant')"
-                class="w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400">
+          (change)="onGovernorateChange('merchant')"
+          class="w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400">
           <option value="" disabled selected>اختر المحافظة</option>
           <option *ngFor="let gov of governorates" [value]="gov.governorate_name">
             {{ gov.governorate_name }}
@@ -227,9 +230,8 @@
       <!-- المدينة -->
       <div class="mb-4">
         <label class="block mb-1 text-sm font-medium text-gray-900 dark:text-gray-300">المدينة</label>
-      <select name="city" [(ngModel)]="merchantUser.city" required
-                [disabled]="!merchantUser.governorate"
-                class="w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400">
+        <select name="city" [(ngModel)]="merchantUser.city" required [disabled]="!merchantUser.governorate"
+          class="w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400">
           <option value="" disabled selected>اختر المدينة</option>
           <option *ngFor="let city of merchantCities" [value]="city">
             {{ city }}
@@ -246,7 +248,8 @@
 
       <!-- رقم التسجيل الضريبي (اختياري) -->
       <div class="mb-4">
-        <label class="block mb-1 text-sm font-medium text-gray-900 dark:text-gray-300">رقم التسجيل الضريبي (اختياري)</label>
+        <label class="block mb-1 text-sm font-medium text-gray-900 dark:text-gray-300">رقم التسجيل الضريبي
+          (اختياري)</label>
         <input type="text" name="taxNumber" [(ngModel)]="merchantUser.taxNumber"
           class="w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400" />
       </div>
@@ -254,14 +257,16 @@
       <!-- رفع شعار المنشئه -->
       <div class="mb-4">
         <label class="block mb-1 text-sm font-medium text-gray-900 dark:text-gray-300">شعار المنشئه</label>
-<input type="file" (change)="merchantUser.logoFile = $any($event.target).files && $any($event.target).files.length > 0 ? $any($event.target).files[0] : null" accept="image/*"
-          class="w-full text-gray-900 dark:text-gray-200" />
+        <input type="file"
+          (change)="merchantUser.logoFile = $any($event.target).files && $any($event.target).files.length > 0 ? $any($event.target).files[0] : null"
+          accept="image/*" class="w-full text-gray-900 dark:text-gray-200" />
       </div>
 
       <!-- كلمة المرور -->
       <div class="mb-4" *ngIf="isMerchantRegistration">
         <label class="block mb-1 text-sm font-medium text-gray-900 dark:text-gray-300">كلمة المرور</label>
-        <input type="password" name="password" [(ngModel)]="merchantUser.password" required minlength="8" (input)="validateMerchantPassword()"
+        <input type="password" name="password" [(ngModel)]="merchantUser.password" required minlength="8"
+          (input)="validateMerchantPassword()"
           class="w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 border rounded-lg border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
           [ngClass]="{
             'border-blue-500 focus:ring-blue-500': merchantPasswordValid && merchantPasswordTouched,
@@ -276,26 +281,25 @@
       <!-- تأكيد كلمة المرور -->
       <div class="mb-4" *ngIf="isMerchantRegistration">
         <label class="block mb-1 text-sm font-medium text-gray-900 dark:text-gray-300">تأكيد كلمة المرور</label>
-        <input type="password" name="merchantConfirmPassword" [(ngModel)]="merchantConfirmPassword" required
-          [ngClass]="{
+        <input type="password" name="merchantConfirmPassword" [(ngModel)]="merchantConfirmPassword" required [ngClass]="{
             'border-red-500 focus:ring-red-500': merchantPasswordMismatch,
             'border-blue-500 focus:ring-blue-500': !merchantPasswordMismatch && merchantConfirmPassword
           }"
           class="w-full px-4 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 border rounded-lg border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
-          (blur)="merchantPasswordTouched = true" (input)="checkMerchantPasswordMatch()"/>
+          (blur)="merchantPasswordTouched = true" (input)="checkMerchantPasswordMatch()" />
 
         <!-- رسائل خطأ تطابق كلمة المرور -->
         <div *ngIf="merchantPasswordMismatch && merchantPasswordTouched" class="text-red-500 dark:text-red-400 text-sm">
           ❌ كلمتا المرور لا تتطابقان.
         </div>
-        <div *ngIf="!merchantPasswordMismatch && merchantConfirmPassword" class="text-blue-500 dark:text-blue-400 text-sm">
+        <div *ngIf="!merchantPasswordMismatch && merchantConfirmPassword"
+          class="text-blue-500 dark:text-blue-400 text-sm">
           ✔️ كلمتا المرور متطابقتان!
         </div>
       </div>
 
       <!-- زر الإرسال -->
-      <button type="submit"
-        [disabled]="!isMerchantFormValid"
+      <button type="submit" [disabled]="!isMerchantFormValid"
         class="w-full bg-green-600 dark:bg-green-700 text-white py-2 rounded-lg hover:bg-green-700 dark:hover:bg-green-800 transition duration-200"
         [ngClass]="{'opacity-50 cursor-not-allowed': !isMerchantFormValid}">
         إنشاء حساب كتاجر

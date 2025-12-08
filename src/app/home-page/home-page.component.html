@@ -28,7 +28,8 @@
             class="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-xl group-hover:scale-110 transition-transform duration-300">
             <fa-icon [icon]="cat.icon" *ngIf="cat.icon"></fa-icon>
           </div>
-          <span class="font-medium text-gray-700 dark:text-white group-hover:text-blue-600 transition-colors">{{ cat.name }}</span>
+          <span class="font-medium text-gray-700 dark:text-white group-hover:text-blue-600 transition-colors">{{
+            cat.name }}</span>
         </a>
       </ng-container>
     </div>
@@ -141,6 +142,103 @@
         </svg>
       </div>
       <p class="text-gray-500 text-lg">لا توجد منتجات في هذا القسم حالياً</p>
+    </div>
+  </div>
+
+  <!-- Digital Library Promo Section -->
+  <div class="bg-gradient-to-r from-indigo-900 to-purple-900 py-16 relative overflow-hidden">
+    <div class="absolute inset-0 opacity-20">
+      <div
+        class="absolute top-0 left-0 w-64 h-64 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl animate-blob">
+      </div>
+      <div
+        class="absolute top-0 right-0 w-64 h-64 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000">
+      </div>
+      <div
+        class="absolute -bottom-32 left-20 w-64 h-64 bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000">
+      </div>
+    </div>
+
+    <div class="container mx-auto px-4 relative z-10">
+      <div class="flex flex-col md:flex-row items-center justify-between gap-12">
+        <div class="md:w-1/2 text-white">
+          <div
+            class="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full mb-6 border border-white/20">
+            <span class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+            <span class="text-sm font-medium">متاح الآن</span>
+          </div>
+          <h2 class="text-4xl md:text-5xl font-bold mb-6 leading-tight">
+            المكتبة الرقمية
+            <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-pink-400">الشاملة</span>
+          </h2>
+          <p class="text-lg text-gray-300 mb-8 leading-relaxed">
+            اكتشف آلاف الكتب الإلكترونية في مختلف المجالات. اقرأ بلا حدود مع اشتراكاتنا المميزة، أو اشترِ كتبك المفضلة
+            واحتفظ بها للأبد.
+          </p>
+
+          <div class="flex flex-wrap gap-4">
+            <a routerLink="/library"
+              class="px-8 py-4 bg-white text-indigo-900 font-bold rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 flex items-center gap-2">
+              <i class="fas fa-book-reader"></i>
+              تصفح المكتبة
+            </a>
+            <a routerLink="/subscription"
+              class="px-8 py-4 bg-indigo-600/50 backdrop-blur-sm border border-indigo-400/30 text-white font-bold rounded-xl hover:bg-indigo-600 hover:scale-105 transition-all duration-300 flex items-center gap-2">
+              <i class="fas fa-crown"></i>
+              خطط الاشتراك
+            </a>
+          </div>
+
+          <div class="mt-12 flex items-center gap-8 border-t border-white/10 pt-8">
+            <div>
+              <div class="text-3xl font-bold text-white mb-1">+5000</div>
+              <div class="text-sm text-gray-400">كتاب إلكتروني</div>
+            </div>
+            <div>
+              <div class="text-3xl font-bold text-white mb-1">100%</div>
+              <div class="text-sm text-gray-400">قراءة غير محدودة</div>
+            </div>
+            <div>
+              <div class="text-3xl font-bold text-white mb-1">24/7</div>
+              <div class="text-sm text-gray-400">وصول فوري</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="md:w-1/2 relative">
+          <div class="relative z-10 transform hover:scale-105 transition-transform duration-500">
+            <img src="ebook.png" onerror="this.src='https://placehold.co/600x400/1e1b4b/FFF?text=Digital+Library'"
+              alt="Digital Library Interface"
+              class="rounded-2xl shadow-2xl border-4 border-white/10 backdrop-blur-sm animate-float-slow">
+
+            <!-- Floating Cards -->
+            <div class="absolute -top-6 -right-6 bg-white dark:bg-gray-800 p-4 rounded-xl shadow-xl animate-float">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-green-600">
+                  <i class="fas fa-check"></i>
+                </div>
+                <div>
+                  <div class="text-sm font-bold text-gray-800 dark:text-white">اشتراك نشط</div>
+                  <div class="text-xs text-gray-500">وصول كامل للمكتبة</div>
+                </div>
+              </div>
+            </div>
+
+            <div
+              class="absolute -bottom-6 -left-6 bg-white dark:bg-gray-800 p-4 rounded-xl shadow-xl animate-float animation-delay-2000">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
+                  <i class="fas fa-book-open"></i>
+                </div>
+                <div>
+                  <div class="text-sm font-bold text-gray-800 dark:text-white">اقرأ في أي مكان</div>
+                  <div class="text-xs text-gray-500">موبايل، تابلت، لابتوب</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 

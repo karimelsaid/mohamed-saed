@@ -32,7 +32,7 @@ export class LoginComponent implements OnInit, AfterViewInit {
     private authService: AuthService,
     private merchantAuthService: MerchantAuthService,
     private route: ActivatedRoute
-  ) {}
+  ) { }
 
   ngOnInit() {
     // اقرأ returnUrl من الرابط
@@ -43,9 +43,8 @@ export class LoginComponent implements OnInit, AfterViewInit {
 
     if (this.isAndroid) {
       GoogleAuth.initialize({
-        clientId: environment.androidGoogleClientId,
+        clientId: environment.googleClientId,
         scopes: ['profile', 'email'],
-        grantOfflineAccess: true,
       });
     }
   }
@@ -67,6 +66,7 @@ export class LoginComponent implements OnInit, AfterViewInit {
   async googleSignIn() {
     if (this.isAndroid) {
       try {
+        await GoogleAuth.signOut();
         const result = await GoogleAuth.signIn();
         const idToken = result.authentication.idToken;
         this.authService.googleSignIn(idToken).subscribe({

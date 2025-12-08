@@ -7,6 +7,7 @@ import { FormsModule } from '@angular/forms';
 import { environment } from '../../environments/environment';
 import { PaymentService } from '../services/payment.service';
 import { ModalService } from '../services/modal.service';
+import { PaymentModalComponent } from '../payment-modal/payment-modal.component';
 
 interface RatedBook {
   bookId: string;
@@ -43,12 +44,13 @@ interface Order {
   orderDate: string;
   address: string;
   totalAmount: number;
+  paymentStatus?: string; // Add optional paymentStatus
 }
 
 @Component({
   selector: 'app-user-orders',
   standalone: true,
-  imports: [CommonModule, NgForOf, FormsModule],
+  imports: [CommonModule, FormsModule, PaymentModalComponent],
   templateUrl: './user-orders.component.html',
   styleUrls: ['./user-orders.component.css']
 })
@@ -66,7 +68,11 @@ export class UserOrdersComponent implements OnInit {
   ratedBooks: RatedBook[] = [];
   showArchived: boolean = false;
 
-  constructor(private http: HttpClient, private authService: AuthService, private paymentService: PaymentService, private modalService: ModalService) {}
+  // Payment Modal State
+  showPaymentModal: boolean = false;
+  paymentUrl: string = '';
+
+  constructor(private http: HttpClient, private authService: AuthService, private paymentService: PaymentService, private modalService: ModalService) { }
 
   ngOnInit(): void {
     this.authService.user$.subscribe(user => {
@@ -257,15 +263,16 @@ export class UserOrdersComponent implements OnInit {
     }
 
     const currency = 'EGP'; // Adjust currency as needed
-    const merchantRedirect = window.location.origin + '/payment-success'; // Redirect URL after payment
+    const merchantRedirect = window.location.origin + '/order/callback'; // Redirect to custom callback handler
 
     this.authService.user$.pipe(take(1)).subscribe(user => {
       const customerEmail = user?.email || '';
       // Use existing order ID to create payment session without re-submitting order
-      this.paymentService.createPayment(order._id, order.totalAmount, currency, customerEmail, merchantRedirect).subscribe({
+      this.paymentService.createPayment(order._id, order.totalAmount, currency, customerEmail, merchantRedirect, 'ar').subscribe({
         next: (paymentResponse: any) => {
           if (paymentResponse.sessionUrl) {
-            window.location.href = paymentResponse.sessionUrl;
+            this.paymentUrl = paymentResponse.sessionUrl;
+            this.showPaymentModal = true;
           } else {
             this.showErrorModal('فشل في الحصول على رابط الدفع');
           }
@@ -276,6 +283,18 @@ export class UserOrdersComponent implements OnInit {
         }
       });
     });
+  }
+
+  onPaymentModalClose(): void {
+    this.showPaymentModal = false;
+    this.paymentUrl = '';
+  }
+
+  onPaymentComplete(success: boolean): void {
+    if (success) {
+      // Payment successful, reload orders to update status
+      this.loadOrders(this.userId);
+    }
   }
 
   // Helper methods for showing modals
@@ -321,6 +340,8 @@ export class UserOrdersComponent implements OnInit {
       }
     });
   }
+
+
 
   toggleArchived(): void {
     this.showArchived = !this.showArchived;

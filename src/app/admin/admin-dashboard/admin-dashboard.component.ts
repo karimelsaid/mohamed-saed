@@ -20,6 +20,7 @@ import { faShoppingCart, faStore, faBook, faPrint, faPlus, faEdit, faTruck, faUs
 import { PaymentRequestsComponent } from '../payment-requests/payment-requests.component';
 import { UserHierarchyComponent } from '../user-hierarchy/user-hierarchy.component';
 import { AmazonPriceCalculatorComponent } from '../amazon-price-calculator/amazon-price-calculator.component';
+import { AdminEbooksComponent } from '../admin-ebooks/admin-ebooks.component';
 
 interface Order {
   _id: string;
@@ -145,7 +146,8 @@ interface UrgencyRequest {
     ProductApprovalComponent,
     PaymentRequestsComponent,
     UserHierarchyComponent,
-    AmazonPriceCalculatorComponent
+    AmazonPriceCalculatorComponent,
+    AdminEbooksComponent
   ],
   templateUrl: './admin-dashboard.component.html',
   styleUrls: ['./admin-dashboard.component.css']
@@ -156,7 +158,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   requestedBooks: RequestedBook[] = [];
   allRequestedBooks: RequestedBook[] = [];
   isAdmin: boolean = false; // Add paymentRequests to the type union
-  currentView: 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' = 'orders';
+  currentView: 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' = 'orders';
 
   manualPromotionStartDate: string = '';
   manualPromotionEndDate: string = '';
@@ -193,6 +195,9 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   // New properties for sorting
   sortField: keyof Product | '' = '';
   sortDirection: 'asc' | 'desc' = 'asc';
+
+  // Ebook filter property
+  ebookFilter: 'all' | 'withEbook' | 'withoutEbook' = 'all';
 
   // Multi-select properties
   selectedProducts: Set<string> = new Set();
@@ -232,6 +237,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
   backendBaseUrl: string = environment.apiBaseUrl;
   uploadsBaseUrl: string = environment.uploadsBaseUrl;
+
+  selectedEpubFile: File | null = null;
 
   product: any = {
     product_category: '',
@@ -519,6 +526,40 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     'غير مصنف': ['suggestedCategory']
   };
 
+  isBookCategory(category: string): boolean {
+    if (!category) return false;
+    const lowerCategory = category.toLowerCase();
+    // Check for explicit 'Books' or 'كتب' or common book categories
+    if (lowerCategory === 'كتب' || lowerCategory === 'books' ||
+      // Explicit user-specified categories
+      category === 'روايات وقصص' ||
+      category === 'تطوير الذات وعلم النفس' ||
+      category === 'كتب دينية' ||
+      category === 'قواميس ومراجع' ||
+      category === 'صحة وطب وعلوم' ||
+      category === 'أعمال وتسويق ومالية' ||
+      category === 'فنون وحرف' ||
+      category === 'تاريخ وسير ذاتية' ||
+      category === 'تربية وأطفال' ||
+      // Common keywords
+      lowerCategory.includes('رواية') || lowerCategory.includes('قصص') ||
+      lowerCategory.includes('novel') || lowerCategory.includes('story') ||
+      lowerCategory.includes('ديني') || lowerCategory.includes('تطوير') ||
+      lowerCategory.includes('نفس') || lowerCategory.includes('أعمال') ||
+      lowerCategory.includes('تسويق') || lowerCategory.includes('صحة') ||
+      lowerCategory.includes('طب') || lowerCategory.includes('قاموس') ||
+      lowerCategory.includes('مراجع') || lowerCategory.includes('تربية') ||
+      lowerCategory.includes('أطفال') || lowerCategory.includes('تاريخ') ||
+      lowerCategory.includes('سير') || lowerCategory.includes('فنون') ||
+      lowerCategory.includes('حرف')) {
+      return true;
+    }
+
+    const fullCategory = this.categoryMap[category] || category;
+    const fields = this.categoryFieldsMap[fullCategory];
+    return fields ? fields.includes('author') : false;
+  }
+
   private modalServiceSubscription?: Subscription;
 
   constructor(
@@ -581,7 +622,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     }
   }
 
-  switchView(view: 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator'): void {
+  switchView(view: 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks'): void {
     this.currentView = view;
     if (view === 'orders' || view === 'merchantOrders') {
       this.ordersPage = 1; // Reset page when switching views
@@ -732,6 +773,13 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   get filteredProducts(): Product[] {
     let filtered = this.allProducts;
 
+    // Apply ebook filter
+    if (this.ebookFilter === 'withEbook') {
+      filtered = filtered.filter((p: any) => p.linkedEbookId);
+    } else if (this.ebookFilter === 'withoutEbook') {
+      filtered = filtered.filter((p: any) => !p.linkedEbookId);
+    }
+
     if (this.searchTerm) {
       const lowerSearch = this.searchTerm.toLowerCase();
       filtered = filtered.filter(p => {
@@ -790,6 +838,11 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   }
 
   onSearchTermChange(): void {
+    this.productsPage = 1;
+    this.updateProductsPage();
+  }
+
+  onEbookFilterChange(): void {
     this.productsPage = 1;
     this.updateProductsPage();
   }
@@ -1091,6 +1144,15 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       this.loadProducts();
     };
     reader.readAsBinaryString(file);
+  }
+
+  handleEditClick(product: any): void {
+    if (product.editMode) {
+      this.updateProduct(product);
+    } else {
+      product.editMode = true;
+      product.detailsOpen = true;
+    }
   }
 
   confirmPrintOrderShipment(userId: string, orderId: string, newStatus: string): void {
@@ -1530,6 +1592,23 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     }
   }
 
+
+
+  onEpubSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      const file = input.files[0];
+      // Check MIME type or file extension
+      if (file.type !== 'application/epub+zip' && !file.name.toLowerCase().endsWith('.epub')) {
+        this.showErrorModal('يرجى تحميل ملف بصيغة EPUB فقط.');
+        input.value = ''; // Clear input
+        this.selectedEpubFile = null;
+        return;
+      }
+      this.selectedEpubFile = file;
+    }
+  }
+
   generatePreviews(files: File[]): void {
     files.forEach(file => {
       const reader = new FileReader();
@@ -1540,6 +1619,48 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       };
       reader.readAsDataURL(file);
     });
+  }
+  onEpubSelectedForUpdate(event: Event, product: Product): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      const file = input.files[0];
+      // Check MIME type or file extension
+      if (file.type !== 'application/epub+zip' && !file.name.toLowerCase().endsWith('.epub')) {
+        this.showErrorModal('يرجى تحميل ملف بصيغة EPUB فقط.');
+        input.value = '';
+        return;
+      }
+      // Check for barcode
+      if (!product['barcode']) {
+        if (!confirm('⚠️ تنبيه: هذا المنتج لا يحتوي على باركود! \nسيتم استخدام الرقم التسلسلي للربط، وقد يؤدي ذلك لرابط غير دقيق. \nهل تريد المتابعة؟')) {
+          input.value = '';
+          return;
+        }
+      }
+
+      // Upload immediately
+      this.showProgressModal('جاري تحديث ملف الكتاب...');
+      const formData = new FormData();
+      formData.append('epub', file);
+      if (product['barcode']) {
+        formData.append('barcode', product['barcode']);
+      }
+
+      this.http.post(`${this.backendBaseUrl}/admin/products/${product.products_id}/epub`, formData).subscribe({
+        next: (res: any) => {
+          this.closeProgressModal();
+          this.showSuccessModal('تم تحديث ملف الكتاب بنجاح');
+          if (res.linkedEbookId) {
+            product['linkedEbookId'] = res.linkedEbookId;
+          }
+        },
+        error: (err) => {
+          this.closeProgressModal();
+          this.showErrorModal('حدث خطأ أثناء تحديث ملف الكتاب');
+          console.error(err);
+        }
+      });
+    }
   }
 
   selectMainImage(index: number): void {
@@ -1594,6 +1715,10 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
     for (const file of reorderedFiles) {
       formData.append('image', file);
+    }
+
+    if (this.selectedEpubFile) {
+      formData.append('epub', this.selectedEpubFile);
     }
 
     // Append image URLs if any
@@ -1706,6 +1831,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     };
     this.selectedFiles = [];
     this.selectedFilesPreviews = [];
+    this.selectedEpubFile = null;
     this.imageUrls = [];
     this.imageUrl = '';
     this.imageError = null;

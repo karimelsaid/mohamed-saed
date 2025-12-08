@@ -1,7 +1,7 @@
 import { Component, OnInit, ViewChild, ChangeDetectorRef, Output, EventEmitter, ElementRef, HostListener, CUSTOM_ELEMENTS_SCHEMA, ViewEncapsulation, Input } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, NavigationEnd } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { faBars, faClose, faHome, faBook, faFilePdf, faUser, faChevronUp, faChevronDown, faSearch, faHeart, faCartPlus, faClipboardList, faTachometerAlt, faBell, faTrash, faStore, faFilter, faExpand } from '@fortawesome/free-solid-svg-icons';
+import { faBars, faClose, faHome, faBook, faFilePdf, faUser, faChevronUp, faChevronDown, faSearch, faHeart, faCartPlus, faClipboardList, faTachometerAlt, faBell, faTrash, faStore, faFilter, faExpand, faBookReader } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { AuthService } from '../auth/auth.service';
 import { MerchantAuthService } from '../services/merchant-auth.service';
@@ -20,12 +20,14 @@ import { DataService } from '../services/data.service';
 export class NavbarIconsComponent implements OnInit {
   @Output() accountClick = new EventEmitter<void>();
   @Input() isBottomNav: boolean = false;
+  @Input() showOnlyNotification: boolean = false; // New input
 
   faFilter = faFilter;
   faBars = faBars;
   faClose = faClose;
   faHome = faHome;
   faBook = faBook;
+  faBookReader = faBookReader;
   faFilePdf = faFilePdf;
   faUser = faUser;
   faChevronDown = faChevronDown;

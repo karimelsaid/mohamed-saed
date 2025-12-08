@@ -1,19 +1,123 @@
-/* Ensure modals render at viewport level */
-:host {
-    position: static;
+/* Base Nav Item Pill Style */
+.nav-item-pill {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    /* Initial circle/square padding */
+    border-radius: 9999px;
+    /* Fully rounded pill */
+    color: #4b5563;
+    /* Gray-600 */
+    background: transparent;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+    position: relative;
+    text-decoration: none;
+    cursor: pointer;
+    border: 1px solid transparent;
+    /* Prevent layout shift */
+    min-width: 40px;
+    /* Ensure click target size */
+    min-height: 40px;
 }
 
-/* Force account modal to render at viewport level */
-:host ::ng-deep app-account-modal {
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
-    z-index: 9999 !important;
-    pointer-events: none;
+/* Dark mode text color */
+:host-context(.dark) .nav-item-pill {
+    color: #9ca3af;
+    /* Gray-400 */
 }
 
-:host ::ng-deep app-account-modal>div {
-    pointer-events: auto;
+/* Label text - hidden by default */
+.nav-item-pill .nav-label {
+    max-width: 0;
+    opacity: 0;
+    white-space: nowrap;
+    font-size: 0.875rem;
+    /* text-sm */
+    font-weight: 600;
+    /* font-bold */
+    margin-left: 0;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: translateX(-10px);
+    /* Slide effect */
+}
+
+/* Active State */
+.nav-item-pill.active-pill {
+    background-color: #6366f1;
+    /* Indigo-500 */
+    color: white;
+    padding: 8px 16px;
+    /* Expand padding */
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+/* Revealing the label */
+.nav-item-pill.active-pill .nav-label {
+    max-width: 150px;
+    /* Allow expansion */
+    opacity: 1;
+    margin-left: 8px;
+    /* Gap between icon and text */
+    transform: translateX(0);
+}
+
+/* Dark mode active state adjustments */
+:host-context(.dark) .nav-item-pill.active-pill {
+    color: white;
+    background-color: #6366f1;
+}
+
+/* Hover State */
+.nav-item-pill:not(.active-pill):hover {
+    background-color: #f3f4f6;
+}
+
+:host-context(.dark) .nav-item-pill:not(.active-pill):hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Badge Positioning Update - Ensure it stays visible */
+.nav-item-pill .badge-count {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    /* Adjust as needed */
+    z-index: 10;
+}
+
+/* Mobile responsive - smaller icons and text */
+@media (max-width: 400px) {
+    .nav-item-pill {
+        padding: 6px;
+        min-width: 32px;
+        min-height: 32px;
+    }
+
+    .nav-item-pill fa-icon {
+        font-size: 0.9rem;
+    }
+
+    .nav-item-pill .nav-label {
+        font-size: 0.7rem;
+    }
+
+    .nav-item-pill.active-pill {
+        padding: 6px 10px;
+    }
+
+    .nav-item-pill.active-pill .nav-label {
+        margin-left: 4px;
+    }
+}
+
+@media (max-width: 320px) {
+    .nav-item-pill fa-icon {
+        font-size: 0.8rem;
+    }
+
+    .nav-item-pill .nav-label {
+        font-size: 0.65rem;
+    }
 }

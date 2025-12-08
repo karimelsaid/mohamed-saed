@@ -30,6 +30,7 @@ import { SearchBarModule } from './search-bar/search-bar.module';
 import { HTTP_INTERCEPTORS } from '@angular/common/http';
 import { MerchantAuthInterceptor } from './interceptors/merchant-auth.interceptor';
 import { AdminAuthInterceptor } from './interceptors/admin-auth.interceptor';
+import { AuthInterceptor } from './interceptors/auth.interceptor';
 
 import { AdminModule } from './admin/admin.module';
 import { MerchantDashboardComponent } from './merchant/dashboard/dashboard.component';
@@ -93,7 +94,8 @@ import { BooksComponent } from './book-list/books/books.component';
     provideHttpClient(withInterceptorsFromDi()), // استخدام provideHttpClient بدلاً من HttpClientModule
     { provide: LocationStrategy, useClass: PathLocationStrategy },
     { provide: HTTP_INTERCEPTORS, useClass: MerchantAuthInterceptor, multi: true },
-    { provide: HTTP_INTERCEPTORS, useClass: AdminAuthInterceptor, multi: true }
+    { provide: HTTP_INTERCEPTORS, useClass: AdminAuthInterceptor, multi: true },
+    { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true }
   ],
   bootstrap: [AppComponent]
 })

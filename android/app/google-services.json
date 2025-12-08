@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "933338292435",
+    "project_id": "tough-volt-455820-q4",
+    "storage_bucket": "tough-volt-455820-q4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:933338292435:android:64ec5eb1ba90c8eee87426",
+        "android_client_info": {
+          "package_name": "com.kenouz.bookstore2"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "933338292435-br4gba7k8tu2518q5dghkkj9meilirb6.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.kenouz.bookstore2",
+            "certificate_hash": "fd04d0563d1ffae98230bbb41f758dcf81e1a439"
+          }
+        },
+        {
+          "client_id": "933338292435-mdpbppoua97gt3vt2bidpip89q0rjjue.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.kenouz.bookstore2",
+            "certificate_hash": "f942abb8a8b156f4ecbc380cf965bb1b6425abf5"
+          }
+        },
+        {
+          "client_id": "933338292435-c9bk3oo6i1oe3qkhkvp8crflmthhg0kc.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAskTIpkFRSNB8fpjP3EUk9HEmM_oLNhJQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "933338292435-c9bk3oo6i1oe3qkhkvp8crflmthhg0kc.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -22,6 +22,10 @@ const chatAiRoutes = require('./routes/chat-ai.routes');
 const adminRoutes = require('./routes/admin.routes'); // تأكد من وجود هذا المسار
 const merchantRoutes = require('./routes/merchant.routes');
 const paymentRequestsRoutes = require('./routes/payment-requests.routes'); // استيراد مسارات طلبات الدفع
+const ebooksRoutes = require('./routes/ebooks.routes');
+const subscriptionsRoutes = require('./routes/subscriptions.routes');
+const userLibraryRoutes = require('./routes/user-library.routes');
+const readingProgressRoutes = require('./routes/reading-progress.routes');
 const app = express();
 const port = process.env.PORT || 3000;
 const isProduction = process.env.NODE_ENV === 'production';
@@ -39,7 +43,7 @@ app.use((req, res, next) => {
 });
 
 // إعداد CORS للسماح بالمصادر المناسبة
-const allowedOrigins = ['https://knoozbook.com', 'https://www.knoozbook.com'];
+const allowedOrigins = ['https://knoozbook.com', 'https://www.knoozbook.com', 'https://localhost', 'http://localhost'];
 if (!isProduction) {
   allowedOrigins.push('http://localhost:4200');
 }
@@ -125,6 +129,13 @@ const mongoose = require('mongoose');
 // تسجيل مسار طلبات الدفع
 app.use('/api/payment-requests', paymentRequestsRoutes);
 
+// E-book system routes
+app.use('/api/ebooks', ebooksRoutes);
+app.use('/api/subscriptions', subscriptionsRoutes);
+app.use('/api/user-library', userLibraryRoutes);
+app.use('/api/reading-progress', readingProgressRoutes);
+
+
 const User = require('./models/User.model');
 const { ObjectId } = mongoose.Types;
 
@@ -145,7 +156,11 @@ cron.schedule('0 */2 * * *', () => {
 });
 
 // تحديث عند بدء التشغيل
-updateBooksData().catch(console.error);
+// updateBooksData().catch(console.error);
+
+// Seed test ebooks if needed
+// const seedEbooks = require('./scripts/seed-ebooks-module');
+// seedEbooks().catch(console.error);
 
 // توليد ملف sitemap وقت تشغيل السيرفر
 generateRobotsTxt();
@@ -187,6 +202,17 @@ function generateRobotsTxt() {
 //   }
 //   res.sendFile(path.join(__dirname, 'dist/browser/index.html'));
 // });
+
+// Global Error Handler
+app.use((err, req, res, next) => {
+  console.error('🔥 Global Error Handler:', err);
+  res.status(500).json({
+    success: false,
+    message: 'Internal Server Error',
+    error: err.message,
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+  });
+});
 
 // بدء السيرفر
 

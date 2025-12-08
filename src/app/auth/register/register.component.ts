@@ -65,7 +65,7 @@ export class RegisterComponent implements OnInit, AfterViewInit {
   message: string = '';
   private returnUrl: string = '/';
 
-  constructor(private authService: AuthService, private router: Router, private route: ActivatedRoute) {}
+  constructor(private authService: AuthService, private router: Router, private route: ActivatedRoute) { }
 
   ngOnInit() {
     // اقرأ returnUrl من الرابط
@@ -80,9 +80,8 @@ export class RegisterComponent implements OnInit, AfterViewInit {
 
     if (this.isAndroid) {
       GoogleAuth.initialize({
-        clientId: environment.androidGoogleClientId,
+        clientId: environment.googleClientId,
         scopes: ['profile', 'email'],
-        grantOfflineAccess: true,
       });
     }
   }
@@ -118,6 +117,7 @@ export class RegisterComponent implements OnInit, AfterViewInit {
   async googleSignIn() {
     if (this.isAndroid) {
       try {
+        await GoogleAuth.signOut();
         const result = await GoogleAuth.signIn();
         const idToken = result.authentication.idToken;
         const referralCode = localStorage.getItem('referralCode');
@@ -176,8 +176,8 @@ export class RegisterComponent implements OnInit, AfterViewInit {
     return this.user.governorate && this.user.city;
   }
 
-   // التحقق من أن الاسم غير فارغ
-   validateName() {
+  // التحقق من أن الاسم غير فارغ
+  validateName() {
     this.usernameValid = this.user.username.trim().length > 0;
   }
   // التحقق من تطابق كلمة المرور للمشتري
@@ -304,20 +304,20 @@ export class RegisterComponent implements OnInit, AfterViewInit {
       this.user.village || '',
       referralCode || undefined
     )
-    .subscribe({
-      next: (response) => {
-        this.message = '✅ تم إنشاء الحساب بنجاح! جارِ توجيهك...';
-        this.router.navigateByUrl(this.returnUrl);
-      },
-      error: (error) => {
-        if (error.status === 400 && error.error.message) {
-          this.message = `❌ ${error.error.message}`;
-        } else {
-          this.message = '❌ حدث خطأ أثناء إنشاء الحساب. يرجى المحاولة لاحقًا.';
+      .subscribe({
+        next: (response) => {
+          this.message = '✅ تم إنشاء الحساب بنجاح! جارِ توجيهك...';
+          this.router.navigateByUrl(this.returnUrl);
+        },
+        error: (error) => {
+          if (error.status === 400 && error.error.message) {
+            this.message = `❌ ${error.error.message}`;
+          } else {
+            this.message = '❌ حدث خطأ أثناء إنشاء الحساب. يرجى المحاولة لاحقًا.';
+          }
+          console.error('Error creating account:', error);
         }
-        console.error('Error creating account:', error);
-      }
-    });
+      });
   }
 
   registerMerchant() {

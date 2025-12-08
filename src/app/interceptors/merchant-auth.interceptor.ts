@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, Injector } from '@angular/core';
 import { HttpInterceptor, HttpRequest, HttpHandler, HttpEvent, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
@@ -8,14 +8,15 @@ import { Router } from '@angular/router';
 @Injectable()
 export class MerchantAuthInterceptor implements HttpInterceptor {
   constructor(
-    private merchantAuthService: MerchantAuthService,
+    private injector: Injector,
     private router: Router
-  ) {}
+  ) { }
 
   intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
     // Only intercept merchant API calls
     if (req.url.includes('/merchant')) {
-      const token = this.merchantAuthService.getToken();
+      const merchantAuthService = this.injector.get(MerchantAuthService);
+      const token = merchantAuthService.getToken();
 
       if (token) {
         const authReq = req.clone({
@@ -28,7 +29,7 @@ export class MerchantAuthInterceptor implements HttpInterceptor {
           catchError((error: HttpErrorResponse) => {
             if (error.status === 401 || error.status === 403) {
               // Clear authentication and redirect to login
-              this.merchantAuthService.performLogout();
+              merchantAuthService.performLogout();
               this.router.navigate(['/login']);
               alert('انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى.');
             }

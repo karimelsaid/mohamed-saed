@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.kenouz.bookstore2.app-mergeDebugResources-28:/values-v31/values-v31.xml",
+            "outputFile": "com.kenouz.bookstore2.app-mergeDebugResources-29:/values-v31/values-v31.xml",
             "map": [
                 {
                     "source": "C:\\Users\\karim\\.gradle\\caches\\8.14\\transforms\\aa19d00011ab4dea9a5bb9252ff42bb8\\transformed\\core-splashscreen-1.0.1\\res\\values-v31\\values-v31.xml",

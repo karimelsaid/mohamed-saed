@@ -1,0 +1,275 @@
+<div class="reader-wrapper" [class.fullscreen]="isFullscreen" [ngClass]="'theme-' + settings.theme">
+
+    <!-- Visible Navigation Arrows -->
+    <button class="nav-arrow nav-prev" (click)="prevPage()" title="الصفحة السابقة">
+        <i class="fas fa-chevron-right"></i>
+    </button>
+    <button class="nav-arrow nav-next" (click)="nextPage()" title="الصفحة التالية">
+        <i class="fas fa-chevron-left"></i>
+    </button>
+
+    <!-- Loading State -->
+    <div class="loading-overlay" *ngIf="isLoading">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <p>جاري تحميل الكتاب...</p>
+        </div>
+    </div>
+
+    <!-- Error State -->
+    <div class="error-overlay" *ngIf="error && !isLoading">
+        <div class="error-content">
+            <i class="fas fa-exclamation-triangle"></i>
+            <h3>{{ error }}</h3>
+            <button (click)="goBack()" class="back-btn">
+                <i class="fas fa-arrow-right"></i>
+                العودة للمكتبة
+            </button>
+        </div>
+    </div>
+
+    <!-- Floating UI Controls (Outside Container for Z-Index) -->
+
+    <!-- Top Bar (Floating) -->
+    <div class="top-bar" [class.hidden]="!isControlsVisible">
+        <button class="icon-btn" (click)="goBack()" title="خروج">
+            <i class="fas fa-arrow-right"></i>
+        </button>
+
+        <div class="book-info">
+            <h2 class="book-title">{{ ebook?.title }}</h2>
+            <span class="chapter-title">{{ currentChapter }}</span>
+        </div>
+
+        <div class="top-actions">
+            <button class="icon-btn" (click)="toggleSection('toc')" [class.active]="activeSection === 'toc'"
+                title="الفهرس">
+                <i class="fas fa-list-ul"></i>
+            </button>
+            <button class="icon-btn" (click)="toggleSection('settings')" [class.active]="activeSection === 'settings'"
+                title="مظهر القراءة">
+                <i class="fas fa-font"></i>
+            </button>
+            <button class="icon-btn" (click)="toggleSection('bookmarks')" [class.active]="activeSection === 'bookmarks'"
+                title="العلامات">
+                <i class="fas fa-bookmark"></i>
+            </button>
+            <button class="icon-btn" (click)="toggleSection('highlights')"
+                [class.active]="activeSection === 'highlights'" title="التظليلات">
+                <i class="fas fa-highlighter"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Popup Panels (Overlay) -->
+    <div class="overlay-backdrop" *ngIf="activeSection" (click)="closeAllPanels()"></div>
+
+    <!-- Settings Popup -->
+    <div class="popup-panel" *ngIf="activeSection === 'settings'">
+        <div class="font-settings-grid">
+            <!-- Theme Selection -->
+            <div class="theme-options">
+                <div class="theme-circle" style="background: #ffffff; border-color: #e0e0e0;"
+                    [class.active]="settings.theme === 'light'" (click)="setTheme('light')"></div>
+                <div class="theme-circle" style="background: #f8f1e3; border-color: #e6dcc6;"
+                    [class.active]="settings.theme === 'sepia'" (click)="setTheme('sepia')"></div>
+                <div class="theme-circle" style="background: #1a1a1a; border-color: #333;"
+                    [class.active]="settings.theme === 'dark'" (click)="setTheme('dark')"></div>
+                <div class="theme-circle" style="background: #000000; border-color: #333;"
+                    [class.active]="settings.theme === 'black'" (click)="setTheme('black')"></div>
+            </div>
+
+            <!-- Font Size -->
+            <div class="setting-row">
+                <span class="setting-label">حجم الخط</span>
+                <div class="size-control flex">
+                    <button class="icon-btn" (click)="changeFontSize(-1)"><i class="fas fa-minus"></i></button>
+                    <span>{{ settings.fontSize }}</span>
+                    <button class="icon-btn" (click)="changeFontSize(1)"><i class="fas fa-plus"></i></button>
+                </div>
+            </div>
+
+            <!-- Font Family -->
+            <div class="setting-row">
+                <span class="setting-label">نوع الخط</span>
+                <select [(ngModel)]="settings.fontFamily" (change)="changeFontFamily(settings.fontFamily)"
+                    class="font-select">
+                    <option value="Cairo">Cairo (عربي حديث)</option>
+                    <option value="Amiri">Amiri (عربي كلاسيكي)</option>
+                    <option value="Arial">Arial (بسيط)</option>
+                </select>
+            </div>
+
+            <!-- Line Height -->
+            <div class="setting-row">
+                <span class="setting-label">تباعد الأسطر</span>
+                <div class="size-control flex">
+                    <button class="icon-btn" (click)="changeLineHeight(-0.1)"><i class="fas fa-minus"></i></button>
+                    <button class="icon-btn" (click)="changeLineHeight(0.1)"><i class="fas fa-plus"></i></button>
+                </div>
+            </div>
+
+            <!-- Background Image -->
+            <div class="setting-row">
+                <span class="setting-label">خلفية مخصصة</span>
+                <div class="background-options">
+                    <div class="background-circle" style="background-image: url('/pgbook1.jpeg');"
+                        [class.selected]="settings.backgroundImage === 'pgbook1.jpeg'"
+                        (click)="setBackgroundImage('pgbook1.jpeg')" title="خلفية 1"></div>
+                    <div class="background-circle" style="background-image: url('/pgbook2.jpeg');"
+                        [class.selected]="settings.backgroundImage === 'pgbook2.jpeg'"
+                        (click)="setBackgroundImage('pgbook2.jpeg')" title="خلفية 2"></div>
+                    <div class="background-circle" style="background-image: url('/pgbook3.jpeg');"
+                        [class.selected]="settings.backgroundImage === 'pgbook3.jpeg'"
+                        (click)="setBackgroundImage('pgbook3.jpeg')" title="خلفية 3"></div>
+                    <div class="background-circle" style="background-image: url('/pgbook4.jpeg');"
+                        [class.selected]="settings.backgroundImage === 'pgbook4.jpeg'"
+                        (click)="setBackgroundImage('pgbook4.jpeg')" title="خلفية 4"></div>
+                    <div class="background-circle remove-bg" [class.selected]="settings.backgroundImage === null"
+                        (click)="setBackgroundImage(null)" title="بدون خلفية">
+                        <i class="fas fa-times"></i>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- TOC Popup -->
+    <div class="popup-panel" *ngIf="activeSection === 'toc'">
+        <h3 class="panel-title">الفهرس</h3>
+        <ul class="toc-list">
+            <li *ngFor="let item of toc" class="toc-item" (click)="goToChapter(item)">
+                {{ item.label }}
+            </li>
+        </ul>
+    </div>
+
+    <!-- Bookmarks Popup -->
+    <div class="popup-panel" *ngIf="activeSection === 'bookmarks'">
+        <h3 class="panel-title">العلامات المرجعية</h3>
+        <button class="add-bookmark-btn" (click)="addBookmark()">
+            <i class="fas fa-plus"></i> إضافة علامة
+        </button>
+        <div class="bookmarks-list">
+            <div class="bookmark-item" *ngFor="let bookmark of bookmarks">
+                <span (click)="goToPage(bookmark.cfi)">{{ bookmark.label }}</span>
+                <button class="delete-btn" (click)="removeBookmark(bookmark._id)"><i class="fas fa-trash"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Highlights Popup -->
+    <div class="popup-panel" *ngIf="activeSection === 'highlights'">
+        <h3 class="panel-title">التظليلات</h3>
+        <div class="highlights-list" *ngIf="highlights.length > 0">
+            <div class="highlight-item" *ngFor="let highlight of highlights">
+                <div class="highlight-color-indicator" [style.backgroundColor]="highlight.color"></div>
+                <div class="highlight-content">
+                    <p class="highlight-text" (click)="goToPage(highlight.cfi)">"{{ highlight.text }}"</p>
+                    <span class="highlight-note" *ngIf="highlight.note">{{ highlight.note }}</span>
+                </div>
+                <button class="delete-btn" (click)="removeHighlight(highlight._id)"><i
+                        class="fas fa-trash"></i></button>
+            </div>
+        </div>
+        <p class="empty-message" *ngIf="highlights.length === 0">لا توجد تظليلات بعد. حدد نصاً لتظليله.</p>
+    </div>
+
+    <!-- Bottom Bar (Floating) -->
+    <div class="bottom-bar" [class.hidden]="!isControlsVisible">
+        <div class="progress-info">
+            <span>{{ currentChapter || 'صفحة ' + currentPage }}</span>
+            <!-- Content Width Controls -->
+            <div class="width-controls">
+                <button class="width-btn" (click)="decreaseContentWidth()" [disabled]="contentWidth <= minContentWidth"
+                    title="تضييق المحتوى">
+                    <i class="fas fa-minus"></i>
+                </button>
+                <span class="width-value">{{ contentWidth }}px</span>
+                <button class="width-btn" (click)="increaseContentWidth()"
+                    [disabled]="contentWidth >= effectiveMaxWidth" title="توسيع المحتوى">
+                    <i class="fas fa-plus"></i>
+                </button>
+            </div>
+            <span>{{ progressPercent }}%</span>
+        </div>
+        <input type="range" min="0" max="100" [value]="progressPercent" (input)="onProgressChange($event)"
+            class="range-slider">
+    </div>
+
+    <!-- Reader Content Container -->
+    <div class="reader-container" [style.opacity]="(isLoading || error) ? '0' : '1'">
+        <div class="main-content">
+            <div #readerContainer id="epub-reader-frame" class="reader-content" [style.max-width.px]="contentWidth">
+            </div>
+        </div>
+    </div>
+
+    <!-- Selection Popup (for highlighting and copying) -->
+    <div class="selection-popup" *ngIf="showSelectionPopup" [style.left.px]="selectionPopupPosition.x"
+        [style.top.px]="selectionPopupPosition.y">
+        <div class="color-options">
+            <button *ngFor="let c of highlightColors" class="color-btn" [class.remove-btn]="c.isRemove"
+                [style.backgroundColor]="c.isRemove ? 'transparent' : c.color" [title]="c.name"
+                (click)="addHighlight(c.color)">
+                <i *ngIf="c.isRemove" class="fas fa-eraser"></i>
+            </button>
+        </div>
+        <button class="selection-action-btn" (click)="copySelectedText()" title="نسخ">
+            <i class="fas fa-copy"></i>
+        </button>
+    </div>
+
+    <!-- Subscription Prompt Overlay (Preview Mode) -->
+    <div class="subscription-overlay" *ngIf="showSubscriptionPrompt">
+        <div class="subscription-prompt">
+            <button class="close-prompt" (click)="closeSubscriptionPrompt()">
+                <i class="fas fa-times"></i>
+            </button>
+
+            <div class="prompt-icon">
+                <i class="fas fa-book-heart"></i>
+            </div>
+
+            <h2>✨ لا تتوقف هنا... الكتاب لسه مبدأش! ✨</h2>
+
+            <p class="emotional-text">
+                كل صفحة فيها عالم جديد مستنيك تكتشفه. اشترك دلوقتي وخلّي رحلة القراءة متتوقفش أبداً!
+                <br>
+                آلاف الكتب في انتظارك... 📚💫
+            </p>
+
+            <div class="pricing-cards">
+                <div class="price-card">
+                    <h3>شهري</h3>
+                    <div class="price">{{ prices.monthly }} <span>جنيه/شهر</span></div>
+                    <ul>
+                        <li><i class="fas fa-check"></i> وصول غير محدود</li>
+                        <li><i class="fas fa-check"></i> قارئ متطور</li>
+                    </ul>
+                </div>
+                <div class="price-card featured">
+                    <div class="best-badge">الأفضل قيمة</div>
+                    <h3>سنوي</h3>
+                    <div class="price">{{ prices.yearly }} <span>جنيه/سنة</span></div>
+                    <div class="savings">وفر {{ (prices.monthly * 12) - prices.yearly }} جنيه</div>
+                    <ul>
+                        <li><i class="fas fa-check"></i> كل مميزات الشهري</li>
+                        <li><i class="fas fa-check"></i> توفير 17%</li>
+                    </ul>
+                </div>
+            </div>
+
+            <button class="subscribe-now-btn" (click)="goToSubscription()">
+                <i class="fas fa-crown"></i>
+                اشترك الآن وأكمل رحلتك!
+            </button>
+
+            <p class="back-link">
+                <a (click)="goBack()">العودة للمكتبة</a>
+            </p>
+        </div>
+    </div>
+
+</div>

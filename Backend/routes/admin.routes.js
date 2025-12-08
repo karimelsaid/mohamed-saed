@@ -18,6 +18,9 @@ router.patch('/products/:barcode', adminController.updateProduct);
 // Route to replace product image
 router.post('/products/:barcode/image', adminController.upload.single('image'), adminController.replaceProductImage);
 
+// Route to replace product EPUB
+router.post('/products/:barcode/epub', adminController.upload.single('epub'), adminController.replaceProductEpub);
+
 // Route to delete product
 router.delete('/products/:barcode', adminController.deleteProduct);
 

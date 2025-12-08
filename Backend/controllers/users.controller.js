@@ -109,6 +109,14 @@ async function createAccount(req, res) {
       }
     }
 
+    // Generate JWT token
+    const jwt = require('jsonwebtoken');
+    const token = jwt.sign(
+      { userId: newUser._id, email: newUser.email, role: newUser.role },
+      process.env.JWT_SECRET || 'your-secret-key',
+      { expiresIn: '7d' }
+    );
+
     // Return user data for auto-login (similar to login response)
     const responsePayload = {
       message: 'تم إنشاء الحساب بنجاح',
@@ -118,7 +126,8 @@ async function createAccount(req, res) {
         email: newUser.email,
         phone: newUser.phone,
         role: newUser.role,
-        bookId: bookId // إعادة bookId للواجهة الأمامية
+        bookId: bookId, // إعادة bookId للواجهة الأمامية
+        token: token // Include token
       }
     };
     res.status(201).json(responsePayload);
@@ -141,16 +150,13 @@ async function login(req, res) {
       return res.status(401).json({ message: 'كلمة المرور غير صحيحة' });
     }
 
-    // Generate JWT token for admin users
-    let token = null;
-    if (user.role === 'admin') {
-      const jwt = require('jsonwebtoken');
-      token = jwt.sign(
-        { userId: user._id, email: user.email, role: user.role },
-        process.env.JWT_SECRET || 'your-secret-key',
-        { expiresIn: '7d' }
-      );
-    }
+    // Generate JWT token for all users
+    const jwt = require('jsonwebtoken');
+    const token = jwt.sign(
+      { userId: user._id, email: user.email, role: user.role },
+      process.env.JWT_SECRET || 'your-secret-key',
+      { expiresIn: '7d' }
+    );
 
     res.status(200).json({
       message: 'تم تسجيل الدخول بنجاح',
@@ -164,7 +170,7 @@ async function login(req, res) {
         city: user.city,
         village: user.village,
         referralCode: user.referralCode,
-        token: token // Include token for admin users
+        token: token // Include token for all users
       }
     });
   } catch (error) {
@@ -573,6 +579,14 @@ async function googleSignIn(req, res) {
       await user.save();
     }
 
+    // Generate JWT token
+    const jwt = require('jsonwebtoken');
+    const token = jwt.sign(
+      { userId: user._id, email: user.email, role: user.role },
+      process.env.JWT_SECRET || 'your-secret-key',
+      { expiresIn: '7d' }
+    );
+
     res.status(200).json({
       id: user._id,
       username: user.username,
@@ -582,7 +596,8 @@ async function googleSignIn(req, res) {
       governorate: user.governorate,
       city: user.city,
       village: user.village,
-      referralCode: user.referralCode
+      referralCode: user.referralCode,
+      token: token // Include token
     });
   } catch (error) {
     console.error('Error during Google sign-in:', error);

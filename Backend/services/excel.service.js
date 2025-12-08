@@ -109,6 +109,17 @@ async function downloadAndConvertExcel(fileId, promotionStartDateStr, promotionE
   const updatedData = [];
   for (const product of filteredJson) {
     const product_id = product.products_id;
+
+    // Map Barcode column (handle case sensitivity)
+    if (product['Barcode']) {
+      product.barcode = String(product['Barcode']).trim();
+    } else if (product['barcode']) {
+      product.barcode = String(product['barcode']).trim();
+    } else {
+        // Fallback: Use products_id as barcode (User Request)
+        product.barcode = String(product_id).trim();
+    }
+
     let name = product.product_name || '';
     // Prefer product_category field if valid
     let category = null;
@@ -267,7 +278,8 @@ async function addProductToExcel(productData, merchantId = null) {
 
     // Prepare new product row with all fields including category-specific ones
     const newRow = {
-      products_id: productData.barcode,
+      products_id: productData.products_id || productData.barcode, // Use provided ID or fallback to barcode if needed
+      barcode: productData.barcode || '',
       product_name: productData.categoryPrefix ? productData.categoryPrefix + productData.product_name : productData.product_name,
       product_quantity: productData.product_quantity,
       product_category: productData.product_category,
@@ -309,6 +321,7 @@ async function addProductToExcel(productData, merchantId = null) {
       length: productData.length || '',
       usage: productData.usage || '',
       suggestedCategory: productData.suggestedCategory || '',
+      linkedEbookId: productData.linkedEbookId || '',
       createdAt: productData.createdAt || new Date().toISOString()
     };
 

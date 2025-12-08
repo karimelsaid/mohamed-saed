@@ -3,11 +3,27 @@ const fs = require('fs');
 const multer = require('multer');
 const sharp = require('sharp');
 const { addProductToExcel, categoryMap, reverseCategoryMap, downloadAndConvertExcel, updateExcelFromJson } = require('../services/excel.service');
+
+// Mapping from Arabic short keys to English enum values used in Ebook model
+const englishCategoryMap = {
+  'رواية': 'Novels-stories',
+  'تنمية': 'Self-development-psychology',
+  'ديني': 'Islamic',
+  'صحة': 'HealthMedicineScience',
+  'اعمال': 'Business-Marketing-Finance',
+  'فن': 'Arts-crafts',
+  'تاريخ': 'History-Biographies',
+  'تربية': 'Education-children',
+  'قاموس': 'Dictionaries-References',
+  // add other mappings as needed
+};
 const sitemapService = require('../services/sitemap.service');
 
 const PromotionDate = require('../models/PromotionDate.model');
 const PaymentRequest = require('../models/PaymentRequest.model');
 const Referral = require('../models/Referral.model');
+const Ebook = require('../models/Ebook.model');
+const { createMiniEpub } = require('../services/epub.service');
 
 // Helper function to generate random barcode string
 function generateRandomBarcode(length = 12) {
@@ -27,13 +43,26 @@ function getAdminUploadDir(adminUsername, barcode) {
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 3 * 1024 * 1024 }, // 5 MB
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB
   fileFilter: (req, file, cb) => {
-    // Accept only image files
-    if (!file.mimetype.startsWith('image/')) {
-      return cb(new Error('Only image files are allowed!'), false);
+    // Accept image files
+    if (file.mimetype.startsWith('image/')) {
+      return cb(null, true);
     }
-    cb(null, true);
+
+    // Accept EPUB files (strict mime or fallback to extension)
+    // Common MIME types for EPUB: application/epub+zip, application/epub, application/zip, application/octet-stream
+    const isEpubMime = file.mimetype === 'application/epub+zip' || file.mimetype === 'application/epub' || file.mimetype === 'application/zip' || file.mimetype === 'application/octet-stream';
+    const isEpubExt = file.originalname.toLowerCase().endsWith('.epub');
+
+    if (isEpubMime && isEpubExt) {
+      cb(null, true);
+    } else if (file.mimetype === 'application/epub+zip' || file.mimetype === 'application/epub') {
+      cb(null, true);
+    } else {
+      console.log('Rejected file:', file.originalname, 'Mime:', file.mimetype);
+      cb(new Error('Only image and EPUB files are allowed!'), false);
+    }
   }
 });
 
@@ -77,11 +106,20 @@ async function addProduct(req, res) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
 
-    const isMultiple = req.files.length > 1;
+    const imageFiles = req.files.filter(f => f.mimetype.startsWith('image/'));
+    const epubFile = req.files.find(f => f.mimetype === 'application/epub+zip');
+
+    if (imageFiles.length === 0) {
+      return res.status(400).json({ success: false, message: 'Image file is required' });
+    }
+
+
+
+    const isMultiple = imageFiles.length > 1;
     const filenames = [];
 
-    for (let i = 0; i < req.files.length; i++) {
-      const file = req.files[i];
+    for (let i = 0; i < imageFiles.length; i++) {
+      const file = imageFiles[i];
       const suffix = isMultiple ? (i === 0 ? '' : '_' + i) : '';
 
       // WebP
@@ -95,6 +133,56 @@ async function addProduct(req, res) {
     }
 
     const filename = filenames[0];
+
+    // Handle EPUB upload if present
+    let linkedEbookId = null;
+    let epubFilePath = '';
+    let miniEpubFilePath = '';
+
+    if (epubFile) {
+      const sanitizedTitle = product_name.replace(/[^a-zA-Z0-9]/g, '_');
+
+      const fileExt = '.epub';
+      const newFileName = `${sanitizedTitle}_${barcode}${fileExt}`; // Use barcode for uniqueness
+      const ebooksDir = path.join(__dirname, '../uploads/ebooks');
+      if (!fs.existsSync(ebooksDir)) {
+        fs.mkdirSync(ebooksDir, { recursive: true });
+      }
+      const newPath = path.join(ebooksDir, newFileName);
+
+      // Write buffer to file
+      fs.writeFileSync(newPath, epubFile.buffer);
+
+      const relativePath = path.join('uploads', 'ebooks', newFileName);
+      epubFilePath = relativePath;
+
+      // Generate Mini Version
+      const miniFileName = `${sanitizedTitle}_${barcode}_mini${fileExt}`;
+      const miniPath = path.join(ebooksDir, miniFileName);
+
+      const miniCreated = await createMiniEpub(newPath, miniPath);
+
+      if (miniCreated) {
+        miniEpubFilePath = path.join('uploads', 'ebooks', miniFileName);
+      }
+
+      // Create Ebook record
+      const ebook = await Ebook.create({
+        title: product_name,
+        author: author || 'Unknown',
+        description: product_description,
+        coverImage: filename, // Use the product image as cover
+        epubFilePath: epubFilePath,
+        miniEpubFilePath: miniEpubFilePath,
+        fileSize: epubFile.size,
+        category: product_category,
+        pages: pages || 0,
+        price: parseFloat(product_price) || 0,
+        availableForSubscription: true // Default to true
+      });
+
+      linkedEbookId = ebook._id;
+    }
 
     // Convert full category name to short key if necessary
     const shortCategoryKey = reverseCategoryMap[product_category] || product_category;
@@ -189,6 +277,10 @@ async function addProduct(req, res) {
       length: length || '',
       usage: usage || '',
       suggestedCategory: suggestedCategory || '',
+      suggestedCategory: suggestedCategory || '',
+      linkedEbookId: linkedEbookId ? linkedEbookId.toString() : '',
+      epubFilePath: epubFilePath || '',
+      miniEpubFilePath: miniEpubFilePath || '',
       createdAt: new Date().toISOString() // Add createdAt field with current timestamp
     };
 
@@ -221,6 +313,7 @@ async function listProducts(req, res) {
     const fs = require('fs');
     const path = require('path');
     const outputPath = path.join(__dirname, '..', 'output.json');
+    const ebookMappingsPath = path.join(__dirname, '..', 'ebook-mappings.json');
     let products;
 
     // Check if output.json exists and is less than 5 minutes old
@@ -233,12 +326,58 @@ async function listProducts(req, res) {
         // Read from cache
         products = JSON.parse(fs.readFileSync(outputPath, 'utf-8'));
       } else {
-        // File is old, download fresh
-        products = await downloadAndConvertExcel(process.env.GOOGLE_DRIVE_FILE_ID);
+        // File is old, try to download fresh
+        try {
+          products = await downloadAndConvertExcel(process.env.GOOGLE_DRIVE_FILE_ID);
+        } catch (downloadError) {
+          console.error('Error refreshing product list from Google Drive:', downloadError.message);
+          console.warn('Falling back to cached output.json due to download failure.');
+          // Fallback to cache if download fails
+          products = JSON.parse(fs.readFileSync(outputPath, 'utf-8'));
+          // Optionally append a warning flag to the response?
+        }
       }
     } else {
-      // File doesn't exist, download
+      // File doesn't exist, must download
       products = await downloadAndConvertExcel(process.env.GOOGLE_DRIVE_FILE_ID);
+    }
+
+    // Merge linkedEbookId from persistent ebook-mappings.json
+    if (fs.existsSync(ebookMappingsPath)) {
+      try {
+        let ebookMappings = JSON.parse(fs.readFileSync(ebookMappingsPath, 'utf-8'));
+        let mappingsChanged = false;
+
+        // Get all valid Ebook IDs from DB
+        const Ebook = require('../models/Ebook.model');
+        const validEbookIds = await Ebook.find({}, '_id').lean();
+        const validEbookIdSet = new Set(validEbookIds.map(e => e._id.toString()));
+
+        products.forEach(product => {
+          const barcode = String(product.products_id).trim();
+          if (ebookMappings[barcode]) {
+            const mappedId = ebookMappings[barcode];
+            if (validEbookIdSet.has(mappedId)) {
+              product.linkedEbookId = mappedId;
+            } else {
+              // Found a stale mapping, remove it
+              delete ebookMappings[barcode];
+              mappingsChanged = true;
+              // Also clear it from the product if it was somehow already there
+              delete product.linkedEbookId;
+            }
+          }
+        });
+
+        if (mappingsChanged) {
+          fs.writeFileSync(ebookMappingsPath, JSON.stringify(ebookMappings, null, 2));
+          console.log('🧹 Cleaned up stale ebook mappings');
+        }
+
+        console.log('📚 Merged linkedEbookId from ebook-mappings.json');
+      } catch (e) {
+        console.error('Error reading ebook-mappings.json:', e);
+      }
     }
 
     // Do not map product_category back to short keys, send as is
@@ -432,6 +571,178 @@ async function replaceProductImage(req, res) {
     res.json({ success: true, message: 'Product image replaced successfully' });
   } catch (error) {
     console.error('Error in replaceProductImage:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+}
+
+// New API to replace product EPUB
+async function replaceProductEpub(req, res) {
+  try {
+    const { barcode } = req.params;
+    if (!barcode) {
+      return res.status(400).json({ success: false, message: 'Missing product barcode' });
+    }
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'EPUB file is required' });
+    }
+
+    // Find product to get details (like name)
+    const outputPath = path.join(__dirname, '..', 'output.json');
+    const products = JSON.parse(fs.readFileSync(outputPath, 'utf-8'));
+    const product = products.find(p => String(p.products_id).trim() === String(barcode).trim());
+
+    if (!product) {
+      return res.status(404).json({ success: false, message: 'Product not found' });
+    }
+
+    const sanitizedTitle = product.product_name.replace(/[^a-zA-Z0-9\u0600-\u06FF]/g, '_');
+
+    // Check if Ebook exists
+    let ebook;
+    if (product.linkedEbookId) {
+      ebook = await Ebook.findById(product.linkedEbookId);
+    }
+
+    if (!ebook) {
+      // Map Arabic category (short or full) to English enum value
+      let englishCategory = englishCategoryMap[product.product_category];
+      if (!englishCategory) {
+        // If product_category is a full Arabic name, get its short key via reverseCategoryMap
+        const shortKey = reverseCategoryMap[product.product_category] || product.product_category;
+        // Then map the short key to English enum
+        englishCategory = englishCategoryMap[shortKey] || 'Novels-stories';
+      }
+
+      // Auto-detect language from product name
+      const hasEnglishChars = /[a-zA-Z]/.test(product.product_name);
+      const hasArabicChars = /[\u0600-\u06FF]/.test(product.product_name);
+      const detectedLanguage = hasEnglishChars && !hasArabicChars ? 'English' : 'العربية';
+
+      // Create new Ebook if not existing
+      ebook = new Ebook({
+        title: product.product_name,
+        author: product.author || 'Unknown',
+        description: product.product_description,
+        coverImage: product.product_image, // Will be updated after copying cover image
+        category: englishCategory,
+        language: detectedLanguage,
+        pages: product.pages || 0,
+        price: parseFloat(product.product_price) || 0,
+        relatedProductId: product.products_id || product.barcode, // Store product ID (or barcode) for linking
+        availableForSubscription: true
+      });
+    }
+
+    const fileExt = '.epub';
+    const newFileName = `${sanitizedTitle}_${ebook._id}${fileExt}`;
+    const miniFileName = `${sanitizedTitle}_${ebook._id}_mini${fileExt}`;
+    const ebooksDir = path.join(__dirname, '../uploads/ebooks');
+    if (!fs.existsSync(ebooksDir)) {
+      fs.mkdirSync(ebooksDir, { recursive: true });
+    }
+    const newPath = path.join(ebooksDir, newFileName);
+
+    // Write buffer to file
+    // Write buffer to file
+    // Check if updating existing ebook, delete old files if name changed
+    if (ebook.epubFilePath && ebook.epubFilePath !== `uploads/ebooks/${newFileName}`) {
+      const oldPath = path.join(__dirname, '..', ebook.epubFilePath);
+      if (fs.existsSync(oldPath)) {
+        try {
+          fs.unlinkSync(oldPath);
+          console.log('🗑️ Deleted old EPUB file:', oldPath);
+        } catch (err) {
+          console.error('Error deleting old EPUB:', err);
+        }
+      }
+    }
+    if (ebook.miniEpubFilePath && ebook.miniEpubFilePath !== `uploads/ebooks/${miniFileName}`) {
+      const oldMiniPath = path.join(__dirname, '..', ebook.miniEpubFilePath);
+      if (fs.existsSync(oldMiniPath)) {
+        try {
+          fs.unlinkSync(oldMiniPath);
+          console.log('🗑️ Deleted old Mini EPUB file:', oldMiniPath);
+        } catch (err) { console.error('Error deleting old Mini EPUB:', err); }
+      }
+    }
+
+    fs.writeFileSync(newPath, req.file.buffer);
+
+    // Use forward slashes for DB storage to avoid OS-specific path issues
+    const relativePath = `uploads/ebooks/${newFileName}`;
+    ebook.epubFilePath = relativePath;
+    ebook.fileSize = req.file.size;
+
+
+
+    // Copy product cover image to ebooks directory with bookName_ebookId.webp format
+    const productImagePath = path.join(__dirname, '../uploads/books/admin__karim_mohamed__', barcode, `${barcode}.webp`);
+    const coverFileName = `${sanitizedTitle}_${ebook._id}.webp`;
+    const coverPath = path.join(ebooksDir, coverFileName);
+
+    if (fs.existsSync(productImagePath)) {
+      try {
+        fs.copyFileSync(productImagePath, coverPath);
+        // Store with forward slashes
+        ebook.coverImage = `uploads/ebooks/${coverFileName}`;
+        console.log(`✅ Cover image copied: ${coverFileName}`);
+      } catch (copyError) {
+        console.error('Error copying cover image:', copyError);
+        // Keep original product_image as fallback
+      }
+    } else {
+      console.log(`⚠️ Product image not found at: ${productImagePath}`);
+      // Keep original product_image as fallback
+    }
+
+    // Generate Mini Version
+    const miniPath = path.join(ebooksDir, miniFileName);
+
+    const miniCreated = await createMiniEpub(newPath, miniPath);
+
+    if (miniCreated) {
+      ebook.miniEpubFilePath = `uploads/ebooks/${miniFileName}`;
+    }
+
+    // Ensure relatedProductId is updated/set (prioritize barcode for linking)
+    // Use product.barcode from Excel, or fallback to the requested barcode, or products_id
+    ebook.relatedProductId = product.barcode || req.body.barcode || product.products_id;
+
+    await ebook.save();
+
+    // Update product with linkedEbookId
+    console.log('💾 Saving linkedEbookId:', ebook._id.toString(), 'for product:', barcode);
+
+    // Save to persistent ebook-mappings.json (survives Excel refresh)
+    const ebookMappingsPath = path.join(__dirname, '..', 'ebook-mappings.json');
+    let ebookMappings = {};
+    if (fs.existsSync(ebookMappingsPath)) {
+      try {
+        ebookMappings = JSON.parse(fs.readFileSync(ebookMappingsPath, 'utf-8'));
+      } catch (e) {
+        ebookMappings = {};
+      }
+    }
+    ebookMappings[barcode] = ebook._id.toString();
+    fs.writeFileSync(ebookMappingsPath, JSON.stringify(ebookMappings, null, 2));
+    console.log('✅ linkedEbookId saved to ebook-mappings.json');
+
+    // Update local JSON array - always update to ensure it's saved
+    const productIndex = products.findIndex(p => String(p.products_id).trim() === String(barcode).trim());
+    if (productIndex !== -1) {
+      products[productIndex].linkedEbookId = ebook._id.toString();
+      fs.writeFileSync(outputPath, JSON.stringify(products, null, 2));
+      console.log('✅ linkedEbookId saved to output.json for product index:', productIndex);
+
+      // Sync to Excel (commented out to prevent Google Drive timeout errors)
+      // await updateExcelFromJson();
+    } else {
+      console.log('❌ Product not found in products array for barcode:', barcode);
+    }
+
+    res.json({ success: true, message: 'Product EPUB replaced successfully', linkedEbookId: ebook._id });
+  } catch (error) {
+    console.error('Error in replaceProductEpub:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 }
@@ -1619,6 +1930,7 @@ module.exports = {
   listProducts,
   updateProduct,
   replaceProductImage,
+  replaceProductEpub,
   deleteProduct,
   bulkDeleteProducts,
   syncJsonToExcel,
@@ -1645,3 +1957,189 @@ module.exports = {
   deleteUrgencyRequest,
   updateProductQuantity
 };
+
+async function updateUrgencyRequestStatus(req, res) {
+  try {
+    const { requestId } = req.params;
+    const { fulfilled } = req.body;
+
+    const user = await User.findOne({ 'urgencyRequests._id': requestId });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Urgency request not found' });
+    }
+
+    const request = user.urgencyRequests.id(requestId);
+    if (!request) {
+      return res.status(404).json({ success: false, message: 'Urgency request not found' });
+    }
+
+    request.fulfilled = fulfilled;
+
+    // If fulfilled, update product quantity in Excel and delete the request
+    if (fulfilled) {
+      const barcode = request.bookId;
+      if (barcode) {
+        // Download current Excel file
+        const fileId = process.env.GOOGLE_DRIVE_FILE_ID;
+        if (!fileId) {
+          return res.status(500).json({ success: false, message: 'Missing Google Drive file ID' });
+        }
+
+        const client = await require('../config/drive').auth.getClient();
+        const drive = require('googleapis').google.drive({ version: 'v3', auth: client });
+
+        const resDrive = await drive.files.get({
+          fileId,
+          alt: 'media',
+        }, { responseType: 'arraybuffer' });
+
+        const buffer = Buffer.from(resDrive.data);
+        const xlsx = require('xlsx');
+        const workbook = xlsx.read(buffer, { type: 'buffer' });
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        let json = xlsx.utils.sheet_to_json(sheet);
+
+        // Find product by barcode and increase quantity by 5
+        const productIndex = json.findIndex(p => {
+          if (!p.products_id) return false;
+          const pId = String(p.products_id).trim();
+          const bId = String(barcode).trim();
+          return pId === bId || Number(pId) === Number(bId) || pId === String(Number(bId)) || String(Number(pId)) === bId;
+        });
+
+        if (productIndex !== -1) {
+          const currentQuantity = parseInt(json[productIndex].product_quantity, 10) || 0;
+          json[productIndex].product_quantity = currentQuantity + 5;
+
+          // Convert JSON back to sheet
+          const newSheet = xlsx.utils.json_to_sheet(json);
+          workbook.Sheets[sheetName] = newSheet;
+
+          // Write workbook to buffer
+          const wbout = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+
+          // Upload updated Excel file back to Google Drive
+          await drive.files.update({
+            fileId,
+            media: {
+              mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+              body: wbout
+            }
+          });
+
+          // Update output.json by re-running downloadAndConvertExcel
+          await downloadAndConvertExcel(fileId);
+
+          // Update the update file to keep in sync
+          await updateExcelFromJson(process.env.GOOGLE_DRIVE_FILE_update);
+        }
+      }
+
+      // Delete the urgency request after fulfilling
+      user.urgencyRequests.pull(requestId);
+    }
+
+    await user.save();
+
+    res.json({ success: true, message: 'Urgency request status updated successfully' });
+  } catch (error) {
+    console.error('Error updating urgency request status:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+}
+
+async function deleteUrgencyRequest(req, res) {
+  try {
+    const { requestId } = req.params;
+
+    const user = await User.findOne({ 'urgencyRequests._id': requestId });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Urgency request not found' });
+    }
+
+    user.urgencyRequests.pull(requestId);
+    await user.save();
+
+    res.json({ success: true, message: 'Urgency request deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting urgency request:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+}
+
+async function updateProductQuantity(req, res) {
+  try {
+    const { barcode } = req.params;
+    const { product_quantity } = req.body;
+
+    if (!barcode) {
+      return res.status(400).json({ success: false, message: 'Missing product barcode' });
+    }
+
+    if (product_quantity === undefined || product_quantity < 0) {
+      return res.status(400).json({ success: false, message: 'Invalid product quantity' });
+    }
+
+    // Download current Excel file
+    const fileId = process.env.GOOGLE_DRIVE_FILE_ID;
+    if (!fileId) {
+      return res.status(500).json({ success: false, message: 'Missing Google Drive file ID' });
+    }
+
+    const client = await require('../config/drive').auth.getClient();
+    const drive = require('googleapis').google.drive({ version: 'v3', auth: client });
+
+    const resDrive = await drive.files.get({
+      fileId,
+      alt: 'media',
+    }, { responseType: 'arraybuffer' });
+
+    const buffer = Buffer.from(resDrive.data);
+    const xlsx = require('xlsx');
+    const workbook = xlsx.read(buffer, { type: 'buffer' });
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+    let json = xlsx.utils.sheet_to_json(sheet);
+
+    // Find product by barcode and update quantity
+    const productIndex = json.findIndex(p => {
+      if (!p.products_id) return false;
+      const pId = String(p.products_id).trim();
+      const bId = String(barcode).trim();
+      return pId === bId || Number(pId) === Number(bId) || pId === String(Number(bId)) || String(Number(pId)) === bId;
+    });
+    if (productIndex === -1) {
+      return res.status(404).json({ success: false, message: 'Product not found' });
+    }
+
+    json[productIndex].product_quantity = product_quantity;
+
+    // Convert JSON back to sheet
+    const newSheet = xlsx.utils.json_to_sheet(json);
+    workbook.Sheets[sheetName] = newSheet;
+
+    // Write workbook to buffer
+    const wbout = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+
+    // Upload updated Excel file back to Google Drive
+    await drive.files.update({
+      fileId,
+      media: {
+        mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        body: wbout
+      }
+    });
+
+    // Update output.json by re-running downloadAndConvertExcel
+    await downloadAndConvertExcel(fileId);
+
+    // Update the update file to keep in sync
+    await updateExcelFromJson(process.env.GOOGLE_DRIVE_FILE_update);
+
+    res.json({ success: true, message: 'Product quantity updated successfully' });
+  } catch (error) {
+    console.error('Error in updateProductQuantity:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+}

@@ -3,12 +3,13 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { ReadingProgress, Bookmark, Highlight, ReaderSettings } from '../models/ebook.model';
+import { environment } from '../../environments/environment';
 
 @Injectable({
     providedIn: 'root'
 })
 export class ReadingProgressService {
-    private apiUrl = '/api/reading-progress';
+    private apiUrl = `${environment.apiBaseUrl}/reading-progress`;
 
     private currentProgressSubject = new BehaviorSubject<ReadingProgress | null>(null);
     public currentProgress$ = this.currentProgressSubject.asObservable();

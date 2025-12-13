@@ -3,7 +3,7 @@ import { HttpClient, HttpEventType } from '@angular/common/http';
 import { AuthService } from '../../auth/auth.service';
 import { Router, RouterModule } from '@angular/router';
 import { DataService } from '../../services/data.service';
-import { take } from 'rxjs/operators';
+import { take, finalize, timeout } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { NotificationService } from '../../services/notification.service';
 import { ModalDialogComponent } from '../../shared/modal-dialog/modal-dialog.component';
@@ -16,7 +16,7 @@ import * as XLSX from 'xlsx';
 import { FreeShippingRulesComponent } from './free-shipping/free-shipping-rules.component';
 import { Subscription } from 'rxjs';
 import { FaIconLibrary, FontAwesomeModule, FaIconComponent } from '@fortawesome/angular-fontawesome';
-import { faShoppingCart, faStore, faBook, faPrint, faPlus, faEdit, faTruck, faUsers, faCheckCircle, faMoneyBillWave, faSitemap, faPlusCircle, faImage, faTag, faHashtag, faList, faDollarSign, faAlignLeft, faExclamationTriangle, faCartPlus, faHeart } from '@fortawesome/free-solid-svg-icons';
+import { faShoppingCart, faStore, faBook, faPrint, faPlus, faEdit, faTruck, faUsers, faCheckCircle, faMoneyBillWave, faSitemap, faPlusCircle, faImage, faTag, faHashtag, faList, faDollarSign, faAlignLeft, faExclamationTriangle, faCartPlus, faHeart, faMobileAlt } from '@fortawesome/free-solid-svg-icons';
 import { PaymentRequestsComponent } from '../payment-requests/payment-requests.component';
 import { UserHierarchyComponent } from '../user-hierarchy/user-hierarchy.component';
 import { AmazonPriceCalculatorComponent } from '../amazon-price-calculator/amazon-price-calculator.component';
@@ -158,7 +158,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   requestedBooks: RequestedBook[] = [];
   allRequestedBooks: RequestedBook[] = [];
   isAdmin: boolean = false; // Add paymentRequests to the type union
-  currentView: 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' = 'orders';
+  currentView: 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' = 'orders';
 
   manualPromotionStartDate: string = '';
   manualPromotionEndDate: string = '';
@@ -573,7 +573,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     library: FaIconLibrary
   ) {
     library.addIcons(
-      faShoppingCart, faStore, faBook, faPrint, faPlus, faEdit, faTruck, faUsers, faCheckCircle, faMoneyBillWave, faSitemap, faPlusCircle, faImage, faTag, faHashtag, faList, faDollarSign, faAlignLeft, faExclamationTriangle, faCartPlus, faHeart
+      faShoppingCart, faStore, faBook, faPrint, faPlus, faEdit, faTruck, faUsers, faCheckCircle, faMoneyBillWave, faSitemap, faPlusCircle, faImage, faTag, faHashtag, faList, faDollarSign, faAlignLeft, faExclamationTriangle, faCartPlus, faHeart, faMobileAlt
     );
   }
 
@@ -605,6 +605,12 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
     // Initialize filter options
     this.filterOptions = ['جميع الفئات', ...this.categories];
+
+    // Initialize Mobile Version Data (Default structure)
+    this.mobileVersionConfig = {
+      android: { minBuildNumber: 0, storeUrl: '', forceUpdate: false },
+      ios: { minBuildNumber: 0, storeUrl: '', forceUpdate: false }
+    };
   }
 
   ngOnDestroy(): void {
@@ -622,7 +628,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     }
   }
 
-  switchView(view: 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks'): void {
+  switchView(view: 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion'): void {
     this.currentView = view;
     if (view === 'orders' || view === 'merchantOrders') {
       this.ordersPage = 1; // Reset page when switching views
@@ -651,7 +657,34 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     } else if (view === 'urgencyRequests') {
       this.urgencyRequestsPage = 1;
       this.loadUrgencyRequests();
+    } else if (view === 'mobileVersion') {
+      this.loadMobileVersion();
     }
+  }
+
+  // --- Mobile Version Control ---
+  mobileVersionConfig: any = {};
+
+  loadMobileVersion(): void {
+    this.http.get(`${this.backendBaseUrl}/mobile-version`).subscribe({
+      next: (config: any) => {
+        this.mobileVersionConfig = config;
+      },
+      error: (err) => {
+        this.showErrorModal('فشل تحميل إعدادات التطبيق');
+      }
+    });
+  }
+
+  saveMobileVersion(): void {
+    this.http.put(`${this.backendBaseUrl}/mobile-version`, this.mobileVersionConfig).subscribe({
+      next: (response: any) => {
+        this.showSuccessModal('تم تحديث إعدادات التطبيق بنجاح');
+      },
+      error: (err) => {
+        this.showErrorModal('فشل تحديث إعدادات التطبيق');
+      }
+    });
   }
 
   loadStats(): void {
@@ -1717,9 +1750,10 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       formData.append('image', file);
     }
 
-    if (this.selectedEpubFile) {
-      formData.append('epub', this.selectedEpubFile);
-    }
+    // Epub upload removed from creation flow to prevent Multer error
+    // if (this.selectedEpubFile) {
+    //   formData.append('epub', this.selectedEpubFile);
+    // }
 
     // Append image URLs if any
     this.imageUrls.forEach(url => {
@@ -1744,13 +1778,22 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       body: formData,
       reportProgress: true,
       observe: 'events'
-    }).subscribe({
+    }).pipe(
+      timeout(60000), // Timeout after 1 minute
+      finalize(() => {
+        this.uploading = false;
+        // Ensure progress is reset if not successful
+        if (!this.uploadSuccess) {
+          this.uploadProgress = 0;
+        }
+      })
+    ).subscribe({
       next: (event) => {
         if (event.type === 1 && event.total) { // HttpEventType.UploadProgress
           this.uploadProgress = Math.round((event.loaded / event.total) * 100);
-        } else if (event.type === 4) { // HttpEventType.Response
+        } else if (event.type === 4 || (event as any).body?.success) { // HttpEventType.Response or check body
           this.uploadSuccess = true;
-          this.uploading = false;
+          // this.uploading = false; // Handled by finalize
 
           // Store the current product data for potential reuse
           const currentProductData = { ...this.product };
@@ -1770,9 +1813,10 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
         }
       },
       error: (error) => {
-        this.uploading = false;
+        // this.uploading = false; // Handled by finalize
         this.uploadProgress = 0;
         this.uploadSuccess = false;
+        console.error('Upload Error:', error); // Log error for debugging
         this.showErrorModal('حدث خطأ أثناء إضافة المنتج.');
       }
     });
@@ -2300,6 +2344,10 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       action
     );
   }
+
+
+
+
 
   // Print order multi-select methods
   togglePrintOrderSelection(orderId: string): void {

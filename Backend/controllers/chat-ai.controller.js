@@ -9,7 +9,7 @@ const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 // تعديل المسار ليكون متوافقًا مع بيئة الإنتاج بعد البناء
 // سيتم نسخ الملف إلى مجلد dist/server
-const BOOKS_JSON_PATH = path.resolve(__dirname, 'output.json');
+const BOOKS_JSON_PATH = path.resolve(__dirname, '../output.json');
 
 let cachedBooks = null;
 

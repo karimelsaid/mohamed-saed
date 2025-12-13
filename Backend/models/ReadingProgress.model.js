@@ -49,8 +49,7 @@ const readingProgressSchema = new mongoose.Schema({
         index: true
     },
     ebookId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Ebook',
+        type: String, // Changed from ObjectId to support external IDs (ext_...)
         required: true,
         index: true
     },

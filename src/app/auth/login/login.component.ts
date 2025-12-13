@@ -174,9 +174,17 @@ export class LoginComponent implements OnInit, AfterViewInit {
               }
             });
           } else {
-            localStorage.setItem('user', JSON.stringify(response.user));
+            // CRITICAL FIX: Save token with user data
+            const userData = { ...response.user };
+            if (response.token) {
+              userData.token = response.token;
+            } else if (response.accessToken) {
+              userData.token = response.accessToken;
+            }
+
+            localStorage.setItem('user', JSON.stringify(userData));
             this.authService.setLoginStatus(true);
-            this.authService.setUser(response.user);
+            this.authService.setUser(userData);
 
             setTimeout(() => {
               // If returnUrl is the default, check for admin role, otherwise respect returnUrl

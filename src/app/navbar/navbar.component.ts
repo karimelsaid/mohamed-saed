@@ -13,6 +13,8 @@ import { NotificationService, Notification } from '../services/notification.serv
 import { NavbarIconsComponent } from '../navbar-icons/navbar-icons.component';
 import { SearchBarComponent } from '../search-bar/search-bar.component';
 
+import { Capacitor } from '@capacitor/core';
+
 @Component({
   selector: 'app-navbar',
   standalone: true,
@@ -22,6 +24,8 @@ import { SearchBarComponent } from '../search-bar/search-bar.component';
 })
 export class NavbarComponent implements OnInit {
   @ViewChild(AccountModalComponent) accountModal!: AccountModalComponent;
+
+  isAndroidApp: boolean = false;
 
   faBars = faBars;
   faClose = faClose;
@@ -163,7 +167,7 @@ export class NavbarComponent implements OnInit {
   }
 
   exitBars(): void {
-    setTimeout(() => (this.openBars = !this.openBars), 50);
+    setTimeout(() => (this.openBars = false), 50);
   }
 
   constructor(
@@ -176,6 +180,8 @@ export class NavbarComponent implements OnInit {
   ) { }
 
   ngOnInit(): void {
+    this.isAndroidApp = Capacitor.getPlatform() === 'android';
+
     // Initialize dark mode from localStorage, default to false (light mode)
     const darkModeStored = localStorage.getItem('darkMode');
     if (darkModeStored !== null) {
@@ -346,4 +352,10 @@ export class NavbarComponent implements OnInit {
     this.router.navigate(['/requests']);
     this.isOrdersActive = true;
   }
+
+  isLibraryPage(): boolean {
+    return this.router.url.startsWith('/library');
+  }
+
+  protected readonly Math = Math;
 }

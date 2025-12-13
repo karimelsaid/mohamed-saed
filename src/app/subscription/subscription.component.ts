@@ -104,17 +104,31 @@ export class SubscriptionComponent implements OnInit {
         }
     }
 
+    // Cancel Modal State
+    showCancelModal = false;
+
     cancelSubscription(): void {
-        if (confirm('هل أنت متأكد من إلغاء الاشتراك؟')) {
-            this.subscriptionService.cancelSubscription().subscribe({
-                next: () => {
-                    this.success = 'تم إلغاء الاشتراك بنجاح';
-                },
-                error: () => {
-                    this.error = 'حدث خطأ في إلغاء الاشتراك';
-                }
-            });
-        }
+        this.showCancelModal = true;
+    }
+
+    closeCancelModal(): void {
+        this.showCancelModal = false;
+    }
+
+    confirmCancellation(): void {
+        this.closeCancelModal();
+        this.isLoading = true;
+        this.subscriptionService.cancelSubscription().subscribe({
+            next: () => {
+                this.isLoading = false;
+                this.success = 'تم إلغاء الاشتراك بنجاح. نأسف لرؤيتك تغادر 💔';
+                this.getRemainingDays(); // Refresh UI
+            },
+            error: () => {
+                this.isLoading = false;
+                this.error = 'حدث خطأ في إلغاء الاشتراك';
+            }
+        });
     }
 
     getRemainingDays(): number {

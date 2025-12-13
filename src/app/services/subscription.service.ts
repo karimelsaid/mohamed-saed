@@ -30,11 +30,13 @@ interface CancelResponse {
     message: string;
 }
 
+import { environment } from '../../environments/environment';
+
 @Injectable({
     providedIn: 'root'
 })
 export class SubscriptionService {
-    private apiUrl = '/api/subscriptions';
+    private apiUrl = `${environment.apiBaseUrl}/subscriptions`;
 
     private subscriptionStatusSubject = new BehaviorSubject<Subscription | null>(null);
     public subscriptionStatus$ = this.subscriptionStatusSubject.asObservable();
@@ -81,6 +83,10 @@ export class SubscriptionService {
 
     getSubscriptionStatus(): Observable<SubscriptionStatusResponse> {
         return this.http.get<SubscriptionStatusResponse>(`${this.apiUrl}/status`);
+    }
+
+    getSubscriptionHistory(): Observable<any> {
+        return this.http.get(`${this.apiUrl}/history`);
     }
 
     subscribe(plan: 'monthly' | 'yearly', paymentMethod: string): Observable<SubscribeResponse> {

@@ -3,11 +3,13 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { UserLibraryEntry, AccessCheckResponse } from '../models/ebook.model';
 
+import { environment } from '../../environments/environment';
+
 @Injectable({
     providedIn: 'root'
 })
 export class UserLibraryService {
-    private apiUrl = '/api/user-library';
+    private apiUrl = `${environment.apiBaseUrl}/user-library`;
 
     constructor(private http: HttpClient) { }
 
@@ -38,5 +40,14 @@ export class UserLibraryService {
     // Remove from library
     removeFromLibrary(ebookId: string): Observable<{ success: boolean; message: string }> {
         return this.http.delete<{ success: boolean; message: string }>(`${this.apiUrl}/${ebookId}`);
+    }
+
+    // Request a new book
+    requestBook(userId: string, bookName: string, authorName?: string): Observable<any> {
+        return this.http.post(`${environment.apiBaseUrl}/users/request-book`, {
+            userId,
+            bookName,
+            authorName
+        });
     }
 }

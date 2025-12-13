@@ -9,7 +9,8 @@
     <app-navbar-icons class="hidden md:block" [isBottomNav]="false"
       (accountClick)="openAccountModal()"></app-navbar-icons>
 
-    <div class="w-full md:absolute md:top-[72px] md:left-0 md:right-0 m-4 md:py-3 transition-all duration-300">
+    <div [ngClass]="{'md:hidden': isLibraryPage()}"
+      class="w-full md:absolute md:top-[72px] md:left-0 md:right-0 m-4 md:py-3 transition-all duration-300">
       <div class="search-bar-container relative flex justify-center max-w-4xl mx-auto">
         <app-search-bar class="w-full" [allBooks]="allBooks" (searchExecuted)="onSearchExecuted($event)">
         </app-search-bar>
@@ -274,12 +275,14 @@
         <button (click)="toggleDarkMode()"
           class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full shadow-md focus:outline-none transition-colors duration-300 p-2">
           <fa-icon *ngIf="isDarkMode" [icon]="faMoon" class="text-lg"></fa-icon>
-          <fa-icon *ngIf="!isDarkMode" [icon]="faSun" class="text-lg"></fa-icon>
+          <fa-icon *ngIf="!isDarkMode" [icon]="faMoon" class="text-lg"></fa-icon>
         </button>
       </div>
 
       <!-- Full Screen Toggle Button -->
-      <div class="flex flex-col sm:flex-row items-center cursor-pointer" title="تبديل الشاشة الكاملة">
+      <!-- Show on all screens unless it is the Android Native App -->
+      <div *ngIf="!isAndroidApp" class="flex flex-col sm:flex-row items-center cursor-pointer"
+        title="تبديل الشاشة الكاملة">
         <button (click)="toggleFullScreen()"
           class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full shadow-md focus:outline-none transition-colors duration-300 p-2">
           <fa-icon [icon]="faExpand" class="text-lg"></fa-icon>

@@ -162,7 +162,34 @@ export class AdminEbooksComponent implements OnInit {
     getCoverUrl(ebook: Ebook): string {
         if (!ebook.coverImage) return 'assets/images/book-placeholder.jpg';
         if (ebook.coverImage.startsWith('http')) return ebook.coverImage;
-        if (ebook.coverImage.startsWith('uploads/')) return `${this.uploadsBaseUrl}/${ebook.coverImage}`;
-        return `/${ebook.coverImage}`; // Fallback
+
+        // If it starts with 'uploads/', we need to see how uploadsBaseUrl is defined.
+        // Assuming uploadsBaseUrl maps to the root domain + /uploads or similar.
+        // If uploadsBaseUrl = '.../uploads/books', and coverImage = 'uploads/ebooks/...', we have a mismatch.
+        // Let's assume we want to construct absolute URL relative to domain root if we don't have a better base.
+        // Or if uploadsBaseUrl is strictly for 'uploads/books', we might need a generic base.
+
+        // Fix: If ebook.coverImage is a relative path like 'uploads/ebooks/file.jpg', 
+        // and we want to prevent double 'uploads' if uploadsBaseUrl includes it.
+
+        // Better approach: Use apiBaseUrl's origin or just relative to root if serving static files correctly.
+        // But for now, let's fix the duplication.
+
+        // If coverImage is just a filename (old logic), append to uploadsBaseUrl
+        if (!ebook.coverImage.includes('/')) {
+            return `${this.uploadsBaseUrl}/${ebook.coverImage}`;
+        }
+
+        // If it is a relative path 'uploads/...'
+        if (ebook.coverImage.startsWith('uploads/')) {
+            // If uploadsBaseUrl ends with 'uploads/books', we might want to go up levels or just use window.location.origin
+            // A safe bet if the backend serves 'uploads' statically:
+            // return `${environment.apiBaseUrl.replace('/api', '')}/${ebook.coverImage}`;
+
+            // Or simpler, if we know it's a relative path from server root:
+            return `${environment.apiBaseUrl.replace('/api', '')}/${ebook.coverImage}`;
+        }
+
+        return `/${ebook.coverImage}`;
     }
 }

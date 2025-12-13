@@ -1,72 +1,152 @@
-<!-- أيقونة الدردشة الثابتة -->
-<div class="fixed bottom-24 md:bottom-5 right-5 bg-blue-600 text-white text-3xl w-14 h-14 rounded-full flex items-center justify-center shadow-lg z-40 cursor-pointer hover:bg-blue-700" *ngIf="!isVisible" (click)="toggleVisibility()" title="فتح الدردشة">
-  💬
-</div>
-
-<!-- نافذة الدردشة العائمة -->
-<div
-  class="fixed w-80 sm:w-96 max-h-[500px] bg-white dark:bg-gray-900 rounded-lg shadow-lg flex flex-col z-50 font-sans"
-  *ngIf="isVisible"
-  [ngClass]="{'fullscreen': isFullscreen}"
-  [ngStyle]="{'left.px': posX, 'top.px': posY, 'bottom': 'auto', 'right': 'auto', 'position': 'fixed', 'width.px': !isFullscreen ? chatWindowWidth : null, 'height.px': !isFullscreen ? chatWindowHeight : null}"
->
+<!-- أيقونة الدردشة العائمة بتصميم عصري -->
+<div class="fixed bottom-24 md:bottom-6 right-6 z-50 transition-transform duration-300 hover:scale-110"
+  *ngIf="!isVisible" (click)="toggleVisibility()" title="Chat with AI">
   <div
-    class="bg-blue-600 text-white p-3 font-bold flex justify-between items-center rounded-t-lg hover:bg-blue-700 cursor-move"
-    (mousedown)="onDragStart($event)"
-    (touchstart)="onTouchStart($event)"
-    (touchmove)="onTouchMove($event)"
-    (touchend)="onTouchEnd($event)"
-  >
-    <span>دردشة الذكاء الاصطناعي</span>
-  <button
-    class="text-white text-xl cursor-pointer ml-2"
-    (click)="toggleFullscreen(); $event.stopPropagation()"
-    (touchstart)="$event.stopPropagation()"
-    (touchend)="$event.stopPropagation()"
-    [title]="isFullscreen ? 'خروج من ملء الشاشة' : 'ملء الشاشة'"
-    [attr.aria-label]="isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'"
-  >
-    <svg *ngIf="!isFullscreen" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-6 h-6">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 3H5a2 2 0 00-2 2v3m0 8v3a2 2 0 002 2h3m8-16h3a2 2 0 012 2v3m0 8v3a2 2 0 01-2 2h-3" />
-    </svg>
-    <svg *ngIf="isFullscreen" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-6 h-6">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 18h16M6 4v16M18 4v16" />
-    </svg>
-  </button>
-  <button class="text-white text-xl cursor-pointer" (click)="toggleVisibility()" (touchstart)="$event.stopPropagation()" (touchend)="toggleVisibility()" title="إغلاق الدردشة">×</button>
+    class="w-16 h-16 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-full shadow-2xl flex items-center justify-center cursor-pointer relative overflow-hidden group">
+    <div class="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
+    <span class="text-3xl transform group-hover:rotate-12 transition-transform duration-300">💬</span>
+    <!-- نبض إشعار اختياري -->
+    <span class="absolute top-0 right-0 -mt-1 -mr-1 flex h-4 w-4">
+      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+      <span class="relative inline-flex rounded-full h-4 w-4 bg-red-500"></span>
+    </span>
+  </div>
 </div>
 
-  <div #messagesContainer class="flex-1 p-3 overflow-y-auto bg-gray-100 dark:bg-gray-700 flex flex-col">
-    <div *ngFor="let message of messages" [ngClass]="{
-      'bg-green-200 text-gray-900 self-start': message.role === 'user',
-      'bg-gray-300 dark:bg-gray-600 dark:text-gray-100 self-end': message.role === 'assistant',
-      'bg-gray-200 italic text-center dark:bg-gray-500 dark:text-gray-200 self-center': message.role === 'system'
-    }" class="mb-2 p-2 rounded max-w-[80%] break-words" [innerHTML]="sanitize(message.content)">
+<!-- نافذة الدردشة الرئيسية -->
+<div class="fixed z-50 flex flex-col transition-all duration-300 ease-in-out font-sans" *ngIf="isVisible"
+  [ngClass]="{'fullscreen-mode': isFullscreen, 'window-mode': !isFullscreen}"
+  [ngStyle]="!isFullscreen ? {'left.px': posX, 'top.px': posY, 'width.px': chatWindowWidth, 'height.px': chatWindowHeight} : {}">
+
+  <!-- تأثير الزجاج الخلفي -->
+  <div
+    class="absolute inset-0 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 dark:border-gray-700/50 overflow-hidden">
+  </div>
+
+  <!-- المحتوى الداخلي -->
+  <div class="relative flex flex-col h-full z-10">
+
+    <!-- الرأس Header -->
+    <div
+      class="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-blue-600/90 to-indigo-600/90 text-white shadow-md cursor-move select-none"
+      (mousedown)="onDragStart($event)" (touchstart)="onTouchStart($event)" (touchmove)="onTouchMove($event)"
+      (touchend)="onTouchEnd($event)">
+      <div class="flex items-center space-x-3 rtl:space-x-reverse">
+        <div
+          class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm border border-white/30">
+          <span class="text-xl">🤖</span>
+        </div>
+        <div>
+          <h3 class="font-bold text-lg leading-tight">المساعد الذكي</h3>
+          <p class="text-xs text-blue-100 flex items-center gap-1">
+            <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+            متصل الآن
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button class="p-2 rounded-full hover:bg-white/20 transition-colors focus:outline-none"
+          (click)="toggleFullscreen(); $event.stopPropagation()" (mousedown)="$event.stopPropagation()"
+          (touchstart)="$event.stopPropagation()" (touchend)="$event.stopPropagation()"
+          [title]="isFullscreen ? 'تصغير' : 'تكبير'">
+          <svg *ngIf="!isFullscreen" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+            stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+          </svg>
+          <svg *ngIf="isFullscreen" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+            stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 18h16M6 4v16M18 4v16" />
+          </svg>
+        </button>
+        <button class="p-2 rounded-full hover:bg-red-500/80 transition-colors focus:outline-none"
+          (click)="toggleVisibility()" (mousedown)="$event.stopPropagation()" (touchstart)="$event.stopPropagation()"
+          (touchend)="$event.stopPropagation()" title="إغلاق">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
     </div>
-  </div>
 
-  <!-- Typing indicator shown only while sending and hidden when assistant replies -->
-  <div *ngIf="isTyping" class="rtl typing-indicator p-3 border-t border-gray-300 dark:border-gray-700 flex items-center">
-    <span class="ml-2 text-gray-600 dark:text-gray-300 text-sm">المساعد يكتب</span>
-    <span class="dot"></span>
-    <span class="dot"></span>
-    <span class="dot"></span>
-  </div>
+    <!-- منطقة الرسائل Messages Area -->
+    <div #messagesContainer class="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth custom-scrollbar">
 
-  <div class="flex p-3 border-t border-gray-300 dark:border-gray-700 rtl">
-    <textarea
-      [(ngModel)]="newMessage"
-      placeholder="اكتب رسالتك هنا..."
-      (keydown.enter)="$event.preventDefault(); sendMessage()"
-      class="flex-1 resize-none p-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-sans text-sm"
-      rows="2"
-    ></textarea>
-    <button
-      [disabled]="isLoading || !newMessage.trim()"
-      (click)="sendMessage()"
-      class="ml-2 px-4 py-2 bg-blue-600 text-white rounded disabled:bg-blue-300 disabled:cursor-not-allowed"
-    >
-      {{ isLoading ? 'جاري الإرسال...' : 'إرسال' }}
-    </button>
+      <!-- رسالة الترحيب الافتراضية -->
+      <div *ngIf="messages.length === 0"
+        class="flex flex-col items-center justify-center h-full text-center text-gray-500 dark:text-gray-400 space-y-4 opacity-70">
+        <div class="text-6xl mb-2">👋</div>
+        <p class="text-lg font-medium">مرحباً بك! كيف يمكنني مساعدتك اليوم؟</p>
+      </div>
+
+      <ng-container *ngFor="let message of messages">
+        <!-- رسائل المستخدم -->
+        <div *ngIf="message.role === 'user'" class="flex justify-end animate-fade-in-up">
+          <div
+            class="bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-2xl rounded-tr-sm px-5 py-3 max-w-[85%] shadow-md break-words text-sm md:text-base leading-relaxed">
+            <div [innerHTML]="sanitize(message.content)"></div>
+          </div>
+        </div>
+
+        <!-- رسائل المساعد -->
+        <div *ngIf="message.role === 'assistant'" class="flex justify-start animate-fade-in-up">
+          <div class="flex items-end gap-2 max-w-[85%]">
+            <div
+              class="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900 border border-indigo-200 dark:border-indigo-700 flex items-center justify-center flex-shrink-0">
+              <span class="text-sm">🤖</span>
+            </div>
+            <div
+              class="bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-100 dark:border-gray-700 rounded-2xl rounded-tl-sm px-5 py-3 shadow-sm break-words text-sm md:text-base leading-relaxed">
+              <div [innerHTML]="sanitize(message.content)"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- رسائل النظام -->
+        <div *ngIf="message.role === 'system'" class="flex justify-center my-4 animate-fade-in">
+          <span
+            class="bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-xs px-3 py-1 rounded-full shadow-sm border border-gray-200 dark:border-gray-700">
+            {{ message.content }}
+          </span>
+        </div>
+      </ng-container>
+
+      <!-- مؤشر الكتابة Text Indicator -->
+      <div *ngIf="isTyping" class="flex justify-start animate-fade-in">
+        <div
+          class="flex items-center gap-2 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm ml-10">
+          <div class="typing-dot bg-blue-500"></div>
+          <div class="typing-dot bg-blue-500 delay-100"></div>
+          <div class="typing-dot bg-blue-500 delay-200"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- منطقة الإدخال Input Area -->
+    <div
+      class="p-4 bg-white/50 dark:bg-gray-900/50 backdrop-blur-md border-t border-gray-200/50 dark:border-gray-700/50">
+      <div
+        class="relative flex items-end gap-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-3xl shadow-inner px-4 py-2 transition-shadow focus-within:ring-2 focus-within:ring-blue-500/50 focus-within:border-blue-500">
+        <textarea [(ngModel)]="newMessage" placeholder="اكتب رسالتك..."
+          (keydown.enter)="$event.preventDefault(); sendMessage()"
+          class="w-full bg-transparent border-none text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:ring-0 resize-none max-h-32 py-2 pr-0 pl-2 text-sm leading-6"
+          rows="1" style="min-height: 40px;" #chatInput
+          (input)="chatInput.style.height = 'auto'; chatInput.style.height = chatInput.scrollHeight + 'px'"></textarea>
+
+        <button [disabled]="isLoading || !newMessage.trim()" (click)="sendMessage()"
+          class="mb-1 p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 active:scale-95 mx-auto">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 transform rotate-90 rtl:rotate-180" viewBox="0 0 20 20"
+            fill="currentColor">
+            <path
+              d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+          </svg>
+        </button>
+      </div>
+      <div class="text-center mt-2">
+        <span class="text-[10px] text-gray-400 dark:text-gray-500">مدعوم بواسطة الذكاء الاصطناعي</span>
+      </div>
+    </div>
+
   </div>
 </div>

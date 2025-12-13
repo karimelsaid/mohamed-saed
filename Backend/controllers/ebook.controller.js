@@ -159,7 +159,7 @@ exports.checkAccess = async (req, res) => {
 exports.streamEbook = async (req, res) => {
     try {
         const { id } = req.params;
-        const userId = req.user._id;
+        const userId = req.user ? req.user._id : null;
 
         // Get ebook
         const ebook = await Ebook.findById(id);
@@ -173,28 +173,39 @@ exports.streamEbook = async (req, res) => {
 
 
         // Check access - user must have subscription or own the ebook
-        const activeSubscription = await Subscription.findActiveSubscription(userId);
-        const ownsEbook = await UserLibrary.userOwnsEbook(userId, id);
+        // const activeSubscription = userId ? await Subscription.findActiveSubscription(userId) : null;
+        // const ownsEbook = userId ? await UserLibrary.userOwnsEbook(userId, id) : false;
 
-        if (!activeSubscription && !ownsEbook) {
-            // Check if mini version exists for preview
-            if (ebook.miniEpubFilePath && fs.existsSync(path.join(__dirname, '..', ebook.miniEpubFilePath))) {
-                // Allow access to mini version
-            } else {
-                return res.status(403).json({
-                    success: false,
-                    message: 'ليس لديك صلاحية للوصول إلى هذا الكتاب. يرجى الاشتراك أو شراء الكتاب.'
-                });
-            }
-        }
+        // Relaxed Access: Allow download for everyone (Client-side 20% limit enforcement)
+        // if (!activeSubscription && !ownsEbook) {
+        // Check if mini version exists for preview
+        // if (ebook.miniEpubFilePath && fs.existsSync(path.join(__dirname, '..', ebook.miniEpubFilePath))) {
+        // Allow access to mini version
+        // } else {
+        // return res.status(403).json({
+        //     success: false,
+        //     message: 'ليس لديك صلاحية للوصول إلى هذا الكتاب. يرجى الاشتراك أو شراء الكتاب.'
+        // });
+        // }
+        // }
 
         // Determine which file to serve
         let filePath;
-        if (activeSubscription || ownsEbook) {
-            filePath = path.join(__dirname, '..', ebook.epubFilePath);
-        } else {
-            filePath = path.join(__dirname, '..', ebook.miniEpubFilePath);
-        }
+        // Always serve full file (Client enforces limit)
+        filePath = path.join(__dirname, '..', ebook.epubFilePath);
+
+        console.log('--- Stream Debug ---');
+        console.log('Book ID:', id);
+        console.log('DB File Path:', ebook.epubFilePath);
+        console.log('Resolved Path:', filePath);
+        console.log('Exists:', fs.existsSync(filePath));
+
+        // Old logic:
+        // if (activeSubscription || ownsEbook) {
+        //     filePath = path.join(__dirname, '..', ebook.epubFilePath);
+        // } else {
+        //     filePath = path.join(__dirname, '..', ebook.miniEpubFilePath);
+        // }
 
         // Check if file exists
         if (!fs.existsSync(filePath)) {
@@ -316,8 +327,6 @@ exports.createEbook = async (req, res) => {
         const ebookData = req.body;
 
         // 1. Create initial record (validate basic fields first)
-        // Note: We might want to delay creation until after upload if we want to use metadata for required fields
-        // But for now, we assume user sends 'Unknown' or basic data, then we update it.
         const ebook = await Ebook.create(ebookData);
 
         // 2. Handle file upload
@@ -358,18 +367,7 @@ exports.createEbook = async (req, res) => {
                 }
             }
 
-            // 4. Generate Mini Version
-            const miniFileName = `${sanitizedTitle}_${ebook._id}_mini${fileExt}`;
-            const miniPath = path.join('uploads', 'ebooks', miniFileName);
-
-            const miniCreated = await epubService.createMiniEpub(
-                path.join(__dirname, '..', newPath),
-                path.join(__dirname, '..', miniPath)
-            );
-
-            if (miniCreated) {
-                ebook.miniEpubFilePath = miniPath;
-            }
+            // Removed Mini Generation logic here as per requirement
 
             await ebook.save();
         }
@@ -405,10 +403,11 @@ exports.updateEbook = async (req, res) => {
 
         // Handle file upload if new file provided
         if (req.file) {
-            // Delete old files
+            // Delete old file
             if (ebook.epubFilePath && fs.existsSync(path.join(__dirname, '..', ebook.epubFilePath))) {
                 fs.unlinkSync(path.join(__dirname, '..', ebook.epubFilePath));
             }
+            // Logic for mini file deletion (legacy cleanup)
             if (ebook.miniEpubFilePath && fs.existsSync(path.join(__dirname, '..', ebook.miniEpubFilePath))) {
                 fs.unlinkSync(path.join(__dirname, '..', ebook.miniEpubFilePath));
             }
@@ -430,6 +429,8 @@ exports.updateEbook = async (req, res) => {
 
             updateData.epubFilePath = newPath;
             updateData.fileSize = req.file.size;
+            // Clear mini epub path if it existed
+            updateData.miniEpubFilePath = null;
 
             // --- Extract Metadata & Auto-Fill ---
             const metadata = await epubService.extractMetadata(path.join(__dirname, '..', newPath));
@@ -443,25 +444,17 @@ exports.updateEbook = async (req, res) => {
                 if ((!updateData.pages || updateData.pages == 0) && metadata.pages) {
                     updateData.pages = metadata.pages;
                 }
-                // Don't overwrite description usually, but if empty...
                 if (!updateData.description && !ebook.description && metadata.description) {
                     updateData.description = metadata.description;
                 }
             }
-
-            // Generate Mini Version
-            const miniFileName = `${sanitizedTitle}_${ebook._id}_mini${fileExt}`;
-            const miniPath = path.join('uploads', 'ebooks', miniFileName);
-
-            const miniCreated = await epubService.createMiniEpub(
-                path.join(__dirname, '..', newPath),
-                path.join(__dirname, '..', miniPath)
-            );
-
-            if (miniCreated) {
-                updateData.miniEpubFilePath = miniPath;
-            }
         }
+
+        // Handle logic for cover image update if it's passed as a filepath string (e.g. from a separate upload handler)
+        // Note: The frontend likely uploads cover separately or as part of form data?
+        // Assuming updateData.coverImage contains the NEW path, we might want to delete the old one?
+        // However, without a dedicated cover upload middleware here, we assume standard behavior.
+        // If the implementation changes to handle cover uploads in this controller, we'd add deletion logic here.
 
         ebook = await Ebook.findByIdAndUpdate(
             id,
@@ -498,23 +491,45 @@ exports.deleteEbook = async (req, res) => {
             });
         }
 
-        // Delete file from filesystem
+        // 1. Delete EPUB file from filesystem
         if (ebook.epubFilePath) {
             const filePath = path.join(__dirname, '..', ebook.epubFilePath);
             if (fs.existsSync(filePath)) {
-                fs.unlinkSync(filePath);
+                try { fs.unlinkSync(filePath); } catch (e) { console.error('Error deleting epub file:', e); }
             }
         }
+        // 2. Delete Mini Version (for legacy books)
         if (ebook.miniEpubFilePath) {
             const miniFilePath = path.join(__dirname, '..', ebook.miniEpubFilePath);
             if (fs.existsSync(miniFilePath)) {
-                fs.unlinkSync(miniFilePath);
+                try { fs.unlinkSync(miniFilePath); } catch (e) { console.error('Error deleting mini epub file:', e); }
             }
         }
 
+        // 3. Delete Cover Image (if it's a local file)
+        // Check if coverImage string looks like a local path (e.g. "uploads/...")
+        if (ebook.coverImage && (ebook.coverImage.startsWith('uploads') || ebook.coverImage.startsWith('/uploads'))) {
+            // Remove leading slash if present
+            const relativePath = ebook.coverImage.startsWith('/') ? ebook.coverImage.substring(1) : ebook.coverImage;
+            const coverPath = path.join(__dirname, '..', relativePath);
+            if (fs.existsSync(coverPath)) {
+                try { fs.unlinkSync(coverPath); } catch (e) { console.error('Error deleting cover image:', e); }
+            }
+        }
+
+        // 4. Delete Database Record
         await Ebook.findByIdAndDelete(id);
 
-        // Update any product linked to this ebook
+        // 5. Cascade Delete: UserLibrary Entries
+        const UserLibraryResult = await UserLibrary.deleteMany({ ebookId: id });
+        console.log(`Deleted ${UserLibraryResult.deletedCount} user library references.`);
+
+        // 6. Cascade Delete: ReadingProgress Entries
+        const ReadingProgress = require('../models/ReadingProgress.model'); // Import needed here
+        const progressResult = await ReadingProgress.deleteMany({ ebookId: id });
+        console.log(`Deleted ${progressResult.deletedCount} reading progress records.`);
+
+        // 7. Update any product linked to this ebook
         const Product = require('../models/Product.model');
         await Product.updateMany(
             { linkedEbookId: id },
@@ -526,7 +541,7 @@ exports.deleteEbook = async (req, res) => {
 
         res.json({
             success: true,
-            message: 'تم حذف الكتاب الإلكتروني بنجاح'
+            message: 'تم حذف الكتاب الإلكتروني وجميع بياناته بنجاح'
         });
     } catch (error) {
         console.error('Error deleting ebook:', error);

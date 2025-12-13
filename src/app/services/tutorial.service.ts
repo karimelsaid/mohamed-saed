@@ -53,90 +53,81 @@ export class TutorialService {
   private getTutorialSteps(): TutorialStep[] {
     return [
       {
-        id: 'welcome',
-        title: 'مرحباً بك في كنوز!',
-        description: 'سوف نأخذك في جولة سريعة للتعرف على أهم مميزات التطبيق',
+        id: 'books-sections',
+        title: 'الكتب وأقسامها',
+        description: 'تصفح آلاف الكتب الورقية في مختلف المجالات، وتعرف على التصنيفات المتاحة بسهولة.',
+        element: '#category-books', // Target the specific Books category card
         position: 'center',
         action: () => {
-          this.router.navigate(['/Home']);
-        }
-      },
-      {
-        id: 'categories',
-        title: 'فئات الكتب',
-        description: 'تصفح مجموعة واسعة من فئات الكتب المتنوعة من الدينية إلى التعليمية',
-        element: '.photoliperary',
-        position: 'bottom',
-       action: () => {
-          this.router.navigate(['/Home']);
-        }
-      },
-      {
-        id: 'search',
-        title: 'البحث المتقدم',
-        description: 'ابحث عن الكتب بسهولة باستخدام شريط البحث في الأعلى',
-        element: '.tutorial-search',
-        position: 'bottom',
-        action: () => {
-          this.router.navigate(['/Home']);
-        }
-      },
-      {
-        id: 'recent-books',
-        title: 'الكتب الجديدة',
-        description: 'اكتشف أحدث الكتب المضافة إلى المكتبة',
-        element: '.tutorial-recent-books',
-        position: 'bottom',
-        action: () => {
-          this.router.navigate(['/Home']);
-        }
-      },
-      {
-        id: 'cart-favorites',
-        title: 'السلة والمفضلة',
-        description: 'أضف الكتب إلى سلة التسوق أو قائمة المفضلة لشرائها لاحقاً',
-        element: '.grid.grid-cols-1.sm\\:grid-cols-2.md\\:grid-cols-3',
-        position: 'bottom',
-        action: () => {
-          this.router.navigate(['/research'], { queryParams: { filter: 'all', showFirst: 'true' } });
-        }
-      },
-      {
-        id: 'print-services',
-        title: 'خدمات الطباعة',
-        description: 'اطلب طباعة كتبك الخاصة بجودة عالية وأسعار مناسبة',
-        element: '.tutorial-create-project',
-        position: 'bottom',
-        action: () => {
-          // Navigate to print route first
-          this.router.navigate(['/print']).then(() => {
-            // Then scroll to the create project element
+          this.router.navigate(['/Home']).then(() => {
+            // Scroll to category
             setTimeout(() => {
-              const createProjectElement = document.querySelector('.tutorial-create-project');
-              if (createProjectElement) {
-                createProjectElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              }
-            }, 50); // Wait for navigation to complete
+              const element = document.querySelector('#category-books');
+              if (element) element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 500);
           });
         }
       },
       {
-        id: 'user-account',
-        title: 'حسابك الشخصي',
-        description: 'سجل دخولك أو أنشئ حساباً جديداً للوصول إلى جميع المميزات',
-        element: 'app-navbar',
-        position: 'bottom',
+        id: 'other-products',
+        title: 'المنتجات الأخرى',
+        description: 'استكشف باقي الأقسام المتنوعة مثل الإلكترونيات والألعاب والمستلزمات المكتبية.',
+        element: '#categories-grid', // Target the whole grid to show "other stuff" 
+        position: 'center',
         action: () => {
-          this.router.navigate(['/Home']);
+          this.router.navigate(['/Home']).then(() => {
+            setTimeout(() => {
+              // Scroll to grid but maybe a bit offset to show variety
+              const grid = document.querySelector('#categories-grid');
+              if (grid) grid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 300);
+          });
         }
       },
       {
-        id: 'get-started',
-        title: 'ابدأ الآن!',
-        description: 'الآن أنت جاهز لاستكشاف عالم الكتب. استمتع بتجربة التسوق!',
+        id: 'digital-library',
+        title: 'المكتبة الرقمية',
+        description: 'اقرأ وحمل آلاف الكتب الإلكترونية، مع أدوات تفاعلية للبحث والتظليل والمفضلة.',
+        element: 'app-library',
         position: 'center',
         action: () => {
-          this.router.navigate(['/Home']);
+          this.router.navigate(['/library']);
+        }
+      },
+      {
+        id: 'printing-services',
+        title: 'خدمات الطباعة',
+        description: 'اطبع كتبك الخاصة أو مذكراتك بجودة عالية وتوصيل سريع لباب منزلك.',
+        element: 'app-print',
+        position: 'center',
+        action: () => {
+          this.router.navigate(['/print']);
+        }
+      },
+      {
+        id: 'affiliate-program',
+        title: 'الربح من الإحالات',
+        description: 'اربح المال عن طريق دعوة أصدقائك لاستخدام الموقع، واحصل على عمولات مجزية.',
+        element: 'app-referrals',
+        position: 'center',
+        action: () => {
+          this.router.navigate(['/referrals']);
+        }
+      },
+      {
+        id: 'merchant-account',
+        title: 'حساب التاجر',
+        description: 'لبيع منتجاتك معنا، اضغط على "حساب تاجر" هنا لإنشاء حسابك الجديد.',
+        element: '#merchant-toggle', // Target the specific toggle button
+        position: 'center',
+        action: () => {
+          this.router.navigate(['/register']).then(() => {
+            setTimeout(() => {
+              // Ensure the toggle is visible
+              const toggle = document.querySelector('#merchant-toggle');
+              if (toggle) toggle.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 500);
+          });
         }
       }
     ];

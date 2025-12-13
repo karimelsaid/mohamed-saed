@@ -128,6 +128,12 @@
     <fa-icon [icon]="['fas', 'book-open']"></fa-icon>
     الكتب الإلكترونية
   </button>
+
+  <button (click)="switchView('mobileVersion')" [class.bg-blue-600]="currentView === 'mobileVersion'"
+    class="px-4 py-3 rounded-lg text-white bg-blue-400 hover:bg-blue-600 transition flex items-center justify-center gap-2 shadow-md hover:shadow-lg">
+    <fa-icon [icon]="['fas', 'mobile-alt']"></fa-icon>
+    إصدار التطبيق
+  </button>
 </div>
 
 <div class="promotion-date-controls my-6 max-w-md mx-auto p-4 border rounded bg-gray-50 dark:bg-gray-800">
@@ -175,6 +181,98 @@
 
 <div *ngIf="currentView === 'ebooks'" class="mb-28 md:mb-0 px-4">
   <app-admin-ebooks></app-admin-ebooks>
+</div>
+
+<!-- Mobile Version View -->
+<div *ngIf="currentView === 'mobileVersion'" class="space-y-6 px-4 md:px-0 mb-28 md:mb-0">
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700">
+    <h2
+      class="text-xl font-bold mb-6 text-gray-800 dark:text-white flex items-center gap-2 border-b pb-4 dark:border-gray-700">
+      <fa-icon [icon]="['fas', 'mobile-alt']" class="text-blue-500"></fa-icon>
+      إعدادات إصدار تطبيق الهاتف
+    </h2>
+
+    <div *ngIf="mobileVersionConfig" class="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <!-- Android Settings -->
+      <div
+        class="border p-5 rounded-xl bg-gray-50 dark:bg-gray-700/50 dark:border-gray-600 hover:shadow-md transition-shadow">
+        <h3
+          class="font-bold text-lg mb-4 text-green-600 dark:text-green-400 border-b pb-2 dark:border-gray-600 flex justify-between items-center">
+          <span>Android</span>
+          <fa-icon [icon]="['fab', 'android']" class="text-2xl opacity-80"></fa-icon>
+        </h3>
+        <div class="space-y-5">
+          <div>
+            <label class="block text-sm font-medium mb-1.5 text-gray-700 dark:text-gray-300">أقل رقم بناء (Min Build
+              Number)</label>
+            <input type="number" [(ngModel)]="mobileVersionConfig.android.minBuildNumber"
+              class="w-full p-2.5 border rounded-lg dark:bg-gray-600 dark:border-gray-500 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all">
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1.5 flex items-center gap-1">
+              <fa-icon [icon]="['fas', 'info-circle']"></fa-icon>
+              المستخدمين برقم بناء أقل سيتم إجبارهم/تنبيههم للتحديث.
+            </p>
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1.5 text-gray-700 dark:text-gray-300">رابط المتجر (Store
+              URL)</label>
+            <input type="text" [(ngModel)]="mobileVersionConfig.android.storeUrl"
+              class="w-full p-2.5 border rounded-lg dark:bg-gray-600 dark:border-gray-500 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
+              dir="ltr">
+          </div>
+          <div
+            class="flex items-center gap-3 mt-2 bg-white dark:bg-gray-600 p-3 rounded-lg border dark:border-gray-500">
+            <input type="checkbox" [(ngModel)]="mobileVersionConfig.android.forceUpdate" id="androidForce"
+              class="w-5 h-5 text-green-600 rounded focus:ring-green-500 cursor-pointer">
+            <label for="androidForce" class="font-medium cursor-pointer flex-1 text-gray-700 dark:text-gray-200">
+              تحديث إجباري (Force Update)
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- iOS Settings -->
+      <div
+        class="border p-5 rounded-xl bg-gray-50 dark:bg-gray-700/50 dark:border-gray-600 hover:shadow-md transition-shadow">
+        <h3
+          class="font-bold text-lg mb-4 text-blue-600 dark:text-blue-400 border-b pb-2 dark:border-gray-600 flex justify-between items-center">
+          <span>iOS</span>
+          <fa-icon [icon]="['fab', 'apple']" class="text-2xl opacity-80"></fa-icon>
+        </h3>
+        <div class="space-y-5">
+          <div>
+            <label class="block text-sm font-medium mb-1.5 text-gray-700 dark:text-gray-300">أقل رقم بناء (Min Build
+              Number)</label>
+            <input type="number" [(ngModel)]="mobileVersionConfig.ios.minBuildNumber"
+              class="w-full p-2.5 border rounded-lg dark:bg-gray-600 dark:border-gray-500 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1.5 text-gray-700 dark:text-gray-300">رابط المتجر (Store
+              URL)</label>
+            <input type="text" [(ngModel)]="mobileVersionConfig.ios.storeUrl"
+              class="w-full p-2.5 border rounded-lg dark:bg-gray-600 dark:border-gray-500 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+              dir="ltr">
+          </div>
+          <div
+            class="flex items-center gap-3 mt-2 bg-white dark:bg-gray-600 p-3 rounded-lg border dark:border-gray-500">
+            <input type="checkbox" [(ngModel)]="mobileVersionConfig.ios.forceUpdate" id="iosForce"
+              class="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 cursor-pointer">
+            <label for="iosForce" class="font-medium cursor-pointer flex-1 text-gray-700 dark:text-gray-200">
+              تحديث إجباري (Force Update)
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="mt-8 flex justify-end pt-4 border-t dark:border-gray-700">
+      <button (click)="saveMobileVersion()"
+        class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg hover:shadow-xl transition transform hover:-translate-y-0.5 flex items-center gap-2 text-lg">
+        <fa-icon [icon]="['fas', 'check-circle']"></fa-icon>
+        حفظ الإعدادات
+      </button>
+    </div>
+  </div>
 </div>
 
 <div *ngIf="currentView === 'addProduct'" class="px-4 sm:px-10 max-w-4xl mx-auto mb-32 md:mb-0">
@@ -312,9 +410,6 @@
             <div><label for="publishYear" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">سنة
                 النشر</label><input type="number" id="publishYear" [(ngModel)]="product.publishYear" name="publishYear"
                 class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="سنة النشر (اختياري)" /></div>
-            <div><label for="epubFile" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">ملف
-                الكتاب الإلكتروني (EPUB)</label><input type="file" id="epubFile" (change)="onEpubSelected($event)"
-                accept=".epub" class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" /></div>
           </ng-container>
 
           <!-- ✏️ أدوات مكتبية -->

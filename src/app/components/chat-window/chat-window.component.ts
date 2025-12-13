@@ -133,6 +133,18 @@ export class ChatWindowComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
+  scrollToBottom(): void {
+    try {
+      setTimeout(() => {
+        if (this.messagesContainer) {
+          this.messagesContainer.nativeElement.scrollTop = this.messagesContainer.nativeElement.scrollHeight;
+        }
+      }, 100);
+    } catch (err) {
+      console.error('Scroll to bottom failed:', err);
+    }
+  }
+
   sendMessage(): void {
     if (!this.newMessage.trim()) return;
 
@@ -141,6 +153,8 @@ export class ChatWindowComponent implements OnInit, AfterViewInit, OnDestroy {
       role: 'user',
       content: this.newMessage
     });
+
+    this.scrollToBottom();
 
     const messageToSend = this.newMessage;
     this.newMessage = '';
@@ -164,6 +178,7 @@ export class ChatWindowComponent implements OnInit, AfterViewInit, OnDestroy {
               role: 'assistant',
               content: assistantMessage.content
             });
+            this.scrollToBottom();
           }
           this.isLoading = false;
           this.isTyping = false; // إيقاف مؤشر الكتابة عند استلام الرد
@@ -174,6 +189,7 @@ export class ChatWindowComponent implements OnInit, AfterViewInit, OnDestroy {
             role: 'assistant',
             content: 'عذراً، حدث خطأ أثناء معالجة طلبك. يرجى المحاولة مرة أخرى.'
           });
+          this.scrollToBottom();
           this.isLoading = false;
           this.isTyping = false; // إيقاف مؤشر الكتابة عند الخطأ
         }

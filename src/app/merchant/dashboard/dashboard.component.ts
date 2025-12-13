@@ -211,10 +211,13 @@ export class MerchantDashboardComponent implements OnInit {
         this.loadingMerchant = false;
 
         // Handle authentication errors
-        if (error.status === 401 || error.status === 403) {
-          alert('انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى.');
-          this.merchantAuthService.performLogout();
-          this.router.navigate(['/login']);
+        // Handle authentication errors
+        if (error.status === 401) {
+          // Let interceptor handle it
+        } else if (error.status === 403) {
+          // Let interceptor handle it or show specific message
+          alert('ليس لديك صلاحية للوصول لهذا المحتوى.');
+          this.router.navigate(['/']);
         } else {
           alert('فشل في تحميل بيانات التاجر');
         }
@@ -242,10 +245,11 @@ export class MerchantDashboardComponent implements OnInit {
         this.loadingProducts = false;
 
         // Handle authentication errors
-        if (error.status === 401 || error.status === 403) {
-          alert('انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى.');
-          this.merchantAuthService.performLogout();
-          this.router.navigate(['/login']);
+        // Handle authentication errors
+        if (error.status === 401) {
+          // Let interceptor handle it
+        } else if (error.status === 403) {
+          alert('ليس لديك صلاحية لعرض المنتجات.');
         } else {
           alert('فشل في تحميل المنتجات');
         }
@@ -264,10 +268,11 @@ export class MerchantDashboardComponent implements OnInit {
         this.loadingOrders = false;
 
         // Handle authentication errors
-        if (error.status === 401 || error.status === 403) {
-          alert('انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى.');
-          this.merchantAuthService.performLogout();
-          this.router.navigate(['/login']);
+        // Handle authentication errors
+        if (error.status === 401) {
+          // Let interceptor handle it
+        } else if (error.status === 403) {
+          alert('ليس لديك صلاحية لعرض الطلبات.');
         } else {
           alert('فشل في تحميل الطلبات');
         }
@@ -286,10 +291,11 @@ export class MerchantDashboardComponent implements OnInit {
         this.loadingUpdateRequests = false;
 
         // Handle authentication errors
-        if (error.status === 401 || error.status === 403) {
-          alert('انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى.');
-          this.merchantAuthService.performLogout();
-          this.router.navigate(['/login']);
+        // Handle authentication errors
+        if (error.status === 401) {
+          // Let interceptor handle it
+        } else if (error.status === 403) {
+          alert('ليس لديك صلاحية لعرض طلبات التحديث.');
         } else {
           alert('فشل في تحميل طلبات تحديث المنتجات');
         }

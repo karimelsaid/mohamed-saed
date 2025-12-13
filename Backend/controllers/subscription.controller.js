@@ -320,3 +320,25 @@ exports.getAllSubscriptions = async (req, res) => {
         });
     }
 };
+
+exports.getHistory = async (req, res) => {
+    try {
+        const userId = req.user._id;
+
+        const subscriptions = await Subscription.find({ userId })
+            .sort({ createdAt: -1 });
+
+        res.json({
+            success: true,
+            count: subscriptions.length,
+            data: subscriptions
+        });
+    } catch (error) {
+        console.error('Error fetching subscription history:', error);
+        res.status(500).json({
+            success: false,
+            message: 'خطأ في جلب سجل الاشتراكات',
+            error: error.message
+        });
+    }
+};

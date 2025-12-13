@@ -1,7 +1,8 @@
 <div class="min-h-screen bg-gray-50 dark:bg-gray-900 pb-20 transition-colors duration-300">
 
   <!-- Hero Section (Promo Carousel) -->
-  <div class="relative w-full h-[330px] sm:h-[550px] md:h-[700px] overflow-hidden bg-gray-200 dark:bg-gray-800">
+  <div class="relative w-full h-[330px] sm:h-[550px] md:h-[700px] overflow-hidden bg-gray-200 dark:bg-gray-800"
+    (touchstart)="onTouchStart($event)" (touchend)="onTouchEnd($event)">
     <div *ngFor="let image of promoImages; let i = index"
       class="absolute inset-0 w-full h-full transition-opacity duration-1000 ease-in-out"
       [class.opacity-100]="i === promoCurrentIndex" [class.opacity-0]="i !== promoCurrentIndex">
@@ -20,9 +21,9 @@
   <!-- Categories Grid -->
   <div class="container mx-auto px-4 py-12">
     <h2 class="text-2xl font-bold text-gray-800 dark:text-white mb-8 text-center">تصفح حسب الفئة</h2>
-    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+    <div id="categories-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
       <ng-container *ngFor="let cat of categories">
-        <a *ngIf="cat.id !== 'all'" [routerLink]="['/' + cat.id]"
+        <a *ngIf="cat.id !== 'all'" [routerLink]="['/' + cat.id]" [id]="'category-' + cat.id"
           class="glass-panel p-6 rounded-2xl flex flex-col items-center justify-center gap-4 group hover:bg-white transition-all duration-300 cursor-pointer">
           <div
             class="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-xl group-hover:scale-110 transition-transform duration-300">

@@ -100,6 +100,29 @@
                 </select>
             </div>
 
+            <!-- Text Alignment -->
+            <div class="setting-row">
+                <span class="setting-label">محاذاة النص</span>
+                <div class="align-options">
+                    <button class="icon-btn" [class.active]="settings.textAlign === 'right'"
+                        (click)="setTextAlign('right')" title="يمين">
+                        <i class="fas fa-align-right"></i>
+                    </button>
+                    <button class="icon-btn" [class.active]="settings.textAlign === 'center'"
+                        (click)="setTextAlign('center')" title="وسط">
+                        <i class="fas fa-align-center"></i>
+                    </button>
+                    <button class="icon-btn" [class.active]="settings.textAlign === 'left'"
+                        (click)="setTextAlign('left')" title="يسار">
+                        <i class="fas fa-align-left"></i>
+                    </button>
+                    <button class="icon-btn" [class.active]="settings.textAlign === 'justify'"
+                        (click)="setTextAlign('justify')" title="ضبط">
+                        <i class="fas fa-align-justify"></i>
+                    </button>
+                </div>
+            </div>
+
             <!-- Line Height -->
             <div class="setting-row">
                 <span class="setting-label">تباعد الأسطر</span>
@@ -139,7 +162,8 @@
     <div class="popup-panel" *ngIf="activeSection === 'toc'">
         <h3 class="panel-title">الفهرس</h3>
         <ul class="toc-list">
-            <li *ngFor="let item of toc" class="toc-item" (click)="goToChapter(item)">
+            <li *ngFor="let item of toc" class="toc-item" (click)="goToChapter(item)"
+                [style.padding-right.px]="($any(item).level || 0) * 20">
                 {{ item.label }}
             </li>
         </ul>
@@ -198,10 +222,27 @@
             class="range-slider">
     </div>
 
-    <!-- Reader Content Container -->
-    <div class="reader-container" [style.opacity]="(isLoading || error) ? '0' : '1'">
+    <!-- Reader Content Container (EPUB) -->
+    <div class="reader-container" *ngIf="bookType === 'epub'" [style.opacity]="(isLoading || error) ? '0' : '1'">
         <div class="main-content">
             <div #readerContainer id="epub-reader-frame" class="reader-content" [style.max-width.px]="contentWidth">
+            </div>
+        </div>
+    </div>
+
+    <!-- Reader Content Container (BOK/Text) -->
+    <div class="reader-container bok-container" *ngIf="bookType === 'bok'"
+        [style.opacity]="(isLoading || error) ? '0' : '1'">
+        <div class="main-content">
+            <div class="reader-content bok-text-content" [style.max-width.px]="contentWidth"
+                [style.font-size.px]="settings.fontSize" [style.font-family]="settings.fontFamily"
+                [style.line-height]="settings.lineHeight" [style.text-align]="settings.textAlign"
+                [style.color]="settings.textColor" style="white-space: pre-wrap; padding: 20px 10px; min-height: 60vh;"
+                (mouseup)="handleBokMouseUp($event)" (touchend)="handleBokMouseUp($event)"
+                (click)="handleBokClick($event)">
+
+                <div [innerHTML]="outputBokPage"></div>
+
             </div>
         </div>
     </div>
@@ -269,6 +310,21 @@
             <p class="back-link">
                 <a (click)="goBack()">العودة للمكتبة</a>
             </p>
+        </div>
+    </div>
+
+    <!-- Auth Requirement Popup -->
+    <div class="overlay-backdrop" *ngIf="showAuthModal" (click)="closeAuthPrompt()" style="z-index: 999;"></div>
+    <div class="auth-popup" *ngIf="showAuthModal">
+        <div class="auth-popup-content">
+            <i class="fas fa-user-lock"></i>
+            <h3>ميزة للأعضاء فقط</h3>
+            <p>سجل دخولك الآن لحفظ تظليلاتك، علاماتك المرجعية، ومزامنة قراءتك عبر كل أجهزتك.</p>
+            <div class="auth-actions">
+                <button class="auth-btn login" (click)="goToLogin()">تسجيل الدخول</button>
+                <button class="auth-btn signup" (click)="goToSignup()">إنشاء حساب جديد</button>
+                <button class="auth-btn cancel" (click)="closeAuthPrompt()">ليس الآن</button>
+            </div>
         </div>
     </div>
 

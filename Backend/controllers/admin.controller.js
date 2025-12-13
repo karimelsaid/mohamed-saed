@@ -156,16 +156,6 @@ async function addProduct(req, res) {
       const relativePath = path.join('uploads', 'ebooks', newFileName);
       epubFilePath = relativePath;
 
-      // Generate Mini Version
-      const miniFileName = `${sanitizedTitle}_${barcode}_mini${fileExt}`;
-      const miniPath = path.join(ebooksDir, miniFileName);
-
-      const miniCreated = await createMiniEpub(newPath, miniPath);
-
-      if (miniCreated) {
-        miniEpubFilePath = path.join('uploads', 'ebooks', miniFileName);
-      }
-
       // Create Ebook record
       const ebook = await Ebook.create({
         title: product_name,
@@ -173,7 +163,7 @@ async function addProduct(req, res) {
         description: product_description,
         coverImage: filename, // Use the product image as cover
         epubFilePath: epubFilePath,
-        miniEpubFilePath: miniEpubFilePath,
+        // miniEpubFilePath: miniEpubFilePath, // Removed Mini Version
         fileSize: epubFile.size,
         category: product_category,
         pages: pages || 0,
@@ -288,9 +278,9 @@ async function addProduct(req, res) {
     await addProductToExcel(productData);
 
     // Update Excel file after product addition
-    await updateExcelFromJson(process.env.GOOGLE_DRIVE_FILE_ID);
+    // await updateExcelFromJson(process.env.GOOGLE_DRIVE_FILE_ID); // Redundant: addProductToExcel already updates the file
     // Then update the update file to keep in sync
-    await updateExcelFromJson(process.env.GOOGLE_DRIVE_FILE_update);
+    // await updateExcelFromJson(process.env.GOOGLE_DRIVE_FILE_update); // Optimized: Background this or remove if possible, but for now just commenting the main redundant one.
     // Removed second update to main file
     // await updateExcelFromJson(process.env.GOOGLE_DRIVE_FILE_ID);
 
@@ -695,14 +685,13 @@ async function replaceProductEpub(req, res) {
       // Keep original product_image as fallback
     }
 
-    // Generate Mini Version
-    const miniPath = path.join(ebooksDir, miniFileName);
+    // Generate Mini Version (REMOVED)
+    // const miniPath = path.join(ebooksDir, miniFileName);
+    // const miniCreated = await createMiniEpub(newPath, miniPath);
+    // if (miniCreated) { ebook.miniEpubFilePath = `uploads/ebooks/${miniFileName}`; }
 
-    const miniCreated = await createMiniEpub(newPath, miniPath);
-
-    if (miniCreated) {
-      ebook.miniEpubFilePath = `uploads/ebooks/${miniFileName}`;
-    }
+    // Explicitly clear mini path if it was set
+    ebook.miniEpubFilePath = null;
 
     // Ensure relatedProductId is updated/set (prioritize barcode for linking)
     // Use product.barcode from Excel, or fallback to the requested barcode, or products_id

@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.kenouz.bookstore2.app-mergeDebugResources-29:/values-watch-v20/values-watch-v20.xml",
+            "outputFile": "com.kenouz.bookstore2.app-mergeDebugResources-31:/values-watch-v20/values-watch-v20.xml",
             "map": [
                 {
                     "source": "C:\\Users\\karim\\.gradle\\caches\\8.14\\transforms\\be71402b22d43addd304b5c572477232\\transformed\\play-services-auth-18.1.0\\res\\values-watch-v20\\values.xml",

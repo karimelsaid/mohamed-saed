@@ -35,6 +35,7 @@ import { AddProductComponent } from './merchant/add-product/add-product.componen
 import { EditProductComponent } from './merchant/edit-product/edit-product.component';
 import { MerchantProfileComponent } from './merchant/merchant-profile/merchant-profile.component';
 import { MerchantAuthGuard } from './guards/merchant-auth.guard';
+import { AdminAuthGuard } from './guards/admin-auth.guard';
 import { PaymentRequestsComponent } from './admin/payment-requests/payment-requests.component';
 import { OfficeSuppliesComponent } from './book-list/office-supplies/office-supplies.component';
 import { ElectronicsComponent } from './book-list/electronics/electronics.component';
@@ -49,7 +50,7 @@ import { BooksComponent } from './book-list/books/books.component';
 import { LibraryComponent } from './library/library.component';
 import { EpubReaderComponent } from './epub-reader/epub-reader.component';
 import { SubscriptionComponent } from './subscription/subscription.component';
-
+import { DownloadsComponent } from './downloads/downloads.component';
 const routes: Routes = [
   {
     path: 'merchant',
@@ -88,7 +89,7 @@ const routes: Routes = [
   { path: 'Self-development-psychology', component: TatwerComponent },
   { path: 'History-Biographies', component: TarekhComponent },
   { path: 'Dictionaries-References', component: QamosComponent },
-  { path: 'ControlPanel', component: AdminDashboardComponent },
+  { path: 'ControlPanel', component: AdminDashboardComponent, canActivate: [AdminAuthGuard] },
   { path: 'book/:id/:name?', component: BookDetailsComponent },
   { path: 'product/:id/:name?', component: BookDetailsComponent },
   { path: '', redirectTo: '/Home', pathMatch: 'full' },  // الصفحة الرئيسية هي "home" افتراضيًا
@@ -106,6 +107,7 @@ const routes: Routes = [
   { path: 'library', component: LibraryComponent },
   { path: 'reader/:ebookId', component: EpubReaderComponent },
   { path: 'subscription', component: SubscriptionComponent },
+  { path: 'downloads', component: DownloadsComponent },
   {
     path: 'subscription/callback',
     loadComponent: () => import('./subscription/subscription-callback/subscription-callback.component').then(m => m.SubscriptionCallbackComponent)
@@ -142,6 +144,7 @@ const routes: Routes = [
   { path: ':username', component: MerchantProfileComponent },
   { path: '**', component: NotFoundComponent }
 ];
+
 
 @NgModule({
   imports: [RouterModule.forRoot(routes)],

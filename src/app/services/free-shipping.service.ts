@@ -3,6 +3,8 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 
+import { environment } from '../../environments/environment';
+
 export interface FreeShippingRules {
   minQuantity: number;
   minOrderValue: number;
@@ -27,9 +29,9 @@ export class FreeShippingService {
     freeShippingEnabled: true
   };
 
-  private apiUrl = '/api/admin/free-shipping-rules';
+  private apiUrl = `${environment.apiBaseUrl}/admin/free-shipping-rules`;
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   getRules(): Observable<FreeShippingRules> {
     return this.http.get<{ success: boolean; rules: FreeShippingRules }>(this.apiUrl).pipe(

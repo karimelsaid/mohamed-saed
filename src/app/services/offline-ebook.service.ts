@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { EbookService } from './ebook.service';
+import { HttpClient, HttpEventType, HttpEvent } from '@angular/common/http';
 import { Observable, from, throwError, of } from 'rxjs';
 import { catchError, map, switchMap, tap } from 'rxjs/operators';
 
@@ -115,6 +116,73 @@ export class OfflineEbookService {
         });
     }
 
+    // Save metadata for a book (called when reading successfully)
+    public async saveMetadata(ebookId: string, metadata: any): Promise<void> {
+        const db = await this.getDB();
+        return new Promise((resolve) => {
+            const transaction = db.transaction([this.storeName], 'readwrite');
+            const store = transaction.objectStore(this.storeName);
+            const getReq = store.get(ebookId);
+            getReq.onsuccess = () => {
+                const record = getReq.result;
+                if (record) {
+                    record.metadata = metadata;
+                    store.put(record, ebookId);
+                }
+                resolve();
+            };
+            getReq.onerror = () => resolve(); // Ignore errors
+        });
+    }
+
+    // Get metadata for a specific book
+    public async getMetadata(ebookId: string): Promise<any | null> {
+        const db = await this.getDB();
+        return new Promise((resolve) => {
+            const transaction = db.transaction([this.storeName], 'readonly');
+            const store = transaction.objectStore(this.storeName);
+            const request = store.get(ebookId);
+            request.onsuccess = () => {
+                const record = request.result;
+                resolve(record ? record.metadata : null);
+            };
+            request.onerror = () => resolve(null);
+        });
+    }
+
+    // Get all cached books with their metadata
+    public async getCachedBooks(): Promise<any[]> {
+        const db = await this.getDB();
+        return new Promise((resolve) => {
+            const transaction = db.transaction([this.storeName], 'readonly');
+            const store = transaction.objectStore(this.storeName);
+            const books: any[] = [];
+
+            // Use cursor to get both key (ebookId) and value
+            const cursorRequest = store.openCursor();
+            cursorRequest.onsuccess = (event: any) => {
+                const cursor = event.target.result;
+                if (cursor) {
+                    const record = cursor.value;
+                    if (record.metadata) {
+                        // Include the ebookId (cursor.key) in the returned object
+                        books.push({
+                            ...record.metadata,
+                            _id: cursor.key, // Add the ID
+                            id: cursor.key,  // Also as 'id' for compatibility
+                            ebookId: cursor.key
+                        });
+                    }
+                    cursor.continue();
+                } else {
+                    // No more records
+                    resolve(books);
+                }
+            };
+            cursorRequest.onerror = () => resolve([]);
+        });
+    }
+
     // Main method: Get from cache OR fetch from network
     public getOrFetchBook(ebookId: string): Observable<Blob> {
         // 1. Try Cache First
@@ -131,19 +199,60 @@ export class OfflineEbookService {
                 }
 
                 // 3. Online: Fetch, Encrypt, Store
-                // We use streamEbook from the existing service, but we handle the retry logic there
-                return this.ebookService.streamEbook(ebookId).pipe( // Default to authenticated stream
-                    catchError(err => {
-                        // Fallback to public stream if 401/403 (same logic as before)
-                        if (err.status === 401 || err.status === 403) {
-                            return this.ebookService.streamPublicEbook(ebookId);
-                        }
-                        return throwError(() => err);
-                    }),
+                // Usage of STREAM EBOOK (Full) primarily, falling back to public if needed.
+                // This allows us to download the FULL book locally.
+                // The Reader Component will restrict view to first 20 pages if user has no access.
+                return this.ebookService.streamEbook(ebookId).pipe(
+                    // Process the blob we got
                     switchMap(blob => from(blob.arrayBuffer())),
                     switchMap(buffer => from(this.saveToCache(ebookId, buffer))),
                     map(buffer => new Blob([buffer], { type: 'application/epub+zip' }))
                 );
+            })
+        );
+    }
+
+
+    // Download with progress tracking
+    public downloadBookWithProgress(ebookId: string): Observable<{ state: 'PENDING' | 'DOWNLOADING' | 'ENCRYPTING' | 'DONE' | 'ERROR', progress: number }> {
+        // 1. Check cache first
+        return from(this.getFromCache(ebookId)).pipe(
+            switchMap(cachedData => {
+                if (cachedData) {
+                    return of({ state: 'DONE' as const, progress: 100 });
+                }
+
+                if (!navigator.onLine) {
+                    return throwError(() => new Error('NO_INTERNET'));
+                }
+
+                return new Observable<{ state: 'PENDING' | 'DOWNLOADING' | 'ENCRYPTING' | 'DONE' | 'ERROR', progress: number }>(observer => {
+                    observer.next({ state: 'PENDING', progress: 0 });
+
+                    this.ebookService.streamEbookWithProgress(ebookId).subscribe({
+                        next: (event: HttpEvent<Blob>) => {
+                            if (event.type === HttpEventType.DownloadProgress) {
+                                const percentDone = Math.round(100 * event.loaded / (event.total || 1));
+                                observer.next({ state: 'DOWNLOADING', progress: percentDone });
+                            } else if (event.type === HttpEventType.Response) {
+                                observer.next({ state: 'ENCRYPTING', progress: 99 });
+                                const blob = event.body;
+                                if (blob) {
+                                    blob.arrayBuffer().then(buffer => {
+                                        this.saveToCache(ebookId, buffer).then(() => {
+                                            observer.next({ state: 'DONE', progress: 100 });
+                                            observer.complete();
+                                        });
+                                    });
+                                }
+                            }
+                        },
+                        error: (err) => {
+                            observer.next({ state: 'ERROR', progress: 0 });
+                            observer.error(err);
+                        }
+                    });
+                });
             })
         );
     }
@@ -202,5 +311,46 @@ export class OfflineEbookService {
             console.warn('Failed to cache book', e);
             return data; // Return data anyway so user can read currently
         }
+    }
+
+
+    // Delete a book from cache
+    public async deleteBook(ebookId: string): Promise<void> {
+        const db = await this.getDB();
+        return new Promise((resolve, reject) => {
+            const transaction = db.transaction([this.storeName], 'readwrite');
+            const store = transaction.objectStore(this.storeName);
+            const request = store.delete(ebookId);
+            request.onsuccess = () => resolve();
+            request.onerror = (e) => reject(e);
+        });
+    }
+
+    // --- Local Favorites (LocalStorage) ---
+
+    private readonly FAVORITES_KEY = 'local_favorites';
+
+    getLocalFavorites(): string[] {
+        const stored = localStorage.getItem(this.FAVORITES_KEY);
+        return stored ? JSON.parse(stored) : [];
+    }
+
+    isLocalFavorite(ebookId: string): boolean {
+        const favorites = this.getLocalFavorites();
+        return favorites.includes(ebookId);
+    }
+
+    addLocalFavorite(ebookId: string): void {
+        const favorites = this.getLocalFavorites();
+        if (!favorites.includes(ebookId)) {
+            favorites.push(ebookId);
+            localStorage.setItem(this.FAVORITES_KEY, JSON.stringify(favorites));
+        }
+    }
+
+    removeLocalFavorite(ebookId: string): void {
+        let favorites = this.getLocalFavorites();
+        favorites = favorites.filter(id => id !== ebookId);
+        localStorage.setItem(this.FAVORITES_KEY, JSON.stringify(favorites));
     }
 }

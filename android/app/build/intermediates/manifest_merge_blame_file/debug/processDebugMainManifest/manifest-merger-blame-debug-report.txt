@@ -1,8 +1,8 @@
 1<?xml version="1.0" encoding="utf-8"?>
 2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
 3    package="com.kenouz.bookstore2"
-4    android:versionCode="7"
-5    android:versionName="1.0.3" >
+4    android:versionCode="9"
+5    android:versionName="1.2.0" >
 6
 7    <uses-sdk
 8        android:minSdkVersion="23"
@@ -13,209 +13,240 @@
 13    <uses-permission android:name="android.permission.INTERNET" />
 13-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:47:5-67
 13-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:47:22-64
-14    <uses-permission android:name="android.permission.USE_CREDENTIALS" />
-14-->[:codetrix-studio-capacitor-google-auth] D:\My projects\Kenouz\node_modules\@codetrix-studio\capacitor-google-auth\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:7:5-74
-14-->[:codetrix-studio-capacitor-google-auth] D:\My projects\Kenouz\node_modules\@codetrix-studio\capacitor-google-auth\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:7:22-71
-15
-16    <permission
-16-->[androidx.core:core:1.15.0] C:\Users\karim\.gradle\caches\8.14\transforms\287781d3f80d1b2d3a38b084152c3635\transformed\core-1.15.0\AndroidManifest.xml:22:5-24:47
-17        android:name="com.kenouz.bookstore2.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
-17-->[androidx.core:core:1.15.0] C:\Users\karim\.gradle\caches\8.14\transforms\287781d3f80d1b2d3a38b084152c3635\transformed\core-1.15.0\AndroidManifest.xml:23:9-81
-18        android:protectionLevel="signature" />
-18-->[androidx.core:core:1.15.0] C:\Users\karim\.gradle\caches\8.14\transforms\287781d3f80d1b2d3a38b084152c3635\transformed\core-1.15.0\AndroidManifest.xml:24:9-44
-19
-20    <uses-permission android:name="com.kenouz.bookstore2.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
-20-->[androidx.core:core:1.15.0] C:\Users\karim\.gradle\caches\8.14\transforms\287781d3f80d1b2d3a38b084152c3635\transformed\core-1.15.0\AndroidManifest.xml:26:5-97
-20-->[androidx.core:core:1.15.0] C:\Users\karim\.gradle\caches\8.14\transforms\287781d3f80d1b2d3a38b084152c3635\transformed\core-1.15.0\AndroidManifest.xml:26:22-94
-21
-22    <application
-22-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:4:5-43:19
-23        android:allowBackup="true"
-23-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:5:9-35
-24        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
-24-->[androidx.core:core:1.15.0] C:\Users\karim\.gradle\caches\8.14\transforms\287781d3f80d1b2d3a38b084152c3635\transformed\core-1.15.0\AndroidManifest.xml:28:18-86
-25        android:debuggable="true"
-26        android:extractNativeLibs="false"
-27        android:icon="@mipmap/ic_launcher"
-27-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:6:9-43
-28        android:label="@string/app_name"
-28-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:7:9-41
-29        android:roundIcon="@mipmap/ic_launcher_round"
-29-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:8:9-54
-30        android:supportsRtl="true"
-30-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:9:9-35
-31        android:testOnly="true"
-32        android:theme="@style/AppTheme" >
-32-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:10:9-40
-33        <activity
-33-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:12:9-32:20
-34            android:name="com.kenouz.bookstore2.MainActivity"
-34-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:14:13-41
-35            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation"
-35-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:13:13-140
-36            android:exported="true"
-36-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:18:13-36
-37            android:label="@string/title_activity_main"
-37-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:15:13-56
-38            android:launchMode="singleTask"
-38-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:17:13-44
-39            android:theme="@style/AppTheme.NoActionBarLaunch" >
-39-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:16:13-62
-40            <intent-filter>
-40-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:20:13-23:29
-41                <action android:name="android.intent.action.MAIN" />
-41-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:21:17-69
-41-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:21:25-66
-42
-43                <category android:name="android.intent.category.LAUNCHER" />
-43-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:22:17-77
-43-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:22:27-74
-44            </intent-filter>
-45            <intent-filter>
-45-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:25:13-30:29
-46                <action android:name="android.intent.action.VIEW" />
-46-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:26:17-69
-46-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:26:25-66
-47
-48                <category android:name="android.intent.category.DEFAULT" />
-48-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:27:17-76
-48-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:27:27-73
-49                <category android:name="android.intent.category.BROWSABLE" />
-49-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:28:17-78
-49-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:28:27-75
-50
-51                <data
-51-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:29:17-95
-52                    android:path="/oauth2redirect"
-52-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:29:62-92
-53                    android:scheme="com.kenouz.bookstore2" />
-53-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:29:23-61
-54            </intent-filter>
-55        </activity>
-56
-57        <provider
-58            android:name="androidx.core.content.FileProvider"
-58-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:35:13-62
-59            android:authorities="com.kenouz.bookstore2.fileprovider"
-59-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:36:13-64
-60            android:exported="false"
-60-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:37:13-37
-61            android:grantUriPermissions="true" >
-61-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:38:13-47
-62            <meta-data
-62-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:39:13-41:64
-63                android:name="android.support.FILE_PROVIDER_PATHS"
-63-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:40:17-67
-64                android:resource="@xml/file_paths" />
-64-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:41:17-51
-65        </provider>
-66
-67        <activity
-67-->[com.google.android.gms:play-services-auth:18.1.0] C:\Users\karim\.gradle\caches\8.14\transforms\be71402b22d43addd304b5c572477232\transformed\play-services-auth-18.1.0\AndroidManifest.xml:23:9-27:75
-68            android:name="com.google.android.gms.auth.api.signin.internal.SignInHubActivity"
-68-->[com.google.android.gms:play-services-auth:18.1.0] C:\Users\karim\.gradle\caches\8.14\transforms\be71402b22d43addd304b5c572477232\transformed\play-services-auth-18.1.0\AndroidManifest.xml:24:13-93
-69            android:excludeFromRecents="true"
-69-->[com.google.android.gms:play-services-auth:18.1.0] C:\Users\karim\.gradle\caches\8.14\transforms\be71402b22d43addd304b5c572477232\transformed\play-services-auth-18.1.0\AndroidManifest.xml:25:13-46
-70            android:exported="false"
-70-->[com.google.android.gms:play-services-auth:18.1.0] C:\Users\karim\.gradle\caches\8.14\transforms\be71402b22d43addd304b5c572477232\transformed\play-services-auth-18.1.0\AndroidManifest.xml:26:13-37
-71            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
-71-->[com.google.android.gms:play-services-auth:18.1.0] C:\Users\karim\.gradle\caches\8.14\transforms\be71402b22d43addd304b5c572477232\transformed\play-services-auth-18.1.0\AndroidManifest.xml:27:13-72
-72        <!--
-73            Service handling Google Sign-In user revocation. For apps that do not integrate with
-74            Google Sign-In, this service will never be started.
-75        -->
-76        <service
-76-->[com.google.android.gms:play-services-auth:18.1.0] C:\Users\karim\.gradle\caches\8.14\transforms\be71402b22d43addd304b5c572477232\transformed\play-services-auth-18.1.0\AndroidManifest.xml:33:9-37:51
-77            android:name="com.google.android.gms.auth.api.signin.RevocationBoundService"
-77-->[com.google.android.gms:play-services-auth:18.1.0] C:\Users\karim\.gradle\caches\8.14\transforms\be71402b22d43addd304b5c572477232\transformed\play-services-auth-18.1.0\AndroidManifest.xml:34:13-89
-78            android:exported="true"
-78-->[com.google.android.gms:play-services-auth:18.1.0] C:\Users\karim\.gradle\caches\8.14\transforms\be71402b22d43addd304b5c572477232\transformed\play-services-auth-18.1.0\AndroidManifest.xml:35:13-36
-79            android:permission="com.google.android.gms.auth.api.signin.permission.REVOCATION_NOTIFICATION"
-79-->[com.google.android.gms:play-services-auth:18.1.0] C:\Users\karim\.gradle\caches\8.14\transforms\be71402b22d43addd304b5c572477232\transformed\play-services-auth-18.1.0\AndroidManifest.xml:36:13-107
-80            android:visibleToInstantApps="true" />
-80-->[com.google.android.gms:play-services-auth:18.1.0] C:\Users\karim\.gradle\caches\8.14\transforms\be71402b22d43addd304b5c572477232\transformed\play-services-auth-18.1.0\AndroidManifest.xml:37:13-48
-81
-82        <activity
-82-->[com.google.android.gms:play-services-base:17.1.0] C:\Users\karim\.gradle\caches\8.14\transforms\108dec7101ea3f9e916d9f966d64ef71\transformed\play-services-base-17.1.0\AndroidManifest.xml:23:9-26:75
-83            android:name="com.google.android.gms.common.api.GoogleApiActivity"
-83-->[com.google.android.gms:play-services-base:17.1.0] C:\Users\karim\.gradle\caches\8.14\transforms\108dec7101ea3f9e916d9f966d64ef71\transformed\play-services-base-17.1.0\AndroidManifest.xml:24:13-79
-84            android:exported="false"
-84-->[com.google.android.gms:play-services-base:17.1.0] C:\Users\karim\.gradle\caches\8.14\transforms\108dec7101ea3f9e916d9f966d64ef71\transformed\play-services-base-17.1.0\AndroidManifest.xml:25:13-37
-85            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
-85-->[com.google.android.gms:play-services-base:17.1.0] C:\Users\karim\.gradle\caches\8.14\transforms\108dec7101ea3f9e916d9f966d64ef71\transformed\play-services-base-17.1.0\AndroidManifest.xml:26:13-72
-86
-87        <meta-data
-87-->[com.google.android.gms:play-services-basement:17.1.1] C:\Users\karim\.gradle\caches\8.14\transforms\c9dc15238a24a21eb07491d06afaa421\transformed\play-services-basement-17.1.1\AndroidManifest.xml:23:9-25:69
-88            android:name="com.google.android.gms.version"
-88-->[com.google.android.gms:play-services-basement:17.1.1] C:\Users\karim\.gradle\caches\8.14\transforms\c9dc15238a24a21eb07491d06afaa421\transformed\play-services-basement-17.1.1\AndroidManifest.xml:24:13-58
-89            android:value="@integer/google_play_services_version" />
-89-->[com.google.android.gms:play-services-basement:17.1.1] C:\Users\karim\.gradle\caches\8.14\transforms\c9dc15238a24a21eb07491d06afaa421\transformed\play-services-basement-17.1.1\AndroidManifest.xml:25:13-66
-90
-91        <provider
-91-->[androidx.emoji2:emoji2:1.3.0] C:\Users\karim\.gradle\caches\8.14\transforms\b8a8e3f552e341629781c71cd4940d3f\transformed\emoji2-1.3.0\AndroidManifest.xml:24:9-32:20
-92            android:name="androidx.startup.InitializationProvider"
-92-->[androidx.emoji2:emoji2:1.3.0] C:\Users\karim\.gradle\caches\8.14\transforms\b8a8e3f552e341629781c71cd4940d3f\transformed\emoji2-1.3.0\AndroidManifest.xml:25:13-67
-93            android:authorities="com.kenouz.bookstore2.androidx-startup"
-93-->[androidx.emoji2:emoji2:1.3.0] C:\Users\karim\.gradle\caches\8.14\transforms\b8a8e3f552e341629781c71cd4940d3f\transformed\emoji2-1.3.0\AndroidManifest.xml:26:13-68
-94            android:exported="false" >
-94-->[androidx.emoji2:emoji2:1.3.0] C:\Users\karim\.gradle\caches\8.14\transforms\b8a8e3f552e341629781c71cd4940d3f\transformed\emoji2-1.3.0\AndroidManifest.xml:27:13-37
-95            <meta-data
-95-->[androidx.emoji2:emoji2:1.3.0] C:\Users\karim\.gradle\caches\8.14\transforms\b8a8e3f552e341629781c71cd4940d3f\transformed\emoji2-1.3.0\AndroidManifest.xml:29:13-31:52
-96                android:name="androidx.emoji2.text.EmojiCompatInitializer"
-96-->[androidx.emoji2:emoji2:1.3.0] C:\Users\karim\.gradle\caches\8.14\transforms\b8a8e3f552e341629781c71cd4940d3f\transformed\emoji2-1.3.0\AndroidManifest.xml:30:17-75
-97                android:value="androidx.startup" />
-97-->[androidx.emoji2:emoji2:1.3.0] C:\Users\karim\.gradle\caches\8.14\transforms\b8a8e3f552e341629781c71cd4940d3f\transformed\emoji2-1.3.0\AndroidManifest.xml:31:17-49
-98            <meta-data
-98-->[androidx.lifecycle:lifecycle-process:2.6.2] C:\Users\karim\.gradle\caches\8.14\transforms\80c0a81b899a1a8c7776048a25bdac6a\transformed\lifecycle-process-2.6.2\AndroidManifest.xml:29:13-31:52
-99                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
-99-->[androidx.lifecycle:lifecycle-process:2.6.2] C:\Users\karim\.gradle\caches\8.14\transforms\80c0a81b899a1a8c7776048a25bdac6a\transformed\lifecycle-process-2.6.2\AndroidManifest.xml:30:17-78
-100                android:value="androidx.startup" />
-100-->[androidx.lifecycle:lifecycle-process:2.6.2] C:\Users\karim\.gradle\caches\8.14\transforms\80c0a81b899a1a8c7776048a25bdac6a\transformed\lifecycle-process-2.6.2\AndroidManifest.xml:31:17-49
-101            <meta-data
-101-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\karim\.gradle\caches\8.14\transforms\0dcd57c4a656c1fbe069dac37eaab491\transformed\profileinstaller-1.3.1\AndroidManifest.xml:29:13-31:52
-102                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
-102-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\karim\.gradle\caches\8.14\transforms\0dcd57c4a656c1fbe069dac37eaab491\transformed\profileinstaller-1.3.1\AndroidManifest.xml:30:17-85
-103                android:value="androidx.startup" />
-103-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\karim\.gradle\caches\8.14\transforms\0dcd57c4a656c1fbe069dac37eaab491\transformed\profileinstaller-1.3.1\AndroidManifest.xml:31:17-49
-104        </provider>
-105
-106        <receiver
-106-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\karim\.gradle\caches\8.14\transforms\0dcd57c4a656c1fbe069dac37eaab491\transformed\profileinstaller-1.3.1\AndroidManifest.xml:34:9-52:20
-107            android:name="androidx.profileinstaller.ProfileInstallReceiver"
-107-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\karim\.gradle\caches\8.14\transforms\0dcd57c4a656c1fbe069dac37eaab491\transformed\profileinstaller-1.3.1\AndroidManifest.xml:35:13-76
-108            android:directBootAware="false"
-108-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\karim\.gradle\caches\8.14\transforms\0dcd57c4a656c1fbe069dac37eaab491\transformed\profileinstaller-1.3.1\AndroidManifest.xml:36:13-44
-109            android:enabled="true"
-109-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\karim\.gradle\caches\8.14\transforms\0dcd57c4a656c1fbe069dac37eaab491\transformed\profileinstaller-1.3.1\AndroidManifest.xml:37:13-35
-110            android:exported="true"
-110-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\karim\.gradle\caches\8.14\transforms\0dcd57c4a656c1fbe069dac37eaab491\transformed\profileinstaller-1.3.1\AndroidManifest.xml:38:13-36
-111            android:permission="android.permission.DUMP" >
-111-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\karim\.gradle\caches\8.14\transforms\0dcd57c4a656c1fbe069dac37eaab491\transformed\profileinstaller-1.3.1\AndroidManifest.xml:39:13-57
-112            <intent-filter>
-112-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\karim\.gradle\caches\8.14\transforms\0dcd57c4a656c1fbe069dac37eaab491\transformed\profileinstaller-1.3.1\AndroidManifest.xml:40:13-42:29
-113                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
-113-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\karim\.gradle\caches\8.14\transforms\0dcd57c4a656c1fbe069dac37eaab491\transformed\profileinstaller-1.3.1\AndroidManifest.xml:41:17-91
-113-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\karim\.gradle\caches\8.14\transforms\0dcd57c4a656c1fbe069dac37eaab491\transformed\profileinstaller-1.3.1\AndroidManifest.xml:41:25-88
-114            </intent-filter>
-115            <intent-filter>
-115-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\karim\.gradle\caches\8.14\transforms\0dcd57c4a656c1fbe069dac37eaab491\transformed\profileinstaller-1.3.1\AndroidManifest.xml:43:13-45:29
-116                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
-116-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\karim\.gradle\caches\8.14\transforms\0dcd57c4a656c1fbe069dac37eaab491\transformed\profileinstaller-1.3.1\AndroidManifest.xml:44:17-85
-116-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\karim\.gradle\caches\8.14\transforms\0dcd57c4a656c1fbe069dac37eaab491\transformed\profileinstaller-1.3.1\AndroidManifest.xml:44:25-82
-117            </intent-filter>
-118            <intent-filter>
-118-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\karim\.gradle\caches\8.14\transforms\0dcd57c4a656c1fbe069dac37eaab491\transformed\profileinstaller-1.3.1\AndroidManifest.xml:46:13-48:29
-119                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
-119-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\karim\.gradle\caches\8.14\transforms\0dcd57c4a656c1fbe069dac37eaab491\transformed\profileinstaller-1.3.1\AndroidManifest.xml:47:17-88
-119-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\karim\.gradle\caches\8.14\transforms\0dcd57c4a656c1fbe069dac37eaab491\transformed\profileinstaller-1.3.1\AndroidManifest.xml:47:25-85
-120            </intent-filter>
-121            <intent-filter>
-121-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\karim\.gradle\caches\8.14\transforms\0dcd57c4a656c1fbe069dac37eaab491\transformed\profileinstaller-1.3.1\AndroidManifest.xml:49:13-51:29
-122                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
-122-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\karim\.gradle\caches\8.14\transforms\0dcd57c4a656c1fbe069dac37eaab491\transformed\profileinstaller-1.3.1\AndroidManifest.xml:50:17-95
-122-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\karim\.gradle\caches\8.14\transforms\0dcd57c4a656c1fbe069dac37eaab491\transformed\profileinstaller-1.3.1\AndroidManifest.xml:50:25-92
-123            </intent-filter>
-124        </receiver>
-125    </application>
-126
-127</manifest>
+14
+15    <queries>
+15-->[:capacitor-browser] D:\My projects\Kenouz\node_modules\@capacitor\browser\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:7:5-11:15
+16        <intent>
+16-->[:capacitor-browser] D:\My projects\Kenouz\node_modules\@capacitor\browser\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:8:9-10:18
+17            <action android:name="android.support.customtabs.action.CustomTabsService" />
+17-->[:capacitor-browser] D:\My projects\Kenouz\node_modules\@capacitor\browser\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:9:13-90
+17-->[:capacitor-browser] D:\My projects\Kenouz\node_modules\@capacitor\browser\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:9:21-87
+18        </intent>
+19    </queries>
+20
+21    <uses-permission android:name="android.permission.USE_CREDENTIALS" />
+21-->[:codetrix-studio-capacitor-google-auth] D:\My projects\Kenouz\node_modules\@codetrix-studio\capacitor-google-auth\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:7:5-74
+21-->[:codetrix-studio-capacitor-google-auth] D:\My projects\Kenouz\node_modules\@codetrix-studio\capacitor-google-auth\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:7:22-71
+22
+23    <permission
+23-->[androidx.core:core:1.15.0] C:\Users\karim\.gradle\caches\8.14\transforms\287781d3f80d1b2d3a38b084152c3635\transformed\core-1.15.0\AndroidManifest.xml:22:5-24:47
+24        android:name="com.kenouz.bookstore2.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+24-->[androidx.core:core:1.15.0] C:\Users\karim\.gradle\caches\8.14\transforms\287781d3f80d1b2d3a38b084152c3635\transformed\core-1.15.0\AndroidManifest.xml:23:9-81
+25        android:protectionLevel="signature" />
+25-->[androidx.core:core:1.15.0] C:\Users\karim\.gradle\caches\8.14\transforms\287781d3f80d1b2d3a38b084152c3635\transformed\core-1.15.0\AndroidManifest.xml:24:9-44
+26
+27    <uses-permission android:name="com.kenouz.bookstore2.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+27-->[androidx.core:core:1.15.0] C:\Users\karim\.gradle\caches\8.14\transforms\287781d3f80d1b2d3a38b084152c3635\transformed\core-1.15.0\AndroidManifest.xml:26:5-97
+27-->[androidx.core:core:1.15.0] C:\Users\karim\.gradle\caches\8.14\transforms\287781d3f80d1b2d3a38b084152c3635\transformed\core-1.15.0\AndroidManifest.xml:26:22-94
+28
+29    <application
+29-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:4:5-43:19
+30        android:allowBackup="true"
+30-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:5:9-35
+31        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+31-->[androidx.core:core:1.15.0] C:\Users\karim\.gradle\caches\8.14\transforms\287781d3f80d1b2d3a38b084152c3635\transformed\core-1.15.0\AndroidManifest.xml:28:18-86
+32        android:debuggable="true"
+33        android:extractNativeLibs="false"
+34        android:icon="@mipmap/ic_launcher"
+34-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:6:9-43
+35        android:label="@string/app_name"
+35-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:7:9-41
+36        android:roundIcon="@mipmap/ic_launcher_round"
+36-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:8:9-54
+37        android:supportsRtl="true"
+37-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:9:9-35
+38        android:testOnly="true"
+39        android:theme="@style/AppTheme" >
+39-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:10:9-40
+40        <activity
+40-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:12:9-32:20
+41            android:name="com.kenouz.bookstore2.MainActivity"
+41-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:14:13-41
+42            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation"
+42-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:13:13-140
+43            android:exported="true"
+43-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:18:13-36
+44            android:label="@string/title_activity_main"
+44-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:15:13-56
+45            android:launchMode="singleTask"
+45-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:17:13-44
+46            android:theme="@style/AppTheme.NoActionBarLaunch" >
+46-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:16:13-62
+47            <intent-filter>
+47-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:20:13-23:29
+48                <action android:name="android.intent.action.MAIN" />
+48-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:21:17-69
+48-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:21:25-66
+49
+50                <category android:name="android.intent.category.LAUNCHER" />
+50-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:22:17-77
+50-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:22:27-74
+51            </intent-filter>
+52            <intent-filter>
+52-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:25:13-30:29
+53                <action android:name="android.intent.action.VIEW" />
+53-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:26:17-69
+53-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:26:25-66
+54
+55                <category android:name="android.intent.category.DEFAULT" />
+55-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:27:17-76
+55-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:27:27-73
+56                <category android:name="android.intent.category.BROWSABLE" />
+56-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:28:17-78
+56-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:28:27-75
+57
+58                <data
+58-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:29:17-95
+59                    android:path="/oauth2redirect"
+59-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:29:62-92
+60                    android:scheme="com.kenouz.bookstore2" />
+60-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:29:23-61
+61            </intent-filter>
+62        </activity>
+63
+64        <provider
+65            android:name="androidx.core.content.FileProvider"
+65-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:35:13-62
+66            android:authorities="com.kenouz.bookstore2.fileprovider"
+66-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:36:13-64
+67            android:exported="false"
+67-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:37:13-37
+68            android:grantUriPermissions="true" >
+68-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:38:13-47
+69            <meta-data
+69-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:39:13-41:64
+70                android:name="android.support.FILE_PROVIDER_PATHS"
+70-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:40:17-67
+71                android:resource="@xml/file_paths" />
+71-->D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:41:17-51
+72        </provider>
+73
+74        <activity
+74-->[:capacitor-browser] D:\My projects\Kenouz\node_modules\@capacitor\browser\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:14:9-18:75
+75            android:name="com.capacitorjs.plugins.browser.BrowserControllerActivity"
+75-->[:capacitor-browser] D:\My projects\Kenouz\node_modules\@capacitor\browser\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:15:13-85
+76            android:exported="false"
+76-->[:capacitor-browser] D:\My projects\Kenouz\node_modules\@capacitor\browser\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:16:13-37
+77            android:launchMode="singleTask"
+77-->[:capacitor-browser] D:\My projects\Kenouz\node_modules\@capacitor\browser\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:17:13-44
+78            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+78-->[:capacitor-browser] D:\My projects\Kenouz\node_modules\@capacitor\browser\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:18:13-72
+79        <activity
+79-->[com.google.android.gms:play-services-auth:18.1.0] C:\Users\karim\.gradle\caches\8.14\transforms\be71402b22d43addd304b5c572477232\transformed\play-services-auth-18.1.0\AndroidManifest.xml:23:9-27:75
+80            android:name="com.google.android.gms.auth.api.signin.internal.SignInHubActivity"
+80-->[com.google.android.gms:play-services-auth:18.1.0] C:\Users\karim\.gradle\caches\8.14\transforms\be71402b22d43addd304b5c572477232\transformed\play-services-auth-18.1.0\AndroidManifest.xml:24:13-93
+81            android:excludeFromRecents="true"
+81-->[com.google.android.gms:play-services-auth:18.1.0] C:\Users\karim\.gradle\caches\8.14\transforms\be71402b22d43addd304b5c572477232\transformed\play-services-auth-18.1.0\AndroidManifest.xml:25:13-46
+82            android:exported="false"
+82-->[com.google.android.gms:play-services-auth:18.1.0] C:\Users\karim\.gradle\caches\8.14\transforms\be71402b22d43addd304b5c572477232\transformed\play-services-auth-18.1.0\AndroidManifest.xml:26:13-37
+83            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+83-->[com.google.android.gms:play-services-auth:18.1.0] C:\Users\karim\.gradle\caches\8.14\transforms\be71402b22d43addd304b5c572477232\transformed\play-services-auth-18.1.0\AndroidManifest.xml:27:13-72
+84        <!--
+85            Service handling Google Sign-In user revocation. For apps that do not integrate with
+86            Google Sign-In, this service will never be started.
+87        -->
+88        <service
+88-->[com.google.android.gms:play-services-auth:18.1.0] C:\Users\karim\.gradle\caches\8.14\transforms\be71402b22d43addd304b5c572477232\transformed\play-services-auth-18.1.0\AndroidManifest.xml:33:9-37:51
+89            android:name="com.google.android.gms.auth.api.signin.RevocationBoundService"
+89-->[com.google.android.gms:play-services-auth:18.1.0] C:\Users\karim\.gradle\caches\8.14\transforms\be71402b22d43addd304b5c572477232\transformed\play-services-auth-18.1.0\AndroidManifest.xml:34:13-89
+90            android:exported="true"
+90-->[com.google.android.gms:play-services-auth:18.1.0] C:\Users\karim\.gradle\caches\8.14\transforms\be71402b22d43addd304b5c572477232\transformed\play-services-auth-18.1.0\AndroidManifest.xml:35:13-36
+91            android:permission="com.google.android.gms.auth.api.signin.permission.REVOCATION_NOTIFICATION"
+91-->[com.google.android.gms:play-services-auth:18.1.0] C:\Users\karim\.gradle\caches\8.14\transforms\be71402b22d43addd304b5c572477232\transformed\play-services-auth-18.1.0\AndroidManifest.xml:36:13-107
+92            android:visibleToInstantApps="true" />
+92-->[com.google.android.gms:play-services-auth:18.1.0] C:\Users\karim\.gradle\caches\8.14\transforms\be71402b22d43addd304b5c572477232\transformed\play-services-auth-18.1.0\AndroidManifest.xml:37:13-48
+93
+94        <activity
+94-->[com.google.android.gms:play-services-base:18.0.1] C:\Users\karim\.gradle\caches\8.14\transforms\a47d2fd3ff1c0e039fbf3881d18ae290\transformed\play-services-base-18.0.1\AndroidManifest.xml:20:9-22:45
+95            android:name="com.google.android.gms.common.api.GoogleApiActivity"
+95-->[com.google.android.gms:play-services-base:18.0.1] C:\Users\karim\.gradle\caches\8.14\transforms\a47d2fd3ff1c0e039fbf3881d18ae290\transformed\play-services-base-18.0.1\AndroidManifest.xml:20:19-85
+96            android:exported="false"
+96-->[com.google.android.gms:play-services-base:18.0.1] C:\Users\karim\.gradle\caches\8.14\transforms\a47d2fd3ff1c0e039fbf3881d18ae290\transformed\play-services-base-18.0.1\AndroidManifest.xml:22:19-43
+97            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+97-->[com.google.android.gms:play-services-base:18.0.1] C:\Users\karim\.gradle\caches\8.14\transforms\a47d2fd3ff1c0e039fbf3881d18ae290\transformed\play-services-base-18.0.1\AndroidManifest.xml:21:19-78
+98
+99        <meta-data
+99-->[com.google.android.gms:play-services-basement:18.1.0] C:\Users\karim\.gradle\caches\8.14\transforms\e59092c73c7eaeba4485cb6552c6616d\transformed\play-services-basement-18.1.0\AndroidManifest.xml:21:9-23:69
+100            android:name="com.google.android.gms.version"
+100-->[com.google.android.gms:play-services-basement:18.1.0] C:\Users\karim\.gradle\caches\8.14\transforms\e59092c73c7eaeba4485cb6552c6616d\transformed\play-services-basement-18.1.0\AndroidManifest.xml:22:13-58
+101            android:value="@integer/google_play_services_version" />
+101-->[com.google.android.gms:play-services-basement:18.1.0] C:\Users\karim\.gradle\caches\8.14\transforms\e59092c73c7eaeba4485cb6552c6616d\transformed\play-services-basement-18.1.0\AndroidManifest.xml:23:13-66
+102
+103        <provider
+103-->[androidx.emoji2:emoji2:1.3.0] C:\Users\karim\.gradle\caches\8.14\transforms\b8a8e3f552e341629781c71cd4940d3f\transformed\emoji2-1.3.0\AndroidManifest.xml:24:9-32:20
+104            android:name="androidx.startup.InitializationProvider"
+104-->[androidx.emoji2:emoji2:1.3.0] C:\Users\karim\.gradle\caches\8.14\transforms\b8a8e3f552e341629781c71cd4940d3f\transformed\emoji2-1.3.0\AndroidManifest.xml:25:13-67
+105            android:authorities="com.kenouz.bookstore2.androidx-startup"
+105-->[androidx.emoji2:emoji2:1.3.0] C:\Users\karim\.gradle\caches\8.14\transforms\b8a8e3f552e341629781c71cd4940d3f\transformed\emoji2-1.3.0\AndroidManifest.xml:26:13-68
+106            android:exported="false" >
+106-->[androidx.emoji2:emoji2:1.3.0] C:\Users\karim\.gradle\caches\8.14\transforms\b8a8e3f552e341629781c71cd4940d3f\transformed\emoji2-1.3.0\AndroidManifest.xml:27:13-37
+107            <meta-data
+107-->[androidx.emoji2:emoji2:1.3.0] C:\Users\karim\.gradle\caches\8.14\transforms\b8a8e3f552e341629781c71cd4940d3f\transformed\emoji2-1.3.0\AndroidManifest.xml:29:13-31:52
+108                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+108-->[androidx.emoji2:emoji2:1.3.0] C:\Users\karim\.gradle\caches\8.14\transforms\b8a8e3f552e341629781c71cd4940d3f\transformed\emoji2-1.3.0\AndroidManifest.xml:30:17-75
+109                android:value="androidx.startup" />
+109-->[androidx.emoji2:emoji2:1.3.0] C:\Users\karim\.gradle\caches\8.14\transforms\b8a8e3f552e341629781c71cd4940d3f\transformed\emoji2-1.3.0\AndroidManifest.xml:31:17-49
+110            <meta-data
+110-->[androidx.lifecycle:lifecycle-process:2.6.2] C:\Users\karim\.gradle\caches\8.14\transforms\80c0a81b899a1a8c7776048a25bdac6a\transformed\lifecycle-process-2.6.2\AndroidManifest.xml:29:13-31:52
+111                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+111-->[androidx.lifecycle:lifecycle-process:2.6.2] C:\Users\karim\.gradle\caches\8.14\transforms\80c0a81b899a1a8c7776048a25bdac6a\transformed\lifecycle-process-2.6.2\AndroidManifest.xml:30:17-78
+112                android:value="androidx.startup" />
+112-->[androidx.lifecycle:lifecycle-process:2.6.2] C:\Users\karim\.gradle\caches\8.14\transforms\80c0a81b899a1a8c7776048a25bdac6a\transformed\lifecycle-process-2.6.2\AndroidManifest.xml:31:17-49
+113            <meta-data
+113-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\karim\.gradle\caches\8.14\transforms\0dcd57c4a656c1fbe069dac37eaab491\transformed\profileinstaller-1.3.1\AndroidManifest.xml:29:13-31:52
+114                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
+114-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\karim\.gradle\caches\8.14\transforms\0dcd57c4a656c1fbe069dac37eaab491\transformed\profileinstaller-1.3.1\AndroidManifest.xml:30:17-85
+115                android:value="androidx.startup" />
+115-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\karim\.gradle\caches\8.14\transforms\0dcd57c4a656c1fbe069dac37eaab491\transformed\profileinstaller-1.3.1\AndroidManifest.xml:31:17-49
+116        </provider>
+117
+118        <receiver
+118-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\karim\.gradle\caches\8.14\transforms\0dcd57c4a656c1fbe069dac37eaab491\transformed\profileinstaller-1.3.1\AndroidManifest.xml:34:9-52:20
+119            android:name="androidx.profileinstaller.ProfileInstallReceiver"
+119-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\karim\.gradle\caches\8.14\transforms\0dcd57c4a656c1fbe069dac37eaab491\transformed\profileinstaller-1.3.1\AndroidManifest.xml:35:13-76
+120            android:directBootAware="false"
+120-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\karim\.gradle\caches\8.14\transforms\0dcd57c4a656c1fbe069dac37eaab491\transformed\profileinstaller-1.3.1\AndroidManifest.xml:36:13-44
+121            android:enabled="true"
+121-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\karim\.gradle\caches\8.14\transforms\0dcd57c4a656c1fbe069dac37eaab491\transformed\profileinstaller-1.3.1\AndroidManifest.xml:37:13-35
+122            android:exported="true"
+122-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\karim\.gradle\caches\8.14\transforms\0dcd57c4a656c1fbe069dac37eaab491\transformed\profileinstaller-1.3.1\AndroidManifest.xml:38:13-36
+123            android:permission="android.permission.DUMP" >
+123-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\karim\.gradle\caches\8.14\transforms\0dcd57c4a656c1fbe069dac37eaab491\transformed\profileinstaller-1.3.1\AndroidManifest.xml:39:13-57
+124            <intent-filter>
+124-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\karim\.gradle\caches\8.14\transforms\0dcd57c4a656c1fbe069dac37eaab491\transformed\profileinstaller-1.3.1\AndroidManifest.xml:40:13-42:29
+125                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
+125-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\karim\.gradle\caches\8.14\transforms\0dcd57c4a656c1fbe069dac37eaab491\transformed\profileinstaller-1.3.1\AndroidManifest.xml:41:17-91
+125-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\karim\.gradle\caches\8.14\transforms\0dcd57c4a656c1fbe069dac37eaab491\transformed\profileinstaller-1.3.1\AndroidManifest.xml:41:25-88
+126            </intent-filter>
+127            <intent-filter>
+127-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\karim\.gradle\caches\8.14\transforms\0dcd57c4a656c1fbe069dac37eaab491\transformed\profileinstaller-1.3.1\AndroidManifest.xml:43:13-45:29
+128                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
+128-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\karim\.gradle\caches\8.14\transforms\0dcd57c4a656c1fbe069dac37eaab491\transformed\profileinstaller-1.3.1\AndroidManifest.xml:44:17-85
+128-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\karim\.gradle\caches\8.14\transforms\0dcd57c4a656c1fbe069dac37eaab491\transformed\profileinstaller-1.3.1\AndroidManifest.xml:44:25-82
+129            </intent-filter>
+130            <intent-filter>
+130-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\karim\.gradle\caches\8.14\transforms\0dcd57c4a656c1fbe069dac37eaab491\transformed\profileinstaller-1.3.1\AndroidManifest.xml:46:13-48:29
+131                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
+131-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\karim\.gradle\caches\8.14\transforms\0dcd57c4a656c1fbe069dac37eaab491\transformed\profileinstaller-1.3.1\AndroidManifest.xml:47:17-88
+131-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\karim\.gradle\caches\8.14\transforms\0dcd57c4a656c1fbe069dac37eaab491\transformed\profileinstaller-1.3.1\AndroidManifest.xml:47:25-85
+132            </intent-filter>
+133            <intent-filter>
+133-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\karim\.gradle\caches\8.14\transforms\0dcd57c4a656c1fbe069dac37eaab491\transformed\profileinstaller-1.3.1\AndroidManifest.xml:49:13-51:29
+134                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
+134-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\karim\.gradle\caches\8.14\transforms\0dcd57c4a656c1fbe069dac37eaab491\transformed\profileinstaller-1.3.1\AndroidManifest.xml:50:17-95
+134-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\karim\.gradle\caches\8.14\transforms\0dcd57c4a656c1fbe069dac37eaab491\transformed\profileinstaller-1.3.1\AndroidManifest.xml:50:25-92
+135            </intent-filter>
+136        </receiver> <!-- The activities will be merged into the manifest of the hosting app. -->
+137        <activity
+137-->[com.google.android.play:core-common:2.0.3] C:\Users\karim\.gradle\caches\8.14\transforms\1849b55f1a73857dffe94c2d77516326\transformed\core-common-2.0.3\AndroidManifest.xml:14:9-18:65
+138            android:name="com.google.android.play.core.common.PlayCoreDialogWrapperActivity"
+138-->[com.google.android.play:core-common:2.0.3] C:\Users\karim\.gradle\caches\8.14\transforms\1849b55f1a73857dffe94c2d77516326\transformed\core-common-2.0.3\AndroidManifest.xml:15:13-93
+139            android:exported="false"
+139-->[com.google.android.play:core-common:2.0.3] C:\Users\karim\.gradle\caches\8.14\transforms\1849b55f1a73857dffe94c2d77516326\transformed\core-common-2.0.3\AndroidManifest.xml:16:13-37
+140            android:stateNotNeeded="true"
+140-->[com.google.android.play:core-common:2.0.3] C:\Users\karim\.gradle\caches\8.14\transforms\1849b55f1a73857dffe94c2d77516326\transformed\core-common-2.0.3\AndroidManifest.xml:17:13-42
+141            android:theme="@style/Theme.PlayCore.Transparent" />
+141-->[com.google.android.play:core-common:2.0.3] C:\Users\karim\.gradle\caches\8.14\transforms\1849b55f1a73857dffe94c2d77516326\transformed\core-common-2.0.3\AndroidManifest.xml:18:13-62
+142    </application>
+143
+144</manifest>

@@ -36,4 +36,5 @@ import { AdminEbooksComponent } from './admin-ebooks/admin-ebooks.component';
     ProductApprovalComponent
   ]
 })
+// Force rebuild
 export class AdminModule { }

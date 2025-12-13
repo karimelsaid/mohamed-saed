@@ -37,19 +37,40 @@ export class AuthService {
       body.referralCode = referralCode;
     }
     return this.http.post<User>(`${this.apiUrl}/users/google-signin`, body).pipe(
-      tap((user: User) => this.setUser(user))
+      tap((response: any) => {
+        const user = response.user || response;
+        // CRITICAL FIX: Merge token if present for Google Sign-In
+        const userWithToken = { ...user };
+        if (response.token) {
+          userWithToken.token = response.token;
+        } else if (response.accessToken) {
+          userWithToken.token = response.accessToken;
+        }
+        this.setUser(userWithToken);
+      })
     );
   }
 
   /** Traditional login */
   login(email: string, password: string): Observable<User> {
     return this.http.post<User>(`${this.apiUrl}/users/login`, { email, password }).pipe(
-      tap((user: User) => {
+      tap((response: any) => {
         localStorage.removeItem('referralCode');
         localStorage.removeItem('referralBookId');
         console.log('[Auth] User logged in. Cleared any existing referral data from localStorage.');
+
+        const user = response.user || response;
         console.log('🧠 المستخدم الراجع من السيرفر:', user);
-        this.setUser(user);
+
+        // CRITICAL FIX: Merge token if present
+        const userWithToken = { ...user };
+        if (response.token) {
+          userWithToken.token = response.token;
+        } else if (response.accessToken) {
+          userWithToken.token = response.accessToken;
+        }
+
+        this.setUser(userWithToken);
         this.loadUserData(user.id);
       })
     );
@@ -116,7 +137,14 @@ export class AuthService {
           localStorage.removeItem('referralBookId');
           console.log('[Auth] Account created. Cleared any existing referral data from localStorage.');
           console.log('🧠 تم إنشاء الحساب وتسجيل الدخول تلقائياً:', response.user);
-          this.setUser(response.user);
+
+          // CRITICAL FIX: Merge token into user object so AuthInterceptor can find it
+          const userWithToken = { ...response.user };
+          if (response.token) {
+            userWithToken.token = response.token;
+          }
+
+          this.setUser(userWithToken);
           this.loadUserData(response.user.id);
         }
       })

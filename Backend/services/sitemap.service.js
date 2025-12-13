@@ -65,62 +65,79 @@ class SitemapService extends EventEmitter {
     this.generateSitemap();
   }
 
-  generateSitemap() {
-    fs.readFile(this.outputJsonPath, 'utf8', (err, data) => {
-      if (err) {
-        console.error('Error reading output.json:', err);
-        return;
-      }
-      let books;
+  async generateSitemap() {
+    const maxRetries = 5;
+    const retryDelay = 2000;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        books = JSON.parse(data);
-      } catch (parseErr) {
-        console.error('Error parsing output.json:', parseErr);
-        return;
-      }
+        let data;
+        try {
+          data = await fs.promises.readFile(this.outputJsonPath, 'utf8');
+        } catch (readErr) {
+          // If file doesn't exist yet or is locked, throw to retry
+          throw new Error(`Read error: ${readErr.message}`);
+        }
 
-      // Base URL - domain only
-      const baseUrl = 'https://knoozbook.com/';
+        if (!data || data.trim().length === 0) {
+          throw new Error('File is empty');
+        }
 
-      // Generate sitemap XML content
-      const urls = books.map(book => {
-        const slug = slugify(book.product_name || '');
-        // Handle inconsistent product ID keys ('product_id' or 'products_id')
-        const productId = book.product_id || book.products_id;
-        // Get category route (dynamic based on product category)
-        const categoryRoute = getCategoryRoute(book.product_category);
-        // Construct the URL with the correct structure: /category-route/id/slug
-        const loc = `${baseUrl}${categoryRoute}/${productId}/${slug}`;
-        const lastmod = new Date().toISOString();
-        return `
+        let books;
+        try {
+          books = JSON.parse(data);
+        } catch (parseErr) {
+          throw new Error(`JSON parse error: ${parseErr.message}`);
+        }
+
+        if (!Array.isArray(books)) {
+          // If for some reason it's not an array (bad write), retry
+          throw new Error('Content is not a JSON array');
+        }
+
+        // Base URL - domain only
+        const baseUrl = 'https://knoozbook.com/';
+
+        // Generate sitemap XML content
+        const urls = books.map(book => {
+          const slug = slugify(book.product_name || '');
+          // Handle inconsistent product ID keys ('product_id' or 'products_id')
+          const productId = book.product_id || book.products_id;
+          // Get category route (dynamic based on product category)
+          const categoryRoute = getCategoryRoute(book.product_category);
+          // Construct the URL with the correct structure: /category-route/id/slug
+          const loc = `${baseUrl}${categoryRoute}/${productId}/${slug}`;
+          const lastmod = new Date().toISOString();
+          return `
   <url>
     <loc>${loc}</loc>
     <lastmod>${lastmod}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>`;
-      }).join('');
+        }).join('');
 
-      const sitemapContent = `<?xml version="1.0" encoding="UTF-8"?>
+        const sitemapContent = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls}
 </urlset>`;
 
-      // Ensure directory exists
-      fs.mkdir(path.dirname(this.sitemapPath), { recursive: true }, (mkdirErr) => {
-        if (mkdirErr) {
-          console.error('Error creating sitemap directory:', mkdirErr);
-          return;
-        }
+        // Ensure directory exists
+        await fs.promises.mkdir(path.dirname(this.sitemapPath), { recursive: true });
+
         // Write sitemap.xml
-        fs.writeFile(this.sitemapPath, sitemapContent, 'utf8', (writeErr) => {
-          if (writeErr) {
-            console.error('Error writing sitemap.xml:', writeErr);
-          } else {
-            console.log('✅ sitemap.xml generated successfully');
-          }
-        });
-      });
-    });
+        await fs.promises.writeFile(this.sitemapPath, sitemapContent, 'utf8');
+        console.log('✅ sitemap.xml generated successfully');
+        return; // Success, exit loop
+
+      } catch (error) {
+        console.warn(`⚠️ Attempt ${attempt}/${maxRetries} failed to generate sitemap: ${error.message}`);
+        if (attempt < maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, retryDelay));
+        } else {
+          console.error('❌ Failed to generate sitemap after multiple attempts.');
+        }
+      }
+    }
   }
 }
 

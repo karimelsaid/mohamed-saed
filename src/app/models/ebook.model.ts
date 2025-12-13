@@ -16,6 +16,9 @@ export interface Ebook {
     pages?: number;
     price: number;
     availableForSubscription: boolean;
+    // Client-side handling fields
+    accessType?: 'preview' | 'full' | 'owned'; // For offline rights management
+    isOwned?: boolean;
     status: 'active' | 'inactive' | 'pending';
     downloadCount: number;
     viewCount: number;

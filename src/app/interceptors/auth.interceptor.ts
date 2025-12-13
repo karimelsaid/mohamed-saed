@@ -10,7 +10,9 @@ export class AuthInterceptor implements HttpInterceptor {
         '/api/subscriptions',
         '/api/user-library',
         '/api/reading-progress',
-        '/api/ebooks'
+        '/api/reading-progress',
+        '/api/ebooks',
+        '/api/users' // CRITICAL FIX: Protect user routes to send token for profile load
     ];
 
     intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
@@ -25,7 +27,8 @@ export class AuthInterceptor implements HttpInterceptor {
                     const user = JSON.parse(userStr);
                     if (user && (user.token || user.accessToken)) {
                         return next.handle(req.clone({
-                            setHeaders: { Authorization: `Bearer ${user.token || user.accessToken}` }
+                            setHeaders: { Authorization: `Bearer ${user.token || user.accessToken}` },
+                            withCredentials: true
                         }));
                     }
                 } catch (e) {
@@ -37,7 +40,8 @@ export class AuthInterceptor implements HttpInterceptor {
             const merchantToken = localStorage.getItem('merchant_token');
             if (merchantToken) {
                 return next.handle(req.clone({
-                    setHeaders: { Authorization: `Bearer ${merchantToken}` }
+                    setHeaders: { Authorization: `Bearer ${merchantToken}` },
+                    withCredentials: true
                 }));
             }
         }

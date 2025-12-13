@@ -9,6 +9,7 @@ import { DataService } from './services/data.service';
 import { ModalService, ModalConfig } from './services/modal.service';
 import { TutorialService } from './services/tutorial.service';
 import { AppUpdateService } from './services/app-update.service'; // Import AppUpdateService
+import { StatusBar, Style } from '@capacitor/status-bar'; // Import StatusBar
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -52,6 +53,10 @@ export class AppComponent {
   initializeApp() {
     this.appUpdateService.checkForUpdate(); // Check for updates on startup
     if (Capacitor.isNativePlatform()) {
+      // Hide Status Bar (Full Screen Mode)
+      StatusBar.hide().catch(() => { });
+      StatusBar.setOverlaysWebView({ overlay: true }).catch(() => { });
+
       App.addListener('backButton', ({ canGoBack }: { canGoBack: boolean }) => {
         this.ngZone.run(() => {
           if (this.router.url === '/' || this.router.url === '/home') {

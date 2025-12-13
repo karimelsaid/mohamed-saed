@@ -2,6 +2,8 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject } from 'rxjs';
 
+import { environment } from '../../environments/environment';
+
 export interface Notification {
   _id: string;
   message: string;
@@ -15,12 +17,12 @@ export interface Notification {
   providedIn: 'root'
 })
 export class NotificationService {
-  private baseUrl = '/api/users'; // Adjust base URL as needed
+  private baseUrl = `${environment.apiBaseUrl}/users`; // Adjust base URL as needed
 
   private notificationsSubject = new BehaviorSubject<Notification[]>([]);
   notifications$ = this.notificationsSubject.asObservable();
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   getNotifications(userId: string): Observable<Notification[]> {
     return this.http.get<Notification[]>(`${this.baseUrl}/notifications/${userId}`);

@@ -2,23 +2,27 @@
   [ngClass]="showOnlyNotification ? 'flex items-center' : 'flex items-center justify-around w-full max-w-md mx-auto'">
 
   <!-- Favorites -->
-  <div *ngIf="!showOnlyNotification" routerLink="/Favorites" routerLinkActive="active-pill"
-    [routerLinkActiveOptions]="{exact:true}" class="nav-item-pill group" #favLink="routerLinkActive">
-    <fa-icon [icon]="faHeart" class="text-xl transition-colors"></fa-icon>
-    <span class="nav-label">المفضلة</span>
-    <span *ngIf="favoritesCount > 0"
-      class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center shadow-sm z-10">
+  <div class="relative flex items-center justify-center">
+    <div *ngIf="!showOnlyNotification" routerLink="/Favorites" routerLinkActive="active-pill"
+      [routerLinkActiveOptions]="{exact:true}" class="nav-item-pill group" #favLink="routerLinkActive">
+      <fa-icon [icon]="faHeart" class="text-xl transition-colors"></fa-icon>
+      <span class="nav-label">المفضلة</span>
+    </div>
+    <span *ngIf="favoritesCount > 0 && !showOnlyNotification"
+      class="badge-count absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-lg border-2 border-white dark:border-gray-900 z-50 pointer-events-none">
       {{ favoritesCount }}
     </span>
   </div>
 
   <!-- Cart -->
-  <div *ngIf="!showOnlyNotification" routerLink="/basket" routerLinkActive="active-pill"
-    [routerLinkActiveOptions]="{exact:true}" class="nav-item-pill group" #cartLink="routerLinkActive">
-    <fa-icon [icon]="faCartPlus" class="text-xl transition-colors"></fa-icon>
-    <span class="nav-label">السلة</span>
-    <span *ngIf="cartCount > 0"
-      class="absolute -top-1 -right-1 bg-blue-600 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center shadow-sm z-10">
+  <div class="relative flex items-center justify-center">
+    <div *ngIf="!showOnlyNotification" routerLink="/basket" routerLinkActive="active-pill"
+      [routerLinkActiveOptions]="{exact:true}" class="nav-item-pill group" #cartLink="routerLinkActive">
+      <fa-icon [icon]="faCartPlus" class="text-xl transition-colors"></fa-icon>
+      <span class="nav-label">السلة</span>
+    </div>
+    <span *ngIf="cartCount > 0 && !showOnlyNotification"
+      class="badge-count absolute -top-1 -right-1 bg-blue-600 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-lg border-2 border-white dark:border-gray-900 z-50 pointer-events-none">
       {{ cartCount }}
     </span>
   </div>
@@ -31,24 +35,29 @@
   </div>
 
   <!-- Library -->
-  <div *ngIf="!showOnlyNotification" routerLink="/library" routerLinkActive="active-pill"
-    [routerLinkActiveOptions]="{exact:true}" class="nav-item-pill group" #libraryLink="routerLinkActive">
-    <fa-icon [icon]="faBookReader" class="text-xl"></fa-icon>
-    <span class="nav-label">المكتبة</span>
+  <div class="relative flex items-center justify-center">
+    <div *ngIf="!showOnlyNotification" routerLink="/library" routerLinkActive="active-pill"
+      [routerLinkActiveOptions]="{exact:true}" class="nav-item-pill group" #libraryLink="routerLinkActive">
+      <fa-icon [icon]="faBookReader" class="text-xl"></fa-icon>
+      <span class="nav-label">المكتبة</span>
+    </div>
+    <span *ngIf="!showOnlyNotification"
+      class="absolute -top-3 left-1/2 -translate-x-1/2 text-blue-600 dark:text-blue-400 text-[9px] font-extrabold z-50 pointer-events-none tracking-tighter whitespace-nowrap">
+      جديد
+    </span>
   </div>
 
   <!-- Notifications -->
-  <!-- Notifications Wrapper -->
   <div class="relative">
     <div (click)="toggleNotificationsDropdown()" class="nav-item-pill group"
       [ngClass]="{'active-pill': showNotificationsDropdown}">
       <fa-icon [icon]="faBell" class="text-xl transition-colors"></fa-icon>
       <span class="nav-label">الإشعارات</span>
-      <span *ngIf="unreadCount > 0"
-        class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center shadow-sm z-10">
-        {{ unreadCount }}
-      </span>
     </div>
+    <span *ngIf="unreadCount > 0"
+      class="badge-count absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-lg border-2 border-white dark:border-gray-900 z-50 pointer-events-none">
+      {{ unreadCount }}
+    </span>
 
     <!-- Notifications Dropdown (Sibling) -->
     <div *ngIf="showNotificationsDropdown"
@@ -105,12 +114,14 @@
   </div>
 
   <!-- Orders -->
-  <div *ngIf="!showOnlyNotification" routerLink="/requests" routerLinkActive="active-pill" class="nav-item-pill group"
-    [ngClass]="{'active-pill': isOrdersActive}">
-    <fa-icon [icon]="faClipboardList" class="text-xl transition-colors"></fa-icon>
-    <span class="nav-label">طلباتي</span>
-    <span *ngIf="orderCount > 0"
-      class="absolute -top-1 -right-1 bg-blue-600 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center shadow-sm z-10">
+  <div class="relative flex items-center justify-center">
+    <div *ngIf="!showOnlyNotification" routerLink="/requests" routerLinkActive="active-pill" class="nav-item-pill group"
+      [ngClass]="{'active-pill': isOrdersActive}">
+      <fa-icon [icon]="faClipboardList" class="text-xl transition-colors"></fa-icon>
+      <span class="nav-label">طلباتي</span>
+    </div>
+    <span *ngIf="orderCount > 0 && !showOnlyNotification"
+      class="badge-count absolute -top-1 -right-1 bg-blue-600 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-lg border-2 border-white dark:border-gray-900 z-50 pointer-events-none">
       {{ orderCount }}
     </span>
   </div>

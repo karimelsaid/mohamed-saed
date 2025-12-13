@@ -10,143 +10,120 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="20921426-b429-47a3-a7f4-6eb8d5c1262b" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/../Backend/controllers/ebook.controller.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../Backend/controllers/reading-progress.controller.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../Backend/controllers/subscription.controller.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../Backend/controllers/user-library.controller.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../Backend/dist/browser/chunk-A5BXBNTT.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../Backend/dist/browser/chunk-KBDQSIIQ.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../Backend/dist/browser/chunk-KUPFC7CX.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../Backend/dist/browser/chunk-LDQBRNEM.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../Backend/dist/browser/chunk-MFFLFG5Q.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../Backend/dist/browser/chunk-VIO523FK.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../Backend/dist/browser/chunk-ZGALIXEC.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../Backend/dist/browser/ebook.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../Backend/dist/browser/pgbook1.jpeg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../Backend/dist/browser/pgbook2.jpeg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../Backend/dist/browser/pgbook3.jpeg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../Backend/dist/browser/pgbook4.jpeg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../Backend/dist/browser/styles-WGPZPYKH.css" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../Backend/ebook-mappings.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../Backend/manual-update.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../Backend/middleware/admin.middleware.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../Backend/middleware/auth.middleware.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../Backend/models/Ebook.model.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../Backend/models/ReadingProgress.model.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../Backend/models/Subscription.model.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../Backend/models/UserLibrary.model.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../Backend/routes/ebooks.routes.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../Backend/routes/reading-progress.routes.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../Backend/routes/subscriptions.routes.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../Backend/routes/user-library.routes.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../Backend/scripts/delete-test-ebooks.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../Backend/scripts/fix-ebook-paths.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../Backend/scripts/seed-ebooks-module.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../Backend/scripts/seed-ebooks.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../Backend/services/epub.service.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../Backend/uploads/books/admin__karim_mohamed__/008292518999/008292518999.webp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../Backend/uploads/books/admin__karim_mohamed__/264637350056/264637350056.webp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../Backend/uploads/books/admin__karim_mohamed__/590318214602/590318214602.webp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../Backend/uploads/ebooks/ارض_زيكولا_6933c2f9ef5e436e2abe6851.webp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../Backend/uploads/ebooks/اماريتا_6933c32bef5e436e2abe68cf.webp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../Backend/uploads/ebooks/رسائل_من_القرآن_6934382bfb904e1e203b12e9.epub" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../Backend/uploads/ebooks/رسائل_من_القرآن_6934382bfb904e1e203b12e9.webp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../Backend/uploads/ebooks/رسائل_من_القرآن_6934382bfb904e1e203b12e9_mini.epub" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../Backend/uploads/ebooks/رسائل_من_القرآن_693469c0204bab7b5ec6629a.webp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../Backend/uploads/ebooks/رسائل_من_القرآن_6934b0cb3e543cf2bf9c6f75.epub" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../Backend/uploads/ebooks/رسائل_من_القرآن_6934b0cb3e543cf2bf9c6f75.webp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../Backend/uploads/ebooks/رسائل_من_القرآن_6934b0cb3e543cf2bf9c6f75_mini.epub" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/google-services.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/src/main/res/playstore-icon.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../public/ebook.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../public/pgbook1.jpeg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../public/pgbook2.jpeg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../public/pgbook3.jpeg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../public/pgbook4.jpeg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../src/app/admin/admin-ebooks/admin-ebooks.component.css" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../src/app/admin/admin-ebooks/admin-ebooks.component.html" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../src/app/admin/admin-ebooks/admin-ebooks.component.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../src/app/checkout-modal/order-callback/order-callback.component.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../src/app/epub-reader/epub-reader.component.css" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../src/app/epub-reader/epub-reader.component.html" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../src/app/epub-reader/epub-reader.component.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../src/app/interceptors/auth.interceptor.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../src/app/library/library.component.css" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../src/app/library/library.component.html" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../src/app/library/library.component.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../src/app/models/ebook.model.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../src/app/payment-modal/payment-modal.component.css" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../src/app/payment-modal/payment-modal.component.html" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../src/app/payment-modal/payment-modal.component.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../src/app/services/app-update.service.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../src/app/services/ebook.service.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../src/app/services/reading-progress.service.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../src/app/services/subscription.service.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../src/app/services/user-library.service.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../src/app/subscription/subscription-callback/subscription-callback.component.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../src/app/subscription/subscription.component.css" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../src/app/subscription/subscription.component.html" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../src/app/subscription/subscription.component.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../Backend/chat-ai.controller.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../Backend/dist/browser/assets/libarchive/build/compiled/archive-reader.d.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../Backend/dist/browser/assets/libarchive/build/compiled/compressed-file.d.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../Backend/dist/browser/assets/libarchive/build/compiled/formats.d.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../Backend/dist/browser/assets/libarchive/build/compiled/libarchive-browser.d.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../Backend/dist/browser/assets/libarchive/build/compiled/libarchive-node.d.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../Backend/dist/browser/assets/libarchive/build/compiled/libarchive.d.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../Backend/dist/browser/assets/libarchive/build/compiled/utils.d.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../Backend/dist/browser/assets/libarchive/libarchive-node.mjs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../Backend/dist/browser/assets/libarchive/libarchive.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../Backend/dist/browser/assets/libarchive/libarchive.wasm" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../Backend/dist/browser/assets/libarchive/worker-bundle-node.mjs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../Backend/dist/browser/assets/libarchive/worker-bundle.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../Backend/dist/browser/chunk-4MA57T7V.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../Backend/dist/browser/chunk-DRIHYRP3.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../Backend/dist/browser/chunk-LJQ2U7WQ.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../Backend/dist/browser/chunk-NGBVDT4W.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../Backend/dist/browser/chunk-PB57JY3W.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../Backend/dist/browser/chunk-PT6ZIQPZ.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../Backend/dist/browser/chunk-V5PETQO5.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../Backend/dist/browser/json/bok.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../Backend/dist/browser/styles-25H536D4.css" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../Backend/models/MobileVersion.model.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../Backend/routes/version.routes.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../Backend/uploads/ebooks/اماريتا_6939c3114bba0dd5b4a2ee56.epub" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../public/assets/libarchive/libarchive.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../public/assets/libarchive/libarchive.wasm" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../public/assets/libarchive/worker-bundle.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../public/json/bok.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../src/app/components/circular-progress/circular-progress.component.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../src/app/downloads/downloads.component.css" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../src/app/downloads/downloads.component.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../src/app/downloads/downloads.component.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../src/app/guards/admin-auth.guard.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../src/app/services/download-manager.service.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../src/app/services/external-library.service.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../Backend/app.js" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/app.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../Backend/controllers/admin.controller.js" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/controllers/admin.controller.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Backend/controllers/payment.controller.js" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/controllers/payment.controller.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Backend/controllers/users.controller.js" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/controllers/users.controller.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Backend/controllers/chat-ai.controller.js" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/controllers/chat-ai.controller.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Backend/controllers/ebook.controller.js" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/controllers/ebook.controller.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Backend/controllers/subscription.controller.js" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/controllers/subscription.controller.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../Backend/dist/3rdpartylicenses.txt" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/dist/3rdpartylicenses.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Backend/dist/browser/chunk-HDMODWHT.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Backend/dist/browser/chunk-VTSET2GV.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Backend/dist/browser/chunk-A5BXBNTT.js" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/dist/browser/chunk-DWERUPJG.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Backend/dist/browser/chunk-LDQBRNEM.js" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/dist/browser/chunk-3SXMO7VE.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Backend/dist/browser/chunk-ZGALIXEC.js" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/../Backend/dist/browser/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/dist/browser/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Backend/dist/browser/main-RETRCSDD.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Backend/dist/browser/robots.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Backend/dist/browser/sitemap.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Backend/dist/browser/styles-YTAGOH3D.css" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Backend/models/Product.model.js" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/models/Product.model.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Backend/models/User.model.js" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/models/User.model.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Backend/dist/browser/json/books_list.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Backend/dist/browser/main-GLBKJX25.js" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/dist/browser/main-MHVCIR7D.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Backend/dist/browser/styles-WGPZPYKH.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Backend/ebook-mappings.json" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/ebook-mappings.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Backend/models/ReadingProgress.model.js" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/models/ReadingProgress.model.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Backend/node_modules/.package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/node_modules/.package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Backend/node_modules/iconv-lite/.github/dependabot.yml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Backend/node_modules/iconv-lite/Changelog.md" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/node_modules/iconv-lite/Changelog.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Backend/node_modules/iconv-lite/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/node_modules/iconv-lite/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Backend/node_modules/iconv-lite/encodings/dbcs-codec.js" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/node_modules/iconv-lite/encodings/dbcs-codec.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Backend/node_modules/iconv-lite/encodings/dbcs-data.js" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/node_modules/iconv-lite/encodings/dbcs-data.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Backend/node_modules/iconv-lite/encodings/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/node_modules/iconv-lite/encodings/index.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Backend/node_modules/iconv-lite/encodings/internal.js" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/node_modules/iconv-lite/encodings/internal.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Backend/node_modules/iconv-lite/encodings/sbcs-codec.js" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/node_modules/iconv-lite/encodings/sbcs-codec.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Backend/node_modules/iconv-lite/encodings/sbcs-data.js" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/node_modules/iconv-lite/encodings/sbcs-data.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Backend/node_modules/iconv-lite/encodings/utf16.js" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/node_modules/iconv-lite/encodings/utf16.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Backend/node_modules/iconv-lite/encodings/utf32.js" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/node_modules/iconv-lite/encodings/utf32.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Backend/node_modules/iconv-lite/encodings/utf7.js" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/node_modules/iconv-lite/encodings/utf7.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Backend/node_modules/iconv-lite/lib/bom-handling.js" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/node_modules/iconv-lite/lib/bom-handling.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Backend/node_modules/iconv-lite/lib/index.d.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/node_modules/iconv-lite/lib/index.d.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Backend/node_modules/iconv-lite/lib/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/node_modules/iconv-lite/lib/index.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Backend/node_modules/iconv-lite/lib/streams.js" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/node_modules/iconv-lite/lib/streams.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Backend/node_modules/iconv-lite/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/node_modules/iconv-lite/package.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../Backend/output.json" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/output.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Backend/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/package-lock.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../Backend/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Backend/routes/admin.routes.js" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/routes/admin.routes.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Backend/routes/payment.routes.js" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/routes/payment.routes.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Backend/services/excel.service.js" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/services/excel.service.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Backend/routes/ebooks.routes.js" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/routes/ebooks.routes.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Backend/routes/subscriptions.routes.js" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/routes/subscriptions.routes.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Backend/services/sitemap.service.js" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/services/sitemap.service.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Backend/uploads/ebooks/ارض_زيكولا_6933c2f9ef5e436e2abe6851.webp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Backend/uploads/ebooks/اماريتا_6933c32bef5e436e2abe68cf.webp" beforeDir="false" afterPath="$PROJECT_DIR$/../Backend/uploads/ebooks/اماريتا_6939c3114bba0dd5b4a2ee56.webp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Backend/uploads/ebooks/رسائل_من_القرآن_6934382bfb904e1e203b12e9.epub" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Backend/uploads/ebooks/رسائل_من_القرآن_6934382bfb904e1e203b12e9.webp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Backend/uploads/ebooks/رسائل_من_القرآن_6934382bfb904e1e203b12e9_mini.epub" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Backend/uploads/ebooks/رسائل_من_القرآن_693469c0204bab7b5ec6629a.webp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Backend/uploads/ebooks/رسائل_من_القرآن_6934b0cb3e543cf2bf9c6f75.epub" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Backend/uploads/ebooks/رسائل_من_القرآن_6934b0cb3e543cf2bf9c6f75.webp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Backend/uploads/ebooks/رسائل_من_القرآن_6934b0cb3e543cf2bf9c6f75_mini.epub" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/.gradle/buildOutputCleanup/buildOutputCleanup.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/buildOutputCleanup/buildOutputCleanup.lock" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gradle/buildOutputCleanup/outputFiles.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/buildOutputCleanup/outputFiles.bin" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gradle/file-system.probe" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/file-system.probe" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/gradle.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/gradle.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/app/build.gradle" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/.npmkeep" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/app/build/intermediates/apk/debug/app-debug.apk" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/apk/debug/app-debug.apk" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/build/intermediates/apk/debug/output-metadata.json" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/apk/debug/output-metadata.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/assets/debug/mergeDebugAssets/capacitor.config.json" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/assets/debug/mergeDebugAssets/capacitor.config.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/build/intermediates/assets/debug/mergeDebugAssets/capacitor.plugins.json" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/assets/debug/mergeDebugAssets/capacitor.plugins.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/build/intermediates/compile_and_runtime_not_namespaced_r_class_jar/debug/processDebugResources/R.jar" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/compile_and_runtime_not_namespaced_r_class_jar/debug/processDebugResources/R.jar" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/compressed_assets/debug/compressDebugAssets/out/assets/capacitor.config.json.jar" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/compressed_assets/debug/compressDebugAssets/out/assets/capacitor.config.json.jar" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/build/intermediates/compressed_assets/debug/compressDebugAssets/out/assets/capacitor.plugins.json.jar" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/compressed_assets/debug/compressDebugAssets/out/assets/capacitor.plugins.json.jar" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/build/intermediates/dex/debug/mergeExtDexDebug/classes.dex" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/dex/debug/mergeExtDexDebug/classes.dex" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/build/intermediates/dex/debug/mergeProjectDexDebug/0/classes.dex" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/dex/debug/mergeProjectDexDebug/0/classes.dex" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/build/intermediates/dex_archive_input_jar_hashes/debug/dexBuilderDebug/out" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/dex_archive_input_jar_hashes/debug/dexBuilderDebug/out" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/build/intermediates/incremental/debug-mergeJavaRes/merge-state" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/incremental/debug-mergeJavaRes/merge-state" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/build/intermediates/incremental/debug/mergeDebugResources/compile-file-map.properties" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/incremental/debug/mergeDebugResources/compile-file-map.properties" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/build/intermediates/incremental/debug/mergeDebugResources/merger.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/incremental/debug/mergeDebugResources/merger.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/incremental/debug/packageDebugResources/compile-file-map.properties" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/incremental/debug/packageDebugResources/compile-file-map.properties" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/incremental/debug/packageDebugResources/merger.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/incremental/debug/packageDebugResources/merger.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/build/intermediates/incremental/mergeDebugAssets/merger.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/incremental/mergeDebugAssets/merger.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/build/intermediates/incremental/packageDebug/tmp/debug/dex-renamer-state.txt" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/incremental/packageDebug/tmp/debug/dex-renamer-state.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/build/intermediates/incremental/packageDebug/tmp/debug/zip-cache/androidResources" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/incremental/packageDebug/tmp/debug/zip-cache/androidResources" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/build/intermediates/incremental/packageDebug/tmp/debug/zip-cache/javaResources0" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/incremental/packageDebug/tmp/debug/zip-cache/javaResources0" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/build/intermediates/linked_resources_binary_format/debug/processDebugResources/linked-resources-binary-format-debug.ap_" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/linked_resources_binary_format/debug/processDebugResources/linked-resources-binary-format-debug.ap_" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/build/intermediates/linked_resources_binary_format/debug/processDebugResources/output-metadata.json" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/linked_resources_binary_format/debug/processDebugResources/output-metadata.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/local_only_symbol_list/debug/parseDebugLocalResources/R-def.txt" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/local_only_symbol_list/debug/parseDebugLocalResources/R-def.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/build/intermediates/manifest_merge_blame_file/debug/processDebugMainManifest/manifest-merger-blame-debug-report.txt" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/manifest_merge_blame_file/debug/processDebugMainManifest/manifest-merger-blame-debug-report.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/build/intermediates/merged_java_res/debug/mergeDebugJavaResource/base.jar" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/merged_java_res/debug/mergeDebugJavaResource/base.jar" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/build/intermediates/merged_manifest/debug/processDebugMainManifest/AndroidManifest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/merged_manifest/debug/processDebugMainManifest/AndroidManifest.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/build/intermediates/merged_manifests/debug/processDebugManifest/AndroidManifest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/merged_manifests/debug/processDebugManifest/AndroidManifest.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/build/intermediates/merged_manifests/debug/processDebugManifest/output-metadata.json" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/merged_manifests/debug/processDebugManifest/output-metadata.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/merged_res/debug/mergeDebugResources/drawable-land-hdpi_splash.png.flat" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/merged_res/debug/mergeDebugResources/drawable-land-mdpi_splash.png.flat" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/merged_res/debug/mergeDebugResources/drawable-land-xhdpi_splash.png.flat" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/merged_res/debug/mergeDebugResources/drawable-land-xxhdpi_splash.png.flat" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/merged_res/debug/mergeDebugResources/drawable-land-xxxhdpi_splash.png.flat" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/merged_res/debug/mergeDebugResources/drawable-port-hdpi_splash.png.flat" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/merged_res/debug/mergeDebugResources/drawable-port-mdpi_splash.png.flat" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/merged_res/debug/mergeDebugResources/drawable-port-xhdpi_splash.png.flat" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/merged_res/debug/mergeDebugResources/drawable-port-xxhdpi_splash.png.flat" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/merged_res/debug/mergeDebugResources/drawable-port-xxxhdpi_splash.png.flat" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/build/intermediates/merged_res/debug/mergeDebugResources/drawable-anydpi-v24_ic_launcher_foreground.xml.flat" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/merged_res/debug/mergeDebugResources/drawable-anydpi-v24_ic_launcher_foreground.xml.flat" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/build/intermediates/merged_res/debug/mergeDebugResources/drawable_ic_launcher_background.xml.flat" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/merged_res/debug/mergeDebugResources/drawable_ic_launcher_background.xml.flat" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/merged_res/debug/mergeDebugResources/drawable_splash.png.flat" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/app/build/intermediates/merged_res/debug/mergeDebugResources/layout_activity_main.xml.flat" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/merged_res/debug/mergeDebugResources/layout_activity_main.xml.flat" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/build/intermediates/merged_res/debug/mergeDebugResources/mipmap-anydpi-v26_ic_launcher.xml.flat" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/merged_res/debug/mergeDebugResources/mipmap-anydpi-v26_ic_launcher.xml.flat" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/build/intermediates/merged_res/debug/mergeDebugResources/mipmap-anydpi-v26_ic_launcher_round.xml.flat" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/merged_res/debug/mergeDebugResources/mipmap-anydpi-v26_ic_launcher_round.xml.flat" afterDir="false" />
@@ -391,112 +368,65 @@
       <change beforePath="$PROJECT_DIR$/app/build/intermediates/merged_res_blame_folder/debug/mergeDebugResources/out/single/mergeDebugResources.json" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/merged_res_blame_folder/debug/mergeDebugResources/out/single/mergeDebugResources.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/build/intermediates/packaged_manifests/debug/processDebugManifestForPackage/AndroidManifest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/packaged_manifests/debug/processDebugManifestForPackage/AndroidManifest.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/build/intermediates/packaged_manifests/debug/processDebugManifestForPackage/output-metadata.json" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/packaged_manifests/debug/processDebugManifestForPackage/output-metadata.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/packaged_res/debug/packageDebugResources/drawable-land-hdpi-v4/splash.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/packaged_res/debug/packageDebugResources/drawable-land-mdpi-v4/splash.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/packaged_res/debug/packageDebugResources/drawable-land-xhdpi-v4/splash.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/packaged_res/debug/packageDebugResources/drawable-land-xxhdpi-v4/splash.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/packaged_res/debug/packageDebugResources/drawable-land-xxxhdpi-v4/splash.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/packaged_res/debug/packageDebugResources/drawable-port-hdpi-v4/splash.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/packaged_res/debug/packageDebugResources/drawable-port-mdpi-v4/splash.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/packaged_res/debug/packageDebugResources/drawable-port-xhdpi-v4/splash.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/packaged_res/debug/packageDebugResources/drawable-port-xxhdpi-v4/splash.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/packaged_res/debug/packageDebugResources/drawable-port-xxxhdpi-v4/splash.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/packaged_res/debug/packageDebugResources/drawable/ic_launcher_background.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/packaged_res/debug/packageDebugResources/drawable/ic_launcher_background.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/packaged_res/debug/packageDebugResources/drawable/splash.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/packaged_res/debug/packageDebugResources/mipmap-anydpi-v26/ic_launcher.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/packaged_res/debug/packageDebugResources/mipmap-anydpi-v26/ic_launcher.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/packaged_res/debug/packageDebugResources/mipmap-anydpi-v26/ic_launcher_round.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/packaged_res/debug/packageDebugResources/mipmap-anydpi-v26/ic_launcher_round.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/packaged_res/debug/packageDebugResources/mipmap-hdpi-v4/ic_launcher.png" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/packaged_res/debug/packageDebugResources/mipmap-hdpi-v4/ic_launcher.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/packaged_res/debug/packageDebugResources/mipmap-hdpi-v4/ic_launcher_foreground.png" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/packaged_res/debug/packageDebugResources/mipmap-hdpi-v4/ic_launcher_foreground.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/packaged_res/debug/packageDebugResources/mipmap-hdpi-v4/ic_launcher_round.png" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/packaged_res/debug/packageDebugResources/mipmap-hdpi-v4/ic_launcher_round.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/packaged_res/debug/packageDebugResources/mipmap-mdpi-v4/ic_launcher.png" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/packaged_res/debug/packageDebugResources/mipmap-mdpi-v4/ic_launcher.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/packaged_res/debug/packageDebugResources/mipmap-mdpi-v4/ic_launcher_foreground.png" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/packaged_res/debug/packageDebugResources/mipmap-mdpi-v4/ic_launcher_foreground.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/packaged_res/debug/packageDebugResources/mipmap-mdpi-v4/ic_launcher_round.png" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/packaged_res/debug/packageDebugResources/mipmap-mdpi-v4/ic_launcher_round.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/packaged_res/debug/packageDebugResources/mipmap-xhdpi-v4/ic_launcher.png" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/packaged_res/debug/packageDebugResources/mipmap-xhdpi-v4/ic_launcher.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/packaged_res/debug/packageDebugResources/mipmap-xhdpi-v4/ic_launcher_foreground.png" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/packaged_res/debug/packageDebugResources/mipmap-xhdpi-v4/ic_launcher_foreground.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/packaged_res/debug/packageDebugResources/mipmap-xhdpi-v4/ic_launcher_round.png" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/packaged_res/debug/packageDebugResources/mipmap-xhdpi-v4/ic_launcher_round.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/packaged_res/debug/packageDebugResources/mipmap-xxhdpi-v4/ic_launcher.png" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/packaged_res/debug/packageDebugResources/mipmap-xxhdpi-v4/ic_launcher.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/packaged_res/debug/packageDebugResources/mipmap-xxhdpi-v4/ic_launcher_foreground.png" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/packaged_res/debug/packageDebugResources/mipmap-xxhdpi-v4/ic_launcher_foreground.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/packaged_res/debug/packageDebugResources/mipmap-xxhdpi-v4/ic_launcher_round.png" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/packaged_res/debug/packageDebugResources/mipmap-xxhdpi-v4/ic_launcher_round.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/packaged_res/debug/packageDebugResources/mipmap-xxxhdpi-v4/ic_launcher.png" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/packaged_res/debug/packageDebugResources/mipmap-xxxhdpi-v4/ic_launcher.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/packaged_res/debug/packageDebugResources/mipmap-xxxhdpi-v4/ic_launcher_foreground.png" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/packaged_res/debug/packageDebugResources/mipmap-xxxhdpi-v4/ic_launcher_foreground.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/packaged_res/debug/packageDebugResources/mipmap-xxxhdpi-v4/ic_launcher_round.png" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/packaged_res/debug/packageDebugResources/mipmap-xxxhdpi-v4/ic_launcher_round.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build/intermediates/packaged_res/debug/packageDebugResources/values/values.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/packaged_res/debug/packageDebugResources/values/values.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/build/intermediates/runtime_symbol_list/debug/processDebugResources/R.txt" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/runtime_symbol_list/debug/processDebugResources/R.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/build/intermediates/source_set_path_map/debug/mapDebugSourceSetPaths/file-map.txt" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/source_set_path_map/debug/mapDebugSourceSetPaths/file-map.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/build/intermediates/stable_resource_ids_file/debug/processDebugResources/stableIds.txt" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/stable_resource_ids_file/debug/processDebugResources/stableIds.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/build/intermediates/symbol_list_with_package_name/debug/processDebugResources/package-aware-r.txt" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/intermediates/symbol_list_with_package_name/debug/processDebugResources/package-aware-r.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/build/outputs/logs/manifest-merger-debug-report.txt" beforeDir="false" afterPath="$PROJECT_DIR$/app/build/outputs/logs/manifest-merger-debug-report.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/capacitor.build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/app/capacitor.build.gradle" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/assets/capacitor.config.json" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/capacitor.config.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/assets/capacitor.plugins.json" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/assets/capacitor.plugins.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable-land-hdpi/splash.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable-land-mdpi/splash.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable-land-xhdpi/splash.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable-land-xxhdpi/splash.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable-land-xxxhdpi/splash.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable-port-hdpi/splash.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable-port-mdpi/splash.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable-port-xhdpi/splash.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable-port-xxhdpi/splash.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable-port-xxxhdpi/splash.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/ic_launcher_background.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/drawable/ic_launcher_background.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/drawable/splash.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/mipmap-hdpi/ic_launcher.png" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/mipmap-hdpi/ic_launcher.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/mipmap-hdpi/ic_launcher_foreground.png" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/mipmap-hdpi/ic_launcher_foreground.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/mipmap-hdpi/ic_launcher_round.png" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/mipmap-hdpi/ic_launcher_round.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/mipmap-mdpi/ic_launcher.png" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/mipmap-mdpi/ic_launcher.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/mipmap-mdpi/ic_launcher_foreground.png" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/mipmap-mdpi/ic_launcher_foreground.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/mipmap-mdpi/ic_launcher_round.png" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/mipmap-mdpi/ic_launcher_round.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/mipmap-xhdpi/ic_launcher.png" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/mipmap-xhdpi/ic_launcher.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/mipmap-xhdpi/ic_launcher_foreground.png" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/mipmap-xhdpi/ic_launcher_foreground.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/mipmap-xxhdpi/ic_launcher.png" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/mipmap-xxhdpi/ic_launcher.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/mipmap-xxhdpi/ic_launcher_foreground.png" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/mipmap-xxhdpi/ic_launcher_foreground.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.png" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/values/strings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/values/strings.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/res/values/styles.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/values/styles.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/build/reports/problems/problems-report.html" beforeDir="false" afterPath="$PROJECT_DIR$/build/reports/problems/problems-report.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/capacitor.settings.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/capacitor.settings.gradle" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../angular.json" beforeDir="false" afterPath="$PROJECT_DIR$/../angular.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../capacitor.config.json" beforeDir="false" afterPath="$PROJECT_DIR$/../capacitor.config.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/../package-lock.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../package.json" beforeDir="false" afterPath="$PROJECT_DIR$/../package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../proxy.conf.json" beforeDir="false" afterPath="$PROJECT_DIR$/../proxy.conf.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../public/json/books_list.json" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/../src/app/admin/admin-dashboard/admin-dashboard.component.html" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/admin/admin-dashboard/admin-dashboard.component.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../src/app/admin/admin-dashboard/admin-dashboard.component.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/admin/admin-dashboard/admin-dashboard.component.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../src/app/admin/admin-ebooks/admin-ebooks.component.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/admin/admin-ebooks/admin-ebooks.component.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../src/app/admin/admin.module.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/admin/admin.module.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../src/app/app-routing.module.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/app-routing.module.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../src/app/app.component.html" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/app.component.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../src/app/app.component.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/app.component.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../src/app/app.module.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/app.module.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../src/app/auth/auth.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/auth/auth.service.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../src/app/auth/login/login.component.html" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/auth/login/login.component.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../src/app/auth/login/login.component.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/auth/login/login.component.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../src/app/auth/register/register.component.html" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/auth/register/register.component.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../src/app/auth/register/register.component.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/auth/register/register.component.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../src/app/checkout-modal/checkout-modal.component.html" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/checkout-modal/checkout-modal.component.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../src/app/checkout-modal/checkout-modal.component.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/checkout-modal/checkout-modal.component.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../src/app/home-page/home-page.component.css" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/home-page/home-page.component.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../src/app/components/chat-window/chat-window.component.css" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/components/chat-window/chat-window.component.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../src/app/components/chat-window/chat-window.component.html" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/components/chat-window/chat-window.component.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../src/app/components/chat-window/chat-window.component.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/components/chat-window/chat-window.component.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../src/app/epub-reader/epub-reader.component.css" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/epub-reader/epub-reader.component.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../src/app/epub-reader/epub-reader.component.html" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/epub-reader/epub-reader.component.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../src/app/epub-reader/epub-reader.component.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/epub-reader/epub-reader.component.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../src/app/home-page/home-page.component.html" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/home-page/home-page.component.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../src/app/home-page/home-page.component.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/home-page/home-page.component.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../src/app/interceptors/admin-auth.interceptor.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/interceptors/admin-auth.interceptor.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../src/app/interceptors/auth.interceptor.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/interceptors/auth.interceptor.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../src/app/interceptors/merchant-auth.interceptor.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/interceptors/merchant-auth.interceptor.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../src/app/navbar-icons/navbar-icons.component.css" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/navbar-icons/navbar-icons.component.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../src/app/library/library.component.css" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/library/library.component.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../src/app/library/library.component.html" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/library/library.component.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../src/app/library/library.component.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/library/library.component.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../src/app/merchant/dashboard/dashboard.component.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/merchant/dashboard/dashboard.component.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../src/app/models/ebook.model.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/models/ebook.model.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../src/app/navbar-icons/navbar-icons.component.html" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/navbar-icons/navbar-icons.component.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../src/app/navbar-icons/navbar-icons.component.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/navbar-icons/navbar-icons.component.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../src/app/navbar/navbar.component.html" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/navbar/navbar.component.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../src/app/navbar/navbar.component.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/navbar/navbar.component.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../src/app/services/payment.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/services/payment.service.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../src/app/user-orders/user-orders.component.html" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/user-orders/user-orders.component.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../src/app/user-orders/user-orders.component.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/user-orders/user-orders.component.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../src/environments/environment.prod.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../src/environments/environment.prod.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../src/app/services/app-update.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/services/app-update.service.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../src/app/services/ebook.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/services/ebook.service.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../src/app/services/free-shipping.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/services/free-shipping.service.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../src/app/services/notification.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/services/notification.service.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../src/app/services/offline-ebook.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/services/offline-ebook.service.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../src/app/services/reading-progress.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/services/reading-progress.service.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../src/app/services/subscription.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/services/subscription.service.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../src/app/services/tutorial.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/services/tutorial.service.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../src/app/services/user-library.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/services/user-library.service.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../src/app/shared/tutorial/tutorial.component.css" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/shared/tutorial/tutorial.component.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../src/app/shared/tutorial/tutorial.component.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/shared/tutorial/tutorial.component.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../src/app/subscription/subscription.component.html" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/subscription/subscription.component.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../src/app/subscription/subscription.component.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../src/app/subscription/subscription.component.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../src/environments/environment.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../src/environments/environment.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../src/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/../src/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../src/styles.css" beforeDir="false" afterPath="$PROJECT_DIR$/../src/styles.css" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

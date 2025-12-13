@@ -35,11 +35,12 @@ const verifyToken = require('../middleware/auth.middleware');
 // Public routes
 router.get('/', ebookController.getAllEbooks);
 router.get('/:id/stream/public', ebookController.streamEbookPublic); // Must be before /:id to not be caught as ID
+router.get('/:id/stream', ebookController.streamEbook); // Allow guests to stream (Full file, restricted by client)
 router.get('/:id', ebookController.getEbookById);
 
 // Protected routes (require authentication)
 router.get('/:ebookId/check-access', verifyToken, ebookController.checkAccess);
-router.get('/:id/stream', verifyToken, ebookController.streamEbook);
+// router.get('/:id/stream', verifyToken, ebookController.streamEbook); // Moved to public
 
 // Admin routes (require admin role)
 const verifyAdmin = require('../middleware/admin.middleware');

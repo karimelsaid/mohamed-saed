@@ -8,6 +8,7 @@ const verifyAdmin = require('../middleware/admin.middleware');
 
 // User routes
 router.get('/status', verifyToken, subscriptionController.getSubscriptionStatus);
+router.get('/history', verifyToken, subscriptionController.getHistory); // New route
 router.post('/subscribe', verifyToken, subscriptionController.subscribe);
 router.post('/activate/:subscriptionId', verifyToken, subscriptionController.activateSubscription);
 router.post('/renew', verifyToken, subscriptionController.renewSubscription);

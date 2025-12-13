@@ -1,13 +1,15 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpParams, HttpEvent } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Ebook, AccessCheckResponse } from '../models/ebook.model';
+
+import { environment } from '../../environments/environment';
 
 @Injectable({
     providedIn: 'root'
 })
 export class EbookService {
-    private apiUrl = '/api/ebooks';
+    private apiUrl = `${environment.apiBaseUrl}/ebooks`;
 
     constructor(private http: HttpClient) { }
 
@@ -40,6 +42,15 @@ export class EbookService {
     // Get ebook file for reading (returns blob)
     streamEbook(id: string): Observable<Blob> {
         return this.http.get(`${this.apiUrl}/${id}/stream`, { responseType: 'blob' });
+    }
+
+    // Stream with progress events
+    streamEbookWithProgress(id: string): Observable<HttpEvent<Blob>> {
+        return this.http.get(`${this.apiUrl}/${id}/stream`, {
+            responseType: 'blob',
+            reportProgress: true,
+            observe: 'events'
+        });
     }
 
     // Stream public ebook preview (no auth required)

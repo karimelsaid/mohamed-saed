@@ -43,6 +43,8 @@ export class HomePageComponent implements OnInit {
   promoImages: string[] = [];
   promoCurrentIndex = 0;
   promoIntervalId: any;
+  touchStartX: number = 0;
+  touchEndX: number = 0;
 
   constructor(private dataService: DataService, private router: Router, private authService: AuthService) { }
 
@@ -143,6 +145,40 @@ export class HomePageComponent implements OnInit {
   setPromoIndex(index: number): void {
     this.promoCurrentIndex = index;
     this.startPromoAutoScroll();
+  }
+
+  nextPromoImage(): void {
+    this.promoCurrentIndex = (this.promoCurrentIndex + 1) % this.promoImages.length;
+    this.startPromoAutoScroll(); // Reset timer
+  }
+
+  prevPromoImage(): void {
+    this.promoCurrentIndex = (this.promoCurrentIndex - 1 + this.promoImages.length) % this.promoImages.length;
+    this.startPromoAutoScroll(); // Reset timer
+  }
+
+  onTouchStart(e: TouchEvent): void {
+    this.touchStartX = e.changedTouches[0].screenX;
+  }
+
+  onTouchEnd(e: TouchEvent): void {
+    this.touchEndX = e.changedTouches[0].screenX;
+    this.handleSwipe();
+  }
+
+  handleSwipe(): void {
+    const threshold = 50; // Minimum distance to be considered a swipe
+    const swipeDistance = this.touchEndX - this.touchStartX;
+
+    if (Math.abs(swipeDistance) > threshold) {
+      if (swipeDistance > 0) {
+        // Swiped Right -> Previous Image
+        this.prevPromoImage();
+      } else {
+        // Swiped Left -> Next Image
+        this.nextPromoImage();
+      }
+    }
   }
 
   setPromoImages(): void {

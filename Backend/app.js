@@ -10,6 +10,10 @@ const path = require('path');
 const { connectDB } = require('./config/database');
 const { updateBooksData } = require('./controllers/books.controller');
 const sitemapService = require('./services/sitemap.service'); // Added import for sitemap service
+const axios = require('axios'); // For proxying requests
+// const MDBReader = require('mdb-reader').default; // Moved to dynamic import inside route due to ESM
+// const unrar = require('unrar-promise'); // Moved to dynamic import inside route due to ESM
+const iconv = require('iconv-lite'); // For encoding conversion (Windows-1256 to UTF-8)
 
 // استيراد المسارات
 const usersRoutes = require('./routes/users.routes');
@@ -22,6 +26,7 @@ const chatAiRoutes = require('./routes/chat-ai.routes');
 const adminRoutes = require('./routes/admin.routes'); // تأكد من وجود هذا المسار
 const merchantRoutes = require('./routes/merchant.routes');
 const paymentRequestsRoutes = require('./routes/payment-requests.routes'); // استيراد مسارات طلبات الدفع
+const versionRoutes = require('./routes/version.routes'); // Added version routes
 const ebooksRoutes = require('./routes/ebooks.routes');
 const subscriptionsRoutes = require('./routes/subscriptions.routes');
 const userLibraryRoutes = require('./routes/user-library.routes');
@@ -29,6 +34,11 @@ const readingProgressRoutes = require('./routes/reading-progress.routes');
 const app = express();
 const port = process.env.PORT || 3000;
 const isProduction = process.env.NODE_ENV === 'production';
+
+// Trust proxy is required for secure cookies behind a reverse proxy (e.g. Nginx/Cloudflare)
+if (isProduction) {
+  app.set('trust proxy', 1);
+}
 
 // Middlewares
 app.use(bodyParser.json());
@@ -51,14 +61,31 @@ app.use(cors({
   origin: allowedOrigins,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['Content-Length', 'Content-Disposition'], // Critical for progress bar
+  credentials: true
 }));
 
 // Session middleware
+const MongoStore = require('connect-mongo');
+
+// Session middleware
+const sessionStore = MongoStore.create({
+  mongoUrl: process.env.MONGO_URI || "mongodb+srv://karimmohamed2729:joufTO0k8VcsbZcd@kenouz.oup4o7v.mongodb.net/?retryWrites=true&w=majority&appName=kenouz",
+  collectionName: 'sessions',
+  ttl: 14 * 24 * 60 * 60, // 14 days
+  autoRemove: 'native'
+});
+
 app.use(session({
   secret: 'your-secret-key',
   resave: false,
-  saveUninitialized: true,
-  cookie: { secure: false }
+  saveUninitialized: false, // Changed to false for better performance with MongoStore
+  store: sessionStore,
+  cookie: {
+    secure: isProduction, // Secure in production (requires HTTPS)
+    sameSite: isProduction ? 'lax' : 'lax', // Use Lax for better compatibility
+    maxAge: 14 * 24 * 60 * 60 * 1000 // 14 days
+  }
 }));
 
 // Middleware to handle referral code
@@ -70,6 +97,330 @@ app.use((req, res, next) => {
 });
 
 
+
+
+// Proxy Download Route with Caching
+app.get('/api/proxy-download', async (req, res) => {
+  const fileUrl = req.query.url;
+  if (!fileUrl) {
+    return res.status(400).send('Missing url parameter');
+  }
+
+  // Generate a safe filename from URL (hash or simple clean)
+  // E.g. https://old.shamela.ws/.../80.rar -> 80.rar
+  // Use encoding to handle query params if any, but Shamela URLs are simple usually.
+  // Ensure uniqueness.
+  const urlParts = fileUrl.split('/');
+  const safeName = urlParts[urlParts.length - 1].replace(/[^a-zA-Z0-9.-]/g, '_');
+  const cacheDir = path.join(__dirname, 'uploads', 'external_cache');
+  const cacheFilePath = path.join(cacheDir, safeName);
+
+  // Ensure cache dir exists
+  if (!fs.existsSync(cacheDir)) {
+    fs.mkdirSync(cacheDir, { recursive: true });
+  }
+
+  // 1. Check Cache
+  if (fs.existsSync(cacheFilePath)) {
+    // Serve from cache
+    const stat = fs.statSync(cacheFilePath);
+    // Only serve if fully downloaded (simple check: size > 0). 
+    // Ideally we'd have a temp file but for simplicity:
+    if (stat.size > 0) {
+      res.setHeader('Content-Type', 'application/x-rar-compressed');
+      res.setHeader('Content-Length', stat.size);
+      res.setHeader('Content-Disposition', `attachment; filename="${safeName}"`);
+      const readStream = fs.createReadStream(cacheFilePath);
+      readStream.pipe(res);
+      return;
+    }
+  }
+
+  // 2. Buffer and Send (Most Stable Approach)
+  try {
+    const response = await axios({
+      method: 'get',
+      url: fileUrl,
+      responseType: 'arraybuffer', // Load into memory
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+        'Referer': 'https://old.shamela.ws/'
+      },
+      timeout: 60000
+    });
+
+    const buffer = response.data;
+    const contentType = response.headers['content-type'] || 'application/octet-stream';
+    const contentLength = buffer.length;
+
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Length', contentLength);
+    // Remove attachment to prevent browser dialog if accessing directly, though Angular ignores it.
+    // res.setHeader('Content-Disposition', `attachment; filename="${safeName}"`);
+    res.setHeader('Access-Control-Expose-Headers', 'Content-Length'); // Ensure client sees size
+
+    res.send(buffer);
+
+    // Cache Async (Fire and Forget)
+    // Don't let caching errors stop the response
+    try {
+      if (!fs.existsSync(cacheFilePath)) {
+        fs.writeFileSync(cacheFilePath, buffer);
+        console.log('File cached successfully (Buffered):', safeName);
+      }
+    } catch (cacheErr) {
+      console.error('Cache Write Error:', cacheErr.message);
+    }
+
+  } catch (error) {
+    console.error('Proxy Error Details:', error.message);
+    if (!res.headersSent) {
+      if (error.response) {
+        res.status(error.response.status).send('External Error');
+      } else {
+        res.status(500).send('Proxy Failed: ' + error.message);
+      }
+    }
+  }
+});
+
+
+// Extract Book Content API - Downloads RAR, extracts BOK, parses database, returns text
+app.get('/api/extract-book', async (req, res) => {
+  const fileUrl = req.query.url;
+  const bookId = req.query.bookId;
+
+  if (!fileUrl || !bookId) {
+    return res.status(400).json({ error: 'Missing url or bookId parameter' });
+  }
+
+  // Generate safe filename
+  const urlParts = fileUrl.split('/');
+  const safeName = urlParts[urlParts.length - 1].replace(/[^a-zA-Z0-9.-]/g, '_');
+  const cacheDir = path.join(__dirname, 'uploads', 'external_cache');
+  const extractDir = path.join(__dirname, 'uploads', 'extracted');
+  const cacheFilePath = path.join(cacheDir, safeName);
+
+  // Ensure directories exist
+  if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir, { recursive: true });
+  if (!fs.existsSync(extractDir)) fs.mkdirSync(extractDir, { recursive: true });
+
+  // Dynamic import for ESM module
+  const { default: MDBReader } = await import('mdb-reader');
+  const unrar = await import('unrar-promise');
+
+  try {
+    // Step 1: Download RAR if not cached
+    if (!fs.existsSync(cacheFilePath)) {
+      // console.log('Downloading:', fileUrl);
+      const response = await axios({
+        method: 'get',
+        url: fileUrl,
+        responseType: 'arraybuffer',
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Referer': 'https://old.shamela.ws/'
+        },
+        timeout: 60000
+      });
+      fs.writeFileSync(cacheFilePath, response.data);
+      // console.log('Downloaded and cached:', safeName);
+    }
+
+    // Step 2: Extract RAR
+    const bookExtractDir = path.join(extractDir, bookId);
+    if (!fs.existsSync(bookExtractDir)) {
+      fs.mkdirSync(bookExtractDir, { recursive: true });
+    }
+
+    // console.log('Extracting RAR...');
+    await unrar.unrar(cacheFilePath, bookExtractDir);
+
+    // Step 3: Find BOK file
+    const extractedFiles = fs.readdirSync(bookExtractDir);
+    let bokFile = extractedFiles.find(f => f.toLowerCase().endsWith('.bok'));
+
+    if (!bokFile && extractedFiles.length > 0) {
+      bokFile = extractedFiles[0]; // Use first file if no .bok
+    }
+
+    if (!bokFile) {
+      throw new Error('No BOK file found in archive');
+    }
+
+    const bokPath = path.join(bookExtractDir, bokFile);
+    // console.log('Parsing BOK:', bokPath);
+
+    // Step 4: Parse BOK database
+    const buffer = fs.readFileSync(bokPath);
+    const reader = new MDBReader(buffer);
+    const tableNames = reader.getTableNames();
+    // console.log('Tables:', tableNames);
+
+    let bookContent = '';
+
+    // Shamela BOK format: b{bookId} contains the actual text with 'nass' column
+    // Look for tables starting with 'b' followed by numbers
+    let contentTable = tableNames.find(t => /^b\d+$/.test(t));
+
+    // Fallback to other common names
+    if (!contentTable) {
+      const possibleTables = ['b', 'book', 'page', 't', 'text'];
+      contentTable = tableNames.find(t => possibleTables.includes(t.toLowerCase()));
+    }
+
+    // Last resort: first non-system, non-Main table
+    if (!contentTable) {
+      contentTable = tableNames.find(t => !t.startsWith('MSys') && t !== 'Main' && !t.startsWith('men_')) || tableNames[0];
+    }
+
+    // console.log('Using table:', contentTable);
+
+
+
+    let idMap = {}; // Maps record ID -> word count index
+    let currentWordCount = 0;
+
+    if (contentTable) {
+      const table = reader.getTable(contentTable);
+      const data = table.getData();
+      const columns = table.getColumns();
+
+      // console.log(`Table '${contentTable}' has ${data.length} rows`);
+
+      // Find text column
+      const textColNames = ['nass', 'text', 'content', 'page', 'body'];
+      const textCol = columns.find(c => textColNames.includes(c.name.toLowerCase()));
+      const idCol = columns.find(c => ['id', 'nass_id', 'target'].includes(c.name.toLowerCase()));
+
+      let parsedContentParts = [];
+
+      if (textCol) {
+        data.forEach(row => {
+          const rawText = row[textCol.name];
+          if (rawText && String(rawText).trim().length > 0) {
+            const text = String(rawText);
+
+            // Map ID to current word count
+            if (idCol) {
+              idMap[row[idCol.name]] = currentWordCount;
+            } else if (row.id) {
+              idMap[row.id] = currentWordCount;
+            }
+
+            parsedContentParts.push(text);
+
+            // Approximate word count (same logic as Reader)
+            const wordCount = text.split(/\s+/).length;
+            currentWordCount += wordCount;
+          }
+        });
+        bookContent = parsedContentParts.join('\n\n---\n\n');
+
+      } else {
+        // Fallback: stringify first non-id column
+        const contentCol = columns.find(c => !['id', 'parentid', 'pagenum'].includes(c.name.toLowerCase()));
+        if (contentCol) {
+          bookContent = data.map(row => String(row[contentCol.name] || '')).join('\n\n');
+        }
+      }
+    }
+
+
+
+    // --- TOC Extraction Logic ---
+    let toc = [];
+    let tocTable = null;
+    if (contentTable) {
+      const idMatch = contentTable.match(/^b(\d+)$/);
+      if (idMatch) {
+        const tableId = idMatch[1];
+        tocTable = tableNames.find(t => t === `t${tableId}`);
+      }
+    }
+
+    // Fallback for TOC table
+    if (!tocTable) {
+      tocTable = tableNames.find(t => ['titles', 'f', 'fehres'].includes(t.toLowerCase()));
+    }
+
+    if (tocTable) {
+      // console.log('Using TOC table:', tocTable);
+      const tTable = reader.getTable(tocTable);
+      const tData = tTable.getData();
+      const tColumns = tTable.getColumns();
+
+      // Identify columns: tit (title), lvl (level), id (target id)
+      const titCol = tColumns.find(c => ['tit', 'title', 'nass'].includes(c.name.toLowerCase()));
+      const lvlCol = tColumns.find(c => ['lvl', 'level'].includes(c.name.toLowerCase()));
+      const idCol = tColumns.find(c => ['id', 'nass_id', 'target'].includes(c.name.toLowerCase()));
+
+      if (titCol && idCol) {
+        toc = tData.map(row => {
+          let title = String(row[titCol.name] || '');
+          // Decode title if needed
+          if (/[\xC0-\xFF]/.test(title)) {
+            const buffer = Buffer.from(title, 'latin1');
+            title = iconv.decode(buffer, 'windows-1256');
+          }
+
+          return {
+            id: row[idCol.name],
+            title: title,
+            level: lvlCol ? Number(row[lvlCol.name]) || 0 : 0
+          };
+        });
+      }
+    } else {
+      // console.log('No TOC table found');
+    }
+
+    if (!bookContent || bookContent.length < 100) {
+      throw new Error('Could not extract readable content from BOK file');
+    }
+
+    // Convert from Windows-1256 (Arabic) to UTF-8 if needed
+    // Check if text looks like misencoded Arabic (Latin-1 chars where Arabic should be)
+    if (/[\xC0-\xFF]/.test(bookContent.substring(0, 1000))) {
+      // console.log('Detected Windows-1256 encoding, converting...');
+      // Convert: treat the string as Latin-1 bytes, decode as Windows-1256
+      const buffer = Buffer.from(bookContent, 'latin1');
+      bookContent = iconv.decode(buffer, 'windows-1256');
+    }
+
+    // console.log('Extracted content length:', bookContent.length);
+    // console.log('Sample (first 200 chars):', bookContent.substring(0, 200));
+
+    // Clean up extracted files to save server space
+    try {
+      fs.rmSync(bookExtractDir, { recursive: true, force: true });
+      // ALSO remove the cached RAR file to save space
+      if (fs.existsSync(cacheFilePath)) {
+        fs.unlinkSync(cacheFilePath);
+      }
+      // console.log('Cleaned up extracted files and RAR:', safeName);
+    } catch (cleanErr) {
+      console.error('Cleanup error:', cleanErr.message);
+    }
+
+    res.json({
+      success: true,
+      bookId: bookId,
+      content: bookContent,
+      length: bookContent.length,
+      toc: toc,
+      idMap: idMap
+    });
+
+  } catch (error) {
+    console.error('Extract Book Error:', error.message);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
 
 
 // Dedicated route to serve files with Content-Disposition attachment to force download
@@ -128,6 +479,7 @@ app.use('/api/merchant', merchantRoutes);
 const mongoose = require('mongoose');
 // تسجيل مسار طلبات الدفع
 app.use('/api/payment-requests', paymentRequestsRoutes);
+app.use('/api/mobile-version', versionRoutes); // Register version check route
 
 // E-book system routes
 app.use('/api/ebooks', ebooksRoutes);
@@ -139,7 +491,7 @@ app.use('/api/reading-progress', readingProgressRoutes);
 const User = require('./models/User.model');
 const { ObjectId } = mongoose.Types;
 
-// Directly define the print order deletion route here to ensure it's correct
+// Direct route definition for deleting print order
 const printController = require('./controllers/print.controller');
 app.delete('/api/print/orders/:userId/:orderId', printController.deletePrintOrder);
 // Add the old route for admin dashboard compatibility

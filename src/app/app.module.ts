@@ -46,7 +46,6 @@ import { FabricsComponent } from './book-list/fabrics/fabrics.component';
 import { OthersComponent } from './book-list/others/others.component';
 import { BooksComponent } from './book-list/books/books.component';
 
-
 @NgModule({
   declarations: [
     AppComponent,

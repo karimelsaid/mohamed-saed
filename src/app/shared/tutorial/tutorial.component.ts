@@ -34,7 +34,7 @@ export class TutorialComponent implements OnInit, OnDestroy {
     private elementRef: ElementRef,
     private renderer: Renderer2,
     private router: Router
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.subscription = this.tutorialService.tutorialState$.subscribe(state => {
@@ -83,14 +83,6 @@ export class TutorialComponent implements OnInit, OnDestroy {
     }
   }
 
-  private applyHighlight(): void {
-    if (this.highlightedElement) {
-      this.renderer.addClass(this.highlightedElement, 'tutorial-highlight');
-      this.renderer.setStyle(this.highlightedElement, 'position', 'relative');
-      this.renderer.setStyle(this.highlightedElement, 'z-index', '1000');
-    }
-  }
-
   private removeHighlight(): void {
     if (this.highlightedElement) {
       this.renderer.removeClass(this.highlightedElement, 'tutorial-highlight');
@@ -104,34 +96,50 @@ export class TutorialComponent implements OnInit, OnDestroy {
     if (this.highlightedElement) {
       this.highlightedElement.scrollIntoView({
         behavior: 'smooth',
-        block: 'start',
+        block: 'center',
         inline: 'center'
       });
+
+      // Retry scroll after a small delay to handle dynamic layouts
+      setTimeout(() => {
+        if (this.highlightedElement) {
+          this.highlightedElement.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+            inline: 'center'
+          });
+        }
+      }, 500);
     }
   }
 
   private setPositionClass(): void {
-    if (!this.currentStep || !this.currentStep.position) {
-      this.positionClass = '';
+    if (!this.highlightedElement) {
+      // Default to center if no element
+      this.positionClass = 'center';
       return;
     }
-    switch (this.currentStep.position) {
-      case 'top':
-        this.positionClass = 'top-0 bottom-auto -translate-y-0';
-        break;
-      case 'bottom':
-        this.positionClass = 'bottom-0 top-auto -translate-y-0';
-        break;
-      case 'left':
-        this.positionClass = 'left-0 right-auto -translate-x-0';
-        break;
-      case 'right':
-        this.positionClass = 'right-0 left-auto -translate-x-0';
-        break;
-      case 'center':
-      default:
-        this.positionClass = 'top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2';
-        break;
+
+    const rect = this.highlightedElement.getBoundingClientRect();
+    const windowHeight = window.innerHeight;
+    const elementCenter = rect.top + (rect.height / 2);
+
+    // If element is in the top half, put modal at bottom.
+    // If element is in the bottom half, put modal at top.
+    if (elementCenter < windowHeight / 2) {
+      this.positionClass = 'bottom';
+    } else {
+      this.positionClass = 'top';
+    }
+  }
+
+  private applyHighlight(): void {
+    if (this.highlightedElement) {
+      this.renderer.addClass(this.highlightedElement, 'tutorial-highlight');
+      this.renderer.setStyle(this.highlightedElement, 'position', 'relative');
+      this.renderer.setStyle(this.highlightedElement, 'z-index', '1000');
+      // Recalculate position after finding element
+      this.setPositionClass();
     }
   }
 

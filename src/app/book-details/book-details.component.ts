@@ -117,7 +117,7 @@ export class BookDetailsComponent implements OnInit {
   }
 
   fetchAverageRating(bookId: string): void {
-    this.http.get<{ bookId: string; averageRating: number; ratingCount: number }>(`http://localhost:3000/api/users/average-rating/${bookId}`)
+    this.http.get<{ bookId: string; averageRating: number; ratingCount: number }>(`${environment.apiBaseUrl}/users/average-rating/${bookId}`)
       .subscribe({
         next: (res) => {
           this.averageRating = res.averageRating;
@@ -176,19 +176,41 @@ export class BookDetailsComponent implements OnInit {
   copyBookLink(): void {
     if (!this.book) return;
     const categoryRoute = this.getProductRoute(this.book);
-    let url = window.location.origin + '/' + categoryRoute.join('/');
+    // CRITICAL FIX: Use production domain for shared links, not window.location.origin (which is localhost/file on Android)
+    const baseUrl = 'https://knoozbook.com';
+    let url = baseUrl + '/' + categoryRoute.join('/');
     // Check if there is a referral code in the current URL and append it
     const currentUrl = new URL(window.location.href);
     const refCode = currentUrl.searchParams.get('ref');
     if (refCode) {
       url += `?ref=${refCode}`;
     }
-    navigator.clipboard.writeText(url).then(() => {
-      this.showCopySuccess = true;
-      setTimeout(() => this.showCopySuccess = false, 2000);
-    }).catch(err => {
-      console.error('Failed to copy: ', err);
-    });
+
+    // AUTOMATIC FEATURE: Try Native Share first (Mobile/Android)
+    if (navigator.share) {
+      // Decode the URL for cleaner display (Arabic characters instead of %...)
+      const cleanUrl = decodeURIComponent(url);
+
+      navigator.share({
+        title: this.book.product_name,
+        // Append clean URL to text so it appears readable. Removing 'url' param to avoid duplication/encoding by OS.
+        text: `تحقق من كتاب "${this.book.product_name}" على كنوز بوك\n${cleanUrl}`
+      }).then(() => {
+        console.log('Shared successfully');
+      }).catch((error) => {
+        console.warn('Share failed or cancelled:', error);
+      });
+    } else {
+      // Fallback for Desktop / non-supported browsers
+      // Also copy decoded version for better user experience
+      const cleanUrl = decodeURIComponent(url);
+      navigator.clipboard.writeText(cleanUrl).then(() => {
+        this.showCopySuccess = true;
+        setTimeout(() => this.showCopySuccess = false, 2000);
+      }).catch(err => {
+        console.error('Failed to copy: ', err);
+      });
+    }
   }
 
 

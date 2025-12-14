@@ -13,7 +13,8 @@
     "rival": true,
     "product_discount_percent": 65,
     "image_path": "/uploads/books/admin__karim_mohamed__/393/393.webp",
-    "barcode": "393"
+    "barcode": "393",
+    "linkedEbookId": "693e49fe6628f2ce27b37573"
   },
   {
     "products_id": "22",

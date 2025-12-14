@@ -136,7 +136,15 @@ export class ReferralsComponent implements OnInit {
             productCategory: product.product_category // Send category to backend
           }).subscribe({
             next: (response: any) => {
-              this.referralLink = response.link;
+              let link = response.link;
+              // Ensure link is absolute and uses production domain
+              if (link && !link.startsWith('http')) {
+                link = `https://knoozbook.com${link.startsWith('/') ? '' : '/'}${link}`;
+              } else if (link && link.includes('localhost')) {
+                link = link.replace(/http:\/\/localhost:\d+/, 'https://knoozbook.com');
+                link = link.replace(/https:\/\/localhost:\d+/, 'https://knoozbook.com');
+              }
+              this.referralLink = link;
             },
             error: (error) => {
               console.error('Error generating referral link:', error);
@@ -150,8 +158,8 @@ export class ReferralsComponent implements OnInit {
   generateGeneralReferralLink() {
     this.authService.user$.pipe(take(1)).subscribe(user => {
       if (user && this.referralCode) {
-        // The base URL of your application
-        const baseUrl = window.location.origin;
+        // AUTOMATIC FIX: Use production domain explicitly to avoid localhost/file issues on Android/Cordova
+        const baseUrl = 'https://knoozbook.com';
         // Construct the general referral link for registration
         this.referralLink = `${baseUrl}/register?ref=${this.referralCode}`;
       } else {
@@ -169,14 +177,33 @@ export class ReferralsComponent implements OnInit {
 
   shareLink() {
     if (navigator.share) {
-      const isGeneralReferral = this.referralLink.includes('/register?ref=');
-      const urlObj = new URL(this.referralLink);
-      const decodedPathname = decodeURIComponent(urlObj.pathname);
-      const decodedUrl = urlObj.origin + decodedPathname + urlObj.search;
+      // Robust share logic
+      let shareUrl = this.referralLink;
+      try {
+        // Verify URL validity, default to Knoozbook if specific parsing fails
+        const urlObj = new URL(this.referralLink);
+        // If we want to ensure encoded/decoded consistency:
+        // But usually keeping it as is is safest if it's already a valid execution URL.
+        // The previous logic tried to decode pathname components.
+        // Let's rely on the cleaned this.referralLink from generation methods.
+      } catch (e) {
+        console.warn('Invalid URL for share, attempting adjustment', e);
+        if (!shareUrl.startsWith('http')) {
+          shareUrl = `https://knoozbook.com/${shareUrl.replace(/^\//, '')}`;
+        }
+      }
+
+      const isGeneralReferral = shareUrl.includes('/register?ref=');
+
+      // Decode for clean display
+      const cleanShareUrl = decodeURIComponent(shareUrl);
+
       navigator.share({
         title: isGeneralReferral ? 'انضم إلى موقعنا' : 'شارك هذا المنتج',
-        text: isGeneralReferral ? 'انضم إلى موقعنا واحصل على عروض رائعة!' : 'تحقق من هذا المنتج المثير!',
-        url: decodedUrl
+        text: (isGeneralReferral ? 'انضم إلى موقعنا واحصل على عروض رائعة!' : 'تحقق من هذا المنتج المثير!') + `\n${cleanShareUrl}`
+      }).catch((error) => {
+        console.warn('Share failed or cancelled:', error);
+        // Do not automatically fallback to copy on cancel, as it confuses users.
       });
     } else {
       this.copyLink();

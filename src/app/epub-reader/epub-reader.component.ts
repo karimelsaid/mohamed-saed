@@ -248,10 +248,19 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
                 // Online Authoritative Check
                 this.hasAccess = accessResponse.hasAccess === true;
                 this.isPreviewMode = accessResponse.accessType === 'preview' || !this.hasAccess;
+                console.log('KENOUZ DEBUG: Online Access Check. HasAccess:', this.hasAccess, 'IsPreview:', this.isPreviewMode, 'Type:', accessResponse.accessType);
 
                 // Update cached metadata with new confirmed status
                 if (isCached && cachedMetadata) {
                     cachedMetadata.accessType = this.hasAccess && !this.isPreviewMode ? 'owned' : 'preview';
+
+                    // SAVE EXPIRY DATE
+                    if (this.hasAccess && accessResponse.accessType === 'subscription' && accessResponse.subscription?.endDate) {
+                        cachedMetadata.subscriptionExpiry = accessResponse.subscription.endDate;
+                    } else if (this.hasAccess && accessResponse.accessType === 'owned') {
+                        cachedMetadata.subscriptionExpiry = undefined; // Permanent access
+                    }
+
                     this.offlineEbookService.saveMetadata(this.ebookId, cachedMetadata);
                 }
 
@@ -259,8 +268,34 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
                 // Offline Fallback
                 console.log('Using offline cached metadata for access rights');
                 if (cachedMetadata && cachedMetadata.accessType === 'owned') {
-                    this.hasAccess = true;
-                    this.isPreviewMode = false;
+                    // CHECK EXPIRY if subscription
+                    if (cachedMetadata.subscriptionExpiry) {
+                        const expiry = new Date(cachedMetadata.subscriptionExpiry);
+                        const now = new Date();
+                        if (now > expiry) {
+                            console.warn('Offline subscription expired:', expiry);
+                            this.hasAccess = false;
+                            this.isPreviewMode = true;
+                            this.error = 'انتهت صلاحية اشتراكك (محفوظ محلياً). يرجى الاتصال بالإنترنت للتجديد.';
+                        } else {
+                            this.hasAccess = true;
+                            this.isPreviewMode = false;
+                        }
+                    } else {
+                        // Critical Pass: Check if it's truly permanent ownership
+                        if (cachedMetadata.isOwned) {
+                            this.hasAccess = true;
+                            this.isPreviewMode = false;
+                        } else {
+                            // It was likely a subscription access (cached as 'owned') but has no expiry date saved.
+                            // To be strict/safe and prevent the loophole, we default to PREVIEW.
+                            // User must go online once to refresh the metadata and save the expiry date.
+                            console.warn('Offline: Subscription access found but no expiry date. Defaulting to preview for security.');
+                            this.hasAccess = false;
+                            this.isPreviewMode = true;
+                            this.error = 'يرجى الاتصال بالإنترنت لتحديث حالة اشتراكك.';
+                        }
+                    }
                 } else {
                     this.hasAccess = false;
                     this.isPreviewMode = true;
@@ -787,12 +822,14 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
         // Preview Restriction for TOC
         if (this.isPreviewMode) {
             const spineIndex = (this.book?.spine as any)?.spineItems?.findIndex((item: any) => item.href.includes(chapter.href));
+            console.log('KENOUZ DEBUG: TOC Check. Preview:', this.isPreviewMode, 'SpineIndex:', spineIndex);
             // If index found and > 3, block
             if (spineIndex !== undefined && spineIndex > 3) {
                 this.showSubscriptionPrompt = true;
                 return;
             }
         }
+
 
         this.rendition?.display(chapter.href);
         this.currentChapter = chapter.label;
@@ -805,11 +842,13 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
         const percent = event.target.value;
 
         // Preview Restriction for Slider
+        // Preview Restriction for Slider
         if (this.isPreviewMode && percent > 20) { // Limit to 20% of the book
             this.showSubscriptionPrompt = true;
             // Reset slider visual if possible or just block navigation
             return;
         }
+
 
         let cfi = null;
         try {
@@ -919,12 +958,15 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
         // EPUB Mode
         if (this.rendition && !this.isNavigating) {
             // Preview Restriction Logic
+            // Preview Restriction Logic
             if (this.isPreviewMode) {
+                console.log('KENOUZ DEBUG: NextPage Check. Percent:', this.progressPercent);
                 if (this.progressPercent >= 20) {
                     this.showSubscriptionPrompt = true;
                     return;
                 }
             }
+
 
             this.isNavigating = true;
             try {
@@ -1113,6 +1155,7 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
         }
 
         // Preview Limit Check (EPUB)
+        // Preview Limit Check (EPUB)
         if (this.isPreviewMode && this.book) {
             if (this.progressPercent >= 20) {
                 this.showSubscriptionPrompt = true;
@@ -1120,11 +1163,14 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
             }
         }
 
+
         this.rendition?.display(item.href).then(() => {
+            // Post-navigation check
             // Post-navigation check
             if (this.isPreviewMode && this.progressPercent > 20) {
                 this.showSubscriptionPrompt = true;
             }
+
         });
         this.closeAllPanels();
     }

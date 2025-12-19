@@ -15,11 +15,30 @@ import { environment } from '../../environments/environment';
 // Import New Services and Components
 import { DownloadManagerService, DownloadProgress } from '../services/download-manager.service';
 import { DownloadsComponent } from '../downloads/downloads.component';
+import { GamificationDashboardComponent } from '../gamification/dashboard/dashboard.component';
+import { Share } from '@capacitor/share';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Capacitor } from '@capacitor/core';
+
+export interface UnifiedBook {
+    id: string;
+    title: string;
+    author: string;
+    coverUrl: string;
+    category: string;
+    source: 'internal' | 'external';
+    rating?: number;
+    isFree?: boolean; // Internal specific
+    originalObject: any; // Keep ref to original for actions
+    isDownloaded: boolean;
+    isDownloading: boolean;
+    downloadProgress?: number;
+}
 
 @Component({
     selector: 'app-library',
     standalone: true,
-    imports: [CommonModule, RouterModule, FormsModule, DownloadsComponent],
+    imports: [CommonModule, RouterModule, FormsModule, DownloadsComponent, GamificationDashboardComponent],
     templateUrl: './library.component.html',
     styleUrls: ['./library.component.css']
 })
@@ -50,19 +69,28 @@ export class LibraryComponent implements OnInit, OnDestroy {
     totalDownloadsCount: number = 0; // Combined count from internal + external
 
     // General State
-    activeTab: 'internal' | 'external' | 'downloads' = 'internal';
+    // 'books' covers both internal and external (merged view)
+    // 'achievements' is the new tab
+    activeTab: 'books' | 'achievements' | 'downloads' = 'books';
     downloadsTab: 'downloads' | 'favorites' = 'downloads';
     subscription: Subscription | null = null;
     subscriptionHistory: Subscription[] = [];
     isLoading = true;
     error: string | null = null;
 
+
+
+    // --- Unified Data Interface ---
+    unifiedBooks: UnifiedBook[] = [];
+
     categories: string[] = [];
+    allCategories: string[] = []; // Unified list
 
     // UI Filters
     selectedCategory: string = '';
     searchQuery: string = '';
     viewMode: 'all' | 'owned' | 'favorites' | 'subscription' = 'all';
+    bookSource: 'internal' | 'external' = 'internal'; // Toggle for merged books tab
     showDownloadedOnly: boolean = false;
 
     // Pagination State (Internal)
@@ -94,19 +122,26 @@ export class LibraryComponent implements OnInit, OnDestroy {
             }
         });
 
+        // Check login status
+        const isLoggedIn = this.authService.isLoggedIn();
+
         this.categories = this.ebookService.getCategories();
-        this.subscriptionService.refreshStatus();
+        this.updateUnifiedCategories();
+
+        if (isLoggedIn) {
+            this.subscriptionService.refreshStatus();
+            // Subscribe to subscription status changes
+            const sub = this.subscriptionService.subscriptionStatus$.subscribe(status => {
+                this.subscription = status;
+                if (status) {
+                    this.loadSubscriptionHistory();
+                }
+            });
+            this.subscriptions.push(sub);
+        }
+
         this.loadData();
         this.loadExternalData();
-
-        // Subscribe to subscription status changes
-        const sub = this.subscriptionService.subscriptionStatus$.subscribe(status => {
-            this.subscription = status;
-            if (status) {
-                this.loadSubscriptionHistory();
-            }
-        });
-        this.subscriptions.push(sub);
 
         // Subscribe to Favorite IDs
         const favSub = this.authService.favoriteBookIds.subscribe(ids => {
@@ -121,6 +156,7 @@ export class LibraryComponent implements OnInit, OnDestroy {
         const downloadSub = this.downloadManager.downloadedBookIds$.subscribe(ids => {
             this.downloadedBooks = ids;
             this.updateTotalDownloadsCount();
+            this.updateUnifiedGrid(); // Fix: Update UI for "Read" button
         });
         this.subscriptions.push(downloadSub);
 
@@ -175,7 +211,7 @@ export class LibraryComponent implements OnInit, OnDestroy {
                 else this.ebooks = response.data;
                 this.totalBooks = response.total;
                 this.hasMoreBooks = this.ebooks.length < this.totalBooks;
-                this.applyFilters();
+                this.applyFilters(); // Consolidating filters
                 this.isLoading = false;
                 this.isLoadingMore = false;
             },
@@ -186,7 +222,7 @@ export class LibraryComponent implements OnInit, OnDestroy {
             }
         });
 
-        if (!append) {
+        if (!append && this.authService.isLoggedIn()) {
             this.userLibraryService.getUserLibrary().subscribe({
                 next: (response) => {
                     this.ownedEbookIds = new Set(response.data.map((item: any) => typeof item.ebookId === 'object' ? item.ebookId._id : item.ebookId));
@@ -212,31 +248,186 @@ export class LibraryComponent implements OnInit, OnDestroy {
             next: (books) => {
                 this.externalBooks = books;
                 this.externalCategories = this.externalLibraryService.getUniqueCategories(books);
-                this.applyExternalFilters();
+                this.updateUnifiedCategories();
+                this.applyExternalFilters(); // Apply current filters (search/cat) immediately
             },
             error: (err) => console.error('Failed to load external books', err)
         });
     }
 
+    private updateUnifiedCategories() {
+        // Map internal keys to display names
+        const internalDisplayNames = this.categories.map(c => this.getCategoryName(c));
+
+        // Merge and dedup
+        const unique = new Set([...internalDisplayNames, ...this.externalCategories]);
+        this.allCategories = Array.from(unique).sort();
+    }
+
+    // --- Unified Logic ---
+
+    // Called whenever internal or external filtered lists change
+    private updateUnifiedGrid() {
+        // Map Internal
+        const internalUnified: UnifiedBook[] = this.filteredEbooks.map(book => ({
+            id: book._id,
+            title: book.title,
+            author: book.author,
+            coverUrl: this.getCoverImageUrl(book),
+            category: this.getCategoryName(book.category),
+            source: 'internal',
+            rating: book.averageRating || 4.5,
+            isFree: book.price === 0,
+            originalObject: book, // Keep ref
+            isDownloaded: this.isInternalBookDownloaded(book),
+            isDownloading: this.isInternalBookDownloading(book),
+            downloadProgress: this.isInternalBookDownloading(book) ? this.getInternalDownloadProgress(book) : 0
+        }));
+
+        // Map External
+        const externalUnified: UnifiedBook[] = this.paginatedExternalBooks.map(book => ({
+            id: String(book.id),
+            title: book.title,
+            author: book.author,
+            coverUrl: 'assets/images/defaults/book_cover_placeholder.png', // Or dynamic 
+            category: book.category,
+            source: 'external',
+            rating: undefined,
+            isFree: true,
+            originalObject: book,
+            isDownloaded: this.downloadedBooks.has(book.id),
+            isDownloading: !!this.getDownloadState(book.id),
+            downloadProgress: this.getDownloadState(book.id)?.progress || 0
+        }));
+
+        // Merge
+        let combined = [...internalUnified, ...externalUnified];
+
+        // Sort (Interleave by Title)
+        combined.sort((a, b) => a.title.localeCompare(b.title, 'ar'));
+
+        this.unifiedBooks = combined;
+    }
+
+    // Unified Load More
+    loadMoreUnified() {
+        this.isLoadingMore = true;
+
+        // 1. Load more internal
+        if (this.hasMoreBooks) {
+            this.loadMore(); // This appends to ebooks/filteredEbooks
+        }
+
+        // 2. Load more external (Advance page)
+        if (this.externalCurrentPage < this.totalExternalPages) {
+            this.externalCurrentPage++;
+
+            const currentEnd = this.externalCurrentPage * this.externalItemsPerPage;
+            this.paginatedExternalBooks = this.filteredExternalBooks.slice(0, currentEnd);
+        }
+
+        setTimeout(() => {
+            this.updateUnifiedGrid();
+            this.isLoadingMore = false;
+        }, 500);
+    }
+
+    openExternalBook(book: any) {
+        this.downloadExternalBook(book);
+    }
+
+    // Internal Helper for downloading state check
+    getInternalDownloadProgress(book: Ebook): number {
+        const state = this.internalDownloadStates[book._id];
+        return state ? state.progress : 0;
+    }
+
+    applyFilters(): void {
+        let filtered = [...this.ebooks];
+
+        // ViewMode Logic
+        if (this.viewMode === 'favorites') {
+            filtered = filtered.filter(e => this.isFavorite(e));
+        } else if (this.viewMode === 'owned') {
+            filtered = filtered.filter(e => this.ownedEbookIds.has(e._id));
+        } else if (this.viewMode === 'subscription') {
+            // Show books available for subscription (assuming property exists or logic)
+            // If property doesn't exist on Ebook interface, we might need a different check
+            // Based on previous code in Step 2839, it used 'availableForSubscription'
+            filtered = filtered.filter(e => e.availableForSubscription);
+        }
+
+        // Search Filter
+        if (this.searchQuery) {
+            const q = this.searchQuery.toLowerCase();
+            filtered = filtered.filter(e =>
+                e.title.toLowerCase().includes(q) ||
+                e.author.toLowerCase().includes(q)
+            );
+        }
+
+        // Category Filter
+        if (this.selectedCategory) {
+            filtered = filtered.filter(e => this.getCategoryName(e.category) === this.selectedCategory);
+        }
+
+        this.filteredEbooks = filtered;
+        this.updateUnifiedGrid(); // Trigger Merge
+    }
+
     applyExternalFilters(): void {
         let filtered = this.externalBooks;
-        if (this.selectedCategory) filtered = filtered.filter(b => b.category === this.selectedCategory);
-        if (this.searchQuery.trim()) {
-            const query = this.searchQuery.toLowerCase();
-            filtered = filtered.filter(b => b.title.toLowerCase().includes(query) || b.author.toLowerCase().includes(query));
+
+        // ViewMode Logic for External
+        if (this.viewMode === 'favorites') {
+            filtered = filtered.filter(b => this.isExternalFavorite(b));
+        } else if (this.viewMode === 'owned') {
+            // External books are "owned" if downloaded? Or just always available?
+            // "Owned" usually means purchased. External are free. 
+            // Maybe show downloaded ones? Or nothing?
+            // Let's match "showDownloadedOnly" behavior or just show all since they are "free"?
+            // User context: "Subscription (Favorites and Subscription) do not display correct items"
+            // If I am in Subscription mode, I probably don't want to see External books (they are not "subscription" content).
+            // If I am in Owned mode, maybe downloaded?
+            if (this.showDownloadedOnly) {
+                filtered = filtered.filter(b => this.downloadedBooks.has(b.id));
+            }
+        } else if (this.viewMode === 'subscription') {
+            // External books are NOT part of subscription (they are free). 
+            // So we should probably hide them to avoid confusion, or show them as they are "free access"?
+            // If the user says "Favorites and Subscription do not display correct items", they probably expect strict filtering.
+            // Let's exclude external books in Subscription mode for now to be distinct.
+            filtered = [];
         }
-        if (this.showDownloadedOnly) filtered = filtered.filter(b => this.downloadedBooks.has(b.id));
+
+        if (this.selectedCategory) filtered = filtered.filter(b => b.category === this.selectedCategory);
+        if (this.searchQuery) {
+            const q = this.searchQuery.toLowerCase();
+            filtered = filtered.filter(b => b.title.toLowerCase().includes(q) || b.author.toLowerCase().includes(q));
+        }
+
+        if (this.showDownloadedOnly) {
+            filtered = filtered.filter(b => this.downloadedBooks.has(b.id));
+        }
 
         this.filteredExternalBooks = filtered;
         this.externalTotalItems = filtered.length;
         this.externalCurrentPage = 1;
-        this.updatePaginatedExternalBooks();
+        this.updateExternalPagination();
+        this.updateUnifiedGrid(); // Trigger Merge
     }
 
-    updatePaginatedExternalBooks(): void {
-        const startIndex = (this.externalCurrentPage - 1) * this.externalItemsPerPage;
-        const endIndex = startIndex + this.externalItemsPerPage;
-        this.paginatedExternalBooks = this.filteredExternalBooks.slice(startIndex, endIndex);
+    updateExternalPagination() {
+        const end = this.externalCurrentPage * this.externalItemsPerPage;
+        this.paginatedExternalBooks = this.filteredExternalBooks.slice(0, end);
+    }
+
+    onExternalPageChange(page: number) {
+        if (page >= 1 && page <= this.totalExternalPages) {
+            this.externalCurrentPage = page;
+            this.updateExternalPagination();
+            this.updateUnifiedGrid(); // Trigger Merge
+        }
     }
 
     get totalExternalPages(): number {
@@ -286,36 +477,32 @@ export class LibraryComponent implements OnInit, OnDestroy {
     }
 
     // --- Tab & Search Interactions ---
-    setActiveTab(tab: 'internal' | 'external' | 'downloads') {
+    setActiveTab(tab: 'books' | 'achievements' | 'downloads') {
         this.activeTab = tab;
         this.selectedCategory = '';
         this.searchQuery = '';
-        if (tab === 'internal') this.loadData();
-        else if (tab === 'external') this.applyExternalFilters();
     }
 
     setDownloadsTab(tab: 'downloads' | 'favorites') { this.downloadsTab = tab; }
-    onSearch(): void { this.activeTab === 'internal' ? this.loadData(false) : this.applyExternalFilters(); }
-    onCategoryChange(): void { this.activeTab === 'internal' ? this.loadData(false) : this.applyExternalFilters(); }
+
+    onSearch(): void {
+        // Update both to ensure persistence when switching
+        this.loadData(false);
+        this.applyExternalFilters();
+    }
+
+    onCategoryChange(): void {
+        // Update both
+        this.loadData(false);
+        this.applyExternalFilters();
+    }
     toggleDownloadedFilter(): void { this.showDownloadedOnly = !this.showDownloadedOnly; this.applyExternalFilters(); }
     loadMore(): void { if (!this.hasMoreBooks || this.isLoadingMore) return; this.currentPage++; this.loadData(true); }
-
-    applyFilters(): void {
-        let filtered = [...this.ebooks];
-        if (this.selectedCategory) filtered = filtered.filter(e => e.category === this.selectedCategory);
-        if (this.searchQuery.trim()) {
-            const query = this.searchQuery.toLowerCase();
-            filtered = filtered.filter(e => e.title.toLowerCase().includes(query) || e.author.toLowerCase().includes(query) || e.description.toLowerCase().includes(query));
-        }
-        if (this.viewMode === 'owned') filtered = filtered.filter(e => this.ownedEbookIds.has(e._id));
-        else if (this.viewMode === 'subscription') filtered = filtered.filter(e => e.availableForSubscription);
-        else if (this.viewMode === 'favorites') filtered = filtered.filter(e => this.favoriteEbookIds.has(e._id));
-        this.filteredEbooks = filtered;
-    }
 
     setViewMode(mode: 'all' | 'owned' | 'favorites' | 'subscription'): void {
         this.viewMode = mode;
         this.applyFilters();
+        this.applyExternalFilters();
     }
 
     // --- Helpers ---
@@ -371,69 +558,131 @@ export class LibraryComponent implements OnInit, OnDestroy {
         return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
     }
 
-    async downloadInvoice(targetSub?: Subscription) {
-        const sub = targetSub || this.subscription;
-        if (!sub) return;
+    async downloadInvoice(targetSub?: any) {
+        const item = targetSub || this.subscription;
+        if (!item) return;
 
-        // Dynamic import to avoid initial bundle weight
-        const jsPDF = (await import('jspdf')).default;
+        this.isLoading = true;
 
-        const doc = new jsPDF();
+        try {
+            // 1. Get the template
+            const template = document.getElementById('invoice-template');
+            if (!template) {
+                console.error('Invoice template not found');
+                alert('خطأ: قالب الفاتورة غير موجود');
+                return;
+            }
 
-        const startDate = new Date(sub.startDate).toLocaleDateString('en-GB');
-        const endDate = new Date(sub.endDate).toLocaleDateString('en-GB');
-        const price = sub.price + ' EGP';
-        const planName = sub.plan === 'yearly' ? 'اشتراك سنوي' : 'اشتراك شهري';
+            // 2. Prepare Data
+            const userStr = localStorage.getItem('user');
+            let userName = 'عميل كنوز';
+            let userEmail = '';
+            if (userStr) {
+                try {
+                    const user = JSON.parse(userStr);
+                    userName = user.name || user.username || 'عميل كنوز';
+                    userEmail = user.email || '';
+                } catch (e) { }
+            }
 
+            // Handle different object structures (Subscription vs History Item)
+            const planName = (item.plan === 'monthly' || item.plan === 'شهري') ? 'اشتراك شهري Premium' : 'اشتراك سنوي VIP';
+            const price = item.price || (item.plan === 'monthly' ? 50 : 500);
 
-        // Header
-        doc.setFontSize(22);
-        doc.setTextColor(31, 41, 55); // gray-800
-        doc.text('INVOICE — knoozbook Digital Library', 20, 25);
+            // Generate deterministic ID
+            const dateObj = new Date(item.startDate || item.date || new Date());
+            const timestamp = dateObj.getTime();
+            const invoiceId = `INV-${timestamp.toString().slice(-6)}`;
+            const dateStr = dateObj.toLocaleDateString('ar-EG');
+            const paymentRef = `TXN-${Math.abs(timestamp).toString(36).toUpperCase()}`;
+            const duration = (item.plan === 'monthly' || item.plan === 'شهري') ? '30 يوم / days' : '365 يوم / days';
 
-        // Bill To
-        doc.setFontSize(12);
-        doc.setTextColor(0, 0, 0);
-        doc.text('Bill To:', 20, 50);
-        doc.setFontSize(10);
-        doc.setTextColor(75, 85, 99);
-        doc.text('Card Subscriber', 20, 57);
+            // 3. Inject Data
+            const setText = (id: string, text: string) => {
+                const el = document.getElementById(id);
+                if (el) el.innerText = text;
+            }
 
-        // Invoice Details
-        doc.text('Date: ' + startDate, 20, 70);
-        doc.text('Invoice #: ' + sub._id.substring(0, 8).toUpperCase(), 20, 76);
+            setText('invoice-user-name', userName);
+            setText('invoice-user-email', userEmail);
+            setText('invoice-id', invoiceId);
+            setText('invoice-date', dateStr);
+            setText('invoice-plan-name', planName);
+            setText('invoice-price', `${price} EGP`);
+            setText('invoice-subtotal', `${price} EGP`);
+            setText('invoice-total', `${price} EGP`);
+            setText('invoice-payment-ref', paymentRef);
+            setText('invoice-qr-id', invoiceId);
+            setText('invoice-duration', duration);
 
-        // Table Header
-        doc.setFontSize(10);
-        doc.setTextColor(0, 0, 0);
-        doc.setFont('helvetica', 'bold');
-        doc.text('Description', 20, 95);
-        doc.text('Period', 100, 95);
-        doc.text('Amount', 170, 95);
+            // 4. Import & Capture
+            const { jsPDF } = await import('jspdf');
+            const html2canvas = (await import('html2canvas')).default;
 
-        doc.setDrawColor(200, 200, 200);
-        doc.line(20, 98, 190, 98);
+            // Make visible for capture
+            const originalOpacity = template.style.opacity;
+            const originalZIndex = template.style.zIndex;
 
-        // Table Row
-        doc.setFont('helvetica', 'normal');
-        doc.text(`knoozbook Premium Subscription (${sub.plan === 'yearly' ? 'Yearly' : 'Monthly'})`, 20, 108);
-        doc.text(`${startDate} - ${endDate}`, 100, 108);
-        doc.text(price, 170, 108);
+            template.style.opacity = '1';
+            template.style.zIndex = '9999';
+            template.style.backgroundColor = 'white';
 
-        doc.line(20, 115, 190, 115);
+            // Wait for render
+            await new Promise(resolve => setTimeout(resolve, 250));
 
-        // Total
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'bold');
-        doc.text('Total: ' + price, 170, 130);
+            const canvas = await html2canvas(template as HTMLElement, {
+                scale: 2,
+                useCORS: true,
+                logging: false,
+                windowWidth: 794 // A4 width @ 96dpi
+            });
 
-        // Footer
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(10);
-        doc.setTextColor(0, 0, 0);
-        doc.text('Thank you for subscribing to knoozbook.', 20, 150);
+            // Restore hidden state
+            template.style.opacity = originalOpacity;
+            template.style.zIndex = originalZIndex;
 
-        doc.save('knoozbook-Invoice.pdf');
+            // 5. Generate PDF
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+
+            const fileName = `فاتورة_ضريبية_${invoiceId}.pdf`;
+
+            if (Capacitor.isNativePlatform()) {
+                // Native: Save to fs and Share
+                const base64Data = pdf.output('datauristring').split(',')[1];
+
+                try {
+                    const savedFile = await Filesystem.writeFile({
+                        path: fileName,
+                        data: base64Data,
+                        directory: Directory.Cache
+                    });
+
+                    await Share.share({
+                        title: 'فاتورة اشتراك كنوز بوك',
+                        text: `إليك فاتورة الاشتراك رقم ${invoiceId}`,
+                        url: savedFile.uri,
+                        dialogTitle: 'تحميل الفاتورة'
+                    });
+                } catch (nativeErr) {
+                    console.error('Native save/share failed', nativeErr);
+                    alert('عذراً، حدث خطأ أثناء حفظ الملف على الهاتف.');
+                }
+            } else {
+                pdf.save(fileName);
+            }
+
+        } catch (error) {
+            console.error('Error generating invoice:', error);
+            alert('حدث خطأ أثناء إنشاء الفاتورة. يرجى المحاولة مرة أخرى.');
+        } finally {
+            this.isLoading = false;
+        }
     }
 
     getCoverImageUrl(ebook: Ebook): string {
@@ -480,6 +729,14 @@ export class LibraryComponent implements OnInit, OnDestroy {
             this.downloadStates[book.id]?.state === 'EXTRACTING') return;
 
         // Start Download
+
+        // UI Update: Immediate Feedback
+        const targetBook = this.unifiedBooks.find(b => b.id === book.id);
+        if (targetBook) {
+            targetBook.isDownloading = true;
+            targetBook.downloadProgress = 0;
+        }
+
         this.downloadManager.downloadAndProcessBook(
             book.id,
             book.downloadUrl,
@@ -487,14 +744,33 @@ export class LibraryComponent implements OnInit, OnDestroy {
         ).subscribe({
             next: (progress) => {
                 this.downloadStates[book.id] = progress;
+
+                // UI Update: Real-time progress
+                const currentBook = this.unifiedBooks.find(b => b.id === book.id);
+                if (currentBook) {
+                    currentBook.downloadProgress = progress.progress;
+                    if (progress.state === 'DONE') {
+                        currentBook.isDownloading = false;
+                        currentBook.isDownloaded = true;
+                    }
+                }
+
                 // If done, mark as ready
                 if (progress.state === 'DONE') {
                     this.downloadedBooks.add(book.id);
+                    this.updateUnifiedGrid(); // Refresh grid state
                 }
             },
             error: (err) => {
                 console.error('Download error', err);
                 this.downloadStates[book.id] = { state: 'ERROR', progress: 0, error: 'فشل التحميل' };
+
+                // Reset UI
+                const currentBook = this.unifiedBooks.find(b => b.id === book.id);
+                if (currentBook) {
+                    currentBook.isDownloading = false;
+                    currentBook.downloadProgress = 0;
+                }
             }
         });
     }
@@ -506,22 +782,7 @@ export class LibraryComponent implements OnInit, OnDestroy {
         }
     }
 
-    // 6. External Pagination (using correct method)
-    onExternalPageChange(newPage: number): void {
-        this.externalCurrentPage = newPage;
-        this.updatePaginatedExternalBooks();
 
-        // Scroll to top
-        const gridElement = document.querySelector('.ebooks-grid');
-        if (gridElement) {
-            gridElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-
-        // Check availability for new page items
-        setTimeout(() => {
-            this.paginatedExternalBooks.forEach(b => this.checkBookAvailability(b.id));
-        }, 100);
-    }
 
     isExternalFavorite(book: any): boolean {
         return this.offlineEbookService.isLocalFavorite(book.id);
@@ -561,6 +822,8 @@ export class LibraryComponent implements OnInit, OnDestroy {
             this.updateTotalDownloadsCount();
         } catch (e) {
             console.error('Error checking internal downloads:', e);
+        } finally {
+            this.updateUnifiedGrid(); // Ensure grid reflects downloaded status
         }
     }
 
@@ -572,20 +835,44 @@ export class LibraryComponent implements OnInit, OnDestroy {
 
         this.internalDownloadStates[ebook._id] = { state: 'PENDING', progress: 0 };
 
-        this.offlineEbookService.downloadBookWithProgress(ebook._id).subscribe({
+        // Update UI immediately
+        const unifiedBook = this.unifiedBooks.find(b => b.id === ebook._id);
+        if (unifiedBook) {
+            unifiedBook.isDownloading = true;
+            unifiedBook.downloadProgress = 0;
+        }
+
+        this.offlineEbookService.downloadBookWithProgress(ebook._id, ebook).subscribe({
             next: (status) => {
                 this.internalDownloadStates[ebook._id] = status;
+
+                // Update UI Real-time
+                const currentBook = this.unifiedBooks.find(b => b.id === ebook._id);
+                if (currentBook) {
+                    currentBook.downloadProgress = status.progress;
+                    if (status.state === 'DONE') {
+                        currentBook.isDownloading = false;
+                        currentBook.isDownloaded = true;
+                    }
+                }
+
                 if (status.state === 'DONE') {
                     this.downloadedInternalBooks.add(ebook._id);
                     this.internalDownloadStates[ebook._id] = null; // Clear tracking
                     this.updateTotalDownloadsCount();
-                    // Optional: Toast "Download Complete"
+                    // Force grid refresh to ensure consistency
+                    this.updateUnifiedGrid();
                 }
             },
             error: (err) => {
                 console.error('Download failed', err);
                 this.internalDownloadStates[ebook._id] = null;
-                // Optional: Toast "Download Failed"
+
+                const currentBook = this.unifiedBooks.find(b => b.id === ebook._id);
+                if (currentBook) {
+                    currentBook.isDownloading = false;
+                    currentBook.downloadProgress = 0;
+                }
             }
         });
     }
@@ -610,8 +897,6 @@ export class LibraryComponent implements OnInit, OnDestroy {
         }
     }
 
-    getInternalDownloadProgress(ebook: Ebook): number {
-        const state = this.internalDownloadStates[ebook._id];
-        return state ? state.progress : 0;
-    }
+
+
 }

@@ -7,6 +7,7 @@ import { User } from './user.model';
 import { environment } from '../../environments/environment';
 import { MerchantAuthService } from '../services/merchant-auth.service';
 import { SubscriptionService } from '../services/subscription.service';
+import { NotificationService } from '../services/notification.service';
 
 @Injectable({
   providedIn: 'root'
@@ -25,7 +26,8 @@ export class AuthService {
   constructor(
     private http: HttpClient,
     private merchantAuthService: MerchantAuthService,
-    private subscriptionService: SubscriptionService
+    private subscriptionService: SubscriptionService,
+    private notificationService: NotificationService
   ) {
     this.checkInitialLogin();
   }
@@ -38,14 +40,33 @@ export class AuthService {
     }
     return this.http.post<User>(`${this.apiUrl}/users/google-signin`, body).pipe(
       tap((response: any) => {
+        console.log('🔍 [AuthService] Raw Google Sign-In Response:', response);
         const user = response.user || response;
+
+        // CRITICAL FIX: Normalize ID (Backend might return _id)
+        if (!user.id && user._id) {
+          user.id = user._id;
+        }
+
         // CRITICAL FIX: Merge token if present for Google Sign-In
         const userWithToken = { ...user };
-        if (response.token) {
-          userWithToken.token = response.token;
-        } else if (response.accessToken) {
-          userWithToken.token = response.accessToken;
+
+        // Extract token from various possible locations
+        const token = response.token || response.accessToken || user.token;
+
+        if (token) {
+          userWithToken.token = token;
+
+          // SPECIAL HANDLING FOR MERCHANTS
+          if (user.role === 'merchant') {
+            localStorage.setItem('merchant_token', token);
+            // Also notify merchant service if possible/needed, but localStorage is the critical fix for interceptors
+            this.merchantAuthService.setMerchantAuthFromExternal(token, user);
+          }
+        } else {
+          console.error('❌ [AuthService] NO TOKEN FOUND IN GOOGLE SIGN-IN RESPONSE!');
         }
+
         this.setUser(userWithToken);
       })
     );
@@ -60,6 +81,12 @@ export class AuthService {
         console.log('[Auth] User logged in. Cleared any existing referral data from localStorage.');
 
         const user = response.user || response;
+
+        // CRITICAL FIX: Normalize ID
+        if (!user.id && user._id) {
+          user.id = user._id;
+        }
+
         console.log('🧠 المستخدم الراجع من السيرفر:', user);
 
         // CRITICAL FIX: Merge token if present
@@ -84,15 +111,29 @@ export class AuthService {
   private checkInitialLogin(): void {
     const userData = localStorage.getItem('user');
     if (userData) {
-      const parsedUser = JSON.parse(userData);
-      setTimeout(() => {
-        this.isLoggedInSubject.next(true);
-        this.userSubject.next(parsedUser);
-        // Load user-specific data such as favorites and cart
-        if (parsedUser && parsedUser.id) {
-          this.loadUserData(parsedUser.id);
+      try {
+        const parsedUser = JSON.parse(userData);
+
+        // CRITICAL FIX: Normalize ID for stored sessions
+        if (parsedUser && !parsedUser.id && parsedUser._id) {
+          console.log('🛠️ [AuthService] Auto-fixing missing ID in stored session');
+          parsedUser.id = parsedUser._id;
+          // Create userWithToken logic here if needed, but mostly just fixing the object
+          localStorage.setItem('user', JSON.stringify(parsedUser)); // Update storage
         }
-      }, 50);
+
+        setTimeout(() => {
+          this.isLoggedInSubject.next(true);
+          this.userSubject.next(parsedUser);
+          // Load user-specific data such as favorites and cart
+          if (parsedUser && parsedUser.id) {
+            this.loadUserData(parsedUser.id);
+          }
+        }, 50);
+      } catch (e) {
+        console.error('Error parsing stored user:', e);
+        this.logout();
+      }
     }
   }
 
@@ -100,15 +141,18 @@ export class AuthService {
     this.isLoggedInSubject.next(status);
   }
 
+  isLoggedIn(): boolean {
+    return this.isLoggedInSubject.getValue();
+  }
+
   setUser(user: any): void {
-    setTimeout(() => {
-      this.userSubject.next(user);
-      this.setLoginStatus(true);
-      localStorage.setItem('user', JSON.stringify(user));
-    }, 100);
+    this.userSubject.next(user);
+    this.setLoginStatus(true);
+    localStorage.setItem('user', JSON.stringify(user));
   }
 
   clearUser(): void {
+    console.warn('⚠️ [AuthService] Clearing User!');
     this.userSubject.next(null);
     this.setLoginStatus(false);
     localStorage.removeItem('user');
@@ -130,13 +174,18 @@ export class AuthService {
     if (referralCode) {
       body.referralCode = referralCode;
     }
-    return this.http.post(`${this.apiUrl}/users/create-account`, body).pipe(
+    return this.http.post(`${this.apiUrl}/users/register`, body).pipe(
       tap((response: any) => {
         if (response && response.user) {
           localStorage.removeItem('referralCode');
           localStorage.removeItem('referralBookId');
           console.log('[Auth] Account created. Cleared any existing referral data from localStorage.');
           console.log('🧠 تم إنشاء الحساب وتسجيل الدخول تلقائياً:', response.user);
+
+          // CRITICAL FIX: Normalize ID
+          if (!response.user.id && response.user._id) {
+            response.user.id = response.user._id;
+          }
 
           // CRITICAL FIX: Merge token into user object so AuthInterceptor can find it
           const userWithToken = { ...response.user };
@@ -168,21 +217,21 @@ export class AuthService {
   /** Favorites */
   addToFavorites(userId: string, bookId: string): Observable<any> {
     const data = { userId, bookId };
-    return this.http.post(`${this.apiUrl}/users/add-to-favorites`, data);
+    return this.http.post(`${this.apiUrl}/users/favorites`, data);
   }
 
   /** Cart */
   addToCart(userId: string, bookId: string): Observable<any> {
     const data = { userId, bookId };
-    return this.http.post(`${this.apiUrl}/users/add-to-cart`, data);
+    return this.http.post(`${this.apiUrl}/users/cart`, data);
   }
 
   removeFromCart(userId: string, bookId: string): Observable<any> {
-    return this.http.delete(`${this.apiUrl}/users/remove-from-cart/${userId}/${encodeURIComponent(bookId)}`);
+    return this.http.delete(`${this.apiUrl}/users/cart/${userId}/${encodeURIComponent(bookId)}`);
   }
 
   removeFromFavorites(userId: string, bookId: string): Observable<any> {
-    return this.http.delete(`${this.apiUrl}/users/remove-from-favorites/${userId}/${encodeURIComponent(bookId)}`);
+    return this.http.delete(`${this.apiUrl}/users/favorites/${userId}/${encodeURIComponent(bookId)}`);
   }
 
   /** Load user data (favorites & cart) */
@@ -191,7 +240,7 @@ export class AuthService {
       console.warn('⚠️ لا يوجد userId لتحميل البيانات.');
       return;
     }
-    this.http.get<{ favorites: string[]; cart: string[] }>(`${this.apiUrl}/users/user-data/${userId}`).subscribe({
+    this.http.get<{ favorites: string[]; cart: string[] }>(`${this.apiUrl}/users/${userId}`).subscribe({
       next: data => {
         this.favoriteBookIds.next(data.favorites);
         this.cartBookIds.next(data.cart);
@@ -223,6 +272,7 @@ export class AuthService {
 
   /** Logout – also clears subscription status */
   logout(): void {
+    console.warn('🚨 [AuthService] LOGOUT CALLED! Trace:', new Error().stack);
     this.userSubject.next(null);
     this.isLoggedInSubject.next(false);
     this.favoriteBookIds.next([]);
@@ -230,6 +280,15 @@ export class AuthService {
     localStorage.removeItem('user');
     localStorage.removeItem('referralCode');
     localStorage.removeItem('referralBookId');
+
+    // CRITICAL FIX: Also clear merchant session
+    this.merchantAuthService.performLogout();
+
+    // Clear notifications cache
+    if (this.notificationService) {
+      this.notificationService.clearNotifications();
+    }
+
     if (this.subscriptionService && this.subscriptionService.clearStatus) {
       this.subscriptionService.clearStatus();
     }

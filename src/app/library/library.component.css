@@ -566,6 +566,23 @@
   background: rgba(99, 102, 241, 0.9);
 }
 
+/* Source Badges */
+.badge.source-badge {
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.badge.source-badge.internal {
+    background: rgba(59, 130, 246, 0.9); /* Blue for Internal */
+}
+.badge.source-badge.external {
+    background: rgba(16, 185, 129, 0.9); /* Green for External */
+}
+.badge.source-badge i {
+    font-size: 0.65rem;
+}
+
 .card-overlay {
   position: absolute;
   inset: 0;

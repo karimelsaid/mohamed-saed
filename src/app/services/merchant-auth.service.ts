@@ -130,6 +130,10 @@ export class MerchantAuthService {
   }
 
   getToken(): string | null {
+    // Safety check for SSR or unexpected environments
+    if (typeof localStorage === 'undefined') {
+      return null;
+    }
     return localStorage.getItem(this.merchantTokenKey);
   }
 

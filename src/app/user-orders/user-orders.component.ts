@@ -8,6 +8,7 @@ import { environment } from '../../environments/environment';
 import { PaymentService } from '../services/payment.service';
 import { ModalService } from '../services/modal.service';
 import { PaymentModalComponent } from '../payment-modal/payment-modal.component';
+import { Browser } from '@capacitor/browser';
 
 interface RatedBook {
   bookId: string;
@@ -346,5 +347,23 @@ export class UserOrdersComponent implements OnInit {
   toggleArchived(): void {
     this.showArchived = !this.showArchived;
     this.loadOrders(this.userId);
+  }
+
+  async openFile(url: string) {
+    if (!url) return;
+
+    // Ensure absolute URL
+    let fullUrl = url;
+    if (!url.startsWith('http')) {
+      fullUrl = `${environment.apiBaseUrl.replace('/api', '')}/${url.startsWith('/') ? url.substring(1) : url}`;
+    }
+
+    try {
+      await Browser.open({ url: fullUrl });
+    } catch (e) {
+      console.error('Browser open failed', e);
+      // Fallback for web
+      window.open(fullUrl, '_blank');
+    }
   }
 }

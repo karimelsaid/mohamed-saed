@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { MerchantAuthService } from '../../services/merchant-auth.service';
 import { Router } from '@angular/router';
@@ -12,7 +12,7 @@ import { ModalDialogComponent } from '../../shared/modal-dialog/modal-dialog.com
   templateUrl: './add-product.component.html',
   styleUrls: ['./add-product.component.css']
 })
-export class AddProductComponent implements OnInit {
+export class AddProductComponent implements OnInit, OnDestroy {
   productForm: FormGroup;
   loading = false;
   selectedFile: File | null = null;
@@ -46,10 +46,18 @@ export class AddProductComponent implements OnInit {
     'هداية وألعاب'
   ];
 
+  @ViewChild('videoElement') videoElement!: ElementRef;
+  @ViewChild('canvasElement') canvasElement!: ElementRef;
+
+  showCameraModal = false;
+  cameraStream: MediaStream | null = null;
+  errorMessage: string | null = null;
+
   constructor(
     private fb: FormBuilder,
     private merchantAuthService: MerchantAuthService,
-    private router: Router
+    private router: Router,
+    private cdr: ChangeDetectorRef
   ) {
     this.productForm = this.fb.group({
       product_name: ['', Validators.required],
@@ -83,7 +91,7 @@ export class AddProductComponent implements OnInit {
     } else {
       // If no merchant data in localStorage, fetch from API
       this.merchantAuthService.getCurrentMerchantFromAPI().subscribe({
-        next: (response) => {
+        next: (response: any) => {
           this.isApproved = response.merchant?.approved || false;
           this.isLoading = false;
 
@@ -93,7 +101,7 @@ export class AddProductComponent implements OnInit {
             this.router.navigate(['/merchant/dashboard']);
           }
         },
-        error: (error) => {
+        error: (error: any) => {
           console.error('❌ Error fetching merchant data in component:', error);
           this.isLoading = false;
           alert('حدث خطأ في تحميل بيانات الحساب. يرجى تسجيل الدخول مرة أخرى.');
@@ -113,6 +121,117 @@ export class AddProductComponent implements OnInit {
       };
       reader.readAsDataURL(file);
     }
+  }
+
+  // --- Camera Logic ---
+  currentFacingMode: 'user' | 'environment' = 'environment';
+
+  async openCamera() {
+    console.log('📸 Opening camera request...');
+    this.showCameraModal = true;
+    this.cdr.detectChanges(); // Force update to ensure modal exists in DOM
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      alert('متصفحك لا يدعم الوصول إلى الكاميرا');
+      this.showCameraModal = false;
+      return;
+    }
+
+    try {
+      console.log('📸 Requesting media stream with mode:', this.currentFacingMode);
+
+      if (this.cameraStream) {
+        this.cameraStream.getTracks().forEach(track => track.stop());
+        this.cameraStream = null;
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: this.currentFacingMode }
+      });
+
+      // CRITICAL FIX: Check if modal was closed while waiting for stream
+      if (!this.showCameraModal) {
+        console.log('📸 Modal closed during initialization, stopping stream.');
+        stream.getTracks().forEach(track => track.stop());
+        return;
+      }
+
+      this.cameraStream = stream;
+      console.log('📸 Stream obtained:', this.cameraStream);
+
+      setTimeout(() => {
+        if (this.videoElement && this.videoElement.nativeElement) {
+          console.log('📸 Assigning stream to video element');
+          this.videoElement.nativeElement.srcObject = this.cameraStream;
+          this.videoElement.nativeElement.muted = true;
+          this.videoElement.nativeElement.style.transform = this.currentFacingMode === 'user' ? 'scaleX(-1)' : 'none';
+
+          this.videoElement.nativeElement.play().then(() => {
+            console.log('📸 Video playing');
+          }).catch((e: any) => console.error('📸 Video play error:', e));
+        } else {
+          console.error('📸 Video element not found!');
+          alert('حدث خطأ في عرض الكاميرا (Video Element not found)');
+        }
+      }, 300);
+    } catch (err: any) {
+      console.error('❌ Error accessing camera:', err);
+      // Explicit alert for the user
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        alert('تم رفض إذن الوصول للكاميرا.');
+      } else {
+        alert('تعذر فتح الكاميرا: ' + (err.message || err));
+      }
+      this.showCameraModal = false;
+    }
+  }
+
+  closeCamera() {
+    this.showCameraModal = false;
+    if (this.cameraStream) {
+      this.cameraStream.getTracks().forEach(track => track.stop());
+      this.cameraStream = null;
+    }
+  }
+
+  switchCamera() {
+    this.currentFacingMode = this.currentFacingMode === 'environment' ? 'user' : 'environment';
+    this.openCamera(); // Re-open camera with the new facing mode
+  }
+
+  captureImage() {
+    if (this.videoElement && this.canvasElement) {
+      const video = this.videoElement.nativeElement;
+      const canvas = this.canvasElement.nativeElement;
+      const context = canvas.getContext('2d');
+
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      canvas.toBlob((blob: Blob) => {
+        if (blob) {
+          // Create file from blob
+          const file = new File([blob], "camera-capture.jpg", { type: "image/jpeg" });
+
+          // Set as selected file
+          this.selectedFile = file;
+
+          // Generate preview
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            this.imagePreview = e.target?.result as string;
+          };
+          reader.readAsDataURL(file);
+
+          this.closeCamera();
+        }
+      }, 'image/jpeg');
+    }
+  }
+
+  ngOnDestroy() {
+    this.closeCamera();
   }
 
   onSubmit() {
@@ -135,7 +254,7 @@ export class AddProductComponent implements OnInit {
       formData.append('image', this.selectedFile);
 
       this.merchantAuthService.addMerchantProduct(formData).subscribe({
-        next: (response) => {
+        next: (response: any) => {
           console.log('Product added successfully:', response);
           this.loading = false;
           this.showSuccessModal = true;
@@ -146,7 +265,7 @@ export class AddProductComponent implements OnInit {
           this.onConfirm = () => this.addAnotherProduct();
           this.onCancel = () => this.goToDashboard();
         },
-        error: (error) => {
+        error: (error: any) => {
           console.error('Error adding product:', error);
           this.loading = false;
 

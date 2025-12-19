@@ -1,0 +1,4 @@
+/* Basic styles, Tailwind handles most layout */
+textarea {
+    resize: vertical;
+}

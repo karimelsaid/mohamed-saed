@@ -191,25 +191,32 @@ exports.streamEbook = async (req, res) => {
 
         // Determine which file to serve
         let filePath;
-        // Always serve full file (Client enforces limit)
-        filePath = path.join(__dirname, '..', ebook.epubFilePath);
+
+        // Normalize path logic from getAllEbooks
+        let normalizedPath = ebook.epubFilePath;
+        if (normalizedPath && normalizedPath.includes('uploads/ebooks/uploads/ebooks/')) {
+            normalizedPath = normalizedPath.replace('uploads/ebooks/uploads/ebooks/', 'uploads/ebooks/');
+        }
+
+        // Try multiple possible paths to find the file
+        const possiblePaths = [
+            path.join(__dirname, '..', normalizedPath), // Standard: Backend/uploads/...
+            path.join(__dirname, '..', '..', normalizedPath), // Root/uploads/... (if path relative to project root)
+            normalizedPath // Absolute path
+        ];
+
+        // Find first existing path
+        filePath = possiblePaths.find(p => fs.existsSync(p));
 
         console.log('--- Stream Debug ---');
         console.log('Book ID:', id);
-        console.log('DB File Path:', ebook.epubFilePath);
+        console.log('DB Path:', ebook.epubFilePath);
+        console.log('Normalized:', normalizedPath);
         console.log('Resolved Path:', filePath);
-        console.log('Exists:', fs.existsSync(filePath));
-
-        // Old logic:
-        // if (activeSubscription || ownsEbook) {
-        //     filePath = path.join(__dirname, '..', ebook.epubFilePath);
-        // } else {
-        //     filePath = path.join(__dirname, '..', ebook.miniEpubFilePath);
-        // }
 
         // Check if file exists
-        if (!fs.existsSync(filePath)) {
-            console.error('❌ File not found:', filePath);
+        if (!filePath) {
+            console.error('❌ File not found in any candidate path');
             return res.status(404).json({
                 success: false,
                 message: 'ملف الكتاب غير موجود'

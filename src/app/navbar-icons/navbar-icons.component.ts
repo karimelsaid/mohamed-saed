@@ -1,11 +1,12 @@
 import { Component, OnInit, ViewChild, ChangeDetectorRef, Output, EventEmitter, ElementRef, HostListener, CUSTOM_ELEMENTS_SCHEMA, ViewEncapsulation, Input } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, NavigationEnd } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { faBars, faClose, faHome, faBook, faFilePdf, faUser, faChevronUp, faChevronDown, faSearch, faHeart, faCartPlus, faClipboardList, faTachometerAlt, faBell, faTrash, faStore, faFilter, faExpand, faBookReader } from '@fortawesome/free-solid-svg-icons';
+import { faBars, faClose, faHome, faBook, faFilePdf, faUser, faChevronUp, faChevronDown, faSearch, faHeart, faCartPlus, faClipboardList, faTachometerAlt, faBell, faTrash, faStore, faFilter, faExpand, faBookReader, faCoins } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { AuthService } from '../auth/auth.service';
 import { MerchantAuthService } from '../services/merchant-auth.service';
 import { NotificationService, Notification } from '../services/notification.service';
+import { PushNotificationService } from '../services/push-notification.service';
 import { DataService } from '../services/data.service';
 
 @Component({
@@ -41,6 +42,7 @@ export class NavbarIconsComponent implements OnInit {
   faTrash = faTrash;
   faStore = faStore;
   faExpand = faExpand;
+  faCoins = faCoins;
 
   openBars = false;
   scrollBook = true;
@@ -59,7 +61,7 @@ export class NavbarIconsComponent implements OnInit {
   showAccountModal: boolean = false;
 
   // Notification related
-  notifications: (Notification & { removing?: boolean })[] = [];
+  notifications: (Notification & { removing?: boolean; swipeOffset?: number; startX?: number; currentX?: number; swiping?: boolean })[] = [];
   showNotificationsDropdown: boolean = false;
   unreadCount: number = 0;
 
@@ -78,6 +80,7 @@ export class NavbarIconsComponent implements OnInit {
     private authService: AuthService,
     private merchantAuthService: MerchantAuthService,
     private notificationService: NotificationService,
+    public pushService: PushNotificationService,
     private cdr: ChangeDetectorRef
   ) { }
 
@@ -338,5 +341,45 @@ export class NavbarIconsComponent implements OnInit {
   onFullScreenChange(): void {
     this.isFullScreen = !!document.fullscreenElement;
     this.cdr.markForCheck();
+  }
+  // Touch Handling for Swipe to Delete
+  onTouchStart(event: TouchEvent, notification: any) {
+    notification.startX = event.touches[0].clientX;
+    notification.currentX = notification.startX;
+    notification.swiping = true;
+  }
+
+  onTouchMove(event: TouchEvent, notification: any) {
+    if (!notification.swiping) return;
+    notification.currentX = event.touches[0].clientX;
+    const diff = notification.currentX - notification.startX;
+
+    // Only allow swiping left (negative diff) to reveal delete button
+    if (diff < 0) {
+      // Limit swipe to -80px (width of delete button)
+      notification.swipeOffset = Math.max(diff, -80);
+      // Prevent scrolling while swiping horizontally
+      if (Math.abs(diff) > 10) event.preventDefault();
+    }
+  }
+
+  onTouchEnd(event: TouchEvent, notification: any) {
+    notification.swiping = false;
+    if (notification.swipeOffset < -40) {
+      // Swiped enough, snap to open
+      notification.swipeOffset = -80;
+    } else {
+      // Snap back to close
+      notification.swipeOffset = 0;
+    }
+  }
+
+  getNotificationIcon(type: string): any {
+    switch (type) {
+      case 'order': return this.faCartPlus;
+      case 'print_order': case 'printOrder': return this.faFilePdf;
+      case 'offer': return this.faCoins;
+      case 'system': default: return this.faBell;
+    }
   }
 }

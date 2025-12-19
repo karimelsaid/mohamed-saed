@@ -2,7 +2,7 @@ import { Component, ViewChild, OnInit, OnDestroy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { DataService } from '../../services/data.service';
 import { Book } from '../../book';
-import { faHeart, faCartPlus, faShareAlt } from '@fortawesome/free-solid-svg-icons';
+import { faHeart, faCartPlus, faShareAlt, faCoins } from '@fortawesome/free-solid-svg-icons';
 import { faStar } from '@fortawesome/free-solid-svg-icons';
 import { faStar as faStarRegular } from '@fortawesome/free-regular-svg-icons';
 import { AuthService } from '../../auth/auth.service';
@@ -54,6 +54,7 @@ export class OthersComponent implements OnInit, OnDestroy {
   ratings: { [productId: string]: any } = {};
   private countdownInterval: any;
   faShareAlt = faShareAlt;
+  faCoins = faCoins;
   showCopySuccess: boolean = false;
   copiedProductId: string | null = null;
   isLoading: boolean = true;

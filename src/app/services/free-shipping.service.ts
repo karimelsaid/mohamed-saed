@@ -29,7 +29,7 @@ export class FreeShippingService {
     freeShippingEnabled: true
   };
 
-  private apiUrl = `${environment.apiBaseUrl}/admin/free-shipping-rules`;
+  private apiUrl = `${environment.apiBaseUrl}/admin/settings/free-shipping-rules`;
 
   constructor(private http: HttpClient) { }
 

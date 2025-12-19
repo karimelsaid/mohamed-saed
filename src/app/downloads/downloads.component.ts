@@ -95,15 +95,15 @@ export class DownloadsComponent implements OnInit {
     // Add internal downloads
     for (const book of this.internalDownloads) {
       // Avoid duplicates
-      if (!this.allDownloads.find(d => d.id === book.id)) {
+      if (!this.allDownloads.find(d => d.id === (book._id || book.id || book.ebookId))) {
         this.allDownloads.push({
-          id: book.id || book.ebookId,
+          id: book._id || book.id || book.ebookId,
           title: book.title || book.metadata?.title || 'كتاب',
-          author: book.author || book.metadata?.author,
-          category: book.category || book.metadata?.category,
+          author: book.author || book.metadata?.author || 'مؤلف غير معروف',
+          category: book.category || book.metadata?.category || 'عام',
           source: 'internal',
-          downloadDate: book.downloadDate || book.timestamp,
-          contentLength: book.size || book.contentLength
+          downloadDate: book.downloadDate || book.timestamp || Date.now(),
+          contentLength: book.size || book.contentLength || 0
         });
       }
     }

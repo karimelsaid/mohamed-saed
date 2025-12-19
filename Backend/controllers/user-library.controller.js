@@ -90,6 +90,17 @@ exports.checkAccess = async (req, res) => {
             });
         }
 
+        // Handle external books (Shamela) - always allow access or handle differently
+        // Since they don't exist in local DB and are free/public references
+        if (ebookId.startsWith('ext')) {
+            return res.json({
+                success: true,
+                hasAccess: true,
+                accessType: 'external',
+                acquiredVia: 'free'
+            });
+        }
+
         // Check ownership
         const libraryEntry = await UserLibrary.findOne({ userId, ebookId });
         if (libraryEntry) {

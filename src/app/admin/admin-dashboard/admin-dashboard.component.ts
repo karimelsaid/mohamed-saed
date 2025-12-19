@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, ViewChild, ElementRef } from '@angular/core';
 import { HttpClient, HttpEventType } from '@angular/common/http';
 import { AuthService } from '../../auth/auth.service';
 import { Router, RouterModule } from '@angular/router';
@@ -16,11 +16,12 @@ import * as XLSX from 'xlsx';
 import { FreeShippingRulesComponent } from './free-shipping/free-shipping-rules.component';
 import { Subscription } from 'rxjs';
 import { FaIconLibrary, FontAwesomeModule, FaIconComponent } from '@fortawesome/angular-fontawesome';
-import { faShoppingCart, faStore, faBook, faPrint, faPlus, faEdit, faTruck, faUsers, faCheckCircle, faMoneyBillWave, faSitemap, faPlusCircle, faImage, faTag, faHashtag, faList, faDollarSign, faAlignLeft, faExclamationTriangle, faCartPlus, faHeart, faMobileAlt } from '@fortawesome/free-solid-svg-icons';
-import { PaymentRequestsComponent } from '../payment-requests/payment-requests.component';
+import { faShoppingCart, faStore, faBook, faPrint, faPlus, faEdit, faTruck, faUsers, faCheckCircle, faMoneyBillWave, faSitemap, faPlusCircle, faImage, faTag, faHashtag, faList, faDollarSign, faAlignLeft, faExclamationTriangle, faCartPlus, faHeart, faMobileAlt, faCamera, faTimes, faHome, faChartLine, faCog, faBars, faUserClock, faCoins, faUserPlus, faChartBar, faBell, faSearch, faSlidersH } from '@fortawesome/free-solid-svg-icons';
+// PaymentRequestsComponent removed
 import { UserHierarchyComponent } from '../user-hierarchy/user-hierarchy.component';
 import { AmazonPriceCalculatorComponent } from '../amazon-price-calculator/amazon-price-calculator.component';
 import { AdminEbooksComponent } from '../admin-ebooks/admin-ebooks.component';
+import { AdminNotificationsComponent } from '../admin-notifications/admin-notifications.component';
 
 interface Order {
   _id: string;
@@ -132,6 +133,32 @@ interface UrgencyRequest {
   fulfilled?: boolean;
 }
 
+interface UserInsight {
+  user: any;
+  score: number;
+  readingTimeAvg: string;
+  currentStreak: number;
+  bestStreak: number;
+  conversionProbability: 'High' | 'Medium' | 'Low';
+  topInterests: string[];
+}
+
+interface SystemSettings {
+  gamification: {
+    loginPoints: number;
+    readingPointsPerMinute: number;
+    referralPoints: number;
+    streakBonus7Days: number;
+    streakBonus30Days: number;
+    reviewPoints: number;
+  };
+  economy: {
+    coinExchangeRate: number;
+    minimumWithdrawal: number;
+  };
+  maintenanceMode: boolean;
+}
+
 @Component({
   selector: 'app-admin-dashboard',
   standalone: true,
@@ -144,10 +171,11 @@ interface UrgencyRequest {
     FreeShippingRulesComponent,
     MerchantManagementComponent,
     ProductApprovalComponent,
-    PaymentRequestsComponent,
+    // PaymentRequestsComponent removed
     UserHierarchyComponent,
     AmazonPriceCalculatorComponent,
-    AdminEbooksComponent
+    AdminEbooksComponent,
+    AdminNotificationsComponent
   ],
   templateUrl: './admin-dashboard.component.html',
   styleUrls: ['./admin-dashboard.component.css']
@@ -158,7 +186,27 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   requestedBooks: RequestedBook[] = [];
   allRequestedBooks: RequestedBook[] = [];
   isAdmin: boolean = false; // Add paymentRequests to the type union
-  currentView: 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' = 'orders';
+  showSidebar: boolean = true;
+  currentView: 'dashboard' | 'userIntelligence' | 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' | 'gamificationControl' | 'notifications' = 'dashboard';
+
+  // Gamification Control Properties
+  systemSettings: SystemSettings = {
+    gamification: {
+      loginPoints: 10,
+      readingPointsPerMinute: 1,
+      referralPoints: 50,
+      streakBonus7Days: 100,
+      streakBonus30Days: 500,
+      reviewPoints: 20
+    },
+    economy: {
+      coinExchangeRate: 50,
+      minimumWithdrawal: 500
+    },
+    maintenanceMode: false
+  };
+  isSavingSettings: boolean = false;
+  originalSettings: SystemSettings | null = null;
 
   manualPromotionStartDate: string = '';
   manualPromotionEndDate: string = '';
@@ -214,6 +262,18 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   totalRequestedBooks: number = 0;
   totalPrintOrders: number = 0;
   totalUrgencyRequests: number = 0;
+  totalCoins: number = 0;
+  totalReferrals: number = 0;
+
+  // Smart Dashboard Stats (Phase 1)
+  activeUsersNow: number = 0;
+  todayReaders: number = 0;
+  todayCoins: number = 0;
+  todayReferrals: number = 0;
+
+  // Smart Alerts
+  lowReadingAlert: boolean = false;
+  activeChallengeAlert: boolean = true; // Mocked for now
 
   // Filter properties for products
   filterOptions: string[] = [];
@@ -231,6 +291,27 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   faCheckCircle = faCheckCircle;
   faMoneyBillWave = faMoneyBillWave;
   faSitemap = faSitemap;
+  faCamera = faCamera;
+  faTimes = faTimes;
+  faUserClock = faUserClock;
+  faCoins = faCoins;
+  faUserPlus = faUserPlus;
+  faChartBar = faChartBar;
+  faBell = faBell;
+  faSearch = faSearch; // Ensure faSearch is imported or added to library
+
+  // User Intelligence Phase 2
+  usersList: any[] = [];
+  selectedUserInsight: UserInsight | null = null;
+  showUserAnalysisModal: boolean = false;
+  userSearchTerm: string = '';
+  filteredUsersList: any[] = [];
+
+  @ViewChild('videoElement') videoElement!: ElementRef;
+  @ViewChild('canvasElement') canvasElement!: ElementRef;
+
+  showCameraModal: boolean = false;
+  cameraStream: MediaStream | null = null;
 
 
   showArchived: boolean = false;
@@ -387,6 +468,125 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       this.imageError = 'رابط الصورة غير صالح.';
     }
   }
+
+  // --- Camera Logic ---
+  currentFacingMode: 'user' | 'environment' = 'environment';
+
+  async openCamera() {
+    console.log('📸 Admin: Opening camera request...');
+    this.showCameraModal = true;
+    this.cdr.detectChanges(); // Force update to ensure modal exists in DOM
+
+    // 1. Check support
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      alert('نأسف، المتصفح لا يدعم تشغيل الكاميرا.');
+      this.showCameraModal = false;
+      return;
+    }
+
+    try {
+      console.log('📸 Admin: Requesting media stream with mode:', this.currentFacingMode);
+
+      // Stop previous stream if any
+      if (this.cameraStream) {
+        this.cameraStream.getTracks().forEach(track => track.stop());
+        this.cameraStream = null;
+      }
+
+      // 2. Request stream with specific facing mode
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: this.currentFacingMode }
+      });
+
+      // CRITICAL FIX: Check if modal was closed while waiting for stream
+      if (!this.showCameraModal) {
+        console.log('📸 Admin: Modal closed during initialization, stopping stream.');
+        stream.getTracks().forEach(track => track.stop());
+        return;
+      }
+
+      this.cameraStream = stream;
+      console.log('📸 Admin: Stream obtained:', this.cameraStream);
+
+      // 3. Attach stream
+      setTimeout(() => {
+        let videoEl: HTMLVideoElement | null = null;
+        if (this.videoElement && this.videoElement.nativeElement) {
+          videoEl = this.videoElement.nativeElement;
+        } else {
+          videoEl = document.getElementById('adminCameraVideo') as HTMLVideoElement;
+        }
+
+        if (videoEl) {
+          console.log('📸 Admin: Assigning stream to video element');
+          videoEl.srcObject = this.cameraStream;
+          videoEl.muted = true;
+          // Visual feedback: Mirror if user/front camera
+          videoEl.style.transform = this.currentFacingMode === 'user' ? 'scaleX(-1)' : 'none';
+
+          videoEl.play().catch((e: any) => console.error('📸 Admin: Play error', e));
+        } else {
+          console.error('📸 Admin: Video element NOT found in DOM!');
+        }
+      }, 300);
+
+    } catch (err: any) {
+      console.error('❌ Error accessing camera:', err);
+      // Explicit alert for the user
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        alert('تم رفض إذن الوصول للكاميرا.');
+      } else {
+        alert('تعذر فتح الكاميرا: ' + (err.message || err));
+      }
+      this.showCameraModal = false;
+      this.cdr.detectChanges();
+    }
+  }
+
+  switchCamera() {
+    this.currentFacingMode = this.currentFacingMode === 'environment' ? 'user' : 'environment';
+    this.openCamera();
+  }
+
+  closeCamera() {
+    this.showCameraModal = false;
+    if (this.cameraStream) {
+      this.cameraStream.getTracks().forEach(track => track.stop());
+      this.cameraStream = null;
+    }
+  }
+
+  captureImage() {
+    if (this.videoElement && this.canvasElement) {
+      const video = this.videoElement.nativeElement;
+      const canvas = this.canvasElement.nativeElement;
+      const context = canvas.getContext('2d');
+
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      canvas.toBlob((blob: Blob) => {
+        if (blob) {
+          if (this.selectedFiles.length + this.imageUrls.length >= 3) {
+            this.modalService.showWarning(
+              'تنبيه',
+              'لا يمكن إضافة المزيد من الصور (الحد الأقصى 3)'
+            );
+            this.closeCamera();
+            return;
+          }
+
+          const file = new File([blob], `camera-${Date.now()}.jpg`, { type: "image/jpeg" });
+          this.selectedFiles.push(file);
+          this.generatePreviews([file]);
+          this.closeCamera();
+        }
+      }, 'image/jpeg');
+    }
+  }
+
+
 
   // Modal properties for component's modal system
   modalOpen: boolean = false;
@@ -573,7 +773,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     library: FaIconLibrary
   ) {
     library.addIcons(
-      faShoppingCart, faStore, faBook, faPrint, faPlus, faEdit, faTruck, faUsers, faCheckCircle, faMoneyBillWave, faSitemap, faPlusCircle, faImage, faTag, faHashtag, faList, faDollarSign, faAlignLeft, faExclamationTriangle, faCartPlus, faHeart, faMobileAlt
+      faShoppingCart, faStore, faBook, faPrint, faPlus, faEdit, faTruck, faUsers, faCheckCircle, faMoneyBillWave, faSitemap, faPlusCircle, faImage, faTag, faHashtag, faList, faDollarSign, faAlignLeft, faExclamationTriangle, faCartPlus, faHeart, faMobileAlt, faCamera, faTimes, faHome, faChartLine, faCog, faBars, faUserClock, faCoins, faUserPlus, faChartBar, faBell, faSearch, faSlidersH
     );
   }
 
@@ -628,9 +828,16 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     }
   }
 
-  switchView(view: 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion'): void {
+  switchView(view: 'dashboard' | 'userIntelligence' | 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' | 'gamificationControl' | 'notifications'): void {
     this.currentView = view;
-    if (view === 'orders' || view === 'merchantOrders') {
+
+    if (view === 'dashboard') {
+      this.loadStats();
+    } else if (view === 'userIntelligence') {
+      this.loadUsersForIntelligence();
+    } else if (view === 'gamificationControl') {
+      this.loadSystemSettings();
+    } else if (view === 'orders' || view === 'merchantOrders') {
       this.ordersPage = 1; // Reset page when switching views
       this.loadOrders();
     } else if (view === 'requestedBooks') {
@@ -688,13 +895,22 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   }
 
   loadStats(): void {
-    this.http.get<{ success: boolean; stats: { totalUsers: number; totalProducts: number; totalOrders: number; totalLikes: number; totalCartItems: number } }>(`${this.backendBaseUrl}/admin/stats`).subscribe({
+    this.http.get<{ success: boolean; stats: { totalUsers: number; totalProducts: number; totalOrders: number; totalLikes: number; totalCartItems: number; totalMerchantOrders: number; totalCoins: number; totalReferrals: number } }>(`${this.backendBaseUrl}/admin/stats`).subscribe({
       next: (response) => {
         if (response.success) {
           this.totalUsers = response.stats.totalUsers;
           this.totalProducts = response.stats.totalProducts;
           this.totalLikes = response.stats.totalLikes;
           this.totalCartItems = response.stats.totalCartItems;
+          this.totalMerchantOrders = response.stats.totalMerchantOrders || 0;
+          this.totalCoins = response.stats.totalCoins || 0;
+          this.totalReferrals = response.stats.totalReferrals || 0;
+
+          // Calculate total orders (website + merchant)
+          this.totalOrders = response.stats.totalOrders;
+
+          // Calculate Phase 1 Smart Stats
+          this.calculateSmartStats();
         }
       },
       error: (err) => {
@@ -714,6 +930,174 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       }
     });
   }
+
+  calculateSmartStats(): void {
+    // 1. Mock Active Users (Random or Real if available)
+    // If we have the users list loaded, we can pretend a percentage is active, or use the mocked value
+    this.activeUsersNow = Math.floor(Math.random() * (40 - 15 + 1)) + 15;
+
+    // 2. Today's Readers (Mocked based on total users percentage for now, until backend support)
+    // Assuming 20% of users read daily
+    this.todayReaders = Math.floor(this.totalUsers * 0.2) + Math.floor(Math.random() * 5);
+
+    // 3. Today's Coins (Mocked based on total coins growth or simply a random realistic number)
+    // In a real scenario, we'd filter coin transactions by date
+    this.todayCoins = Math.floor(Math.random() * 500) + 100;
+
+    // 4. Today's Referrals (Mocked)
+    this.todayReferrals = Math.floor(Math.random() * 3);
+
+    // 5. Smart Alerts Logic (Mocked)
+    // E.g., if today's readers < 10% of total users, show alert
+    if (this.todayReaders < (this.totalUsers * 0.1)) {
+      this.lowReadingAlert = true;
+    }
+  }
+
+  // Phase 2: User Intelligence Logic
+  loadUsersForIntelligence(): void {
+    console.log('Loading users for intelligence...');
+    // Reusing the user-hierarchy endpoint as a source of truth for users list
+    this.http.get<any[]>(`${this.backendBaseUrl}/admin/user-hierarchy`).subscribe({
+      next: (users) => {
+        console.log('Users loaded:', users);
+        if (Array.isArray(users)) {
+          console.log('Users count:', users.length);
+          this.usersList = users;
+          this.filteredUsersList = users;
+        } else {
+          console.error('Expected array but got:', users);
+        }
+      },
+      error: (err) => console.error('Error loading users for intelligence', err)
+    });
+  }
+
+  filterUsers(): void {
+    if (!this.userSearchTerm) {
+      this.filteredUsersList = this.usersList;
+      return;
+    }
+    const term = this.userSearchTerm.toLowerCase();
+    this.filteredUsersList = this.usersList.filter(u =>
+      u.username.toLowerCase().includes(term) ||
+      u.email.toLowerCase().includes(term) ||
+      (u.phone && u.phone.includes(term))
+    );
+  }
+
+  calculateUserScore(user: any): number {
+    if (!user) return 0;
+
+    // Master Score Logic (0-100) - Revised (No Randomness)
+    // 1. Referral Power (max 50 points): 10 points per child!
+    const referralScore = Math.min((user.children?.length || 0) * 10, 50);
+
+    // 2. Loyalty / Account Age (max 30 points):
+    let daysSinceJoin = 0;
+    if (user.createdAt) {
+      const created = new Date(user.createdAt);
+      if (!isNaN(created.getTime())) {
+        daysSinceJoin = Math.floor((new Date().getTime() - created.getTime()) / (1000 * 3600 * 24));
+      }
+    }
+    const loyaltyScore = Math.min(daysSinceJoin * 1, 30); // 1 point per day, max 30
+
+    // 3. Profile Completeness (Max 20 points)
+    // If they have a phone OR picture
+    let completenessScore = 0;
+    if (user.phone) completenessScore += 10;
+    if (user.profileImage) completenessScore += 10;
+
+    return Math.min(referralScore + loyaltyScore + completenessScore, 100);
+  }
+
+  analyzeUser(user: any): void {
+    const score = this.calculateUserScore(user);
+
+    // Determine conversion probability based on REAL score
+    let probability: 'High' | 'Medium' | 'Low' = 'Low';
+    if (score > 60) probability = 'High';
+    else if (score > 30) probability = 'Medium';
+
+    this.selectedUserInsight = {
+      user: user,
+      readingTimeAvg: '0 دقيقة', // Placeholder until backend tracking is linked
+      bestStreak: 0,            // Placeholder
+      currentStreak: 0,         // Added to satisfy interface
+      conversionProbability: probability,
+      topInterests: [], // Placeholder
+      score: score
+    };
+
+    this.showUserAnalysisModal = true;
+  }
+
+
+
+  closeUserAnalysis(): void {
+    this.showUserAnalysisModal = false;
+    this.selectedUserInsight = null;
+  }
+
+  resetSystemSettings(): void {
+    if (confirm('هل أنت متأكد من استعادة القيم الافتراضية للنظام؟')) {
+      this.systemSettings = {
+        gamification: {
+          loginPoints: 10,
+          readingPointsPerMinute: 1,
+          referralPoints: 50,
+          streakBonus7Days: 100,
+          streakBonus30Days: 500,
+          reviewPoints: 20
+        },
+        economy: {
+          coinExchangeRate: 50,
+          minimumWithdrawal: 500
+        },
+        maintenanceMode: false
+      };
+    }
+  }
+
+  undoSettings(): void {
+    if (this.originalSettings) {
+      if (confirm('هل أنت متأكد من التراجع عن جميع التغييرات غير المحفوظة؟')) {
+        this.systemSettings = JSON.parse(JSON.stringify(this.originalSettings));
+      }
+    } else {
+      alert('لا توجد تغييرات للتراجع عنها');
+    }
+  }
+
+  loadSystemSettings(): void {
+    this.http.get<SystemSettings>(`${this.backendBaseUrl}/admin/settings`).subscribe({
+      next: (settings) => {
+        if (settings) {
+          this.systemSettings = settings;
+          this.originalSettings = JSON.parse(JSON.stringify(settings)); // Deep copy
+        }
+      },
+      error: (err) => console.error('Error loading settings', err)
+    });
+  }
+
+  saveSystemSettings(): void {
+    this.isSavingSettings = true;
+    this.http.put(`${this.backendBaseUrl}/admin/settings`, this.systemSettings).subscribe({
+      next: () => {
+        alert('تم حفظ الإعدادات بنجاح');
+        this.isSavingSettings = false;
+      },
+      error: (err) => {
+        console.error('Error saving settings', err);
+        alert('حدث خطأ أثناء حفظ الإعدادات');
+        this.isSavingSettings = false;
+      }
+    });
+  }
+
+
 
   loadPromotionDates(): void {
     this.http.get<{ success: boolean; startDate: string; endDate: string }>(`${this.backendBaseUrl}/admin/promotion-dates`).subscribe({
@@ -1627,6 +2011,19 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
 
 
+
+  generatePreviews(files: File[]): void {
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        if (e.target?.result) {
+          this.selectedFilesPreviews.push(e.target.result as string);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
   onEpubSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
@@ -1642,17 +2039,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     }
   }
 
-  generatePreviews(files: File[]): void {
-    files.forEach(file => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        if (e.target?.result) {
-          this.selectedFilesPreviews.push(e.target.result as string);
-        }
-      };
-      reader.readAsDataURL(file);
-    });
-  }
+
   onEpubSelectedForUpdate(event: Event, product: Product): void {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {

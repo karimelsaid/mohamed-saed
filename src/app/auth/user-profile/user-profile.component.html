@@ -1,107 +1,484 @@
-<div class="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4 md:mt-40 mt-10">
-  <div class="w-full max-w-2xl bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 space-y-8">
-    <div class="text-center">
-      <h2 class="text-3xl font-bold text-gray-900 dark:text-white">إعدادات الحساب</h2>
-      <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">قم بتحديث معلومات ملفك الشخصي.</p>
-    </div>
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900 pt-24 pb-12 px-4 sm:px-6 lg:px-8 rtl" dir="rtl">
+  <div class="max-w-7xl mx-auto">
 
-    <div *ngIf="isLoading" class="text-center">
-      <p class="text-gray-500 dark:text-gray-400">جاري تحميل البيانات...</p>
-    </div>
-
-    <div *ngIf="!isLoading">
-      <div class="flex justify-end mb-4">
-        <button *ngIf="!isEditingAddress" (click)="toggleEdit(true)" class="bg-blue-600 text-white py-2 px-5 rounded-lg hover:bg-blue-700 transition-colors shadow-md font-semibold">
-          تعديل
-        </button>
+    <!-- Header Section -->
+    <div class="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">حسابي</h1>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">إدارة ملفك الشخصي، الإحالات، والإنجازات.</p>
       </div>
 
-      <form [formGroup]="profileForm" (ngSubmit)="onSubmit()" class="space-y-6">
-        <div>
-          <label for="username" class="block text-sm font-medium text-gray-700 dark:text-gray-300 text-right">اسم المستخدم</label>
-          <input id="username" type="text" formControlName="username" required
-                 [ngClass]="{'bg-gray-100 dark:bg-gray-900 cursor-not-allowed': !isEditingAddress, 'bg-gray-50 dark:bg-gray-700': isEditingAddress}"
-                 class="mt-1 block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm text-right">
+      <!-- Gamification Mini-Summary -->
+      <div *ngIf="gamificationProfile"
+        class="flex items-center gap-4 bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+        <div class="flex items-center gap-2">
+          <div
+            class="w-10 h-10 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center text-yellow-600 dark:text-yellow-400">
+            <fa-icon [icon]="faCoins" class="text-xl"></fa-icon>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 dark:text-gray-400">عملات كنوز</p>
+            <p class="font-bold text-gray-900 dark:text-white">{{ gamificationProfile.coins | number }}</p>
+          </div>
         </div>
-
-        <div>
-          <label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 text-right">البريد الإلكتروني</label>
-          <input id="email" type="email" formControlName="email"
-                 class="mt-1 block w-full px-4 py-3 bg-gray-200 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl shadow-sm sm:text-sm text-gray-500 dark:text-gray-400 cursor-not-allowed text-right"
-                 readonly>
+        <div class="w-px h-8 bg-gray-200 dark:bg-gray-700"></div>
+        <div class="flex items-center gap-2">
+          <div
+            class="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-600 dark:text-purple-400">
+            <fa-icon [icon]="faTrophy" class="text-xl"></fa-icon>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 dark:text-gray-400">المستوى</p>
+            <p class="font-bold text-gray-900 dark:text-white">{{ gamificationProfile.level }}</p>
+          </div>
         </div>
+      </div>
+    </div>
 
-        <div>
-          <label for="phone" class="block text-sm font-medium text-gray-700 dark:text-gray-300 text-right">رقم الهاتف</label>
-          <input id="phone" type="tel" formControlName="phone" required (input)="validatePhone()"
-                 [ngClass]="{
-                   'bg-gray-100 dark:bg-gray-900 cursor-not-allowed': !isEditingAddress,
-                   'bg-gray-50 dark:bg-gray-700': isEditingAddress,
-                   'border-red-500 focus:ring-red-500': !phoneValid && phoneTouched && isEditingAddress,
-                   'border-blue-500 focus:ring-blue-500': phoneValid && phoneTouched && isEditingAddress
-                 }"
-                 class="mt-1 block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl shadow-sm focus:outline-none sm:text-sm text-right">
-          <div *ngIf="!phoneValid && phoneTouched && isEditingAddress" class="text-red-500 text-xs mt-1 text-right">
-            رقم هاتف مصري صالح مطلوب (11 رقم يبدأ بـ 010, 011, 012, أو 015).
+    <div class="flex flex-col lg:flex-row gap-8">
+
+      <!-- Sidebar Navigation -->
+      <div class="w-full lg:w-64 flex-shrink-0">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden sticky top-24">
+          <!-- User Brief -->
+          <div class="p-6 text-center border-b border-gray-100 dark:border-gray-700">
+            <!-- Profile Image Container -->
+            <div class="relative w-24 h-24 mx-auto mb-4 group">
+              <!-- Image or Placeholder -->
+              <div
+                class="w-full h-full rounded-full overflow-hidden shadow-lg border-2 border-white dark:border-gray-600 bg-gray-100 dark:bg-gray-700">
+                <img *ngIf="profileImage" [src]="profileImage" alt="Profile" class="w-full h-full object-cover">
+                <div *ngIf="!profileImage"
+                  class="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-3xl font-bold">
+                  {{ user?.username?.charAt(0)?.toUpperCase() }}
+                </div>
+              </div>
+
+              <!-- Edit Overlay -->
+              <div
+                class="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 cursor-pointer backdrop-blur-sm"
+                (click)="triggerFileInput()">
+                <!-- Default click triggers file input, secondary buttons for specific actions -->
+                <button type="button" (click)="$event.stopPropagation(); triggerFileInput()"
+                  class="text-white hover:text-blue-200 p-1" title="رفع صورة">
+                  <fa-icon [icon]="faEdit"></fa-icon>
+                </button>
+                <button type="button" (click)="$event.stopPropagation(); openCamera()"
+                  class="text-white hover:text-blue-200 p-1" title=" التقاط صورة">
+                  <fa-icon [icon]="faCamera"></fa-icon>
+                </button>
+              </div>
+
+              <!-- Loading Indicator -->
+              <div *ngIf="isUploadingImage"
+                class="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center">
+                <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+              </div>
+            </div>
+
+            <!-- Hidden File Input -->
+            <input type="file" #fileInput (change)="onFileSelected($event)" accept="image/*" class="hidden">
+            <h3 class="font-bold text-gray-900 dark:text-white truncate">{{ user?.username }}</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400 truncate">{{ user?.email }}</p>
+          </div>
+
+          <!-- Navigation Menu -->
+          <nav class="p-2 space-y-1">
+            <button (click)="switchTab('profile')"
+              [ngClass]="activeTab === 'profile' ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'"
+              class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-medium">
+              <fa-icon [icon]="faUser" class="w-5 text-center"></fa-icon>
+              <span>الملف الشخصي</span>
+            </button>
+
+            <button (click)="switchTab('referrals')"
+              [ngClass]="activeTab === 'referrals' ? 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'"
+              class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-medium">
+              <fa-icon [icon]="faUsers" class="w-5 text-center"></fa-icon>
+              <span>دعوة الأصدقاء</span>
+              <span class="mr-auto bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full font-bold">جديد</span>
+            </button> <!-- End Referrals Button -->
+
+            <button (click)="enableNotifications()" [disabled]="isEnablingNotifications || notificationsEnabled"
+              class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
+              [ngClass]="{'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300': notificationsEnabled}">
+              <fa-icon [icon]="notificationsEnabled ? faCheckCircle : faBell" class="w-5 text-center"
+                [class.animate-pulse]="isEnablingNotifications"></fa-icon>
+              <span>{{ notificationsEnabled ? 'الإشعارات مفعلة' : (isEnablingNotifications ? 'جاري التفعيل...' : 'تفعيل
+                الإشعارات') }}</span>
+            </button>
+
+            <button (click)="switchTab('achievements')"
+              [ngClass]="activeTab === 'achievements' ? 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'"
+              class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-medium">
+              <fa-icon [icon]="faTrophy" class="w-5 text-center"></fa-icon>
+              <span>إنجازاتي</span>
+            </button>
+
+            <div class="pt-4 mt-4 border-t border-gray-100 dark:border-gray-700">
+              <button (click)="logout()"
+                class="w-full flex items-center gap-3 px-4 py-3 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all duration-200 font-medium">
+                <fa-icon [icon]="faSignOutAlt" class="w-5 text-center"></fa-icon>
+                <span>تسجيل الخروج</span>
+              </button>
+            </div>
+          </nav>
+        </div>
+      </div>
+
+      <!-- Main Content Area -->
+      <div id="tab-content" class="flex-1">
+        <!-- Hero Card: Coins & Wallet (Always Visible) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <!-- Coins Card -->
+          <div
+            class="bg-gradient-to-br from-purple-600 to-indigo-600 rounded-2xl shadow-lg p-6 text-white relative overflow-hidden">
+            <div class="relative z-10">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="font-bold text-lg text-purple-100">رصيد العملات</h3>
+                <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                  <fa-icon [icon]="faCoins" class="text-yellow-300 text-xl"></fa-icon>
+                </div>
+              </div>
+              <div class="text-4xl font-bold text-white mb-2">{{ gamificationProfile?.coins || 0 | number }}</div>
+              <p class="text-sm text-purple-200 mb-4">عملة كنوز</p>
+              <button (click)="openConvertModal()"
+                class="w-full py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-bold transition-all">
+                تحويل إلى رصيد
+              </button>
+            </div>
+            <div class="absolute -right-8 -bottom-8 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
+          </div>
+
+          <!-- Cash Wallet Card -->
+          <div
+            class="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl shadow-lg p-6 text-white relative overflow-hidden">
+            <div class="relative z-10">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="font-bold text-lg text-emerald-100">المحفظة النقدية</h3>
+                <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                  <div class="text-xl font-bold">ج.م</div>
+                </div>
+              </div>
+              <div class="text-4xl font-bold text-white mb-2">{{ gamificationProfile?.referralBalance || 0 | number }}
+              </div>
+              <p class="text-sm text-emerald-100 mb-4">جنيه مصري</p>
+              <div class="text-xs bg-black/10 rounded px-2 py-1 inline-block">
+                يمكن استخدامه في الشراء
+              </div>
+            </div>
+            <div class="absolute -right-8 -bottom-8 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
           </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div>
-            <label for="governorate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 text-right">المحافظة</label>
-            <input *ngIf="!isEditingAddress" type="text" formControlName="governorate"
-                   class="mt-1 block w-full px-4 py-3 bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl shadow-sm cursor-not-allowed sm:text-sm text-right">
-            <select *ngIf="isEditingAddress" id="governorate" formControlName="governorate" (change)="onGovernorateChange()"
-                    class="mt-1 block w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm text-right">
-              <option value="" disabled>اختر محافظة</option>
-              <option *ngFor="let gov of governorates" [value]="gov.governorate_name">{{gov.governorate_name}}</option>
-            </select>
+        <!-- Tab: Profile Settings (Existing Form Refactored) -->
+        <div *ngIf="activeTab === 'profile'"
+          class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6 sm:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div class="flex items-center justify-between mb-6">
+            <h2 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <fa-icon [icon]="faEdit" class="text-blue-500"></fa-icon>
+              تعديل البيانات
+            </h2>
+            <button *ngIf="!isEditingAddress" (click)="toggleEdit(true)"
+              class="text-blue-600 hover:text-blue-700 dark:text-blue-400 font-medium text-sm">
+              تفعيل التعديل
+            </button>
           </div>
-          <div>
-            <label for="city" class="block text-sm font-medium text-gray-700 dark:text-gray-300 text-right">المدينة / المركز</label>
-            <input *ngIf="!isEditingAddress" type="text" formControlName="city"
-                   class="mt-1 block w-full px-4 py-3 bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl shadow-sm cursor-not-allowed sm:text-sm text-right">
-            <select *ngIf="isEditingAddress" id="city" formControlName="city" (change)="validateLocation()"
-                    [disabled]="!profileForm.get('governorate')?.value"
-                    class="mt-1 block w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm text-right disabled:bg-gray-200 disabled:cursor-not-allowed">
-              <option value="" disabled>اختر مدينة</option>
-              <option *ngFor="let city of cities" [value]="city">{{city}}</option>
-            </select>
+
+          <div *ngIf="isLoading" class="py-12 text-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p class="mt-4 text-gray-500">جاري تحميل البيانات...</p>
           </div>
-          <div>
-            <label for="village" class="block text-sm font-medium text-gray-700 dark:text-gray-300 text-right">القرية / العنوان</label>
-            <input id="village" type="text" formControlName="village"
-                   [ngClass]="{'bg-gray-100 dark:bg-gray-900 cursor-not-allowed': !isEditingAddress, 'bg-gray-50 dark:bg-gray-700': isEditingAddress}"
-                   class="mt-1 block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm text-right">
-            <div *ngIf="profileForm.get('village')?.invalid && profileForm.get('village')?.touched && isEditingAddress"
-                 class="text-red-500 text-xs mt-1 text-right">
-              تفاصيل العنوان مطلوبة.
+
+          <form *ngIf="!isLoading" [formGroup]="profileForm" (ngSubmit)="onSubmit()" class="space-y-6">
+            <!-- Grid Layout -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">اسم المستخدم</label>
+                <input type="text" formControlName="username"
+                  [ngClass]="{'bg-gray-50 dark:bg-gray-900/50': !isEditingAddress, 'bg-white dark:bg-gray-700': isEditingAddress}"
+                  class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">البريد الإلكتروني</label>
+                <input type="email" formControlName="email"
+                  class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-900/50 text-gray-500 cursor-not-allowed">
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">رقم الهاتف</label>
+                <input type="tel" formControlName="phone" (input)="validatePhone()" [ngClass]="{
+                    'border-red-500 focus:ring-red-500': !phoneValid && phoneTouched && isEditingAddress,
+                    'bg-gray-50 dark:bg-gray-900/50': !isEditingAddress, 
+                    'bg-white dark:bg-gray-700': isEditingAddress
+                  }"
+                  class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                <p *ngIf="!phoneValid && phoneTouched && isEditingAddress" class="text-red-500 text-xs mt-1">رقم غير
+                  صالح</p>
+              </div>
+            </div>
+
+            <!-- Address Section -->
+            <div class="pt-6 border-t border-gray-100 dark:border-gray-700">
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">العنوان</h3>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">المحافظة</label>
+                  <select *ngIf="isEditingAddress" formControlName="governorate" (change)="onGovernorateChange()"
+                    class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 transition-all">
+                    <option value="" disabled>اختر محافظة</option>
+                    <option *ngFor="let gov of governorates" [value]="gov.governorate_name">{{gov.governorate_name}}
+                    </option>
+                  </select>
+                  <input *ngIf="!isEditingAddress" type="text" formControlName="governorate"
+                    class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed">
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">المدينة</label>
+                  <select *ngIf="isEditingAddress" formControlName="city" (change)="validateLocation()"
+                    class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 transition-all">
+                    <option value="" disabled>اختر مدينة</option>
+                    <option *ngFor="let city of cities" [value]="city">{{city}}</option>
+                  </select>
+                  <input *ngIf="!isEditingAddress" type="text" formControlName="city"
+                    class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed">
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">القرية / الشارع</label>
+                  <input type="text" formControlName="village"
+                    [ngClass]="{'bg-gray-50 dark:bg-gray-900/50': !isEditingAddress, 'bg-white dark:bg-gray-700': isEditingAddress}"
+                    class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 transition-all">
+                </div>
+              </div>
+            </div>
+
+            <!-- Messages -->
+            <div *ngIf="errorMessage"
+              class="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300 p-4 rounded-xl border border-red-100 dark:border-red-900/30 flex items-center gap-3">
+              <fa-icon [icon]="faTimes"></fa-icon>
+              {{ errorMessage }}
+            </div>
+            <div *ngIf="successMessage"
+              class="bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-300 p-4 rounded-xl border border-green-100 dark:border-green-900/30 flex items-center gap-3">
+              <fa-icon [icon]="faCheckCircle"></fa-icon>
+              {{ successMessage }}
+            </div>
+
+            <!-- Actions -->
+            <div *ngIf="isEditingAddress" class="flex gap-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+              <button type="submit" [disabled]="profileForm.invalid || isSubmitting || !locationValid"
+                class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg shadow-blue-500/30 transition-all disabled:opacity-50 disabled:shadow-none">
+                <span *ngIf="!isSubmitting">حفظ التغييرات</span>
+                <span *ngIf="isSubmitting">جاري الحفظ...</span>
+              </button>
+              <button type="button" (click)="toggleEdit(false)"
+                class="px-6 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 font-medium transition-all">
+                إلغاء
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Tab: Referrals (New & Coin Based) -->
+        <div *ngIf="activeTab === 'referrals'" class="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <!-- Hero Card: Coins & Wallet -->
+
+
+          <!-- Code Box -->
+          <div
+            class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-8 border border-gray-100 dark:border-gray-700 text-center">
+            <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4">كود الدعوة الخاص بك</h3>
+            <p class="text-gray-500 mb-6 max-w-md mx-auto">شارك هذا الكود مع أصدقائك. ستحصل على <span
+                class="font-bold text-purple-600">100 عملة</span> لكل صديق يسجل باستخدامه!</p>
+
+            <div class="relative max-w-md mx-auto group">
+              <div
+                class="flex items-center bg-gray-50 dark:bg-gray-900 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 p-2 pl-28 transition-colors group-hover:border-purple-400">
+                <input type="text" readonly [value]="gamificationProfile?.referralCode || 'جاري التوليد...'"
+                  class="w-full bg-transparent border-none focus:ring-0 text-xl font-mono font-bold text-gray-700 dark:text-gray-200 text-center tracking-widest">
+              </div>
+              <button (click)="copyReferralCode()"
+                class="absolute left-1 top-1 bottom-1 px-6 rounded-lg font-bold text-white transition-all duration-200 flex items-center gap-2"
+                [ngClass]="copied ? 'bg-green-500' : 'bg-purple-600 hover:bg-purple-700'">
+                <fa-icon [icon]="copied ? faCheckCircle : faCopy"></fa-icon>
+                <span>{{ copied ? 'تم النسخ' : 'نسخ' }}</span>
+              </button>
+            </div>
+          </div>
+
+
+
+          <!-- How requests work -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div
+              class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 text-center">
+              <div
+                class="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">
+                1</div>
+              <h4 class="font-bold text-gray-900 dark:text-white mb-2">شارك الكود</h4>
+              <p class="text-sm text-gray-500">أرسل الكود لأصدقائك عبر الواتساب أو الفيسبوك.</p>
+            </div>
+            <div
+              class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 text-center">
+              <div
+                class="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">
+                2</div>
+              <h4 class="font-bold text-gray-900 dark:text-white mb-2">يسجل صديقك</h4>
+              <p class="text-sm text-gray-500">عندما يسجل صديقك حساب جديد باستخدام الكود.</p>
+            </div>
+            <div
+              class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 text-center">
+              <div
+                class="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">
+                3</div>
+              <h4 class="font-bold text-gray-900 dark:text-white mb-2">اكسب عملات</h4>
+              <p class="text-sm text-gray-500">تحصل فوراً على 100 عملة لكل صديق!</p>
             </div>
           </div>
         </div>
 
-        <div *ngIf="errorMessage" class="bg-red-100 dark:bg-red-900/30 border-r-4 border-red-500 text-red-700 dark:text-red-300 p-4 rounded-lg" role="alert">
-          <p class="font-bold">خطأ</p>
-          <p>{{ errorMessage }}</p>
+        <!-- Tab: Achievements -->
+        <div *ngIf="activeTab === 'achievements'"
+          class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-8 text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div
+            class="w-24 h-24 bg-purple-100 dark:bg-purple-900/20 rounded-full flex items-center justify-center mx-auto mb-6">
+            <fa-icon [icon]="faTrophy" class="text-4xl text-purple-600 dark:text-purple-400"></fa-icon>
+          </div>
+
+          <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">لوحة الإنجازات</h2>
+          <p class="text-gray-600 dark:text-gray-400 max-w-lg mx-auto mb-8">
+            تستطيع متابعة تقدمك الكامل، مستواك، وترتيبك بين القراء في لوحة القيادة الخاصة بالألعاب (Gamification
+            Dashboard).
+          </p>
+
+          <a [routerLink]="['/library']" [queryParams]="{tab: 'achievements'}"
+            class="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold py-3 px-8 rounded-xl shadow-lg transition-transform hover:scale-105">
+            <span>الذهاب إلى إنجازاتي</span>
+            <fa-icon [icon]="faTrophy"></fa-icon>
+          </a>
         </div>
 
-        <div *ngIf="successMessage" class="bg-green-100 dark:bg-green-900/30 border-r-4 border-green-500 text-green-700 dark:text-green-300 p-4 rounded-lg" role="alert">
-          <p class="font-bold">نجاح</p>
-          <p>{{ successMessage }}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Conversion Modal -->
+  <div *ngIf="showConvertModal"
+    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+    <div
+      class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+      <div class="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
+        <h3 class="text-xl font-bold text-gray-900 dark:text-white">تحويل العملات</h3>
+        <button (click)="closeConvertModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+          <fa-icon [icon]="faTimes" class="text-lg"></fa-icon>
+        </button>
+      </div>
+
+      <div class="p-6 space-y-4">
+        <div
+          class="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-xl flex gap-3 text-yellow-800 dark:text-yellow-200 text-sm">
+          <fa-icon [icon]="faCoins" class="mt-1"></fa-icon>
+          <p>سعر التحويل الحالي: <span class="font-bold">{{conversionRate}} عملة = 1 جنيه</span></p>
         </div>
 
-        <div *ngIf="isEditingAddress" class="flex space-x-4">
-          <button type="submit" [disabled]="profileForm.invalid || isSubmitting || !locationValid"
-                  class="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-lg text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-105">
-            <span *ngIf="!isSubmitting">حفظ التغييرات</span>
-            <span *ngIf="isSubmitting">جاري الحفظ...</span>
-          </button>
-          <button type="button" (click)="toggleEdit(false)"
-                  class="w-full flex justify-center py-3 px-4 border border-gray-300 rounded-xl shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-            إلغاء
-          </button>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">كم تريد أن
+            تحول؟</label>
+          <input type="number" [(ngModel)]="coinsToConvert" [min]="50" [max]="gamificationProfile?.coins || 0"
+            [step]="50"
+            class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-purple-500 text-center text-xl font-bold">
+          <div class="flex justify-between text-xs text-gray-500 mt-2">
+            <span>الحد الأدنى: 50 عملة</span>
+            <span>رصيدك: {{gamificationProfile?.coins}} عملة</span>
+          </div>
         </div>
-      </form>
+
+        <div class="flex items-center justify-center gap-4 py-4">
+          <div class="text-center">
+            <p class="text-sm text-gray-500">ستدفع</p>
+            <p class="text-xl font-bold text-purple-600">{{coinsToConvert || 0}} عملة</p>
+          </div>
+          <div class="text-gray-400">➡️</div>
+          <div class="text-center">
+            <p class="text-sm text-gray-500">ستحصل على</p>
+            <p class="text-xl font-bold text-emerald-600">{{Math.floor((coinsToConvert || 0) / conversionRate)}}
+              جنيه</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="p-6 bg-gray-50 dark:bg-gray-900/50 flex gap-3">
+        <button (click)="convertCoins()"
+          [disabled]="!coinsToConvert || coinsToConvert < 50 || coinsToConvert > (gamificationProfile?.coins || 0)"
+          class="flex-1 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl transition-all">
+          تأكيد التحويل
+        </button>
+        <button (click)="closeConvertModal()"
+          class="px-6 py-3 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 font-medium">
+          إلغاء
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Camera Modal -->
+</div>
+
+<!-- Camera Modal -->
+<div *ngIf="showCameraModal"
+  style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 99999; background-color: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center;"
+  class="backdrop-blur-sm animate-in fade-in duration-200">
+
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden w-full max-w-lg relative flex flex-col"
+    style="max-height: 90vh;" (click)="$event.stopPropagation()">
+    <!-- Header -->
+    <div
+      class="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-900 shrink-0">
+      <h3 class="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+        <fa-icon [icon]="faCamera" class="text-blue-500"></fa-icon>
+        التقاط صورة شخصية
+      </h3>
+      <button (click)="closeCamera()" class="text-gray-400 hover:text-red-500 transition-colors p-2 focus:outline-none">
+        <fa-icon [icon]="faTimes" class="text-xl"></fa-icon>
+      </button>
+    </div>
+
+    <!-- Video Feed -->
+    <div class="relative bg-gray-900 w-full flex items-center justify-center overflow-hidden shrink-0"
+      style="min-height: 300px; max-height: 60vh;">
+      <video #videoElement id="userProfileCameraVideo" class="w-full h-full object-cover" autoplay playsinline muted
+        style="max-height: 60vh;"></video>
+      <!-- Reticle -->
+      <div class="absolute inset-0 border-2 border-white/20 pointer-events-none rounded-full w-64 h-64 m-auto"></div>
+      <p class="absolute bottom-4 text-white/70 text-sm bg-black/40 px-3 py-1 rounded-full">تأكد من وجود وجهك داخل
+        الدائرة</p>
+    </div>
+
+    <!-- Hidden Canvas for Capture -->
+    <canvas #canvasElement class="hidden"></canvas>
+
+    <!-- Actions -->
+    <div class="p-6 flex justify-center items-center gap-8 bg-gray-50 dark:bg-gray-900 shrink-0">
+
+      <!-- Switch Camera Button -->
+      <button (click)="switchCamera()" type="button"
+        class="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full w-12 h-12 flex items-center justify-center hover:bg-gray-300 dark:hover:bg-gray-600 transition shadow">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
+      </button>
+
+      <button type="button" (click)="captureImage()"
+        class="bg-blue-600 hover:bg-blue-700 text-white rounded-full w-20 h-20 flex items-center justify-center shadow-lg border-4 border-white dark:border-gray-700 transition-transform hover:scale-105 active:scale-95 focus:outline-none">
+        <div class="w-16 h-16 rounded-full border-2 border-white pointer-events-none"></div>
+      </button>
+
+      <!-- Placeholder -->
+      <div class="w-12"></div>
     </div>
   </div>
 </div>

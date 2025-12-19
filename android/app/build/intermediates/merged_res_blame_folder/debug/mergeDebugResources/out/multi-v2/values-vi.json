@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.kenouz.bookstore2.app-mergeDebugResources-31:/values-vi/values-vi.xml",
+            "outputFile": "com.kenouz.bookstore2.app-mergeDebugResources-37:/values-vi/values-vi.xml",
             "map": [
                 {
                     "source": "C:\\Users\\karim\\.gradle\\caches\\8.14\\transforms\\a47d2fd3ff1c0e039fbf3881d18ae290\\transformed\\play-services-base-18.0.1\\res\\values-vi\\values.xml",
@@ -18,23 +18,6 @@
                         "startOffsets": "3528,3630,3792,3917,4026,4191,4321,4440,4672,4845,4952,5109,5239,5398,5547,5615,5679",
                         "endColumns": "101,161,124,108,164,129,118,103,172,106,156,129,158,148,67,63,82",
                         "endOffsets": "3625,3787,3912,4021,4186,4316,4435,4539,4840,4947,5104,5234,5393,5542,5610,5674,5757"
-                    }
-                },
-                {
-                    "source": "C:\\Users\\karim\\.gradle\\caches\\8.14\\transforms\\e59092c73c7eaeba4485cb6552c6616d\\transformed\\play-services-basement-18.1.0\\res\\values-vi\\values.xml",
-                    "from": {
-                        "startLines": "4",
-                        "startColumns": "0",
-                        "startOffsets": "195",
-                        "endColumns": "123",
-                        "endOffsets": "318"
-                    },
-                    "to": {
-                        "startLines": "44",
-                        "startColumns": "4",
-                        "startOffsets": "4544",
-                        "endColumns": "127",
-                        "endOffsets": "4667"
                     }
                 },
                 {
@@ -69,6 +52,23 @@
                         "startOffsets": "2798,2895,2997,3096,3196,3299,3412,6300",
                         "endColumns": "96,101,98,99,102,112,115,100",
                         "endOffsets": "2890,2992,3091,3191,3294,3407,3523,6396"
+                    }
+                },
+                {
+                    "source": "C:\\Users\\karim\\.gradle\\caches\\8.14\\transforms\\3e3d4bef3d26d5b4614b184cb71711c9\\transformed\\play-services-basement-18.3.0\\res\\values-vi\\values.xml",
+                    "from": {
+                        "startLines": "4",
+                        "startColumns": "0",
+                        "startOffsets": "195",
+                        "endColumns": "123",
+                        "endOffsets": "318"
+                    },
+                    "to": {
+                        "startLines": "44",
+                        "startColumns": "4",
+                        "startOffsets": "4544",
+                        "endColumns": "127",
+                        "endOffsets": "4667"
                     }
                 },
                 {

@@ -1,195 +1,261 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { HttpClient } from '@angular/common/http'; // Imported HttpClient
 import { EbookService } from '../../services/ebook.service';
 import { Ebook } from '../../models/ebook.model';
 import { environment } from '../../../environments/environment';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { ModalDialogComponent } from '../../shared/modal-dialog/modal-dialog.component';
+
+
+interface Product {
+    products_id: string; // Using the ID field from schema
+    product_name: string;
+    product_category: string;
+    product_description: string; // for author usually? No, author is separate field often
+    author?: string;
+    product_image?: string;
+    linkedEbookId?: string; // The crucial link
+    [key: string]: any;
+}
 
 @Component({
     selector: 'app-admin-ebooks',
     standalone: true,
-    imports: [CommonModule, FormsModule, FontAwesomeModule, ModalDialogComponent],
+    imports: [CommonModule, FormsModule, FontAwesomeModule],
     templateUrl: './admin-ebooks.component.html',
     styleUrls: ['./admin-ebooks.component.css']
 })
 export class AdminEbooksComponent implements OnInit {
-    ebooks: Ebook[] = [];
+    products: Product[] = [];
+    filteredProducts: Product[] = [];
     isLoading = false;
 
     // Pagination
     currentPage = 1;
+    itemsPerPage = 10;
     totalPages = 1;
-    totalItems = 0;
-    itemsPerPage = 20;
 
     // Search & Filter
     searchTerm = '';
+    filterStatus: 'all' | 'available' | 'unavailable' = 'all';
 
-    // Modal State
-    selectedEbook: Ebook | null = null;
-
-    // Delete Modal
-    showDeleteModal = false;
-    deleteModalMessage = '';
-
-    // Update File Modal
-    showUpdateModal = false;
+    // Upload Modal State
+    showUploadModal = false;
+    selectedProduct: Product | null = null;
     selectedFile: File | null = null;
-    isUpdating = false;
 
-    private uploadsBaseUrl = environment.uploadsBaseUrl;
+    isUploading = false;
 
-    constructor(private ebookService: EbookService) { }
+    isDeleting = false;
+    isDragging = false;
+
+    private backendBaseUrl = environment.apiBaseUrl;
+    uploadsBaseUrl = environment.uploadsBaseUrl;
+
+    constructor(
+        private ebookService: EbookService,
+        private http: HttpClient
+    ) { }
 
     ngOnInit(): void {
-        this.loadEbooks();
+        this.loadProducts();
     }
 
-    loadEbooks(page: number = 1): void {
+    loadProducts(): void {
         this.isLoading = true;
-        this.currentPage = page;
+        this.http.get<{ success: boolean; products: Product[] }>(`${this.backendBaseUrl}/admin/products`).subscribe({
+            next: (response) => {
+                if (response.success) {
+                    const allProducts = response.products;
+                    console.log('All Products:', allProducts);
+                    console.log('Unique Categories:', [...new Set(allProducts.map(p => p.product_category))]);
 
-        // We can filter by search term if provided
-        const filters = {
-            search: this.searchTerm,
-            includeInvalid: true
-        };
-
-        this.ebookService.getEbooks(filters, this.currentPage, this.itemsPerPage).subscribe({
-            next: (res) => {
-                this.ebooks = res.data;
-                this.totalPages = res.pages;
-                this.totalItems = res.total;
+                    // Filter only 'Books' or similar categories
+                    this.products = allProducts.filter(p => this.isBookCategory(p.product_category));
+                    this.applyFilters();
+                }
                 this.isLoading = false;
             },
             error: (err) => {
-                console.error('Error loading ebooks', err);
+                console.error('Error loading products', err);
                 this.isLoading = false;
             }
         });
+    }
+
+    // Helper logic copied/adapted from AdminDashboard
+    isBookCategory(category: string): boolean {
+        if (!category) return false;
+        const lower = category.toLowerCase();
+
+        // Known categories from EbookService + Arabic mappings + Generics
+        const allowed = [
+            'books', 'كتب', 'book',
+            'business-marketing-finance', 'education-children', 'arts-crafts',
+            'healthmedicinescience', 'islamic', 'novels-stories',
+            'self-development-psychology', 'history-biographies', 'dictionaries-references',
+            'روايات وقصص', 'كتب دينية', 'تطوير الذات وعلم النفس', 'قواميس ومراجع',
+            'صحة وطب وعلوم', 'تاريخ وسير ذاتية', 'تربية وأطفال', 'فنون وحرف',
+            'أعمال وتسويق ومالية', 'إسلامي'
+        ];
+
+        return allowed.includes(lower) ||
+            lower.includes('رواية') ||
+            lower.includes('كتب') ||
+            lower.includes('قصص') ||
+            lower.includes('book');
+    }
+
+    applyFilters(): void {
+        let temp = this.products;
+
+        if (this.searchTerm) {
+            const lower = this.searchTerm.toLowerCase();
+            temp = temp.filter(p =>
+                (p.product_name && p.product_name.toLowerCase().includes(lower)) ||
+                (p.author && p.author.toLowerCase().includes(lower))
+            );
+        }
+
+        // Apply Status Filter
+        if (this.filterStatus === 'available') {
+            temp = temp.filter(p => !!p.linkedEbookId); // Has ebook
+        } else if (this.filterStatus === 'unavailable') {
+            temp = temp.filter(p => !p.linkedEbookId); // No ebook
+        }
+
+        this.totalPages = Math.ceil(temp.length / this.itemsPerPage);
+
+        // Paginate
+        const start = (this.currentPage - 1) * this.itemsPerPage;
+        this.filteredProducts = temp.slice(start, start + this.itemsPerPage);
     }
 
     onSearch(): void {
-        this.loadEbooks(1);
+        this.currentPage = 1;
+        this.applyFilters();
     }
 
-    // --- DELETE FUNCTIONALITY ---
-    confirmDelete(ebook: Ebook): void {
-        this.selectedEbook = ebook;
-        this.deleteModalMessage = `هل أنت متأكد من حذف كتاب "${ebook.title}"؟ هذا الإجراء لا يمكن التراجع عنه وسيتم حذف الملفات المرتبطة به.`;
-        this.showDeleteModal = true;
+    onFilterChange(): void {
+        this.currentPage = 1;
+        this.applyFilters();
     }
 
-    onDeleteConfirmed(): void {
-        if (!this.selectedEbook) return;
-
-        this.isLoading = true;
-        this.ebookService.deleteEbook(this.selectedEbook._id).subscribe({
-            next: () => {
-                this.isLoading = false;
-                this.showDeleteModal = false;
-                this.selectedEbook = null;
-                // Reload current page
-                this.loadEbooks(this.currentPage);
-            },
-            error: (err) => {
-                console.error('Error deleting ebook', err);
-                this.isLoading = false;
-                this.showDeleteModal = false;
-                alert('حدث خطأ أثناء الحذف');
-            }
-        });
+    nextPage(): void {
+        if (this.currentPage < this.totalPages) {
+            this.currentPage++;
+            this.applyFilters();
+        }
     }
 
-    onDeleteCancelled(): void {
-        this.showDeleteModal = false;
-        this.selectedEbook = null;
+    prevPage(): void {
+        if (this.currentPage > 1) {
+            this.currentPage--;
+            this.applyFilters();
+        }
     }
 
-    // --- UPDATE FILE FUNCTIONALITY ---
-    openUpdateModal(ebook: Ebook): void {
-        this.selectedEbook = ebook;
+    // --- UPLOAD / UPDATE FUNCTIONALITY ---
+
+    openUploadModal(product: Product): void {
+        this.selectedProduct = product;
         this.selectedFile = null;
-        this.showUpdateModal = true;
+        this.showUploadModal = true;
     }
 
     onFileSelected(event: any): void {
-        if (event.target.files && event.target.files.length > 0) {
-            const file = event.target.files[0];
-            if (file.type === 'application/epub+zip' || file.name.endsWith('.epub')) {
-                this.selectedFile = file;
-            } else {
-                alert('الرجاء اختيار ملف بصيغة EPUB فقط');
-                event.target.value = ''; // Reset input
-            }
+        const input = event.target as HTMLInputElement;
+        if (input.files && input.files.length > 0) {
+            this.handleFile(input.files[0]);
         }
     }
 
-    submitUpdate(): void {
-        if (!this.selectedEbook || !this.selectedFile) return;
+    onDragOver(event: DragEvent): void {
+        event.preventDefault();
+        event.stopPropagation();
+        this.isDragging = true;
+    }
 
-        this.isUpdating = true;
-        const formData = new FormData();
-        formData.append('epubFile', this.selectedFile);
-        // We can also allow updating metadata here later if needed
+    onDragLeave(event: DragEvent): void {
+        event.preventDefault();
+        event.stopPropagation();
+        this.isDragging = false;
+    }
 
-        this.ebookService.updateEbook(this.selectedEbook._id, formData).subscribe({
+    onDrop(event: DragEvent): void {
+        event.preventDefault();
+        event.stopPropagation();
+        this.isDragging = false;
+
+        const files = event.dataTransfer?.files;
+        if (files && files.length > 0) {
+            this.handleFile(files[0]);
+        }
+    }
+
+    handleFile(file: File): void {
+        if (file.type === 'application/epub+zip' || file.name.endsWith('.epub')) {
+            this.selectedFile = file;
+        } else {
+            alert('الرجاء تحميل ملف بصيغة EPUB فقط');
+        }
+    }
+
+    submitUpload(): void {
+        if (!this.selectedProduct || !this.selectedFile) return;
+
+        this.isUploading = true;
+        this.ebookService.uploadEbookForProduct(this.selectedProduct.products_id, this.selectedFile).subscribe({
             next: (res) => {
-                this.isUpdating = false;
-                this.showUpdateModal = false;
-                this.selectedEbook = null;
+                alert('تم رفع الكتاب الإلكتروني بنجاح! ✅');
+                // Update local status
+                if (this.selectedProduct) {
+                    this.selectedProduct.linkedEbookId = res.linkedEbookId || 'new_id';
+                }
+                this.isUploading = false;
+                this.showUploadModal = false;
+                this.selectedProduct = null;
                 this.selectedFile = null;
-                alert('تم تحديث ملف الكتاب بنجاح');
-                this.loadEbooks(this.currentPage);
             },
             error: (err) => {
-                console.error('Error updating ebook', err);
-                this.isUpdating = false;
-                alert('حدث خطأ أثناء تحديث الملف');
+                console.error('Upload Error', err);
+                alert('حدث خطأ أثناء الرفع. الرجاء المحاولة مرة أخرى.');
+                this.isUploading = false;
             }
         });
     }
 
-    cancelUpdate(): void {
-        this.showUpdateModal = false;
-        this.selectedEbook = null;
+    cancelUpload(): void {
+        this.showUploadModal = false;
+        this.selectedProduct = null;
         this.selectedFile = null;
     }
 
+    deleteEbook(product: Product): void {
+        if (!product.linkedEbookId) return;
+
+        if (confirm(`هل أنت متأكد من حذف النسخة الإلكترونية لكتاب "${product.product_name}" نهائياً؟ \nسيتم حذف ملف الكتاب والصورة المصغرة من الخادم.`)) {
+            this.isDeleting = true;
+            this.ebookService.deleteEbook(product.linkedEbookId).subscribe({
+                next: () => {
+                    alert('تم حذف الكتاب الإلكتروني بنجاح ✅');
+                    product.linkedEbookId = undefined; // Unlink locally
+                    this.isDeleting = false;
+                },
+                error: (err) => {
+                    console.error('Delete Error', err);
+                    alert('حدث خطأ أثناء الحذف.');
+                    this.isDeleting = false;
+                }
+            });
+        }
+    }
+
     // Helpers
-    getCoverUrl(ebook: Ebook): string {
-        if (!ebook.coverImage) return 'assets/images/book-placeholder.jpg';
-        if (ebook.coverImage.startsWith('http')) return ebook.coverImage;
-
-        // If it starts with 'uploads/', we need to see how uploadsBaseUrl is defined.
-        // Assuming uploadsBaseUrl maps to the root domain + /uploads or similar.
-        // If uploadsBaseUrl = '.../uploads/books', and coverImage = 'uploads/ebooks/...', we have a mismatch.
-        // Let's assume we want to construct absolute URL relative to domain root if we don't have a better base.
-        // Or if uploadsBaseUrl is strictly for 'uploads/books', we might need a generic base.
-
-        // Fix: If ebook.coverImage is a relative path like 'uploads/ebooks/file.jpg', 
-        // and we want to prevent double 'uploads' if uploadsBaseUrl includes it.
-
-        // Better approach: Use apiBaseUrl's origin or just relative to root if serving static files correctly.
-        // But for now, let's fix the duplication.
-
-        // If coverImage is just a filename (old logic), append to uploadsBaseUrl
-        if (!ebook.coverImage.includes('/')) {
-            return `${this.uploadsBaseUrl}/${ebook.coverImage}`;
-        }
-
-        // If it is a relative path 'uploads/...'
-        if (ebook.coverImage.startsWith('uploads/')) {
-            // If uploadsBaseUrl ends with 'uploads/books', we might want to go up levels or just use window.location.origin
-            // A safe bet if the backend serves 'uploads' statically:
-            // return `${environment.apiBaseUrl.replace('/api', '')}/${ebook.coverImage}`;
-
-            // Or simpler, if we know it's a relative path from server root:
-            return `${environment.apiBaseUrl.replace('/api', '')}/${ebook.coverImage}`;
-        }
-
-        return `/${ebook.coverImage}`;
+    getProductImage(product: Product): string {
+        if (!product.product_image) return 'assets/images/book-placeholder.jpg';
+        if (product.product_image.startsWith('http')) return product.product_image;
+        return `${this.uploadsBaseUrl}/${product.product_image}`;
     }
 }

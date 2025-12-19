@@ -86,6 +86,12 @@
                             <span class="font-bold text-blue-600 text-lg">
                                 {{ book.product_price | number:'1.0-2' }} <span class="text-xs font-normal">ج.م</span>
                             </span>
+                            <!-- Digital Price (Coins) -->
+                            <span
+                                class="text-xs text-yellow-600 font-bold flex items-center gap-1 mt-1 bg-yellow-50 px-2 py-0.5 rounded-md w-fit">
+                                <fa-icon [icon]="faCoins" class="text-yellow-500"></fa-icon>
+                                {{ (book.product_price * 50) | number:'1.0-0' }} عملة
+                            </span>
                         </div>
                     </div>
 

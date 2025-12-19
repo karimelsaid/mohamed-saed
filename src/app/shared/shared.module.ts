@@ -7,6 +7,7 @@ import { LoginComponent } from '../auth/login/login.component';
 import { RegisterComponent } from '../auth/register/register.component';
 import { FreeShippingRulesComponent } from '../admin/admin-dashboard/free-shipping/free-shipping-rules.component';
 import { ModalDialogComponent } from './modal-dialog/modal-dialog.component';
+import { AchievementCardComponent } from './components/achievement-card/achievement-card.component';
 @NgModule({
   imports: [
     CommonModule,
@@ -18,12 +19,16 @@ import { ModalDialogComponent } from './modal-dialog/modal-dialog.component';
     FreeShippingRulesComponent,
     ModalDialogComponent
   ],
+  declarations: [
+    AchievementCardComponent
+  ],
   exports: [
-    AccountModalComponent, // 👈 علشان نقدر نستخدمه بره
+    AccountModalComponent,
     LoginComponent,
     RegisterComponent,
     FreeShippingRulesComponent,
-    ModalDialogComponent
+    ModalDialogComponent,
+    AchievementCardComponent
   ]
 })
 export class SharedModule { }

@@ -10,7 +10,7 @@ import { SharedModule } from '../shared/shared.module';
 import { AuthService } from '../auth/auth.service';
 import { HttpClient } from '@angular/common/http';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { faStar, faShareAlt } from '@fortawesome/free-solid-svg-icons';
+import { faStar, faShareAlt, faCoins } from '@fortawesome/free-solid-svg-icons';
 import { faStar as faStarRegular } from '@fortawesome/free-regular-svg-icons';
 import { environment } from '../../environments/environment';
 import { SlugService } from '../services/slug.service';
@@ -28,6 +28,7 @@ export class BookDetailsComponent implements OnInit {
   faStar = faStar;
   faStarRegular = faStarRegular;
   faShareAlt = faShareAlt;
+  faCoins = faCoins;
 
   showCopySuccess = false;
   book: Book | undefined;

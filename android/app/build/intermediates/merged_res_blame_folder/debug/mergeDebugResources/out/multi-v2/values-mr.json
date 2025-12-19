@@ -1,25 +1,8 @@
 {
     "logs": [
         {
-            "outputFile": "com.kenouz.bookstore2.app-mergeDebugResources-31:/values-mr/values-mr.xml",
+            "outputFile": "com.kenouz.bookstore2.app-mergeDebugResources-37:/values-mr/values-mr.xml",
             "map": [
-                {
-                    "source": "C:\\Users\\karim\\.gradle\\caches\\8.14\\transforms\\e59092c73c7eaeba4485cb6552c6616d\\transformed\\play-services-basement-18.1.0\\res\\values-mr\\values.xml",
-                    "from": {
-                        "startLines": "4",
-                        "startColumns": "0",
-                        "startOffsets": "195",
-                        "endColumns": "138",
-                        "endOffsets": "333"
-                    },
-                    "to": {
-                        "startLines": "44",
-                        "startColumns": "4",
-                        "startOffsets": "4508",
-                        "endColumns": "142",
-                        "endOffsets": "4646"
-                    }
-                },
                 {
                     "source": "C:\\Users\\karim\\.gradle\\caches\\8.14\\transforms\\a47d2fd3ff1c0e039fbf3881d18ae290\\transformed\\play-services-base-18.0.1\\res\\values-mr\\values.xml",
                     "from": {
@@ -52,6 +35,23 @@
                         "startOffsets": "105,216,322,429,519,620,732,810,887,978,1071,1164,1261,1361,1454,1549,1643,1734,1825,1905,2012,2113,2210,2319,2421,2535,2692,6101",
                         "endColumns": "110,105,106,89,100,111,77,76,90,92,92,96,99,92,94,93,90,90,79,106,100,96,108,101,113,156,102,79",
                         "endOffsets": "211,317,424,514,615,727,805,882,973,1066,1159,1256,1356,1449,1544,1638,1729,1820,1900,2007,2108,2205,2314,2416,2530,2687,2790,6176"
+                    }
+                },
+                {
+                    "source": "C:\\Users\\karim\\.gradle\\caches\\8.14\\transforms\\3e3d4bef3d26d5b4614b184cb71711c9\\transformed\\play-services-basement-18.3.0\\res\\values-mr\\values.xml",
+                    "from": {
+                        "startLines": "4",
+                        "startColumns": "0",
+                        "startOffsets": "195",
+                        "endColumns": "138",
+                        "endOffsets": "333"
+                    },
+                    "to": {
+                        "startLines": "44",
+                        "startColumns": "4",
+                        "startOffsets": "4508",
+                        "endColumns": "142",
+                        "endOffsets": "4646"
                     }
                 },
                 {

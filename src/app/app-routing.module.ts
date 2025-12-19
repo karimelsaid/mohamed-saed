@@ -51,6 +51,8 @@ import { LibraryComponent } from './library/library.component';
 import { EpubReaderComponent } from './epub-reader/epub-reader.component';
 import { SubscriptionComponent } from './subscription/subscription.component';
 import { DownloadsComponent } from './downloads/downloads.component';
+import { GamificationDashboardComponent } from './gamification/dashboard/dashboard.component';
+import { HowToEarnComponent } from './pages/how-to-earn/how-to-earn.component';
 const routes: Routes = [
   {
     path: 'merchant',
@@ -140,6 +142,8 @@ const routes: Routes = [
   { path: 'عن-الموقع', component: AboutComponent },
   { path: 'سياسة-الخصوصية', component: PrivacyPolicyComponent },
   { path: 'الشروط-والاحكام', component: TermsConditionsComponent },
+  { path: 'achievements', component: GamificationDashboardComponent },
+  { path: 'earn', component: HowToEarnComponent },
   // يجب أن يكون هذا المسار قرب النهاية لتجنب التعارض مع المسارات الثابتة الأخرى
   { path: ':username', component: MerchantProfileComponent },
   { path: '**', component: NotFoundComponent }

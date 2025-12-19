@@ -1684,6 +1684,24 @@ async function getStats(req, res) {
     ]);
     const totalCartItems = cartItemsResult.length > 0 ? cartItemsResult[0].total : 0;
 
+    // Calculate total coins
+    const coinsResult = await User.aggregate([
+      { $match: { 'gamification.coins': { $exists: true } } },
+      { $group: { _id: null, total: { $sum: '$gamification.coins' } } }
+    ]);
+    const totalCoins = coinsResult.length > 0 ? coinsResult[0].total : 0;
+
+    // Calculate total referrals
+    const totalReferrals = await Referral.countDocuments();
+
+    // Calculate total merchant orders
+    const merchantOrdersResult = await User.aggregate([
+      { $unwind: '$orders' },
+      { $match: { 'orders.isMerchantOrder': true } },
+      { $group: { _id: null, total: { $sum: 1 } } }
+    ]);
+    const totalMerchantOrders = merchantOrdersResult.length > 0 ? merchantOrdersResult[0].total : 0;
+
     res.json({
       success: true,
       stats: {
@@ -1691,7 +1709,10 @@ async function getStats(req, res) {
         totalProducts,
         totalOrders,
         totalLikes,
-        totalCartItems
+        totalCartItems,
+        totalCoins,
+        totalReferrals,
+        totalMerchantOrders
       }
     });
   } catch (error) {

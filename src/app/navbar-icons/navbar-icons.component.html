@@ -47,6 +47,19 @@
     </span>
   </div>
 
+  <!-- Earn From Reading (New) -->
+  <div class="relative flex items-center justify-center">
+    <div *ngIf="!showOnlyNotification" routerLink="/earn" routerLinkActive="active-pill"
+      [routerLinkActiveOptions]="{exact:true}" class="nav-item-pill group" #earnLink="routerLinkActive">
+      <fa-icon [icon]="faCoins" class="text-xl text-yellow-500"></fa-icon>
+      <span class="nav-label text-yellow-600 dark:text-yellow-400 font-bold">اكسب</span>
+    </div>
+    <span *ngIf="!showOnlyNotification"
+      class="absolute -top-3 left-1/2 -translate-x-1/2 text-red-500 text-[9px] font-extrabold z-50 pointer-events-none tracking-tighter whitespace-nowrap animate-pulse">
+      جديد
+    </span>
+  </div>
+
   <!-- Notifications -->
   <div class="relative">
     <div (click)="toggleNotificationsDropdown()" class="nav-item-pill group"
@@ -90,24 +103,40 @@
 
       <div class="max-h-80 overflow-y-auto relative z-10">
         <div *ngFor="let notification of notifications"
-          class="p-4 border-b border-gray-50 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer relative group"
+          class="relative overflow-hidden border-b border-gray-50 dark:border-gray-700 last:border-0 group touch-pan-y"
           [ngClass]="{ 'bg-blue-50/50 dark:bg-blue-900/10': !notification.read }"
           (click)="handleNotificationClick(notification)">
-          <div class="flex gap-3">
+
+          <!-- Notification Content -->
+          <div
+            class="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors flex gap-3 relative z-10 bg-white dark:bg-gray-800"
+            [style.transform]="notification.swipeOffset ? 'translateX(' + notification.swipeOffset + 'px)' : 'none'"
+            (touchstart)="onTouchStart($event, notification)" (touchmove)="onTouchMove($event, notification)"
+            (touchend)="onTouchEnd($event, notification)">
+
             <div class="flex-shrink-0 mt-1">
-              <div class="w-2 h-2 rounded-full" [ngClass]="notification.read ? 'bg-gray-300' : 'bg-blue-500'"></div>
+              <div class="w-10 h-10 rounded-full flex items-center justify-center" [ngClass]="{
+                     'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400': notification.type === 'order',
+                     'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400': notification.type === 'print_order' || notification.type === 'printOrder',
+                     'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400': notification.type === 'system',
+                     'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400': notification.type === 'offer'
+                   }">
+                <fa-icon [icon]="getNotificationIcon(notification.type)"></fa-icon>
+              </div>
             </div>
-            <div class="flex-1">
+            <div class="flex-grow min-w-0">
               <p class="text-sm text-gray-800 dark:text-gray-200 leading-relaxed mb-1">{{ notification.message }}</p>
-              <span class="text-xs text-gray-400">{{ notification.createdAt ? (notification.createdAt | date:'short') :
-                'الآن' }}</span>
+              <span class="text-xs text-gray-400 block">{{ notification.createdAt ? (notification.createdAt |
+                date:'short') : 'الآن' }}</span>
             </div>
-            <button
-              class="opacity-0 group-hover:opacity-100 absolute top-2 left-2 text-gray-400 hover:text-red-500 transition-all p-1"
-              (click)="deleteNotification(notification); $event.stopPropagation();" title="حذف">
-              <fa-icon [icon]="faTrash" class="text-xs"></fa-icon>
-            </button>
           </div>
+
+          <!-- Delete Action Background (Reveals on swipe) -->
+          <div class="absolute inset-y-0 right-0 w-20 bg-red-500 flex items-center justify-center z-0"
+            (click)="deleteNotification(notification); $event.stopPropagation();">
+            <fa-icon [icon]="faTrash" class="text-white text-lg"></fa-icon>
+          </div>
+
         </div>
       </div>
     </div>
@@ -127,8 +156,9 @@
   </div>
 
   <!-- Account -->
-  <div *ngIf="!showOnlyNotification" (click)="onAccountClick()" class="nav-item-pill group"
-    [ngClass]="{'active-pill': isAccountActive}">
+  <div *ngIf="!showOnlyNotification" routerLink="/profile" class="nav-item-pill group"
+    [ngClass]="{'active-pill': isAccountActive}" routerLinkActive="active-pill"
+    [routerLinkActiveOptions]="{exact:true}">
     <fa-icon [icon]="faUser" class="text-xl transition-colors"></fa-icon>
     <span class="nav-label">حسابي</span>
   </div>

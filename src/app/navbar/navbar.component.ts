@@ -4,12 +4,13 @@ import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { faBars, faClose, faHome, faShoppingCart, faBook, faBookReader, faFilePdf, faUser, faChevronUp, faChevronDown, faSearch, faHeart, faCartPlus, faClipboardList, faTachometerAlt, faBell, faTrash, faMosque, faBrain, faScroll, faChartLine, faHeartbeat, faBookOpen, faChild, faHistory, faPalette, faMoon, faSun, faExpand, faBolt, faTshirt, faMagic, faShoePrints, faChair, faGamepad, faCut, faEllipsisH } from '@fortawesome/free-solid-svg-icons';
+import { faSearch, faUser, faShoppingCart, faBars, faClose, faHome, faBook, faBookReader, faChevronDown, faChevronUp, faMosque, faBrain, faScroll, faChartLine, faHeartbeat, faBookOpen, faChild, faHistory, faPalette, faBolt, faTshirt, faMagic, faShoePrints, faChair, faGamepad, faCut, faEllipsisH, faMoon, faExpand, faTrophy, faFilePdf, faHeart, faCartPlus, faClipboardList, faTachometerAlt, faBell, faTrash, faSun, faCoins } from '@fortawesome/free-solid-svg-icons';
 import { DataService } from '../services/data.service';
 import { AccountModalComponent } from '../auth/account-modal/account-modal.component';
 import { AuthService } from '../auth/auth.service';
 import { MerchantAuthService } from '../services/merchant-auth.service';
 import { NotificationService, Notification } from '../services/notification.service';
+import { PushNotificationService } from '../services/push-notification.service';
 import { NavbarIconsComponent } from '../navbar-icons/navbar-icons.component';
 import { SearchBarComponent } from '../search-bar/search-bar.component';
 
@@ -56,6 +57,7 @@ export class NavbarComponent implements OnInit {
   faMoon = faMoon;
   faSun = faSun;
   faExpand = faExpand;
+  faTrophy = faTrophy;
   faBolt = faBolt;
   faTshirt = faTshirt;
   faMagic = faMagic;
@@ -64,6 +66,7 @@ export class NavbarComponent implements OnInit {
   faGamepad = faGamepad;
   faCut = faCut;
   faEllipsisH = faEllipsisH;
+  faCoins = faCoins;
 
   openBars = false;
   scrollBook = true;
@@ -81,7 +84,7 @@ export class NavbarComponent implements OnInit {
   showAccountModal: boolean = false;
 
   // Notification related
-  notifications: (Notification & { removing?: boolean })[] = [];
+  notifications: (Notification & { removing?: boolean; swipeOffset?: number; startX?: number; currentX?: number; swiping?: boolean })[] = [];
   showNotificationsDropdown: boolean = false;
   unreadCount: number = 0;
 
@@ -146,10 +149,14 @@ export class NavbarComponent implements OnInit {
   }
 
   openAccountModal(): void {
-    this.accountModal.openModal();
-    this.showAccountModal = true;
-    this.isAccountActive = true;
-    this.cdr.markForCheck();
+    if (this.isLoggedIn) {
+      this.router.navigate(['/profile']);
+    } else {
+      this.accountModal.openModal();
+      this.showAccountModal = true;
+      this.isAccountActive = true;
+      this.cdr.markForCheck();
+    }
   }
 
   closeAccountModal(): void {
@@ -176,6 +183,7 @@ export class NavbarComponent implements OnInit {
     private authService: AuthService,
     private merchantAuthService: MerchantAuthService,
     private notificationService: NotificationService,
+    public pushService: PushNotificationService,
     private cdr: ChangeDetectorRef
   ) { }
 
@@ -238,7 +246,12 @@ export class NavbarComponent implements OnInit {
     const isMerchantLoggedIn = this.merchantAuthService.isAuthenticated();
 
     this.isLoggedIn = isUserLoggedIn || isMerchantLoggedIn;
-    this.isAdmin = this.user?.email === 'admin@example.com';
+    this.isAdmin = this.user?.email === 'admin@example.com' || this.user?.role === 'admin';
+
+    // Defensive: If user is admin, they shouldn't be treated as merchant in the navbar
+    if (this.isAdmin) {
+      this.isMerchant = false;
+    }
 
     // Force immediate view update
     this.cdr.markForCheck();
@@ -355,6 +368,47 @@ export class NavbarComponent implements OnInit {
 
   isLibraryPage(): boolean {
     return this.router.url.startsWith('/library');
+  }
+
+  // Touch Handling for Swipe to Delete
+  onTouchStart(event: TouchEvent, notification: any) {
+    notification.startX = event.touches[0].clientX;
+    notification.currentX = notification.startX;
+    notification.swiping = true;
+  }
+
+  onTouchMove(event: TouchEvent, notification: any) {
+    if (!notification.swiping) return;
+    notification.currentX = event.touches[0].clientX;
+    const diff = notification.currentX - notification.startX;
+
+    // Only allow swiping left (negative diff) to reveal delete button
+    if (diff < 0) {
+      // Limit swipe to -80px (width of delete button)
+      notification.swipeOffset = Math.max(diff, -80);
+      // Prevent scrolling while swiping horizontally
+      if (Math.abs(diff) > 10) event.preventDefault();
+    }
+  }
+
+  onTouchEnd(event: TouchEvent, notification: any) {
+    notification.swiping = false;
+    if (notification.swipeOffset < -40) {
+      // Swiped enough, snap to open
+      notification.swipeOffset = -80;
+    } else {
+      // Snap back to close
+      notification.swipeOffset = 0;
+    }
+  }
+
+  getNotificationIcon(type: string): any {
+    switch (type) {
+      case 'order': return this.faShoppingCart;
+      case 'print_order': case 'printOrder': return this.faFilePdf;
+      case 'offer': return this.faCoins;
+      case 'system': default: return this.faBell;
+    }
   }
 
   protected readonly Math = Math;

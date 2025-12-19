@@ -12,12 +12,11 @@
             أضف منتجك الجديد وابدأ في بيعه للعملاء
           </p>
         </div>
-        <button
-          (click)="cancel()"
-          class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
-        >
+        <button (click)="cancel()"
+          class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200">
           <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18">
+            </path>
           </svg>
           العودة للوحة التحكم
         </button>
@@ -38,24 +37,24 @@
             اسم المنتج <span class="text-red-500">*</span>
           </label>
           <div class="relative">
-            <input
-              type="text"
-              id="product_name"
-              formControlName="product_name"
+            <input type="text" id="product_name" formControlName="product_name"
               class="block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors duration-200"
               placeholder="أدخل اسم المنتج"
-              [class.border-red-500]="productForm.get('product_name')?.invalid && productForm.get('product_name')?.touched"
-            />
+              [class.border-red-500]="productForm.get('product_name')?.invalid && productForm.get('product_name')?.touched" />
             <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
               <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z">
+                </path>
               </svg>
             </div>
           </div>
           <div *ngIf="productForm.get('product_name')?.invalid && productForm.get('product_name')?.touched"
-               class="mt-2 text-sm text-red-600 dark:text-red-400 flex items-center">
+            class="mt-2 text-sm text-red-600 dark:text-red-400 flex items-center">
             <svg class="w-4 h-4 ml-1" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+              <path fill-rule="evenodd"
+                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                clip-rule="evenodd"></path>
             </svg>
             اسم المنتج مطلوب
           </div>
@@ -69,24 +68,20 @@
               السعر (ج.م) <span class="text-red-500">*</span>
             </label>
             <div class="relative">
-              <input
-                type="number"
-                id="product_price"
-                formControlName="product_price"
+              <input type="number" id="product_price" formControlName="product_price"
                 class="block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors duration-200"
-                placeholder="0.00"
-                min="0"
-                step="0.01"
-                [class.border-red-500]="productForm.get('product_price')?.invalid && productForm.get('product_price')?.touched"
-              />
+                placeholder="0.00" min="0" step="0.01"
+                [class.border-red-500]="productForm.get('product_price')?.invalid && productForm.get('product_price')?.touched" />
               <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                 <span class="text-gray-500 dark:text-gray-400 text-sm">ج.م</span>
               </div>
             </div>
             <div *ngIf="productForm.get('product_price')?.invalid && productForm.get('product_price')?.touched"
-                 class="mt-2 text-sm text-red-600 dark:text-red-400 flex items-center">
+              class="mt-2 text-sm text-red-600 dark:text-red-400 flex items-center">
               <svg class="w-4 h-4 ml-1" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                <path fill-rule="evenodd"
+                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                  clip-rule="evenodd"></path>
               </svg>
               السعر مطلوب ويجب أن يكون أكبر من 0
             </div>
@@ -98,17 +93,13 @@
               الكمية المتاحة
             </label>
             <div class="relative">
-              <input
-                type="number"
-                id="stock_quantity"
-                formControlName="stock_quantity"
+              <input type="number" id="stock_quantity" formControlName="stock_quantity"
                 class="block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors duration-200"
-                placeholder="0"
-                min="0"
-              />
+                placeholder="0" min="0" />
               <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                 <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
                 </svg>
               </div>
             </div>
@@ -121,11 +112,8 @@
             الفئة
           </label>
           <div class="relative">
-            <select
-              id="category"
-              formControlName="category"
-              class="block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors duration-200"
-            >
+            <select id="category" formControlName="category"
+              class="block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors duration-200">
               <option value="">اختر الفئة</option>
               <option value="كتب">كتب</option>
               <option value="أدوات مكتبية">أدوات مكتبية</option>
@@ -140,7 +128,9 @@
             </select>
             <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
               <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10">
+                </path>
               </svg>
             </div>
           </div>
@@ -152,25 +142,26 @@
             فئة الكتاب <span class="text-red-500">*</span>
           </label>
           <div class="relative">
-            <select
-              id="book_category"
-              formControlName="book_category"
+            <select id="book_category" formControlName="book_category"
               class="block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors duration-200"
-              [class.border-red-500]="productForm.get('book_category')?.invalid && productForm.get('book_category')?.touched"
-            >
+              [class.border-red-500]="productForm.get('book_category')?.invalid && productForm.get('book_category')?.touched">
               <option value="">اختر فئة الكتاب</option>
               <option *ngFor="let cat of bookCategories" [value]="cat">{{ cat }}</option>
             </select>
             <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
               <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253">
+                </path>
               </svg>
             </div>
           </div>
           <div *ngIf="productForm.get('book_category')?.invalid && productForm.get('book_category')?.touched"
-               class="mt-2 text-sm text-red-600 dark:text-red-400 flex items-center">
+            class="mt-2 text-sm text-red-600 dark:text-red-400 flex items-center">
             <svg class="w-4 h-4 ml-1" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+              <path fill-rule="evenodd"
+                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                clip-rule="evenodd"></path>
             </svg>
             فئة الكتاب مطلوبة
           </div>
@@ -182,15 +173,9 @@
             تكلفة السعر (ج.م)
           </label>
           <div class="relative">
-            <input
-              type="number"
-              id="price_cost"
-              formControlName="price_cost"
+            <input type="number" id="price_cost" formControlName="price_cost"
               class="block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors duration-200"
-              placeholder="0.00"
-              min="0"
-              step="0.01"
-            />
+              placeholder="0.00" min="0" step="0.01" />
             <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
               <span class="text-gray-500 dark:text-gray-400 text-sm">ج.م</span>
             </div>
@@ -202,18 +187,36 @@
           <label for="product_image" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             صورة المنتج <span class="text-red-500">*</span>
           </label>
-          <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 dark:border-gray-600 border-dashed rounded-lg hover:border-gray-400 dark:hover:border-gray-500 transition-colors duration-200">
+          <div
+            class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 dark:border-gray-600 border-dashed rounded-lg hover:border-gray-400 dark:hover:border-gray-500 transition-colors duration-200">
             <div class="space-y-1 text-center">
-              <div *ngIf="!imagePreview" class="flex text-sm text-gray-600 dark:text-gray-400">
-                <label for="product_image" class="relative cursor-pointer bg-white dark:bg-gray-800 rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500">
-                  <span>اختر صورة</span>
-                  <input id="product_image" name="product_image" type="file" accept="image/*" (change)="onFileSelected($event)" class="sr-only">
+              <div *ngIf="!imagePreview"
+                class="flex flex-col sm:flex-row items-center justify-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+                <label for="product_image"
+                  class="relative cursor-pointer bg-white dark:bg-gray-800 rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500">
+                  <span>اختر صورة من الجهاز</span>
+                  <input id="product_image" name="product_image" type="file" accept="image/*"
+                    (change)="onFileSelected($event)" class="sr-only">
                 </label>
-                <p class="pl-1">أو اسحب وأفلت</p>
+
+                <span class="text-gray-400">أو</span>
+
+                <button type="button" (click)="openCamera()"
+                  class="inline-flex items-center text-blue-600 hover:text-blue-500 font-medium bg-transparent border-0 p-0 focus:outline-none">
+                  <svg class="w-5 h-5 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z">
+                    </path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                  </svg>
+                  التقاط صورة
+                </button>
               </div>
               <div *ngIf="imagePreview" class="flex flex-col items-center">
                 <img [src]="imagePreview" alt="Product preview" class="w-32 h-32 object-cover rounded-lg mb-2">
-                <button type="button" (click)="selectedFile = null; imagePreview = null" class="text-red-600 hover:text-red-800 text-sm">إزالة الصورة</button>
+                <button type="button" (click)="selectedFile = null; imagePreview = null"
+                  class="text-red-600 hover:text-red-800 text-sm">إزالة الصورة</button>
               </div>
               <p class="text-xs text-gray-500 dark:text-gray-400">
                 PNG, JPG, GIF حتى 1 ميجابايت
@@ -227,18 +230,17 @@
           <label for="product_description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             وصف المنتج <span class="text-red-500">*</span>
           </label>
-          <textarea
-            id="product_description"
-            formControlName="product_description"
-            rows="4"
+          <textarea id="product_description" formControlName="product_description" rows="4"
             class="block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors duration-200 resize-none"
             placeholder="اكتب وصفاً مفصلاً للمنتج..."
-            [class.border-red-500]="productForm.get('product_description')?.invalid && productForm.get('product_description')?.touched"
-          ></textarea>
-          <div *ngIf="productForm.get('product_description')?.invalid && productForm.get('product_description')?.touched"
-               class="mt-2 text-sm text-red-600 dark:text-red-400 flex items-center">
+            [class.border-red-500]="productForm.get('product_description')?.invalid && productForm.get('product_description')?.touched"></textarea>
+          <div
+            *ngIf="productForm.get('product_description')?.invalid && productForm.get('product_description')?.touched"
+            class="mt-2 text-sm text-red-600 dark:text-red-400 flex items-center">
             <svg class="w-4 h-4 ml-1" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+              <path fill-rule="evenodd"
+                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                clip-rule="evenodd"></path>
             </svg>
             وصف المنتج مطلوب
           </div>
@@ -248,28 +250,26 @@
         </div>
 
         <!-- Form Actions -->
-        <div class="flex flex-col sm:flex-row sm:justify-end sm:space-x-4 space-y-3 sm:space-y-0 pt-6 border-t border-gray-200 dark:border-gray-700">
-          <button
-            type="button"
-            (click)="cancel()"
-            class="w-full sm:w-auto inline-flex justify-center items-center px-6 py-3 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
-          >
+        <div
+          class="flex flex-col sm:flex-row sm:justify-end sm:space-x-4 space-y-3 sm:space-y-0 pt-6 border-t border-gray-200 dark:border-gray-700">
+          <button type="button" (click)="cancel()"
+            class="w-full sm:w-auto inline-flex justify-center items-center px-6 py-3 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200">
             <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
             </svg>
             إلغاء
           </button>
-          <button
-            type="submit"
-            [disabled]="productForm.invalid || loading"
-            class="w-full sm:w-auto inline-flex justify-center items-center px-6 py-3 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-          >
+          <button type="submit" [disabled]="productForm.invalid || loading"
+            class="w-full sm:w-auto inline-flex justify-center items-center px-6 py-3 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200">
             <svg *ngIf="loading" class="animate-spin -ml-1 mr-3 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              <path class="opacity-75" fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+              </path>
             </svg>
             <svg *ngIf="!loading" class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6">
+              </path>
             </svg>
             <span *ngIf="loading">جاري الإضافة...</span>
             <span *ngIf="!loading">إضافة المنتج</span>
@@ -283,7 +283,9 @@
       <div class="flex">
         <div class="flex-shrink-0">
           <svg class="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
-            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+            <path fill-rule="evenodd"
+              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+              clip-rule="evenodd"></path>
           </svg>
         </div>
         <div class="mr-3">
@@ -303,17 +305,55 @@
     </div>
   </div>
 </div>
-
 <!-- Success Modal -->
-<app-modal-dialog
-  [isOpen]="showSuccessModal"
-  [title]="modalTitle"
-  [message]="modalMessage"
-  [confirmText]="confirmButtonText"
-  [cancelText]="cancelButtonText"
-  [showCancel]="true"
-  [type]="'success'"
-  (confirmed)="onConfirm && onConfirm()"
-  (cancelled)="onCancel && onCancel()"
-  (closed)="showSuccessModal = false">
+<app-modal-dialog [isOpen]="showSuccessModal" [title]="modalTitle" [message]="modalMessage"
+  [confirmText]="confirmButtonText" [cancelText]="cancelButtonText" [showCancel]="true" [type]="'success'"
+  (confirmed)="onConfirm && onConfirm()" (cancelled)="onCancel && onCancel()" (closed)="showSuccessModal = false">
 </app-modal-dialog>
+
+<!-- Camera Modal (Moved Outside) -->
+<div *ngIf="showCameraModal"
+  style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 99999; background-color: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center;"
+  class="backdrop-blur-sm animate-in fade-in duration-200">
+
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden w-full max-w-lg relative flex flex-col"
+    style="max-height: 90vh;" (click)="$event.stopPropagation()">
+    <!-- Header -->
+    <div
+      class="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-900 shrink-0">
+      <h3 class="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+        <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z">
+          </path>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z">
+          </path>
+        </svg>
+        التقاط صورة للمنتج
+      </h3>
+      <button type="button" (click)="closeCamera()"
+        class="text-gray-400 hover:text-red-500 transition-colors focus:outline-none p-2">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Video Feed -->
+    <div class="relative bg-black w-full flex items-center justify-center overflow-hidden shrink-0"
+      style="min-height: 300px; max-height: 60vh;">
+      <video #videoElement class="w-full h-full object-cover" autoplay playsinline style="max-height: 60vh;"></video>
+    </div>
+
+    <!-- Hidden Canvas -->
+    <canvas #canvasElement class="hidden"></canvas>
+
+    <!-- Actions -->
+    <div class="p-6 flex justify-center gap-4 bg-gray-50 dark:bg-gray-900 shrink-0">
+      <button type="button" (click)="captureImage()"
+        class="bg-blue-600 hover:bg-blue-700 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg border-4 border-white dark:border-gray-700 transition-transform hover:scale-105 active:scale-95 focus:outline-none">
+        <div class="w-12 h-12 rounded-full border-2 border-white pointer-events-none"></div>
+      </button>
+    </div>
+  </div>
+</div>

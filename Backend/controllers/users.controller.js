@@ -6,6 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const { OAuth2Client } = require('google-auth-library');
 const client = new OAuth2Client('933338292435-c9bk3oo6i1oe3qkhkvp8crflmthhg0kc.apps.googleusercontent.com');
+const SystemSettings = require('../models/SystemSettings');
 
 // Function to update user profile and sync orders' shippingAddress
 async function updateUserProfile(req, res) {
@@ -90,17 +91,20 @@ async function createAccount(req, res) {
       if (referrer && referrer._id.toString() !== newUser._id.toString()) {
         const existingReferral = await Referral.findOne({ referrerId: referrer._id, referredId: newUser._id });
         if (!existingReferral) {
+          const settings = await SystemSettings.getInstance();
+          const referralPoints = settings.gamification.referralPoints || 50;
+
           const referral = new Referral({
             referrerId: referrer._id,
             referredId: newUser._id,
             status: 'completed', // Since signup is completed
-            earned: 2
+            earned: referralPoints // Dynamic value
           });
           await referral.save();
 
-          // Update referrer's balance
-          referrer.referralBalance += 2;
-          await referrer.save();
+          // Award Coins via Gamification Service
+          const gamificationService = require('../services/gamification.service');
+          await gamificationService.processReferral(referrer._id, newUser._id);
 
           // Set referredBy on new user
           newUser.referredBy = referrer._id;
@@ -126,8 +130,9 @@ async function createAccount(req, res) {
         email: newUser.email,
         phone: newUser.phone,
         role: newUser.role,
-        bookId: bookId, // إعادة bookId للواجهة الأمامية
-        token: token // Include token
+        bookId: bookId,
+        profileImage: newUser.profileImage, // Added profileImage
+        token: token
       }
     };
     res.status(201).json(responsePayload);
@@ -158,6 +163,10 @@ async function login(req, res) {
       { expiresIn: '7d' }
     );
 
+    // Process Login Reward (Background)
+    const gamificationService = require('../services/gamification.service');
+    gamificationService.processLogin(user._id).catch(err => console.error('Login Reward Error:', err));
+
     res.status(200).json({
       message: 'تم تسجيل الدخول بنجاح',
       user: {
@@ -169,7 +178,9 @@ async function login(req, res) {
         governorate: user.governorate,
         city: user.city,
         village: user.village,
+        village: user.village,
         referralCode: user.referralCode,
+        profileImage: user.profileImage, // Added profileImage
         token: token // Include token for all users
       }
     });
@@ -247,7 +258,8 @@ async function getUserData(req, res) {
       cart: user.cart
     });
   } catch (error) {
-    res.status(500).json({ message: 'حدث خطأ أثناء جلب البيانات', error });
+    console.error('GetUserData Error:', error);
+    res.status(500).json({ message: 'حدث خطأ أثناء جلب البيانات', error: error.message });
   }
 }
 
@@ -264,10 +276,13 @@ async function getUserProfile(req, res) {
       governorate: user.governorate,
       city: user.city,
       village: user.village,
-      postOffice: user.postOffice
+      postOffice: user.postOffice,
+      referralBalance: user.referralBalance || 0, // Add referralBalance
+      profileImage: user.profileImage // Add profileImage
     });
   } catch (error) {
-    res.status(500).json({ message: 'حدث خطأ أثناء جلب بيانات الملف الشخصي', error });
+    console.error('GetUserProfile Error:', error);
+    res.status(500).json({ message: 'حدث خطأ أثناء جلب بيانات الملف الشخصي', error: error.message });
   }
 }
 
@@ -515,11 +530,18 @@ async function googleSignIn(req, res) {
   const { idToken, referralCode } = req.body;
 
   try {
+    // Verify ID Token
+    // console.log('🔐 Verifying Google Token...');
     const ticket = await client.verifyIdToken({
       idToken,
-      audience: '933338292435-c9bk3oo6i1oe3qkhkvp8crflmthhg0kc.apps.googleusercontent.com'
+      audience: [
+        '933338292435-c9bk3oo6i1oe3qkhkvp8crflmthhg0kc.apps.googleusercontent.com', // Web Client ID
+        '933338292435-br4gba7k8tu2518q5dghkkj9meilirb6.apps.googleusercontent.com', // Android Client ID 1
+        '933338292435-mdpbppoua97gt3vt2bidpip89q0rjjue.apps.googleusercontent.com'  // Android Client ID 2
+      ]
     });
     const payload = ticket.getPayload();
+    // console.log('✅ Google Token Verified. Payload:', payload);
 
     if (!payload) {
       return res.status(400).json({ message: 'Invalid Google token' });
@@ -555,17 +577,20 @@ async function googleSignIn(req, res) {
         if (referrer && referrer._id.toString() !== user._id.toString()) {
           const existingReferral = await Referral.findOne({ referrerId: referrer._id, referredId: user._id });
           if (!existingReferral) {
+            const settings = await SystemSettings.getInstance();
+            const referralPoints = settings.gamification.referralPoints || 50;
+
             const referral = new Referral({
               referrerId: referrer._id,
               referredId: user._id,
               status: 'completed', // Set to completed for rewards
-              earned: 2
+              earned: referralPoints // Dynamic value
             });
             await referral.save();
 
-            // Update referrer's balance
-            referrer.referralBalance += 2;
-            await referrer.save();
+            // Award Coins via Gamification Service
+            const gamificationService = require('../services/gamification.service');
+            await gamificationService.processReferral(referrer._id, user._id);
 
             // Set referredBy on new user
             user.referredBy = referrer._id;
@@ -587,17 +612,26 @@ async function googleSignIn(req, res) {
       { expiresIn: '7d' }
     );
 
+    // Process Login Reward (Background)
+    const gamificationService = require('../services/gamification.service');
+    gamificationService.processLogin(user._id).catch(err => console.error('Login Reward Error:', err));
+
+
+    // Convert user to object and remove password
+    const userObject = user.toObject();
+    delete userObject.password;
+
+    // CRITICAL FIX: Map _id to id for frontend compatibility
+    userObject.id = user._id;
+
+    // Add token to the response
+    userObject.token = token;
+
     res.status(200).json({
-      id: user._id,
-      username: user.username,
-      email: user.email,
-      phone: user.phone,
-      role: user.role,
-      governorate: user.governorate,
-      city: user.city,
-      village: user.village,
-      referralCode: user.referralCode,
-      token: token // Include token
+      message: 'تم تسجيل الدخول بنجاح',
+      user: userObject,
+      // Keep backward compatibility if frontend uses top-level fields (though it seems to use response.user)
+      ...userObject
     });
   } catch (error) {
     console.error('Error during Google sign-in:', error);
@@ -624,7 +658,7 @@ async function getNotifications(req, res) {
     res.status(200).json(notifications);
   } catch (error) {
     console.error('Error fetching notifications:', error);
-    res.status(500).json({ message: 'Error fetching notifications', error });
+    res.status(500).json({ message: 'Error fetching notifications', error: error.message });
   }
 }
 
@@ -771,7 +805,8 @@ async function getReferralBalance(req, res) {
     }
     res.json({ balance: user.referralBalance, referralCode: user.referralCode });
   } catch (error) {
-    res.status(500).json({ message: 'Error' });
+    console.error('Error fetching referral balance:', error);
+    res.status(500).json({ message: 'Error fetching referral balance', error: error.message });
   }
 }
 

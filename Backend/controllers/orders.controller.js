@@ -58,11 +58,25 @@ exports.submitOrder = async (req, res) => {
       price: product.price || 0
     }));
 
+    // Wallet Discount Logic
+    let walletDiscount = 0;
+    let finalTotalAmount = totalAmount;
+
+    if (req.body.useWallet && user.referralBalance > 0) {
+      walletDiscount = Math.min(totalAmount, user.referralBalance);
+      finalTotalAmount = totalAmount - walletDiscount;
+
+      // Deduct from balance
+      user.referralBalance -= walletDiscount;
+    }
+
     const newOrder = {
       date: new Date(),
       preparationTime,
       products: validatedProducts,
-      totalAmount,
+      totalAmount: finalTotalAmount, // Final amount to pay
+      subTotal: totalAmount, // Original amount (Items + Shipping)
+      walletDiscount,
       shippingCost: shippingCost || 0,
       isPickup: isPickup || false,
       pickupLocation: isPickup ? pickupLocation : null,
@@ -108,15 +122,15 @@ exports.submitOrder = async (req, res) => {
         if (!product) {
           // Continue without creating a referral, but don't block the order.
         } else {
-        const newReferral = new Referral({
-          referrerId: referrer._id,
-          referredId: userId,
+          const newReferral = new Referral({
+            referrerId: referrer._id,
+            referredId: userId,
             bookId: product.products_id || bookId, // Use the original bookId (products_id)
-          orderId: addedOrder._id, // Link referral to this specific order
-          status: 'pending',
-          earned: 0
-        });
-        await newReferral.save();
+            orderId: addedOrder._id, // Link referral to this specific order
+            status: 'pending',
+            earned: 0
+          });
+          await newReferral.save();
         }
       } else if (!referrer) {
         // console.log(`[Referral Submit] No referrer found for code: ${referralCode}`);
@@ -168,6 +182,7 @@ exports.getUserOrders = async (req, res) => {
 
     res.status(200).json(transformedOrders);
   } catch (error) {
+    console.error('Error getting orders:', error);
     res.status(500).json({
       message: 'Error getting orders',
       error: error.message
@@ -260,11 +275,19 @@ exports.updateOrderStatus = async (req, res) => {
       return res.status(400).json({ message: 'Invalid status value' });
     }
 
+    const oldStatus = order.status;
     order.status = status;
 
     // Clear paymentSessionUrl if order is cancelled or completed
     if (status === 'تم الإلغاء' || status === 'تم التسليم') {
       order.paymentSessionUrl = null;
+    }
+
+    // Refund Wallet Balance if Cancelled
+    // Only refund if the previous status was NOT cancelled to avoid double refunds
+    if (status === 'تم الإلغاء' && oldStatus !== 'تم الإلغاء' && order.walletDiscount > 0) {
+      user.referralBalance = (user.referralBalance || 0) + order.walletDiscount;
+      console.log(`[Order Refund] Refunded ${order.walletDiscount} to user ${user._id}`);
     }
 
     // Handle referral completion if order is received or delivered
@@ -299,21 +322,24 @@ exports.updateOrderStatus = async (req, res) => {
 
     // Create notification message based on status
     let notificationMessage = '';
+    const bookName = order.products.length > 0 ? (order.products[0].bookName || order.products[0].book || 'كتاب') : 'طلبك';
+    const productSummary = order.products.length > 1 ? `${bookName} و ${order.products.length - 1} كتب أخرى` : bookName;
+
     switch (status) {
       case 'تم الشحن':
-        notificationMessage = `تم شحن الطلب رقم ${orderId}`;
+        notificationMessage = `تم شحن ${productSummary} (طلب رقم ${orderId})`;
         break;
       case 'تم الاستلام':
-        notificationMessage = `تم استلام الطلب رقم ${orderId} من التاجر`;
+        notificationMessage = `تم استلام ${productSummary} من التاجر`;
         break;
       case 'تم التسليم':
-        notificationMessage = `تم تسليم الطلب رقم ${orderId}`;
+        notificationMessage = `تم تسليم ${productSummary} بنجاح`;
         break;
       case 'تم الإلغاء':
-        notificationMessage = `تم إلغاء الطلب رقم ${orderId}`;
+        notificationMessage = `تم إلغاء طلب ${productSummary}`;
         break;
       default:
-        notificationMessage = `تم تحديث حالة الطلب رقم ${orderId} إلى ${status}`;
+        notificationMessage = `تحديث حالة طلب ${productSummary}: ${status}`;
     }
 
     // Add notification to user
@@ -328,6 +354,16 @@ exports.updateOrderStatus = async (req, res) => {
     await user.save({ validateBeforeSave: false });
 
     res.status(200).json({ message: 'Order status updated successfully' });
+
+    // Send Push Notification
+    const pushService = require('../services/push-notification.service');
+    const pushPayload = {
+      title: 'تحديث الطلب',
+      body: notificationMessage,
+      url: '/my-orders',
+      data: { orderId: orderId, type: 'order' }
+    };
+    pushService.sendToUser(user._id, pushPayload, { important: true }).catch(err => console.error('Push Error:', err));
   } catch (error) {
     console.error('Error updating order status:', error); // Detailed error logging
     res.status(500).json({
@@ -353,6 +389,15 @@ exports.deleteOrder = async (req, res) => {
     if (orderIndex === -1) {
       console.error('Order not found in user orders for order ID:', orderId); // Log for debugging
       return res.status(404).json({ message: 'Order not found in user orders' });
+    }
+
+
+    // Refund Wallet Balance if Deleted
+    const orderToDelete = user.orders[orderIndex];
+    // Check if wallet was used AND if it wasn't already refunded via cancellation AND wasn't delivered
+    if (orderToDelete.walletDiscount > 0 && orderToDelete.status !== 'تم الإلغاء' && orderToDelete.status !== 'تم التسليم') {
+      user.referralBalance = (user.referralBalance || 0) + orderToDelete.walletDiscount;
+      console.log(`[Order Delete] Refunded ${orderToDelete.walletDiscount} to user ${user._id}`);
     }
 
     // Remove the order from the user's orders
@@ -395,6 +440,14 @@ exports.bulkDeleteOrders = async (req, res) => {
     // Delete orders per user and save once per user
     const results = [];
     for (const [userId, { user, orderIds: userOrderIds }] of userOrderMap) {
+      // Refund for deleted orders
+      userOrderIds.forEach(id => {
+        const order = user.orders.id(id);
+        if (order && order.walletDiscount > 0 && order.status !== 'تم الإلغاء' && order.status !== 'تم التسليم') {
+          user.referralBalance = (user.referralBalance || 0) + order.walletDiscount;
+        }
+      });
+
       // Remove orders from user's orders array
       user.orders = user.orders.filter(order => !userOrderIds.includes(order._id.toString()));
       await user.save();

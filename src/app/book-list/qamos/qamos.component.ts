@@ -2,7 +2,7 @@ import { Component, ViewChild, OnInit, OnDestroy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { DataService } from '../../services/data.service';
 import { Book } from '../../book';
-import { faHeart, faCartPlus, faShareAlt } from '@fortawesome/free-solid-svg-icons';
+import { faHeart, faCartPlus, faShareAlt, faCoins } from '@fortawesome/free-solid-svg-icons';
 import { faStar } from '@fortawesome/free-solid-svg-icons';
 import { faStar as faStarRegular } from '@fortawesome/free-regular-svg-icons';
 import { AuthService } from '../../auth/auth.service';
@@ -31,8 +31,9 @@ export class QamosComponent implements OnInit, OnDestroy {
 
   ratings: { [bookId: string]: any } = {};
 
-    private countdownInterval: any;
+  private countdownInterval: any;
   faShareAlt = faShareAlt;
+  faCoins = faCoins;
   showCopySuccess: boolean = false;
   copiedBookId: string | null = null;
   isLoading: boolean = true;
@@ -78,7 +79,7 @@ export class QamosComponent implements OnInit, OnDestroy {
   }
   copyBookLink(book: Book): void {
     if (!book) return;
-      const url = window.location.origin + '/book/' + book.products_id + '/' + this.getBookSlug(book.product_name);
+    const url = window.location.origin + '/book/' + book.products_id + '/' + this.getBookSlug(book.product_name);
 
     navigator.clipboard.writeText(url).then(() => {
       this.showCopySuccess = true;
@@ -107,7 +108,7 @@ export class QamosComponent implements OnInit, OnDestroy {
       if (book.products_id) {
 
 
-this.http.get<{ bookId: string; averageRating: number; ratingCount: number }>(`${environment.apiBaseUrl}/users/average-rating/${book.products_id}`)
+        this.http.get<{ bookId: string; averageRating: number; ratingCount: number }>(`${environment.apiBaseUrl}/users/average-rating/${book.products_id}`)
           .subscribe({
             next: (res) => {
               this.ratings[book.products_id] = {
@@ -150,10 +151,10 @@ this.http.get<{ bookId: string; averageRating: number; ratingCount: number }>(`$
   }
 
   updatePage(): void {
-const startIndex = (this.currentPage - 1) * this.booksPerPage;
-const endIndex = startIndex + this.booksPerPage;
-this.paginatedBooks = this.books.slice(startIndex, endIndex);
-}
+    const startIndex = (this.currentPage - 1) * this.booksPerPage;
+    const endIndex = startIndex + this.booksPerPage;
+    this.paginatedBooks = this.books.slice(startIndex, endIndex);
+  }
 
   onPageClick(page: number | string): void {
     if (typeof page === 'number') {
@@ -174,7 +175,7 @@ this.paginatedBooks = this.books.slice(startIndex, endIndex);
     this.updateURL();
   }
 
- getDisplayedPages(): (number | string)[] {
+  getDisplayedPages(): (number | string)[] {
     const totalPages = this.totalPages || 1;
     const currentPage = this.currentPage || 1;
     const maxPagesToShow = 5;

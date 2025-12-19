@@ -1,4 +1,4 @@
-import { NgModule } from '@angular/core';
+import { NgModule, isDevMode } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 import { AccountModalComponent } from './auth/account-modal/account-modal.component';
 import { RouterModule } from '@angular/router';
@@ -11,7 +11,9 @@ import { AamalComponent } from './book-list/aamal/aamal.component';
 import { FitComponent } from './book-list/fit/fit.component';
 import { FenonComponent } from './book-list/fenon/fenon.component';
 import { ChildComponent } from './book-list/child/child.component';
-import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import { FontAwesomeModule, FaIconLibrary } from '@fortawesome/angular-fontawesome';
+import { fas, faBookOpen } from '@fortawesome/free-solid-svg-icons';
+import { fab, faAmazon } from '@fortawesome/free-brands-svg-icons';
 import { PrintComponent } from './print/print.component'
 import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
 import { TarekhComponent } from './book-list/tarekh/tarekh.component';
@@ -45,6 +47,9 @@ import { GamesComponent } from './book-list/games/games.component';
 import { FabricsComponent } from './book-list/fabrics/fabrics.component';
 import { OthersComponent } from './book-list/others/others.component';
 import { BooksComponent } from './book-list/books/books.component';
+import { HowToEarnComponent } from './pages/how-to-earn/how-to-earn.component';
+import { ServiceWorkerModule } from '@angular/service-worker';
+
 
 @NgModule({
   declarations: [
@@ -71,7 +76,9 @@ import { BooksComponent } from './book-list/books/books.component';
     GamesComponent,
     FabricsComponent,
     OthersComponent,
-    BooksComponent
+    BooksComponent,
+
+    HowToEarnComponent
   ],
   imports: [
     BrowserModule,
@@ -87,7 +94,13 @@ import { BooksComponent } from './book-list/books/books.component';
     AdminModule,
     MerchantDashboardComponent,
     TutorialComponent,
-    AccountModalComponent
+    AccountModalComponent,
+    ServiceWorkerModule.register('ngsw-worker.js', {
+      enabled: !isDevMode(),
+      // Register the ServiceWorker as soon as the application is stable
+      // or after 30 seconds (whichever comes first).
+      registrationStrategy: 'registerWhenStable:30000'
+    })
   ],
   providers: [
     provideHttpClient(withInterceptorsFromDi()), // استخدام provideHttpClient بدلاً من HttpClientModule
@@ -98,4 +111,9 @@ import { BooksComponent } from './book-list/books/books.component';
   ],
   bootstrap: [AppComponent]
 })
-export class AppModule { }
+export class AppModule {
+  constructor(library: FaIconLibrary) {
+    library.addIconPacks(fas, fab);
+    library.addIcons(faBookOpen, faAmazon);
+  }
+}

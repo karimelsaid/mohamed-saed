@@ -9,6 +9,8 @@ import { FreeShippingService, FreeShippingRules } from '../services/free-shippin
 import { User } from '../auth/user.model';
 import governoratesData from '../../../public/json/egypt-governorates.json';
 import { take } from 'rxjs/operators';
+import { environment } from '../../environments/environment';
+
 @Component({
   standalone: true,
   imports: [
@@ -69,6 +71,9 @@ export class PrintComponent implements OnInit {
   phoneTouched: boolean = false;
   locationValid: boolean = true;
 
+  // API Base URL from environment
+  private apiUrl = environment.apiBaseUrl;
+
   freeShippingRules: FreeShippingRules = {
     minQuantity: 3,
     minOrderValue: 0,
@@ -85,7 +90,7 @@ export class PrintComponent implements OnInit {
     private authService: AuthService,
     private freeShippingService: FreeShippingService,
     private cdr: ChangeDetectorRef
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.authService.user$.subscribe(user => {
@@ -122,12 +127,19 @@ export class PrintComponent implements OnInit {
   }
 
   loadPreviousOrders() {
-    this.http.get<any[]>(`/api/users/${this.userId}/print-orders`).subscribe({
+    console.log('🔄 Loading previous orders for userId:', this.userId);
+    if (!this.userId) {
+      console.error('❌ Cannot load orders: userId is missing/empty');
+      return;
+    }
+    // Use environment.apiBaseUrl
+    this.http.get<any[]>(`${this.apiUrl}/users/${this.userId}/print-orders`).subscribe({
       next: (orders) => {
+        console.log('✅ Previous orders loaded:', orders);
         this.previousOrders = orders;
       },
       error: (err) => {
-        console.error('Failed to load previous orders:', err);
+        console.error('❌ Failed to load previous orders:', err);
         this.modalMessage = 'فشل في تحميل المشاريع السابقة.';
         this.modalType = 'error';
         this.showModal = true;
@@ -168,9 +180,30 @@ export class PrintComponent implements OnInit {
 
   nextStep() {
     if (this.canGoNext()) {
+      if (this.currentStep === 2) {
+        this.saveUserProfile();
+      }
       this.currentStep++;
       window.scrollTo(0, 0);
     }
+  }
+
+  saveUserProfile() {
+    if (!this.editedUserProfile || !this.userId) return;
+
+    // Prepare update payload
+    const updateData: any = {
+      governorate: this.editedUserProfile.governorate,
+      city: this.editedUserProfile.city,
+      village: this.editedUserProfile.village,
+      phone: this.editedUserProfile.phone
+    };
+
+    // Call API to update profile
+    this.http.put(`${this.apiUrl}/users/update-profile/${this.userId}`, updateData).subscribe({
+      next: () => console.log('✅ User profile updated successfully'),
+      error: (err) => console.error('❌ Failed to update profile:', err)
+    });
   }
 
   prevStep() {
@@ -312,8 +345,8 @@ export class PrintComponent implements OnInit {
       coverPrice = 100;
     }
 
-    const copies = project.copies || 0;    const numberOfA4Sheets = Math.ceil(pages / pagesPerA4Sheet);
-    const totalPaperCost = numberOfA4Sheets * paperCostPerA4Sheet;    const totalPrintingCost = pages * printingCostPerPage;
+    const copies = project.copies || 0; const numberOfA4Sheets = Math.ceil(pages / pagesPerA4Sheet);
+    const totalPaperCost = numberOfA4Sheets * paperCostPerA4Sheet; const totalPrintingCost = pages * printingCostPerPage;
     const price = (totalPaperCost + totalPrintingCost + coverPrice) * copies;
     return Math.ceil(price); // Round up to the nearest integer
   }
@@ -327,11 +360,12 @@ export class PrintComponent implements OnInit {
     if (!confirm('هل أنت متأكد من رغبتك في حذف هذا الطلب؟ لا يمكن التراجع عن هذا الإجراء.')) {
       return;
     }
-    this.http.delete(`/api/print/orders/${this.userId}/${orderId}`).subscribe({
+    // Use environment.apiBaseUrl
+    this.http.delete(`${this.apiUrl}/print/orders/${this.userId}/${orderId}`).subscribe({
       next: () => {
         this.previousOrders.splice(index, 1);
       },
-      error: (err) => {
+      error: (err: any) => {
         this.modalMessage = 'فشل حذف الطلب. يرجى المحاولة مرة أخرى.';
         this.modalType = 'error';
         this.showModal = true;
@@ -619,7 +653,8 @@ export class PrintComponent implements OnInit {
     this.calculateShippingCost();
 
     // Save post office details to user profile immediately
-    this.http.put(`/api/users/update-profile/${this.userProfile.id}`, { postOffice: this.userProfile.postOffice }).subscribe({
+    // Use environment.apiBaseUrl
+    this.http.put(`${this.apiUrl}/users/update-profile/${this.userProfile.id}`, { postOffice: this.userProfile.postOffice }).subscribe({
       next: () => console.log('Post office details saved to user profile.'),
       error: (err: any) => console.error('Failed to save post office details:', err)
     });
@@ -629,23 +664,30 @@ export class PrintComponent implements OnInit {
     if (this.deliveryType === 'pickup') return true;
     if (this.deliveryType === 'postOffice') {
       return this.postOfficeGovernorate.trim().length > 0 &&
-             this.postOfficeCity.trim().length > 0 &&
-             this.postOfficeAddress.trim().length > 0;
+        this.postOfficeCity.trim().length > 0 &&
+        this.postOfficeAddress.trim().length > 0;
     }
     if (!this.editedUserProfile) return false;
     const governorate = this.editedUserProfile?.governorate ?? '';
     const city = this.editedUserProfile?.city ?? '';
     const village = this.editedUserProfile?.village ?? '';
     const phone = this.editedUserProfile?.phone ?? '';
-    const phoneValid = this.phoneValid && this.phoneTouched;
-    const locationValid = this.locationValid;
+
+    // Dynamic validation
+    const egyptPhoneRegex = /^(010|011|012|015)[0-9]{8}$/;
+    const isPhoneValid = egyptPhoneRegex.test(phone);
+    const isLocationValid = governorate.trim().length > 0 &&
+      city.trim().length > 0 &&
+      // Check if governorate is valid selection
+      this.governorates.some(g => g.governorate_name === governorate);
+
     return (
       governorate.trim().length > 0 &&
       city.trim().length > 0 &&
       village.trim().length > 0 &&
       phone.trim().length > 0 &&
-      phoneValid &&
-      locationValid
+      isPhoneValid &&
+      isLocationValid
     );
   }
 
@@ -732,7 +774,8 @@ export class PrintComponent implements OnInit {
     this.uploading = true;
     this.uploadProgress = 0;
     this.showUploadModal = true; // Show upload progress modal immediately
-    this.http.post('/api/print/upload', formData, {
+    // Use environment.apiBaseUrl
+    this.http.post(`${this.apiUrl}/print/upload`, formData, {
       reportProgress: true,
       observe: 'events'
     }).subscribe({
@@ -751,9 +794,13 @@ export class PrintComponent implements OnInit {
       error: (err) => {
         this.uploading = false;
         this.showUploadModal = false;
+        console.error('❌ Upload Error:', err);
         this.showModal = true;
         this.modalType = 'error';
-        this.modalMessage = err.error?.message || 'فشل في إرسال الطلب. يرجى المحاولة مرة أخرى.';
+        // Detailed error message for debugging
+        const status = err.status || 'Unknown';
+        const msg = err.error?.message || err.message || 'فشل في إرسال الطلب.';
+        this.modalMessage = `خطأ (${status}): ${msg}`;
       }
     });
   }

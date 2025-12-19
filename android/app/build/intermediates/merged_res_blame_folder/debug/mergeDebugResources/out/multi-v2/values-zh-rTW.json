@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.kenouz.bookstore2.app-mergeDebugResources-31:/values-zh-rTW/values-zh-rTW.xml",
+            "outputFile": "com.kenouz.bookstore2.app-mergeDebugResources-37:/values-zh-rTW/values-zh-rTW.xml",
             "map": [
                 {
                     "source": "C:\\Users\\karim\\.gradle\\caches\\8.14\\transforms\\3ef57d74d78b52df3d1e74791d585bbc\\transformed\\appcompat-1.7.0\\res\\values-zh-rTW\\values-zh-rTW.xml",
@@ -21,23 +21,6 @@
                     }
                 },
                 {
-                    "source": "C:\\Users\\karim\\.gradle\\caches\\8.14\\transforms\\e59092c73c7eaeba4485cb6552c6616d\\transformed\\play-services-basement-18.1.0\\res\\values-zh-rTW\\values.xml",
-                    "from": {
-                        "startLines": "4",
-                        "startColumns": "0",
-                        "startOffsets": "199",
-                        "endColumns": "98",
-                        "endOffsets": "297"
-                    },
-                    "to": {
-                        "startLines": "44",
-                        "startColumns": "4",
-                        "startOffsets": "4196",
-                        "endColumns": "102",
-                        "endOffsets": "4294"
-                    }
-                },
-                {
                     "source": "C:\\Users\\karim\\.gradle\\caches\\8.14\\transforms\\a29e69d6b6aa77c15bf4815fb2a81fda\\transformed\\browser-1.8.0\\res\\values-zh-rTW\\values-zh-rTW.xml",
                     "from": {
                         "startLines": "2,3,4,5",
@@ -52,6 +35,23 @@
                         "startOffsets": "5151,5235,5327,5428",
                         "endColumns": "83,91,100,92",
                         "endOffsets": "5230,5322,5423,5516"
+                    }
+                },
+                {
+                    "source": "C:\\Users\\karim\\.gradle\\caches\\8.14\\transforms\\3e3d4bef3d26d5b4614b184cb71711c9\\transformed\\play-services-basement-18.3.0\\res\\values-zh-rTW\\values.xml",
+                    "from": {
+                        "startLines": "4",
+                        "startColumns": "0",
+                        "startOffsets": "199",
+                        "endColumns": "98",
+                        "endOffsets": "297"
+                    },
+                    "to": {
+                        "startLines": "44",
+                        "startColumns": "4",
+                        "startOffsets": "4196",
+                        "endColumns": "102",
+                        "endOffsets": "4294"
                     }
                 },
                 {

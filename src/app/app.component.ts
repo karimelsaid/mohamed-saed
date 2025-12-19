@@ -9,6 +9,9 @@ import { DataService } from './services/data.service';
 import { ModalService, ModalConfig } from './services/modal.service';
 import { TutorialService } from './services/tutorial.service';
 import { AppUpdateService } from './services/app-update.service'; // Import AppUpdateService
+import { PushNotificationService } from './services/push-notification.service';
+import { NotificationService } from './services/notification.service';
+import { AuthService } from './auth/auth.service';
 import { StatusBar, Style } from '@capacitor/status-bar'; // Import StatusBar
 import { Subscription } from 'rxjs';
 
@@ -45,13 +48,20 @@ export class AppComponent {
     private tutorialService: TutorialService,
     private location: Location, // Inject Location
     private ngZone: NgZone, // Inject NgZone
-    private appUpdateService: AppUpdateService // Inject AppUpdateService
+    private appUpdateService: AppUpdateService, // Inject AppUpdateService
+    private pushService: PushNotificationService, // Inject PushNotificationService
+    private notificationService: NotificationService, // Inject NotificationService
+    private authService: AuthService
   ) {
     this.initializeApp();
   }
 
   initializeApp() {
     this.appUpdateService.checkForUpdate(); // Check for updates on startup
+
+    // Auto specific actions
+    this.pushService.initialPermissionRequest();
+
     if (Capacitor.isNativePlatform()) {
       // Hide Status Bar (Full Screen Mode)
       StatusBar.hide().catch(() => { });
@@ -121,6 +131,33 @@ export class AppComponent {
     // Subscribe to modal service
     this.modalSubscription = this.modalService.modal$.subscribe(config => {
       this.modalConfig = config;
+    });
+
+    // Global Push Listener for Optimistic Updates
+    this.pushService.pushPayload.subscribe((payload: any) => {
+      console.log('⚡ Optimistic Notification Update:', payload);
+      if (payload && payload.notification) {
+        // Construct temporary notification object
+        const newNotification: any = {
+          _id: payload.data?.relatedId ? `temp_${payload.data.relatedId}` : `temp_${Date.now()}`,
+          message: payload.notification.body || payload.body,
+          type: payload.data?.type || 'system',
+          read: false,
+          createdAt: new Date().toISOString(),
+          relatedId: payload.data?.relatedId
+        };
+
+        this.notificationService.addNotification(newNotification);
+        this.notificationService.addNotification(newNotification);
+      }
+    });
+
+    // Auto-subscribe logged in users to push system
+    this.authService.user$.subscribe(user => {
+      if (user && user.id) {
+        // This ensures that valid token is sent to backend whenever user is known
+        this.pushService.subscribeToNotifications();
+      }
     });
   }
 

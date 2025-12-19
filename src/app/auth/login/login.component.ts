@@ -8,17 +8,25 @@ import { MerchantAuthService } from '../../services/merchant-auth.service';
 import { environment } from '../../../environments/environment';
 import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 import { Capacitor } from '@capacitor/core';
-
 import { RouterModule } from '@angular/router';
+
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import { faEnvelope, faLock, faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, FontAwesomeModule],
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.css']
 })
 export class LoginComponent implements OnInit, AfterViewInit {
+  // Icons
+  faEnvelope = faEnvelope;
+  faLock = faLock;
+  faEye = faEye;
+  faEyeSlash = faEyeSlash;
+
   email: string = '';
   password: string = '';
   message: string = '';
@@ -72,7 +80,22 @@ export class LoginComponent implements OnInit, AfterViewInit {
         this.authService.googleSignIn(idToken).subscribe({
           next: (user) => {
             this.message = '✅ تم تسجيل الدخول بنجاح! جارِ توجيهك...';
-            this.router.navigateByUrl(this.returnUrl);
+            this.isSuccess = true;
+
+            // ROBUST NAVIGATION FIX: Ensure LocalStorage is ready before moving
+            setTimeout(() => {
+              const storedUser = localStorage.getItem('user');
+              if (storedUser) {
+                console.log('✅ [Login] LocalStorage verified. Navigating...');
+                this.router.navigateByUrl(this.returnUrl);
+              } else {
+                console.warn('⚠️ [Login] LocalStorage empty! Retrying save...');
+                this.authService.setUser(user); // Force save again
+                setTimeout(() => {
+                  this.router.navigateByUrl(this.returnUrl);
+                }, 1000); // Wait longer second time
+              }
+            }, 800); // Initial wait
           },
           error: (error) => {
             if (error.status === 400 && error.error.message) {
@@ -119,10 +142,12 @@ export class LoginComponent implements OnInit, AfterViewInit {
     this.authService.googleSignIn(idToken).subscribe({
       next: (user) => {
         this.message = '✅ تم تسجيل الدخول بنجاح! جارِ توجيهك...';
+        this.isSuccess = true;
         this.router.navigateByUrl(this.returnUrl);
       },
       error: (error) => {
         this.message = '❌ فشل تسجيل الدخول باستخدام حساب Google. يرجى المحاولة مرة أخرى.';
+        this.isSuccess = false;
         console.error('Google sign-in error:', error);
       }
     });
@@ -174,6 +199,9 @@ export class LoginComponent implements OnInit, AfterViewInit {
               }
             });
           } else {
+            // CRITICAL FIX: Clear any stale merchant session to prevent role overlap
+            this.merchantAuthService.performLogout();
+
             // CRITICAL FIX: Save token with user data
             const userData = { ...response.user };
             if (response.token) {

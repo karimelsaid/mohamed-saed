@@ -1,8 +1,25 @@
 {
     "logs": [
         {
-            "outputFile": "com.kenouz.bookstore2.app-mergeDebugResources-31:/values-ta/values-ta.xml",
+            "outputFile": "com.kenouz.bookstore2.app-mergeDebugResources-37:/values-ta/values-ta.xml",
             "map": [
+                {
+                    "source": "C:\\Users\\karim\\.gradle\\caches\\8.14\\transforms\\3e3d4bef3d26d5b4614b184cb71711c9\\transformed\\play-services-basement-18.3.0\\res\\values-ta\\values.xml",
+                    "from": {
+                        "startLines": "4",
+                        "startColumns": "0",
+                        "startOffsets": "195",
+                        "endColumns": "156",
+                        "endOffsets": "351"
+                    },
+                    "to": {
+                        "startLines": "44",
+                        "startColumns": "4",
+                        "startOffsets": "4601",
+                        "endColumns": "160",
+                        "endOffsets": "4757"
+                    }
+                },
                 {
                     "source": "C:\\Users\\karim\\.gradle\\caches\\8.14\\transforms\\3ef57d74d78b52df3d1e74791d585bbc\\transformed\\appcompat-1.7.0\\res\\values-ta\\values-ta.xml",
                     "from": {
@@ -18,23 +35,6 @@
                         "startOffsets": "105,218,320,435,524,635,756,835,911,1009,1109,1204,1298,1405,1505,1607,1701,1799,1897,1978,2086,2189,2288,2404,2507,2612,2769,6283",
                         "endColumns": "112,101,114,88,110,120,78,75,97,99,94,93,106,99,101,93,97,97,80,107,102,98,115,102,104,156,101,81",
                         "endOffsets": "213,315,430,519,630,751,830,906,1004,1104,1199,1293,1400,1500,1602,1696,1794,1892,1973,2081,2184,2283,2399,2502,2607,2764,2866,6360"
-                    }
-                },
-                {
-                    "source": "C:\\Users\\karim\\.gradle\\caches\\8.14\\transforms\\e59092c73c7eaeba4485cb6552c6616d\\transformed\\play-services-basement-18.1.0\\res\\values-ta\\values.xml",
-                    "from": {
-                        "startLines": "4",
-                        "startColumns": "0",
-                        "startOffsets": "195",
-                        "endColumns": "156",
-                        "endOffsets": "351"
-                    },
-                    "to": {
-                        "startLines": "44",
-                        "startColumns": "4",
-                        "startOffsets": "4601",
-                        "endColumns": "160",
-                        "endOffsets": "4757"
                     }
                 },
                 {

@@ -105,4 +105,34 @@ exports.updatePaymentRequestStatus = async (req, res) => {
     console.error('Error updating payment request status:', error);
     res.status(500).json({ message: 'حدث خطأ أثناء تحديث حالة الطلب' });
   }
+}
+
+
+// Get all payment requests for admin
+exports.getAllPaymentRequests = async (req, res) => {
+  try {
+    const users = await User.find({ 'paymentRequests.0': { $exists: true } }).lean();
+
+    const allRequests = users.flatMap(user =>
+      user.paymentRequests.map(request => ({
+        requestId: request._id,
+        userId: user._id,
+        username: user.username,
+        email: user.email,
+        phone: user.phone,
+        amount: request.amount,
+        status: request.status,
+        createdAt: request.createdAt,
+        processedAt: request.processedAt
+      }))
+    );
+
+    // Sort by date (newest first)
+    allRequests.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    res.json(allRequests);
+  } catch (error) {
+    console.error('Error fetching all payment requests:', error);
+    res.status(500).json({ message: 'Error fetching payment requests', error: error.message });
+  }
 };

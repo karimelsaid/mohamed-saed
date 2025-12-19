@@ -149,267 +149,229 @@
     </div>
 
     <!-- Step 2: Address -->
-    <div *ngIf="currentStep === 2 && userProfile" class="mb-8">
-      <h3 class="text-lg font-bold mb-4 text-gray-900 dark:text-gray-200">العنوان</h3>
-      <!-- Delivery Type Selection -->
-      <div class="mb-6">
-        <label class="block mb-4 text-sm font-medium text-gray-700 dark:text-gray-300">نوع التسليم</label>
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <label
-            class="relative flex items-center p-4 border-2 border-gray-300 dark:border-gray-600 rounded-xl cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-300 dark:hover:border-blue-500 transition-all duration-300 ease-in-out transform hover:scale-[1.02] peer-checked:border-blue-500 peer-checked:bg-blue-50 dark:peer-checked:bg-blue-900/30 peer-checked:shadow-lg">
-            <input type="radio" [(ngModel)]="deliveryType" value="delivery" (change)="onDeliveryTypeChange()"
-              class="sr-only peer" />
-            <div
-              class="w-6 h-6 border-2 border-gray-400 dark:border-gray-500 rounded-full mr-4 peer-checked:border-blue-500 peer-checked:bg-blue-500 peer-checked:shadow-md transition-all duration-300 ease-in-out flex items-center justify-center">
-              <div
-                class="w-3 h-3 bg-blue-500 rounded-full scale-0 peer-checked:scale-100 transition-transform duration-300 ease-in-out">
-              </div>
-            </div>
-            <div class="flex-1">
-              <div
-                class="font-semibold text-gray-900 dark:text-gray-200 peer-checked:text-blue-700 dark:peer-checked:text-blue-300 transition-colors duration-300">
-                تسليم إلى العنوان</div>
-              <div
-                class="text-sm text-gray-500 dark:text-gray-400 peer-checked:text-blue-600 dark:peer-checked:text-blue-400 transition-colors duration-300">
-                توصيل إلى باب المنزل</div>
-            </div>
-            <div
-              class="w-6 h-6 bg-blue-100 dark:bg-blue-900/50 rounded-full flex items-center justify-center opacity-0 peer-checked:opacity-100 transition-all duration-300 ease-in-out">
-              <svg class="w-4 h-4 text-blue-600 dark:text-blue-400" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd"
-                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                  clip-rule="evenodd"></path>
-              </svg>
-            </div>
-          </label>
-          <label *ngIf="!hasMerchantProducts"
-            class="relative flex items-center p-4 border-2 border-gray-300 dark:border-gray-600 rounded-xl cursor-pointer hover:bg-green-50 dark:hover:bg-green-900/20 hover:border-green-300 dark:hover:border-green-500 transition-all duration-300 ease-in-out transform hover:scale-[1.02] peer-checked:border-green-500 peer-checked:bg-green-50 dark:peer-checked:bg-green-900/30 peer-checked:shadow-lg">
-            <input type="radio" [(ngModel)]="deliveryType" value="pickup" (change)="onDeliveryTypeChange()"
-              class="sr-only peer" />
-            <div
-              class="w-6 h-6 border-2 border-gray-400 dark:border-gray-500 rounded-full mr-4 peer-checked:border-green-500 peer-checked:bg-green-500 peer-checked:shadow-md transition-all duration-300 ease-in-out flex items-center justify-center">
-              <div
-                class="w-3 h-3 bg-green-500 rounded-full scale-0 peer-checked:scale-100 transition-transform duration-300 ease-in-out">
-              </div>
-            </div>
-            <div class="flex-1">
-              <div
-                class="font-semibold text-gray-900 dark:text-gray-200 peer-checked:text-green-700 dark:peer-checked:text-green-300 transition-colors duration-300">
-                استلام من المكان</div>
-              <div
-                class="text-sm text-gray-500 dark:text-gray-400 peer-checked:text-green-600 dark:peer-checked:text-green-400 transition-colors duration-300">
-                {{pickupLocationText}}</div>
-            </div>
-            <div
-              class="w-6 h-6 bg-green-100 dark:bg-green-900/50 rounded-full flex items-center justify-center opacity-0 peer-checked:opacity-100 transition-all duration-300 ease-in-out">
-              <svg class="w-4 h-4 text-green-600 dark:text-green-400" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd"
-                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                  clip-rule="evenodd"></path>
-              </svg>
-            </div>
-          </label>
-          <label
-            class="relative flex items-center p-4 border-2 border-gray-300 dark:border-gray-600 rounded-xl cursor-pointer hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:border-purple-300 dark:hover:border-purple-500 transition-all duration-300 ease-in-out transform hover:scale-[1.02] peer-checked:border-purple-500 peer-checked:bg-purple-50 dark:peer-checked:bg-purple-900/30 peer-checked:shadow-lg">
-            <input type="radio" [(ngModel)]="deliveryType" value="postOffice" (change)="onDeliveryTypeChange()"
-              class="sr-only peer" />
-            <div
-              class="w-6 h-6 border-2 border-gray-400 dark:border-gray-500 rounded-full mr-4 peer-checked:border-purple-500 peer-checked:bg-purple-500 peer-checked:shadow-md transition-all duration-300 ease-in-out flex items-center justify-center">
-              <div
-                class="w-3 h-3 bg-purple-500 rounded-full scale-0 peer-checked:scale-100 transition-transform duration-300 ease-in-out">
-              </div>
-            </div>
-            <div class="flex-1">
-              <div
-                class="font-semibold text-gray-900 dark:text-gray-200 peer-checked:text-purple-700 dark:peer-checked:text-purple-300 transition-colors duration-300">
-                شحن عبر مكاتب البريد</div>
-              <div
-                class="text-sm text-gray-500 dark:text-gray-400 peer-checked:text-purple-600 dark:peer-checked:text-purple-400 transition-colors duration-300">
-                توصيل عبر مكاتب البريد</div>
-            </div>
-            <div
-              class="w-6 h-6 bg-purple-100 dark:bg-purple-900/50 rounded-full flex items-center justify-center opacity-0 peer-checked:opacity-100 transition-all duration-300 ease-in-out">
-              <svg class="w-4 h-4 text-purple-600 dark:text-purple-400" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd"
-                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                  clip-rule="evenodd"></path>
-              </svg>
-            </div>
-          </label>
-        </div>
+    <div *ngIf="currentStep === 2" class="mb-8">
+      <!-- Loading State -->
+      <div *ngIf="!userProfile" class="flex flex-col items-center justify-center py-12 text-gray-500">
+        <i class="fas fa-spinner fa-spin text-3xl mb-4 text-blue-600"></i>
+        <p>جاري تحميل بيانات العنوان...</p>
       </div>
-      <!-- Delivery Address Section -->
-      <div *ngIf="!isPickup && !isPostOffice">
-        <div *ngIf="!isEditingAddress" class="mb-4">
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-            <div>
-              <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">المحافظة</label>
-              <input type="text" [value]="userProfile.governorate" disabled
-                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 cursor-not-allowed text-gray-900 dark:text-gray-200 shadow-sm" />
-            </div>
-            <div>
-              <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">المدينة</label>
-              <input type="text" [value]="userProfile.city" disabled
-                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 cursor-not-allowed text-gray-900 dark:text-gray-200 shadow-sm" />
-            </div>
-            <div>
-              <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">تفاصيل العنوان</label>
-              <input type="text" [value]="userProfile.village" disabled
-                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 cursor-not-allowed text-gray-900 dark:text-gray-200 shadow-sm" />
-            </div>
+
+      <div *ngIf="userProfile">
+        <h3 class="text-lg font-bold mb-4 text-gray-900 dark:text-gray-200">العنوان</h3>
+        <!-- Delivery Type Selection -->
+        <div class="mb-6">
+          <label class="block mb-4 text-sm font-medium text-gray-700 dark:text-gray-300">نوع التسليم</label>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <label
+              class="relative flex items-center p-4 border-2 border-gray-300 dark:border-gray-600 rounded-xl cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-300 dark:hover:border-blue-500 transition-all duration-300 ease-in-out transform hover:scale-[1.02] peer-checked:border-blue-500 peer-checked:bg-blue-50 dark:peer-checked:bg-blue-900/30 peer-checked:shadow-lg">
+              <input type="radio" [(ngModel)]="deliveryType" value="delivery" (change)="onDeliveryTypeChange()"
+                class="sr-only peer" />
+              <div
+                class="w-6 h-6 border-2 border-gray-400 dark:border-gray-500 rounded-full mr-4 peer-checked:border-blue-500 peer-checked:bg-blue-500 peer-checked:shadow-md transition-all duration-300 ease-in-out flex items-center justify-center">
+                <div
+                  class="w-3 h-3 bg-blue-500 rounded-full scale-0 peer-checked:scale-100 transition-transform duration-300 ease-in-out">
+                </div>
+              </div>
+              <div class="flex-1">
+                <div
+                  class="font-semibold text-gray-900 dark:text-gray-200 peer-checked:text-blue-700 dark:peer-checked:text-blue-300 transition-colors duration-300">
+                  تسليم إلى العنوان</div>
+                <div
+                  class="text-sm text-gray-500 dark:text-gray-400 peer-checked:text-blue-600 dark:peer-checked:text-blue-400 transition-colors duration-300">
+                  توصيل إلى باب المنزل</div>
+              </div>
+              <div
+                class="w-6 h-6 bg-blue-100 dark:bg-blue-900/50 rounded-full flex items-center justify-center opacity-0 peer-checked:opacity-100 transition-all duration-300 ease-in-out">
+                <svg class="w-4 h-4 text-blue-600 dark:text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd"
+                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                    clip-rule="evenodd"></path>
+                </svg>
+              </div>
+            </label>
+            <label *ngIf="!hasMerchantProducts"
+              class="relative flex items-center p-4 border-2 border-gray-300 dark:border-gray-600 rounded-xl cursor-pointer hover:bg-green-50 dark:hover:bg-green-900/20 hover:border-green-300 dark:hover:border-green-500 transition-all duration-300 ease-in-out transform hover:scale-[1.02] peer-checked:border-green-500 peer-checked:bg-green-50 dark:peer-checked:bg-green-900/30 peer-checked:shadow-lg">
+              <input type="radio" [(ngModel)]="deliveryType" value="pickup" (change)="onDeliveryTypeChange()"
+                class="sr-only peer" />
+              <div
+                class="w-6 h-6 border-2 border-gray-400 dark:border-gray-500 rounded-full mr-4 peer-checked:border-green-500 peer-checked:bg-green-500 peer-checked:shadow-md transition-all duration-300 ease-in-out flex items-center justify-center">
+                <div
+                  class="w-3 h-3 bg-green-500 rounded-full scale-0 peer-checked:scale-100 transition-transform duration-300 ease-in-out">
+                </div>
+              </div>
+              <div class="flex-1">
+                <div
+                  class="font-semibold text-gray-900 dark:text-gray-200 peer-checked:text-green-700 dark:peer-checked:text-green-300 transition-colors duration-300">
+                  استلام من المكان</div>
+                <div
+                  class="text-sm text-gray-500 dark:text-gray-400 peer-checked:text-green-600 dark:peer-checked:text-green-400 transition-colors duration-300">
+                  {{pickupLocationText}}</div>
+              </div>
+              <div
+                class="w-6 h-6 bg-green-100 dark:bg-green-900/50 rounded-full flex items-center justify-center opacity-0 peer-checked:opacity-100 transition-all duration-300 ease-in-out">
+                <svg class="w-4 h-4 text-green-600 dark:text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd"
+                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                    clip-rule="evenodd"></path>
+                </svg>
+              </div>
+            </label>
+            <label
+              class="relative flex items-center p-4 border-2 border-gray-300 dark:border-gray-600 rounded-xl cursor-pointer hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:border-purple-300 dark:hover:border-purple-500 transition-all duration-300 ease-in-out transform hover:scale-[1.02] peer-checked:border-purple-500 peer-checked:bg-purple-50 dark:peer-checked:bg-purple-900/30 peer-checked:shadow-lg">
+              <input type="radio" [(ngModel)]="deliveryType" value="postOffice" (change)="onDeliveryTypeChange()"
+                class="sr-only peer" />
+              <div
+                class="w-6 h-6 border-2 border-gray-400 dark:border-gray-500 rounded-full mr-4 peer-checked:border-purple-500 peer-checked:bg-purple-500 peer-checked:shadow-md transition-all duration-300 ease-in-out flex items-center justify-center">
+                <div
+                  class="w-3 h-3 bg-purple-500 rounded-full scale-0 peer-checked:scale-100 transition-transform duration-300 ease-in-out">
+                </div>
+              </div>
+              <div class="flex-1">
+                <div
+                  class="font-semibold text-gray-900 dark:text-gray-200 peer-checked:text-purple-700 dark:peer-checked:text-purple-300 transition-colors duration-300">
+                  شحن عبر مكاتب البريد</div>
+                <div
+                  class="text-sm text-gray-500 dark:text-gray-400 peer-checked:text-purple-600 dark:peer-checked:text-purple-400 transition-colors duration-300">
+                  توصيل عبر مكاتب البريد</div>
+              </div>
+              <div
+                class="w-6 h-6 bg-purple-100 dark:bg-purple-900/50 rounded-full flex items-center justify-center opacity-0 peer-checked:opacity-100 transition-all duration-300 ease-in-out">
+                <svg class="w-4 h-4 text-purple-600 dark:text-purple-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd"
+                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                    clip-rule="evenodd"></path>
+                </svg>
+              </div>
+            </label>
           </div>
-          <div class="mb-4">
-            <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">رقم الهاتف</label>
-            <input type="text" [value]="userProfile.phone" disabled
-              class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 cursor-not-allowed text-gray-900 dark:text-gray-200 shadow-sm" />
-          </div>
-          <label class="relative flex items-center mt-2 cursor-pointer group">
-            <input type="checkbox" [(ngModel)]="isAddressConfirmed" class="sr-only peer" />
-            <div
-              class="w-5 h-5 border-2 border-gray-300 dark:border-gray-600 rounded mr-3 peer-checked:border-blue-500 peer-checked:bg-blue-500 peer-checked:shadow-md transition-all flex items-center justify-center">
-              <svg class="w-3 h-3 text-white opacity-0 peer-checked:opacity-100 transition-opacity" fill="currentColor"
-                viewBox="0 0 20 20">
-                <path fill-rule="evenodd"
-                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                  clip-rule="evenodd"></path>
-              </svg>
-            </div>
-            <span
-              class="text-gray-900 dark:text-gray-200 peer-checked:text-blue-600 dark:peer-checked:text-blue-400 transition-colors">حدد
-              هذا الخيار إذا كنت متأكدًا من المعلومات</span>
-            <fa-icon [icon]="faHandPointRight"
-              class="ml-2 animate-hand-pointing text-blue-600 dark:text-yellow-400 group-hover:scale-110 transition-transform"></fa-icon>
-          </label>
-          <button *ngIf="!isAddressConfirmed" (click)="onEditAddress()"
-            class="mt-2 bg-blue-500 dark:bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-600 dark:hover:bg-blue-700 transition-colors">
-            تعديل البيانات ورقم الهاتف
-          </button>
         </div>
-        <div *ngIf="isEditingAddress && editedUserProfile" class="mb-4">
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-            <div>
-              <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">المحافظة</label>
-              <input list="governoratesList" type="text" [(ngModel)]="editedUserProfile!.governorate"
-                (change)="onGovernorateChange()"
-                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 shadow-sm" />
-              <datalist id="governoratesList">
-                <option *ngFor="let gov of governorates" [value]="gov.governorate_name"></option>
-              </datalist>
+        <!-- Delivery Address Section -->
+        <div *ngIf="!isPickup && !isPostOffice">
+          <div *ngIf="!isEditingAddress" class="mb-4">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+              <div>
+                <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">المحافظة</label>
+                <input type="text" [value]="userProfile.governorate" disabled
+                  class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 cursor-not-allowed text-gray-900 dark:text-gray-200 shadow-sm" />
+              </div>
+              <div>
+                <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">المدينة</label>
+                <input type="text" [value]="userProfile.city" disabled
+                  class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 cursor-not-allowed text-gray-900 dark:text-gray-200 shadow-sm" />
+              </div>
+              <div>
+                <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">تفاصيل العنوان</label>
+                <input type="text" [value]="userProfile.village" disabled
+                  class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 cursor-not-allowed text-gray-900 dark:text-gray-200 shadow-sm" />
+              </div>
             </div>
-            <div>
-              <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">المدينة</label>
-              <input list="citiesList" type="text" [(ngModel)]="editedUserProfile!.city" (input)="validateLocation()"
-                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 shadow-sm" />
-              <datalist id="citiesList">
-                <option *ngFor="let city of cities" [value]="city"></option>
-              </datalist>
+            <div class="mb-4">
+              <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">رقم الهاتف</label>
+              <input type="text" [value]="userProfile.phone" disabled
+                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 cursor-not-allowed text-gray-900 dark:text-gray-200 shadow-sm" />
             </div>
-            <div>
-              <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">تفاصيل العنوان</label>
-              <input type="text" [(ngModel)]="editedUserProfile!.village"
-                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 shadow-sm" />
-            </div>
+            <label class="relative flex items-center mt-2 cursor-pointer group">
+              <input type="checkbox" [(ngModel)]="isAddressConfirmed" class="sr-only peer" />
+              <div
+                class="w-5 h-5 border-2 border-gray-300 dark:border-gray-600 rounded mr-3 peer-checked:border-blue-500 peer-checked:bg-blue-500 peer-checked:shadow-md transition-all flex items-center justify-center">
+                <svg class="w-3 h-3 text-white opacity-0 peer-checked:opacity-100 transition-opacity"
+                  fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd"
+                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                    clip-rule="evenodd"></path>
+                </svg>
+              </div>
+              <span
+                class="text-gray-900 dark:text-gray-200 peer-checked:text-blue-600 dark:peer-checked:text-blue-400 transition-colors">حدد
+                هذا الخيار إذا كنت متأكدًا من المعلومات</span>
+              <fa-icon [icon]="faHandPointRight"
+                class="ml-2 animate-hand-pointing text-blue-600 dark:text-yellow-400 group-hover:scale-110 transition-transform"></fa-icon>
+            </label>
+            <button *ngIf="!isAddressConfirmed" (click)="onEditAddress()"
+              class="mt-2 bg-blue-500 dark:bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-600 dark:hover:bg-blue-700 transition-colors">
+              تعديل البيانات ورقم الهاتف
+            </button>
           </div>
-          <div class="mb-4">
-            <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">رقم الهاتف</label>
-            <input type="text" [(ngModel)]="editedUserProfile!.phone" (input)="validatePhone()" [ngClass]="{
+          <div *ngIf="isEditingAddress && editedUserProfile" class="mb-4">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+              <div>
+                <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">المحافظة</label>
+                <input list="governoratesList" type="text" [(ngModel)]="editedUserProfile!.governorate"
+                  (change)="onGovernorateChange()"
+                  class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 shadow-sm" />
+                <datalist id="governoratesList">
+                  <option *ngFor="let gov of governorates" [value]="gov.governorate_name"></option>
+                </datalist>
+              </div>
+              <div>
+                <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">المدينة</label>
+                <input list="citiesList" type="text" [(ngModel)]="editedUserProfile!.city" (input)="validateLocation()"
+                  class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 shadow-sm" />
+                <datalist id="citiesList">
+                  <option *ngFor="let city of cities" [value]="city"></option>
+                </datalist>
+              </div>
+              <div>
+                <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">تفاصيل العنوان</label>
+                <input type="text" [(ngModel)]="editedUserProfile!.village"
+                  class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 shadow-sm" />
+              </div>
+            </div>
+            <div class="mb-4">
+              <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">رقم الهاتف</label>
+              <input type="text" [(ngModel)]="editedUserProfile!.phone" (input)="validatePhone()" [ngClass]="{
                    'border-blue-500 focus:ring-blue-500': phoneValid && phoneTouched,
                    'border-red-500 focus:ring-red-500': !phoneValid && phoneTouched
                  }"
-              class="w-full px-4 py-3 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 shadow-sm" />
-            <div *ngIf="!phoneValid && phoneTouched" class="text-red-500 dark:text-red-400 text-sm mt-1">
-              ❌ رقم الهاتف غير صالح. يجب أن يبدأ بـ 010 أو 011 أو 012 أو 015 ويحتوي على 11 رقمًا.
+                class="w-full px-4 py-3 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 shadow-sm" />
+              <div *ngIf="!phoneValid && phoneTouched" class="text-red-500 dark:text-red-400 text-sm mt-1">
+                ❌ رقم الهاتف غير صالح. يجب أن يبدأ بـ 010 أو 011 أو 012 أو 015 ويحتوي على 11 رقمًا.
+              </div>
+              <div *ngIf="phoneValid && phoneTouched" class="text-blue-500 dark:text-blue-400 text-sm mt-1">
+                ✔️ رقم الهاتف صحيح!
+              </div>
             </div>
-            <div *ngIf="phoneValid && phoneTouched" class="text-blue-500 dark:text-blue-400 text-sm mt-1">
-              ✔️ رقم الهاتف صحيح!
+            <div class="flex space-x-4">
+              <button (click)="saveEditAddress()" [disabled]="!phoneValid || !phoneTouched || !locationValid"
+                class="bg-green-600 dark:bg-green-700 text-white py-3 px-6 rounded-lg hover:bg-green-700 dark:hover:bg-green-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md">
+                حفظ
+              </button>
+              <button (click)="cancelEditAddress()"
+                class="bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-gray-200 py-3 px-6 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-700 transition-colors shadow-md">
+                إلغاء
+              </button>
             </div>
-          </div>
-          <div class="flex space-x-4">
-            <button (click)="saveEditAddress()" [disabled]="!phoneValid || !phoneTouched || !locationValid"
-              class="bg-green-600 dark:bg-green-700 text-white py-3 px-6 rounded-lg hover:bg-green-700 dark:hover:bg-green-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md">
-              حفظ
-            </button>
-            <button (click)="cancelEditAddress()"
-              class="bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-gray-200 py-3 px-6 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-700 transition-colors shadow-md">
-              إلغاء
-            </button>
           </div>
         </div>
-      </div>
-      <!-- Pickup Section -->
-      <div *ngIf="isPickup" class="mb-4">
-        <div class="bg-blue-50 dark:bg-blue-900 p-4 rounded-lg">
-          <h4 class="text-lg font-semibold text-blue-800 dark:text-blue-200 mb-2">مكان الاستلام</h4>
-          <p class="text-blue-700 dark:text-blue-300 mb-2 flex items-center">
-            <span class="inline-flex items-center mr-2">
-              <svg class="w-4 h-4 text-blue-600 dark:text-blue-400 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd"
-                  d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z"
-                  clip-rule="evenodd"></path>
-              </svg>
-              الفرع الأول
-            </span>
-            <span class="inline-flex items-center mr-2">
-              <svg class="w-4 h-4 text-blue-600 dark:text-blue-400 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd"
-                  d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z"
-                  clip-rule="evenodd"></path>
-              </svg>
-              محافظة الدقهلية
-            </span>
-          </p>
-          <a [href]="pickupLocation" target="_blank"
-            class="text-blue-600 dark:text-blue-400 underline mt-2 inline-block">عرض على الخريطة</a>
-        </div>
-        <label class="relative flex items-center mt-4 cursor-pointer group">
-          <input type="checkbox" [(ngModel)]="isAddressConfirmed" class="sr-only peer" />
-          <div
-            class="w-5 h-5 border-2 border-gray-300 dark:border-gray-600 rounded mr-3 peer-checked:border-green-500 peer-checked:bg-green-500 peer-checked:shadow-md transition-all flex items-center justify-center">
-            <svg class="w-3 h-3 text-white opacity-0 peer-checked:opacity-100 transition-opacity" fill="currentColor"
-              viewBox="0 0 20 20">
-              <path fill-rule="evenodd"
-                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                clip-rule="evenodd"></path>
-            </svg>
+        <!-- Pickup Section -->
+        <div *ngIf="isPickup" class="mb-4">
+          <div class="bg-blue-50 dark:bg-blue-900 p-4 rounded-lg">
+            <h4 class="text-lg font-semibold text-blue-800 dark:text-blue-200 mb-2">مكان الاستلام</h4>
+            <p class="text-blue-700 dark:text-blue-300 mb-2 flex items-center">
+              <span class="inline-flex items-center mr-2">
+                <svg class="w-4 h-4 text-blue-600 dark:text-blue-400 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd"
+                    d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z"
+                    clip-rule="evenodd"></path>
+                </svg>
+                الفرع الأول
+              </span>
+              <span class="inline-flex items-center mr-2">
+                <svg class="w-4 h-4 text-blue-600 dark:text-blue-400 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd"
+                    d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z"
+                    clip-rule="evenodd"></path>
+                </svg>
+                محافظة الدقهلية
+              </span>
+            </p>
+            <a [href]="pickupLocation" target="_blank"
+              class="text-blue-600 dark:text-blue-400 underline mt-2 inline-block">عرض على الخريطة</a>
           </div>
-          <span
-            class="text-gray-900 dark:text-gray-200 peer-checked:text-green-600 dark:peer-checked:text-green-400 transition-colors">حدد
-            هذا الخيار إذا كنت متأكدًا من الاستلام من المكان</span>
-          <fa-icon [icon]="faHandPointRight"
-            class="ml-2 animate-hand-pointing text-blue-600 dark:text-yellow-400 group-hover:scale-110 transition-transform"></fa-icon>
-        </label>
-      </div>
-      <!-- Post Office Section -->
-      <div *ngIf="isPostOffice" class="mb-4">
-        <div *ngIf="!isEditingPostOffice" class="mb-4">
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-            <div>
-              <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">المحافظة</label>
-              <input type="text" [value]="postOfficeGovernorate" disabled
-                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 cursor-not-allowed text-gray-900 dark:text-gray-200 shadow-sm" />
-            </div>
-            <div>
-              <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">المدينة</label>
-              <input type="text" [value]="postOfficeCity" disabled
-                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 cursor-not-allowed text-gray-900 dark:text-gray-200 shadow-sm" />
-            </div>
-            <div>
-              <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">عنوان أقرب مكتب
-                بريد</label>
-              <input type="text" [value]="postOfficeAddress" disabled
-                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 cursor-not-allowed text-gray-900 dark:text-gray-200 shadow-sm" />
-            </div>
-          </div>
-          <div class="mb-4">
-            <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">اسم مكتب البريد
-              (اختياري)</label>
-            <input type="text" [value]="postOfficeName" disabled
-              class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 cursor-not-allowed text-gray-900 dark:text-gray-200 shadow-sm" />
-          </div>
-          <label class="relative flex items-center mt-2 cursor-pointer group">
+          <label class="relative flex items-center mt-4 cursor-pointer group">
             <input type="checkbox" [(ngModel)]="isAddressConfirmed" class="sr-only peer" />
             <div
-              class="w-5 h-5 border-2 border-gray-300 dark:border-gray-600 rounded mr-3 peer-checked:border-purple-500 peer-checked:bg-purple-500 peer-checked:shadow-md transition-all flex items-center justify-center">
+              class="w-5 h-5 border-2 border-gray-300 dark:border-gray-600 rounded mr-3 peer-checked:border-green-500 peer-checked:bg-green-500 peer-checked:shadow-md transition-all flex items-center justify-center">
               <svg class="w-3 h-3 text-white opacity-0 peer-checked:opacity-100 transition-opacity" fill="currentColor"
                 viewBox="0 0 20 20">
                 <path fill-rule="evenodd"
@@ -418,68 +380,114 @@
               </svg>
             </div>
             <span
-              class="text-gray-900 dark:text-gray-200 peer-checked:text-purple-600 dark:peer-checked:text-purple-400 transition-colors">حدد
-              هذا الخيار إذا كنت متأكدًا من المعلومات</span>
+              class="text-gray-900 dark:text-gray-200 peer-checked:text-green-600 dark:peer-checked:text-green-400 transition-colors">حدد
+              هذا الخيار إذا كنت متأكدًا من الاستلام من المكان</span>
             <fa-icon [icon]="faHandPointRight"
-              class="ml-2 animate-hand-pointing text-purple-600 dark:text-yellow-400 group-hover:scale-110 transition-transform"></fa-icon>
+              class="ml-2 animate-hand-pointing text-blue-600 dark:text-yellow-400 group-hover:scale-110 transition-transform"></fa-icon>
           </label>
-          <button *ngIf="!isAddressConfirmed" (click)="onEditPostOffice()"
-            class="mt-2 bg-purple-500 dark:bg-purple-600 text-white py-2 px-4 rounded hover:bg-purple-600 dark:hover:bg-purple-700 transition-colors">
-            تعديل بيانات مكتب البريد
+        </div>
+        <!-- Post Office Section -->
+        <div *ngIf="isPostOffice" class="mb-4">
+          <div *ngIf="!isEditingPostOffice" class="mb-4">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+              <div>
+                <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">المحافظة</label>
+                <input type="text" [value]="postOfficeGovernorate" disabled
+                  class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 cursor-not-allowed text-gray-900 dark:text-gray-200 shadow-sm" />
+              </div>
+              <div>
+                <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">المدينة</label>
+                <input type="text" [value]="postOfficeCity" disabled
+                  class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 cursor-not-allowed text-gray-900 dark:text-gray-200 shadow-sm" />
+              </div>
+              <div>
+                <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">عنوان أقرب مكتب
+                  بريد</label>
+                <input type="text" [value]="postOfficeAddress" disabled
+                  class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 cursor-not-allowed text-gray-900 dark:text-gray-200 shadow-sm" />
+              </div>
+            </div>
+            <div class="mb-4">
+              <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">اسم مكتب البريد
+                (اختياري)</label>
+              <input type="text" [value]="postOfficeName" disabled
+                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 cursor-not-allowed text-gray-900 dark:text-gray-200 shadow-sm" />
+            </div>
+            <label class="relative flex items-center mt-2 cursor-pointer group">
+              <input type="checkbox" [(ngModel)]="isAddressConfirmed" class="sr-only peer" />
+              <div
+                class="w-5 h-5 border-2 border-gray-300 dark:border-gray-600 rounded mr-3 peer-checked:border-purple-500 peer-checked:bg-purple-500 peer-checked:shadow-md transition-all flex items-center justify-center">
+                <svg class="w-3 h-3 text-white opacity-0 peer-checked:opacity-100 transition-opacity"
+                  fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd"
+                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                    clip-rule="evenodd"></path>
+                </svg>
+              </div>
+              <span
+                class="text-gray-900 dark:text-gray-200 peer-checked:text-purple-600 dark:peer-checked:text-purple-400 transition-colors">حدد
+                هذا الخيار إذا كنت متأكدًا من المعلومات</span>
+              <fa-icon [icon]="faHandPointRight"
+                class="ml-2 animate-hand-pointing text-purple-600 dark:text-yellow-400 group-hover:scale-110 transition-transform"></fa-icon>
+            </label>
+            <button *ngIf="!isAddressConfirmed" (click)="onEditPostOffice()"
+              class="mt-2 bg-purple-500 dark:bg-purple-600 text-white py-2 px-4 rounded hover:bg-purple-600 dark:hover:bg-purple-700 transition-colors">
+              تعديل بيانات مكتب البريد
+            </button>
+          </div>
+          <div *ngIf="isEditingPostOffice" class="mb-4">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+              <div>
+                <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">المحافظة</label>
+                <input list="postOfficeGovernoratesList" type="text" [(ngModel)]="postOfficeGovernorate"
+                  (change)="onPostOfficeGovernorateChange()"
+                  class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 shadow-sm" />
+                <datalist id="postOfficeGovernoratesList">
+                  <option *ngFor="let gov of governorates" [value]="gov.governorate_name"></option>
+                </datalist>
+              </div>
+              <div>
+                <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">المدينة</label>
+                <input list="postOfficeCitiesList" type="text" [(ngModel)]="postOfficeCity"
+                  class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 shadow-sm" />
+                <datalist id="postOfficeCitiesList">
+                  <option *ngFor="let city of postOfficeCities" [value]="city"></option>
+                </datalist>
+              </div>
+              <div>
+                <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">عنوان أقرب مكتب
+                  بريد</label>
+                <input type="text" [(ngModel)]="postOfficeAddress" placeholder="أدخل عنوان أقرب مكتب بريد"
+                  class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 shadow-sm" />
+              </div>
+            </div>
+            <div class="mb-4">
+              <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">اسم مكتب البريد</label>
+              <input type="text" [(ngModel)]="postOfficeName" placeholder="أدخل اسم مكتب البريد" required
+                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 shadow-sm" />
+            </div>
+            <div class="flex space-x-4">
+              <button (click)="saveEditPostOffice()"
+                class="bg-green-600 dark:bg-green-700 text-white py-3 px-6 rounded-lg hover:bg-green-700 dark:hover:bg-green-800 transition-colors shadow-md">
+                حفظ
+              </button>
+              <button (click)="cancelEditPostOffice()"
+                class="bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-gray-200 py-3 px-6 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-700 transition-colors shadow-md">
+                إلغاء
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="flex justify-between mt-4">
+          <button (click)="previousStep()"
+            class="bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-gray-200 py-3 px-6 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-700 transition-colors shadow-md font-semibold">
+            السابق
+          </button>
+          <button (click)="nextStep()" [disabled]="!isAddressConfirmed || !isAddressComplete"
+            class="bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors shadow-md font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed">
+            التالي
           </button>
         </div>
-        <div *ngIf="isEditingPostOffice" class="mb-4">
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-            <div>
-              <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">المحافظة</label>
-              <input list="postOfficeGovernoratesList" type="text" [(ngModel)]="postOfficeGovernorate"
-                (change)="onPostOfficeGovernorateChange()"
-                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 shadow-sm" />
-              <datalist id="postOfficeGovernoratesList">
-                <option *ngFor="let gov of governorates" [value]="gov.governorate_name"></option>
-              </datalist>
-            </div>
-            <div>
-              <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">المدينة</label>
-              <input list="postOfficeCitiesList" type="text" [(ngModel)]="postOfficeCity"
-                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 shadow-sm" />
-              <datalist id="postOfficeCitiesList">
-                <option *ngFor="let city of postOfficeCities" [value]="city"></option>
-              </datalist>
-            </div>
-            <div>
-              <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">عنوان أقرب مكتب
-                بريد</label>
-              <input type="text" [(ngModel)]="postOfficeAddress" placeholder="أدخل عنوان أقرب مكتب بريد"
-                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 shadow-sm" />
-            </div>
-          </div>
-          <div class="mb-4">
-            <label class="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">اسم مكتب البريد</label>
-            <input type="text" [(ngModel)]="postOfficeName" placeholder="أدخل اسم مكتب البريد" required
-              class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 shadow-sm" />
-          </div>
-          <div class="flex space-x-4">
-            <button (click)="saveEditPostOffice()"
-              class="bg-green-600 dark:bg-green-700 text-white py-3 px-6 rounded-lg hover:bg-green-700 dark:hover:bg-green-800 transition-colors shadow-md">
-              حفظ
-            </button>
-            <button (click)="cancelEditPostOffice()"
-              class="bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-gray-200 py-3 px-6 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-700 transition-colors shadow-md">
-              إلغاء
-            </button>
-          </div>
-        </div>
-      </div>
-      <div class="flex justify-between mt-4">
-        <button (click)="previousStep()"
-          class="bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-gray-200 py-3 px-6 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-700 transition-colors shadow-md font-semibold">
-          السابق
-        </button>
-        <button (click)="nextStep()" [disabled]="!isAddressConfirmed || !isAddressComplete"
-          class="bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors shadow-md font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed">
-          التالي
-        </button>
       </div>
     </div>
 
@@ -496,9 +504,36 @@
         <fa-icon [icon]="faCheck" class="text-green-600 dark:text-green-400"></fa-icon>
         <span>{{ freeShippingMessage }}</span>
       </div>
-      <div class="flex justify-between mb-6">
-        <span class="font-bold text-xl text-gray-900 dark:text-gray-200">المجموع:</span>
-        <span class="font-bold text-xl text-gray-900 dark:text-gray-200">{{totalPrice}} EGP</span>
+
+      <!-- Wallet Balance Section -->
+      <div *ngIf="userProfile?.referralBalance"
+        class="mb-4 bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg border border-yellow-200 dark:border-yellow-700">
+        <label class="flex items-center cursor-pointer">
+          <input type="checkbox" [checked]="useWallet" (change)="toggleWallet()"
+            class="form-checkbox h-5 w-5 text-yellow-600 rounded focus:ring-yellow-500 border-gray-300 dark:border-gray-600 dark:bg-gray-700">
+          <span class="mr-3 text-gray-800 dark:text-gray-200 font-medium">
+            استخدام رصيد المحفظة ({{userProfile?.referralBalance}} EGP)
+          </span>
+        </label>
+        <div *ngIf="useWallet" class="mt-2 text-sm text-gray-600 dark:text-gray-400 mr-8">
+          سيتم خصم {{walletDiscount}} EGP من رصيدك.
+        </div>
+      </div>
+
+      <div class="space-y-2 mb-6 border-t border-gray-200 dark:border-gray-700 pt-4">
+        <div class="flex justify-between text-gray-600 dark:text-gray-400">
+          <span>المجموع الفرعي:</span>
+          <span>{{totalPrice}} EGP</span>
+        </div>
+        <div *ngIf="useWallet && walletDiscount > 0" class="flex justify-between text-green-600 dark:text-green-400">
+          <span>خصم المحفظة:</span>
+          <span>-{{walletDiscount}} EGP</span>
+        </div>
+        <div
+          class="flex justify-between font-bold text-xl text-gray-900 dark:text-gray-200 pt-2 border-t border-gray-200 dark:border-gray-700">
+          <span>الإجمالي النهائي:</span>
+          <span>{{finalTotal}} EGP</span>
+        </div>
       </div>
 
       <div class="grid grid-cols-2 gap-4">

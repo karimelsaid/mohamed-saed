@@ -7,15 +7,35 @@ import governoratesData from '../../../../public/json/egypt-governorates.json';
 import { environment } from '../../../environments/environment';
 import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 import { Capacitor } from '@capacitor/core';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import {
+  faUser, faEnvelope, faLock, faPhone, faMapMarkerAlt,
+  faStore, faIdCard, faImage, faEye, faEyeSlash, faBuilding, faGift, faCheckCircle
+} from '@fortawesome/free-solid-svg-icons';
 
 @Component({
   selector: 'app-register',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, FontAwesomeModule],
   templateUrl: './register.component.html',
   styleUrls: ['./register.component.css']
 })
 export class RegisterComponent implements OnInit, AfterViewInit {
+  // Icons
+  faUser = faUser;
+  faEnvelope = faEnvelope;
+  faLock = faLock;
+  faPhone = faPhone;
+  faMapMarkerAlt = faMapMarkerAlt;
+  faStore = faStore;
+  faIdCard = faIdCard;
+  faImage = faImage;
+  faEye = faEye;
+  faEyeSlash = faEyeSlash;
+  faBuilding = faBuilding;
+  faGift = faGift;
+  faCheckCircle = faCheckCircle;
+
   governorates: any[] = governoratesData.governorates;
   buyerCities: string[] = [];
   merchantCities: string[] = [];
@@ -65,6 +85,8 @@ export class RegisterComponent implements OnInit, AfterViewInit {
   message: string = '';
   private returnUrl: string = '/';
 
+  referralCode: string = '';
+
   constructor(private authService: AuthService, private router: Router, private route: ActivatedRoute) { }
 
   ngOnInit() {
@@ -72,11 +94,26 @@ export class RegisterComponent implements OnInit, AfterViewInit {
     this.route.queryParams.subscribe(params => {
       // إذا كان returnUrl هو صفحة التسجيل نفسها، وجه للصفحة الرئيسية
       this.returnUrl = params['returnUrl'] && !params['returnUrl'].includes('/register') ? params['returnUrl'] : '/';
+
+      // Check for registration type (merchant vs buyer)
+      if (params['type'] === 'merchant') {
+        this.isMerchantRegistration = true;
+      }
+
       // حفظ رمز الإحالة في localStorage إذا كان موجودًا
       if (params['ref']) {
         localStorage.setItem('referralCode', params['ref']);
+        this.referralCode = params['ref']; // Auto-fill from URL
       }
     });
+
+    // Auto-fill from localStorage if not already set from URL
+    if (!this.referralCode) {
+      const storedRef = localStorage.getItem('referralCode');
+      if (storedRef) {
+        this.referralCode = storedRef;
+      }
+    }
 
     if (this.isAndroid) {
       GoogleAuth.initialize({
@@ -292,7 +329,8 @@ export class RegisterComponent implements OnInit, AfterViewInit {
     this.message = ''; // Clear previous messages
     console.log('تم التسجيل بالبيانات:', this.user);
 
-    const referralCode = localStorage.getItem('referralCode');
+    // Use the referral code from the input field (which defaults to localStorage value)
+    const finalReferralCode = this.referralCode || localStorage.getItem('referralCode');
 
     this.authService.createAccount(
       this.user.username,
@@ -302,7 +340,7 @@ export class RegisterComponent implements OnInit, AfterViewInit {
       this.user.governorate,
       this.user.city,
       this.user.village || '',
-      referralCode || undefined
+      finalReferralCode || undefined
     )
       .subscribe({
         next: (response) => {

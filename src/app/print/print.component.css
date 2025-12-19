@@ -1,0 +1,9 @@
+
+/* Custom styles to ensure radio selection visibility */
+.selected-radio {
+  border-color: #3b82f6 !important;
+  background-color: #eff6ff !important;
+}
+.dark .selected-radio {
+  background-color: rgba(30, 58, 138, 0.2) !important;
+}

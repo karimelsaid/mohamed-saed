@@ -7,14 +7,17 @@ export interface User {
     city: string;
     village: string;
     referralCode?: string;
+    referralBalance?: number;
+    profileImage?: string;
     address?: string;
     favorites: string[];
     cart: string[];
-    role: string;
+    role?: 'user' | 'merchant' | 'admin';
     postOffice?: {
         governorate: string;
         city: string;
         name: string;
         address: string;
     };
+    token?: string;
 }

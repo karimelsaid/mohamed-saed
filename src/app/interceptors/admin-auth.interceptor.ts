@@ -14,7 +14,7 @@ export class AdminAuthInterceptor implements HttpInterceptor {
 
   intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
     // Only intercept admin API calls
-    if (req.url.includes('/api/admin')) {
+    if (req.url.includes('/api/admin') || req.url.includes('/api/notifications/admin')) {
       const user = JSON.parse(localStorage.getItem('user') || 'null');
 
       if (user && user.token) {

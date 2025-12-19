@@ -24,7 +24,7 @@ exports.deletePrintOrder = async (req, res) => {
 
     const order = userWithOrder.orders[0];
 
-       // Use $pull to atomically remove the order from the array
+    // Use $pull to atomically remove the order from the array
     const updateResult = await User.updateOne(
       { _id: userId },
       { $pull: { orders: { _id: new mongoose.Types.ObjectId(orderId) } } }
@@ -136,12 +136,15 @@ exports.uploadPrintProjects = async (req, res) => {
 
     try {
       let userId = req.body.userId;
+      // console.log('👤 [PrintController] User ID from body:', userId);
+
       if (!userId) {
         const user = await User.findOne({});
         if (!user) {
           return res.status(400).json({ success: false, message: 'No users found in database for testing' });
         }
         userId = user._id.toString();
+        // console.log('⚠️ [PrintController] Using fallback user ID:', userId);
       }
 
       if (!mongoose.Types.ObjectId.isValid(userId)) {
@@ -150,12 +153,15 @@ exports.uploadPrintProjects = async (req, res) => {
 
       const user = await User.findById(userId);
       if (!user) {
+        console.error('❌ [PrintController] User not found:', userId);
         return res.status(404).json({ success: false, message: 'User not found' });
       }
 
       const projectsData = JSON.parse(req.body.projectsData); // expecting JSON string of array of project metadata
+      // console.log('📦 [PrintController] Projects Data parsed, length:', projectsData?.length);
 
       if (!projectsData || !Array.isArray(projectsData) || projectsData.length !== req.files.length) {
+        console.error('❌ [PrintController] Mismatch between files and project data');
         return res.status(400).json({ success: false, message: 'بيانات المشروع غير صالحة' });
       }
 
@@ -239,6 +245,8 @@ exports.uploadPrintProjects = async (req, res) => {
       user.markModified('orders');
       await user.save();
 
+      // console.log('✅ [PrintController] Upload completed successfully for User:', userId);
+
       res.status(201).json({
         success: true,
         message: 'Print projects uploaded successfully',
@@ -247,7 +255,13 @@ exports.uploadPrintProjects = async (req, res) => {
         projects: printProjects
       });
     } catch (error) {
-      res.status(500).json({ success: false, message: 'Server error', error: error.message });
+      console.error('🔥 Error in uploadPrintProjects:', error);
+      if (error.name === 'ValidationError') {
+        const messages = Object.values(error.errors).map(val => val.message);
+        console.error('Validation Errors:', messages);
+        return res.status(400).json({ success: false, message: 'Validation Error', errors: messages });
+      }
+      res.status(500).json({ success: false, message: 'Server error', error: error.message, stack: error.stack });
     }
   });
 };
@@ -259,41 +273,41 @@ function sanitizeFilename(filename) {
 }
 
 exports.getAllPrintOrders = async (req, res) => {
-    try {
-        // Find all users and select necessary fields
-        const users = await User.find({
-            "orders": {
-                "$elemMatch": { "printProjects": { "$exists": true, "$ne": [] } }
-            }
-        })
-            .select('username email phone orders')
-            .lean();
+  try {
+    // Find all users and select necessary fields
+    const users = await User.find({
+      "orders": {
+        "$elemMatch": { "printProjects": { "$exists": true, "$ne": [] } }
+      }
+    })
+      .select('username email phone orders')
+      .lean();
 
-        // Flatten the print orders from all users into a single array
-        const allPrintOrders = users.flatMap(user =>
-            user.orders
-                .filter(order => order.printProjects && order.printProjects.length > 0) // Filter for print orders
-                .map(order => ({
-                    orderId: order._id,
-                    userId: user._id,
-                    username: user.username,
-                    email: user.email,
-                    phone: order.shippingAddress?.phone || user.phone,
-                    shippingAddress: order.shippingAddress, // Pass the full shipping address object
-                    status: order.status,
-                    orderDate: order.date,
-                    totalAmount: order.totalAmount,
-                    printProjects: order.printProjects.map(p => ({ ...p, filename: sanitizeFilename(p.filename) }))
-                }))
-        );
+    // Flatten the print orders from all users into a single array
+    const allPrintOrders = users.flatMap(user =>
+      user.orders
+        .filter(order => order.printProjects && order.printProjects.length > 0) // Filter for print orders
+        .map(order => ({
+          orderId: order._id,
+          userId: user._id,
+          username: user.username,
+          email: user.email,
+          phone: order.shippingAddress?.phone || user.phone,
+          shippingAddress: order.shippingAddress, // Pass the full shipping address object
+          status: order.status,
+          orderDate: order.date,
+          totalAmount: order.totalAmount,
+          printProjects: order.printProjects.map(p => ({ ...p, filename: sanitizeFilename(p.filename) }))
+        }))
+    );
 
-        allPrintOrders.sort((a, b) => new Date(b.orderDate) - new Date(a.orderDate));
+    allPrintOrders.sort((a, b) => new Date(b.orderDate) - new Date(a.orderDate));
 
-        res.json({ success: true, printOrders: allPrintOrders });
-    } catch (error) {
-        console.error('Error fetching all print orders:', error);
-        res.status(500).json({ success: false, message: 'Server error' });
-    }
+    res.json({ success: true, printOrders: allPrintOrders });
+  } catch (error) {
+    console.error('Error fetching all print orders:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
 };
 
 // New controller method to download a file associated with a print order
@@ -386,18 +400,20 @@ exports.updatePrintOrderStatus = async (req, res) => {
 
     // Create notification message based on status
     let notificationMessage = '';
+    const projectTitle = order.printProjects && order.printProjects.length > 0 ? order.printProjects[0].projectTitle : `طلب طباعة ${orderId}`;
+
     switch (status) {
       case 'تم الشحن':
-        notificationMessage = `تم شحن طلب الطباعة رقم ${orderId}`;
+        notificationMessage = `تم شحن مشروع الطباعة: "${projectTitle}"`;
         break;
       case 'تم التسليم':
-        notificationMessage = `تم تسليم طلب الطباعة رقم ${orderId}`;
+        notificationMessage = `تم تسليم مشروع الطباعة: "${projectTitle}"`;
         break;
       case 'تم الإلغاء':
-        notificationMessage = `تم إلغاء طلب الطباعة رقم ${orderId}`;
+        notificationMessage = `تم إلغاء مشروع الطباعة: "${projectTitle}"`;
         break;
       default:
-        notificationMessage = `تم تحديث حالة طلب الطباعة رقم ${orderId} إلى ${status}`;
+        notificationMessage = `تحديث حالة مشروع "${projectTitle}": ${status}`;
     }
 
     // Add notification to user
@@ -410,6 +426,16 @@ exports.updatePrintOrderStatus = async (req, res) => {
     });
 
     await user.save({ validateBeforeSave: false });
+
+    // Send Push Notification
+    const pushService = require('../services/push-notification.service');
+    const pushPayload = {
+      title: 'تحديث طلب الطباعة',
+      body: notificationMessage,
+      url: '/print-orders',
+      data: { orderId: orderId, type: 'print_order' }
+    };
+    pushService.sendToUser(user._id, pushPayload, { important: true }).catch(err => console.error('Push Error:', err));
 
     res.status(200).json({ message: 'Print order status updated successfully' });
   } catch (error) {

@@ -1,6 +1,9 @@
-import { Injectable } from '@angular/core';
-import { HttpInterceptor, HttpRequest, HttpHandler, HttpEvent } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Injectable, Injector } from '@angular/core';
+import { HttpInterceptor, HttpRequest, HttpHandler, HttpEvent, HttpErrorResponse } from '@angular/common/http';
+import { Observable, throwError } from 'rxjs';
+import { catchError } from 'rxjs/operators';
+import { Router } from '@angular/router';
+import { AuthService } from '../auth/auth.service';
 
 @Injectable()
 export class AuthInterceptor implements HttpInterceptor {
@@ -10,42 +13,64 @@ export class AuthInterceptor implements HttpInterceptor {
         '/api/subscriptions',
         '/api/user-library',
         '/api/reading-progress',
-        '/api/reading-progress',
         '/api/ebooks',
-        '/api/users' // CRITICAL FIX: Protect user routes to send token for profile load
+        '/api/users',
+        '/api/gamification',
+        '/api/notifications'
     ];
 
-    intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
-        // Check if this request is to a protected path
-        const isProtectedPath = this.protectedPaths.some(path => req.url.includes(path));
+    constructor(private injector: Injector, private router: Router) { }
 
-        if (isProtectedPath) {
-            // 1. Try generic user token
+    intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
+        let authReq = req;
+
+        // Skip specific external domains
+        if (!req.url.includes('googleapis.com')) {
             const userStr = localStorage.getItem('user');
+            const merchantToken = localStorage.getItem('merchant_token');
+
             if (userStr) {
                 try {
                     const user = JSON.parse(userStr);
-                    if (user && (user.token || user.accessToken)) {
-                        return next.handle(req.clone({
-                            setHeaders: { Authorization: `Bearer ${user.token || user.accessToken}` },
+                    const token = user.token || user.accessToken;
+
+                    if (token) {
+                        // Attach User Token
+                        authReq = req.clone({
+                            setHeaders: { Authorization: `Bearer ${token}` },
                             withCredentials: true
-                        }));
+                        });
                     }
                 } catch (e) {
-                    console.error('Error parsing user from localStorage:', e);
+                    console.error('❌ [AuthInterceptor] Error parsing user', e);
                 }
             }
-
-            // 2. Try merchant token
-            const merchantToken = localStorage.getItem('merchant_token');
-            if (merchantToken) {
-                return next.handle(req.clone({
+            // If no user token, check for merchant token
+            else if (merchantToken) {
+                authReq = req.clone({
                     setHeaders: { Authorization: `Bearer ${merchantToken}` },
                     withCredentials: true
-                }));
+                });
             }
         }
 
-        return next.handle(req);
+        return next.handle(authReq).pipe(
+            catchError((error: HttpErrorResponse) => {
+                if (error.status === 401) {
+                    console.error(`🚨 [AuthInterceptor] 401 Unauthorized for ${req.url}`);
+
+                    // NOTE: Temporarily disabled automatic logout to prevent losing sessions on Android 
+                    // when intermittent auth issues occur.
+                    /*
+                    if (req.url.includes('/api') && !this.router.url.includes('/login')) {
+                        const authService = this.injector.get(AuthService);
+                        authService.logout();
+                        this.router.navigate(['/login']);
+                    }
+                    */
+                }
+                return throwError(error);
+            })
+        );
     }
 }

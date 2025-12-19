@@ -5,7 +5,9 @@ const verifyToken = async (req, res, next) => {
     try {
         const token = req.header('Authorization')?.replace('Bearer ', '');
 
+
         if (!token) {
+            // console.warn(`❌ [AuthMiddleware] No token provided for: ${req.method} ${req.originalUrl}`);
             return res.status(401).json({
                 success: false,
                 message: 'الوصول مرفوض. لم يتم توفير رمز المصادقة.'
@@ -13,6 +15,7 @@ const verifyToken = async (req, res, next) => {
         }
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+        // console.log('✅ [AuthMiddleware] Token decoded:', decoded);
 
         // Try to find user by different ID fields (userId, adminId, merchantId)
         const user = await User.findOne({
@@ -20,6 +23,7 @@ const verifyToken = async (req, res, next) => {
         });
 
         if (!user) {
+            console.error('❌ [AuthMiddleware] User not found for token ID:', decoded.userId);
             return res.status(401).json({
                 success: false,
                 message: 'رمز المصادقة غير صالح.'
@@ -29,7 +33,7 @@ const verifyToken = async (req, res, next) => {
         req.user = user;
         next();
     } catch (error) {
-        console.error('Auth middleware error:', error);
+        console.error('❌ [AuthMiddleware] Error:', error.message);
         res.status(401).json({
             success: false,
             message: 'رمز المصادقة غير صالح أو منتهي الصلاحية.'

@@ -989,6 +989,7 @@ mipmap ic_launcher_background
 mipmap ic_launcher_foreground
 mipmap ic_launcher_monochrome
 mipmap ic_launcher_round
+raw firebase_common_keep
 string abc_action_bar_home_description
 string abc_action_bar_up_description
 string abc_action_menu_overflow_description
@@ -1049,6 +1050,7 @@ string default_web_client_id
 string fallback_menu_item_copy_link
 string fallback_menu_item_open_in_browser
 string fallback_menu_item_share_link
+string fcm_fallback_notification_channel_label
 string gcm_defaultSenderId
 string google_api_key
 string google_app_id

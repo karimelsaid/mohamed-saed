@@ -1,0 +1,153 @@
+<div *ngIf="visible"
+    class="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in"
+    dir="rtl">
+
+    <!-- Close Button -->
+    <button (click)="closeModal()" class="absolute top-4 right-4 text-white hover:text-gray-300 z-50">
+        <fa-icon [icon]="faTimes" class="text-3xl"></fa-icon>
+    </button>
+
+    <div class="relative w-full max-w-sm">
+
+        <!-- The Viral Card (This part gets captured) -->
+        <div #cardContainer dir="rtl"
+            class="relative bg-gradient-to-br from-gray-900 to-black text-white rounded-3xl overflow-hidden shadow-2xl border border-yellow-500/30 p-8 transform transition-transform duration-500 hover:scale-[1.02]">
+
+            <!-- Glow Effects -->
+            <div
+                class="absolute top-0 right-0 w-32 h-32 bg-yellow-500/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2">
+            </div>
+            <div
+                class="absolute bottom-0 left-0 w-32 h-32 bg-green-500/20 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2">
+            </div>
+
+            <!-- Header -->
+            <div class="flex items-center justify-between mb-8 relative z-10">
+                <div class="flex items-center gap-2">
+                    <img src="logoname2.jpg" onerror="this.src='logo.ico'" crossorigin="anonymous"
+                        class="w-8 h-8 rounded-full border border-gray-700">
+                    <span class="font-bold text-gray-300 text-sm tracking-wider">KNOOZBOOK</span>
+                </div>
+                <div
+                    class="bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-xs px-3 rounded-full font-bold flex items-center justify-center gap-2 h-8">
+                    <fa-icon [icon]="faCheckCircle" class="text-sm"></fa-icon>
+                    <!-- Small PB to center text visually with icon -->
+                    <span class="leading-none pb-0.5">موثق</span>
+                </div>
+            </div>
+
+            <!-- Big Number (The Hook) -->
+            <div class="text-center mb-8 relative z-10 w-full">
+                <p class="text-gray-400 text-sm font-medium mb-2">مجموع الأرباح</p>
+                <!-- WYSWYG: Solid Gold with Glow -->
+                <!-- Inline-block ensures valid centering without LTR full-width drift -->
+                <div class="inline-block text-6xl font-black text-yellow-400 drop-shadow-2xl leading-tight" dir="ltr"
+                    style="font-family: sans-serif; text-shadow: 0 0 20px rgba(250, 204, 21, 0.4);">
+                    {{ coinsEarned | number:'1.0-0' }}
+                </div>
+                <div class="text-yellow-500 font-bold text-xl mt-1">عملة ذهبية</div>
+            </div>
+
+            <!-- User Info -->
+            <div
+                class="bg-gray-800/50 rounded-2xl p-4 flex items-center gap-4 mb-6 border border-gray-700 relative z-10">
+                <div
+                    class="w-12 h-12 rounded-full bg-gray-700 overflow-hidden border-2 border-yellow-500 flex items-center justify-center">
+                    <img *ngIf="userImage" [src]="userImage" class="w-full h-full object-cover">
+                    <!-- Generic Fallback Icon if no image at all -->
+                    <fa-icon *ngIf="!userImage" [icon]="faCoins" class="text-xl text-yellow-500"></fa-icon>
+                </div>
+                <div>
+                    <h3 class="font-bold text-white text-lg leading-tight">{{ userName }}</h3>
+                    <p class="text-green-400 text-sm font-medium">{{ milestoneTitle }}</p>
+                </div>
+            </div>
+
+            <!-- Footer Call to Action (For the viewer, not the user) -->
+            <div class="text-center relative z-10 border-t border-gray-800 pt-4">
+                <p class="text-gray-400 text-xs mb-1">اقرأ واكسب فلوس حقيقية 💰</p>
+                <p class="text-white font-bold tracking-widest text-sm">WWW.KNOOZBOOK.COM</p>
+            </div>
+        </div>
+
+        <!-- Action Button (Outside the capture area) -->
+        <button (click)="shareAchievement()" [disabled]="isSharing"
+            class="w-full mt-6 bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-4 rounded-xl shadow-lg shadow-yellow-500/20 flex items-center justify-center gap-3 transition-all transform hover:-translate-y-1 active:scale-95">
+            <fa-icon [icon]="faShareAlt" [class.animate-spin]="isSharing"></fa-icon>
+            <span *ngIf="!isSharing">مشاركة الإنجاز الآن</span>
+            <span *ngIf="isSharing">جاري التجهيز...</span>
+        </button>
+        <p class="text-center text-gray-400 text-xs mt-3">سيتم إنشاء صورة احترافية للمشاركة</p>
+
+    </div>
+
+    <!-- Hidden Export Template (Fixed High-Res Dimensions 1080x1080 for Instagram/Socials) -->
+    <div id="export-card"
+        class="fixed top-0 left-0 z-[-1] opacity-0 pointer-events-none bg-gradient-to-br from-gray-900 via-black to-gray-900 flex flex-col items-center justify-center text-white"
+        style="width: 1080px; height: 1080px; font-family: 'Tajawal', sans-serif;" dir="rtl">
+
+        <!-- Background Elements -->
+        <div
+            class="absolute top-0 right-0 w-[500px] h-[500px] bg-yellow-500/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2">
+        </div>
+        <div
+            class="absolute bottom-0 left-0 w-[500px] h-[500px] bg-green-500/10 rounded-full blur-[100px] translate-y-1/2 -translate-x-1/2">
+        </div>
+
+        <!-- Decorative Border -->
+        <div class="absolute inset-8 border border-yellow-500/30 rounded-[4rem]"></div>
+
+        <div class="relative z-10 w-full px-20 text-center flex flex-col items-center gap-10">
+
+            <!-- Branding -->
+            <div class="flex items-center gap-4 mb-8">
+                <img src="logoname2.jpg" onerror="this.src='logo.ico'"
+                    class="w-16 h-16 rounded-full border-2 border-gray-600 shadow-xl">
+                <span class="text-3xl font-bold tracking-[0.2em] text-gray-300">KNOOZBOOK</span>
+            </div>
+
+            <!-- Title -->
+            <div>
+                <h2 class="text-4xl text-yellow-500 font-bold mb-2">إنجاز جديد تم تحقيقه! 🏆</h2>
+                <p class="text-2xl text-gray-400">انضم إلينا في رحلة القراءة والمعرفة</p>
+            </div>
+
+            <!-- The Big Number -->
+            <div class="py-10">
+                <!-- Removed bg-clip-text as html2canvas struggles with it. Using solid color with strong shadow -->
+                <div class="text-8xl font-black text-yellow-400 drop-shadow-2xl"
+                    style="text-shadow: 0 0 30px rgba(234, 179, 8, 0.6); font-family: sans-serif;">
+                    {{ coinsEarned | number:'1.0-0' }}
+                </div>
+                <div class="text-3xl text-white mt-4 font-bold" style="font-family: 'Arial', sans-serif;">عملة ذهبية
+                    مكتسبة</div>
+            </div>
+
+            <!-- User Profile -->
+            <div
+                class="bg-gray-800/80 backdrop-blur-xl border border-gray-600 rounded-3xl p-8 flex items-center gap-8 min-w-[500px] shadow-2xl">
+                <div
+                    class="w-24 h-24 rounded-full border-4 border-yellow-500 overflow-hidden shadow-lg bg-gray-700 flex items-center justify-center">
+                    <img *ngIf="userImage" [src]="userImage" class="w-full h-full object-cover">
+                    <fa-icon *ngIf="!userImage" [icon]="faCoins" class="text-4xl text-yellow-500"></fa-icon>
+                </div>
+                <div class="text-right">
+                    <h3 class="text-4xl font-bold text-white mb-2">{{ userName }}</h3>
+                    <p class="text-xl text-green-400 font-medium flex items-center gap-2">
+                        <span class="inline-block w-3 h-3 bg-green-500 rounded-full animate-pulse"></span>
+                        {{ milestoneTitle }}
+                    </p>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="mt-12 text-center opacity-80">
+                <p class="text-2xl font-bold text-white mb-2" style="font-family: 'Arial', sans-serif;">
+                    WWW.KNOOZBOOK.COM</p>
+                <p class="text-lg text-gray-500">منصة القراءة التفاعلية الأولى في العالم العربي</p>
+            </div>
+
+        </div>
+    </div>
+
+</div>

@@ -51,7 +51,13 @@ export class CheckoutModalComponent implements OnInit {
 
   // New properties for Payment Modal
   showPaymentModal: boolean = false;
+
   paymentUrl: string = '';
+
+  // Wallet
+  useWallet: boolean = false;
+  walletDiscount: number = 0;
+  finalTotal: number = 0;
 
   private cartItemsLoaded: boolean = false;
   private freeShippingRulesLoaded: boolean = false;
@@ -319,6 +325,20 @@ export class CheckoutModalComponent implements OnInit {
       return total;
     }, 0);
     this.totalPrice = itemsTotal + this.shippingCost;
+
+    // Wallet Logic
+    if (this.useWallet && (this.userProfile?.referralBalance || 0) > 0) {
+      this.walletDiscount = Math.min(this.totalPrice, this.userProfile!.referralBalance!);
+      this.finalTotal = this.totalPrice - this.walletDiscount;
+    } else {
+      this.walletDiscount = 0;
+      this.finalTotal = this.totalPrice;
+    }
+  }
+
+  toggleWallet() {
+    this.useWallet = !this.useWallet;
+    this.calculateTotalPrice();
   }
 
   get hasPurchasableItems(): boolean {
@@ -340,6 +360,23 @@ export class CheckoutModalComponent implements OnInit {
 
   nextStep(): void {
     if (this.currentStep < 3) {
+      if (this.currentStep === 1) {
+        if (!this.userProfile) {
+          // If profile is not loaded, try to load it or alert
+          this.authService.user$.pipe(take(1)).subscribe(user => {
+            if (!user) {
+              alert('يجب تسجيل الدخول للمتابعة');
+              // Optionally redirect to login or show login modal
+            } else {
+              // Try reloading profile if we have a user but no profile yet
+              this.loadUserProfile();
+              // Allow proceeding locally, but the view handle the loading state
+              this.currentStep++;
+            }
+          });
+          return;
+        }
+      }
       this.currentStep++;
     }
   }
@@ -594,7 +631,9 @@ export class CheckoutModalComponent implements OnInit {
           postOfficeName: this.isPostOffice ? this.postOfficeName : null,
           phone: this.userProfile?.phone,
           referralCode: referralCode,
-          bookId: bookId
+
+          bookId: bookId,
+          useWallet: this.useWallet
         };
 
         console.log('[Checkout] Submitting order with data:', orderData);
@@ -693,7 +732,9 @@ export class CheckoutModalComponent implements OnInit {
           postOfficeName: this.isPostOffice ? this.postOfficeName : null,
           phone: this.userProfile?.phone,
           referralCode: referralCode,
+
           bookId: bookId,
+          useWallet: this.useWallet,
           paymentMethod: 'cod'
         };
 

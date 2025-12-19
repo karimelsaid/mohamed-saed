@@ -27,6 +27,7 @@ const userSchema = new mongoose.Schema({
   role: { type: String, required: true, default: 'user', enum: ['user', 'merchant', 'admin'] },
   taxNumber: { type: String },
   logo: { type: String },
+  profileImage: { type: String, default: null }, // صورة الملف الشخصي
   bio: { type: String }, // نبذة تعريفية عن التاجر
   approved: { type: Boolean, default: false },
   suspended: { type: Boolean, default: false }, // إيقاف الحساب مؤقتاً
@@ -64,6 +65,8 @@ const userSchema = new mongoose.Schema({
     }],
     shippingCost: Number,
     totalAmount: Number,
+    subTotal: Number,
+    walletDiscount: Number,
     paymentSessionUrl: { type: String, default: null },
     paymentStatus: { type: String, enum: ['pending', 'completed', 'failed'], default: 'pending' },
     status: { type: String, default: 'قيد الإنتظار' }, // pending, shipped, completed,cancelled
@@ -122,6 +125,16 @@ const userSchema = new mongoose.Schema({
     requestedAt: { type: Date, default: Date.now },
     status: { type: String, default: 'pending', enum: ['pending', 'fulfilled'] }
   }],
+  gamification: {
+    xp: { type: Number, default: 0 },
+    level: { type: Number, default: 1 },
+    currentStreak: { type: Number, default: 0 },
+    longestStreak: { type: Number, default: 0 },
+    lastStreakUpdate: { type: Date },
+    coins: { type: Number, default: 0 },
+    lastLoginRewardDate: { type: Date },
+    lastRewardDateString: { type: String } // For atomic checks (YYYY-MM-DD)
+  },
   paymentRequests: [paymentRequestSchema]
 }, { timestamps: true });
 

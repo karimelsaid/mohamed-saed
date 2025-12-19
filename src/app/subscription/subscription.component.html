@@ -37,15 +37,64 @@
                     <span class="days-badge">{{ getRemainingDays() }} يوم</span>
                 </div>
             </div>
-            <div class="card-actions">
+            <div class="card-actions flex gap-3">
                 <a routerLink="/library" class="btn primary">
                     <i class="fas fa-book-reader"></i>
                     الذهاب للمكتبة
                 </a>
-                <button class="btn secondary" (click)="cancelSubscription()">
-                    إلغاء الاشتراك
+                <button
+                    class="btn-outline px-6 py-2 rounded-lg border-2 border-yellow-500 text-yellow-600 dark:text-yellow-400 font-bold hover:bg-yellow-500 hover:text-white transition-all flex items-center gap-2">
+                    <i class="fas fa-cog"></i>
+                    إدارة الخطة
+                </button>
+                <button class="btn secondary text-red-500 hover:text-red-700" (click)="cancelSubscription()">
+                    <i class="fas fa-times-circle"></i>
+                    إلغاء
                 </button>
             </div>
+        </div>
+    </div>
+
+    <!-- Payment History -->
+    <div class="mt-8 mb-8 animate-fade-in" *ngIf="subscription && subscription.status === 'active'">
+        <h2 class="text-xl font-bold mb-4 text-gray-800 dark:text-white flex items-center gap-2">
+            <i class="fas fa-history text-blue-500"></i>
+            سجل المدفوعات
+        </h2>
+
+        <div
+            class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+            <table class="w-full text-right">
+                <thead class="bg-gray-50 dark:bg-gray-900/50 text-gray-500 dark:text-gray-400 text-xs uppercase">
+                    <tr>
+                        <th class="py-3 px-4">التاريخ</th>
+                        <th class="py-3 px-4">الخطة</th>
+                        <th class="py-3 px-4">المبلغ</th>
+                        <th class="py-3 px-4">الفاتورة</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                    <tr *ngFor="let item of paymentHistory"
+                        class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                        <td class="py-3 px-4 font-medium text-gray-900 dark:text-white">
+                            {{ item.date | date:'dd/MM/yyyy' }}
+                        </td>
+                        <td class="py-3 px-4 text-gray-600 dark:text-gray-300">
+                            {{ item.plan === 'monthly' ? 'شهرية' : 'سنوية' }}
+                        </td>
+                        <td class="py-3 px-4 text-gray-600 dark:text-gray-300">
+                            {{ item.price }} ج.م
+                        </td>
+                        <td class="py-3 px-4">
+                            <button (click)="downloadInvoice(item)"
+                                class="text-blue-500 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 px-4 py-2 rounded-lg transition-colors text-xs font-bold flex items-center gap-2 border border-blue-200 dark:border-blue-900/30">
+                                <i class="fas fa-file-pdf"></i>
+                                PDF
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
 
@@ -163,4 +212,149 @@
     <app-payment-modal *ngIf="showPaymentModal" [paymentUrl]="paymentUrl" (close)="onPaymentModalClose()"
         (paymentComplete)="onPaymentComplete($event)">
     </app-payment-modal>
+
+    <!-- Hidden Invoice Template -->
+    <div class="fixed top-0 left-0 w-[210mm] min-h-[297mm] bg-white text-black p-10 z-[-1] opacity-0 pointer-events-none"
+        id="invoice-template">
+
+        <!-- Header with Logo -->
+        <div class="flex justify-between items-start border-b-2 border-yellow-500 pb-6 mb-8" dir="rtl">
+            <div class="flex items-center gap-4">
+                <!-- Logo -->
+                <img src="logoname2.jpg" onerror="this.src='logo.ico'"
+                    class="w-24 h-24 rounded-full border-2 border-gray-100 shadow-sm object-cover">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900 leading-tight">فاتورة ضريبية مبسطة</h1>
+                    <p class="text-gray-500 text-sm mt-1">مكتبة كنوز بوك الرقمية</p>
+                    <p class="text-gray-400 text-xs mt-1 font-sans" dir="ltr">Tax Invoice</p>
+                </div>
+            </div>
+            <div class="text-left">
+                <div class="bg-yellow-50 text-yellow-700 px-4 py-2 rounded-lg border border-yellow-200 text-center">
+                    <span class="block text-xs uppercase tracking-wider font-bold">Status</span>
+                    <span class="block text-lg font-bold text-green-600">PAID</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Info Grid -->
+        <div class="grid grid-cols-2 gap-10 mb-10" dir="rtl">
+            <!-- Client Info -->
+            <div class="bg-gray-50 p-5 rounded-xl border border-gray-100">
+                <h3 class="font-bold text-gray-800 mb-4 border-b border-gray-200 pb-2 flex items-center gap-2">
+                    <i class="fas fa-user text-yellow-500"></i> بيانات العميل
+                </h3>
+                <div class="space-y-3">
+                    <div>
+                        <span class="text-gray-500 text-xs block mb-1">الاسم / Name</span>
+                        <div class="text-gray-900 font-bold" id="invoice-user-name">ضيف</div>
+                    </div>
+                    <div>
+                        <span class="text-gray-500 text-xs block mb-1">البريد الإلكتروني / Email</span>
+                        <div class="text-gray-900 font-sans text-sm" id="invoice-user-email">guest&#64;example.com</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Invoice Details -->
+            <div class="bg-gray-50 p-5 rounded-xl border border-gray-100 text-left" dir="ltr">
+                <h3 class="font-bold text-gray-800 mb-4 border-b border-gray-200 pb-2 flex items-center gap-2">
+                    <i class="fas fa-file-invoice text-yellow-500"></i> Invoice Details
+                </h3>
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">Invoice Number:</span>
+                        <span class="font-bold font-mono text-gray-900" id="invoice-id">INV-000</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">Issue Date:</span>
+                        <span class="font-bold text-gray-900" id="invoice-date">2024-01-01</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">Payment Ref:</span>
+                        <span class="font-bold font-mono text-gray-700" id="invoice-payment-ref">TXN-000000</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Line Items -->
+        <table class="w-full mb-8 text-right border-collapse" dir="rtl">
+            <thead>
+                <tr class="bg-gray-900 text-white text-sm">
+                    <th class="py-3 px-4 rounded-tr-lg">الوصف / Description</th>
+                    <th class="py-3 px-4 w-32 text-center text-white">المدة</th>
+                    <th class="py-3 px-4 w-40 text-left rounded-tl-lg">الإجمالي</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="border-b border-gray-100">
+                    <td class="py-4 px-4">
+                        <span class="font-bold block text-gray-800 text-lg" id="invoice-plan-name">اشتراك شهري</span>
+                        <span class="text-xs text-gray-500">Digital Library Access - Premium Plan</span>
+                    </td>
+                    <td class="py-4 px-4 text-center text-gray-600 font-mono" id="invoice-duration">30 Days</td>
+                    <td class="py-4 px-4 text-left font-bold font-mono text-lg text-gray-900" id="invoice-price">0.00
+                        EGP</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Totals & QR -->
+        <div class="flex justify-between items-end mb-12" dir="rtl">
+
+            <!-- Trust / QR Section -->
+            <div class="text-center w-32">
+                <!-- Mock QR Code -->
+                <div class="bg-white p-2 border border-gray-200 rounded-lg inline-block mb-2">
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=KNOOZBOOK-INVOICE-VERIFIED"
+                        class="w-24 h-24 opacity-80 mix-blend-multiply" alt="QR Code">
+                </div>
+                <p class="text-[10px] text-gray-400">Scan to Verify</p>
+                <p class="text-[10px] text-gray-400 font-mono mt-1" id="invoice-qr-id">REF-000</p>
+            </div>
+
+            <!-- Totals Box -->
+            <div class="bg-gray-50 p-6 rounded-xl w-80 border border-gray-200">
+                <div class="flex justify-between items-center mb-3 text-sm">
+                    <span class="text-gray-600">المجموع قبل الضريبة:</span>
+                    <span class="font-mono font-medium" id="invoice-subtotal">0.00 EGP</span>
+                </div>
+                <div class="flex justify-between items-center mb-3 text-sm">
+                    <span class="text-gray-600">ضريبة القيمة المضافة (0%):</span>
+                    <!-- Assuming simplified/0% or exempt for now -->
+                    <span class="font-mono font-medium">0.00 EGP</span>
+                </div>
+                <div
+                    class="flex justify-between items-center text-xl font-bold text-gray-900 mt-4 pt-4 border-t border-gray-300">
+                    <span>الإجمالي المستحق:</span>
+                    <span class="font-mono text-yellow-600" id="invoice-total">0.00 EGP</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="mt-auto pt-8 border-t-2 border-gray-100">
+            <div class="flex justify-between items-end text-xs text-gray-400">
+                <div class="text-right" dir="rtl">
+                    <p class="font-bold text-gray-600 mb-1">شروط واحكام:</p>
+                    <p>هذه الفاتورة إلكترونية ولا تحتاج إلى توقيع.</p>
+                    <p>المبلغ المدفوع غير قابل للاسترداد وفقاً لسياسة الاستخدام.</p>
+                </div>
+                <div class="text-center">
+                    <p class="font-bold text-gray-600 mb-2">تابعنا</p>
+                    <p>www.knoozbook.com</p>
+                </div>
+                <div class="text-left" dir="ltr">
+                    <p>&copy; 2025 KNOOZ BOOK. All Rights Reserved.</p>
+                </div>
+            </div>
+            <!-- Security Badge -->
+            <div class="mt-6 flex justify-center items-center gap-2 opacity-50">
+                <i class="fas fa-lock text-gray-400"></i>
+                <span class="text-[10px] text-gray-400 uppercase tracking-widest">Secure Payment Transaction • SSL
+                    Encrypted</span>
+            </div>
+        </div>
+    </div>
 </div>

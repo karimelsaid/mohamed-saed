@@ -1,4 +1,13 @@
-require('./loadEnv');
+
+process.on('uncaughtException', (err) => {
+  console.error('🔥 UNCAUGHT EXCEPTION:', err);
+  // Keep process alive if possible for debugging, or log and exit
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('🔥 UNHANDLED REJECTION:', reason);
+});
+
 
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -11,6 +20,7 @@ const { connectDB } = require('./config/database');
 const { updateBooksData } = require('./controllers/books.controller');
 const sitemapService = require('./services/sitemap.service'); // Added import for sitemap service
 const axios = require('axios'); // For proxying requests
+const cronJobs = require('./services/cron-jobs.service'); // Added cron jobs service
 // const MDBReader = require('mdb-reader').default; // Moved to dynamic import inside route due to ESM
 // const unrar = require('unrar-promise'); // Moved to dynamic import inside route due to ESM
 const iconv = require('iconv-lite'); // For encoding conversion (Windows-1256 to UTF-8)
@@ -31,6 +41,9 @@ const ebooksRoutes = require('./routes/ebooks.routes');
 const subscriptionsRoutes = require('./routes/subscriptions.routes');
 const userLibraryRoutes = require('./routes/user-library.routes');
 const readingProgressRoutes = require('./routes/reading-progress.routes');
+const gamificationRoutes = require('./routes/gamification.routes');
+const adminSettingsRoutes = require('./routes/admin-settings');
+const notificationRoutes = require('./routes/notification');
 const app = express();
 const port = process.env.PORT || 3000;
 const isProduction = process.env.NODE_ENV === 'production';
@@ -43,17 +56,16 @@ if (isProduction) {
 // Middlewares
 app.use(bodyParser.json());
 
-app.use('/api/print', printRoutes);
-
 // إضافة رؤوس Cross-Origin-Opener-Policy و Cross-Origin-Embedder-Policy
 app.use((req, res, next) => {
-  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
-  res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+  // Relaxed headers to allow Google Sign-In popups and external resources
+  res.setHeader('Cross-Origin-Opener-Policy', 'unsafe-none');
+  res.setHeader('Cross-Origin-Embedder-Policy', 'unsafe-none');
   next();
 });
 
 // إعداد CORS للسماح بالمصادر المناسبة
-const allowedOrigins = ['https://knoozbook.com', 'https://www.knoozbook.com', 'https://localhost', 'http://localhost'];
+const allowedOrigins = ['https://knoozbook.com', 'https://www.knoozbook.com', 'https://localhost', 'http://localhost', 'http://localhost:3000'];
 if (!isProduction) {
   allowedOrigins.push('http://localhost:4200');
 }
@@ -64,6 +76,8 @@ app.use(cors({
   exposedHeaders: ['Content-Length', 'Content-Disposition'], // Critical for progress bar
   credentials: true
 }));
+
+app.use('/api/print', printRoutes);
 
 // Session middleware
 const MongoStore = require('connect-mongo');
@@ -459,6 +473,7 @@ const uploadsAbsolutePath = require('path').resolve(__dirname, 'uploads');
 app.use('/uploads', express.static(uploadsAbsolutePath));
 
 // الاتصال بقاعدة البيانات
+// الاتصال بقاعدة البيانات
 connectDB().catch(err => {
   console.error('❌ فشل في الاتصال بقاعدة البيانات:', err);
   process.exit(1);
@@ -472,6 +487,7 @@ app.use('/api/orders', ordersRoutes);
 app.use('/api/payment', paymentRoutes); // تعديل المسار ليكون أكثر تحديداً
 
 app.use('/api/chat-ai', chatAiRoutes);
+app.use('/api/admin/settings', adminSettingsRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/merchant', merchantRoutes);
 
@@ -486,6 +502,11 @@ app.use('/api/ebooks', ebooksRoutes);
 app.use('/api/subscriptions', subscriptionsRoutes);
 app.use('/api/user-library', userLibraryRoutes);
 app.use('/api/reading-progress', readingProgressRoutes);
+app.use('/api/gamification', gamificationRoutes);
+app.use('/api/notifications', notificationRoutes); // Notification Routes
+app.use('/api/gamification', gamificationRoutes);
+app.use('/api/notifications', notificationRoutes); // Notification Routes
+// app.use('/api/admin/settings', adminSettingsRoutes); // Moved up to avoid conflict
 
 
 const User = require('./models/User.model');
@@ -547,13 +568,14 @@ function generateRobotsTxt() {
 
 // في بيئة SSR، لم نعد بحاجة لتقديم ملفات Angular الثابتة أو مسار catch-all من هنا.
 // سيقوم خادم SSR (server.ts) بهذه المهمة.
-// app.use(express.static(path.join(__dirname, 'dist/browser')));
-// app.get('*', (req, res, next) => {
-//   if (req.path.startsWith('/uploads/')) {
-//     return next();
-//   }
-//   res.sendFile(path.join(__dirname, 'dist/browser/index.html'));
-// });
+// Serve Angular Static Files (Enable for PWA Testing)
+app.use(express.static(path.join(__dirname, 'dist/browser')));
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api/') || req.path.startsWith('/uploads/')) {
+    return next();
+  }
+  res.sendFile(path.join(__dirname, 'dist/browser/index.html'));
+});
 
 // Global Error Handler
 app.use((err, req, res, next) => {
@@ -570,6 +592,8 @@ app.use((err, req, res, next) => {
 
 app.listen(port, '0.0.0.0', () => {
   console.log(`🚀 الخادم يعمل على http://0.0.0.0:${port}`);
+  // Initialize Cron Jobs
+  cronJobs.initCronJobs();
 });
 
 module.exports = {

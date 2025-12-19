@@ -11,6 +11,7 @@ import { Ebook, ReadingProgress, ReaderSettings, Bookmark, Highlight } from '../
 import { OfflineEbookService } from '../services/offline-ebook.service';
 import { DownloadManagerService } from '../services/download-manager.service';
 import { ExternalLibraryService } from '../services/external-library.service';
+import { GamificationService } from '../services/gamification.service';
 
 @Component({
     selector: 'app-epub-reader',
@@ -123,6 +124,7 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
         private offlineEbookService: OfflineEbookService,
         private downloadManager: DownloadManagerService,
         private externalLibraryService: ExternalLibraryService,
+        private gamificationService: GamificationService,
         private cdr: ChangeDetectorRef,
         private sanitizer: DomSanitizer,
         private hostEl: ElementRef
@@ -150,7 +152,7 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
 
         this.saveProgressInterval = setInterval(() => {
             this.saveProgress();
-        }, 30000);
+        }, 10000);
     }
 
     ngAfterViewInit(): void {
@@ -874,6 +876,7 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
     // Save progress to backend/local storage
     saveProgress() {
         let progressData: any = null;
+        let visibleWordCount = 0;
 
         // BOK Mode Save
         if (this.bookType === 'bok') {
@@ -883,6 +886,11 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
                 currentPage: this.currentPage,
                 totalPages: this.totalPages
             };
+            // Calculate words in current BOK page
+            if (this.bokPages && this.bokPages[this.currentPage]) {
+                const text = this.bokPages[this.currentPage];
+                visibleWordCount = text.trim().split(/\s+/).length;
+            }
         }
         // EPUB Mode Save
         else if (this.rendition) {
@@ -894,12 +902,76 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
                     currentPage: this.currentPage,
                     totalPages: this.totalPages
                 };
+
+                // Calculate words in current EPUB view (Anti-Cheat)
+                try {
+                    // Try to get text range for current view
+                    if (currentLocation.end) {
+                        const range = this.rendition.getRange(currentLocation.start.cfi, currentLocation.end.cfi);
+                        if (range) {
+                            visibleWordCount = range.toString().trim().split(/\s+/).length;
+                        }
+                    }
+
+                    // Fallback: If range fails, estimate from chapter text (rough average)
+                    if (visibleWordCount === 0 && this.currentSelectionContents) {
+                        const chapterText = this.currentSelectionContents.document.body.innerText;
+                        // Using a fraction assuming typical page view? safer to just use a fixed cap if precise count fails.
+                        // But let's try to be generous if we can't be precise.
+                        visibleWordCount = 300; // Default fallback for unknown view
+                    }
+                } catch (e) {
+                    console.warn('Word count calculation failed', e);
+                    visibleWordCount = 200; // Safe default
+                }
             }
         }
 
         if (progressData) {
             // Call service to save
             this.readingProgressService.updateProgress(this.ebookId, progressData).subscribe({
+                next: () => {
+                    // Sync Gamification (XP & Streak) with Anti-Cheat
+                    const now = Date.now();
+                    // Actual time spent since last sync
+                    let sessionDurationMinutes = (now - this.readingStartTime) / 1000 / 60;
+
+                    // --- ANTI-CHEAT LOGIC ---
+                    // Rule: Max 1 minute for every 50 words (Very generous "slow reader" limit)
+                    // e.g. 200 words page -> max 4 mins allowed.
+                    // Minimum cap: 1 minute (for images/short text)
+                    if (visibleWordCount > 0) {
+                        const maxAllowedMinutes = Math.max(1, (visibleWordCount / 50));
+
+                        if (sessionDurationMinutes > maxAllowedMinutes) {
+                            console.warn(`[Anti-Cheat] Capping reading time. Actual: ${sessionDurationMinutes.toFixed(2)}m, Allowed: ${maxAllowedMinutes.toFixed(2)}m (Words: ${visibleWordCount})`);
+                            sessionDurationMinutes = maxAllowedMinutes;
+                            // We reset start time to "now" minus the capped duration to artificially maintain continuity? 
+                            // No, just reset start time to now for the next interval.
+                        }
+                    }
+
+                    const formattedDuration = parseFloat(sessionDurationMinutes.toFixed(2));
+
+                    console.log(`[Gamification Debug] Session Duration: ${formattedDuration} min (Words: ${visibleWordCount})`);
+                    if (formattedDuration > 0.05) { // Min 3 seconds
+                        console.log(`[Gamification Debug] Syncing progress...`);
+                        this.gamificationService.syncProgress({
+                            minutesRead: formattedDuration,
+                            pagesRead: 0,
+                            ebookId: this.ebookId
+                        }).subscribe({
+                            next: (res) => {
+                                console.log('[Gamification Debug] Sync success:', res);
+                                if (res.success && res.data.xpEarned > 0) console.log('XP Earned:', res.data.xpEarned);
+                            },
+                            error: (err) => console.error('[Gamification Debug] Sync error:', err)
+                        });
+                        this.readingStartTime = now;
+                    } else {
+                        console.log('[Gamification Debug] Duration too short (< 0.1 min)');
+                    }
+                },
                 error: (err: any) => console.error('Failed to save progress', JSON.stringify(err))
             });
         }

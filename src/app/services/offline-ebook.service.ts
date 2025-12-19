@@ -214,11 +214,15 @@ export class OfflineEbookService {
 
 
     // Download with progress tracking
-    public downloadBookWithProgress(ebookId: string): Observable<{ state: 'PENDING' | 'DOWNLOADING' | 'ENCRYPTING' | 'DONE' | 'ERROR', progress: number }> {
+    public downloadBookWithProgress(ebookId: string, metadata: any = null): Observable<{ state: 'PENDING' | 'DOWNLOADING' | 'ENCRYPTING' | 'DONE' | 'ERROR', progress: number }> {
         // 1. Check cache first
         return from(this.getFromCache(ebookId)).pipe(
             switchMap(cachedData => {
                 if (cachedData) {
+                    // Repair: If we have data but maybe missing metadata (old download), save it now
+                    if (metadata) {
+                        this.saveMetadata(ebookId, metadata);
+                    }
                     return of({ state: 'DONE' as const, progress: 100 });
                 }
 
@@ -239,7 +243,7 @@ export class OfflineEbookService {
                                 const blob = event.body;
                                 if (blob) {
                                     blob.arrayBuffer().then(buffer => {
-                                        this.saveToCache(ebookId, buffer).then(() => {
+                                        this.saveToCache(ebookId, buffer, metadata).then(() => {
                                             observer.next({ state: 'DONE', progress: 100 });
                                             observer.complete();
                                         });
@@ -289,7 +293,7 @@ export class OfflineEbookService {
         }
     }
 
-    private async saveToCache(ebookId: string, data: ArrayBuffer): Promise<ArrayBuffer> {
+    private async saveToCache(ebookId: string, data: ArrayBuffer, metadata: any = null): Promise<ArrayBuffer> {
         try {
             const { buffer: encrypted, iv } = await this.encryptData(data);
             const db = await this.getDB();
@@ -297,11 +301,18 @@ export class OfflineEbookService {
             return new Promise((resolve, reject) => {
                 const transaction = db.transaction([this.storeName], 'readwrite');
                 const store = transaction.objectStore(this.storeName);
-                const record = {
+
+                // If metadata is not provided, try to preserve existing metadata if updating?
+                // For now, assume new download provides metadata.
+                const record: any = {
                     data: encrypted,
                     iv: iv,
                     timestamp: Date.now()
                 };
+
+                if (metadata) {
+                    record.metadata = metadata;
+                }
 
                 const request = store.put(record, ebookId);
                 request.onsuccess = () => resolve(data); // Return original data to user immediately

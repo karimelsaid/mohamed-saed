@@ -10,7 +10,8 @@ const authenticateMerchant = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-    const merchant = await User.findOne({ _id: decoded.merchantId, role: 'merchant' });
+    // CRITICAL FIX: Support tokens with 'userId' (Google Sign-In) OR 'merchantId' (Standard Login)
+    const merchant = await User.findOne({ _id: decoded.merchantId || decoded.userId, role: 'merchant' });
 
     if (!merchant) {
       return res.status(401).json({ success: false, message: 'Invalid token.' });

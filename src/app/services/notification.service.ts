@@ -48,4 +48,13 @@ export class NotificationService {
   deleteNotification(userId: string, notificationId: string): Observable<any> {
     return this.http.delete(`${this.baseUrl}/notifications/${userId}/${notificationId}`);
   }
+
+  addNotification(notification: Notification): void {
+    const current = this.notificationsSubject.value;
+    this.notificationsSubject.next([notification, ...current]);
+  }
+
+  clearNotifications(): void {
+    this.notificationsSubject.next([]);
+  }
 }

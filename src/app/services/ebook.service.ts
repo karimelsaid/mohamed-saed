@@ -73,6 +73,12 @@ export class EbookService {
         return this.http.delete<{ success: boolean; message: string }>(`${this.apiUrl}/${id}`);
     }
 
+    uploadEbookForProduct(productId: string, file: File): Observable<{ success: boolean; message: string; linkedEbookId: string }> {
+        const formData = new FormData();
+        formData.append('epub', file);
+        return this.http.post<{ success: boolean; message: string; linkedEbookId: string }>(`${environment.apiBaseUrl}/admin/products/${productId}/epub`, formData);
+    }
+
     // Get categories for filtering
     getCategories(): string[] {
         return [

@@ -11,54 +11,71 @@
     <!-- Downloads Tab -->
     <div class="tab-content" *ngIf="!isLoading && activeTab === 'downloads'">
         <!-- Empty State -->
-        <div class="empty-state" *ngIf="allDownloads.length === 0">
-            <i class="fas fa-cloud-download-alt"></i>
-            <h3>لا توجد تحميلات</h3>
-            <p>قم بتحميل كتب من المكتبة لتتمكن من قراءتها بدون إنترنت</p>
-            <a routerLink="/library" class="btn-primary">
+        <div class="empty-state text-center py-10" *ngIf="allDownloads.length === 0">
+            <i class="fas fa-cloud-download-alt text-4xl text-gray-300 dark:text-gray-600 mb-4"></i>
+            <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-2">لا توجد تحميلات</h3>
+            <p class="text-gray-500 dark:text-gray-400 mb-6">قم بتحميل كتب من المكتبة لتتمكن من قراءتها بدون إنترنت</p>
+            <a routerLink="/library"
+                class="btn-primary inline-flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
                 <i class="fas fa-book"></i> تصفح المكتبة
             </a>
         </div>
 
         <!-- Downloads Grid -->
         <div class="books-grid" *ngIf="allDownloads.length > 0">
-            <div class="book-card" *ngFor="let book of allDownloads">
-                <div class="card-cover download-cover">
-                    <div class="dynamic-cover" [class.internal-cover]="book.source === 'internal'">
-                        <i class="fas fa-book"></i>
-                        <div class="cover-title-small">{{ book.title }}</div>
+            <div class="book-card bg-white dark:bg-gray-800 border border-transparent dark:border-gray-700/50 shadow-md dark:shadow-xl dark:shadow-black/20 hover:transform hover:-translate-y-1 transition-all duration-300"
+                *ngFor="let book of allDownloads">
+                <div class="card-cover download-cover relative h-36 bg-gray-100 dark:bg-gray-700">
+                    <div class="dynamic-cover w-full h-full flex flex-col items-center justify-center text-center p-2"
+                        [class.internal-cover]="book.source === 'internal'">
+                        <i class="fas fa-book text-4xl text-white/50 mb-2"></i>
+                        <div
+                            class="cover-title-small text-white font-bold text-sm shadow-black drop-shadow-md line-clamp-2 px-2">
+                            {{ book.title }}</div>
                     </div>
-                    <div class="offline-badge">
+                    <div
+                        class="offline-badge absolute top-2 right-2 bg-green-500/90 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1 backdrop-blur-sm shadow-sm">
                         <i class="fas fa-check-circle"></i> متاح
                     </div>
                     <!-- Source Badge -->
-                    <div class="source-badge" [ngClass]="getSourceClass(book.source)">
+                    <div class="source-badge absolute bottom-2 right-2 text-xs px-2 py-1 rounded-full text-white shadow-sm"
+                        [ngClass]="getSourceClass(book.source)">
                         {{ getSourceLabel(book.source) }}
                     </div>
                 </div>
 
-                <div class="card-content">
-                    <h3 class="book-title">{{ book.title }}</h3>
-                    <p class="book-author" *ngIf="book.author">{{ book.author }}</p>
+                <div class="card-content p-4">
+                    <h3
+                        class="book-title text-gray-900 dark:text-gray-100 font-bold mb-1 text-base line-clamp-2 min-h-[3rem]">
+                        {{ book.title }}</h3>
+                    <p class="book-author text-gray-600 dark:text-gray-400 text-sm mb-3 line-clamp-1"
+                        *ngIf="book.author">{{
+                        book.author }}</p>
 
-                    <div class="book-meta">
-                        <span class="meta-item" *ngIf="book.downloadDate">
-                            <i class="fas fa-calendar"></i>
+                    <div
+                        class="book-meta flex justify-between items-center text-xs text-gray-500 dark:text-gray-500 pt-2 border-t border-gray-100 dark:border-gray-700/50">
+                        <span class="meta-item flex items-center gap-1" *ngIf="book.downloadDate">
+                            <i class="fas fa-clock"></i>
                             {{ formatDate(book.downloadDate) }}
                         </span>
-                        <span class="meta-item" *ngIf="book.contentLength">
-                            <i class="fas fa-file-alt"></i>
+                        <span class="meta-item flex items-center gap-1" *ngIf="book.contentLength">
+                            <i class="fas fa-hdd"></i>
                             {{ formatSize(book.contentLength) }}
                         </span>
                     </div>
                 </div>
 
-                <div class="card-actions">
-                    <button class="btn-read" (click)="openBook(book)">
-                        <i class="fas fa-book-reader"></i> اقرأ
+                <div
+                    class="card-actions p-3 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-700/50 flex gap-2">
+                    <button
+                        class="btn-read flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500 text-white px-3 py-2 rounded-lg transition-colors font-medium text-sm"
+                        (click)="openBook(book)">
+                        <i class="fas fa-book-reader"></i> <span>اقرأ</span>
                     </button>
-                    <button class="btn-delete" (click)="deleteDownload(book)" title="حذف">
-                        <i class="fas fa-trash"></i>
+                    <button
+                        class="btn-delete w-10 h-10 flex items-center justify-center rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors border border-transparent hover:border-red-200 dark:hover:border-red-800/30"
+                        (click)="deleteDownload(book)" title="حذف">
+                        <i class="fas fa-trash-alt"></i>
                     </button>
                 </div>
             </div>
@@ -116,29 +133,41 @@
     </div>
 
     <!-- Stats Footer -->
-    <div class="downloads-stats" *ngIf="!isLoading && (allDownloads.length > 0 || favorites.length > 0)">
-        <div class="stat" *ngIf="allDownloads.length > 0">
-            <span class="stat-value">{{ allDownloads.length }}</span>
-            <span class="stat-label">كتاب محمّل</span>
+    <div class="downloads-stats bg-white dark:bg-gray-800/90 dark:backdrop-blur-md border border-gray-100 dark:border-gray-700/50 shadow-lg dark:shadow-xl rounded-2xl mt-8"
+        *ngIf="!isLoading && (allDownloads.length > 0 || favorites.length > 0)">
+        <div class="stat flex-1 flex flex-col items-center justify-center p-4 border-l last:border-l-0 dark:border-gray-700/50"
+            *ngIf="allDownloads.length > 0">
+            <span class="stat-value text-3xl font-bold text-gray-900 dark:text-yellow-500 mb-1">{{ allDownloads.length
+                }}</span>
+            <span class="stat-label text-sm font-medium text-gray-500 dark:text-gray-400">كتاب تم تحميله</span>
         </div>
-        <div class="stat" *ngIf="favorites.length > 0">
-            <span class="stat-value">{{ favorites.length }}</span>
-            <span class="stat-label">في المفضلة</span>
+        <div class="stat flex-1 flex flex-col items-center justify-center p-4" *ngIf="favorites.length > 0">
+            <span class="stat-value text-3xl font-bold text-gray-900 dark:text-red-500 mb-1">{{ favorites.length
+                }}</span>
+            <span class="stat-label text-sm font-medium text-gray-500 dark:text-gray-400">في المفضلة</span>
         </div>
     </div>
 </div>
 
 <!-- Custom Delete Modal -->
-<div class="modal-overlay" *ngIf="showDeleteModal" (click)="cancelDelete()">
-    <div class="delete-modal glass-card" (click)="$event.stopPropagation()">
-        <div class="modal-icon">
-            <i class="fas fa-trash-alt"></i>
+<div class="modal-overlay bg-black/50 backdrop-blur-sm" *ngIf="showDeleteModal" (click)="cancelDelete()">
+    <div class="delete-modal glass-card bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-xl max-w-sm w-full mx-4"
+        (click)="$event.stopPropagation()">
+        <div
+            class="modal-icon bg-red-100 dark:bg-red-900/30 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+            <i class="fas fa-trash-alt text-red-500 text-2xl"></i>
         </div>
-        <h3>حذف الكتاب</h3>
-        <p>هل أنت متأكد من رغبتك في حذف كتاب <br> <strong>"{{ itemToDelete?.title }}"</strong>؟</p>
-        <div class="modal-actions">
-            <button class="btn-cancel" (click)="cancelDelete()">إلغاء</button>
-            <button class="btn-confirm-delete" (click)="confirmDelete()">نعم، احذف</button>
+        <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2 text-center">حذف الكتاب</h3>
+        <p class="text-gray-600 dark:text-gray-300 text-center mb-6">هل أنت متأكد من رغبتك في حذف كتاب <br> <strong
+                class="text-gray-900 dark:text-white">"{{
+                itemToDelete?.title }}"</strong>؟</p>
+        <div class="modal-actions flex gap-3 justify-center">
+            <button
+                class="btn-cancel px-6 py-2 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                (click)="cancelDelete()">إلغاء</button>
+            <button
+                class="btn-confirm-delete px-6 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white transition-colors shadow-lg shadow-red-500/30"
+                (click)="confirmDelete()">نعم، احذف</button>
         </div>
     </div>
 </div>

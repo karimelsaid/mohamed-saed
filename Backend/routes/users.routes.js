@@ -35,24 +35,29 @@ const {
   requestPayment
 } = require('../controllers/users.controller'); // Removed getPaymentRequests
 
-// مسارات المستخدمين
-router.post('/create-account', createAccount);
+const userMediaController = require('../controllers/user-media.controller'); // Import media controller
+
+router.post('/register', createAccount);
 router.post('/login', login);
 router.post('/google-signin', googleSignIn);
-router.post('/add-to-favorites', addToFavorites);
-router.post('/add-to-cart', addToCart);
-router.delete('/remove-from-favorites/:userId/:bookId', removeFromFavorites);
-router.delete('/remove-from-cart/:userId/:bookId', removeFromCart);
-router.get('/user-data/:userId', getUserData);
 
-// جلب بيانات الملف الشخصي للمستخدم
-router.get('/profile/:userId', getUserProfile);
+router.get('/:userId', getUserData);
+router.get('/profile/:userId', getUserProfile); // This serves general profile data
+// Note: /profile-image (below) handles the image upload via multer
 
-// جلب طلبات الطباعة السابقة للمستخدم
+router.put('/profile/:userId', updateUserProfile);
+
+router.post('/favorites', addToFavorites);
+router.delete('/favorites/:userId/:bookId', removeFromFavorites);
+
+router.post('/cart', addToCart);
+router.delete('/cart/:userId/:bookId', removeFromCart);
+
 router.get('/:userId/print-orders', getUserPrintOrders);
 
-// تحديث بيانات الملف الشخصي للمستخدم (بما في ذلك تحديث عناوين الشحن في الطلبات)
-router.put('/update-profile/:userId', updateUserProfile);
+
+// مسار رفع الصورة الشخصية
+router.post('/profile-image', userMediaController.uploadProfileImage);
 
 // تحديث عنوان الشحن لطلب معين
 router.put('/:userId/orders/:orderId/shipping-address', updateOrderShippingAddress);

@@ -1,5 +1,5 @@
-import { Component, ViewChild, ElementRef, NgZone } from '@angular/core';
-import { Router } from '@angular/router';
+import { Component, ViewChild, ElementRef, NgZone, OnInit } from '@angular/core';
+import { Router, NavigationEnd } from '@angular/router';
 import { Location } from '@angular/common'; // Import Location
 import { App } from '@capacitor/app'; // Import App
 import { Capacitor } from '@capacitor/core'; // Import Capacitor
@@ -14,6 +14,7 @@ import { NotificationService } from './services/notification.service';
 import { AuthService } from './auth/auth.service';
 import { StatusBar, Style } from '@capacitor/status-bar'; // Import StatusBar
 import { Subscription } from 'rxjs';
+import { filter } from 'rxjs/operators';
 
 @Component({
   selector: 'app-root',
@@ -21,7 +22,7 @@ import { Subscription } from 'rxjs';
   standalone: false,
   styleUrl: './app.component.css'
 })
-export class AppComponent {
+export class AppComponent implements OnInit {
   @ViewChild('accountModal') accountModal: any;
 
   title = 'kenouz';  // Added title property to fix the error
@@ -34,6 +35,7 @@ export class AppComponent {
   faYoutube = faYoutube;
   outOn = false;
   isSearchPage: boolean = false; // متغير لتحديد إذا كانت الصفحة هي صفحة البحث
+  isMushafPage: boolean = false; // Added to fix compilation error
 
   allBooks: any[] = []; // جميع الكتب في الموقع
 
@@ -98,10 +100,11 @@ export class AppComponent {
       }
     });
 
-    // Scroll to top on navigation
+    // Scroll to top and update page status on navigation
     this.router.events.subscribe((event: any) => {
-      if (event.urlAfterRedirects) {
+      if (event instanceof NavigationEnd) {
         window.scrollTo(0, 0);
+        this.isMushafPage = event.urlAfterRedirects.includes('/mushaf');
       }
     });
 

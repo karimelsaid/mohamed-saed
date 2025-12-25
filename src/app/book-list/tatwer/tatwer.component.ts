@@ -9,6 +9,7 @@ import { AuthService } from '../../auth/auth.service';
 import { AccountModalComponent } from '../../auth/account-modal/account-modal.component';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
+import { GamificationService } from '../../services/gamification.service';
 
 @Component({
   selector: 'app-tatwer',
@@ -37,7 +38,14 @@ export class TatwerComponent implements OnInit, OnDestroy {
   copiedBookId: string | null = null;
   isLoading: boolean = true;
 
-  constructor(private dataService: DataService, private route: ActivatedRoute, private router: Router, private authService: AuthService, private http: HttpClient) { }
+  constructor(
+    private dataService: DataService,
+    private route: ActivatedRoute,
+    private router: Router,
+    private authService: AuthService,
+    private http: HttpClient,
+    public gamificationService: GamificationService
+  ) { }
 
   getDisplayedPages(): (number | string)[] {
     const totalPages = this.totalPages || 1;

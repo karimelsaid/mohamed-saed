@@ -6,6 +6,10 @@ const subscriptionController = require('../controllers/subscription.controller')
 const verifyToken = require('../middleware/auth.middleware');
 const verifyAdmin = require('../middleware/admin.middleware');
 
+
+// Public routes
+router.get('/prices', subscriptionController.getPrices);
+
 // User routes
 router.get('/status', verifyToken, subscriptionController.getSubscriptionStatus);
 router.get('/history', verifyToken, subscriptionController.getHistory); // New route

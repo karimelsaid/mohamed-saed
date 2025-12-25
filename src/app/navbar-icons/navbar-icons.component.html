@@ -61,7 +61,7 @@
   </div>
 
   <!-- Notifications -->
-  <div class="relative">
+  <div class="relative notifications-wrapper">
     <div (click)="toggleNotificationsDropdown()" class="nav-item-pill group"
       [ngClass]="{'active-pill': showNotificationsDropdown}">
       <fa-icon [icon]="faBell" class="text-xl transition-colors"></fa-icon>
@@ -109,10 +109,11 @@
 
           <!-- Notification Content -->
           <div
-            class="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors flex gap-3 relative z-10 bg-white dark:bg-gray-800"
-            [style.transform]="notification.swipeOffset ? 'translateX(' + notification.swipeOffset + 'px)' : 'none'"
+            class="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors flex gap-3 relative z-10 bg-white dark:bg-gray-800 cursor-grab active:cursor-grabbing"
+            style="user-select: none; -webkit-user-select: none;"
+            [style.transform]="'translateX(' + (notification.swipeOffset || -15) + 'px)'"
             (touchstart)="onTouchStart($event, notification)" (touchmove)="onTouchMove($event, notification)"
-            (touchend)="onTouchEnd($event, notification)">
+            (touchend)="onTouchEnd($event, notification)" (mousedown)="onMouseDown($event, notification)">
 
             <div class="flex-shrink-0 mt-1">
               <div class="w-10 h-10 rounded-full flex items-center justify-center" [ngClass]="{
@@ -124,9 +125,11 @@
                 <fa-icon [icon]="getNotificationIcon(notification.type)"></fa-icon>
               </div>
             </div>
-            <div class="flex-grow min-w-0">
-              <p class="text-sm text-gray-800 dark:text-gray-200 leading-relaxed mb-1">{{ notification.message }}</p>
-              <span class="text-xs text-gray-400 block">{{ notification.createdAt ? (notification.createdAt |
+            <div class="flex-grow min-w-0 pointer-events-none select-none">
+              <p class="text-sm text-gray-800 dark:text-gray-200 leading-relaxed mb-1 select-none">{{
+                notification.message }}</p>
+              <span class="text-xs text-gray-400 block select-none">{{ notification.createdAt ? (notification.createdAt
+                |
                 date:'short') : 'الآن' }}</span>
             </div>
           </div>
@@ -179,6 +182,3 @@
   </div>
 
 </div>
-
-<!-- Backdrop for closing notifications -->
-<div *ngIf="showNotificationsDropdown" class="fixed inset-0 z-[1001]" (click)="toggleNotificationsDropdown()"></div>

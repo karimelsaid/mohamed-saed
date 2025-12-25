@@ -37,8 +37,28 @@ export interface Challenge {
 })
 export class GamificationService {
     private apiUrl = `${environment.apiBaseUrl}/gamification`;
+    public poundValue: number = 50;
 
-    constructor(private http: HttpClient) { }
+    constructor(private http: HttpClient) {
+        this.loadSettings();
+    }
+
+    loadSettings() {
+        this.http.get<any>(`${environment.apiBaseUrl}/admin/settings`).subscribe({
+            next: (settings) => {
+                if (settings && settings.economy && settings.economy.coinExchangeRate) {
+                    this.poundValue = settings.economy.coinExchangeRate;
+                    console.log('Currency exchange rate loaded:', this.poundValue);
+                }
+            },
+            error: (err) => {
+                console.error('Failed to load system settings', err);
+            }
+        });
+    }
+    getPoundValue(): number {
+        return this.poundValue;
+    }
 
     getProfile(): Observable<{ success: boolean, data: GamificationProfile }> {
         return this.http.get<{ success: boolean, data: GamificationProfile }>(

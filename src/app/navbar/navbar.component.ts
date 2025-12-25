@@ -287,7 +287,7 @@ export class NavbarComponent implements OnInit {
 
         // Subscribe to notifications observable for real-time updates
         this.notificationService.notifications$.subscribe((notifications) => {
-          this.notifications = notifications;
+          this.notifications = notifications.map(n => ({ ...n, swipeOffset: -15 }));
           this.unreadCount = notifications.filter(n => !n.read).length;
           this.cdr.markForCheck();
         });
@@ -391,14 +391,74 @@ export class NavbarComponent implements OnInit {
     }
   }
 
+  // Track active notification being swiped
+  activeNotification: any = null;
+
+  // Mouse Handling for Desktop Swipe
+  onMouseDown(event: MouseEvent, notification: any) {
+    event.preventDefault(); // Stop default generic dragging
+    this.activeNotification = notification;
+    notification.startX = event.clientX;
+    notification.currentX = notification.startX;
+    notification.swiping = true;
+
+    // Add global listeners to handle dragging outside the element
+    window.addEventListener('mousemove', this.onWindowMouseMove);
+    window.addEventListener('mouseup', this.onWindowMouseUp);
+  }
+
+  // Bound function to preserve 'this' context
+  onWindowMouseMove = (event: MouseEvent) => {
+    if (!this.activeNotification || !this.activeNotification.swiping) return;
+
+    event.preventDefault(); // Prevent text selection during drag
+
+    const diff = event.clientX - this.activeNotification.startX;
+
+    // Allow swiping left (negative) to reveal delete, and slightly right to close hint
+    // We limit the max open to -80px (delete width) and max closed to 0px
+    // Since we want a hint of -10px default, we allow pulling back to 0.
+
+    // We add the initial offset if it exists (for the hint)
+    // Actually, simpler logic:
+    // New offset = Current diff
+
+    if (diff < 0) {
+      // Swiping left (opening)
+      this.activeNotification.swipeOffset = Math.max(diff, -80);
+    } else {
+      // Swiping right (closing) - allow going back to 0 from the hint
+      this.activeNotification.swipeOffset = Math.min(diff, 0);
+    }
+  };
+
+  onWindowMouseUp = (event: MouseEvent) => {
+    if (this.activeNotification) {
+      this.activeNotification.swiping = false;
+
+      // Threshold to fully open
+      if (this.activeNotification.swipeOffset < -40) {
+        this.activeNotification.swipeOffset = -80;
+      } else {
+        // Snap back to hint state (-10px) or closed (0px)? 
+        // User wants hint visible. Let's snap to -15px as the "closed/idle" state 
+        // so they always see it exists.
+        this.activeNotification.swipeOffset = -15;
+      }
+      this.activeNotification = null;
+    }
+
+    // Clean up
+    window.removeEventListener('mousemove', this.onWindowMouseMove);
+    window.removeEventListener('mouseup', this.onWindowMouseUp);
+  };
+
   onTouchEnd(event: TouchEvent, notification: any) {
     notification.swiping = false;
     if (notification.swipeOffset < -40) {
-      // Swiped enough, snap to open
       notification.swipeOffset = -80;
     } else {
-      // Snap back to close
-      notification.swipeOffset = 0;
+      notification.swipeOffset = -15; // Reset to hint state
     }
   }
 

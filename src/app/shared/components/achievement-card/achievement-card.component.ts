@@ -1,6 +1,6 @@
 import { Component, Input, Output, EventEmitter, ElementRef, ViewChild } from '@angular/core';
 import { faCoins, faShareAlt, faCheckCircle, faTimes } from '@fortawesome/free-solid-svg-icons';
-import html2canvas from 'html2canvas';
+// Redacted static import for lazy loading
 import { Share } from '@capacitor/share';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Capacitor } from '@capacitor/core';
@@ -98,7 +98,7 @@ export class AchievementCardComponent {
 
       try {
         console.log('Capturing visible card...');
-
+        const html2canvas = (await import('html2canvas')).default;
         const canvas = await html2canvas(cardEl, {
           scale: 2,
           backgroundColor: null, // Transparent background if possible

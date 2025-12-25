@@ -2,7 +2,7 @@
 <app-search-results *ngIf="isSearchPage"></app-search-results>
 
 <!-- زر التواصل - تصميم احترافي ومبهر -->
-<div [ngClass]="{'out':outOn,'on':!outOn}"
+<div *ngIf="!isMushafPage" [ngClass]="{'out':outOn,'on':!outOn}"
   class="z-50 fixed top-[20%] -left-10 transform transition-all duration-500 ease-in-out">
   <div class="relative group">
     <div
@@ -163,17 +163,17 @@
   </div>
 </div>
 
-<app-navbar></app-navbar>
+<app-navbar *ngIf="!isMushafPage"></app-navbar>
 
-<div class="w-full m-20 md:m-10"></div>
+<div class="w-full m-20 md:m-10" *ngIf="!isMushafPage"></div>
 
 <div class="flex flex-col min-h-screen">
   <div class="flex-grow">
     <router-outlet></router-outlet>
-    <app-chat-window></app-chat-window>
+    <app-chat-window *ngIf="!isMushafPage"></app-chat-window>
   </div>
 
-  <footer
+  <footer *ngIf="!isMushafPage"
     class="bg-slate-950 text-gray-300 pb-24 md:pb-10 py-8 lg:py-12 mt-auto border-t border-white/5 relative overflow-hidden text-center">
     <div class="absolute inset-0 opacity-[0.03]"
       style="background-image: radial-gradient(#ffffff 1px, transparent 1px); background-size: 32px 32px;"></div>
@@ -241,16 +241,16 @@
                     class="text-lg">f</span></a>
                 <a href="https://t.me/knoozbook" target="_blank"
                   class="w-10 h-10 rounded-full bg-white/5 hover:bg-[#229ED9] hover:text-white flex items-center justify-center transition-all duration-300 hover:-translate-y-1"><span
-                    class="text-lg">            <img class="w-6 h-6 transition-transform duration-300 group-hover/item:scale-110" src="telegram.png"
-              alt="Telegram"></span></a>
+                    class="text-lg"> <img class="w-6 h-6 transition-transform duration-300 group-hover/item:scale-110"
+                      src="telegram.png" alt="Telegram"></span></a>
                 <a href="https://chat.whatsapp.com/KfgUWkKxGoM7yqoC6NBz8q?mode=wwt" target="_blank"
                   class="w-10 h-10 rounded-full bg-white/5 hover:bg-[#25D366] hover:text-white flex items-center justify-center transition-all duration-300 hover:-translate-y-1"><span
-                    class="text-lg">            <img class="w-6 h-6 transition-transform duration-300 group-hover/item:scale-110" src="whats.png"
-              alt="whatsapp"></span></a>
+                    class="text-lg"> <img class="w-6 h-6 transition-transform duration-300 group-hover/item:scale-110"
+                      src="whats.png" alt="whatsapp"></span></a>
                 <a href="https://www.instagram.com/knooz_book?igsh=dmZqeDU0dzZ6ejBh" target="_blank"
                   class="w-10 h-10 rounded-full bg-white/5 hover:bg-[#E1306C] hover:text-white flex items-center justify-center transition-all duration-300 hover:-translate-y-1"><span
-                    class="text-lg">            <img class="w-6 h-6 transition-transform duration-300 group-hover/item:scale-110" src="insta.png"
-              alt="instagram"></span></a>
+                    class="text-lg"> <img class="w-6 h-6 transition-transform duration-300 group-hover/item:scale-110"
+                      src="insta.png" alt="instagram"></span></a>
               </div>
             </div>
           </div>
@@ -266,7 +266,7 @@
   </footer>
 </div>
 
-<app-navbar-icons (accountClick)="openAccountModal()" [isBottomNav]="true"
+<app-navbar-icons (accountClick)="openAccountModal()" [isBottomNav]="true" *ngIf="!isMushafPage"
   class="fixed bottom-0 left-0 right-0 block md:hidden bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-t border-gray-100 dark:border-gray-800 p-4 shadow-lg z-50"></app-navbar-icons>
 <app-account-modal #accountModal></app-account-modal>
 <app-modal-dialog *ngIf="modalConfig" [isOpen]="!!modalConfig" [title]="modalConfig.title || ''"

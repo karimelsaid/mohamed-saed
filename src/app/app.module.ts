@@ -33,6 +33,7 @@ import { HTTP_INTERCEPTORS } from '@angular/common/http';
 import { MerchantAuthInterceptor } from './interceptors/merchant-auth.interceptor';
 import { AdminAuthInterceptor } from './interceptors/admin-auth.interceptor';
 import { AuthInterceptor } from './interceptors/auth.interceptor';
+// Removed static imports for lazy loading
 
 import { AdminModule } from './admin/admin.module';
 import { MerchantDashboardComponent } from './merchant/dashboard/dashboard.component';
@@ -78,7 +79,7 @@ import { ServiceWorkerModule } from '@angular/service-worker';
     OthersComponent,
     BooksComponent,
 
-    HowToEarnComponent
+    HowToEarnComponent,
   ],
   imports: [
     BrowserModule,
@@ -92,6 +93,7 @@ import { ServiceWorkerModule } from '@angular/service-worker';
     NavbarIconsModule,
     SearchBarModule,
     AdminModule,
+    // Removed from initial bundle
     MerchantDashboardComponent,
     TutorialComponent,
     AccountModalComponent,

@@ -31,10 +31,23 @@ router.put('/', async (req, res) => {
         }
 
         if (gamification) settings.gamification = { ...settings.gamification, ...gamification };
+        if (gamification) settings.gamification = { ...settings.gamification, ...gamification };
         if (economy) settings.economy = { ...settings.economy, ...economy };
+        if (req.body.subscription) settings.subscription = { ...settings.subscription, ...req.body.subscription };
         if (typeof maintenanceMode !== 'undefined') settings.maintenanceMode = maintenanceMode;
 
+        if (req.body.notificationSchedules) {
+            settings.notificationSchedules = { ...settings.notificationSchedules, ...req.body.notificationSchedules };
+        }
+
         const updatedSettings = await settings.save();
+
+        if (req.body.notificationSchedules) {
+            // Restart cron jobs
+            const cronJobsService = require('../services/cron-jobs.service');
+            await cronJobsService.restartCronJobs();
+        }
+
         res.status(200).json({ message: 'Settings updated successfully', settings: updatedSettings });
     } catch (error) {
         res.status(500).json({ message: 'Error updating settings', error: error.message });

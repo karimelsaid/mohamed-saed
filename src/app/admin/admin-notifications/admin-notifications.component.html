@@ -18,6 +18,12 @@
             <fa-icon [icon]="faBookOpen" class="mr-2"></fa-icon>
             من المكتبة
         </button>
+        <button (click)="activeTab = 'settings'" [class.border-yellow-500]="activeTab === 'settings'"
+            [class.text-yellow-600]="activeTab === 'settings'"
+            class="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 focus:outline-none border-b-2 border-transparent transition-colors duration-200">
+            <fa-icon [icon]="faCog" class="mr-2"></fa-icon>
+            الإعدادات
+        </button>
     </div>
 
     <!-- Manual Form -->
@@ -91,9 +97,75 @@
         </button>
     </div>
 
+    <!-- Settings Form -->
+    <div *ngIf="activeTab === 'settings'" class="space-y-6">
+        <div class="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
+            <h3 class="font-bold text-gray-800 dark:text-white mb-4 border-b pb-2 dark:border-gray-600">مواعيد
+                الإشعارات التلقائية
+            </h3>
+
+            <!-- Streak Saver -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                    <label class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">🔔 منقذ الـ Streak
+                        (Streak Saver)</label>
+                    <div class="flex items-center gap-2">
+                        <input type="number" [(ngModel)]="settings.streakSaver.hour" min="0" max="23"
+                            class="w-20 p-2 border rounded text-center dark:bg-gray-600 dark:text-white"
+                            placeholder="HH">
+                        <span class="font-bold">:</span>
+                        <input type="number" [(ngModel)]="settings.streakSaver.minute" min="0" max="59"
+                            class="w-20 p-2 border rounded text-center dark:bg-gray-600 dark:text-white"
+                            placeholder="MM">
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">تذكير للمستخدمين الذين لم يفتحوا التطبيق اليوم.</p>
+                </div>
+
+                <!-- Daily Reward -->
+                <div>
+                    <label class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">🎁 المكافأة اليومية
+                        (Daily Reward)</label>
+                    <div class="flex items-center gap-2">
+                        <input type="number" [(ngModel)]="settings.dailyReward.hour" min="0" max="23"
+                            class="w-20 p-2 border rounded text-center dark:bg-gray-600 dark:text-white"
+                            placeholder="HH">
+                        <span class="font-bold">:</span>
+                        <input type="number" [(ngModel)]="settings.dailyReward.minute" min="0" max="59"
+                            class="w-20 p-2 border rounded text-center dark:bg-gray-600 dark:text-white"
+                            placeholder="MM">
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">تنبيه بوجود مكافأة يومية جاهزة للاستلام.</p>
+                </div>
+
+                <!-- Daily Wisdom -->
+                <div>
+                    <label class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">💡 حكمة اليوم (Daily
+                        Wisdom)</label>
+                    <div class="flex items-center gap-2">
+                        <input type="number" [(ngModel)]="settings.dailyWisdom.hour" min="0" max="23"
+                            class="w-20 p-2 border rounded text-center dark:bg-gray-600 dark:text-white"
+                            placeholder="HH">
+                        <span class="font-bold">:</span>
+                        <input type="number" [(ngModel)]="settings.dailyWisdom.minute" min="0" max="59"
+                            class="w-20 p-2 border rounded text-center dark:bg-gray-600 dark:text-white"
+                            placeholder="MM">
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">اقتباس أو معلومة عشوائية يومية.</p>
+                </div>
+            </div>
+        </div>
+
+        <button (click)="saveSettings()" [disabled]="isSending"
+            class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded-lg shadow-md transition-colors flex items-center gap-2 mr-auto">
+            <span *ngIf="isSending">جاري الحفظ وإعادة الجدولة...</span>
+            <span *ngIf="!isSending">حفظ الإعدادات</span>
+            <fa-icon [icon]="faCog" [class.animate-spin]="isSending"></fa-icon>
+        </button>
+    </div>
+
     <!-- Status Message -->
     <div *ngIf="statusMessage" class="mt-4 p-3 rounded"
-        [ngClass]="{'bg-green-100 text-green-700': statusMessage.includes('Success'), 'bg-red-100 text-red-700': statusMessage.includes('Error')}">
+        [ngClass]="{'bg-green-100 text-green-700': statusMessage.includes('Success') || statusMessage.includes('saved'), 'bg-red-100 text-red-700': statusMessage.includes('Error')}">
         {{ statusMessage }}
     </div>
 </div>

@@ -36,7 +36,7 @@ export class SubscriptionComponent implements OnInit {
     ) { }
 
     ngOnInit(): void {
-        this.prices = this.subscriptionService.getPrices();
+        this.subscriptionService.prices$.subscribe(prices => this.prices = prices);
         this.subscriptionService.subscriptionStatus$.subscribe(sub => {
             this.subscription = sub;
             if (sub && sub.status === 'active') {

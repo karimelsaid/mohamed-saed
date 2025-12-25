@@ -89,7 +89,7 @@
             <span
               class="text-sm text-yellow-600 dark:text-yellow-400 font-bold flex items-center gap-1 mt-1 bg-yellow-50 dark:bg-yellow-900/20 px-2 py-0.5 rounded-md w-fit">
               <fa-icon [icon]="faCoins" class="text-yellow-500"></fa-icon>
-              {{ (book.product_price * 50) | number:'1.0-0' }} عملة
+              {{ (book.product_price * gamificationService.poundValue) | number:'1.0-0' }} عملة
             </span>
           </div>
           <div *ngIf="!book.rival" class="flex flex-col mb-4 bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg w-fit">
@@ -102,7 +102,7 @@
             <span
               class="text-sm text-yellow-600 dark:text-yellow-400 font-bold flex items-center gap-1 mt-1 bg-yellow-50 dark:bg-yellow-900/20 px-2 py-0.5 rounded-md w-fit">
               <fa-icon [icon]="faCoins" class="text-yellow-500"></fa-icon>
-              {{ (book.product_price_before_discount * 50) | number:'1.0-0' }} عملة
+              {{ (book.product_price_before_discount * gamificationService.poundValue) | number:'1.0-0' }} عملة
             </span>
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">

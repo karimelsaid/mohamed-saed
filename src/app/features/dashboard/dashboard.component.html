@@ -1,0 +1,34 @@
+<div class="dashboard-container rtl">
+    <header class="dashboard-header">
+        <h1>لوحة المتابعة الشخصية</h1>
+        <p>تابع تقدمك في حفظ ومراجعة القرآن الكريم</p>
+    </header>
+
+    <div class="stats-grid">
+        <!-- حفظ جديد -->
+        <div class="stat-card new">
+            <h3>الحفظ الجديد</h3>
+            <div class="counter">{{ (newMemorization$ | async)?.length || 0 }}</div>
+            <p>صفحات قيد التثبيت</p>
+        </div>
+
+        <!-- مراجعة -->
+        <div class="stat-card review">
+            <h3>المراجعة</h3>
+            <div class="counter">{{ (reviewList$ | async)?.length || 0 }}</div>
+            <p>صفحات في مرحلة التكرار</p>
+        </div>
+
+        <!-- صفحات منسية -->
+        <div class="stat-card forgotten">
+            <h3>المتشابهات/المنسي</h3>
+            <div class="counter">{{ (forgottenList$ | async)?.length || 0 }}</div>
+            <p>تحتاج إعادة تركيز</p>
+        </div>
+    </div>
+
+    <section class="action-section">
+        <button class="primary-btn">ابدأ الورد اليومي</button>
+        <button class="secondary-btn">سجل حفظاً جديداً</button>
+    </section>
+</div>

@@ -32,6 +32,8 @@ const CATEGORY_ROUTES: { [key: string]: string } = {
   'قواامس ومراجع': 'book'
 };
 
+import { GamificationService } from '../../services/gamification.service';
+
 @Component({
   selector: 'app-electronics',
   standalone: false,
@@ -59,7 +61,14 @@ export class ElectronicsComponent implements OnInit, OnDestroy {
   copiedProductId: string | null = null;
   isLoading: boolean = true;
 
-  constructor(private dataService: DataService, private route: ActivatedRoute, private router: Router, private authService: AuthService, private http: HttpClient) { }
+  constructor(
+    private dataService: DataService,
+    private route: ActivatedRoute,
+    private router: Router,
+    private authService: AuthService,
+    private http: HttpClient,
+    public gamificationService: GamificationService
+  ) { }
 
   ngOnInit(): void {
     this.isLoading = true;

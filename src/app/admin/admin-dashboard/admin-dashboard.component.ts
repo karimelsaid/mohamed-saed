@@ -22,6 +22,7 @@ import { UserHierarchyComponent } from '../user-hierarchy/user-hierarchy.compone
 import { AmazonPriceCalculatorComponent } from '../amazon-price-calculator/amazon-price-calculator.component';
 import { AdminEbooksComponent } from '../admin-ebooks/admin-ebooks.component';
 import { AdminNotificationsComponent } from '../admin-notifications/admin-notifications.component';
+import { SubscriptionSettingsComponent } from '../subscription-settings/subscription-settings.component';
 
 interface Order {
   _id: string;
@@ -175,7 +176,8 @@ interface SystemSettings {
     UserHierarchyComponent,
     AmazonPriceCalculatorComponent,
     AdminEbooksComponent,
-    AdminNotificationsComponent
+    AdminNotificationsComponent,
+    SubscriptionSettingsComponent
   ],
   templateUrl: './admin-dashboard.component.html',
   styleUrls: ['./admin-dashboard.component.css']
@@ -187,7 +189,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   allRequestedBooks: RequestedBook[] = [];
   isAdmin: boolean = false; // Add paymentRequests to the type union
   showSidebar: boolean = true;
-  currentView: 'dashboard' | 'userIntelligence' | 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' | 'gamificationControl' | 'notifications' = 'dashboard';
+  currentView: 'dashboard' | 'userIntelligence' | 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' | 'gamificationControl' | 'notifications' | 'subscriptionControl' = 'dashboard';
 
   // Gamification Control Properties
   systemSettings: SystemSettings = {
@@ -785,6 +787,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
         this.loadPromotionDates();
         this.loadNotifications();
         this.loadStats();
+        this.loadSystemSettings(); // Load settings on init
       } else {
         this.isAdmin = false;
         this.router.navigate(['/']);
@@ -828,7 +831,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     }
   }
 
-  switchView(view: 'dashboard' | 'userIntelligence' | 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' | 'gamificationControl' | 'notifications'): void {
+  switchView(view: 'dashboard' | 'userIntelligence' | 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' | 'gamificationControl' | 'notifications' | 'subscriptionControl'): void {
     this.currentView = view;
 
     if (view === 'dashboard') {
@@ -866,6 +869,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       this.loadUrgencyRequests();
     } else if (view === 'mobileVersion') {
       this.loadMobileVersion();
+    } else if (view === 'subscriptionControl') {
+      // No data loading needed as the component handles it
     }
   }
 
@@ -927,6 +932,25 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         // Error handled silently
+      }
+    });
+  }
+
+  loadSystemSettings(): void {
+    this.http.get<SystemSettings>(`${this.backendBaseUrl}/admin/settings`).subscribe({
+      next: (settings) => {
+        if (settings) {
+          this.systemSettings = { ...this.systemSettings, ...settings };
+          // Ensure deep merge for nested objects if needed, or just rely on spread for top-level keys
+          if (settings.gamification) this.systemSettings.gamification = { ...this.systemSettings.gamification, ...settings.gamification };
+          if (settings.economy) this.systemSettings.economy = { ...this.systemSettings.economy, ...settings.economy };
+
+          this.originalSettings = JSON.parse(JSON.stringify(this.systemSettings));
+          console.log('System settings loaded:', this.systemSettings);
+        }
+      },
+      error: (err) => {
+        console.error('Error loading settings', err);
       }
     });
   }
@@ -1070,17 +1094,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     }
   }
 
-  loadSystemSettings(): void {
-    this.http.get<SystemSettings>(`${this.backendBaseUrl}/admin/settings`).subscribe({
-      next: (settings) => {
-        if (settings) {
-          this.systemSettings = settings;
-          this.originalSettings = JSON.parse(JSON.stringify(settings)); // Deep copy
-        }
-      },
-      error: (err) => console.error('Error loading settings', err)
-    });
-  }
+
 
   saveSystemSettings(): void {
     this.isSavingSettings = true;

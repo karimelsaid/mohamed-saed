@@ -467,10 +467,11 @@
 
                 <!-- Notification Content -->
                 <div
-                  class="p-4 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors flex gap-3 relative z-10 bg-white dark:bg-slate-900"
-                  [style.transform]="notification.swipeOffset ? 'translateX(' + notification.swipeOffset + 'px)' : 'none'"
+                  class="p-4 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors flex gap-3 relative z-10 bg-white dark:bg-slate-900 cursor-grab active:cursor-grabbing"
+                  style="user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;"
+                  [style.transform]="'translateX(' + (notification.swipeOffset || -15) + 'px)'"
                   (touchstart)="onTouchStart($event, notification)" (touchmove)="onTouchMove($event, notification)"
-                  (touchend)="onTouchEnd($event, notification)">
+                  (touchend)="onTouchEnd($event, notification)" (mousedown)="onMouseDown($event, notification)">
 
                   <div class="flex-shrink-0 mt-1">
                     <div class="w-10 h-10 rounded-full flex items-center justify-center" [ngClass]="{
@@ -483,10 +484,12 @@
                     </div>
                   </div>
 
-                  <div class="flex-grow min-w-0">
-                    <p class="text-sm text-gray-800 dark:text-gray-200 leading-relaxed mb-1">{{notification.message}}
+                  <div class="flex-grow min-w-0 select-none pointer-events-none">
+                    <p class="text-sm text-gray-800 dark:text-gray-200 leading-relaxed mb-1 select-none">
+                      {{notification.message}}
                     </p>
-                    <span class="text-xs text-gray-400 block">{{notification.createdAt | date:'short'}}</span>
+                    <span class="text-xs text-gray-400 block select-none">{{notification.createdAt |
+                      date:'short'}}</span>
                   </div>
                 </div>
 

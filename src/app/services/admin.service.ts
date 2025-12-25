@@ -92,4 +92,15 @@ export class AdminService {
       catchError(this.handleError)
     );
   }
+  getSystemSettings(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/settings`).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  updateSystemSettings(settings: any): Observable<any> {
+    return this.http.put(`${this.apiUrl}/settings`, settings).pipe(
+      catchError(this.handleError)
+    );
+  }
 }

@@ -24,8 +24,8 @@ export class AuthInterceptor implements HttpInterceptor {
     intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
         let authReq = req;
 
-        // Skip specific external domains
-        if (!req.url.includes('googleapis.com')) {
+        // Skip specific external domains that don't allow credentials or don't need auth
+        if (!req.url.includes('googleapis.com') && !req.url.includes('jsdelivr.net')) {
             const userStr = localStorage.getItem('user');
             const merchantToken = localStorage.getItem('merchant_token');
 

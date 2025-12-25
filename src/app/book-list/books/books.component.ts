@@ -8,6 +8,7 @@ import { AuthService } from '../../auth/auth.service';
 import { AccountModalComponent } from '../../auth/account-modal/account-modal.component';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
+import { GamificationService } from '../../services/gamification.service';
 
 @Component({
     selector: 'app-books',
@@ -51,7 +52,8 @@ export class BooksComponent implements OnInit, OnDestroy {
         private route: ActivatedRoute,
         private router: Router,
         private authService: AuthService,
-        private http: HttpClient
+        private http: HttpClient,
+        public gamificationService: GamificationService
     ) { }
 
     ngOnInit(): void {

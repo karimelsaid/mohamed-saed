@@ -113,7 +113,7 @@ export class NavbarIconsComponent implements OnInit {
         });
 
         this.notificationService.notifications$.subscribe((notifications) => {
-          this.notifications = notifications;
+          this.notifications = notifications.map(n => ({ ...n, swipeOffset: -15 }));
           this.unreadCount = notifications.filter(n => !n.read).length;
           this.cdr.markForCheck();
         });
@@ -181,6 +181,16 @@ export class NavbarIconsComponent implements OnInit {
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent) {
     const target = event.target as HTMLElement;
+
+    // Close Notifications Dropdown if clicked outside
+    if (this.showNotificationsDropdown) {
+      const clickedInsideNotifications = target.closest('.notifications-wrapper');
+      if (!clickedInsideNotifications) {
+        this.showNotificationsDropdown = false;
+      }
+    }
+
+    // Existing mobile menu logic (keeping just in case)
     const clickedInsideMenu = target.closest('.rtl.md\\:hidden.z-50.relative.text-blue-950.dark\\:text-blue-100');
     const clickedOnBarsIcon = target.closest('.fa-bars');
     if (!clickedInsideMenu && !clickedOnBarsIcon) {
@@ -363,14 +373,64 @@ export class NavbarIconsComponent implements OnInit {
     }
   }
 
+  // Track active notification being swiped
+  activeNotification: any = null;
+
+  // Mouse Handling for Desktop Swipe
+  onMouseDown(event: MouseEvent, notification: any) {
+    event.preventDefault(); // Stop default generic dragging
+    this.activeNotification = notification;
+    notification.startX = event.clientX;
+    notification.currentX = notification.startX;
+    notification.swiping = true;
+
+    // Add global listeners to handle dragging outside the element
+    window.addEventListener('mousemove', this.onWindowMouseMove);
+    window.addEventListener('mouseup', this.onWindowMouseUp);
+  }
+
+  // Bound function to preserve 'this' context
+  onWindowMouseMove = (event: MouseEvent) => {
+    if (!this.activeNotification || !this.activeNotification.swiping) return;
+
+    event.preventDefault(); // Prevent text selection during drag
+
+    const diff = event.clientX - this.activeNotification.startX;
+
+    if (diff < 0) {
+      // Swiping left (opening)
+      this.activeNotification.swipeOffset = Math.max(diff, -80);
+    } else {
+      // Swiping right (closing) - allow going back to 0 from the hint
+      this.activeNotification.swipeOffset = Math.min(diff, 0);
+    }
+  };
+
+  onWindowMouseUp = (event: MouseEvent) => {
+    if (this.activeNotification) {
+      this.activeNotification.swiping = false;
+
+      // Threshold to fully open
+      if (this.activeNotification.swipeOffset < -40) {
+        this.activeNotification.swipeOffset = -80;
+      } else {
+        // Snap back to hint state (-15px) or closed (0px)? 
+        this.activeNotification.swipeOffset = -15;
+      }
+      this.activeNotification = null;
+    }
+
+    // Clean up
+    window.removeEventListener('mousemove', this.onWindowMouseMove);
+    window.removeEventListener('mouseup', this.onWindowMouseUp);
+  };
+
   onTouchEnd(event: TouchEvent, notification: any) {
     notification.swiping = false;
     if (notification.swipeOffset < -40) {
-      // Swiped enough, snap to open
       notification.swipeOffset = -80;
     } else {
-      // Snap back to close
-      notification.swipeOffset = 0;
+      notification.swipeOffset = -15; // Reset to hint state
     }
   }
 

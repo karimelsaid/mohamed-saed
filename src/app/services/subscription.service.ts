@@ -43,6 +43,7 @@ export class SubscriptionService {
 
     constructor(private http: HttpClient) {
         this.loadSubscriptionStatus();
+        this.loadPrices();
     }
 
     private loadSubscriptionStatus(): void {
@@ -146,11 +147,23 @@ export class SubscriptionService {
         return diffDays > 0 ? diffDays : 0;
     }
 
+    // Price Management
+    private pricesSubject = new BehaviorSubject<{ monthly: number; yearly: number }>({ monthly: 50, yearly: 500 });
+    public prices$ = this.pricesSubject.asObservable();
+
+    loadPrices(): void {
+        this.http.get<{ success: boolean; data: { monthly: number; yearly: number } }>(`${this.apiUrl}/prices`)
+            .pipe(
+                tap(response => {
+                    if (response.success && response.data) {
+                        this.pricesSubject.next(response.data);
+                    }
+                })
+            ).subscribe();
+    }
+
     getPrices(): { monthly: number; yearly: number } {
-        return {
-            monthly: 50,
-            yearly: 500
-        };
+        return this.pricesSubject.value; // Returns latest cached value
     }
 
     // Clear subscription status (used on logout)

@@ -50,14 +50,19 @@ exports.subscribe = async (req, res) => {
         // Calculate dates and price
         const startDate = new Date();
         const endDate = new Date();
+        // Fetch dynamic prices
+        const SystemSettings = require('../models/SystemSettings');
+        const settings = await SystemSettings.getInstance();
+        const prices = settings.subscription || { monthlyPrice: 50, yearlyPrice: 500 };
+
         let price;
 
         if (plan === 'monthly') {
             endDate.setMonth(endDate.getMonth() + 1);
-            price = 50; // 50 EGP per month
+            price = prices.monthlyPrice;
         } else if (plan === 'yearly') {
             endDate.setFullYear(endDate.getFullYear() + 1);
-            price = 500; // 500 EGP per year
+            price = prices.yearlyPrice;
         }
 
         // Create subscription
@@ -200,6 +205,11 @@ exports.renewSubscription = async (req, res) => {
         const userId = req.user._id;
         const { paymentMethod } = req.body;
 
+        // Fetch System Settings for latest prices
+        const SystemSettings = require('../models/SystemSettings');
+        const settings = await SystemSettings.getInstance();
+        const prices = settings.subscription || { monthlyPrice: 50, yearlyPrice: 500 };
+
         // Find the most recent subscription
         const lastSubscription = await Subscription.findOne({ userId })
             .sort({ endDate: -1 });
@@ -218,10 +228,10 @@ exports.renewSubscription = async (req, res) => {
 
         if (lastSubscription.plan === 'monthly') {
             endDate.setMonth(endDate.getMonth() + 1);
-            price = 50;
+            price = prices.monthlyPrice;
         } else if (lastSubscription.plan === 'yearly') {
             endDate.setFullYear(endDate.getFullYear() + 1);
-            price = 500;
+            price = prices.yearlyPrice;
         }
 
         // Create new subscription
@@ -249,6 +259,25 @@ exports.renewSubscription = async (req, res) => {
             message: 'خطأ في تجديد الاشتراك',
             error: error.message
         });
+    }
+};
+
+// Get current subscription prices
+exports.getPrices = async (req, res) => {
+    try {
+        const SystemSettings = require('../models/SystemSettings');
+        const settings = await SystemSettings.getInstance();
+        const prices = settings.subscription || { monthlyPrice: 50, yearlyPrice: 500 };
+
+        res.json({
+            success: true,
+            data: {
+                monthly: prices.monthlyPrice,
+                yearly: prices.yearlyPrice
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Error fetching prices', error: error.message });
     }
 };
 

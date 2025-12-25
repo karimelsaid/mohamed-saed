@@ -1,34 +1,63 @@
 const cron = require('node-cron');
+const fs = require('fs');
+const path = require('path');
 const User = require('../models/User.model'); // Adjust path as needed
 const pushNotificationService = require('./push-notification.service');
 
 /**
  * Initialize all cron jobs
  */
-exports.initCronJobs = () => {
-    console.log('⏰ Initializing Cron Jobs...');
+let scheduledTasks = []; // Store active cron tasks to stop them later
 
-    // 1. Streak Saver: Run every day at 20:00 (8 PM)
-    // Notify users who haven't logged in today (lastActive < today)
-    cron.schedule('0 20 * * *', async () => {
+/**
+ * Initialize all cron jobs
+ */
+exports.initCronJobs = async () => {
+
+    // Stop existing tasks
+    scheduledTasks.forEach(task => task.stop());
+    scheduledTasks = [];
+
+    // Fetch dynamic schedules
+    const SystemSettings = require('../models/SystemSettings');
+    const settings = await SystemSettings.getInstance();
+    const schedules = settings.notificationSchedules || {
+        streakSaver: { hour: 20, minute: 0 },
+        dailyReward: { hour: 9, minute: 0 },
+        dailyWisdom: { hour: 14, minute: 0 }
+    };
+
+    // 1. Streak Saver
+    const streakCron = `${schedules.streakSaver.minute} ${schedules.streakSaver.hour} * * *`;
+    const streakTask = cron.schedule(streakCron, async () => {
         console.log('Running Streak Saver Job...');
         await checkStreaksAndNotify();
     });
+    scheduledTasks.push(streakTask);
 
-    // 2. Daily Reward Reminder at 9 AM
-    cron.schedule('0 9 * * *', () => {
+    // 2. Daily Reward Reminder
+    const rewardCron = `${schedules.dailyReward.minute} ${schedules.dailyReward.hour} * * *`;
+    const rewardTask = cron.schedule(rewardCron, () => {
         console.log('⏰ Running Daily Reward Reminder...');
         sendDailyRewardReminders();
     });
+    scheduledTasks.push(rewardTask);
 
-    // 3. Random Wisdom/Fact at 2 PM (Non-annoying)
-    cron.schedule('0 14 * * *', async () => {
+    // 3. Random Wisdom/Fact
+    const wisdomCron = `${schedules.dailyWisdom.minute} ${schedules.dailyWisdom.hour} * * *`;
+    const wisdomTask = cron.schedule(wisdomCron, async () => {
         console.log('⏰ Running Daily Wisdom...');
         try {
-            const content = require('../data/notifications-content.json');
+            const contentPath = path.join(__dirname, '../data/notifications-content.json');
+            const fileData = fs.readFileSync(contentPath, 'utf8');
+            const content = JSON.parse(fileData);
+
             const items = [...(content.quotes || []), ...(content.facts || [])];
             if (items.length > 0) {
-                const randomItem = items[Math.floor(Math.random() * items.length)];
+                const randomIndex = Math.floor(Math.random() * items.length);
+                const randomItem = items[randomIndex];
+
+                console.log(`Selected item index ${randomIndex}: ${randomItem.text.substring(0, 30)}...`);
 
                 const payload = {
                     notification: {
@@ -46,8 +75,14 @@ exports.initCronJobs = () => {
             console.error('Error sending daily wisdom:', err);
         }
     });
+    scheduledTasks.push(wisdomTask);
+};
 
-    console.log('✅ Cron Jobs Scheduled: Streaks (8 PM), Rewards (9 AM), Wisdom (2 PM)');
+/**
+ * Restart cron jobs (used when settings change)
+ */
+exports.restartCronJobs = async () => {
+    await exports.initCronJobs();
 };
 
 /**

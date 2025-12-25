@@ -1,4 +1,5 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
+import { GamificationService } from '../services/gamification.service';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { take } from 'rxjs/operators';
 import { DataService } from '../services/data.service';
@@ -51,7 +52,8 @@ export class BookDetailsComponent implements OnInit {
     private dataService: DataService,
     private authService: AuthService,
     private http: HttpClient,
-    private slugService: SlugService
+    private slugService: SlugService,
+    public gamificationService: GamificationService
   ) { }
 
   ngOnInit(): void {

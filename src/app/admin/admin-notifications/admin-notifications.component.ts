@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms'; // For ngModel
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { faPaperPlane, faBookOpen, faBell } from '@fortawesome/free-solid-svg-icons';
+import { faPaperPlane, faBookOpen, faBell, faCog } from '@fortawesome/free-solid-svg-icons';
 
 @Component({
     selector: 'app-admin-notifications',
@@ -17,8 +17,17 @@ export class AdminNotificationsComponent implements OnInit {
     faPaperPlane = faPaperPlane;
     faBookOpen = faBookOpen;
     faBell = faBell;
+    faCog = faCog;
 
-    activeTab: 'manual' | 'library' = 'manual';
+    // Settings Tab
+    activeTab: 'manual' | 'library' | 'settings' = 'manual';
+
+    settings: any = {
+        streakSaver: { hour: 20, minute: 0 },
+        dailyReward: { hour: 9, minute: 0 },
+        dailyWisdom: { hour: 14, minute: 0 }
+    };
+
     libraryContent: any[] = [];
 
     // Manual Form
@@ -41,6 +50,37 @@ export class AdminNotificationsComponent implements OnInit {
 
     ngOnInit() {
         this.loadLibrary();
+        this.loadSystemSettings();
+    }
+
+    loadSystemSettings() {
+        this.http.get(`${environment.apiBaseUrl}/admin/settings`).subscribe({
+            next: (data: any) => {
+                if (data.notificationSchedules) {
+                    this.settings = data.notificationSchedules;
+                }
+            },
+            error: (err) => console.error('Error loading settings:', err)
+        });
+    }
+
+    saveSettings() {
+        this.isSending = true;
+        this.statusMessage = 'Saving settings...';
+
+        const payload = { notificationSchedules: this.settings };
+
+        this.http.put(`${environment.apiBaseUrl}/admin/settings`, payload).subscribe({
+            next: (res: any) => {
+                this.isSending = false;
+                this.statusMessage = 'Settings saved and Cron Jobs restarted!';
+                setTimeout(() => this.statusMessage = '', 3000);
+            },
+            error: (err) => {
+                this.isSending = false;
+                this.statusMessage = `Error saving settings: ${err.message}`;
+            }
+        });
     }
 
     loadLibrary() {

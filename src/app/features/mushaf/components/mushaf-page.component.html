@@ -1,0 +1,433 @@
+<div class="mushaf-screen theme-{{currentTheme}}" *ngIf="currentPageData$ | async as page">
+    <!-- Voice Debug Panel (Temporary) -->
+    <div *ngIf="isMemorizationMode && memorizationSettings.inputMethod === 'voice'"
+        style="position: fixed; top: 60px; left: 10px; background: rgba(0,0,0,0.8); color: lime; padding: 10px; z-index: 9999; font-size: 12px; direction: ltr; pointer-events: none; max-width: 300px;">
+        <div>State: {{voiceState}}</div>
+        <div>Ayah: {{currentAyahIndex + 1}} / {{sessionAyahs.length}} ({{sessionAyahs[currentAyahIndex]}})</div>
+        <div>Map Has Key: {{verseDataMap.has(sessionAyahs[currentAyahIndex])}}</div>
+        <div>Idx: {{currentWordIndex}} / {{currentExpectedWords.length}}</div>
+        <div>Next: {{currentExpectedWords[currentWordIndex+1]}}</div>
+        <div>Heard: {{lastSpokenTranscript}}</div>
+        <div style="color: yellow">Exp: {{currentExpectedWords[currentWordIndex]}} (Hidden)</div>
+    </div>
+    <!-- Sidebar / Index Drawer -->
+    <div class="mushaf-sidebar" [class.open]="isSidebarOpen" [class.animating]="sidebarOffset === 0"
+        [style.transform]="isSidebarOpen ? 'translateX(calc(-320px + ' + sidebarOffset + 'px))' : 'translateX(0)'"
+        (touchstart)="onSidebarTouchStart($event)" (touchmove)="onSidebarTouchMove($event)"
+        (touchend)="onSidebarTouchEnd()">
+        <div class="sidebar-header">
+            <button class="close-btn" (click)="toggleSidebar()">
+                <i class="fas fa-times"></i>
+            </button>
+            <h3>فهرس المصحف</h3>
+        </div>
+
+        <div class="sidebar-tabs">
+            <button [class.active]="sidebarTab === 'surahs'" (click)="sidebarTab = 'surahs'">السور</button>
+            <button [class.active]="sidebarTab === 'juzs'" (click)="sidebarTab = 'juzs'">الأجزاء</button>
+            <button [class.active]="sidebarTab === 'pages'" (click)="sidebarTab = 'pages'">الصفحات</button>
+        </div>
+
+        <div class="sidebar-content" *ngIf="mushafMetadata$ | async as meta">
+            <div class="index-section" *ngIf="sidebarTab === 'surahs'">
+                <div class="index-list">
+                    <button *ngFor="let surah of meta.surahs" (click)="goToPage(surah.start_page)"
+                        [class.active]="(currentSurah$ | async)?.id === surah.id">
+                        <span class="surah-num">{{ surah.id }}-</span>
+                        <span class="surah-name">{{ surah.name }}</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="index-section" *ngIf="sidebarTab === 'juzs'">
+                <div class="index-grid">
+                    <button *ngFor="let juz of meta.juzs" (click)="goToPage(juz.start_page)"
+                        [class.active]="(currentJuz$ | async)?.id === juz.id">
+                        الجزء {{ juz.id }}
+                    </button>
+                </div>
+            </div>
+
+            <div class="index-section" *ngIf="sidebarTab === 'pages'">
+                <div class="index-grid pages-grid">
+                    <button *ngFor="let p of [].constructor(604); let i = index" (click)="goToPage(i + 1)"
+                        [class.active]="pageNumber === i + 1">
+                        {{ i + 1 }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="sidebar-overlay" *ngIf="isSidebarOpen" (click)="toggleSidebar()"></div>
+
+    <!-- Settings Sidebar (Left Side) -->
+    <div class="mushaf-settings-sidebar" [class.open]="isSettingsOpen" [class.animating]="settingsOffset === 0"
+        [style.transform]="isSettingsOpen ? 'translateX(calc(320px + ' + settingsOffset + 'px))' : 'translateX(0)'"
+        (touchstart)="onSettingsTouchStart($event)" (touchmove)="onSettingsTouchMove($event)"
+        (touchend)="onSettingsTouchEnd()">
+        <div class="sidebar-header">
+            <h3>الإعدادات</h3>
+            <button class="close-btn" (click)="toggleSettings()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <div class="sidebar-content">
+            <div class="settings-section">
+                <h4>لون المصحف</h4>
+                <div class="theme-picker">
+                    <button class="theme-circle cream" [class.active]="currentTheme === 'cream'"
+                        (click)="setTheme('cream')" title="كريمي"></button>
+                    <button class="theme-circle white" [class.active]="currentTheme === 'white'"
+                        (click)="setTheme('white')" title="أبيض"></button>
+                    <button class="theme-circle green" [class.active]="currentTheme === 'green'"
+                        (click)="setTheme('green')" title="أخضر"></button>
+                    <button class="theme-circle sky" [class.active]="currentTheme === 'sky'" (click)="setTheme('sky')"
+                        title="أزرق سماوي"></button>
+                    <button class="theme-circle blue" [class.active]="currentTheme === 'blue'"
+                        (click)="setTheme('blue')" title="أزرق"></button>
+                    <button class="theme-circle dark" [class.active]="currentTheme === 'dark'"
+                        (click)="setTheme('dark')" title="ليلي"></button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="sidebar-overlay settings-overlay" *ngIf="isSettingsOpen" (click)="toggleSettings()"></div>
+
+
+    <!-- FIXED HEADER (Independent of Slider) -->
+    <div class="page-header-meta fixed-header">
+        <div class="header-left">
+            <button class="menu-trigger" (click)="$event.stopPropagation(); toggleSidebar()" title="الفهرس">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+
+        <div class="header-center">
+            <span class="surah-meta" *ngIf="currentSurah$ | async as surah" (click)="openSidebarToTab('surahs')">
+                سورة {{ surah.name }}
+            </span>
+            <span class="juz-divider">|</span>
+            <span class="juz-meta" *ngIf="currentJuz$ | async as juz" (click)="openSidebarToTab('juzs')">
+                الجزء {{ juz.id }}
+            </span>
+            <span class="page-divider">|</span>
+            <span class="page-num-meta" (click)="openSidebarToTab('pages')">
+                صفحة {{ pageNumber }}
+            </span>
+        </div>
+
+        <div class="header-right">
+            <button class="settings-trigger" (click)="$event.stopPropagation(); toggleSettings()" title="الإعدادات">
+                <i class="fas fa-cog"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Mushaf Page Container (Slider) -->
+    <div class="mushaf-page-container" [class.scale-mode]="isMemorizationMode && !isTestPhase"
+        (touchstart)="onTouchStart($event)" (touchmove)="onTouchMove($event)" (touchend)="onTouchEnd($event)">
+
+        <div class="mushaf-slider" [class.animating]="isAnimating"
+            [style.transform]="'translateX(calc(-100vw + ' + slideOffset + 'px))'">
+
+            <!-- Next Page -->
+            <div class="mushaf-page-wrapper" *ngIf="nextPageData$ | async as nextPage"
+                [class.first-pages]="nextPage.page_number <= 2">
+                <div class="mushaf-page quran-text"
+                    [style.font-family]="'\'' + dataService.getFontName(pageNumber + 1) + '\''">
+                    <div class="lines-container" [class.centered-content]="nextPage.page_number <= 2"
+                        [style.--page-shift.px]="0">
+                        <ng-container *ngFor="let line of nextPage.lines">
+                            <div class="mushaf-line" [ngClass]="'line-type-' + line.type"
+                                *ngIf="!shouldHideLine(line, nextPage.page_number)">
+                                <ng-container *ngIf="line.type === 'verse'">
+                                    <span *ngFor="let segment of line.segments"
+                                        [ngClass]="getSegmentClass(segment, segment.verse_key, nextPage)"
+                                        (click)="$event.stopPropagation(); onAyahClick(segment.verse_key)">
+                                        {{ segment.text }}
+                                    </span>
+                                </ng-container>
+                                <ng-container *ngIf="line.type !== 'verse' && line.text">
+                                    <span class="header-text-wrap">{{ line.text }}</span>
+                                </ng-container>
+                            </div>
+                        </ng-container>
+                    </div>
+                </div>
+            </div>
+            <div class="mushaf-page-wrapper empty-page" *ngIf="!(nextPageData$ | async)"></div>
+
+            <!-- Current Page -->
+            <div class="mushaf-page-wrapper current-page-wrapper" [class.first-pages]="page.page_number <= 2">
+                <div class="mushaf-page quran-text" [style.font-family]="fontFamily">
+                    <div class="lines-container" [class.centered-content]="page.page_number <= 2"
+                        [style.--page-shift.px]="pageVerticalShift">
+                        <ng-container *ngFor="let line of page.lines">
+                            <div class="mushaf-line" [ngClass]="'line-type-' + line.type"
+                                *ngIf="!shouldHideLine(line, page.page_number)">
+                                <ng-container *ngIf="line.type === 'verse'">
+                                    <span *ngFor="let segment of line.segments"
+                                        [ngClass]="getSegmentClass(segment, segment.verse_key, page)"
+                                        (click)="$event.stopPropagation(); onAyahClick(segment.verse_key)">
+                                        {{ segment.text }}
+                                    </span>
+                                </ng-container>
+                                <ng-container *ngIf="line.type !== 'verse' && line.text">
+                                    <span class="header-text-wrap">{{ line.text }}</span>
+                                </ng-container>
+                            </div>
+                        </ng-container>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Previous Page -->
+            <div class="mushaf-page-wrapper" *ngIf="prevPageData$ | async as prevPage"
+                [class.first-pages]="prevPage.page_number <= 2">
+                <div class="mushaf-page quran-text"
+                    [style.font-family]="'\'' + dataService.getFontName(pageNumber - 1) + '\''">
+                    <div class="lines-container" [class.centered-content]="prevPage.page_number <= 2"
+                        [style.--page-shift.px]="0">
+                        <ng-container *ngFor="let line of prevPage.lines">
+                            <div class="mushaf-line" [ngClass]="'line-type-' + line.type"
+                                *ngIf="!shouldHideLine(line, prevPage.page_number)">
+                                <ng-container *ngIf="line.type === 'verse'">
+                                    <span *ngFor="let segment of line.segments"
+                                        [ngClass]="getSegmentClass(segment, segment.verse_key, prevPage)"
+                                        (click)="$event.stopPropagation(); onAyahClick(segment.verse_key)">
+                                        {{ segment.text }}
+                                    </span>
+                                </ng-container>
+                                <ng-container *ngIf="line.type !== 'verse' && line.text">{{ line.text }}</ng-container>
+                            </div>
+                        </ng-container>
+                    </div>
+                </div>
+            </div>
+            <div class="mushaf-page-wrapper empty-page" *ngIf="!(prevPageData$ | async)"></div>
+
+        </div>
+
+        <div *ngIf="!isFontReady" class="page-loading-status">
+            <div class="spinner"></div>
+            <p>جاري تحميل الخطوط...</p>
+        </div>
+
+        <!-- Memorization Controls Footer -->
+        <div class="memorization-footer" *ngIf="isMemorizationMode && !isTestPhase">
+            <button class="exit-mode-btn" (click)="exitMemorization()">إلغاء</button>
+            <div class="repetition-counter" (click)="isGroupPhase ? incrementGroupRepetition() : incrementRepetition()">
+                <div class="counter-label" *ngIf="memorizationSettings.inputMethod !== 'voice'">
+                    {{ isGroupPhase ? 'تكرار المجموعة' :
+                    (memorizationSettings.type === 'muraaja') ? 'التالي' : 'تكرار الآية' }}
+                </div>
+
+                <!-- Voice Mode UI -->
+                <div class="voice-indicator" *ngIf="memorizationSettings.inputMethod === 'voice'"
+                    [ngClass]="voiceState">
+                    <div class="mic-icon">
+                        <i class="fas fa-microphone"
+                            *ngIf="voiceState === 'listening' || voiceState === 'processing'"></i>
+                        <i class="fas fa-microphone-slash"
+                            *ngIf="voiceState === 'error' || voiceState === 'inactive'"></i>
+                    </div>
+                    <span>{{ (voiceState === 'listening' || voiceState === 'processing') && lastSpokenTranscript ?
+                        lastSpokenTranscript : 'استمع...' }}</span>
+                    <div class="pulse-ring" *ngIf="voiceState === 'listening'"></div>
+                </div>
+                <div class="counter-value">
+                    <ng-container *ngIf="isGroupPhase || memorizationSettings.type === 'hifz'">
+                        {{ currentRepetition }} / {{ isGroupPhase ? memorizationSettings.groupRepeat :
+                        memorizationSettings.ayahRepeat }}
+                    </ng-container>
+                    <ng-container *ngIf="!isGroupPhase && memorizationSettings.type === 'muraaja'">
+                        <!-- No numbers for review -->
+                    </ng-container>
+                </div>
+            </div>
+        </div>
+
+        <!-- Test Phase UI -->
+        <div class="test-phase-overlay" *ngIf="isTestPhase">
+            <div class="test-card" *ngIf="!showTestResult" dir="rtl">
+                <div class="test-header">
+                    <h3>اختبار المراجعة</h3>
+                    <div class="test-progress">{{ currentTestQuestionIndex + 1 }} / {{ testQuestions.length }}</div>
+                </div>
+
+                <div class="test-question" [ngClass]="'q-type-' + testQuestions[currentTestQuestionIndex]?.type">
+                    <span class="q-prefix">
+                        ما هي الآية التي
+                        <span class="highlight-kw">{{ testQuestions[currentTestQuestionIndex]?.type === 'next' ? 'تلي' :
+                            'تسبق' }}</span>:
+                    </span>
+                    <div class="q-verse quran-text">
+                        <span
+                            *ngFor="let seg of verseDataMap.get(testQuestions[currentTestQuestionIndex]?.baseVerseKey)"
+                            [style.font-family]="seg.font">
+                            {{ seg.text }}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="test-options">
+                    <button *ngFor="let optionKey of testOptions" class="option-btn quran-text"
+                        (click)="submitAnswer(optionKey)">
+                        <span *ngFor="let seg of verseDataMap.get(optionKey)" [style.font-family]="seg.font">
+                            {{ seg.text }}
+                        </span>
+                    </button>
+                </div>
+
+                <div class="test-actions">
+                    <button class="exit-mode-btn" (click)="exitMemorization()">إلغاء</button>
+                </div>
+            </div>
+
+            <div class="test-card result-card" *ngIf="showTestResult" dir="rtl">
+                <div class="result-icon">
+                    <i class="fas"
+                        [ngClass]="(correctAnswersCount / testQuestions.length) >= 0.8 ? 'fa-medal' : 'fa-info-circle'"></i>
+                </div>
+                <h3>نتيجة الاختبار</h3>
+                <div class="final-score">
+                    <span class="score-percent">{{ ((correctAnswersCount / testQuestions.length) * 100).toFixed(0)
+                        }}%</span>
+                    <span class="score-ratio">{{ correctAnswersCount }} من أصل {{ testQuestions.length }}</span>
+                </div>
+                <p class="result-message">
+                    {{ (correctAnswersCount / testQuestions.length) >= 0.8 ? 'أحسنت! استمر في التميز.' : 'مراجعة موفقة،
+                    استمر في الحفظ.' }}
+                </p>
+
+                <div class="test-review-list">
+                    <div class="review-item" *ngFor="let q of testQuestions" [class.correct]="q.isCorrect"
+                        [class.wrong]="!q.isCorrect">
+                        <div class="review-header">
+                            <span class="review-icon">
+                                <i class="fas" [ngClass]="q.isCorrect ? 'fa-check-circle' : 'fa-times-circle'"></i>
+                            </span>
+                            <span class="review-type">{{ q.type === 'next' ? 'ما يلي' : 'ما يسبق' }}:</span>
+                            <div class="review-verse quran-text">
+                                <span *ngFor="let seg of verseDataMap.get(q.baseVerseKey)"
+                                    [style.font-family]="seg.font">{{ seg.text }}</span>
+                            </div>
+                        </div>
+
+                        <div class="review-answer" *ngIf="!q.isCorrect">
+                            <span class="lbl">الإجابة الصحيحة:</span>
+                            <div class="quran-text">
+                                <span *ngFor="let seg of verseDataMap.get(q.correctAnswer)"
+                                    [style.font-family]="seg.font">{{ seg.text }}</span>
+                            </div>
+                        </div>
+                        <div class="review-answer correct-answer-preview" *ngIf="q.isCorrect">
+                            <div class="quran-text">
+                                <span *ngFor="let seg of verseDataMap.get(q.correctAnswer)"
+                                    [style.font-family]="seg.font">{{ seg.text }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="test-actions">
+                    <button class="primary-btn" (click)="exitMemorization()">إنهاء المراجعة</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Sheet Options -->
+    <div class="bottom-sheet" [class.open]="showOptionsSheet" [style.transform]="'translateY(' + sheetOffset + 'px)'"
+        (touchstart)="onSheetTouchStart($event)" (touchmove)="onSheetTouchMove($event)" (touchend)="onSheetTouchEnd()">
+        <div class="sheet-header">
+            <div class="handle"></div>
+            <h4>خيارات الحفظ والمراجعة</h4>
+            <button class="close-sheet" (click)="$event.stopPropagation(); closeOptionsSheet()"><i
+                    class="fas fa-times"></i></button>
+        </div>
+        <div class="sheet-content">
+            <div class="setting-group">
+                <label>الهدف:</label>
+                <div class="radio-group">
+                    <button [class.active]="memorizationSettings.type === 'hifz'"
+                        (click)="memorizationSettings.type = 'hifz'">حفظ جديد</button>
+                    <button [class.active]="memorizationSettings.type === 'muraaja'"
+                        (click)="memorizationSettings.type = 'muraaja'">مراجعة</button>
+                </div>
+            </div>
+
+            <div class="setting-group" *ngIf="memorizationSettings.type === 'muraaja'">
+                <label>نوع الإدخال:</label>
+                <div class="radio-group chips">
+                    <button [class.active]="memorizationSettings.inputMethod === 'touch'"
+                        (click)="memorizationSettings.inputMethod = 'touch'">لمس</button>
+                    <button [class.active]="memorizationSettings.inputMethod === 'voice'"
+                        (click)="memorizationSettings.inputMethod = 'voice'">صوت (ترتيل)</button>
+                </div>
+            </div>
+
+            <div class="setting-group" *ngIf="memorizationSettings.type === 'muraaja'">
+                <label>نوع الإخفاء:</label>
+                <div class="radio-group chips">
+                    <button [class.active]="memorizationSettings.hideType === 'ayah'"
+                        (click)="memorizationSettings.hideType = 'ayah'">آيات</button>
+                    <button [class.active]="memorizationSettings.hideType === 'word'"
+                        (click)="memorizationSettings.hideType = 'word'">كلمات</button>
+                </div>
+            </div>
+
+            <div class="setting-group" *ngIf="memorizationSettings.type === 'muraaja'">
+                <label>مستوى الاختبار:</label>
+                <div class="radio-group chips">
+                    <button [class.active]="memorizationSettings.difficulty === 'easy'"
+                        (click)="memorizationSettings.difficulty = 'easy'">سهل</button>
+                    <button [class.active]="memorizationSettings.difficulty === 'hard'"
+                        (click)="memorizationSettings.difficulty = 'hard'">صعب</button>
+                </div>
+            </div>
+
+            <div class="setting-group">
+                <label>النطاق:</label>
+                <div class="radio-group chips">
+                    <button [class.active]="memorizationSettings.range === 'page'"
+                        (click)="memorizationSettings.range = 'page'">الصفحة</button>
+                    <button [class.active]="memorizationSettings.range === 'surah'"
+                        (click)="memorizationSettings.range = 'surah'">السورة</button>
+                    <button [class.active]="memorizationSettings.range === 'juz'"
+                        (click)="memorizationSettings.range = 'juz'">الجزء</button>
+                </div>
+            </div>
+
+            <div class="setting-group" *ngIf="memorizationSettings.type === 'hifz'">
+                <label>تكرار الآية:</label>
+                <div class="number-input">
+                    <button
+                        (click)="memorizationSettings.ayahRepeat = memorizationSettings.ayahRepeat > 1 ? memorizationSettings.ayahRepeat - 1 : 1">-</button>
+                    <span>{{ memorizationSettings.ayahRepeat }}</span>
+                    <button (click)="memorizationSettings.ayahRepeat = memorizationSettings.ayahRepeat + 1">+</button>
+                </div>
+            </div>
+
+            <div class="setting-group" *ngIf="memorizationSettings.type === 'hifz'">
+                <label>تكرار المجموعة:</label>
+                <div class="number-input">
+                    <button
+                        (click)="memorizationSettings.groupRepeat = memorizationSettings.groupRepeat > 1 ? memorizationSettings.groupRepeat - 1 : 1">-</button>
+                    <span>{{ memorizationSettings.groupRepeat }}</span>
+                    <button (click)="memorizationSettings.groupRepeat = memorizationSettings.groupRepeat + 1">+</button>
+                </div>
+            </div>
+
+            <button class="start-btn" (click)="$event.stopPropagation(); startMemorization()">بدء العملية</button>
+        </div>
+    </div>
+    <div class="sheet-overlay" *ngIf="showOptionsSheet" (click)="closeOptionsSheet()"></div>
+
+</div>
+
+<div *ngIf="!(currentPageData$ | async)" class="loading-screen">
+    <div class="spinner"></div>
+    <p>جاري التحميل...</p>
+</div>

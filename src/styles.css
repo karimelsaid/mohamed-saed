@@ -16,7 +16,8 @@
         min-height: 100vh;
         overflow-x: hidden;
         padding-top: env(safe-area-inset-top);
-        padding-top: constant(safe-area-inset-top); /* for older iOS */
+        padding-top: constant(safe-area-inset-top);
+        /* for older iOS */
     }
 }
 

@@ -10,6 +10,7 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 import { ModalService } from '../services/modal.service';
 import { AccountModalComponent } from '../auth/account-modal/account-modal.component';
+import { GamificationService } from '../services/gamification.service';
 @Component({
   selector: 'app-search-results',
   templateUrl: './search-results.component.html',
@@ -51,7 +52,7 @@ export class SearchResultsComponent implements OnInit {
 
   @ViewChild(AccountModalComponent, { static: false }) accountModal?: AccountModalComponent;
 
-  constructor(private dataService: DataService, private route: ActivatedRoute, private router: Router, private authService: AuthService, private http: HttpClient, private modalService: ModalService) { }
+  constructor(private dataService: DataService, private route: ActivatedRoute, private router: Router, private authService: AuthService, private http: HttpClient, private modalService: ModalService, public gamificationService: GamificationService) { }
 
   ngOnInit(): void {
     // نحصل على قيمة البحث من الـ queryParams

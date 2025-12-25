@@ -12,6 +12,9 @@ import { ModalDialogComponent } from '../shared/modal-dialog/modal-dialog.compon
 import { PaymentRequestsComponent } from './payment-requests/payment-requests.component';
 import { AmazonPriceCalculatorComponent } from './amazon-price-calculator/amazon-price-calculator.component';
 import { AdminEbooksComponent } from './admin-ebooks/admin-ebooks.component';
+import { SubscriptionSettingsComponent } from './subscription-settings/subscription-settings.component';
+
+import { AdminRoutingModule } from './admin-routing.module';
 
 @NgModule({
   declarations: [
@@ -21,6 +24,7 @@ import { AdminEbooksComponent } from './admin-ebooks/admin-ebooks.component';
     FormsModule,
     HttpClientModule,
     FontAwesomeModule,
+    AdminRoutingModule,
     // Standalone components are imported here
     AdminDashboardComponent,
     MerchantManagementComponent,
@@ -29,7 +33,8 @@ import { AdminEbooksComponent } from './admin-ebooks/admin-ebooks.component';
     ModalDialogComponent,
     PaymentRequestsComponent,
     AmazonPriceCalculatorComponent,
-    AdminEbooksComponent
+    AdminEbooksComponent,
+    SubscriptionSettingsComponent
   ],
   exports: [
     MerchantManagementComponent,

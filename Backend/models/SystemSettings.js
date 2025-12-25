@@ -13,6 +13,15 @@ const systemSettingsSchema = mongoose.Schema({
         coinExchangeRate: { type: Number, default: 50 }, // 50 Coins = 1 EGP
         minimumWithdrawal: { type: Number, default: 500 }
     },
+    subscription: {
+        monthlyPrice: { type: Number, default: 50 },
+        yearlyPrice: { type: Number, default: 500 }
+    },
+    notificationSchedules: {
+        streakSaver: { hour: { type: Number, default: 20 }, minute: { type: Number, default: 0 } },
+        dailyReward: { hour: { type: Number, default: 9 }, minute: { type: Number, default: 0 } },
+        dailyWisdom: { hour: { type: Number, default: 14 }, minute: { type: Number, default: 0 } }
+    },
     maintenanceMode: { type: Boolean, default: false }
 }, { timestamps: true });
 

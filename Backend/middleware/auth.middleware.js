@@ -15,15 +15,13 @@ const verifyToken = async (req, res, next) => {
         }
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-        // console.log('✅ [AuthMiddleware] Token decoded:', decoded);
+        // console.log('✅ [AuthMiddleware] Token decoded successfully. userId:', decoded.userId);
 
         // Try to find user by different ID fields (userId, adminId, merchantId)
-        const user = await User.findOne({
-            _id: decoded.userId || decoded.adminId || decoded.merchantId
-        });
+        const user = await User.findById(decoded.userId || decoded.adminId || decoded.merchantId);
 
         if (!user) {
-            console.error('❌ [AuthMiddleware] User not found for token ID:', decoded.userId);
+            console.error('❌ [AuthMiddleware] User not found for token payload:', decoded);
             return res.status(401).json({
                 success: false,
                 message: 'رمز المصادقة غير صالح.'

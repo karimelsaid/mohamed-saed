@@ -1,0 +1,79 @@
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fade-in-up {
+    animation: fadeIn 0.4s ease-out forwards;
+}
+
+/* Custom scrollbar for the container */
+:host {
+    display: block;
+    max-height: 100%;
+    overflow-y: auto;
+    scrollbar-width: none;
+    /* Firefox */
+}
+
+:host::-webkit-scrollbar {
+    display: none;
+    /* Chrome/Safari */
+}
+
+/* SVG Gauge Animation */
+circle {
+    transition: stroke-dashoffset 1.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Glassmorphism effects */
+.bg-white\/10 {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.backdrop-blur-sm {
+    backdrop-filter: blur(4px);
+}
+
+/* Card Hover Effects */
+.group:hover .shadow-sm {
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+}
+
+.group {
+    transition: all 0.3s ease;
+}
+
+/* RTL Support for borders */
+.border-r-4 {
+    border-right-width: 4px;
+    border-left-width: 0;
+}
+
+/* Specific item animations */
+.space-y-8>div {
+    animation: fadeIn 0.5s ease-out backwards;
+}
+
+.space-y-8>div:nth-child(1) {
+    animation-delay: 0.1s;
+}
+
+.space-y-8>div:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.space-y-8>div:nth-child(3) {
+    animation-delay: 0.3s;
+}
+
+.space-y-8>div:nth-child(4) {
+    animation-delay: 0.4s;
+}

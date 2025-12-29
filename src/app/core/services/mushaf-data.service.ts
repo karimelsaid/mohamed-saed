@@ -69,7 +69,8 @@ export class MushafDataService {
 
   getMetadata(): Observable<MushafMetadata> {
     if (!this.metadata$) {
-      this.metadata$ = this.http.get<MushafMetadata>('/assets/data/mushaf-metadata.json').pipe(
+      // Cache busting to ensure we get new total verses count
+      this.metadata$ = this.http.get<MushafMetadata>(`/assets/data/mushaf-metadata.json?v=${new Date().getTime()}`).pipe(
         shareReplay(1)
       );
     }

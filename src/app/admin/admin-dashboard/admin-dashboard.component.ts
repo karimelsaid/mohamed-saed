@@ -36,6 +36,7 @@ interface Order {
   orderDate: string;
   totalAmount: number;
   isMerchantOrder?: boolean;
+  paymentStatus?: string; // Added paymentStatus
 }
 
 interface RequestedBook {
@@ -86,6 +87,7 @@ interface GroupedOrder {
   orderDate: string;
   totalAmount: number;
   isMerchantOrder?: boolean;
+  paymentStatus?: string; // Added paymentStatus
 }
 
 interface PrintOrder {
@@ -1674,7 +1676,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
                 status: order.status,
                 orderDate: order.orderDate,
                 totalAmount: order.totalAmount,
-                isMerchantOrder: order.isMerchantOrder || false
+                isMerchantOrder: order.isMerchantOrder || false,
+                paymentStatus: order.paymentStatus // Map paymentStatus
               };
             }
             groupedOrdersMap[order._id].products.push({

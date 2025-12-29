@@ -177,6 +177,7 @@ exports.getUserOrders = async (req, res) => {
           status: order.status,
           orderDate: order.date,
           totalAmount: order.totalAmount,  // Added totalAmount here
+          paymentStatus: order.paymentStatus, // Added paymentStatus
         };
       });
 
@@ -210,20 +211,26 @@ exports.getAllOrders = async (req, res) => {
               customerName: user.username,
               email: user.email,
               quantity: product.quantity,
-              address: (() => {
+              address: order.address || (() => {
                 let baseAddress = '';
                 if (order.isPickup) {
                   baseAddress = `استلام من المكتبة: ${order.pickupLocation}`;
                 } else if (order.postOffice && order.postOffice.governorate) {
                   baseAddress = `شحن عبر مكاتب البريد: ${order.postOffice.governorate}, ${order.postOffice.city}, ${order.postOffice.address || ''}${order.postOffice.name ? ' - اسم المكتب: ' + order.postOffice.name : ''}`;
                 } else { // delivery
-                  baseAddress = `${order.shippingAddress?.governorate || ''}, ${order.shippingAddress?.city || ''}, ${order.shippingAddress?.village || ''}`;
+                  const parts = [
+                    order.shippingAddress?.governorate,
+                    order.shippingAddress?.city,
+                    order.shippingAddress?.village
+                  ].filter(Boolean);
+                  baseAddress = parts.length > 0 ? parts.join(', ') : '';
                 }
                 return baseAddress + (user.phone ? ' - ' + user.phone : '');
-              })(), // Always construct base address and append phone
+              })(),
               status: order.status,
               orderDate: order.date,
-              totalAmount: order.totalAmount,  // Added totalAmount here
+              totalAmount: order.totalAmount,
+              paymentStatus: order.paymentStatus, // Added paymentStatus
               isMerchantOrder: false // default
             });
           });

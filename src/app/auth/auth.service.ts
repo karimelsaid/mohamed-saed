@@ -207,7 +207,10 @@ export class AuthService {
         if (response && response.success && response.token && response.merchant) {
           console.log('🧠 تم إنشاء حساب التاجر وتسجيل الدخول تلقائياً:', response.merchant);
           this.merchantAuthService.setMerchantAuthFromExternal(response.token, response.merchant);
-          this.setUser(response.merchant);
+
+          // CRITICAL FIX: Merge token into merchant object for AuthInterceptor
+          const merchantWithToken = { ...response.merchant, token: response.token };
+          this.setUser(merchantWithToken);
           this.loadUserData(response.merchant._id);
         }
       })

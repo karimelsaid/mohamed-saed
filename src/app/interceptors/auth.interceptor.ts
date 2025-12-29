@@ -25,21 +25,28 @@ export class AuthInterceptor implements HttpInterceptor {
         let authReq = req;
 
         // Skip specific external domains that don't allow credentials or don't need auth
-        if (!req.url.includes('googleapis.com') && !req.url.includes('jsdelivr.net')) {
+        if (!req.url.includes('googleapis.com') && !req.url.includes('jsdelivr.net') && !req.url.includes('api.quran.com')) {
             const userStr = localStorage.getItem('user');
             const merchantToken = localStorage.getItem('merchant_token');
 
             if (userStr) {
                 try {
                     const user = JSON.parse(userStr);
-                    const token = user.token || user.accessToken;
+                    let token = user.token || user.accessToken;
+
+                    if (!token) {
+                        token = localStorage.getItem('merchant_token');
+                    }
 
                     if (token) {
                         // Attach User Token
+                        // console.log(`🔑 [AuthInterceptor] Token found and attached for ${req.url}`);
                         authReq = req.clone({
                             setHeaders: { Authorization: `Bearer ${token}` },
                             withCredentials: true
                         });
+                    } else {
+                        console.warn(`⚠️ [AuthInterceptor] User found in localStorage but NO TOKEN found for ${req.url}`);
                     }
                 } catch (e) {
                     console.error('❌ [AuthInterceptor] Error parsing user', e);

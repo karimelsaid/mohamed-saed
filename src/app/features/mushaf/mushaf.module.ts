@@ -4,14 +4,19 @@ import { MushafPageComponent } from './components/mushaf-page.component';
 import { MushafRoutingModule } from './mushaf-routing.module';
 import { FormsModule } from '@angular/forms';
 
+import { MutabaaTrackerComponent } from './components/mutabaa-tracker/mutabaa-tracker.component';
+import { HifzWizardComponent } from './components/hifz-wizard/hifz-wizard.component';
+
 @NgModule({
     declarations: [
-        MushafPageComponent
+        MushafPageComponent,
+        HifzWizardComponent
     ],
     imports: [
         CommonModule,
         MushafRoutingModule,
-        FormsModule
+        FormsModule,
+        MutabaaTrackerComponent
     ],
     exports: [
         MushafPageComponent

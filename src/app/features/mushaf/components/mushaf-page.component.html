@@ -1,3 +1,36 @@
+<!-- Login Required Overlay -->
+<div class="login-required-overlay" *ngIf="!isLoggedIn">
+    <div class="login-prompt-card">
+        <div class="login-icon">
+            <i class="fas fa-book-quran"></i>
+        </div>
+        <h2>المصحف الشريف</h2>
+        <p>للاستفادة من ميزات المصحف الرقمي وتتبع تقدمك في الحفظ والقراءة، يرجى تسجيل الدخول أو إنشاء حساب جديد.</p>
+        <div class="login-buttons">
+            <button class="btn-login" routerLink="/login">
+                <i class="fas fa-sign-in-alt"></i>
+                تسجيل الدخول
+            </button>
+            <button class="btn-register" routerLink="/register">
+                <i class="fas fa-user-plus"></i>
+                إنشاء حساب
+            </button>
+        </div>
+        <a class="back-link" routerLink="/">
+            <i class="fas fa-arrow-right"></i>
+            العودة للصفحة الرئيسية
+        </a>
+    </div>
+</div>
+
+<!-- Hifz Plan Setup Wizard Overlay -->
+<!-- Hifz Plan Setup Wizard Overlay -->
+<div class="wizard-overlay" *ngIf="showHifzWizard && isLoggedIn" (click)="closeWizard()">
+    <div (click)="$event.stopPropagation()">
+        <app-hifz-wizard (setupComplete)="onWizardComplete()" (close)="closeWizard()"></app-hifz-wizard>
+    </div>
+</div>
+
 <div class="mushaf-screen theme-{{currentTheme}}" *ngIf="currentPageData$ | async as page">
     <!-- Voice Debug Panel (Temporary) -->
     <div *ngIf="isMemorizationMode && memorizationSettings.inputMethod === 'voice'"
@@ -72,7 +105,175 @@
             </button>
         </div>
 
-        <div class="sidebar-content">
+        <div class="sidebar-content dashboard-content">
+            <!-- User Stats Summary -->
+            <div class="user-stats-card">
+                <div class="stats-row">
+                    <div class="stat-item">
+                        <span class="stat-value">{{ (quranProgressService.progress$ | async)?.totalPoints || 0 }}</span>
+                        <span class="stat-label">نقطة</span>
+                    </div>
+                    <div class="stat-divider"></div>
+                    <div class="stat-item">
+                        <span class="stat-value">0.00</span>
+                        <span class="stat-label">رصيد (ج.م)</span>
+                    </div>
+                    <div class="stat-divider"></div>
+                    <div class="stat-item">
+                        <span class="stat-value">{{ (quranProgressService.progress$ | async)?.dailyStreak || 0 }}</span>
+                        <span class="stat-label">يوم التزام</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Wird Management Tabs -->
+            <div class="wird-section">
+                <div class="wird-tabs">
+                    <button class="wird-tab active">🕋 رحلة الحفظ الذكية</button>
+                </div>
+
+                <div class="wird-content">
+                    <!-- Smart Journey Dashboard -->
+                    <div class="tab-pane animate-fade-in">
+                        <!-- إذا لم يتم إعداد الخطة -->
+                        <div *ngIf="!hifzPlanSetupComplete" class="empty-state progress-view">
+                            <i class="fas fa-compass"></i>
+                            <h4>ابدأ رحلتك في حفظ القرآن</h4>
+                            <p style="color: #888; margin-bottom: 16px;">نبني معاك خطة شخصية بناءً على مستواك وطاقتك
+                                اليومية</p>
+                            <button class="btn-create-wird" (click)="showHifzWizard = true">
+                                <i class="fas fa-magic"></i> إعداد رحلة الحفظ الذكية
+                            </button>
+                        </div>
+
+                        <!-- إذا تم إعداد الخطة - لوحة اليوم -->
+                        <div *ngIf="hifzPlanSetupComplete" class="day-dashboard">
+                            <!-- إحصائيات عامة -->
+                            <div class="stats-header">
+                                <div class="stat-item">
+                                    <span class="stat-value">{{ dailyTasks?.stats?.totalVersesMemorized || 0 }}</span>
+                                    <span class="stat-label">آية محفوظة</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-value">{{ dailyTasks?.streak || 0 }} 🔥</span>
+                                    <span class="stat-label">يوم متتالي</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-value highlight">{{ dailyTasks?.stats?.percentage || '0'
+                                        }}%</span>
+                                    <span class="stat-label">من القرآن</span>
+                                </div>
+                            </div>
+
+                            <!-- شريط التقدم والختم المتوقع -->
+                            <div class="progress-container">
+                                <div class="progress-bar-bg">
+                                    <div class="main-progress-bar" [style.width.%]="dailyTasks?.stats?.percentage || 0">
+                                    </div>
+                                </div>
+                                <div class="progress-info" *ngIf="dailyTasks?.stats?.completionDate">
+                                    <span>🏆 المتوقع للختم: {{ dailyTasks?.stats?.completionDate | date:'mediumDate'
+                                        }}</span>
+                                    <span>باقي {{ dailyTasks?.stats?.remainingVerses }} آية</span>
+                                </div>
+                            </div>
+
+                            <!-- الحفظ الجديد -->
+                            <div class="dashboard-card" [class.done]="dailyTasks?.newMemorization?.status === 'done'">
+                                <div class="card-header">
+                                    <span class="card-icon">🧠</span>
+                                    <span class="card-title">الحفظ الجديد</span>
+                                    <span class="card-status"
+                                        *ngIf="dailyTasks?.newMemorization?.status === 'done'">✅</span>
+                                </div>
+                                <div class="card-body">
+                                    <p>{{ getNewMemorizationLabel() }}</p>
+                                    <p class="task-details" *ngIf="getNewMemorizationDetails()">{{
+                                        getNewMemorizationDetails() }}</p>
+                                    <div class="mini-progress">
+                                        <div class="mini-progress-bar" [style.width.%]="getHifzProgressPercent()"></div>
+                                    </div>
+                                    <span class="progress-text">{{ getHifzProgressPercent() | number:'1.0-0' }}% من
+                                        القرآن</span>
+                                </div>
+                            </div>
+
+                            <!-- التمكين -->
+                            <div class="dashboard-card" [class.done]="dailyTasks?.consolidation?.status === 'done'">
+                                <div class="card-header">
+                                    <span class="card-icon">🔁</span>
+                                    <span class="card-title">التمكين</span>
+                                    <span class="card-status"
+                                        *ngIf="dailyTasks?.consolidation?.status === 'done'">✅</span>
+                                </div>
+                                <div class="card-body">
+                                    <p>مراجعة التمكين</p>
+                                    <p class="task-details">{{ getConsolidationDetails() }}</p>
+                                </div>
+                            </div>
+
+                            <!-- المراجعة البعيدة (الماضي) -->
+                            <div class="dashboard-card" [class.done]="dailyTasks?.revision?.status === 'done'">
+                                <div class="card-header">
+                                    <span class="card-icon">📚</span>
+                                    <span class="card-title">{{ getRevisionLabel() }}</span>
+                                    <span class="card-status" *ngIf="dailyTasks?.revision?.status === 'done'">✅</span>
+                                </div>
+                                <div class="card-body">
+                                    <p>{{ getRevisionLabel() }}</p>
+                                    <p class="task-details">{{ getRevisionDetails() }}</p>
+                                </div>
+                            </div>
+
+                            <!-- ورد التلاوة -->
+                            <div class="dashboard-card" [class.done]="dailyTasks?.recitation?.status === 'done'">
+                                <div class="card-header">
+                                    <span class="card-icon">📖</span>
+                                    <span class="card-title">ورد التلاوة</span>
+                                    <span class="card-status" *ngIf="dailyTasks?.recitation?.status === 'done'">✅</span>
+                                </div>
+                                <div class="card-body">
+                                    <p>{{ dailyTasks?.recitation?.amount || 2 }} {{ getRecitationUnitLabel() }}</p>
+                                    <p class="task-details" *ngIf="getRecitationDetails()">{{ getRecitationDetails() }}
+                                    </p>
+                                    <div class="mini-progress">
+                                        <div class="mini-progress-bar" [style.width.%]="getTilawoProgressPercent()">
+                                        </div>
+                                    </div>
+                                    <span class="progress-text">{{ getTilawoProgressPercent() | number:'1.0-0' }}% من
+                                        الختمة</span>
+                                </div>
+                            </div>
+
+                            <!-- زر تعديل الخطة -->
+                            <button class="btn-edit-plan" (click)="showHifzWizard = true">
+                                <i class="fas fa-cog"></i> تعديل الخطة
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notifications Settings -->
+            <div class="settings-section">
+                <h4>التنبيهات</h4>
+                <div class="setting-row">
+                    <span>إشعارات المتصفح</span>
+                    <label class="switch">
+                        <input type="checkbox" checked>
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+                <div class="setting-row" *ngIf="isMobileApp">
+                    <span>تنبيهات الهاتف</span>
+                    <label class="switch">
+                        <input type="checkbox" checked>
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Theme Picker (Existing) -->
             <div class="settings-section">
                 <h4>لون المصحف</h4>
                 <div class="theme-picker">
@@ -118,6 +319,14 @@
         </div>
 
         <div class="header-right">
+            <!-- Manual Session Toggle -->
+            <button class="record-trigger" [class.active]="isReadingActive"
+                (click)="$event.stopPropagation(); toggleReadingSession()"
+                [title]="isReadingActive ? 'إيقاف التسجيل' : 'بدء تسجيل الورد'">
+                <i class="fas" [class.fa-stop-circle]="isReadingActive" [class.fa-play-circle]="!isReadingActive"></i>
+                <span class="record-dot" *ngIf="isReadingActive"></span>
+            </button>
+
             <button class="settings-trigger" (click)="$event.stopPropagation(); toggleSettings()" title="الإعدادات">
                 <i class="fas fa-cog"></i>
             </button>
@@ -199,7 +408,8 @@
                                         {{ segment.text }}
                                     </span>
                                 </ng-container>
-                                <ng-container *ngIf="line.type !== 'verse' && line.text">{{ line.text }}</ng-container>
+                                <ng-container *ngIf="line.type !== 'verse' && line.text">{{ line.text
+                                    }}</ng-container>
                             </div>
                         </ng-container>
                     </div>
@@ -232,8 +442,6 @@
                         <i class="fas fa-microphone-slash"
                             *ngIf="voiceState === 'error' || voiceState === 'inactive'"></i>
                     </div>
-                    <span>{{ (voiceState === 'listening' || voiceState === 'processing') && lastSpokenTranscript ?
-                        lastSpokenTranscript : 'استمع...' }}</span>
                     <div class="pulse-ring" *ngIf="voiceState === 'listening'"></div>
                 </div>
                 <div class="counter-value">
@@ -246,6 +454,13 @@
                     </ng-container>
                 </div>
             </div>
+
+            <!-- Mic Toggle Button (Only in Review Mode) -->
+            <button class="mic-footer-btn" *ngIf="memorizationSettings.type === 'muraaja'"
+                [class.active]="memorizationSettings.inputMethod === 'voice'" (click)="toggleVoiceMode()">
+                <i class="fas" [class.fa-microphone]="memorizationSettings.inputMethod === 'voice'"
+                    [class.fa-microphone-slash]="memorizationSettings.inputMethod !== 'voice'"></i>
+            </button>
         </div>
 
         <!-- Test Phase UI -->
@@ -253,13 +468,24 @@
             <div class="test-card" *ngIf="!showTestResult" dir="rtl">
                 <div class="test-header">
                     <h3>اختبار المراجعة</h3>
-                    <div class="test-progress">{{ currentTestQuestionIndex + 1 }} / {{ testQuestions.length }}</div>
+                    <div class="test-controls" style="display: flex; align-items: center; gap: 10px;">
+                        <!-- Test Phase Mic Button -->
+                        <button class="mic-footer-btn" style="width: 36px; height: 36px;"
+                            [class.active]="memorizationSettings.inputMethod === 'voice'" (click)="toggleVoiceMode()">
+                            <i class="fas" [class.fa-microphone]="memorizationSettings.inputMethod === 'voice'"
+                                [class.fa-microphone-slash]="memorizationSettings.inputMethod !== 'voice'"
+                                style="font-size: 14px;"></i>
+                        </button>
+                        <div class="test-progress">{{ currentTestQuestionIndex + 1 }} / {{ testQuestions.length }}
+                        </div>
+                    </div>
                 </div>
 
                 <div class="test-question" [ngClass]="'q-type-' + testQuestions[currentTestQuestionIndex]?.type">
                     <span class="q-prefix">
                         ما هي الآية التي
-                        <span class="highlight-kw">{{ testQuestions[currentTestQuestionIndex]?.type === 'next' ? 'تلي' :
+                        <span class="highlight-kw">{{ testQuestions[currentTestQuestionIndex]?.type === 'next' ?
+                            'تلي' :
                             'تسبق' }}</span>:
                     </span>
                     <div class="q-verse quran-text">
@@ -297,7 +523,8 @@
                     <span class="score-ratio">{{ correctAnswersCount }} من أصل {{ testQuestions.length }}</span>
                 </div>
                 <p class="result-message">
-                    {{ (correctAnswersCount / testQuestions.length) >= 0.8 ? 'أحسنت! استمر في التميز.' : 'مراجعة موفقة،
+                    {{ (correctAnswersCount / testQuestions.length) >= 0.8 ? 'أحسنت! استمر في التميز.' : 'مراجعة
+                    موفقة،
                     استمر في الحفظ.' }}
                 </p>
 
@@ -358,15 +585,7 @@
                 </div>
             </div>
 
-            <div class="setting-group" *ngIf="memorizationSettings.type === 'muraaja'">
-                <label>نوع الإدخال:</label>
-                <div class="radio-group chips">
-                    <button [class.active]="memorizationSettings.inputMethod === 'touch'"
-                        (click)="memorizationSettings.inputMethod = 'touch'">لمس</button>
-                    <button [class.active]="memorizationSettings.inputMethod === 'voice'"
-                        (click)="memorizationSettings.inputMethod = 'voice'">صوت (ترتيل)</button>
-                </div>
-            </div>
+
 
             <div class="setting-group" *ngIf="memorizationSettings.type === 'muraaja'">
                 <label>نوع الإخفاء:</label>
@@ -425,6 +644,14 @@
     </div>
     <div class="sheet-overlay" *ngIf="showOptionsSheet" (click)="closeOptionsSheet()"></div>
 
+
+    <!-- Reading Integrity Indicator (Anti-Cheat Feedback) -->
+    <div *ngIf="isLoggedIn && !isMemorizationMode && !isTestPhase && isReadingActive" class="reading-integrity-bar"
+        [class.verified]="isPageVerified()">
+        <div class="integrity-progress" [style.width.%]="getReadingProgressPercent()"></div>
+        <div class="integrity-label" *ngIf="!isPageVerified()">جاري احتساب التلاوة...</div>
+        <div class="integrity-label text-green-500" *ngIf="isPageVerified()">تم احتساب الصفحة ✅</div>
+    </div>
 </div>
 
 <div *ngIf="!(currentPageData$ | async)" class="loading-screen">

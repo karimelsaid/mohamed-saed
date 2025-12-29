@@ -135,6 +135,92 @@ const userSchema = new mongoose.Schema({
     lastLoginRewardDate: { type: Date },
     lastRewardDateString: { type: String } // For atomic checks (YYYY-MM-DD)
   },
+  // نظام تقدم القرآن الكريم
+  quranProgress: {
+    totalPoints: { type: Number, default: 0 },          // إجمالي نقاط القرآن
+    dailyStreak: { type: Number, default: 0 },          // أيام الالتزام المتتالية
+    longestStreak: { type: Number, default: 0 },        // أطول سلسلة التزام
+    pagesRead: { type: Number, default: 0 },            // الصفحات المقروءة
+    pagesReviewed: { type: Number, default: 0 },        // الصفحات المراجعة
+    versesMemorized: { type: Number, default: 0 },      // الآيات المحفوظة
+    totalMinutesReading: { type: Number, default: 0 },  // دقائق القراءة
+    khatmatCount: { type: Number, default: 0 },         // عدد الختمات
+    lastActivityDate: { type: Date },                   // آخر نشاط
+    lastPage: { type: Number, default: 1 },             // آخر صفحة تم قراءتها
+    bookmarks: [{ type: Number }]                       // الصفحات المحفوظة
+  },
+  // نظام المتابعة الذكية (Smart Mutaba'a)
+  mutabaa: {
+    // إعدادات الخطة اليومية
+    plan: {
+      tilawoTarget: { type: Number, default: 2 }, // عدد صفحات التلاوة اليومية
+      hifzTarget: { type: Number, default: 0 },   // عدد آيات الحفظ الجديد
+      murajaTarget: { type: Number, default: 0 }, // عدد صفحات المراجعة القريبة
+      deepMurajaTarget: { type: Number, default: 0 } // عدد صفحات المراجعة البعيدة
+    },
+    // سجل المتابعة اليومي
+    dailyLog: [{
+      date: { type: String }, // YYYY-MM-DD
+      tilawo: {
+        status: { type: String, enum: ['pending', 'done', 'postponed'], default: 'pending' },
+        pagesCompleted: { type: Number, default: 0 }
+      },
+      hifz: {
+        status: { type: String, enum: ['pending', 'done', 'postponed'], default: 'pending' },
+        versesCompleted: { type: Number, default: 0 }
+      },
+      muraja: {
+        status: { type: String, enum: ['pending', 'done', 'postponed'], default: 'pending' },
+        pagesCompleted: { type: Number, default: 0 }
+      },
+      deepMuraja: {
+        status: { type: String, enum: ['pending', 'done', 'postponed'], default: 'pending' },
+        pagesCompleted: { type: Number, default: 0 }
+      },
+      completedAt: { type: Date } // وقت إتمام جميع المهام
+    }]
+  },
+  // نظام الحفظ الديناميكي (Dynamic Hifz Plan)
+  hifzPlan: {
+    // إعداد المستخدم الأولي
+    isSetupComplete: { type: Boolean, default: false },
+    userLevel: { type: String, enum: ['beginner', 'intermediate', 'advanced'], default: 'beginner' },
+    // طاقة المستخدم اليومية
+    dailyCapacity: {
+      recitationType: { type: String, enum: ['page', 'half_hizb', 'hizb', 'juz'], default: 'page' },
+      recitationAmount: { type: Number, default: 2 }, // عدد الوحدات
+      newMemorization: { type: String, enum: ['verse', 'half_page', 'page'], default: 'verse' },
+      memorizationDays: { type: Number, default: 5 }, // أيام الحفظ في الأسبوع
+      reviewType: { type: String, enum: ['light', 'weekly', 'rescue'], default: 'light' },
+      reviewAmount: { type: Number, default: 1 } // الكمية للمراجعة
+    },
+    // خريطة المحفوظات (surah:verse -> memory state)
+    memorizedContent: [{
+      verseKey: { type: String }, // "2:255" format
+      strength: { type: String, enum: ['strong', 'medium', 'weak', 'rescue'], default: 'medium' },
+      lastReviewed: { type: Date },
+      nextReview: { type: Date },
+      reviewCount: { type: Number, default: 0 }
+    }],
+    // المؤشرات (Cursors) لتتبع التقدم
+    cursors: {
+      newMemorization: { surah: { type: Number, default: 1 }, verse: { type: Number, default: 1 } },
+      review: { surah: { type: Number, default: 1 }, page: { type: Number, default: 1 } },
+      recitation: { page: { type: Number, default: 1 } }
+    },
+    // الموقع الحالي في الحفظ الجديد (Deprecated: use cursors.newMemorization)
+    currentPosition: {
+      surah: { type: Number, default: 1 },
+      verse: { type: Number, default: 1 }
+    },
+    // إحصائيات
+    stats: {
+      totalVersesMemorized: { type: Number, default: 0 },
+      currentStreak: { type: Number, default: 0 },
+      bestStreak: { type: Number, default: 0 },
+      lastActiveDate: { type: String } // YYYY-MM-DD
+    }
+  },
   paymentRequests: [paymentRequestSchema]
 }, { timestamps: true });
 

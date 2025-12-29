@@ -20,6 +20,7 @@ export interface SurahMetadata {
   name: string;
   start_page: number;
   end_page: number;
+  verses_count: number;
 }
 
 export interface JuzMetadata {

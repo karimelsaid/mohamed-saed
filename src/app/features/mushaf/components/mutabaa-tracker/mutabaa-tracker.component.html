@@ -1,0 +1,336 @@
+<div class="p-4 space-y-6 rtl" dir="rtl">
+
+    <!-- Header -->
+    <div class="text-center mb-4">
+        <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-100">جدول المتابعة اليومي 📅</h2>
+        <p class="text-gray-500 dark:text-gray-400 text-sm">"أحب الأعمال إلى الله أدومها وإن قل"</p>
+    </div>
+
+    <!-- Loading State -->
+    <div *ngIf="loading" class="text-center py-8">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
+    </div>
+
+    <!-- Professional Tahfiz Dashboard -->
+    <div *ngIf="!loading && plan && todayLog" class="pb-10">
+
+        <!-- Top Gauge & Welcome -->
+        <div
+            class="bg-gradient-to-br from-indigo-900 via-indigo-800 to-indigo-950 rounded-3xl p-6 text-white shadow-2xl mb-8 relative overflow-hidden mx-auto max-w-lg">
+            <div class="absolute -right-10 -top-10 w-40 h-40 bg-white/5 rounded-full blur-3xl"></div>
+            <div class="absolute -left-10 -bottom-10 w-40 h-40 bg-indigo-400/10 rounded-full blur-3xl"></div>
+
+            <div class="relative flex items-center justify-between gap-6">
+                <div class="flex-1">
+                    <h2 class="text-2xl font-bold mb-1">لوحة التميز القرآني 🌟</h2>
+                    <p class="text-indigo-200 text-xs opacity-80">أهلاً بك في يومك مع القرآن الكريم</p>
+                    <div class="mt-4 flex gap-2">
+                        <span
+                            class="bg-white/10 px-3 py-1 rounded-full text-[10px] border border-white/5 flex items-center gap-1">
+                            <i class="fas fa-fire text-orange-400"></i> {{ quranProgress?.dailyStreak || 0 }}-يوم
+                        </span>
+                        <span
+                            class="bg-white/10 px-3 py-1 rounded-full text-[10px] border border-white/5 flex items-center gap-1">
+                            <i class="fas fa-gem text-yellow-400"></i> {{ quranProgress?.totalPoints || 0 }} نقطة
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Circular Progress Gauge -->
+                <div class="relative w-24 h-24">
+                    <svg class="w-full h-full transform -rotate-90">
+                        <circle cx="48" cy="48" r="40" stroke="rgba(255,255,255,0.1)" stroke-width="8"
+                            fill="transparent" />
+                        <circle cx="48" cy="48" r="40" stroke="white" stroke-width="8" fill="transparent"
+                            [style.stroke-dasharray]="251.2"
+                            [style.stroke-dashoffset]="251.2 - (251.2 * getDailyCompletionPercent() / 100)"
+                            stroke-linecap="round" class="transition-all duration-1000 ease-out" />
+                    </svg>
+                    <div class="absolute inset-0 flex flex-col items-center justify-center">
+                        <span class="text-xl font-black">{{ getDailyCompletionPercent() }}%</span>
+                        <span class="text-[8px] uppercase tracking-tighter opacity-70">إنجاز اليوم</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="max-w-xl mx-auto space-y-8">
+            <!-- Section 1: The Pillar (Hifz) -->
+            <div>
+                <h3 class="flex items-center gap-2 text-indigo-500 dark:text-indigo-400 font-bold mb-4 px-2 text-sm">
+                    <span class="w-2 h-2 bg-indigo-500 rounded-full"></span> الأساس: الحفظ الجديد
+                </h3>
+
+                <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 shadow-sm border border-gray-100 dark:border-gray-700 relative overflow-hidden group border-r-4"
+                    [class.border-r-indigo-500]="getTarget('hifz') > 0"
+                    [class.border-r-gray-200]="getTarget('hifz') === 0">
+
+                    <div class="flex flex-col gap-5">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-4">
+                                <div
+                                    class="w-14 h-14 bg-indigo-50 dark:bg-indigo-900/40 rounded-2xl flex items-center justify-center text-2xl shadow-inner">
+                                    🧠</div>
+                                <div>
+                                    <h4 class="font-black text-gray-800 dark:text-gray-100">الحفظ الجديد</h4>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400" *ngIf="getTarget('hifz') > 0">
+                                        المطلوب: <span
+                                            class="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-2 rounded font-bold">{{
+                                            getTarget('hifz') }} آيات</span>
+                                    </p>
+                                    <p class="text-xs text-gray-400 italic" *ngIf="getTarget('hifz') === 0">لم يتم تحديد
+                                        خطة حفظ</p>
+                                </div>
+                            </div>
+
+                            <!-- Status Badge -->
+                            <div *ngIf="getTarget('hifz') > 0" class="flex flex-col items-end gap-1">
+                                <div [ngClass]="{
+                                    'bg-gray-100 text-gray-400': getTaskStatus('hifz') === 'pending',
+                                    'bg-green-100 text-green-600': getTaskStatus('hifz') === 'done',
+                                    'bg-red-100 text-red-500': getTaskStatus('hifz') === 'postponed'
+                                }" class="px-3 py-1 rounded-full text-[10px] font-black uppercase">
+                                    {{ getTaskStatus('hifz') === 'pending' ? 'قيد التنفيذ' : (getTaskStatus('hifz') ===
+                                    'done' ? 'تم الإنجاز' : 'مؤجل') }}
+                                </div>
+                            </div>
+
+                            <button *ngIf="getTarget('hifz') === 0" (click)="openSetup()"
+                                class="text-indigo-500 hover:text-indigo-600 p-2"><i
+                                    class="fas fa-plus-circle text-2xl"></i></button>
+                        </div>
+
+                        <!-- Grading / Done Action -->
+                        <div *ngIf="getTarget('hifz') > 0 && getTaskStatus('hifz') === 'pending'"
+                            class="flex flex-col gap-3">
+                            <div class="text-xs font-bold text-gray-400 text-center">بأي جودة أتممت حفظك؟</div>
+                            <div class="grid grid-cols-3 gap-2">
+                                <button (click)="markDoneWithRating('hifz', 'excellent')"
+                                    class="flex flex-col items-center gap-1 p-2 rounded-2xl border-2 border-gray-100 dark:border-gray-700 hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-900/10 transition-all">
+                                    <span class="text-lg">⭐</span>
+                                    <span class="text-[10px] font-bold">ممتاز</span>
+                                </button>
+                                <button (click)="markDoneWithRating('hifz', 'good')"
+                                    class="flex flex-col items-center gap-1 p-2 rounded-2xl border-2 border-gray-100 dark:border-gray-700 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-all">
+                                    <span class="text-lg">✅</span>
+                                    <span class="text-[10px] font-bold">جيد</span>
+                                </button>
+                                <button (click)="requestPostpone('hifz')"
+                                    class="flex flex-col items-center gap-1 p-2 rounded-2xl border-2 border-gray-100 dark:border-gray-700 hover:border-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-all text-red-400">
+                                    <span class="text-lg">⚠️</span>
+                                    <span class="text-[10px] font-bold">يحتاج إعادة</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Done Badge with Rating Info -->
+                        <div *ngIf="getTarget('hifz') > 0 && getTaskStatus('hifz') === 'done'"
+                            class="bg-green-50 dark:bg-green-900/10 rounded-2xl p-3 flex items-center gap-3">
+                            <div class="text-green-500 text-xl"><i class="fas fa-award"></i></div>
+                            <div class="flex-1">
+                                <div class="text-xs font-bold text-green-700 dark:text-green-400">حفظ متقن بفضل الله
+                                </div>
+                                <div class="text-[10px] text-green-500 opacity-70">تمت إضافة النقاط لتفوقك</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 2: The Guard (Tamkeen - Near Revision) -->
+            <div>
+                <div class="flex items-center justify-between mb-4 px-2">
+                    <h3 class="flex items-center gap-2 text-emerald-500 font-bold text-sm">
+                        <span class="w-2 h-2 bg-emerald-500 rounded-full"></span> الحماية: التمكيين (ماضي قريب)
+                    </h3>
+                    <span class="text-[10px] text-gray-400">لتثبيت الحفظ الجديد</span>
+                </div>
+
+                <div
+                    class="bg-white dark:bg-gray-800 rounded-3xl p-5 shadow-sm border border-gray-100 dark:border-gray-700 border-r-4 border-r-emerald-500">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-4">
+                            <div
+                                class="w-12 h-12 bg-emerald-50 dark:bg-emerald-900/40 rounded-2xl flex items-center justify-center text-xl shadow-inner">
+                                🔄</div>
+                            <div>
+                                <h4 class="font-black text-gray-800 dark:text-gray-100 text-sm">المراجعة القريبة</h4>
+                                <p class="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">الهدف: {{
+                                    getTarget('muraja') || 0 }} صفحات</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            <button *ngIf="getTaskStatus('muraja') === 'pending'" (click)="markDone('muraja')"
+                                class="bg-emerald-500 hover:bg-emerald-600 text-white flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all">
+                                أتممتُ <i class="fas fa-check"></i>
+                            </button>
+                            <div *ngIf="getTaskStatus('muraja') === 'done'"
+                                class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                                <i class="fas fa-check"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Progress Line for Overall Goal -->
+                    <div class="mt-4">
+                        <div class="flex justify-between text-[8px] mb-1 font-bold text-gray-400">
+                            <span>إجمالي التمكين</span>
+                            <span>{{ getGlobalProgress('muraja').label }}</span>
+                        </div>
+                        <div class="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden">
+                            <div class="bg-emerald-400 h-full rounded-full"
+                                [style.width.%]="getGlobalProgress('muraja').percent"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 3: The Garden (Deep Revision & Tilawo) -->
+            <div>
+                <h3 class="flex items-center gap-2 text-amber-500 font-bold mb-4 px-2 text-sm">
+                    <span class="w-2 h-2 bg-amber-500 rounded-full"></span> المداومة: الورد اليومي
+                </h3>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <!-- Deep Revision -->
+                    <div class="bg-white dark:bg-gray-800 rounded-3xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col justify-between min-h-[140px]"
+                        [class.opacity-60]="getTaskStatus('deepMuraja') === 'done'">
+                        <div>
+                            <div
+                                class="w-10 h-10 bg-amber-50 dark:bg-amber-900/40 rounded-xl flex items-center justify-center text-lg mb-3">
+                                🏛️</div>
+                            <h4 class="font-bold text-gray-800 dark:text-gray-100 text-xs">الماضي البعيد</h4>
+                            <p class="text-[10px] text-gray-400">{{ getTarget('deepMuraja') || 0 }} ص</p>
+                        </div>
+                        <button [disabled]="getTaskStatus('deepMuraja') === 'done'" (click)="markDone('deepMuraja')"
+                            class="mt-3 w-full py-2 rounded-xl text-[10px] font-black transition-all"
+                            [ngClass]="getTaskStatus('deepMuraja') === 'done' ? 'bg-amber-100 text-amber-600' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 hover:bg-amber-500 hover:text-white'">
+                            {{ getTaskStatus('deepMuraja') === 'done' ? 'تم الورد' : 'إتمام الورد' }}
+                        </button>
+                    </div>
+
+                    <!-- Recitation -->
+                    <div class="bg-white dark:bg-gray-800 rounded-3xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col justify-between min-h-[140px]"
+                        [class.opacity-60]="getTaskStatus('tilawo') === 'done'">
+                        <div>
+                            <div
+                                class="w-10 h-10 bg-blue-50 dark:bg-blue-900/40 rounded-xl flex items-center justify-center text-lg mb-3">
+                                📖</div>
+                            <h4 class="font-bold text-gray-800 dark:text-gray-100 text-xs">ورد التلاوة</h4>
+                            <p class="text-[10px] text-gray-400">{{ getTarget('tilawo') || 0 }} ص</p>
+                        </div>
+                        <button [disabled]="getTaskStatus('tilawo') === 'done'" (click)="markDone('tilawo')"
+                            class="mt-3 w-full py-2 rounded-xl text-[10px] font-black transition-all"
+                            [ngClass]="getTaskStatus('tilawo') === 'done' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 hover:bg-blue-500 hover:text-white'">
+                            {{ getTaskStatus('tilawo') === 'done' ? 'تم الورد' : 'إتمام الورد' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer Actions -->
+            <div class="pt-4 flex justify-center">
+                <button (click)="openSetup()"
+                    class="text-indigo-400 hover:text-indigo-500 text-[10px] font-bold flex items-center gap-2 px-6 py-3 rounded-2xl bg-indigo-50 dark:bg-indigo-900/20 transition-all border border-indigo-100 dark:border-indigo-800/50">
+                    <i class="fas fa-cog"></i> تعديل نظام المنهج الشخصي
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Setup / Settings Modal -->
+    <div *ngIf="showSetupModal" class="fixed inset-0 z-50 flex items-center justify-center p-4" dir="rtl">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" (click)="closeSetup()"></div>
+
+        <div
+            class="relative bg-white dark:bg-gray-800 rounded-2xl w-full max-w-sm shadow-2xl transform scale-100 transition-all overflow-hidden border border-gray-100 dark:border-gray-700 animate-fade-in-up">
+
+            <div
+                class="bg-gradient-to-l from-indigo-600 to-purple-600 px-6 py-4 flex justify-between items-center text-white">
+                <h3 class="text-lg font-bold flex items-center gap-2">
+                    <i class="fas fa-sliders-h"></i> إعداد جدول المتابعة
+                </h3>
+                <button (click)="closeSetup()"
+                    class="text-white/80 hover:text-white hover:bg-white/10 rounded-full w-8 h-8 flex items-center justify-center transition-colors">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="p-6 space-y-5">
+                <!-- Tilawo Input -->
+                <div class="group">
+                    <label class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 flex justify-between">
+                        <span>📖 ورد التلاوة</span>
+                        <span class="text-indigo-600 font-normal text-xs">صفحات</span>
+                    </label>
+                    <input type="number" [(ngModel)]="newPlan.tilawoTarget" min="0"
+                        class="w-full bg-gray-50 dark:bg-gray-700/50 border-2 border-gray-200 dark:border-gray-600 rounded-xl px-4 py-3 text-center text-xl font-bold text-gray-800 dark:text-white focus:border-indigo-500 focus:ring-0 transition-colors">
+                </div>
+
+                <!-- Hifz Input -->
+                <div class="group">
+                    <label class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 flex justify-between">
+                        <span>🧠 حفظ جديد</span>
+                        <span class="text-indigo-600 font-normal text-xs">آيات</span>
+                    </label>
+                    <input type="number" [(ngModel)]="newPlan.hifzTarget" min="0"
+                        class="w-full bg-gray-50 dark:bg-gray-700/50 border-2 border-gray-200 dark:border-gray-600 rounded-xl px-4 py-3 text-center text-xl font-bold text-gray-800 dark:text-white focus:border-indigo-500 focus:ring-0 transition-colors">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="group">
+                        <label class="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-2 truncate">🔄 مراجعة
+                            قريبة (صفحات)</label>
+                        <input type="number" [(ngModel)]="newPlan.murajaTarget" min="0"
+                            class="w-full bg-gray-50 dark:bg-gray-700/50 border-2 border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-center text-lg font-bold text-gray-800 dark:text-white focus:border-indigo-500 focus:ring-0 transition-colors">
+                    </div>
+
+                    <div class="group">
+                        <label class="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-2 truncate">🏛️ مراجعة
+                            بعيدة (صفحات)</label>
+                        <input type="number" [(ngModel)]="newPlan.deepMurajaTarget" min="0"
+                            class="w-full bg-gray-50 dark:bg-gray-700/50 border-2 border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-center text-lg font-bold text-gray-800 dark:text-white focus:border-indigo-500 focus:ring-0 transition-colors">
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-4 bg-gray-50 dark:bg-gray-700/30 border-t border-gray-100 dark:border-gray-700">
+                <button (click)="savePlan()"
+                    class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-3 rounded-xl shadow-lg shadow-indigo-200 dark:shadow-none transition-all hover:-translate-y-0.5 active:scale-95 flex justify-center items-center gap-2">
+                    <i class="fas fa-check"></i> حفظ التغييرات
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Soft Penalty / Postpone Dialog -->
+    <div *ngIf="showPostponeDialog"
+        class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
+        <div
+            class="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-sm w-full shadow-2xl transform scale-100 transition-transform">
+            <div class="text-center mb-4 text-4xl">🥺</div>
+            <h3 class="text-lg font-bold text-center mb-2 dark:text-white">هل أنت متأكد؟</h3>
+            <p class="text-center text-gray-600 dark:text-gray-300 mb-6 font-medium">
+                {{ postponeMessage }}
+            </p>
+            <div class="flex gap-3">
+                <button (click)="cancelPostpone()"
+                    class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-xl font-bold">
+                    سأقرأ الآن! 💪
+                </button>
+                <button (click)="confirmPostpone()"
+                    class="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-500 py-2 rounded-xl text-sm">
+                    تأجيل للأسف
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Toast -->
+    <div *ngIf="successMessage"
+        class="fixed bottom-20 left-1/2 -translate-x-1/2 bg-green-600 text-white px-6 py-3 rounded-full shadow-lg z-50 animate-bounce">
+        {{ successMessage }}
+    </div>
+
+</div>

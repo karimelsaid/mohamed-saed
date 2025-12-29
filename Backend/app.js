@@ -9,8 +9,9 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 
-const express = require('express');
-const bodyParser = require('body-parser');
+require('dotenv').config();
+const User = require('./models/User.model');
+const { ObjectId } = require('mongoose').Types;
 const cors = require('cors');
 const session = require('express-session');
 const cron = require('node-cron');
@@ -44,6 +45,9 @@ const readingProgressRoutes = require('./routes/reading-progress.routes');
 const gamificationRoutes = require('./routes/gamification.routes');
 const adminSettingsRoutes = require('./routes/admin-settings');
 const notificationRoutes = require('./routes/notification');
+const quranProgressRoutes = require('./routes/quran-progress.routes');
+const express = require('express');
+const bodyParser = require('body-parser');
 const app = express();
 const port = process.env.PORT || 3000;
 const isProduction = process.env.NODE_ENV === 'production';
@@ -506,11 +510,10 @@ app.use('/api/gamification', gamificationRoutes);
 app.use('/api/notifications', notificationRoutes); // Notification Routes
 app.use('/api/gamification', gamificationRoutes);
 app.use('/api/notifications', notificationRoutes); // Notification Routes
-// app.use('/api/admin/settings', adminSettingsRoutes); // Moved up to avoid conflict
+app.use('/api/quran-progress', quranProgressRoutes); // Quran Progress Routes
+app.use('/api/mutabaa', require('./routes/mutabaa.routes')); // Smart Mutaba'a Routes
+app.use('/api/hifz-plan', require('./routes/hifzPlan.routes')); // Dynamic Hifz Plan Routes
 
-
-const User = require('./models/User.model');
-const { ObjectId } = mongoose.Types;
 
 // Direct route definition for deleting print order
 const printController = require('./controllers/print.controller');

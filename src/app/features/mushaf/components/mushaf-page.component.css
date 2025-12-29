@@ -385,6 +385,54 @@
   justify-content: center;
 }
 
+.record-trigger {
+  background: none;
+  border: none;
+  color: #c2a87a;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: all 0.3s ease;
+  margin-left: 8px;
+}
+
+.record-trigger.active {
+  color: #ef4444;
+  /* Recording Red */
+}
+
+.record-dot {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 6px;
+  height: 6px;
+  background: #ef4444;
+  border-radius: 50%;
+  animation: pulse-red 1.5s infinite;
+}
+
+@keyframes pulse-red {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+  }
+
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
+  }
+
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+  }
+}
+
 /* Background for the header area when screen is wider than 550px */
 .mushaf-screen::before {
   content: "";
@@ -1380,4 +1428,736 @@
 .correct-answer-preview .quran-text {
   color: #4ade80;
   opacity: 0.9;
+}
+
+/* Error/Skip Word Highlighting for Voice Review */
+.error-verse {
+  color: #ef4444 !important;
+  /* Red color */
+  text-decoration: underline wavy;
+  opacity: 1;
+}
+
+/* Login Required Overlay */
+.login-required-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.login-prompt-card {
+  background: #1a1a1a;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 40px;
+  border-radius: 24px;
+  text-align: center;
+  max-width: 480px;
+  width: 100%;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+}
+
+.login-icon {
+  width: 80px;
+  height: 80px;
+  background: rgba(212, 175, 55, 0.1);
+  color: #d4af37;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  margin: 0 auto 24px;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+}
+
+.login-prompt-card h2 {
+  color: #fff;
+  font-size: 24px;
+  margin-bottom: 12px;
+  font-family: 'Amiri', serif;
+}
+
+.login-prompt-card p {
+  color: #aaa;
+  font-size: 16px;
+  line-height: 1.6;
+  margin-bottom: 32px;
+}
+
+.login-buttons {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.login-buttons button {
+  flex: 1;
+  height: 48px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.btn-login {
+  background: #d4af37;
+  color: #000;
+  border: none;
+}
+
+.btn-login:hover {
+  background: #c5a028;
+  transform: translateY(-2px);
+}
+
+.btn-register {
+  background: transparent;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-register:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: #fff;
+  transform: translateY(-2px);
+}
+
+.back-link {
+  color: #666;
+  text-decoration: none;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.2s;
+}
+
+.back-link:hover {
+  color: #fff;
+}
+
+/* RTL Support */
+.login-buttons button i,
+.back-link i {
+  transform: scaleX(-1);
+  /* Flip icons for RTL context if needed */
+}
+
+/* Microphone FAB */
+.mic-fab {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: none;
+  background: var(--surface-card);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  color: var(--text-secondary);
+  font-size: 1.5rem;
+  z-index: 1000;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mic-fab.active {
+  background: var(--primary-color);
+  color: white;
+  box-shadow: 0 8px 24px var(--primary-color-alpha);
+  transform: translateX(-50%) scale(1.1);
+}
+
+.mic-fab:active {
+  transform: translateX(-50%) scale(0.95);
+}
+
+.status-indicator {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ccc;
+  border: 2px solid var(--surface-card);
+}
+
+.status-indicator.online {
+  background: #22c55e;
+  /* Green-500 */
+  box-shadow: 0 0 4px #22c55e;
+}
+
+.status-indicator.offline {
+  background: #f97316;
+  /* Orange-500 */
+  box-shadow: 0 0 4px #f97316;
+}
+
+@media (orientation: landscape) {
+  .mic-fab {
+    bottom: 2rem;
+    left: 2rem;
+    transform: none;
+  }
+
+  .mic-fab.active {
+    transform: scale(1.1);
+  }
+
+}
+
+/* Footer Mic Button */
+.mic-footer-btn {
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(5px);
+}
+
+.mic-footer-btn.active {
+  background: var(--primary-color, #c2a87a);
+  border-color: var(--primary-color, #c2a87a);
+  color: black;
+  box-shadow: 0 0 10px rgba(194, 168, 122, 0.4);
+}
+
+.status-indicator-dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid #000;
+}
+
+.status-indicator-dot.online {
+  background-color: #22c55e;
+}
+
+.status-indicator-dot.offline {
+  background-color: #f97316;
+}
+
+/* Error/Skipped Word Highlighting */
+.error-verse {
+  color: #ef4444 !important;
+  /* Red color for errors */
+  text-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
+}
+
+/* Skipped Ayah Highlighting (entire verse) */
+.mushaf-segment.skipped-ayah {
+  color: #ef4444 !important;
+  opacity: 0.7;
+}
+
+/* Dashboard Styles */
+.dashboard-content {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* User Stats Card */
+.user-stats-card {
+  background: linear-gradient(135deg, #1a1a1a 0%, #222 100%);
+  border-radius: 16px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.stats-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+}
+
+.stat-value {
+  color: #d4af37;
+  font-size: 18px;
+  font-weight: bold;
+  font-family: 'Inter', sans-serif;
+}
+
+.stat-label {
+  color: #888;
+  font-size: 11px;
+}
+
+.stat-divider {
+  width: 1px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Wird Tabs */
+.wird-tabs {
+  display: flex;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 4px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+}
+
+.wird-tab {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #888;
+  padding: 8px;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.wird-tab.active {
+  background: rgba(212, 175, 55, 0.15);
+  color: #d4af37;
+  font-weight: bold;
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 24px 0;
+  color: #666;
+}
+
+.empty-state i {
+  font-size: 32px;
+  margin-bottom: 12px;
+  opacity: 0.5;
+}
+
+.empty-state p {
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.btn-create-wird {
+  background: transparent;
+  border: 1px dashed rgba(212, 175, 55, 0.3);
+  color: #d4af37;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-create-wird:hover {
+  background: rgba(212, 175, 55, 0.05);
+  border-color: #d4af37;
+}
+
+/* Switches */
+.setting-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.setting-row span {
+  font-size: 14px;
+  color: #ccc;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 22px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #333;
+  transition: .4s;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .4s;
+}
+
+input:checked+.slider {
+  background-color: #d4af37;
+}
+
+input:checked+.slider:before {
+  transform: translateX(18px);
+}
+
+/* Progress View in Tabs */
+.progress-view {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 24px 16px !important;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.progress-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.percent-badge {
+  background: rgba(194, 168, 122, 0.2);
+  color: #c2a87a;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.progress-view p {
+  color: #94a3b8;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.progress-bar-container {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 8px 0;
+}
+
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(to left, #c2a87a, #e2e8f0);
+  border-radius: 10px;
+  transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-create-wird {
+  margin-top: 10px;
+  background: #c2a87a;
+  color: #000;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-create-wird:hover {
+  background: #d4bc8f;
+  transform: translateY(-2px);
+}
+
+.btn-create-wird:active {
+  transform: scale(0.98);
+}
+
+/* Reading Integrity Indicator */
+.reading-integrity-bar {
+  position: fixed;
+  bottom: 0px;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: rgba(0, 0, 0, 0.1);
+  z-index: 2000;
+  transition: all 0.3s ease;
+}
+
+.integrity-progress {
+  height: 100%;
+  background: #c2a87a;
+  width: 0%;
+  transition: width 0.1s linear;
+}
+
+.reading-integrity-bar.verified .integrity-progress {
+  background: #10b981;
+  /* Success Green */
+}
+
+.integrity-label {
+  position: absolute;
+  bottom: 8px;
+  right: 12px;
+  font-size: 10px;
+  font-weight: bold;
+  opacity: 0.6;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.reading-integrity-bar.verified .integrity-label {
+  opacity: 1;
+}
+
+/* Hide bar when sidebar or settings is open to avoid clutter */
+.mushaf-screen.sidebar-open .reading-integrity-bar,
+.mushaf-screen.settings-open .reading-integrity-bar {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Hifz Wizard Overlay */
+.wizard-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.9);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+/* Day Dashboard Cards */
+.day-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.dashboard-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 14px;
+  transition: all 0.3s ease;
+}
+
+.dashboard-card:hover {
+  background: rgba(194, 168, 122, 0.1);
+  border-color: rgba(194, 168, 122, 0.3);
+}
+
+.dashboard-card .card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.dashboard-card .card-icon {
+  font-size: 1.3rem;
+}
+
+.dashboard-card .card-title {
+  color: #c2a87a;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.dashboard-card .card-body p {
+  color: #aaa;
+  font-size: 0.85rem;
+  margin: 0 0 10px;
+}
+
+.task-details {
+  color: #c2a87a !important;
+  font-size: 0.8rem !important;
+  margin-top: -6px !important;
+  margin-bottom: 12px !important;
+  opacity: 0.8;
+}
+
+.dashboard-card .card-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.dashboard-card .btn-done {
+  flex: 1;
+  background: linear-gradient(135deg, #4ade80, #22c55e);
+  border: none;
+  color: #1a2a3a;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dashboard-card .btn-done:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(74, 222, 128, 0.3);
+}
+
+.dashboard-card .btn-later {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #888;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dashboard-card .btn-later:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.btn-edit-plan {
+  background: transparent;
+  border: 1px solid rgba(194, 168, 122, 0.3);
+  color: #c2a87a;
+  padding: 10px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.btn-edit-plan:hover {
+  background: rgba(194, 168, 122, 0.1);
+}
+
+.empty-state h4 {
+  color: #c2a87a;
+  margin: 12px 0 4px;
+  font-size: 1.1rem;
+}
+
+/* Stats Header */
+.stats-header {
+  display: flex;
+  justify-content: space-around;
+  background: rgba(194, 168, 122, 0.1);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.stat-value {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #c2a87a;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: #888;
+}
+
+/* Mini Progress Bar */
+.mini-progress {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+  margin: 8px 0 4px;
+}
+
+.mini-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #c2a87a, #d4af37);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  font-size: 0.7rem;
+  color: #666;
+}
+
+/* Card Done State */
+.dashboard-card.done {
+  background: rgba(74, 222, 128, 0.1);
+  border-color: rgba(74, 222, 128, 0.3);
+}
+
+.dashboard-card .card-status {
+  margin-right: auto;
 }

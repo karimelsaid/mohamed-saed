@@ -69,18 +69,34 @@ export class SearchResultsComponent implements OnInit {
   // دالة نسخ رابط الكتاب
   copyBookLink(book: Book): void {
     if (!book) return;
-    const url = window.location.origin + '/book/' + book.products_id + '/' + this.getBookSlug(book.product_name);
+    // CRITICAL FIX: Use production domain instead of window.location.origin
+    const baseUrl = 'https://knoozbook.com';
+    const url = baseUrl + '/book/' + book.products_id + '/' + this.getBookSlug(book.product_name);
 
-    navigator.clipboard.writeText(url).then(() => {
-      this.showCopySuccess = true;
-      this.copiedBookId = book.products_id;
-      setTimeout(() => {
-        this.showCopySuccess = false;
-        this.copiedBookId = null;
-      }, 2000);
-    }).catch(err => {
-      console.error('Failed to copy: ', err);
-    });
+    // Use Native Share if available (Android/iOS)
+    if (navigator.share) {
+      const cleanUrl = decodeURIComponent(url);
+      navigator.share({
+        title: book.product_name,
+        text: `تحقق من كتاب "${book.product_name}" على كنوز بوك\n${cleanUrl}`
+      }).then(() => {
+        console.log('Shared successfully');
+      }).catch((error) => {
+        console.warn('Share failed or cancelled:', error);
+      });
+    } else {
+      // Fallback to clipboard
+      navigator.clipboard.writeText(url).then(() => {
+        this.showCopySuccess = true;
+        this.copiedBookId = book.products_id;
+        setTimeout(() => {
+          this.showCopySuccess = false;
+          this.copiedBookId = null;
+        }, 2000);
+      }).catch(err => {
+        console.error('Failed to copy: ', err);
+      });
+    }
   }
 
   // Updated method to generate book slug without encoding to keep readable characters in URL

@@ -31,84 +31,136 @@ exports.getHifzPlan = async (req, res) => {
 /**
  * حفظ إعدادات المعالج (Setup Wizard)
  */
-const { surahVerses } = require('../utils/surahData');
+const { surahVerses, surahNames } = require('../utils/surahData');
+
+/**
+ * دالة مساعدة للحصول على اسم السورة
+ */
+const getSurahName = (id) => {
+    return surahNames[id - 1] || `سورة ${id}`;
+};
 
 /**
  * حفظ إعدادات المعالج (Setup Wizard)
  */
 exports.saveSetup = async (req, res) => {
     try {
-        const { userLevel, dailyCapacity, memorizedContent } = req.body;
+        const { userLevel, dailyCapacity, memorizedContent, resetProgress } = req.body;
         const user = await User.findById(req.user._id);
+
+        console.log(`[HifzPlan] saveSetup for user: ${user.email}, resetProgress: ${resetProgress}`);
         if (!user) return res.status(404).json({ success: false, message: 'المستخدم غير موجود' });
 
-        // Calculate accurate total verses from backend data
-        let totalVersesMemorized = 0;
-        console.log('[HifzPlan] saveSetup received body:', {
-            level: userLevel,
-            capacity: dailyCapacity,
-            contentLength: memorizedContent?.length
-        });
+        // Accurate total verses count from individual verse keys
+        const totalVersesMemorized = (memorizedContent && Array.isArray(memorizedContent)) ? memorizedContent.length : 0;
 
-        if (memorizedContent && Array.isArray(memorizedContent)) {
-            memorizedContent.forEach(item => {
-                if (item.verseKey) {
-                    const surahId = parseInt(item.verseKey.split(':')[0]);
-                    const count = surahVerses[surahId] || 0;
-                    totalVersesMemorized += count;
-                    console.log(`[HifzPlan] + Surah ${surahId}: ${count} verses. Total: ${totalVersesMemorized}`);
-                    // Log a sample
-                    if (surahId === 1 || surahId === 2) {
-                        console.log(`[HifzPlan] Surah ${surahId} verses: ${count}`);
-                    }
-                }
-            });
-        }
-        console.log('[HifzPlan] Calculated Total Verses:', totalVersesMemorized);
-
-        // Calculate start position for New Memorization (Smart Gap Detection)
-        const memorizedSurahIds = new Set();
-        (memorizedContent || []).forEach(v => {
-            const surahId = parseInt(v.verseKey.split(':')[0]);
-            memorizedSurahIds.add(surahId);
-        });
+        // Smart start position (first GAP Detection at Verse Level)
+        const memorizedKeys = new Set((memorizedContent || []).map(v => v.verseKey));
 
         let startSurah = 1;
-        for (let i = 1; i <= 114; i++) {
-            if (!memorizedSurahIds.has(i)) {
-                startSurah = i;
-                break;
+        let startVerse = 1;
+        let foundGap = false;
+
+        for (let s = 1; s <= 114; s++) {
+            const versesInSurah = surahVerses[s] || 0;
+            for (let v = 1; v <= versesInSurah; v++) {
+                if (!memorizedKeys.has(`${s}:${v}`)) {
+                    startSurah = s;
+                    startVerse = v;
+                    foundGap = true;
+                    break;
+                }
+            }
+            if (foundGap) break;
+        }
+
+        // Initialize cursors
+        let cursors = {
+            newMemorization: { surah: startSurah, verse: startVerse },
+            review: { surah: 1, page: 1 },
+            recitation: { page: 1 }
+        };
+
+        // Preservation logic
+        if (user.hifzPlan && user.hifzPlan.cursors) {
+            const oldCursors = user.hifzPlan.cursors;
+
+            // Only preserve newMemorization if it's still at or ahead of the first gap
+            // But if it's pointing to something already memorized, reset.
+            if (oldCursors.newMemorization && oldCursors.newMemorization.surah === startSurah && oldCursors.newMemorization.verse >= startVerse) {
+                cursors.newMemorization = oldCursors.newMemorization;
+            } else {
+                cursors.newMemorization = { surah: startSurah, verse: startVerse };
+            }
+
+            // Preservation for Review/Recitation
+            // RESET them if the user explicitly cleared everything (new plan) OR if resetProgress flag is true
+            if (totalVersesMemorized > 0 && !resetProgress) {
+                if (oldCursors.review && oldCursors.review.page !== undefined) cursors.review = oldCursors.review;
+                if (oldCursors.recitation && oldCursors.recitation.page !== undefined) cursors.recitation = oldCursors.recitation;
             }
         }
 
-        user.hifzPlan = {
+        // Plain object for Mongoose
+        const newHifzPlan = {
             isSetupComplete: true,
-            userLevel: userLevel || 'beginner',
+            userLevel: userLevel || (user.hifzPlan ? user.hifzPlan.userLevel : 'beginner'),
             dailyCapacity: {
                 recitationType: dailyCapacity?.recitationType || 'page',
                 recitationAmount: dailyCapacity?.recitationAmount || 2,
                 newMemorization: dailyCapacity?.newMemorization || 'verse',
+                memorizationAmount: dailyCapacity?.memorizationAmount || 5,
                 memorizationDays: dailyCapacity?.memorizationDays || 5,
                 reviewType: dailyCapacity?.reviewType || 'light',
                 reviewAmount: dailyCapacity?.reviewAmount || 1
             },
             memorizedContent: memorizedContent || [],
             cursors: {
-                newMemorization: { surah: startSurah, verse: 1 },
-                review: { surah: 1, page: 1 },
-                recitation: { page: 1 }
+                newMemorization: {
+                    surah: cursors.newMemorization?.surah || 1,
+                    verse: cursors.newMemorization?.verse || 1
+                },
+                review: {
+                    surah: cursors.review?.surah || 1,
+                    page: cursors.review?.page || 1
+                },
+                recitation: {
+                    page: cursors.recitation?.page || 1
+                }
             },
-            // Deprecated but kept for compatibility
-            currentPosition: { surah: startSurah, verse: 1 },
             stats: {
-                totalVersesMemorized: totalVersesMemorized, // Backend calculation
-                currentStreak: 0,
-                bestStreak: 0,
+                totalVersesMemorized: totalVersesMemorized,
+                currentStreak: (user.hifzPlan && user.hifzPlan.stats) ? user.hifzPlan.stats.currentStreak : 0,
+                bestStreak: (user.hifzPlan && user.hifzPlan.stats) ? user.hifzPlan.stats.bestStreak : 0,
                 lastActiveDate: getTodayStr()
             }
         };
 
+        user.set('hifzPlan', newHifzPlan);
+
+        // SYNC: Update mutabaa.plan
+        if (!user.mutabaa) user.mutabaa = { plan: {}, dailyLog: [] };
+
+        // If resetProgress is true, clear today's progress in mutabaa.dailyLog to start fresh
+        if (resetProgress) {
+            const today = getTodayStr();
+            const logIdx = user.mutabaa.dailyLog.findIndex(l => l.date === today);
+            if (logIdx !== -1) {
+                user.mutabaa.dailyLog[logIdx].tilawo = { status: 'pending', pagesCompleted: 0 };
+                user.mutabaa.dailyLog[logIdx].hifz = { status: 'pending', versesCompleted: 0 };
+                user.mutabaa.dailyLog[logIdx].muraja = { status: 'pending', pagesCompleted: 0 };
+                user.mutabaa.dailyLog[logIdx].deepMuraja = { status: 'pending', pagesCompleted: 0 };
+                user.markModified('mutabaa.dailyLog');
+            }
+        }
+
+        user.mutabaa.plan.hifzTarget = (newHifzPlan.dailyCapacity.newMemorization === 'verses') ? newHifzPlan.dailyCapacity.memorizationAmount : 1;
+        user.mutabaa.plan.tilawoTarget = newHifzPlan.dailyCapacity.recitationAmount || 2;
+        user.mutabaa.plan.murajaTarget = 1;
+        user.mutabaa.plan.deepMurajaTarget = newHifzPlan.dailyCapacity.reviewAmount || 1;
+
         user.markModified('hifzPlan');
+        user.markModified('mutabaa.plan');
         await user.save();
 
         res.json({ success: true, message: 'تم حفظ الإعدادات بنجاح', plan: user.hifzPlan });
@@ -134,19 +186,32 @@ exports.generateDailyTasks = async (req, res) => {
 
         const cursors = plan.cursors || { newMemorization: { surah: 1, verse: 1 }, review: { surah: 1, page: 1 }, recitation: { page: 1 } };
 
+        const todayLog = (user.mutabaa?.dailyLog || []).find(log => log.date === today);
+
         // 1️⃣ الحفظ الجديد
-        // Use cursor to determine next task
-        // Logic: Simple increment for now, assuming next verse is valid
         const nextSurah = cursors.newMemorization.surah;
         const nextVerse = cursors.newMemorization.verse;
 
+        const amount = plan.dailyCapacity.newMemorization === 'verses' ? (plan.dailyCapacity.memorizationAmount || 5) : 1;
+        let label = `${getSurahName(nextSurah)} - آية ${nextVerse}`;
+
+        if (plan.dailyCapacity.newMemorization === 'verses' && amount > 1) {
+            label = `${getSurahName(nextSurah)} - من آية ${nextVerse} إلى ${nextVerse + amount - 1}`;
+        } else if (plan.dailyCapacity.newMemorization === 'page') {
+            label = `حفظ صفحة كاملة (بداية من ${getSurahName(nextSurah)} آية ${nextVerse})`;
+        } else if (plan.dailyCapacity.newMemorization === 'half_page') {
+            label = `حفظ نصف صفحة (بداية من ${getSurahName(nextSurah)} آية ${nextVerse})`;
+        }
+
         const newMemorization = {
             type: 'new_memorization',
-            label: `سورة ${nextSurah} - آية ${nextVerse}`,
-            target: plan.dailyCapacity.newMemorization,
-            start: { surah: nextSurah, verse: nextVerse },
-            amount: 1, // Determines how many verses/pages (placeholder logic)
-            status: 'pending'
+            label: label,
+            target: plan.dailyCapacity.newMemorization === 'verses' ? 'verses' : plan.dailyCapacity.newMemorization,
+            surah: nextSurah,
+            verse: nextVerse,
+            amount: amount,
+            amountDone: todayLog?.hifz?.versesCompleted || 0,
+            status: (todayLog?.hifz?.status === 'done' && (todayLog?.hifz?.versesCompleted || 0) < amount) ? 'pending' : (todayLog?.hifz?.status || 'pending')
         };
 
         // 2️⃣ التمكين (مراجعة آخر 14 يوم)
@@ -160,11 +225,17 @@ exports.generateDailyTasks = async (req, res) => {
             .sort((a, b) => new Date(b.lastReviewed) - new Date(a.lastReviewed))
             .slice(0, 10);
 
+        const consolidationSurahs = [...new Set(recentContent.map(v => parseInt(v.verseKey.split(':')[0])))];
+        const consolidationLabel = consolidationSurahs.length > 0
+            ? `تمكين الحفظ الجديد (${consolidationSurahs.map(id => getSurahName(id)).join('، ')})`
+            : 'تمكين الحفظ الجديد';
+
         const consolidation = {
             type: 'consolidation',
-            label: 'التمكين',
+            label: consolidationLabel,
             verses: recentContent.map(v => v.verseKey),
-            status: 'pending'
+            amountDone: todayLog?.muraja?.pagesCompleted || 0, // Using muraja field as placeholder
+            status: todayLog?.muraja?.status || 'pending'
         };
 
         // 3️⃣ المراجعة البعيدة (الماضي)
@@ -183,8 +254,9 @@ exports.generateDailyTasks = async (req, res) => {
             label: reviewLabel,
             amount: reviewAmount,
             unit: plan.dailyCapacity.reviewType === 'weekly' ? 'juz' : 'page',
-            startPage: reviewStartPage, // To be used by frontend
-            status: 'pending'
+            startPage: reviewStartPage,
+            amountDone: todayLog?.deepMuraja?.pagesCompleted || 0,
+            status: (todayLog?.deepMuraja?.status === 'done' && (todayLog?.deepMuraja?.pagesCompleted || 0) < reviewAmount) ? 'pending' : (todayLog?.deepMuraja?.status || 'pending')
         };
 
         // 4️⃣ ورد التلاوة
@@ -198,7 +270,8 @@ exports.generateDailyTasks = async (req, res) => {
             amount: recitationAmount,
             unit: plan.dailyCapacity.recitationType,
             startPage: recitationStart,
-            status: 'pending'
+            amountDone: todayLog?.tilawo?.pagesCompleted || 0,
+            status: (todayLog?.tilawo?.status === 'done' && (todayLog?.tilawo?.pagesCompleted || 0) < recitationAmount) ? 'pending' : (todayLog?.tilawo?.status || 'pending')
         };
 
         // Calculate Estimated Completion Date
@@ -213,6 +286,7 @@ exports.generateDailyTasks = async (req, res) => {
 
         // Estimate rate
         if (cap === 'verse') dailyRate = 1;
+        else if (cap === 'verses') dailyRate = plan.dailyCapacity.memorizationAmount || 5;
         else if (cap === 'half_page') dailyRate = 7; // Approx
         else if (cap === 'page') dailyRate = 15; // Approx
 
@@ -236,7 +310,6 @@ exports.generateDailyTasks = async (req, res) => {
             }
         });
     } catch (err) {
-        console.error('[HifzPlan] generateDailyTasks error:', err);
         res.status(500).json({ success: false, message: 'خطأ في الخادم' });
     }
 };
@@ -319,8 +392,43 @@ exports.reduceLoad = async (req, res) => {
         await user.save();
 
         res.json({ success: true, message: 'تم تقليل الحمل ❤️', plan: user.hifzPlan });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'خطأ في الخادم' });
+    }
+};
+
+/**
+ * حفظ إعدادات التنبيهات المخصصة
+ */
+exports.saveReminders = async (req, res) => {
+    try {
+        const { reminders } = req.body;
+        const user = await User.findById(req.user._id);
+        if (!user) return res.status(404).json({ success: false, message: 'المستخدم غير موجود' });
+
+        if (!user.hifzPlan) user.hifzPlan = {};
+
+        user.hifzPlan.reminders = {
+            recitation: {
+                enabled: reminders?.recitation?.enabled ?? false,
+                time: reminders?.recitation?.time || '08:00'
+            },
+            memorization: {
+                enabled: reminders?.memorization?.enabled ?? false,
+                time: reminders?.memorization?.time || '09:00'
+            },
+            revision: {
+                enabled: reminders?.revision?.enabled ?? false,
+                time: reminders?.revision?.time || '10:00'
+            }
+        };
+
+        user.markModified('hifzPlan');
+        await user.save();
+
+        res.json({ success: true, message: 'تم حفظ إعدادات التنبيهات بنجاح', reminders: user.hifzPlan.reminders });
     } catch (err) {
-        console.error('[HifzPlan] reduceLoad error:', err);
+        console.error('[HifzPlan] saveReminders error:', err);
         res.status(500).json({ success: false, message: 'خطأ في الخادم' });
     }
 };

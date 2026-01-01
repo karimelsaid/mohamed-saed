@@ -1,4 +1,3 @@
-```html
 <div class="wizard-container">
     <div class="wizard-header">
         <button class="close-btn" (click)="closeWizard()">
@@ -71,6 +70,7 @@
                 (click)="toggleSurah(surah.id, surah.name)">
                 <span class="surah-number">{{ surah.id }}</span>
                 {{ surah.name }}
+                <span *ngIf="getSurahPercent(surah.id) > 0" class="chip-percent">{{ getSurahPercent(surah.id) }}%</span>
             </button>
         </div>
 
@@ -86,17 +86,49 @@
         <div class="selected-surahs" *ngIf="memorizedSurahs.length > 0">
             <h4>تم تحديد {{ memorizedSurahs.length }} سورة:</h4>
             <div class="selected-list">
-                <div *ngFor="let surah of memorizedSurahs.slice(0, 5)" class="selected-surah-item">
-                    <span>{{ surah.surahName }}</span>
+                <div *ngFor="let surah of memorizedSurahs" class="selected-surah-item">
+                    <div class="surah-info-row">
+                        <span class="surah-name">{{ surah.surahName }}</span>
+                        <span *ngIf="surah.totalVerses && surah.memorizedVerseCount" class="surah-progress-small">
+                            ({{ surah.memorizedVerseCount }}/{{ surah.totalVerses }} آية - {{
+                            ((surah.memorizedVerseCount / surah.totalVerses) * 100) | number:'1.0-0' }}%)
+                        </span>
+                    </div>
+
+                    <div class="surah-actions">
+                        <button class="toggle-range-btn" (click)="toggleRangeSettings(surah)">
+                            {{ surah.showRangeSettings ? 'إخفاء النطاق' : 'تحديد نطاق محفوظ' }}
+                        </button>
+                    </div>
+
+                    <div class="surah-range-options" *ngIf="surah.showRangeSettings">
+                        <label class="range-main-label">اختر النطاق المحفوظ:</label>
+                        <div class="range-inputs-flex">
+                            <div class="range-input-group">
+                                <label>من:</label>
+                                <select [(ngModel)]="surah.fromVerse" (ngModelChange)="updateCount(surah)"
+                                    class="range-select">
+                                    <option *ngFor="let v of getVerseRange(surah.totalVerses)" [value]="v">آية {{ v }}
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="range-input-group">
+                                <label>إلى:</label>
+                                <select [(ngModel)]="surah.toVerse" (ngModelChange)="updateCount(surah)"
+                                    class="range-select">
+                                    <option *ngFor="let v of getVerseRange(surah.totalVerses)" [value]="v">آية {{ v }}
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
                     <select [(ngModel)]="surah.strength" class="strength-select">
                         <option value="strong">قوي 💚</option>
                         <option value="medium">متوسط 🟡</option>
                         <option value="weak">ضعيف 🟠</option>
                         <option value="rescue">تقريبًا ناسي 🔴</option>
                     </select>
-                </div>
-                <div *ngIf="memorizedSurahs.length > 5" class="more-items">
-                    ... و {{ memorizedSurahs.length - 5 }} سور أخرى
                 </div>
             </div>
         </div>
@@ -123,17 +155,23 @@
 
         <div class="capacity-section">
             <label>🧠 مقدار الحفظ الجديد:</label>
-            <select [(ngModel)]="dailyCapacity.newMemorization" class="capacity-select full">
-                <option value="verse">آية واحدة</option>
-                <option value="half_page">نصف صفحة</option>
-                <option value="page">صفحة كاملة</option>
-            </select>
+            <div class="capacity-row">
+                <select [(ngModel)]="dailyCapacity.newMemorization" class="capacity-select"
+                    [class.full]="dailyCapacity.newMemorization !== 'verses'">
+                    <option value="verse">آية واحدة</option>
+                    <option value="verses">عدد آيات</option>
+                    <option value="half_page">نصف صفحة</option>
+                    <option value="page">صفحة كاملة</option>
+                </select>
+                <input *ngIf="dailyCapacity.newMemorization === 'verses'" type="number"
+                    [(ngModel)]="dailyCapacity.memorizationAmount" min="2" max="100" class="capacity-input">
+            </div>
         </div>
 
         <div class="capacity-section">
             <label>📅 أيام الحفظ في الأسبوع:</label>
             <div class="days-selector">
-                <button *ngFor="let d of [3, 5, 7]" class="day-btn"
+                <button *ngFor="let d of [1, 3, 5, 7]" class="day-btn"
                     [class.selected]="dailyCapacity.memorizationDays === d"
                     (click)="dailyCapacity.memorizationDays = d">
                     {{ d }} أيام
@@ -155,6 +193,14 @@
             <p class="step-desc" style="margin-top: 8px; font-size: 0.8rem;">* سيتم اختيار
                 {{dailyCapacity.reviewAmount}} {{dailyCapacity.reviewType === 'light' ? 'صفحة' : 'جزء'}} من محفوظاتك
                 السابقة بالترتيب.</p>
+        </div>
+
+        <div class="capacity-section" style="border-top: 1px dashed #eee; padding-top: 16px; margin-top: 8px;">
+            <label class="reset-checkbox-label" style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                <input type="checkbox" [(ngModel)]="resetProgress" style="width: 20px; height: 20px;">
+                <span style="font-size: 0.9rem; color: #d32f2f; font-weight: 500;">إعادة ضبط ورد التلاوة والمراجعة
+                    للبداية (صفحة 1)</span>
+            </label>
         </div>
     </div>
 

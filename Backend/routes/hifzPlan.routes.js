@@ -21,4 +21,7 @@ router.post('/verse-strength', hifzPlanController.updateVerseStrength);
 // تقليل الحمل اليومي
 router.post('/reduce-load', hifzPlanController.reduceLoad);
 
+// حفظ إعدادات التنبيهات
+router.post('/reminders', hifzPlanController.saveReminders);
+
 module.exports = router;

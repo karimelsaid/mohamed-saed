@@ -60,7 +60,8 @@ export class UserProfileComponent implements OnInit, OnDestroy {
       }
 
       // 1. Check current status first
-      const currentStatus = await this.pushService.getPermissionStatus();
+      const statusResponse = await this.pushService.getPermissionStatus();
+      const currentStatus = statusResponse.permission;
 
       if (currentStatus === 'denied') {
         const confirmSettings = confirm('⚠️ تم حظر الإشعارات مسبقاً.\nهل تريد الذهاب إلى الإعدادات لتفعيلها الآن؟');
@@ -84,8 +85,8 @@ export class UserProfileComponent implements OnInit, OnDestroy {
       await this.pushService.subscribeToNotifications();
 
       // 3. Verify Again
-      const newStatus = await this.pushService.getPermissionStatus();
-      if (newStatus === 'granted') {
+      const statusResponse2 = await this.pushService.getPermissionStatus();
+      if (statusResponse2.permission === 'granted') {
         this.notificationsEnabled = true;
         alert('تم تفعيل الإشعارات بنجاح! 🔔');
       } else {
@@ -192,11 +193,11 @@ export class UserProfileComponent implements OnInit, OnDestroy {
           setTimeout(() => {
             if (this.pushService) {
               // 1. Check current status first
-              this.pushService.getPermissionStatus().then(status => {
-                console.log('🔔 Permission Status:', status);
-                if (status === 'granted') {
+              this.pushService.getPermissionStatus().then(statusRes => {
+                console.log('🔔 Permission Status:', statusRes);
+                if (statusRes.permission === 'granted') {
                   this.notificationsEnabled = true;
-                } else if (status === 'prompt' || status === 'prompt-with-rationale') {
+                } else if (statusRes.permission === 'prompt' || statusRes.permission === 'prompt-with-rationale') {
                   // 2. If prompt, trigger the request flow (Auto-Prompt)
                   this.pushService.initialPermissionRequest();
                 }

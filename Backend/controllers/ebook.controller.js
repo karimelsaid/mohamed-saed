@@ -34,7 +34,7 @@ exports.getAllEbooks = async (req, res) => {
         const total = await Ebook.countDocuments(query);
 
         const ebooks = await Ebook.find(query)
-            .sort({ createdAt: -1 })
+            .sort({ createdAt: -1, _id: -1 })
             .skip(skip)
             .limit(limitNum)
             .select('-__v');

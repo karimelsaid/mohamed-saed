@@ -121,3 +121,32 @@
         font-size: 0.65rem;
     }
 }
+
+/* Mushaf Centerpiece Button */
+.mushaf-center-btn {
+    background: transparent !important;
+    z-index: 50;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 4px !important;
+}
+
+.mushaf-center-btn.active-pill {
+    background: rgba(107, 33, 168, 0.1) !important;
+    box-shadow: none !important;
+}
+
+.mushaf-center-btn:hover {
+    transform: scale(1.1);
+    background: rgba(107, 33, 168, 0.15) !important;
+}
+
+@media (max-width: 640px) {
+    .mushaf-center-btn {
+        transform: none;
+    }
+
+    .mushaf-center-btn:hover {
+        transform: scale(1.1);
+    }
+}

@@ -3,7 +3,6 @@ const router = express.Router();
 const authenticateToken = require('../middleware/auth.middleware');
 const quranProgressController = require('../controllers/quran-progress.controller');
 
-console.log('AuthenticateToken type:', typeof authenticateToken);
 // جميع الطلبات تتطلب تسجيل الدخول
 if (typeof authenticateToken !== 'function') {
     throw new Error('AuthenticateToken is not a function');
@@ -24,5 +23,14 @@ router.post('/last-page', quranProgressController.updateLastPage);
 
 // إضافة/إزالة bookmark
 router.post('/bookmark', quranProgressController.toggleBookmark);
+
+// تحويل النقاط إلى رصيد
+router.post('/convert-points', quranProgressController.convertPoints);
+
+// طلب سحب الرصيد
+router.post('/request-payout', quranProgressController.requestPayout);
+
+// إنشاء تبرع
+router.post('/create-donation', quranProgressController.createDonation);
 
 module.exports = router;

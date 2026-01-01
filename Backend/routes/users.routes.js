@@ -41,6 +41,10 @@ router.post('/register', createAccount);
 router.post('/login', login);
 router.post('/google-signin', googleSignIn);
 
+// Static routes first to avoid collision with :userId
+router.get('/requested-books', getAllRequestedBooks);
+router.get('/urgency-requests', getAllUrgencyRequests);
+
 router.get('/:userId', getUserData);
 router.get('/profile/:userId', getUserProfile); // This serves general profile data
 // Note: /profile-image (below) handles the image upload via multer
@@ -64,9 +68,6 @@ router.put('/:userId/orders/:orderId/shipping-address', updateOrderShippingAddre
 
 // إضافة مسار طلب كتاب جديد
 router.post('/request-book', requestBook);
-
-// مسار جديد لجلب جميع اقتراحات الكتب
-router.get('/requested-books', getAllRequestedBooks);
 
 // تحديث حالة اقتراح الكتاب (added true/false)
 router.patch('/requested-books/:userId/:bookId', updateRequestedBookStatus);
@@ -97,9 +98,6 @@ router.get('/referral-balance/:userId', getReferralBalance);
 router.get('/referrals/:userId', getReferrals);
 router.delete('/referrals/:userId/:referralId', deleteReferral);
 router.post('/urgency-requests', submitUrgencyRequest);
-
-// Add routes for urgency requests
-router.get('/urgency-requests', getAllUrgencyRequests);
 router.patch('/urgency-requests/:userId/:requestId', updateUrgencyRequestStatus);
 
 router.post('/request-payment', requestPayment);

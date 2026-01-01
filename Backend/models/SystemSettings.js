@@ -9,8 +9,20 @@ const systemSettingsSchema = mongoose.Schema({
         streakBonus30Days: { type: Number, default: 500 },
         reviewPoints: { type: Number, default: 20 }
     },
+    quranPoints: {
+        VERSE_MEMORIZED: { type: Number, default: 5 },
+        PAGE_COMPLETE: { type: Number, default: 10 },
+        HIZB_COMPLETE: { type: Number, default: 50 },
+        JUZ_COMPLETE: { type: Number, default: 100 },
+        DAILY_STREAK: { type: Number, default: 20 },
+        KHATMA_COMPLETE: { type: Number, default: 1000 },
+        REVISION_PAGE_COMPLETE: { type: Number, default: 5 },
+        REVISION_VERSE_COMPLETE: { type: Number, default: 2 }
+    },
     economy: {
-        coinExchangeRate: { type: Number, default: 50 }, // 50 Coins = 1 EGP
+        coinExchangeRate: { type: Number, default: 50 }, // For Store/EPUB
+        quranPointsPerEGP: { type: Number, default: 500 }, // For Quran
+        quranMinConversionPoints: { type: Number, default: 5 },
         minimumWithdrawal: { type: Number, default: 500 }
     },
     subscription: {

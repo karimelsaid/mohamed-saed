@@ -37,7 +37,9 @@ const chatAiRoutes = require('./routes/chat-ai.routes');
 const adminRoutes = require('./routes/admin.routes'); // تأكد من وجود هذا المسار
 const merchantRoutes = require('./routes/merchant.routes');
 const paymentRequestsRoutes = require('./routes/payment-requests.routes'); // استيراد مسارات طلبات الدفع
-const versionRoutes = require('./routes/version.routes'); // Added version routes
+const versionRoutes = require('./routes/version.routes');
+const feedbackRoutes = require('./routes/feedback.routes');
+// Added version routes
 const ebooksRoutes = require('./routes/ebooks.routes');
 const subscriptionsRoutes = require('./routes/subscriptions.routes');
 const userLibraryRoutes = require('./routes/user-library.routes');
@@ -441,6 +443,9 @@ app.get('/api/extract-book', async (req, res) => {
 });
 
 
+const uploadsAbsolutePath = path.resolve(__dirname, 'uploads');
+app.use('/uploads', express.static(uploadsAbsolutePath));
+
 // Dedicated route to serve files with Content-Disposition attachment to force download
 app.get('/uploads/:filename', (req, res) => {
   const encodedFilename = req.params.filename;
@@ -473,16 +478,6 @@ app.get('/uploads/:filename', (req, res) => {
   });
 });
 
-const uploadsAbsolutePath = require('path').resolve(__dirname, 'uploads');
-app.use('/uploads', express.static(uploadsAbsolutePath));
-
-// الاتصال بقاعدة البيانات
-// الاتصال بقاعدة البيانات
-connectDB().catch(err => {
-  console.error('❌ فشل في الاتصال بقاعدة البيانات:', err);
-  process.exit(1);
-});
-
 // تسجيل المسارات
 app.use('/api/users', usersRoutes);
 app.use('/api/books', booksRoutes);
@@ -508,11 +503,10 @@ app.use('/api/user-library', userLibraryRoutes);
 app.use('/api/reading-progress', readingProgressRoutes);
 app.use('/api/gamification', gamificationRoutes);
 app.use('/api/notifications', notificationRoutes); // Notification Routes
-app.use('/api/gamification', gamificationRoutes);
-app.use('/api/notifications', notificationRoutes); // Notification Routes
 app.use('/api/quran-progress', quranProgressRoutes); // Quran Progress Routes
 app.use('/api/mutabaa', require('./routes/mutabaa.routes')); // Smart Mutaba'a Routes
 app.use('/api/hifz-plan', require('./routes/hifzPlan.routes')); // Dynamic Hifz Plan Routes
+app.use('/api/feedback', feedbackRoutes); // Feedback Routes
 
 
 // Direct route definition for deleting print order
@@ -563,7 +557,6 @@ function generateRobotsTxt() {
       fs.mkdirSync(dir, { recursive: true });
     }
     fs.writeFileSync(robotsPath, content);
-    console.log('✅ تم إنشاء ملف robots.txt بنجاح مع روابط ثابتة وكتب');
   } catch (error) {
     console.error('❌ فشل في إنشاء robots.txt:', error.message);
   }
@@ -591,13 +584,23 @@ app.use((err, req, res, next) => {
   });
 });
 
-// بدء السيرفر
+// بدء السيرفر بعد التأكد من الاتصال بقاعدة البيانات
+async function startServer() {
+  try {
+    await connectDB();
 
-app.listen(port, '0.0.0.0', () => {
-  console.log(`🚀 الخادم يعمل على http://0.0.0.0:${port}`);
-  // Initialize Cron Jobs
-  cronJobs.initCronJobs();
-});
+    app.listen(port, '0.0.0.0', () => {
+      console.log(`🚀 الخادم يعمل على http://0.0.0.0:${port}`);
+      // Initialize Cron Jobs
+      cronJobs.initCronJobs();
+    });
+  } catch (err) {
+    console.error('❌ فشل بدء الخادم بسبب خطأ في قاعدة البيانات:', err.message);
+    process.exit(1);
+  }
+}
+
+startServer();
 
 module.exports = {
   app

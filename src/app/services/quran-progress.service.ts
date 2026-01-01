@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, BehaviorSubject } from 'rxjs';
-import { tap } from 'rxjs/operators';
+import { Observable, BehaviorSubject, throwError } from 'rxjs';
+import { tap, catchError } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 
 export interface QuranProgress {
@@ -16,6 +16,7 @@ export interface QuranProgress {
     lastActivityDate: Date | null;
     lastPage: number;
     bookmarks: number[];
+    walletBalance: number;
 }
 
 export interface PointsResponse {
@@ -47,28 +48,38 @@ export class QuranProgressService {
     private progressSubject = new BehaviorSubject<QuranProgress | null>(null);
     public progress$ = this.progressSubject.asObservable();
 
+    // إعدادات الاقتصاد (لتحويل النقاط)
+    private economySubject = new BehaviorSubject<any>(null);
+    public economy$ = this.economySubject.asObservable();
+
     // النقاط المقابلة لكل نشاط (للعرض فقط)
     public readonly POINTS = {
-        MINUTE_READING: 1,
-        VERSE_MEMORIZED: 5,
-        PAGE_COMPLETE: 10,
-        HIZB_COMPLETE: 50,
-        JUZ_COMPLETE: 100,
-        DAILY_STREAK: 20,
-        KHATMA_COMPLETE: 1000,
-        REVISION_PAGE_COMPLETE: 5,
-        REVISION_VERSE_COMPLETE: 2
+        MINUTE_READING: 1,           // نقطة واحدة لكل دقيقة قراءة
+        VERSE_MEMORIZED: 5,          // 5 نقاط لكل آية يتم حفظها لأول مرة
+        PAGE_COMPLETE: 10,           // 10 نقاط عند إتمام قراءة صفحة كاملة
+        HIZB_COMPLETE: 50,           // 50 نقطة عند إتمام حزب كامل
+        JUZ_COMPLETE: 100,           // 100 نقطة عند إتمام جزء كامل
+        DAILY_STREAK: 20,            // 20 نقطة إضافية للالتزام اليومي (التتابع)
+        KHATMA_COMPLETE: 1000,       // 1000 نقطة مكافأة عند ختم القرآن كاملاً
+        REVISION_PAGE_COMPLETE: 5,   // 5 نقاط لكل صفحة مراجعة (أقل من الحفظ الجديد)
+        REVISION_VERSE_COMPLETE: 2   // نقطتان لكل آية يتم مراجعتها وتثبيتها
     };
 
     constructor(private http: HttpClient) { }
 
     // جلب تقدم المستخدم
-    getProgress(): Observable<{ success: boolean; progress: QuranProgress }> {
-        return this.http.get<{ success: boolean; progress: QuranProgress }>(`${this.apiUrl}/progress`).pipe(
+    getProgress(): Observable<{ success: boolean; progress: QuranProgress; economy: any }> {
+        return this.http.get<{ success: boolean; progress: QuranProgress; economy: any }>(`${this.apiUrl}/progress`).pipe(
             tap(response => {
                 if (response.success) {
                     this.progressSubject.next(response.progress);
+                    if (response.economy) {
+                        this.economySubject.next(response.economy);
+                    }
                 }
+            }),
+            catchError(err => {
+                return throwError(err);
             })
         );
     }
@@ -84,8 +95,13 @@ export class QuranProgressService {
                             ...current,
                             totalPoints: response.totalPoints
                         });
+                    } else {
+                        this.getProgress().subscribe();
                     }
                 }
+            }),
+            catchError(err => {
+                return throwError(err);
             })
         );
     }
@@ -160,7 +176,7 @@ export class QuranProgressService {
         const user = localStorage.getItem('user');
         if (user) {
             this.addPoints(activity, count).subscribe({
-                error: err => console.error('Failed to add points:', err)
+                error: err => { }
             });
         }
     }
@@ -175,5 +191,62 @@ export class QuranProgressService {
         if (progress) {
             this.progressSubject.next(progress);
         }
+    }
+
+    // تحويل النقاط إلى جنيهات
+    convertPoints(points: number): Observable<any> {
+        return this.http.post<any>(`${this.apiUrl}/convert-points`, { points }).pipe(
+            tap(response => {
+                if (response.success) {
+                    const current = this.progressSubject.value;
+                    if (current) {
+                        this.progressSubject.next({
+                            ...current,
+                            totalPoints: response.newTotalPoints,
+                            walletBalance: response.newBalance
+                        });
+                    }
+                }
+            })
+        );
+    }
+
+    // طلب سحب الرصيد
+    requestPayout(): Observable<any> {
+        return this.http.post<any>(`${this.apiUrl}/request-payout`, {}).pipe(
+            tap(response => {
+                if (response.success) {
+                    const current = this.progressSubject.value;
+                    if (current) {
+                        this.progressSubject.next({
+                            ...current,
+                            walletBalance: 0
+                        });
+                    }
+                }
+            })
+        );
+    }
+
+    // إنشاء تبرع
+    createDonation(amount: number, message: string = ''): Observable<any> {
+        return this.http.post<any>(`${this.apiUrl}/create-donation`, { amount, message }).pipe(
+            tap(response => {
+                if (response.success) {
+                    const current = this.progressSubject.value;
+                    if (current) {
+                        this.progressSubject.next({
+                            ...current,
+                            walletBalance: response.newBalance
+                        });
+                    }
+                }
+            })
+        );
+    }
+
+    // جلب إحصائيات التبرعات الإجمالية
+    getDonationStats(): Observable<any> {
+        return this.http.get<any>(`${environment.apiBaseUrl}/admin/donation-stats`);
     }
 }

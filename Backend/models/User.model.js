@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+// Update: Added 'verses' to newMemorization enum and memorizationAmount field.
 
 const paymentRequestSchema = new mongoose.Schema({
   amount: { type: Number, required: true },
@@ -147,7 +148,8 @@ const userSchema = new mongoose.Schema({
     khatmatCount: { type: Number, default: 0 },         // عدد الختمات
     lastActivityDate: { type: Date },                   // آخر نشاط
     lastPage: { type: Number, default: 1 },             // آخر صفحة تم قراءتها
-    bookmarks: [{ type: Number }]                       // الصفحات المحفوظة
+    bookmarks: [{ type: Number }],                       // الصفحات المحفوظة
+    walletBalance: { type: Number, default: 0 }         // رصيد المحفظة (ج.م)
   },
   // نظام المتابعة الذكية (Smart Mutaba'a)
   mutabaa: {
@@ -189,7 +191,8 @@ const userSchema = new mongoose.Schema({
     dailyCapacity: {
       recitationType: { type: String, enum: ['page', 'half_hizb', 'hizb', 'juz'], default: 'page' },
       recitationAmount: { type: Number, default: 2 }, // عدد الوحدات
-      newMemorization: { type: String, enum: ['verse', 'half_page', 'page'], default: 'verse' },
+      newMemorization: { type: String, enum: ['verse', 'half_page', 'page', 'verses'], default: 'verse' },
+      memorizationAmount: { type: Number, default: 5 }, // For 'verses' type
       memorizationDays: { type: Number, default: 5 }, // أيام الحفظ في الأسبوع
       reviewType: { type: String, enum: ['light', 'weekly', 'rescue'], default: 'light' },
       reviewAmount: { type: Number, default: 1 } // الكمية للمراجعة
@@ -219,6 +222,12 @@ const userSchema = new mongoose.Schema({
       currentStreak: { type: Number, default: 0 },
       bestStreak: { type: Number, default: 0 },
       lastActiveDate: { type: String } // YYYY-MM-DD
+    },
+    // إعدادات التنبيهات المخصصة
+    reminders: {
+      recitation: { enabled: { type: Boolean, default: false }, time: { type: String, default: '08:00' } },
+      memorization: { enabled: { type: Boolean, default: false }, time: { type: String, default: '09:00' } },
+      revision: { enabled: { type: Boolean, default: false }, time: { type: String, default: '10:00' } }
     }
   },
   paymentRequests: [paymentRequestSchema]

@@ -13,8 +13,9 @@ import { PushNotificationService } from './services/push-notification.service';
 import { NotificationService } from './services/notification.service';
 import { AuthService } from './auth/auth.service';
 import { StatusBar, Style } from '@capacitor/status-bar'; // Import StatusBar
-import { Subscription } from 'rxjs';
+import { Subscription, Observable } from 'rxjs';
 import { filter } from 'rxjs/operators';
+import { MushafAssetService } from './core/services/mushaf-asset.service';
 
 @Component({
   selector: 'app-root',
@@ -43,6 +44,11 @@ export class AppComponent implements OnInit {
   modalConfig: ModalConfig | null = null;
   private modalSubscription: Subscription | null = null;
 
+  // Mushaf Download State
+  isDownloadingAssets$!: Observable<boolean>;
+  downloadProgress$!: Observable<number>;
+  downloadMessage$!: Observable<string>;
+
   constructor(
     private router: Router,
     private dataService: DataService,
@@ -53,9 +59,13 @@ export class AppComponent implements OnInit {
     private appUpdateService: AppUpdateService, // Inject AppUpdateService
     private pushService: PushNotificationService, // Inject PushNotificationService
     private notificationService: NotificationService, // Inject NotificationService
-    private authService: AuthService
+    private authService: AuthService,
+    private mushafAssetService: MushafAssetService
   ) {
     this.initializeApp();
+    this.isDownloadingAssets$ = this.mushafAssetService.loading$;
+    this.downloadProgress$ = this.mushafAssetService.progress$;
+    this.downloadMessage$ = this.mushafAssetService.message$;
   }
 
   initializeApp() {
@@ -105,6 +115,8 @@ export class AppComponent implements OnInit {
       if (event instanceof NavigationEnd) {
         window.scrollTo(0, 0);
         this.isMushafPage = event.urlAfterRedirects.includes('/mushaf');
+        // Persist state to allow "Resume Mushaf"
+        localStorage.setItem('last_mushaf_state', this.isMushafPage ? 'mushaf' : 'other');
       }
     });
 
@@ -136,21 +148,30 @@ export class AppComponent implements OnInit {
       this.modalConfig = config;
     });
 
+    // Auto-resume Mushaf if it was the last open page
+    const lastState = localStorage.getItem('last_mushaf_state');
+    const currentPath = window.location.pathname;
+    if (lastState === 'mushaf' && (currentPath === '/' || currentPath === '/home' || currentPath === '/index.html')) {
+      this.router.navigate(['/mushaf']);
+    }
+
     // Global Push Listener for Optimistic Updates
     this.pushService.pushPayload.subscribe((payload: any) => {
       console.log('⚡ Optimistic Notification Update:', payload);
       if (payload && payload.notification) {
         // Construct temporary notification object
         const newNotification: any = {
-          _id: payload.data?.relatedId ? `temp_${payload.data.relatedId}` : `temp_${Date.now()}`,
           message: payload.notification.body || payload.body,
           type: payload.data?.type || 'system',
           read: false,
           createdAt: new Date().toISOString(),
           relatedId: payload.data?.relatedId
         };
+        // Add random ID if not present
+        if (!newNotification._id) {
+          newNotification._id = `temp_${Date.now()}`;
+        }
 
-        this.notificationService.addNotification(newNotification);
         this.notificationService.addNotification(newNotification);
       }
     });

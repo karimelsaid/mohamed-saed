@@ -23,6 +23,7 @@ const PromotionDate = require('../models/PromotionDate.model');
 const PaymentRequest = require('../models/PaymentRequest.model');
 const Referral = require('../models/Referral.model');
 const Ebook = require('../models/Ebook.model');
+const Donation = require('../models/Donation.model');
 const { createMiniEpub } = require('../services/epub.service');
 
 // Helper function to generate random barcode string
@@ -1594,6 +1595,70 @@ async function getPaymentRequests(req, res) {
   }
 }
 
+async function updatePaymentRequestStatus(req, res) {
+  try {
+    const { requestId } = req.params;
+    const { status } = req.body; // 'completed' or 'rejected'
+
+    const user = await User.findOne({ 'paymentRequests._id': requestId });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User or request not found' });
+    }
+
+    const request = user.paymentRequests.id(requestId);
+    if (!request) {
+      return res.status(404).json({ success: false, message: 'Request not found' });
+    }
+
+    if (request.status !== 'pending') {
+      return res.status(400).json({ success: false, message: 'Request already processed' });
+    }
+
+    request.status = status;
+    request.processedAt = new Date();
+
+    // If rejected, refund the wallet balance
+    if (status === 'rejected') {
+      user.quranProgress.walletBalance += request.amount;
+    }
+
+    await user.save();
+
+    // Also update the global PaymentRequest model if it exists/is used
+    const globalRequest = await PaymentRequest.findById(requestId);
+    if (globalRequest) {
+      globalRequest.status = status;
+      globalRequest.processedAt = new Date();
+      await globalRequest.save();
+    }
+
+    res.json({ success: true, message: `Payment request ${status} successfully` });
+  } catch (error) {
+    console.error('Error updating payment request status:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+}
+
+async function getDonationStats(req, res) {
+  try {
+    const totalDonations = await Donation.aggregate([
+      { $match: { status: 'completed' } },
+      { $group: { _id: null, total: { $sum: '$amount' } } }
+    ]);
+
+    const donorsCount = await Donation.distinct('userId', { status: 'completed' });
+
+    res.json({
+      success: true,
+      totalAmount: totalDonations.length > 0 ? totalDonations[0].total : 0,
+      donorsCount: donorsCount.length
+    });
+  } catch (error) {
+    console.error('Error fetching donation stats:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+}
+
 async function userHierarchy(req, res) {
   try {
     const users = await User.find({}, 'username email phone governorate city village referralCode referralBalance role createdAt');
@@ -1965,7 +2030,9 @@ module.exports = {
   getAllUrgencyRequests,
   updateUrgencyRequestStatus,
   deleteUrgencyRequest,
-  updateProductQuantity
+  updateProductQuantity,
+  updatePaymentRequestStatus,
+  getDonationStats
 };
 
 async function updateUrgencyRequestStatus(req, res) {

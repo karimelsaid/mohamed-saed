@@ -17,7 +17,7 @@ import { FreeShippingRulesComponent } from './free-shipping/free-shipping-rules.
 import { Subscription } from 'rxjs';
 import { FaIconLibrary, FontAwesomeModule, FaIconComponent } from '@fortawesome/angular-fontawesome';
 import { faShoppingCart, faStore, faBook, faPrint, faPlus, faEdit, faTruck, faUsers, faCheckCircle, faMoneyBillWave, faSitemap, faPlusCircle, faImage, faTag, faHashtag, faList, faDollarSign, faAlignLeft, faExclamationTriangle, faCartPlus, faHeart, faMobileAlt, faCamera, faTimes, faHome, faChartLine, faCog, faBars, faUserClock, faCoins, faUserPlus, faChartBar, faBell, faSearch, faSlidersH } from '@fortawesome/free-solid-svg-icons';
-// PaymentRequestsComponent removed
+import { PaymentRequestsComponent } from '../payment-requests/payment-requests.component';
 import { UserHierarchyComponent } from '../user-hierarchy/user-hierarchy.component';
 import { AmazonPriceCalculatorComponent } from '../amazon-price-calculator/amazon-price-calculator.component';
 import { AdminEbooksComponent } from '../admin-ebooks/admin-ebooks.component';
@@ -136,6 +136,16 @@ interface UrgencyRequest {
   fulfilled?: boolean;
 }
 
+interface ReaderFeedback {
+  _id: string;
+  userId?: string;
+  username?: string;
+  email?: string;
+  content: string;
+  page?: number;
+  createdAt: string;
+}
+
 interface UserInsight {
   user: any;
   score: number;
@@ -155,8 +165,20 @@ interface SystemSettings {
     streakBonus30Days: number;
     reviewPoints: number;
   };
+  quranPoints: {
+    VERSE_MEMORIZED: number;
+    PAGE_COMPLETE: number;
+    HIZB_COMPLETE: number;
+    JUZ_COMPLETE: number;
+    DAILY_STREAK: number;
+    KHATMA_COMPLETE: number;
+    REVISION_PAGE_COMPLETE: number;
+    REVISION_VERSE_COMPLETE: number;
+  };
   economy: {
     coinExchangeRate: number;
+    quranPointsPerEGP: number;
+    quranMinConversionPoints: number;
     minimumWithdrawal: number;
   };
   maintenanceMode: boolean;
@@ -174,7 +196,7 @@ interface SystemSettings {
     FreeShippingRulesComponent,
     MerchantManagementComponent,
     ProductApprovalComponent,
-    // PaymentRequestsComponent removed
+    PaymentRequestsComponent,
     UserHierarchyComponent,
     AmazonPriceCalculatorComponent,
     AdminEbooksComponent,
@@ -189,9 +211,10 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   allOrders: GroupedOrder[] = [];
   requestedBooks: RequestedBook[] = [];
   allRequestedBooks: RequestedBook[] = [];
+  feedbacks: ReaderFeedback[] = [];
   isAdmin: boolean = false; // Add paymentRequests to the type union
   showSidebar: boolean = true;
-  currentView: 'dashboard' | 'userIntelligence' | 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' | 'gamificationControl' | 'notifications' | 'subscriptionControl' = 'dashboard';
+  currentView: 'dashboard' | 'userIntelligence' | 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' | 'gamificationControl' | 'notifications' | 'subscriptionControl' | 'readerFeedback' = 'dashboard';
 
   // Gamification Control Properties
   systemSettings: SystemSettings = {
@@ -203,8 +226,20 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       streakBonus30Days: 500,
       reviewPoints: 20
     },
+    quranPoints: {
+      VERSE_MEMORIZED: 5,
+      PAGE_COMPLETE: 10,
+      HIZB_COMPLETE: 50,
+      JUZ_COMPLETE: 100,
+      DAILY_STREAK: 20,
+      KHATMA_COMPLETE: 1000,
+      REVISION_PAGE_COMPLETE: 5,
+      REVISION_VERSE_COMPLETE: 2
+    },
     economy: {
       coinExchangeRate: 50,
+      quranPointsPerEGP: 500,
+      quranMinConversionPoints: 5,
       minimumWithdrawal: 500
     },
     maintenanceMode: false
@@ -833,7 +868,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     }
   }
 
-  switchView(view: 'dashboard' | 'userIntelligence' | 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' | 'gamificationControl' | 'notifications' | 'subscriptionControl'): void {
+  switchView(view: 'dashboard' | 'userIntelligence' | 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' | 'gamificationControl' | 'notifications' | 'subscriptionControl' | 'readerFeedback'): void {
     this.currentView = view;
 
     if (view === 'dashboard') {
@@ -873,6 +908,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       this.loadMobileVersion();
     } else if (view === 'subscriptionControl') {
       // No data loading needed as the component handles it
+    } else if (view === 'readerFeedback') {
+      this.loadFeedbacks();
     }
   }
 
@@ -942,10 +979,19 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     this.http.get<SystemSettings>(`${this.backendBaseUrl}/admin/settings`).subscribe({
       next: (settings) => {
         if (settings) {
-          this.systemSettings = { ...this.systemSettings, ...settings };
-          // Ensure deep merge for nested objects if needed, or just rely on spread for top-level keys
-          if (settings.gamification) this.systemSettings.gamification = { ...this.systemSettings.gamification, ...settings.gamification };
-          if (settings.economy) this.systemSettings.economy = { ...this.systemSettings.economy, ...settings.economy };
+          // Update top-level properties
+          if (typeof settings.maintenanceMode !== 'undefined') this.systemSettings.maintenanceMode = settings.maintenanceMode;
+
+          // Deep merge sub-objects to preserve local defaults for new fields
+          if (settings.gamification) {
+            this.systemSettings.gamification = { ...this.systemSettings.gamification, ...settings.gamification };
+          }
+          if (settings.quranPoints) {
+            this.systemSettings.quranPoints = { ...this.systemSettings.quranPoints, ...settings.quranPoints };
+          }
+          if (settings.economy) {
+            this.systemSettings.economy = { ...this.systemSettings.economy, ...settings.economy };
+          }
 
           this.originalSettings = JSON.parse(JSON.stringify(this.systemSettings));
           console.log('System settings loaded:', this.systemSettings);
@@ -978,6 +1024,18 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     if (this.todayReaders < (this.totalUsers * 0.1)) {
       this.lowReadingAlert = true;
     }
+  }
+
+  loadFeedbacks(): void {
+    console.log('Loading reader feedback...');
+    this.http.get<any>(`${this.backendBaseUrl}/feedback/all`).subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.feedbacks = res.feedback;
+        }
+      },
+      error: (err) => console.error('Error loading feedback', err)
+    });
   }
 
   // Phase 2: User Intelligence Logic
@@ -1077,8 +1135,20 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
           streakBonus30Days: 500,
           reviewPoints: 20
         },
+        quranPoints: {
+          VERSE_MEMORIZED: 5,
+          PAGE_COMPLETE: 10,
+          HIZB_COMPLETE: 50,
+          JUZ_COMPLETE: 100,
+          DAILY_STREAK: 20,
+          KHATMA_COMPLETE: 1000,
+          REVISION_PAGE_COMPLETE: 5,
+          REVISION_VERSE_COMPLETE: 2
+        },
         economy: {
           coinExchangeRate: 50,
+          quranPointsPerEGP: 500,
+          quranMinConversionPoints: 5,
           minimumWithdrawal: 500
         },
         maintenanceMode: false

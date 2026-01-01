@@ -18,6 +18,7 @@ export class HifzWizardComponent implements OnInit {
     totalSteps = 3;
     isLoading = true; // Start loading true
     error = '';
+    resetProgress = false;
 
     // ... variables ... 
     // We need to keep class properties intact, but ReplcementContent replaces text block.
@@ -25,7 +26,16 @@ export class HifzWizardComponent implements OnInit {
 
     userLevel: 'beginner' | 'intermediate' | 'advanced' = 'beginner';
     selectionTab: 'surah' | 'juz' = 'surah';
-    memorizedSurahs: { surahId: number; surahName: string; strength: string }[] = [];
+    memorizedSurahs: {
+        surahId: number;
+        surahName: string;
+        strength: string;
+        memorizedVerseCount?: number;
+        totalVerses?: number;
+        fromVerse?: number;
+        toVerse?: number;
+        showRangeSettings?: boolean;
+    }[] = [];
     surahList: SurahMetadata[] = [];
     juzList: JuzMetadata[] = [];
     searchQuery: string = '';
@@ -34,6 +44,7 @@ export class HifzWizardComponent implements OnInit {
         recitationType: 'page',
         recitationAmount: 2,
         newMemorization: 'verse',
+        memorizationAmount: 5, // Default for 'verses' type
         memorizationDays: 5,
         reviewType: 'light',
         reviewAmount: 1
@@ -55,43 +66,50 @@ export class HifzWizardComponent implements OnInit {
             planData: this.hifzPlanService.getPlan()
         }).subscribe({
             next: (data) => {
-                // 1. Setup Metadata
                 this.surahList = data.metadata.surahs;
                 this.juzList = data.metadata.juzs;
 
-                // 2. Setup Existing Plan Data (if valid)
                 if (data.planData && data.planData.plan) {
                     const plan = data.planData.plan;
-
-                    // Restore User Level
                     if (plan.userLevel) this.userLevel = plan.userLevel;
-
-                    // Restore Daily Capacity
                     if (plan.dailyCapacity) {
                         this.dailyCapacity = { ...this.dailyCapacity, ...plan.dailyCapacity };
                     }
 
-                    // Restore Memorized Surahs
                     if (plan.memorizedContent && plan.memorizedContent.length > 0) {
-                        const restoredSurahs = new Map<number, string>(); // id -> strength
-
+                        // Group verses by Surah ID and count
+                        const surahVerseCountMap = new Map<number, { count: number; strength: string; min: number; max: number }>();
                         plan.memorizedContent.forEach(v => {
                             const parts = v.verseKey.split(':');
                             const surahId = parseInt(parts[0]);
-                            if (!restoredSurahs.has(surahId)) {
-                                // Use the strength of the first encounter or keep logic simple
-                                restoredSurahs.set(surahId, v.strength);
+                            const verseNum = parseInt(parts[1]);
+                            if (surahVerseCountMap.has(surahId)) {
+                                const current = surahVerseCountMap.get(surahId)!;
+                                current.count++;
+                                if (verseNum < current.min) current.min = verseNum;
+                                if (verseNum > current.max) current.max = verseNum;
+                            } else {
+                                surahVerseCountMap.set(surahId, {
+                                    count: 1,
+                                    strength: v.strength || 'medium',
+                                    min: verseNum,
+                                    max: verseNum
+                                });
                             }
                         });
 
                         this.memorizedSurahs = [];
-                        restoredSurahs.forEach((strength, surahId) => {
+                        surahVerseCountMap.forEach((data, surahId) => {
                             const meta = this.surahList.find(s => s.id === surahId);
                             if (meta) {
                                 this.memorizedSurahs.push({
                                     surahId,
                                     surahName: meta.name,
-                                    strength
+                                    strength: data.strength,
+                                    memorizedVerseCount: data.count,
+                                    totalVerses: meta.verses_count,
+                                    fromVerse: data.min,
+                                    toVerse: data.max
                                 });
                             }
                         });
@@ -101,9 +119,7 @@ export class HifzWizardComponent implements OnInit {
                 this.isLoading = false;
             },
             error: (err) => {
-                console.error('Error loading wizard data', err);
                 this.isLoading = false;
-                // Fallback: still let user use wizard but empty
             }
         });
     }
@@ -126,14 +142,17 @@ export class HifzWizardComponent implements OnInit {
         this.userLevel = level;
         if (level === 'beginner') {
             this.dailyCapacity.newMemorization = 'verse';
+            this.dailyCapacity.memorizationAmount = 3;
             this.dailyCapacity.memorizationDays = 3;
             this.dailyCapacity.reviewType = 'light';
         } else if (level === 'intermediate') {
             this.dailyCapacity.newMemorization = 'half_page';
+            this.dailyCapacity.memorizationAmount = 10;
             this.dailyCapacity.memorizationDays = 5;
             this.dailyCapacity.reviewType = 'weekly';
         } else {
             this.dailyCapacity.newMemorization = 'page';
+            this.dailyCapacity.memorizationAmount = 20;
             this.dailyCapacity.memorizationDays = 7;
             this.dailyCapacity.reviewType = 'rescue';
         }
@@ -142,7 +161,16 @@ export class HifzWizardComponent implements OnInit {
     toggleSurah(surahId: number, surahName: string): void {
         const idx = this.memorizedSurahs.findIndex(s => s.surahId === surahId);
         if (idx === -1) {
-            this.memorizedSurahs.push({ surahId, surahName, strength: 'medium' });
+            const meta = this.surahList.find(s => s.id === surahId);
+            this.memorizedSurahs.push({
+                surahId,
+                surahName,
+                strength: 'medium',
+                totalVerses: meta?.verses_count || 0,
+                memorizedVerseCount: meta?.verses_count || 0,
+                fromVerse: 1,
+                toVerse: meta?.verses_count || 0
+            });
         } else {
             this.memorizedSurahs.splice(idx, 1);
         }
@@ -157,8 +185,6 @@ export class HifzWizardComponent implements OnInit {
         const juz = this.juzList.find(j => j.id === juzId);
         if (!juz) return;
 
-        // Calculate end page for Juz if not present (Juz is roughly 20 pages)
-        // Better: find next juz start page or user total pages (604)
         const nextJuz = this.juzList.find(j => j.id === juzId + 1);
         const startPage = juz.start_page;
         const endPage = nextJuz ? nextJuz.start_page - 1 : 604;
@@ -179,13 +205,44 @@ export class HifzWizardComponent implements OnInit {
         } else {
             surahsInJuz.forEach(s => {
                 if (!this.isSurahSelected(s.id)) {
-                    this.memorizedSurahs.push({ surahId: s.id, surahName: s.name, strength: 'medium' });
+                    this.memorizedSurahs.push({
+                        surahId: s.id,
+                        surahName: s.name,
+                        strength: 'medium',
+                        totalVerses: s.verses_count,
+                        memorizedVerseCount: s.verses_count,
+                        fromVerse: 1,
+                        toVerse: s.verses_count
+                    });
                 }
             });
         }
-
-        console.log(`[HifzWizard] Memorized Surahs Updated. Count: ${this.memorizedSurahs.length}`);
         this.checkAllSelected();
+    }
+
+    toggleRangeSettings(surah: any): void {
+        surah.showRangeSettings = !surah.showRangeSettings;
+    }
+
+    getVerseRange(count: number | undefined): number[] {
+        if (!count) return [];
+        return Array.from({ length: count }, (_, i) => i + 1);
+    }
+
+    updateCount(surah: any): void {
+        const from = surah.fromVerse || 1;
+        const to = surah.toVerse || surah.totalVerses || 0;
+        if (to >= from && from > 0) {
+            surah.memorizedVerseCount = to - from + 1;
+        } else {
+            surah.memorizedVerseCount = 0;
+        }
+    }
+
+    getSurahPercent(surahId: number): number {
+        const ms = this.memorizedSurahs.find(s => s.surahId === surahId);
+        if (!ms || !ms.memorizedVerseCount || !ms.totalVerses) return 0;
+        return Math.round((ms.memorizedVerseCount / ms.totalVerses) * 100);
     }
 
     isJuzSelected(juzId: number): boolean {
@@ -212,7 +269,11 @@ export class HifzWizardComponent implements OnInit {
             this.memorizedSurahs = this.surahList.map(s => ({
                 surahId: s.id,
                 surahName: s.name,
-                strength: 'medium'
+                strength: 'medium',
+                totalVerses: s.verses_count,
+                memorizedVerseCount: s.verses_count,
+                fromVerse: 1,
+                toVerse: s.verses_count
             }));
         }
         this.isAllSelected = !this.isAllSelected;
@@ -244,31 +305,30 @@ export class HifzWizardComponent implements OnInit {
         this.isLoading = true;
         this.error = '';
 
-        const memorizedContent: MemorizedVerse[] = this.memorizedSurahs.map(s => ({
-            verseKey: `${s.surahId}:1`,
-            strength: s.strength as any
-        }));
+        const memorizedContent: MemorizedVerse[] = [];
+        let totalVersesFactor = 0;
 
-        const totalVerses = this.memorizedSurahs.reduce((sum, ms) => {
+        this.memorizedSurahs.forEach(ms => {
             const meta = this.surahList.find(s => s.id === ms.surahId);
-            if (!meta?.verses_count) {
-                console.warn(`[HifzWizard] Missing verses_count for Surah ${ms.surahId}`, meta);
+            if (meta) {
+                const start = ms.fromVerse || 1;
+                const end = ms.toVerse || meta.verses_count;
+                for (let v = start; v <= end; v++) {
+                    memorizedContent.push({
+                        verseKey: `${ms.surahId}:${v}`,
+                        strength: ms.strength as any
+                    });
+                    totalVersesFactor++;
+                }
             }
-            return sum + (meta?.verses_count || 0);
-        }, 0);
-
-        // DEBUG: Alert user to confirm data presence
-        alert(`جاري حفظ الخطة...\nعدد السور المختارة: ${this.memorizedSurahs.length}\nمجموع الآيات المحسوب: ${totalVerses}`);
-
-        console.log('[HifzWizard] Calculated Total Verses:', totalVerses);
-        console.log('[HifzWizard] Selected Surahs:', this.memorizedSurahs);
-        console.log('[HifzWizard] First Surah Meta:', this.surahList[0]);
+        });
 
         this.hifzPlanService.saveSetup({
             userLevel: this.userLevel,
             dailyCapacity: this.dailyCapacity,
             memorizedContent,
-            totalVersesMemorized: totalVerses
+            totalVersesMemorized: totalVersesFactor,
+            resetProgress: this.resetProgress
         }).subscribe({
             next: (res) => {
                 this.isLoading = false;

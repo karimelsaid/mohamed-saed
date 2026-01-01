@@ -349,8 +349,10 @@ async function requestBook(req, res) {
 // New controller to get all requested books from all users
 async function getAllRequestedBooks(req, res) {
   try {
-    const users = await User.find({}, 'requestedBooks username');
+    // Optimization: Only find users that have at least one requested book
+    const users = await User.find({ "requestedBooks.0": { $exists: true } }, 'requestedBooks username');
     let allRequestedBooks = [];
+
     users.forEach(user => {
       if (user.requestedBooks && user.requestedBooks.length > 0) {
         allRequestedBooks = allRequestedBooks.concat(user.requestedBooks.map(rb => ({
@@ -364,6 +366,10 @@ async function getAllRequestedBooks(req, res) {
         })));
       }
     });
+
+    // Sort by date requested descending
+    allRequestedBooks.sort((a, b) => new Date(b.dateRequested) - new Date(a.dateRequested));
+
     res.status(200).json(allRequestedBooks);
   } catch (error) {
     console.error('Error fetching requested books:', error);

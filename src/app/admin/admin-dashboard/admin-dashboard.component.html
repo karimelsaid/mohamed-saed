@@ -16,7 +16,7 @@
 
     <!-- Navigation Items -->
     <nav
-      class="flex-1 overflow-y-auto py-4 px-2 space-y-1 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600">
+      class="flex-1 overflow-y-auto py-4 px-2 space-y-1 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 pb-28 md:pb-4">
 
       <button (click)="switchView('dashboard'); showSidebar = false"
         [class]="currentView === 'dashboard' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
@@ -158,6 +158,20 @@
         class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
         <fa-icon [icon]="['fas', 'mobile-alt']"></fa-icon>
         <span>إعدادات التطبيق</span>
+      </button>
+
+      <button (click)="switchView('paymentRequests'); showSidebar = false"
+        [class]="currentView === 'paymentRequests' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
+        class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
+        <fa-icon [icon]="['fas', 'money-bill-wave']"></fa-icon>
+        <span>طلبات الدفع</span>
+      </button>
+
+      <button (click)="switchView('readerFeedback'); showSidebar = false"
+        [class]="currentView === 'readerFeedback' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
+        class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
+        <fa-icon [icon]="['fas', 'comment-dots']"></fa-icon>
+        <span>ملاحظات القراء</span>
       </button>
 
     </nav>
@@ -560,6 +574,10 @@
         <app-subscription-settings></app-subscription-settings>
       </div>
 
+      <div *ngIf="currentView === 'paymentRequests'" class="mb-28 md:mb-0 px-4">
+        <app-payment-requests></app-payment-requests>
+      </div>
+
       <!-- GAMIFICATION CONTROL ROOM VIEW -->
       <div *ngIf="currentView === 'gamificationControl'"
         class="space-y-6 animate-in fade-in duration-300 mb-28 md:mb-0 px-4">
@@ -591,110 +609,182 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <!-- Economy & Points Config -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- Card 1: EPUB/Store Gamification -->
           <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
             <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-6 flex items-center gap-2">
-              <fa-icon [icon]="['fas', 'coins']" class="text-yellow-500"></fa-icon>
-              اقتصاد النقاط (Points Economy)
+              <fa-icon [icon]="['fas', 'book']" class="text-blue-500"></fa-icon>
+              نظام الكتب الإلكترونية (EPUB)
             </h3>
 
             <div class="space-y-6">
-              <!-- Helper Function for Range Sliders -->
               <div>
                 <div class="flex justify-between mb-2">
-                  <label class="font-medium text-gray-700 dark:text-gray-300">نقاط تسجيل الدخول اليومي</label>
-                  <span
-                    class="bg-purple-100 dark:bg-purple-900/30 text-purple-600 font-bold px-2 py-0.5 rounded text-sm">{{
-                    systemSettings.gamification.loginPoints }} نقطة</span>
+                  <label class="font-medium text-gray-700 dark:text-gray-300">نقاط تسجيل الدخول اليومي (Coins)</label>
+                  <span class="bg-blue-100 dark:bg-blue-900/30 text-blue-600 font-bold px-2 py-0.5 rounded text-sm">{{
+                    systemSettings.gamification.loginPoints }} Coins</span>
                 </div>
                 <input type="range" [(ngModel)]="systemSettings.gamification.loginPoints" min="1" max="100"
-                  class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600">
+                  class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
               </div>
 
               <div>
                 <div class="flex justify-between mb-2">
-                  <label class="font-medium text-gray-700 dark:text-gray-300">نقاط القراءة (لكل دقيقة)</label>
-                  <span
-                    class="bg-purple-100 dark:bg-purple-900/30 text-purple-600 font-bold px-2 py-0.5 rounded text-sm">{{
-                    systemSettings.gamification.readingPointsPerMinute }} نقطة</span>
+                  <label class="font-medium text-gray-700 dark:text-gray-300">نقاط القراءة (xp لكل دقيقة)</label>
+                  <span class="bg-blue-100 dark:bg-blue-900/30 text-blue-600 font-bold px-2 py-0.5 rounded text-sm">{{
+                    systemSettings.gamification.readingPointsPerMinute }} XP</span>
                 </div>
                 <input type="range" [(ngModel)]="systemSettings.gamification.readingPointsPerMinute" min="0.1" max="10"
-                  step="0.1" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600">
+                  step="0.1" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
               </div>
 
               <div>
                 <div class="flex justify-between mb-2">
-                  <label class="font-medium text-gray-700 dark:text-gray-300">مكافأة الإحالة (Referral)</label>
-                  <span
-                    class="bg-purple-100 dark:bg-purple-900/30 text-purple-600 font-bold px-2 py-0.5 rounded text-sm">{{
-                    systemSettings.gamification.referralPoints }} نقطة</span>
+                  <label class="font-medium text-gray-700 dark:text-gray-300">مكافأة الإحالة (Coins)</label>
+                  <span class="bg-blue-100 dark:bg-blue-900/30 text-blue-600 font-bold px-2 py-0.5 rounded text-sm">{{
+                    systemSettings.gamification.referralPoints }} Coins</span>
                 </div>
                 <input type="range" [(ngModel)]="systemSettings.gamification.referralPoints" min="10" max="500"
-                  class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600">
+                  class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
               </div>
 
+              <div class="pt-4 border-t dark:border-gray-700">
+                <div class="flex justify-between mb-2">
+                  <label class="font-medium text-gray-700 dark:text-gray-300">سعر الصرف (كم عملة = 1 جنيه؟)</label>
+                  <span class="text-blue-600 font-bold text-sm">{{ systemSettings.economy.coinExchangeRate }} Coin = 1
+                    جم</span>
+                </div>
+                <input type="range" [(ngModel)]="systemSettings.economy.coinExchangeRate" min="10" max="200" step="5"
+                  class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2: Quran Progress Points Config -->
+          <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-6 flex items-center gap-2">
+              <fa-icon [icon]="['fas', 'book-quran']" class="text-green-500"></fa-icon>
+              نظام المصحف الشريف (Quran)
+            </h3>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">حفظ آية (نقاط)</label>
+                <input type="number" [(ngModel)]="systemSettings.quranPoints.VERSE_MEMORIZED"
+                  class="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">مراجعة آية (نقاط)</label>
+                <input type="number" [(ngModel)]="systemSettings.quranPoints.REVISION_VERSE_COMPLETE"
+                  class="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">إكمال صفحة (نقاط)</label>
+                <input type="number" [(ngModel)]="systemSettings.quranPoints.PAGE_COMPLETE"
+                  class="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">مراجعة صفحة
+                  (نقاط)</label>
+                <input type="number" [(ngModel)]="systemSettings.quranPoints.REVISION_PAGE_COMPLETE"
+                  class="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">إكمال حزب (نقاط)</label>
+                <input type="number" [(ngModel)]="systemSettings.quranPoints.HIZB_COMPLETE"
+                  class="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">إكمال جزء (نقاط)</label>
+                <input type="number" [(ngModel)]="systemSettings.quranPoints.JUZ_COMPLETE"
+                  class="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">التزام يومي
+                  (نقاط)</label>
+                <input type="number" [(ngModel)]="systemSettings.quranPoints.DAILY_STREAK"
+                  class="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ختم القرآن (نقاط)</label>
+                <input type="number" [(ngModel)]="systemSettings.quranPoints.KHATMA_COMPLETE"
+                  class="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+              </div>
+            </div>
+
+            <div class="mt-6 pt-6 border-t dark:border-gray-700 space-y-4">
+              <h4 class="font-bold text-gray-800 dark:text-white">تحويل المحفظة (Wallet)</h4>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="text-xs font-medium text-gray-500">سعر الصرف (نقطة = 1 جم)</label>
+                  <input type="number" [(ngModel)]="systemSettings.economy.quranPointsPerEGP"
+                    class="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                </div>
+                <div>
+                  <label class="text-xs font-medium text-gray-500">الحد الأدنى للتحويل</label>
+                  <input type="number" [(ngModel)]="systemSettings.economy.quranMinConversionPoints"
+                    class="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 3: Streak Bonuses (Store) -->
+          <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-6 flex items-center gap-2">
+              <fa-icon [icon]="['fas', 'fire']" class="text-orange-500"></fa-icon>
+              مكافآت الاستمرارية (EPUB Streaks)
+            </h3>
+            <div class="space-y-6">
               <div>
                 <div class="flex justify-between mb-2">
-                  <label class="font-medium text-gray-700 dark:text-gray-300">مكافأة المراجعة (Review)</label>
+                  <label class="font-medium text-gray-700 dark:text-gray-300">بونص 7 أيام متواصلة</label>
                   <span
                     class="bg-purple-100 dark:bg-purple-900/30 text-purple-600 font-bold px-2 py-0.5 rounded text-sm">{{
-                    systemSettings.gamification.reviewPoints }} نقطة</span>
+                    systemSettings.gamification.streakBonus7Days }} Coins</span>
                 </div>
-                <input type="range" [(ngModel)]="systemSettings.gamification.reviewPoints" min="5" max="100"
+                <input type="range" [(ngModel)]="systemSettings.gamification.streakBonus7Days" min="50" max="1000"
+                  class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600">
+              </div>
+              <div>
+                <div class="flex justify-between mb-2">
+                  <label class="font-medium text-gray-700 dark:text-gray-300">بونص 30 يوم (شهر كامل)</label>
+                  <span
+                    class="bg-purple-100 dark:bg-purple-900/30 text-purple-600 font-bold px-2 py-0.5 rounded text-sm">{{
+                    systemSettings.gamification.streakBonus30Days }} Coins</span>
+                </div>
+                <input type="range" [(ngModel)]="systemSettings.gamification.streakBonus30Days" min="100" max="5000"
                   class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600">
               </div>
             </div>
           </div>
 
-          <!-- Streak & Exchange Rate -->
-          <div class="space-y-6">
-            <div
-              class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-              <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-6 flex items-center gap-2">
-                <fa-icon [icon]="['fas', 'fire']" class="text-orange-500"></fa-icon>
-                مكافآت الـ Streak (الاستمرارية)
-              </h3>
-              <div class="space-y-6">
-                <div>
-                  <div class="flex justify-between mb-2">
-                    <label class="font-medium text-gray-700 dark:text-gray-300">بونص 7 أيام متواصلة</label>
-                    <span
-                      class="bg-purple-100 dark:bg-purple-900/30 text-purple-600 font-bold px-2 py-0.5 rounded text-sm">{{
-                      systemSettings.gamification.streakBonus7Days }} نقطة</span>
-                  </div>
-                  <input type="range" [(ngModel)]="systemSettings.gamification.streakBonus7Days" min="50" max="1000"
-                    class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600">
-                </div>
-                <div>
-                  <div class="flex justify-between mb-2">
-                    <label class="font-medium text-gray-700 dark:text-gray-300">بونص 30 يوم (شهر كامل)</label>
-                    <span
-                      class="bg-purple-100 dark:bg-purple-900/30 text-purple-600 font-bold px-2 py-0.5 rounded text-sm">{{
-                      systemSettings.gamification.streakBonus30Days }} نقطة</span>
-                  </div>
-                  <input type="range" [(ngModel)]="systemSettings.gamification.streakBonus30Days" min="100" max="5000"
-                    class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600">
-                </div>
-              </div>
-            </div>
-
-            <div
-              class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 border-l-4 border-green-500">
-              <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
-                <fa-icon [icon]="['fas', 'money-bill-wave']" class="text-green-600"></fa-icon>
-                سعر الصرف (Exchange Rate)
-              </h3>
+          <!-- Card 4: Shared/Maintenance -->
+          <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-6 flex items-center gap-2">
+              <fa-icon [icon]="['fas', 'vial']" class="text-red-500"></fa-icon>
+              إعدادات إضافية
+            </h3>
+            <div class="space-y-4">
               <div>
-                <div class="flex justify-between mb-2">
-                  <label class="font-medium text-gray-700 dark:text-gray-300">كم عملة تساوي 1 جنيه؟</label>
-                  <span
-                    class="bg-green-100 dark:bg-green-900/30 text-green-600 font-bold px-2 py-0.5 rounded text-sm">{{
-                    systemSettings.economy.coinExchangeRate }} عملة = 1 جم</span>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">الحد الأدنى للسحب
+                  (جم)</label>
+                <input type="number" [(ngModel)]="systemSettings.economy.minimumWithdrawal"
+                  class="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+              </div>
+              <div
+                class="flex items-center justify-between p-4 bg-red-50 dark:bg-red-900/10 rounded-xl border border-red-100 dark:border-red-900/20">
+                <div>
+                  <h4 class="font-bold text-red-600">وضع الصيانة (Maintenance)</h4>
+                  <p class="text-xs text-red-500">سيمنع المستخدمين من الوصول للمشروع</p>
                 </div>
-                <input type="range" [(ngModel)]="systemSettings.economy.coinExchangeRate" min="10" max="200" step="5"
-                  class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-green-600">
-                <p class="text-xs text-gray-500 mt-2">زيادة هذا الرقم تقلل قيمة العملة. تقليله يرفع قيمتها.</p>
+                <div class="relative inline-block w-12 h-6 transition duration-200 ease-in-out">
+                  <input type="checkbox" [(ngModel)]="systemSettings.maintenanceMode" class="opacity-0 w-0 h-0 peer">
+                  <span
+                    class="absolute cursor-pointer inset-0 bg-gray-300 peer-checked:bg-red-500 rounded-full transition-colors duration-200"></span>
+                  <span
+                    class="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform duration-200 peer-checked:translate-x-6"></span>
+                </div>
               </div>
             </div>
           </div>
@@ -2002,10 +2092,10 @@
               </td>
             </tr>
           </tbody>
-          <p *ngIf="requestedBooks.length === 0" class="text-center text-gray-500 dark:text-gray-400 py-6">لا توجد
-            اقتراحات
-            حالياً</p>
         </table>
+        <p *ngIf="requestedBooks.length === 0" class="text-center text-gray-500 dark:text-gray-400 py-6">لا توجد
+          اقتراحات
+          حالياً</p>
 
         <!-- List for small screens -->
         <div class="sm:hidden space-y-4">
@@ -2314,6 +2404,52 @@
                 [style.width.%]="uploadProgress"></div>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- Reader Feedback View -->
+      <div *ngIf="currentView === 'readerFeedback'" class="space-y-6">
+        <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6">ملاحظات القراء</h2>
+
+        <div
+          class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-50 dark:bg-gray-700 border-b border-gray-100 dark:border-gray-600">
+              <tr>
+                <th class="px-6 py-4 text-right font-medium text-gray-500 dark:text-gray-300">التاريخ</th>
+                <th class="px-6 py-4 text-right font-medium text-gray-500 dark:text-gray-300">المستخدم</th>
+                <th class="px-6 py-4 text-right font-medium text-gray-500 dark:text-gray-300">الملاحظة</th>
+                <th class="px-6 py-4 text-right font-medium text-gray-500 dark:text-gray-300">الصفحة</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+              <tr *ngFor="let fb of feedbacks" class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                <td class="px-6 py-4 text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                  {{fb.createdAt | date:'medium'}}
+                </td>
+                <td class="px-6 py-4">
+                  <div class="font-medium text-gray-900 dark:text-gray-100">{{fb.username || 'زائر'}}</div>
+                  <div class="text-xs text-gray-500 dark:text-gray-400">{{fb.email}}</div>
+                </td>
+                <td class="px-6 py-4 text-gray-700 dark:text-gray-300 max-w-lg">
+                  {{fb.content}}
+                </td>
+                <td class="px-6 py-4 text-gray-600 dark:text-gray-400">
+                  <span *ngIf="fb.page"
+                    class="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded text-xs">
+                    ص {{fb.page}}
+                  </span>
+                  <span *ngIf="!fb.page">-</span>
+                </td>
+              </tr>
+              <tr *ngIf="feedbacks.length === 0">
+                <td colspan="4" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                  <fa-icon [icon]="['fas', 'inbox']" class="text-4xl mb-3 block opacity-30"></fa-icon>
+                  لا توجد ملاحظات حتى الآن
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 

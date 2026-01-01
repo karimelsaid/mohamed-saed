@@ -14,15 +14,10 @@ exports.getPublicKey = (req, res) => {
 
 exports.subscribe = async (req, res) => {
     try {
-        console.log('🔔 Subscribe Request Received');
         const { subscription, token, platform, userAgent } = req.body;
         const userId = req.user ? req.user._id : null;
 
-        console.log('👤 UserID:', userId);
-        // console.log('📦 Content:', req.body);
-
         if (!userId) {
-            console.error('❌ User ID missing');
             return res.status(401).json({ message: 'User not authenticated' });
         }
 
@@ -31,7 +26,6 @@ exports.subscribe = async (req, res) => {
 
         // --- SCENARIO 1: NATIVE (Android/iOS) ---
         if (token && platform) {
-            console.log('📱 Processing Native Subscription:', platform);
             query = { token: token }; // Unique by FCM Token
             updateData.token = token;
             updateData.platform = platform; // 'android' or 'ios'
@@ -41,7 +35,6 @@ exports.subscribe = async (req, res) => {
 
         // --- SCENARIO 2: WEB PUSH ---
         else if (subscription && subscription.endpoint) {
-            console.log('💻 Processing Web Subscription');
             query = { endpoint: subscription.endpoint }; // Unique by Web Endpoint
             updateData.endpoint = subscription.endpoint;
             updateData.keys = subscription.keys;
@@ -50,19 +43,17 @@ exports.subscribe = async (req, res) => {
         }
 
         else {
-            console.error('❌ Invalid Request Data:', req.body);
             return res.status(400).json({ message: 'Invalid subscription data. Must provide subscription (Web) or token (Native).' });
         }
 
         // Upsert subscription
-        const result = await PushSubscription.findOneAndUpdate(
+        await PushSubscription.findOneAndUpdate(
             query,
             updateData,
             { upsert: true, new: true }
         );
 
-        console.log('✅ Subscription Saved/Updated:', result._id, result.platform);
-        res.status(201).json({ message: 'Subscribed successfully' });
+        res.status(201).json({ success: true, message: 'Subscribed successfully' });
 
     } catch (error) {
         console.error('❌ Subscribe Error:', error);
@@ -171,3 +162,5 @@ exports.sendAdminNotification = async (req, res) => {
         res.status(500).json({ message: 'Failed to send notification' });
     }
 };
+
+

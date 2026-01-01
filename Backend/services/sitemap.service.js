@@ -126,7 +126,6 @@ class SitemapService extends EventEmitter {
 
         // Write sitemap.xml
         await fs.promises.writeFile(this.sitemapPath, sitemapContent, 'utf8');
-        console.log('✅ sitemap.xml generated successfully');
         return; // Success, exit loop
 
       } catch (error) {

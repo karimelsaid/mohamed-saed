@@ -1,4 +1,3 @@
-console.log('✅ Loading Mutabaa Routes...'); // Double confirm
 const express = require('express');
 const router = express.Router();
 const mutabaaController = require('../controllers/mutabaa.controller');

@@ -23,7 +23,7 @@ router.get('/free-shipping-rules', adminController.getFreeShippingRules);
 // PUT /admin/settings - Update settings
 router.put('/', async (req, res) => {
     try {
-        const { gamification, economy, maintenanceMode } = req.body;
+        const { gamification, quranPoints, economy, maintenanceMode } = req.body;
 
         let settings = await SystemSettings.findOne();
         if (!settings) {
@@ -31,7 +31,7 @@ router.put('/', async (req, res) => {
         }
 
         if (gamification) settings.gamification = { ...settings.gamification, ...gamification };
-        if (gamification) settings.gamification = { ...settings.gamification, ...gamification };
+        if (req.body.quranPoints) settings.quranPoints = { ...settings.quranPoints, ...req.body.quranPoints };
         if (economy) settings.economy = { ...settings.economy, ...economy };
         if (req.body.subscription) settings.subscription = { ...settings.subscription, ...req.body.subscription };
         if (typeof maintenanceMode !== 'undefined') settings.maintenanceMode = maintenanceMode;

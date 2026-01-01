@@ -3,8 +3,21 @@ const router = express.Router();
 const adminController = require('../controllers/admin.controller');
 const authenticateAdmin = require('../middleware/admin.auth');
 
-// Apply authentication to all admin routes
+// Publicly accessible stats (no admin auth required)
+router.get('/donation-stats', adminController.getDonationStats);
+router.get('/stats', adminController.getStats);
+
+// Apply authentication to all other admin routes
 router.use(authenticateAdmin);
+
+// Route to get all urgency requests
+router.get('/urgency-requests', adminController.getAllUrgencyRequests);
+
+// Route to update urgency request status
+router.patch('/urgency-requests/:requestId', adminController.updateUrgencyRequestStatus);
+
+// Route to delete urgency request
+router.delete('/urgency-requests/:requestId', adminController.deleteUrgencyRequest);
 
 // Route to add new product with image upload
 router.post('/add-product', adminController.upload.array('image', 3), adminController.addProduct);
@@ -65,20 +78,5 @@ router.patch('/product-update-requests/:requestId', adminController.updateProduc
 
 // Route to get all payment requests
 router.get('/payment-requests', adminController.getPaymentRequests);
-
-// Route to get user hierarchy
-router.get('/user-hierarchy', adminController.userHierarchy);
-
-// Route to get admin stats
-router.get('/stats', adminController.getStats);
-
-// Route to get all urgency requests
-router.get('/urgency-requests', adminController.getAllUrgencyRequests);
-
-// Route to update urgency request status
-router.patch('/urgency-requests/:requestId', adminController.updateUrgencyRequestStatus);
-
-// Route to delete urgency request
-router.delete('/urgency-requests/:requestId', adminController.deleteUrgencyRequest);
-
+router.patch('/payment-requests/:requestId', adminController.updatePaymentRequestStatus);
 module.exports = router;

@@ -51,16 +51,14 @@ export class QuranMatchingService {
         // Remove Tatweel (Kashida)
         normalized = normalized.replace(/ـ/g, '');
 
-        // Remove ALL Tashkeel (Diacritics) - comprehensive range
-        normalized = normalized.replace(/[\u064B-\u065F\u0670\u06D6-\u06ED]/g, '');
+        // Remove ALL Tashkeel and small signs (Diacritics)
+        // Includes: \u0610-\u061A (honorifics), \u064B-\u065F (vowels), \u0670 (small alef), \u06D6-\u06ED (small signs)
+        normalized = normalized.replace(/[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED]/g, '');
 
-        // Remove Hamza standalone
-        normalized = normalized.replace(/ء/g, '');
-
-        // Unify Alefs (all variations to bare Alef)
+        // Unify Alefs
         normalized = normalized.replace(/[أإآٱ]/g, 'ا');
 
-        // Unify Ya and Alif Maqsura
+        // Unify Ya and Alif Maqsura and Hamza on Ya
         normalized = normalized.replace(/[ىئ]/g, 'ي');
 
         // Unify Ta Marbuta and Ha
@@ -69,9 +67,8 @@ export class QuranMatchingService {
         // Unify Waw variations
         normalized = normalized.replace(/ؤ/g, 'و');
 
-        // Handle Lam-Alef ligatures
-        normalized = normalized.replace(/لا/g, 'لا');
-        normalized = normalized.replace(/[ﻻﻼ]/g, 'لا');
+        // Remove Hamza standalone (ء) as it's often ignored or added inconsistently
+        normalized = normalized.replace(/ء/g, '');
 
         // Remove non-Arabic characters except spaces
         normalized = normalized.replace(/[^\u0600-\u06FF\s]/g, '');
@@ -87,34 +84,21 @@ export class QuranMatchingService {
      */
     levenshteinDistance(a: string, b: string): number {
         const matrix = [];
+        for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+        for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
 
-        // Increment along the first column of each row
-        for (let i = 0; i <= b.length; i++) {
-            matrix[i] = [i];
-        }
-
-        // Increment each column in the first row
-        for (let j = 0; j <= a.length; j++) {
-            matrix[0][j] = j;
-        }
-
-        // Fill in the rest of the matrix
         for (let i = 1; i <= b.length; i++) {
             for (let j = 1; j <= a.length; j++) {
                 if (b.charAt(i - 1) === a.charAt(j - 1)) {
                     matrix[i][j] = matrix[i - 1][j - 1];
                 } else {
                     matrix[i][j] = Math.min(
-                        matrix[i - 1][j - 1] + 1, // substitution
-                        Math.min(
-                            matrix[i][j - 1] + 1, // insertion
-                            matrix[i - 1][j] + 1  // deletion
-                        )
+                        matrix[i - 1][j - 1] + 1,
+                        Math.min(matrix[i][j - 1] + 1, matrix[i - 1][j] + 1)
                     );
                 }
             }
         }
-
         return matrix[b.length][a.length];
     }
 
@@ -125,15 +109,12 @@ export class QuranMatchingService {
         const normSpoken = this.normalize(spokenWord);
         const normExpected = this.normalize(expectedWord);
 
-        // console.log(`[Matching] '${normSpoken}' vs '${normExpected}'`);
-
+        if (!normSpoken || !normExpected) return false;
         if (normSpoken === normExpected) return true;
 
-        // LENIENT: For Muqatta'at syllables (الف, لام, ميم, etc.)
-        // Just check if the first letter matches - very forgiving
+        // LENIENT: For Muqatta'at syllables
         const muqattaatSyllables = ['الف', 'لام', 'ميم', 'صاد', 'را', 'كاف', 'ها', 'يا', 'عين', 'طا', 'سين', 'قاف', 'نون', 'حا'];
         if (muqattaatSyllables.includes(normExpected)) {
-            // Very lenient: if spoken starts with or contains the first letter of expected, it's a match
             const firstLetter = normExpected.charAt(0);
             if (normSpoken.includes(firstLetter) || normSpoken.charAt(0) === firstLetter) {
                 return true;
@@ -141,11 +122,9 @@ export class QuranMatchingService {
         }
 
         // Partial inclusion for prefixes like "Wa", "Fa"
-        // If expected is "والعصر" and user says "العصر" -> Close enough
         if (normExpected.length > normSpoken.length && normExpected.endsWith(normSpoken)) {
             if (normExpected.length - normSpoken.length <= 2) return true;
         }
-        // If expected is "العصر" and user says "والعصر" -> Close enough
         if (normSpoken.length > normExpected.length && normSpoken.endsWith(normExpected)) {
             if (normSpoken.length - normExpected.length <= 2) return true;
         }
@@ -153,10 +132,10 @@ export class QuranMatchingService {
         const distance = this.levenshteinDistance(normSpoken, normExpected);
         const maxLength = Math.max(normSpoken.length, normExpected.length);
 
-        // Stricter matching for accuracy (like Tarteel)
+        // Relaxed matching for voice recognition artifacts
         if (maxLength <= 3) return distance <= 1;
-        if (maxLength <= 6) return distance <= 1;  // Tightened: was 2
-        return distance <= 2;                       // Tightened: was 3
+        if (maxLength <= 6) return distance <= 2; // Relaxed: was 1
+        return distance <= 3;                    // Relaxed: was 2
     }
 
     /**
@@ -167,62 +146,48 @@ export class QuranMatchingService {
         const spokenTokens = spokenText.split(/\s+/).filter(t => t.length > 0);
         const spokenTokensNorm = spokenTokens.map(t => this.normalize(t));
 
-        // Combine all spoken tokens into one string for substring matching
-        const fullSpokenNorm = spokenTokensNorm.join(' ');
-
-        // Look ahead ONLY 2 words to prevent auto-skipping
-        const lookAhead = 2;
-
-        // Strategy 1: Check if latest words match any expected word
-        const windowSize = 4;
+        // Strategy 1: Look ahead in expected words (up to 3 words)
+        // Check if any of the LATEST 5 spoken words match the next expected words
+        const lookAhead = 3;
+        const windowSize = 5;
         const searchWindow = spokenTokensNorm.slice(-windowSize);
 
         for (let w = searchWindow.length - 1; w >= 0; w--) {
             const spokenWord = searchWindow[w];
-
             for (let i = 0; i < lookAhead; i++) {
                 const targetIndex = currentWordIndex + i;
                 if (targetIndex >= expectedWords.length) break;
 
-                const expected = expectedWords[targetIndex];
-
-                if (this.isMatch(spokenWord, expected)) {
+                if (this.isMatch(spokenWord, expectedWords[targetIndex])) {
                     return targetIndex;
                 }
             }
         }
 
-        // Strategy 2: Check combined last 2-3 words against expected
-        for (let combineCount = 2; combineCount <= 3; combineCount++) {
-            if (searchWindow.length >= combineCount) {
-                const combined = searchWindow.slice(-combineCount).join('');
+        // Strategy 2: Check combined tokens (concatenated last 2 words)
+        // Helps with words split by the recognizer (e.g. "في ما" -> "فيما")
+        if (searchWindow.length >= 2) {
+            const combined = searchWindow[searchWindow.length - 2] + searchWindow[searchWindow.length - 1];
+            for (let i = 0; i < lookAhead; i++) {
+                const targetIndex = currentWordIndex + i;
+                if (targetIndex >= expectedWords.length) break;
 
-                for (let i = 0; i < lookAhead; i++) {
-                    const targetIndex = currentWordIndex + i;
-                    if (targetIndex >= expectedWords.length) break;
-
-                    const expected = this.normalize(expectedWords[targetIndex]);
-
-                    if (this.isMatch(combined, expected)) {
-                        return targetIndex;
-                    }
+                if (this.isMatch(combined, expectedWords[targetIndex])) {
+                    return targetIndex;
                 }
             }
         }
 
-        // Strategy 3: Check if full spoken text contains expected word
+        // Strategy 3: Substring match for longer words or combined phrases
+        const fullSpokenNorm = spokenTokensNorm.join(' ');
         for (let i = 0; i < lookAhead; i++) {
             const targetIndex = currentWordIndex + i;
             if (targetIndex >= expectedWords.length) break;
 
             const expectedNorm = this.normalize(expectedWords[targetIndex]);
-
-            // Check if the expected word appears in the spoken text
-            if (fullSpokenNorm.includes(expectedNorm)) {
+            if (expectedNorm.length >= 4 && fullSpokenNorm.includes(expectedNorm)) {
                 return targetIndex;
             }
-
-            // Removed: overly aggressive partial matching was causing auto-skipping
         }
 
         return -1;

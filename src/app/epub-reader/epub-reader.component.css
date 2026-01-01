@@ -130,13 +130,10 @@
     border-left: none;
 }
 
-/* Mobile: smaller arrows */
+/* Mobile: hide arrows */
 @media (max-width: 768px) {
     .nav-arrow {
-        width: 40px;
-        height: 60px;
-        font-size: 1rem;
-        opacity: 0.4;
+        display: none !important;
     }
 }
 
@@ -145,8 +142,8 @@
     position: absolute;
     top: 74px;
     /* Below header */
-    bottom: 80px;
-    /* Above footer with extra space */
+    bottom: calc(90px + var(--safe-area-bottom));
+    /* Above footer with safe area */
     left: 0;
     right: 0;
     overflow: hidden;
@@ -165,6 +162,8 @@
     -moz-user-select: text;
     -ms-user-select: text;
     touch-action: manipulation;
+    padding-bottom: 10px;
+    /* Extra room to prevent clipping */
 }
 
 /* Force BOK/Text content to satisfy theme colors */
@@ -255,7 +254,7 @@
     right: 0;
     background: var(--ui-bg);
     border-top: 1px solid var(--ui-border);
-    padding: 16px 24px;
+    padding: 16px 24px calc(16px + var(--safe-area-bottom, 0px));
     z-index: 50;
     transform: translateY(0);
     opacity: 1;
@@ -1336,6 +1335,91 @@
 
 .auth-btn.cancel:hover {
     text-decoration: underline;
+}
+
+@keyframes fadeInScale {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -45%) scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+}
+
+/* ============================
+   Page Transitions (Slide Effect)
+   ============================ */
+
+.reader-content {
+    transition: transform 0.3s ease-out, opacity 0.2s;
+    backface-visibility: hidden;
+}
+
+.slide-out-right {
+    animation: slideOutRight 0.15s forwards;
+}
+
+.slide-in-left {
+    animation: slideInLeft 0.3s forwards;
+}
+
+.slide-out-left {
+    animation: slideOutLeft 0.15s forwards;
+}
+
+.slide-in-right {
+    animation: slideInRight 0.3s forwards;
+}
+
+@keyframes slideOutRight {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+
+    to {
+        transform: translateX(50px);
+        opacity: 0;
+    }
+}
+
+@keyframes slideInLeft {
+    from {
+        transform: translateX(-50px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOutLeft {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+
+    to {
+        transform: translateX(-50px);
+        opacity: 0;
+    }
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(50px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
 }
 
 @keyframes fadeInScale {

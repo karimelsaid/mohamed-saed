@@ -6,7 +6,8 @@ import { environment } from '../../environments/environment';
 export interface DailyCapacity {
     recitationType: 'page' | 'half_hizb' | 'hizb' | 'juz';
     recitationAmount: number;
-    newMemorization: 'verse' | 'half_page' | 'page';
+    newMemorization: 'verse' | 'half_page' | 'page' | 'verses';
+    memorizationAmount?: number;
     memorizationDays: number;
     reviewType: 'light' | 'weekly' | 'rescue';
     reviewAmount?: number;
@@ -31,6 +32,11 @@ export interface HifzPlan {
         currentStreak: number;
         bestStreak: number;
         lastActiveDate: string;
+    };
+    reminders?: {
+        recitation: { enabled: boolean; time: string };
+        memorization: { enabled: boolean; time: string };
+        revision: { enabled: boolean; time: string };
     };
 }
 
@@ -68,6 +74,7 @@ export class HifzPlanService {
         dailyCapacity: DailyCapacity;
         memorizedContent?: MemorizedVerse[];
         totalVersesMemorized?: number;
+        resetProgress?: boolean;
     }): Observable<{ success: boolean; message: string; plan: HifzPlan }> {
         return this.http.post<{ success: boolean; message: string; plan: HifzPlan }>(`${this.apiUrl}/setup`, data);
     }
@@ -91,5 +98,12 @@ export class HifzPlanService {
      */
     reduceLoad(taskType: string): Observable<{ success: boolean; message: string; plan: HifzPlan }> {
         return this.http.post<{ success: boolean; message: string; plan: HifzPlan }>(`${this.apiUrl}/reduce-load`, { taskType });
+    }
+
+    /**
+     * حفظ إعدادات التنبيهات
+     */
+    saveReminders(reminders: any): Observable<{ success: boolean; message: string; reminders: any }> {
+        return this.http.post<{ success: boolean; message: string; reminders: any }>(`${this.apiUrl}/reminders`, { reminders });
     }
 }

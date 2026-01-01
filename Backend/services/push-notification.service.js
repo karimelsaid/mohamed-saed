@@ -87,15 +87,16 @@ exports.sendNotification = async (sub, payload, options = { important: false }) 
 
             // Payload for Web Push is typically a JSON string
             await webpush.sendNotification(pushConfig, JSON.stringify(payload), webOptions);
+            // console.log(`✅ Push delivered successfully to ${sub.platform} (${sub._id})`);
             return true;
         }
 
     } catch (error) {
-        // console.error(`Error sending push to ${sub.platform}:`, error.message);
+        console.error(`❌ Error sending push to ${sub.platform} for user ${sub.userId}:`, error.message);
 
         // Handle Expired Subscriptions
         if (error.statusCode === 410 || error.statusCode === 404 || (error.code && error.code.includes('registration-token-not-registered'))) {
-            // console.log('Subscription expired/invalid, deleting from DB:', sub._id);
+            console.log(`🗑️ Subscription expired/invalid, deleting from DB: ${sub._id}`);
             await PushSubscription.deleteOne({ _id: sub._id });
         }
         return false;
@@ -105,9 +106,17 @@ exports.sendNotification = async (sub, payload, options = { important: false }) 
 exports.sendToUser = async (userId, payload, options = { important: false }) => {
     const subscriptions = await PushSubscription.find({ userId });
 
+    if (subscriptions.length === 0) {
+        return [];
+    }
+
+    console.log(`📡 Sending to ${subscriptions.length} devices for user: ${userId}`);
+
     // Send to all devices of the user
-    const results = await Promise.all(subscriptions.map(sub => {
-        return exports.sendNotification(sub, payload, options);
+    const results = await Promise.all(subscriptions.map(async (sub) => {
+        const success = await exports.sendNotification(sub, payload, options);
+        if (success) console.log(`✅ Push sent to ${sub.platform} for ${userId}`);
+        return success;
     }));
 
     return results;

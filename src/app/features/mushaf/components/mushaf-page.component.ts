@@ -2,6 +2,7 @@ import { Component, Input, OnInit, OnChanges, SimpleChanges, OnDestroy, ChangeDe
 import { MutabaaTrackerComponent } from './mutabaa-tracker/mutabaa-tracker.component';
 import { MushafDataService } from '../../../core/services/mushaf-data.service';
 import { MushafFontService } from '../../../core/services/mushaf-font.service';
+import { MushafAssetService } from '../../../core/services/mushaf-asset.service'; // Added Import
 import { VoiceRecognitionService } from '../../../core/services/voice-recognition.service';
 import { QuranMatchingService } from '../../../core/services/quran-matching.service';
 import { MushafPage, SurahMetadata, JuzMetadata, MushafMetadata, MushafSegment } from '../../../core/models/mushaf.model';
@@ -10,7 +11,18 @@ import { take } from 'rxjs/operators';
 import { QuranProgressService } from '../../../services/quran-progress.service';
 import { MutabaaService } from '../../../services/mutabaa.service';
 import { HifzPlanService } from '../../../services/hifz-plan.service';
+import { PushNotificationService } from '../../../services/push-notification.service';
 import { Router } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../../environments/environment';
+
+export type VoiceState = 'inactive' | 'listening' | 'processing' | 'error' | 'idle';
+
+export interface ReminderSettings {
+    recitation: { enabled: boolean; time: string };
+    memorization: { enabled: boolean; time: string };
+    revision: { enabled: boolean; time: string };
+}
 
 @Component({
     selector: 'app-mushaf-page',
@@ -40,7 +52,9 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
     themes = ['cream', 'white', 'green', 'sky', 'blue', 'dark']; // Added 'sky' for Madina Blue style
     isLoggedIn: boolean = false; // User login status
     isMobileApp: boolean = false; // Check if running as native/pwa app
+    isAndroid: boolean = false; // Check if running specifically on Android
     activeWirdTab: 'recitation' | 'memorization' | 'revision' | 'mutabaa' = 'mutabaa'; // Dashboard active tab
+    totalUsers: number = 0; // NEW: Total readers count
 
 
     isMemorizationMode: boolean = false;
@@ -59,7 +73,9 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         ayahRepeat: 3,
         groupRepeat: 3,
         customStartVerse: '',
-        customEndVerse: ''
+        customEndVerse: '',
+        surahStartVerse: 1,
+        surahEndVerse: 7
     };
 
     // Active Session State
@@ -78,6 +94,11 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
     correctAnswersCount: number = 0;
     showTestResult: boolean = false;
     verseDataMap: Map<string, { text: string, font: string }[]> = new Map();
+    ripples: { x: number, y: number, id: number }[] = [];
+    private rippleId = 0;
+
+    // Voice State
+    voiceState: VoiceState = 'inactive';
 
     // Touch and Swipe properties
     private touchStartX: number = 0;
@@ -95,11 +116,9 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
     isAnimating: boolean = false;
     swipeDirection: 'none' | 'next' | 'prev' = 'none';
     private versePageMap: Map<string, number> = new Map(); // Tracks which page each verse belongs to
+    isWaitingForPageTurn: boolean = false; // NEW: Prevent premature page turn during hifz
 
-    // Voice Mode State
-    voiceState: 'inactive' | 'listening' | 'processing' | 'error' | 'idle' = 'inactive';
     private voiceSubscription?: Subscription;
-    lastSpokenTranscript: string = '';
 
     // Error Tracking (for red highlights during session)
     // Keys are "verseKey:wordIndex" for individual words, or just "verseKey" for skipped ayahs
@@ -110,12 +129,14 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
 
     // Anti-Cheat & Dynamic Progress State
     private pageStartTime: number = Date.now();
+    private isCurrentPageAwarded: boolean = false;
+    private quranPointsPerEGP: number = 500; // Default fallback // Tracks if points were already awarded for the current page
     private sessionCounters = {
         pagesRead: 0,
         versesMemorized: 0,
         pagesReviewed: 0
     };
-    private readonly MIN_PAGE_STAY_MS = 20000; // 20 seconds
+    private readonly MIN_PAGE_STAY_MS = 30000; // 30 seconds (as requested, except first 2 pages)
     private userPlan: any = null;
     private integrityRefreshInterval: any;
     isReadingActive: boolean = false; // Manual session toggle
@@ -123,24 +144,98 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
     hifzPlanSetupComplete: boolean = false; // Whether user has completed hifz plan setup
     dailyTasks: any = null; // Daily tasks from hifz plan API
     hifzPlanStats: any = null; // Stats from hifz plan
+    reminderSettings: ReminderSettings = {
+        recitation: { enabled: false, time: '08:00' },
+        memorization: { enabled: false, time: '09:00' },
+        revision: { enabled: false, time: '10:00' }
+    };
+    pushEnabled: boolean = false; // Track browser permission
+    pushSubscribed: boolean = false; // Track actual push registration
+    isMobile: boolean = false;
+
+    // Track auto-synced tasks to prevent repeat calls
+    private completedTasks: Set<string> = new Set();
+    private currentTaskType: 'new_memorization' | 'consolidation' | 'revision' | 'recitation' | null = null;
 
 
 
 
+
+    private lastSyncedPage: number = -1;
+    private lastSyncedVerseKey: string = '';
+
+    // Wallet Modal State
+    walletModal: {
+        show: boolean;
+        type: 'convert' | 'payout' | 'success' | 'error';
+        title: string;
+        message: string;
+        pointsToConvert: number;
+        maxPoints: number;
+        equivalentEGP: number;
+        loading: boolean;
+        isDonation?: boolean;
+    } = {
+            show: false,
+            type: 'convert',
+            title: '',
+            message: '',
+            pointsToConvert: 0,
+            maxPoints: 0,
+            equivalentEGP: 0,
+            loading: false,
+            isDonation: false
+        };
+
+    donationStats: {
+        totalAmount: number;
+        donorsCount: number;
+        showGratitude: boolean;
+    } = {
+            totalAmount: 0,
+            donorsCount: 0,
+            showGratitude: false
+        };
+
+    feedbackModal: {
+        show: boolean;
+        content: string;
+        loading: boolean;
+        success: boolean;
+        error: string;
+    } = {
+            show: false,
+            content: '',
+            loading: false,
+            success: false,
+            error: ''
+        };
 
     constructor(
         public dataService: MushafDataService,
         private fontService: MushafFontService,
+        public assetService: MushafAssetService, // Injected Asset Service
         private voiceService: VoiceRecognitionService,
         private matchingService: QuranMatchingService,
         private cdr: ChangeDetectorRef,
         public quranProgressService: QuranProgressService,
         private mutabaaService: MutabaaService,
         private hifzPlanService: HifzPlanService,
-        private router: Router
+        private pushService: PushNotificationService,
+        private router: Router,
+        private http: HttpClient
     ) { }
 
-    ngOnInit(): void {
+    async ngOnInit(): Promise<void> {
+
+        // Ensure assets are downloaded before proceeding
+        try {
+            await this.assetService.ensureAssets();
+        } catch (error) {
+            console.error('Failed to download assets:', error);
+            // Optionally show error to user or fallback
+        }
+
         // Check if user is logged in
         const user = localStorage.getItem('user');
         this.isLoggedIn = !!user;
@@ -149,6 +244,12 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
         const isCapacitor = (window as any).Capacitor !== undefined;
         this.isMobileApp = isStandalone || isCapacitor;
+
+        // Platform detection for Android specifically
+        const ua = navigator.userAgent.toLowerCase();
+        const isAndroidUA = ua.includes('android');
+        const isAndroidCapacitor = isCapacitor && (window as any).Capacitor.getPlatform() === 'android';
+        this.isAndroid = isAndroidUA || isAndroidCapacitor;
 
         this.pageStartTime = Date.now();
         this.loadUserPlan();
@@ -159,8 +260,22 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
             this.currentTheme = savedTheme;
         }
 
+        // Restore last read page if not provided by input
+        const savedPage = localStorage.getItem('lastMushafPage');
+        if (savedPage && (!this.pageNumber || this.pageNumber === 1)) {
+            this.pageNumber = parseInt(savedPage, 10);
+        }
+
+
         this.fontService.loadBasmalahFont();
         this.loadPage();
+
+        // Check Push Permission Status
+        this.pushService.getPermissionStatus().then(statusRes => {
+            this.pushEnabled = (statusRes.permission === 'granted');
+            this.pushSubscribed = statusRes.hasSubscription;
+            this.cdr.detectChanges();
+        });
 
         // Refresh progress data
         if (this.isLoggedIn) {
@@ -171,12 +286,21 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
                 this.cdr.detectChanges();
             });
 
-            // Timer for reading integrity bar updates
+            this.quranProgressService.economy$.subscribe(settings => {
+                if (settings && settings.quranPointsPerEGP) {
+                    this.quranPointsPerEGP = settings.quranPointsPerEGP;
+                }
+            });
+
+            // Timer for reading integrity bar updates AND immediate point awarding
             this.integrityRefreshInterval = setInterval(() => {
-                if (this.isLoggedIn && this.isReadingActive && !this.isMemorizationMode && !this.isTestPhase) {
+                if (this.isLoggedIn && !this.isTestPhase) {
+                    if (this.isReadingActive || this.isMemorizationMode) {
+                        this.checkImmediatePointAwarding();
+                    }
                     this.cdr.detectChanges();
                 }
-            }, 1000);
+            }, 1000); // Check every second for better precision
 
             // Check if hifz plan setup is needed
             this.hifzPlanService.getPlan().subscribe({
@@ -184,6 +308,9 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
                     if (res.success) {
                         this.hifzPlanSetupComplete = res.isSetupComplete;
                         this.hifzPlanStats = res.plan?.stats || null;
+                        if (res.plan?.reminders) {
+                            this.reminderSettings = res.plan.reminders;
+                        }
                         if (!res.isSetupComplete) {
                             this.showHifzWizard = true;
                         } else {
@@ -194,6 +321,71 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
                 error: () => { /* Silently fail - user can access wizard manually */ }
             });
         }
+
+        // Stats are now public
+        this.loadTotalUsers();
+        this.loadDonationStats();
+    }
+
+    loadDonationStats(): void {
+        this.quranProgressService.getDonationStats().subscribe({
+            next: (res) => {
+                if (res.success) {
+                    this.donationStats.totalAmount = res.totalAmount;
+                    this.donationStats.donorsCount = res.donorsCount;
+                }
+            }
+        });
+    }
+
+    openFeedbackModal(): void {
+        this.feedbackModal = {
+            show: true,
+            content: '',
+            loading: false,
+            success: false,
+            error: ''
+        };
+        this.isSettingsOpen = false;
+    }
+
+    closeFeedbackModal(): void {
+        this.feedbackModal.show = false;
+    }
+
+    rateApp(): void {
+        // Open Google Play link
+        window.open('https://play.google.com/store/apps/details?id=com.kenouz.bookstore2&pcampaignid=web_share', '_blank');
+        this.closeFeedbackModal();
+    }
+
+    submitFeedback(): void {
+        if (!this.feedbackModal.content.trim()) {
+            this.feedbackModal.error = 'يرجى كتابة ملاحظاتك أولاً';
+            return;
+        }
+
+        this.feedbackModal.loading = true;
+        this.feedbackModal.error = '';
+
+        this.http.post<any>(`${environment.apiBaseUrl}/feedback/submit`, {
+            content: this.feedbackModal.content,
+            page: this.pageNumber
+        }).subscribe({
+            next: (res) => {
+                this.feedbackModal.loading = false;
+                if (res.success) {
+                    this.feedbackModal.success = true;
+                    setTimeout(() => this.closeFeedbackModal(), 2000);
+                } else {
+                    this.feedbackModal.error = res.message || 'حدث خطأ أثناء الإرسال';
+                }
+            },
+            error: (err) => {
+                this.feedbackModal.loading = false;
+                this.feedbackModal.error = 'فشل الاتصال بالخادم، يرجى المحاولة لاحقاً';
+            }
+        });
     }
 
     toggleReadingSession(): void {
@@ -207,7 +399,32 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
     onWizardComplete(): void {
         this.showHifzWizard = false;
         this.hifzPlanSetupComplete = true; // Optimistic update
+
+        // CRITICAL: Reset all session state to prevent stale data from triggering instant completion
+        this.sessionCounters = {
+            pagesRead: 0,
+            versesMemorized: 0,
+            pagesReviewed: 0
+        };
+        this.completedTasks.clear();
+        this.errorWords.clear();
+        this.skippedAyahs.clear();
+
+        // Reload everything fresh
         this.loadDailyTasks();
+
+        // Refresh hifz plan status and stats
+        this.hifzPlanService.getPlan().subscribe({
+            next: (res) => {
+                if (res.success) {
+                    this.hifzPlanSetupComplete = res.isSetupComplete;
+                    this.hifzPlanStats = res.plan?.stats || null;
+                    if (res.plan?.reminders) {
+                        this.reminderSettings = res.plan.reminders;
+                    }
+                }
+            }
+        });
     }
 
     closeWizard(): void {
@@ -219,7 +436,7 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
             next: (res) => {
                 if (res.success) {
                     this.dailyTasks = {
-                        newMemorization: res.tasks?.find((t: any) => t.type === 'new_memorization'),
+                        new_memorization: res.tasks?.find((t: any) => t.type === 'new_memorization'),
                         consolidation: res.tasks?.find((t: any) => t.type === 'consolidation'),
                         revision: res.tasks?.find((t: any) => t.type === 'revision'),
                         recitation: res.tasks?.find((t: any) => t.type === 'recitation'),
@@ -239,16 +456,9 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
 
     // Helper methods for dashboard display
     getNewMemorizationLabel(): string {
-        return this.dailyTasks?.newMemorization?.label || 'الحفظ الجديد';
+        return this.dailyTasks?.new_memorization?.label || 'الحفظ الجديد';
     }
 
-    getNewMemorizationDetails(): string {
-        // Backend provides a specific label now e.g. "Surah 2 - Verse 142"
-        if (this.dailyTasks?.newMemorization?.label) {
-            return `مطلوب حفظ: ${this.dailyTasks.newMemorization.label}`;
-        }
-        return 'اضغط للبدء';
-    }
 
     getRecitationUnitLabel(): string {
         const unit = this.dailyTasks?.recitation?.unit;
@@ -260,52 +470,241 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
     }
 
     getRecitationDetails(): string {
-        // Use backend label which contains specific page range e.g. "Page 10 to 12"
+        // If done, we just show the backend label which ALREADY advanced because the cursor moved
+        if (this.dailyTasks?.recitation?.status === 'done' || this.getTilawoProgressPercent() >= 100) {
+            return this.dailyTasks?.recitation?.label || 'ورد التلاوة';
+        }
+
+        // Use backend label but strip "من" if present for consistency
         if (this.dailyTasks?.recitation?.label) {
-            return `ورد اليوم: ${this.dailyTasks.recitation.label}`;
+            let label = this.dailyTasks.recitation.label;
+            if (label.startsWith('من ')) label = label.substring(3);
+            return label;
         }
         const currentPage = this.quranProgressService.getCurrentProgress()?.lastPage || 1;
         return `متابعك عند صفحة ${currentPage}`;
     }
 
     getConsolidationDetails(): string {
+        // If done, show next proposed action
+        if (this.dailyTasks?.consolidation?.status === 'done' || this.getConsolidationProgressPercent() >= 100) {
+            return 'القادم: مراجعة مجموعة جديدة';
+        }
+
         const verses = this.dailyTasks?.consolidation?.verses;
         if (!verses || verses.length === 0) return 'لا توجد مراجعة اليوم';
         return `مراجعة ${verses.length} آية (آخر 14 يوم)`;
     }
 
     getRevisionLabel(): string {
-        // Use backend label e.g. "Page 50 to 52"
-        if (this.dailyTasks?.revision?.label) {
-            return this.dailyTasks.revision.label;
-        }
-        return 'المراجعة البعيدة';
+        const label = this.dailyTasks?.revision?.label;
+        return label ? `${label} (محفوظ سابقاً)` : 'محفوظ سابقاً';
     }
 
     getRevisionDetails(): string {
-        if (this.dailyTasks?.revision?.startPage) {
-            return 'التالي في خطتك (تلقائي)';
+        // If done, show next proposed action
+        if (this.getRevisionProgressPercent() >= 100) {
+            const amount = this.dailyTasks?.revision?.amount || 1;
+            const unit = this.dailyTasks?.revision?.unit === 'juz' ? 'أجزاء' : 'صفحات';
+            return `القادم: ${amount} ${unit} إضافية للمراجعة`;
         }
-        return 'الصفحات التالية في خطتك';
+
+        if (this.dailyTasks?.revision?.label) {
+            return `مطلوب مراجعة: ${this.dailyTasks.revision.label}`;
+        }
+        return 'التالي في خطتك (تلقائي)';
+    }
+
+    getNewMemorizationDetails(): string {
+        // If done, show next proposed action
+        if (this.dailyTasks?.new_memorization?.status === 'done' || this.getHifzProgressPercent() >= 100) {
+            const amount = this.dailyTasks?.new_memorization?.amount || 1;
+            const unit = (this.dailyTasks?.new_memorization?.unit === 'verse' || this.dailyTasks?.new_memorization?.target === 'verses') ? 'آيات' : 'صفحات';
+            return `القادم: ${amount} ${unit} جديدة للحفظ`;
+        }
+
+        // Backend provides a specific label now e.g. "Surah 2 - Verse 142"
+        if (this.dailyTasks?.new_memorization?.label) {
+            return `مطلوب حفظ: ${this.dailyTasks.new_memorization.label}`;
+        }
+        return 'اضغط للبدء';
     }
 
     getHifzProgressPercent(): number {
-        const memorized = this.hifzPlanStats?.totalVersesMemorized || 0;
-        const total = 6236; // Total verses in Quran
-        return (memorized / total) * 100;
+        if (!this.dailyTasks?.new_memorization) return 100;
+        if (this.dailyTasks.new_memorization.status === 'done' && this.sessionCounters.versesMemorized === 0) return 100;
+
+        const target = this.dailyTasks.new_memorization.amount || 1;
+        const done = (this.dailyTasks.new_memorization.amountDone || 0) + this.sessionCounters.versesMemorized;
+        return Math.min(Math.round((done / target) * 100), 100);
+    }
+
+    getConsolidationProgressPercent(): number {
+        // If no verses (no task) or status is done, logic says 100% (nothing to do is also done)
+        if (!this.dailyTasks?.consolidation || !this.dailyTasks.consolidation.verses || this.dailyTasks.consolidation.verses.length === 0 || this.dailyTasks.consolidation.status === 'done') return 100;
+        return 0;
+    }
+
+    get hasConsolidationContent(): boolean {
+        return !!(this.dailyTasks?.consolidation?.verses && this.dailyTasks.consolidation.verses.length > 0);
+    }
+
+    getRevisionProgressPercent(): number {
+        if (!this.dailyTasks?.revision) return 100;
+        if (this.dailyTasks.revision.status === 'done' && this.sessionCounters.pagesReviewed === 0) return 100;
+
+        const target = this.dailyTasks.revision.amount || 1;
+        const done = (this.dailyTasks.revision.amountDone || 0) + this.sessionCounters.pagesReviewed;
+        return Math.min(Math.round((done / target) * 100), 100);
     }
 
     getTilawoProgressPercent(): number {
-        // Use the quranProgress from the service
-        const pagesRead = this.quranProgressService.getCurrentProgress()?.pagesRead || 0;
-        const total = 604; // Total pages in Quran
-        return (pagesRead / total) * 100;
+        if (!this.dailyTasks?.recitation) return 100;
+        if (this.dailyTasks.recitation.status === 'done' && this.sessionCounters.pagesRead === 0) return 100;
+
+        const target = this.dailyTasks.recitation.amount || 1;
+        const done = (this.dailyTasks.recitation.amountDone || 0) + this.sessionCounters.pagesRead;
+        return Math.min(Math.round((done / target) * 100), 100);
+    }
+
+    navigateToTask(task: any): void {
+        if (!task) return;
+
+        this.isSettingsOpen = false;
+        this.currentTaskType = task.type || null;
+
+        // Reset session counters when switching tasks to ensure accurate progress tracking
+        this.sessionCounters.pagesRead = 0;
+        this.sessionCounters.versesMemorized = 0;
+        this.sessionCounters.pagesReviewed = 0;
+
+        // Reset sync guards to allow immediate sync for the new task location
+        this.lastSyncedPage = -1;
+        this.lastSyncedVerseKey = '';
+        this.completedTasks.delete(task.type); // Allow re-syncing for this task if needed
+
+        // Priority 1: Direct Verse/Surah (Precise)
+        let surahId = task.surah || task.surahId || task.surah_id || task.position?.surah;
+        let verseNumber = task.verse || task.verseNumber || task.position?.verse;
+
+        if (!surahId && task.verses && Array.isArray(task.verses) && task.verses.length > 0) {
+            const first = task.verses[0];
+            if (typeof first === 'string' && first.includes(':')) {
+                const parts = first.split(':');
+                surahId = parts[0];
+                verseNumber = parts[1];
+            }
+        }
+
+        if (surahId && verseNumber) {
+            // Special Logic for Done Tasks: If already 100%, we might want to navigate to the "Next" range
+            const isDone = task.status === 'done' || (task.amountDone >= task.amount && task.amount > 0);
+
+            if (isDone && task.type === 'recitation') {
+                const currentPos = this.quranProgressService.getCurrentProgress()?.lastPage || 1;
+                // Jump to currentPos + 1 if it's within limits
+                const nextPage = Math.min(604, currentPos + 1);
+                console.log(`[Mushaf] Task is DONE. Navigating to NEXT page: ${nextPage}`);
+                this.goToPage(nextPage);
+                return;
+            }
+
+            this.dataService.getPageNumberForVerse(Number(surahId), Number(verseNumber)).subscribe({
+                next: (page) => {
+                    if (page) this.goToPage(page);
+                    else this.navigateToSurahStart(surahId);
+                },
+                error: () => this.navigateToSurahStart(surahId)
+            });
+            return;
+        }
+
+        // Priority 2: Label Parsing (for Juz or Surah without Verse)
+        if (task.label) {
+            const juzMatch = task.label.match(/(?:Juz|الجزء)\s+(\d+)/i);
+            if (juzMatch) {
+                const juzNum = Number(juzMatch[1]);
+                this.goToPage(juzNum === 1 ? 1 : (juzNum - 1) * 20 + 2);
+                return;
+            }
+
+            const surahMatch = task.label.match(/(?:Surah|سورة)\s+(\d+)/i);
+            if (surahMatch) {
+                this.navigateToSurahStart(surahMatch[1]);
+                return;
+            }
+        }
+
+        // Priority 3: Page Number
+        const targetPage = task.startPage || task.page || task.targetPage || task.target;
+        if (targetPage && !isNaN(Number(targetPage))) {
+            this.goToPage(Number(targetPage));
+            return;
+        }
+
+        // Fallback: Default to last read page
+        const lastPage = this.quranProgressService.getCurrentProgress()?.lastPage || 1;
+        this.goToPage(lastPage);
+    }
+
+    private navigateToSurahStart(surahId: any): void {
+        const finalSurahId = Number(surahId);
+        this.dataService.getMetadata().subscribe(meta => {
+            const surah = meta.surahs.find((s: any) => s.id === finalSurahId);
+            if (surah) {
+                this.goToPage(surah.start_page);
+                this.isSettingsOpen = false;
+            } else {
+                this.isSettingsOpen = false;
+            }
+        });
     }
 
     ngOnDestroy(): void {
         this.stopVoiceSession();
-        if (this.integrityRefreshInterval) clearInterval(this.integrityRefreshInterval);
+        if (this.integrityRefreshInterval) {
+            clearInterval(this.integrityRefreshInterval);
+        }
     }
+
+    saveReminders(): void {
+        if (!this.isLoggedIn) return;
+        this.hifzPlanService.saveReminders(this.reminderSettings).subscribe({
+            next: (res) => console.log('✅ Reminders saved:', res),
+            error: (err) => console.error('❌ Failed to save reminders:', err)
+        });
+    }
+
+    async togglePushNotifications(): Promise<void> {
+        if (!this.isLoggedIn) return;
+
+        try {
+            if (!this.pushEnabled) {
+                // Subscribe
+                const success = await this.pushService.subscribeToNotifications();
+                if (success) {
+                    this.pushEnabled = true;
+                    this.pushSubscribed = true;
+                }
+            } else {
+                // Unsubscribe
+                await this.pushService.unsubscribeFromNotifications();
+                this.pushEnabled = false;
+                this.pushSubscribed = false;
+            }
+            this.cdr.detectChanges();
+        } catch (err) {
+            console.error('[Mushaf] Push toggle failed:', err);
+            // Revert state on error
+            this.pushService.getPermissionStatus().then(statusRes => {
+                this.pushEnabled = (statusRes.permission === 'granted');
+                this.pushSubscribed = statusRes.hasSubscription;
+                this.cdr.detectChanges();
+            });
+        }
+    }
+
+
 
     private loadUserPlan(): void {
         if (!this.isLoggedIn) return;
@@ -319,14 +718,54 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         });
     }
 
+    private getMinStayTime(): number {
+        // Exception for first two pages (1 and 2): 5 seconds threshold instead of 30
+        return this.pageNumber <= 2 ? 5000 : this.MIN_PAGE_STAY_MS;
+    }
+
+    private checkImmediatePointAwarding(): void {
+        if (this.isCurrentPageAwarded) return;
+
+        const timeSpent = Date.now() - this.pageStartTime;
+        const threshold = this.getMinStayTime();
+
+        if (timeSpent >= threshold) {
+            this.awardPagePoints();
+        }
+    }
+
+    private awardPagePoints(): void {
+        if (this.isCurrentPageAwarded) return;
+
+        this.isCurrentPageAwarded = true;
+
+        // Award points for completing a page
+        this.quranProgressService.addPointsIfLoggedIn('PAGE_COMPLETE', 1);
+
+        // RECITATION LOGIC: Only count if this specific page is part of the assigned Daily Recitation range
+        if (this.currentTaskType === 'recitation' && this.isPageInRecitationRange(this.pageNumber)) {
+            this.sessionCounters.pagesRead++;
+            this.checkAutoSync('tilawo');
+        } else if (this.currentTaskType !== 'recitation') {
+            // General reading or other tasks still increment counter for local UI but don't force-sync recitation range
+            this.sessionCounters.pagesRead++;
+        }
+
+        if (this.isMemorizationMode && this.memorizationSettings.type === 'muraaja') {
+            this.quranProgressService.addPointsIfLoggedIn('REVISION_PAGE_COMPLETE' as any, 1);
+            this.sessionCounters.pagesReviewed++;
+            this.checkAutoSync('muraja');
+        }
+    }
+
     isPageVerified(): boolean {
-        return this.isReadingActive && (Date.now() - this.pageStartTime) >= this.MIN_PAGE_STAY_MS;
+        return this.isReadingActive && (Date.now() - this.pageStartTime) >= this.getMinStayTime();
     }
 
     getReadingProgressPercent(): number {
         if (!this.isReadingActive) return 0;
         const elapsed = Date.now() - this.pageStartTime;
-        return Math.min(100, (elapsed / this.MIN_PAGE_STAY_MS) * 100);
+        return Math.min(100, (elapsed / this.getMinStayTime()) * 100);
     }
 
     getGlobalPercent(type: 'tilawo' | 'hifz' | 'muraja'): number {
@@ -402,6 +841,9 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         this.currentSurah$ = this.dataService.getSurahAtPage(this.pageNumber);
         this.currentJuz$ = this.dataService.getJuzAtPage(this.pageNumber);
         this.mushafMetadata$ = this.dataService.getMetadata();
+
+        // Persist page number
+        localStorage.setItem('lastMushafPage', this.pageNumber.toString());
     }
 
     private getPageFromFont(fontName: string): number {
@@ -410,7 +852,10 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
 
     private loadPage(): void {
         this.showOptionsSheet = false;
+        this.pageStartTime = Date.now();
+        this.isCurrentPageAwarded = false;
         this.loadPages();
+        this.loadTotalUsers();
     }
 
     toggleSidebar(): void {
@@ -430,17 +875,20 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
     setTheme(theme: string): void {
         this.currentTheme = theme;
         localStorage.setItem('mushaf_theme', theme);
+        this.isSettingsOpen = false; // Close settings after choosing theme
     }
 
     goToPage(page: number): void {
         this.pageNumber = page;
         this.isSidebarOpen = false;
+        this.isSettingsOpen = false;
         this.loadPage();
     }
 
     openSidebarToTab(tab: 'surahs' | 'juzs' | 'pages'): void {
         this.sidebarTab = tab;
         this.isSidebarOpen = true;
+        this.isSettingsOpen = false; // Ensure settings are closed when opening index
     }
 
     nextPage(): void {
@@ -484,27 +932,9 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
 
             this.loadPages();
 
-            // Anti-Cheat & Dynamic Progress logic
-            const timeSpent = Date.now() - this.pageStartTime;
-            if (this.isReadingActive && timeSpent >= this.MIN_PAGE_STAY_MS) {
-                console.log(`[Mushaf] Page ${this.pageNumber} verified (${Math.round(timeSpent / 1000)}s spent)`);
-
-                // Award points for completing a page
-                this.quranProgressService.addPointsIfLoggedIn('PAGE_COMPLETE', 1);
-                this.sessionCounters.pagesRead++;
-                this.checkAutoSync('tilawo');
-
-                if (this.isMemorizationMode && this.memorizationSettings.type === 'muraaja') {
-                    this.quranProgressService.addPointsIfLoggedIn('REVISION_PAGE_COMPLETE' as any, 1);
-                    this.sessionCounters.pagesReviewed++;
-                    this.checkAutoSync('muraja');
-                }
-            } else {
-                console.warn(`[Mushaf] Page ${this.pageNumber} NOT counted (Only ${Math.round(timeSpent / 1000)}s spent - Anti-Cheat active)`);
-            }
-
-            // Reset timer for the new page
+            // Reset timer and awarding status for the new page
             this.pageStartTime = Date.now();
+            this.isCurrentPageAwarded = false;
 
             // Reset scroll to top when changing pages
             const pageElements = document.querySelectorAll('.mushaf-page');
@@ -663,11 +1093,55 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         this.settingsOffset = 0;
     }
 
+    handleMushafClick(event: MouseEvent | TouchEvent): void {
+        const isMuraaja = this.memorizationSettings.type === 'muraaja';
+        const isHifz = this.memorizationSettings.type === 'hifz';
+        const isTouch = this.memorizationSettings.inputMethod === 'touch';
+
+        if (this.isMemorizationMode && (isMuraaja || isHifz) && isTouch && !this.isTestPhase) {
+            // Add ripple animation
+            const clientX = (event as MouseEvent).clientX !== undefined ? (event as MouseEvent).clientX : (event as TouchEvent).touches[0].clientX;
+            const clientY = (event as MouseEvent).clientY !== undefined ? (event as MouseEvent).clientY : (event as TouchEvent).touches[0].clientY;
+
+            const id = this.rippleId++;
+            this.ripples.push({ x: clientX, y: clientY, id });
+
+            // Remove ripple after animation
+            setTimeout(() => {
+                this.ripples = this.ripples.filter(r => r.id !== id);
+                this.cdr.detectChanges();
+            }, 600);
+
+            // Trigger action
+            if (this.isGroupPhase) {
+                this.incrementGroupRepetition();
+            } else {
+                this.incrementRepetition();
+            }
+            this.cdr.detectChanges();
+        }
+    }
+
     onAyahClick(verseKey: string): void {
         console.log('[Mushaf] Ayah clicked:', verseKey, 'isMemorizationMode:', this.isMemorizationMode);
         if (this.isMemorizationMode) return;
         this.selectedVerseKey = verseKey;
-        this.showOptionsSheet = true;
+
+        // Initialize verse range defaults based on the clicked ayah and current surah
+        const [surahId, verseNum] = verseKey.split(':').map(Number);
+        this.memorizationSettings.surahStartVerse = verseNum;
+
+        // Fetch surah metadata to get the total verses count for the end range
+        this.dataService.getMetadata().subscribe(meta => {
+            const surah = meta.surahs.find(s => s.id === surahId);
+            if (surah) {
+                // If the clicked verse is the last one or near it, maybe set end to last.
+                // Otherwise, let's default to the end of the surah or a reasonable chunk.
+                this.memorizationSettings.surahEndVerse = surah.verses_count;
+            }
+            this.showOptionsSheet = true;
+            this.cdr.detectChanges();
+        });
     }
 
     closeOptionsSheet(): void {
@@ -683,6 +1157,13 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         this.currentAyahIndex = 0;
         this.currentWordIndex = (this.memorizationSettings.type === 'muraaja' && this.memorizationSettings.hideType === 'word') ? -1 : 0;
         this.currentRepetition = 1;
+
+        // Reset session counters to ensure accurate progress tracking for this task
+        this.sessionCounters = {
+            pagesRead: 0,
+            versesMemorized: 0,
+            pagesReviewed: 0
+        };
 
         // Clear error tracking for new session
         this.errorWords.clear();
@@ -715,6 +1196,7 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         });
 
         this.pageVerticalShift = 0;
+        this.isWaitingForPageTurn = false;
     }
 
     private async prepareSessionAyahs(): Promise<void> {
@@ -729,7 +1211,16 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
             if (surah) {
                 const pages = await firstValueFrom(this.dataService.getMushaf().pipe(take(1)));
                 const surahPages = pages.filter(p => p.page_number >= surah.start_page && p.page_number <= surah.end_page);
-                this.sessionAyahs = this.extractVerseKeys(surahPages, surah.id);
+                const allAyahs = this.extractVerseKeys(surahPages, surah.id);
+
+                // Filter by verse range if provided
+                const start = this.memorizationSettings.surahStartVerse || 1;
+                const end = this.memorizationSettings.surahEndVerse || surah.verses_count;
+
+                this.sessionAyahs = allAyahs.filter(vKey => {
+                    const vNum = parseInt(vKey.split(':')[1]);
+                    return vNum >= start && vNum <= end;
+                });
             }
         } else if (range === 'juz') {
             const juz = await firstValueFrom(this.dataService.getJuzAtPage(pageNumber).pipe(take(1)));
@@ -789,6 +1280,18 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         const isWordMode = this.memorizationSettings.hideType === 'word';
         const isMuraaja = this.memorizationSettings.type === 'muraaja';
 
+        // NEW: Handle pending page turn first
+        if (this.isWaitingForPageTurn) {
+            this.isWaitingForPageTurn = false;
+            const targetVerseKey = this.sessionAyahs[this.currentAyahIndex];
+            const targetPage = this.versePageMap.get(targetVerseKey);
+            if (targetPage && targetPage !== this.pageNumber) {
+                if (targetPage > this.pageNumber) this.triggerPageChange('next');
+                else this.triggerPageChange('prev');
+            }
+            return;
+        }
+
         if (isMuraaja && isWordMode) {
             // In review word mode, we increment word by word
             const currentVerseKey = this.sessionAyahs[this.currentAyahIndex];
@@ -817,9 +1320,18 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
             } else {
                 // Ayah complete (Touch Mode) - Award points
                 if (this.memorizationSettings.type === 'hifz') {
-                    this.quranProgressService.addPointsIfLoggedIn('VERSE_MEMORIZED', 1);
-                    this.sessionCounters.versesMemorized++;
-                    this.checkAutoSync('hifz');
+                    // STRICT CHECK: Only count if this verse is part of the assigned Daily Wird
+                    const currentVerseKey = this.sessionAyahs[this.currentAyahIndex];
+                    if (this.isVerseInDailyWird(currentVerseKey)) {
+                        this.quranProgressService.addPointsIfLoggedIn('VERSE_MEMORIZED', 1);
+                        this.sessionCounters.versesMemorized++;
+
+                        // Only sync immediately if Group Repeat is NOT required
+                        // If Group Repeat is > 0, we sync ONLY after the group phase is done (in incrementGroupRepetition)
+                        if (this.memorizationSettings.groupRepeat === 0) {
+                            this.checkAutoSync('hifz');
+                        }
+                    }
                 } else if (this.memorizationSettings.type === 'muraaja') {
                     this.quranProgressService.addPointsIfLoggedIn('REVISION_VERSE_COMPLETE' as any, 1);
                 }
@@ -840,19 +1352,20 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
             // Page navigation logic
             const nextVerseKey = this.sessionAyahs[this.currentAyahIndex];
             const targetPage = this.versePageMap.get(nextVerseKey);
+
             if (targetPage && targetPage !== this.pageNumber) {
-                // If the next verse is on a different page, navigate to it
-                if (targetPage > this.pageNumber) {
-                    this.triggerPageChange('next');
-                } else {
-                    this.triggerPageChange('prev');
-                }
-                return; // Important: triggerPageChange will handle the final calculateAutoShift
+                // NEW: Instead of navigating immediately, mark as waiting
+                // This lets the user see/verify the last revealed content on the current page
+                this.isWaitingForPageTurn = true;
+                this.cdr.detectChanges();
+                return;
             }
 
             setTimeout(() => this.calculateAutoShift(), 100);
         } else {
-            if (this.memorizationSettings.difficulty === 'hard') {
+            if (this.memorizationSettings.groupRepeat > 0) {
+                this.startGroupPhase();
+            } else if (this.memorizationSettings.difficulty === 'hard') {
                 this.startTestPhase();
             } else {
                 this.exitMemorization();
@@ -892,48 +1405,73 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         }
     }
 
-    private syncWithMutabaa(): void {
-        if (!this.isLoggedIn || !this.sessionAyahs.length) return;
-
-        const type = this.memorizationSettings.type;
-        const taskType = type === 'hifz' ? 'hifz' : 'muraja';
-
-        console.log(`[Mushaf] Auto-syncing Mutabaa log for ${taskType}...`);
-        this.mutabaaService.updateTaskStatus(taskType, 'done').subscribe({
-            next: (res) => {
-                if (res.success) {
-                    console.log('[Mushaf] Mutabaa Log synced successfully');
-                }
-            },
-            error: (err) => console.error('[Mushaf] Sync failed:', err)
-        });
-    }
 
     private checkAutoSync(type: 'tilawo' | 'hifz' | 'muraja'): void {
-        if (!this.userPlan || !this.isLoggedIn) return;
+        if (!this.dailyTasks || !this.isLoggedIn) return;
 
         let target = 0;
         let current = 0;
 
         if (type === 'tilawo') {
-            target = this.userPlan.tilawoTarget;
+            target = this.dailyTasks.recitation?.amount || 1;
             current = this.sessionCounters.pagesRead;
         } else if (type === 'hifz') {
-            target = this.userPlan.hifzTarget;
+            target = this.dailyTasks.new_memorization?.amount || 1;
             current = this.sessionCounters.versesMemorized;
         } else if (type === 'muraja') {
-            target = this.userPlan.murajaTarget;
+            // Consolidation or Revision? Base target on amount from the specific task object
+            const task = (this.currentTaskType === 'revision') ? this.dailyTasks.revision : this.dailyTasks.consolidation;
+            target = task?.amount || 1;
             current = this.sessionCounters.pagesReviewed;
         }
 
-        if (target > 0 && current >= target) {
-            console.log(`[Mushaf] AUTO-SYNC: Target for ${type} reached (${current}/${target})!`);
-            this.mutabaaService.updateTaskStatus(type as any, 'done').subscribe({
+        if (target > 0 && current > 0) {
+            const currentAyahKey = this.sessionAyahs[this.currentAyahIndex];
+
+            // Guard: Avoid syncing the same page/verse multiple times in a row
+            if (type === 'tilawo' && this.pageNumber === this.lastSyncedPage) return;
+            if (type === 'hifz' && currentAyahKey === this.lastSyncedVerseKey) return;
+            // For muraja, we don't have a simple activePage check besides pageNumber
+            if (type === 'muraja' && this.pageNumber === this.lastSyncedPage) return;
+
+            // Correctly map currentTaskType to backend sync types
+            let finalSyncType = type as string;
+            if (type === 'muraja') {
+                if (this.currentTaskType === 'revision') finalSyncType = 'deepMuraja';
+            }
+
+            const taskObj = (type === 'tilawo' ? this.dailyTasks.recitation :
+                (type === 'hifz' ? this.dailyTasks.new_memorization :
+                    (this.currentTaskType === 'revision' ? this.dailyTasks.revision : this.dailyTasks.consolidation)));
+
+            if (!taskObj) return;
+
+            const oldDone = taskObj.amountDone || 0;
+            const totalToSync = oldDone + current;
+
+            // FIX: Use totalToSync for status to avoid flipping 'done' back to 'pending' during Sabiq Bil Khayrat
+            const newStatus = (totalToSync >= target) ? 'done' : 'pending';
+
+            console.log(`[Mushaf] SYNC: Synchronizing ${type} progress: ${totalToSync}/${target} (Status: ${newStatus})`);
+
+            // Track last synced position
+            if (type === 'tilawo' || type === 'muraja') this.lastSyncedPage = this.pageNumber;
+            if (type === 'hifz') this.lastSyncedVerseKey = currentAyahKey;
+
+            this.mutabaaService.updateTaskStatus(finalSyncType as any, newStatus, totalToSync).subscribe({
                 next: (res) => {
                     if (res.success) {
-                        console.log(`[Mushaf] ${type} task marked as DONE automatically.`);
-                        // Optional: show a small toast or toast via CDR
+                        // Reset local session counters after successful sync
+                        if (type === 'hifz') this.sessionCounters.versesMemorized = 0;
+                        else if (type === 'muraja') this.sessionCounters.pagesReviewed = 0;
+                        else if (type === 'tilawo') this.sessionCounters.pagesRead = 0;
+
+                        // Reload daily tasks to update the plan
+                        this.loadDailyTasks();
                     }
+                },
+                error: (err) => {
+                    console.error(`[Mushaf] Failed to sync ${type}:`, err);
                 }
             });
         }
@@ -941,7 +1479,7 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
 
     private getVerseSegmentCount(verseKey: string): number {
         let count = 0;
-        this.currentPageData$?.subscribe(page => {
+        this.currentPageData$?.pipe(take(1)).subscribe(page => {
             if (!page) return;
             page.lines.forEach(line => {
                 if (line.segments) {
@@ -980,6 +1518,11 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         if (this.currentRepetition < this.memorizationSettings.groupRepeat) {
             this.currentRepetition++;
         } else {
+            // Group Phase Complete!
+            if (this.memorizationSettings.type === 'hifz') {
+                this.checkAutoSync('hifz');
+            }
+
             if (this.memorizationSettings.difficulty === 'hard') {
                 this.startTestPhase();
             } else {
@@ -993,6 +1536,7 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         this.showTestResult = false;
         this.currentTestQuestionIndex = 0;
         this.correctAnswersCount = 0;
+
         this.testQuestions = [];
 
         const totalSessionAyahs = this.sessionAyahs.length;
@@ -1030,6 +1574,49 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         }
 
         this.loadQuestion(0);
+    }
+
+    private isVerseInDailyWird(verseKey: string): boolean {
+        if (!this.dailyTasks || !this.dailyTasks.new_memorization) return false;
+
+        const task = this.dailyTasks.new_memorization;
+        // If task is already done, we don't count it for the daily progress bar anymore
+        if (task.status === 'done' || this.getHifzProgressPercent() >= 100) return false;
+
+        const [vSurah, vNum] = verseKey.split(':').map(Number);
+        const startSurah = task.surah;
+        const startVerse = task.verse;
+
+        // Use the assigned amount for today
+        const amount = task.amount || (this.hifzPlanStats?.dailyCapacity?.memorizationAmount) || 1;
+        const endVerse = startVerse + amount - 1;
+
+        // Check if verse is within the assigned range for the START surah
+        // Note: For simplicity across surah boundaries, we mostly focus on the current surah task.
+        if (vSurah === startSurah && vNum >= startVerse && vNum <= endVerse) {
+            return true;
+        }
+        return false;
+    }
+
+    isPageInRecitationRange(pageNum: number): boolean {
+        if (!this.dailyTasks?.recitation) return false;
+        const task = this.dailyTasks.recitation;
+        const start = task.startPage || 1;
+        const amount = task.amount || 2;
+        const end = start + amount - 1;
+        return pageNum >= start && pageNum <= end;
+    }
+
+    isPageRead(pageNum: number): boolean {
+        if (!this.dailyTasks?.recitation) return false;
+        const task = this.dailyTasks.recitation;
+        const start = task.startPage || 1;
+        // Combine backend progress with current session progress
+        const amountDone = (task.amountDone || 0) + this.sessionCounters.pagesRead;
+        const lastRead = start + amountDone - 1;
+        // ONLY highlight if within the daily range and has been read
+        return pageNum >= start && pageNum <= lastRead;
     }
 
     private generateQuestionData(verseKey: string): any {
@@ -1117,14 +1704,10 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
     }
 
     exitMemorization(): void {
-        // If they reached the end of session ayahs, it's a success! sync it.
-        if (this.currentAyahIndex >= this.sessionAyahs.length - 1 && this.sessionAyahs.length > 0) {
-            this.syncWithMutabaa();
-        }
-
         this.isMemorizationMode = false;
         this.isTestPhase = false;
         this.isGroupPhase = false;
+        this.isWaitingForPageTurn = false;
         this.pageVerticalShift = 0;
         this.stopVoiceSession();
     }
@@ -1147,7 +1730,13 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         // 1. Handle Past Verses (Persistence)
         const verseIdx = this.sessionAyahs.indexOf(verseKey);
         if (verseIdx !== -1 && verseIdx < this.currentAyahIndex) {
-            return classes + 'active-verse'; // Already completed verses stay visible
+            // Check if this specific word was an error
+            const segIdx = this.getSegmentIndexInVerse(segment, verseKey, page);
+            const errorKey = `${verseKey}:${segIdx}`;
+            if (this.errorWords.has(errorKey)) {
+                return classes + 'error-verse';
+            }
+            return classes + 'active-verse'; // Otherwise active
         }
 
         // Current verse visibility
@@ -1261,10 +1850,7 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
                 }
             });
             this.cdr.detectChanges();
-            console.log('[Voice] Standard text loaded from API successfully');
         } catch (e) {
-            console.error('Failed to load standard text from API', e);
-            console.log('[Voice] Using fallback: local verse data with normalization');
             // Fallback: Use local verse data but apply normalization to text
             // The matching service will handle the comparison
         }
@@ -1311,23 +1897,18 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
 
         this.voiceSubscription = this.voiceService.voiceEvents$.subscribe(event => {
             if (event.type === 'error') {
-                console.error('Voice Error:', event.error);
                 this.voiceState = 'error';
-                // Try to restart if generic error, or just show UI
-                if (event.error === 'no-speech') {
-                    // Silent fail, just keep listening loop or prompt user
-                }
             } else if (event.type === 'start') {
                 this.voiceState = 'listening';
                 this.cdr.detectChanges();
             } else if (event.type === 'end') {
-                // If we are still in voice mode, restart listening (continuous mode helper)
                 if (this.isMemorizationMode && this.memorizationSettings.inputMethod === 'voice') {
-                    this.voiceService.start();
+                    setTimeout(() => this.voiceService.start(), 300);
                 }
             } else if (event.type === 'result') {
                 this.processVoiceInput(event.transcript || '', event.isFinal || false);
             }
+            this.cdr.detectChanges();
         });
     }
 
@@ -1342,7 +1923,6 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
     }
 
     processVoiceInput(transcript: string, isFinal: boolean = false): void {
-        this.lastSpokenTranscript = transcript;
         this.voiceState = 'processing';
 
         // Get expected words for the current Ayah
@@ -1362,17 +1942,8 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
 
         const nextIndex = this.currentWordIndex + 1;
 
-        console.log('[Voice] Transcript:', transcript);
-        console.log('[Voice] Current Index (Revealed):', this.currentWordIndex);
-        console.log('[Voice] Next Expected Index:', nextIndex);
-        if (nextIndex < expectedWords.length) {
-            console.log('[Voice] Expected Word:', expectedWords[nextIndex]);
-        }
-
         // Find if the spoken text matches the NEXT word(s)
         const matchIndex = this.matchingService.findProgress(transcript, expectedWords, nextIndex);
-
-        console.log('[Voice] Match Result:', matchIndex);
 
         if (matchIndex !== -1) {
             // Correct word(s) spoken!
@@ -1403,17 +1974,10 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
                     this.quranProgressService.addPointsIfLoggedIn('REVISION_VERSE_COMPLETE' as any, 1);
                 }
 
-                // IMPORTANT: Restart voice recognition to clear the transcript buffer
-                // This prevents old words from matching in the new Ayah
                 if (this.memorizationSettings.inputMethod === 'voice') {
-                    // Ignore voice results for 500ms to clear stale buffer
-                    this.ignoreVoiceUntil = Date.now() + 500;
-                    this.voiceService.stop();
-                    setTimeout(() => {
-                        if (this.memorizationSettings.inputMethod === 'voice' && this.isMemorizationMode) {
-                            this.voiceService.start();
-                        }
-                    }, 300); // Increased timeout for better buffer clearing
+                    // We no longer restart the mic here to avoid the "beep" sound.
+                    // Instead, we just cool down for 300ms to ignore any leftover audio from the previous Ayah.
+                    this.ignoreVoiceUntil = Date.now() + 300;
                 }
 
             } else {
@@ -1477,5 +2041,181 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         // Ensure we try to get from data map first (which might have updated standard text)
         const segs = this.verseDataMap.get(key);
         return segs ? segs.map(s => s.text) : [];
+    }
+
+    convertPointsToEGP() {
+        const progress = this.quranProgressService.getCurrentProgress();
+        if (!progress || progress.totalPoints < 5) { // 5 points = 1 Piastre (usually, but let's stick to minPoints if we had it)
+            this.showWalletModal('error', 'عذراً', 'يجب أن يكون لديك 5 نقاط على الأقل (1 قرش) للتحويل');
+            return;
+        }
+
+        this.walletModal = {
+            show: true,
+            type: 'convert',
+            title: 'تحويل النقاط',
+            message: 'حدد عدد النقاط التي تود تحويلها إلى جنيهات',
+            pointsToConvert: progress.totalPoints,
+            maxPoints: progress.totalPoints,
+            equivalentEGP: progress.totalPoints / this.quranPointsPerEGP,
+            loading: false,
+            isDonation: false
+        };
+    }
+
+    onPointsChange(points: number) {
+        this.walletModal.pointsToConvert = points;
+        this.walletModal.equivalentEGP = points / this.quranPointsPerEGP;
+    }
+
+    confirmConversion() {
+        if (this.walletModal.pointsToConvert < 5) {
+            this.showWalletModal('error', 'خطأ', 'الحد الأدنى للتحويل هو 5 نقاط');
+            return;
+        }
+
+        this.walletModal.loading = true;
+        this.quranProgressService.convertPoints(this.walletModal.pointsToConvert).subscribe({
+            next: (res) => {
+                this.showWalletModal('success', 'تم التحويل بنجاح!', `تمت إضافة ${res.addedBalance.toFixed(2)} ج.م إلى محفظتك`);
+            },
+            error: (err) => {
+                this.showWalletModal('error', 'فشل التحويل', err.error?.message || 'حدث خطأ أثناء التحويل');
+            }
+        });
+    }
+
+    requestPayout() {
+        const progress = this.quranProgressService.getCurrentProgress();
+        const balance = progress?.walletBalance || 0;
+
+        if (balance < 20) {
+            this.showWalletModal('error', 'الحد الأدنى للسحب', 'عذراً، يجب أن يكون رصيدك 20 جنيه على الأقل لتقديم طلب سحب.');
+            return;
+        }
+
+        this.walletModal = {
+            show: true,
+            type: 'payout',
+            title: 'طلب سحب رصيد',
+            message: `هل تود تقديم طلب لسحب رصيدك الحالي (${balance.toFixed(2)} ج.م)؟ \n (ملاحظة: يمكنك تقديم طلب واحد فقط يومياً)`,
+            pointsToConvert: 0,
+            maxPoints: 0,
+            equivalentEGP: balance,
+            loading: false,
+            isDonation: false
+        };
+    }
+
+    confirmPayout() {
+        this.walletModal.loading = true;
+        this.quranProgressService.requestPayout().subscribe({
+            next: (res) => {
+                this.showWalletModal('success', 'تم تقديم الطلب!', res.message);
+            },
+            error: (err) => {
+                this.showWalletModal('error', 'فشل الطلب', err.error?.message || 'حدث خطأ أثناء تقديم الطلب');
+            }
+        });
+    }
+
+    showWalletModal(type: 'success' | 'error' | 'convert' | 'payout', title: string, message: string) {
+        this.walletModal = {
+            ...this.walletModal,
+            show: true,
+            type,
+            title,
+            message,
+            loading: false
+        };
+    }
+
+    closeWalletModal() {
+        this.walletModal.show = false;
+        this.walletModal.isDonation = false;
+    }
+
+    openDonationModal() {
+        const progress = this.quranProgressService.getCurrentProgress();
+        const balance = progress?.walletBalance || 0;
+
+        this.walletModal = {
+            show: true,
+            type: 'convert',
+            title: 'دعم التطبيق',
+            message: balance <= 0
+                ? 'عذراً، يجب أن يكون لديك رصيد في المحفظة للتبرع. يمكنك تحويل بعض النقاط إلى رصيد أولاً.'
+                : 'اختر المبلغ الذي تود التبرع به كصدقة جارية من رصيد محفظتك',
+            pointsToConvert: balance,
+            maxPoints: balance,
+            equivalentEGP: balance > 0 ? Math.min(balance, 10) : 0,
+            loading: false,
+            isDonation: true
+        };
+    }
+
+    confirmDonation() {
+        if (this.walletModal.equivalentEGP < 0.01) {
+            this.showWalletModal('error', 'خطأ', 'الحد الأدنى للتبرع هو قرش واحد (0.01 ج.م)');
+            return;
+        }
+
+        this.walletModal.loading = true;
+        const amount = this.walletModal.equivalentEGP;
+        this.quranProgressService.createDonation(amount).subscribe({
+            next: (res) => {
+                this.walletModal.show = false;
+                this.donationStats.showGratitude = true;
+                this.loadDonationStats(); // Refresh stats
+            },
+            error: (err) => {
+                this.showWalletModal('error', 'فشل التبرع', err.error?.message || 'حدث خطأ أثناء معالجة الطلب');
+            }
+        });
+    }
+
+    closeGratitudeModal() {
+        this.donationStats.showGratitude = false;
+    }
+
+    // --- Total Users ---
+    loadTotalUsers(): void {
+        this.http.get<any>(`${environment.apiBaseUrl}/admin/stats`).subscribe({
+            next: (res) => {
+                if (res && res.stats && res.stats.totalUsers) {
+                    this.totalUsers = res.stats.totalUsers;
+                } else {
+                    this.totalUsers = 0;
+                }
+            },
+            error: () => {
+                this.totalUsers = 0;
+            }
+        });
+    }
+
+    // --- Share Position ---
+    sharePosition(): void {
+        const pageLink = `https://knoozbook.com/mushaf`;
+        const appLink = `https://play.google.com/store/apps/details?id=com.kenouz.bookstore2`;
+        const text = `شاركوني تلاوة وحفظ ومراجعة القرآن الكريم عبر تطبيق وموقع كنوز. \nالرابط: ${pageLink} \nتحميل التطبيق: ${appLink}`;
+
+        if (this.isAndroid && (window as any).Android && (window as any).Android.share) {
+            (window as any).Android.share(text);
+        } else if (navigator.share) {
+            navigator.share({
+                title: 'مكتبة كنوز - المصحف الشريف',
+                text: text,
+                url: pageLink
+            }).catch(err => { });
+        } else {
+            const tempInput = document.createElement('textarea');
+            tempInput.value = text;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+            alert('تم نسخ رابط الصفحة للمشاركة');
+        }
     }
 }

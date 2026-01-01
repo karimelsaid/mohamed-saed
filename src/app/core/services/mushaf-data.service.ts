@@ -1,7 +1,8 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, map, shareReplay, of, switchMap } from 'rxjs';
+import { Observable, map, shareReplay, of, switchMap, from } from 'rxjs';
 import { MushafPage, MushafMetadata, SurahMetadata, JuzMetadata, HizbMetadata } from '../models/mushaf.model';
+import { MushafAssetService } from './mushaf-asset.service';
 
 @Injectable({
   providedIn: 'root'
@@ -11,13 +12,17 @@ export class MushafDataService {
   private mushafData$?: Observable<MushafPage[]>;
   private metadata$?: Observable<MushafMetadata>;
 
-  constructor(private http: HttpClient) { }
+  constructor(
+    private http: HttpClient,
+    private assetService: MushafAssetService
+  ) { }
 
   /**
    * Returns the individual page data.
    * Now fetches only the required JUZ chunk for the requested page.
    */
   getPage(pageNumber: number): Observable<MushafPage | undefined> {
+    console.log(`[MushafData] Requested Page: ${pageNumber}`);
     return this.getMetadata().pipe(
       map(meta => {
         let targetJuzId = 1;
@@ -28,16 +33,28 @@ export class MushafDataService {
             break;
           }
         }
+        console.log(`[MushafData] Page ${pageNumber} belongs to Juz ${targetJuzId}`);
         return targetJuzId;
       }),
-      switchMap(juzId => this.getJuzChunk(juzId)),
-      map(pages => pages.find(p => p.page_number === pageNumber))
+      switchMap(juzId => {
+        console.log(`[MushafData] Loading Juz chunk: ${juzId}`);
+        return this.getJuzChunk(juzId);
+      }),
+      map(pages => {
+        const page = pages.find(p => p.page_number === pageNumber);
+        if (!page) {
+          console.error(`[MushafData] CRITICAL: Page ${pageNumber} not found in Juz chunk!`);
+        } else {
+          console.log(`[MushafData] Page ${pageNumber} data found successfully.`);
+        }
+        return page;
+      })
     );
   }
 
   private getJuzChunk(juzId: number): Observable<MushafPage[]> {
     if (!this.loadedJuzChunks.has(juzId)) {
-      const obs = this.http.get<MushafPage[]>(`/assets/data/mushaf_chunks/juz_${juzId}.json`).pipe(
+      const obs = from(this.assetService.getJsonData<MushafPage[]>(`data/mushaf_chunks/juz_${juzId}.json`)).pipe(
         shareReplay(1)
       );
       this.loadedJuzChunks.set(juzId, obs);
@@ -50,11 +67,8 @@ export class MushafDataService {
    * Note: This will still load data on demand.
    */
   getMushaf(): Observable<MushafPage[]> {
-    // If we absolutely need the whole thing, we'd have to combine all chunks.
-    // However, for current memorization logic, we usually only need the pages in the session.
-    // For now, redirect to the old file if full access is truly needed, or better, refactor callers.
     if (!this.mushafData$) {
-      this.mushafData$ = this.http.get<MushafPage[]>('/assets/data/mushaf.json').pipe(
+      this.mushafData$ = from(this.assetService.getJsonData<MushafPage[]>('data/mushaf.json')).pipe(
         shareReplay(1)
       );
     }
@@ -69,8 +83,7 @@ export class MushafDataService {
 
   getMetadata(): Observable<MushafMetadata> {
     if (!this.metadata$) {
-      // Cache busting to ensure we get new total verses count
-      this.metadata$ = this.http.get<MushafMetadata>(`/assets/data/mushaf-metadata.json?v=${new Date().getTime()}`).pipe(
+      this.metadata$ = from(this.assetService.getJsonData<MushafMetadata>('data/mushaf-metadata.json')).pipe(
         shareReplay(1)
       );
     }
@@ -116,7 +129,18 @@ export class MushafDataService {
     );
   }
   getPageText(pageNumber: number): Observable<any> {
-    // Fetching text_imlaei_simple for easier matching
+    // API calls remain external
     return this.http.get(`https://api.quran.com/api/v4/verses/by_page/${pageNumber}?words=true&word_fields=text_imlaei_simple`);
   }
+
+  /**
+   * Get precise page number for a specific verse key (e.g., "2:142") or Surah/Verse numbers.
+   */
+  getPageNumberForVerse(surah: number, verse: number): Observable<number> {
+    const verseKey = `${surah}:${verse}`;
+    return this.http.get<any>(`https://api.quran.com/api/v4/verses/by_key/${verseKey}`).pipe(
+      map(response => response.verse.page_number)
+    );
+  }
 }
+

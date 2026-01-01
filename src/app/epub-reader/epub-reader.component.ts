@@ -49,6 +49,11 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
     private selectionTimeout: any;
     prices = { monthly: 50, yearly: 500 };
 
+    // Touch Handling
+    private touchStartX: number = 0;
+    private touchStartY: number = 0;
+    private readonly SWIPE_THRESHOLD = 50; // Minimum distance for swipe
+
     // UI State
     isControlsVisible = true;
     activeSection: 'toc' | 'settings' | 'bookmarks' | 'highlights' | null = null;
@@ -59,6 +64,9 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
     readonly minContentWidth = 300;
     readonly maxContentWidth = 1200;
     readonly contentWidthStep = 100;
+
+    // Animation State
+    animationClass: string = '';
 
     // Calculate max allowed width based on screen size with responsive margin
     get effectiveMaxWidth(): number {
@@ -582,16 +590,29 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
     private bindRenditionEvents() {
         if (!this.rendition) return;
 
-        this.rendition.on('relocated', (location: any) => {
-            this.updateProgress(location);
-        });
-
-        // Hook for applying styles on every chapter load
-        // Hook for applying styles on every chapter load
+        // Hook for applying styles and event listeners on every chapter load
         this.rendition.hooks.content.register((contents: any) => {
             this.applyStyleToFrame(contents);
-            // No need to restore highlights here as they persist in rendition.annotations
-            // We just ensure styles are injected which applyStyleToFrame handles.
+
+            // Access both document and window of the iframe
+            const doc = contents.document;
+            const win = contents.window; // Sometimes needed for selection
+
+            // Re-bind touch handlers to the IFRAME document directly
+            doc.addEventListener('touchstart', (e: TouchEvent) => {
+                this.touchStartX = e.changedTouches[0].clientX;
+                this.touchStartY = e.changedTouches[0].clientY;
+            });
+
+            doc.addEventListener('touchend', (e: TouchEvent) => {
+                const touchEndX = e.changedTouches[0].clientX;
+                const touchEndY = e.changedTouches[0].clientY;
+                this.handleSwipe(this.touchStartX, this.touchStartY, touchEndX, touchEndY);
+            });
+        });
+
+        this.rendition.on('relocated', (location: any) => {
+            this.updateProgress(location);
         });
 
         // Listen for text selection
@@ -640,6 +661,43 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
             }
             lastClickTime = now;
         });
+    }
+
+    private handleSwipe(startX: number, startY: number, endX: number, endY: number) {
+        const diffX = startX - endX;
+        const diffY = startY - endY;
+
+        // Check if movement is horizontal enough (ignore vertical scrolls)
+        if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > this.SWIPE_THRESHOLD) {
+            // For RTL (Arabic): 
+            // Swipe Right (startX < endX, diffX < 0) -> Next Page (Logic: Pulling content from left?)
+            // Swipe Left (startX > endX, diffX > 0) -> Prev Page
+
+            // Correction:
+            // "Next" in RTL is usually physically on the LEFT. So to go Next, you swipe logic moves viewport to the left...
+            // Standard Book Flip:
+            // Turn page Right-to-Left (Swipe Left) -> Next Page.
+            // Turn page Left-to-Right (Swipe Right) -> Prev Page.
+
+            // However, the user said it doesn't match Mushaf.
+            // In Mushaf code:
+            // Swipe Right (deltaX > 0) -> Next.
+            // Swipe Left (deltaX < 0) -> Prev.
+
+            // My 'diffX' = start - end.
+            // Swipe Right: end > start => diffX is NEGATIVE.
+            // Swipe Left: start > end => diffX is POSITIVE.
+
+            if (diffX < 0) {
+                // diffX negative => endX > startX => Swipe Right.
+                // Mushaf logic: Swipe Right -> Next.
+                this.nextPage();
+            } else {
+                // diffX positive => startX > endX => Swipe Left.
+                // Mushaf logic: Swipe Left -> Prev.
+                this.prevPage();
+            }
+        }
     }
 
     private applyStyleToFrame(contents?: any) {
@@ -1041,8 +1099,23 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
 
 
             this.isNavigating = true;
+
+            // RTL Animation: Next Page moves content to Right (pulling from Left)?
+            // "Connected" feel: Next Page -> Slide current OUT to Right, New IN from Left.
+            this.animationClass = 'slide-out-right';
+
             try {
+                // Wait for exit animation
+                await new Promise(r => setTimeout(r, 150));
+
                 await this.rendition.next();
+
+                // In animation
+                this.animationClass = 'slide-in-left';
+                setTimeout(() => {
+                    this.animationClass = '';
+                }, 300);
+
             } finally {
                 this.isNavigating = false;
             }
@@ -1063,8 +1136,19 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
         // EPUB Mode
         if (this.rendition && !this.isNavigating) {
             this.isNavigating = true;
+
+            // RTL Animation: Prev Page -> Slide current OUT to Left, New IN from Right
+            this.animationClass = 'slide-out-left';
+
             try {
+                await new Promise(r => setTimeout(r, 150));
+
                 await this.rendition.prev();
+
+                this.animationClass = 'slide-in-right';
+                setTimeout(() => {
+                    this.animationClass = '';
+                }, 300);
             } finally {
                 this.isNavigating = false;
             }

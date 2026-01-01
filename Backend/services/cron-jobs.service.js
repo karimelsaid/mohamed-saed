@@ -76,6 +76,13 @@ exports.initCronJobs = async () => {
         }
     });
     scheduledTasks.push(wisdomTask);
+
+    // 4. Custom Quran Reminders (Every minute)
+    const customRemindersTask = cron.schedule('* * * * *', () => {
+        // console.log('⏰ Checking Custom Quran Reminders...');
+        processCustomReminders();
+    });
+    scheduledTasks.push(customRemindersTask);
 };
 
 /**
@@ -152,5 +159,86 @@ async function sendDailyRewardReminders() {
 
     } catch (error) {
         console.error('Error in sendDailyRewardReminders:', error);
+    }
+}
+
+/**
+ * Process custom reminders for all users
+ */
+async function processCustomReminders() {
+    try {
+        const now = new Date();
+        const egyptOffset = 2 * 60; // UTC+2
+        const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+        const egyptTime = new Date(utc + (egyptOffset * 60000));
+
+        const hours = String(egyptTime.getHours()).padStart(2, '0');
+        const minutes = String(egyptTime.getMinutes()).padStart(2, '0');
+        const currentTimeStr = `${hours}:${minutes}`;
+
+        // console.log(`[Cron] Checking Quran Reminders at Egypt Time: ${currentTimeStr}`);
+
+        // 1. Recitation Reminders
+        const recitationUsers = await User.find({
+            'hifzPlan.reminders.recitation.enabled': true,
+            'hifzPlan.reminders.recitation.time': currentTimeStr
+        }).select('_id');
+
+        if (recitationUsers.length > 0) {
+            const payload = {
+                notification: {
+                    title: '📖 ورد التلاوة',
+                    body: 'حان الآن موعد ورد التلاوة اليومي. افتح المصحف وابدأ رحلتك.',
+                    icon: '/assets/icons/icon-192x192.png',
+                    data: { url: '/mushaf' }
+                }
+            };
+            for (const user of recitationUsers) {
+                await pushNotificationService.sendToUser(user._id, payload);
+            }
+        }
+
+        // 2. Memorization Reminders
+        const memorizationUsers = await User.find({
+            'hifzPlan.reminders.memorization.enabled': true,
+            'hifzPlan.reminders.memorization.time': currentTimeStr
+        }).select('_id');
+
+        if (memorizationUsers.length > 0) {
+            const payload = {
+                notification: {
+                    title: '🧠 ورد الحفظ الجديد',
+                    body: 'حان موعد حفظ آياتك الجديدة اليوم. استعن بالله وابدأ.',
+                    icon: '/assets/icons/icon-192x192.png',
+                    data: { url: '/mushaf' }
+                }
+            };
+            for (const user of memorizationUsers) {
+                await pushNotificationService.sendToUser(user._id, payload);
+            }
+        }
+
+        // 3. Revision Reminders
+        const revisionUsers = await User.find({
+            'hifzPlan.reminders.revision.enabled': true,
+            'hifzPlan.reminders.revision.time': currentTimeStr
+        }).select('_id');
+
+        if (revisionUsers.length > 0) {
+            const payload = {
+                notification: {
+                    title: '📚 ورد المراجعة',
+                    body: 'موعد مراجعة محفوظاتك الآن. المراجعة هي سر الثبات.',
+                    icon: '/assets/icons/icon-192x192.png',
+                    data: { url: '/mushaf' }
+                }
+            };
+            for (const user of revisionUsers) {
+                await pushNotificationService.sendToUser(user._id, payload);
+            }
+        }
+
+    } catch (error) {
+        console.error('Error in processCustomReminders:', error);
     }
 }

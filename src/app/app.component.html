@@ -1,3 +1,30 @@
+<!-- Mushaf Download Overlay -->
+<div *ngIf="isDownloadingAssets$ | async"
+  class="fixed inset-0 z-[1000] bg-slate-900 flex flex-col items-center justify-center text-white p-6">
+  <img src="logoname2.jpg" alt="Logo" class="w-24 h-24 mb-8 animate-pulse rounded-full shadow-lg shadow-blue-500/50">
+
+  <h2 class="text-2xl font-bold mb-4 font-kufi">جاري تحميل المصحف الشريف</h2>
+
+  <div class="w-full max-w-md bg-gray-800 rounded-full h-4 mb-4 relative overflow-hidden ring-2 ring-blue-500/30">
+    <div
+      class="bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 h-4 rounded-full transition-all duration-300 relative"
+      [style.width.%]="(downloadProgress$ | async) || 0">
+      <div class="absolute inset-0 bg-white/20 animate-[shimmer_2s_infinite]"></div>
+    </div>
+  </div>
+
+  <p class="text-lg font-bold mb-8 text-blue-300">{{ (downloadProgress$ | async) || 0 }}%</p>
+
+  <div
+    class="bg-white/10 p-6 rounded-2xl border border-white/10 backdrop-blur-sm max-w-md text-center transform hover:scale-105 transition-transform duration-500">
+    <p class="text-xl leading-relaxed text-gray-200 font-medium">
+      "هذا الأمر عظيم يحتاج للصبر"
+    </p>
+  </div>
+
+  <p class="mt-8 text-sm text-gray-500">يرجى عدم إغلاق التطبيق أثناء التحميل</p>
+</div>
+
 <!-- هذا المكان فقط يظهر عندما يكون هناك بحث -->
 <app-search-results *ngIf="isSearchPage"></app-search-results>
 

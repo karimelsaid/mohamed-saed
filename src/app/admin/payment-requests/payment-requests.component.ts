@@ -4,6 +4,7 @@ import { CommonModule } from '@angular/common';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { faCheck, faTimes } from '@fortawesome/free-solid-svg-icons';
 import { environment } from '../../../environments/environment';
+import { ModalService } from '../../services/modal.service';
 
 interface PaymentRequest {
   _id: string;
@@ -31,7 +32,10 @@ export class PaymentRequestsComponent implements OnInit {
   faCheck = faCheck;
   faTimes = faTimes;
 
-  constructor(private http: HttpClient) { }
+  constructor(
+    private http: HttpClient,
+    private modalService: ModalService
+  ) { }
 
   ngOnInit(): void {
     this.loadPaymentRequests();
@@ -54,19 +58,35 @@ export class PaymentRequestsComponent implements OnInit {
   }
 
   updateRequestStatus(requestId: string, status: 'completed' | 'rejected'): void {
+    const request = this.requests.find(req => req._id === requestId);
+    if (!request) return;
+
     this.http.patch(`${environment.apiBaseUrl}/payment-requests/${requestId}`, { status })
       .subscribe({
         next: (response: any) => {
-          alert('تم تحديث حالة الطلب بنجاح');
-          // تحديث الطلب في الواجهة فوراً بدلاً من إعادة تحميل القائمة بالكامل
-          const index = this.requests.findIndex(req => req._id === requestId);
-          if (index !== -1) {
-            this.requests[index].status = status;
-          }
+          this.modalService.showSuccess(`تم ${status === 'completed' ? 'قبول' : 'رفض'} طلب الدفع بنجاح`);
+
+          // Send notification to the user
+          const notificationPayload = {
+            title: status === 'completed' ? '✅ تم تنفيذ طلب الدفع' : '❌ تم رفض طلب الدفع',
+            body: status === 'completed'
+              ? `تمت الموافقة على طلب سحب مبلغ ${request.amount} جنيه بنجاح.`
+              : `نعتذر، تم رفض طلب سحب مبلغ ${request.amount} جنيه. يرجى التواصل مع الدعم للمزيد من التفاصيل.`,
+            url: '/wallet', // Assuming there's a wallet or history page
+            userId: request.userId._id
+          };
+
+          this.http.post(`${environment.apiBaseUrl}/notifications/admin/send`, notificationPayload)
+            .subscribe({
+              error: (err) => console.error('Error sending notification:', err)
+            });
+
+          // Update UI locally
+          request.status = status;
         },
         error: (err) => {
           console.error('Error updating request status:', err);
-          alert('فشل تحديث حالة الطلب');
+          this.modalService.showError('فشل تحديث حالة الطلب');
         }
       });
   }

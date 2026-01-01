@@ -129,6 +129,9 @@
 }
 
 .surah-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 20px;
@@ -149,6 +152,20 @@
   border-color: #c2a87a;
 }
 
+.chip-percent {
+  font-size: 0.75rem;
+  background: rgba(194, 168, 122, 0.2);
+  color: #c2a87a;
+  padding: 2px 6px;
+  border-radius: 10px;
+  margin-right: 4px;
+}
+
+.surah-chip.selected .chip-percent {
+  background: rgba(26, 42, 58, 0.2);
+  color: #1a2a3a;
+}
+
 .selected-surahs {
   background: rgba(0, 0, 0, 0.2);
   border-radius: 12px;
@@ -163,19 +180,116 @@
 
 .selected-surah-item {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 0;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.strength-select {
+.surah-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.surah-name {
+  color: #fff;
+  font-weight: 600;
+}
+
+.surah-progress-small {
+  color: #c2a87a;
+  font-size: 0.8rem;
+}
+
+.surah-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+.toggle-range-btn {
+  background: transparent;
+  border: 1px dashed rgba(194, 168, 122, 0.5);
+  color: #c2a87a;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.toggle-range-btn:hover {
+  background: rgba(194, 168, 122, 0.1);
+  border-color: #c2a87a;
+}
+
+.surah-range-options {
+  background: rgba(255, 255, 255, 0.03);
+  padding: 10px;
+  border-radius: 8px;
+  margin: 8px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.range-main-label {
+  font-size: 0.8rem;
+  color: #c2a87a;
+  font-weight: 500;
+}
+
+.range-inputs-flex {
+  display: flex;
+  gap: 12px;
+}
+
+.range-input-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+}
+
+.range-input-group label {
+  font-size: 0.8rem;
+  color: #888;
+  white-space: nowrap;
+}
+
+.range-select {
   background: rgba(255, 255, 255, 0.1);
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  padding: 6px 4px;
+  border-radius: 6px;
+  width: 100%;
+  font-size: 0.8rem;
+  outline: none;
+  cursor: pointer;
+}
+
+.range-select:focus {
+  border-color: #c2a87a;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.strength-select {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   color: #fff;
   padding: 6px 10px;
   border-radius: 6px;
   font-size: 0.85rem;
+  outline: none;
+  cursor: pointer;
+  align-self: flex-start;
+}
+
+.strength-select:focus {
+  border-color: #c2a87a;
+  background: rgba(194, 168, 122, 0.15);
 }
 
 /* Capacity Section */
@@ -196,13 +310,20 @@
 }
 
 .capacity-select {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   color: #fff;
   padding: 10px 12px;
   border-radius: 8px;
   font-size: 0.9rem;
   flex: 1;
+  outline: none;
+  cursor: pointer;
+}
+
+.capacity-select:focus {
+  border-color: #c2a87a;
+  background: rgba(194, 168, 122, 0.15);
 }
 
 .capacity-select.full {
@@ -210,14 +331,20 @@
 }
 
 .capacity-input {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   color: #fff;
   padding: 10px;
   border-radius: 8px;
   width: 60px;
   text-align: center;
   font-size: 0.9rem;
+  outline: none;
+}
+
+.capacity-input:focus {
+  border-color: #c2a87a;
+  background: rgba(194, 168, 122, 0.15);
 }
 
 .days-selector {
@@ -336,10 +463,16 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.1);
   padding: 0 12px;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.2s;
+}
+
+.search-box:focus-within {
+  border-color: #c2a87a;
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .search-box input {

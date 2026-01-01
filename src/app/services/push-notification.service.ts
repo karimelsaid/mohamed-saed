@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { SwPush } from '@angular/service-worker';
-import { firstValueFrom, Subject } from 'rxjs';
+import { firstValueFrom, Subject, timeout, catchError, of, take } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { Capacitor } from '@capacitor/core';
 import { PushNotifications } from '@capacitor/push-notifications';
@@ -43,15 +43,33 @@ export class PushNotificationService {
         }
     }
 
-    async getPermissionStatus(): Promise<'granted' | 'denied' | 'prompt' | 'prompt-with-rationale' | 'default'> {
+    async getPermissionStatus(): Promise<{ permission: string, hasSubscription: boolean }> {
         if (Capacitor.isNativePlatform()) {
             const status = await PushNotifications.checkPermissions();
-            return status.receive;
+            return { permission: status.receive, hasSubscription: false }; // Capacitor handles this differently
         } else {
             if (!('Notification' in window)) {
-                return 'denied';
+                return { permission: 'denied', hasSubscription: false };
             }
-            return Notification.permission as 'granted' | 'denied' | 'prompt' | 'default';
+
+            let hasSub = false;
+            try {
+                // CRITICAL: Timeout after 2s if SW is not responding (common in Dev Mode)
+                const sub = await firstValueFrom(
+                    this.swPush.subscription.pipe(
+                        timeout(2000),
+                        catchError(() => of(null))
+                    )
+                );
+                hasSub = !!sub;
+            } catch (e) {
+                // Silent fail
+            }
+
+            return {
+                permission: Notification.permission as string,
+                hasSubscription: hasSub
+            };
         }
     }
 
@@ -60,49 +78,45 @@ export class PushNotificationService {
     }
 
     async subscribeToNotifications(): Promise<any> {
-        console.error('🔔 Subscribe: Starting subscription flow...');
-
         // 1. Native App (Android/iOS)
         if (Capacitor.isNativePlatform()) {
-            console.log('📱 Native Platform detected. Registering for Push Notifications...');
             return await this.registerNativePush();
         }
 
-        // 2. Web / PWA
-        if (!this.swPush.isEnabled) {
-            console.warn('Service Workers are not enabled or supported.');
-            throw new Error('Service Workers are disabled (Dev Mode). Use Production Build to test.');
-        }
-
         try {
-            console.error('🔔 DEBUG: Starting subscription flow (WEB)...');
-            console.error('🔔 DEBUG: SERVER_URL:', this.SERVER_URL);
+            // 1. Explicitly request permission first (independent of Service Worker)
+            if ('Notification' in window && Notification.permission !== 'granted') {
+                const perm = await Notification.requestPermission();
+                if (perm !== 'granted') {
+                    throw new Error('تم رفض تصريح التنبيهات من المتصفح.');
+                }
+            }
 
-            // 1. Get Public Key from Backend
+            // 2. Now check if SW is enabled for the actual subscription
+            if (!this.swPush.isEnabled) {
+                throw new Error('Service Worker غير مفعل. الإشعارات تعمل فقط في نسخة الـ Production أو PWA.');
+            }
+
+            const status = await this.getPermissionStatus();
             const keyObs = this.http.get(`${this.SERVER_URL}/notifications/public-key`);
-            if (!keyObs) throw new Error('Http.get for public-key returned undefined!');
-
             const keyResponse: any = await firstValueFrom(keyObs);
-            if (!keyResponse || !keyResponse.publicKey) throw new Error('Invalid key response');
+            if (!keyResponse || !keyResponse.publicKey) throw new Error('فشل الحصول على مفتاح التشفير من الخادم.');
 
             const publicKey = keyResponse.publicKey;
-            console.log('🔔 Requesting Web Subscription...');
-
             const subscription = await this.swPush.requestSubscription({
                 serverPublicKey: publicKey
             });
 
-            // Send to Backend (Web Type)
-            const subObs = this.http.post(`${this.SERVER_URL}/notifications/subscribe`, { subscription });
-            await firstValueFrom(subObs);
+            // 3. Send to Backend
+            await firstValueFrom(this.http.post(`${this.SERVER_URL}/notifications/subscribe`, { subscription }));
 
-            console.log('✅ Web Subscription successful');
             return subscription;
 
-        } catch (err) {
-            console.error('❌ Could not subscribe to notifications', err);
-            // Don't rethrow to avoid crushing the app entirely, just log it.
-            // throw err; 
+        } catch (err: any) {
+            console.error('❌ [PushService] Subscription failed:', err);
+            let msg = err.message || 'خطأ غير معروف';
+            if (err.name === 'NotAllowedError') msg = 'يرجى تفعيل التنبيهات من إعدادات المتصفح (موقوف حالياً).';
+            throw err;
         }
     }
 
@@ -195,4 +209,6 @@ export class PushNotificationService {
             console.error('Error unsubscribing', err);
         }
     }
+
+
 }

@@ -225,7 +225,8 @@
     <!-- Reader Content Container (EPUB) -->
     <div class="reader-container" *ngIf="bookType === 'epub'" [style.opacity]="(isLoading || error) ? '0' : '1'">
         <div class="main-content">
-            <div #readerContainer id="epub-reader-frame" class="reader-content" [style.max-width.px]="contentWidth">
+            <div #readerContainer id="epub-reader-frame" class="reader-content" [style.max-width.px]="contentWidth"
+                [ngClass]="animationClass">
             </div>
         </div>
     </div>

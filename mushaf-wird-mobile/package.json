@@ -1,0 +1,21 @@
+{
+    "name": "mushaf-wird-mobile",
+    "version": "1.0.0",
+    "private": true,
+    "scripts": {
+        "cap": "cap"
+    },
+    "dependencies": {
+        "@capacitor/android": "^7.4.1",
+        "@capacitor/app": "^7.1.0",
+        "@capacitor/core": "^7.4.1",
+        "@capacitor/filesystem": "^7.1.6",
+        "@capacitor/local-notifications": "^7.0.4",
+        "@capacitor/status-bar": "^7.0.4",
+        "@capawesome-team/capacitor-android-foreground-service": "^7.0.1",
+        "@capgo/native-audio": "^7.11.2"
+    },
+    "devDependencies": {
+        "@capacitor/cli": "^7.4.1"
+    }
+}

@@ -17,6 +17,7 @@ import { QuranAudioService, PlaybackState } from '../../../core/services/quran-a
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
+import { Capacitor } from '@capacitor/core';
 
 export type VoiceState = 'inactive' | 'listening' | 'processing' | 'error' | 'idle';
 
@@ -286,6 +287,7 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
     ) { }
 
     async ngOnInit(): Promise<void> {
+        this.isAndroid = Capacitor.getPlatform() === 'android';
 
         // Setup Audio State
         this.audioState$ = this.audioService.state$;
@@ -1756,6 +1758,15 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
             });
         } catch (e) {
             console.warn('⚠️ Server not available, using local reminders only');
+        }
+    }
+
+    async toggleAndroidNotifications(): Promise<void> {
+        if (!this.isAndroid) return;
+        try {
+            await this.localReminderService.requestPermissions();
+        } catch (e) {
+            console.error('Error requesting notifications:', e);
         }
     }
 

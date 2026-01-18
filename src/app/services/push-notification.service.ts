@@ -19,7 +19,7 @@ export class PushNotificationService {
     ) {
         // Initialize listeners if on native platform
         if (Capacitor.isNativePlatform()) {
-            this.registerNativeListeners();
+            // this.registerNativeListeners();
         }
     }
 

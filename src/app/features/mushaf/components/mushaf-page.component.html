@@ -1,10 +1,47 @@
-<!-- Hifz Plan Setup Wizard Overlay -->
-<!-- Hifz Plan Setup Wizard Overlay -->
 <div class="wizard-overlay theme-{{currentTheme}}" *ngIf="showHifzWizard" (click)="closeWizard()">
     <div (click)="$event.stopPropagation()">
         <app-hifz-wizard (setupComplete)="onWizardComplete()" (close)="closeWizard()"></app-hifz-wizard>
     </div>
 </div>
+
+<!-- Loading Overlay -->
+
+<!-- Loading Overlay -->
+<div class="loading-overlay theme-{{currentTheme}}" *ngIf="assetService.loading$ | async"
+    style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 99999; 
+           background: radial-gradient(circle at center, var(--bg-secondary), var(--bg-primary)); 
+           display: flex; flex-direction: column; align-items: center; justify-content: center; direction: rtl; backdrop-filter: blur(15px);">
+
+    <div class="loading-content"
+        style="text-align: center; padding: 20px; animation: fadeIn 0.5s ease-out; display: flex; flex-direction: column; align-items: center;">
+        <img src="mushaf-wird.png" alt="المصحف"
+            style="width: 120px; height: auto; margin-bottom: 32px; filter: drop-shadow(0 8px 16px rgba(0,0,0,0.15));">
+
+        <div class="spinner-container" style="position: relative; width: 60px; height: 60px; margin: 0 auto 24px;">
+            <div class="spinner"
+                style="border: 3px solid rgba(var(--primary-rgb), 0.1); border-top-color: var(--primary-color); border-radius: 50%; width: 100%; height: 100%; animation: spin 1s linear infinite;">
+            </div>
+        </div>
+
+        <h3
+            style="margin-bottom: 8px; font-size: 1.3em; color: var(--text-primary); font-family: 'Amiri', serif; font-weight: bold;">
+            جاري تجهيز المصحف</h3>
+        <p style="margin-bottom: 20px; font-size: 1em; color: var(--text-secondary);">{{ assetService.message$ | async
+            }}</p>
+
+        <div class="progress-bar-container"
+            style="width: 240px; height: 6px; background: rgba(0,0,0,0.1); border-radius: 10px; overflow: hidden; margin: 0 auto;">
+            <div class="fill" [style.width.%]="assetService.progress$ | async"
+                style="height: 100%; background: #c2a87a; transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); border-radius: 10px;">
+            </div>
+        </div>
+        <span
+            style="display: block; margin-top: 10px; font-size: 0.9em; color: var(--text-secondary); font-weight: 500;">{{
+            assetService.progress$ | async }}%</span>
+    </div>
+</div>
+
+
 
 <div class="mushaf-screen theme-{{currentTheme}}" *ngIf="currentPageData$ | async as page">
 
@@ -345,7 +382,7 @@
                 <div class="setting-row" *ngIf="isAndroid">
                     <span>تنبيهات الهاتف</span>
                     <label class="switch">
-                        <input type="checkbox" checked>
+                        <input type="checkbox" [checked]="pushEnabled" (change)="toggleAndroidNotifications()">
                         <span class="slider round"></span>
                     </label>
                 </div>

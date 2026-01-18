@@ -10,7 +10,11 @@
     "build:prod": "ng build --configuration production",
     "capacitor:sync": "npx cap sync android",
     "android:open": "npx cap open android",
-    "android:run": "npm run build:prod && npm run capacitor:sync && npx cap open android"
+    "android:run": "npm run build:prod && npm run capacitor:sync && npx cap open android",
+    "mushaf:build": "ng build mushaf-wird",
+    "mushaf:android:sync": "cd mushaf-wird-mobile && npx cap sync android",
+    "mushaf:android:open": "cd mushaf-wird-mobile && npx cap open android",
+    "mushaf:android:run": "npm run mushaf:build && npm run mushaf:android:sync && npm run mushaf:android:open"
   },
   "private": true,
   "dependencies": {

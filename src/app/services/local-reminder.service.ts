@@ -32,8 +32,9 @@ export class LocalReminderService {
         private router: Router
     ) {
         // Initialize on service creation
-        this.initializeReminders();
-        this.setupNotificationListeners();
+        // Initialize on service creation
+        // this.initializeReminders();
+        // this.setupNotificationListeners();
     }
 
     /**

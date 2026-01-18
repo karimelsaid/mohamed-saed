@@ -1,0 +1,6 @@
+{
+    "appId": "com.kenouz.mushafwird",
+    "appName": "Mushaf-Wird",
+    "webDir": "../Backend/dist/mushaf-wird/browser",
+    "bundledWebRuntime": false
+}

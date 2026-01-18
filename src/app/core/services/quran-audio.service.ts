@@ -3,6 +3,8 @@ import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, map, firstValueFrom, timeout, catchError, of, throwError, tap } from 'rxjs';
 import { ForegroundService } from '@capawesome-team/capacitor-android-foreground-service';
 import { Capacitor } from '@capacitor/core';
+import { App } from '@capacitor/app';
+import { NativeAudio } from '@capgo/native-audio';
 
 export interface Reciter {
     id: number;
@@ -88,12 +90,23 @@ export class QuranAudioService {
     }
 
     private setupInterruptionHandling() {
-        // Resume on app focus if it was interrupted
-        document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'visible' && this.wasInterrupted) {
-                console.log('[AudioService] App became visible, resuming interrupted audio...');
-                this.resume();
+        // Handle App State Changes (Background/Foreground)
+        App.addListener('appStateChange', ({ isActive }) => {
+            if (!isActive && !this.userExplicitlyPaused && this.state.value.isPlaying) {
+                // For both Native and Web: Force silent audio bridge to stay playing.
+                // This acts as a "heartbeat" to prevent Android from throttling the WebView/JS.
+                if (this.audio.paused) {
+                    this.audio.play().catch(() => { });
+                }
+
+                // Refresh Notification
+                this.startForegroundService();
             }
+        });
+
+        // Backup: Visibility Change
+        document.addEventListener('visibilitychange', () => {
+            // ... keep existing logging ...
         });
     }
 
@@ -114,10 +127,15 @@ export class QuranAudioService {
                 id: this.CHANNEL_ID,
                 name: 'تلاوة القرآن',
                 description: 'إشعارات تشغيل التلاوة في الخلفية',
-                importance: 2 // IMPORTANCE_LOW (No sound, no popup)
+                importance: 2
+            });
+            // Initialize Native Audio listeners
+            NativeAudio.addListener('complete', (data: { assetId: string }) => {
+                console.log(`[AudioService] Native Audio Complete: ${data.assetId}`);
+                this.handleAudioEnded(data.assetId);
             });
         } catch (e) {
-            console.error('[AudioService] Failed to create notification channel', e);
+            console.error('[AudioService] Failed to create notification channel/listeners', e);
         }
     }
 
@@ -157,8 +175,8 @@ export class QuranAudioService {
                 id: this.foregroundServiceId,
                 body: body,
                 title: title,
-                smallIcon: 'ic_launcher_foreground',
-                notificationChannelId: this.CHANNEL_ID, // Use our silent channel
+                smallIcon: 'ic_launcher_round', // Fallback to safe icon
+                notificationChannelId: this.CHANNEL_ID,
                 buttons: [
                     {
                         id: 1,
@@ -203,14 +221,24 @@ export class QuranAudioService {
             this.updateState({ isPlaying: true });
             this.startForegroundService();
         };
-        this.audio.onpause = () => {
+        this.audio.onpause = async () => {
             this.updateState({ isPlaying: false });
 
-            if (!this.userExplicitlyPaused) {
-                console.log('[AudioService] Audio paused by system/interruption. Marking for resume.');
-                this.wasInterrupted = true;
+            // Only attempt auto-resume if it wasn't a user action
+            // ONLY auto-resume HTML5 Audio if we are in TIMED playback mode
+            if (Capacitor.isNativePlatform() && this.isTimedPlayback) {
+                const state = await App.getState();
+                if (!state.isActive) {
+                    console.log('[AudioService] App is backgrounded (Timed). Keeping audio alive...');
+                    setTimeout(() => {
+                        if (this.wasInterrupted && !this.userExplicitlyPaused && this.audio.paused) {
+                            this.audio.play().catch(e => console.warn('Resume failed:', e));
+                        }
+                    }, 1000);
+                }
             }
         };
+
         this.audio.onended = () => this.handleAudioEnded();
         this.audio.ontimeupdate = () => {
             if (this.audio.playbackRate !== this.state.value.playbackRate) {
@@ -291,89 +319,80 @@ export class QuranAudioService {
         const wasTimed = this.isTimedPlayback;
         const willBeTimed = this.TIMED_RECITERS.includes(rId);
 
-        // If there's already a play request in progress, queue this one
         if (this.isPlayingNewAudio) {
             console.log(`[AudioService] Audio loading in progress, queueing request for ${verseKey}`);
             this.pendingPlayRequest = { verseKey, reciterId: rId };
             return;
         }
 
-        // Stop audio only if switching modes or if current audio is still playing
-        // For continuous playback of same type, stop immediately without delay
         if (!willBeTimed || wasTimed !== willBeTimed) {
             await this.stopAudioCompletely();
-        } else {
-            // For timed playback, we intentionally DO NOT stop/pause here.
-            // We pass control to playTimedVerse which determines if it's a gapless transition (same surah)
-            // or if a stop is needed (diff surah).
-            // This enables continuous looping/recitation without "hiccups".
         }
 
         this.isPlayingNewAudio = true;
         this.isTimedPlayback = willBeTimed;
-
         this.lastEndTriggeredVerseKey = '';
+
         this.updateState({ currentVerseKey: verseKey, reciterId: rId, isBuffering: true, currentAyahRepeatCount: 0 });
         this.updateMediaSessionMetadata(verseKey, rId);
+        this.startForegroundService();
 
         if (this.isTimedPlayback) {
             return this.playTimedVerse(verseKey, rId);
         }
 
-        // If switching to non-timed playback, reset surah-level timings
         this.currentTimedReciterId = null;
         this.currentSurahTimings = [];
 
         try {
-            // Ensure preloading is effective by using the same fetch logic
             const audioUrl = await this.getOrFetchAudioUrl(verseKey, rId);
 
             if (audioUrl) {
                 console.log('[AudioService] Final Audio URL:', audioUrl);
 
-                if (this.currentObjectURL && this.currentObjectURL !== audioUrl) {
-                    URL.revokeObjectURL(this.currentObjectURL);
-                    this.currentObjectURL = null;
-                }
+                // BACKGROUND BRIDGE: Use the HTML5 audio element as a "silent bridge"
+                // This keeps the WebView media session ACTIVE in the background.
+                this.audio.src = this.SILENT_SRC;
+                this.audio.loop = true;
+                this.audio.play().catch(() => { });
 
-                if (audioUrl.startsWith('blob:')) {
-                    this.currentObjectURL = audioUrl;
-                }
-
-                this.audio.src = audioUrl;
-                this.audio.load();
-                this.audio.playbackRate = this.state.value.playbackRate;
+                // Native Audio Implementation
+                const assetId = `verse_${verseKey.replace(':', '_')}`;
+                try {
+                    const currentKey = this.state.value.currentVerseKey;
+                    if (currentKey) {
+                        const oldId = `verse_${currentKey.replace(':', '_')}`;
+                        if (oldId !== assetId) await NativeAudio.unload({ assetId: oldId });
+                    }
+                } catch (e) { }
 
                 try {
-                    await this.waitForAudioReady();
-                    await this.audio.play();
-                    console.log('[AudioService] Playback started successfully');
-                    this.isPlayingNewAudio = false;
-                    this.preloadNextVerse(verseKey, rId);
-                } catch (playError) {
-                    console.error('[AudioService] Playback failed/blocked:', playError);
-                    if (this.audio.src.includes('audio.qurancdn.com') && !this.isTimedPlayback) {
-                        const fallbackUrl = this.audio.src.replace('audio.qurancdn.com', 'download.quranicaudio.com/quran');
-                        this.audio.src = fallbackUrl;
-                        this.audio.load();
-                        try {
-                            await this.waitForAudioReady();
-                            await this.audio.play();
-                            this.isPlayingNewAudio = false;
-                        } catch (e) {
-                            this.isPlayingNewAudio = false;
-                            this.updateState({ isPlaying: false, isBuffering: false });
-                        }
-                    } else {
-                        this.isPlayingNewAudio = false;
-                        this.updateState({ isPlaying: false, isBuffering: false });
-                    }
+                    await NativeAudio.preload({
+                        assetId: assetId,
+                        assetPath: audioUrl,
+                        audioChannelNum: 1,
+                        isUrl: true
+                    });
+                } catch (preloadError: any) {
+                    console.warn('Preload warning:', preloadError);
                 }
+
+                await NativeAudio.play({ assetId: assetId });
+
+                const rate = this.state.value.playbackRate;
+                if (rate !== 1.0) {
+                    await NativeAudio.setRate({ assetId, rate }).catch(() => { });
+                }
+
+                this.updateState({ isPlaying: true, isBuffering: false });
+                this.isPlayingNewAudio = false;
+                this.preloadNextVerse(verseKey, rId);
             } else {
                 this.updateState({ isBuffering: false, isPlaying: false });
                 this.isPlayingNewAudio = false;
             }
         } catch (error) {
+            console.error('[AudioService] Native Playback failed:', error);
             this.updateState({ isBuffering: false, isPlaying: false });
             this.isPlayingNewAudio = false;
         }
@@ -392,7 +411,6 @@ export class QuranAudioService {
         const wasTimed = this.isTimedPlayback;
         const willBeTimed = this.TIMED_RECITERS.includes(rId);
 
-        // If there's already a play request in progress, queue this one
         if (this.isPlayingNewAudio) {
             console.log(`[AudioService] Audio loading in progress, queueing request for ${verseKey}`);
             this.pendingPlayRequest = { verseKey, reciterId: rId };
@@ -553,17 +571,33 @@ export class QuranAudioService {
         }
     }
 
-    pause() {
+    async pause() {
         this.userExplicitlyPaused = true;
-        this.audio.pause();
+        this.updateState({ isPlaying: false });
+        if (Capacitor.isNativePlatform()) {
+            const assetId = `verse_${this.state.value.currentVerseKey?.replace(':', '_')}`;
+            await NativeAudio.pause({ assetId }).catch(() => { });
+        } else {
+            this.audio.pause();
+        }
+        await this.stopForegroundService();
     }
 
-    resume() {
+    async resume() {
         this.userExplicitlyPaused = false;
-        this.wasInterrupted = false;
-        if (this.audio.src) {
+        if (Capacitor.isNativePlatform()) {
+            const assetId = `verse_${this.state.value.currentVerseKey?.replace(':', '_')}`;
+            await NativeAudio.resume({ assetId }).catch(async () => {
+                // If resume fails, try re-playing
+                if (this.state.value.currentVerseKey) {
+                    await this.playVerse(this.state.value.currentVerseKey);
+                }
+            });
+            this.updateState({ isPlaying: true });
+        } else if (this.audio.src) {
             this.audio.play();
         }
+        await this.startForegroundService();
     }
 
     async stop() {
@@ -573,16 +607,22 @@ export class QuranAudioService {
     }
 
     private async stopAudioCompletely(): Promise<void> {
-        // Stop audio immediately and clear any pending state
+        if (Capacitor.isNativePlatform()) {
+            const currentKey = this.state.value.currentVerseKey;
+            if (currentKey) {
+                const assetId = `verse_${currentKey.replace(':', '_')}`;
+                await NativeAudio.stop({ assetId }).catch(() => { });
+                await NativeAudio.unload({ assetId }).catch(() => { });
+            }
+        }
+
         if (!this.audio.paused) {
             this.audio.pause();
         }
         await this.stopForegroundService();
         this.audio.currentTime = 0;
-
-        // Clear any pending play requests to prevent overlap
+        this.audio.src = this.SILENT_SRC;
         this.pendingPlayRequest = null;
-
         return Promise.resolve();
     }
 
@@ -642,9 +682,30 @@ export class QuranAudioService {
         }
     }
 
-    setPlaybackRate(rate: number) {
+    async setPlaybackRate(rate: number) {
         this.updateState({ playbackRate: rate });
+
+        if (Capacitor.isNativePlatform() && !this.isTimedPlayback) {
+            const currentKey = this.state.value.currentVerseKey;
+            if (currentKey) {
+                const assetId = `verse_${currentKey.replace(':', '_')}`;
+                await NativeAudio.setRate({ assetId, rate }).catch(() => { });
+            }
+        }
+
         this.audio.playbackRate = rate;
+    }
+
+    async setVolume(volume: number) {
+        // volume should be 0.0 to 1.0
+        if (Capacitor.isNativePlatform() && !this.isTimedPlayback) {
+            const currentKey = this.state.value.currentVerseKey;
+            if (currentKey) {
+                const assetId = `verse_${currentKey.replace(':', '_')}`;
+                await NativeAudio.setVolume({ assetId, volume }).catch(() => { });
+            }
+        }
+        this.audio.volume = volume;
     }
 
     setRepeatSettings(ayahRepeat: number, groupRepeat: number) {
@@ -660,8 +721,17 @@ export class QuranAudioService {
         this.updateState({ playbackRange: range, currentGroupRepeatCount: 0 });
     }
 
-    private handleAudioEnded() {
+    private async handleAudioEnded(sourceAssetId?: string) {
         const s = this.state.value;
+
+        // Verify asset ID for native playback to prevent race conditions (e.g. unload triggering complete)
+        if (Capacitor.isNativePlatform() && !this.isTimedPlayback && sourceAssetId) {
+            const currentAssetId = `verse_${s.currentVerseKey?.replace(':', '_')}`;
+            if (sourceAssetId !== currentAssetId) {
+                console.log(`[AudioService] Ignoring handleAudioEnded for stale asset: ${sourceAssetId} (current: ${currentAssetId})`);
+                return;
+            }
+        }
 
         // Prevent handling if new audio is loading to avoid conflicts
         if (this.isPlayingNewAudio) {
@@ -674,26 +744,29 @@ export class QuranAudioService {
             console.log(`[AudioService] Repeating Ayah (${s.currentAyahRepeatCount + 2}/${s.repeatAyah})`);
             this.updateState({ currentAyahRepeatCount: s.currentAyahRepeatCount + 1 });
 
-            if (this.isTimedPlayback && this.currentVerseTiming) {
-                this.audio.currentTime = this.currentVerseTiming.timestamp_from / 1000;
+            if (Capacitor.isNativePlatform() && !this.isTimedPlayback) {
+                const assetId = `verse_${s.currentVerseKey?.replace(':', '_')}`;
+                await NativeAudio.play({ assetId }).catch(err => {
+                    console.error('[AudioService] Native replay failed:', err);
+                });
             } else {
-                this.audio.currentTime = 0;
+                if (this.isTimedPlayback && this.currentVerseTiming) {
+                    this.audio.currentTime = this.currentVerseTiming.timestamp_from / 1000;
+                } else {
+                    this.audio.currentTime = 0;
+                }
+                this.audio.play().catch(err => {
+                    console.error('[AudioService] HTML5 replay failed:', err);
+                });
             }
-
-            this.audio.play().catch(err => {
-                console.error('[AudioService] Failed to replay ayah:', err);
-            });
             return;
         }
 
         // 2. Clear Ayah Repeat count and notify completion to advance
-        // Mark that we've notified for this verse to prevent duplicate notifications
         if (s.currentVerseKey && s.currentVerseKey !== this.lastEndTriggeredVerseKey) {
             console.log(`[AudioService] Verse ${s.currentVerseKey} completed. Notifying advance.`);
             this.lastEndTriggeredVerseKey = s.currentVerseKey;
             this.updateState({ currentAyahRepeatCount: 0 });
-
-            // Notify immediately for smooth transition
             this.verseCompleted.next(s.currentVerseKey);
         } else {
             this.updateState({ currentAyahRepeatCount: 0 });

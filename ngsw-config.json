@@ -26,5 +26,29 @@
         ]
       }
     }
+  ],
+  "dataGroups": [
+    {
+      "name": "mushaf-assets",
+      "urls": [
+        "https://hamdyattya.github.io/mushaf-assets/**"
+      ],
+      "cacheConfig": {
+        "maxSize": 1000,
+        "maxAge": "30d",
+        "strategy": "performance"
+      }
+    },
+    {
+      "name": "api-requests",
+      "urls": [
+        "/api/**"
+      ],
+      "cacheConfig": {
+        "maxSize": 100,
+        "maxAge": "1h",
+        "strategy": "freshness"
+      }
+    }
   ]
 }

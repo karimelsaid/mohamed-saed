@@ -7,24 +7,38 @@ const verifyToken = async (req, res, next) => {
 
 
         if (!token) {
-            // console.warn(`❌ [AuthMiddleware] No token provided for: ${req.method} ${req.originalUrl}`);
             return res.status(401).json({
                 success: false,
                 message: 'الوصول مرفوض. لم يتم توفير رمز المصادقة.'
             });
         }
 
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-        // console.log('✅ [AuthMiddleware] Token decoded successfully. userId:', decoded.userId);
-
-        // Try to find user by different ID fields (userId, adminId, merchantId)
-        const user = await User.findById(decoded.userId || decoded.adminId || decoded.merchantId);
-
-        if (!user) {
-            console.error('❌ [AuthMiddleware] User not found for token payload:', decoded);
+        let decoded;
+        try {
+            decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+        } catch (err) {
             return res.status(401).json({
                 success: false,
-                message: 'رمز المصادقة غير صالح.'
+                message: 'رمز المصادقة غير صالح أو منتهي الصلاحية.'
+            });
+        }
+
+        // Try to find user by different ID fields (userId, adminId, merchantId)
+        const userId = decoded.userId || decoded.adminId || decoded.merchantId || decoded.id;
+
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: 'رمز المصادقة لا يحتوي على معرف صالح.'
+            });
+        }
+
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(401).json({
+                success: false,
+                message: 'المستخدم غير موجود.'
             });
         }
 

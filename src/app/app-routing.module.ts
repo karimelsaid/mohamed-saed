@@ -23,6 +23,7 @@ import { UserOrdersComponent } from './user-orders/user-orders.component';
 import { PrintComponent } from './print/print.component';
 import { BookDetailsComponent } from './book-details/book-details.component';
 import { ReferralsComponent } from './referrals/referrals.component';
+import { LandingComponent } from './core/components/landing/landing.component';
 
 import { AboutComponent } from './about/about.component';
 import { PrivacyPolicyComponent } from './privacy-policy/privacy-policy.component';
@@ -35,6 +36,7 @@ import { EditProductComponent } from './merchant/edit-product/edit-product.compo
 import { MerchantProfileComponent } from './merchant/merchant-profile/merchant-profile.component';
 import { MerchantAuthGuard } from './guards/merchant-auth.guard';
 import { AdminAuthGuard } from './guards/admin-auth.guard';
+import { StartupGuard } from './guards/startup.guard';
 import { OfficeSuppliesComponent } from './book-list/office-supplies/office-supplies.component';
 import { ElectronicsComponent } from './book-list/electronics/electronics.component';
 import { ClothingComponent } from './book-list/clothing/clothing.component';
@@ -97,7 +99,7 @@ const routes: Routes = [
   },
   { path: 'book/:id/:name?', component: BookDetailsComponent },
   { path: 'product/:id/:name?', component: BookDetailsComponent },
-  { path: '', redirectTo: '/Home', pathMatch: 'full' },  // الصفحة الرئيسية هي "home" افتراضيًا
+  { path: '', component: LandingComponent, pathMatch: 'full' }, // Landing component handles initial redirection
   { path: 'research', component: SearchResultsComponent }, // المسار الذي نوجه إليه المستخدم عند البحث
   { path: 'basket', component: CartComponent },
   { path: 'Favorites', component: FavoritesComponent },

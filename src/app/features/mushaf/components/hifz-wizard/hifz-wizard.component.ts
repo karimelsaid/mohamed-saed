@@ -61,13 +61,17 @@ export class HifzWizardComponent implements OnInit {
 
     private loadInitialData(): void {
         this.isLoading = true;
+        this.error = '';
+
         forkJoin({
             metadata: this.dataService.getMetadata(),
             planData: this.hifzPlanService.getPlan()
         }).subscribe({
             next: (data) => {
-                this.surahList = data.metadata.surahs;
-                this.juzList = data.metadata.juzs;
+                if (data.metadata) {
+                    this.surahList = data.metadata.surahs;
+                    this.juzList = data.metadata.juzs;
+                }
 
                 if (data.planData && data.planData.plan) {
                     const plan = data.planData.plan;
@@ -119,9 +123,22 @@ export class HifzWizardComponent implements OnInit {
                 this.isLoading = false;
             },
             error: (err) => {
+                console.error('[HifzWizard] Error loading initial data:', err);
                 this.isLoading = false;
+                this.error = 'فشل تحميل البيانات. يرجى التأكد من الاتصال بالإنترنت.';
+
+                // Even with error, we try to load whatever we have in surahList from dataService
+                // (It might have been loaded partially or earlier)
             }
         });
+
+        // Fail-safe: if metadata is not loaded in 5 seconds, try to stop loading
+        setTimeout(() => {
+            if (this.isLoading && this.surahList.length === 0) {
+                this.isLoading = false;
+                console.warn('[HifzWizard] Loading timeout hit.');
+            }
+        }, 5000);
     }
 
     nextStep(): void {
@@ -141,20 +158,23 @@ export class HifzWizardComponent implements OnInit {
     selectLevel(level: 'beginner' | 'intermediate' | 'advanced'): void {
         this.userLevel = level;
         if (level === 'beginner') {
-            this.dailyCapacity.newMemorization = 'verse';
+            this.dailyCapacity.newMemorization = 'verses'; // Plural for multiple
             this.dailyCapacity.memorizationAmount = 3;
             this.dailyCapacity.memorizationDays = 3;
             this.dailyCapacity.reviewType = 'light';
+            this.dailyCapacity.reviewAmount = 1;
         } else if (level === 'intermediate') {
             this.dailyCapacity.newMemorization = 'half_page';
-            this.dailyCapacity.memorizationAmount = 10;
+            this.dailyCapacity.memorizationAmount = 1;
             this.dailyCapacity.memorizationDays = 5;
             this.dailyCapacity.reviewType = 'weekly';
+            this.dailyCapacity.reviewAmount = 1;
         } else {
             this.dailyCapacity.newMemorization = 'page';
-            this.dailyCapacity.memorizationAmount = 20;
+            this.dailyCapacity.memorizationAmount = 1;
             this.dailyCapacity.memorizationDays = 7;
             this.dailyCapacity.reviewType = 'rescue';
+            this.dailyCapacity.reviewAmount = 1;
         }
     }
 
@@ -323,12 +343,30 @@ export class HifzWizardComponent implements OnInit {
             }
         });
 
+        // --- NEW: Calculate first unmemorized verse as the starting position ---
+        let currentPosition = { surah: 1, verse: 1 };
+        const memoSet = new Set(memorizedContent.map(m => m.verseKey));
+
+        // Loop through Quran to find the first "gap"
+        let found = false;
+        for (const surah of this.surahList) {
+            for (let v = 1; v <= surah.verses_count; v++) {
+                if (!memoSet.has(`${surah.id}:${v}`)) {
+                    currentPosition = { surah: surah.id, verse: v };
+                    found = true;
+                    break;
+                }
+            }
+            if (found) break;
+        }
+
         this.hifzPlanService.saveSetup({
             userLevel: this.userLevel,
             dailyCapacity: this.dailyCapacity,
             memorizedContent,
             totalVersesMemorized: totalVersesFactor,
-            resetProgress: this.resetProgress
+            resetProgress: this.resetProgress,
+            currentPosition // Pass explicitly to advance the cursor to the first gap
         }).subscribe({
             next: (res) => {
                 this.isLoading = false;

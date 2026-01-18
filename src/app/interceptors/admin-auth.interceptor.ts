@@ -33,7 +33,7 @@ export class AdminAuthInterceptor implements HttpInterceptor {
                 const authService = this.injector.get(AuthService);
                 authService.logout();
                 this.router.navigate(['/login']);
-                alert('انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى.');
+                // alert('انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى.');
               }
               // If not admin, do nothing (let the component handle it or ignore)
             } else if (error.status === 403) {

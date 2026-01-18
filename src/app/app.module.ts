@@ -50,6 +50,7 @@ import { OthersComponent } from './book-list/others/others.component';
 import { BooksComponent } from './book-list/books/books.component';
 import { HowToEarnComponent } from './pages/how-to-earn/how-to-earn.component';
 import { ServiceWorkerModule } from '@angular/service-worker';
+import { LandingComponent } from './core/components/landing/landing.component';
 
 
 @NgModule({
@@ -80,6 +81,7 @@ import { ServiceWorkerModule } from '@angular/service-worker';
     BooksComponent,
 
     HowToEarnComponent,
+      LandingComponent,
   ],
   imports: [
     BrowserModule,

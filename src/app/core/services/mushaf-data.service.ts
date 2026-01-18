@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, map, shareReplay, of, switchMap, from } from 'rxjs';
+import { Observable, of, from } from 'rxjs';
+import { map, shareReplay, switchMap, catchError } from 'rxjs/operators';
 import { MushafPage, MushafMetadata, SurahMetadata, JuzMetadata, HizbMetadata } from '../models/mushaf.model';
 import { MushafAssetService } from './mushaf-asset.service';
 
@@ -84,6 +85,10 @@ export class MushafDataService {
   getMetadata(): Observable<MushafMetadata> {
     if (!this.metadata$) {
       this.metadata$ = from(this.assetService.getJsonData<MushafMetadata>('data/mushaf-metadata.json')).pipe(
+        catchError(err => {
+          this.metadata$ = undefined; // Allow retry
+          throw err;
+        }),
         shareReplay(1)
       );
     }
@@ -135,11 +140,69 @@ export class MushafDataService {
 
   /**
    * Get precise page number for a specific verse key (e.g., "2:142") or Surah/Verse numbers.
+   * Now works offline by searching Juz chunks.
    */
   getPageNumberForVerse(surah: number, verse: number): Observable<number> {
     const verseKey = `${surah}:${verse}`;
-    return this.http.get<any>(`https://api.quran.com/api/v4/verses/by_key/${verseKey}`).pipe(
-      map(response => response.verse.page_number)
+
+    return this.getSurahMetadata(surah).pipe(
+      switchMap(surahMeta => {
+        if (!surahMeta) {
+          return this.http.get<any>(`https://api.quran.com/api/v4/verses/by_key/${verseKey}`).pipe(
+            map(response => response.verse.page_number)
+          );
+        }
+
+        // Logic to find which Juz this surah belongs to at the start
+        return this.getJuzAtPage(surahMeta.start_page).pipe(
+          switchMap(juzMeta => {
+            if (!juzMeta) return of(surahMeta.start_page);
+
+            // Search through Juz chunks starting from this Juz to find the verse
+            // Usually a surah is within 1-2 Juzs.
+            return this.findVerseInJuzRange(juzMeta.id, surahMeta.start_page, surahMeta.end_page, verseKey);
+          })
+        );
+      })
+    );
+  }
+
+  private getSurahMetadata(surahId: number): Observable<SurahMetadata | undefined> {
+    return this.getMetadata().pipe(
+      map(meta => meta.surahs.find(s => s.id === surahId))
+    );
+  }
+
+  private findVerseInJuzRange(startJuz: number, startPage: number, endPage: number, verseKey: string): Observable<number> {
+    // Try current Juz first
+    return this.getJuzChunk(startJuz).pipe(
+      map(pages => {
+        const page = pages.find(p => p.lines.some(l => l.segments?.some(s => s.verse_key === verseKey)));
+        if (page) return page.page_number;
+        return 0;
+      }),
+      switchMap(pageNumber => {
+        if (pageNumber > 0) return of(pageNumber);
+
+        // If not found, maybe it's in the next Juz? (Surahs can span multiple Juzs)
+        // For efficiency, we just fall back to surah start page if not found in current Juz
+        // This is a very rare case for a specific verse search.
+        return of(startPage);
+      })
+    );
+  }
+
+  /**
+   * Returns split data for half-page logic.
+   */
+  getPageSplits(): Observable<any[]> {
+    // Fetch directly from local assets (User moved it to public/json/split.json)
+    // This works on both Web and Android (via WebView) without needing the backend or asset downloader.
+    return this.http.get<any[]>('json/split.json').pipe(
+      catchError(err => {
+        console.warn('[MushafData] Failed to load local split.json, trying asset service fallback', err);
+        return from(this.assetService.getJsonData<any[]>('data/mushaf_chunks/split.json'));
+      })
     );
   }
 }

@@ -1,20 +1,19 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable, BehaviorSubject, throwError } from 'rxjs';
-import { tap, catchError } from 'rxjs/operators';
-import { environment } from '../../environments/environment';
+import { Observable, BehaviorSubject, of } from 'rxjs';
+import { tap } from 'rxjs/operators';
 
 export interface QuranProgress {
     totalPoints: number;
     dailyStreak: number;
     longestStreak: number;
     pagesRead: number;
-    pagesReviewed?: number; // Added for revision tracking
+    pagesReviewed?: number;
     versesMemorized: number;
     totalMinutesReading: number;
     khatmatCount: number;
     lastActivityDate: Date | null;
     lastPage: number;
+    lastReadPage: number;
     bookmarks: number[];
     walletBalance: number;
 }
@@ -26,7 +25,6 @@ export interface PointsResponse {
     message: string;
 }
 
-// أنواع الأنشطة
 export type ActivityType =
     | 'MINUTE_READING'
     | 'VERSE_MEMORIZED'
@@ -42,143 +40,142 @@ export type ActivityType =
     providedIn: 'root'
 })
 export class QuranProgressService {
-    private apiUrl = `${environment.apiBaseUrl}/quran-progress`;
+    private readonly STORAGE_KEY = 'guest_quran_progress';
 
     // حالة التقدم المحلية
     private progressSubject = new BehaviorSubject<QuranProgress | null>(null);
     public progress$ = this.progressSubject.asObservable();
 
-    // إعدادات الاقتصاد (لتحويل النقاط)
-    private economySubject = new BehaviorSubject<any>(null);
+    // إعدادات الاقتصاد (Disabled)
+    private economySubject = new BehaviorSubject<any>({ quranPointsPerEGP: 500 });
     public economy$ = this.economySubject.asObservable();
 
-    // النقاط المقابلة لكل نشاط (للعرض فقط)
     public readonly POINTS = {
-        MINUTE_READING: 1,           // نقطة واحدة لكل دقيقة قراءة
-        VERSE_MEMORIZED: 5,          // 5 نقاط لكل آية يتم حفظها لأول مرة
-        PAGE_COMPLETE: 10,           // 10 نقاط عند إتمام قراءة صفحة كاملة
-        HIZB_COMPLETE: 50,           // 50 نقطة عند إتمام حزب كامل
-        JUZ_COMPLETE: 100,           // 100 نقطة عند إتمام جزء كامل
-        DAILY_STREAK: 20,            // 20 نقطة إضافية للالتزام اليومي (التتابع)
-        KHATMA_COMPLETE: 1000,       // 1000 نقطة مكافأة عند ختم القرآن كاملاً
-        REVISION_PAGE_COMPLETE: 5,   // 5 نقاط لكل صفحة مراجعة (أقل من الحفظ الجديد)
-        REVISION_VERSE_COMPLETE: 2   // نقطتان لكل آية يتم مراجعتها وتثبيتها
+        MINUTE_READING: 1,
+        VERSE_MEMORIZED: 5,
+        PAGE_COMPLETE: 10,
+        HIZB_COMPLETE: 50,
+        JUZ_COMPLETE: 100,
+        DAILY_STREAK: 20,
+        KHATMA_COMPLETE: 1000,
+        REVISION_PAGE_COMPLETE: 5,
+        REVISION_VERSE_COMPLETE: 2
     };
 
-    constructor(private http: HttpClient) { }
+    constructor() {
+        this.loadLocalProgress();
+    }
+
+    private loadLocalProgress(): void {
+        const guestProgress = localStorage.getItem(this.STORAGE_KEY);
+        if (guestProgress) {
+            try {
+                this.progressSubject.next(JSON.parse(guestProgress));
+            } catch (e) {
+                console.error('Error parsing local progress', e);
+                this.progressSubject.next(this.getDefaultProgress());
+            }
+        } else {
+            this.progressSubject.next(this.getDefaultProgress());
+        }
+    }
+
+    private saveLocalProgress(progress: QuranProgress): void {
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(progress));
+        this.progressSubject.next(progress);
+    }
 
     // جلب تقدم المستخدم
     getProgress(): Observable<{ success: boolean; progress: QuranProgress; economy: any }> {
-        return this.http.get<{ success: boolean; progress: QuranProgress; economy: any }>(`${this.apiUrl}/progress`).pipe(
-            tap(response => {
-                if (response.success) {
-                    this.progressSubject.next(response.progress);
-                    if (response.economy) {
-                        this.economySubject.next(response.economy);
-                    }
-                }
-            }),
-            catchError(err => {
-                return throwError(err);
+        const current = this.progressSubject.value || this.getDefaultProgress();
+        return of({
+            success: true,
+            progress: current,
+            economy: this.economySubject.value
+        }).pipe(
+            tap(res => {
+                this.progressSubject.next(res.progress);
             })
         );
+    }
+
+    private getDefaultProgress(): QuranProgress {
+        return {
+            totalPoints: 0,
+            dailyStreak: 0,
+            longestStreak: 0,
+            pagesRead: 0,
+            versesMemorized: 0,
+            totalMinutesReading: 0,
+            khatmatCount: 0,
+            lastActivityDate: null,
+            lastPage: 1,
+            lastReadPage: 1,
+            bookmarks: [],
+            walletBalance: 0
+        };
     }
 
     // إضافة نقاط
     addPoints(activity: ActivityType, count: number = 1): Observable<PointsResponse> {
-        return this.http.post<PointsResponse>(`${this.apiUrl}/add-points`, { activity, count }).pipe(
-            tap(response => {
-                if (response.success) {
-                    const current = this.progressSubject.value;
-                    if (current) {
-                        this.progressSubject.next({
-                            ...current,
-                            totalPoints: response.totalPoints
-                        });
-                    } else {
-                        this.getProgress().subscribe();
-                    }
-                }
-            }),
-            catchError(err => {
-                return throwError(err);
-            })
-        );
+        const current = this.progressSubject.value || this.getDefaultProgress();
+        const updated = {
+            ...current,
+            pagesRead: activity === 'PAGE_COMPLETE' ? current.pagesRead + count : current.pagesRead,
+            versesMemorized: activity === 'VERSE_MEMORIZED' ? current.versesMemorized + count : current.versesMemorized,
+            pagesReviewed: activity === 'REVISION_PAGE_COMPLETE' ? (current.pagesReviewed || 0) + count : current.pagesReviewed,
+        };
+        this.saveLocalProgress(updated);
+        return of({
+            success: true,
+            pointsAdded: 0,
+            totalPoints: 0,
+            message: 'تم تحديث الإحصائيات محلياً'
+        });
     }
 
     // تحديث الالتزام اليومي
     updateStreak(): Observable<{ success: boolean; streak: number; pointsAdded: number }> {
-        return this.http.post<{ success: boolean; streak: number; pointsAdded: number }>(
-            `${this.apiUrl}/update-streak`, {}
-        ).pipe(
-            tap(response => {
-                if (response.success) {
-                    const current = this.progressSubject.value;
-                    if (current) {
-                        this.progressSubject.next({
-                            ...current,
-                            dailyStreak: response.streak,
-                            totalPoints: current.totalPoints + response.pointsAdded
-                        });
-                    }
-                }
-            })
-        );
+        const current = this.progressSubject.value || this.getDefaultProgress();
+        const updated = {
+            ...current,
+            dailyStreak: current.dailyStreak + 1,
+            totalPoints: current.totalPoints + this.POINTS.DAILY_STREAK
+        };
+        this.saveLocalProgress(updated);
+        return of({ success: true, streak: updated.dailyStreak, pointsAdded: this.POINTS.DAILY_STREAK });
     }
 
     // تحديث آخر صفحة
     updateLastPage(pageNumber: number): Observable<{ success: boolean; lastPage: number }> {
-        return this.http.post<{ success: boolean; lastPage: number }>(
-            `${this.apiUrl}/last-page`, { pageNumber }
-        ).pipe(
-            tap(response => {
-                if (response.success) {
-                    const current = this.progressSubject.value;
-                    if (current) {
-                        this.progressSubject.next({
-                            ...current,
-                            lastPage: pageNumber
-                        });
-                    }
-                }
-            })
-        );
+        const current = this.progressSubject.value || this.getDefaultProgress();
+        const updated = { ...current, lastPage: pageNumber };
+        this.saveLocalProgress(updated);
+        localStorage.setItem('lastMushafPage', pageNumber.toString());
+        return of({ success: true, lastPage: pageNumber });
     }
 
     // إضافة/إزالة bookmark
     toggleBookmark(pageNumber: number): Observable<{ success: boolean; action: string; pageNumber: number }> {
-        return this.http.post<{ success: boolean; action: string; pageNumber: number }>(
-            `${this.apiUrl}/bookmark`, { pageNumber }
-        ).pipe(
-            tap(response => {
-                if (response.success) {
-                    const current = this.progressSubject.value;
-                    if (current) {
-                        const bookmarks = [...current.bookmarks];
-                        if (response.action === 'added') {
-                            bookmarks.push(pageNumber);
-                        } else {
-                            const index = bookmarks.indexOf(pageNumber);
-                            if (index > -1) bookmarks.splice(index, 1);
-                        }
-                        this.progressSubject.next({
-                            ...current,
-                            bookmarks
-                        });
-                    }
-                }
-            })
-        );
+        const current = this.progressSubject.value || this.getDefaultProgress();
+        const bookmarks = [...current.bookmarks];
+        const index = bookmarks.indexOf(pageNumber);
+        let action = '';
+        if (index > -1) {
+            bookmarks.splice(index, 1);
+            action = 'removed';
+        } else {
+            bookmarks.push(pageNumber);
+            action = 'added';
+        }
+        const updated = { ...current, bookmarks };
+        this.saveLocalProgress(updated);
+        return of({ success: true, action, pageNumber });
     }
 
-    // التحقق من تسجيل الدخول قبل إضافة النقاط
+    // التحقق قبل إضافة النقاط
     addPointsIfLoggedIn(activity: ActivityType, count: number = 1): void {
-        const user = localStorage.getItem('user');
-        if (user) {
-            this.addPoints(activity, count).subscribe({
-                error: err => { }
-            });
-        }
+        this.addPoints(activity, count).subscribe();
     }
 
     // الحصول على التقدم الحالي (synchronous)
@@ -186,67 +183,11 @@ export class QuranProgressService {
         return this.progressSubject.value;
     }
 
-    // تحديث الحالة المحلية من مصدر خارجي (مثل جدول المتابعة)
+    // تحديث الحالة المحلية من مصدر خارجي
     setLocalProgress(progress: QuranProgress): void {
         if (progress) {
-            this.progressSubject.next(progress);
+            this.saveLocalProgress(progress);
         }
     }
-
-    // تحويل النقاط إلى جنيهات
-    convertPoints(points: number): Observable<any> {
-        return this.http.post<any>(`${this.apiUrl}/convert-points`, { points }).pipe(
-            tap(response => {
-                if (response.success) {
-                    const current = this.progressSubject.value;
-                    if (current) {
-                        this.progressSubject.next({
-                            ...current,
-                            totalPoints: response.newTotalPoints,
-                            walletBalance: response.newBalance
-                        });
-                    }
-                }
-            })
-        );
-    }
-
-    // طلب سحب الرصيد
-    requestPayout(): Observable<any> {
-        return this.http.post<any>(`${this.apiUrl}/request-payout`, {}).pipe(
-            tap(response => {
-                if (response.success) {
-                    const current = this.progressSubject.value;
-                    if (current) {
-                        this.progressSubject.next({
-                            ...current,
-                            walletBalance: 0
-                        });
-                    }
-                }
-            })
-        );
-    }
-
-    // إنشاء تبرع
-    createDonation(amount: number, message: string = ''): Observable<any> {
-        return this.http.post<any>(`${this.apiUrl}/create-donation`, { amount, message }).pipe(
-            tap(response => {
-                if (response.success) {
-                    const current = this.progressSubject.value;
-                    if (current) {
-                        this.progressSubject.next({
-                            ...current,
-                            walletBalance: response.newBalance
-                        });
-                    }
-                }
-            })
-        );
-    }
-
-    // جلب إحصائيات التبرعات الإجمالية
-    getDonationStats(): Observable<any> {
-        return this.http.get<any>(`${environment.apiBaseUrl}/admin/donation-stats`);
-    }
 }
+

@@ -7,6 +7,11 @@
   margin: 0 auto;
   font-family: 'Tajawal', sans-serif;
   direction: rtl;
+  /* FIX: Limit height to prevent overflow */
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .wizard-header {
@@ -62,6 +67,9 @@
 
 .step-content {
   min-height: 280px;
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .step-content h3 {
@@ -273,6 +281,13 @@
 .range-select:focus {
   border-color: #c2a87a;
   background: rgba(255, 255, 255, 0.15);
+}
+
+.range-select option,
+.capacity-select option,
+.strength-select option {
+  background: #1a2a3a;
+  color: #fff;
 }
 
 .strength-select {
@@ -540,10 +555,75 @@
   overflow-y: auto;
 }
 
-.more-items {
-  text-align: center;
-  color: #888;
-  font-size: 0.85rem;
-  padding: 8px;
-  font-style: italic;
+
+/* --- Theme Support --- */
+
+/* Cream Theme */
+:host-context(.theme-cream) .wizard-container {
+  background: #fdf6e3;
+  color: #1e293b;
+  box-shadow: 0 10px 40px rgba(138, 113, 80, 0.2);
+}
+
+:host-context(.theme-cream) .wizard-header h2,
+:host-context(.theme-cream) .step-content h3,
+:host-context(.theme-cream) .level-title,
+:host-context(.theme-cream) .surah-name,
+:host-context(.theme-cream) .range-main-label,
+:host-context(.theme-cream) .capacity-section label,
+:host-context(.theme-cream) .search-box input {
+  color: #1e293b;
+}
+
+:host-context(.theme-cream) .step-desc,
+:host-context(.theme-cream) .level-desc,
+:host-context(.theme-cream) .range-input-group label,
+:host-context(.theme-cream) .tab-btn {
+  color: #64748b;
+}
+
+:host-context(.theme-cream) .level-card,
+:host-context(.theme-cream) .surah-chip,
+:host-context(.theme-cream) .search-box,
+:host-context(.theme-cream) .range-select,
+:host-context(.theme-cream) .capacity-select,
+:host-context(.theme-cream) .capacity-input,
+:host-context(.theme-cream) .day-btn,
+:host-context(.theme-cream) .selection-tabs,
+:host-context(.theme-cream) .select-all-btn,
+:host-context(.theme-cream) .selected-surahs {
+  background: rgba(138, 113, 80, 0.06);
+  border-color: rgba(138, 113, 80, 0.12);
+  color: #1e293b;
+}
+
+:host-context(.theme-cream) .level-card:hover,
+:host-context(.theme-cream) .surah-chip:hover,
+:host-context(.theme-cream) .day-btn:hover {
+  background: rgba(138, 113, 80, 0.12);
+}
+
+:host-context(.theme-cream) .level-card.selected,
+:host-context(.theme-cream) .surah-chip.selected,
+:host-context(.theme-cream) .day-btn.selected,
+:host-context(.theme-cream) .tab-btn.active {
+  background: rgba(194, 168, 122, 0.2);
+  border-color: #c2a87a;
+  color: #8a7150;
+}
+
+:host-context(.theme-cream) .progress-bar {
+  background: rgba(138, 113, 80, 0.1);
+}
+
+:host-context(.theme-cream) .surah-number,
+:host-context(.theme-cream) .selection-controls .search-box i {
+  color: #8a7150;
+  opacity: 0.6;
+}
+
+/* Dark Theme explicitly */
+:host-context(.theme-dark) .wizard-container {
+  background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
+  color: #e2e8f0;
 }

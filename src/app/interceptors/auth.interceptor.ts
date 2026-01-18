@@ -24,40 +24,58 @@ export class AuthInterceptor implements HttpInterceptor {
     intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
         let authReq = req;
 
-        // Skip specific external domains that don't allow credentials or don't need auth
-        if (!req.url.includes('googleapis.com') && !req.url.includes('jsdelivr.net') && !req.url.includes('api.quran.com')) {
+        // Determine if request is internal (Kenouz API or local)
+        const isInternal = req.url.startsWith('/api') ||
+            req.url.startsWith('/auth') ||
+            req.url.startsWith('/admin') ||
+            req.url.startsWith('/uploads') ||
+            req.url.includes(window.location.host);
+
+        // EXTRA safety: Explicitly skip external audio/font domains
+        const isExternalMedia = req.url.includes('quranicaudio.com') ||
+            req.url.includes('quran.com') ||
+            req.url.includes('googleapis.com') ||
+            req.url.includes('jsdelivr.net');
+
+        if (isInternal && !isExternalMedia) {
             const userStr = localStorage.getItem('user');
             const merchantToken = localStorage.getItem('merchant_token');
+            const authToken = localStorage.getItem('auth_token');
 
-            if (userStr) {
+            if (userStr || merchantToken || authToken) {
                 try {
-                    const user = JSON.parse(userStr);
-                    let token = user.token || user.accessToken;
+                    let token: string | null = null;
+                    const isMerchantRoute = req.url.includes('/api/merchant');
 
-                    if (!token) {
-                        token = localStorage.getItem('merchant_token');
+                    // 1. Get user token from parsed user object
+                    let userToken: string | null = null;
+                    if (userStr) {
+                        const userObj = JSON.parse(userStr);
+                        userToken = userObj.token || userObj.accessToken;
+                    }
+
+                    // 2. Selection Logic:
+                    // - If it's a merchant route, prefer merchantToken.
+                    // - Otherwise, prefer userToken.
+                    // - Fallback to authToken (generic) if others missing.
+                    if (isMerchantRoute && merchantToken) {
+                        token = merchantToken;
+                    } else if (userToken) {
+                        token = userToken;
+                    } else {
+                        token = merchantToken || authToken;
                     }
 
                     if (token) {
-                        // Attach User Token
-                        // console.log(`🔑 [AuthInterceptor] Token found and attached for ${req.url}`);
+                        // Attach Token
                         authReq = req.clone({
                             setHeaders: { Authorization: `Bearer ${token}` },
                             withCredentials: true
                         });
-                    } else {
-                        console.warn(`⚠️ [AuthInterceptor] User found in localStorage but NO TOKEN found for ${req.url}`);
                     }
                 } catch (e) {
-                    console.error('❌ [AuthInterceptor] Error parsing user', e);
+                    console.error('❌ [AuthInterceptor] Error parsing user or token', e);
                 }
-            }
-            // If no user token, check for merchant token
-            else if (merchantToken) {
-                authReq = req.clone({
-                    setHeaders: { Authorization: `Bearer ${merchantToken}` },
-                    withCredentials: true
-                });
             }
         }
 

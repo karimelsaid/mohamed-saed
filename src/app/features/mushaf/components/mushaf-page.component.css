@@ -12,6 +12,10 @@
   font-family: 'Inter', sans-serif;
   direction: rtl;
   z-index: 9999;
+  -webkit-text-size-adjust: none !important;
+  -moz-text-size-adjust: none !important;
+  -ms-text-size-adjust: none !important;
+  text-size-adjust: none !important;
 }
 
 /* Sidebar / Index Drawer */
@@ -68,12 +72,14 @@
 .settings-section {
   padding: 20px;
   border-bottom: 1px solid rgba(194, 168, 122, 0.1);
+  z-index: 9999;
+
 }
 
 .settings-section h4 {
   color: #c2a87a;
   margin-bottom: 15px;
-  font-size: 1rem;
+  font-size: 16px;
 }
 
 .theme-picker {
@@ -135,6 +141,9 @@
 .mushaf-screen.theme-cream::before {
   background: #fdf6e3;
   color: #1e293b;
+  --bottom-shade: rgba(138, 113, 80, 0.04);
+  /* Darkened for visibility on mobile */
+  --half-page-bg: rgba(138, 113, 80, 0.15);
 }
 
 .mushaf-screen.theme-white .mushaf-page,
@@ -143,6 +152,8 @@
 .mushaf-screen.theme-white::before {
   background: #ffffff;
   color: #000000;
+  --bottom-shade: rgba(0, 0, 0, 0.02);
+  --half-page-bg: rgba(0, 0, 0, 0.05);
 }
 
 .mushaf-screen.theme-green .mushaf-page,
@@ -151,6 +162,8 @@
 .mushaf-screen.theme-green::before {
   background: #f0f9eb;
   color: #1e293b;
+  --bottom-shade: rgba(46, 125, 50, 0.03);
+  --half-page-bg: rgba(46, 125, 50, 0.06);
 }
 
 .mushaf-screen.theme-sky .mushaf-page,
@@ -159,6 +172,8 @@
 .mushaf-screen.theme-sky::before {
   background: #e1f5fe;
   color: #1e293b;
+  --bottom-shade: rgba(2, 136, 209, 0.03);
+  --half-page-bg: rgba(2, 136, 209, 0.06);
 }
 
 .mushaf-screen.theme-blue .mushaf-page,
@@ -167,6 +182,8 @@
 .mushaf-screen.theme-blue::before {
   background: #bbdefb;
   color: #1e293b;
+  --bottom-shade: rgba(25, 118, 210, 0.03);
+  --half-page-bg: rgba(25, 118, 210, 0.06);
 }
 
 .mushaf-screen.theme-dark .mushaf-page,
@@ -175,6 +192,8 @@
 .mushaf-screen.theme-dark::before {
   background: #1a1a1a;
   color: #e2e8f0;
+  --bottom-shade: rgba(0, 0, 0, 0.15);
+  --half-page-bg: rgba(255, 255, 255, 0.03);
 }
 
 /* In dark theme, some markers might need adjustment */
@@ -184,7 +203,7 @@
 }
 
 .sidebar-header {
-  padding: 3.5rem 20px 20px;
+  padding: 60px 20px 20px;
   /* Increased top padding to show below fixed header */
   display: flex;
   align-items: center;
@@ -344,13 +363,22 @@
 
 /* FIXED HEADER STYLING */
 .fixed-header {
-  height: 2.8rem;
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  min-height: 55px;
+  /* Fixed height in px instead of rem */
+  padding-top: env(safe-area-inset-top);
   border-bottom: 2px solid rgba(0, 0, 0, 0.05);
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  padding: 0 1rem;
-  font-size: 0.75rem;
+  align-items: flex-start;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  /* Match the Quran text scaling logic but smaller */
+  font-size: clamp(14px, 3.8vmin, 22px) !important;
+  /* Fixed size */
   color: #64748b;
   font-family: 'Amiri', serif !important;
   font-weight: 500;
@@ -358,8 +386,20 @@
   /* Higher than sidebar content but below overlay? Wait, overlays are 999. Sidebars are 1000. Header should be 1002 to stay on top. */
   box-sizing: border-box;
   width: 100%;
-  max-width: 550px;
   margin: 0 auto;
+}
+
+.header-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  gap: 8px;
+  min-height: 55px;
+  /* Fixed height matches header */
+  max-width: 820px;
+  margin: 0 auto 0 auto;
+  /* Maintain minimum height for icons positioning and add spacing from top */
 }
 
 .header-left,
@@ -367,7 +407,9 @@
   display: flex;
   align-items: center;
   min-width: 40px;
-  /* Ensure icons have dedicated space */
+  gap: 8px;
+  flex-shrink: 0;
+  /* Ensure icons have dedicated space and don't shrink */
 }
 
 .header-center {
@@ -377,13 +419,16 @@
   justify-content: center;
   gap: 12px;
   font-weight: 600;
+  min-width: 0;
+  font-size: 0.75rem;
+  /* Allow center to shrink if needed but maintain layout */
 }
 
 .juz-divider,
 .page-divider {
   opacity: 0.3;
   font-weight: 300;
-  font-size: 0.8rem;
+  font-size: 0.5rem;
 }
 
 .surah-meta,
@@ -404,7 +449,8 @@
 
 .share-trigger,
 .settings-trigger,
-.exit-trigger {
+.exit-trigger,
+.info-trigger {
   background: none;
   border: none;
   color: #c2a87a;
@@ -418,7 +464,7 @@
 }
 
 .settings-trigger:hover {
-  transform: rotate(15deg) scale(1.1);
+  color: #c2a87a;
 }
 
 .share-trigger:hover {
@@ -429,6 +475,11 @@
 .exit-trigger:hover {
   transform: scale(1.1);
   color: #ef4444;
+}
+
+.info-trigger:hover {
+  color: #c2a87a;
+  transform: scale(1.1);
 }
 
 .total-users-badge {
@@ -533,6 +584,9 @@
   /* Match page background to remove black bar */
   touch-action: pan-y;
   direction: ltr !important;
+  /* FIX: Add padding-top to fill the space above header without moving content up */
+  /* 55px header + 10px spacing + safe area */
+  padding-top: calc(65px + env(safe-area-inset-top));
 }
 
 .mushaf-slider {
@@ -572,21 +626,24 @@
   /* Portrait: fit content to screen */
   box-sizing: border-box;
   transition: all 0.3s ease;
+  position: relative;
+  max-width: 470px;
 }
 
-.mushaf-page-wrapper.is-read-page .mushaf-page {
-  opacity: 0.7;
+.mushaf-page::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 45%;
+  background: linear-gradient(to bottom, transparent, var(--bottom-shade, rgba(138, 113, 80, 0.03)));
+  pointer-events: none;
+  z-index: 10;
+  border-radius: 0 0 12px 12px;
 }
 
-.mushaf-page-wrapper.is-recitation-target .mushaf-page {
-  box-shadow: inset 0 0 40px rgba(194, 168, 122, 0.15);
-  border: 1px solid rgba(194, 168, 122, 0.3);
-}
-
-.mushaf-screen.theme-dark .mushaf-page-wrapper.is-recitation-target .mushaf-page {
-  background: rgba(194, 168, 122, 0.05);
-  box-shadow: inset 0 0 60px rgba(0, 0, 0, 0.4);
-}
+/* Page states (Recitation/Read) - Effects removed per user request */
 
 /* Landscape: allow scrolling but hide scrollbar */
 @media (orientation: landscape) {
@@ -661,17 +718,37 @@
   /* Portrait: equal vertical distribution */
   min-height: 0;
   display: flex;
-  align-items: center;
-  justify-content: space-evenly;
-  /* Portrait: balanced distribution with less gaps */
-  font-size: clamp(0.4rem, min(3.3vh, 6.5vw), 1.6rem);
+  /* space-between creates the standard "Justified" look (flush R/L) for Fixed Layout Mushafs */
+  justify-content: space-between !important;
+  /* vmin fits screen, clamp prevents it from getting too small (gaps) or huge (overlap) */
+  /* Min 24px replicates the dense feel of 540x720 on smaller screens */
+  font-size: clamp(24px, 5vmin, 40px) !important;
   white-space: nowrap;
   width: 100%;
   padding: 0 3%;
   box-sizing: border-box;
-  letter-spacing: 0.005em;
-  /* Subtle breathing room */
+  letter-spacing: normal;
+  /* Reset standard spacing */
+  text-align: justify;
+  /* Ensure justify works, but we rely on flex for line spacing usually? */
+  /* Wait, justify-content: space-evenly is on the flex container. */
+  /* If font is big enough, gaps are small. */
+  transition: background 0.4s ease;
+  line-height: 1.7 !important;
+  /* Slightly tighter vertical rhythm */
+  /* max-height: 100%; REMOVED to prevent clipping */
+  /* overflow: hidden; REMOVED to prevent clipping */
 }
+
+/* Make words flexible to fill the line dynamically */
+/* Make words flexible to fill the line dynamically */
+.mushaf-line>span {
+  flex: 0 1 auto;
+  /* Allow shrink but don't force grow */
+  text-align: center;
+}
+
+/* Second half coloring is now handled at the line level via [style.background] */
 
 /* Landscape: larger text, fill width */
 @media (orientation: landscape) {
@@ -680,7 +757,7 @@
     min-height: auto;
     justify-content: space-between;
     /* Fill width like portrait */
-    font-size: clamp(0.6rem, 5vw, 1.8rem);
+    font-size: 5.5vmin !important;
     padding: 0 3%;
   }
 }
@@ -704,7 +781,7 @@
 
 .line-type-bismillah {
   font-family: "QCF_BSML", "Amiri", serif;
-  font-size: clamp(0.5rem, 4.2vh, 1.3rem);
+  font-size: 5vmin !important;
   /* Further reduced for delicate look */
   justify-content: center !important;
   color: inherit;
@@ -726,7 +803,7 @@
   border-radius: 2px;
   flex: 0 0 55px !important;
   /* Force fixed height even on first pages */
-  margin: 15px auto;
+  margin: 15px auto 0;
   /* Center horizontally */
   width: 80% !important;
   /* Strict enforcement to prevent flash */
@@ -736,12 +813,13 @@
   /* Traditional Calligraphic Style */
   font-weight: 700;
   /* Bold for decorative look */
-  /* Stable font size to prevent vh-based jumping */
-  font-size: 1.9rem;
+  /* Fixed px size for fixed height container */
+  font-size: 26px !important;
   line-height: 1.3;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: center !important;
+  /* Force center overrides space-between */
   align-self: center;
   /* Prevent header from stretching full width */
   overflow: visible;
@@ -1002,6 +1080,10 @@
   padding-bottom: 90px;
 }
 
+.recitation-session .lines-container {
+  padding-bottom: 30px !important;
+}
+
 .test-options {
   display: flex;
   flex-direction: column;
@@ -1045,12 +1127,41 @@
   border-top: 1px solid rgba(0, 0, 0, 0.05);
 }
 
-.mushaf-screen.theme-dark .bottom-sheet {
+.bottom-sheet.theme-dark {
   background: #1e1e1e;
   color: #f1f5f9;
   box-shadow: 0 -15px 50px rgba(0, 0, 0, 0.6);
   border-top-color: rgba(255, 255, 255, 0.05);
 }
+
+.bottom-sheet.theme-cream,
+.bottom-sheet.theme-white,
+.bottom-sheet.theme-green,
+.bottom-sheet.theme-sky,
+.bottom-sheet.theme-blue {
+  background: #fdf6e3;
+  /* Default light base */
+  color: #1e293b;
+  border-top-color: rgba(0, 0, 0, 0.05);
+}
+
+.bottom-sheet.theme-white {
+  background: #ffffff;
+}
+
+.bottom-sheet.theme-green {
+  background: #f0f9eb;
+}
+
+.bottom-sheet.theme-sky {
+  background: #e1f5fe;
+}
+
+.bottom-sheet.theme-blue {
+  background: #bbdefb;
+}
+
+
 
 .bottom-sheet.open {
   bottom: 0;
@@ -1067,9 +1178,14 @@
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
-.mushaf-screen.theme-dark .sheet-header {
+.bottom-sheet.theme-dark .sheet-header {
   border-bottom-color: rgba(255, 255, 255, 0.05);
 }
+
+.bottom-sheet.theme-cream .sheet-header {
+  border-bottom-color: rgba(0, 0, 0, 0.05);
+}
+
 
 .handle {
   width: 36px;
@@ -1172,8 +1288,14 @@
 }
 
 .mushaf-screen.theme-dark .radio-group-modern button {
-  background: #2d2d2d;
-  color: #94a3b8;
+  background: #1a1a1a;
+  color: #cbd5e1;
+  border: 1px solid rgba(194, 168, 122, 0.15);
+}
+
+.mushaf-screen.theme-dark .radio-group-modern button:hover {
+  background: rgba(194, 168, 122, 0.08);
+  border-color: rgba(194, 168, 122, 0.3);
 }
 
 .radio-group-modern button.active {
@@ -1185,9 +1307,10 @@
 }
 
 .mushaf-screen.theme-dark .radio-group-modern button.active {
-  background: rgba(194, 168, 122, 0.1);
+  background: rgba(194, 168, 122, 0.2);
+  border-color: #c2a87a;
   color: #c2a87a;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 20px rgba(194, 168, 122, 0.15);
 }
 
 .btn-icon {
@@ -1214,9 +1337,14 @@
 }
 
 .mushaf-screen.theme-dark .radio-chips-modern button {
-  background: #2d2d2d;
-  border-color: #404040;
-  color: #94a3b8;
+  background: #1a1a1a;
+  border-color: rgba(194, 168, 122, 0.2);
+  color: #cbd5e1;
+}
+
+.mushaf-screen.theme-dark .radio-chips-modern button:hover {
+  background: rgba(194, 168, 122, 0.1);
+  border-color: rgba(194, 168, 122, 0.35);
 }
 
 .radio-chips-modern button.active {
@@ -1224,6 +1352,13 @@
   color: white;
   border-color: #c2a87a;
   box-shadow: 0 2px 8px rgba(194, 168, 122, 0.3);
+}
+
+.mushaf-screen.theme-dark .radio-chips-modern button.active {
+  background: #c2a87a;
+  color: #1e293b;
+  border-color: #c2a87a;
+  box-shadow: 0 4px 15px rgba(194, 168, 122, 0.25);
 }
 
 /* Verse Range Picker */
@@ -1307,6 +1442,10 @@
   color: #64748b;
 }
 
+.mushaf-screen.theme-dark .setting-item label {
+  color: #cbd5e1;
+}
+
 .mini-chips {
   display: flex;
   background: #f1f5f9;
@@ -1337,9 +1476,14 @@
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
 }
 
+.mushaf-screen.theme-dark .mini-chips button {
+  color: #94a3b8;
+}
+
 .mushaf-screen.theme-dark .mini-chips button.active {
   background: #404040;
   color: #f1f5f9;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
 /* Number Control Modern */
@@ -1361,24 +1505,28 @@
   color: #64748b;
 }
 
+.mushaf-screen.theme-dark .counter-item label {
+  color: #cbd5e1;
+}
+
 .number-control {
   display: flex;
   align-items: center;
   justify-content: space-between;
   background: #f8fafc;
-  padding: 6px;
+  padding: 8px;
   border-radius: 14px;
   border: 1px solid #e2e8f0;
 }
 
 .mushaf-screen.theme-dark .number-control {
-  background: #2d2d2d;
-  border-color: #404040;
+  background: #1a1a1a;
+  border-color: rgba(194, 168, 122, 0.2);
 }
 
 .number-control button {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 10px;
   border: none;
   background: white;
@@ -1389,11 +1537,25 @@
   cursor: pointer;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   transition: all 0.2s;
+  font-size: 1rem;
 }
 
 .mushaf-screen.theme-dark .number-control button {
-  background: #404040;
+  background: rgba(194, 168, 122, 0.15);
   box-shadow: none;
+  color: #c2a87a;
+  border: 1px solid rgba(194, 168, 122, 0.25);
+}
+
+.mushaf-screen.theme-dark .number-control button:hover {
+  background: rgba(194, 168, 122, 0.25);
+  transform: scale(1.05);
+}
+
+.mushaf-screen.theme-dark .number-control span {
+  color: #fff;
+  font-size: 1.3rem;
+  text-shadow: 0 0 10px rgba(194, 168, 122, 0.3);
 }
 
 .number-control button:hover {
@@ -1403,9 +1565,10 @@
 
 .number-control span {
   font-weight: 700;
-  font-size: 1.1rem;
-  min-width: 30px;
+  font-size: 1.2rem;
+  min-width: 40px;
   text-align: center;
+  color: #1e293b;
 }
 
 /* Start Button Modern */
@@ -1455,6 +1618,51 @@
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* Guest Mode Styles */
+.guest-mode-badge {
+  background: rgba(255, 193, 7, 0.15);
+  color: #ff9800;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(255, 152, 0, 0.3);
+  margin-left: 10px;
+  font-weight: 600;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 15px 0;
+  color: #888;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  border-bottom: 1px solid #eee;
+}
+
+.auth-divider span {
+  padding: 0 10px;
+  font-size: 0.9rem;
+}
+
+.btn-register.secondary {
+  background: #f5f5f5;
+  color: #333;
+  border: 1px solid #ddd;
+}
+
+.btn-register.secondary:hover {
+  background: #eee;
 }
 
 .sheet-overlay {
@@ -2007,6 +2215,7 @@
   position: relative;
   transition: all 0.3s ease;
   backdrop-filter: blur(5px);
+  display: none;
 }
 
 .mic-footer-btn.active {
@@ -2230,6 +2439,21 @@
   border-bottom: 1px solid rgba(194, 168, 122, 0.1);
 }
 
+.reminder-note {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin-top: 8px;
+  text-align: right;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.mushaf-screen.theme-dark .reminder-note {
+  color: #64748b;
+}
+
 .reminder-label {
   display: flex;
   justify-content: space-between;
@@ -2240,7 +2464,11 @@
 .reminder-label span {
   font-size: 14px;
   font-weight: 500;
-  color: #fff !important;
+  color: #1e293b;
+}
+
+.mushaf-screen.theme-dark .reminder-label span {
+  color: #e2e8f0;
 }
 
 .reminder-label i {
@@ -2256,12 +2484,27 @@
 .reminder-input-wrapper input[type="time"] {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(194, 168, 122, 0.3);
-  color: #fff;
+  color: #1e293b;
   padding: 6px 12px;
   border-radius: 6px;
   font-size: 15px;
   outline: none;
   width: 100%;
+}
+
+.mushaf-screen.theme-dark .reminder-input-wrapper input[type="time"] {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(194, 168, 122, 0.4);
+  color: #e2e8f0;
+}
+
+.mushaf-screen.theme-cream .reminder-input-wrapper input[type="time"],
+.mushaf-screen.theme-white .reminder-input-wrapper input[type="time"],
+.mushaf-screen.theme-green .reminder-input-wrapper input[type="time"],
+.mushaf-screen.theme-sky .reminder-input-wrapper input[type="time"],
+.mushaf-screen.theme-blue .reminder-input-wrapper input[type="time"] {
+  background: rgba(255, 255, 255, 0.9);
+  color: #1e293b;
 }
 
 .reminder-input-wrapper input[type="time"]::-webkit-calendar-picker-indicator {
@@ -2654,6 +2897,32 @@ input:checked+.slider:before {
 .dashboard-card.done {
   background: rgba(74, 222, 128, 0.1);
   border-color: rgba(74, 222, 128, 0.3);
+}
+
+.dashboard-card.blocked {
+  opacity: 0.85;
+  filter: grayscale(0.2);
+  border: 1px dashed rgba(194, 168, 122, 0.4);
+}
+
+.blocked-msg {
+  background: rgba(194, 168, 122, 0.1);
+  color: #854d0e;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  margin: 12px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgba(194, 168, 122, 0.2);
+  line-height: 1.4;
+  font-weight: 500;
+}
+
+.mushaf-screen.theme-dark .blocked-msg {
+  color: #c2a87a;
+  background: rgba(194, 168, 122, 0.05);
 }
 
 .dashboard-card .card-status {
@@ -3077,6 +3346,109 @@ input:checked+.slider:before {
   background: rgba(194, 168, 122, 0.2);
 }
 
+/* Completion & Progress Refinement */
+.progress-section {
+  margin: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.progress-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.progress-bar-bg {
+  flex: 1;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(194, 168, 122, 0.1);
+}
+
+.main-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #c2a87a 0%, #d4c4a8 100%);
+  border-radius: 10px;
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.progress-percentage {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #c2a87a;
+  min-width: 35px;
+}
+
+.completion-estimate-card {
+  background: linear-gradient(135deg, rgba(194, 168, 122, 0.12) 0%, rgba(194, 168, 122, 0.05) 100%);
+  border: 1px solid rgba(194, 168, 122, 0.2);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: all 0.3s ease;
+}
+
+.completion-estimate-card:hover {
+  background: rgba(194, 168, 122, 0.15);
+  border-color: rgba(194, 168, 122, 0.4);
+}
+
+.est-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.est-icon-wrapper {
+  width: 36px;
+  height: 36px;
+  background: rgba(194, 168, 122, 0.2);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #c2a87a;
+  font-size: 1.1rem;
+}
+
+.est-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.est-label {
+  font-size: 0.75rem;
+  opacity: 0.7;
+  color: #e2e8f0;
+}
+
+.est-date {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  letter-spacing: 0.5px;
+}
+
+.est-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: rgba(194, 168, 122, 0.9);
+  padding-top: 10px;
+  border-top: 1px solid rgba(194, 168, 122, 0.1);
+}
+
+.est-footer i {
+  font-size: 0.85rem;
+}
+
 /* Gratitude Modal Styling */
 .gratitude-modal-overlay {
   position: fixed;
@@ -3275,6 +3647,85 @@ input:checked+.slider:before {
   max-width: 400px !important;
 }
 
+.info-modal {
+  max-width: 400px !important;
+}
+
+.info-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 10px 0;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  padding: 16px;
+  background: rgba(194, 168, 122, 0.05);
+  border-radius: 12px;
+  border: 1px solid rgba(194, 168, 122, 0.1);
+  transition: all 0.2s ease;
+}
+
+.info-item.clickable {
+  cursor: pointer;
+}
+
+.info-item.clickable:hover {
+  background: rgba(194, 168, 122, 0.1);
+  transform: translateX(-4px);
+}
+
+.info-item i {
+  font-size: 1.2rem;
+}
+
+.info-item>div {
+  flex: 1;
+}
+
+.info-quote {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #c2a87a;
+  margin: 0;
+  font-style: italic;
+  text-align: right;
+}
+
+.info-badge {
+  font-size: 0.9rem;
+  color: #64748b;
+  margin: 0;
+  text-align: right;
+}
+
+.info-action {
+  font-size: 0.95rem;
+  color: #1e293b;
+  margin: 0;
+  font-weight: 500;
+  text-align: right;
+}
+
+.mushaf-screen.theme-dark .info-item {
+  background: rgba(194, 168, 122, 0.08);
+  border-color: rgba(194, 168, 122, 0.15);
+}
+
+.mushaf-screen.theme-dark .info-item.clickable:hover {
+  background: rgba(194, 168, 122, 0.15);
+}
+
+.mushaf-screen.theme-dark .info-badge {
+  color: #94a3b8;
+}
+
+.mushaf-screen.theme-dark .info-action {
+  color: #e2e8f0;
+}
+
 .feedback-input-wrapper {
   margin-top: 16px;
 }
@@ -3304,4 +3755,2304 @@ input:checked+.slider:before {
   font-size: 0.85rem;
   margin-top: 10px;
   text-align: center;
+}
+
+.surah-selector-mini {
+  margin-bottom: 15px;
+  width: 100%;
+}
+
+.surah-selector-mini select {
+  width: 100%;
+  padding: 10px 15px;
+  border-radius: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-family: inherit;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s ease;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: left 12px center;
+  background-size: 16px;
+  padding-left: 40px;
+  text-align: right;
+}
+
+.surah-selector-mini select:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.1);
+}
+
+.radio-chips-modern button.active {
+  background: var(--primary-color);
+  color: white !important;
+  border-color: var(--primary-color);
+}
+
+/* Recitation Mode Footer Enhancements */
+.memorization-footer.recitation-view {
+  background: rgba(22, 28, 38, 0.98);
+  border-top: 2px solid rgba(49, 151, 149, 0.4);
+}
+
+.recitation-view .repetition-counter {
+  background: linear-gradient(135deg, #1d908d 0%, #166967 100%);
+  border-radius: 12px;
+  padding: 10px 30px;
+  min-width: 160px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease;
+  border: 1px solid rgba(49, 151, 149, 0.3);
+}
+
+.recitation-view .repetition-counter .counter-label {
+  font-size: 1.1em;
+  font-weight: 600;
+  color: #fff;
+}
+
+.recitation-view .repetition-counter:active {
+  transform: scale(0.95);
+}
+
+.recitation-view .exit-mode-btn {
+  background: rgba(229, 62, 62, 0.1) !important;
+  color: #fc8181 !important;
+  border: 1px solid rgba(229, 62, 62, 0.3) !important;
+  border-radius: 10px;
+  padding: 8px 20px;
+  font-weight: 600;
+}
+
+.recitation-view .exit-mode-btn:hover {
+  background: rgba(229, 62, 62, 0.2) !important;
+  color: #fff !important;
+}
+
+/* Ultra-Compact Floating Integrity Pill for Recitation */
+.reading-integrity-bar {
+  position: fixed !important;
+  bottom: 6px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  width: auto !important;
+  min-width: 140px !important;
+  max-width: 80% !important;
+  height: 22px !important;
+  background: rgba(10, 15, 25, 0.75) !important;
+  backdrop-filter: blur(4px) !important;
+  border-radius: 11px !important;
+  border: 1px solid rgba(194, 168, 122, 0.1) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+  z-index: 10005 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+}
+
+.integrity-content {
+  flex: 1 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  padding: 0 8px !important;
+  white-space: nowrap !important;
+}
+
+.integrity-label {
+  position: static !important;
+  font-size: 9px !important;
+  font-weight: 500 !important;
+  color: #fff !important;
+  opacity: 0.8 !important;
+  margin: 0 !important;
+}
+
+.integrity-progress {
+  position: absolute !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  height: 1.5px !important;
+  background: #c2a87a !important;
+  transition: width 0.3s ease !important;
+}
+
+.reading-integrity-bar.verified .integrity-progress {
+  background: #10b981 !important;
+}
+
+.small-exit-btn {
+  background: rgba(239, 68, 68, 0.1) !important;
+  color: #fca5a5 !important;
+  border: 1px solid rgba(239, 68, 68, 0.2) !important;
+  border-radius: 8px !important;
+  padding: 1px 4px !important;
+  font-size: 8px !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 2px !important;
+  margin: 0 !important;
+  transition: all 0.2s ease !important;
+}
+
+.small-exit-btn:hover {
+  background: rgba(239, 68, 68, 0.25) !important;
+  color: #fff !important;
+}
+
+.small-exit-btn i {
+  font-size: 0.8em !important;
+}
+
+/* =========================================
+   Gamified Wird Journey Timeline
+   ========================================= */
+
+.wird-journey-timeline {
+  position: relative;
+  padding-right: 25px;
+  /* RTL Support: Space on the right */
+  margin-top: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  /* Increased gap for better breathing room */
+}
+
+/* The Vertical Line */
+.wird-journey-timeline::before {
+  content: '';
+  position: absolute;
+  top: 15px;
+  bottom: 0;
+  right: 8px;
+  /* RTL Support: Position on the right */
+  width: 2px;
+  background: linear-gradient(to bottom,
+      #4CAF50 0%,
+      /* Green for done */
+      #c2a87a 50%,
+      /* Gold for active */
+      rgba(0, 0, 0, 0.05) 100%
+      /* Very subtle grey for future */
+    );
+  z-index: 0;
+  opacity: 0.5;
+  border-radius: 2px;
+}
+
+/* Base Card Styling for Timeline */
+.timeline-step {
+  position: relative;
+  z-index: 1;
+  margin-right: 0 !important;
+  /* Ensure card adheres to new padding */
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Optional: Add a subtle connector line to the card if needed, but let's keep it clean for now */
+}
+
+/* Step Indicator Node (The Circle) */
+.timeline-step .card-header::before {
+  content: '';
+  position: absolute;
+  right: -31px;
+  /* Align with the line on the right */
+  top: 50%;
+  transform: translateY(-50%);
+  width: 10px;
+  /* Slightly smaller dot */
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  z-index: 2;
+  box-shadow: 0 0 0 2px #e5e7eb;
+  background: #fff;
+  transition: all 0.3s ease;
+}
+
+/* --- Status: Active Step --- */
+.timeline-step.active-step {
+  transform: translateX(-5px);
+  /* Gentle nudge to the left */
+  box-shadow: 0 8px 25px rgba(194, 168, 122, 0.12);
+  border: 1px solid rgba(194, 168, 122, 0.4);
+}
+
+.timeline-step.active-step .card-header::before {
+  background: #c2a87a;
+  box-shadow: 0 0 0 3px rgba(194, 168, 122, 0.2);
+  width: 12px;
+  height: 12px;
+  right: -32px;
+  /* Adjust for size increase */
+  animation: pulse-ring 2s infinite;
+}
+
+/* --- Status: Completed Step --- */
+.timeline-step.done .card-header::before {
+  background: #4CAF50;
+  box-shadow: 0 0 0 2px #4CAF50;
+  border-color: #4CAF50;
+}
+
+/* --- Status: Locked Step --- */
+.timeline-step.locked-step {
+  opacity: 0.6;
+  filter: grayscale(0.8);
+  pointer-events: none;
+  transform: scale(0.98);
+}
+
+.timeline-step.locked-step .card-header::before {
+  background: #e5e7eb;
+  box-shadow: none;
+  border-color: #d1d5db;
+}
+
+/* --- Animations --- */
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgba(194, 168, 122, 0.4);
+  }
+
+  70% {
+    box-shadow: 0 0 0 10px rgba(194, 168, 122, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(194, 168, 122, 0);
+  }
+}
+
+/* --- Wird Action Button Styling --- */
+.wird-action-btn {
+  width: 100%;
+  padding: 10px 15px;
+  background: #c2a87a;
+  color: #1e293b;
+  border: none;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 10px;
+  box-shadow: 0 4px 10px rgba(194, 168, 122, 0.2);
+}
+
+.wird-action-btn:hover:not(:disabled) {
+  background: #b39b70;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 15px rgba(194, 168, 122, 0.3);
+}
+
+.wird-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #d1d5db;
+  color: #64748b;
+  box-shadow: none;
+}
+
+.wird-action-btn i {
+  font-size: 0.9rem;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 480px) {
+  .wird-journey-timeline {
+    padding-right: 35px;
+    /* More space for nodes on mobile */
+  }
+
+  .wird-journey-timeline::before {
+    right: 18px;
+    /* Slightly more inset */
+  }
+
+  .timeline-step .card-header::before {
+    right: -28px;
+    /* Align with new padding */
+  }
+
+  .timeline-step.active-step .card-header::before {
+    right: -29px;
+  }
+}
+
+/* Locked Overlay Styling */
+.locked-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.85);
+  /* Murky white overlap */
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  backdrop-filter: blur(2px);
+}
+
+.lock-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: #64748b;
+  font-size: 0.9em;
+  font-weight: 500;
+}
+
+.lock-content i {
+  font-size: 1.5em;
+  color: #c2a87a;
+  background: #fff;
+  padding: 12px;
+  border-radius: 50%;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+/* Ensure card is relative for overlay */
+.dashboard-card {
+  position: relative;
+  overflow: hidden;
+  /* Contain the overlay */
+}
+
+/* Floating Audio Player - Premium Glassmorphism */
+.floating-audio-player {
+  position: fixed;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 20px);
+  max-width: 420px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(194, 168, 122, 0.3);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  z-index: 9999;
+  /* Below overlays like tafsir and download modals */
+  overflow: hidden;
+  animation: slideUpFade 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+
+
+.floating-audio-player.theme-dark {
+  background: rgba(30, 41, 59, 0.9);
+  border-color: rgba(194, 168, 122, 0.15);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+.floating-audio-player.theme-cream,
+.floating-audio-player.theme-white,
+.floating-audio-player.theme-green,
+.floating-audio-player.theme-sky,
+.floating-audio-player.theme-blue {
+  background: rgba(253, 246, 227, 0.95);
+  border-color: rgba(138, 113, 80, 0.3);
+  color: #1e293b;
+}
+
+.floating-audio-player.theme-white {
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.floating-audio-player.theme-dark {
+  background: rgba(30, 41, 59, 0.95);
+  border-color: rgba(194, 168, 122, 0.15);
+  color: #e2e8f0;
+}
+
+.player-content {
+  padding: 10px 12px;
+  position: relative;
+}
+
+.player-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: nowrap;
+  width: 100%;
+}
+
+/* Responsive Audio Player for Small Screens */
+@media (max-width: 400px) {
+  .floating-audio-player {
+    width: calc(100% - 16px);
+    bottom: 10px;
+    border-radius: 12px;
+  }
+
+  .player-content {
+    padding: 8px 10px;
+  }
+
+  .player-main {
+    gap: 6px;
+  }
+
+  .reciter-selector {
+    padding: 6px 10px;
+    font-size: 0.75rem;
+    max-width: 140px;
+  }
+
+  .reciter-selector span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 80px;
+  }
+
+  .reciter-selector-avatar {
+    width: 22px;
+    height: 22px;
+  }
+
+  .play-pause-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 0.9rem;
+  }
+
+  .download-btn,
+  .stop-btn {
+    width: 32px;
+    height: 32px;
+  }
+
+  .tafsir-btn {
+    padding: 4px 8px;
+    font-size: 0.7rem;
+  }
+
+  .tafsir-btn span {
+    display: none;
+  }
+
+  .player-close {
+    font-size: 0.9rem;
+  }
+}
+
+.playback-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.play-pause-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #c2a87a;
+  color: #1e293b;
+  border: none;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 10px rgba(194, 168, 122, 0.3);
+}
+
+.download-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(194, 168, 122, 0.1);
+  color: #c2a87a;
+  border: 1px solid rgba(194, 168, 122, 0.3);
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.download-btn:hover {
+  background: #c2a87a;
+  color: #1e293b;
+}
+
+.download-btn.downloading {
+  animation: pulse-gold 1.5s infinite;
+}
+
+@keyframes pulse-gold {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  50% {
+    transform: scale(1.1);
+    opacity: 0.7;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.playback-controls button:active {
+  transform: scale(0.9);
+}
+
+.reciter-selector {
+  flex: 0 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(194, 168, 122, 0.15);
+  padding: 6px 10px;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  color: #1e293b;
+  border: 1px solid rgba(194, 168, 122, 0.3);
+  transition: all 0.2s ease;
+  cursor: pointer;
+  max-width: 160px;
+  min-width: 100px;
+}
+
+.reciter-selector span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.reciter-selector:hover {
+  background: rgba(194, 168, 122, 0.2);
+  border-color: rgba(194, 168, 122, 0.4);
+}
+
+.mushaf-screen.theme-dark .reciter-selector {
+  color: #e2e8f0;
+  background: rgba(194, 168, 122, 0.1);
+}
+
+.mushaf-screen.theme-dark .reciter-selector:hover {
+  background: rgba(194, 168, 122, 0.15);
+}
+
+.reciter-selector i {
+  color: #c2a87a;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.reciter-selector select {
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-weight: 500;
+  width: 100%;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.reciter-selector select option {
+  background: #fff;
+  color: #1e293b;
+  padding: 10px 12px;
+  font-size: 0.9rem;
+}
+
+.mushaf-screen.theme-dark .reciter-selector select option {
+  background: #1e293b;
+  color: #e2e8f0;
+}
+
+.reciter-selector-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(194, 168, 122, 0.4);
+  flex-shrink: 0;
+}
+
+/* ============================================
+   Reciter Selection Modal
+   ============================================ */
+.reciter-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  z-index: 10010;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.3s ease;
+}
+
+.reciter-modal {
+  background: #fdf6e3;
+  border-radius: 20px;
+  width: 90%;
+  max-width: 450px;
+  max-height: 80vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideUpModal 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes slideUpModal {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.mushaf-screen.theme-dark .reciter-modal {
+  background: #1e293b;
+  border: 1px solid rgba(194, 168, 122, 0.2);
+}
+
+.reciter-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(194, 168, 122, 0.15);
+  background: rgba(194, 168, 122, 0.05);
+}
+
+.reciter-modal-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.reciter-modal-header h3 i {
+  color: #c2a87a;
+}
+
+.mushaf-screen.theme-dark .reciter-modal-header h3 {
+  color: #e2e8f0;
+}
+
+.reciter-modal-close {
+  background: rgba(0, 0, 0, 0.05);
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #64748b;
+  transition: all 0.2s;
+}
+
+.reciter-modal-close:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.reciter-modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+}
+
+.reciter-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.reciter-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(194, 168, 122, 0.05);
+  border: 2px solid transparent;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.reciter-item:hover {
+  background: rgba(194, 168, 122, 0.12);
+  transform: translateX(-3px);
+}
+
+.reciter-item.selected {
+  background: rgba(194, 168, 122, 0.15);
+  border-color: #c2a87a;
+}
+
+.mushaf-screen.theme-dark .reciter-item {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.mushaf-screen.theme-dark .reciter-item:hover {
+  background: rgba(194, 168, 122, 0.1);
+}
+
+.mushaf-screen.theme-dark .reciter-item.selected {
+  background: rgba(194, 168, 122, 0.15);
+}
+
+.reciter-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(194, 168, 122, 0.3);
+  flex-shrink: 0;
+}
+
+.reciter-avatar-placeholder {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(194, 168, 122, 0.2), rgba(194, 168, 122, 0.1));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #c2a87a;
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+
+.reciter-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.reciter-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #1e293b;
+  margin-bottom: 2px;
+}
+
+.mushaf-screen.theme-dark .reciter-name {
+  color: #f1f5f9;
+}
+
+.reciter-style {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.mushaf-screen.theme-dark .reciter-style {
+  color: #94a3b8;
+}
+
+.reciter-check {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #c2a87a;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+}
+
+/* Theme-based Reciter Modal Styling */
+.reciter-modal-overlay.theme-cream .reciter-modal {
+  background: #fdf6e3;
+}
+
+.reciter-modal-overlay.theme-white .reciter-modal {
+  background: #ffffff;
+}
+
+.reciter-modal-overlay.theme-green .reciter-modal {
+  background: #e8f5e9;
+}
+
+.reciter-modal-overlay.theme-sky .reciter-modal {
+  background: #e3f2fd;
+}
+
+.reciter-modal-overlay.theme-blue .reciter-modal {
+  background: #e1f5fe;
+}
+
+.reciter-modal-overlay.theme-dark .reciter-modal {
+  background: #1a1a1a;
+  border: 1px solid rgba(194, 168, 122, 0.2);
+}
+
+.reciter-modal-overlay.theme-dark .reciter-modal-header {
+  background: rgba(194, 168, 122, 0.08);
+  border-color: rgba(194, 168, 122, 0.15);
+}
+
+.reciter-modal-overlay.theme-dark .reciter-modal-header h3 {
+  color: #e2e8f0;
+}
+
+.reciter-modal-overlay.theme-dark .reciter-item {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: transparent;
+}
+
+.reciter-modal-overlay.theme-dark .reciter-item:hover {
+  background: rgba(194, 168, 122, 0.1);
+}
+
+.reciter-modal-overlay.theme-dark .reciter-item.selected {
+  background: rgba(194, 168, 122, 0.15);
+  border-color: #c2a87a;
+}
+
+.reciter-modal-overlay.theme-dark .reciter-name {
+  color: #f1f5f9;
+}
+
+.reciter-modal-overlay.theme-dark .reciter-style {
+  color: #94a3b8;
+}
+
+.reciter-modal-overlay.theme-dark .reciter-modal-close {
+  color: #94a3b8;
+}
+
+.reciter-modal-overlay.theme-dark .reciter-modal-close:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.verse-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 45px;
+}
+
+.v-key {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #c2a87a;
+  opacity: 0.8;
+}
+
+.player-close {
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.player-progress-bar {
+  height: 3px;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 2px;
+  margin-top: 10px;
+  width: 100%;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #c2a87a;
+  transition: width 0.3s linear;
+}
+
+.buffering-spinner {
+  font-size: 0.8rem;
+  color: #c2a87a;
+}
+
+@keyframes slideUpFade {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+/* Download Mode Styles in Sidebar Index */
+.index-list button.download-mode {
+  border: 1px dashed rgba(194, 168, 122, 0.4);
+  background: rgba(194, 168, 122, 0.05);
+}
+
+.index-list button.download-mode:hover {
+  background: rgba(194, 168, 122, 0.15);
+  transform: translateX(-5px);
+}
+
+.surah-actions {
+  margin-right: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.download-icon,
+.loading-icon,
+.downloaded-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(194, 168, 122, 0.1);
+  color: #c2a87a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  transition: all 0.2s ease;
+}
+
+.loading-icon {
+  color: #c2a87a;
+  background: transparent;
+}
+
+.downloaded-icon {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+}
+
+.index-list button.download-mode:hover .download-icon {
+  background: #c2a87a;
+  color: #fff;
+  transform: scale(1.1);
+}
+
+/* Active Audio Verse Highlighting */
+.mushaf-segment.audio-active {
+  background-color: rgba(194, 168, 122, 0.15) !important;
+  border-radius: 4px;
+  box-shadow: 0 0 0 2px rgba(194, 168, 122, 0.1);
+  transition: background-color 0.3s ease;
+}
+
+.header-actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.btn-play-ayah-direct {
+  background: rgba(194, 168, 122, 0.15);
+  color: #c2a87a;
+  border: 1px solid rgba(194, 168, 122, 0.3);
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.btn-play-ayah-direct:hover {
+  background: #c2a87a;
+  color: #1e293b;
+}
+
+.btn-play-ayah-direct i {
+  font-size: 0.75rem;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.audio-toggle-btn {
+  background: rgba(194, 168, 122, 0.1);
+  color: #c2a87a;
+  border: 1px solid rgba(194, 168, 122, 0.2);
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.audio-toggle-btn:hover {
+  background: rgba(194, 168, 122, 0.2);
+  transform: translateY(-2px);
+}
+
+.audio-toggle-btn.active {
+  background: #c2a87a;
+  color: #1e293b;
+  border-color: #c2a87a;
+  box-shadow: 0 4px 12px rgba(194, 168, 122, 0.3);
+}
+
+/* Audio Settings Modal Styles */
+.audio-settings-modal {
+  max-width: 400px;
+}
+
+.settings-group {
+  margin-bottom: 24px;
+}
+
+.settings-group label {
+  display: block;
+  margin-bottom: 12px;
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
+.range-options,
+.speed-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  gap: 8px;
+}
+
+.range-options button,
+.speed-options button {
+  background: rgba(194, 168, 122, 0.05);
+  border: 1px solid rgba(194, 168, 122, 0.2);
+  color: #f8fafc;
+  padding: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+}
+
+.range-options button.active,
+.speed-options button.active {
+  background: #c2a87a;
+  color: #1e293b;
+  border-color: #c2a87a;
+  font-weight: bold;
+  box-shadow: 0 4px 12px rgba(194, 168, 122, 0.3);
+}
+
+.number-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  background: rgba(194, 168, 122, 0.05);
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(194, 168, 122, 0.1);
+}
+
+.number-stepper button {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #c2a87a;
+  color: #1e293b;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.1s;
+}
+
+.number-stepper button:active {
+  transform: scale(0.9);
+}
+
+.number-stepper .val {
+  font-size: 1.1rem;
+  font-weight: bold;
+  min-width: 80px;
+  text-align: center;
+  color: #c2a87a;
+}
+
+.header-audio-btn {
+  background: rgba(194, 168, 122, 0.1);
+  color: #c2a87a;
+  border: 1px solid rgba(194, 168, 122, 0.2);
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-right: 8px;
+}
+
+.header-audio-btn:hover {
+  background: rgba(194, 168, 122, 0.2);
+  transform: translateY(-1px);
+}
+
+.header-audio-btn.active {
+  background: #c2a87a;
+  color: #1e293b;
+  border-color: #c2a87a;
+  box-shadow: 0 4px 10px rgba(194, 168, 122, 0.2);
+}
+
+/* New Stop Button */
+.stop-btn {
+  background: rgba(239, 68, 68, 0.08);
+  /* Sophisticated subtle red */
+  border: 1px solid rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.stop-btn:hover {
+  background: rgba(239, 68, 68, 0.15);
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);
+}
+
+/* Surah Index Enhancements */
+.surah-index-item {
+  position: relative;
+  display: grid !important;
+  grid-template-columns: 1fr auto auto !important;
+  align-items: center !important;
+  padding: 12px 16px !important;
+  gap: 15px;
+  background: rgba(194, 168, 122, 0.03) !important;
+  border: 1px solid rgba(194, 168, 122, 0.1) !important;
+  margin-bottom: 8px !important;
+  border-radius: 12px !important;
+  transition: all 0.2s ease;
+}
+
+.surah-index-item:hover {
+  background: rgba(194, 168, 122, 0.06) !important;
+  border-color: rgba(194, 168, 122, 0.2) !important;
+}
+
+.surah-info-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.surah-progress-container {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  min-width: 90px;
+}
+
+.progress-bar-mini {
+  width: 70px;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #c2a87a, #d4bc8f);
+  border-radius: 3px;
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.progress-text {
+  font-size: 0.65rem;
+  letter-spacing: 0.02em;
+  color: #c2a87a;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.download-index-btn {
+  background: rgba(194, 168, 122, 0.08);
+  border: 1px solid rgba(194, 168, 122, 0.15);
+  color: #c2a87a;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.download-index-btn:hover:not(:disabled) {
+  background: #c2a87a;
+  color: #1e293b;
+  transform: translateY(-2px);
+}
+
+.download-index-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.download-status-badge {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+}
+
+.download-status-badge.completed {
+  background: rgba(34, 197, 94, 0.15);
+  /* Greenish */
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.1);
+}
+
+.download-status-badge.loading {
+  background: rgba(194, 168, 122, 0.1);
+  color: #c2a87a;
+}
+
+/* Active Verse Highlight */
+.playing-verse {
+  background: rgba(194, 168, 122, 0.2) !important;
+  border-radius: 4px;
+  box-shadow: 0 0 10px rgba(194, 168, 122, 0.3);
+  transition: all 0.5s ease;
+}
+
+/* Tafsir Button */
+.tafsir-btn {
+  background: rgba(194, 168, 122, 0.1);
+  border: 1px solid rgba(194, 168, 122, 0.2);
+  color: #c2a87a;
+  padding: 6px 14px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+  margin-right: 15px;
+}
+
+.tafsir-btn:hover {
+  background: rgba(194, 168, 122, 0.2);
+  transform: translateY(-2px);
+}
+
+.tafsir-btn i {
+  font-size: 1rem;
+}
+
+/* Tafsir Modal/Overlay */
+.tafsir-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  z-index: 50000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.tafsir-modal {
+  width: 100%;
+  height: 100%;
+  background: inherit;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tafsir-header {
+  background: inherit;
+  border-bottom: 2px solid rgba(194, 168, 122, 0.2);
+  padding: 30px 24px 15px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 70px;
+}
+
+.header-center-group {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.header-spacer {
+  flex: 1;
+}
+
+.header-main {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.header-main i {
+  color: #c2a87a;
+  font-size: 1.4rem;
+}
+
+.header-main h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: #c2a87a;
+  font-weight: 800;
+}
+
+.back-to-mushaf {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: #1e293b;
+  font-size: 1.3rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.back-to-mushaf:hover {
+  background: #f8f1e5;
+}
+
+.tafsir-controls {
+  padding: 16px 24px;
+  background: rgba(194, 168, 122, 0.05);
+  display: flex;
+  gap: 15px;
+  border-bottom: 1px solid rgba(194, 168, 122, 0.1);
+}
+
+.tafsir-selector {
+  flex: 1;
+}
+
+.tafsir-selector select {
+  width: 100%;
+  padding: 12px 20px;
+  border-radius: 14px;
+  border: 2px solid #c2a87a;
+  background: rgba(194, 168, 122, 0.05);
+  color: inherit;
+  font-weight: 700;
+  font-family: inherit;
+  font-size: 1rem;
+  outline: none;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(194, 168, 122, 0.08);
+}
+
+.tafsir-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+  direction: rtl;
+  background: transparent;
+}
+
+.tafsir-page-view {
+  display: flex;
+  flex-direction: column;
+  gap: 35px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.tafsir-surah-header {
+  background: rgba(194, 168, 122, 0.1);
+  padding: 20px;
+  margin: 10px 0;
+  border-radius: 16px;
+  border: 2px solid #c2a87a;
+  text-align: center;
+  box-shadow: 0 4px 15px rgba(194, 168, 122, 0.1);
+}
+
+.tafsir-surah-header .surah-name {
+  font-family: 'Amiri', serif;
+  font-size: 2.2rem;
+  color: #1e293b;
+}
+
+.tafsir-entry {
+  padding: 28px;
+  border-radius: 20px;
+  background: rgba(194, 168, 122, 0.03);
+  border: 1px solid rgba(194, 168, 122, 0.1);
+  transition: all 0.3s ease;
+}
+
+.tafsir-entry.active-verse {
+  background: rgba(194, 168, 122, 0.1);
+  border: 2.5px solid #c2a87a;
+  box-shadow: 0 12px 30px rgba(194, 168, 122, 0.15);
+}
+
+.entry-header {
+  margin-bottom: 25px;
+  padding-bottom: 15px;
+  border-bottom: 1px dashed rgba(194, 168, 122, 0.2);
+}
+
+.verse-badge {
+  display: inline-block;
+  background: #c2a87a;
+  color: #fff;
+  padding: 5px 15px;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: bold;
+  margin-bottom: 15px;
+}
+
+.verse-text.quran-text {
+  font-size: 1.8rem;
+  line-height: 2;
+  color: inherit;
+  text-align: center;
+  font-family: 'Amiri', serif;
+  word-wrap: break-word;
+  word-break: break-word;
+  white-space: normal;
+  max-width: 100%;
+  display: block;
+}
+
+.entry-tafsir-text {
+  font-size: 1.35rem;
+  line-height: 2.3;
+  color: #334155;
+  font-family: 'Amiri', serif;
+}
+
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 0;
+  color: #c2a87a;
+  gap: 20px;
+}
+
+
+@media (max-width: 768px) {
+  .tafsir-page-view {
+    gap: 20px;
+  }
+
+  .tafsir-entry {
+    padding: 20px;
+  }
+
+  .verse-text.quran-text {
+    font-size: 1.5rem;
+  }
+
+  .entry-tafsir-text {
+    font-size: 1.2rem;
+  }
+
+  .tafsir-surah-header .surah-name {
+    font-size: 1.8rem;
+  }
+}
+
+
+/* --- Tafsir Theme Support --- */
+.tafsir-overlay.theme-dark .tafsir-modal {
+  background: #121212;
+  color: #e0e0e0;
+}
+
+.tafsir-overlay.theme-dark .tafsir-header {
+  background: #1a1a1a;
+  border-bottom: 1px solid #333;
+}
+
+.tafsir-overlay.theme-dark .tafsir-controls {
+  background: #1a1a1a;
+  border-bottom: 1px solid #333;
+}
+
+.tafsir-overlay.theme-dark .tafsir-selector select {
+  background: #222;
+  color: #eee;
+  border: 1px solid #444;
+}
+
+.tafsir-overlay.theme-dark .tafsir-surah-header {
+  background: rgba(194, 168, 122, 0.1);
+  color: #c2a87a;
+}
+
+.tafsir-overlay.theme-dark .tafsir-entry {
+  border-bottom: 1px solid #222;
+}
+
+.tafsir-overlay.theme-dark .tafsir-entry.active-verse {
+  background: rgba(194, 168, 122, 0.05);
+  border-right-color: #c2a87a;
+}
+
+.tafsir-overlay.theme-dark .verse-text {
+  color: #fff;
+}
+
+.tafsir-overlay.theme-dark .entry-tafsir-text {
+  color: #bbb;
+}
+
+.tafsir-overlay.theme-cream .tafsir-modal {
+  background: #fdf6e3;
+  color: #5b4636;
+}
+
+.tafsir-overlay.theme-cream .tafsir-header {
+  background: #f5eed9;
+  border-bottom: 1px solid #e6dfc6;
+}
+
+.tafsir-overlay.theme-cream .tafsir-controls {
+  background: #f5eed9;
+  border-bottom: 1px solid #e6dfc6;
+}
+
+.tafsir-overlay.theme-cream .tafsir-selector select {
+  background: #fff;
+  color: #5b4636;
+  border: 1px solid #dcd5be;
+}
+
+.tafsir-overlay.theme-cream .tafsir-surah-header {
+  background: rgba(91, 70, 54, 0.05);
+  color: #5b4636;
+}
+
+.tafsir-overlay.theme-cream .tafsir-entry {
+  border-bottom: 1px solid #ece5cd;
+}
+
+.tafsir-overlay.theme-cream .tafsir-entry.active-verse {
+  background: rgba(91, 70, 54, 0.05);
+  border-right-color: #5b4636;
+}
+
+.tafsir-overlay.theme-cream .verse-text {
+  color: #2c1810;
+}
+
+.tafsir-overlay.theme-cream .entry-tafsir-text {
+  color: #5b4636;
+}
+
+.tafsir-overlay.theme-green .tafsir-modal {
+  background: #f1f8e9;
+  color: #1b5e20;
+}
+
+.tafsir-overlay.theme-green .tafsir-header {
+  background: #e8f5e9;
+  border-bottom: 1px solid #c8e6c9;
+}
+
+.tafsir-overlay.theme-green .tafsir-controls {
+  background: #e8f5e9;
+  border-bottom: 1px solid #c8e6c9;
+}
+
+.tafsir-overlay.theme-green .tafsir-selector select {
+  background: #fff;
+  color: #1b5e20;
+  border: 1px solid #a5d6a7;
+}
+
+.tafsir-overlay.theme-green .tafsir-surah-header {
+  background: rgba(27, 94, 32, 0.05);
+  color: #1b5e20;
+}
+
+.tafsir-overlay.theme-green .tafsir-entry {
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.tafsir-overlay.theme-green .tafsir-entry.active-verse {
+  background: rgba(27, 94, 32, 0.05);
+  border-right-color: #4caf50;
+}
+
+.tafsir-overlay.theme-green .verse-text {
+  color: #000;
+}
+
+.tafsir-overlay.theme-sky .tafsir-modal {
+  background: #f0f4f8;
+  color: #243b53;
+}
+
+.tafsir-overlay.theme-sky .tafsir-header {
+  background: #d9e2ec;
+  border-bottom: 1px solid #bcccdc;
+}
+
+.tafsir-overlay.theme-sky .tafsir-controls {
+  background: #d9e2ec;
+  border-bottom: 1px solid #bcccdc;
+}
+
+.tafsir-overlay.theme-sky .tafsir-selector select {
+  background: #fff;
+  color: #243b53;
+  border: 1px solid #829ab1;
+}
+
+.tafsir-overlay.theme-sky .tafsir-entry.active-verse {
+  background: rgba(36, 59, 83, 0.05);
+  border-right-color: #486581;
+}
+
+.tafsir-overlay.theme-blue .tafsir-modal {
+  background: #0d1b2a;
+  color: #e0e1dd;
+}
+
+.tafsir-overlay.theme-blue .tafsir-header {
+  background: #1b263b;
+  border-bottom: 1px solid #415a77;
+}
+
+.tafsir-overlay.theme-blue .tafsir-controls {
+  background: #1b263b;
+  border-bottom: 1px solid #415a77;
+}
+
+.tafsir-overlay.theme-blue .tafsir-selector select {
+  background: #0d1b2a;
+  color: #e0e1dd;
+  border: 1px solid #415a77;
+}
+
+.tafsir-overlay.theme-blue .tafsir-entry.active-verse {
+  background: rgba(224, 225, 221, 0.05);
+  border-right-color: #778da9;
+}
+
+.tafsir-overlay.theme-blue .verse-text {
+  color: #fff;
+}
+
+.tafsir-overlay.theme-white .tafsir-modal {
+  background: #ffffff;
+  color: #333333;
+}
+
+.tafsir-overlay.theme-white .tafsir-header {
+  background: #f8f9fa;
+  border-bottom: 1px solid #eee;
+}
+
+.tafsir-overlay.theme-white .tafsir-controls {
+  background: #f8f9fa;
+  border-bottom: 1px solid #eee;
+}
+
+.tafsir-overlay.theme-white .tafsir-selector select {
+  background: #fff;
+  color: #333;
+  border: 1px solid #ccc;
+}
+
+.tafsir-overlay.theme-white .tafsir-entry.active-verse {
+  background: #f0f7ff;
+  border-right-color: #007bff;
+}
+
+.tafsir-overlay.theme-white .verse-text {
+  color: #000;
+}
+
+/* Tafsir Header Navigation */
+.page-nav-controls {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  background: rgba(194, 168, 122, 0.1);
+  padding: 3px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(194, 168, 122, 0.2);
+}
+
+.page-title {
+  font-weight: 800;
+  color: #c2a87a;
+  min-width: 90px;
+  text-align: center;
+  font-family: 'Amiri', serif;
+}
+
+.nav-btn {
+  background: transparent;
+  border: none;
+  color: #c2a87a;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.nav-btn:hover:not(:disabled) {
+  background: rgba(194, 168, 122, 0.2);
+}
+
+.nav-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* Sources Toggle Button */
+.sources-toggle-btn {
+  background: #c2a87a;
+  color: white;
+  border: none;
+  padding: 7px 15px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 10px rgba(194, 168, 122, 0.2);
+}
+
+.sources-toggle-btn.active {
+  background: #1e293b;
+}
+
+/* Sources View */
+.tafsir-sources-view {
+  flex: 1;
+  overflow-y: auto;
+  padding: 15px;
+  background: transparent;
+}
+
+
+.sources-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+
+.source-card {
+  background: rgba(194, 168, 122, 0.05);
+  border: 1px solid rgba(194, 168, 122, 0.1);
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: all 0.3s ease;
+}
+
+
+.source-card.selected {
+  border: 2px solid #c2a87a;
+  background: rgba(194, 168, 122, 0.1);
+  box-shadow: 0 8px 25px rgba(194, 168, 122, 0.1);
+}
+
+.source-info h4 {
+  margin: 0 0 3px 0;
+  font-size: 0.95rem;
+  color: #c2a87a;
+}
+
+
+.download-status {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.progress-bar-mini {
+  height: 6px;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-bar-mini .fill {
+  height: 100%;
+  background: #4caf50;
+  transition: width 0.3s ease;
+}
+
+.download-status .pct {
+  font-size: 0.85rem;
+  color: #666;
+  text-align: left;
+  font-family: 'Inter', sans-serif;
+}
+
+.source-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-top: auto;
+}
+
+.source-btn {
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.85rem;
+}
+
+
+.source-btn.download {
+  background: rgba(76, 175, 80, 0.1);
+  color: #2e7d32;
+  border: 1px solid rgba(76, 175, 80, 0.2);
+  flex: 1;
+}
+
+.source-btn.download:hover {
+  background: #2e7d32;
+  color: white;
+}
+
+.source-btn.select {
+  background: #c2a87a;
+  color: white;
+  border: none;
+}
+
+.active-label {
+  color: #2e7d32;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+}
+
+.active-label::before {
+  content: "●";
+  font-size: 1.2rem;
+}
+
+.downloaded-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #4caf50;
+  font-weight: 700;
+  font-size: 0.9rem;
+  background: rgba(76, 175, 80, 0.1);
+  padding: 8px 12px;
+  border-radius: 10px;
+}
+
+.downloaded-check i {
+  font-size: 1.1rem;
+}
+
+/* Theme Adjustments for Dark Mode */
+.tafsir-overlay.theme-dark .source-card {
+  background: #1e1e1e;
+}
+
+.tafsir-overlay.theme-dark .progress-bar-mini {
+  background: #333;
+}
+
+.tafsir-overlay.theme-dark .download-status .pct {
+  color: #aaa;
+}
+
+@media (max-width: 600px) {
+  .sources-list {
+    grid-template-columns: 1fr;
+  }
+
+  .page-nav-controls {
+    gap: 10px;
+    padding: 5px 10px;
+  }
+
+  .page-title {
+    min-width: 70px;
+    font-size: 0.9rem;
+  }
+}
+
+/* Audio Manager Modal Adjustments */
+.audio-manager-modal {
+  width: 100%;
+  height: 100%;
+}
+
+.reciter-management-header {
+  background: rgba(194, 168, 122, 0.05);
+  padding: 12px;
+  border-radius: 12px;
+  margin-bottom: 15px;
+  border: 1px solid rgba(194, 168, 122, 0.1);
+}
+
+
+.current-reciter-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 15px;
+}
+
+.current-reciter-info label {
+  font-size: 0.85rem;
+  color: #c2a87a;
+  font-weight: 500;
+}
+
+.reciter-selector-fancy {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(194, 168, 122, 0.4);
+  border-radius: 12px;
+  padding: 4px 12px;
+  transition: all 0.2s ease;
+}
+
+.reciter-selector-fancy:hover {
+  background: rgba(0, 0, 0, 0.4);
+  border-color: rgba(194, 168, 122, 0.6);
+}
+
+.reciter-selector-fancy select {
+  width: 100%;
+  background: none;
+  border: none;
+  color: #fff;
+  padding: 10px 8px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  line-height: 1.5;
+}
+
+.reciter-selector-fancy select option {
+  background: #1e293b;
+  color: #e2e8f0;
+  padding: 12px 14px;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.mushaf-screen.theme-dark .reciter-selector-fancy {
+  background: rgba(30, 41, 59, 0.6);
+  border-color: rgba(194, 168, 122, 0.4);
+}
+
+.mushaf-screen.theme-dark .reciter-selector-fancy:hover {
+  background: rgba(30, 41, 59, 0.8);
+  border-color: rgba(194, 168, 122, 0.6);
+}
+
+.mushaf-screen.theme-dark .reciter-selector-fancy select {
+  color: #e2e8f0;
+}
+
+.mushaf-screen.theme-dark .reciter-selector-fancy select option {
+  background: #1e293b;
+  color: #e2e8f0;
+}
+
+.download-surah-btn {
+  width: 100%;
+  background: #c2a87a;
+  color: #000;
+  border: none;
+  padding: 10px;
+  border-radius: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+
+.download-surah-btn:disabled {
+  background: #444;
+  color: #888;
+  cursor: not-allowed;
+}
+
+.download-surah-btn:not(:disabled):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(194, 168, 122, 0.3);
+}
+
+.source-card.downloaded {
+  border-color: rgba(76, 175, 80, 0.3);
+}
+
+.surah-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.surah-title .num {
+  background: rgba(194, 168, 122, 0.1);
+  color: #c2a87a;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+
+.loading-infinite {
+  animation: loading-bar 2s infinite linear;
+  width: 50% !important;
+}
+
+@keyframes loading-bar {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(200%);
+  }
+}
+
+.surah-actions-minimal {
+  margin-right: auto;
+  padding-right: 8px;
+}
+
+/* Sidebar Footer & Feedback Styles */
+.sidebar-footer-info {
+  margin-top: auto;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.4);
+  border-top: 1px solid rgba(194, 168, 122, 0.1);
+  text-align: center;
+}
+
+.hadith-quote {
+  font-style: italic;
+  color: #c2a87a;
+  font-size: 0.9rem;
+  margin-bottom: 10px;
+}
+
+.testing-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  background: rgba(255, 68, 68, 0.1);
+  color: #ff4444;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  margin-bottom: 15px;
+}
+
+.feedback-btn {
+  width: 100%;
+  padding: 12px;
+  background: rgba(194, 168, 122, 0.1);
+  border: 1px solid rgba(194, 168, 122, 0.3);
+  color: #c2a87a;
+  border-radius: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+}
+
+.feedback-btn i {
+  font-size: 1.1rem;
+}
+
+.feedback-btn:hover {
+  background: rgba(194, 168, 122, 0.2);
+  transform: translateY(-2px);
+}
+
+/* Scroll Container for Settings Sidebar */
+.settings-scroll-container {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  width: 100%;
+  padding-bottom: 20px;
+  -webkit-overflow-scrolling: touch;
+  /* Smooth scrolling on iOS */
+}
+
+/* Custom Scrollbar for Settings */
+.settings-scroll-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.settings-scroll-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.settings-scroll-container::-webkit-scrollbar-thumb {
+  background-color: rgba(194, 168, 122, 0.3);
+  border-radius: 3px;
+}
+
+/* Padding for default wird content */
+
+
+
+/* Task Done Toast */
+.task-done-toast {
+  position: absolute;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2000;
+  pointer-events: none;
+}
+
+.toast-content {
+  background: #4CAF50;
+  color: white;
+  padding: 12px 24px;
+  border-radius: 30px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+@keyframes bounceIn {
+  0% {
+    transform: translate(-50%, -100px);
+    opacity: 0;
+  }
+
+  60% {
+    transform: translate(-50%, 20px);
+  }
+
+  100% {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.wird-content {
+  padding: 0 15px;
 }

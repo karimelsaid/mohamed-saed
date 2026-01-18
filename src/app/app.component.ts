@@ -11,6 +11,7 @@ import { TutorialService } from './services/tutorial.service';
 import { AppUpdateService } from './services/app-update.service'; // Import AppUpdateService
 import { PushNotificationService } from './services/push-notification.service';
 import { NotificationService } from './services/notification.service';
+import { LocalReminderService } from './services/local-reminder.service';
 import { AuthService } from './auth/auth.service';
 import { StatusBar, Style } from '@capacitor/status-bar'; // Import StatusBar
 import { Subscription, Observable } from 'rxjs';
@@ -59,10 +60,13 @@ export class AppComponent implements OnInit {
     private appUpdateService: AppUpdateService, // Inject AppUpdateService
     private pushService: PushNotificationService, // Inject PushNotificationService
     private notificationService: NotificationService, // Inject NotificationService
+    private localReminderService: LocalReminderService, // Inject LocalReminderService
     private authService: AuthService,
     private mushafAssetService: MushafAssetService
   ) {
     this.initializeApp();
+    // Initialize local reminders (works without server)
+    this.localReminderService.initializeReminders();
     this.isDownloadingAssets$ = this.mushafAssetService.loading$;
     this.downloadProgress$ = this.mushafAssetService.progress$;
     this.downloadMessage$ = this.mushafAssetService.message$;
@@ -114,9 +118,14 @@ export class AppComponent implements OnInit {
     this.router.events.subscribe((event: any) => {
       if (event instanceof NavigationEnd) {
         window.scrollTo(0, 0);
-        this.isMushafPage = event.urlAfterRedirects.includes('/mushaf');
-        // Persist state to allow "Resume Mushaf"
-        localStorage.setItem('last_mushaf_state', this.isMushafPage ? 'mushaf' : 'other');
+
+        // CRITICAL: Do NOT overwrite state if we are just landing!
+        // Only update state if we are navigating to a "real" page (Home or Mushaf)
+        if (event.urlAfterRedirects !== '/' && !event.urlAfterRedirects.includes('landing')) {
+          this.isMushafPage = event.urlAfterRedirects.includes('/mushaf');
+          // Persist state
+          localStorage.setItem('last_mushaf_state', this.isMushafPage ? 'mushaf' : 'home');
+        }
       }
     });
 
@@ -148,12 +157,12 @@ export class AppComponent implements OnInit {
       this.modalConfig = config;
     });
 
-    // Auto-resume Mushaf if it was the last open page
-    const lastState = localStorage.getItem('last_mushaf_state');
-    const currentPath = window.location.pathname;
-    if (lastState === 'mushaf' && (currentPath === '/' || currentPath === '/home' || currentPath === '/index.html')) {
-      this.router.navigate(['/mushaf']);
-    }
+    // Auto-resume Mushaf logic moved to StartupGuard
+    // const lastState = localStorage.getItem('last_mushaf_state');
+    // const currentPath = window.location.pathname;
+    // if (lastState === 'mushaf' && (currentPath === '/' || currentPath === '/home' || currentPath === '/index.html')) {
+    //   this.router.navigate(['/mushaf']);
+    // }
 
     // Global Push Listener for Optimistic Updates
     this.pushService.pushPayload.subscribe((payload: any) => {

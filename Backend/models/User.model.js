@@ -173,7 +173,8 @@ const userSchema = new mongoose.Schema({
       },
       muraja: {
         status: { type: String, enum: ['pending', 'done', 'postponed'], default: 'pending' },
-        pagesCompleted: { type: Number, default: 0 }
+        pagesCompleted: { type: Number, default: 0 },
+        versesCompleted: { type: Number, default: 0 }
       },
       deepMuraja: {
         status: { type: String, enum: ['pending', 'done', 'postponed'], default: 'pending' },

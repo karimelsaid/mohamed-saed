@@ -60,7 +60,10 @@ if (isProduction) {
 }
 
 // Middlewares
-app.use(bodyParser.json());
+app.use(bodyParser.json({ limit: '50mb' }));
+app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
+
+// Request Logger removed as per user request
 
 // إضافة رؤوس Cross-Origin-Opener-Policy و Cross-Origin-Embedder-Policy
 app.use((req, res, next) => {

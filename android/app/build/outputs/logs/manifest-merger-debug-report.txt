@@ -11,18 +11,21 @@ INJECTED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:34:
 	android:name
 		ADDED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:35:13-62
 manifest
-ADDED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:2:1-53:12
-INJECTED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:2:1-53:12
-INJECTED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:2:1-53:12
-INJECTED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:2:1-53:12
+ADDED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:2:1-61:12
+INJECTED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:2:1-61:12
+INJECTED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:2:1-61:12
+INJECTED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:2:1-61:12
 MERGED from [:capacitor-app] D:\My projects\Kenouz\node_modules\@capacitor\app\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:2:1-7:12
 MERGED from [:capacitor-browser] D:\My projects\Kenouz\node_modules\@capacitor\browser\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:2:1-21:12
 MERGED from [:capacitor-dialog] D:\My projects\Kenouz\node_modules\@capacitor\dialog\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:2:1-7:12
 MERGED from [:capacitor-filesystem] D:\My projects\Kenouz\node_modules\@capacitor\filesystem\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:2:1-7:12
+MERGED from [:capacitor-local-notifications] D:\My projects\Kenouz\node_modules\@capacitor\local-notifications\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:2:1-26:12
 MERGED from [:capacitor-push-notifications] D:\My projects\Kenouz\node_modules\@capacitor\push-notifications\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:2:1-17:12
 MERGED from [:capacitor-share] D:\My projects\Kenouz\node_modules\@capacitor\share\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:2:1-7:12
 MERGED from [:capacitor-status-bar] D:\My projects\Kenouz\node_modules\@capacitor\status-bar\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:2:1-7:12
+MERGED from [:capawesome-team-capacitor-android-foreground-service] D:\My projects\Kenouz\node_modules\@capawesome-team\capacitor-android-foreground-service\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:2:1-9:12
 MERGED from [:capawesome-capacitor-app-update] D:\My projects\Kenouz\node_modules\@capawesome\capacitor-app-update\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:2:1-7:12
+MERGED from [:capgo-native-audio] D:\My projects\Kenouz\node_modules\@capgo\native-audio\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:2:1-7:12
 MERGED from [:codetrix-studio-capacitor-google-auth] D:\My projects\Kenouz\node_modules\@codetrix-studio\capacitor-google-auth\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:2:1-10:12
 MERGED from [:capacitor-native-settings] D:\My projects\Kenouz\node_modules\capacitor-native-settings\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:2:1-7:12
 MERGED from [:capacitor-android] D:\My projects\Kenouz\node_modules\@capacitor\android\capacitor\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:2:1-7:12
@@ -50,12 +53,28 @@ MERGED from [androidx.drawerlayout:drawerlayout:1.0.0] C:\Users\karim\.gradle\ca
 MERGED from [androidx.emoji2:emoji2-views-helper:1.3.0] C:\Users\karim\.gradle\caches\8.14\transforms\0edfd9b57a975d171b8c167107585661\transformed\emoji2-views-helper-1.3.0\AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.emoji2:emoji2:1.3.0] C:\Users\karim\.gradle\caches\8.14\transforms\b8a8e3f552e341629781c71cd4940d3f\transformed\emoji2-1.3.0\AndroidManifest.xml:17:1-35:12
 MERGED from [androidx.viewpager:viewpager:1.0.0] C:\Users\karim\.gradle\caches\8.14\transforms\53aaea6a6977562107ba34acdd3c5d3a\transformed\viewpager-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.media3:media3-exoplayer-hls:1.8.0] C:\Users\karim\.gradle\caches\8.14\transforms\f16ae5d02a83c1fe3da5a72c1ee1b1d4\transformed\media3-exoplayer-hls-1.8.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.media3:media3-transformer:1.8.0] C:\Users\karim\.gradle\caches\8.14\transforms\871a2a110ee82e967804628850ac0f24\transformed\media3-transformer-1.8.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.media3:media3-exoplayer:1.8.0] C:\Users\karim\.gradle\caches\8.14\transforms\2efdded63e2f2f757f660bdd580862b0\transformed\media3-exoplayer-1.8.0\AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.media3:media3-session:1.8.0] C:\Users\karim\.gradle\caches\8.14\transforms\49b161049652b87cf5a260205db7d126\transformed\media3-session-1.8.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.media3:media3-effect:1.8.0] C:\Users\karim\.gradle\caches\8.14\transforms\0d47fe002a8207d9e3c92ac4e88819e9\transformed\media3-effect-1.8.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.media3:media3-datasource:1.8.0] C:\Users\karim\.gradle\caches\8.14\transforms\23e8811dc1a743e8b445bddc491e01ea\transformed\media3-datasource-1.8.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.media3:media3-database:1.8.0] C:\Users\karim\.gradle\caches\8.14\transforms\45d6ce75024ee9774cdfe077fe215245\transformed\media3-database-1.8.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.media3:media3-extractor:1.8.0] C:\Users\karim\.gradle\caches\8.14\transforms\49fd900416dc511965a322d5b18ceba7\transformed\media3-extractor-1.8.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.media3:media3-muxer:1.8.0] C:\Users\karim\.gradle\caches\8.14\transforms\987d5622e70d468dc2b0a51838c3016a\transformed\media3-muxer-1.8.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.media3:media3-container:1.8.0] C:\Users\karim\.gradle\caches\8.14\transforms\66f350e56e9d5ea4931577cb1b23d5d0\transformed\media3-container-1.8.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.media3:media3-decoder:1.8.0] C:\Users\karim\.gradle\caches\8.14\transforms\dd0773bf8c990f56b6ca363fca295cb9\transformed\media3-decoder-1.8.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.media3:media3-common:1.8.0] C:\Users\karim\.gradle\caches\8.14\transforms\df4ab81f61b98b2f2c400c13616bc73f\transformed\media3-common-1.8.0\AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.media3:media3-ui:1.8.0] C:\Users\karim\.gradle\caches\8.14\transforms\ef264fbb0025cf04c86052972e8817cf\transformed\media3-ui-1.8.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.recyclerview:recyclerview:1.3.0] C:\Users\karim\.gradle\caches\8.14\transforms\b0d8252a1ecc7b4016dd280bf5edf7b0\transformed\recyclerview-1.3.0\AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.customview:customview:1.0.0] C:\Users\karim\.gradle\caches\8.14\transforms\8d9ad5644bb8b282c0d0bc05fab20f7f\transformed\customview-1.0.0\AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.webkit:webkit:1.12.1] C:\Users\karim\.gradle\caches\8.14\transforms\1d506260a599a8b63b3c44658cc88030\transformed\webkit-1.12.1\AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.browser:browser:1.8.0] C:\Users\karim\.gradle\caches\8.14\transforms\a29e69d6b6aa77c15bf4815fb2a81fda\transformed\browser-1.8.0\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.media:media:1.7.1] C:\Users\karim\.gradle\caches\8.14\transforms\1808df27f145cbb462bb00bc0116fe2e\transformed\media-1.7.1\AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.vectordrawable:vectordrawable-animated:1.1.0] C:\Users\karim\.gradle\caches\8.14\transforms\120f9a6be388d573982bf417791505b4\transformed\vectordrawable-animated-1.1.0\AndroidManifest.xml:17:1-24:12
 MERGED from [androidx.vectordrawable:vectordrawable:1.1.0] C:\Users\karim\.gradle\caches\8.14\transforms\5d4c1219b68a91f986cf16cfe5c686e7\transformed\vectordrawable-1.1.0\AndroidManifest.xml:17:1-24:12
 MERGED from [androidx.activity:activity-ktx:1.9.3] C:\Users\karim\.gradle\caches\8.14\transforms\11f618773ec136d46990736efb0a15c7\transformed\activity-ktx-1.9.3\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.customview:customview-poolingcontainer:1.0.0] C:\Users\karim\.gradle\caches\8.14\transforms\cb6e75cb8207acad76e58338071189c4\transformed\customview-poolingcontainer-1.0.0\AndroidManifest.xml:17:1-23:12
 MERGED from [androidx.core:core-ktx:1.15.0] C:\Users\karim\.gradle\caches\8.14\transforms\7c671f07e854b18d1e5f4adaf2fcbe11\transformed\core-ktx-1.15.0\AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.legacy:legacy-support-core-utils:1.0.0] C:\Users\karim\.gradle\caches\8.14\transforms\61094040b1a00d356a7778c80ec02f13\transformed\legacy-support-core-utils-1.0.0\AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.loader:loader:1.0.0] C:\Users\karim\.gradle\caches\8.14\transforms\4b0b5dd2a58e1136cd6108838b649602\transformed\loader-1.0.0\AndroidManifest.xml:17:1-22:12
@@ -86,6 +105,7 @@ MERGED from [com.google.android.datatransport:transport-backend-cct:3.1.9] C:\Us
 MERGED from [com.google.firebase:firebase-encoders-json:18.0.0] C:\Users\karim\.gradle\caches\8.14\transforms\2dd11869f910812f706e6c6f8f3ef3d3\transformed\firebase-encoders-json-18.0.0\AndroidManifest.xml:15:1-23:12
 MERGED from [com.google.android.datatransport:transport-runtime:3.1.9] C:\Users\karim\.gradle\caches\8.14\transforms\048a03c1c5a1d008018d87da760a72db\transformed\transport-runtime-3.1.9\AndroidManifest.xml:15:1-41:12
 MERGED from [com.google.android.datatransport:transport-api:3.1.0] C:\Users\karim\.gradle\caches\8.14\transforms\8665b15aa75f03cddf68cbfd1655cd41\transformed\transport-api-3.1.0\AndroidManifest.xml:15:1-20:12
+MERGED from [androidx.exifinterface:exifinterface:1.3.6] C:\Users\karim\.gradle\caches\8.14\transforms\d9501b923ca82a048c82a00bbedec8fd\transformed\exifinterface-1.3.6\AndroidManifest.xml:17:1-24:12
 MERGED from [androidx.arch.core:core-runtime:2.2.0] C:\Users\karim\.gradle\caches\8.14\transforms\7973c867820e4e933780d1a21a3487ee\transformed\core-runtime-2.2.0\AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.documentfile:documentfile:1.0.0] C:\Users\karim\.gradle\caches\8.14\transforms\abe176e9770eab3bbbb4309547d61dcb\transformed\documentfile-1.0.0\AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.localbroadcastmanager:localbroadcastmanager:1.0.0] C:\Users\karim\.gradle\caches\8.14\transforms\6a0f031f803e6fc41797e4c1ec7dfcf9\transformed\localbroadcastmanager-1.0.0\AndroidManifest.xml:17:1-22:12
@@ -102,10 +122,12 @@ MERGED from [com.google.android.play:core-common:2.0.3] C:\Users\karim\.gradle\c
 	xmlns:android
 		ADDED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:2:11-69
 application
-ADDED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:4:5-43:19
-INJECTED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:4:5-43:19
+ADDED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:4:5-48:19
+INJECTED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:4:5-48:19
 MERGED from [:capacitor-browser] D:\My projects\Kenouz\node_modules\@capacitor\browser\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:13:5-19:19
 MERGED from [:capacitor-browser] D:\My projects\Kenouz\node_modules\@capacitor\browser\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:13:5-19:19
+MERGED from [:capacitor-local-notifications] D:\My projects\Kenouz\node_modules\@capacitor\local-notifications\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:11:5-24:19
+MERGED from [:capacitor-local-notifications] D:\My projects\Kenouz\node_modules\@capacitor\local-notifications\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:11:5-24:19
 MERGED from [:capacitor-push-notifications] D:\My projects\Kenouz\node_modules\@capacitor\push-notifications\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:7:5-15:19
 MERGED from [:capacitor-push-notifications] D:\My projects\Kenouz\node_modules\@capacitor\push-notifications\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:7:5-15:19
 MERGED from [:capacitor-cordova-android-plugins] D:\My projects\Kenouz\android\capacitor-cordova-android-plugins\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:8:5-9:19
@@ -214,8 +236,16 @@ ADDED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:29:17-
 		ADDED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:29:62-92
 	android:scheme
 		ADDED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:29:23-61
+service#io.capawesome.capacitorjs.plugins.foregroundservice.AndroidForegroundService
+ADDED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:44:9-47:40
+	android:exported
+		ADDED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:47:13-37
+	android:foregroundServiceType
+		ADDED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:46:13-58
+	android:name
+		ADDED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:45:13-104
 uses-permission#android.permission.INTERNET
-ADDED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:47:5-67
+ADDED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:52:5-67
 MERGED from [:codetrix-studio-capacitor-google-auth] D:\My projects\Kenouz\node_modules\@codetrix-studio\capacitor-google-auth\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:8:5-67
 MERGED from [:codetrix-studio-capacitor-google-auth] D:\My projects\Kenouz\node_modules\@codetrix-studio\capacitor-google-auth\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:8:5-67
 MERGED from [com.google.firebase:firebase-installations:17.2.0] C:\Users\karim\.gradle\caches\8.14\transforms\890a7930256ae36f03dba73fe1d966be\transformed\firebase-installations-17.2.0\AndroidManifest.xml:8:5-67
@@ -225,25 +255,47 @@ MERGED from [com.google.android.gms:play-services-cloud-messaging:17.2.0] C:\Use
 MERGED from [com.google.android.datatransport:transport-backend-cct:3.1.9] C:\Users\karim\.gradle\caches\8.14\transforms\47f7f661f8f32de17ab1f25a68b286e5\transformed\transport-backend-cct-3.1.9\AndroidManifest.xml:25:5-67
 MERGED from [com.google.android.datatransport:transport-backend-cct:3.1.9] C:\Users\karim\.gradle\caches\8.14\transforms\47f7f661f8f32de17ab1f25a68b286e5\transformed\transport-backend-cct-3.1.9\AndroidManifest.xml:25:5-67
 	android:name
-		ADDED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:47:22-64
+		ADDED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:52:22-64
 uses-permission#android.permission.POST_NOTIFICATIONS
-ADDED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:48:5-77
+ADDED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:53:5-77
+MERGED from [:capacitor-local-notifications] D:\My projects\Kenouz\node_modules\@capacitor\local-notifications\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:9:5-77
+MERGED from [:capacitor-local-notifications] D:\My projects\Kenouz\node_modules\@capacitor\local-notifications\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:9:5-77
+MERGED from [:capawesome-team-capacitor-android-foreground-service] D:\My projects\Kenouz\node_modules\@capawesome-team\capacitor-android-foreground-service\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:7:5-77
+MERGED from [:capawesome-team-capacitor-android-foreground-service] D:\My projects\Kenouz\node_modules\@capawesome-team\capacitor-android-foreground-service\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:7:5-77
 MERGED from [com.google.firebase:firebase-messaging:24.1.0] C:\Users\karim\.gradle\caches\8.14\transforms\735111fad22e184b1369ee8ea78d5dfc\transformed\firebase-messaging-24.1.0\AndroidManifest.xml:23:5-77
 MERGED from [com.google.firebase:firebase-messaging:24.1.0] C:\Users\karim\.gradle\caches\8.14\transforms\735111fad22e184b1369ee8ea78d5dfc\transformed\firebase-messaging-24.1.0\AndroidManifest.xml:23:5-77
 	android:name
-		ADDED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:48:22-74
+		ADDED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:53:22-74
 uses-permission#android.permission.CAMERA
-ADDED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:49:5-65
+ADDED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:54:5-65
 	android:name
-		ADDED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:49:22-62
+		ADDED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:54:22-62
 uses-permission#android.permission.RECORD_AUDIO
-ADDED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:50:5-71
+ADDED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:55:5-71
 	android:name
-		ADDED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:50:22-68
+		ADDED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:55:22-68
 uses-permission#android.permission.MODIFY_AUDIO_SETTINGS
-ADDED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:51:5-80
+ADDED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:56:5-80
 	android:name
-		ADDED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:51:22-77
+		ADDED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:56:22-77
+uses-permission#android.permission.FOREGROUND_SERVICE
+ADDED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:57:5-77
+	android:name
+		ADDED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:57:22-74
+uses-permission#android.permission.WAKE_LOCK
+ADDED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:58:5-68
+MERGED from [:capacitor-local-notifications] D:\My projects\Kenouz\node_modules\@capacitor\local-notifications\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:8:5-68
+MERGED from [:capacitor-local-notifications] D:\My projects\Kenouz\node_modules\@capacitor\local-notifications\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:8:5-68
+MERGED from [com.google.firebase:firebase-messaging:24.1.0] C:\Users\karim\.gradle\caches\8.14\transforms\735111fad22e184b1369ee8ea78d5dfc\transformed\firebase-messaging-24.1.0\AndroidManifest.xml:24:5-68
+MERGED from [com.google.firebase:firebase-messaging:24.1.0] C:\Users\karim\.gradle\caches\8.14\transforms\735111fad22e184b1369ee8ea78d5dfc\transformed\firebase-messaging-24.1.0\AndroidManifest.xml:24:5-68
+MERGED from [com.google.android.gms:play-services-cloud-messaging:17.2.0] C:\Users\karim\.gradle\caches\8.14\transforms\6c1214dfa9d5776bf5b9db13133e4180\transformed\play-services-cloud-messaging-17.2.0\AndroidManifest.xml:9:5-68
+MERGED from [com.google.android.gms:play-services-cloud-messaging:17.2.0] C:\Users\karim\.gradle\caches\8.14\transforms\6c1214dfa9d5776bf5b9db13133e4180\transformed\play-services-cloud-messaging-17.2.0\AndroidManifest.xml:9:5-68
+	android:name
+		ADDED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:58:22-65
+uses-permission#android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK
+ADDED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:59:5-92
+	android:name
+		ADDED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:59:22-89
 meta-data#android.support.FILE_PROVIDER_PATHS
 ADDED from D:\My projects\Kenouz\android\app\src\main\AndroidManifest.xml:39:13-41:64
 	android:resource
@@ -262,14 +314,20 @@ MERGED from [:capacitor-dialog] D:\My projects\Kenouz\node_modules\@capacitor\di
 MERGED from [:capacitor-dialog] D:\My projects\Kenouz\node_modules\@capacitor\dialog\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:5:5-44
 MERGED from [:capacitor-filesystem] D:\My projects\Kenouz\node_modules\@capacitor\filesystem\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:5:5-44
 MERGED from [:capacitor-filesystem] D:\My projects\Kenouz\node_modules\@capacitor\filesystem\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:5:5-44
+MERGED from [:capacitor-local-notifications] D:\My projects\Kenouz\node_modules\@capacitor\local-notifications\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:5:5-44
+MERGED from [:capacitor-local-notifications] D:\My projects\Kenouz\node_modules\@capacitor\local-notifications\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:5:5-44
 MERGED from [:capacitor-push-notifications] D:\My projects\Kenouz\node_modules\@capacitor\push-notifications\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:5:5-44
 MERGED from [:capacitor-push-notifications] D:\My projects\Kenouz\node_modules\@capacitor\push-notifications\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:5:5-44
 MERGED from [:capacitor-share] D:\My projects\Kenouz\node_modules\@capacitor\share\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:5:5-44
 MERGED from [:capacitor-share] D:\My projects\Kenouz\node_modules\@capacitor\share\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:5:5-44
 MERGED from [:capacitor-status-bar] D:\My projects\Kenouz\node_modules\@capacitor\status-bar\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:5:5-44
 MERGED from [:capacitor-status-bar] D:\My projects\Kenouz\node_modules\@capacitor\status-bar\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:5:5-44
+MERGED from [:capawesome-team-capacitor-android-foreground-service] D:\My projects\Kenouz\node_modules\@capawesome-team\capacitor-android-foreground-service\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:5:5-44
+MERGED from [:capawesome-team-capacitor-android-foreground-service] D:\My projects\Kenouz\node_modules\@capawesome-team\capacitor-android-foreground-service\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:5:5-44
 MERGED from [:capawesome-capacitor-app-update] D:\My projects\Kenouz\node_modules\@capawesome\capacitor-app-update\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:5:5-44
 MERGED from [:capawesome-capacitor-app-update] D:\My projects\Kenouz\node_modules\@capawesome\capacitor-app-update\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:5:5-44
+MERGED from [:capgo-native-audio] D:\My projects\Kenouz\node_modules\@capgo\native-audio\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:5:5-44
+MERGED from [:capgo-native-audio] D:\My projects\Kenouz\node_modules\@capgo\native-audio\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:5:5-44
 MERGED from [:codetrix-studio-capacitor-google-auth] D:\My projects\Kenouz\node_modules\@codetrix-studio\capacitor-google-auth\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:5:5-44
 MERGED from [:codetrix-studio-capacitor-google-auth] D:\My projects\Kenouz\node_modules\@codetrix-studio\capacitor-google-auth\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:5:5-44
 MERGED from [:capacitor-native-settings] D:\My projects\Kenouz\node_modules\capacitor-native-settings\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:5:5-44
@@ -324,18 +382,50 @@ MERGED from [androidx.emoji2:emoji2:1.3.0] C:\Users\karim\.gradle\caches\8.14\tr
 MERGED from [androidx.emoji2:emoji2:1.3.0] C:\Users\karim\.gradle\caches\8.14\transforms\b8a8e3f552e341629781c71cd4940d3f\transformed\emoji2-1.3.0\AndroidManifest.xml:21:5-44
 MERGED from [androidx.viewpager:viewpager:1.0.0] C:\Users\karim\.gradle\caches\8.14\transforms\53aaea6a6977562107ba34acdd3c5d3a\transformed\viewpager-1.0.0\AndroidManifest.xml:20:5-44
 MERGED from [androidx.viewpager:viewpager:1.0.0] C:\Users\karim\.gradle\caches\8.14\transforms\53aaea6a6977562107ba34acdd3c5d3a\transformed\viewpager-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-exoplayer-hls:1.8.0] C:\Users\karim\.gradle\caches\8.14\transforms\f16ae5d02a83c1fe3da5a72c1ee1b1d4\transformed\media3-exoplayer-hls-1.8.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-exoplayer-hls:1.8.0] C:\Users\karim\.gradle\caches\8.14\transforms\f16ae5d02a83c1fe3da5a72c1ee1b1d4\transformed\media3-exoplayer-hls-1.8.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-transformer:1.8.0] C:\Users\karim\.gradle\caches\8.14\transforms\871a2a110ee82e967804628850ac0f24\transformed\media3-transformer-1.8.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-transformer:1.8.0] C:\Users\karim\.gradle\caches\8.14\transforms\871a2a110ee82e967804628850ac0f24\transformed\media3-transformer-1.8.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-exoplayer:1.8.0] C:\Users\karim\.gradle\caches\8.14\transforms\2efdded63e2f2f757f660bdd580862b0\transformed\media3-exoplayer-1.8.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-exoplayer:1.8.0] C:\Users\karim\.gradle\caches\8.14\transforms\2efdded63e2f2f757f660bdd580862b0\transformed\media3-exoplayer-1.8.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-session:1.8.0] C:\Users\karim\.gradle\caches\8.14\transforms\49b161049652b87cf5a260205db7d126\transformed\media3-session-1.8.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-session:1.8.0] C:\Users\karim\.gradle\caches\8.14\transforms\49b161049652b87cf5a260205db7d126\transformed\media3-session-1.8.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-effect:1.8.0] C:\Users\karim\.gradle\caches\8.14\transforms\0d47fe002a8207d9e3c92ac4e88819e9\transformed\media3-effect-1.8.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-effect:1.8.0] C:\Users\karim\.gradle\caches\8.14\transforms\0d47fe002a8207d9e3c92ac4e88819e9\transformed\media3-effect-1.8.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-datasource:1.8.0] C:\Users\karim\.gradle\caches\8.14\transforms\23e8811dc1a743e8b445bddc491e01ea\transformed\media3-datasource-1.8.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-datasource:1.8.0] C:\Users\karim\.gradle\caches\8.14\transforms\23e8811dc1a743e8b445bddc491e01ea\transformed\media3-datasource-1.8.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-database:1.8.0] C:\Users\karim\.gradle\caches\8.14\transforms\45d6ce75024ee9774cdfe077fe215245\transformed\media3-database-1.8.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-database:1.8.0] C:\Users\karim\.gradle\caches\8.14\transforms\45d6ce75024ee9774cdfe077fe215245\transformed\media3-database-1.8.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-extractor:1.8.0] C:\Users\karim\.gradle\caches\8.14\transforms\49fd900416dc511965a322d5b18ceba7\transformed\media3-extractor-1.8.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-extractor:1.8.0] C:\Users\karim\.gradle\caches\8.14\transforms\49fd900416dc511965a322d5b18ceba7\transformed\media3-extractor-1.8.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-muxer:1.8.0] C:\Users\karim\.gradle\caches\8.14\transforms\987d5622e70d468dc2b0a51838c3016a\transformed\media3-muxer-1.8.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-muxer:1.8.0] C:\Users\karim\.gradle\caches\8.14\transforms\987d5622e70d468dc2b0a51838c3016a\transformed\media3-muxer-1.8.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-container:1.8.0] C:\Users\karim\.gradle\caches\8.14\transforms\66f350e56e9d5ea4931577cb1b23d5d0\transformed\media3-container-1.8.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-container:1.8.0] C:\Users\karim\.gradle\caches\8.14\transforms\66f350e56e9d5ea4931577cb1b23d5d0\transformed\media3-container-1.8.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-decoder:1.8.0] C:\Users\karim\.gradle\caches\8.14\transforms\dd0773bf8c990f56b6ca363fca295cb9\transformed\media3-decoder-1.8.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-decoder:1.8.0] C:\Users\karim\.gradle\caches\8.14\transforms\dd0773bf8c990f56b6ca363fca295cb9\transformed\media3-decoder-1.8.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-common:1.8.0] C:\Users\karim\.gradle\caches\8.14\transforms\df4ab81f61b98b2f2c400c13616bc73f\transformed\media3-common-1.8.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-common:1.8.0] C:\Users\karim\.gradle\caches\8.14\transforms\df4ab81f61b98b2f2c400c13616bc73f\transformed\media3-common-1.8.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-ui:1.8.0] C:\Users\karim\.gradle\caches\8.14\transforms\ef264fbb0025cf04c86052972e8817cf\transformed\media3-ui-1.8.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.media3:media3-ui:1.8.0] C:\Users\karim\.gradle\caches\8.14\transforms\ef264fbb0025cf04c86052972e8817cf\transformed\media3-ui-1.8.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.recyclerview:recyclerview:1.3.0] C:\Users\karim\.gradle\caches\8.14\transforms\b0d8252a1ecc7b4016dd280bf5edf7b0\transformed\recyclerview-1.3.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.recyclerview:recyclerview:1.3.0] C:\Users\karim\.gradle\caches\8.14\transforms\b0d8252a1ecc7b4016dd280bf5edf7b0\transformed\recyclerview-1.3.0\AndroidManifest.xml:20:5-44
 MERGED from [androidx.customview:customview:1.0.0] C:\Users\karim\.gradle\caches\8.14\transforms\8d9ad5644bb8b282c0d0bc05fab20f7f\transformed\customview-1.0.0\AndroidManifest.xml:20:5-44
 MERGED from [androidx.customview:customview:1.0.0] C:\Users\karim\.gradle\caches\8.14\transforms\8d9ad5644bb8b282c0d0bc05fab20f7f\transformed\customview-1.0.0\AndroidManifest.xml:20:5-44
 MERGED from [androidx.webkit:webkit:1.12.1] C:\Users\karim\.gradle\caches\8.14\transforms\1d506260a599a8b63b3c44658cc88030\transformed\webkit-1.12.1\AndroidManifest.xml:5:5-44
 MERGED from [androidx.webkit:webkit:1.12.1] C:\Users\karim\.gradle\caches\8.14\transforms\1d506260a599a8b63b3c44658cc88030\transformed\webkit-1.12.1\AndroidManifest.xml:5:5-44
 MERGED from [androidx.browser:browser:1.8.0] C:\Users\karim\.gradle\caches\8.14\transforms\a29e69d6b6aa77c15bf4815fb2a81fda\transformed\browser-1.8.0\AndroidManifest.xml:5:5-44
 MERGED from [androidx.browser:browser:1.8.0] C:\Users\karim\.gradle\caches\8.14\transforms\a29e69d6b6aa77c15bf4815fb2a81fda\transformed\browser-1.8.0\AndroidManifest.xml:5:5-44
+MERGED from [androidx.media:media:1.7.1] C:\Users\karim\.gradle\caches\8.14\transforms\1808df27f145cbb462bb00bc0116fe2e\transformed\media-1.7.1\AndroidManifest.xml:5:5-44
+MERGED from [androidx.media:media:1.7.1] C:\Users\karim\.gradle\caches\8.14\transforms\1808df27f145cbb462bb00bc0116fe2e\transformed\media-1.7.1\AndroidManifest.xml:5:5-44
 MERGED from [androidx.vectordrawable:vectordrawable-animated:1.1.0] C:\Users\karim\.gradle\caches\8.14\transforms\120f9a6be388d573982bf417791505b4\transformed\vectordrawable-animated-1.1.0\AndroidManifest.xml:20:5-22:41
 MERGED from [androidx.vectordrawable:vectordrawable-animated:1.1.0] C:\Users\karim\.gradle\caches\8.14\transforms\120f9a6be388d573982bf417791505b4\transformed\vectordrawable-animated-1.1.0\AndroidManifest.xml:20:5-22:41
 MERGED from [androidx.vectordrawable:vectordrawable:1.1.0] C:\Users\karim\.gradle\caches\8.14\transforms\5d4c1219b68a91f986cf16cfe5c686e7\transformed\vectordrawable-1.1.0\AndroidManifest.xml:20:5-22:41
 MERGED from [androidx.vectordrawable:vectordrawable:1.1.0] C:\Users\karim\.gradle\caches\8.14\transforms\5d4c1219b68a91f986cf16cfe5c686e7\transformed\vectordrawable-1.1.0\AndroidManifest.xml:20:5-22:41
 MERGED from [androidx.activity:activity-ktx:1.9.3] C:\Users\karim\.gradle\caches\8.14\transforms\11f618773ec136d46990736efb0a15c7\transformed\activity-ktx-1.9.3\AndroidManifest.xml:5:5-44
 MERGED from [androidx.activity:activity-ktx:1.9.3] C:\Users\karim\.gradle\caches\8.14\transforms\11f618773ec136d46990736efb0a15c7\transformed\activity-ktx-1.9.3\AndroidManifest.xml:5:5-44
+MERGED from [androidx.customview:customview-poolingcontainer:1.0.0] C:\Users\karim\.gradle\caches\8.14\transforms\cb6e75cb8207acad76e58338071189c4\transformed\customview-poolingcontainer-1.0.0\AndroidManifest.xml:20:5-21:38
+MERGED from [androidx.customview:customview-poolingcontainer:1.0.0] C:\Users\karim\.gradle\caches\8.14\transforms\cb6e75cb8207acad76e58338071189c4\transformed\customview-poolingcontainer-1.0.0\AndroidManifest.xml:20:5-21:38
 MERGED from [androidx.core:core-ktx:1.15.0] C:\Users\karim\.gradle\caches\8.14\transforms\7c671f07e854b18d1e5f4adaf2fcbe11\transformed\core-ktx-1.15.0\AndroidManifest.xml:5:5-44
 MERGED from [androidx.core:core-ktx:1.15.0] C:\Users\karim\.gradle\caches\8.14\transforms\7c671f07e854b18d1e5f4adaf2fcbe11\transformed\core-ktx-1.15.0\AndroidManifest.xml:5:5-44
 MERGED from [androidx.legacy:legacy-support-core-utils:1.0.0] C:\Users\karim\.gradle\caches\8.14\transforms\61094040b1a00d356a7778c80ec02f13\transformed\legacy-support-core-utils-1.0.0\AndroidManifest.xml:20:5-44
@@ -396,6 +486,8 @@ MERGED from [com.google.android.datatransport:transport-runtime:3.1.9] C:\Users\
 MERGED from [com.google.android.datatransport:transport-runtime:3.1.9] C:\Users\karim\.gradle\caches\8.14\transforms\048a03c1c5a1d008018d87da760a72db\transformed\transport-runtime-3.1.9\AndroidManifest.xml:18:5-20:41
 MERGED from [com.google.android.datatransport:transport-api:3.1.0] C:\Users\karim\.gradle\caches\8.14\transforms\8665b15aa75f03cddf68cbfd1655cd41\transformed\transport-api-3.1.0\AndroidManifest.xml:18:5-44
 MERGED from [com.google.android.datatransport:transport-api:3.1.0] C:\Users\karim\.gradle\caches\8.14\transforms\8665b15aa75f03cddf68cbfd1655cd41\transformed\transport-api-3.1.0\AndroidManifest.xml:18:5-44
+MERGED from [androidx.exifinterface:exifinterface:1.3.6] C:\Users\karim\.gradle\caches\8.14\transforms\d9501b923ca82a048c82a00bbedec8fd\transformed\exifinterface-1.3.6\AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.exifinterface:exifinterface:1.3.6] C:\Users\karim\.gradle\caches\8.14\transforms\d9501b923ca82a048c82a00bbedec8fd\transformed\exifinterface-1.3.6\AndroidManifest.xml:20:5-22:41
 MERGED from [androidx.arch.core:core-runtime:2.2.0] C:\Users\karim\.gradle\caches\8.14\transforms\7973c867820e4e933780d1a21a3487ee\transformed\core-runtime-2.2.0\AndroidManifest.xml:20:5-44
 MERGED from [androidx.arch.core:core-runtime:2.2.0] C:\Users\karim\.gradle\caches\8.14\transforms\7973c867820e4e933780d1a21a3487ee\transformed\core-runtime-2.2.0\AndroidManifest.xml:20:5-44
 MERGED from [androidx.documentfile:documentfile:1.0.0] C:\Users\karim\.gradle\caches\8.14\transforms\abe176e9770eab3bbbb4309547d61dcb\transformed\documentfile-1.0.0\AndroidManifest.xml:20:5-44
@@ -432,6 +524,40 @@ ADDED from [:capacitor-browser] D:\My projects\Kenouz\node_modules\@capacitor\br
 		ADDED from [:capacitor-browser] D:\My projects\Kenouz\node_modules\@capacitor\browser\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:18:13-72
 	android:name
 		ADDED from [:capacitor-browser] D:\My projects\Kenouz\node_modules\@capacitor\browser\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:15:13-85
+uses-permission#android.permission.RECEIVE_BOOT_COMPLETED
+ADDED from [:capacitor-local-notifications] D:\My projects\Kenouz\node_modules\@capacitor\local-notifications\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:7:5-81
+	android:name
+		ADDED from [:capacitor-local-notifications] D:\My projects\Kenouz\node_modules\@capacitor\local-notifications\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:7:22-78
+receiver#com.capacitorjs.plugins.localnotifications.TimedNotificationPublisher
+ADDED from [:capacitor-local-notifications] D:\My projects\Kenouz\node_modules\@capacitor\local-notifications\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:12:9-106
+	android:name
+		ADDED from [:capacitor-local-notifications] D:\My projects\Kenouz\node_modules\@capacitor\local-notifications\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:12:19-103
+receiver#com.capacitorjs.plugins.localnotifications.NotificationDismissReceiver
+ADDED from [:capacitor-local-notifications] D:\My projects\Kenouz\node_modules\@capacitor\local-notifications\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:13:9-107
+	android:name
+		ADDED from [:capacitor-local-notifications] D:\My projects\Kenouz\node_modules\@capacitor\local-notifications\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:13:19-104
+receiver#com.capacitorjs.plugins.localnotifications.LocalNotificationRestoreReceiver
+ADDED from [:capacitor-local-notifications] D:\My projects\Kenouz\node_modules\@capacitor\local-notifications\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:14:9-23:20
+	android:exported
+		ADDED from [:capacitor-local-notifications] D:\My projects\Kenouz\node_modules\@capacitor\local-notifications\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:17:13-37
+	android:directBootAware
+		ADDED from [:capacitor-local-notifications] D:\My projects\Kenouz\node_modules\@capacitor\local-notifications\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:16:13-43
+	android:name
+		ADDED from [:capacitor-local-notifications] D:\My projects\Kenouz\node_modules\@capacitor\local-notifications\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:15:13-103
+intent-filter#action:name:android.intent.action.BOOT_COMPLETED+action:name:android.intent.action.LOCKED_BOOT_COMPLETED+action:name:android.intent.action.QUICKBOOT_POWERON
+ADDED from [:capacitor-local-notifications] D:\My projects\Kenouz\node_modules\@capacitor\local-notifications\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:18:13-22:29
+action#android.intent.action.LOCKED_BOOT_COMPLETED
+ADDED from [:capacitor-local-notifications] D:\My projects\Kenouz\node_modules\@capacitor\local-notifications\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:19:17-86
+	android:name
+		ADDED from [:capacitor-local-notifications] D:\My projects\Kenouz\node_modules\@capacitor\local-notifications\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:19:25-83
+action#android.intent.action.BOOT_COMPLETED
+ADDED from [:capacitor-local-notifications] D:\My projects\Kenouz\node_modules\@capacitor\local-notifications\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:20:17-79
+	android:name
+		ADDED from [:capacitor-local-notifications] D:\My projects\Kenouz\node_modules\@capacitor\local-notifications\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:20:25-76
+action#android.intent.action.QUICKBOOT_POWERON
+ADDED from [:capacitor-local-notifications] D:\My projects\Kenouz\node_modules\@capacitor\local-notifications\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:21:17-82
+	android:name
+		ADDED from [:capacitor-local-notifications] D:\My projects\Kenouz\node_modules\@capacitor\local-notifications\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:21:25-79
 service#com.capacitorjs.plugins.pushnotifications.MessagingService
 ADDED from [:capacitor-push-notifications] D:\My projects\Kenouz\node_modules\@capacitor\push-notifications\android\build\intermediates\merged_manifest\debug\processDebugManifest\AndroidManifest.xml:8:9-14:19
 	android:exported
@@ -454,18 +580,16 @@ MERGED from [com.google.firebase:firebase-installations:17.2.0] C:\Users\karim\.
 MERGED from [com.google.firebase:firebase-installations:17.2.0] C:\Users\karim\.gradle\caches\8.14\transforms\890a7930256ae36f03dba73fe1d966be\transformed\firebase-installations-17.2.0\AndroidManifest.xml:7:5-79
 MERGED from [com.google.android.gms:play-services-cloud-messaging:17.2.0] C:\Users\karim\.gradle\caches\8.14\transforms\6c1214dfa9d5776bf5b9db13133e4180\transformed\play-services-cloud-messaging-17.2.0\AndroidManifest.xml:7:5-79
 MERGED from [com.google.android.gms:play-services-cloud-messaging:17.2.0] C:\Users\karim\.gradle\caches\8.14\transforms\6c1214dfa9d5776bf5b9db13133e4180\transformed\play-services-cloud-messaging-17.2.0\AndroidManifest.xml:7:5-79
+MERGED from [androidx.media3:media3-exoplayer:1.8.0] C:\Users\karim\.gradle\caches\8.14\transforms\2efdded63e2f2f757f660bdd580862b0\transformed\media3-exoplayer-1.8.0\AndroidManifest.xml:22:5-79
+MERGED from [androidx.media3:media3-exoplayer:1.8.0] C:\Users\karim\.gradle\caches\8.14\transforms\2efdded63e2f2f757f660bdd580862b0\transformed\media3-exoplayer-1.8.0\AndroidManifest.xml:22:5-79
+MERGED from [androidx.media3:media3-common:1.8.0] C:\Users\karim\.gradle\caches\8.14\transforms\df4ab81f61b98b2f2c400c13616bc73f\transformed\media3-common-1.8.0\AndroidManifest.xml:22:5-79
+MERGED from [androidx.media3:media3-common:1.8.0] C:\Users\karim\.gradle\caches\8.14\transforms\df4ab81f61b98b2f2c400c13616bc73f\transformed\media3-common-1.8.0\AndroidManifest.xml:22:5-79
 MERGED from [com.google.android.datatransport:transport-backend-cct:3.1.9] C:\Users\karim\.gradle\caches\8.14\transforms\47f7f661f8f32de17ab1f25a68b286e5\transformed\transport-backend-cct-3.1.9\AndroidManifest.xml:24:5-79
 MERGED from [com.google.android.datatransport:transport-backend-cct:3.1.9] C:\Users\karim\.gradle\caches\8.14\transforms\47f7f661f8f32de17ab1f25a68b286e5\transformed\transport-backend-cct-3.1.9\AndroidManifest.xml:24:5-79
 MERGED from [com.google.android.datatransport:transport-runtime:3.1.9] C:\Users\karim\.gradle\caches\8.14\transforms\048a03c1c5a1d008018d87da760a72db\transformed\transport-runtime-3.1.9\AndroidManifest.xml:22:5-79
 MERGED from [com.google.android.datatransport:transport-runtime:3.1.9] C:\Users\karim\.gradle\caches\8.14\transforms\048a03c1c5a1d008018d87da760a72db\transformed\transport-runtime-3.1.9\AndroidManifest.xml:22:5-79
 	android:name
 		ADDED from [com.google.firebase:firebase-messaging:24.1.0] C:\Users\karim\.gradle\caches\8.14\transforms\735111fad22e184b1369ee8ea78d5dfc\transformed\firebase-messaging-24.1.0\AndroidManifest.xml:22:22-76
-uses-permission#android.permission.WAKE_LOCK
-ADDED from [com.google.firebase:firebase-messaging:24.1.0] C:\Users\karim\.gradle\caches\8.14\transforms\735111fad22e184b1369ee8ea78d5dfc\transformed\firebase-messaging-24.1.0\AndroidManifest.xml:24:5-68
-MERGED from [com.google.android.gms:play-services-cloud-messaging:17.2.0] C:\Users\karim\.gradle\caches\8.14\transforms\6c1214dfa9d5776bf5b9db13133e4180\transformed\play-services-cloud-messaging-17.2.0\AndroidManifest.xml:9:5-68
-MERGED from [com.google.android.gms:play-services-cloud-messaging:17.2.0] C:\Users\karim\.gradle\caches\8.14\transforms\6c1214dfa9d5776bf5b9db13133e4180\transformed\play-services-cloud-messaging-17.2.0\AndroidManifest.xml:9:5-68
-	android:name
-		ADDED from [com.google.firebase:firebase-messaging:24.1.0] C:\Users\karim\.gradle\caches\8.14\transforms\735111fad22e184b1369ee8ea78d5dfc\transformed\firebase-messaging-24.1.0\AndroidManifest.xml:24:22-65
 uses-permission#com.google.android.c2dm.permission.RECEIVE
 ADDED from [com.google.firebase:firebase-messaging:24.1.0] C:\Users\karim\.gradle\caches\8.14\transforms\735111fad22e184b1369ee8ea78d5dfc\transformed\firebase-messaging-24.1.0\AndroidManifest.xml:26:5-82
 MERGED from [com.google.android.gms:play-services-cloud-messaging:17.2.0] C:\Users\karim\.gradle\caches\8.14\transforms\6c1214dfa9d5776bf5b9db13133e4180\transformed\play-services-cloud-messaging-17.2.0\AndroidManifest.xml:11:5-82

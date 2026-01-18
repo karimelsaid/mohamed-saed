@@ -39,6 +39,12 @@ export class MutabaaTrackerComponent implements OnInit {
 
     ngOnInit() {
         this.loadData();
+
+        // Listen for task updates from other components
+        this.mutabaaService.taskUpdated$.subscribe(() => {
+            console.log('🔄 [MutabaaTracker] Update Notification Received. Reloading...');
+            this.loadData();
+        });
     }
 
     quranProgress: any | null = null; // Store global progress stats

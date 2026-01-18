@@ -1,54 +1,63 @@
 com.kenouz.bookstore2.app-profileinstaller-1.3.1-0 C:\Users\karim\.gradle\caches\8.14\transforms\0dcd57c4a656c1fbe069dac37eaab491\transformed\profileinstaller-1.3.1\res
 com.kenouz.bookstore2.app-emoji2-views-helper-1.3.0-1 C:\Users\karim\.gradle\caches\8.14\transforms\0edfd9b57a975d171b8c167107585661\transformed\emoji2-views-helper-1.3.0\res
 com.kenouz.bookstore2.app-activity-ktx-1.9.3-2 C:\Users\karim\.gradle\caches\8.14\transforms\11f618773ec136d46990736efb0a15c7\transformed\activity-ktx-1.9.3\res
-com.kenouz.bookstore2.app-core-common-2.0.3-3 C:\Users\karim\.gradle\caches\8.14\transforms\1849b55f1a73857dffe94c2d77516326\transformed\core-common-2.0.3\res
-com.kenouz.bookstore2.app-webkit-1.12.1-4 C:\Users\karim\.gradle\caches\8.14\transforms\1d506260a599a8b63b3c44658cc88030\transformed\webkit-1.12.1\res
-com.kenouz.bookstore2.app-firebase-common-21.0.0-5 C:\Users\karim\.gradle\caches\8.14\transforms\1f1eeca9f73104fffdc8ba76ea83b49c\transformed\firebase-common-21.0.0\res
-com.kenouz.bookstore2.app-lifecycle-runtime-ktx-2.6.2-6 C:\Users\karim\.gradle\caches\8.14\transforms\1f8fef9481532cec5f180ad9a1a247e7\transformed\lifecycle-runtime-ktx-2.6.2\res
-com.kenouz.bookstore2.app-lifecycle-viewmodel-2.6.2-7 C:\Users\karim\.gradle\caches\8.14\transforms\2149b0b0c6ec21c63efef76a23e70929\transformed\lifecycle-viewmodel-2.6.2\res
-com.kenouz.bookstore2.app-appcompat-resources-1.7.0-8 C:\Users\karim\.gradle\caches\8.14\transforms\25c6eadbeca7d98523876c5d583008de\transformed\appcompat-resources-1.7.0\res
-com.kenouz.bookstore2.app-core-1.15.0-9 C:\Users\karim\.gradle\caches\8.14\transforms\287781d3f80d1b2d3a38b084152c3635\transformed\core-1.15.0\res
-com.kenouz.bookstore2.app-activity-1.9.3-10 C:\Users\karim\.gradle\caches\8.14\transforms\290dc4ed56610c378dda272708be0288\transformed\activity-1.9.3\res
-com.kenouz.bookstore2.app-savedstate-1.2.1-11 C:\Users\karim\.gradle\caches\8.14\transforms\291e1d06defe1fd02fbc25de74401868\transformed\savedstate-1.2.1\res
-com.kenouz.bookstore2.app-play-services-basement-18.3.0-12 C:\Users\karim\.gradle\caches\8.14\transforms\3e3d4bef3d26d5b4614b184cb71711c9\transformed\play-services-basement-18.3.0\res
-com.kenouz.bookstore2.app-appcompat-1.7.0-13 C:\Users\karim\.gradle\caches\8.14\transforms\3ef57d74d78b52df3d1e74791d585bbc\transformed\appcompat-1.7.0\res
-com.kenouz.bookstore2.app-coordinatorlayout-1.2.0-14 C:\Users\karim\.gradle\caches\8.14\transforms\44bb6b3381ec06f7d2ed0154d2de3e22\transformed\coordinatorlayout-1.2.0\res
-com.kenouz.bookstore2.app-tracing-1.2.0-15 C:\Users\karim\.gradle\caches\8.14\transforms\481189583a522aaf657f8afb3d5174ed\transformed\tracing-1.2.0\res
-com.kenouz.bookstore2.app-lifecycle-livedata-core-2.6.2-16 C:\Users\karim\.gradle\caches\8.14\transforms\582ae46e06fd8f1114c8c2ba7e2ca727\transformed\lifecycle-livedata-core-2.6.2\res
-com.kenouz.bookstore2.app-firebase-messaging-24.1.0-17 C:\Users\karim\.gradle\caches\8.14\transforms\735111fad22e184b1369ee8ea78d5dfc\transformed\firebase-messaging-24.1.0\res
-com.kenouz.bookstore2.app-core-runtime-2.2.0-18 C:\Users\karim\.gradle\caches\8.14\transforms\7973c867820e4e933780d1a21a3487ee\transformed\core-runtime-2.2.0\res
-com.kenouz.bookstore2.app-lifecycle-livedata-2.6.2-19 C:\Users\karim\.gradle\caches\8.14\transforms\7c660fe31b0f05a161b3d17c03191d99\transformed\lifecycle-livedata-2.6.2\res
-com.kenouz.bookstore2.app-core-ktx-1.15.0-20 C:\Users\karim\.gradle\caches\8.14\transforms\7c671f07e854b18d1e5f4adaf2fcbe11\transformed\core-ktx-1.15.0\res
-com.kenouz.bookstore2.app-lifecycle-process-2.6.2-21 C:\Users\karim\.gradle\caches\8.14\transforms\80c0a81b899a1a8c7776048a25bdac6a\transformed\lifecycle-process-2.6.2\res
-com.kenouz.bookstore2.app-annotation-experimental-1.4.1-22 C:\Users\karim\.gradle\caches\8.14\transforms\87a826086f9b9990df60b25f5c3ac852\transformed\annotation-experimental-1.4.1\res
-com.kenouz.bookstore2.app-savedstate-ktx-1.2.1-23 C:\Users\karim\.gradle\caches\8.14\transforms\9700b3372eed47a3368f441027d207f7\transformed\savedstate-ktx-1.2.1\res
-com.kenouz.bookstore2.app-lifecycle-viewmodel-savedstate-2.6.2-24 C:\Users\karim\.gradle\caches\8.14\transforms\9fb6a5893be5c955ec8e7623935cccaf\transformed\lifecycle-viewmodel-savedstate-2.6.2\res
-com.kenouz.bookstore2.app-browser-1.8.0-25 C:\Users\karim\.gradle\caches\8.14\transforms\a29e69d6b6aa77c15bf4815fb2a81fda\transformed\browser-1.8.0\res
-com.kenouz.bookstore2.app-play-services-base-18.0.1-26 C:\Users\karim\.gradle\caches\8.14\transforms\a47d2fd3ff1c0e039fbf3881d18ae290\transformed\play-services-base-18.0.1\res
-com.kenouz.bookstore2.app-core-splashscreen-1.0.1-27 C:\Users\karim\.gradle\caches\8.14\transforms\aa19d00011ab4dea9a5bb9252ff42bb8\transformed\core-splashscreen-1.0.1\res
-com.kenouz.bookstore2.app-lifecycle-viewmodel-ktx-2.6.2-28 C:\Users\karim\.gradle\caches\8.14\transforms\b4a68bb602e506eff3c6f9f2f3a01888\transformed\lifecycle-viewmodel-ktx-2.6.2\res
-com.kenouz.bookstore2.app-emoji2-1.3.0-29 C:\Users\karim\.gradle\caches\8.14\transforms\b8a8e3f552e341629781c71cd4940d3f\transformed\emoji2-1.3.0\res
-com.kenouz.bookstore2.app-play-services-auth-18.1.0-30 C:\Users\karim\.gradle\caches\8.14\transforms\be71402b22d43addd304b5c572477232\transformed\play-services-auth-18.1.0\res
-com.kenouz.bookstore2.app-startup-runtime-1.1.1-31 C:\Users\karim\.gradle\caches\8.14\transforms\c81897e351187d8cdab86951871fc6e0\transformed\startup-runtime-1.1.1\res
-com.kenouz.bookstore2.app-fragment-1.8.4-32 C:\Users\karim\.gradle\caches\8.14\transforms\e07225989cb6b3f2b2f2d62a1b1c01fc\transformed\fragment-1.8.4\res
-com.kenouz.bookstore2.app-lifecycle-runtime-2.6.2-33 C:\Users\karim\.gradle\caches\8.14\transforms\ff82014f7b4f191c14d780ba098d9b32\transformed\lifecycle-runtime-2.6.2\res
-com.kenouz.bookstore2.app-pngs-34 D:\My projects\Kenouz\android\app\build\generated\res\pngs\debug
-com.kenouz.bookstore2.app-res-35 D:\My projects\Kenouz\android\app\build\generated\res\processDebugGoogleServices
-com.kenouz.bookstore2.app-resValues-36 D:\My projects\Kenouz\android\app\build\generated\res\resValues\debug
-com.kenouz.bookstore2.app-packageDebugResources-37 D:\My projects\Kenouz\android\app\build\intermediates\incremental\debug\packageDebugResources\merged.dir
-com.kenouz.bookstore2.app-packageDebugResources-38 D:\My projects\Kenouz\android\app\build\intermediates\incremental\debug\packageDebugResources\stripped.dir
-com.kenouz.bookstore2.app-debug-39 D:\My projects\Kenouz\android\app\build\intermediates\merged_res\debug\mergeDebugResources
-com.kenouz.bookstore2.app-debug-40 D:\My projects\Kenouz\android\app\src\debug\res
-com.kenouz.bookstore2.app-main-41 D:\My projects\Kenouz\android\app\src\main\res
-com.kenouz.bookstore2.app-debug-42 D:\My projects\Kenouz\android\capacitor-cordova-android-plugins\build\intermediates\packaged_res\debug\packageDebugResources
-com.kenouz.bookstore2.app-debug-43 D:\My projects\Kenouz\node_modules\@capacitor\android\capacitor\build\intermediates\packaged_res\debug\packageDebugResources
-com.kenouz.bookstore2.app-debug-44 D:\My projects\Kenouz\node_modules\@capacitor\app\android\build\intermediates\packaged_res\debug\packageDebugResources
-com.kenouz.bookstore2.app-debug-45 D:\My projects\Kenouz\node_modules\@capacitor\browser\android\build\intermediates\packaged_res\debug\packageDebugResources
-com.kenouz.bookstore2.app-debug-46 D:\My projects\Kenouz\node_modules\@capacitor\dialog\android\build\intermediates\packaged_res\debug\packageDebugResources
-com.kenouz.bookstore2.app-debug-47 D:\My projects\Kenouz\node_modules\@capacitor\filesystem\android\build\intermediates\packaged_res\debug\packageDebugResources
-com.kenouz.bookstore2.app-debug-48 D:\My projects\Kenouz\node_modules\@capacitor\push-notifications\android\build\intermediates\packaged_res\debug\packageDebugResources
-com.kenouz.bookstore2.app-debug-49 D:\My projects\Kenouz\node_modules\@capacitor\share\android\build\intermediates\packaged_res\debug\packageDebugResources
-com.kenouz.bookstore2.app-debug-50 D:\My projects\Kenouz\node_modules\@capacitor\status-bar\android\build\intermediates\packaged_res\debug\packageDebugResources
-com.kenouz.bookstore2.app-debug-51 D:\My projects\Kenouz\node_modules\@capawesome\capacitor-app-update\android\build\intermediates\packaged_res\debug\packageDebugResources
-com.kenouz.bookstore2.app-debug-52 D:\My projects\Kenouz\node_modules\@codetrix-studio\capacitor-google-auth\android\build\intermediates\packaged_res\debug\packageDebugResources
-com.kenouz.bookstore2.app-debug-53 D:\My projects\Kenouz\node_modules\capacitor-native-settings\android\build\intermediates\packaged_res\debug\packageDebugResources
+com.kenouz.bookstore2.app-media-1.7.1-3 C:\Users\karim\.gradle\caches\8.14\transforms\1808df27f145cbb462bb00bc0116fe2e\transformed\media-1.7.1\res
+com.kenouz.bookstore2.app-core-common-2.0.3-4 C:\Users\karim\.gradle\caches\8.14\transforms\1849b55f1a73857dffe94c2d77516326\transformed\core-common-2.0.3\res
+com.kenouz.bookstore2.app-webkit-1.12.1-5 C:\Users\karim\.gradle\caches\8.14\transforms\1d506260a599a8b63b3c44658cc88030\transformed\webkit-1.12.1\res
+com.kenouz.bookstore2.app-firebase-common-21.0.0-6 C:\Users\karim\.gradle\caches\8.14\transforms\1f1eeca9f73104fffdc8ba76ea83b49c\transformed\firebase-common-21.0.0\res
+com.kenouz.bookstore2.app-lifecycle-runtime-ktx-2.6.2-7 C:\Users\karim\.gradle\caches\8.14\transforms\1f8fef9481532cec5f180ad9a1a247e7\transformed\lifecycle-runtime-ktx-2.6.2\res
+com.kenouz.bookstore2.app-lifecycle-viewmodel-2.6.2-8 C:\Users\karim\.gradle\caches\8.14\transforms\2149b0b0c6ec21c63efef76a23e70929\transformed\lifecycle-viewmodel-2.6.2\res
+com.kenouz.bookstore2.app-appcompat-resources-1.7.0-9 C:\Users\karim\.gradle\caches\8.14\transforms\25c6eadbeca7d98523876c5d583008de\transformed\appcompat-resources-1.7.0\res
+com.kenouz.bookstore2.app-core-1.15.0-10 C:\Users\karim\.gradle\caches\8.14\transforms\287781d3f80d1b2d3a38b084152c3635\transformed\core-1.15.0\res
+com.kenouz.bookstore2.app-activity-1.9.3-11 C:\Users\karim\.gradle\caches\8.14\transforms\290dc4ed56610c378dda272708be0288\transformed\activity-1.9.3\res
+com.kenouz.bookstore2.app-savedstate-1.2.1-12 C:\Users\karim\.gradle\caches\8.14\transforms\291e1d06defe1fd02fbc25de74401868\transformed\savedstate-1.2.1\res
+com.kenouz.bookstore2.app-media3-exoplayer-1.8.0-13 C:\Users\karim\.gradle\caches\8.14\transforms\2efdded63e2f2f757f660bdd580862b0\transformed\media3-exoplayer-1.8.0\res
+com.kenouz.bookstore2.app-play-services-basement-18.3.0-14 C:\Users\karim\.gradle\caches\8.14\transforms\3e3d4bef3d26d5b4614b184cb71711c9\transformed\play-services-basement-18.3.0\res
+com.kenouz.bookstore2.app-appcompat-1.7.0-15 C:\Users\karim\.gradle\caches\8.14\transforms\3ef57d74d78b52df3d1e74791d585bbc\transformed\appcompat-1.7.0\res
+com.kenouz.bookstore2.app-coordinatorlayout-1.2.0-16 C:\Users\karim\.gradle\caches\8.14\transforms\44bb6b3381ec06f7d2ed0154d2de3e22\transformed\coordinatorlayout-1.2.0\res
+com.kenouz.bookstore2.app-tracing-1.2.0-17 C:\Users\karim\.gradle\caches\8.14\transforms\481189583a522aaf657f8afb3d5174ed\transformed\tracing-1.2.0\res
+com.kenouz.bookstore2.app-media3-session-1.8.0-18 C:\Users\karim\.gradle\caches\8.14\transforms\49b161049652b87cf5a260205db7d126\transformed\media3-session-1.8.0\res
+com.kenouz.bookstore2.app-lifecycle-livedata-core-2.6.2-19 C:\Users\karim\.gradle\caches\8.14\transforms\582ae46e06fd8f1114c8c2ba7e2ca727\transformed\lifecycle-livedata-core-2.6.2\res
+com.kenouz.bookstore2.app-firebase-messaging-24.1.0-20 C:\Users\karim\.gradle\caches\8.14\transforms\735111fad22e184b1369ee8ea78d5dfc\transformed\firebase-messaging-24.1.0\res
+com.kenouz.bookstore2.app-core-runtime-2.2.0-21 C:\Users\karim\.gradle\caches\8.14\transforms\7973c867820e4e933780d1a21a3487ee\transformed\core-runtime-2.2.0\res
+com.kenouz.bookstore2.app-lifecycle-livedata-2.6.2-22 C:\Users\karim\.gradle\caches\8.14\transforms\7c660fe31b0f05a161b3d17c03191d99\transformed\lifecycle-livedata-2.6.2\res
+com.kenouz.bookstore2.app-core-ktx-1.15.0-23 C:\Users\karim\.gradle\caches\8.14\transforms\7c671f07e854b18d1e5f4adaf2fcbe11\transformed\core-ktx-1.15.0\res
+com.kenouz.bookstore2.app-lifecycle-process-2.6.2-24 C:\Users\karim\.gradle\caches\8.14\transforms\80c0a81b899a1a8c7776048a25bdac6a\transformed\lifecycle-process-2.6.2\res
+com.kenouz.bookstore2.app-annotation-experimental-1.4.1-25 C:\Users\karim\.gradle\caches\8.14\transforms\87a826086f9b9990df60b25f5c3ac852\transformed\annotation-experimental-1.4.1\res
+com.kenouz.bookstore2.app-savedstate-ktx-1.2.1-26 C:\Users\karim\.gradle\caches\8.14\transforms\9700b3372eed47a3368f441027d207f7\transformed\savedstate-ktx-1.2.1\res
+com.kenouz.bookstore2.app-lifecycle-viewmodel-savedstate-2.6.2-27 C:\Users\karim\.gradle\caches\8.14\transforms\9fb6a5893be5c955ec8e7623935cccaf\transformed\lifecycle-viewmodel-savedstate-2.6.2\res
+com.kenouz.bookstore2.app-browser-1.8.0-28 C:\Users\karim\.gradle\caches\8.14\transforms\a29e69d6b6aa77c15bf4815fb2a81fda\transformed\browser-1.8.0\res
+com.kenouz.bookstore2.app-play-services-base-18.0.1-29 C:\Users\karim\.gradle\caches\8.14\transforms\a47d2fd3ff1c0e039fbf3881d18ae290\transformed\play-services-base-18.0.1\res
+com.kenouz.bookstore2.app-core-splashscreen-1.0.1-30 C:\Users\karim\.gradle\caches\8.14\transforms\aa19d00011ab4dea9a5bb9252ff42bb8\transformed\core-splashscreen-1.0.1\res
+com.kenouz.bookstore2.app-recyclerview-1.3.0-31 C:\Users\karim\.gradle\caches\8.14\transforms\b0d8252a1ecc7b4016dd280bf5edf7b0\transformed\recyclerview-1.3.0\res
+com.kenouz.bookstore2.app-lifecycle-viewmodel-ktx-2.6.2-32 C:\Users\karim\.gradle\caches\8.14\transforms\b4a68bb602e506eff3c6f9f2f3a01888\transformed\lifecycle-viewmodel-ktx-2.6.2\res
+com.kenouz.bookstore2.app-emoji2-1.3.0-33 C:\Users\karim\.gradle\caches\8.14\transforms\b8a8e3f552e341629781c71cd4940d3f\transformed\emoji2-1.3.0\res
+com.kenouz.bookstore2.app-play-services-auth-18.1.0-34 C:\Users\karim\.gradle\caches\8.14\transforms\be71402b22d43addd304b5c572477232\transformed\play-services-auth-18.1.0\res
+com.kenouz.bookstore2.app-startup-runtime-1.1.1-35 C:\Users\karim\.gradle\caches\8.14\transforms\c81897e351187d8cdab86951871fc6e0\transformed\startup-runtime-1.1.1\res
+com.kenouz.bookstore2.app-customview-poolingcontainer-1.0.0-36 C:\Users\karim\.gradle\caches\8.14\transforms\cb6e75cb8207acad76e58338071189c4\transformed\customview-poolingcontainer-1.0.0\res
+com.kenouz.bookstore2.app-fragment-1.8.4-37 C:\Users\karim\.gradle\caches\8.14\transforms\e07225989cb6b3f2b2f2d62a1b1c01fc\transformed\fragment-1.8.4\res
+com.kenouz.bookstore2.app-media3-ui-1.8.0-38 C:\Users\karim\.gradle\caches\8.14\transforms\ef264fbb0025cf04c86052972e8817cf\transformed\media3-ui-1.8.0\res
+com.kenouz.bookstore2.app-lifecycle-runtime-2.6.2-39 C:\Users\karim\.gradle\caches\8.14\transforms\ff82014f7b4f191c14d780ba098d9b32\transformed\lifecycle-runtime-2.6.2\res
+com.kenouz.bookstore2.app-pngs-40 D:\My projects\Kenouz\android\app\build\generated\res\pngs\debug
+com.kenouz.bookstore2.app-res-41 D:\My projects\Kenouz\android\app\build\generated\res\processDebugGoogleServices
+com.kenouz.bookstore2.app-resValues-42 D:\My projects\Kenouz\android\app\build\generated\res\resValues\debug
+com.kenouz.bookstore2.app-packageDebugResources-43 D:\My projects\Kenouz\android\app\build\intermediates\incremental\debug\packageDebugResources\merged.dir
+com.kenouz.bookstore2.app-packageDebugResources-44 D:\My projects\Kenouz\android\app\build\intermediates\incremental\debug\packageDebugResources\stripped.dir
+com.kenouz.bookstore2.app-debug-45 D:\My projects\Kenouz\android\app\build\intermediates\merged_res\debug\mergeDebugResources
+com.kenouz.bookstore2.app-debug-46 D:\My projects\Kenouz\android\app\src\debug\res
+com.kenouz.bookstore2.app-main-47 D:\My projects\Kenouz\android\app\src\main\res
+com.kenouz.bookstore2.app-debug-48 D:\My projects\Kenouz\android\capacitor-cordova-android-plugins\build\intermediates\packaged_res\debug\packageDebugResources
+com.kenouz.bookstore2.app-debug-49 D:\My projects\Kenouz\node_modules\@capacitor\android\capacitor\build\intermediates\packaged_res\debug\packageDebugResources
+com.kenouz.bookstore2.app-debug-50 D:\My projects\Kenouz\node_modules\@capacitor\app\android\build\intermediates\packaged_res\debug\packageDebugResources
+com.kenouz.bookstore2.app-debug-51 D:\My projects\Kenouz\node_modules\@capacitor\browser\android\build\intermediates\packaged_res\debug\packageDebugResources
+com.kenouz.bookstore2.app-debug-52 D:\My projects\Kenouz\node_modules\@capacitor\dialog\android\build\intermediates\packaged_res\debug\packageDebugResources
+com.kenouz.bookstore2.app-debug-53 D:\My projects\Kenouz\node_modules\@capacitor\filesystem\android\build\intermediates\packaged_res\debug\packageDebugResources
+com.kenouz.bookstore2.app-debug-54 D:\My projects\Kenouz\node_modules\@capacitor\local-notifications\android\build\intermediates\packaged_res\debug\packageDebugResources
+com.kenouz.bookstore2.app-debug-55 D:\My projects\Kenouz\node_modules\@capacitor\push-notifications\android\build\intermediates\packaged_res\debug\packageDebugResources
+com.kenouz.bookstore2.app-debug-56 D:\My projects\Kenouz\node_modules\@capacitor\share\android\build\intermediates\packaged_res\debug\packageDebugResources
+com.kenouz.bookstore2.app-debug-57 D:\My projects\Kenouz\node_modules\@capacitor\status-bar\android\build\intermediates\packaged_res\debug\packageDebugResources
+com.kenouz.bookstore2.app-debug-58 D:\My projects\Kenouz\node_modules\@capawesome-team\capacitor-android-foreground-service\android\build\intermediates\packaged_res\debug\packageDebugResources
+com.kenouz.bookstore2.app-debug-59 D:\My projects\Kenouz\node_modules\@capawesome\capacitor-app-update\android\build\intermediates\packaged_res\debug\packageDebugResources
+com.kenouz.bookstore2.app-debug-60 D:\My projects\Kenouz\node_modules\@capgo\native-audio\android\build\intermediates\packaged_res\debug\packageDebugResources
+com.kenouz.bookstore2.app-debug-61 D:\My projects\Kenouz\node_modules\@codetrix-studio\capacitor-google-auth\android\build\intermediates\packaged_res\debug\packageDebugResources
+com.kenouz.bookstore2.app-debug-62 D:\My projects\Kenouz\node_modules\capacitor-native-settings\android\build\intermediates\packaged_res\debug\packageDebugResources

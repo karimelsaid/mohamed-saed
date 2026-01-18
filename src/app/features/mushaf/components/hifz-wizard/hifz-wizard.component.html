@@ -157,14 +157,14 @@
             <label>🧠 مقدار الحفظ الجديد:</label>
             <div class="capacity-row">
                 <select [(ngModel)]="dailyCapacity.newMemorization" class="capacity-select"
-                    [class.full]="dailyCapacity.newMemorization !== 'verses'">
+                    [class.full]="dailyCapacity.newMemorization === 'verse'">
                     <option value="verse">آية واحدة</option>
                     <option value="verses">عدد آيات</option>
                     <option value="half_page">نصف صفحة</option>
                     <option value="page">صفحة كاملة</option>
                 </select>
-                <input *ngIf="dailyCapacity.newMemorization === 'verses'" type="number"
-                    [(ngModel)]="dailyCapacity.memorizationAmount" min="2" max="100" class="capacity-input">
+                <input *ngIf="dailyCapacity.newMemorization !== 'verse'" type="number"
+                    [(ngModel)]="dailyCapacity.memorizationAmount" min="1" max="100" class="capacity-input">
             </div>
         </div>
 

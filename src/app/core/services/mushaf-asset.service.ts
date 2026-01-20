@@ -18,6 +18,9 @@ export class MushafAssetService {
     private messageSubject = new BehaviorSubject<string>('');
     public message$ = this.messageSubject.asObservable();
 
+    private errorSubject = new BehaviorSubject<string | null>(null);
+    public error$ = this.errorSubject.asObservable();
+
     private totalFiles = 604 + 1 + 2 + 30; // 604 pages + Basmalah + 2 JSONs + 30 juz chunks
     private completedFiles = 0;
 
@@ -94,6 +97,7 @@ export class MushafAssetService {
         this.loadingSubject.next(true);
         this.progressSubject.next(0);
         this.completedFiles = 0;
+        this.errorSubject.next(null); // Clear previous errors
         this.messageSubject.next('بدء تحميل المصحف الشريف...');
 
         try {
@@ -117,7 +121,6 @@ export class MushafAssetService {
             await this.downloadFile('fonts/QCF_BSML.woff2', 'mushaf_assets/fonts/QCF_BSML.woff2');
 
             // 3. Download Page Fonts (1 to 604)
-            // Batch them to avoid hitting connection limits but keep it fast
             const batchSize = 10;
             for (let i = 1; i <= 604; i += batchSize) {
                 const promises = [];
@@ -139,13 +142,13 @@ export class MushafAssetService {
 
             this.messageSubject.next('تم التحميل بنجاح');
             this.progressSubject.next(100);
-
-            // Small delay to let UI show 100%
             await new Promise(resolve => setTimeout(resolve, 500));
 
         } catch (error) {
             console.error('Asset download failed:', error);
-            this.messageSubject.next('حدث خطأ أثناء التحميل. يرجى التحقق من الإنترنت.');
+            const errMsg = 'حدث خطأ أثناء التحميل. يرجى التحقق من الاتصال بالإنترنت والمحاولة مرة أخرى.';
+            this.messageSubject.next(errMsg);
+            this.errorSubject.next(errMsg);
             throw error;
         } finally {
             this.loadingSubject.next(false);

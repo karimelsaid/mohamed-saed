@@ -417,10 +417,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: 4px;
   font-weight: 600;
   min-width: 0;
-  font-size: 0.75rem;
+  font-size: 0.65rem;
   /* Allow center to shrink if needed but maintain layout */
 }
 
@@ -428,8 +428,9 @@
 .page-divider {
   opacity: 0.3;
   font-weight: 300;
-  font-size: 0.5rem;
+  font-size: 0.4rem;
 }
+
 
 .surah-meta,
 .juz-meta,
@@ -587,6 +588,7 @@
   /* FIX: Add padding-top to fill the space above header without moving content up */
   /* 55px header + 10px spacing + safe area */
   padding-top: calc(65px + env(safe-area-inset-top));
+  padding-bottom: calc(10px + env(safe-area-inset-bottom));
 }
 
 .mushaf-slider {
@@ -615,7 +617,7 @@
   /* Allow content to fill more screen space in landscape */
   height: 100%;
   background-color: #f3e7c9;
-  padding: 0 0.1rem 0.6rem;
+  padding: 0 0.1rem calc(20px + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
   position: relative;
@@ -3016,6 +3018,9 @@ input:checked+.slider:before {
   border-radius: 20px;
   width: 100%;
   max-width: 400px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
   animation: modal-content-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -3074,6 +3079,9 @@ input:checked+.slider:before {
 .modal-body {
   padding: 24px 20px;
   text-align: center;
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .modal-message {
@@ -4138,7 +4146,8 @@ input:checked+.slider:before {
 /* Floating Audio Player - Premium Glassmorphism */
 .floating-audio-player {
   position: fixed;
-  bottom: 40px;
+  bottom: clamp(60px, 8vh, 100px);
+  /* Increased from 40px and made flexible */
   left: 50%;
   transform: translateX(-50%);
   width: calc(100% - 20px);
@@ -4201,7 +4210,8 @@ input:checked+.slider:before {
 @media (max-width: 400px) {
   .floating-audio-player {
     width: calc(100% - 16px);
-    bottom: 10px;
+    bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+    /* Raised from 10px and added safe-area */
     border-radius: 12px;
   }
 
@@ -4279,7 +4289,8 @@ input:checked+.slider:before {
   box-shadow: 0 4px 10px rgba(194, 168, 122, 0.3);
 }
 
-.download-btn {
+.download-btn,
+.settings-btn {
   width: 32px;
   height: 32px;
   border-radius: 50%;
@@ -4294,9 +4305,77 @@ input:checked+.slider:before {
   transition: all 0.2s ease;
 }
 
+.settings-btn:hover,
+.download-btn:hover {
+  background: rgba(194, 168, 122, 0.2);
+  transform: scale(1.05);
+}
+
+.download-btn {
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
 .download-btn:hover {
   background: #c2a87a;
   color: #1e293b;
+}
+
+/* Mushaf Download UI Styles & Animations */
+.retry-btn:hover {
+  background: #d4bc8d !important;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(194, 168, 122, 0.4) !important;
+}
+
+.retry-btn:active {
+  transform: translateY(0);
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes shake {
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  25% {
+    transform: translateX(-5px);
+  }
+
+  75% {
+    transform: translateX(5px);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Ensure the player sits above mobile navigation/keyboard hints */
+@media screen and (max-height: 500px) {
+  .floating-audio-player {
+    bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 .download-btn.downloading {
@@ -4881,6 +4960,51 @@ input:checked+.slider:before {
   border-color: #c2a87a;
   font-weight: bold;
   box-shadow: 0 4px 12px rgba(194, 168, 122, 0.3);
+}
+
+.custom-range-controls {
+  margin-top: 20px;
+  background: rgba(194, 168, 122, 0.05);
+  padding: 15px;
+  border-radius: 12px;
+  border: 1px solid rgba(194, 168, 122, 0.1);
+}
+
+.range-row {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 12px;
+}
+
+.range-row:last-child {
+  margin-bottom: 0;
+}
+
+.field-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field-item label {
+  font-size: 0.8rem !important;
+  margin-bottom: 0 !important;
+  opacity: 0.8;
+}
+
+.field-item select {
+  background: #111;
+  border: 1px solid rgba(194, 168, 122, 0.3);
+  color: #fff;
+  padding: 8px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  outline: none;
+}
+
+.field-item select:focus {
+  border-color: #c2a87a;
 }
 
 .number-stepper {

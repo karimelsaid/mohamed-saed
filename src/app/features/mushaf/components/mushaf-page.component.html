@@ -7,37 +7,57 @@
 <!-- Loading Overlay -->
 
 <!-- Loading Overlay -->
-<div class="loading-overlay theme-{{currentTheme}}" *ngIf="assetService.loading$ | async"
+<!-- Loading Overlay -->
+<div class="loading-overlay theme-{{currentTheme}}"
+    *ngIf="(assetService.loading$ | async) || (assetService.error$ | async)"
     style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 99999; 
            background: radial-gradient(circle at center, var(--bg-secondary), var(--bg-primary)); 
            display: flex; flex-direction: column; align-items: center; justify-content: center; direction: rtl; backdrop-filter: blur(15px);">
 
     <div class="loading-content"
-        style="text-align: center; padding: 20px; animation: fadeIn 0.5s ease-out; display: flex; flex-direction: column; align-items: center;">
+        style="text-align: center; padding: 20px; animation: fadeIn 0.5s ease-out; display: flex; flex-direction: column; align-items: center; max-width: 400px;">
         <img src="mushaf-wird.png" alt="المصحف"
-            style="width: 120px; height: auto; margin-bottom: 32px; filter: drop-shadow(0 8px 16px rgba(0,0,0,0.15));">
+            style="width: 180px; height: auto; margin-bottom: 32px; filter: drop-shadow(0 8px 16px rgba(0,0,0,0.15));">
 
-        <div class="spinner-container" style="position: relative; width: 60px; height: 60px; margin: 0 auto 24px;">
-            <div class="spinner"
-                style="border: 3px solid rgba(var(--primary-rgb), 0.1); border-top-color: var(--primary-color); border-radius: 50%; width: 100%; height: 100%; animation: spin 1s linear infinite;">
+        <!-- Spinner or Error Icon -->
+        <div class="status-icon-container"
+            style="position: relative; width: 64px; height: 64px; margin: 0 auto 24px; display: flex; align-items: center; justify-content: center;">
+            <div class="spinner" *ngIf="assetService.loading$ | async"
+                style="border: 3px solid rgba(var(--primary-rgb), 0.1); border-top-color: var(--primary-color); border-radius: 50%; width: 100%; height: 100%; position: absolute; animation: spin 1s linear infinite;">
             </div>
+            <i class="fas fa-exclamation-triangle" *ngIf="assetService.error$ | async"
+                style="font-size: 32px; color: #ef4444; animation: shake 0.5s ease-in-out;"></i>
         </div>
 
         <h3
             style="margin-bottom: 8px; font-size: 1.3em; color: var(--text-primary); font-family: 'Amiri', serif; font-weight: bold;">
-            جاري تجهيز المصحف</h3>
-        <p style="margin-bottom: 20px; font-size: 1em; color: var(--text-secondary);">{{ assetService.message$ | async
-            }}</p>
+            {{ (assetService.error$ | async) ? 'فشل تحميل المصحف' : 'جاري تجهيز المصحف' }}
+        </h3>
 
-        <div class="progress-bar-container"
-            style="width: 240px; height: 6px; background: rgba(0,0,0,0.1); border-radius: 10px; overflow: hidden; margin: 0 auto;">
+        <p style="margin-bottom: 24px; font-size: 1.05em; color: var(--text-secondary); line-height: 1.6;">
+            {{ (assetService.message$ | async) }}
+        </p>
+
+        <!-- Progress Bar (Only during loading) -->
+        <div class="progress-bar-container" *ngIf="assetService.loading$ | async"
+            style="width: 240px; height: 8px; background: rgba(0,0,0,0.1); border-radius: 10px; overflow: hidden; margin: 0 auto;">
             <div class="fill" [style.width.%]="assetService.progress$ | async"
                 style="height: 100%; background: #c2a87a; transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); border-radius: 10px;">
             </div>
         </div>
-        <span
-            style="display: block; margin-top: 10px; font-size: 0.9em; color: var(--text-secondary); font-weight: 500;">{{
-            assetService.progress$ | async }}%</span>
+        <span *ngIf="assetService.loading$ | async"
+            style="display: block; margin-top: 10px; font-size: 0.9em; color: var(--text-secondary); font-weight: 500;">
+            {{ assetService.progress$ | async }}%
+        </span>
+
+        <!-- Retry Button (Only on error) -->
+        <div class="error-actions" *ngIf="assetService.error$ | async"
+            style="display: flex; gap: 12px; margin-top: 10px;">
+            <button class="retry-btn" (click)="assetService.downloadAssets()"
+                style="padding: 12px 32px; background: #c2a87a; color: #1e293b; border: none; border-radius: 12px; font-weight: bold; font-size: 1.1em; cursor: pointer; display: flex; align-items: center; gap: 10px; box-shadow: 0 4px 12px rgba(194, 168, 122, 0.3); transition: all 0.2s ease;">
+                <i class="fas fa-redo"></i> المحاولة مرة أخرى
+            </button>
+        </div>
     </div>
 </div>
 
@@ -491,6 +511,10 @@
                 <button class="header-audio-btn" [class.active]="showAudioPlayer"
                     (click)="$event.stopPropagation(); toggleAudioPlayer()" title="مشغل الصوت">
                     <i class="fas fa-headphones"></i>
+                </button>
+                <button class="header-audio-btn active" [class.active]="showOptionsSheet"
+                    (click)="$event.stopPropagation(); showOptionsSheet = true" title="خيارات الحفظ والمراجعة">
+                    <i class="fas fa-graduation-cap"></i>
                 </button>
             </div>
 
@@ -1052,6 +1076,43 @@
                         (click)="audioSettingsModal.tempRange = 'juz'">الجزء</button>
                     <button [class.active]="audioSettingsModal.tempRange === 'quran'"
                         (click)="audioSettingsModal.tempRange = 'quran'">المصحف</button>
+                    <button [class.active]="audioSettingsModal.tempRange === 'custom'"
+                        (click)="audioSettingsModal.tempRange = 'custom'">نطاق مخصص</button>
+                </div>
+
+                <!-- Custom Range Selection Controls -->
+                <div class="custom-range-controls animate-fade-in" *ngIf="audioSettingsModal.tempRange === 'custom'">
+                    <div class="range-row">
+                        <div class="field-item">
+                            <label>من سورة</label>
+                            <select [(ngModel)]="audioSettingsModal.startSurah"
+                                (change)="updateAudioSettingsAyahLists()">
+                                <option *ngFor="let s of allSurahs" [value]="s.id">{{ s.name }}</option>
+                            </select>
+                        </div>
+                        <div class="field-item">
+                            <label>آية</label>
+                            <select [(ngModel)]="audioSettingsModal.startAyah">
+                                <option *ngFor="let a of audioSettingsModal.availableAyahsForStart" [value]="a">{{ a }}
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="range-row">
+                        <div class="field-item">
+                            <label>إلى سورة</label>
+                            <select [(ngModel)]="audioSettingsModal.endSurah" (change)="updateAudioSettingsAyahLists()">
+                                <option *ngFor="let s of allSurahs" [value]="s.id">{{ s.name }}</option>
+                            </select>
+                        </div>
+                        <div class="field-item">
+                            <label>آية</label>
+                            <select [(ngModel)]="audioSettingsModal.endAyah">
+                                <option *ngFor="let a of audioSettingsModal.availableAyahsForEnd" [value]="a">{{ a }}
+                                </option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -1119,6 +1180,10 @@
             </div>
 
             <div class="playback-controls">
+                <button class="settings-btn" (click)="$event.stopPropagation(); openAudioSettings()"
+                    title="إعدادات التلاوة">
+                    <i class="fas fa-cog"></i>
+                </button>
                 <button class="download-btn" (click)="$event.stopPropagation(); openAudioManager()"
                     title="تحميل السور للاستماع بدون إنترنت">
                     <i class="fas fa-download"></i>
@@ -1156,17 +1221,7 @@
             <div class="header-center-group">
                 <div class="header-main" *ngIf="!showTafsirSources">
                     <div class="page-nav-controls">
-                        <!-- Next Page (+1) Points Left in Mushaf -->
-                        <button class="nav-btn next" (click)="changeTafsirPage(1)" [disabled]="tafsirPageNumber >= 604"
-                            title="الصفحة التالية">
-                            <i class="fas fa-chevron-left"></i>
-                        </button>
                         <span class="page-title">صفحة {{ tafsirPageNumber }}</span>
-                        <!-- Prev Page (-1) Points Right in Mushaf -->
-                        <button class="nav-btn prev" (click)="changeTafsirPage(-1)" [disabled]="tafsirPageNumber <= 1"
-                            title="الصفحة السابقة">
-                            <i class="fas fa-chevron-right"></i>
-                        </button>
                     </div>
                 </div>
 
@@ -1220,7 +1275,10 @@
         </div>
 
         <!-- Content View -->
-        <div class="tafsir-content" *ngIf="!showTafsirSources" [class.loading]="loadingTafsir">
+        <!-- Content View -->
+        <div class="tafsir-content" *ngIf="!showTafsirSources" [class.loading]="loadingTafsir"
+            (touchstart)="onTafsirTouchStart($event)" (touchmove)="onTafsirTouchMove($event)"
+            (touchend)="onTafsirTouchEnd()">
             <div class="loading-state" *ngIf="loadingTafsir">
                 <i class="fas fa-spinner fa-spin"></i>
                 <p>جاري تحميل التفسير...</p>
@@ -1335,7 +1393,8 @@
                 </div>
             </div>
 
-            <div class="tafsir-sources-view" style="display: block;">
+            <div class="tafsir-sources-view" style="display: block; margin-top: 15px;">
+                <h4 style="color: #c2a87a; margin-bottom: 10px;">جميع السور</h4>
                 <div class="sources-list">
                     <div class="source-card" *ngFor="let surah of allSurahs"
                         [class.downloaded]="downloadedSurahs.has(surah.id)">

@@ -5,6 +5,9 @@ import { ForegroundService } from '@capawesome-team/capacitor-android-foreground
 import { Capacitor } from '@capacitor/core';
 import { App } from '@capacitor/app';
 import { NativeAudio } from '@capgo/native-audio';
+import { MediaBridge } from './media-bridge.plugin';
+import { MushafDataService } from './mushaf-data.service';
+import { Filesystem, Directory } from '@capacitor/filesystem';
 
 export interface Reciter {
     id: number;
@@ -30,14 +33,27 @@ export interface PlaybackState {
     repeatGroup: number; // 0 = off, 1, 2, 3...
     currentAyahRepeatCount: number;
     currentGroupRepeatCount: number;
-    playbackRange: 'surah' | 'page' | 'juz' | 'quran' | 'single';
+    playbackRange: 'surah' | 'page' | 'juz' | 'quran' | 'single' | 'custom';
+    specificRange?: { start: string; end: string }; // e.g. { start: "1:1", end: "1:7" }
+    rangeEndVerseKey?: string | null; // e.g. "1:7", the absolute stop boundary
 }
 
 @Injectable({
     providedIn: 'root'
 })
 export class QuranAudioService {
-    private audio = new Audio();
+    private audioPrimary = new Audio();
+    private audioSecondary = new Audio();
+    private activeAudio = this.audioPrimary;
+
+    // Getter to maintain compatibility with existing code using 'this.audio'
+    private get audio(): HTMLAudioElement {
+        return this.activeAudio;
+    }
+
+    private get standbyAudio(): HTMLAudioElement {
+        return this.activeAudio === this.audioPrimary ? this.audioSecondary : this.audioPrimary;
+    }
     private readonly SILENT_SRC = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
     private audioUrlBase = 'https://api.quran.com/api/v4/recitations';
     private qdcAudioUrlBase = 'https://api.quran.com/api/qdc/audio/reciters';
@@ -48,29 +64,73 @@ export class QuranAudioService {
     private userExplicitlyPaused = false;
     private wasInterrupted = false;
 
-    private readonly TIMED_RECITERS = [174, 159, 19, 158, 13, 160, 175, 161, 168]; // Reciters that use surah-level timed segments
+
+    // FIXED: Temporarily disabled Timed Reciters (Gapless) to force Verse-by-Verse playback
+    // This resolves the stuttering/looping issues on Android for Sudais/Shuraim/etc.
+    // ADDED: 174 (Yasser Al-Dossari) for gapless support as it works well with QDC segments
+    private readonly TIMED_RECITERS: number[] = [174, 175]; // Added 175 (Abu Sharida)
     private currentSurahTimings: VerseTiming[] = [];
     private currentTimedReciterId: number | null = null;
     private currentVerseTiming: VerseTiming | null = null;
     private isTimedPlayback = false;
     private lastEndTriggeredVerseKey = '';
     private isPlayingNewAudio = false; // Flag to track if new audio is being loaded
+    private isGaplessTransitioning = false; // Flag to track gapless transitions
+    private lastVerseStartTime = 0; // Track start time to detect rapid loops
     private pendingPlayRequest: { verseKey: string; reciterId: number } | null = null; // Track pending play requests
+
+    // PERFECTION: Precision Clocking and Cross-fade
+    private overlapTimer: any = null;
+    private readonly OVERLAP_TRIGGER_SEC = 0.18; // Hyper-Precise overlap (0.18s)
+    private readonly FADE_DURATION_MS = 400; // Duration of volume fade (Balanced for exit)
+    private readonly PRECISION_INTERVAL_MS = 16; // 60fps check frequency
+
+    // Fallback URLs for reciters with missing/broken specific verse audio on QDC API
+    private readonly RECITER_OVERRIDES: { [key: number]: string } = {
+        19: 'https://everyayah.com/data/Ahmed_ibn_Ali_al-Ajamy_128kbps_ketaballah.net',
+        13: 'https://everyayah.com/data/Ghamadi_40kbps',
+        158: 'https://everyayah.com/data/Ali_Jaber_64kbps', // Corrected from Studio path
+        159: 'https://everyayah.com/data/MaherAlMuaiqly128kbps',
+        174: 'https://everyayah.com/data/Yasser_Ad-Dussary_128kbps',
+        // ID 175 is Abdullah Hamad Abu Sharida on Quran.com, NOT Basfar. Removing incorrect override.
+        168: 'https://everyayah.com/data/Minshawy_Children_128kbps'
+    };
+
+    // Instant Preload State
+    private nextVerseBlobUrl: string | null = null;
+    private nextVerseKey: string | null = null;
 
     private state = new BehaviorSubject<PlaybackState>({
         isPlaying: false,
         currentVerseKey: null,
-        reciterId: 12, // Default: Al-Husary (Muallim)
+        reciterId: 0,
         progress: 0,
         duration: 0,
         isBuffering: false,
-        playbackRate: 1.0,
+        playbackRate: 1,
         repeatAyah: 0,
         repeatGroup: 0,
         currentAyahRepeatCount: 0,
         currentGroupRepeatCount: 0,
-        playbackRange: 'page'
+        playbackRange: 'surah'
     });
+
+    // Flag to force HTML5 Audio usage even on Native platforms (Android/iOS)
+    // NativeAudio has issues on some devices. For now, use HTML5 Audio.
+    // Background playback requires additional native configuration.
+    private readonly FORCE_HTML5_AUDIO = true;
+
+    private get useNativeAudio(): boolean {
+        // Only use native audio if we are on a native platform AND NOT forced to use HTML5
+        return Capacitor.isNativePlatform() && !this.FORCE_HTML5_AUDIO;
+    }
+
+    // Stutter guard and cancellation state
+    private lastPlayCallVerseKey: string = '';
+    private lastPlayCallTime: number = 0;
+    private currentOperationId: number = 0;
+    private activeNativeAssetId: string | null = null;
+
 
     public state$ = this.state.asObservable();
     public get snapshot(): PlaybackState {
@@ -81,12 +141,35 @@ export class QuranAudioService {
     private currentRepeatCount = 0;
     private maxRepeatCount = 1;
 
-    constructor(private http: HttpClient) {
+    constructor(
+        private http: HttpClient,
+        private dataService: MushafDataService
+    ) {
         this.setupMediaSession();
         this.setupAudioListeners();
         this.setupForegroundServiceListeners();
         this.createNotificationChannel();
         this.setupInterruptionHandling();
+        this.setupNativeAudioListeners();
+    }
+
+    private setupNativeAudioListeners() {
+        if (Capacitor.isNativePlatform()) {
+            // Critical: Listen for NativeAudio completion to trigger verse transitions
+            NativeAudio.addListener('complete', (info: { assetId: string }) => {
+                console.log(`[AudioService] NativeAudio complete event for: ${info.assetId}`);
+                // Pass the assetId to handleAudioEnded so it can verify it's the current asset
+                this.handleAudioEnded(info.assetId);
+            });
+
+            // PRODUCTION GRADE: Listen for MediaBridge (Native Player) completion
+            if (Capacitor.getPlatform() === 'android') {
+                MediaBridge.addListener('playbackEnded', (info: any) => {
+                    console.log('[AudioService] MediaBridge playback ended event');
+                    this.handleAudioEnded();
+                });
+            }
+        }
     }
 
     private setupInterruptionHandling() {
@@ -127,7 +210,7 @@ export class QuranAudioService {
                 id: this.CHANNEL_ID,
                 name: 'تلاوة القرآن',
                 description: 'إشعارات تشغيل التلاوة في الخلفية',
-                importance: 2
+                importance: 3 // DEFAULT importance for media playback
             });
             // Initialize Native Audio listeners
             NativeAudio.addListener('complete', (data: { assetId: string }) => {
@@ -154,7 +237,8 @@ export class QuranAudioService {
     }
 
     private async startForegroundService() {
-        if (Capacitor.getPlatform() !== 'android') return;
+        // Skip on web or if it's Android (MediaBridge uses its own native service)
+        if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() === 'android') return;
 
         // Get current info for notification
         const reciterId = this.state.value.reciterId;
@@ -175,7 +259,7 @@ export class QuranAudioService {
                 id: this.foregroundServiceId,
                 body: body,
                 title: title,
-                smallIcon: 'ic_launcher_round', // Fallback to safe icon
+                smallIcon: 'ic_launcher_round',
                 notificationChannelId: this.CHANNEL_ID,
                 buttons: [
                     {
@@ -217,51 +301,61 @@ export class QuranAudioService {
     }
 
     private setupAudioListeners() {
-        this.audio.onplay = () => {
+        this.attachListenersToPlayer(this.audioPrimary);
+        this.attachListenersToPlayer(this.audioSecondary);
+    }
+
+    private attachListenersToPlayer(player: HTMLAudioElement) {
+        player.onplay = () => {
+            if (player !== this.activeAudio) return;
             this.updateState({ isPlaying: true });
             this.startForegroundService();
+            // CRITICAL: Set Media Session playback state for Android background audio
+            if ('mediaSession' in navigator) {
+                navigator.mediaSession.playbackState = 'playing';
+            }
         };
-        this.audio.onpause = async () => {
+        player.onpause = async () => {
+            if (player !== this.activeAudio) return;
             this.updateState({ isPlaying: false });
-
-            // Only attempt auto-resume if it wasn't a user action
-            // ONLY auto-resume HTML5 Audio if we are in TIMED playback mode
-            if (Capacitor.isNativePlatform() && this.isTimedPlayback) {
-                const state = await App.getState();
-                if (!state.isActive) {
-                    console.log('[AudioService] App is backgrounded (Timed). Keeping audio alive...');
-                    setTimeout(() => {
-                        if (this.wasInterrupted && !this.userExplicitlyPaused && this.audio.paused) {
-                            this.audio.play().catch(e => console.warn('Resume failed:', e));
-                        }
-                    }, 1000);
-                }
+            // Set Media Session state to paused
+            if ('mediaSession' in navigator) {
+                navigator.mediaSession.playbackState = 'paused';
             }
         };
 
-        this.audio.onended = () => this.handleAudioEnded();
-        this.audio.ontimeupdate = () => {
-            if (this.audio.playbackRate !== this.state.value.playbackRate) {
-                this.audio.playbackRate = this.state.value.playbackRate;
+        player.onended = () => {
+            if (player !== this.activeAudio) return;
+            this.handleAudioEnded();
+        };
+
+        player.ontimeupdate = () => {
+            if (player !== this.activeAudio) return;
+
+            if (player.playbackRate !== this.state.value.playbackRate) {
+                player.playbackRate = this.state.value.playbackRate;
             }
 
-            let progress = this.audio.currentTime;
-            let duration = this.audio.duration || 0;
+            let progress = player.currentTime;
+            let duration = player.duration || 0;
+
+            // PERFECTION: Start Precision Clock when near end (within 2 seconds)
+            if (duration > 0 && (duration - progress) <= 2.0 && !this.overlapTimer && !this.isGaplessTransitioning) {
+                this.startPrecisionClock(player);
+            }
 
             if (this.isTimedPlayback && this.currentVerseTiming) {
-                const currentTimeMs = this.audio.currentTime * 1000;
+                const currentTimeMs = player.currentTime * 1000;
 
-                // If we passed the end of the segment, trigger handleAudioEnded
-                // Uset strict check without buffer to prevent early cutting
-                if (!this.audio.paused && currentTimeMs >= this.currentVerseTiming.timestamp_to) {
-                    // Double check to avoid erratic triggers
+                // CRITICAL: Ignore updates if we are in the middle of a gapless transition
+                if (!this.isGaplessTransitioning && !player.paused && currentTimeMs >= this.currentVerseTiming.timestamp_to) {
                     if (this.state.value.currentVerseKey === this.currentVerseTiming.verse_key) {
                         this.handleAudioEnded();
                     }
                 }
 
                 // Adjust progress/duration for UI to be verse-relative
-                progress = Math.max(0, this.audio.currentTime - (this.currentVerseTiming.timestamp_from / 1000));
+                progress = Math.max(0, player.currentTime - (this.currentVerseTiming.timestamp_from / 1000));
                 duration = Math.max(0, (this.currentVerseTiming.timestamp_to - this.currentVerseTiming.timestamp_from) / 1000);
             }
 
@@ -274,29 +368,31 @@ export class QuranAudioService {
                 try {
                     navigator.mediaSession.setPositionState({
                         duration: duration,
-                        playbackRate: this.audio.playbackRate,
-                        position: this.audio.currentTime
+                        playbackRate: player.playbackRate,
+                        position: player.currentTime
                     });
                 } catch (e) { /* ignore */ }
             }
         };
-        this.audio.onwaiting = () => {
-            // console.log('[AudioService] Buffering...');
+
+        player.onwaiting = () => {
+            if (player !== this.activeAudio) return;
             this.updateState({ isBuffering: true });
         };
-        this.audio.onplaying = () => {
-            // console.log('[AudioService] Playing...');
+        player.onplaying = () => {
+            if (player !== this.activeAudio) return;
             this.updateState({ isBuffering: false, isPlaying: true });
         };
-        this.audio.oncanplay = () => {
-            // console.log('[AudioService] Can play...');
+        player.oncanplay = () => {
+            if (player !== this.activeAudio) return; // Standby player loads shouldn't update UI buffering
             this.updateState({ isBuffering: false });
         };
-        this.audio.onstalled = () => {
-            // console.warn('[AudioService] Stalled...');
+        player.onstalled = () => {
+            if (player !== this.activeAudio) return;
             this.updateState({ isBuffering: true });
         };
-        this.audio.onerror = (e) => {
+        player.onerror = (e) => {
+            if (player !== this.activeAudio) return;
             console.error('[AudioService] Playback Error:', e);
             this.updateState({ isPlaying: false, isBuffering: false });
         };
@@ -310,28 +406,177 @@ export class QuranAudioService {
         this.updateState(partial);
     }
 
+    private async getLocalUri(verseKey: string, reciterId: number, surahIdOverride?: number): Promise<{ raw: string, converted: string } | null> {
+        if (!Capacitor.isNativePlatform()) return null;
+        try {
+            let surah, ayah;
+            if (verseKey === 'full' && surahIdOverride) {
+                surah = surahIdOverride.toString();
+                ayah = 'full';
+            } else {
+                [surah, ayah] = verseKey.split(':');
+            }
+            const fileName = `audio/${reciterId}/${surah}/${ayah}.mp3`;
+            const result = await Filesystem.getUri({
+                directory: Directory.Data,
+                path: fileName
+            });
+            // Check if file exists
+            try {
+                await Filesystem.stat({
+                    directory: Directory.Data,
+                    path: fileName
+                });
+                return {
+                    raw: result.uri,
+                    converted: Capacitor.convertFileSrc(result.uri)
+                };
+            } catch (e) {
+                return null;
+            }
+        } catch (e) {
+            return null;
+        }
+    }
+
+    private async probeAudioUrl(originalUrl: string): Promise<string | null> {
+        try {
+            // 1. Try Original
+            const res1 = await fetch(originalUrl, { method: 'HEAD' });
+            if (res1.ok && res1.headers.get('content-type')?.includes('audio')) return originalUrl;
+
+            // 2. Try with .mp3 extension if not present
+            if (!originalUrl.endsWith('.mp3')) {
+                const mp3Url = originalUrl.replace(/\.[^/.]+$/, "") + ".mp3"; // replace extension
+                const res2 = await fetch(mp3Url, { method: 'HEAD' });
+                if (res2.ok && res2.headers.get('content-type')?.includes('audio')) return mp3Url;
+            }
+
+            // 3. Try with .m4a extension
+            const m4aUrl = originalUrl.replace(/\.[^/.]+$/, "") + ".m4a";
+            const res3 = await fetch(m4aUrl, { method: 'HEAD' });
+            if (res3.ok && res3.headers.get('content-type')?.includes('audio')) return m4aUrl;
+
+            // 4. Try alternate Miracle CDN
+            // Example: https://everyayah.com/data/AbdulSamad_64kbps_QuranExplorer.Com/001001.mp3
+            // Keeping it simple for now, just logging failure
+            console.error(`[AudioService] All probes failed for ${originalUrl}`);
+            return null;
+        } catch (e) {
+            console.warn('[AudioService] Probe network error, assuming original might work:', e);
+            return originalUrl; // Optimistic fallback
+        }
+    }
+
     async playVerse(verseKey: string, reciterId?: number) {
-        this.userExplicitlyPaused = false;
-        this.wasInterrupted = false;
+        // CRITICAL: Aggressive mutex to prevent NativeAudio hammering
+        if (this.isPlayingNewAudio) {
+            // Already processing - completely ignore this call
+            return;
+        }
+
+        const now = Date.now();
+        const timeDiff = now - this.lastPlayCallTime;
+        console.log(`[AudioService DEBUG] playVerse called: ${verseKey} (Reciter: ${reciterId}), Diff: ${timeDiff}ms, PlayingNew: ${this.isPlayingNewAudio}, CurrentKey: ${this.state.value.currentVerseKey}, IsPlaying: ${this.state.value.isPlaying}`);
+
+        // Extended debounce - prevent rapid re-triggering for same verse (1.5 seconds)
+        if (verseKey === this.lastPlayCallVerseKey && timeDiff < 1500) {
+            console.log(`[AudioService] Debounced rapid play request for ${verseKey}. Diff was ${timeDiff}ms`);
+            return;
+        }
+
+        // If currently playing the same verse, ignore
+        if (this.state.value.currentVerseKey === verseKey && this.state.value.isPlaying) {
+            console.log(`[AudioService] Already playing ${verseKey}, ignoring duplicate request`);
+            return;
+        }
+
+        // Set mutex IMMEDIATELY before any async work
+        this.isPlayingNewAudio = true;
+        this.isGaplessTransitioning = false; // RESET FLAG: Allow new overlap triggers
+        this.lastPlayCallVerseKey = verseKey;
+        this.lastPlayCallTime = now;
+
         const rId = reciterId || this.state.value.reciterId;
         console.log(`[AudioService] Playing Verse: ${verseKey}, Reciter: ${rId}`);
+
+        // Cancel any pending operation
+        this.currentOperationId++;
+        const operationId = this.currentOperationId;
 
         const wasTimed = this.isTimedPlayback;
         const willBeTimed = this.TIMED_RECITERS.includes(rId);
 
-        if (this.isPlayingNewAudio) {
-            console.log(`[AudioService] Audio loading in progress, queueing request for ${verseKey}`);
-            this.pendingPlayRequest = { verseKey, reciterId: rId };
+        // Clear any pending requests - we're handling this one now
+        this.pendingPlayRequest = null;
+
+        // Stop audio only if switching modes or if current audio is still playing
+        if (!willBeTimed || wasTimed !== willBeTimed) {
+            await this.stopAudioCompletely();
+        } else {
+            if (!this.audio.paused) {
+                this.audio.pause();
+            }
+            this.audio.currentTime = 0;
+        }
+
+        // Check if operation was cancelled during stop
+        if (operationId !== this.currentOperationId) {
+            this.isPlayingNewAudio = false;
             return;
         }
 
-        if (!willBeTimed || wasTimed !== willBeTimed) {
-            await this.stopAudioCompletely();
-        }
-
-        this.isPlayingNewAudio = true;
         this.isTimedPlayback = willBeTimed;
         this.lastEndTriggeredVerseKey = '';
+
+        // DUAL PLAYER: CHECK SWAP
+        const isStandbyReady = this.nextVerseKey === verseKey && this.standbyAudio.src;
+
+        if (isStandbyReady) {
+            console.log(`[AudioService] STUDIO SWAP (Cross-fade) to Standby for ${verseKey}`);
+
+            const oldActive = this.activeAudio;
+            this.activeAudio = this.standbyAudio;
+
+            // 1. Fade OUT old player
+            this.fadePlayer(oldActive, 1, 0, this.FADE_DURATION_MS);
+
+            this.updateState({
+                currentVerseKey: verseKey,
+                reciterId: rId,
+                isBuffering: false,
+                currentAyahRepeatCount: 0
+            });
+
+            this.nextVerseKey = null; // Consumed
+
+            if (this.state.value.playbackRate !== 1) this.activeAudio.playbackRate = this.state.value.playbackRate;
+
+            // Update Metadata non-blocking
+            this.updateMediaSessionMetadata(verseKey, rId);
+            this.startForegroundService();
+
+            try {
+                this.activeAudio.currentTime = 0;
+                this.activeAudio.volume = 0; // Start silent for fade in
+                await this.activeAudio.play();
+
+                // 2. Fade IN new player (FAST for punchy start)
+                this.fadePlayer(this.activeAudio, 0, 1, 50);
+
+                this.isPlayingNewAudio = false;
+                this.preloadNextVerse(verseKey, rId); // Trigger next preload on the *new* standby
+                return;
+            } catch (playError) {
+                console.error('[AudioService] Studio swap failed:', playError);
+                // Fallthrough to normal fetch if swap fails
+            }
+        }
+
+        // Standard Load (No Standby Match)
+        console.log('[AudioService] Standard loading (no standby match)...');
+        this.stopPrecisionClock(); // Ensure timer isn't running for random clicks
+        this.activeAudio.volume = 1; // Ensure full volume for fresh starts
 
         this.updateState({ currentVerseKey: verseKey, reciterId: rId, isBuffering: true, currentAyahRepeatCount: 0 });
         this.updateMediaSessionMetadata(verseKey, rId);
@@ -341,139 +586,66 @@ export class QuranAudioService {
             return this.playTimedVerse(verseKey, rId);
         }
 
-        this.currentTimedReciterId = null;
-        this.currentSurahTimings = [];
-
-        try {
-            const audioUrl = await this.getOrFetchAudioUrl(verseKey, rId);
-
-            if (audioUrl) {
-                console.log('[AudioService] Final Audio URL:', audioUrl);
-
-                // BACKGROUND BRIDGE: Use the HTML5 audio element as a "silent bridge"
-                // This keeps the WebView media session ACTIVE in the background.
-                this.audio.src = this.SILENT_SRC;
-                this.audio.loop = true;
-                this.audio.play().catch(() => { });
-
-                // Native Audio Implementation
-                const assetId = `verse_${verseKey.replace(':', '_')}`;
-                try {
-                    const currentKey = this.state.value.currentVerseKey;
-                    if (currentKey) {
-                        const oldId = `verse_${currentKey.replace(':', '_')}`;
-                        if (oldId !== assetId) await NativeAudio.unload({ assetId: oldId });
-                    }
-                } catch (e) { }
-
-                try {
-                    await NativeAudio.preload({
-                        assetId: assetId,
-                        assetPath: audioUrl,
-                        audioChannelNum: 1,
-                        isUrl: true
-                    });
-                } catch (preloadError: any) {
-                    console.warn('Preload warning:', preloadError);
-                }
-
-                await NativeAudio.play({ assetId: assetId });
-
-                const rate = this.state.value.playbackRate;
-                if (rate !== 1.0) {
-                    await NativeAudio.setRate({ assetId, rate }).catch(() => { });
-                }
-
-                this.updateState({ isPlaying: true, isBuffering: false });
-                this.isPlayingNewAudio = false;
-                this.preloadNextVerse(verseKey, rId);
-            } else {
-                this.updateState({ isBuffering: false, isPlaying: false });
-                this.isPlayingNewAudio = false;
-            }
-        } catch (error) {
-            console.error('[AudioService] Native Playback failed:', error);
-            this.updateState({ isBuffering: false, isPlaying: false });
-            this.isPlayingNewAudio = false;
-        }
-
-        if (this.pendingPlayRequest) {
-            const pending = this.pendingPlayRequest;
-            this.pendingPlayRequest = null;
-            this.playVerse(pending.verseKey, pending.reciterId);
-        }
-    }
-
-    private async playVerse_OLD_UNUSED(verseKey: string, reciterId?: number) {
-        const rId = reciterId || this.state.value.reciterId;
-        console.log(`[AudioService] Playing Verse: ${verseKey}, Reciter: ${rId}`);
-
-        const wasTimed = this.isTimedPlayback;
-        const willBeTimed = this.TIMED_RECITERS.includes(rId);
-
-        if (this.isPlayingNewAudio) {
-            console.log(`[AudioService] Audio loading in progress, queueing request for ${verseKey}`);
-            this.pendingPlayRequest = { verseKey, reciterId: rId };
-            return;
-        }
-
-        // Stop audio only if switching modes or if current audio is still playing
-        // For continuous playback of same type, stop immediately without delay
-        if (!willBeTimed || wasTimed !== willBeTimed) {
-            await this.stopAudioCompletely();
-        } else {
-            // For same playback type (non-timed), just pause immediately for faster transition
-            if (!this.audio.paused) {
-                this.audio.pause();
-            }
-            this.audio.currentTime = 0;
-        }
-
-        this.isPlayingNewAudio = true;
-        this.isTimedPlayback = willBeTimed;
-
-        this.lastEndTriggeredVerseKey = '';
-        this.updateState({ currentVerseKey: verseKey, reciterId: rId, isBuffering: true, currentAyahRepeatCount: 0 });
-
-        if (this.isTimedPlayback) {
-            return this.playTimedVerse(verseKey, rId);
-        }
-
         // If switching to non-timed playback, reset surah-level timings
         this.currentTimedReciterId = null;
         this.currentSurahTimings = [];
 
+
         try {
-            const metadataUrl = `${this.audioUrlBase}/${rId}/by_ayah/${verseKey}`;
             const cache = await caches.open(this.CACHE_NAME);
-            const cachedMetadata = await cache.match(metadataUrl);
+
+            // CHECK OVERRIDES FIRST
+            let overrideUrl: string | null = null;
+            if (this.RECITER_OVERRIDES[rId]) {
+                const [surah, ayah] = verseKey.split(':');
+                const paddedSurah = surah.padStart(3, '0');
+                const paddedAyah = ayah.padStart(3, '0');
+                overrideUrl = `${this.RECITER_OVERRIDES[rId]}/${paddedSurah}${paddedAyah}.mp3`;
+                console.log(`[AudioService] Using Override URL for Reciter ${rId}: ${overrideUrl}`);
+            }
 
             let audioData;
-            if (cachedMetadata) {
-                console.log('[AudioService] Found metadata in cache');
-                const response = await cachedMetadata.json();
-                audioData = response?.audio_file || response?.audio || (response?.audio_files && response.audio_files[0]);
+            // If override exists, skip cache/network metadata fetch and go straight to playing
+            if (overrideUrl) {
+                audioData = { url: overrideUrl };
             } else {
-                // Fetch from network
-                const response = await firstValueFrom(
-                    this.http.get<any>(metadataUrl).pipe(
-                        timeout(12000),
-                        catchError(err => {
-                            console.error('[AudioService] Request timed out or failed:', err);
-                            return of(null);
-                        })
-                    )
-                );
+                const metadataUrl = `${this.audioUrlBase}/${rId}/by_ayah/${verseKey}`;
+                const cachedMetadata = await cache.match(metadataUrl);
 
-                if (!response) {
-                    console.warn('[AudioService] Empty response or timeout');
-                    this.updateState({ isBuffering: false, isPlaying: false });
-                    return;
+                // Operation check
+                if (operationId !== this.currentOperationId) return;
+
+                if (cachedMetadata) {
+                    console.log('[AudioService] Found metadata in cache');
+                    const response = await cachedMetadata.json();
+                    audioData = response?.audio_file || response?.audio || (response?.audio_files && response.audio_files[0]);
+                } else {
+                    // Fetch from network
+                    const response = await firstValueFrom(
+                        this.http.get<any>(metadataUrl).pipe(
+                            timeout(12000),
+                            catchError(err => {
+                                console.error('[AudioService] Request timed out or failed:', err);
+                                return of(null);
+                            })
+                        )
+                    );
+
+                    if (operationId !== this.currentOperationId) return;
+
+                    if (!response) {
+                        console.warn('[AudioService] Empty response or timeout');
+                        // Fallback logic could go here too if we wanted to auto-retry with overrides, 
+                        // but overrides are checked first now.
+                        this.updateState({ isBuffering: false, isPlaying: false });
+                        this.isPlayingNewAudio = false;
+                        return;
+                    }
+                    audioData = response?.audio_file || response?.audio || (response?.audio_files && response.audio_files[0]);
+
+                    // Optional: cache individual metadata for future
+                    try { cache.put(metadataUrl, new Response(JSON.stringify(response))); } catch (e) { }
                 }
-                audioData = response?.audio_file || response?.audio || (response?.audio_files && response.audio_files[0]);
-
-                // Optional: cache individual metadata for future
-                try { cache.put(metadataUrl, new Response(JSON.stringify(response))); } catch (e) { }
             }
 
             if (audioData?.url) {
@@ -481,15 +653,126 @@ export class QuranAudioService {
                 if (audioUrl.startsWith('//')) {
                     audioUrl = `https:${audioUrl}`;
                 } else if (!audioUrl.startsWith('http')) {
-                    // Priority 1: audio.qurancdn.com (Works for Alafasy)
-                    // Priority 2: download.quranicaudio.com/quran/ (Traditional fallback)
                     audioUrl = `https://audio.qurancdn.com/${audioUrl}`;
                 }
 
+                // Check and Probe URL for 404s
+                const validUrl = await this.probeAudioUrl(audioUrl);
+                if (!validUrl) {
+                    console.warn(`[AudioService] Probe failed for ${audioUrl} (Reciter: ${rId})`);
+                    this.updateState({ isBuffering: false, isPlaying: false });
+                    this.isPlayingNewAudio = false;
+                    return;
+                }
+                audioUrl = validUrl;
+
                 console.log('[AudioService] Final Audio URL:', audioUrl);
 
-                // Check for cached audio file
+                // NATIVE OFFLINE CHECK: Check if file exists in filesystem
+                const localResult = await this.getLocalUri(verseKey, rId);
+                if (localResult) {
+                    console.log('[AudioService] Found LOCAL file:', localResult.raw);
+                    // For Android Native, pass the RAW file:// URI
+                    // For fallback/other platforms, use converted
+                    audioUrl = Capacitor.getPlatform() === 'android' ? localResult.raw : localResult.converted;
+                }
+
+                // PRODUCTION GRADE: Use Native MediaBridge for Android to support reliable background audio
+                if (Capacitor.getPlatform() === 'android') {
+                    console.log('[AudioService] Using Native MediaBridge for Android');
+
+                    // SILENCE HTML5 Audio to save battery/CPU, but don't clear SRC yet
+                    // Clearing SRC might trigger extra events we don't want
+                    this.audio.pause();
+                    this.standbyAudio.pause();
+
+                    const reciters = await firstValueFrom(this.getReciters());
+                    const reciterName = reciters.find(r => r.id === rId)?.name || 'القارئ';
+
+                    // Get actual Surah name
+                    const surahId = parseInt(verseKey.split(':')[0]);
+                    const surahMeta = await firstValueFrom(this.dataService.getMetadata().pipe(
+                        map(meta => meta.surahs.find(s => s.id === surahId))
+                    ));
+                    const surahName = surahMeta?.name || `سورة ${surahId}`;
+                    const title = `${surahName} - الآية ${verseKey.split(':')[1]}`;
+
+                    try {
+                        await MediaBridge.play({
+                            url: audioUrl,
+                            title: title,
+                            artist: reciterName
+                        });
+
+                        this.updateState({ isPlaying: true, isBuffering: false });
+                        this.isPlayingNewAudio = false;
+
+                        // We still use currentVerseKey for UI tracking
+                        this.preloadNextVerse(verseKey, rId);
+                        return;
+                    } catch (bridgeError) {
+                        console.error('[AudioService] MediaBridge play failed, falling back to HTML5:', bridgeError);
+                        // Fallback to HTML5 if bridge fails
+                        this.audio.src = localResult?.converted || audioUrl;
+                        this.audio.play();
+                    }
+                }
+
+                // Use the getter to determine if we should use Native Audio or fallback to HTML5
+                if (this.useNativeAudio) {
+                    const assetId = `verse_${verseKey.replace(':', '_')}`;
+
+                    // Unload previous assets to prevent memory leaks
+                    if (this.activeNativeAssetId && this.activeNativeAssetId !== assetId) {
+                        await NativeAudio.stop({ assetId: this.activeNativeAssetId }).catch(() => { });
+                        await NativeAudio.unload({ assetId: this.activeNativeAssetId }).catch(() => { });
+                    }
+                    this.activeNativeAssetId = assetId;
+
+                    if (operationId !== this.currentOperationId) {
+                        this.isPlayingNewAudio = false;
+                        return;
+                    }
+
+                    try {
+                        await NativeAudio.preload({
+                            assetId,
+                            assetPath: audioUrl,
+                            audioChannelNum: 1,
+                            isUrl: true
+                        });
+
+                        if (operationId !== this.currentOperationId) {
+                            await NativeAudio.unload({ assetId }).catch(() => { });
+                            this.isPlayingNewAudio = false;
+                            return;
+                        }
+
+
+                        // Play the audio
+                        this.lastVerseStartTime = Date.now();
+                        await NativeAudio.play({ assetId });
+                        await this.startForegroundService();
+                        this.updateState({ isPlaying: true, isBuffering: false });
+                        this.isPlayingNewAudio = false;
+                        this.preloadNextVerse(verseKey, rId);
+
+                    } catch (nativeError) {
+                        console.error('[AudioService] Native Audio failed:', nativeError);
+                        this.updateState({ isBuffering: false, isPlaying: false });
+                        this.isPlayingNewAudio = false;
+                    }
+                    this.isPlayingNewAudio = false;
+                    return;
+                }
+
+                // Check for cached audio file (Web/Standard)
                 const cachedAudio = await cache.match(audioUrl);
+                if (operationId !== this.currentOperationId) {
+                    this.isPlayingNewAudio = false;
+                    return;
+                }
+
                 if (cachedAudio) {
                     console.log('[AudioService] Playing from cache!');
                     const blob = await cachedAudio.blob();
@@ -509,63 +792,39 @@ export class QuranAudioService {
                 }
 
                 this.audio.load();
-                this.audio.playbackRate = this.state.value.playbackRate;
+                if (this.state.value.playbackRate !== 1) {
+                    this.audio.playbackRate = this.state.value.playbackRate;
+                }
 
                 // Wait for audio to be ready for smoother playback
-                // But don't wait too long to avoid blocking
-                await new Promise<void>((resolve) => {
-                    if (this.audio.readyState >= 3) { // HAVE_FUTURE_DATA or higher
-                        resolve();
-                        return;
-                    }
-                    const canPlayHandler = () => {
-                        this.audio.removeEventListener('canplay', canPlayHandler);
-                        resolve();
-                    };
-                    this.audio.addEventListener('canplay', canPlayHandler);
+                await this.waitForAudioReady().catch(e => console.warn('Audio wait timeout:', e));
 
-                    // Timeout after 500ms to not block if metadata takes too long
-                    setTimeout(() => {
-                        this.audio.removeEventListener('canplay', canPlayHandler);
-                        resolve();
-                    }, 500);
-                });
+                if (operationId !== this.currentOperationId) {
+                    this.isPlayingNewAudio = false;
+                    return;
+                }
 
                 try {
+                    // CRITICAL: Start Foreground Service BEFORE audio.play() for Android background support
+                    await this.startForegroundService();
                     await this.audio.play();
                     console.log('[AudioService] Playback started successfully');
                     this.isPlayingNewAudio = false;
-
-                    // Check if there's a pending request (e.g., reciter was changed during load)
-                    if (this.pendingPlayRequest) {
-                        const pending = this.pendingPlayRequest;
-                        this.pendingPlayRequest = null;
-                        setTimeout(() => this.playVerse(pending.verseKey, pending.reciterId), 100);
-                    }
                 } catch (playError) {
                     console.error('[AudioService] Playback failed/blocked:', playError);
                     this.isPlayingNewAudio = false;
-                    // If it's a 404 and we used the new CDN, try the old fallback
-                    if (this.audio.src.includes('audio.qurancdn.com') && !this.isTimedPlayback) {
-                        const fallbackUrl = this.audio.src.replace('audio.qurancdn.com', 'download.quranicaudio.com/quran');
-                        console.log('[AudioService] Retrying with fallback URL:', fallbackUrl);
-                        this.audio.src = fallbackUrl;
-                        this.audio.load();
-                        this.audio.play().catch(e => {
-                            console.error('[AudioService] Fallback also failed:', e);
-                            this.isPlayingNewAudio = false;
-                        });
-                    } else {
-                        this.updateState({ isPlaying: false, isBuffering: false });
-                    }
+                    this.updateState({ isPlaying: false, isBuffering: false });
                 }
             } else {
-                console.warn('[AudioService] No audio URL found');
+                console.warn(`[AudioService] No audio URL found for ${rId}/${verseKey}`);
+                if (audioData) {
+                    console.error('[AudioService] Invalid Audio Data structure:', audioData);
+                }
                 this.updateState({ isBuffering: false, isPlaying: false });
                 this.isPlayingNewAudio = false;
             }
         } catch (error) {
-            console.error('[AudioService] Error in playVerse:', error);
+            console.error(`[AudioService] Error in playVerse for ${verseKey}:`, error);
             this.updateState({ isBuffering: false, isPlaying: false });
             this.isPlayingNewAudio = false;
         }
@@ -573,69 +832,90 @@ export class QuranAudioService {
 
     async pause() {
         this.userExplicitlyPaused = true;
-        this.updateState({ isPlaying: false });
-        if (Capacitor.isNativePlatform()) {
-            const assetId = `verse_${this.state.value.currentVerseKey?.replace(':', '_')}`;
-            await NativeAudio.pause({ assetId }).catch(() => { });
+
+        if (Capacitor.getPlatform() === 'android') {
+            MediaBridge.pause().catch(() => { });
+        }
+
+        if (this.useNativeAudio) {
+            if (this.activeNativeAssetId) {
+                NativeAudio.stop({ assetId: this.activeNativeAssetId }).catch(e => console.warn('Native pause (stop) failed', e));
+            }
         } else {
             this.audio.pause();
         }
-        await this.stopForegroundService();
+
+        this.updateState({ isPlaying: false });
+        this.stopForegroundService();
     }
 
     async resume() {
         this.userExplicitlyPaused = false;
-        if (Capacitor.isNativePlatform()) {
-            const assetId = `verse_${this.state.value.currentVerseKey?.replace(':', '_')}`;
-            await NativeAudio.resume({ assetId }).catch(async () => {
-                // If resume fails, try re-playing
-                if (this.state.value.currentVerseKey) {
-                    await this.playVerse(this.state.value.currentVerseKey);
-                }
-            });
-            this.updateState({ isPlaying: true });
-        } else if (this.audio.src) {
-            this.audio.play();
+
+        if (Capacitor.getPlatform() === 'android') {
+            MediaBridge.resume().catch(() => { });
         }
-        await this.startForegroundService();
+
+        if (this.useNativeAudio) {
+            if (this.activeNativeAssetId) {
+                NativeAudio.play({ assetId: this.activeNativeAssetId }).catch(e => console.warn('Native resume (play) failed', e));
+            } else {
+                if (this.state.value.currentVerseKey) {
+                    this.playVerse(this.state.value.currentVerseKey);
+                }
+            }
+        } else {
+            this.audio.play().catch(e => console.error('Resume failed:', e));
+        }
+
+        this.startForegroundService();
+        this.updateState({ isPlaying: true });
     }
 
-    async stop() {
+    stop() {
         this.userExplicitlyPaused = true;
-        await this.stopAudioCompletely();
-        this.updateState({ isPlaying: false, currentVerseKey: null });
+        this.currentOperationId++;
+        this.isPlayingNewAudio = false; // Force release lock
+        this.lastPlayCallVerseKey = ''; // Allow immediate replay
+
+        if (Capacitor.getPlatform() === 'android') {
+            MediaBridge.stop().catch(() => { });
+        }
+
+        this.stopAudioCompletely();
+        this.stopForegroundService();
+        // CRITICAL: Set currentVerseKey to null to tell UI that the session is OVER.
+        // This resets the "Play" button to its initial state (opening options).
+        this.updateState({ isPlaying: false, progress: 0, isBuffering: false, currentVerseKey: null });
     }
 
-    private async stopAudioCompletely(): Promise<void> {
-        if (Capacitor.isNativePlatform()) {
-            const currentKey = this.state.value.currentVerseKey;
-            if (currentKey) {
-                const assetId = `verse_${currentKey.replace(':', '_')}`;
-                await NativeAudio.stop({ assetId }).catch(() => { });
-                await NativeAudio.unload({ assetId }).catch(() => { });
+    async stopAudioCompletely() {
+        this.stopPrecisionClock();
+        this.audio.pause();
+        this.audio.currentTime = 0;
+        if (this.currentObjectURL) {
+            URL.revokeObjectURL(this.currentObjectURL);
+            this.currentObjectURL = null;
+        }
+
+        // Force reset HTML5 audio
+        this.audio.removeAttribute('src');
+        this.audio.currentTime = 0;
+        this.audio.load();
+
+        if (this.useNativeAudio) {
+            if (this.activeNativeAssetId) {
+                await NativeAudio.stop({ assetId: this.activeNativeAssetId }).catch(() => { });
+                await NativeAudio.unload({ assetId: this.activeNativeAssetId }).catch(() => { });
+                this.activeNativeAssetId = null;
             }
         }
-
-        if (!this.audio.paused) {
-            this.audio.pause();
-        }
-        await this.stopForegroundService();
-        this.audio.currentTime = 0;
-        this.audio.src = this.SILENT_SRC;
-        this.pendingPlayRequest = null;
-        return Promise.resolve();
+        this.audio.src = '';
     }
 
     prime() {
-        // Unlock audio context synchronously in response to user click
-        if (this.audio.paused) {
-            if (!this.audio.src) {
-                this.audio.src = this.SILENT_SRC;
-            }
-            this.audio.play().then(() => {
-                // Keep it "ready"
-                this.audio.pause();
-            }).catch(() => { });
+        if (!this.useNativeAudio) {
+            this.audio.load();
         }
     }
 
@@ -644,6 +924,9 @@ export class QuranAudioService {
         const wasPlaying = this.state.value.isPlaying;
 
         console.log(`[AudioService] setReciter: newId=${id}, currentKey=${currentKey}, wasPlaying=${wasPlaying}`);
+
+        // Invalidate any pending operations from previous reciter
+        this.currentOperationId++;
 
         // Stop audio completely first to prevent overlap
         await this.stopAudioCompletely();
@@ -660,6 +943,18 @@ export class QuranAudioService {
             this.currentObjectURL = null;
         }
 
+        if (this.currentObjectURL) {
+            URL.revokeObjectURL(this.currentObjectURL);
+            this.currentObjectURL = null;
+        }
+
+        // Clear preloaded next verse blobs to prevent mixing voices
+        if (this.nextVerseBlobUrl) {
+            URL.revokeObjectURL(this.nextVerseBlobUrl);
+            this.nextVerseBlobUrl = null;
+            this.nextVerseKey = null;
+        }
+
         this.updateState({
             reciterId: id,
             currentAyahRepeatCount: 0,
@@ -667,6 +962,8 @@ export class QuranAudioService {
             isPlaying: false,
             isBuffering: false
         });
+
+        this.isGaplessTransitioning = false; // RESET FLAG: Clear any overlap state
 
         // Prime immediately to keep user gesture context
         this.prime();
@@ -685,7 +982,7 @@ export class QuranAudioService {
     async setPlaybackRate(rate: number) {
         this.updateState({ playbackRate: rate });
 
-        if (Capacitor.isNativePlatform() && !this.isTimedPlayback) {
+        if (this.useNativeAudio && !this.isTimedPlayback) {
             const currentKey = this.state.value.currentVerseKey;
             if (currentKey) {
                 const assetId = `verse_${currentKey.replace(':', '_')}`;
@@ -698,7 +995,7 @@ export class QuranAudioService {
 
     async setVolume(volume: number) {
         // volume should be 0.0 to 1.0
-        if (Capacitor.isNativePlatform() && !this.isTimedPlayback) {
+        if (this.useNativeAudio && !this.isTimedPlayback) {
             const currentKey = this.state.value.currentVerseKey;
             if (currentKey) {
                 const assetId = `verse_${currentKey.replace(':', '_')}`;
@@ -717,15 +1014,15 @@ export class QuranAudioService {
         });
     }
 
-    setPlaybackRange(range: PlaybackState['playbackRange']) {
-        this.updateState({ playbackRange: range, currentGroupRepeatCount: 0 });
+    setPlaybackRange(range: 'surah' | 'page' | 'juz' | 'quran' | 'single' | 'custom', specificRange?: { start: string; end: string }, rangeEndVerseKey?: string | null) {
+        this.updateState({ playbackRange: range, specificRange, rangeEndVerseKey, currentGroupRepeatCount: 0 });
     }
 
     private async handleAudioEnded(sourceAssetId?: string) {
         const s = this.state.value;
 
         // Verify asset ID for native playback to prevent race conditions (e.g. unload triggering complete)
-        if (Capacitor.isNativePlatform() && !this.isTimedPlayback && sourceAssetId) {
+        if (this.useNativeAudio && !this.isTimedPlayback && sourceAssetId) {
             const currentAssetId = `verse_${s.currentVerseKey?.replace(':', '_')}`;
             if (sourceAssetId !== currentAssetId) {
                 console.log(`[AudioService] Ignoring handleAudioEnded for stale asset: ${sourceAssetId} (current: ${currentAssetId})`);
@@ -739,12 +1036,22 @@ export class QuranAudioService {
             return;
         }
 
+        // CRITICAL: Loop Breaker
+        // If the audio "completed" almost instantly (< 500ms), it's likely a native error or corruption.
+        // We must IGNORE it to prevent an infinite loop of Play -> Error -> Complete -> PlayNext -> Play
+        const elapsed = Date.now() - this.lastVerseStartTime;
+        if (elapsed < 500) {
+            console.warn(`[AudioService] Rapid audio completion detected (${elapsed}ms). Ignoring loop and stopping.`);
+            this.updateState({ isPlaying: false, isBuffering: false });
+            return;
+        }
+
         // 1. Ayah Repetition
         if (s.repeatAyah > 1 && s.currentAyahRepeatCount + 1 < s.repeatAyah) {
             console.log(`[AudioService] Repeating Ayah (${s.currentAyahRepeatCount + 2}/${s.repeatAyah})`);
             this.updateState({ currentAyahRepeatCount: s.currentAyahRepeatCount + 1 });
 
-            if (Capacitor.isNativePlatform() && !this.isTimedPlayback) {
+            if (this.useNativeAudio && !this.isTimedPlayback) {
                 const assetId = `verse_${s.currentVerseKey?.replace(':', '_')}`;
                 await NativeAudio.play({ assetId }).catch(err => {
                     console.error('[AudioService] Native replay failed:', err);
@@ -762,13 +1069,55 @@ export class QuranAudioService {
             return;
         }
 
-        // 2. Clear Ayah Repeat count and notify completion to advance
+        // 2. INTERNAL AUTO-ADVANCE (Dual Player)
+        // If we have the next verse ready in standby, play it IMMEDIATELY
         if (s.currentVerseKey && s.currentVerseKey !== this.lastEndTriggeredVerseKey) {
-            console.log(`[AudioService] Verse ${s.currentVerseKey} completed. Notifying advance.`);
+            const nextKey = this.nextVerseKey;
+
+            // CRITICAL: Check if nextKey is within boundaries
+            if (nextKey && this.standbyAudio.src && this.isWithinRange(nextKey)) {
+                console.log(`[AudioService] Auto-advancing internally to ${nextKey}`);
+                this.playVerse(nextKey); // Trigger swap and play
+                return; // Transition handled internally
+            } else if (nextKey && !this.isWithinRange(nextKey)) {
+                // Truly out of range -> handle group repetitions or stop
+                if (s.repeatGroup > 1 && s.currentGroupRepeatCount + 1 < s.repeatGroup) {
+                    let restartKey = '';
+                    if (s.playbackRange === 'custom' && s.specificRange) {
+                        restartKey = s.specificRange.start;
+                    } else if (s.playbackRange === 'surah' && s.currentVerseKey) {
+                        restartKey = s.currentVerseKey.split(':')[0] + ':1';
+                    } else if (s.playbackRange === 'single' && s.currentVerseKey) {
+                        restartKey = s.currentVerseKey;
+                    }
+
+                    if (restartKey) {
+                        console.log(`[AudioService] Group Repeat Triggered (${s.currentGroupRepeatCount + 2}/${s.repeatGroup}) to ${restartKey}`);
+                        this.updateState({
+                            currentGroupRepeatCount: s.currentGroupRepeatCount + 1,
+                            currentAyahRepeatCount: 0
+                        });
+                        this.playVerse(restartKey);
+                        return;
+                    }
+                }
+
+                // Truly END of selected range
+                console.log(`[AudioService] Range Reached (${nextKey} out of range ${s.rangeEndVerseKey}). Stopping playback.`);
+                this.stop();
+                return;
+            }
+            console.log(`[AudioService] Next key ${nextKey} is within range or unknown. Falling through to notify.`);
+        }
+
+        // 3. Clear Ayah Repeat count and notify completion to advance
+        if (s.currentVerseKey && s.currentVerseKey !== this.lastEndTriggeredVerseKey) {
+            console.log(`[AudioService] Verse ${s.currentVerseKey} completed. Notifying advance. (Range: ${s.playbackRange})`);
             this.lastEndTriggeredVerseKey = s.currentVerseKey;
             this.updateState({ currentAyahRepeatCount: 0 });
             this.verseCompleted.next(s.currentVerseKey);
         } else {
+            console.log(`[AudioService] Verse already notified or no current key: ${s.currentVerseKey}`);
             this.updateState({ currentAyahRepeatCount: 0 });
         }
     }
@@ -868,8 +1217,14 @@ export class QuranAudioService {
                     let audioUrl = timingsRes.audio_files[0].audio_url;
                     if (!audioUrl.startsWith('http')) audioUrl = `https:${audioUrl}`;
 
+                    // OFFLINE CHECK for Timed Audio
+                    const localResult = await this.getLocalUri('full', reciterId, surahId);
+
                     const cachedAudio = await cache.match(audioUrl);
-                    if (cachedAudio) {
+                    if (localResult) {
+                        console.log('[AudioService] Found local FULL audio in filesystem');
+                        this.audio.src = localResult.converted;
+                    } else if (cachedAudio) {
                         console.log('[AudioService] Found timed audio in cache, using Blob URL');
                         const blob = await cachedAudio.blob();
                         if (this.currentObjectURL) URL.revokeObjectURL(this.currentObjectURL);
@@ -903,10 +1258,14 @@ export class QuranAudioService {
             const timing = this.currentSurahTimings.find(t => t.verse_key === verseKey);
             if (!timing) {
                 this.updateState({ isPlaying: false, isBuffering: false });
+                this.isPlayingNewAudio = false;
                 return;
             }
 
+            // CRITICAL: Set transition flag to prevent timeupdate race conditions
+            this.isGaplessTransitioning = true;
             this.currentVerseTiming = timing;
+
             if (this.audio.paused) {
                 await this.audio.play();
             }
@@ -916,10 +1275,9 @@ export class QuranAudioService {
             const currentTime = this.audio.currentTime;
 
             // Gapless Logic:
-            // If we are "close" to the target time (e.g. within 1 second), and it's a gapless candidate,
-            // we assume the audio just naturally flowed there.
-            // But if we are far off (user clicked a specific verse), we MUST seek.
-            const isCloseEnough = Math.abs(currentTime - targetTime) < 1.5; // 1.5s tolerance for natural flow
+            // If we are "close" to the target time, assume natural flow.
+            // Increased tolerance to 2.5s to verify if it fixes "stutter/repeat" issues with some reciters
+            const isCloseEnough = Math.abs(currentTime - targetTime) < 2.5;
 
             if (!isGaplessCandidate || !isCloseEnough) {
                 console.log(`[AudioService] Seeking to verse start: ${targetTime}s (Current: ${currentTime}s)`);
@@ -928,70 +1286,85 @@ export class QuranAudioService {
                 console.log(`[AudioService] Gapless transition: Continuous playback at ${currentTime}s`);
             }
 
+            // Small delay to allow audio engine to stabilize before re-enabling checks
+            // This is a "safety window"
+            setTimeout(() => {
+                this.isGaplessTransitioning = false;
+            }, 500);
+
             this.updateState({ isPlaying: true, isBuffering: false });
             this.isPlayingNewAudio = false;
-
-            // Check if there's a pending request (e.g., reciter was changed during load)
-            if (this.pendingPlayRequest) {
-                const pending = this.pendingPlayRequest;
-                this.pendingPlayRequest = null;
-                setTimeout(() => this.playVerse(pending.verseKey, pending.reciterId), 100);
-            }
         } catch (error) {
             console.error('[AudioService] Timed playback error:', error);
             this.updateState({ isPlaying: false, isBuffering: false });
             this.isPlayingNewAudio = false;
+            this.isGaplessTransitioning = false;
         }
     }
 
+
+
     async isSurahCached(surahId: number, reciterId: number): Promise<boolean> {
+        const markerUrl = `https://api.quran.com/api/v4/recitations/${reciterId}/by_chapter/${surahId}`;
+        const cache = await caches.open(this.CACHE_NAME);
+        const marker = await cache.match(markerUrl);
+
+        if (!marker) return false;
+
+        if (!Capacitor.isNativePlatform()) return true;
+
+        // Native check: verify files actually exist in filesystem
         try {
-            const cache = await caches.open(this.CACHE_NAME);
-            const isTimed = this.TIMED_RECITERS.includes(reciterId);
-
-            if (isTimed) {
-                const timingsUrl = `${this.qdcAudioUrlBase}/${reciterId}/audio_files?chapter=${surahId}&segments=true`;
-                const cachedTimings = await cache.match(timingsUrl);
-                if (!cachedTimings) return false;
-
-                const timingsRes = await cachedTimings.json();
-                let audioUrl = timingsRes?.audio_files?.[0]?.audio_url;
-                if (!audioUrl) return false;
-                if (!audioUrl.startsWith('http')) audioUrl = `https:${audioUrl}`;
-
-                const cachedAudio = await cache.match(audioUrl);
-                return !!cachedAudio;
-            } else {
-                const metadataUrl = `https://api.quran.com/api/v4/recitations/${reciterId}/by_chapter/${surahId}`;
-                const cachedMeta = await cache.match(metadataUrl);
-                if (!cachedMeta) return false;
-
-                // Check a sample verse to be more sure
-                const metaRes = await cachedMeta.json();
-                const sampleVerse = metaRes?.audio_files?.[0];
-                if (!sampleVerse) return false;
-
-                let audioUrl = sampleVerse.url;
-                if (audioUrl.startsWith('//')) audioUrl = `https:${audioUrl}`;
-                else if (!audioUrl.startsWith('http')) audioUrl = `https://audio.qurancdn.com/${audioUrl}`;
-
-                let cachedAudio = await cache.match(audioUrl);
-
-                // Fallback check if not found in primary CDN
-                if (!cachedAudio && audioUrl.includes('audio.qurancdn.com')) {
-                    const fallbackUrl = audioUrl.replace('audio.qurancdn.com', 'download.quranicaudio.com/quran');
-                    cachedAudio = await cache.match(fallbackUrl);
-                }
-
-                return !!cachedAudio;
-            }
-        } catch (e) { return false; }
+            const path = `audio/${reciterId}/${surahId}`;
+            const stats = await Filesystem.readdir({
+                directory: Directory.Data,
+                path: path
+            });
+            return stats.files.length > 0;
+        } catch (e) {
+            return false;
+        }
     }
 
     async downloadSurah(surahId: number, reciterId: number): Promise<void> {
         console.log(`[AudioService] Starting download: Surah ${surahId}, Reciter ${reciterId}`);
         const cache = await caches.open(this.CACHE_NAME);
         const isTimed = this.TIMED_RECITERS.includes(reciterId);
+
+        // ABU SHARIDA (175) SPECIAL HANDLER
+        if (reciterId === 175) {
+            // Reciter 175 uses surah-level files only on quranicaudio.com pattern
+            const audioUrl = `https://download.quranicaudio.com/quran/abdullah_abu_sharida/${surahId}.mp3`;
+            const timingsUrl = `https://quran.com/api/proxy/content/api/qdc/audio/reciters/175/audio_files?chapter=${surahId}&segments=true`;
+
+            try {
+                // Download Audio File to Filesystem
+                const fileName = `audio/${reciterId}/${surahId}/full.mp3`;
+                await this.ensureDirectory(`audio/${reciterId}/${surahId}`);
+
+                await Filesystem.downloadFile({
+                    url: audioUrl,
+                    directory: Directory.Data,
+                    path: fileName
+                });
+
+                // Fetch Timings (via proxy)
+                const timingsRes = await firstValueFrom(this.http.get<any>(timingsUrl).pipe(timeout(30000)));
+                if (timingsRes?.audio_files?.[0]) {
+                    await cache.put(timingsUrl, new Response(JSON.stringify(timingsRes)));
+                }
+
+                // Marker
+                const v4MarkerUrl = `https://api.quran.com/api/v4/recitations/${reciterId}/by_chapter/${surahId}`;
+                await cache.put(v4MarkerUrl, new Response(JSON.stringify({ downloaded: true })));
+
+                console.log(`[AudioService] Abu Sharida download complete: Surah ${surahId}`);
+                return;
+            } catch (e) {
+                console.error('[AudioService] Abu Sharida download failed:', e);
+                throw e;
+            }
+        }
 
         if (isTimed) {
             const timingsUrl = `${this.qdcAudioUrlBase}/${reciterId}/audio_files?chapter=${surahId}&segments=true`;
@@ -1001,11 +1374,17 @@ export class QuranAudioService {
             let audioUrl = timingsRes.audio_files[0].audio_url;
             if (!audioUrl.startsWith('http')) audioUrl = `https:${audioUrl}`;
 
-            // Download Audio File
-            const audioBlob = await firstValueFrom(this.http.get(audioUrl, { responseType: 'blob' }).pipe(timeout(300000))); // 5 mins for large file
-            await cache.put(audioUrl, new Response(audioBlob));
+            // Download Audio File to FILESYSTEM
+            const fileName = `audio/${reciterId}/${surahId}/full.mp3`;
+            await this.ensureDirectory(`audio/${reciterId}/${surahId}`);
 
-            // Cache Timings only AFTER audio is successful
+            await Filesystem.downloadFile({
+                url: audioUrl,
+                directory: Directory.Data,
+                path: fileName
+            });
+
+            // Cache Timings only AFTER audio is successful (Keep in Web Cache for timing lookups)
             await cache.put(timingsUrl, new Response(JSON.stringify(timingsRes)));
 
             // Also cache v4 marker for isSurahCached calls from other places
@@ -1016,15 +1395,61 @@ export class QuranAudioService {
             return;
         }
 
+        // --- NON-TIMED / VERSE-BY-VERSE DOWNLOAD ---
         const metadataUrl = `https://api.quran.com/api/v4/recitations/${reciterId}/by_chapter/${surahId}`;
+        const hasOverride = !!this.RECITER_OVERRIDES[reciterId];
+
         try {
-            const metaResponse = await firstValueFrom(
-                this.http.get<any>(metadataUrl).pipe(timeout(30000), catchError(() => of(null)))
-            );
-            if (!metaResponse || !metaResponse.audio_files) throw new Error('Failed to fetch metadata');
+            let metaResponse: any = null;
+            if (!hasOverride) {
+                // Try fetching metadata from Quran.com V4 if no override exists
+                metaResponse = await firstValueFrom(
+                    this.http.get<any>(metadataUrl).pipe(timeout(30000), catchError(() => of(null)))
+                );
+            }
 
             let successCount = 0;
-            for (const item of metaResponse.audio_files) {
+            let audioFiles: any[] = [];
+
+            if (metaResponse?.audio_files) {
+                audioFiles = metaResponse.audio_files;
+            } else {
+                // FALLBACK: Manual Verse List Construction for Overridden or Broken Reciters
+                console.log(`[AudioService] Metadata missing for reciter ${reciterId}. Using local fallback...`);
+                const mushafMeta = await firstValueFrom(this.dataService.getMetadata());
+                const surahInfo = mushafMeta.surahs.find(s => s.id === surahId);
+                if (!surahInfo) throw new Error(`Surah ${surahId} not found in local metadata`);
+
+                for (let i = 1; i <= surahInfo.verses_count; i++) {
+                    const verseKey = `${surahId}:${i}`;
+                    let audioUrl = '';
+
+                    if (this.RECITER_OVERRIDES[reciterId]) {
+                        const paddedSurah = surahId.toString().padStart(3, '0');
+                        const paddedAyah = i.toString().padStart(3, '0');
+                        audioUrl = `${this.RECITER_OVERRIDES[reciterId]}/${paddedSurah}${paddedAyah}.mp3`;
+                    } else {
+                        // If no override and no metadata, we can't guess the URL pattern easily 
+                        // unless it follows the default audio.qurancdn.com pattern.
+                        // For now, if no metadata and no override, we fail.
+                        continue;
+                    }
+
+                    audioFiles.push({
+                        verse_key: verseKey,
+                        url: audioUrl
+                    });
+                }
+            }
+
+            if (audioFiles.length === 0) throw new Error('No audio files found to download');
+
+            await this.ensureDirectory(`audio/${reciterId}/${surahId}`);
+
+            for (const item of audioFiles) {
+                const ayahNum = item.verse_key.split(':')[1];
+                const fileName = `audio/${reciterId}/${surahId}/${ayahNum}.mp3`;
+
                 let audioUrl = item.url;
                 if (audioUrl.startsWith('//')) {
                     audioUrl = `https:${audioUrl}`;
@@ -1032,40 +1457,25 @@ export class QuranAudioService {
                     audioUrl = `https://audio.qurancdn.com/${audioUrl}`;
                 }
 
-                let cachedFile = await cache.match(audioUrl);
+                // Check and Probe URL for 404s/Correct extensions
+                const validUrl = await this.probeAudioUrl(audioUrl);
+                if (validUrl) audioUrl = validUrl;
 
-                // Fallback check for downloader
-                if (!cachedFile && audioUrl.includes('audio.qurancdn.com')) {
-                    const fallbackUrl = audioUrl.replace('audio.qurancdn.com', 'download.quranicaudio.com/quran');
-                    cachedFile = await cache.match(fallbackUrl);
-                    if (cachedFile) audioUrl = fallbackUrl;
-                }
+                // CHECK FILESYSTEM
+                let exists = false;
+                try {
+                    await Filesystem.stat({ directory: Directory.Data, path: fileName });
+                    exists = true;
+                } catch (e) { }
 
-                if (!cachedFile) {
+                if (!exists) {
                     try {
-                        let success = false;
-                        // Try primary URL
-                        try {
-                            const audioBlob = await firstValueFrom(this.http.get(audioUrl, { responseType: 'blob' }).pipe(timeout(60000)));
-                            if (audioBlob && audioBlob.size > 100) {
-                                await cache.put(audioUrl, new Response(audioBlob));
-                                success = true;
-                            }
-                        } catch (e) {
-                            // Try fallback URL if relative
-                            if (!item.url.startsWith('//') && !item.url.startsWith('http')) {
-                                const fallbackUrl = `https://download.quranicaudio.com/quran/${item.url}`;
-                                console.log('[AudioService] Trying fallback for download:', fallbackUrl);
-                                const audioBlob = await firstValueFrom(this.http.get(fallbackUrl, { responseType: 'blob' }).pipe(timeout(60000)));
-                                if (audioBlob && audioBlob.size > 100) {
-                                    await cache.put(fallbackUrl, new Response(audioBlob));
-                                    audioUrl = fallbackUrl; // Update to cached version
-                                    success = true;
-                                }
-                            }
-                        }
-
-                        if (success) successCount++;
+                        await Filesystem.downloadFile({
+                            url: audioUrl,
+                            directory: Directory.Data,
+                            path: fileName
+                        });
+                        successCount++;
                     } catch (e) {
                         console.warn(`[AudioService] Failed to download ayah ${item.verse_key}`, e);
                         continue;
@@ -1074,21 +1484,63 @@ export class QuranAudioService {
                     successCount++;
                 }
 
-                // Cache individual ayah metadata
+                // --- FAKE METADATA INJECTION ---
+                // Cache individual ayah metadata so the player works offline for reciters without real metadata endpoints
                 const ayahMetadataUrl = `${this.audioUrlBase}/${reciterId}/by_ayah/${item.verse_key}`;
-                const ayahMetadata = { audio_file: item };
+                const ayahMetadata = { audio_file: { ...item, url: audioUrl } }; // Ensure URL is absolute in fixed metadata
                 await cache.put(ayahMetadataUrl, new Response(JSON.stringify(ayahMetadata)));
             }
 
-            // Only cache chapter metadata AFTER at least some success
+            // Only cache chapter metadata AFTER success
             if (successCount > 0) {
-                await cache.put(metadataUrl, new Response(JSON.stringify(metaResponse)));
+                const finalMeta = metaResponse || { audio_files: audioFiles, downloaded: true };
+                await cache.put(metadataUrl, new Response(JSON.stringify(finalMeta)));
             }
             console.log(`[AudioService] Verse download complete: Surah ${surahId}, success: ${successCount}`);
         } catch (error) {
             console.error(`[AudioService] Download failed for Surah ${surahId}:`, error);
             throw error;
         }
+    }
+
+    private async ensureDirectory(path: string) {
+        if (!Capacitor.isNativePlatform()) return;
+        const parts = path.split('/');
+        let currentPath = '';
+        for (const part of parts) {
+            currentPath += part + '/';
+            try {
+                await Filesystem.mkdir({
+                    directory: Directory.Data,
+                    path: currentPath,
+                    recursive: false
+                });
+            } catch (e) {
+                // Error 17 usually means folder exists
+            }
+        }
+    }
+
+    private async saveBlobToFilesystem(blob: Blob, path: string) {
+        if (!Capacitor.isNativePlatform()) return;
+        const reader = new FileReader();
+        return new Promise<void>((resolve, reject) => {
+            reader.onload = async () => {
+                const base64Data = (reader.result as string).split(',')[1];
+                try {
+                    await Filesystem.writeFile({
+                        directory: Directory.Data,
+                        path: path,
+                        data: base64Data
+                    });
+                    resolve();
+                } catch (e) {
+                    reject(e);
+                }
+            };
+            reader.onerror = () => reject(new Error('FileReader failed'));
+            reader.readAsDataURL(blob);
+        });
     }
 
     seek(time: number) {
@@ -1129,6 +1581,8 @@ export class QuranAudioService {
             }, 5000);
         });
     }
+
+
 
     private async getOrFetchAudioUrl(verseKey: string, reciterId: number): Promise<string | null> {
         const metadataUrl = `${this.audioUrlBase}/${reciterId}/by_ayah/${verseKey}`;
@@ -1173,26 +1627,162 @@ export class QuranAudioService {
         return audioUrl;
     }
 
-    private async preloadNextVerse(currentVerseKey: string, reciterId: number) {
-        try {
-            const parts = currentVerseKey.split(':');
-            const surah = parseInt(parts[0]);
-            const ayah = parseInt(parts[1]);
-            const nextVerseKey = `${surah}:${ayah + 1}`;
+    // --- Gapless Optimization: Explicit Next Verse Setting ---
+    public setNextVerseToPreload(verseKey: string) {
+        // Called by UI when it calculates the true next verse (handling Surah/Page logic)
+        this.preloadNextVerse(this.state.value.currentVerseKey || '', this.state.value.reciterId, verseKey);
+    }
 
-            const url = await this.getOrFetchAudioUrl(nextVerseKey, reciterId);
-            if (url && !url.startsWith('blob:')) {
-                const cache = await caches.open(this.CACHE_NAME);
-                const match = await cache.match(url);
-                if (!match) {
-                    try {
-                        const response = await fetch(url);
-                        if (response.ok) {
-                            await cache.put(url, response.clone());
+    private async preloadNextVerse(currentVerseKey: string, reciterId: number, specificNextKey?: string) {
+        try {
+            let nextVerseKey = specificNextKey;
+
+            // If no specific key provided, try simple +1 logic (fallback)
+            if (!nextVerseKey) {
+                const parts = currentVerseKey.split(':');
+                const surah = parseInt(parts[0]);
+                const ayah = parseInt(parts[1]);
+                // Fallback within current surah ONLY. 
+                // Cross-surah preloading depends on component calling setNextVerseToPreload()
+                nextVerseKey = `${surah}:${ayah + 1}`;
+            }
+
+            // Don't preload if already holding it
+            if (this.nextVerseKey === nextVerseKey) return;
+
+            console.log(`[AudioService] Preloading next verse (Dual Player): ${nextVerseKey}`);
+
+            let urlToFetch = '';
+            if (this.RECITER_OVERRIDES[reciterId]) {
+                const [nSurah, nAyah] = nextVerseKey.split(':').map(Number);
+                const paddedSurah = nSurah.toString().padStart(3, '0');
+                const paddedAyah = nAyah.toString().padStart(3, '0');
+                urlToFetch = `${this.RECITER_OVERRIDES[reciterId]}/${paddedSurah}${paddedAyah}.mp3`;
+            } else {
+                urlToFetch = await this.getOrFetchAudioUrl(nextVerseKey, reciterId) || '';
+            }
+
+            if (urlToFetch) {
+                // DUAL PLAYER: Load directly into the standby player
+                this.standbyAudio.src = urlToFetch;
+                this.standbyAudio.load();
+                this.nextVerseKey = nextVerseKey;
+                // We no longer use nextVerseBlobUrl
+
+                console.log(`[AudioService] Standby player primed with ${nextVerseKey}`);
+
+                // Also cache to disk for future session functionality (optimistic)
+                // We don't block on this
+                try {
+                    const cache = await caches.open(this.CACHE_NAME);
+                    cache.match(urlToFetch).then(res => {
+                        if (!res) {
+                            fetch(urlToFetch).then(freshRes => {
+                                if (freshRes.ok) cache.put(urlToFetch, freshRes.clone());
+                            });
                         }
-                    } catch (e) { }
+                    });
+                } catch (e) { }
+            }
+        } catch (e) {
+            console.warn('[AudioService] Failed to preload next verse', e);
+        }
+    }
+
+    private startPrecisionClock(player: HTMLAudioElement) {
+        if (this.overlapTimer) return;
+
+        console.log(`[AudioService] Precision Clock Started...`);
+        this.overlapTimer = setInterval(() => {
+            const s = this.state.value;
+            const rem = player.duration - player.currentTime;
+            const nextKey = this.nextVerseKey;
+
+            // Precision Overlap Trigger
+            if (rem <= this.OVERLAP_TRIGGER_SEC && !this.isGaplessTransitioning) {
+                // CRITICAL: Only trigger overlap if it's the LAST repetition of this ayah
+                const isLastRepeat = s.currentAyahRepeatCount + 1 >= s.repeatAyah;
+
+                if (isLastRepeat && nextKey && this.standbyAudio.src && this.isWithinRange(nextKey)) {
+                    console.log(`[AudioService] Studio Overlap Triggered! Rem: ${rem.toFixed(3)}s`);
+                    this.isGaplessTransitioning = true;
+                    this.playVerse(nextKey);
+                } else if (!isLastRepeat) {
+                    // Still repeating - let handleAudioEnded handle the loop
+                    // No-op here
+                } else if (nextKey && !this.isWithinRange(nextKey)) {
+                    // Range reached! stop the timer and let normal end handle it
+                    console.log(`[AudioService] Range ending soon (${nextKey} out), disabling precision clock.`);
+                    this.stopPrecisionClock();
                 }
             }
-        } catch (e) { }
+
+            // Auto-cleanup if past end or paused
+            if (rem <= 0 || player.paused) {
+                this.stopPrecisionClock();
+            }
+        }, this.PRECISION_INTERVAL_MS);
+    }
+
+    private stopPrecisionClock() {
+        if (this.overlapTimer) {
+            clearInterval(this.overlapTimer);
+            this.overlapTimer = null;
+        }
+    }
+
+    private fadePlayer(player: HTMLAudioElement, from: number, to: number, duration: number) {
+        const start = Date.now();
+        const initialVol = from;
+        const diff = to - from;
+
+        const timer = setInterval(() => {
+            const elapsed = Date.now() - start;
+            const progress = Math.min(1, elapsed / duration);
+
+            player.volume = initialVol + (diff * progress);
+
+            if (progress >= 1) {
+                clearInterval(timer);
+                if (to === 0) {
+                    player.pause();
+                    player.currentTime = 0;
+                    player.volume = 1; // Reset for next use
+                }
+            }
+        }, 16);
+    }
+
+    private isWithinRange(verseKey: string): boolean {
+        const s = this.state.value;
+        if (!s.playbackRange || !verseKey) return true;
+
+        // If it's quran mode, it's always within range unless we reach the very end (handled by ID < 114 check elsewhere)
+        if (s.playbackRange === 'quran') return true;
+
+        const parseKey = (key: string) => {
+            const parts = key.split(':').map(Number);
+            return (parts[0] || 0) * 1000 + (parts[1] || 0);
+        };
+
+        // If we have an explicit boundary, use it
+        if (s.rangeEndVerseKey) {
+            const currentVal = parseKey(verseKey);
+            const endVal = parseKey(s.rangeEndVerseKey);
+            const result = currentVal <= endVal;
+            console.log(`[AudioService] isWithinRange: ${verseKey}(${currentVal}) <= ${s.rangeEndVerseKey}(${endVal}) -> ${result} (Range: ${s.playbackRange})`);
+            return result;
+        }
+
+        // Fallback for custom if rangeEndVerseKey wasn't set (structural safety)
+        if (s.playbackRange === 'custom' && s.specificRange) {
+            const currentVal = parseKey(verseKey);
+            const endVal = parseKey(s.specificRange.end);
+            const result = currentVal <= endVal;
+            console.log(`[AudioService] isWithinRange (Custom fallback): ${verseKey}(${currentVal}) <= ${s.specificRange.end}(${endVal}) -> ${result}`);
+            return result;
+        }
+
+        return true;
     }
 }

@@ -1,6 +1,6 @@
 {
     "appId": "com.kenouz.mushafwird",
-    "appName": "Mushaf-Wird",
+    "appName": "وِرد - مصحف للحفظ والمتابعة",
     "webDir": "../Backend/dist/mushaf-wird/browser",
     "bundledWebRuntime": false
 }

@@ -7,7 +7,7 @@ import { VoiceRecognitionService } from '../../../core/services/voice-recognitio
 import { QuranMatchingService } from '../../../core/services/quran-matching.service';
 import { MushafPage, SurahMetadata, JuzMetadata, MushafMetadata, MushafSegment } from '../../../core/models/mushaf.model';
 import { Observable, firstValueFrom, of, Subscription, forkJoin } from 'rxjs';
-import { take, filter, map } from 'rxjs/operators';
+import { take, filter, map, throttleTime } from 'rxjs/operators';
 import { QuranProgressService } from '../../../services/quran-progress.service';
 import { MutabaaService } from '../../../services/mutabaa.service';
 import { HifzPlanService } from '../../../services/hifz-plan.service';
@@ -18,6 +18,7 @@ import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
 import { Capacitor } from '@capacitor/core';
+import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 
 export type VoiceState = 'inactive' | 'listening' | 'processing' | 'error' | 'idle';
 
@@ -235,6 +236,10 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
     showTafsirSources: boolean = false;
     tafsirDownloadProgress: { [id: number]: { current: number, total: number, loading: boolean } } = {};
 
+    // Tafsir Swipe State
+    private tafsirTouchStartX: number = 0;
+    private tafsirTouchEndX: number = 0;
+
 
     feedbackModal: {
         show: boolean;
@@ -255,10 +260,18 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
     // Audio Settings Modal
     audioSettingsModal = {
         show: false,
-        tempRepeatAyah: 0,
-        tempRepeatGroup: 0,
+        tempRepeatAyah: 1,
+        tempRepeatGroup: 1,
         tempRange: 'page' as any,
-        tempSpeed: 1.0
+        tempSpeed: 1.0,
+
+        // Custom Range Selection
+        startSurah: 1,
+        startAyah: 1,
+        endSurah: 1,
+        endAyah: 7,
+        availableAyahsForStart: [] as number[],
+        availableAyahsForEnd: [] as number[]
     };
 
     showAudioManager: boolean = false;
@@ -286,16 +299,22 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         private http: HttpClient
     ) { }
 
+    private nextVerseKeyToPlay: string | null = null;
+
     async ngOnInit(): Promise<void> {
         this.isAndroid = Capacitor.getPlatform() === 'android';
 
         // Setup Audio State
         this.audioState$ = this.audioService.state$;
         this.audioState$.subscribe(state => {
-            const newKey = state.isPlaying ? state.currentVerseKey : null;
+            const newKey = state.currentVerseKey; // Directly map to currentVerseKey
             if (this.playingVerseKey !== newKey) {
                 this.playingVerseKey = newKey;
                 this.cdr.detectChanges();
+
+                if (newKey) {
+                    this.autoNavigateToVerse(newKey);
+                }
 
                 // Auto-scroll to current verse
                 if (this.playingVerseKey) {
@@ -311,12 +330,13 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
             if (meta) this.allSurahs = meta.surahs;
         });
 
-        this.audioService.verseCompleted$.subscribe(verseKey => {
-            if (verseKey) {
-                console.log(`[MushafPage] Verse completed notification received: ${verseKey}`);
-                this.playNextVerseAudio(verseKey);
-            }
-        });
+        this.audioService.verseCompleted$
+            .subscribe(verseKey => {
+                if (verseKey) {
+                    console.log(`[MushafPage] Verse completed notification received: ${verseKey}`);
+                    this.playNextVerseAudio(verseKey);
+                }
+            });
 
         // Fetch memorized content for indicators
         this.hifzPlanService.getPlan().subscribe(res => {
@@ -725,7 +745,7 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
                                 const activeTaskType = (this.currentTaskType === 'revision' || this.currentTaskType === 'deepMuraja') ? 'revision' :
                                     (this.currentTaskType === 'recitation' || this.currentTaskType === 'tilawo') ? 'recitation' : 'consolidation';
                                 const syncTypeToCompare = (activeTaskType === 'revision') ? 'deepMuraja' : (activeTaskType === 'recitation' ? 'tilawo' : 'muraja');
-
+    
                                 if (type === syncTypeToCompare && type !== 'tilawo') {
                                     console.log(`🚀 [Mushaf] Sabiq Advance: Auto-navigating to new ${activeTaskType} task location.`);
                                     this.navigateToTask(activeTaskType, true); // Pass seamless=true
@@ -1866,8 +1886,16 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
     loadReciters(): void {
         this.audioService.getReciters().subscribe({
             next: reciters => {
-                console.log('[MushafPage] Reciters loaded:', reciters.length);
-                this.availableReciters = reciters;
+                // FILTER: Remove broken reciters (Bandar=160, Khalifa=161)
+                const validReciters = reciters.filter(r => r.id !== 160 && r.id !== 161);
+                console.log(`[MushafPage] Reciters loaded: ${validReciters.length} (Filtered ${reciters.length - validReciters.length} broken)`);
+                this.availableReciters = validReciters;
+
+                // Fallback: If currentReciterId is one of the removed ones, switch to default (e.g. 19 - Ajamy)
+                if (this.currentReciterId === 160 || this.currentReciterId === 161) {
+                    console.warn('[MushafPage] Detected broken reciter ID selection. Resetting to default (19).');
+                    this.selectReciter(19); // Ajamy as safe default
+                }
             },
             error: err => {
                 console.error('[MushafPage] Failed to load reciters:', err);
@@ -2005,12 +2033,79 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         this.cdr.detectChanges();
     }
 
-    playVerseAudio(verseKey: string): void {
+    async playVerseAudio(verseKey: string): Promise<void> {
         // Hide floating player when playback starts (user can toggle via header button)
         this.showAudioPlayer = false;
         localStorage.setItem('showAudioPlayer', 'false');
+
+        // --- SYNC BOUNDARY ---
+        // Ensure that if we are in a relative range mode (surah, page, juz), 
+        // the boundary is updated for the new selection.
+        await this.syncPlaybackBoundary(verseKey);
+
         this.audioService.playVerse(verseKey, this.currentReciterId);
         this.selectedVerseKey = verseKey;
+
+        // --- GAPLESS OPTIMIZATION: Calculate Next Verse Immediately ---
+        this.nextVerseKeyToPlay = null;
+        const state = await firstValueFrom(this.audioService.state$);
+        const nextKey = await this.getNextVerseGlobal(verseKey, state.playbackRange);
+        if (nextKey) {
+            console.log(`[MushafPage] Pre-calculated Next Verse (${state.playbackRange}): ${nextKey}`);
+            this.nextVerseKeyToPlay = nextKey;
+            this.audioService.setNextVerseToPreload(nextKey);
+        }
+    }
+
+    private async syncPlaybackBoundary(refKey: string): Promise<void> {
+        const state = await firstValueFrom(this.audioService.state$);
+        const range = state.playbackRange;
+        let rangeEndKey: string | null = null;
+        let specificRange = state.specificRange;
+
+        if (range === 'surah') {
+            const surahId = parseInt(refKey.split(':')[0], 10);
+            const surahMeta = this.allSurahs.find(sm => Number(sm.id) === surahId);
+            if (surahMeta) {
+                rangeEndKey = `${surahId}:${surahMeta.verses_count}`;
+            }
+        } else if (range === 'page') {
+            const pageNum = await this.getPageForVerseKey(refKey);
+            if (pageNum) {
+                const pages = await firstValueFrom(this.dataService.getMushaf());
+                const pageData = pages.find(p => p.page_number === pageNum);
+                if (pageData) {
+                    const keys = this.extractVerseKeys([pageData]);
+                    rangeEndKey = keys[keys.length - 1] || null;
+                }
+            }
+        } else if (range === 'juz') {
+            const pageNum = await this.getPageForVerseKey(refKey);
+            const juz = pageNum ? await firstValueFrom(this.dataService.getJuzAtPage(pageNum)) : null;
+            if (juz) {
+                const pages = await firstValueFrom(this.dataService.getMushaf());
+                const meta = await firstValueFrom(this.dataService.getMetadata());
+                const nextJuz = meta.juzs.find(j => j.id === juz.id + 1);
+                const endPage = nextJuz ? nextJuz.start_page - 1 : 604;
+                const juzPages = pages.filter(p => p.page_number >= juz.start_page && p.page_number <= endPage);
+                const keys = this.extractVerseKeys(juzPages);
+                rangeEndKey = keys[keys.length - 1] || null;
+            }
+        } else if (range === 'single') {
+            rangeEndKey = refKey;
+        } else if (range === 'quran') {
+            rangeEndKey = "114:6";
+        } else if (range === 'custom') {
+            // In custom mode, clicking a verse doesn't change the boundary, 
+            // unless the user specifically wants to reset it? 
+            // Usually custom boundaries are fixed until changed in settings.
+            rangeEndKey = state.rangeEndVerseKey || null;
+        }
+
+        if (rangeEndKey && rangeEndKey !== state.rangeEndVerseKey) {
+            console.log(`[MushafPage] Auto-syncing boundary for ${range} to: ${rangeEndKey}`);
+            this.audioService.setPlaybackRange(range, specificRange, rangeEndKey);
+        }
     }
 
     toggleAudioPlayer(): void {
@@ -2020,16 +2115,31 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         // The user wants "flexible handling" (visibility only).
     }
 
-    toggleAudioPlayback(state: PlaybackState): void {
+    async toggleAudioPlayback(state: PlaybackState) {
         if (state.isPlaying) {
             this.audioService.pause();
         } else {
             if (state.currentVerseKey) {
                 this.audioService.resume();
             } else {
-                this.openAudioSettings();
+                // If no active session, start from selected verse or current page
+                if (this.selectedVerseKey) {
+                    await this.playVerseAudio(this.selectedVerseKey);
+                } else {
+                    await this.startPlaybackFromContext();
+                }
             }
         }
+    }
+
+    private async startPlaybackFromContext() {
+        // Fallback: Smart lookup for current page
+        const surah = await firstValueFrom(this.dataService.getSurahAtPage(this.pageNumber));
+        const pages = await firstValueFrom(this.dataService.getMushaf());
+        const currentPage = pages.find(p => p.page_number === this.pageNumber);
+        const refKey = this.extractVerseKeys(currentPage ? [currentPage] : [])[0] || '1:1';
+
+        await this.playVerseAudio(refKey);
     }
 
     exit(): void {
@@ -2038,17 +2148,33 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         this.router.navigate(['/Home']);
     }
 
-    openAudioSettings(): void {
-        this.audioService.state$.pipe(take(1)).subscribe(state => {
-            this.audioSettingsModal = {
-                show: true,
-                tempRepeatAyah: state.repeatAyah,
-                tempRepeatGroup: state.repeatGroup,
-                tempRange: state.playbackRange,
-                tempSpeed: state.playbackRate
-            };
-            this.cdr.detectChanges();
-        });
+    async openAudioSettings() {
+        const state = await firstValueFrom(this.audioService.state$);
+        this.audioSettingsModal.tempRepeatAyah = state.repeatAyah;
+        this.audioSettingsModal.tempRepeatGroup = state.repeatGroup;
+        this.audioSettingsModal.tempRange = state.playbackRange;
+        this.audioSettingsModal.tempSpeed = state.playbackRate;
+
+        // Sync Custom Selectors if applicable
+        if (state.playbackRange === 'custom' && state.specificRange) {
+            const [sS, sA] = state.specificRange.start.split(':').map(Number);
+            const [eS, eA] = state.specificRange.end.split(':').map(Number);
+            this.audioSettingsModal.startSurah = sS;
+            this.audioSettingsModal.startAyah = sA;
+            this.audioSettingsModal.endSurah = eS;
+            this.audioSettingsModal.endAyah = eA;
+        } else {
+            // Default to current surah
+            const surah = await firstValueFrom(this.dataService.getSurahAtPage(this.pageNumber));
+            if (surah) {
+                this.audioSettingsModal.startSurah = surah.id;
+                this.audioSettingsModal.endSurah = surah.id;
+                this.audioSettingsModal.endAyah = surah.verses_count;
+            }
+        }
+        this.updateAudioSettingsAyahLists();
+        this.audioSettingsModal.show = true;
+        this.cdr.detectChanges();
     }
 
     getSurahMemorizationProgress(surah: SurahMetadata): number {
@@ -2061,50 +2187,59 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         return Math.min(100, Math.round(percent));
     }
 
-    applyAudioSettings(): void {
+    async applyAudioSettings() {
         const s = this.audioSettingsModal;
-
-        // SYNC LOCK: Prime audio element synchronously in the click handler
-        // This confirms the user gesture for the Audio element before any async calls.
         this.audioService.prime();
-
         this.audioService.setPlaybackRate(s.tempSpeed);
-        this.audioService.setRepeatSettings(s.tempRepeatAyah, s.tempRepeatGroup);
-        this.audioService.setPlaybackRange(s.tempRange);
 
-        this.audioSettingsModal.show = false;
+        // --- Use shared sync logic ---
+        // --- Calculate Starting Verse ---
+        let refKey = this.selectedVerseKey || (await firstValueFrom(this.audioService.state$)).currentVerseKey;
 
-        // Hide floating player when playback starts (user can toggle via header button)
-        this.showAudioPlayer = false;
-        localStorage.setItem('showAudioPlayer', 'false');
-
-        // Trigger actual playback after metadata is set
-        this.audioService.state$.pipe(take(1)).subscribe(state => {
-            if (!state.isPlaying) {
-                if (state.currentVerseKey) {
-                    this.audioService.resume();
-                } else if (this.selectedVerseKey) {
-                    this.playVerseAudio(this.selectedVerseKey);
-                } else {
-                    // Play first verse of page
-                    this.dataService.getMushaf().pipe(take(1)).subscribe(pages => {
-                        const currentPage = pages.find(p => p.page_number === this.pageNumber);
-                        const firstVerse = this.extractVerseKeys(currentPage ? [currentPage] : [])[0];
-                        if (firstVerse) this.playVerseAudio(firstVerse);
-                    });
-                }
+        if (!refKey) {
+            // Fallback: Smart lookup for current page
+            const surah = await firstValueFrom(this.dataService.getSurahAtPage(this.pageNumber));
+            if (s.tempRange === 'surah' && surah) {
+                refKey = `${surah.id}:1`;
+            } else {
+                const pages = await firstValueFrom(this.dataService.getMushaf());
+                const currentPage = pages.find(p => p.page_number === this.pageNumber);
+                refKey = this.extractVerseKeys(currentPage ? [currentPage] : [])[0] || '1:1';
             }
-        });
+        } else if (s.tempRange === 'surah' && !this.selectedVerseKey) {
+            // User explicitly wants Surah mode but didn't click a verse. 
+            // If not already playing, start from beginning.
+            const state = await firstValueFrom(this.audioService.state$);
+            if (!state.isPlaying) {
+                const surahId = parseInt(refKey.split(':')[0], 10);
+                refKey = `${surahId}:1`;
+            }
+        }
+
+        // --- Use shared sync logic ---
+        // Special case: Custom range needs its specific start/end from the modal
+        if (s.tempRange === 'custom') {
+            const specificRange = {
+                start: `${s.startSurah}:${s.startAyah}`,
+                end: `${s.endSurah}:${s.endAyah}`
+            };
+            this.audioService.setPlaybackRange('custom', specificRange, specificRange.end);
+            this.playVerseAudio(specificRange.start);
+        } else {
+            // For surah, page, juz, etc. - set the mode first, then let playVerseAudio sync the boundary
+            this.audioService.setPlaybackRange(s.tempRange, undefined, null); // Clear stale boundary
+            this.playVerseAudio(refKey || '1:1');
+        }
+
+        this.audioService.setRepeatSettings(s.tempRepeatAyah, s.tempRepeatGroup);
+        this.audioSettingsModal.show = false;
         this.cdr.detectChanges();
     }
 
     stopAudio(): void {
         this.audioService.stop();
         this.playingVerseKey = null;
-        // User requested flexibility: DO NOT auto-hide the player on stop.
-        // Let them toggle it manually if they want.
-        // this.showAudioPlayer = false; 
-        // localStorage.setItem('showAudioPlayer', 'false');
+        this.selectedVerseKey = null; // Reset selection so next start uses range beginning
         this.cdr.detectChanges();
     }
 
@@ -2183,8 +2318,20 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
                 this.cdr.detectChanges();
             });
 
+            // 1. Try Loading from Filesystem (Native Offline)
+            if (this.isMobile || Capacitor.isNativePlatform()) {
+                const fsData = await this.loadTafsirFromFilesystem(tafsirId, pageNum);
+                if (fsData) {
+                    this.processTafsirResponse(fsData, verseKey);
+                    this.loadingTafsir = false;
+                    this.cdr.detectChanges();
+                    return;
+                }
+            }
+
             const url = `https://api.quran.com/api/v4/tafsirs/${tafsirId}/by_page/${pageNum}`;
 
+            // 2. Legacy Web Cache Fallback
             if ('caches' in window) {
                 try {
                     const cache = await caches.open('quran-tafsir-cache');
@@ -2204,6 +2351,12 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
                     this.processTafsirResponse(res, verseKey);
                     this.loadingTafsir = false;
                     this.cdr.detectChanges();
+
+                    // Save to Filesystem for future offline use
+                    if (this.isMobile || Capacitor.isNativePlatform()) {
+                        this.saveTafsirToFilesystem(tafsirId, pageNum, res);
+                    }
+
                     if ('caches' in window) {
                         try {
                             caches.open('quran-tafsir-cache').then((cache: any) => {
@@ -2220,6 +2373,78 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         });
     }
 
+    // --- Tafsir Filesystem Helpers ---
+
+    private async ensureTafsirDirectory(tafsirId: number): Promise<void> {
+        try {
+            await Filesystem.mkdir({
+                directory: Directory.Data,
+                path: `tafsir/${tafsirId}`,
+                recursive: true
+            });
+        } catch (e) { }
+    }
+
+    private async saveTafsirToFilesystem(tafsirId: number, pageNum: number, data: any): Promise<void> {
+        try {
+            await this.ensureTafsirDirectory(tafsirId);
+            await Filesystem.writeFile({
+                directory: Directory.Data,
+                path: `tafsir/${tafsirId}/${pageNum}.json`,
+                data: JSON.stringify(data),
+                encoding: Encoding.UTF8
+            });
+        } catch (e) {
+            console.warn('[Tafsir] Failed to save to filesystem', e);
+        }
+    }
+
+    private async loadTafsirFromFilesystem(tafsirId: number, pageNum: number): Promise<any> {
+        try {
+            const file = await Filesystem.readFile({
+                directory: Directory.Data,
+                path: `tafsir/${tafsirId}/${pageNum}.json`,
+                encoding: Encoding.UTF8
+            });
+            return JSON.parse(file.data as string);
+        } catch (e) {
+            return null;
+        }
+    }
+
+    // --- Tafsir Swipe Handlers ---
+
+    onTafsirTouchStart(event: TouchEvent): void {
+        this.tafsirTouchStartX = event.touches[0].clientX;
+    }
+
+    onTafsirTouchMove(event: TouchEvent): void {
+        this.tafsirTouchEndX = event.touches[0].clientX;
+    }
+
+    onTafsirTouchEnd(): void {
+        const diff = this.tafsirTouchStartX - this.tafsirTouchEndX;
+        const threshold = 50; // min swipe distance
+
+        if (Math.abs(diff) > threshold) {
+            if (diff > 0) {
+                // Swiped Left -> User wants "Next" visual, but in RTL Book:
+                // Pulling from Right to Left usually means "Next Page" in LTR.
+                // In Arabic Book, turning page is Right -> Left to go to NEXT page (Left Page).
+                // Wait, User said it was "Reversed".
+                // Previous Logic: Left Swipe -> Next Page (+1).
+                // If that was "Reversed", then Left Swipe should be Previous Page (-1).
+                this.changeTafsirPage(-1);
+            } else {
+                // Swipe Right -> Next Page (+1)
+                this.changeTafsirPage(1);
+            }
+        }
+        // Reset
+        this.tafsirTouchStartX = 0;
+        this.tafsirTouchEndX = 0;
+    }
+
     changeTafsirPage(delta: number): void {
         const newPage = this.tafsirPageNumber + delta;
         if (newPage >= 1 && newPage <= 604) {
@@ -2229,22 +2454,24 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
     }
 
     async downloadFullTafsir(tafsirId: number): Promise<void> {
-        if (!('caches' in window)) {
-            alert('متصفحك لا يدعم خاصية التحميل للأوفلاين');
-            return;
-        }
-
         const tafsirName = this.availableTafsirs.find(t => t.id === tafsirId)?.name || 'التفسير';
 
         // Initialize progress
         this.tafsirDownloadProgress[tafsirId] = { current: 0, total: 604, loading: true };
         this.cdr.detectChanges();
 
-        try {
-            const cache = await caches.open('quran-tafsir-cache');
-            console.log(`[Tafsir] Starting FULL download for ${tafsirName} (ID: ${tafsirId})`);
+        const useFilesystem = this.isMobile || Capacitor.isNativePlatform();
 
-            const chunkSize = 5; // Download 5 pages at a time to be gentle
+        try {
+            // Create directory upfront if using FS
+            if (useFilesystem) await this.ensureTafsirDirectory(tafsirId);
+
+            let cache: any;
+            if ('caches' in window) cache = await caches.open('quran-tafsir-cache');
+
+            console.log(`[Tafsir] Starting FULL download for ${tafsirName} (ID: ${tafsirId}) - Method: ${useFilesystem ? 'Filesystem' : 'WebCache'}`);
+
+            const chunkSize = 5;
             for (let i = 1; i <= 604; i += chunkSize) {
                 const promises = [];
                 for (let j = 0; j < chunkSize && (i + j) <= 604; j++) {
@@ -2252,9 +2479,15 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
                     const url = `https://api.quran.com/api/v4/tafsirs/${tafsirId}/by_page/${p}`;
 
                     promises.push(
-                        fetch(url).then(async res => {
-                            if (res.ok) {
-                                await cache.put(url, res.clone());
+                        firstValueFrom(this.http.get(url)).then(async res => {
+                            if (res) {
+                                if (useFilesystem) {
+                                    await this.saveTafsirToFilesystem(tafsirId, p, res);
+                                }
+                                if (cache) {
+                                    cache.put(url, new Response(JSON.stringify(res)));
+                                }
+
                                 this.tafsirDownloadProgress[tafsirId].current++;
                                 if (this.tafsirDownloadProgress[tafsirId].current % 10 === 0) {
                                     this.cdr.detectChanges();
@@ -2287,17 +2520,35 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
     }
 
     async checkAllTafsirsCacheStatus(): Promise<void> {
-        if (!('caches' in window)) return;
+        const useFilesystem = this.isMobile || Capacitor.isNativePlatform();
+
         try {
-            const cache = await caches.open('quran-tafsir-cache');
+            let cache: any;
+            if ('caches' in window) cache = await caches.open('quran-tafsir-cache');
+
             for (const t of this.availableTafsirs) {
-                // Check a few representative pages (e.g., 1, 302, 604) to estimate if full download exists
-                // For a 100% guarantee we would check all 604, but let's check a sample for performance or just first/last
-                const checkPages = [1, 302, 604];
+                const checkPages = [1, 302, 604]; // Sample check
                 let allExist = true;
+
                 for (const p of checkPages) {
-                    const match = await cache.match(`https://api.quran.com/api/v4/tafsirs/${t.id}/by_page/${p}`);
-                    if (!match) {
+                    let exists = false;
+
+                    if (useFilesystem) {
+                        try {
+                            await Filesystem.stat({
+                                directory: Directory.Data,
+                                path: `tafsir/${t.id}/${p}.json`
+                            });
+                            exists = true;
+                        } catch (e) { }
+                    }
+
+                    if (!exists && cache) {
+                        const match = await cache.match(`https://api.quran.com/api/v4/tafsirs/${t.id}/by_page/${p}`);
+                        if (match) exists = true;
+                    }
+
+                    if (!exists) {
                         allExist = false;
                         break;
                     }
@@ -2330,16 +2581,15 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
             return;
         }
 
-        if (!('caches' in window)) {
-            alert('متصفحك لا يدعم خاصية التحميل للأوفلاين');
-            return;
-        }
-
         const tafsirId = this.selectedTafsirId;
         const tafsirName = this.availableTafsirs.find(t => t.id === tafsirId)?.name || 'التفسير';
+        const useFilesystem = this.isMobile || Capacitor.isNativePlatform();
 
         try {
-            const cache = await caches.open('quran-tafsir-cache');
+            if (useFilesystem) await this.ensureTafsirDirectory(tafsirId);
+
+            let cache: any;
+            if ('caches' in window) cache = await caches.open('quran-tafsir-cache');
 
             // Get metadata to know the page range
             this.dataService.getMetadata().pipe(take(1)).subscribe(async meta => {
@@ -2359,9 +2609,14 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
                     const pageUrl = `https://api.quran.com/api/v4/tafsirs/${tafsirId}/by_page/${p}`;
 
                     try {
-                        const pageRes = await fetch(pageUrl);
-                        if (pageRes.ok) {
-                            await cache.put(pageUrl, pageRes);
+                        const pageRes = await firstValueFrom(this.http.get(pageUrl));
+                        if (pageRes) {
+                            if (useFilesystem) {
+                                await this.saveTafsirToFilesystem(tafsirId, p, pageRes);
+                            }
+                            if (cache) {
+                                cache.put(pageUrl, new Response(JSON.stringify(pageRes)));
+                            }
                             successCount++;
                         }
                     } catch (err) {
@@ -2408,6 +2663,11 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
 
 
     async downloadSurah(surah: any): Promise<void> {
+        if (this.currentReciterId === 175) {
+            alert('عذراً، هذا القارئ (عبدالله حمد أبو شريدة) لا يزال قيد التطوير وسيتم توفير التحميل له قريباً.');
+            return;
+        }
+
         if (this.downloadingSurahs.has(surah.id) || this.downloadedSurahs.has(surah.id)) return;
 
         console.log(`[MushafPage] Starting real download for Surah: ${surah.name}`);
@@ -2429,75 +2689,33 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
     async playNextVerseAudio(currentKey: string): Promise<void> {
         const state = await firstValueFrom(this.audioService.state$);
 
-        // Calculate next logical verse globally
-        // Pass 'quran' to getNextVerseGlobal to get the raw next verse, we'll apply 'page' constraint manually
-        const nextGlobal = await this.getNextVerseGlobal(currentKey, 'quran');
+        // 1. Calculate next logical verse (independent of range constraints first)
+        let nextGlobal: string | null = null;
+        if (this.nextVerseKeyToPlay) {
+            const [cS, cA] = currentKey.split(':').map(Number);
+            const [nS, nA] = this.nextVerseKeyToPlay.split(':').map(Number);
+            const isLogical = (cS === nS && nA === cA + 1) || (nS === cS + 1 && nA === 1);
+            if (isLogical) nextGlobal = this.nextVerseKeyToPlay;
+        }
 
         if (!nextGlobal) {
+            nextGlobal = await this.getNextVerseGlobal(currentKey, 'quran');
+        }
+
+        // 2. Check if next verse is within the user's active range
+        console.log(`[MushafPage] Checking if ${nextGlobal} is within range ${state.rangeEndVerseKey} (Range: ${state.playbackRange})`);
+        if (!nextGlobal || !this.isWithinActiveRange(nextGlobal, state)) {
+            console.log(`[MushafPage] Next verse ${nextGlobal} is OUT of active range. Ending group.`);
             this.handleGroupEnd(state);
             return;
         }
 
-        // Apply Range Constraints
-        if (state.playbackRange === 'surah') {
-            const [currentSurah] = currentKey.split(':');
-            const [nextSurah] = nextGlobal.split(':');
-            if (currentSurah !== nextSurah) {
-                this.handleGroupEnd(state);
-                return;
-            }
-        } else if (state.playbackRange === 'page') {
-            // Check for page boundary
-            const currentP = await this.getPageForVerseKey(currentKey);
-            const nextP = await this.getPageForVerseKey(nextGlobal);
-
-            if (currentP !== nextP) {
-                this.handleGroupEnd(state);
-                return;
-            }
-        } else if (state.playbackRange === 'juz') {
-            // JUZ logic is already partially handled in getNextVerseGlobal but let's double check if we want
-            // However, getNextVerseGlobal with 'quran' passed above returns standard next.
-            // We should let getNextVerseGlobal handle Juz if we passed 'juz'.
-            // Let's refine:
-        }
-
-        // Re-call getNextVerseGlobal with actual range for Juz/Quran limits if needed, 
-        // or just accept nextGlobal if we trust our manual checks.
-        // Better: Let's use the actual range for getNextVerseGlobal, but for 'page' we treat it as 'quran' to find the verse, then check page.
-
-        // Let's stick to the previous plan: use getNextVerseGlobal with 'quran' allows finding the *next* verse.
-        // Then we validte constraints.
-
-        // Juz Check
-        if (state.playbackRange === 'juz') {
-            // We need to check if we crossed a Juz boundary (Juz start pages are in metadata)
-            const currentP = await this.getPageForVerseKey(currentKey);
-            const nextP = await this.getPageForVerseKey(nextGlobal);
-            // Approximate: Check if Juz changed.
-            const currentJuz = await firstValueFrom(this.dataService.getJuzAtPage(currentP));
-            const nextJuz = await firstValueFrom(this.dataService.getJuzAtPage(nextP));
-
-            if (currentJuz && nextJuz && currentJuz.id !== nextJuz.id) {
-                this.handleGroupEnd(state);
-                return;
-            }
-        }
-
+        console.log(`[MushafPage] Advancing to next verse: ${nextGlobal}`);
+        // 3. Play and Navigate
         this.playVerseAudio(nextGlobal);
 
-        // Auto-navigate to keep in sync (optional, but good for "follow along")
-        // Check if we are already seeing the page
-        const nextP = await this.getPageForVerseKey(nextGlobal);
-        if (nextP !== this.pageNumber) {
-            // Only auto-flip if we are close? Or always?
-            // User complaint implies they want to browse freely.
-            // If we auto-flip, we disrupt their browsing.
-            // BUT, if we don't auto-flip, the "Auto Scroll" feature we just added won't work.
-            // Let's AUTO-FLIP if the user hasn't explicitly disabled "Follow Reciter" (which we don't have a setting for yet)
-            // Default behavior: Follow reciter.
-            await this.navigateToVerse(nextGlobal);
-        }
+        // Navigation is now handled REACTIVELY by the state subscription calling autoNavigateToVerse.
+        // We don't need a proactive navigateToVerse call here anymore, preventing double-triggers.
     }
 
     private async getPageForVerseKey(verseKey: string): Promise<number> {
@@ -2522,53 +2740,90 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         return null;
     }
 
+    updateAudioSettingsAyahLists() {
+        const startS = this.allSurahs.find(s => s.id === Number(this.audioSettingsModal.startSurah));
+        if (startS) {
+            this.audioSettingsModal.availableAyahsForStart = Array.from({ length: startS.verses_count }, (_, i) => i + 1);
+            if (this.audioSettingsModal.startAyah > startS.verses_count) this.audioSettingsModal.startAyah = 1;
+        }
+
+        const endS = this.allSurahs.find(s => s.id === Number(this.audioSettingsModal.endSurah));
+        if (endS) {
+            this.audioSettingsModal.availableAyahsForEnd = Array.from({ length: endS.verses_count }, (_, i) => i + 1);
+            if (this.audioSettingsModal.endAyah > endS.verses_count) this.audioSettingsModal.endAyah = endS.verses_count;
+        }
+    }
+
     private async getNextVerseGlobal(currentKey: string, range: string): Promise<string | null> {
         const [surahId, verseNum] = currentKey.split(':').map(Number);
+
+        // Avoid internal state fetching if possible, but keep for Range Enforcement logic
+        const state = await firstValueFrom(this.audioService.state$);
+
+        // 0. Custom Range Enforcement (If specifically requested)
+        if (range === 'custom' && state.specificRange) {
+            const [endS, endV] = state.specificRange.end.split(':').map(Number);
+            if (surahId > endS || (surahId === endS && verseNum >= endV)) {
+                return null;
+            }
+        }
+
         const meta = await firstValueFrom(this.dataService.getMetadata());
         const surah = meta.surahs.find(s => s.id === surahId);
         if (!surah) return null;
 
         // 1. Advance within Surah
         if (verseNum < surah.verses_count) {
-            return `${surahId}:${verseNum + 1}`;
+            const nextKey = `${surahId}:${verseNum + 1}`;
+            if (range === 'page') {
+                const currentP = await this.getPageForVerseKey(currentKey);
+                const nextP = await this.getPageForVerseKey(nextKey);
+                if (currentP !== nextP) return null;
+            }
+            return nextKey;
         }
 
         // 2. Surah Ended, check range permissions
-        if (range === 'surah') {
-            return null; // Stop at end of surah
-        }
+        if (range === 'surah' || range === 'single') return null;
 
-        if (range === 'quran' || range === 'juz') {
-            if (surahId < 114) {
-                const nextSurahId = surahId + 1;
-                const nextKey = `${nextSurahId}:1`;
+        // 3. Move to next Surah (Quran, Juz, or Page)
+        if (surahId < 114) {
+            const nextSurahId = surahId + 1;
+            const nextKey = `${nextSurahId}:1`;
 
-                if (range === 'juz') {
-                    // Check if next surah starts in the same juz
-                    const currentJuz = await firstValueFrom(this.dataService.getJuzAtPage(this.pageNumber));
-                    if (!currentJuz) return null;
-
-                    const nextSurah = meta.surahs.find(s => s.id === nextSurahId);
-                    const nextSurahPage = nextSurah?.start_page || 0;
-
-                    // Locate the start page of the next juz
-                    const nextJuz = meta.juzs.find(j => j.id === currentJuz.id + 1);
-                    const nextJuzStartPage = nextJuz ? nextJuz.start_page : 605; // 605 is the end of Quran
-
-                    if (nextSurahPage >= nextJuzStartPage) {
-                        console.log(`[MushafPage] Exited Juz ${currentJuz.id}. Stopping.`);
-                        return null; // Next surah is outside current Juz
-                    }
-                }
-
-                return nextKey;
+            if (range === 'page') {
+                const currentP = await this.getPageForVerseKey(currentKey);
+                const nextP = await this.getPageForVerseKey(nextKey);
+                if (currentP !== nextP) return null;
             }
+
+            if (range === 'juz') {
+                const currentP = await this.getPageForVerseKey(currentKey);
+                const currentJuz = await firstValueFrom(this.dataService.getJuzAtPage(currentP));
+                if (!currentJuz) return null;
+
+                const nextSurah = meta.surahs.find(s => s.id === nextSurahId);
+                const nextSurahPage = nextSurah?.start_page || 0;
+
+                // Find next Juz to get boundary page
+                const nextJuz = meta.juzs.find(j => j.id === currentJuz.id + 1);
+                const nextJuzStartPage = nextJuz ? nextJuz.start_page : 605;
+
+                if (nextSurahPage >= nextJuzStartPage) return null;
+            }
+
+            return nextKey;
         }
 
-        return null; // End of Quran or restricted range
+        return null;
     }
 
     private async handleGroupEnd(state: PlaybackState): Promise<void> {
+        console.log('[MushafPage] Recitation Range Complete.');
+        this.audioService.stop();
+        this.playingVerseKey = null; // Sync UI
+        this.selectedVerseKey = null; // Reset selection if needed
+        this.cdr.detectChanges();
         if (state.repeatGroup > 1 && (state.currentGroupRepeatCount + 1) < state.repeatGroup) {
             const nextCount = state.currentGroupRepeatCount + 1;
             console.log(`[MushafPage] Repeating Group (${nextCount + 1}/${state.repeatGroup})`);
@@ -2875,6 +3130,21 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         this.pageNumber = page;
         this.isSidebarOpen = false;
         this.isSettingsOpen = false;
+
+        // --- SLIDER ALIGNMENT FIX ---
+        // Ensure the slider is perfectly centered and animations are cleared
+        this.slideOffset = 0;
+        this.isAnimating = false;
+        this.swipeDirection = 'none';
+
+        // --- SELECTION SYNC ---
+        // Clear selection if it's on a different page to avoid confusion during start logic
+        if (this.selectedVerseKey) {
+            this.getPageForVerseKey(this.selectedVerseKey).then(p => {
+                if (p !== page) this.selectedVerseKey = null;
+            });
+        }
+
         this.loadPage();
     }
 
@@ -3216,7 +3486,7 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         const [surahId, verseNum] = verseKey.split(':').map(Number);
         this.memorizationSettings.surahStartVerse = verseNum;
         this.memorizationSettings.targetSurah = surahId;
-
+     
         // Fetch surah metadata to get the total verses count for the end range
         this.dataService.getMetadata().subscribe(meta => {
             const surah = meta.surahs.find(s => s.id === surahId);
@@ -3230,7 +3500,8 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         });
         */
 
-        this.showOptionsSheet = true;
+        // MOVED: Options sheet is now triggered by a dedicated header button
+        // this.showOptionsSheet = true;
         this.cdr.detectChanges();
     }
 
@@ -4797,6 +5068,59 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
             }
         } catch (e) {
             console.warn('[MushafPage] Auto-scroll failed:', e);
+        }
+    }
+
+    private isWithinActiveRange(verseKey: string, state: PlaybackState): boolean {
+        // If no boundary set (like 'quran' mode), everything is within range
+        if (!state.rangeEndVerseKey) {
+            console.log(`[MushafPage] isWithinActiveRange: No boundary set, returning true.`);
+            return true;
+        }
+
+        const parseKey = (key: string) => {
+            const parts = key.split(':').map(Number);
+            return (parts[0] || 0) * 1000 + (parts[1] || 0);
+        };
+
+        const currentVal = parseKey(verseKey);
+        const endVal = parseKey(state.rangeEndVerseKey);
+        const result = currentVal <= endVal;
+
+        console.log(`[MushafPage] isWithinActiveRange: ${verseKey}(${currentVal}) <= ${state.rangeEndVerseKey}(${endVal}) -> ${result}`);
+        return result;
+    }
+
+    private async autoNavigateToVerse(verseKey: string): Promise<void> {
+        try {
+            const [surahId, verseNum] = verseKey.split(':').map(Number);
+            const page = await firstValueFrom(this.dataService.getPageNumberForVerse(surahId, verseNum));
+
+            if (page && page !== this.pageNumber) {
+                console.log(`[MushafPage] Auto-navigating to page ${page} for verse ${verseKey}`);
+
+                // --- SMOOTH AUTO-NAVIGATION ---
+                // If the jump is just the next or previous page, use animated transition
+                if (!this.isAnimating) {
+                    if (page === this.pageNumber + 1) {
+                        this.triggerPageChange('next');
+                    } else if (page === this.pageNumber - 1) {
+                        this.triggerPageChange('prev');
+                    } else {
+                        this.goToPage(page);
+                    }
+                } else {
+                    this.goToPage(page);
+                }
+
+                // --- DYNAMIC BOUNDARY UPDATE ---
+                // Ensure boundaries move with automated navigation (especially for 'page' or 'juz' modes)
+                await this.syncPlaybackBoundary(verseKey);
+
+                this.cdr.detectChanges();
+            }
+        } catch (e) {
+            console.warn('[MushafPage] Auto-navigation failed:', e);
         }
     }
 

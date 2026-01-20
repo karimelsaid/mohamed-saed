@@ -174,20 +174,46 @@ export class MushafDataService {
   }
 
   private findVerseInJuzRange(startJuz: number, startPage: number, endPage: number, verseKey: string): Observable<number> {
-    // Try current Juz first
-    return this.getJuzChunk(startJuz).pipe(
+    // Determine the end Juz for this surah's page range
+    return this.getMetadata().pipe(
+      switchMap(meta => {
+        let endJuzId = startJuz;
+        for (const juz of meta.juzs) {
+          if (juz.start_page <= endPage) {
+            endJuzId = juz.id;
+          } else {
+            break;
+          }
+        }
+
+        // Search through Juz chunks in the range
+        // For simplicity and to avoid complex recursive RxJS, we check up to 3 Juzs (max a surah usually spans)
+        return this.searchInJuz(startJuz, verseKey, 0).pipe(
+          switchMap(page => {
+            if (page > 0) return of(page);
+            if (endJuzId > startJuz) {
+              return this.searchInJuz(startJuz + 1, verseKey, 0).pipe(
+                switchMap(page2 => {
+                  if (page2 > 0) return of(page2);
+                  if (endJuzId > startJuz + 1) {
+                    return this.searchInJuz(startJuz + 2, verseKey, startPage);
+                  }
+                  return of(startPage);
+                })
+              );
+            }
+            return of(startPage);
+          })
+        );
+      })
+    );
+  }
+
+  private searchInJuz(juzId: number, verseKey: string, fallbackPage: number): Observable<number> {
+    return this.getJuzChunk(juzId).pipe(
       map(pages => {
         const page = pages.find(p => p.lines.some(l => l.segments?.some(s => s.verse_key === verseKey)));
-        if (page) return page.page_number;
-        return 0;
-      }),
-      switchMap(pageNumber => {
-        if (pageNumber > 0) return of(pageNumber);
-
-        // If not found, maybe it's in the next Juz? (Surahs can span multiple Juzs)
-        // For efficiency, we just fall back to surah start page if not found in current Juz
-        // This is a very rare case for a specific verse search.
-        return of(startPage);
+        return page ? page.page_number : fallbackPage;
       })
     );
   }

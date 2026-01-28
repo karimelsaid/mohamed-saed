@@ -10,6 +10,11 @@ export interface DailyCapacity {
     memorizationDays: number;
     reviewType: 'light' | 'weekly' | 'rescue';
     reviewAmount?: number;
+    // Weekday selection (0=Sat, 6=Fri)
+    tilawaDays?: number[];
+    hifzDays?: number[];
+    murajaDays?: number[];
+    rabtDays?: number[];
 }
 
 export interface MemorizedVerse {
@@ -195,6 +200,14 @@ export class HifzPlanService {
             todayLog = JSON.parse(mutabaaDataStr).todayLog;
         }
 
+        // Get today's weekday index (0=Sat, 6=Fri based on Arabic week)
+        const jsDay = new Date().getDay(); // JS: 0=Sun, 6=Sat
+        const todayIndex = jsDay === 0 ? 1 : jsDay === 6 ? 0 : jsDay + 1; // Convert to Arabic week
+        // Correction: Arabic week: Sat=0, Sun=1, Mon=2, ...Fri=6
+        // JS: Sun=0, Mon=1, Tue=2, Wed=3, Thu=4, Fri=5, Sat=6
+        // Map: Sat(JS6)->0, Sun(JS0)->1, Mon(JS1)->2, ..., Fri(JS5)->6
+        const arabicDayIndex = jsDay === 6 ? 0 : jsDay + 1;
+
         const recitationAmount = plan.dailyCapacity.recitationAmount;
         const recitationUnit = plan.dailyCapacity.recitationType;
         const lastRead = plan.stats.lastReadPage || 0;
@@ -205,8 +218,17 @@ export class HifzPlanService {
 
         const hifzDisplayAmount = (plan.dailyCapacity.newMemorization === 'verse' ? 1 : (plan.dailyCapacity.memorizationAmount || 1));
 
-        const tasks: DailyTask[] = [
-            {
+        const tasks: DailyTask[] = [];
+
+        // Debug: Log weekday filtering
+        console.log(`[HifzPlan] Today's JS day: ${jsDay}, Arabic day index: ${arabicDayIndex}`);
+        console.log(`[HifzPlan] Tilawa days from plan:`, plan.dailyCapacity.tilawaDays);
+        console.log(`[HifzPlan] Hifz days from plan:`, plan.dailyCapacity.hifzDays);
+
+        // Check if today is a day for Tilawa (ensure number comparison)
+        const tilawaDays = (plan.dailyCapacity.tilawaDays ?? [0, 1, 2, 3, 4, 5, 6]).map(Number);
+        if (tilawaDays.includes(arabicDayIndex)) {
+            tasks.push({
                 type: 'recitation',
                 label: `ورد التلاوة: ${recitationAmount} ${this.getUnitLabel(recitationUnit)} (البداية من ص ${nextStart})`,
                 status: todayLog?.tilawo?.status || 'pending',
@@ -215,8 +237,13 @@ export class HifzPlanService {
                 amountDone: pagesDoneToday,
                 page: nextStart,
                 startPage: nextStart
-            },
-            {
+            });
+        }
+
+        // Check if today is a day for Hifz (ensure number comparison)
+        const hifzDays = (plan.dailyCapacity.hifzDays ?? [0, 1, 2, 3, 4, 5, 6]).map(Number);
+        if (hifzDays.includes(arabicDayIndex)) {
+            tasks.push({
                 type: 'new_memorization',
                 label: `حفظ جديد: ${hifzDisplayAmount} ${this.getUnitLabel(plan.dailyCapacity.newMemorization)}`,
                 status: todayLog?.hifz?.status || 'pending',
@@ -226,8 +253,8 @@ export class HifzPlanService {
                 surah: plan.currentPosition.surah,
                 verse: plan.currentPosition.verse,
                 position: plan.currentPosition
-            }
-        ];
+            });
+        }
 
         const memoUnit = plan.dailyCapacity.newMemorization || 'page';
         const memoAmount = plan.dailyCapacity.memorizationAmount || 1;
@@ -239,7 +266,8 @@ export class HifzPlanService {
         // "Al-Rabt" (Linking) activates if we have at least 5 prior wards in history,
         // OR if the user has substantial memorized content (e.g. > 50 verses) even with empty history.
         // This ensures experienced users jumping in get Rabt immediately.
-        const isRabtActive = wardHistory.length >= 5 || totalMemorized >= 50;
+        // Additionally, Rabt only shows on the same days as Hifz (new memorization)
+        const isRabtActive = (wardHistory.length >= 5 || totalMemorized >= 50) && hifzDays.includes(arabicDayIndex);
 
         // "Al-Rabt" (Linking) only activates if we have at least 6 prior wards to link with today's (total 7).
         if (isRabtActive) {
@@ -292,8 +320,9 @@ export class HifzPlanService {
         }
 
         // --- Revision Task (Muraaja) ---
-        // Always show if there is ANY history, but label changes if Rabt is active.
-        if (historyCount > 0) {
+        // Only show if today is a day for Muraja AND there is history (ensure number comparison)
+        const murajaDays = (plan.dailyCapacity.murajaDays ?? [0, 1, 2, 3, 4, 5, 6]).map(Number);
+        if (historyCount > 0 && murajaDays.includes(arabicDayIndex)) {
             const lastDeep = plan.stats.lastDeepRevisionPage || 0;
             const reviewAmount = plan.dailyCapacity.reviewAmount || 1;
             let nextDeepStart = lastDeep + 1; // Advance to next page 

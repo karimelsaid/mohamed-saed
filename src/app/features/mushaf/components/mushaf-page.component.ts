@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, OnChanges, SimpleChanges, OnDestroy, ChangeDetectorRef, ViewChild } from '@angular/core';
+import { Component, Input, OnInit, OnChanges, SimpleChanges, OnDestroy, ChangeDetectorRef, ViewChild, ChangeDetectionStrategy, AfterViewInit, NgZone, Renderer2, ElementRef } from '@angular/core';
 import { MutabaaTrackerComponent } from './mutabaa-tracker/mutabaa-tracker.component';
 import { MushafDataService } from '../../../core/services/mushaf-data.service';
 import { MushafFontService } from '../../../core/services/mushaf-font.service';
@@ -6,8 +6,8 @@ import { MushafAssetService } from '../../../core/services/mushaf-asset.service'
 import { VoiceRecognitionService } from '../../../core/services/voice-recognition.service';
 import { QuranMatchingService } from '../../../core/services/quran-matching.service';
 import { MushafPage, SurahMetadata, JuzMetadata, MushafMetadata, MushafSegment } from '../../../core/models/mushaf.model';
-import { Observable, firstValueFrom, of, Subscription, forkJoin } from 'rxjs';
-import { take, filter, map, throttleTime } from 'rxjs/operators';
+import { Observable, firstValueFrom, of, Subscription, forkJoin, Subject } from 'rxjs';
+import { take, filter, map, throttleTime, takeUntil } from 'rxjs/operators';
 import { QuranProgressService } from '../../../services/quran-progress.service';
 import { MutabaaService } from '../../../services/mutabaa.service';
 import { HifzPlanService } from '../../../services/hifz-plan.service';
@@ -49,9 +49,10 @@ export interface MemorizationSettings {
     selector: 'app-mushaf-page',
     standalone: false,
     templateUrl: './mushaf-page.component.html',
-    styleUrls: ['./mushaf-page.component.css']
+    styleUrls: ['./mushaf-page.component.css'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
+export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterViewInit {
     @Input() pageNumber: number = 1;
 
     // Virtual Slider State
@@ -63,6 +64,9 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
     currentJuz$?: Observable<JuzMetadata | undefined>;
     mushafMetadata$?: Observable<MushafMetadata>;
     currentMushafPage: MushafPage | null = null; // NEW: Local copy for sync checks
+    private destroy$ = new Subject<void>(); // Added for memory leak fix
+    isLoadingPage: boolean = false;
+    pageLoadError: string | null = null;
 
     fontFamily: string = '';
     isFontReady: boolean = false;
@@ -85,6 +89,8 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
     selectedVerseKey: string | null = null;
 
     @ViewChild(MutabaaTrackerComponent) mutabaaTracker!: MutabaaTrackerComponent;
+    @ViewChild('pageContainer', { static: false }) pageContainerEl?: ElementRef;
+    @ViewChild('mushafSlider', { static: false }) mushafSliderEl?: ElementRef;
 
     // Memorization Settings
     memorizationSettings: MemorizationSettings = {
@@ -110,6 +116,7 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
     currentWordIndex: number = 0; // NEW: Track word within Ayah
     currentRepetition: number = 1;
     isGroupPhase: boolean = false;
+    memoMethod: 'manual' | 'auto' = 'manual'; // 'manual' for touch-based, 'auto' for audio-based
     isTestPhase: boolean = false;
     testOptions: string[] = [];
     correctAnswer: string = '';
@@ -148,6 +155,7 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
     isAnimating: boolean = false;
     swipeDirection: 'none' | 'next' | 'prev' = 'none';
     private versePageMap: Map<string, number> = new Map(); // Tracks which page each verse belongs to
+    private isProcessingAutoRepeat: boolean = false; // Lock flag for repetition logic
     isWaitingForPageTurn: boolean = false; // NEW: Prevent premature page turn during hifz
     showTaskDoneToast: boolean = false; // NEW: Show "Task Done" notification
 
@@ -198,6 +206,25 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
     pushSubscribed: boolean = false; // Track actual push registration
     isMobile: boolean = false;
 
+    // Search State
+    isSearchOpen: boolean = false;
+    searchQuery: string = '';
+    searchResults: any[] = [];
+    private searchTimeout: any;
+    isSearching: boolean = false;
+    flashVerseKey: string | null = null; // Temporary highlight after search
+    private searchSubject = new Subscription(); // Will use for debouncing if needed, or just simple Subject
+
+    // --- Continuous Scroll & Auto-Scroll State ---
+    isContinuousMode: boolean = false;
+    isAutoRepeat: boolean = false;
+    isAutoScrolling: boolean = false;
+    showScrollControls: boolean = false; // Toggle for expanded controls
+    autoScrollSpeed: number = 1.0; // multiplier (1.0 = ~1 min/page)
+    verticalPages: any[] = [];
+    isVerticalLayoutReady: boolean = false; // Hide content until fonts are loaded
+    private rafId: any = null;
+
     // Track auto-synced tasks to prevent repeat calls
     private completedTasks: Set<string> = new Set();
     currentTaskType: 'new_memorization' | 'hifz' | 'consolidation' | 'revision' | 'recitation' | 'tilawo' | 'muraja' | 'deepMuraja' | 'rabt' | null = null;
@@ -227,14 +254,21 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         { id: 14, name: 'تفسير ابن كثير', downloaded: false },
         { id: 15, name: 'تفسير الطبري', downloaded: false },
         { id: 90, name: 'تفسير القرطبي', downloaded: false },
-        { id: 94, name: 'تفسير البغوي', downloaded: false }
+        { id: 94, name: 'تفسير البغوي', downloaded: false },
+        { id: 900, name: 'أسباب النزول (الواحدي)', downloaded: true } // Local asset
     ];
     selectedTafsirId: number = 16;
     tafsirFontFamily: string = '';
+
+    get getActiveTafsirName(): string {
+        const found = this.availableTafsirs.find(t => t.id === this.selectedTafsirId);
+        return found ? found.name : 'مصادر التفسير';
+    }
     loadingTafsir: boolean = false;
     tafsirPageNumber: number = 0;
     showTafsirSources: boolean = false;
     tafsirDownloadProgress: { [id: number]: { current: number, total: number, loading: boolean } } = {};
+    private pagesWithAsbab: number[] = []; // Store unique pages that have Asbab Al-Nuzul data
 
     // Tafsir Swipe State
     private tafsirTouchStartX: number = 0;
@@ -256,6 +290,12 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         };
 
     showInfoModal: boolean = false;
+    showSurahModal: boolean = false; // NEW: Premium Surah selector state
+    surahSearchQuery: string = ''; // NEW: For filtering surahs
+
+    showSleepTimerModal: boolean = false;
+    sleepTimerRemaining: number = 0; // seconds
+    sleepTimerInterval: any = null;
 
     // Audio Settings Modal
     audioSettingsModal = {
@@ -278,6 +318,7 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
     showReciterModal: boolean = false;
     private isExiting: boolean = false;
     allSurahs: any[] = [];
+    allJuzs: any[] = [];
 
 
     Math = Math;
@@ -294,19 +335,22 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         private hifzPlanService: HifzPlanService,
         private pushService: PushNotificationService,
         private localReminderService: LocalReminderService,
-        private audioService: QuranAudioService,
+        public audioService: QuranAudioService,
         private router: Router,
-        private http: HttpClient
+        private http: HttpClient,
+        private ngZone: NgZone,
+        private renderer: Renderer2
     ) { }
 
     private nextVerseKeyToPlay: string | null = null;
 
     async ngOnInit(): Promise<void> {
+        this.isFontReady = true; // Ensure content is visible by default (optimization)
         this.isAndroid = Capacitor.getPlatform() === 'android';
 
         // Setup Audio State
         this.audioState$ = this.audioService.state$;
-        this.audioState$.subscribe(state => {
+        this.audioState$.pipe(takeUntil(this.destroy$)).subscribe(state => {
             const newKey = state.currentVerseKey; // Directly map to currentVerseKey
             if (this.playingVerseKey !== newKey) {
                 this.playingVerseKey = newKey;
@@ -325,21 +369,31 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
             }
         });
 
-        // Load all surahs for labels
-        this.dataService.getMetadata().subscribe(meta => {
-            if (meta) this.allSurahs = meta.surahs;
+        // Load all surahs and juzs for labels
+        this.dataService.getMetadata().pipe(takeUntil(this.destroy$)).subscribe(meta => {
+            if (meta) {
+                this.allSurahs = meta.surahs;
+                this.allJuzs = meta.juzs;
+            }
         });
 
         this.audioService.verseCompleted$
-            .subscribe(verseKey => {
-                if (verseKey) {
-                    console.log(`[MushafPage] Verse completed notification received: ${verseKey}`);
-                    this.playNextVerseAudio(verseKey);
+            .pipe(takeUntil(this.destroy$))
+            .subscribe(async event => {
+                if (event) {
+                    const { verseKey, duration } = event;
+                    console.log(`[MushafPage] Verse completed: ${verseKey}, Duration: ${duration}s`);
+
+                    if (this.isAutoRepeat) {
+                        await this.handleAutoRepeat(verseKey, duration);
+                    } else {
+                        await this.playNextVerseAudio(verseKey);
+                    }
                 }
             });
 
         // Fetch memorized content for indicators
-        this.hifzPlanService.getPlan().subscribe(res => {
+        this.hifzPlanService.getPlan().pipe(takeUntil(this.destroy$)).subscribe(res => {
             if (res.success && res.plan?.memorizedContent) {
                 this.memorizedVerses = res.plan.memorizedContent.map(v => v.verseKey);
             }
@@ -347,6 +401,19 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
 
         // Initialize downloaded status
         this.updateDownloadedStatus();
+
+        // Load page splits for half-page highlighting
+        this.dataService.getPageSplits().pipe(takeUntil(this.destroy$)).subscribe(splits => {
+            if (splits) {
+                splits.forEach(s => {
+                    if (s.page && s.split) {
+                        this.pageSplits.set(s.page, s.split);
+                    }
+                });
+                console.log(`[MushafPage] Loaded ${this.pageSplits.size} page splits.`);
+                this.cdr.detectChanges();
+            }
+        });
 
         // Restore saved reciter
         const savedReciter = localStorage.getItem('lastReciterId');
@@ -363,56 +430,17 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         });
 
 
-        // Ensure assets are downloaded before proceeding
-        try {
-            await this.assetService.ensureAssets();
-        } catch (error) {
-            console.error('Failed to download assets:', error);
-            // Optionally show error to user or fallback
-        }
-
-        // Load page splits for half-page coloring
-        this.dataService.getPageSplits().pipe(take(1)).subscribe(splits => {
-            if (splits) {
-                splits.forEach((s: any) => this.pageSplits.set(s.page, s.split));
-                this.cdr.detectChanges();
-            }
-        });
-
-        // Check if user is logged in
-        const user = localStorage.getItem('user');
-        this.isLoggedIn = !!user;
-        console.log('👤 [MushafPage] isLoggedIn:', this.isLoggedIn, user ? 'User found' : 'User NOT found');
-
-        // Check if running as Mobile App (PWA Standalone or Webview)
-        const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-        const isCapacitor = (window as any).Capacitor !== undefined;
-        this.isMobileApp = isStandalone || isCapacitor;
-
-        // Platform detection for Android specifically
-        const ua = navigator.userAgent.toLowerCase();
-        const isAndroidUA = ua.includes('android');
-        const isAndroidCapacitor = isCapacitor && (window as any).Capacitor.getPlatform() === 'android';
-        this.isAndroid = isAndroidUA || isAndroidCapacitor;
-
-        this.pageStartTime = Date.now();
-        this.loadUserPlan();
-
-        // Restore saved theme from localStorage
-        const savedTheme = localStorage.getItem('mushaf_theme');
-        if (savedTheme && this.themes.includes(savedTheme)) {
-            this.currentTheme = savedTheme;
-        }
-
-        // Restore last read page if not provided by input
-        const savedPage = localStorage.getItem('lastMushafPage');
-        if (savedPage && (!this.pageNumber || this.pageNumber === 1)) {
-            this.pageNumber = parseInt(savedPage, 10);
-        }
-
-
         this.fontService.loadBasmalahFont();
         this.loadPage();
+
+        // Ensure assets are downloaded in background (Native only)
+        // We don't await here to prevent blocking the initial page load UI
+        this.assetService.ensureAssets().catch(error => {
+            console.error('Failed to verify/download assets:', error);
+        });
+
+        // Pre-fetch search database for high-performance offline search
+        this.dataService.getSearchData().pipe(takeUntil(this.destroy$)).subscribe();
 
         // Check Push Permission Status
         this.pushService.getPermissionStatus().then(statusRes => {
@@ -424,24 +452,24 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         // Refresh progress data
         // Refresh progress data
         console.log('📡 [MushafPage] Requesting Quran progress update...');
-        this.quranProgressService.getProgress().subscribe({
+        this.quranProgressService.getProgress().pipe(takeUntil(this.destroy$)).subscribe({
             next: (res) => console.log('✅ [MushafPage] Quran progress update success'),
             error: (err) => console.error('❌ [MushafPage] Quran progress update error:', err)
         });
 
         // Subscribe to progress changes to trigger view updates in the sidebar tabs
-        this.quranProgressService.progress$.subscribe(() => {
+        this.quranProgressService.progress$.pipe(takeUntil(this.destroy$)).subscribe(() => {
             this.cdr.detectChanges();
         });
 
 
         // Listen for task updates from anywhere (dashboard, other components)
-        this.mutabaaService.taskUpdated$.subscribe(() => {
+        this.mutabaaService.taskUpdated$.pipe(takeUntil(this.destroy$)).subscribe(() => {
             console.log('🔄 [Mushaf] Task Update Notification Received. Reloading Tasks & Plan...');
             this.loadDailyTasks();
 
             // Also refresh local plan data to ensure 'memorizedVerses' (used in index) is up to date
-            this.hifzPlanService.getPlan().subscribe(res => {
+            this.hifzPlanService.getPlan().pipe(takeUntil(this.destroy$)).subscribe(res => {
                 if (res.success && res.plan?.memorizedContent) {
                     this.memorizedVerses = res.plan.memorizedContent.map(v => v.verseKey);
                     this.cdr.detectChanges();
@@ -461,7 +489,7 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         }, 1000); // Check every second for better precision
 
         // Check if hifz plan setup is needed and load initial plan status
-        this.hifzPlanService.getPlan().subscribe({
+        this.hifzPlanService.getPlan().pipe(takeUntil(this.destroy$)).subscribe({
             next: (res) => {
                 if (res.success) {
                     this.hifzPlanSetupComplete = res.isSetupComplete;
@@ -499,6 +527,47 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
 
         // Stats are now public
         this.loadTotalUsers();
+
+        // FIX: Populate versePageMap for Touch Interaction Logic
+        // We subscribe to page data streams to map verse keys to page numbers
+        const mapPopulator = (page: any) => {
+            if (page && page.lines) {
+                page.lines.forEach((line: any) => {
+                    if (line.type === 'verse' && line.segments) {
+                        line.segments.forEach((seg: any) => {
+                            if (seg.verse_key) {
+                                this.versePageMap.set(seg.verse_key, page.page_number);
+                            }
+                        });
+                    }
+                });
+            }
+        };
+
+        if (this.currentPageData$) this.currentPageData$.pipe(takeUntil(this.destroy$)).subscribe(mapPopulator);
+        if (this.nextPageData$) this.nextPageData$.pipe(takeUntil(this.destroy$)).subscribe(mapPopulator);
+        if (this.prevPageData$) this.prevPageData$.pipe(takeUntil(this.destroy$)).subscribe(mapPopulator);
+    }
+
+    ngAfterViewInit(): void {
+        console.log('[Mushaf] Initialized. Slider ready:', !!this.mushafSliderEl);
+    }
+
+    // TrackBy functions for better performance
+    trackByLine(index: number, line: any): string {
+        return line.id || index;
+    }
+
+    trackBySegment(index: number, segment: any): string {
+        return segment.verse_key + '-' + index;
+    }
+
+    trackByRipple(index: number, ripple: any): number {
+        return ripple.id;
+    }
+
+    trackBySurah(index: number, surah: any): number {
+        return surah.id;
     }
 
     openFeedbackModal(): void {
@@ -618,7 +687,7 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         console.log('📡 [MushafPage] loadDailyTasks starting...');
 
         // 1. Load Daily Tasks (today's progress)
-        this.hifzPlanService.getDailyTasks().subscribe({
+        this.hifzPlanService.getDailyTasks().pipe(takeUntil(this.destroy$)).subscribe({
             next: async (res: any) => {
                 console.log('✅ [MushafPage] Daily Tasks Response:', res.success ? 'Success' : 'Failed', res);
 
@@ -772,7 +841,7 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         });
 
         // 2. Load Plan Config (for setup status and content)
-        this.hifzPlanService.getPlan().subscribe(res => {
+        this.hifzPlanService.getPlan().pipe(takeUntil(this.destroy$)).subscribe(res => {
             if (res.success && res.plan) {
                 this.hifzPlanSetupComplete = res.plan.isSetupComplete;
                 this.hifzPlanStats = res.plan.stats;
@@ -1758,11 +1827,13 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
     }
 
     ngOnDestroy(): void {
+        this.destroy$.next();
+        this.destroy$.complete();
+
         if (this.integrityRefreshInterval) {
             clearInterval(this.integrityRefreshInterval);
         }
         this.audioService.stop();
-        this.voiceSubscription?.unsubscribe();
     }
 
     saveReminders(): void {
@@ -1875,10 +1946,12 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         const split = this.pageSplits.get(pageNum);
         if (!split) return false;
 
-        const [s, v] = verseKey.split(':').map(Number);
+        // FAST PARSING: Convert verseKey "surah:ayah" to a comparable number (S*1000 + V)
+        // This is much faster than multiple split/map/Number calls in a loop
+        const firstColon = verseKey.indexOf(':');
+        const s = parseInt(verseKey.substring(0, firstColon), 10);
+        const v = parseInt(verseKey.substring(firstColon + 1), 10);
 
-        // If current verse is strictly AFTER the split, it's Definitely Second Half.
-        // The split target is usually the LAST ayah of the first half (from split.json).
         return s > split.surah || (s === split.surah && v > split.ayah);
     }
 
@@ -1886,9 +1959,23 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
     loadReciters(): void {
         this.audioService.getReciters().subscribe({
             next: reciters => {
-                // FILTER: Remove broken reciters (Bandar=160, Khalifa=161)
-                const validReciters = reciters.filter(r => r.id !== 160 && r.id !== 161);
-                console.log(`[MushafPage] Reciters loaded: ${validReciters.length} (Filtered ${reciters.length - validReciters.length} broken)`);
+                const validReciters = reciters; // Keeping all reciters now that 2000+ IDs are safe
+                console.log(`[MushafPage] Reciters loaded: ${validReciters.length}`);
+
+                // MIGRATION: Convert old IDs to new 2000+ range for stability
+                const migrations: { [key: number]: number } = {
+                    211: 2004, // Previously moved to 71, now 2004
+                    71: 2004,
+                    210: 2001,
+                    212: 2002,
+                    286: 2003
+                };
+
+                if (migrations[this.currentReciterId]) {
+                    this.currentReciterId = migrations[this.currentReciterId];
+                    localStorage.setItem('selected_reciter_id', this.currentReciterId.toString());
+                }
+
                 this.availableReciters = validReciters;
 
                 // Fallback: If currentReciterId is one of the removed ones, switch to default (e.g. 19 - Ajamy)
@@ -1939,7 +2026,7 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
             'عبدالباسط عبدالصمد': 'abdelbasset-profile.jpeg',
             // Sudais
             'Abdul Rahman Al-Sudais': 'abdul-rahman-al-sudais-profile.jpeg',
-            'عبدالرحمن السديس': 'abdul-rahman-al-sudais-profile.jpeg',
+            'عبد الرحمن السديس': 'abdul-rahman-al-sudais-profile.jpeg',
             'Abdurrahman as-Sudais': 'abdul-rahman-al-sudais-profile.jpeg',
             'Sudais': 'abdul-rahman-al-sudais-profile.jpeg',
             // Shatri
@@ -2006,7 +2093,45 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
             'Muhammad Al-Tablawi': 'Muhammad Al-Tablawi.jpg',
             'محمد الطبلاوي': 'Muhammad Al-Tablawi.jpg',
             'الطبلاوي': 'Muhammad Al-Tablawi.jpg',
-            'Muhammad Tablawi': 'Muhammad Al-Tablawi.jpg'
+            'Muhammad Tablawi': 'Muhammad Al-Tablawi.jpg',
+            // Yasser Salama (EveryAyah)
+            'Yasser Salama': 'Yaser_Salamah.jpg',
+            'ياسر سلامة': 'Yaser_Salamah.jpg',
+            // Mahmoud Ali Al-Banna (EveryAyah)
+            'Mahmoud Ali Al-Banna': 'mahmoud_ali_al_banna.jpg',
+            'محمود علي البنا': 'mahmoud_ali_al_banna.jpg',
+            // Fares Abbad (EveryAyah)
+            'Fares Abbad': 'Fares_Abbad.webp',
+            'فارس عباد': 'Fares_Abbad.webp',
+            // Ali Al-Hudhaify (EveryAyah)
+            'Ali Al-Hudhaify': 'Hudhaify.webp',
+            'علي عبد الرحمن الحذيفي': 'Hudhaify.webp',
+            'الحذيفي': 'Hudhaify.webp',
+            // Mustafa Ismail (Archive)
+            'Mustafa Ismail': 'Mustafa-Ismail.jpg',
+            'مصطفى إسماعيل': 'Mustafa-Ismail.jpg',
+            // Hassan Saleh (Full Surah)
+            'Hassan Saleh': 'hassan-saleh-profile.jpg',
+            'حسن صالح': 'hassan-saleh-profile.jpg',
+            // Abdullah Kamel
+            'Abdullah Kamel': 'abdullah_kamel.jpg',
+            'عبدالله كامل': 'abdullah_kamel.jpg',
+            // Abdul Wadood Hanif
+            'Abdul Wadood Hanif': 'abdul_wadood_hanif.png',
+            'AbdulWadood Hanif': 'abdul_wadood_hanif.png',
+            'عبدالودود حنيف': 'abdul_wadood_hanif.png',
+            // Idris Abkar
+            'Idris Abkar': 'idris_abkar.jpg',
+            'إدريس أبكر': 'idris_abkar.jpg',
+            // --- NEW RECITERS ---
+            'إسلام صبحي': 'islam-sobhi-profile.jpg',
+            'منصور السالمي': 'mansour-al-salimi-profile.jpg',
+            'وديع اليمني': 'wadih-al-yamani-profile.jpg',
+            'رعد الكردي': 'raad-al-kurdi-profile.jpg',
+            'خالد الجليل': 'khalid-al-jaleel-profile.jpg',
+            'ناصر القطامي': 'nasser-al-qatami-profile.png',
+            'عبد الله بصفر': 'Abdullah-Ibn-Ali-Basfar.jpg',
+            'محمد أيوب': 'Muhammad_ayop.jpeg'
         };
 
         // Try to find a matching image
@@ -2033,25 +2158,144 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         this.cdr.detectChanges();
     }
 
+    // --- Custom Range Selection State ---
+    selectedVersesSet: Set<string> = new Set();
+    computedRange: { start: string, end: string } | null = null;
+
+    onAyahClick(verseKey: string): void {
+        if (this.isMemorizationMode) return;
+
+        // Auto-Show Floating Player on Interaction
+        this.showAudioPlayer = true;
+        // Optionally save preference if needed (though ephemeral is better for context actions)
+        // localStorage.setItem('showAudioPlayer', 'true');
+
+        // Helper to get numeric value
+        const getVal = (k: string) => {
+            const parts = k.split(':').map(Number);
+            return (parts[0] * 1000) + parts[1];
+        };
+
+        const clickedVal = getVal(verseKey);
+
+        // CHECK: Is this verse already "covered" by the current range?
+        // If yes, we interpret this click as a "Cut/Deselect" action at this point.
+        // User Requirement: "Cancel it and cancel any verse after it".
+        if (this.computedRange && this.isVerseInComputedRange(verseKey)) {
+            // Logic: Remove 'verseKey' AND any verse in the set that is >= verseKey
+            // Actually, if we just remove keys >= verseKey from the Set, the new Max will be < verseKey.
+            const toRemove: string[] = [];
+            this.selectedVersesSet.forEach(k => {
+                if (getVal(k) >= clickedVal) {
+                    toRemove.push(k);
+                }
+            });
+            toRemove.forEach(k => this.selectedVersesSet.delete(k));
+        } else {
+            // Standard Add (Extend or Start New)
+            this.selectedVersesSet.add(verseKey);
+        }
+
+        // Compute Range (Min ... Max)
+        this.computeSelectionRange();
+
+        // Update Visual Selection Focus
+        if (this.computedRange) {
+            this.selectedVerseKey = this.computedRange.start;
+        } else {
+            this.selectedVerseKey = this.selectedVersesSet.size > 0 ? Array.from(this.selectedVersesSet)[0] : null;
+            // If Set is empty (user deselected everything), maybe hide player?
+            // User didn't specify, but usually if no selection, no "Play Selection".
+            // However, floating player also has "Play Page" context. Keep it visible.
+        }
+
+        this.cdr.detectChanges();
+
+
+
+    }
+
+    private computeSelectionRange(): void {
+        if (this.selectedVersesSet.size === 0) {
+            this.computedRange = null;
+            return;
+        }
+
+        const verses = Array.from(this.selectedVersesSet).map(k => {
+            const [s, v] = k.split(':').map(Number);
+            return { key: k, surah: s, verse: v, val: s * 1000 + v };
+        });
+
+        // Sort by absolute position
+        verses.sort((a, b) => a.val - b.val);
+
+        const start = verses[0].key;
+        const end = verses[verses.length - 1].key;
+
+        this.computedRange = { start, end };
+    }
+
+    private syncAudioRange(): void {
+        // If we have a computed range, we tell AudioService to use 'custom' mode with this range
+        if (this.computedRange) {
+            const specificRange = {
+                start: this.computedRange.start,
+                end: this.computedRange.end
+            };
+            // logic will be applied when play is clicked, but we can pre-set it
+            // However, we should only forcefully override mode if user hits play.
+            // For now, valid computedRange implies intent for custom range.
+        }
+    }
+
+    isVerseInComputedRange(verseKey: string): boolean {
+        if (!this.computedRange || !verseKey) return false;
+
+        const parse = (k: string) => {
+            const [s, v] = k.split(':').map(Number);
+            return s * 1000 + v;
+        };
+
+        const curr = parse(verseKey);
+        const start = parse(this.computedRange.start);
+        const end = parse(this.computedRange.end);
+
+        return curr >= start && curr <= end;
+    }
+
     async playVerseAudio(verseKey: string): Promise<void> {
-        // Hide floating player when playback starts (user can toggle via header button)
-        this.showAudioPlayer = false;
-        localStorage.setItem('showAudioPlayer', 'false');
 
-        // --- SYNC BOUNDARY ---
-        // Ensure that if we are in a relative range mode (surah, page, juz), 
-        // the boundary is updated for the new selection.
-        await this.syncPlaybackBoundary(verseKey);
+        // Check for Custom Range First
+        if (this.computedRange && this.selectedVersesSet.size > 0) {
+            console.log(`[MushafPage] Playing Computed Range: ${this.computedRange.start} -> ${this.computedRange.end}`);
 
-        this.audioService.playVerse(verseKey, this.currentReciterId);
-        this.selectedVerseKey = verseKey;
+            this.audioService.setPlaybackRange('custom', {
+                start: this.computedRange.start,
+                end: this.computedRange.end
+            }, this.computedRange.end);
 
-        // --- GAPLESS OPTIMIZATION: Calculate Next Verse Immediately ---
+            // Start from the beginning of the range
+            this.audioService.playVerse(this.computedRange.start, this.currentReciterId);
+            this.selectedVerseKey = this.computedRange.start;
+
+            // User Request: Clear the visual selection (shading) once playback starts
+            this.computedRange = null;
+            this.selectedVersesSet.clear();
+            this.cdr.detectChanges();
+        } else {
+            // Default Behavior (Single/Context)
+            await this.syncPlaybackBoundary(verseKey);
+            this.audioService.playVerse(verseKey, this.currentReciterId);
+            this.selectedVerseKey = verseKey;
+        }
+
+        // --- GAPLESS OPTIMIZATION ---
         this.nextVerseKeyToPlay = null;
         const state = await firstValueFrom(this.audioService.state$);
-        const nextKey = await this.getNextVerseGlobal(verseKey, state.playbackRange);
+        // Uses the NEW range state we just set
+        const nextKey = await this.getNextVerseGlobal(state.currentVerseKey || verseKey, state.playbackRange);
+
         if (nextKey) {
-            console.log(`[MushafPage] Pre-calculated Next Verse (${state.playbackRange}): ${nextKey}`);
             this.nextVerseKeyToPlay = nextKey;
             this.audioService.setNextVerseToPreload(nextKey);
         }
@@ -2059,51 +2303,66 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
 
     private async syncPlaybackBoundary(refKey: string): Promise<void> {
         const state = await firstValueFrom(this.audioService.state$);
-        const range = state.playbackRange;
+        let range = state.playbackRange; // We might override this locally if in memorization mode
         let rangeEndKey: string | null = null;
         let specificRange = state.specificRange;
 
-        if (range === 'surah') {
-            const surahId = parseInt(refKey.split(':')[0], 10);
-            const surahMeta = this.allSurahs.find(sm => Number(sm.id) === surahId);
-            if (surahMeta) {
-                rangeEndKey = `${surahId}:${surahMeta.verses_count}`;
-            }
-        } else if (range === 'page') {
-            const pageNum = await this.getPageForVerseKey(refKey);
-            if (pageNum) {
-                const pages = await firstValueFrom(this.dataService.getMushaf());
-                const pageData = pages.find(p => p.page_number === pageNum);
-                if (pageData) {
-                    const keys = this.extractVerseKeys([pageData]);
+        // CRITCAL FIX: In Memorization/Group Mode, the boundary MUST be the end of the session list.
+        // We override whatever the global audio state thinks the range is (e.g. 'quran' or 'surah').
+        if ((this.isMemorizationMode || this.isGroupPhase) && this.sessionAyahs.length > 0) {
+            rangeEndKey = this.sessionAyahs[this.sessionAyahs.length - 1];
+            // Force 'custom' or 'page' semantics to ensure strict enforcement in service
+            range = 'custom';
+            specificRange = {
+                start: this.sessionAyahs[0],
+                end: rangeEndKey
+            };
+            console.log(`[MushafPage] Memorization Mode Enforced Boundary: ${rangeEndKey}`);
+        } else {
+            // Standard Logic for non-memorization playback
+            if (range === 'surah') {
+                const surahId = parseInt(refKey.split(':')[0], 10);
+                const surahMeta = this.allSurahs.find(sm => Number(sm.id) === surahId);
+                if (surahMeta) {
+                    rangeEndKey = `${surahId}:${surahMeta.verses_count}`;
+                }
+            } else if (range === 'page') {
+                const pageNum = await this.getPageForVerseKey(refKey);
+                if (pageNum) {
+                    const pages = await firstValueFrom(this.dataService.getMushaf());
+                    const pageData = pages.find(p => p.page_number === pageNum);
+                    if (pageData) {
+                        const keys = this.extractVerseKeys([pageData]);
+                        rangeEndKey = keys[keys.length - 1] || null;
+                    }
+                }
+            } else if (range === 'juz') {
+                const pageNum = await this.getPageForVerseKey(refKey);
+                const juz = pageNum ? await firstValueFrom(this.dataService.getJuzAtPage(pageNum)) : null;
+                if (juz) {
+                    const pages = await firstValueFrom(this.dataService.getMushaf());
+                    const meta = await firstValueFrom(this.dataService.getMetadata());
+                    const nextJuz = meta.juzs.find(j => j.id === juz.id + 1);
+                    const endPage = nextJuz ? nextJuz.start_page - 1 : 604;
+                    const juzPages = pages.filter(p => p.page_number >= juz.start_page && p.page_number <= endPage);
+                    const keys = this.extractVerseKeys(juzPages);
                     rangeEndKey = keys[keys.length - 1] || null;
                 }
+            } else if (range === 'single') {
+                rangeEndKey = refKey;
+            } else if (range === 'quran') {
+                rangeEndKey = "114:6";
+            } else if (range === 'custom') {
+                rangeEndKey = state.rangeEndVerseKey || null;
             }
-        } else if (range === 'juz') {
-            const pageNum = await this.getPageForVerseKey(refKey);
-            const juz = pageNum ? await firstValueFrom(this.dataService.getJuzAtPage(pageNum)) : null;
-            if (juz) {
-                const pages = await firstValueFrom(this.dataService.getMushaf());
-                const meta = await firstValueFrom(this.dataService.getMetadata());
-                const nextJuz = meta.juzs.find(j => j.id === juz.id + 1);
-                const endPage = nextJuz ? nextJuz.start_page - 1 : 604;
-                const juzPages = pages.filter(p => p.page_number >= juz.start_page && p.page_number <= endPage);
-                const keys = this.extractVerseKeys(juzPages);
-                rangeEndKey = keys[keys.length - 1] || null;
-            }
-        } else if (range === 'single') {
-            rangeEndKey = refKey;
-        } else if (range === 'quran') {
-            rangeEndKey = "114:6";
-        } else if (range === 'custom') {
-            // In custom mode, clicking a verse doesn't change the boundary, 
-            // unless the user specifically wants to reset it? 
-            // Usually custom boundaries are fixed until changed in settings.
-            rangeEndKey = state.rangeEndVerseKey || null;
         }
 
-        if (rangeEndKey && rangeEndKey !== state.rangeEndVerseKey) {
-            console.log(`[MushafPage] Auto-syncing boundary for ${range} to: ${rangeEndKey}`);
+        // Apply update: In Mem Mode, ALWAYS update to guarantee sync
+        const isMemMode = this.isMemorizationMode || this.isGroupPhase;
+        const shouldUpdate = rangeEndKey && (isMemMode || rangeEndKey !== state.rangeEndVerseKey);
+
+        if (shouldUpdate) {
+            console.log(`[MushafPage] SYNC: Setting boundary for ${range} to: ${rangeEndKey} (Session: ${this.sessionAyahs[0]} - ${this.sessionAyahs[this.sessionAyahs.length - 1]})`);
             this.audioService.setPlaybackRange(range, specificRange, rangeEndKey);
         }
     }
@@ -2187,6 +2446,22 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         return Math.min(100, Math.round(percent));
     }
 
+    // Arabic Date Helpers
+    getTodayArabicDayName(): string {
+        const arabicDays = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+        return arabicDays[new Date().getDay()];
+    }
+
+    getTodayArabicDate(): string {
+        const date = new Date();
+        const options: Intl.DateTimeFormatOptions = {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        };
+        return date.toLocaleDateString('ar-EG', options);
+    }
+
     async applyAudioSettings() {
         const s = this.audioSettingsModal;
         this.audioService.prime();
@@ -2232,6 +2507,11 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         }
 
         this.audioService.setRepeatSettings(s.tempRepeatAyah, s.tempRepeatGroup);
+        // SYNC SETTINGS TO COMPONENT
+        this.memorizationSettings.ayahRepeat = s.tempRepeatAyah;
+        this.memorizationSettings.groupRepeat = s.tempRepeatGroup;
+        this.currentRepetition = 1;
+
         this.audioSettingsModal.show = false;
         this.cdr.detectChanges();
     }
@@ -2240,7 +2520,115 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         this.audioService.stop();
         this.playingVerseKey = null;
         this.selectedVerseKey = null; // Reset selection so next start uses range beginning
+
+        // User Request: Return audio options to their default values
+        this.audioSettingsModal.tempRepeatAyah = 1;
+        this.audioSettingsModal.tempRepeatGroup = 1;
+        this.audioSettingsModal.tempRange = 'page';
+        this.audioSettingsModal.tempSpeed = 1.0;
+
+
+
+        // Reset Service State
+        this.audioService.setRepeatSettings(1, 1);
+        this.audioService.setPlaybackRate(1.0);
+        this.audioService.setPlaybackRange('page', undefined, null); // Reset range in service
+
         this.cdr.detectChanges();
+    }
+
+    isSurahMode(state: PlaybackState): boolean {
+        return this.audioService.isSurahReciter(state.reciterId);
+    }
+
+    onSeek(event: any) {
+        const seconds = parseFloat(event.target.value);
+        this.audioService.seekTo(seconds);
+    }
+
+    formatTime(seconds: number): string {
+        if (!seconds || isNaN(seconds)) return '0:00';
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        const s = Math.floor(seconds % 60);
+        if (h > 0) {
+            return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+        return `${m}:${s.toString().padStart(2, '0')}`;
+    }
+
+    getCurrentSurahName(state: PlaybackState): string {
+        if (!state.currentVerseKey) return '';
+        const surahId = parseInt(state.currentVerseKey.split(':')[0], 10);
+        const surah = this.allSurahs.find(s => s.id === surahId);
+        return surah ? surah.name : '';
+    }
+
+    playNextGlobal() {
+        const state = this.audioService.snapshot;
+        if (!state.currentVerseKey) return;
+
+        if (state.isShuffle) {
+            this.playRandomSurah();
+            return;
+        }
+
+        if (this.isSurahMode(state)) {
+            const currentSurahId = parseInt(state.currentVerseKey.split(':')[0], 10);
+            if (currentSurahId < 114) {
+                this.onSurahChange(currentSurahId + 1);
+            }
+        } else {
+            // Verse-by-Verse mode: Next Verse
+            this.playNextVerseAudio(state.currentVerseKey);
+        }
+    }
+
+    private playRandomSurah() {
+        const randomSurahId = Math.floor(Math.random() * 114) + 1;
+        this.onSurahChange(randomSurahId);
+    }
+
+    playPrevGlobal() {
+        const state = this.audioService.snapshot;
+        if (!state.currentVerseKey) return;
+
+        if (this.isSurahMode(state)) {
+            const currentSurahId = parseInt(state.currentVerseKey.split(':')[0], 10);
+            if (currentSurahId > 1) {
+                this.onSurahChange(currentSurahId - 1);
+            }
+        } else {
+            // Verse-by-Verse mode: Previous Verse
+            this.playPrevVerseAudio(state.currentVerseKey);
+        }
+    }
+
+    async playPrevVerseAudio(currentKey: string): Promise<void> {
+        const [surahId, verseNum] = currentKey.split(':').map(Number);
+
+        let prevKey: string | null = null;
+        if (verseNum > 1) {
+            prevKey = `${surahId}:${verseNum - 1}`;
+        } else if (surahId > 1) {
+            // Get last verse of previous surah
+            const meta = await firstValueFrom(this.dataService.getMetadata());
+            const prevSurah = meta.surahs.find(s => s.id === surahId - 1);
+            if (prevSurah) {
+                prevKey = `${surahId - 1}:${prevSurah.verses_count}`;
+            }
+        }
+
+        if (prevKey) {
+            this.playVerseAudio(prevKey);
+            await this.autoNavigateToVerse(prevKey);
+        }
+    }
+
+    onSurahChange(event: any) {
+        const id = event?.target ? parseInt(event.target.value, 10) : parseInt(event, 10);
+        if (isNaN(id)) return;
+        this.audioService.playVerse(`${id}:1`);
     }
 
     // --- Tafsir Methods ---
@@ -2276,6 +2664,8 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         const isPageDirect = verseKey.startsWith('page:');
 
         this.dataService.getMushaf().pipe(take(1)).subscribe(async pages => {
+
+
             let pageNum;
             if (isPageDirect) {
                 pageNum = parseInt(verseKey.split(':')[1]);
@@ -2317,6 +2707,100 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
                 this.tafsirFontFamily = `"${fontName}"`;
                 this.cdr.detectChanges();
             });
+
+            // Handle Local JSON for Asbab Al-Nuzul (ID 900)
+            if (tafsirId === 900) {
+                try {
+                    const localData = await firstValueFrom(this.http.get<any[]>('assets/data/tafsir/asbab_al_nuzul.json'));
+                    if (localData && Array.isArray(localData)) {
+                        // 1. Index the local data for fast lookup: "surahIndex:ayahIndex" -> text
+                        const asbabMap = new Map<string, string>();
+                        localData.forEach(item => {
+                            if (item.ayahs && item.occasions) {
+                                const text = item.occasions.join('<br><br>------------------<br><br>');
+                                item.ayahs.forEach((ayahNum: number) => {
+                                    const key = `${item.surah}:${ayahNum}`;
+                                    asbabMap.set(key, text);
+                                });
+                            }
+                        });
+
+                        const result: any[] = [];
+                        // 2. Iterate over page verses (using the already found 'requestedPage' which matches 'pageNum')
+                        const targetPage = requestedPage || pages.find(p => p.page_number === pageNum);
+
+                        // NEW: Pre-calculate pages with Asbab Al-Nuzul if not done yet
+                        if (this.pagesWithAsbab.length === 0) {
+                            const allPageNumbers = new Set<number>();
+                            const tempVerseMap = new Map<string, number>();
+
+                            // Map all verses to their pages
+                            pages.forEach(p => {
+                                p.lines.forEach(l => {
+                                    if (l.segments) {
+                                        l.segments.forEach(s => {
+                                            if (s.verse_key) tempVerseMap.set(s.verse_key, p.page_number);
+                                        });
+                                    }
+                                });
+                            });
+
+                            localData.forEach(item => {
+                                if (item.ayahs && item.occasions && item.occasions.length > 0) {
+                                    item.ayahs.forEach((v: number) => {
+                                        const key = `${item.surah}:${v}`;
+                                        const pNum = tempVerseMap.get(key);
+                                        if (pNum) allPageNumbers.add(pNum);
+                                    });
+                                }
+                            });
+                            this.pagesWithAsbab = Array.from(allPageNumbers).sort((a, b) => a - b);
+                        }
+
+                        if (targetPage) {
+                            const processedKeys = new Set<string>();
+                            targetPage.lines.forEach(l => {
+                                if (l.type === 'verse' && l.segments) {
+                                    l.segments.forEach(s => {
+                                        const key = s.verse_key;
+                                        if (processedKeys.has(key)) return; // Skip if already added
+                                        processedKeys.add(key);
+
+                                        // Lookup Asbab
+                                        const tafsirText = asbabMap.get(key);
+                                        // FILTER: Only include if text exists
+                                        if (tafsirText) {
+                                            result.push({
+                                                resource_id: 900,
+                                                resource_name: 'أسباب النزول (الواحدي)',
+                                                text: tafsirText,
+                                                verse_key: key
+                                            });
+                                        }
+                                    });
+                                }
+                            });
+                        }
+
+                        // Pass WRAPPED object to match API structure expected by processTafsirResponse
+                        if (result.length === 0 && !isPageDirect && this.pagesWithAsbab.length > 0) {
+                            const nearest = this.pagesWithAsbab.find(p => p >= pageNum) || this.pagesWithAsbab[0];
+                            this.loadTafsirContent(900, `page:${nearest}`);
+                            return;
+                        }
+
+                        this.processTafsirResponse({ tafsirs: result }, verseKey);
+                        this.loadingTafsir = false;
+                        this.cdr.detectChanges();
+                        return;
+                    }
+                } catch (e) {
+                    console.error('Failed to load local tafsir', e);
+                    this.loadingTafsir = false;
+                    this.cdr.detectChanges();
+                    return;
+                }
+            }
 
             // 1. Try Loading from Filesystem (Native Offline)
             if (this.isMobile || Capacitor.isNativePlatform()) {
@@ -2416,6 +2900,7 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
 
     onTafsirTouchStart(event: TouchEvent): void {
         this.tafsirTouchStartX = event.touches[0].clientX;
+        this.tafsirTouchEndX = event.touches[0].clientX; // Initialize to prevent diff on simple tap
     }
 
     onTafsirTouchMove(event: TouchEvent): void {
@@ -2446,10 +2931,24 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
     }
 
     changeTafsirPage(delta: number): void {
-        const newPage = this.tafsirPageNumber + delta;
-        if (newPage >= 1 && newPage <= 604) {
+        let nextPage = this.tafsirPageNumber + delta;
+
+        // SMART NAVIGATION FOR ASBAB AL-NUZUL
+        if (this.selectedTafsirId === 900 && this.pagesWithAsbab.length > 0) {
+            if (delta > 0) {
+                // Find first page > current
+                const found = this.pagesWithAsbab.find(p => p > this.tafsirPageNumber);
+                nextPage = found || this.tafsirPageNumber; // Stay if none found
+            } else {
+                // Find last page < current
+                const found = this.pagesWithAsbab.slice().reverse().find(p => p < this.tafsirPageNumber);
+                nextPage = found || this.tafsirPageNumber; // Stay if none found
+            }
+        }
+
+        if (nextPage >= 1 && nextPage <= 604 && nextPage !== this.tafsirPageNumber) {
             // We don't set this.tafsirPageNumber here because loadTafsirContent sets it
-            this.loadTafsirContent(this.selectedTafsirId, `page:${newPage}`);
+            this.loadTafsirContent(this.selectedTafsirId, `page:${nextPage}`);
         }
     }
 
@@ -2472,10 +2971,11 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
             console.log(`[Tafsir] Starting FULL download for ${tafsirName} (ID: ${tafsirId}) - Method: ${useFilesystem ? 'Filesystem' : 'WebCache'}`);
 
             const chunkSize = 5;
-            for (let i = 1; i <= 604; i += chunkSize) {
+            for (let chunkIdx = 1; chunkIdx <= 604; chunkIdx += chunkSize) {
                 const promises = [];
-                for (let j = 0; j < chunkSize && (i + j) <= 604; j++) {
-                    const p = i + j;
+                const jLimit = Math.min(chunkSize, 604 - chunkIdx + 1);
+                for (let j = 0; j < jLimit; j++) {
+                    const p = chunkIdx + j;
                     const url = `https://api.quran.com/api/v4/tafsirs/${tafsirId}/by_page/${p}`;
 
                     promises.push(
@@ -2520,43 +3020,40 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
     }
 
     async checkAllTafsirsCacheStatus(): Promise<void> {
-        const useFilesystem = this.isMobile || Capacitor.isNativePlatform();
+        if (!this.isMobile && !Capacitor.isNativePlatform() && !('caches' in window)) return;
 
-        try {
-            let cache: any;
-            if ('caches' in window) cache = await caches.open('quran-tafsir-cache');
-
-            for (const t of this.availableTafsirs) {
-                const checkPages = [1, 302, 604]; // Sample check
-                let allExist = true;
-
-                for (const p of checkPages) {
-                    let exists = false;
-
-                    if (useFilesystem) {
-                        try {
-                            await Filesystem.stat({
-                                directory: Directory.Data,
-                                path: `tafsir/${t.id}/${p}.json`
-                            });
-                            exists = true;
-                        } catch (e) { }
-                    }
-
-                    if (!exists && cache) {
-                        const match = await cache.match(`https://api.quran.com/api/v4/tafsirs/${t.id}/by_page/${p}`);
-                        if (match) exists = true;
-                    }
-
-                    if (!exists) {
-                        allExist = false;
-                        break;
-                    }
-                }
-                t.downloaded = allExist;
+        for (const t of this.availableTafsirs) {
+            if (t.id === 900) {
+                t.downloaded = true; // Local asset always downloaded
+                continue;
             }
-            this.cdr.detectChanges();
-        } catch (e) { }
+            // Check only first page of tafsir as an indicator
+            const url = `https://api.quran.com/api/v4/tafsirs/${t.id}/by_page/1`;
+
+            let exists = false;
+            // Native Filesystem Check
+            if (this.isMobile || Capacitor.isNativePlatform()) {
+                try {
+                    const ret = await Filesystem.stat({
+                        path: `tafsir/${t.id}/1.json`,
+                        directory: Directory.Data
+                    });
+                    exists = !!ret;
+                } catch (e) { exists = false; }
+            }
+
+            // Web Cache Storage Check
+            if (!exists && 'caches' in window) {
+                try {
+                    const cache = await caches.open('quran-tafsir-cache');
+                    const match = await cache.match(url);
+                    exists = !!match;
+                } catch (e) { exists = false; }
+            }
+
+            t.downloaded = exists;
+        }
+        this.cdr.detectChanges();
     }
 
     selectTafsirFromList(id: number): void {
@@ -2566,7 +3063,81 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         this.loadTafsirContent(id, `page:${this.tafsirPageNumber}`);
     }
 
+    get activeTafsirName(): string {
+        return this.availableTafsirs.find(t => t.id === this.selectedTafsirId)?.name || 'التفسير';
+    }
 
+    // --- Premium Surah Selector Logic ---
+    openSurahSelector(): void {
+        this.showSurahModal = true;
+        this.surahSearchQuery = '';
+        this.cdr.detectChanges();
+    }
+
+    toggleShuffle() {
+        const newShuffleState = !this.audioService.snapshot.isShuffle;
+        this.audioService.setShuffle(newShuffleState);
+        // Force synchronous change detection and also mark for check to be sure
+        this.cdr.markForCheck();
+        this.cdr.detectChanges();
+    }
+
+    // --- Sleep Timer Logic ---
+    openSleepTimer(): void {
+        this.showSleepTimerModal = true;
+        this.cdr.detectChanges();
+    }
+
+    setSleepTimer(minutes: number): void {
+        this.cancelSleepTimer();
+        if (minutes > 0) {
+            this.sleepTimerRemaining = minutes * 60;
+            this.sleepTimerInterval = setInterval(() => {
+                this.sleepTimerRemaining--;
+                if (this.sleepTimerRemaining <= 0) {
+                    this.stopAudio();
+                    this.cancelSleepTimer();
+                }
+                this.cdr.detectChanges();
+            }, 1000);
+        }
+        this.showSleepTimerModal = false;
+        this.cdr.detectChanges();
+    }
+
+    cancelSleepTimer(): void {
+        if (this.sleepTimerInterval) {
+            clearInterval(this.sleepTimerInterval);
+            this.sleepTimerInterval = null;
+        }
+        this.sleepTimerRemaining = 0;
+        this.cdr.detectChanges();
+    }
+
+    formatTimer(seconds: number): string {
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        return `${m}:${s.toString().padStart(2, '0')}`;
+    }
+
+    closeSurahSelector(): void {
+        this.showSurahModal = false;
+        this.cdr.detectChanges();
+    }
+
+    get filteredSurahs(): any[] {
+        if (!this.surahSearchQuery) return this.allSurahs;
+        const q = this.normalizeArabic(this.surahSearchQuery);
+        return this.allSurahs.filter(s =>
+            this.normalizeArabic(s.name).includes(q) ||
+            s.id.toString().includes(q)
+        );
+    }
+
+    selectSurahFromModal(id: number): void {
+        this.onSurahChange(id);
+        this.closeSurahSelector();
+    }
 
     changeTafsir(id: any): void {
         this.selectedTafsirId = Number(id);
@@ -2689,6 +3260,22 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
     async playNextVerseAudio(currentKey: string): Promise<void> {
         const state = await firstValueFrom(this.audioService.state$);
 
+        // GROUP/MEMORIZATION ENFORCEMENT
+        // If we are in a group session (Hifz/Recitation), strictly follow the session list.
+        if (this.isGroupPhase || this.isMemorizationMode) {
+            const currentIndex = this.sessionAyahs.indexOf(currentKey);
+            if (currentIndex !== -1 && currentIndex < this.sessionAyahs.length - 1) {
+                const nextKey = this.sessionAyahs[currentIndex + 1];
+                this.currentAyahIndex = currentIndex + 1; // CRITICAL: Update cursor for next completion
+                this.playVerseAudio(nextKey);
+                return;
+            } else {
+                this.handleGroupEnd(state);
+                return;
+            }
+        }
+
+        // FALLBACK: Normal Continuous Play logic (e.g. just listening without a session)
         // 1. Calculate next logical verse (independent of range constraints first)
         let nextGlobal: string | null = null;
         if (this.nextVerseKeyToPlay) {
@@ -2702,20 +3289,25 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
             nextGlobal = await this.getNextVerseGlobal(currentKey, 'quran');
         }
 
+        // Smart Shuffle: If current verse is the last of the surah, and shuffle is on, pick random surah.
+        if (state.isShuffle) {
+            const [s, v] = currentKey.split(':').map(Number);
+            const meta = await firstValueFrom(this.dataService.getMetadata());
+            const surah = meta.surahs.find(item => item.id === s);
+            if (surah && v >= surah.verses_count) {
+                this.playRandomSurah();
+                return;
+            }
+        }
+
         // 2. Check if next verse is within the user's active range
-        console.log(`[MushafPage] Checking if ${nextGlobal} is within range ${state.rangeEndVerseKey} (Range: ${state.playbackRange})`);
         if (!nextGlobal || !this.isWithinActiveRange(nextGlobal, state)) {
-            console.log(`[MushafPage] Next verse ${nextGlobal} is OUT of active range. Ending group.`);
             this.handleGroupEnd(state);
             return;
         }
 
-        console.log(`[MushafPage] Advancing to next verse: ${nextGlobal}`);
         // 3. Play and Navigate
         this.playVerseAudio(nextGlobal);
-
-        // Navigation is now handled REACTIVELY by the state subscription calling autoNavigateToVerse.
-        // We don't need a proactive navigateToVerse call here anymore, preventing double-triggers.
     }
 
     private async getPageForVerseKey(verseKey: string): Promise<number> {
@@ -2732,9 +3324,10 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         const currentIdx = allSegments.findIndex(s => s.verse_key === currentKey);
         if (currentIdx === -1) return null;
 
-        for (let i = currentIdx + 1; i < allSegments.length; i++) {
-            if (allSegments[i].verse_key !== currentKey) {
-                return allSegments[i].verse_key;
+        for (let segSearchIdx = currentIdx + 1; segSearchIdx < allSegments.length; segSearchIdx++) {
+            const s = allSegments[segSearchIdx];
+            if (s.verse_key !== currentKey) {
+                return s.verse_key;
             }
         }
         return null;
@@ -2877,52 +3470,60 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
     }
 
     getLineBackground(line: any, page: MushafPage): string {
-        if (!line || !page) return 'transparent';
+        if (!line || !page || !this.pageSplits.size) return 'transparent';
         const pageNum = page.page_number;
         const split = this.pageSplits.get(pageNum);
         if (!split) return 'transparent';
 
         // 1. For Verse types: handle split and full logic
-        if (line.type === 'verse' && line.segments) {
+        if (line.type === 'verse' && line.segments && line.segments.length > 0) {
             let firstSecondIdx = -1;
-            line.segments.forEach((seg: MushafSegment, idx: number) => {
-                if (firstSecondIdx === -1 && this.isVerseInSecondHalf(seg.verse_key, pageNum)) {
-                    firstSecondIdx = idx;
+            const segments = line.segments;
+            const len = segments.length;
+
+            for (let i = 0; i < len; i++) {
+                if (this.isVerseInSecondHalf(segments[i].verse_key, pageNum)) {
+                    firstSecondIdx = i;
+                    break;
                 }
-            });
+            }
 
             if (firstSecondIdx === -1) return 'transparent';
             if (firstSecondIdx === 0) return 'var(--half-page-bg)';
 
             // Split line: use character-weighted gradient for precision
-            const totalC = line.segments.reduce((acc: number, s: MushafSegment) => acc + (s.text?.length || 0), 0);
+            let totalC = 0;
             let secondHalfC = 0;
-            line.segments.forEach((seg: MushafSegment, idx: number) => {
-                if (idx >= firstSecondIdx) secondHalfC += (seg.text?.length || 0);
-            });
-            const percent = totalC > 0 ? (secondHalfC / totalC) * 100 : 0;
+            for (let i = 0; i < len; i++) {
+                const charCount = segments[i].text?.length || 0;
+                totalC += charCount;
+                if (i >= firstSecondIdx) secondHalfC += charCount;
+            }
 
-            // In RTL, segments with higher indices are on the LEFT.
-            // So we color the LEFT part of the line.
+            const percent = totalC > 0 ? (secondHalfC / totalC) * 100 : 0;
             return `linear-gradient(to right, var(--half-page-bg) ${percent}%, transparent ${percent}%)`;
         }
 
         // 2. For Metadata types (Bismillah, Headers): calculate position relative to split line
-        const lineIdx = page.lines.indexOf(line);
+        // Optimization: Check the lines of the page sequentially
+        const lines = page.lines;
+        const lineIdx = lines.indexOf(line);
         if (lineIdx === -1) return 'transparent';
 
-        let isAfterSplit = false;
         for (let i = 0; i < lineIdx; i++) {
-            const prev = page.lines[i];
+            const prev = lines[i];
             if (prev.type === 'verse' && prev.segments) {
-                if (prev.segments.some(s => this.isVerseInSecondHalf(s.verse_key, pageNum))) {
-                    isAfterSplit = true;
-                    break;
+                // If any previous line has a segment in the second half, this metadata line is definitely in the second half
+                const segs = prev.segments;
+                for (let j = 0; j < segs.length; j++) {
+                    if (this.isVerseInSecondHalf(segs[j].verse_key, pageNum)) {
+                        return 'var(--half-page-bg)';
+                    }
                 }
             }
         }
 
-        return isAfterSplit ? 'var(--half-page-bg)' : 'transparent';
+        return 'transparent';
     }
 
     getReadingProgressPercent(): number {
@@ -2997,7 +3598,7 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         }
     }
 
-    private async loadPages(): Promise<void> {
+    private async loadPagesExtra(): Promise<void> {
         try {
             const fontName = this.dataService.getFontName(this.pageNumber);
             this.fontFamily = `"${fontName}"`;
@@ -3007,51 +3608,32 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
             if (this.pageNumber > 1) fontsToLoad.push(this.dataService.getFontName(this.pageNumber - 1));
             if (this.pageNumber < 604) fontsToLoad.push(this.dataService.getFontName(this.pageNumber + 1));
 
-            const loadPromises = fontsToLoad.map(f => this.fontService.loadPageFont(this.getPageFromFont(f)));
-            loadPromises.push(this.fontService.loadBasmalahFont());
+            const currentFont = fontsToLoad[0];
+            const isCurrentLoaded = this.fontService.isFontLoaded(currentFont);
 
-            const allLoaded = fontsToLoad.every(f => this.fontService.isFontLoaded(f)) && this.fontService.isFontLoaded('QCF_BSML');
+            if (!isCurrentLoaded) {
+                this.isFontReady = false;
+                this.cdr.detectChanges();
 
-            if (!allLoaded) {
-                await Promise.all(loadPromises);
-                // Extra tick to let browser process the newly added fonts
-                await (document as any).fonts.ready;
+                // Strictly wait for CURRENT page font
+                await this.fontService.loadFontByName(currentFont);
             }
+
+            // Load others and Basmalah in background
+            const otherFonts = fontsToLoad.slice(1);
+            otherFonts.forEach(f => this.fontService.loadFontByName(f).catch(() => { }));
+            this.fontService.loadBasmalahFont().catch(() => { });
+
+            // Final check and browser font ready signal
+            await (document as any).fonts.ready;
             this.isFontReady = true;
+            this.cdr.detectChanges();
         } catch (err) {
             console.error('Error loading page fonts', err);
+            // CRITICAL: Always show content even if font loading fails
             this.isFontReady = true;
+            this.cdr.detectChanges();
         }
-
-        // Load data for all 3 pages
-        this.currentPageData$ = this.dataService.getPage(this.pageNumber);
-        this.currentPageData$.subscribe(p => {
-            this.currentMushafPage = p || null;
-            if (p) {
-                const surahIds = new Set<number>();
-                p.lines.forEach(line => {
-                    if (line.type === 'verse' && line.segments) {
-                        line.segments.forEach(seg => {
-                            const sId = parseInt(seg.verse_key.split(':')[0]);
-                            surahIds.add(sId);
-                        });
-                    }
-                });
-                if (surahIds.size > 0) {
-                    this.dataService.getMetadata().pipe(take(1)).subscribe(meta => {
-                        this.availableSurahs = meta.surahs.filter(s => surahIds.has(s.id)).map(s => ({
-                            id: s.id,
-                            nameAr: s.name,
-                            nameEn: s.name
-                        }));
-                        // Auto-select first if in specific mode
-                        if (this.availableSurahs.length > 0 && !this.memorizationSettings.targetSurah) {
-                            this.memorizationSettings.targetSurah = this.availableSurahs[0].id;
-                        }
-                    });
-                }
-            }
-        });
 
         this.prevPageData$ = this.pageNumber > 1 ? this.dataService.getPage(this.pageNumber - 1) : undefined;
         this.nextPageData$ = this.pageNumber < 604 ? this.dataService.getPage(this.pageNumber + 1) : undefined;
@@ -3060,27 +3642,85 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         this.currentJuz$ = this.dataService.getJuzAtPage(this.pageNumber);
         this.mushafMetadata$ = this.dataService.getMetadata();
 
-        // Persist page number
         localStorage.setItem('lastMushafPage', this.pageNumber.toString());
+    }
+
+    private async loadPages(): Promise<void> {
+        return this.loadPagesExtra();
     }
 
     private getPageFromFont(fontName: string): number {
         return parseInt(fontName.replace('QCF_P', ''), 10);
     }
 
-    private loadPage(): void {
+    public loadPage(): void {
         if (!this.keepOptionsSheet) {
             this.showOptionsSheet = false;
         }
         this.pageStartTime = Date.now();
         this.isCurrentPageAwarded = false;
-        this.loadPages();
+        this.isLoadingPage = true;
+        this.pageLoadError = null;
+
+        // Load data for current page PRIMARY
+        console.log(`📡 [MushafPage] Loading page ${this.pageNumber}...`);
+        this.currentPageData$ = this.dataService.getPage(this.pageNumber);
+        this.currentPageData$.pipe(takeUntil(this.destroy$)).subscribe({
+            next: (p) => {
+                console.log(`✅ [MushafPage] Page ${this.pageNumber} data loaded.`);
+                this.isLoadingPage = false;
+                this.currentMushafPage = p || null;
+
+                // Trigger font loading and wait
+                this.loadPages();
+
+                this.cdr.detectChanges();
+
+                if (p) {
+                    this.updateAvailableSurahs(p);
+                }
+            },
+            error: (err) => {
+                console.error('❌ [MushafPage] Failed to load individual page data:', err);
+                this.isLoadingPage = false;
+                this.pageLoadError = 'فشل تحميل بيانات الصفحة. يرجى إعادة المحاولة.';
+                this.cdr.detectChanges();
+            }
+        });
+
+        // Load secondary data and fonts in background
+        this.loadPagesExtra();
         this.loadTotalUsers();
+    }
+
+    private updateAvailableSurahs(p: MushafPage): void {
+        const surahIds = new Set<number>();
+        p.lines.forEach(line => {
+            if (line.type === 'verse' && line.segments) {
+                line.segments.forEach(seg => {
+                    const sId = parseInt(seg.verse_key.split(':')[0]);
+                    surahIds.add(sId);
+                });
+            }
+        });
+        if (surahIds.size > 0) {
+            this.dataService.getMetadata().pipe(takeUntil(this.destroy$)).subscribe(meta => {
+                this.availableSurahs = meta.surahs.filter(s => surahIds.has(s.id)).map(s => ({
+                    id: s.id,
+                    nameAr: s.name,
+                    nameEn: s.name
+                }));
+                if (this.availableSurahs.length > 0 && !this.memorizationSettings.targetSurah) {
+                    this.memorizationSettings.targetSurah = this.availableSurahs[0].id;
+                }
+            });
+        }
     }
 
     toggleSidebar(): void {
         this.isSidebarOpen = !this.isSidebarOpen;
         if (this.isSidebarOpen) {
+            this.showAudioPlayer = false; // Close audio player when opening index
             this.isSettingsOpen = false;
             this.updateDownloadedStatus();
         } else {
@@ -3127,6 +3767,16 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
     }
 
     goToPage(page: number): void {
+        // OPTIMIZATION: Only hide content if the target font isn't ready
+        // This prevents flickering/blank screen when navigating to cached pages
+        const targetFont = this.dataService.getFontName(page);
+
+        // Disabled per user request (prefer no hiding)
+        // if (!this.fontService.isFontLoaded(targetFont)) {
+        //     this.isFontReady = false;
+        //     this.cdr.detectChanges();
+        // }
+
         this.pageNumber = page;
         this.isSidebarOpen = false;
         this.isSettingsOpen = false;
@@ -3136,6 +3786,15 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         this.slideOffset = 0;
         this.isAnimating = false;
         this.swipeDirection = 'none';
+        this.updateSliderTransform();
+
+        // Defensive: Reset any internal page scrolling that might have occurred
+        const pageElements = document.querySelectorAll('.mushaf-page');
+        pageElements.forEach(el => {
+            if (el instanceof HTMLElement) {
+                el.scrollLeft = 0;
+            }
+        });
 
         // --- SELECTION SYNC ---
         // Clear selection if it's on a different page to avoid confusion during start logic
@@ -3145,12 +3804,19 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
             });
         }
 
-        this.loadPage();
+        // --- CONTINUOUS MODE SUPPORT ---
+        if (this.isContinuousMode) {
+            this.prepareVerticalLayout();
+        } else {
+            this.loadPage();
+        }
     }
 
     openSidebarToTab(tab: 'surahs' | 'juzs' | 'pages'): void {
         this.sidebarTab = tab;
         this.isSidebarOpen = true;
+        this.showAudioPlayer = false; // Always close audio player when opening index
+        this.sidebarOffset = 0; // Reset offset manually if needed when opening index
         this.isSettingsOpen = false; // Ensure settings are closed when opening index
     }
 
@@ -3186,17 +3852,31 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
     }
 
     private triggerPageChange(direction: 'next' | 'prev'): void {
-        if (this.isAnimating) return; // FIX: Prevent overlapping animations and jump-backs
+        if (this.isAnimating) return;
         this.isAnimating = true;
         this.swipeDirection = direction;
-        this.isWaitingForPageTurn = false; // Reset waiting state
-        // Shift is reset inside the timeout below at the swap moment
+        this.isWaitingForPageTurn = false;
+
+        // Apply animating class MANUALLY via Renderer for high precision
+        if (this.mushafSliderEl) {
+            this.renderer.addClass(this.mushafSliderEl.nativeElement, 'animating');
+        }
+
+        // OPTIMIZATION: Predict next page and check if font is loaded
+        let targetPage = this.pageNumber;
+        if (direction === 'next' && this.pageNumber < 604) targetPage++;
+        else if (direction === 'prev' && this.pageNumber > 1) targetPage--;
+
+        // ALWAYS hide initially during page turn to prevent any symbol flashes
+        this.isFontReady = false;
+        this.cdr.detectChanges();
 
         if (direction === 'next') {
-            this.slideOffset = window.innerWidth;
+            this.slideOffset = window.innerWidth; // Move toward 0vw (Next is on Left)
         } else {
-            this.slideOffset = -window.innerWidth;
+            this.slideOffset = -window.innerWidth; // Move toward -200vw (Prev is on Right)
         }
+        this.updateSliderTransform();
 
         // Wait for the slide animation (250ms) to complete
         setTimeout(() => {
@@ -3214,7 +3894,13 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
             this.swipeDirection = 'none';
             this.slideOffset = 0;
 
-            this.loadPages();
+            // Remove animating class and reset transform
+            if (this.mushafSliderEl) {
+                this.renderer.removeClass(this.mushafSliderEl.nativeElement, 'animating');
+                this.updateSliderTransform();
+            }
+
+            this.loadPage();
 
             // Reset timer and awarding status for the new page
             this.pageStartTime = Date.now();
@@ -3223,7 +3909,7 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
             // Reset scroll to top when changing pages
             const pageElements = document.querySelectorAll('.mushaf-page');
             pageElements.forEach((el) => {
-                el.scrollTop = 0;
+                if (el instanceof HTMLElement) el.scrollTop = 0;
             });
 
             // Recalculate shift after transition is complete and new page is centered
@@ -3233,23 +3919,148 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
                 if (this.isMemorizationMode && this.memorizationSettings.inputMethod === 'voice') {
                     this.updateVerseDataWithStandardText();
                 }
+                this.cdr.detectChanges(); // Final sync for the new page content
             }, 30);
-        }, 250);
+
+            this.cdr.detectChanges(); // Immediate sync for navigation state
+        }, 300); // Synced with CSS transition (0.3s)
     }
 
+    lastTapTime: number = 0;
+    showNavbar: boolean = true; // Use this to toggle fixed header visibility
+
     onTouchStart(event: TouchEvent): void {
-        if (this.isAnimating) return;
+        if (this.isTafsirOpen) return;
+        // console.log('[Touch] Start', event.touches[0].clientX);
+
+        // Interrupt any ongoing animation immediately
+        if (this.isAnimating) {
+            this.isAnimating = false;
+            if (this.mushafSliderEl) {
+                this.renderer.removeClass(this.mushafSliderEl.nativeElement, 'animating');
+            }
+        }
+
         this.touchStartX = event.touches[0].clientX;
         this.touchStartY = event.touches[0].clientY;
         this.touchStartTime = Date.now();
+
+        // Double Tap Detection
+        if (this.touchStartTime - this.lastTapTime < 300) {
+            this.handleDoubleTap();
+        }
+        this.lastTapTime = this.touchStartTime;
+
         this.slideOffset = 0;
         this.isVerticalScroll = false;
         this.hasMoved = false;
+
+        if (this.isMemorizationMode && !this.isTestPhase) {
+            // Logic for sheet dragging or simple swipe in memo mode
+            if (this.memorizationSettings.type === 'recitation' || this.memorizationSettings.type === 'muraaja') {
+                // Allow default swipe?
+            }
+        }
+
+        // Ensure OnPush handles the start of interaction
+        this.cdr.markForCheck();
+    }
+
+    handleDoubleTap(): void {
+        const anyOverlayOpen = this.isSidebarOpen || this.showAudioPlayer || this.showOptionsSheet || this.isTafsirOpen || this.showInfoModal || this.showReciterModal;
+
+        if (anyOverlayOpen) {
+            // Close All Windows
+            this.isSidebarOpen = false;
+            // Assuming showAudioPlayer, isTafsirOpen, showInfoModal, showReciterModal are properties that control visibility
+            // If they are methods, they should be called as such (e.g., this.closeAudioPlayer())
+            this.showAudioPlayer = false; // User requested closing audio player window
+            this.showOptionsSheet = false;
+            this.isTafsirOpen = false;
+            this.showInfoModal = false;
+            this.showReciterModal = false;
+            // Also hide navbar for full immersion?
+            // User said "close windows... like navbar". So YES.
+            this.showNavbar = false;
+        } else {
+            // If everything is closed, toggle Navbar visibility
+            this.showNavbar = !this.showNavbar;
+        }
+    }
+
+    // Verse Selection Logic (Long Press for First Verse)
+    private verseTouchTimer: any;
+    private isLongPressTriggered: boolean = false;
+
+    onVerseTouchStart(event: TouchEvent | MouseEvent, verseKey: string): void {
+        // DISABLE SELECTION DURING PLAYBACK (User Request)
+        if (this.audioService.snapshot.isPlaying) {
+            return;
+        }
+
+        this.isLongPressTriggered = false;
+
+        // ROBUST CHECK: Is there ANY visually selected verse?
+        // We broaden the check to:
+        // 1. Any visible page wrapper (current, next, prev)
+        // 2. All possible active classes (active-verse, playing-verse, audio-active, selected-range, error-verse)
+        const selector = '.mushaf-page-wrapper .active-verse, .mushaf-page-wrapper .playing-verse, .mushaf-page-wrapper .audio-active, .mushaf-page-wrapper .selected-range, .mushaf-page-wrapper .error-verse';
+        const activeVerseEl = document.querySelector(selector);
+        const isSelectionOnPage = !!activeVerseEl;
+
+        // If NO selection (Idle state), require Long Press to start interactions
+        if (!isSelectionOnPage) {
+            this.verseTouchTimer = setTimeout(() => {
+                this.isLongPressTriggered = true;
+                this.onAyahClick(verseKey);
+                // Haptic feedback if available (navigator.vibrate)
+                if (navigator.vibrate) navigator.vibrate(50);
+            }, 600); // 600ms long press requirement
+        }
+    }
+
+    onVerseTouchEnd(event: TouchEvent | MouseEvent, verseKey: string): void {
+        // DISABLE SELECTION DURING PLAYBACK (User Request)
+        if (this.audioService.snapshot.isPlaying) {
+            return;
+        }
+
+        clearTimeout(this.verseTouchTimer);
+
+        // If long press already happened, consume event and stop
+        if (this.isLongPressTriggered) {
+            event.preventDefault();
+            event.stopPropagation();
+            return;
+        }
+
+        // Check Visual State again with purely visual logic
+        const selector = '.mushaf-page-wrapper .active-verse, .mushaf-page-wrapper .playing-verse, .mushaf-page-wrapper .audio-active, .mushaf-page-wrapper .selected-range, .mushaf-page-wrapper .error-verse';
+        const activeVerseEl = document.querySelector(selector);
+        const isSelectionOnPage = !!activeVerseEl;
+
+        // If NO selection on page, Ignore Short Tap (Require Long Press)
+        if (!isSelectionOnPage) {
+            return;
+        }
+
+        // If 'Selection Mode' is active (any verse highlighted), Short tap is valid
+        event.preventDefault(); // Prevent phantom clicks/mouse events
+        this.onAyahClick(verseKey);
+        event.stopPropagation(); // Standard consumption
     }
 
 
 
+    // Prevent context menu on long press
+    onContextMenu(event: Event): void {
+        event.preventDefault();
+    }
+
     onTouchMove(event: TouchEvent): void {
+        if (this.isTafsirOpen) return;
+        clearTimeout(this.verseTouchTimer); // Cancel long press if moving
+
         if (this.isAnimating) return;
         const currentX = event.touches[0].clientX;
         const currentY = event.touches[0].clientY;
@@ -3274,24 +4085,40 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
 
         // Prevent default scrolling when swiping horizontally (only if horizontal movement is significant)
         if (Math.abs(deltaX) > 10 && Math.abs(deltaX) > Math.abs(deltaY) * 1.2) {
-            event.preventDefault();
+            if (event.cancelable) event.preventDefault();
         }
 
         // Strict boundary checking:
         // No movement allowed beyond first/last page.
         if (this.pageNumber === 1 && deltaX < 0) {
             this.slideOffset = 0;
+            this.updateSliderTransform();
             return;
         }
         if (this.pageNumber === 604 && deltaX > 0) {
             this.slideOffset = 0;
+            this.updateSliderTransform();
             return;
         }
 
         this.slideOffset = deltaX;
+        // Optimization: Update transform directly via Renderer2 to bypass CD 
+        this.updateSliderTransform();
+    }
+
+    private updateSliderTransform(): void {
+        if (this.mushafSliderEl) {
+            const offset = this.slideOffset;
+            this.renderer.setStyle(
+                this.mushafSliderEl.nativeElement,
+                'transform',
+                `translate3d(calc(-100vw + ${offset}px), 0, 0)`
+            );
+        }
     }
 
     onTouchEnd(event: TouchEvent): void {
+        if (this.isTafsirOpen) return;
         if (this.isAnimating) {
             this.resetSwipe();
             return;
@@ -3311,7 +4138,7 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         // Calculate velocity only if there was movement
         const velocity = deltaTime > 0 ? Math.abs(deltaX) / deltaTime : 0;
 
-        // Improved threshold for swipe detection (reduced from 8% to 5%)
+        // Improved threshold for swipe detection (5% of window width)
         const threshold = window.innerWidth * 0.05;
 
         // Detect swipe if movement exceeds threshold or has sufficient velocity
@@ -3324,24 +4151,43 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
                 if (timeSpent >= 3000 && !this.isCurrentPageAwarded) {
                     this.awardPagePoints();
                 }
-                this.triggerPageChange('next');
+                this.ngZone.run(() => this.triggerPageChange('next'));
             } else if (deltaX < 0 && this.pageNumber > 1) {
-                // For going back, we usually don't award points, but we reset the awarded flag of the previous page?
-                // loadPage handles resetting isCurrentPageAwarded.
-                this.triggerPageChange('prev');
+                this.ngZone.run(() => this.triggerPageChange('prev'));
             } else {
-                this.resetSwipe();
+                this.ngZone.run(() => this.resetSwipe());
             }
         } else {
             // Small movement - treat as tap if in memorization mode
             if (deltaTime < 300) {
-                this.handleMushafTap(event);
+                this.ngZone.run(() => {
+                    this.handleMushafTap(event);
+                });
             }
-            this.resetSwipe();
+            this.ngZone.run(() => this.resetSwipe());
         }
     }
 
+    private resetSwipe(): void {
+        this.slideOffset = 0;
+        this.isAnimating = false;
+        this.swipeDirection = 'none';
+        this.hasMoved = false;
+        this.isVerticalScroll = false;
+        if (this.mushafSliderEl) {
+            this.renderer.removeClass(this.mushafSliderEl.nativeElement, 'animating');
+        }
+        this.updateSliderTransform();
+    }
+
     private handleMushafTap(event: TouchEvent): void {
+        // IGNORE taps if tafsir is open
+        if (this.isTafsirOpen) return;
+
+        // IGNORE taps inside the footer or test card
+        const target = event.target as HTMLElement;
+        if (target.closest && (target.closest('.memorization-footer') || target.closest('.test-card') || target.closest('.audio-manager-modal'))) return;
+
         const now = Date.now();
         if (now - this.lastIncrementTime < 150) return; // Ignore rapid taps (150ms buffer)
         this.lastIncrementTime = now;
@@ -3350,7 +4196,7 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         const isHifz = this.memorizationSettings.type === 'hifz';
         const isTouch = this.memorizationSettings.inputMethod === 'touch';
 
-        if (this.isMemorizationMode && (isMuraaja || isHifz) && isTouch && !this.isTestPhase) {
+        if (this.isMemorizationMode && (isMuraaja || isHifz) && isTouch && !this.isTestPhase && this.memoMethod === 'manual') {
             // Get touch coordinates
             const touch = event.changedTouches[0];
             const clientX = touch.clientX;
@@ -3441,7 +4287,11 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         this.settingsOffset = 0;
     }
 
-    handleMushafClick(event: MouseEvent | TouchEvent): void {
+    async handleMushafClick(event: MouseEvent | TouchEvent): Promise<void> {
+        const target = event.target as HTMLElement;
+        // IGNORE clicks inside the footer or test card
+        if (target.closest('.memorization-footer') || target.closest('.test-card') || target.closest('.audio-manager-modal')) return;
+
         const now = Date.now();
         if (now - this.lastIncrementTime < 150) return; // Ignore rapid double-triggers (150ms buffer)
         this.lastIncrementTime = now;
@@ -3450,7 +4300,7 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         const isHifz = this.memorizationSettings.type === 'hifz';
         const isTouch = this.memorizationSettings.inputMethod === 'touch';
 
-        if (this.isMemorizationMode && (isMuraaja || isHifz) && isTouch && !this.isTestPhase) {
+        if (this.isMemorizationMode && (isMuraaja || isHifz) && isTouch && !this.isTestPhase && this.memoMethod === 'manual') {
             // Add ripple animation
             const clientX = (event as MouseEvent).clientX !== undefined ? (event as MouseEvent).clientX : (event as TouchEvent).touches[0].clientX;
             const clientY = (event as MouseEvent).clientY !== undefined ? (event as MouseEvent).clientY : (event as TouchEvent).touches[0].clientY;
@@ -3468,42 +4318,13 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
             if (this.isGroupPhase) {
                 this.incrementGroupRepetition();
             } else {
-                this.incrementRepetition();
+                await this.incrementRepetition();
             }
             this.cdr.detectChanges();
         }
     }
 
-    onAyahClick(verseKey: string): void {
-        console.log('[Mushaf] Ayah clicked:', verseKey, 'isMemorizationMode:', this.isMemorizationMode);
-        if (this.isMemorizationMode) return;
-        this.selectedVerseKey = verseKey;
 
-        // User requested: Disable setting range from clicked verse.
-        // Keep the "Operation Range" intact.
-        /*
-        // Initialize verse range defaults based on the clicked ayah and current surah
-        const [surahId, verseNum] = verseKey.split(':').map(Number);
-        this.memorizationSettings.surahStartVerse = verseNum;
-        this.memorizationSettings.targetSurah = surahId;
-     
-        // Fetch surah metadata to get the total verses count for the end range
-        this.dataService.getMetadata().subscribe(meta => {
-            const surah = meta.surahs.find(s => s.id === surahId);
-            if (surah) {
-                // If the clicked verse is the last one or near it, maybe set end to last.
-                // Otherwise, let's default to the end of the surah or a reasonable chunk.
-                this.memorizationSettings.surahEndVerse = surah.verses_count;
-            }
-            this.showOptionsSheet = true;
-            this.cdr.detectChanges();
-        });
-        */
-
-        // MOVED: Options sheet is now triggered by a dedicated header button
-        // this.showOptionsSheet = true;
-        this.cdr.detectChanges();
-    }
 
     selectDailyRecitationWard(): void {
         const task = this.dailyTasks?.recitation;
@@ -3539,8 +4360,12 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
     async startMemorization(): Promise<void> {
         this.showOptionsSheet = false;
         this.isMemorizationMode = true;
+        this.showNavbar = false; // Hide navbar during memorization session
         this.isTestPhase = false;
         this.isGroupPhase = false;
+
+        // Initialize mode: If auto-repeat was already active, start in 'auto', otherwise 'manual'
+        this.memoMethod = this.isAutoRepeat ? 'auto' : 'manual';
 
         // For Recitation, also trigger the reading session (timer/auto-points)
         if (this.memorizationSettings.type === 'recitation') {
@@ -3558,7 +4383,8 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
 
         // Sync audio playback range
         this.audioService.updatePlaybackState({
-            playbackRange: this.memorizationSettings.range === 'surah' ? 'surah' : 'page'
+            playbackRange: this.memorizationSettings.range === 'surah' ? 'surah' : 'page',
+            externalPlaybackControl: true // Component takes full control
         });
 
         this.currentAyahIndex = 0;
@@ -3650,17 +4476,19 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         }
 
         if (range === 'page') {
-            let activeTask = (this.currentTaskType === 'revision' || this.currentTaskType === 'deepMuraja') ? this.dailyTasks?.revision :
+            // Priority: Load the page range requested
+            const activeTask = (this.currentTaskType === 'revision' || this.currentTaskType === 'deepMuraja') ? this.dailyTasks?.revision :
                 (this.currentTaskType === 'recitation' || this.currentTaskType === 'tilawo') ? this.dailyTasks?.recitation :
                     (this.currentTaskType === 'consolidation' || this.currentTaskType === 'muraja') ? this.dailyTasks?.consolidation :
                         this.dailyTasks?.new_memorization;
 
             const isReview = (this.memorizationSettings.type === 'muraaja' || this.currentTaskType === 'muraja' || this.currentTaskType === 'consolidation' || this.currentTaskType === 'revision' || this.currentTaskType === 'deepMuraja');
+            // Determine amount of pages to load
             const amount = (activeTask?.isRabt || (!activeTask && isReview)) ? Math.max(activeTask?.amount || 1, 3) : (activeTask?.amount || 1);
             const pagesToLoad: Observable<MushafPage | undefined>[] = [];
 
-            for (let i = 0; i < amount; i++) {
-                const p = pageNumber + i;
+            for (let pgIdx = 0; pgIdx < amount; pgIdx++) {
+                const p = pageNumber + pgIdx;
                 if (p <= 604) pagesToLoad.push(this.dataService.getPage(p).pipe(take(1)));
             }
 
@@ -3668,31 +4496,17 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
             if (pagesData && pagesData.length > 0) {
                 let allAyahs = this.extractVerseKeys(pagesData.filter((p): p is MushafPage => !!p));
 
-                const shouldResume = activeTask && (activeTask.type === 'new_memorization' || activeTask.type === 'hifz');
-                if (shouldResume && (activeTask.unit === 'verse' || activeTask.target === 'verse' || activeTask.unit === 'verses')) {
-                    const doneCount = activeTask.amountDone || 0;
-                    if (doneCount > 0) {
-                        const taskVerses = activeTask.verses || [];
-                        if (taskVerses.length > 0) {
-                            const doneVerses = new Set(taskVerses.slice(0, doneCount));
-                            allAyahs = allAyahs.filter(v => !doneVerses.has(v));
-                        } else {
-                            const startVerse = Number(activeTask.verse || activeTask.verseNumber || activeTask.position?.verse || 1);
-                            const nextVerseToMemorize = startVerse + doneCount;
-                            const taskSurah = Number(activeTask.surah || activeTask.surahId || activeTask.position?.surah || 1);
-                            allAyahs = allAyahs.filter(v => {
-                                const [s, n] = v.split(':').map(Number);
-                                return s > taskSurah || (s === taskSurah && n >= nextVerseToMemorize);
-                            });
-                        }
-                    }
-                }
+                // CRITICAL FIX: Do NOT filter 'done' verses.
+                // We want the user to be able to repeat the entire set of verses on the page.
+                // The progress tracking will happen when they tick them off again.
+                // Previous code that filtered `activeTask.amountDone` is removed here.
 
                 const start = this.memorizationSettings.surahStartVerse || 1;
                 const end = this.memorizationSettings.surahEndVerse || 999;
                 const targetS = this.memorizationSettings.targetSurah || 0;
                 const isStrictReview = isReview && activeTask && !activeTask.isRabt;
 
+                // Handle basic range restrictions if needed (e.g. partial page selection)
                 if (activeTask?.isRabt || (!activeTask && isReview)) {
                     const startKey = (activeTask?.verses && activeTask.verses.length > 0) ? activeTask.verses[0] : `${targetS}:${start}`;
                     const startIndex = allAyahs.indexOf(startKey);
@@ -3711,8 +4525,11 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
                         allAyahs = allAyahs.slice(startIndex);
                     }
                 } else {
+                    // Default Page Mode: use the full page content unless custom bounds are set manually
                     const sKey = this.memorizationSettings.customStartVerse || `${targetS}:${start}`;
                     const eKey = this.memorizationSettings.customEndVerse || `${targetS}:${end}`;
+
+                    // If no custom bounds, these won't be found, so we show allAyahs (full page).
                     const sIdx = allAyahs.indexOf(sKey);
                     const eIdx = allAyahs.indexOf(eKey);
 
@@ -3729,7 +4546,9 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
             } else {
                 console.warn('[Hifz Session] page mode: NO PAGE DATA!');
             }
-        } else if (range === 'half_page') {
+        }
+
+        else if (range === 'half_page') {
             const page: any = await firstValueFrom(this.currentPageData$?.pipe(take(1)) || of(undefined));
             if (page) {
                 const targetSurah = this.memorizationSettings.targetSurah;
@@ -3741,31 +4560,11 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
                     const vNum = parseInt(vKey.split(':')[1]);
                     return vNum >= start && vNum <= end;
                 });
-
-                let activeTask = this.dailyTasks?.new_memorization;
-                const shouldResume = activeTask && (activeTask.type === 'new_memorization' || activeTask.type === 'hifz');
-
-                if (shouldResume && (activeTask.unit === 'verse' || activeTask.target === 'verse' || activeTask.unit === 'verses')) {
-                    const doneCount = activeTask.amountDone || 0;
-                    if (doneCount > 0) {
-                        const taskVerses = activeTask.verses || [];
-                        if (taskVerses.length > 0) {
-                            const doneVerses = new Set(taskVerses.slice(0, doneCount));
-                            allAyahs = allAyahs.filter(v => !doneVerses.has(v));
-                        } else {
-                            const startVerse = Number(activeTask.verse || activeTask.verseNumber || activeTask.position?.verse || 1);
-                            const nextVerseToMemorize = startVerse + doneCount;
-                            const taskSurah = Number(activeTask.surah || activeTask.surahId || activeTask.position?.surah || 1);
-                            allAyahs = allAyahs.filter(v => {
-                                const [s, n] = v.split(':').map(Number);
-                                return s > taskSurah || (s === taskSurah && n >= nextVerseToMemorize);
-                            });
-                        }
-                    }
-                }
                 this.sessionAyahs = allAyahs;
             }
-        } else if (range === 'surah') {
+        }
+
+        else if (range === 'surah') {
             const targetId = this.memorizationSettings.targetSurah;
             let surahPromise: Observable<SurahMetadata | undefined>;
 
@@ -3793,7 +4592,9 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
                     return true;
                 });
             }
-        } else if (range === 'juz') {
+        }
+
+        else if (range === 'juz') {
             const juz = await firstValueFrom(this.dataService.getJuzAtPage(pageNumber).pipe(take(1)));
             if (juz) {
                 const meta = await firstValueFrom(this.dataService.getMetadata().pipe(take(1)));
@@ -3803,10 +4604,14 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
                 const juzPages = pages.filter(p => p.page_number >= juz.start_page && p.page_number <= endPage);
                 this.sessionAyahs = this.extractVerseKeys(juzPages);
             }
-        } else if (range === 'custom') {
+        }
+
+        else if (range === 'custom') {
             const activeTask = this.dailyTasks?.consolidation;
             let allAyahs = [...((activeTask as any)?.verses || [])];
 
+            // For custom ranges (Rabt), we generally just use what's provided. 
+            // If there is a need to merge with new memorization, we do it here.
             if ((activeTask as any)?.includeCurrentWard && this.dailyTasks?.new_memorization) {
                 const hifzTask = this.dailyTasks.new_memorization;
                 try {
@@ -3820,11 +4625,12 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
                         if (unit === 'verse' || unit === 'verses') {
                             let currentKey = hifzResolve.verseKey;
                             const count = Number(hifzTask.amount || 1);
-                            for (let i = 0; i < count; i++) {
+                            for (let aIdx = 0; aIdx < count; aIdx++) {
                                 currentWardAyahs.push(currentKey);
                                 currentKey = this.calculateNextVerseKey(currentKey);
                             }
                         } else {
+                            // Page based
                             const pageData = await firstValueFrom(this.dataService.getPage(pNum).pipe(take(1)));
                             if (pageData) {
                                 let pageAyahs = this.getJustKeys(pageData);
@@ -3847,6 +4653,7 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
             }
 
             this.sessionAyahs = allAyahs;
+            // Ensure we have data for these verses loaded
             if (this.sessionAyahs.length > 0) {
                 const mushaf = await firstValueFrom(this.dataService.getMushaf().pipe(take(1)));
                 const sessionKeys = new Set(this.sessionAyahs);
@@ -3866,8 +4673,9 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         const tempMap = new Map<string, { text: string, font: string }[]>();
         const keysOrder: string[] = [];
 
-        this.versePageMap.clear();
-        this.verseDataMap.clear();
+        // FIX: Do not clear maps here as they are needed for global touch logic (Short/Long press)
+        // this.versePageMap.clear();
+        // this.verseDataMap.clear();
 
         pages.forEach(page => {
             const fontName = `'${this.dataService.getFontName(page.page_number)}'`;
@@ -3909,7 +4717,7 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         return Array.from(keys);
     }
 
-    incrementRepetition(): void {
+    async incrementRepetition(): Promise<void> {
         const isWordMode = this.memorizationSettings.hideType === 'word';
         const isMuraaja = this.memorizationSettings.type === 'muraaja';
 
@@ -3927,7 +4735,7 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
 
         if (this.memorizationSettings.type === 'recitation') {
             // Recitation mode: Single click goes to next Ayah immediately
-            this.nextAyah();
+            await this.nextAyah();
             return;
         }
 
@@ -3945,9 +4753,10 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
 
             if (this.currentWordIndex < totalWords - 1) {
                 this.currentWordIndex++;
+                this.cdr.detectChanges();
                 setTimeout(() => this.calculateAutoShift(), 50);
             } else {
-                this.nextAyah();
+                await this.nextAyah();
             }
         } else {
             // Normal repetition mode
@@ -3955,6 +4764,7 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
 
             if (this.currentRepetition < targetRepeat) {
                 this.currentRepetition++;
+                this.cdr.detectChanges();
                 // Reset word index to restart the ayah
                 const isWordMode = this.memorizationSettings.hideType === 'word';
                 this.currentWordIndex = (isWordMode) ? -1 : 0;
@@ -3979,15 +4789,13 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
                     this.checkAutoSync('muraja');
                 }
 
-                this.nextAyah();
+                await this.nextAyah();
             }
         }
     }
 
-    private nextAyah(): void {
-        if (this.isAnimating) return; // FIX: Block verse progression until page turn finishes
-
-        if (this.currentAyahIndex < this.sessionAyahs.length - 1) {
+    private async nextAyah(): Promise<boolean> {
+        if (this.sessionAyahs.length > 0 && this.currentAyahIndex < this.sessionAyahs.length - 1) {
             this.currentAyahIndex++;
             this.currentRepetition = 1;
             // When moving to next ayah in word-review, jump directly to showing the first word (index 0)
@@ -4000,15 +4808,40 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
 
             if (targetPage && targetPage !== this.pageNumber) {
                 // Award points for completing all ayahs on this page before moving
-                // We call it unconditionally; awardPagePoints has its own filters for task types.
                 this.awardPagePoints();
 
                 // DELAYED NAVIGATE: Set flag and wait for user click to turn page
                 this.isWaitingForPageTurn = true;
-                return;
             }
 
             setTimeout(() => this.calculateAutoShift(), 100);
+            this.cdr.detectChanges();
+            return true;
+        } else if (this.isAutoRepeat) {
+            // DYNAMIC EXPANSION: If in Auto-Repeat mode but reached end of session or no session
+            // Try to find the next global verse to keep the loop going
+            const currentKey = this.sessionAyahs[this.currentAyahIndex] || this.selectedVerseKey || this.audioService.snapshot.currentVerseKey;
+            if (currentKey) {
+                const nextKey = await this.getNextVerseGlobal(currentKey, 'quran');
+                const state = this.audioService.snapshot;
+
+                if (nextKey && this.isWithinActiveRange(nextKey, state)) {
+                    console.log(`[Mushaf] Auto-expanding session to next verse: ${nextKey}`);
+                    // Maintain the session if it exists, or start a new sequence
+                    if (this.sessionAyahs.length > 0) {
+                        this.sessionAyahs.push(nextKey);
+                        this.currentAyahIndex = this.sessionAyahs.length - 1;
+                    } else {
+                        this.sessionAyahs = [currentKey, nextKey];
+                        this.currentAyahIndex = 1;
+                    }
+                    this.currentRepetition = 1;
+                    this.cdr.detectChanges();
+                    setTimeout(() => this.calculateAutoShift(), 100);
+                    return true;
+                }
+            }
+            return false;
         } else {
             // End of session reached
             console.log(`[Mushaf] End of session reached. Count=${this.sessionAyahs.length}, Index=${this.currentAyahIndex}`);
@@ -4016,30 +4849,23 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
             // Award points ONLY if we actually finished a valid session
             if (this.memorizationSettings.type === 'muraaja' || this.memorizationSettings.type === 'recitation') {
                 const isRabt = this.currentTaskType === 'consolidation';
-                // PERMISSIVE: Any session that reached the end naturally should award points
                 if (isRabt || this.sessionAyahs.length >= 1) {
                     this.awardPagePoints();
-                } else {
-                    console.warn(`[Mushaf] Session ended unexpectedly (empty). Skipping award.`);
                 }
             }
 
             // STRICT BOUNDARY: For Consolidation (Al-Rabt) AND Revision tasks, don't allow going beyond session
-            // This ensures users don't accidentally drift into the next ward if they are tracking progress.
-            // Only apply if it's an ACTUAL TASK (has type in currentTaskType).
             const isBoundTask = this.currentTaskType && ((this.currentTaskType as any) === 'consolidation' || (this.currentTaskType as any) === 'muraja' ||
                 (this.currentTaskType as any) === 'revision' || (this.currentTaskType as any) === 'deepMuraja');
 
             if (isBoundTask) {
                 console.log('🛑 [Mushaf] Boundary Reached. Navigation blocked.');
-
-                // Ensure the final sync is sent for the last verse or page
                 const syncType = (this.currentTaskType === 'revision' || this.currentTaskType === 'deepMuraja') ? 'deepMuraja' : 'muraja';
                 this.checkAutoSync(syncType as any);
 
                 // AUTO-EXIT: Terminate session immediately upon completion
                 this.exitMemorization();
-                return;
+                return false;
             }
 
             if (this.memorizationSettings.groupRepeat > 0) {
@@ -4047,24 +4873,21 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
             } else if (this.memorizationSettings.difficulty === 'hard') {
                 this.startTestPhase();
             } else {
-                // If this is a synced ward (like Hifz or Rabt), checkAutoSync will handle the termination 
-                // after the toast logic. If not, we exit immediately.
                 const isSyncedWard = (this.memorizationSettings.type === 'hifz' || (this.currentTaskType as any) === 'consolidation' || this.currentTaskType === 'revision');
                 if (!isSyncedWard) {
                     this.exitMemorization();
                 }
             }
+            return false;
         }
     }
 
     private calculateAutoShift(): void {
-        if (!this.isMemorizationMode || this.isAnimating) {
+        const activeElements = document.querySelectorAll('.current-page-wrapper .active-verse');
+        if (activeElements.length === 0) {
             if (!this.isMemorizationMode) this.pageVerticalShift = 0;
             return;
         }
-
-        const activeElements = document.querySelectorAll('.current-page-wrapper .active-verse');
-        if (activeElements.length === 0) return;
 
         // Get absolute bottom (compensating for current shift)
         let maxBottom = 0;
@@ -4286,13 +5109,25 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
     private startGroupPhase(): void {
         this.isGroupPhase = true;
         this.currentRepetition = 1;
+        this.currentAyahIndex = 0; // START FROM BEGINNING of the group
+        this.groupTotalDuration = 0; // RESET: Start fresh for group block mimicry
+        this.fixedGroupWaitDuration = 0; // RESET: Re-calculate for the group block
+        console.log('[Mushaf] startGroupPhase: Group mode activated, counters reset.');
     }
 
     incrementGroupRepetition(): void {
+        // Check if we should restart for another loop (use <= to ensure last cycle also gets a restart)
         if (this.currentRepetition < this.memorizationSettings.groupRepeat) {
             this.currentRepetition++;
+            this.cdr.detectChanges();
+            console.log(`[GroupRepeat] Starting loop ${this.currentRepetition}/${this.memorizationSettings.groupRepeat}`);
+            // Restart the group audio for the next loop
+            if (this.isAutoRepeat && this.isMemorizationMode) {
+                this.restartGroupAudio();
+            }
         } else {
-            // Group Phase Complete!
+            // All group loops done!
+            console.log(`[GroupRepeat] All ${this.memorizationSettings.groupRepeat} loops completed.`);
             if (this.memorizationSettings.type === 'hifz') {
                 this.checkAutoSync('hifz');
             } else if (this.memorizationSettings.type === 'muraaja') {
@@ -4304,6 +5139,357 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
             } else {
                 this.exitMemorization();
             }
+        }
+    }
+
+    async toggleAutoRepeat(): Promise<void> {
+        this.isAutoRepeat = !this.isAutoRepeat;
+
+        if (this.isAutoRepeat) {
+            this.currentRepetition = 1;
+            // User pressed PLAY
+            // 1. Unlock audio context for Android (direct user gesture) - AWAIT completion
+            await this.audioService.unlockAudio();
+
+            // Check if still active after async wait
+            if (!this.isAutoRepeat) return;
+
+            // 2. Set service to manual mode (User confirmed via toggleAutoRepeat)
+            this.audioService.setExternalPlaybackControl(true);
+
+            // Use the COMPONENT helper that controls the 'Normal Audio' (User confirmed valid)
+            if (this.sessionAyahs.length > 0 && this.currentAyahIndex < this.sessionAyahs.length) {
+                const verseToPlay = this.sessionAyahs[this.currentAyahIndex];
+                await this.playVerseAudio(verseToPlay);
+            }
+        } else {
+            // User pressed PAUSE
+            this.audioService.setExternalPlaybackControl(false);
+            this.audioService.stop();
+        }
+    }
+
+    setMemoMethod(method: 'manual' | 'auto'): void {
+        this.memoMethod = method;
+        if (method === 'manual') {
+            // Stop any playing audio when switching to manual
+            this.isAutoRepeat = false;
+            this.audioService.setExternalPlaybackControl(false);
+            this.audioService.stop();
+            this.isWaitingForRepetition = false;
+            this.isSimulationPlaying = false;
+            if (this.countdownInterval) {
+                clearInterval(this.countdownInterval);
+                this.countdownInterval = null;
+            }
+        }
+        this.cdr.detectChanges();
+    }
+
+    // Delay state
+    delayBetweenRepetitions: number = -1; // Seconds, -1 = Auto (Mimic) - Default
+    cycleDelay(): void {
+        const delays = [0, 1, 2, 3, 5];
+        const currentIndex = delays.indexOf(this.delayBetweenRepetitions);
+        const nextIndex = (currentIndex + 1) % delays.length;
+        this.delayBetweenRepetitions = delays[nextIndex];
+    }
+
+    // Simulation & Countdown State
+    repetitionCountdown: number = 0;
+    isWaitingForRepetition: boolean = false;
+    isSimulationPlaying: boolean = false;
+    private countdownInterval: any;
+    private simulationStartTime: number = 0; // When simulation wait started
+    private simulationTargetDuration: number = 0; // How long to wait (in seconds)
+
+    toggleSimulationMode(): void {
+        if (this.delayBetweenRepetitions === -1) {
+            this.delayBetweenRepetitions = 0;
+        } else {
+            this.delayBetweenRepetitions = -1;
+        }
+    }
+
+    // Track total group duration for block-based simulation
+    private groupTotalDuration: number = 0;
+    private fixedGroupWaitDuration: number = 0; // Calculated once on first loop, reused for all
+
+    private async handleAutoRepeat(completedVerseKey: string, verseDuration: number = 0): Promise<void> {
+        let activeVerse = this.sessionAyahs[this.currentAyahIndex];
+
+        // Fallback for non-session playback
+        if (!activeVerse && this.isAutoRepeat) {
+            activeVerse = completedVerseKey;
+        }
+
+        // Safety lock
+        if (this.isProcessingAutoRepeat) {
+            console.warn(`[AutoRepeat] Lock active. Skipping duplicate event for ${completedVerseKey}`);
+            return;
+        }
+
+        const effectiveDuration = verseDuration || this.audioService.lastKnownDuration || (this.isAndroid ? 5 : 5);
+        this.groupTotalDuration += effectiveDuration;
+
+        this.isProcessingAutoRepeat = true;
+
+        const proceed = () => {
+            // Restore volume if we were simulating
+            if (this.isSimulationPlaying) {
+                this.audioService.setVolume(1);
+                this.isSimulationPlaying = false;
+                this.isWaitingForRepetition = false;
+                if (this.countdownInterval) clearInterval(this.countdownInterval);
+            }
+
+            if (this.isGroupPhase) {
+                // Group Mode Logic - play as a BLOCK
+                const finishedIndex = this.sessionAyahs.indexOf(completedVerseKey);
+                if (finishedIndex !== -1) this.currentAyahIndex = finishedIndex;
+
+                const isLastInGroup = this.currentAyahIndex >= this.sessionAyahs.length - 1;
+
+                if (isLastInGroup) {
+                    // GROUP BLOCK FINISHED -> Check for simulation delay BEFORE incrementing repetition
+
+                    // Apply group-level delay (simulation or fixed) BEFORE incrementing repetition
+                    if (this.delayBetweenRepetitions === -1 && this.groupTotalDuration > 0) {
+                        // BLOCK SIMULATION: Wait for total group duration
+                        // Save duration on first loop, reuse for subsequent loops
+                        if (this.fixedGroupWaitDuration === 0) {
+                            // FALLBACK: If group duration is 0 (Android metadata issue), use a sensible minimum (at least 5s per verse)
+                            if (this.groupTotalDuration <= 0 && this.isAndroid) {
+                                this.groupTotalDuration = this.sessionAyahs.length * 5;
+                            }
+                            this.fixedGroupWaitDuration = Math.ceil(this.groupTotalDuration);
+                        }
+                        const targetDuration = this.fixedGroupWaitDuration;
+
+                        this.isSimulationPlaying = true;
+                        this.isWaitingForRepetition = true;
+                        this.repetitionCountdown = targetDuration;
+                        this.simulationStartTime = Date.now();
+                        this.simulationTargetDuration = targetDuration;
+                        this.cdr.detectChanges();
+
+                        // ANDROID FIX: Stop audio completely during simulation wait
+                        // Muted audio was triggering verseCompleted$ repeatedly, causing infinite loops
+                        this.audioService.stop();
+
+                        if (this.countdownInterval) clearInterval(this.countdownInterval);
+
+                        const startT = Date.now();
+                        this.countdownInterval = setInterval(() => {
+                            const elapsed = Math.floor((Date.now() - startT) / 1000);
+                            const remaining = targetDuration - elapsed;
+
+                            this.repetitionCountdown = Math.max(0, remaining);
+
+                            if (remaining <= 0) {
+                                this.repetitionCountdown = 0;
+                                clearInterval(this.countdownInterval);
+                                // Simulation done, proceed
+                                this.audioService.setVolume(1);
+                                this.isSimulationPlaying = false;
+                                this.isWaitingForRepetition = false;
+                                this.isProcessingAutoRepeat = false; // RELEASE LOCK BEFORE TRIGGER
+                                this.incrementGroupRepetition();
+                            }
+                            this.cdr.detectChanges();
+                        }, 1000);
+
+                        // Reset accumulator for next cycle (but keep fixedGroupWaitDuration)
+                        this.groupTotalDuration = 0;
+                        return; // Wait for simulation to complete
+
+                    } else if (this.delayBetweenRepetitions > 0) {
+                        // Fixed delay at group end
+                        this.isWaitingForRepetition = true;
+                        this.repetitionCountdown = this.delayBetweenRepetitions;
+                        this.groupTotalDuration = 0;
+                        this.cdr.detectChanges();
+
+                        if (this.countdownInterval) clearInterval(this.countdownInterval);
+
+                        const startT = Date.now();
+                        this.countdownInterval = setInterval(() => {
+                            const elapsed = Math.floor((Date.now() - startT) / 1000);
+                            const remaining = this.delayBetweenRepetitions - elapsed;
+
+                            this.repetitionCountdown = Math.max(0, remaining);
+
+                            if (remaining <= 0) {
+                                clearInterval(this.countdownInterval);
+                                this.isWaitingForRepetition = false;
+                                this.repetitionCountdown = 0;
+                                this.cdr.detectChanges();
+                                this.isProcessingAutoRepeat = false; // RELEASE LOCK BEFORE TRIGGER
+                                this.incrementGroupRepetition();
+                            } else {
+                                this.cdr.detectChanges();
+                            }
+                        }, 1000);
+                        return;
+                    }
+
+                    // No delay - immediate group repeat
+                    this.groupTotalDuration = 0;
+                    this.isProcessingAutoRepeat = false; // RELEASE LOCK BEFORE TRIGGER
+                    this.incrementGroupRepetition();
+                } else {
+                    // NEXT VERSE IN GROUP (no delay, play immediately)
+                    // NOTE: Duration already added at entry point - do NOT add again here
+                    this.isProcessingAutoRepeat = false; // RELEASE LOCK BEFORE TRIGGER
+                    this.playNextVerseAudio(completedVerseKey);
+                }
+
+            } else {
+                // Single Ayah Repetition Mode
+                // NOTE: isSimulationPlaying is always false here (handled in outer block)
+
+                // Just finished an audible verse - check if we need to wait for user recitation
+                // Use <= to ensure wait happens after EVERY cycle, including the last
+                if (this.currentRepetition <= this.memorizationSettings.ayahRepeat) {
+                    // WAIT NEEDED after this cycle for user to recite
+                    console.log(`[AutoRepeat] Single: Audible cycle ${this.currentRepetition}/${this.memorizationSettings.ayahRepeat} done. Starting wait...`);
+
+                    if (this.delayBetweenRepetitions === -1) {
+                        // Simulation mode - muted replay
+                        const targetDuration = Math.ceil(effectiveDuration);
+
+                        this.isSimulationPlaying = true;
+                        this.isWaitingForRepetition = true;
+                        this.repetitionCountdown = targetDuration;
+                        this.cdr.detectChanges();
+                        // ANDROID FIX: Stop audio during simulation wait instead of muted play
+                        this.audioService.stop();
+
+                        if (this.countdownInterval) clearInterval(this.countdownInterval);
+                        this.countdownInterval = setInterval(() => {
+                            this.repetitionCountdown--;
+                            if (this.repetitionCountdown <= 0) {
+                                this.repetitionCountdown = 0;
+                                clearInterval(this.countdownInterval);
+
+                                // FIX: Logic Check AFTER Wait
+                                this.isSimulationPlaying = false;
+                                this.isWaitingForRepetition = false;
+                                this.currentRepetition++;
+                                this.cdr.detectChanges();
+
+                                this.isProcessingAutoRepeat = false; // RELEASE LOCK BEFORE TRIGGER
+                                if (this.currentRepetition > this.memorizationSettings.ayahRepeat) {
+                                    this.advanceToNextVerse(completedVerseKey);
+                                } else {
+                                    this.audioService.playVerse(completedVerseKey);
+                                }
+                            }
+                            this.cdr.detectChanges();
+                        }, 1000);
+                        return;
+                    } else if (this.delayBetweenRepetitions > 0) {
+                        // Fixed delay
+                        this.isWaitingForRepetition = true;
+                        this.repetitionCountdown = this.delayBetweenRepetitions;
+                        this.cdr.detectChanges();
+
+                        if (this.countdownInterval) clearInterval(this.countdownInterval);
+                        this.countdownInterval = setInterval(() => {
+                            this.repetitionCountdown--;
+                            if (this.repetitionCountdown <= 0) {
+                                clearInterval(this.countdownInterval);
+                                this.isWaitingForRepetition = false;
+                                this.repetitionCountdown = 0;
+                                this.currentRepetition++;
+                                this.cdr.detectChanges();
+
+                                this.isProcessingAutoRepeat = false; // RELEASE LOCK BEFORE TRIGGER
+                                if (this.currentRepetition > this.memorizationSettings.ayahRepeat) {
+                                    this.advanceToNextVerse(completedVerseKey);
+                                } else {
+                                    this.audioService.playVerse(completedVerseKey);
+                                }
+                            } else {
+                                this.cdr.detectChanges();
+                            }
+                        }, 1000);
+                        return;
+                    }
+
+                    // No delay mode - immediate play
+                    this.currentRepetition++;
+                    this.cdr.detectChanges();
+
+                    this.isProcessingAutoRepeat = false; // RELEASE LOCK BEFORE TRIGGER
+                    // Check if repetitions for this verse are done
+                    if (this.currentRepetition > this.memorizationSettings.ayahRepeat) {
+                        this.advanceToNextVerse(completedVerseKey);
+                    } else {
+                        // Play audible repetition (since delay is 0/none)
+                        this.audioService.playVerse(completedVerseKey);
+                    }
+                } else {
+                    // All cycles for this ayah completed
+                    this.isProcessingAutoRepeat = false; // RELEASE LOCK BEFORE TRIGGER
+                    this.advanceToNextVerse(completedVerseKey);
+                }
+            }
+        };
+
+        // Start execution
+        proceed();
+    }
+
+    private async advanceToNextVerse(completedVerseKey: string): Promise<void> {
+        if (this.memorizationSettings.type === 'hifz') {
+            if (this.isVerseInDailyWird(completedVerseKey)) {
+                this.quranProgressService.addPointsIfLoggedIn('VERSE_MEMORIZED', 1);
+                this.sessionCounters.versesMemorized++;
+                if (this.memorizationSettings.groupRepeat === 0) this.checkAutoSync('hifz');
+            }
+        } else if (this.memorizationSettings.type === 'muraaja') {
+            this.quranProgressService.addPointsIfLoggedIn('REVISION_VERSE_COMPLETE' as any, 1);
+            this.sessionCounters.versesReviewed++;
+            this.checkAutoSync('muraja');
+        }
+
+        const moved = await this.nextAyah();
+        if (moved) {
+            const nextVerseKey = this.sessionAyahs[this.currentAyahIndex];
+            this.playVerseAudio(nextVerseKey);
+        } else {
+            // NEW: Automatically transition to Group Repetition if configured
+            if (!this.isGroupPhase && this.memorizationSettings.groupRepeat > 1) {
+                this.startGroupPhase();
+                this.restartGroupAudio();
+            }
+        }
+    }
+
+    private restartGroupAudio(): void {
+        this.currentAyahIndex = 0;
+        if (this.sessionAyahs.length > 0) {
+            const firstVerse = this.sessionAyahs[0];
+            this.playVerseAudio(firstVerse);
+        }
+    }
+
+    getMaxVerses(surahId: number): number {
+        const surah = this.allSurahs.find(s => s.id === Number(surahId));
+        return surah ? surah.verses_count : 286;
+    }
+
+    openMemorizationOptions(): void {
+        this.showOptionsSheet = true;
+        // Default to current page's surah if not set
+        if (this.memorizationSettings.targetSurah === 0 && this.currentSurah$) {
+            this.currentSurah$.pipe(take(1)).subscribe(s => {
+                if (s) {
+                    this.memorizationSettings.targetSurah = s.id;
+                    this.memorizationSettings.surahEndVerse = s.verses_count; // Set sensible default end
+                }
+            });
         }
     }
 
@@ -4520,8 +5706,9 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
             return false;
         }
 
+        // Globally hide empty lines or headers with no text to prevent duplicate frames
+        if (line.type === 'header' && (!line.text || line.text.trim().length === 0)) return true;
 
-        // Hide empty lines or lines with only whitespace for first 2 pages
         if (pageNum <= 2) {
             if (line.type === 'verse' && (!line.segments || line.segments.length === 0)) return true;
             if (line.type !== 'verse' && (!line.text || line.text.trim().length === 0)) return true;
@@ -4548,12 +5735,30 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         }
 
         this.isMemorizationMode = false;
+        this.showNavbar = true; // Restore navbar on exit
         this.isReadingActive = false; // Stop tracking when exit
+        this.isAutoRepeat = false; // NEW: Reset auto-repeat state
+        this.audioService.stop(); // NEW: Stop audio playback
+        this.audioService.updatePlaybackState({ externalPlaybackControl: false }); // Release control
         this.isTestPhase = false;
         this.isGroupPhase = false;
-        this.isWaitingForPageTurn = false;
+        this.isWaitingForRepetition = false;
+        this.isSimulationPlaying = false;
+        if (this.countdownInterval) {
+            clearInterval(this.countdownInterval);
+            this.countdownInterval = null;
+        }
+        this.isProcessingAutoRepeat = false; // RELEASE LOCK
+        this.fixedGroupWaitDuration = 0; // Reset for next session
+        this.groupTotalDuration = 0;
         this.pageVerticalShift = 0;
         this.stopVoiceSession();
+
+        // CLEANUP: Reset session-specific arrays to prevent overlap when starting new tasks
+        this.sessionAyahs = [];
+        this.errorWords.clear();
+        this.skippedAyahs.clear();
+        this.currentAyahIndex = 0;
 
         // FIX: Force refresh daily tasks to update progress display after exiting
         // This ensures the progress percentage reflects the saved state
@@ -4561,15 +5766,26 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
             this.loadDailyTasks();
         }, 500);
 
-        this.isExiting = false;
+        this.audioService.setExternalPlaybackControl(false);
+        this.isExiting = false; // Reset for next time
     }
 
     getSegmentClass(segment: MushafSegment, verseKey: string, page: MushafPage): string {
-        let classes = '';
+        let classes = 'verse-segment ';
+
+        // Search navigation flash effect
+        if (this.flashVerseKey === verseKey) {
+            classes += 'verse-flash ';
+        }
 
         // Audio Playback Highlighting
         if (this.playingVerseKey === verseKey) {
             classes += 'audio-active ';
+        }
+
+        // Custom Range Highlighting
+        if (this.computedRange && this.isVerseInComputedRange(verseKey)) {
+            classes += 'selected-range ';
         }
 
         // Check for ayah marker (last segment of the verse)
@@ -4700,11 +5916,6 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         return globalLast === segment;
     }
 
-    private resetSwipe(): void {
-        this.slideOffset = 0;
-        this.hasMoved = false;
-        this.isVerticalScroll = false;
-    }
 
     // --- Voice Recognition Logic ---
 
@@ -4780,21 +5991,23 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
             this.voiceSubscription.unsubscribe();
         }
 
-        this.voiceSubscription = this.voiceService.voiceEvents$.subscribe(event => {
-            if (event.type === 'error') {
-                this.voiceState = 'error';
-            } else if (event.type === 'start') {
-                this.voiceState = 'listening';
-                this.cdr.detectChanges();
-            } else if (event.type === 'end') {
-                if (this.isMemorizationMode && this.memorizationSettings.inputMethod === 'voice') {
-                    setTimeout(() => this.voiceService.start(), 300);
+        this.voiceSubscription = this.voiceService.voiceEvents$
+            .pipe(takeUntil(this.destroy$))
+            .subscribe(event => {
+                if (event.type === 'error') {
+                    this.voiceState = 'error';
+                } else if (event.type === 'start') {
+                    this.voiceState = 'listening';
+                    this.cdr.detectChanges();
+                } else if (event.type === 'end') {
+                    if (this.isMemorizationMode && this.memorizationSettings.inputMethod === 'voice') {
+                        setTimeout(() => this.voiceService.start(), 300);
+                    }
+                } else if (event.type === 'result') {
+                    this.processVoiceInput(event.transcript || '', event.isFinal || false);
                 }
-            } else if (event.type === 'result') {
-                this.processVoiceInput(event.transcript || '', event.isFinal || false);
-            }
-            this.cdr.detectChanges();
-        });
+                this.cdr.detectChanges();
+            });
     }
 
     stopVoiceSession(): void {
@@ -4837,8 +6050,8 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
             // Correct word(s) spoken!
 
             // TRACK SKIPPED WORDS: If user jumped ahead, mark skipped words as errors
-            for (let i = nextIndex; i < matchIndex; i++) {
-                this.errorWords.add(`${vKey}:${i}`);
+            for (let wordIdx = nextIndex; wordIdx < matchIndex; wordIdx++) {
+                this.errorWords.add(`${vKey}:${wordIdx}`);
             }
 
             // Reset failed attempts on successful match
@@ -5124,5 +6337,398 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy {
         }
     }
 
-}
+    // Verse Search Methods
+    toggleSearch() {
+        this.isSearchOpen = !this.isSearchOpen;
+        if (this.isSearchOpen) {
+            this.searchQuery = '';
+            this.searchResults = [];
+            // Focus input after a short delay for animation
+            setTimeout(() => {
+                const el = document.getElementById('verse-search-input');
+                if (el) el.focus();
+            }, 300);
+        }
+    }
 
+    private normalizeArabic(text: string): string {
+        if (!text) return '';
+        return text
+            .replace(/[\u064B-\u065F]/g, '') // Remove Tashkeel
+            .replace(/[أإآ]/g, 'ا')        // Unify Alef
+            .replace(/ة/g, 'ه')            // Unify Marboota
+            .replace(/ى/g, 'ي')            // Unify Yaa
+            .trim();
+    }
+
+    onSearchInput(event: any) {
+        const query = (event.target as HTMLInputElement).value.trim();
+        this.searchQuery = query;
+
+        // Clear previous timeout for debouncing
+        if (this.searchTimeout) clearTimeout(this.searchTimeout);
+
+        if (query.length < 2) {
+            this.searchResults = [];
+            this.isSearching = false;
+            return;
+        }
+
+        this.isSearching = true;
+        this.searchTimeout = setTimeout(() => {
+            this.executeSearch(query);
+        }, 300);
+    }
+
+    async executeSearch(query: string) {
+        try {
+            // 1. Get Search Database (Local/Offline)
+            const searchDb = await firstValueFrom(this.dataService.getSearchData());
+            const normalizedQuery = this.normalizeArabic(query);
+
+            // 2. Perform Filtering (Support full sentence matching)
+            const matchedVerses = searchDb.filter(v => v.s.includes(normalizedQuery));
+
+            // 3. Limit result size for performance (e.g., 50 matches)
+            const limitedResults = matchedVerses.slice(0, 50);
+
+            // 4. Get Metadata for Surah Names (Cached in service)
+            const meta = await firstValueFrom(this.dataService.getMetadata());
+            const surahMap = new Map(meta.surahs.map(s => [s.id, s.name]));
+
+            // 5. Map to UI format
+            this.searchResults = limitedResults.map(res => {
+                const [sId, vNum] = res.k.split(':').map(Number);
+                return {
+                    verse_key: res.k,
+                    surah_id: sId,
+                    verse_number: vNum,
+                    surah_name: surahMap.get(sId) || `سورة ${sId}`,
+                    text: res.t // Original text with diacritics
+                };
+            });
+
+            // 6. Sort results by Quran order
+            this.searchResults.sort((a, b) => {
+                if (a.surah_id !== b.surah_id) return a.surah_id - b.surah_id;
+                return a.verse_number - b.verse_number;
+            });
+
+        } catch (err) {
+            console.error('Local search failed, falling back to API:', err);
+            // Fallback for exceptional cases (e.g. storage error)
+            const url = `https://api.quran.com/api/v4/search?q=${encodeURIComponent(query)}&size=50`;
+            try {
+                const response: any = await firstValueFrom(this.http.get(url));
+                const meta = await firstValueFrom(this.dataService.getMetadata());
+                const surahMap = new Map(meta.surahs.map(s => [s.id, s.name]));
+                const results = response.search.results || [];
+                this.searchResults = results.map((res: any) => {
+                    const [sId, vNum] = res.verse_key.split(':').map(Number);
+                    return {
+                        ...res,
+                        surah_id: sId,
+                        verse_number: vNum,
+                        surah_name: surahMap.get(sId) || `سورة ${sId}`,
+                        text: res.highlighted || res.text
+                    };
+                });
+            } catch (fallbackErr) {
+                console.error('Fallback search also failed:', fallbackErr);
+            }
+        } finally {
+            this.isSearching = false;
+            this.cdr.detectChanges();
+        }
+    }
+
+    async goToSearchResult(result: any) {
+        const verseKey = result.verse_key;
+        const [surah, verse] = verseKey.split(':').map(Number);
+
+        this.isSearchOpen = false; // Close search
+
+        try {
+            const pageNum = await firstValueFrom(this.dataService.getPageNumberForVerse(surah, verse));
+            if (pageNum) {
+                this.goToPage(pageNum);
+
+                // Highlight the verse briefly after navigation
+                setTimeout(() => {
+                    this.flashVerseKey = verseKey;
+                    const el = document.querySelector(`span[data-key="${verseKey}"]`);
+                    if (el) {
+                        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        // Ensure horizontal alignment isn't disturbed by scrollIntoView
+                        const parentPage = el.closest('.mushaf-page');
+                        if (parentPage instanceof HTMLElement) {
+                            setTimeout(() => parentPage.scrollLeft = 0, 100);
+                        }
+                    }
+
+                    // Remove highlight after 2 seconds
+                    setTimeout(() => {
+                        this.flashVerseKey = null;
+                        this.cdr.detectChanges();
+                    }, 2000);
+                }, 1000);
+            }
+        } catch (err) {
+            console.error('Navigation to search result failed:', err);
+        }
+    }
+
+    // --- Continuous Scroll Logic ---
+
+    toggleContinuousMode(): void {
+        this.isContinuousMode = !this.isContinuousMode;
+        localStorage.setItem('mushaf_continuous_mode', JSON.stringify(this.isContinuousMode));
+        this.cdr.detectChanges(); // Force UI update immediately
+
+        if (this.isContinuousMode) {
+            // Defer heavy lifting to allow UI toggle to animate first
+            setTimeout(() => {
+                this.prepareVerticalLayout();
+            }, 50);
+        } else {
+            this.stopAutoScroll();
+            this.goToPage(this.pageNumber);
+        }
+    }
+
+    private async prepareVerticalLayout(): Promise<void> {
+        console.log('[ContinuousScroll] prepareVerticalLayout called for page:', this.pageNumber);
+
+        // IMMEDIATELY hide content and clear old pages
+        this.isVerticalLayoutReady = false;
+        this.verticalPages = [];
+        this.cdr.detectChanges();
+
+        // Wait a tick for DOM to update and hide old content
+        await new Promise(resolve => setTimeout(resolve, 10));
+
+        // Load a range of pages around current page (expanded for merging effect)
+        const start = Math.max(1, this.pageNumber - 3); // Load 3 previous pages
+        const end = Math.min(604, this.pageNumber + 5);
+
+        // FIRST: Preload all fonts for the page range
+        const fontLoadPromises = [];
+        for (let fpIdx = start; fpIdx <= end; fpIdx++) {
+            fontLoadPromises.push(this.fontService.loadPageFont(fpIdx));
+        }
+        fontLoadPromises.push(this.fontService.loadBasmalahFont());
+
+        try {
+            await Promise.all(fontLoadPromises);
+            // Wait for browser to process the newly loaded fonts
+            await (document as any).fonts.ready;
+            console.log('[ContinuousScroll] Fonts loaded for pages', start, 'to', end);
+        } catch (err) {
+            console.error('[ContinuousScroll] Font loading error:', err);
+        }
+
+        // THEN: Load page data
+        const pageRequests = [];
+        for (let dpIdx = start; dpIdx <= end; dpIdx++) {
+            pageRequests.push(firstValueFrom(this.dataService.getPage(dpIdx)));
+        }
+
+        const results = await Promise.all(pageRequests);
+        this.verticalPages = results.filter(p => !!p);
+
+        // NOW show content - fonts are ready
+        this.isVerticalLayoutReady = true;
+
+        // Force Angular to re-render the view
+        this.cdr.detectChanges();
+        console.log('[ContinuousScroll] Loaded', this.verticalPages.length, 'pages. Scrolling to page', this.pageNumber);
+
+        // Let UI render then scroll to target
+        setTimeout(() => {
+            const el = document.querySelector(`.vertical-page-wrapper[data-page="${this.pageNumber}"]`);
+            if (el) {
+                el.scrollIntoView({ behavior: 'auto', block: 'start' });
+                console.log('[ContinuousScroll] Scrolled to page element');
+            } else {
+                console.warn('[ContinuousScroll] Target page element NOT found!');
+            }
+        }, 150);
+    }
+
+    onVerticalScroll(event: Event): void {
+        const container = event.target as HTMLElement;
+        this.updateActivePageFromScroll(container);
+
+        // Auto-load more pages if scrolling manually near bottom
+        if (container.scrollHeight - container.scrollTop < window.innerHeight * 2) {
+            this.loadMoreVerticalPages();
+        }
+
+        // Auto-load previous pages if scrolling near top
+        if (container.scrollTop < 200) {
+            this.loadPreviousVerticalPages(container);
+        }
+    }
+
+    private isLoadingPreviousPages = false;
+
+    private async loadPreviousVerticalPages(container: HTMLElement): Promise<void> {
+        if (this.isLoadingPreviousPages) return;
+
+        const firstPage = this.verticalPages[0]?.page_number;
+        if (firstPage && firstPage > 1) {
+            const prevPageNum = firstPage - 1;
+
+            // Prevent duplicate requests
+            if (this.verticalPages.some(p => p.page_number === prevPageNum)) return;
+
+            this.isLoadingPreviousPages = true;
+
+            // Load font first
+            await this.fontService.loadPageFont(prevPageNum);
+
+            const prevPage = await firstValueFrom(this.dataService.getPage(prevPageNum));
+            if (prevPage) {
+                const oldScrollHeight = container.scrollHeight;
+
+                this.verticalPages.unshift(prevPage);
+                this.cdr.detectChanges();
+
+                // Restore scroll position
+                const newScrollHeight = container.scrollHeight;
+                container.scrollTop += (newScrollHeight - oldScrollHeight);
+            }
+            this.isLoadingPreviousPages = false;
+        }
+    }
+
+    toggleAutoScroll(): void {
+        if (this.isAutoScrolling) {
+            this.stopAutoScroll();
+        } else {
+            this.startAutoScroll();
+            this.resetSpeedControlsTimer(); // Show controls when starting
+        }
+    }
+
+    startAutoScroll(): void {
+        if (!this.isContinuousMode) return;
+        this.isAutoScrolling = true;
+        this.animateScroll();
+    }
+
+    stopAutoScroll(): void {
+        this.isAutoScrolling = false;
+        if (this.rafId) {
+            cancelAnimationFrame(this.rafId);
+            this.rafId = null;
+        }
+    }
+
+    private animateScroll(): void {
+        if (!this.isAutoScrolling) return;
+
+        const container = document.querySelector('.mushaf-vertical-viewer');
+        if (container) {
+            // Speed calculation: 1.0 = approx 0.3 pixels per frame
+            const pixelsPerFrame = (0.3 * this.autoScrollSpeed);
+            container.scrollTop += pixelsPerFrame;
+
+            // Load more if near bottom
+            if (container.scrollHeight - container.scrollTop < window.innerHeight * 2) {
+                this.loadMoreVerticalPages();
+            }
+
+            this.updateActivePageFromScroll(container);
+            this.rafId = requestAnimationFrame(() => this.animateScroll());
+        }
+    }
+
+    private updateActivePageFromScroll(container: Element): void {
+        const wrappers = container.querySelectorAll('.vertical-page-wrapper');
+        let activePage = this.pageNumber;
+
+        for (let wrapIdx = 0; wrapIdx < wrappers.length; wrapIdx++) {
+            const rect = wrappers[wrapIdx].getBoundingClientRect();
+            if (rect.top <= 120 && rect.bottom >= 120) {
+                activePage = parseInt(wrappers[wrapIdx].getAttribute('data-page') || '0');
+                break;
+            }
+        }
+
+        if (activePage !== this.pageNumber) {
+            this.pageNumber = activePage;
+            this.currentSurah$ = this.dataService.getSurahAtPage(this.pageNumber);
+            this.currentJuz$ = this.dataService.getJuzAtPage(this.pageNumber);
+            localStorage.setItem('lastMushafPage', this.pageNumber.toString());
+            this.cdr.detectChanges();
+        }
+    }
+
+    adjustScrollSpeed(delta: number): void {
+        this.autoScrollSpeed = Math.max(0.1, Math.min(5.0, this.autoScrollSpeed + delta));
+        localStorage.setItem('mushaf_scroll_speed', this.autoScrollSpeed.toString());
+        this.resetSpeedControlsTimer(); // Keep controls visible while adjusting
+    }
+
+    // Timer for hiding speed controls
+    private speedControlsTimer: any;
+    // showScrollControls is already declared at the top of the class
+
+    resetSpeedControlsTimer(): void {
+        this.showScrollControls = true;
+        this.cdr.detectChanges();
+
+        if (this.speedControlsTimer) {
+            clearTimeout(this.speedControlsTimer);
+        }
+
+        this.speedControlsTimer = setTimeout(() => {
+            this.showScrollControls = false;
+            this.cdr.detectChanges();
+        }, 2000);
+    }
+
+    // Prevents duplicate requests while loading pages
+    private isLoadingMorePages = false;
+
+    private async loadMoreVerticalPages(): Promise<void> {
+        if (this.isLoadingMorePages) return;
+
+        const lastPage = this.verticalPages[this.verticalPages.length - 1]?.page_number;
+        if (lastPage && lastPage < 604) {
+            // Prevent duplicate
+            if (this.verticalPages.some(p => p.page_number === lastPage + 1)) return;
+
+            this.isLoadingMorePages = true;
+
+            // Load font first
+            await this.fontService.loadPageFont(lastPage + 1);
+
+            const nextPage = await firstValueFrom(this.dataService.getPage(lastPage + 1));
+            if (nextPage) {
+                this.verticalPages.push(nextPage);
+                this.cdr.detectChanges();
+            }
+            this.isLoadingMorePages = false;
+        }
+    }
+    getCurrentSurahNameByPage(pageNum: number): string {
+        if (!this.allSurahs || !this.allSurahs.length) return '';
+        const surah = this.allSurahs.find(s => pageNum >= s.start_page && pageNum <= s.end_page);
+        return surah ? surah.name : '';
+    }
+
+    getCurrentJuzByPage(pageNum: number): number {
+        if (!this.allJuzs || !this.allJuzs.length) return 1;
+        let currentJuz = this.allJuzs[0];
+        for (const juz of this.allJuzs) {
+            if (juz.start_page <= pageNum) {
+                currentJuz = juz;
+            } else {
+                break;
+            }
+        }
+        return currentJuz ? currentJuz.id : 1;
+    }
+}

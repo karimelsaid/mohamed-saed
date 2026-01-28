@@ -388,6 +388,76 @@
   border-color: #c2a87a;
 }
 
+/* Section Header */
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.section-icon {
+  font-size: 1.2rem;
+}
+
+.section-header label {
+  color: #c2a87a;
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+/* Weekday Selector */
+.weekday-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.day-chip {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #ccc;
+  padding: 6px 10px;
+  border-radius: 16px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.day-chip:hover {
+  background: rgba(194, 168, 122, 0.2);
+}
+
+.day-chip.selected {
+  background: #c2a87a;
+  color: #1a2a3a;
+  border-color: #c2a87a;
+}
+
+.all-btn {
+  background: rgba(194, 168, 122, 0.15);
+  border: 1px solid rgba(194, 168, 122, 0.3);
+  color: #c2a87a;
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.all-btn:hover {
+  background: rgba(194, 168, 122, 0.25);
+}
+
+.all-btn.selected {
+  background: #c2a87a;
+  color: #1a2a3a;
+  border-color: #c2a87a;
+}
+
 /* Footer */
 .wizard-footer {
   display: flex;

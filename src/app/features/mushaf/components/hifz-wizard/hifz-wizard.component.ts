@@ -15,14 +15,19 @@ export class HifzWizardComponent implements OnInit {
     @Output() close = new EventEmitter<void>();
 
     currentStep = 1;
-    totalSteps = 3;
+    totalSteps = 2; // Reduced from 3 (removed Level Selection step)
     isLoading = true; // Start loading true
     error = '';
     resetProgress = false;
 
-    // ... variables ... 
-    // We need to keep class properties intact, but ReplcementContent replaces text block.
-    // So I will include the checks.
+    // Weekday labels (Sat=0 to Fri=6)
+    weekdayLabels = ['السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
+
+    // Per-task weekday selection (default: all days)
+    tilawaDays: number[] = [0, 1, 2, 3, 4, 5, 6];
+    hifzDays: number[] = [0, 1, 2, 3, 4, 5, 6];
+    murajaDays: number[] = [0, 1, 2, 3, 4, 5, 6];
+    rabtDays: number[] = [0, 1, 2, 3, 4, 5, 6];
 
     userLevel: 'beginner' | 'intermediate' | 'advanced' = 'beginner';
     selectionTab: 'surah' | 'juz' = 'surah';
@@ -78,6 +83,20 @@ export class HifzWizardComponent implements OnInit {
                     if (plan.userLevel) this.userLevel = plan.userLevel;
                     if (plan.dailyCapacity) {
                         this.dailyCapacity = { ...this.dailyCapacity, ...plan.dailyCapacity };
+
+                        // Restore weekday selections from saved plan
+                        if (plan.dailyCapacity.tilawaDays) {
+                            this.tilawaDays = [...plan.dailyCapacity.tilawaDays];
+                        }
+                        if (plan.dailyCapacity.hifzDays) {
+                            this.hifzDays = [...plan.dailyCapacity.hifzDays];
+                        }
+                        if (plan.dailyCapacity.murajaDays) {
+                            this.murajaDays = [...plan.dailyCapacity.murajaDays];
+                        }
+                        if (plan.dailyCapacity.rabtDays) {
+                            this.rabtDays = [...plan.dailyCapacity.rabtDays];
+                        }
                     }
 
                     if (plan.memorizedContent && plan.memorizedContent.length > 0) {
@@ -317,11 +336,71 @@ export class HifzWizardComponent implements OnInit {
         if (surah) surah.strength = strength;
     }
 
+    // --- Weekday Selection Methods ---
+    toggleDay(taskType: 'tilawa' | 'hifz' | 'muraja' | 'rabt', dayIndex: number): void {
+        const daysArray = this.getDaysArray(taskType);
+        const idx = daysArray.indexOf(dayIndex);
+        if (idx === -1) {
+            daysArray.push(dayIndex);
+            daysArray.sort((a, b) => a - b);
+        } else {
+            daysArray.splice(idx, 1);
+        }
+    }
+
+    toggleAllDays(taskType: 'tilawa' | 'hifz' | 'muraja' | 'rabt'): void {
+        const daysArray = this.getDaysArray(taskType);
+        if (daysArray.length === 7) {
+            // Clear all
+            daysArray.length = 0;
+        } else {
+            // Select all
+            daysArray.length = 0;
+            daysArray.push(0, 1, 2, 3, 4, 5, 6);
+        }
+    }
+
+    isDaySelected(taskType: 'tilawa' | 'hifz' | 'muraja' | 'rabt', dayIndex: number): boolean {
+        return this.getDaysArray(taskType).includes(dayIndex);
+    }
+
+    areAllDaysSelected(taskType: 'tilawa' | 'hifz' | 'muraja' | 'rabt'): boolean {
+        return this.getDaysArray(taskType).length === 7;
+    }
+
+    private getDaysArray(taskType: 'tilawa' | 'hifz' | 'muraja' | 'rabt'): number[] {
+        switch (taskType) {
+            case 'tilawa': return this.tilawaDays;
+            case 'hifz': return this.hifzDays;
+            case 'muraja': return this.murajaDays;
+            case 'rabt': return this.rabtDays;
+        }
+    }
+
     closeWizard(): void {
         this.close.emit();
     }
 
     saveSetup(): void {
+        // Validate: At least one day must be selected for each active task
+        const validationErrors: string[] = [];
+
+        if (this.tilawaDays.length === 0) {
+            validationErrors.push('ورد التلاوة');
+        }
+        if (this.hifzDays.length === 0) {
+            validationErrors.push('الحفظ الجديد');
+        }
+        // مراجعة required only if user has memorization
+        if (this.hasMemorization && this.murajaDays.length === 0) {
+            validationErrors.push('المراجعة البعيدة');
+        }
+
+        if (validationErrors.length > 0) {
+            this.error = `يجب تحديد يوم واحد على الأقل لـ: ${validationErrors.join('، ')}`;
+            return;
+        }
+
         this.isLoading = true;
         this.error = '';
 
@@ -360,9 +439,18 @@ export class HifzWizardComponent implements OnInit {
             if (found) break;
         }
 
+        // Merge weekday selections into dailyCapacity
+        const fullCapacity = {
+            ...this.dailyCapacity,
+            tilawaDays: this.tilawaDays,
+            hifzDays: this.hifzDays,
+            murajaDays: this.murajaDays,
+            rabtDays: this.rabtDays
+        };
+
         this.hifzPlanService.saveSetup({
             userLevel: this.userLevel,
-            dailyCapacity: this.dailyCapacity,
+            dailyCapacity: fullCapacity,
             memorizedContent,
             totalVersesMemorized: totalVersesFactor,
             resetProgress: this.resetProgress,

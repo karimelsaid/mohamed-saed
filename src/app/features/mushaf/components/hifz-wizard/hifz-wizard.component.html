@@ -10,35 +10,10 @@
         <div class="step-indicator">الخطوة {{currentStep}} من {{totalSteps}}</div>
     </div>
 
-    <!-- الخطوة 1: اختر وضعك -->
-    <div class="step-content" *ngIf="currentStep === 1">
-        <h3>🟢 اختر وضعك</h3>
-        <p class="step-desc">هذا يساعدنا في تخصيص الخطة لك</p>
-
-        <div class="level-options">
-            <button class="level-card" [class.selected]="userLevel === 'beginner'" (click)="selectLevel('beginner')">
-                <span class="level-icon">🌱</span>
-                <span class="level-title">مبتدئ</span>
-                <span class="level-desc">حفظ بسيط + قراءة أكتر</span>
-            </button>
-
-            <button class="level-card" [class.selected]="userLevel === 'intermediate'"
-                (click)="selectLevel('intermediate')">
-                <span class="level-icon">📖</span>
-                <span class="level-title">متوسط</span>
-                <span class="level-desc">حفظ + مراجعة متوازنين</span>
-            </button>
-
-            <button class="level-card" [class.selected]="userLevel === 'advanced'" (click)="selectLevel('advanced')">
-                <span class="level-icon">🏆</span>
-                <span class="level-title">حافظ سابقًا</span>
-                <span class="level-desc">تركيز على المراجعة + التثبيت</span>
-            </button>
-        </div>
-    </div>
+    <!-- الخطوة 1: خريطة محفوظاتك (was Step 2) -->
 
     <!-- الخطوة 2: خريطة محفوظاتك -->
-    <div class="step-content" *ngIf="currentStep === 2">
+    <div class="step-content" *ngIf="currentStep === 1">
         <h3>📍 خريطة محفوظاتك</h3>
         <p class="step-desc">حدد ما حفظته سابقاً لضبط خطة المراجعة</p>
 
@@ -135,12 +110,16 @@
     </div>
 
     <!-- الخطوة 3: طاقتك اليومية -->
-    <div class="step-content" *ngIf="currentStep === 3">
+    <div class="step-content" *ngIf="currentStep === 2">
         <h3>⚡ طاقتك اليومية</h3>
         <p class="step-desc">حدد مقدار يناسب طاقتك</p>
 
+        <!-- ورد التلاوة -->
         <div class="capacity-section">
-            <label>📖 ورد التلاوة اليومي:</label>
+            <div class="section-header">
+                <span class="section-icon">📖</span>
+                <label>ورد التلاوة اليومي</label>
+            </div>
             <div class="capacity-row">
                 <select [(ngModel)]="dailyCapacity.recitationType" class="capacity-select">
                     <option value="page">صفحة</option>
@@ -151,10 +130,22 @@
                 <input type="number" [(ngModel)]="dailyCapacity.recitationAmount" min="1" max="10"
                     class="capacity-input">
             </div>
+            <div class="weekday-selector">
+                <button class="all-btn" [class.selected]="areAllDaysSelected('tilawa')"
+                    (click)="toggleAllDays('tilawa')">الكل</button>
+                <button *ngFor="let day of weekdayLabels; let i = index" class="day-chip"
+                    [class.selected]="isDaySelected('tilawa', i)" (click)="toggleDay('tilawa', i)">
+                    {{ day }}
+                </button>
+            </div>
         </div>
 
+        <!-- الحفظ الجديد -->
         <div class="capacity-section">
-            <label>🧠 مقدار الحفظ الجديد:</label>
+            <div class="section-header">
+                <span class="section-icon">🧠</span>
+                <label>مقدار الحفظ الجديد</label>
+            </div>
             <div class="capacity-row">
                 <select [(ngModel)]="dailyCapacity.newMemorization" class="capacity-select"
                     [class.full]="dailyCapacity.newMemorization === 'verse'">
@@ -166,22 +157,22 @@
                 <input *ngIf="dailyCapacity.newMemorization !== 'verse'" type="number"
                     [(ngModel)]="dailyCapacity.memorizationAmount" min="1" max="100" class="capacity-input">
             </div>
-        </div>
-
-        <div class="capacity-section">
-            <label>📅 أيام الحفظ في الأسبوع:</label>
-            <div class="days-selector">
-                <button *ngFor="let d of [1, 3, 5, 7]" class="day-btn"
-                    [class.selected]="dailyCapacity.memorizationDays === d"
-                    (click)="dailyCapacity.memorizationDays = d">
-                    {{ d }} أيام
+            <div class="weekday-selector">
+                <button class="all-btn" [class.selected]="areAllDaysSelected('hifz')"
+                    (click)="toggleAllDays('hifz')">الكل</button>
+                <button *ngFor="let day of weekdayLabels; let i = index" class="day-chip"
+                    [class.selected]="isDaySelected('hifz', i)" (click)="toggleDay('hifz', i)">
+                    {{ day }}
                 </button>
             </div>
         </div>
 
-        <!-- Review Section: Only show if user has memorization -->
+        <!-- المراجعة البعيدة - Only show if user has memorization -->
         <div class="capacity-section" *ngIf="hasMemorization">
-            <label>🛡️ المراجعة البعيدة (للماضي):</label>
+            <div class="section-header">
+                <span class="section-icon">🛡️</span>
+                <label>المراجعة البعيدة (للماضي)</label>
+            </div>
             <div class="capacity-row">
                 <select [(ngModel)]="dailyCapacity.reviewType" class="capacity-select">
                     <option value="light">بالصفحات</option>
@@ -189,6 +180,14 @@
                 </select>
                 <input type="number" [(ngModel)]="dailyCapacity.reviewAmount" min="1" max="30" class="capacity-input"
                     placeholder="الكمية">
+            </div>
+            <div class="weekday-selector">
+                <button class="all-btn" [class.selected]="areAllDaysSelected('muraja')"
+                    (click)="toggleAllDays('muraja')">الكل</button>
+                <button *ngFor="let day of weekdayLabels; let i = index" class="day-chip"
+                    [class.selected]="isDaySelected('muraja', i)" (click)="toggleDay('muraja', i)">
+                    {{ day }}
+                </button>
             </div>
             <p class="step-desc" style="margin-top: 8px; font-size: 0.8rem;">* سيتم اختيار
                 {{dailyCapacity.reviewAmount}} {{dailyCapacity.reviewType === 'light' ? 'صفحة' : 'جزء'}} من محفوظاتك

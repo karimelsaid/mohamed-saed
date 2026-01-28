@@ -21,7 +21,7 @@ export class MushafAssetService {
     private errorSubject = new BehaviorSubject<string | null>(null);
     public error$ = this.errorSubject.asObservable();
 
-    private totalFiles = 604 + 1 + 2 + 30; // 604 pages + Basmalah + 2 JSONs + 30 juz chunks
+    private totalFiles = 604 + 1 + 3 + 30; // 604 pages + Basmalah + 3 JSONs + 30 juz chunks
     private completedFiles = 0;
 
     constructor(private http: HttpClient) { }
@@ -111,6 +111,15 @@ export class MushafAssetService {
             await this.downloadFile('data/mushaf.json', 'mushaf_assets/data/mushaf.json');
             await this.downloadFile('data/mushaf-metadata.json', 'mushaf_assets/data/mushaf-metadata.json');
 
+            // 1a. Optional: Search Data (Don't let failures here stop the whole app)
+            try {
+                await this.downloadFile('data/quran-search.json', 'mushaf_assets/data/quran-search.json');
+            } catch (searchErr) {
+                console.warn('Search database not available on server, app will use online search fallback.', searchErr);
+                // Increment completed files anyway to keep progress bar moving if it was counted
+                this.completedFiles++;
+            }
+
             // 1b. Download Juz Chunks
             for (let i = 1; i <= 30; i++) {
                 await this.downloadFile(`data/mushaf_chunks/juz_${i}.json`, `mushaf_assets/data/mushaf_chunks/juz_${i}.json`);
@@ -157,13 +166,21 @@ export class MushafAssetService {
 
     private async ensureDirectory(path: string): Promise<void> {
         try {
-            await Filesystem.mkdir({
+            // Check if directory already exists to prevent plugin errors in logs
+            const check = await Filesystem.stat({
                 path,
-                directory: Directory.Data,
-                recursive: true
-            });
+                directory: Directory.Data
+            }).catch(() => null);
+
+            if (!check) {
+                await Filesystem.mkdir({
+                    path,
+                    directory: Directory.Data,
+                    recursive: true
+                });
+            }
         } catch (e) {
-            // Ignore if exists
+            // Ignore if exists or other minor error
         }
     }
 
@@ -194,15 +211,23 @@ export class MushafAssetService {
             return `${environment.mushafBaseUrl}/fonts/${fontName}.woff2`;
         }
 
+        const path = `mushaf_assets/fonts/${fontName}.woff2`;
         try {
+            // VERIFY if file actually exists before giving back the URI
+            // getUri alone does NOT check existence
+            await Filesystem.stat({
+                path,
+                directory: Directory.Data
+            });
+
             const uriResult = await Filesystem.getUri({
-                path: `mushaf_assets/fonts/${fontName}.woff2`,
+                path,
                 directory: Directory.Data
             });
             return Capacitor.convertFileSrc(uriResult.uri);
         } catch (e) {
-            // Fallback to remote if missing (should not happen if check passed)
-            console.warn(`Font ${fontName} not found locally, using remote.`);
+            // Fallback to remote if missing or check failed
+            console.warn(`[MushafAsset] Font ${fontName} not found locally, using remote fallback.`);
             return `${environment.mushafBaseUrl}/fonts/${fontName}.woff2`;
         }
     }
@@ -219,7 +244,11 @@ export class MushafAssetService {
             try {
                 const data = await firstValueFrom(this.http.get<T>(url));
                 // Cache it for offline use on Web
-                localStorage.setItem(cacheKey, JSON.stringify(data));
+                try {
+                    localStorage.setItem(cacheKey, JSON.stringify(data));
+                } catch (e) {
+                    console.warn('[MushafAsset] LocalStorage quota exceeded, skipping cache.');
+                }
                 return data;
             } catch (err) {
                 console.warn(`[MushafAsset] Web fetch failed for ${path}, trying localStorage cache.`);
@@ -239,19 +268,47 @@ export class MushafAssetService {
             });
             const data = JSON.parse(result.data as string);
             // Also update localStorage cache for consistency
-            localStorage.setItem(cacheKey, JSON.stringify(data));
-            console.log(`[MushafAsset] Loaded ${path} from local storage.`);
+            try {
+                localStorage.setItem(cacheKey, JSON.stringify(data));
+            } catch (e) {
+                console.warn('[MushafAsset] LocalStorage quota exceeded (Native file read), skipping cache update.');
+            }
+            console.log(`[MushafAsset] Loaded ${path} from local persistent storage.`);
             return data;
         } catch (e) {
-            console.warn(`[MushafAsset] File ${path} not found locally, falling back to remote: ${url}`);
+            // Check cache FIRST before attempting any network requests if file is missing from filesystem
+            const cached = localStorage.getItem(cacheKey);
+            if (cached) {
+                console.log(`[MushafAsset] File ${path} missing from Storage, returning cached version.`);
+                return JSON.parse(cached);
+            }
+
+            console.warn(`[MushafAsset] File ${path} not in persistent storage or cache, trying bundle.`);
             try {
-                const data = await firstValueFrom(this.http.get<T>(url));
-                localStorage.setItem(cacheKey, JSON.stringify(data));
+                // Try to load from bundled assets (served by Capacitor local server)
+                const data = await firstValueFrom(this.http.get<T>(path));
+                try {
+                    localStorage.setItem(cacheKey, JSON.stringify(data));
+                } catch (e) {
+                    console.warn('[MushafAsset] LocalStorage quota exceeded (Bundle read), skipping cache update.');
+                }
                 return data;
-            } catch (err) {
-                const cached = localStorage.getItem(cacheKey);
-                if (cached) return JSON.parse(cached);
-                throw err;
+            } catch (bundleErr) {
+                // Only attempt remote if NOT on Android or if explicitly needed
+                // For this user's offline-first request, we should be very careful
+                console.warn(`[MushafAsset] File ${path} not in bundle, attempting remote as last resort.`);
+                try {
+                    const data = await firstValueFrom(this.http.get<T>(url));
+                    try {
+                        localStorage.setItem(cacheKey, JSON.stringify(data));
+                    } catch (e) {
+                        console.warn('[MushafAsset] LocalStorage quota exceeded (Remote fetch), skipping cache update.');
+                    }
+                    return data;
+                } catch (remoteErr) {
+                    console.error(`[MushafAsset] Total failure to load ${path}:`, remoteErr);
+                    throw remoteErr;
+                }
             }
         }
     }

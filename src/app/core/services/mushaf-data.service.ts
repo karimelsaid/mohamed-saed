@@ -12,6 +12,7 @@ export class MushafDataService {
   private loadedJuzChunks = new Map<number, Observable<MushafPage[]>>();
   private mushafData$?: Observable<MushafPage[]>;
   private metadata$?: Observable<MushafMetadata>;
+  private searchData$?: Observable<any[]>;
 
   constructor(
     private http: HttpClient,
@@ -230,6 +231,19 @@ export class MushafDataService {
         return from(this.assetService.getJsonData<any[]>('data/mushaf_chunks/split.json'));
       })
     );
+  }
+
+  getSearchData(): Observable<any[]> {
+    if (!this.searchData$) {
+      this.searchData$ = from(this.assetService.getJsonData<any[]>('data/quran-search.json')).pipe(
+        catchError(err => {
+          this.searchData$ = undefined;
+          throw err;
+        }),
+        shareReplay(1)
+      );
+    }
+    return this.searchData$;
   }
 }
 

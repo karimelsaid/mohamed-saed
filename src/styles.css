@@ -18,6 +18,10 @@
         padding-top: env(safe-area-inset-top);
         padding-top: constant(safe-area-inset-top);
         /* for older iOS */
+        -webkit-text-size-adjust: none !important;
+        -moz-text-size-adjust: none !important;
+        -ms-text-size-adjust: none !important;
+        text-size-adjust: none !important;
     }
 }
 
@@ -63,6 +67,10 @@
 
 html {
     scroll-behavior: smooth;
+    -webkit-text-size-adjust: none !important;
+    -moz-text-size-adjust: none !important;
+    -ms-text-size-adjust: none !important;
+    text-size-adjust: none !important;
 }
 
 /* Clean Card Styles */

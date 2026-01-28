@@ -68,30 +68,50 @@ export class MushafFontService {
     });
   }
 
+  private loadingPromises = new Map<string, Promise<void>>();
+
   async loadBasmalahFont(): Promise<void> {
     const fontName = 'QCF_BSML';
+    return this.loadFontByName(fontName);
+  }
+
+  async loadFontByName(fontName: string): Promise<void> {
     if (this.loadedFonts.has(fontName)) return Promise.resolve();
+
+    // Check if already loading
+    if (this.loadingPromises.has(fontName)) {
+      return this.loadingPromises.get(fontName)!;
+    }
 
     try {
       const fontUrl = await this.assetService.getFontUri(fontName);
-      return this.loadFont(fontName, fontUrl);
+      const promise = this.loadFont(fontName, fontUrl);
+      this.loadingPromises.set(fontName, promise);
+
+      await promise;
+      this.loadingPromises.delete(fontName);
     } catch (err) {
-      console.error('Error loading Basmalah font', err);
+      this.loadingPromises.delete(fontName);
+      console.error(`Error loading font ${fontName}`, err);
+      throw err;
     }
   }
 
   private loadFont(fontName: string, fontUrl: string): Promise<void> {
+    // Check again to be safe
+    if (this.loadedFonts.has(fontName)) return Promise.resolve();
+
     const font = new FontFace(fontName, `url(${fontUrl}) format('woff2')`, {
-      display: 'block'
+      display: 'block' // Use block to prevent "flash of unstyled text" if possible
     });
 
     return font.load().then((loadedFont) => {
       (document as any).fonts.add(loadedFont);
       this.loadedFonts.add(fontName);
       this.loadedFontsSubject.next(new Set(this.loadedFonts));
-      // console.log(`Font loaded successfully: ${fontName}`);
+      // console.log(`[MushafFont] Successfully loaded: ${fontName}`);
     }).catch(err => {
-      console.error(`Failed to load font: ${fontName} from ${fontUrl}`, err);
+      console.error(`[MushafFont] Failed to load ${fontName} from ${fontUrl}`, err);
       throw err;
     });
   }

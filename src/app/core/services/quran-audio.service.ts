@@ -129,6 +129,11 @@ export class QuranAudioService {
     private nextVerseBlobUrl: string | null = null;
     private nextVerseKey: string | null = null;
 
+    // DOWNLOAD CANCELLATION
+    private pendingCancellations: Set<string> = new Set();
+    private downloadProgress = new BehaviorSubject<Map<string, number>>(new Map());
+    public downloadProgress$ = this.downloadProgress.asObservable();
+
     private state = new BehaviorSubject<PlaybackState>({
         isPlaying: false,
         currentVerseKey: null,
@@ -683,6 +688,44 @@ export class QuranAudioService {
 
         (this.activeAudio as any).verseKey = verseKey; // STAMP PLAYER
         this.updateState({ currentVerseKey: verseKey, reciterId: rId, isBuffering: true, currentAyahRepeatCount: 0 });
+
+        // NATIVE OFFLINE CHECK: Check if file exists in filesystem FIRST
+        const localResult = await this.getLocalUri(verseKey, rId);
+        if (localResult) {
+            console.log(`[AudioService] LOCAL PRIORITIZATION: Found local file for ${verseKey}`);
+            const audioUrl = Capacitor.getPlatform() === 'android' ? localResult.raw : localResult.converted;
+
+            this.updateMediaSessionMetadata(verseKey, rId);
+            this.startForegroundService();
+
+            if (Capacitor.getPlatform() === 'android') {
+                try {
+                    const reciters = await firstValueFrom(this.getReciters());
+                    const reciterName = reciters.find(r => r.id === rId)?.name || 'القارئ';
+
+                    await MediaBridge.play({
+                        url: audioUrl,
+                        title: `الآية ${verseKey}`,
+                        artist: reciterName
+                    });
+                    this.updateState({ isBuffering: false, isPlaying: true });
+                    this.isPlayingNewAudio = false;
+                    this.isGaplessTransitioning = false;
+                    return;
+                } catch (e) {
+                    console.error('[AudioService] Native MediaBridge failed for local file, falling back...', e);
+                }
+            }
+
+            this.audio.src = audioUrl;
+            this.audio.load();
+            await this.audio.play();
+            this.updateState({ isBuffering: false, isPlaying: true });
+            this.isPlayingNewAudio = false;
+            this.isGaplessTransitioning = false;
+            return;
+        }
+
         this.updateMediaSessionMetadata(verseKey, rId);
         this.startForegroundService();
 
@@ -781,12 +824,10 @@ export class QuranAudioService {
 
                 console.log('[AudioService] Final Audio URL:', audioUrl);
 
-                // NATIVE OFFLINE CHECK: Check if file exists in filesystem
+                // LOCAL fILE WAS ALREADY CHECKED AT START OF playVerse
+                // But for safety/fallback in non-VBV modes if needed:
                 const localResult = await this.getLocalUri(verseKey, rId);
                 if (localResult) {
-                    console.log('[AudioService] Found LOCAL file:', localResult.raw);
-                    // For Android Native, pass the RAW file:// URI
-                    // For fallback/other platforms, use converted
                     audioUrl = Capacitor.getPlatform() === 'android' ? localResult.raw : localResult.converted;
                 }
 
@@ -1504,6 +1545,15 @@ export class QuranAudioService {
                 await this.stopAudioCompletely();
             }
 
+            // --- NATIVE OFFLINE CHECK FOR TIMED AUDIO (SURAH LEVEL) ---
+            const localSurahFile = await this.getLocalUri('full', reciterId, surahId);
+            if (localSurahFile) {
+                console.log(`[AudioService] LOCAL PRIORITIZATION: Found local FULL file for Surah ${surahId}`);
+                this.audio.src = localSurahFile.converted;
+                this.audio.load();
+                // We still need timings to navigate verses within the file
+            }
+
             const cache = await caches.open(this.CACHE_NAME);
 
             // 1. Fetch/Cache Timings for the Surah
@@ -1534,13 +1584,16 @@ export class QuranAudioService {
                     let audioUrl = timingsRes.audio_files[0].audio_url;
                     if (!audioUrl.startsWith('http')) audioUrl = `https:${audioUrl}`;
 
-                    // OFFLINE CHECK for Timed Audio
+                    // OFFLINE CHECK for Timed Audio (Already done at start of method, but handle timings load here)
                     const localResult = await this.getLocalUri('full', reciterId, surahId);
 
                     const cachedAudio = await cache.match(audioUrl);
                     if (localResult) {
-                        console.log('[AudioService] Found local FULL audio in filesystem');
-                        this.audio.src = localResult.converted;
+                        // Already set src above, but ensure it's correct
+                        if (this.audio.src !== localResult.converted) {
+                            this.audio.src = localResult.converted;
+                            this.audio.load();
+                        }
                     } else if (cachedAudio) {
                         console.log('[AudioService] Found timed audio in cache, using Blob URL');
                         const blob = await cachedAudio.blob();
@@ -1618,6 +1671,38 @@ export class QuranAudioService {
 
 
 
+    async cancelDownload(surahId: number, reciterId: number): Promise<void> {
+        const key = `${reciterId}-${surahId}`;
+        this.pendingCancellations.add(key);
+        // Clear progress on cancel
+        const currentProgress = this.downloadProgress.value;
+        currentProgress.delete(key);
+        this.downloadProgress.next(currentProgress);
+        console.log(`[AudioService] Cancellation requested for: ${key}`);
+    }
+
+    async deleteSurah(surahId: number, reciterId: number): Promise<void> {
+        if (!Capacitor.isNativePlatform()) return;
+        try {
+            const path = `audio/${reciterId}/${surahId}`;
+            await Filesystem.rmdir({
+                directory: Directory.Data,
+                path: path,
+                recursive: true
+            });
+
+            // Remove marker from cache
+            const cache = await caches.open(this.CACHE_NAME);
+            const markerUrl = `https://api.quran.com/api/v4/recitations/${reciterId}/by_chapter/${surahId}`;
+            await cache.delete(markerUrl);
+
+            console.log(`[AudioService] Deleted Surah ${surahId} for reciter ${reciterId}`);
+        } catch (e) {
+            console.error('[AudioService] Failed to delete surah:', e);
+            throw e;
+        }
+    }
+
     async isSurahCached(surahId: number, reciterId: number): Promise<boolean> {
         const markerUrl = `https://api.quran.com/api/v4/recitations/${reciterId}/by_chapter/${surahId}`;
         const cache = await caches.open(this.CACHE_NAME);
@@ -1641,6 +1726,20 @@ export class QuranAudioService {
     }
 
     async downloadSurah(surahId: number, reciterId: number): Promise<void> {
+        const cancellationKey = `${reciterId}-${surahId}`;
+        this.pendingCancellations.delete(cancellationKey); // Reset if exists
+
+        // Initialize progress
+        const currentProgressMap = this.downloadProgress.value;
+        currentProgressMap.set(cancellationKey, 0);
+        this.downloadProgress.next(currentProgressMap);
+
+        const updateProgress = (pct: number) => {
+            const map = this.downloadProgress.value;
+            map.set(cancellationKey, Math.floor(pct));
+            this.downloadProgress.next(map);
+        };
+
         console.log(`[AudioService] Starting download: Surah ${surahId}, Reciter ${reciterId}`);
         const cache = await caches.open(this.CACHE_NAME);
         const isTimed = this.TIMED_RECITERS.includes(reciterId);
@@ -1656,11 +1755,13 @@ export class QuranAudioService {
                 const fileName = `audio/${reciterId}/${surahId}/full.mp3`;
                 await this.ensureDirectory(`audio/${reciterId}/${surahId}`);
 
+                updateProgress(10);
                 await Filesystem.downloadFile({
                     url: audioUrl,
                     directory: Directory.Data,
                     path: fileName
                 });
+                updateProgress(80);
 
                 // Fetch Timings (via proxy)
                 const timingsRes = await firstValueFrom(this.http.get<any>(timingsUrl).pipe(timeout(30000)));
@@ -1672,10 +1773,13 @@ export class QuranAudioService {
                 const v4MarkerUrl = `https://api.quran.com/api/v4/recitations/${reciterId}/by_chapter/${surahId}`;
                 await cache.put(v4MarkerUrl, new Response(JSON.stringify({ downloaded: true })));
 
+                updateProgress(100);
                 console.log(`[AudioService] Abu Sharida download complete: Surah ${surahId}`);
+                this.clearProgress(cancellationKey);
                 return;
             } catch (e) {
                 console.error('[AudioService] Abu Sharida download failed:', e);
+                this.clearProgress(cancellationKey);
                 throw e;
             }
         }
@@ -1692,12 +1796,21 @@ export class QuranAudioService {
             const fileName = `audio/${reciterId}/${surahId}/full.mp3`;
             await this.ensureDirectory(`audio/${reciterId}/${surahId}`);
 
+            updateProgress(20);
             await Filesystem.downloadFile({
                 url: audioUrl,
                 directory: Directory.Data,
                 path: fileName
             });
 
+            if (this.pendingCancellations.has(cancellationKey)) {
+                this.pendingCancellations.delete(cancellationKey);
+                this.clearProgress(cancellationKey);
+                console.log('[AudioService] Timed download cancelled after file fetch.');
+                return;
+            }
+
+            updateProgress(80);
             // Cache Timings only AFTER audio is successful (Keep in Web Cache for timing lookups)
             await cache.put(timingsUrl, new Response(JSON.stringify(timingsRes)));
 
@@ -1705,7 +1818,9 @@ export class QuranAudioService {
             const v4MarkerUrl = `https://api.quran.com/api/v4/recitations/${reciterId}/by_chapter/${surahId}`;
             await cache.put(v4MarkerUrl, new Response(JSON.stringify({ downloaded: true })));
 
+            updateProgress(100);
             console.log(`[AudioService] Timed download complete: Surah ${surahId}`);
+            this.clearProgress(cancellationKey);
             return;
         }
 
@@ -1760,7 +1875,18 @@ export class QuranAudioService {
 
             await this.ensureDirectory(`audio/${reciterId}/${surahId}`);
 
+            const totalAyat = audioFiles.length;
+            let downloadedCount = 0;
+
             for (const item of audioFiles) {
+                // Check for cancellation at each ayah
+                if (this.pendingCancellations.has(cancellationKey)) {
+                    this.pendingCancellations.delete(cancellationKey);
+                    this.clearProgress(cancellationKey);
+                    console.log(`[AudioService] Verse download cancelled at ayah ${item.verse_key}`);
+                    return;
+                }
+
                 const ayahNum = item.verse_key.split(':')[1];
                 const fileName = `audio/${reciterId}/${surahId}/${ayahNum}.mp3`;
 
@@ -1798,10 +1924,12 @@ export class QuranAudioService {
                     successCount++;
                 }
 
+                downloadedCount++;
+                updateProgress((downloadedCount / totalAyat) * 100);
+
                 // --- FAKE METADATA INJECTION ---
-                // Cache individual ayah metadata so the player works offline for reciters without real metadata endpoints
                 const ayahMetadataUrl = `${this.audioUrlBase}/${reciterId}/by_ayah/${item.verse_key}`;
-                const ayahMetadata = { audio_file: { ...item, url: audioUrl } }; // Ensure URL is absolute in fixed metadata
+                const ayahMetadata = { audio_file: { ...item, url: audioUrl } };
                 await cache.put(ayahMetadataUrl, new Response(JSON.stringify(ayahMetadata)));
             }
 
@@ -1810,28 +1938,35 @@ export class QuranAudioService {
                 const finalMeta = metaResponse || { audio_files: audioFiles, downloaded: true };
                 await cache.put(metadataUrl, new Response(JSON.stringify(finalMeta)));
             }
+
+            updateProgress(100);
             console.log(`[AudioService] Verse download complete: Surah ${surahId}, success: ${successCount}`);
+            this.clearProgress(cancellationKey);
         } catch (error) {
             console.error(`[AudioService] Download failed for Surah ${surahId}:`, error);
+            this.clearProgress(cancellationKey);
             throw error;
         }
     }
 
+    private clearProgress(key: string) {
+        setTimeout(() => {
+            const map = this.downloadProgress.value;
+            map.delete(key);
+            this.downloadProgress.next(map);
+        }, 3000);
+    }
+
     private async ensureDirectory(path: string) {
         if (!Capacitor.isNativePlatform()) return;
-        const parts = path.split('/');
-        let currentPath = '';
-        for (const part of parts) {
-            currentPath += part + '/';
-            try {
-                await Filesystem.mkdir({
-                    directory: Directory.Data,
-                    path: currentPath,
-                    recursive: false
-                });
-            } catch (e) {
-                // Error 17 usually means folder exists
-            }
+        try {
+            await Filesystem.mkdir({
+                directory: Directory.Data,
+                path: path,
+                recursive: true
+            });
+        } catch (e) {
+            // Usually means directory already exists
         }
     }
 
@@ -1899,6 +2034,12 @@ export class QuranAudioService {
 
 
     private async getOrFetchAudioUrl(verseKey: string, reciterId: number): Promise<string | null> {
+        // --- LOCAL CHECK FIRST ---
+        const localFile = await this.getLocalUri(verseKey, reciterId);
+        if (localFile) {
+            return localFile.converted;
+        }
+
         const metadataUrl = `${this.audioUrlBase}/${reciterId}/by_ayah/${verseKey}`;
         const cache = await caches.open(this.CACHE_NAME);
         const cachedMetadata = await cache.match(metadataUrl);

@@ -77,8 +77,8 @@
                         title="مشغل الصوت">
                         <i class="fas fa-headphones"></i>
                     </button>
-                    <button class="audio-toggle-btn" (click)="openAudioManager()" title="إدارة التحميلات">
-                        <i class="fas fa-download"></i>
+                    <button class="audio-toggle-btn no-rotate" (click)="toggleSearch()" title="البحث">
+                        <i class="fas fa-magnifying-glass"></i>
                     </button>
                     <button class="close-btn" (click)="$event.stopPropagation(); toggleSidebar()">
                         <i class="fas fa-times"></i>
@@ -143,7 +143,9 @@
         (touchend)="onSettingsTouchEnd()">
         <div class="sidebar-header">
             <div class="header-main-title">
-                <h3>{{ settingsMode === 'wird' ? 'ورد اليوم' : 'الإعدادات' }}</h3>
+                <h3><i class="fas" [class.fa-calendar-check]="settingsMode === 'wird'"
+                        [class.fa-sliders]="settingsMode !== 'wird'"></i>
+                    {{ settingsMode === 'wird' ? 'ورد اليوم' : 'الإعدادات' }}</h3>
                 <div class="header-actions">
                     <div class="total-users-badge sidebar-badge" *ngIf="totalUsers > 0">
                         <i class="fas fa-users"></i>
@@ -151,11 +153,11 @@
                     </div>
                     <button class="share-trigger sidebar-share" (click)="$event.stopPropagation(); sharePosition()"
                         title="مشاركة الموقع">
-                        <i class="fas fa-share-alt"></i>
+                        <i class="fas fa-share-nodes"></i>
                     </button>
                     <button class="info-trigger sidebar-info" (click)="$event.stopPropagation(); showInfoModal = true"
                         title="معلومات التطبيق">
-                        <i class="fas fa-info-circle"></i>
+                        <i class="fas fa-circle-info"></i>
                     </button>
                 </div>
             </div>
@@ -426,21 +428,9 @@
 
             <!-- Notifications Settings -->
             <div class="settings-section" *ngIf="settingsMode === 'stats'">
-                <h4>التنبيهات</h4>
-                <div class="setting-row" *ngIf="!isAndroid">
-                    <span>إشعارات المتصفح</span>
-                    <label class="switch">
-                        <input type="checkbox" [(ngModel)]="pushEnabled" (ngModelChange)="togglePushNotifications()">
-                        <span class="slider round"></span>
-                    </label>
-                    <div class="push-status-container" *ngIf="pushEnabled">
-                        <span class="status-dot" [class.active]="pushSubscribed"></span>
-                        <span class="status-text">{{ pushSubscribed ? 'جاهز لاستقبال التنبيهات' : 'يُرجى إعادة تفعيل
-                            التنبيهات للربط' }}</span>
-                    </div>
-                </div>
+                <h4><i class="fas fa-bell"></i> التنبيهات والتفضيلات</h4>
                 <div class="setting-row">
-                    <span>التصفح المستمر (رأسي)</span>
+                    <span><i class="fas fa-arrows-up-down"></i> التصفح المستمر (رأسي)</span>
                     <label class="switch">
                         <input type="checkbox" [checked]="isContinuousMode" (change)="toggleContinuousMode()">
                         <span class="slider round"></span>
@@ -455,7 +445,7 @@
                 </div>
 
                 <!-- Custom Quran Reminders -->
-                <div class="setting-group-title">مواعيد التنبيهات المخصصة</div>
+                <div class="settings-section-title"><i class="fas fa-clock"></i> مواعيد التنبيهات المخصصة</div>
 
                 <div class="custom-reminder-block">
                     <div class="reminder-label">
@@ -524,7 +514,7 @@
 
             <!-- Theme Picker (Existing) -->
             <div class="settings-section" *ngIf="settingsMode === 'stats'">
-                <h4>لون المصحف</h4>
+                <h4><i class="fas fa-palette"></i> لون المصحف</h4>
                 <div class="theme-picker">
                     <button class="theme-circle cream" [class.active]="currentTheme === 'cream'"
                         (click)="setTheme('cream')" title="كريمي"></button>
@@ -532,10 +522,6 @@
                         (click)="setTheme('white')" title="أبيض"></button>
                     <button class="theme-circle green" [class.active]="currentTheme === 'green'"
                         (click)="setTheme('green')" title="أخضر"></button>
-                    <button class="theme-circle sky" [class.active]="currentTheme === 'sky'" (click)="setTheme('sky')"
-                        title="أزرق سماوي"></button>
-                    <button class="theme-circle blue" [class.active]="currentTheme === 'blue'"
-                        (click)="setTheme('blue')" title="أزرق"></button>
                     <button class="theme-circle dark" [class.active]="currentTheme === 'dark'"
                         (click)="setTheme('dark')" title="ليلي"></button>
                 </div>
@@ -575,11 +561,12 @@
                 <span class="nav-label">الحفظ</span>
             </button>
 
-            <button class="nav-item" (click)="$event.stopPropagation(); toggleSearch()" title="البحث">
+            <button class="nav-item" [class.active]="isTafsirOpen" (click)="$event.stopPropagation(); openTafsir()"
+                title="التفسير">
                 <div class="nav-icon-wrapper">
-                    <i class="fas fa-magnifying-glass"></i>
+                    <i class="fas fa-book-open"></i>
                 </div>
-                <span class="nav-label">البحث</span>
+                <span class="nav-label">التفسير</span>
             </button>
 
             <button class="nav-item" (click)="$event.stopPropagation(); toggleSettings('wird')" title="الورد">
@@ -787,7 +774,8 @@
     </div>
 
     <!-- NEW: Continuous Vertical Mode -->
-    <div class="mushaf-vertical-viewer quran-text" *ngIf="isContinuousMode" (scroll)="onVerticalScroll($event)">
+    <div class="mushaf-vertical-viewer quran-text" *ngIf="isContinuousMode" (scroll)="onVerticalScroll($event)"
+        (touchstart)="onTouchStart($event)" (touchmove)="onTouchMove($event)" (touchend)="onTouchEnd($event)">
         <!-- Content -->
         <div class="vertical-page-wrapper" *ngFor="let page of verticalPages" [attr.data-page]="page.page_number"
             [class.first-pages]="page.page_number <= 2">
@@ -839,7 +827,8 @@
 
 
     <!-- Memorization Controls Footer (Hidden for Recitation) -->
-    <div class="memorization-footer" *ngIf="(isMemorizationMode || isAutoRepeat) && !isTestPhase"
+    <div class="memorization-footer"
+        *ngIf="(isMemorizationMode || isAutoRepeat) && !isTestPhase && memorizationSettings.type !== 'recitation'"
         (click)="$event.stopPropagation()" (touchstart)="$event.stopPropagation()">
 
         <!-- 1. Mode Switcher (Manual/Auto) -->
@@ -848,11 +837,16 @@
                 title="تكرار يدوي باللمس">
                 <i class="fas fa-hand-pointer"></i>
             </button>
-            <button [class.active]="memoMethod === 'auto'" (click)="setMemoMethod('auto')"
-                title="تكرار تلقائي بصوت القارئ">
-                <img *ngIf="getSelectedReciterImage()" [src]="getSelectedReciterImage()" class="switcher-reciter-img"
+            <button *ngIf="memorizationSettings.type !== 'muraaja'" [class.active]="memoMethod === 'auto'"
+                (click)="setMemoMethod('auto')" title="تكرار تلقائي بصوت القارئ"
+                style="position: relative; overflow: visible !important;">
+                <div class="reciter-selector-trigger" (click)="$event.stopPropagation(); openReciterModal('hifz')"
+                    title="تغيير القارئ">
+                    <i class="fas fa-chevron-up"></i>
+                </div>
+                <img *ngIf="getHifzReciterImage()" [src]="getHifzReciterImage()" class="switcher-reciter-img"
                     alt="القارئ">
-                <i *ngIf="!getSelectedReciterImage()" class="fas fa-robot"></i>
+                <i *ngIf="!getHifzReciterImage()" class="fas fa-robot"></i>
             </button>
         </div>
 
@@ -1406,6 +1400,11 @@
                     <span>{{ getSelectedReciterName() }}</span>
                 </div>
 
+                <button class="mini-download-manager-btn" (click)="$event.stopPropagation(); openAudioManager()"
+                    title="إدارة التحميلات">
+                    <i class="fas fa-download"></i>
+                </button>
+
                 <!-- Surah Selector (Trigger) -->
                 <div class="surah-mini-selector" (click)="openSurahSelector()">
                     <span class="surah-name-badge">{{ getCurrentSurahName(state) }}</span>
@@ -1460,10 +1459,6 @@
             </div>
 
             <div class="verse-actions">
-                <button class="tafsir-btn" (click)="openTafsir()" title="قراءة التفسير">
-                    <i class="fas fa-book-open"></i>
-                    <span>تفسير</span>
-                </button>
                 <div class="buffering-spinner" *ngIf="state.isBuffering">
                     <i class="fas fa-spinner fa-spin"></i>
                 </div>
@@ -1495,6 +1490,14 @@
                 <button class="sources-toggle-btn" (click)="toggleTafsirSources()" [class.active]="showTafsirSources">
                     <i class="fas" [class.fa-list]="!showTafsirSources" [class.fa-times]="showTafsirSources"></i>
                     <span>{{ showTafsirSources ? 'إغلاق' : getActiveTafsirName }}</span>
+                </button>
+
+                <!-- NEW: Asbab Al-Nuzul Index Toggle -->
+                <button class="sources-toggle-btn asbab-index-btn"
+                    *ngIf="selectedTafsirId === 900 && !showTafsirSources" (click)="toggleAsbabIndex()"
+                    [class.active]="showAsbabIndex">
+                    <i class="fas" [class.fa-book-open-reader]="!showAsbabIndex" [class.fa-times]="showAsbabIndex"></i>
+                    <span>{{ showAsbabIndex ? 'إغلاق الفهرس' : 'فهرس الواحدي' }}</span>
                 </button>
             </div>
             <div class="header-spacer"></div>
@@ -1536,16 +1539,31 @@
             </div>
         </div>
 
+        <!-- Asbab Index View -->
+        <div class="tafsir-sources-view asbab-index-view" *ngIf="showAsbabIndex && (mushafMetadata$ | async) as meta">
+            <div class="index-search-header">
+                <div class="search-input-wrapper">
+                    <i class="fas fa-magnifying-glass"></i>
+                    <input type="text" placeholder="ابحث في السور أو الآيات..." [(ngModel)]="asbabSearchQuery">
+                </div>
+            </div>
+            <div class="sources-list asbab-list">
+                <div class="source-card asbab-entry" *ngFor="let entry of filteredAsbabIndex(meta.surahs)"
+                    (click)="loadAsbabEntry(entry)">
+                    <div class="source-info">
+                        <h4>{{ getSurahNameForIndex(entry.surah, meta.surahs) }}</h4>
+                        <span class="ayah-label">آية {{ entry.ayahs.join(', ') }}</span>
+                    </div>
+                    <i class="fas fa-chevron-left arrow"></i>
+                </div>
+            </div>
+        </div>
+
         <!-- Content View -->
         <!-- Content View -->
-        <div class="tafsir-content" *ngIf="!showTafsirSources" [class.loading]="loadingTafsir"
+        <div class="tafsir-content" *ngIf="!showTafsirSources && !showAsbabIndex" [class.loading]="loadingTafsir"
             (touchstart)="onTafsirTouchStart($event)" (touchmove)="onTafsirTouchMove($event)"
             (touchend)="onTafsirTouchEnd()">
-            <div class="loading-state" *ngIf="loadingTafsir">
-                <i class="fas fa-spinner fa-spin"></i>
-                <p>جاري تحميل التفسير...</p>
-            </div>
-
             <!-- Page-based Tafsir List -->
             <div class="tafsir-page-view" *ngIf="!loadingTafsir && pageTafsirs.length > 0">
                 <ng-container *ngFor="let t of pageTafsirs">
@@ -1571,7 +1589,6 @@
                 <p>عذراً، لم يتم العثور على تفسير لهذه الصفحة.</p>
             </div>
         </div>
-
     </div>
 </div>
 
@@ -1630,57 +1647,63 @@
         </div>
 
         <div class="tafsir-content">
-            <div class="reciter-management-header">
-                <div class="current-reciter-info">
-                    <label>القارئ الحالي:</label>
-                    <div class="reciter-selector-fancy">
-                        <select [ngModel]="currentReciterId" (ngModelChange)="changeReciter($event)">
-                            <option *ngFor="let r of availableReciters" [value]="r.id">
-                                {{ getReciterDisplayName(r) }}
-                            </option>
-                        </select>
+            <div class="active-reciter-banner">
+                <div class="reciter-display">
+                    <img *ngIf="getSelectedReciterImage()" [src]="getSelectedReciterImage()" class="banner-avatar">
+                    <div *ngIf="!getSelectedReciterImage()" class="banner-avatar-placeholder">
+                        <i class="fas fa-user"></i>
                     </div>
-                </div>
-                <div class="quick-actions" *ngIf="currentSurah$ | async as surah">
-                    <button class="download-surah-btn"
-                        [disabled]="downloadingSurahs.has(surah.id) || downloadedSurahs.has(surah.id)"
-                        (click)="downloadSurah(surah)">
-                        <i class="fas" [class.fa-download]="!downloadingSurahs.has(surah.id)"
-                            [class.fa-spinner]="downloadingSurahs.has(surah.id)"
-                            [class.fa-spin]="downloadingSurahs.has(surah.id)"></i>
-                        {{ downloadingSurahs.has(surah.id) ? 'جاري التحميل...' : (downloadedSurahs.has(surah.id) ?
-                        'تم
-                        تحميل سورة ' + surah.name : 'تحميل سورة ' + surah.name) }}
-                    </button>
+                    <div class="banner-info">
+                        <span class="label">إدارة تحميلات القارئ:</span>
+                        <span class="name">{{ getSelectedReciterName() }}</span>
+                    </div>
                 </div>
             </div>
 
             <div class="tafsir-sources-view" style="display: block; margin-top: 15px;">
-                <h4 style="color: #c2a87a; margin-bottom: 10px;">جميع السور</h4>
-                <div class="sources-list">
-                    <div class="source-card" *ngFor="let surah of allSurahs"
-                        [class.downloaded]="downloadedSurahs.has(surah.id)">
+                <h4 style="color: #c2a87a; margin-bottom: 15px; font-weight: bold;">جميع السور</h4>
+                <div class="sources-list download-manager-list">
+                    <div class="source-card surah-download-card" *ngFor="let surah of allSurahs"
+                        [class.downloaded]="downloadedSurahs.has(surah.id)"
+                        [class.downloading]="downloadingSurahs.has(surah.id)">
                         <div class="source-info">
                             <div class="surah-title">
                                 <span class="num">{{ surah.id }}</span>
                                 <h4>سورة {{ surah.name }}</h4>
                             </div>
-                            <div class="download-status" *ngIf="downloadingSurahs.has(surah.id)">
-                                <div class="progress-bar-mini">
-                                    <div class="fill loading-infinite"></div>
+                            <div class="download-status-container" *ngIf="downloadingSurahs.has(surah.id)">
+                                <div class="progress-circle">
+                                    <svg viewBox="0 0 36 36">
+                                        <circle class="bg" cx="18" cy="18" r="16"></circle>
+                                        <circle class="fill" cx="18" cy="18" r="16" [style.stroke-dasharray]="100"
+                                            [style.stroke-dashoffset]="100 - (downloadProgressMap.get(currentReciterId + '-' + surah.id) || 0)">
+                                        </circle>
+                                    </svg>
+                                    <span class="percentage-text">{{ downloadProgressMap.get(currentReciterId + '-' +
+                                        surah.id) || 0 }}%</span>
                                 </div>
-                                <span class="pct">جاري التحميل...</span>
                             </div>
                         </div>
                         <div class="source-actions">
-                            <button class="source-btn download"
+                            <!-- Download Action -->
+                            <button class="action-btn download-btn"
                                 *ngIf="!downloadedSurahs.has(surah.id) && !downloadingSurahs.has(surah.id)"
-                                (click)="downloadSurah(surah)">
-                                <i class="fas fa-arrow-down"></i> تحميل
+                                (click)="downloadSurah(surah)" title="تحميل">
+                                <i class="fas fa-download"></i>
                             </button>
-                            <div class="downloaded-check" *ngIf="downloadedSurahs.has(surah.id)">
-                                <i class="fas fa-check-circle"></i>
-                                <span>محملة</span>
+
+                            <!-- Cancel Action -->
+                            <button class="action-btn cancel-btn" *ngIf="downloadingSurahs.has(surah.id)"
+                                (click)="cancelSurahDownload(surah)" title="إلغاء التحميل">
+                                <i class="fas fa-times"></i>
+                            </button>
+
+                            <!-- Delete/Downloaded Action -->
+                            <div class="downloaded-group" *ngIf="downloadedSurahs.has(surah.id)">
+                                <i class="fas fa-check-circle success-icon"></i>
+                                <button class="action-btn delete-btn" (click)="deleteSurah(surah)" title="حذف الملفات">
+                                    <i class="fas fa-trash-can"></i>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -1691,7 +1714,7 @@
 </div>
 
 <!-- Reciter Selection Modal -->
-<div class="reciter-modal-overlay theme-{{currentTheme}}" *ngIf="showReciterModal" (click)="showReciterModal = false">
+<div class="reciter-modal-overlay theme-{{currentTheme}}" *ngIf="showReciterModal" (click)="closeReciterModal()">
     <div class="reciter-modal" (click)="$event.stopPropagation()">
         <div class="reciter-modal-header">
             <h3>
@@ -1700,14 +1723,15 @@
                     {{ availableReciters.length }}
                 </span>
             </h3>
-            <button class="reciter-modal-close" (click)="showReciterModal = false">
+            <button class="reciter-modal-close" (click)="closeReciterModal()">
                 <i class="fas fa-times"></i>
             </button>
         </div>
         <div class="reciter-modal-body">
             <div class="reciter-list">
-                <div class="reciter-item" *ngFor="let r of availableReciters"
-                    [class.selected]="r.id === currentReciterId" (click)="selectReciter(r.id)">
+                <div class="reciter-item" *ngFor="let r of getFilteredReciters()"
+                    [class.selected]="r.id === (reciterSelectionContext === 'hifz' ? hifzReciterId : currentReciterId)"
+                    (click)="selectReciter(r.id)">
                     <img *ngIf="getReciterImage(r)" [src]="getReciterImage(r)" class="reciter-avatar" [alt]="r.name">
                     <div *ngIf="!getReciterImage(r)" class="reciter-avatar-placeholder">
                         <i class="fas fa-user"></i>
@@ -1721,7 +1745,8 @@
                         </div>
                         <div class="reciter-style" *ngIf="r.style">{{ r.style }}</div>
                     </div>
-                    <div class="reciter-check" *ngIf="r.id === currentReciterId">
+                    <div class="reciter-check"
+                        *ngIf="r.id === (reciterSelectionContext === 'hifz' ? hifzReciterId : currentReciterId)">
                         <i class="fas fa-check"></i>
                     </div>
                 </div>

@@ -16,6 +16,45 @@
   -moz-text-size-adjust: none !important;
   -ms-text-size-adjust: none !important;
   text-size-adjust: none !important;
+  /* Android WebView: Suppress focus rings and tap highlights */
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
+/* ANDROID WEBVIEW FIX: Prevent rendering artifacts (random dots) */
+/* These settings stabilize GPU layers and force proper compositing */
+.mushaf-screen,
+.mushaf-page,
+.mushaf-line,
+.lines-container {
+  /* Force hardware compositing layer */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  /* Prevent back-face flickering */
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  /* Smooth sub-pixel rendering */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Remove any outlines and tap highlights */
+  outline: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+  /* Ensure proper layer isolation */
+  isolation: isolate;
+}
+
+/* Specifically for text rendering stability */
+.quran-text,
+.mushaf-line,
+.header-text-wrap {
+  /* Standard GPU optimization without forcing new layers excessively */
+  backface-visibility: hidden;
+}
+
+/* Prevent any focus outlines */
+.mushaf-screen *:focus,
+.mushaf-screen *:focus-visible {
+  outline: none !important;
 }
 
 /* Sidebar / Index Drawer */
@@ -23,6 +62,7 @@
   position: fixed;
   top: 0;
   right: -320px;
+  will-change: transform;
   /* ... existing code ... */
 
   /* Hide content while fonts are loading to prevent flash of unstyled text (FOUC) */
@@ -41,7 +81,7 @@
   background: #fdfbf7;
   background-image: linear-gradient(135deg, #fdfbf7 0%, #f4efe4 100%);
   color: #556b2f;
-  z-index: 1000;
+  z-index: 15000;
   display: flex;
   flex-direction: column;
   box-shadow: -5px 0 20px rgba(0, 0, 0, 0.4);
@@ -59,13 +99,12 @@
   left: -320px;
   width: 310px;
   height: 100%;
-  backdrop-filter: blur(25px) saturate(180%);
-  -webkit-backdrop-filter: blur(25px) saturate(180%);
-  background: rgba(26, 32, 44, 0.85);
-  /* Deep slate with transparency */
+  background: rgba(26, 32, 44, 0.98);
+  /* Deep slate with transparency - REMOVED HEAVY BACKDROP FILTER */
   border-right: 1px solid rgba(194, 168, 122, 0.2);
-  z-index: 1000;
-  /* Behind navbar (11000) but high enough for general interaction */
+  will-change: transform;
+  z-index: 15000;
+  /* Above navbar (11000) */
   overflow-y: auto;
   box-shadow: 10px 0 30px rgba(0, 0, 0, 0.5);
   transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -78,7 +117,7 @@
 /* Theme-specific sidebar adjustments for better blending */
 .mushaf-screen.theme-white .mushaf-settings-sidebar,
 .mushaf-screen.theme-cream .mushaf-settings-sidebar {
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.98);
   border-right-color: rgba(85, 107, 47, 0.2);
 }
 
@@ -183,8 +222,11 @@
 .mushaf-screen.theme-cream .mushaf-vertical-viewer,
 .mushaf-screen.theme-cream .page-top-meta,
 .mushaf-screen.theme-cream .bottom-navbar,
+.mushaf-screen.theme-cream .mushaf-sidebar,
+.mushaf-screen.theme-cream .mushaf-settings-sidebar,
 .mushaf-screen.theme-cream::before {
   background: #fdf6e3;
+  background-image: linear-gradient(135deg, #fdf6e3 0%, #f4efe4 100%);
   color: #1e293b;
   --bottom-shade: rgba(138, 113, 80, 0.04);
   /* Darkened for visibility on mobile */
@@ -196,6 +238,8 @@
 .mushaf-screen.theme-white .mushaf-vertical-viewer,
 .mushaf-screen.theme-white .page-top-meta,
 .mushaf-screen.theme-white .bottom-navbar,
+.mushaf-screen.theme-white .mushaf-sidebar,
+.mushaf-screen.theme-white .mushaf-settings-sidebar,
 .mushaf-screen.theme-white::before {
   background: #ffffff;
   color: #000000;
@@ -208,6 +252,8 @@
 .mushaf-screen.theme-green .mushaf-vertical-viewer,
 .mushaf-screen.theme-green .page-top-meta,
 .mushaf-screen.theme-green .bottom-navbar,
+.mushaf-screen.theme-green .mushaf-sidebar,
+.mushaf-screen.theme-green .mushaf-settings-sidebar,
 .mushaf-screen.theme-green::before {
   background: #f0f9eb;
   color: #1e293b;
@@ -220,11 +266,184 @@
 .mushaf-screen.theme-dark .mushaf-vertical-viewer,
 .mushaf-screen.theme-dark .page-top-meta,
 .mushaf-screen.theme-dark .bottom-navbar,
+.mushaf-screen.theme-dark .mushaf-sidebar,
+.mushaf-screen.theme-dark .mushaf-settings-sidebar,
 .mushaf-screen.theme-dark::before {
   background: #1a1a1a;
   color: #f1f5f9;
   --bottom-shade: rgba(255, 255, 255, 0.02);
   --half-page-bg: rgba(255, 255, 255, 0.05);
+}
+
+.mushaf-screen.theme-sky .mushaf-page,
+.mushaf-screen.theme-sky .mushaf-page-container,
+.mushaf-screen.theme-sky .mushaf-vertical-viewer,
+.mushaf-screen.theme-sky .page-top-meta,
+.mushaf-screen.theme-sky .bottom-navbar,
+.mushaf-screen.theme-sky .mushaf-sidebar,
+.mushaf-screen.theme-sky .mushaf-settings-sidebar,
+.mushaf-screen.theme-sky::before {
+  background: #e3f2fd;
+  color: #0d47a1;
+  --bottom-shade: rgba(13, 71, 161, 0.04);
+  --half-page-bg: rgba(13, 71, 161, 0.1);
+}
+
+.mushaf-screen.theme-blue .mushaf-page,
+.mushaf-screen.theme-blue .mushaf-page-container,
+.mushaf-screen.theme-blue .mushaf-vertical-viewer,
+.mushaf-screen.theme-blue .page-top-meta,
+.mushaf-screen.theme-blue .bottom-navbar,
+.mushaf-screen.theme-blue .mushaf-sidebar,
+.mushaf-screen.theme-blue .mushaf-settings-sidebar,
+.mushaf-screen.theme-blue::before {
+  background: #e8eaf6;
+  color: #1a237e;
+  --bottom-shade: rgba(26, 35, 126, 0.04);
+  --half-page-bg: rgba(26, 35, 126, 0.1);
+}
+
+/* THEMED MODALS & OVERLAYS GLOBAL OVERRIDES - Consolidate for all theme classes */
+.theme-cream .search-modal,
+.theme-cream .wallet-modal,
+.theme-cream .reciter-modal,
+.theme-cream .surah-modal,
+.bottom-sheet.theme-cream,
+.theme-cream .tafsir-modal,
+.theme-cream .bookmark-dialog,
+.tafsir-overlay.theme-cream .tafsir-modal,
+.reciter-modal-overlay.theme-cream .reciter-modal,
+.search-overlay.theme-cream .search-modal {
+  background: #fdf6e3 !important;
+  background-image: linear-gradient(135deg, #fdf6e3 0%, #f4efe4 100%) !important;
+  color: #1e293b !important;
+}
+
+.theme-white .search-modal,
+.theme-white .wallet-modal,
+.theme-white .reciter-modal,
+.theme-white .surah-modal,
+.bottom-sheet.theme-white,
+.theme-white .tafsir-modal,
+.theme-white .bookmark-dialog,
+.tafsir-overlay.theme-white .tafsir-modal,
+.reciter-modal-overlay.theme-white .reciter-modal,
+.search-overlay.theme-white .search-modal {
+  background: #ffffff !important;
+  color: #000000 !important;
+}
+
+.theme-green .search-modal,
+.theme-green .wallet-modal,
+.theme-green .reciter-modal,
+.theme-green .surah-modal,
+.bottom-sheet.theme-green,
+.theme-green .tafsir-modal,
+.theme-green .bookmark-dialog,
+.tafsir-overlay.theme-green .tafsir-modal,
+.reciter-modal-overlay.theme-green .reciter-modal,
+.search-overlay.theme-green .search-modal {
+  background: #f0f9eb !important;
+  color: #1e293b !important;
+}
+
+.theme-sky .search-modal,
+.theme-sky .wallet-modal,
+.theme-sky .reciter-modal,
+.theme-sky .surah-modal,
+.bottom-sheet.theme-sky,
+.theme-sky .tafsir-modal,
+.theme-sky .bookmark-dialog,
+.tafsir-overlay.theme-sky .tafsir-modal,
+.reciter-modal-overlay.theme-sky .reciter-modal,
+.search-overlay.theme-sky .search-modal {
+  background: #e3f2fd !important;
+  color: #0d47a1 !important;
+}
+
+.theme-blue .search-modal,
+.theme-blue .wallet-modal,
+.theme-blue .reciter-modal,
+.theme-blue .surah-modal,
+.bottom-sheet.theme-blue,
+.theme-blue .tafsir-modal,
+.theme-blue .bookmark-dialog,
+.tafsir-overlay.theme-blue .tafsir-modal,
+.reciter-modal-overlay.theme-blue .reciter-modal,
+.search-overlay.theme-blue .search-modal {
+  background: #e8eaf6 !important;
+  color: #1a237e !important;
+}
+
+.theme-dark .search-modal,
+.theme-dark .wallet-modal,
+.theme-dark .reciter-modal,
+.theme-dark .surah-modal,
+.bottom-sheet.theme-dark,
+.theme-dark .tafsir-modal,
+.theme-dark .bookmark-dialog,
+.tafsir-overlay.theme-dark .tafsir-modal,
+.reciter-modal-overlay.theme-dark .reciter-modal,
+.search-overlay.theme-dark .search-modal {
+  background: #1a1a1a !important;
+  color: #f1f5f9 !important;
+}
+
+.theme-cream .modal-header,
+.theme-cream .search-header,
+.theme-cream .sheet-header,
+.theme-cream .reciter-modal-header,
+.theme-cream .surah-modal-header,
+.theme-cream .tafsir-header,
+.theme-cream .dialog-header,
+.theme-white .modal-header,
+.theme-white .search-header,
+.theme-white .sheet-header,
+.theme-white .reciter-modal-header,
+.theme-white .surah-modal-header,
+.theme-white .tafsir-header,
+.theme-white .dialog-header,
+.theme-green .modal-header,
+.theme-green .search-header,
+.theme-green .sheet-header,
+.theme-green .reciter-modal-header,
+.theme-green .surah-modal-header,
+.theme-green .tafsir-header,
+.theme-green .dialog-header,
+.theme-sky .modal-header,
+.theme-sky .search-header,
+.theme-sky .sheet-header,
+.theme-sky .reciter-modal-header,
+.theme-sky .surah-modal-header,
+.theme-sky .tafsir-header,
+.theme-sky .dialog-header,
+.theme-blue .modal-header,
+.theme-blue .search-header,
+.theme-blue .sheet-header,
+.theme-blue .reciter-modal-header,
+.theme-blue .surah-modal-header,
+.theme-blue .tafsir-header,
+.theme-blue .dialog-header,
+.theme-dark .modal-header,
+.theme-dark .search-header,
+.theme-dark .sheet-header,
+.theme-dark .reciter-modal-header,
+.theme-dark .surah-modal-header,
+.theme-dark .tafsir-header,
+.theme-dark .dialog-header {
+  background: rgba(0, 0, 0, 0.03) !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
+}
+
+.theme-dark .modal-header,
+.theme-dark .search-header,
+.theme-dark .sheet-header,
+.theme-dark .reciter-modal-header,
+.theme-dark .surah-modal-header,
+.theme-dark .tafsir-header,
+.theme-dark .dialog-header {
+  background: rgba(255, 255, 255, 0.02) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
 }
 
 /* In dark theme, some markers might need adjustment */
@@ -256,9 +475,126 @@
   font-weight: 700;
 }
 
-.mushaf-screen.theme-white .header-main-title h3,
-.mushaf-screen.theme-cream .header-main-title h3 {
-  color: #2d3748;
+/* Sidebar Interior Elements Theming */
+.theme-cream .index-list button,
+.theme-cream .index-grid button,
+.theme-cream .surah-index-item,
+.theme-white .index-list button,
+.theme-white .index-grid button,
+.theme-white .surah-index-item,
+.theme-green .index-list button,
+.theme-green .index-grid button,
+.theme-green .surah-index-item,
+.theme-sky .index-list button,
+.theme-sky .index-grid button,
+.theme-sky .surah-index-item,
+.theme-blue .index-list button,
+.theme-blue .index-grid button,
+.theme-blue .surah-index-item {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: inherit !important;
+  border-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+.theme-dark .index-list button,
+.theme-dark .index-grid button,
+.theme-dark .surah-index-item {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: inherit !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Modals Overlays Theming */
+.search-overlay.theme-cream,
+.wallet-modal-overlay.theme-cream,
+.bookmark-dialog-overlay.theme-cream,
+.reciter-modal-overlay.theme-cream,
+.surah-modal-overlay.theme-cream,
+.tafsir-overlay.theme-cream {
+  background: rgba(138, 113, 80, 0.4);
+}
+
+.search-overlay.theme-white,
+.wallet-modal-overlay.theme-white,
+.bookmark-dialog-overlay.theme-white,
+.reciter-modal-overlay.theme-white,
+.surah-modal-overlay.theme-white,
+.tafsir-overlay.theme-white {
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.search-overlay.theme-green,
+.wallet-modal-overlay.theme-green,
+.bookmark-dialog-overlay.theme-green,
+.reciter-modal-overlay.theme-green,
+.surah-modal-overlay.theme-green,
+.tafsir-overlay.theme-green {
+  background: rgba(46, 125, 50, 0.4);
+}
+
+.search-overlay.theme-sky,
+.wallet-modal-overlay.theme-sky,
+.bookmark-dialog-overlay.theme-sky,
+.reciter-modal-overlay.theme-sky,
+.surah-modal-overlay.theme-sky,
+.tafsir-overlay.theme-sky {
+  background: rgba(13, 71, 161, 0.4);
+}
+
+.search-overlay.theme-blue,
+.wallet-modal-overlay.theme-blue,
+.bookmark-dialog-overlay.theme-blue,
+.reciter-modal-overlay.theme-blue,
+.surah-modal-overlay.theme-blue,
+.tafsir-overlay.theme-blue {
+  background: rgba(26, 35, 126, 0.4);
+}
+
+.search-overlay.theme-dark,
+.wallet-modal-overlay.theme-dark,
+.bookmark-dialog-overlay.theme-dark,
+.reciter-modal-overlay.theme-dark,
+.surah-modal-overlay.theme-dark,
+.tafsir-overlay.theme-dark {
+  background: rgba(0, 0, 0, 0.8);
+}
+
+/* Inputs and interactive elements inside themed modals */
+.theme-cream input,
+.theme-cream textarea,
+.theme-cream select,
+.theme-white input,
+.theme-white textarea,
+.theme-white select,
+.theme-green input,
+.theme-green textarea,
+.theme-green select,
+.theme-sky input,
+.theme-sky textarea,
+.theme-sky select,
+.theme-blue input,
+.theme-blue textarea,
+.theme-blue select {
+  background: rgba(255, 255, 255, 0.6) !important;
+  color: inherit !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+.theme-dark input,
+.theme-dark textarea,
+.theme-dark select {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: #fff !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.theme-dark .surah-card-modern,
+.theme-dark .reciter-item,
+.theme-dark .result-item,
+.theme-dark .tafsir-entry,
+.theme-dark .source-card {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border-color: rgba(255, 255, 255, 0.05) !important;
 }
 
 .sidebar-badge {
@@ -500,8 +836,8 @@
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(3px);
-  z-index: 999;
+  z-index: 14000;
+  will-change: opacity;
 }
 
 /* FIXED HEADER STYLING */
@@ -522,6 +858,26 @@
   pointer-events: none;
 }
 
+.inline-page-meta>* {
+  pointer-events: auto;
+}
+
+.inline-page-meta .page-header-icon {
+  font-size: 0.85rem;
+  opacity: 0.7;
+  color: #c2a87a;
+  /* Gold color for the icons */
+  transition: all 0.3s ease;
+}
+
+.theme-dark .inline-page-meta .page-header-icon {
+  color: #c2a87a;
+}
+
+.theme-white .inline-page-meta .page-header-icon {
+  color: #8a7150;
+}
+
 .inline-page-meta .divider {
   opacity: 0.3;
 }
@@ -539,8 +895,8 @@
   box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.12);
   border-top: 1px solid rgba(194, 168, 122, 0.2);
   border-radius: 24px 24px 0 0;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: #ffffff;
+  /* Default solid background */
   transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
@@ -731,7 +1087,7 @@
 }
 
 .asbab-index-view {
-  background: rgba(20, 24, 33, 0.98);
+  background: inherit !important;
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -741,63 +1097,63 @@
 }
 
 .index-search-header {
-  padding: 16px;
+  padding: 10px 16px;
   background: rgba(194, 168, 122, 0.05);
   border-bottom: 1px solid rgba(194, 168, 122, 0.1);
 }
 
 .index-search-header .search-input-wrapper {
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(138, 113, 80, 0.08);
   border: 1px solid rgba(194, 168, 122, 0.2);
-  border-radius: 12px;
-  padding: 10px 15px;
+  border-radius: 10px;
+  padding: 6px 12px;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .index-search-header input {
   background: none;
   border: none;
-  color: #fff;
+  color: inherit;
   width: 100%;
-  font-size: 0.95rem;
-  font-family: 'Inter', sans-serif;
+  font-size: 0.9rem;
+  font-family: inherit;
 }
 
 .asbab-list {
-  padding: 10px !important;
-  gap: 10px !important;
+  padding: 8px !important;
+  gap: 8px !important;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)) !important;
 }
 
 .asbab-entry {
+  padding: 8px 12px !important;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  min-height: 50px;
 }
 
-.asbab-entry:hover {
-  background: rgba(194, 168, 122, 0.1) !important;
-  transform: translateX(-5px);
+.asbab-entry h4 {
+  font-size: 0.95rem !important;
+  margin: 0 !important;
 }
 
 .asbab-entry .ayah-label {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   color: #8a7150;
+  opacity: 0.8;
 }
 
 .asbab-entry .arrow {
-  opacity: 0.3;
-  font-size: 0.8rem;
-  transition: transform 0.3s ease;
+  display: none;
+  /* Mobile optimization */
 }
 
-.asbab-entry:hover .arrow {
-  opacity: 1;
-  transform: translateX(-5px);
-}
 
 .total-users-badge {
   display: flex;
@@ -1372,17 +1728,17 @@
 
 .floating-audio-player {
   position: fixed;
-  bottom: calc(85px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(100px + env(safe-area-inset-bottom, 0px));
   left: 10px;
   right: 10px;
-  z-index: 1003;
-  /* ABOVE bottom-navbar */
+  z-index: 12000;
+  /* ABOVE bottom-navbar (11000) */
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 @media (min-width: 768px) {
   .floating-audio-player {
-    bottom: calc(85px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(100px + env(safe-area-inset-bottom, 0px));
   }
 }
 
@@ -1572,6 +1928,7 @@
   visibility: hidden;
   pointer-events: none;
   border-top: 1px solid rgba(0, 0, 0, 0.05);
+  padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
 }
 
 .bottom-sheet.theme-dark {
@@ -3245,20 +3602,22 @@ input:checked+.slider:before {
   pointer-events: none;
 }
 
-/* Hifz Wizard Overlay */
+/* Hifz Wizard Overlay - Redesigned as Full Height / Bottom Sheet */
 .wizard-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.9);
-  z-index: 10000;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  z-index: 12000;
   display: flex;
-  align-items: center;
+  align-items: stretch;
+  /* Anchor to top */
   justify-content: center;
-  padding: 20px;
-  overflow-y: auto;
+  padding: 0;
+  overflow: hidden;
 }
 
 /* Day Dashboard Cards */
@@ -3581,7 +3940,7 @@ input:checked+.slider:before {
   background: rgba(0, 0, 0, 0.75);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  z-index: 11000;
+  z-index: 16000;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -4815,6 +5174,7 @@ input:checked+.slider:before {
   background-size: var(--seek-before-width) 100%;
   cursor: pointer;
   appearance: none;
+  touch-action: none;
 }
 
 .player-seeker::-webkit-slider-thumb {
@@ -5235,12 +5595,12 @@ input:checked+.slider:before {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(4px);
-  z-index: 10010;
+  z-index: 16000;
   display: flex;
   align-items: center;
   justify-content: center;
   animation: fadeIn 0.3s ease;
+  will-change: opacity;
 }
 
 .reciter-modal {
@@ -5254,6 +5614,7 @@ input:checked+.slider:before {
   flex-direction: column;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   animation: slideUpModal 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+  will-change: transform, opacity;
 }
 
 @keyframes slideUpModal {
@@ -5352,7 +5713,6 @@ input:checked+.slider:before {
 }
 
 .settings-btn:hover,
-.shuffle-btn:hover,
 .timer-btn:hover,
 .stop-btn:hover {
   background: rgba(255, 255, 255, 0.15);
@@ -5414,7 +5774,7 @@ input:checked+.slider:before {
   border: 2px solid transparent;
   border-radius: 14px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
 }
 
 .reciter-item:hover {
@@ -6086,7 +6446,7 @@ input:checked+.slider:before {
   background: transparent;
   display: flex;
   flex-direction: column;
-  z-index: 50000;
+  z-index: 10000;
   animation: fadeIn 0.2s ease-out;
 }
 
@@ -6102,18 +6462,18 @@ input:checked+.slider:before {
 .tafsir-header {
   background: inherit;
   border-bottom: 2px solid rgba(194, 168, 122, 0.2);
-  padding: calc(env(safe-area-inset-top) + 30px) 24px 15px 24px;
+  padding: calc(env(safe-area-inset-top) + 8px) 12px 6px 12px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   height: auto;
-  min-height: 70px;
+  min-height: 44px;
 }
 
 .header-center-group {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 12px;
 }
 
 .header-spacer {
@@ -6128,24 +6488,24 @@ input:checked+.slider:before {
 
 .header-main i {
   color: #c2a87a;
-  font-size: 1.4rem;
+  font-size: 1.1rem;
 }
 
 .header-main h3 {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: 1.05rem;
   color: #c2a87a;
   font-weight: 800;
 }
 
 .back-to-mushaf {
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   border: none;
-  background: transparent;
-  color: #1e293b;
-  font-size: 1.3rem;
+  background: rgba(0, 0, 0, 0.03);
+  color: #c2a87a;
+  font-size: 1.1rem;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -6187,7 +6547,7 @@ input:checked+.slider:before {
 .tafsir-content {
   flex: 1;
   overflow-y: auto;
-  padding: 24px;
+  padding: 24px 24px 250px 24px;
   direction: rtl;
   background: transparent;
 }
@@ -6213,7 +6573,7 @@ input:checked+.slider:before {
 .tafsir-surah-header .surah-name {
   font-family: 'Amiri', serif;
   font-size: 2.2rem;
-  color: #1e293b;
+  color: inherit;
 }
 
 .tafsir-entry {
@@ -6501,13 +6861,14 @@ input:checked+.slider:before {
   background: #c2a87a;
   color: white;
   border: none;
-  padding: 7px 15px;
-  border-radius: 12px;
+  padding: 5px 12px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   font-weight: 700;
   cursor: pointer;
+  font-size: 0.9rem;
   transition: all 0.2s;
   box-shadow: 0 4px 10px rgba(194, 168, 122, 0.2);
 }
@@ -6974,15 +7335,42 @@ input:checked+.slider:before {
 */
 
 /* Floating Audio Player - Unified Spiritual Theme */
-.floating-audio-player,
-.mushaf-screen.theme-dark .floating-audio-player,
-.mushaf-screen.theme-blue .floating-audio-player,
-.mushaf-screen.theme-green .floating-audio-player {
-  background: #fdfbf7 !important;
-  background-image: linear-gradient(135deg, #fdfbf7 0%, #f4efe4 100%) !important;
+.floating-audio-player {
+  background: inherit !important;
+  color: inherit !important;
   border: 1px solid rgba(194, 168, 122, 0.3) !important;
-  color: #556b2f !important;
-  box-shadow: 0 10px 30px rgba(85, 107, 47, 0.15) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.theme-cream .floating-audio-player {
+  background: #fdf6e3 !important;
+  background-image: linear-gradient(135deg, #fdf6e3 0%, #f4efe4 100%) !important;
+}
+
+.theme-white .floating-audio-player {
+  background: #ffffff !important;
+}
+
+.theme-green .floating-audio-player {
+  background: #f0f9eb !important;
+}
+
+.theme-dark .floating-audio-player {
+  background: #1a1a1a !important;
+  color: #f1f5f9 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.theme-sky .floating-audio-player {
+  background: #e3f2fd !important;
+  color: #0d47a1 !important;
+}
+
+.theme-blue .floating-audio-player {
+  background: #e8eaf6 !important;
+  color: #1a237e !important;
 }
 
 .floating-audio-player .reciter-selector {
@@ -7157,14 +7545,56 @@ select:focus {
 /* Page Header/Footer animations handled by hidden-navbar class */
 
 /* 5. Memorization Options Bottom Sheet - Unified Spiritual Theme */
-.bottom-sheet,
-.mushaf-screen.theme-dark .bottom-sheet {
-  background: #fdfbf7 !important;
-  background-image: linear-gradient(135deg, #fdfbf7 0%, #f4efe4 100%) !important;
-  border-top: 2px solid rgba(194, 168, 122, 0.4) !important;
-  color: #556b2f !important;
-  box-shadow: 0 -15px 50px rgba(85, 107, 47, 0.15) !important;
+.bottom-sheet {
+  background: #ffffff !important;
+  color: #1e293b !important;
+  border-top: 1px solid rgba(0, 0, 0, 0.1) !important;
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.1) !important;
 }
+
+.bottom-sheet.theme-cream,
+.bottom-navbar.theme-cream {
+  background: #fdf6e3 !important;
+  background-image: linear-gradient(135deg, #fdf6e3 0%, #f4efe4 100%) !important;
+  border-top-color: rgba(194, 168, 122, 0.4) !important;
+  box-shadow: 0 -10px 40px rgba(138, 113, 80, 0.1) !important;
+}
+
+.bottom-sheet.theme-white,
+.bottom-navbar.theme-white {
+  background: #ffffff !important;
+  border-top-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+.bottom-sheet.theme-green,
+.bottom-navbar.theme-green {
+  background: #f0f9eb !important;
+  border-top-color: rgba(46, 125, 50, 0.2) !important;
+  box-shadow: 0 -10px 40px rgba(46, 125, 50, 0.1) !important;
+}
+
+.bottom-sheet.theme-sky,
+.bottom-navbar.theme-sky {
+  background: #e3f2fd !important;
+  border-top-color: rgba(13, 71, 161, 0.2) !important;
+  box-shadow: 0 -10px 40px rgba(13, 71, 161, 0.1) !important;
+}
+
+.bottom-sheet.theme-blue,
+.bottom-navbar.theme-blue {
+  background: #e8eaf6 !important;
+  border-top-color: rgba(26, 35, 126, 0.2) !important;
+  box-shadow: 0 -10px 40px rgba(26, 35, 126, 0.1) !important;
+}
+
+.bottom-sheet.theme-dark,
+.bottom-navbar.theme-dark {
+  background: #1a1a1a !important;
+  color: #f1f5f9 !important;
+  border-top-color: rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.5) !important;
+}
+
 
 .bottom-sheet .sheet-header {
   border-bottom: 1px solid rgba(194, 168, 122, 0.2) !important;
@@ -7174,42 +7604,133 @@ select:focus {
   background: rgba(85, 107, 47, 0.2) !important;
 }
 
-.bottom-sheet .sheet-header h4 {
-  color: #556b2f !important;
-  font-family: 'Amiri', serif !important;
-  font-weight: 700 !important;
-}
-
-.bottom-sheet .close-sheet {
-  background: rgba(85, 107, 47, 0.08) !important;
+/* Bottom Sheet Headers & Labels Theming */
+.bottom-sheet.theme-cream .sheet-header h4,
+.bottom-sheet.theme-cream .group-label {
   color: #556b2f !important;
 }
 
-.bottom-sheet .group-label {
-  color: #8b9678 !important;
-  /* Muted Olive */
-  font-weight: 600 !important;
+.bottom-sheet.theme-white .sheet-header h4,
+.bottom-sheet.theme-white .group-label {
+  color: #000000 !important;
 }
 
-.bottom-sheet .group-label i {
+.bottom-sheet.theme-green .sheet-header h4,
+.bottom-sheet.theme-green .group-label {
+  color: #1b5e20 !important;
+}
+
+.bottom-sheet.theme-sky .sheet-header h4,
+.bottom-sheet.theme-sky .group-label {
+  color: #0d47a1 !important;
+}
+
+.bottom-sheet.theme-blue .sheet-header h4,
+.bottom-sheet.theme-blue .group-label {
+  color: #1a237e !important;
+}
+
+.bottom-sheet.theme-dark .sheet-header h4,
+.bottom-sheet.theme-dark .group-label {
+  color: #f1f5f9 !important;
+}
+
+.bottom-sheet.theme-cream .group-label i {
   color: #c2a87a !important;
-  /* Gold/Cream accent */
 }
 
-/* Modern Radio Group & Chips inside Bottom Sheet */
-.bottom-sheet .radio-group-modern button,
-.bottom-sheet .radio-chips-modern button {
+.bottom-sheet.theme-white .group-label i {
+  color: #8a7150 !important;
+}
+
+.bottom-sheet.theme-green .group-label i {
+  color: #2e7d32 !important;
+}
+
+.bottom-sheet.theme-sky .group-label i {
+  color: #1976d2 !important;
+}
+
+.bottom-sheet.theme-blue .group-label i {
+  color: #303f9f !important;
+}
+
+.bottom-sheet.theme-dark .group-label i {
+  color: #c2a87a !important;
+}
+
+/* Modern Radio Group & Chips inside Bottom Sheet Theming */
+.bottom-sheet.theme-cream .radio-group-modern button,
+.bottom-sheet.theme-cream .radio-chips-modern button {
   background: rgba(85, 107, 47, 0.05) !important;
-  border: 1px solid rgba(85, 107, 47, 0.1) !important;
   color: #556b2f !important;
 }
 
-.bottom-sheet .radio-group-modern button.active,
-.bottom-sheet .radio-chips-modern button.active {
+.bottom-sheet.theme-white .radio-group-modern button,
+.bottom-sheet.theme-white .radio-chips-modern button {
+  background: rgba(0, 0, 0, 0.03) !important;
+  color: #000000 !important;
+}
+
+.bottom-sheet.theme-green .radio-group-modern button,
+.bottom-sheet.theme-green .radio-chips-modern button {
+  background: rgba(46, 125, 50, 0.05) !important;
+  color: #1e293b !important;
+}
+
+.bottom-sheet.theme-sky .radio-group-modern button,
+.bottom-sheet.theme-sky .radio-chips-modern button {
+  background: rgba(13, 71, 161, 0.05) !important;
+  color: #0d47a1 !important;
+}
+
+.bottom-sheet.theme-blue .radio-group-modern button,
+.bottom-sheet.theme-blue .radio-chips-modern button {
+  background: rgba(26, 35, 126, 0.05) !important;
+  color: #1a237e !important;
+}
+
+.bottom-sheet.theme-dark .radio-group-modern button,
+.bottom-sheet.theme-dark .radio-chips-modern button {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: #f1f5f9 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.bottom-sheet.theme-cream .radio-group-modern button.active,
+.bottom-sheet.theme-cream .radio-chips-modern button.active {
   background: #556b2f !important;
-  color: #fdfbf7 !important;
-  border-color: #556b2f !important;
-  box-shadow: 0 4px 12px rgba(85, 107, 47, 0.2) !important;
+  color: #fff !important;
+}
+
+.bottom-sheet.theme-white .radio-group-modern button.active,
+.bottom-sheet.theme-white .radio-chips-modern button.active {
+  background: #000000 !important;
+  color: #fff !important;
+}
+
+.bottom-sheet.theme-green .radio-group-modern button.active,
+.bottom-sheet.theme-green .radio-chips-modern button.active {
+  background: #2e7d32 !important;
+  color: #fff !important;
+}
+
+.bottom-sheet.theme-sky .radio-group-modern button.active,
+.bottom-sheet.theme-sky .radio-chips-modern button.active {
+  background: #0d47a1 !important;
+  color: #fff !important;
+}
+
+.bottom-sheet.theme-blue .radio-group-modern button.active,
+.bottom-sheet.theme-blue .radio-chips-modern button.active {
+  background: #1a237e !important;
+  color: #fff !important;
+}
+
+.bottom-sheet.theme-dark .radio-group-modern button.active,
+.bottom-sheet.theme-dark .radio-chips-modern button.active {
+  background: #c2a87a !important;
+  color: #1a1a1a !important;
 }
 
 /* Verse Range Picker inside Bottom Sheet */
@@ -7914,7 +8435,7 @@ select:focus {
   bottom: 0;
   background: rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(10px);
-  z-index: 11000;
+  z-index: 16000;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -8477,4 +8998,665 @@ select:focus {
 .success-icon {
   color: #10b981;
   font-size: 1.2rem;
+}
+
+/* Bookmark Specific Styles */
+.bookmark-btn.active {
+  color: #c2a87a !important;
+}
+
+.delete-bookmark-btn:hover {
+  transform: scale(1.1);
+  color: #ff0000 !important;
+}
+
+/* Bookmark Dialog Overlay */
+.bookmark-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 12000;
+  padding: 20px;
+  animation: fadeIn 0.3s ease;
+}
+
+.bookmark-dialog {
+  background: #fdfbf7;
+  width: 100%;
+  max-width: 400px;
+  border-radius: 20px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(194, 168, 122, 0.2);
+  overflow: hidden;
+  animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  direction: rtl;
+}
+
+.mushaf-screen.theme-dark .bookmark-dialog {
+  background: #1a1a1a;
+  color: #f1f5f9;
+}
+
+.dialog-header {
+  background: rgba(194, 168, 122, 0.1);
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(194, 168, 122, 0.2);
+}
+
+.dialog-header h3 {
+  margin: 0 !important;
+  font-size: 1.1rem !important;
+  color: #c2a87a !important;
+  font-weight: bold !important;
+}
+
+.close-dialog {
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  font-size: 1.2rem;
+}
+
+.dialog-body {
+  padding: 20px;
+}
+
+.input-group {
+  margin-bottom: 16px;
+}
+
+.input-group label {
+  display: block;
+  margin-bottom: 8px;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.input-group input {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(194, 168, 122, 0.3);
+  background: rgba(255, 255, 255, 0.5);
+  color: #1e293b;
+  font-size: 1rem;
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+
+.mushaf-screen.theme-dark .input-group input {
+  background: rgba(255, 255, 255, 0.05);
+  color: #f1f5f9;
+}
+
+.input-group input:focus {
+  outline: none;
+  border-color: #c2a87a;
+}
+
+.page-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: #64748b;
+  opacity: 0.8;
+}
+
+.dialog-footer {
+  padding: 16px 20px;
+  display: flex;
+  gap: 12px;
+  background: rgba(194, 168, 122, 0.05);
+  border-top: 1px solid rgba(194, 168, 122, 0.1);
+}
+
+.btn-cancel,
+.btn-save {
+  flex: 1;
+  padding: 12px;
+  border-radius: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  font-family: inherit;
+}
+
+.btn-cancel {
+  background: rgba(0, 0, 0, 0.05);
+  color: #1e293b;
+}
+
+.mushaf-screen.theme-dark .btn-cancel {
+  background: rgba(255, 255, 255, 0.1);
+  color: #f1f5f9;
+}
+
+.btn-save {
+  background: #c2a87a;
+  color: white;
+}
+
+.btn-save:hover {
+  background: #b19669;
+  transform: translateY(-2px);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* VISIBILITY IMPROVEMENTS (Added manually) */
+
+/* 1. Make Expected Completion Date darker and bolder for better contrast */
+.completion-estimate-card .est-date {
+  color: #556b2f;
+  /* Dark Olive Green instead of light/gold */
+  font-weight: 800;
+  /* Extra bold */
+  font-size: 0.95rem;
+  /* Slightly larger */
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+  /* Light shadow for depth */
+}
+
+/* Ensure the label is also readable but distinct */
+.completion-estimate-card .est-label {
+  color: #667c45;
+  /* Medium Olive */
+  font-weight: 600;
+}
+
+/* 2. Improve Progress Percentage Visibility */
+.progress-percentage {
+  color: #556b2f;
+  /* Dark Olive matching the date */
+  font-weight: 800;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+  font-size: 0.9rem;
+  background: rgba(255, 255, 255, 0.6);
+  /* Semi-transparent white bg pill */
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+/* Dark Mode Overrides for these specific elements */
+.mushaf-screen.theme-dark .completion-estimate-card .est-date {
+  color: #e2e8f0;
+  /* Light slate/white for dark mode */
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.mushaf-screen.theme-dark .completion-estimate-card .est-label {
+  color: #94a3b8;
+}
+
+.mushaf-screen.theme-dark .progress-percentage {
+  color: #f1f5f9;
+  background: rgba(0, 0, 0, 0.4);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+/* THEMED OPTIONS SHEET COMPONENTS */
+
+/* --- Theme White --- */
+.bottom-sheet.theme-white .verse-range-picker {
+  background: rgba(0, 0, 0, 0.03) !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+}
+
+.bottom-sheet.theme-white .range-field label {
+  color: #555 !important;
+}
+
+.bottom-sheet.theme-white .mini-chips {
+  background: rgba(0, 0, 0, 0.03) !important;
+}
+
+.bottom-sheet.theme-white .mini-chips button {
+  color: #555 !important;
+}
+
+.bottom-sheet.theme-white .mini-chips button.active {
+  background: #000 !important;
+  color: #fff !important;
+}
+
+.bottom-sheet.theme-white .number-control {
+  background: rgba(0, 0, 0, 0.03) !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+.bottom-sheet.theme-white .number-control button {
+  border-color: rgba(0, 0, 0, 0.1) !important;
+  color: #000 !important;
+}
+
+.bottom-sheet.theme-white .number-control span {
+  color: #000 !important;
+}
+
+.bottom-sheet.theme-white .start-session-btn {
+  background: linear-gradient(135deg, #333 0%, #000 100%) !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* --- Theme Green --- */
+/* (Already mostly covered by defaults, but explicit overrides ensure consistency) */
+.bottom-sheet.theme-green .verse-range-picker {
+  background: rgba(46, 125, 50, 0.05) !important;
+  border: 1px solid rgba(46, 125, 50, 0.2) !important;
+}
+
+.bottom-sheet.theme-green .range-field label {
+  color: #2e7d32 !important;
+}
+
+.bottom-sheet.theme-green .mini-chips {
+  background: rgba(46, 125, 50, 0.05) !important;
+}
+
+.bottom-sheet.theme-green .mini-chips button {
+  color: #2e7d32 !important;
+}
+
+.bottom-sheet.theme-green .mini-chips button.active {
+  background: #2e7d32 !important;
+  color: #fff !important;
+}
+
+.bottom-sheet.theme-green .number-control {
+  background: rgba(46, 125, 50, 0.05) !important;
+  border-color: rgba(46, 125, 50, 0.2) !important;
+}
+
+.bottom-sheet.theme-green .number-control button {
+  border-color: rgba(46, 125, 50, 0.2) !important;
+  color: #2e7d32 !important;
+}
+
+.bottom-sheet.theme-green .number-control span {
+  color: #2e7d32 !important;
+}
+
+.bottom-sheet.theme-green .start-session-btn {
+  background: linear-gradient(135deg, #43a047 0%, #2e7d32 100%) !important;
+  box-shadow: 0 6px 20px rgba(46, 125, 50, 0.3) !important;
+}
+
+/* --- Theme Sky --- */
+.bottom-sheet.theme-sky .verse-range-picker {
+  background: rgba(13, 71, 161, 0.05) !important;
+  border: 1px solid rgba(13, 71, 161, 0.2) !important;
+}
+
+.bottom-sheet.theme-sky .range-field label {
+  color: #0d47a1 !important;
+}
+
+.bottom-sheet.theme-sky .mini-chips {
+  background: rgba(13, 71, 161, 0.05) !important;
+}
+
+.bottom-sheet.theme-sky .mini-chips button {
+  color: #0d47a1 !important;
+}
+
+.bottom-sheet.theme-sky .mini-chips button.active {
+  background: #0d47a1 !important;
+  color: #fff !important;
+}
+
+.bottom-sheet.theme-sky .number-control {
+  background: rgba(13, 71, 161, 0.05) !important;
+  border-color: rgba(13, 71, 161, 0.2) !important;
+}
+
+.bottom-sheet.theme-sky .number-control button {
+  border-color: rgba(13, 71, 161, 0.2) !important;
+  color: #0d47a1 !important;
+}
+
+.bottom-sheet.theme-sky .number-control span {
+  color: #0d47a1 !important;
+}
+
+.bottom-sheet.theme-sky .start-session-btn {
+  background: linear-gradient(135deg, #1e88e5 0%, #0d47a1 100%) !important;
+  box-shadow: 0 6px 20px rgba(13, 71, 161, 0.3) !important;
+}
+
+/* --- Theme Blue --- */
+.bottom-sheet.theme-blue .verse-range-picker {
+  background: rgba(26, 35, 126, 0.05) !important;
+  border: 1px solid rgba(26, 35, 126, 0.2) !important;
+}
+
+.bottom-sheet.theme-blue .range-field label {
+  color: #1a237e !important;
+}
+
+.bottom-sheet.theme-blue .mini-chips {
+  background: rgba(26, 35, 126, 0.05) !important;
+}
+
+.bottom-sheet.theme-blue .mini-chips button {
+  color: #1a237e !important;
+}
+
+.bottom-sheet.theme-blue .mini-chips button.active {
+  background: #1a237e !important;
+  color: #fff !important;
+}
+
+.bottom-sheet.theme-blue .number-control {
+  background: rgba(26, 35, 126, 0.05) !important;
+  border-color: rgba(26, 35, 126, 0.2) !important;
+}
+
+.bottom-sheet.theme-blue .number-control button {
+  border-color: rgba(26, 35, 126, 0.2) !important;
+  color: #1a237e !important;
+}
+
+.bottom-sheet.theme-blue .number-control span {
+  color: #1a237e !important;
+}
+
+.bottom-sheet.theme-blue .start-session-btn {
+  background: linear-gradient(135deg, #3949ab 0%, #1a237e 100%) !important;
+  box-shadow: 0 6px 20px rgba(26, 35, 126, 0.3) !important;
+}
+
+/* --- Theme Dark --- */
+.bottom-sheet.theme-dark .verse-range-picker {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.bottom-sheet.theme-dark .range-field label {
+  color: #94a3b8 !important;
+}
+
+.bottom-sheet.theme-dark .mini-chips {
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+
+.bottom-sheet.theme-dark .mini-chips button {
+  color: #94a3b8 !important;
+}
+
+.bottom-sheet.theme-dark .mini-chips button.active {
+  background: #c2a87a !important;
+  color: #1a1a1a !important;
+}
+
+.bottom-sheet.theme-dark .number-control {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.bottom-sheet.theme-dark .number-control button {
+  background: transparent !important;
+  /* Keep distinct on dark */
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: #f1f5f9 !important;
+}
+
+.bottom-sheet.theme-dark .number-control span {
+  color: #f1f5f9 !important;
+}
+
+.bottom-sheet.theme-dark .start-session-btn {
+  background: linear-gradient(135deg, #d4b886 0%, #c2a87a 100%) !important;
+  color: #1a1a1a !important;
+  box-shadow: 0 6px 20px rgba(194, 168, 122, 0.3) !important;
+}
+
+.mushaf-screen.theme-dark .progress-percentage {
+  color: #f1f5f9;
+  background: rgba(0, 0, 0, 0.4);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+/* ============================================
+   FIXED MUSHAF HEADER
+   Persistent header for page metadata & bookmarks
+   ============================================ */
+/* ============================================
+   FIXED MUSHAF HEADER - REFINED
+   Persistent header for page metadata & bookmarks
+   ============================================ */
+.fixed-mushaf-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: calc(50px + env(safe-area-inset-top));
+  /* Adjust height for status bar */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Center the main info block */
+  padding: env(safe-area-inset-top) 16px 0;
+  /* Push content down safely */
+  background: inherit;
+  z-index: 2000;
+  box-shadow: 0 1px 10px rgba(0, 0, 0, 0.03);
+  font-family: inherit;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  direction: rtl;
+}
+
+/* Centered Info Block */
+.header-info-centered {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: inherit;
+  opacity: 0.9;
+}
+
+.header-info-centered .divider {
+  opacity: 0.4;
+  font-size: 0.7rem;
+  margin-top: 2px;
+}
+
+.header-info-centered .surah-title {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+/* Sticky Bookmark (Integrated in flow) */
+.header-bookmark-container {
+  display: flex;
+  align-items: center;
+  z-index: 2001;
+  margin-right: 16px;
+  /* Spacing from the text block */
+}
+
+/* Page Side Indicators (Static Flow) */
+.page-side-indicator.static {
+  position: relative;
+  /* Respect flow */
+  color: inherit;
+  opacity: 0.6;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 8px;
+  /* Spacing from text */
+  transform: none;
+  /* Reset center transform */
+}
+
+.invisible-indicator {
+  visibility: hidden !important;
+}
+
+/* ... existing code ... */
+
+/* Container Adjustment */
+.mushaf-page-container.has-fixed-header {
+  padding-top: calc(50px + env(safe-area-inset-top));
+  /* Match header height */
+  height: 100vh;
+}
+
+/* Force Main Slider Visibility (Fix for Android Hiding) */
+.mushaf-page-container .mushaf-slider {
+  opacity: 1 !important;
+  transition: none !important;
+  animation: none !important;
+  visibility: visible !important;
+}
+
+/* --- THEME OVERRIDES FOR HEADER --- */
+
+/* CREAM (Default) */
+.mushaf-screen.theme-cream .fixed-mushaf-header {
+  background: #fdf6e3;
+  border-bottom: 1px solid rgba(194, 168, 122, 0.1);
+  color: #8b9678;
+}
+
+.mushaf-screen.theme-cream .header-info-centered .surah-title {
+  color: #556b2f;
+}
+
+/* WHITE */
+.mushaf-screen.theme-white .fixed-mushaf-header {
+  background: #ffffff;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  color: #4a5568;
+}
+
+.mushaf-screen.theme-white .header-info-centered .surah-title {
+  color: #2d3748;
+}
+
+/* GREEN */
+.mushaf-screen.theme-green .fixed-mushaf-header {
+  background: #f0f9eb;
+  border-bottom: 1px solid rgba(85, 107, 47, 0.1);
+  color: #2e7d32;
+}
+
+/* SKY */
+.mushaf-screen.theme-sky .fixed-mushaf-header {
+  background: #e3f2fd;
+  border-bottom: 1px solid rgba(13, 71, 161, 0.05);
+  color: #1976d2;
+}
+
+.mushaf-screen.theme-sky .header-info-centered .surah-title {
+  color: #0d47a1;
+}
+
+/* BLUE */
+.mushaf-screen.theme-blue .fixed-mushaf-header {
+  background: #e8eaf6;
+  border-bottom: 1px solid rgba(26, 35, 126, 0.05);
+  color: #3949ab;
+}
+
+.mushaf-screen.theme-blue .header-info-centered .surah-title {
+  color: #1a237e;
+}
+
+/* DARK */
+.mushaf-screen.theme-dark .fixed-mushaf-header {
+  background: #1a1a1a;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  color: #94a3b8;
+}
+
+.mushaf-screen.theme-dark .header-info-centered .surah-title {
+  color: #c2a87a;
+  /* Gold for surah name in dark mode */
+}
+
+/* Hide animation state */
+.fixed-mushaf-header.hidden {
+  transform: translateY(-100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Fix for bookmark button in header */
+.fixed-mushaf-header .bookmark-btn {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  transition: all 0.2s;
+  opacity: 0.7;
+  padding: 0;
+}
+
+.fixed-mushaf-header .bookmark-btn:hover,
+.fixed-mushaf-header .bookmark-btn.active {
+  opacity: 1;
+  transform: scale(1.1);
+  color: #c2a87a;
+}
+
+/* Theme specific active bookmark colors */
+.mushaf-screen.theme-sky .fixed-mushaf-header .bookmark-btn.active {
+  color: #0d47a1;
+}
+
+.mushaf-screen.theme-blue .fixed-mushaf-header .bookmark-btn.active {
+  color: #1a237e;
+}
+
+.mushaf-screen.theme-green .fixed-mushaf-header .bookmark-btn.active {
+  color: #2e7d32;
+}
+
+.mushaf-screen.theme-white .fixed-mushaf-header .bookmark-btn.active {
+  color: #2d3748;
 }

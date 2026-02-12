@@ -19,3 +19,6 @@ project(':capawesome-team-capacitor-android-foreground-service').projectDir = ne
 
 include ':capgo-native-audio'
 project(':capgo-native-audio').projectDir = new File('../node_modules/@capgo/native-audio/android')
+
+include ':capacitor-community-keep-awake'
+project(':capacitor-community-keep-awake').projectDir = new File('../../node_modules/@capacitor-community/keep-awake/android')

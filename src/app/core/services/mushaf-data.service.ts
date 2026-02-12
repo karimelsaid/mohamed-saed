@@ -20,6 +20,16 @@ export class MushafDataService {
   ) { }
 
   /**
+   * Clears all cached data to force a fresh load from storage/network.
+   */
+  clearCache() {
+    this.loadedJuzChunks.clear();
+    this.mushafData$ = undefined;
+    this.metadata$ = undefined;
+    this.searchData$ = undefined;
+  }
+
+  /**
    * Returns the individual page data.
    * Now fetches only the required JUZ chunk for the requested page.
    */

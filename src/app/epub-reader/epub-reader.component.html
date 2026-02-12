@@ -1,4 +1,5 @@
-<div class="reader-wrapper" [class.fullscreen]="isFullscreen" [ngClass]="'theme-' + settings.theme">
+<div class="reader-wrapper" [class.fullscreen]="isFullscreen" [ngClass]="'theme-' + settings.theme"
+    (touchstart)="onTouchStart($event)" (touchmove)="onTouchMove($event)" (touchend)="onTouchEnd($event)">
 
     <!-- Visible Navigation Arrows -->
     <button class="nav-arrow nav-prev" (click)="prevPage()" title="الصفحة السابقة">
@@ -223,7 +224,8 @@
     </div>
 
     <!-- Reader Content Container (EPUB) -->
-    <div class="reader-container" *ngIf="bookType === 'epub'" [style.opacity]="(isLoading || error) ? '0' : '1'">
+    <div class="reader-container" *ngIf="bookType === 'epub'" [style.opacity]="(isLoading || error) ? '0' : '1'"
+        [style.transform]="'translateX(' + dragOffset + 'px)'" [class.transitioning]="!isDragging">
         <div class="main-content">
             <div #readerContainer id="epub-reader-frame" class="reader-content" [style.max-width.px]="contentWidth"
                 [ngClass]="animationClass">
@@ -233,7 +235,8 @@
 
     <!-- Reader Content Container (BOK/Text) -->
     <div class="reader-container bok-container" *ngIf="bookType === 'bok'"
-        [style.opacity]="(isLoading || error) ? '0' : '1'">
+        [style.opacity]="(isLoading || error) ? '0' : '1'" [style.transform]="'translateX(' + dragOffset + 'px)'"
+        [class.transitioning]="!isDragging" [ngClass]="animationClass">
         <div class="main-content">
             <div class="reader-content bok-text-content" [style.max-width.px]="contentWidth"
                 [style.font-size.px]="settings.fontSize" [style.font-family]="settings.fontFamily"

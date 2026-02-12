@@ -159,7 +159,8 @@ export class HifzPlanService {
                 percentage: Math.round(((data.totalVersesMemorized !== undefined ? data.totalVersesMemorized : (memorizedContent.length || 0)) / 6236) * 100),
                 lastActiveDate: new Date().toISOString(),
                 lastReadPage: shouldReset ? 0 : (existingPlan?.stats?.lastReadPage || 0),
-                lastDeepRevisionPage: shouldReset ? 0 : (existingPlan?.stats?.lastDeepRevisionPage || 0)
+                lastDeepRevisionPage: shouldReset ? 0 : (existingPlan?.stats?.lastDeepRevisionPage || 0),
+                completionDate: this.calculateCompletionDate(data.dailyCapacity, 6236 - (data.totalVersesMemorized !== undefined ? data.totalVersesMemorized : (memorizedContent.length || 0)))
             }
         } as any;
 
@@ -242,17 +243,20 @@ export class HifzPlanService {
 
         // Check if today is a day for Hifz (ensure number comparison)
         const hifzDays = (plan.dailyCapacity.hifzDays ?? [0, 1, 2, 3, 4, 5, 6]).map(Number);
+        const totalMemorized = plan.memorizedContent?.length || 0;
+        const isQuranComplete = totalMemorized >= 6236;
+
         if (hifzDays.includes(arabicDayIndex)) {
             tasks.push({
                 type: 'new_memorization',
-                label: `حفظ جديد: ${hifzDisplayAmount} ${this.getUnitLabel(plan.dailyCapacity.newMemorization)}`,
+                label: isQuranComplete ? 'تهانينا! تم ختم حفظ القرآن الكريم' : `حفظ جديد: ${hifzDisplayAmount} ${this.getUnitLabel(plan.dailyCapacity.newMemorization)}`,
                 status: todayLog?.hifz?.status || 'pending',
                 amount: hifzDisplayAmount,
                 unit: plan.dailyCapacity.newMemorization,
                 amountDone: todayLog?.hifz?.versesCompleted || 0,
-                surah: plan.currentPosition.surah,
-                verse: plan.currentPosition.verse,
-                position: plan.currentPosition
+                surah: isQuranComplete ? undefined : plan.currentPosition.surah,
+                verse: isQuranComplete ? undefined : plan.currentPosition.verse,
+                position: isQuranComplete ? undefined : plan.currentPosition
             });
         }
 
@@ -261,21 +265,27 @@ export class HifzPlanService {
         const historyCount = plan.memorizedContent?.length || 0;
 
         const wardHistory = plan.wardHistory || [];
-        const totalMemorized = plan.memorizedContent?.length || 0;
+        // Removed duplicate totalMemorized declaration
 
-        // "Al-Rabt" (Linking) activates if we have at least 5 prior wards in history,
-        // OR if the user has substantial memorized content (e.g. > 50 verses) even with empty history.
-        // This ensures experienced users jumping in get Rabt immediately.
-        // Additionally, Rabt only shows on the same days as Hifz (new memorization)
-        const isRabtActive = (wardHistory.length >= 5 || totalMemorized >= 50) && hifzDays.includes(arabicDayIndex);
+        // "Al-Rabt" (Linking) always appears on Hifz days to show progress,
+        // but remains LOCKED until 7 new wards are accumulated.
+        const showRabtCard = hifzDays.includes(arabicDayIndex);
 
-        // "Al-Rabt" (Linking) only activates if we have at least 6 prior wards to link with today's (total 7).
-        if (isRabtActive) {
+        if (showRabtCard) {
+            const unlinkedCount = plan.stats.unlinkedWardsCount || 0;
+            const targetCount = 7;
+            const isLocked = unlinkedCount < targetCount;
+
             // 1. Calculate the ideal review size (today + 6 past)
             const wardSizeEstimate = (memoUnit === 'verses' || memoUnit === 'verse') ? memoAmount : (memoUnit === 'half_page' ? 8 : 15) * memoAmount;
 
             // 2. Extract real history (Target = 7 wards total: Today + 6 past)
             const isTodayHifzDone = todayLog?.hifz?.status === 'done';
+
+            // RABT LOGIC FIX: Strict 7-Wird limits
+            // If Hifz is done today, we include today's wird, so look back 6 more (Total 7)
+            // If Hifz NOT done, we look back 6 (Total 6 prior), plus today's slot implicitly pending? 
+            // Actually, the windowSize calc below (7 or 6) effectively manages the *scope*.
             const windowSize = isTodayHifzDone ? 7 : 6;
             let historyVerses = wardHistory.slice(-windowSize).flat();
 
@@ -283,7 +293,6 @@ export class HifzPlanService {
             // synthesize the link verses from the last memorized parts.
             if (historyVerses.length === 0 && totalMemorized > 0) {
                 // We take roughly 7 "ward-sized" chunks.
-                // Estimating chunk size from today's target or default 15 verses.
                 const chunkSize = (memoUnit === 'page' ? 15 : (memoUnit === 'half_page' ? 8 : memoAmount)) || 15;
                 const lookbackCount = isTodayHifzDone ? 7 : 6;
                 const vKeys = plan.memorizedContent.slice(-chunkSize * lookbackCount).map(m => m.verseKey);
@@ -302,20 +311,31 @@ export class HifzPlanService {
                 rabtVerse = parseInt(parts[1]);
             }
 
+            // CHECK DONE STATUS
+            const isRabtDone = todayLog?.rabt?.status === 'done';
+
+            // STRICT CAP: If done, force amountDone to equal amount to prevent "Sabiq"
+            // This ensures the card "closes" (visual completion) without implied extra credit.
+            const effectiveAmountDone = isRabtDone ? rabtTotalVerses : (todayLog?.rabt?.versesCompleted || 0);
+
             tasks.push({
                 type: 'consolidation' as any,
                 label: `الربط: السبع أوراد الأخيرة (${rabtTotalVerses} آية في ${windowSize + (isTodayHifzDone ? 0 : 1)} أوراد)`,
                 status: todayLog?.rabt?.status || 'pending',
                 amount: rabtTotalVerses,
                 unit: 'verses',
-                amountDone: todayLog?.rabt?.versesCompleted || 0,
+                amountDone: effectiveAmountDone,
                 isRabt: true,
                 lookBackUnits: windowSize,
                 wardCount: windowSize + (isTodayHifzDone ? 0 : 1),
                 surah: rabtSurah || plan.currentPosition.surah,
                 verse: rabtVerse || plan.currentPosition.verse,
                 verses: historyVerses,
-                includeCurrentWard: !isTodayHifzDone
+                includeCurrentWard: !isTodayHifzDone,
+                disableSabiq: true, // Custom hint for future UI updates if needed
+                isLocked: isLocked, // HTML will use this to show overlay
+                currentCount: unlinkedCount,
+                targetCount: targetCount
             } as any);
         }
 
@@ -328,7 +348,7 @@ export class HifzPlanService {
             let nextDeepStart = lastDeep + 1; // Advance to next page 
             if (nextDeepStart > 604) nextDeepStart = 1;
 
-            const revisionLabel = isRabtActive ? 'مراجعة الماضي البعيد' : 'مراجعة الماضي';
+            const revisionLabel = showRabtCard ? 'مراجعة الماضي البعيد' : 'مراجعة الماضي';
 
             tasks.push({
                 type: 'revision' as any,
@@ -405,6 +425,165 @@ export class HifzPlanService {
             localStorage.setItem(this.STORAGE_KEY, JSON.stringify(plan));
         }
         return of({ success: true, message: 'تم حفظ التنبيهات محلياً', reminders });
+    }
+
+    private calculateCompletionDate(capacity: DailyCapacity, remainingVerses: number): string | null {
+        if (remainingVerses <= 0) return new Date().toISOString();
+
+        const unit = capacity.newMemorization;
+        const amount = capacity.memorizationAmount || 1;
+        let daysPerWeek = 5;
+        if (capacity.hifzDays && Array.isArray(capacity.hifzDays)) {
+            daysPerWeek = capacity.hifzDays.length;
+        } else if (typeof capacity.memorizationDays === 'number') {
+            daysPerWeek = capacity.memorizationDays;
+        }
+
+        if (daysPerWeek === 0) return ''; // No active days
+
+        // Estimate daily verses
+        let dailyVerses = 0;
+        if (unit === 'verse' || unit === 'verses') {
+            dailyVerses = amount;
+        } else if (unit === 'half_page') {
+            dailyVerses = amount * 8; // Avg verses per half page
+        } else if (unit === 'page') {
+            dailyVerses = amount * 15; // Avg verses per page
+        } else {
+            dailyVerses = amount * 15; // Default fallback
+        }
+
+        if (dailyVerses <= 0) return '';
+
+        const weeklyVerses = dailyVerses * daysPerWeek;
+        const weeksNeeded = remainingVerses / weeklyVerses;
+        const daysNeeded = weeksNeeded * 7;
+
+        if (remainingVerses <= 0) return null;
+
+        const completionDate = new Date();
+        completionDate.setDate(completionDate.getDate() + Math.ceil(daysNeeded));
+
+        return completionDate.toISOString();
+    }
+
+    /**
+     * تسجيل النشاط اليومي (لزيادة العداد بمجرد الدخول)
+     */
+    recordDailyActivity(): Observable<{ success: boolean; streak: number; increased: boolean }> {
+        const localPlanStr = localStorage.getItem(this.STORAGE_KEY);
+        if (!localPlanStr) return of({ success: false, streak: 0, increased: false });
+
+        const plan: HifzPlan = JSON.parse(localPlanStr);
+        const today = new Date().toISOString().split('T')[0];
+        const lastActive = plan.stats.lastActiveDate ? plan.stats.lastActiveDate.split('T')[0] : '';
+
+        let increased = false;
+
+        // If last active was BEFORE today (i.e. yesterday or earlier), we update streak
+        if (lastActive !== today) {
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+            if (lastActive === yesterdayStr) {
+                // Consecutive day
+                plan.stats.currentStreak = (plan.stats.currentStreak || 0) + 1;
+                increased = true;
+            } else {
+                // Streak broken or first day
+                plan.stats.currentStreak = 1;
+                increased = true; // Still considered an increase/activation
+            }
+
+            if (plan.stats.currentStreak > (plan.stats.bestStreak || 0)) {
+                plan.stats.bestStreak = plan.stats.currentStreak;
+            }
+
+            plan.stats.lastActiveDate = new Date().toISOString();
+            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(plan));
+        }
+
+        return of({ success: true, streak: plan.stats.currentStreak, increased });
+    }
+
+    /**
+     * Static verse counts for all 114 surahs of the Quran
+     */
+    private static readonly SURAH_VERSE_COUNTS: number[] = [
+        7, 286, 200, 176, 120, 165, 206, 75, 129, 109, 123, 111, 43, 52, 99, 128,
+        111, 110, 98, 135, 112, 78, 118, 64, 77, 227, 93, 88, 69, 60, 34, 30, 73,
+        54, 45, 83, 182, 88, 75, 85, 54, 53, 89, 59, 37, 35, 38, 29, 18, 45, 60,
+        49, 62, 55, 78, 96, 29, 22, 24, 13, 14, 11, 11, 18, 12, 12, 30, 52, 52,
+        44, 28, 28, 20, 56, 40, 31, 50, 40, 46, 42, 29, 19, 36, 25, 22, 17, 19,
+        26, 30, 20, 15, 21, 11, 8, 8, 19, 5, 8, 8, 11, 11, 8, 3, 9, 5, 4, 7, 3,
+        6, 3, 5, 4, 5, 6
+    ];
+
+    /**
+     * البحث عن أول آية غير محفوظة مع دعم الالتفاف (Wrap-Around)
+     * @param currentSurah - رقم السورة الحالية (1-114)
+     * @param currentVerse - رقم الآية الحالية
+     * @param memorizedKeys - مجموعة مفاتيح الآيات المحفوظة (Set)
+     * @returns الموضع الجديد {surah, verse} أو null إذا كل القرآن محفوظ
+     */
+    static getNextUnmemorizedVerse(
+        currentSurah: number,
+        currentVerse: number,
+        memorizedKeys: Set<string>
+    ): { surah: number; verse: number } | null {
+        const totalSurahs = 114;
+
+        // البحث من الموضع الحالي + 1 حتى نهاية القرآن، ثم من البداية
+        let searchVerse = currentVerse + 1;
+        let searchSurah = currentSurah;
+
+        // التحقق من تجاوز عدد آيات السورة الحالية
+        if (searchVerse > HifzPlanService.SURAH_VERSE_COUNTS[searchSurah - 1]) {
+            searchSurah++;
+            searchVerse = 1;
+        }
+
+        // البحث في المصحف كله (دورة كاملة)
+        for (let loopCount = 0; loopCount < totalSurahs + 1; loopCount++) {
+            // الالتفاف بعد سورة 114
+            if (searchSurah > totalSurahs) {
+                searchSurah = 1;
+                searchVerse = 1;
+            }
+
+            const surahVerseCount = HifzPlanService.SURAH_VERSE_COUNTS[searchSurah - 1];
+
+            // البحث في آيات السورة الحالية
+            for (let v = searchVerse; v <= surahVerseCount; v++) {
+                const verseKey = `${searchSurah}:${v}`;
+                if (!memorizedKeys.has(verseKey)) {
+                    console.log(`🔍 [HifzPlan] Next unmemorized verse found: ${verseKey}`);
+                    return { surah: searchSurah, verse: v };
+                }
+            }
+
+            // الانتقال للسورة التالية
+            searchSurah++;
+            searchVerse = 1;
+
+            // التحقق من العودة للموضع الأصلي (دورة كاملة بدون نتيجة)
+            if (searchSurah === currentSurah) {
+                // بحث أخير في السورة الأصلية من بدايتها حتى الآية الأصلية
+                for (let v = 1; v <= currentVerse; v++) {
+                    const verseKey = `${searchSurah}:${v}`;
+                    if (!memorizedKeys.has(verseKey)) {
+                        console.log(`🔍 [HifzPlan] Next unmemorized verse found (wrapped): ${verseKey}`);
+                        return { surah: searchSurah, verse: v };
+                    }
+                }
+                break;
+            }
+        }
+
+        // كل القرآن محفوظ!
+        console.log('🎉 [HifzPlan] All Quran verses are memorized!');
+        return null;
     }
 }
 

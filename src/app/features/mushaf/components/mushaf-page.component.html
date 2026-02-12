@@ -80,6 +80,9 @@
                     <button class="audio-toggle-btn no-rotate" (click)="toggleSearch()" title="البحث">
                         <i class="fas fa-magnifying-glass"></i>
                     </button>
+                    <button class="audio-toggle-btn" (click)="sidebarTab = 'bookmarks'" title="العلامات المرجعية">
+                        <i class="fas fa-bookmark"></i>
+                    </button>
                     <button class="close-btn" (click)="$event.stopPropagation(); toggleSidebar()">
                         <i class="fas fa-times"></i>
                     </button>
@@ -91,6 +94,7 @@
             <button [class.active]="sidebarTab === 'surahs'" (click)="sidebarTab = 'surahs'">السور</button>
             <button [class.active]="sidebarTab === 'juzs'" (click)="sidebarTab = 'juzs'">الأجزاء</button>
             <button [class.active]="sidebarTab === 'pages'" (click)="sidebarTab = 'pages'">الصفحات</button>
+            <button [class.active]="sidebarTab === 'bookmarks'" (click)="sidebarTab = 'bookmarks'">العلامات</button>
         </div>
 
         <div class="sidebar-content" *ngIf="mushafMetadata$ | async as meta">
@@ -132,6 +136,32 @@
                     </button>
                 </div>
             </div>
+
+            <div class="index-section" *ngIf="sidebarTab === 'bookmarks'">
+                <div class="empty-state" *ngIf="userBookmarks.length === 0"
+                    style="padding: 40px 20px; text-align: center; color: var(--text-secondary);">
+                    <i class="fas fa-bookmark" style="font-size: 3rem; margin-bottom: 16px; opacity: 0.3;"></i>
+                    <p>لا توجد علامات مرجعية محفوظة.</p>
+                </div>
+                <div class="index-list" *ngIf="userBookmarks.length > 0">
+                    <div *ngFor="let bookmark of userBookmarks" class="surah-index-item"
+                        (click)="goToBookmark(bookmark)">
+                        <div class="surah-info-main">
+                            <span class="surah-num"><i class="fas fa-bookmark" style="color: #c2a87a;"></i></span>
+                            <div style="display: flex; flex-direction: column;">
+                                <span class="surah-name" style="font-weight: bold;">{{ bookmark.title }}</span>
+                                <span style="font-size: 0.75rem; color: var(--text-secondary);">
+                                    سورة {{ bookmark.surahName }} - صفحة {{ bookmark.pageNumber }}
+                                </span>
+                            </div>
+                        </div>
+                        <button class="delete-bookmark-btn" (click)="deleteBookmark(bookmark.id, $event)" title="حذف"
+                            style="background: none; border: none; color: #ff4444; cursor: pointer; padding: 10px; font-size: 1.1rem; transition: transform 0.2s;">
+                            <i class="fas fa-trash-can"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
     <div class="sidebar-overlay" *ngIf="isSidebarOpen" (click)="toggleSidebar()"></div>
@@ -147,10 +177,6 @@
                         [class.fa-sliders]="settingsMode !== 'wird'"></i>
                     {{ settingsMode === 'wird' ? 'ورد اليوم' : 'الإعدادات' }}</h3>
                 <div class="header-actions">
-                    <div class="total-users-badge sidebar-badge" *ngIf="totalUsers > 0">
-                        <i class="fas fa-users"></i>
-                        <span>{{ totalUsers | number }}</span>
-                    </div>
                     <button class="share-trigger sidebar-share" (click)="$event.stopPropagation(); sharePosition()"
                         title="مشاركة الموقع">
                         <i class="fas fa-share-nodes"></i>
@@ -338,8 +364,38 @@
                                             لا يوجد ورد تمكين حالياً (بانتظار إتمام حفظ جديد)
                                         </div>
 
+                                        <!-- Start: Locked Overlay for Link (Rabt) -->
+                                        <div class="locked-overlay" *ngIf="dailyTasks?.consolidation?.isLocked"
+                                            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.85); backdrop-filter: blur(2px); z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 12px; text-align: center;">
+                                            <div class="lock-icon"
+                                                style="background: #f0f0f0; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; color: #7f8c8d; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+                                                <i class="fas fa-lock" style="font-size: 1.2rem;"></i>
+                                            </div>
+                                            <span
+                                                style="font-weight: bold; color: #555; font-size: 0.95rem; margin-bottom: 4px;">التمكين
+                                                مغلق</span>
+                                            <span style="font-size: 0.85rem; color: #7f8c8d;">يجب إتمام 7 أوراد جديدة
+                                                أولاً</span>
+
+                                            <!-- Progress Indicator for Unlock -->
+                                            <div class="unlock-progress"
+                                                style="margin-top: 12px; width: 80%; background: #e0e0e0; height: 6px; border-radius: 10px; overflow: hidden;">
+                                                <div class="unlock-fill"
+                                                    [style.width.%]="(dailyTasks?.consolidation?.currentCount / dailyTasks?.consolidation?.targetCount) * 100"
+                                                    style="background: #c2a87a; height: 100%; border-radius: 10px; transition: width 0.3s ease;">
+                                                </div>
+                                            </div>
+                                            <span
+                                                style="font-size: 0.8rem; color: #c2a87a; margin-top: 6px; font-weight: bold;">
+                                                {{ dailyTasks?.consolidation?.currentCount }} / {{
+                                                dailyTasks?.consolidation?.targetCount }} أوراد
+                                            </span>
+                                        </div>
+                                        <!-- End: Locked Overlay -->
+
                                         <button class="wird-action-btn" *ngIf="hasConsolidationContent"
-                                            (click)="navigateToTask(dailyTasks?.consolidation)">
+                                            (click)="navigateToTask(dailyTasks?.consolidation)"
+                                            [disabled]="dailyTasks?.consolidation?.isLocked">
                                             <i class="fas"
                                                 [class.fa-arrow-left]="getConsolidationProgressPercent() < 100"
                                                 [class.fa-forward]="getConsolidationProgressPercent() >= 100"></i>
@@ -535,58 +591,9 @@
 
 
 
-    <!-- NEW BOTTOM NAVIGATION BAR -->
-    <div class="bottom-navbar theme-{{currentTheme}}" [class.hidden-navbar]="!showNavbar">
-        <div class="nav-container">
-            <button class="nav-item" (click)="$event.stopPropagation(); toggleSidebar()" title="الفهرس">
-                <div class="nav-icon-wrapper">
-                    <i class="fas fa-bars"></i>
-                </div>
-                <span class="nav-label">الفهرس</span>
-            </button>
-
-            <button class="nav-item" [class.active]="showAudioPlayer"
-                (click)="$event.stopPropagation(); toggleAudioPlayer()" title="التلاوة">
-                <div class="nav-icon-wrapper">
-                    <i class="fas fa-headphones"></i>
-                </div>
-                <span class="nav-label">التلاوة</span>
-            </button>
-
-            <button class="nav-item" [class.active]="showOptionsSheet"
-                (click)="$event.stopPropagation(); openMemorizationOptions()" title="الحفظ">
-                <div class="nav-icon-wrapper">
-                    <i class="fas fa-graduation-cap"></i>
-                </div>
-                <span class="nav-label">الحفظ</span>
-            </button>
-
-            <button class="nav-item" [class.active]="isTafsirOpen" (click)="$event.stopPropagation(); openTafsir()"
-                title="التفسير">
-                <div class="nav-icon-wrapper">
-                    <i class="fas fa-book-open"></i>
-                </div>
-                <span class="nav-label">التفسير</span>
-            </button>
-
-            <button class="nav-item" (click)="$event.stopPropagation(); toggleSettings('wird')" title="الورد">
-                <div class="nav-icon-wrapper">
-                    <i class="fas fa-pen-to-square"></i>
-                </div>
-                <span class="nav-label">الورد</span>
-            </button>
-
-            <button class="nav-item" (click)="$event.stopPropagation(); toggleSettings('stats')" title="الإعدادات">
-                <div class="nav-icon-wrapper">
-                    <i class="fas fa-cog"></i>
-                </div>
-                <span class="nav-label">الإعدادات</span>
-            </button>
-        </div>
-    </div>
 
     <!-- Verse Search Overlay -->
-    <div class="search-overlay" [class.open]="isSearchOpen" (click)="toggleSearch()">
+    <div class="search-overlay theme-{{currentTheme}}" [class.open]="isSearchOpen" (click)="toggleSearch()">
         <div class="search-modal" (click)="$event.stopPropagation()">
             <div class="search-header">
                 <div class="search-input-wrapper">
@@ -629,9 +636,44 @@
         </div>
     </div>
 
+    <!-- FIXED HEADER: Persistent UI for Page Info & Bookmark to prevent flickering -->
+    <div class="fixed-mushaf-header" *ngIf="currentMushafPage && !isContinuousMode && showNavbar"
+        [class.hidden]="!showNavbar">
+
+        <!-- Centered Info Block with Integrated Indicators -->
+        <div class="header-info-centered">
+
+            <!-- Turn Logic: Odd Page (Right Page) -> Icon on Left (Spine) -->
+            <div class="page-side-indicator static"
+                [class.invisible-indicator]="currentMushafPage.page_number % 2 === 0">
+                <i class="fas fa-book-open"></i>
+            </div>
+
+            <span class="header-label">جزء {{ getCurrentJuzByPage(currentMushafPage.page_number) }}</span>
+            <span class="divider">•</span>
+            <span class="surah-title">سورة {{ getCurrentSurahNameByPage(currentMushafPage.page_number) }}</span>
+            <span class="divider">•</span>
+            <span class="header-label">صفحة {{ currentMushafPage.page_number }}</span>
+
+            <!-- Turn Logic: Even Page (Left Page) -> Icon on Right (Spine) -->
+            <div class="page-side-indicator static"
+                [class.invisible-indicator]="currentMushafPage.page_number % 2 !== 0">
+                <i class="fas fa-book-open"></i>
+            </div>
+        </div>
+
+        <!-- Bookmark (Integrated in flow) -->
+        <div class="header-bookmark-container">
+            <button class="bookmark-btn" (click)="toggleBookmark()" [class.active]="isPageBookmarked"
+                [title]="isPageBookmarked ? 'إزالة العلامة' : 'حفظ العلامة'">
+                <i class="fa-bookmark" [ngClass]="isPageBookmarked ? 'fas' : 'far'"></i>
+            </button>
+        </div>
+    </div>
+
     <!-- Mushaf Page Container (Slider) -->
     <div #pageContainer class="mushaf-page-container" [class.no-navbar]="!showNavbar"
-        [class.scale-mode]="isMemorizationMode && !isTestPhase"
+        [class.has-fixed-header]="showNavbar" [class.scale-mode]="isMemorizationMode && !isTestPhase"
         [class.recitation-session]="isMemorizationMode && memorizationSettings.type === 'recitation'"
         [class.tap-active]="isMemorizationMode && memorizationSettings.type === 'muraaja'"
         (touchstart)="onTouchStart($event)" (touchmove)="onTouchMove($event)" (touchend)="onTouchEnd($event)">
@@ -650,14 +692,6 @@
                     [style.font-family]="'\'' + dataService.getFontName(pageNumber + 1) + '\''">
                     <div class="lines-container" [class.centered-content]="nextPage.page_number <= 2"
                         [style.--page-shift.px]="0">
-                        <!-- Inline Page Metadata -->
-                        <div class="inline-page-meta" *ngIf="nextPage.page_number > 2">
-                            <span>سورة {{ getCurrentSurahNameByPage(nextPage.page_number) }}</span>
-                            <span class="divider">|</span>
-                            <span>الجزء {{ getCurrentJuzByPage(nextPage.page_number) }}</span>
-                            <span class="divider">|</span>
-                            <span>صفحة {{ nextPage.page_number }}</span>
-                        </div>
                         <ng-container *ngFor="let line of nextPage.lines; trackBy: trackByLine">
                             <div class="mushaf-line" [ngClass]="'line-type-' + line.type"
                                 [style.background]="getLineBackground(line, nextPage)"
@@ -687,20 +721,12 @@
                 <div class="mushaf-page-wrapper empty-page"></div>
             </ng-template>
 
-            <!-- Current Page -->
-            <div class="mushaf-page-wrapper current-page-wrapper" *ngIf="currentPageData$ | async as page"
-                [class.first-pages]="page.page_number <= 2" [style.opacity]="!isFontReady ? '0' : '1'">
+            <!-- Current Page (SLAB DATA BINDING FOR STABILITY) -->
+            <div class="mushaf-page-wrapper current-page-wrapper" *ngIf="currentMushafPage as page"
+                [class.first-pages]="page.page_number <= 2">
                 <div class="mushaf-page quran-text" [style.font-family]="fontFamily">
                     <div class="lines-container" [class.centered-content]="page.page_number <= 2"
                         [style.--page-shift.px]="pageVerticalShift">
-                        <!-- Inline Page Metadata -->
-                        <div class="inline-page-meta" *ngIf="page.page_number > 2">
-                            <span>سورة {{ getCurrentSurahNameByPage(page.page_number) }}</span>
-                            <span class="divider">|</span>
-                            <span>الجزء {{ getCurrentJuzByPage(page.page_number) }}</span>
-                            <span class="divider">|</span>
-                            <span>صفحة {{ page.page_number }}</span>
-                        </div>
                         <ng-container *ngFor="let line of page.lines; trackBy: trackByLine">
                             <div class="mushaf-line" [ngClass]="'line-type-' + line.type"
                                 [style.background]="getLineBackground(line, page)"
@@ -733,14 +759,6 @@
                     [style.font-family]="'\'' + dataService.getFontName(pageNumber - 1) + '\''">
                     <div class="lines-container" [class.centered-content]="prevPage.page_number <= 2"
                         [style.--page-shift.px]="0">
-                        <!-- Inline Page Metadata -->
-                        <div class="inline-page-meta" *ngIf="prevPage.page_number > 2">
-                            <span>سورة {{ getCurrentSurahNameByPage(prevPage.page_number) }}</span>
-                            <span class="divider">|</span>
-                            <span>الجزء {{ getCurrentJuzByPage(prevPage.page_number) }}</span>
-                            <span class="divider">|</span>
-                            <span>صفحة {{ prevPage.page_number }}</span>
-                        </div>
                         <ng-container *ngFor="let line of prevPage.lines; trackBy: trackByLine">
                             <div class="mushaf-line" [ngClass]="'line-type-' + line.type"
                                 [style.background]="getLineBackground(line, prevPage)"
@@ -879,7 +897,8 @@
 
             </div>
             <div class="counter-value" *ngIf="isGroupPhase || memorizationSettings.type === 'hifz' || isAutoRepeat">
-                {{ currentRepetition }} / {{ isGroupPhase ? memorizationSettings.groupRepeat :
+                {{ isGroupPhase ? currentGroupRepetition : currentRepetition }} / {{ isGroupPhase ?
+                memorizationSettings.groupRepeat :
                 memorizationSettings.ayahRepeat }}
             </div>
         </div>
@@ -1211,7 +1230,7 @@
 
 
 <!-- Feedback Modal -->
-<div class="wallet-modal-overlay" *ngIf="feedbackModal.show" (click)="closeFeedbackModal()">
+<div class="wallet-modal-overlay theme-{{currentTheme}}" *ngIf="feedbackModal.show" (click)="closeFeedbackModal()">
     <div class="wallet-modal feedback-modal" (click)="$event.stopPropagation()">
         <div class="modal-header">
             <h3>أرسل ملاحظاتك</h3>
@@ -1275,7 +1294,8 @@
 </div>
 
 <!-- Audio Settings Modal -->
-<div class="wallet-modal-overlay" *ngIf="audioSettingsModal.show" (click)="audioSettingsModal.show = false">
+<div class="wallet-modal-overlay theme-{{currentTheme}}" *ngIf="audioSettingsModal.show"
+    (click)="audioSettingsModal.show = false">
     <div class="wallet-modal audio-settings-modal" (click)="$event.stopPropagation()">
         <div class="modal-header">
             <h3>خيارات التلاوة</h3>
@@ -1393,7 +1413,7 @@
     <div class="player-content">
         <div class="player-main">
             <div class="reciter-selector-group">
-                <div class="reciter-selector" (click)="$event.stopPropagation(); showReciterModal = true">
+                <div class="reciter-selector" (click)="$event.stopPropagation(); openReciterModal('global')">
                     <img *ngIf="getSelectedReciterImage()" [src]="getSelectedReciterImage()"
                         class="reciter-selector-avatar">
                     <i *ngIf="!getSelectedReciterImage()" class="fas fa-user-circle"></i>
@@ -1412,11 +1432,15 @@
             </div>
 
             <!-- Seek Bar (Unified) -->
-            <div class="player-seeker-container">
-                <span class="time-label">{{ formatTime(state.progress) }}</span>
+            <div class="player-seeker-container" (touchstart)="$event.stopPropagation()"
+                (touchmove)="$event.stopPropagation(); $event.preventDefault()" (touchend)="$event.stopPropagation()"
+                (click)="$event.stopPropagation()" (mousedown)="$event.stopPropagation()">
+                <span class="time-label">{{ formatTime(isSeeking ? tempSeekPosition : state.progress) }}</span>
                 <input type="range" class="player-seeker" [min]="0" [max]="state.duration" [step]="0.1"
-                    [value]="state.progress" (input)="onSeek($event)" (click)="$event.stopPropagation()"
-                    [style.--seek-before-width.%]="(state.progress / (state.duration || 1)) * 100">
+                    [value]="isSeeking ? tempSeekPosition : state.progress" (input)="onSeek($event)"
+                    (mousedown)="onSeekStart()" (touchstart)="$event.stopPropagation(); onSeekStart()"
+                    (change)="onSeekEnd($event)" (touchend)="onSeekEnd($event)" (click)="$event.stopPropagation()"
+                    [style.--seek-before-width.%]="((isSeeking ? tempSeekPosition : state.progress) / (state.duration || 1)) * 100">
                 <span class="time-label">{{ formatTime(state.duration) }}</span>
             </div>
 
@@ -1459,15 +1483,14 @@
             </div>
 
             <div class="verse-actions">
-                <div class="buffering-spinner" *ngIf="state.isBuffering">
-                    <i class="fas fa-spinner fa-spin"></i>
-                </div>
+
             </div>
         </div>
 
     </div>
 </div>
-<div class="tafsir-overlay theme-{{currentTheme}}" *ngIf="isTafsirOpen" (click)="closeTafsir()">
+<div class="tafsir-overlay theme-{{currentTheme}}" *ngIf="isTafsirOpen" (click)="closeTafsir()"
+    (touchstart)="onTouchStart($event)" (touchmove)="onTouchMove($event)" (touchend)="onTouchEnd($event)">
     <div class="tafsir-modal" (click)="$event.stopPropagation()" [class.show-sources]="showTafsirSources">
         <div class="tafsir-header">
             <button class="back-to-mushaf" (click)="closeTafsir()" title="العودة للمصحف">
@@ -1679,7 +1702,8 @@
                                             [style.stroke-dashoffset]="100 - (downloadProgressMap.get(currentReciterId + '-' + surah.id) || 0)">
                                         </circle>
                                     </svg>
-                                    <span class="percentage-text">{{ downloadProgressMap.get(currentReciterId + '-' +
+                                    <span class="percentage-text">{{ downloadProgressMap.get(currentReciterId + '-'
+                                        +
                                         surah.id) || 0 }}%</span>
                                 </div>
                             </div>
@@ -1729,7 +1753,7 @@
         </div>
         <div class="reciter-modal-body">
             <div class="reciter-list">
-                <div class="reciter-item" *ngFor="let r of getFilteredReciters()"
+                <div class="reciter-item" *ngFor="let r of filteredReciters"
                     [class.selected]="r.id === (reciterSelectionContext === 'hifz' ? hifzReciterId : currentReciterId)"
                     (click)="selectReciter(r.id)">
                     <img *ngIf="getReciterImage(r)" [src]="getReciterImage(r)" class="reciter-avatar" [alt]="r.name">
@@ -1831,6 +1855,86 @@
                 </button>
             </div>
         </div>
+    </div>
+</div>
+
+
+<!-- Bookmark Save Dialog Overlay -->
+<div class="bookmark-dialog-overlay theme-{{currentTheme}}" *ngIf="showBookmarkDialog" (click)="closeBookmarkDialog()">
+    <div class="bookmark-dialog" (click)="$event.stopPropagation()">
+        <div class="dialog-header">
+            <h3>حفظ العلامة المرجعية</h3>
+            <button class="close-dialog" (click)="closeBookmarkDialog()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="dialog-body">
+            <div class="input-group">
+                <label>عنوان المرجع</label>
+                <input type="text" [(ngModel)]="bookmarkTitle" placeholder="أدخل عنواناً للمرجع..."
+                    (keyup.enter)="saveBookmark()" autofocus>
+            </div>
+            <div class="page-summary">
+                <span>سورة {{ getCurrentSurahNameByPage(pageNumber) }}</span>
+                <span class="divider">|</span>
+                <span>صفحة {{ pageNumber }}</span>
+            </div>
+        </div>
+        <div class="dialog-footer">
+            <button class="btn-cancel" (click)="closeBookmarkDialog()">إلغاء</button>
+            <button class="btn-save" (click)="saveBookmark()">حفظ</button>
+        </div>
+    </div>
+</div>
+
+<!-- NEW BOTTOM NAVIGATION BAR -->
+<div class="bottom-navbar theme-{{currentTheme}}" [class.hidden-navbar]="!showNavbar">
+    <div class="nav-container">
+        <button class="nav-item" [class.active]="isSettingsOpen && settingsMode === 'stats'"
+            (click)="$event.stopPropagation(); toggleSettings('stats')" title="الإعدادات">
+            <div class="nav-icon-wrapper">
+                <i class="fas fa-cog"></i>
+            </div>
+            <span class="nav-label">الإعدادات</span>
+        </button>
+
+        <button class="nav-item" [class.active]="isSettingsOpen && settingsMode === 'wird'"
+            (click)="$event.stopPropagation(); toggleSettings('wird')" title="الورد">
+            <div class="nav-icon-wrapper">
+                <i class="fas fa-pen-to-square"></i>
+            </div>
+            <span class="nav-label">الورد</span>
+        </button>
+
+        <button class="nav-item" [class.active]="isTafsirOpen" (click)="$event.stopPropagation(); openTafsir()"
+            title="التفسير">
+            <div class="nav-icon-wrapper">
+                <i class="fas fa-book-open"></i>
+            </div>
+            <span class="nav-label">التفسير</span>
+        </button>
+
+        <button class="nav-item" [class.active]="showOptionsSheet"
+            (click)="$event.stopPropagation(); openMemorizationOptions()" title="الحفظ">
+            <div class="nav-icon-wrapper">
+                <i class="fas fa-graduation-cap"></i>
+            </div>
+            <span class="nav-label">الحفظ</span>
+        </button>
+
+        <button class="nav-item" [class.active]="showAudioPlayer"
+            (click)="$event.stopPropagation(); toggleAudioPlayer()" title="التلاوة">
+            <div class="nav-icon-wrapper">
+                <i class="fas fa-headphones"></i>
+            </div>
+            <span class="nav-label">التلاوة</span>
+        </button>
+
+        <button class="nav-item" [class.active]="isSidebarOpen" (click)="$event.stopPropagation(); toggleSidebar()"
+            title="الفهرس">
+            <div class="nav-icon-wrapper">
+                <i class="fas fa-bars"></i>
+            </div>
+            <span class="nav-label">الفهرس</span>
+        </button>
     </div>
 </div>
 

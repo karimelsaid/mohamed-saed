@@ -2,16 +2,33 @@
   background: linear-gradient(135deg, #1a2a3a 0%, #0d1b2a 100%);
   color: #e0e0e0;
   padding: 24px;
-  border-radius: 16px;
-  max-width: 500px;
-  margin: 0 auto;
+  /* Add safe area bottom padding since we are full screen now */
+  padding-bottom: calc(24px + env(safe-area-inset-bottom));
+  width: 100%;
+  max-width: none;
+  border-radius: 0;
+  margin: 0;
   font-family: 'Tajawal', sans-serif;
   direction: rtl;
-  /* FIX: Limit height to prevent overflow */
-  max-height: 90vh;
+  /* FIX: Fill parent exactly instead of using 100vh which can overflow on mobile browsers */
+  height: 100%;
+  max-height: 100%;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+  box-shadow: none;
+  /* No shadow needed for full screen */
+  animation: slideUpWizard 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideUpWizard {
+  from {
+    transform: translateY(100%);
+  }
+
+  to {
+    transform: translateY(0);
+  }
 }
 
 .wizard-header {

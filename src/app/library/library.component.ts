@@ -207,8 +207,12 @@ export class LibraryComponent implements OnInit, OnDestroy {
 
         this.ebookService.getEbooks(filters, this.currentPage, this.itemsPerPage).subscribe({
             next: (response) => {
+                console.log('KENOUZ DEBUG: Internal Ebooks API Response:', response);
                 if (append) this.ebooks = [...this.ebooks, ...response.data];
                 else this.ebooks = response.data;
+
+                console.log('KENOUZ DEBUG: Current Internal Ebooks loaded:', this.ebooks.length);
+
                 this.totalBooks = response.total;
                 this.hasMoreBooks = this.ebooks.length < this.totalBooks;
                 this.applyFilters(); // Consolidating filters
@@ -307,6 +311,7 @@ export class LibraryComponent implements OnInit, OnDestroy {
         combined.sort((a, b) => a.title.localeCompare(b.title, 'ar'));
 
         this.unifiedBooks = combined;
+        console.log('KENOUZ DEBUG: Updated Unified Grid. Total:', combined.length, 'Internal:', internalUnified.length, 'External:', externalUnified.length);
     }
 
     // Unified Load More
@@ -344,6 +349,7 @@ export class LibraryComponent implements OnInit, OnDestroy {
 
     applyFilters(): void {
         let filtered = [...this.ebooks];
+        console.log('KENOUZ DEBUG: applyFilters Start. Ebooks Total:', this.ebooks.length);
 
         // ViewMode Logic
         if (this.viewMode === 'favorites') {
@@ -356,6 +362,7 @@ export class LibraryComponent implements OnInit, OnDestroy {
             // Based on previous code in Step 2839, it used 'availableForSubscription'
             filtered = filtered.filter(e => e.availableForSubscription);
         }
+        console.log('KENOUZ DEBUG: After ViewMode Filter:', filtered.length, 'Mode:', this.viewMode);
 
         // Search Filter
         if (this.searchQuery) {
@@ -364,14 +371,17 @@ export class LibraryComponent implements OnInit, OnDestroy {
                 e.title.toLowerCase().includes(q) ||
                 e.author.toLowerCase().includes(q)
             );
+            console.log('KENOUZ DEBUG: After Search Filter:', filtered.length, 'Query:', q);
         }
 
         // Category Filter
         if (this.selectedCategory) {
             filtered = filtered.filter(e => this.getCategoryName(e.category) === this.selectedCategory);
+            console.log('KENOUZ DEBUG: After Category Filter:', filtered.length, 'Cat (Display):', this.selectedCategory, 'Sample Cat (Raw):', this.ebooks[0]?.category);
         }
 
         this.filteredEbooks = filtered;
+        console.log('KENOUZ DEBUG: Final Filtered Ebooks:', this.filteredEbooks.length);
         this.updateUnifiedGrid(); // Trigger Merge
     }
 
@@ -475,6 +485,7 @@ export class LibraryComponent implements OnInit, OnDestroy {
             });
         }).unsubscribe();
     }
+
 
     // --- Tab & Search Interactions ---
     setActiveTab(tab: 'books' | 'achievements' | 'downloads') {

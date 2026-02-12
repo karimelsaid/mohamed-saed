@@ -1,11 +1,11 @@
-import { Injectable } from '@angular/core';
+import { Injectable, NgZone } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, map, firstValueFrom, timeout, catchError, of, throwError, tap } from 'rxjs';
+import { BehaviorSubject, Observable, map, firstValueFrom, timeout, catchError, of, throwError, tap, take } from 'rxjs';
 import { ForegroundService } from '@capawesome-team/capacitor-android-foreground-service';
 import { Capacitor } from '@capacitor/core';
 import { App } from '@capacitor/app';
 import { NativeAudio } from '@capgo/native-audio';
-import { MediaBridge } from './media-bridge.plugin';
+import { MediaBridge, QueueItem } from './media-bridge.plugin';
 import { MushafDataService } from './mushaf-data.service';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 
@@ -39,6 +39,9 @@ export interface PlaybackState {
     rangeEndVerseKey?: string | null; // e.g. "1:7", the absolute stop boundary
     externalPlaybackControl?: boolean; // When true, service skips internal auto-advance
     isShuffle?: boolean; // NEW: Pick random Surah on completion
+    ayahModeSettings: { repeatAyah: number; repeatGroup: number };
+    surahModeSettings: { repeatGroup: number };
+    isGroupPhase?: boolean; // NEW: Track if we are in block-repetition phase
 }
 
 @Injectable({
@@ -81,6 +84,9 @@ export class QuranAudioService {
     private isGaplessTransitioning = false; // Flag to track gapless transitions
     private lastVerseStartTime = 0; // Track start time to detect rapid loops
     private pendingPlayRequest: { verseKey: string; reciterId: number } | null = null; // Track pending play requests
+    private lastNativeQueueIndex: number | null = null;
+    private lastQueuedKeyNative: string | null = null;
+    private lastTrackedVerseKey: string | null = null;
 
     // PERFECTION: Precision Clocking and Cross-fade
     private overlapTimer: any = null;
@@ -124,7 +130,9 @@ export class QuranAudioService {
         2013: 'https://server6.mp3quran.net/kurdi/' // Raad Al-Kurdi
     };
 
+    // Reciter Classification Sets
     private readonly SURAH_RECITERS = new Set([2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013]);
+    private readonly TEACHER_RECITERS = new Set([12, 168, 161, 126]); // Hosary, Minshawy, Tunaiji, Basfar (Muallim)
     // Instant Preload State
     private nextVerseBlobUrl: string | null = null;
     private nextVerseKey: string | null = null;
@@ -148,13 +156,16 @@ export class QuranAudioService {
         currentGroupRepeatCount: 0,
         playbackRange: 'surah',
         externalPlaybackControl: false,
-        isShuffle: false
+        isShuffle: false,
+        isGroupPhase: false,
+        ayahModeSettings: { repeatAyah: 1, repeatGroup: 1 },
+        surahModeSettings: { repeatGroup: 1 }
     });
 
     // Flag to force HTML5 Audio usage even on Native platforms (Android/iOS)
     // NativeAudio has issues on some devices. For now, use HTML5 Audio.
     // Background playback requires additional native configuration.
-    private readonly FORCE_HTML5_AUDIO = true;
+    private readonly FORCE_HTML5_AUDIO = false;
 
     private get useNativeAudio(): boolean {
         // Only use native audio if we are on a native platform AND NOT forced to use HTML5
@@ -174,8 +185,15 @@ export class QuranAudioService {
         return this.state.value;
     }
 
+    /**
+     * Checks if a reciter is a "Teacher" (Muallim) style with built-in gaps.
+     */
+    public isTeacherReciter(reciterId: number): boolean {
+        return this.TEACHER_RECITERS.has(Number(reciterId));
+    }
+
     public isSurahReciter(reciterId: number): boolean {
-        return this.SURAH_RECITERS.has(reciterId) || reciterId === 286;
+        return this.SURAH_RECITERS.has(reciterId) || reciterId === 286 || this.TIMED_RECITERS.includes(reciterId);
     }
     private verseCompleted = new BehaviorSubject<{ verseKey: string; duration: number } | null>(null);
     public verseCompleted$ = this.verseCompleted.asObservable();
@@ -190,7 +208,8 @@ export class QuranAudioService {
 
     constructor(
         private http: HttpClient,
-        private dataService: MushafDataService
+        private dataService: MushafDataService,
+        private ngZone: NgZone
     ) {
         // Restore shuffle mode
         const savedShuffle = localStorage.getItem('audio_shuffle_mode');
@@ -204,13 +223,20 @@ export class QuranAudioService {
         this.createNotificationChannel();
         this.setupInterruptionHandling();
         this.setupNativeAudioListeners();
+
+        // Cache surah data for native queue building
+        this.dataService.getMetadata().pipe(take(1)).subscribe((meta: any) => {
+            if (meta?.surahs) {
+                this.cachedSurahsData = meta.surahs.map((s: any) => ({ id: s.id, verses_count: s.verses_count }));
+            }
+        });
     }
 
     private setupNativeAudioListeners() {
         if (Capacitor.isNativePlatform()) {
             // Critical: Listen for NativeAudio completion to trigger verse transitions
             NativeAudio.addListener('complete', (info: { assetId: string }) => {
-                console.log(`[AudioService] NativeAudio complete event for: ${info.assetId}`);
+                console.log(`[AudioService] NativeAudio complete event for: ${info.assetId} `);
                 // Pass the assetId to handleAudioEnded so it can verify it's the current asset
                 this.handleAudioEnded(info.assetId);
             });
@@ -219,6 +245,10 @@ export class QuranAudioService {
             if (Capacitor.getPlatform() === 'android') {
                 MediaBridge.addListener('playbackEnded', async (info: any) => {
                     console.log('[AudioService] MediaBridge playback ended event');
+                    // ANDROID FIX: Don't reset externalPlaybackControl here anymore.
+                    // If we are in Memorization Mode, the component will handle the state.
+                    // If we reset it here, it causes the next verse to stop prematurelly.
+
                     // ANDROID FIX: Capture duration from status before handling end
                     try {
                         const status = await MediaBridge.getStatus();
@@ -226,6 +256,57 @@ export class QuranAudioService {
                         else if (status.position > 0) this.lastValidDuration = status.position / 1000;
                     } catch (e) { /* ignore */ }
                     this.handleAudioEnded();
+                });
+                // NEW: Listen for native queue auto-advance (background transitions)
+                MediaBridge.addListener('verseChanged', async (info: { verseKey: string }) => {
+                    this.ngZone.run(() => {
+                        console.log('[AudioService] Native verseChanged event:', info.verseKey);
+
+                        const s = this.snapshot;
+                        const isSurah = this.isSurahReciter(s.reciterId);
+
+                        // SYNC REPETITIONS: 
+                        // For multi-pass queues, the queueIndex keeps increasing.
+                        // We detect a new cycle by checking if we transitioned from the end of the range back to the start.
+                        const rangeStart = this.getPlaybackRangeStart();
+                        const rangeEnd = this.snapshot.rangeEndVerseKey || this.snapshot.specificRange?.end;
+
+                        MediaBridge.getStatus().then(status => {
+                            if (status && status.queueIndex !== undefined) {
+                                if (this.lastNativeQueueIndex !== null && status.queueIndex > this.lastNativeQueueIndex) {
+                                    // Robust Cycle detection: transition from rangeEnd to rangeStart
+                                    // or just index increment if it's a single verse range
+                                    const isSingleVerse = rangeStart === rangeEnd;
+                                    const isReturnToStart = info.verseKey === rangeStart && (isSingleVerse || (this.lastTrackedVerseKey && this.lastTrackedVerseKey !== rangeStart));
+
+                                    if (isReturnToStart) {
+                                        console.log(`[AudioService] Cycle transition detected (${this.lastTrackedVerseKey} -> ${info.verseKey}). Incrementing count.`);
+                                        this.updateState({ currentGroupRepeatCount: s.currentGroupRepeatCount + 1 });
+                                    }
+                                }
+                                this.lastNativeQueueIndex = status.queueIndex;
+                                this.lastTrackedVerseKey = info.verseKey;
+                            }
+                        }).catch(() => { });
+
+                        // SURAH RECITER UI GUARD: 
+                        // Do NOT track verses UI-wise for Surah reciters on Android to maintain "Locked" UI appearance.
+                        if (isSurah) return;
+
+                        // Update UI state to reflect the new verse being played natively
+                        this.updateState({
+                            currentVerseKey: info.verseKey,
+                            isPlaying: true,
+                            isBuffering: false
+                        });
+                        // Reset last verse start time for loop breaker
+                        this.lastVerseStartTime = Date.now();
+                        // Restart progress polling for the new verse
+                        this.startAndroidProgressPolling();
+
+                        // AUTO-REFILL: Add more verses to queue when running low
+                        this.refillNativeQueueIfNeeded(info.verseKey, s.reciterId, '');
+                    });
                 });
             }
         }
@@ -237,7 +318,8 @@ export class QuranAudioService {
             if (!isActive && !this.userExplicitlyPaused && this.state.value.isPlaying) {
                 // For both Native and Web: Force silent audio bridge to stay playing.
                 // This acts as a "heartbeat" to prevent Android from throttling the WebView/JS.
-                if (this.audio.paused) {
+                // ANDROID PRO-TIP: Disable this for Android if using MediaBridge, as it causes process conflicts.
+                if (Capacitor.getPlatform() !== 'android' && this.audio.paused) {
                     this.audio.play().catch(() => { });
                 }
 
@@ -273,7 +355,7 @@ export class QuranAudioService {
             });
             // Initialize Native Audio listeners
             NativeAudio.addListener('complete', (data: { assetId: string }) => {
-                console.log(`[AudioService] Native Audio Complete: ${data.assetId}`);
+                console.log(`[AudioService] Native Audio Complete: ${data.assetId} `);
                 this.handleAudioEnded(data.assetId);
             });
         } catch (e) {
@@ -296,8 +378,8 @@ export class QuranAudioService {
     }
 
     private async startForegroundService() {
-        // Skip on web or if it's Android (MediaBridge uses its own native service)
-        if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() === 'android') return;
+        // Skip on web
+        if (!Capacitor.isNativePlatform()) return;
 
         // Get current info for notification
         const reciterId = this.state.value.reciterId;
@@ -307,7 +389,7 @@ export class QuranAudioService {
         let body = 'كنوز';
 
         if (verseKey) {
-            title = `الآية ${verseKey}`;
+            title = `الآية ${verseKey} `;
             const reciters = await firstValueFrom(this.getReciters());
             const rName = reciters.find(r => r.id === reciterId)?.name;
             if (rName) body = rName;
@@ -348,7 +430,7 @@ export class QuranAudioService {
                 const reciterName = reciters.find((r: Reciter) => r.id === reciterId)?.name || 'القارئ';
 
                 navigator.mediaSession.metadata = new MediaMetadata({
-                    title: `الآية ${verseKey}`,
+                    title: `الآية ${verseKey} `,
                     artist: reciterName,
                     album: 'كنوز',
                     artwork: [
@@ -474,8 +556,8 @@ export class QuranAudioService {
         };
     }
 
-    private updateState(partial: Partial<PlaybackState>) {
-        this.state.next({ ...this.state.value, ...partial });
+    public updateState(updates: Partial<PlaybackState>) {
+        this.state.next({ ...this.state.value, ...updates });
     }
 
     public updatePlaybackState(partial: Partial<PlaybackState>) {
@@ -487,16 +569,563 @@ export class QuranAudioService {
     }
 
     public seekTo(seconds: number) {
+        // ANDROID: Use native MediaBridge for seek
+        if (Capacitor.getPlatform() === 'android') {
+            MediaBridge.seekTo({ position: seconds }).catch((e: any) => {
+                console.error('[AudioService] MediaBridge seekTo failed:', e);
+            });
+        }
+        // WEB/iOS: Use HTML5 Audio
         if (this.audio) {
             this.audio.currentTime = seconds;
-            this.updateState({ progress: seconds });
+        }
+        this.updateState({ progress: seconds });
+    }
+
+    // ANDROID: Start polling for progress updates when using MediaBridge
+    private async startAndroidProgressPolling() {
+        if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'android') return;
+
+        this.stopAndroidProgressPolling();
+
+        const pollInterval = 400; // Increased slightly for stability
+        const pollStartTime = Date.now();
+
+        const poll = async () => {
+            // Stop if playing is false and grace period ended, or if timer was cleared
+            if (!this.state.value.isPlaying && Date.now() - pollStartTime > 5000) {
+                this.stopAndroidProgressPolling();
+                return;
+            }
+            if (!this.androidStatusTimer) return;
+
+            try {
+                const status = await MediaBridge.getStatus().catch(() => null);
+                if (!status) {
+                    this.androidStatusTimer = setTimeout(poll, pollInterval);
+                    return;
+                }
+
+                const progress = (status.position || 0) / 1000;
+                const duration = (status.duration || 0) / 1000;
+
+                this.ngZone.run(() => {
+                    if (duration > 0) this.lastValidDuration = duration;
+
+                    // Sync state
+                    const isGracePeriod = Date.now() - pollStartTime < 5000;
+                    let stateUpdate: any = {
+                        progress: Math.max(0, progress),
+                        duration: duration > 0 ? duration : this.lastValidDuration,
+                        isBuffering: status.isPlaying && progress === 0 && duration === 0
+                    };
+
+                    if (status.currentVerseKey && status.currentVerseKey !== this.state.value.currentVerseKey) {
+                        // CRITICAL: Prevent verse key updates in Hifz mode (External Control) or for Surah Reciters
+                        // In Hifz mode, the component controls the verse key. Native player should not override it.
+                        const isExternalControl = this.state.value.externalPlaybackControl;
+
+                        if (!isExternalControl && !this.isSurahReciter(this.state.value.reciterId)) {
+                            stateUpdate.currentVerseKey = status.currentVerseKey;
+                        }
+                    }
+
+                    if (status.isPlaying === false && !isGracePeriod) {
+                        stateUpdate.isPlaying = false;
+                    }
+
+                    this.updateState(stateUpdate);
+                });
+
+                // Update lock screen controls
+                if ('mediaSession' in navigator && duration > 0) {
+                    try {
+                        navigator.mediaSession.setPositionState({
+                            duration: duration,
+                            playbackRate: this.state.value.playbackRate,
+                            position: progress
+                        });
+                    } catch (e) { /* ignore */ }
+                }
+            } catch (e) {
+                console.error('[AudioService] Android progress polling error:', e);
+            }
+
+            // Schedule NEXT poll only after current one finishes (Prevents piling)
+            if (this.androidStatusTimer) {
+                this.androidStatusTimer = setTimeout(poll, pollInterval);
+            }
+        };
+
+        // Start initial poll
+        this.androidStatusTimer = setTimeout(poll, pollInterval);
+    }
+
+    // ANDROID: Stop polling when playback stops
+    private stopAndroidProgressPolling() {
+        if (this.androidStatusTimer) {
+            clearTimeout(this.androidStatusTimer);
+            this.androidStatusTimer = null;
+        }
+    }
+
+
+    // ANDROID: Build native queue with current verse + next verses for background playback
+    private async buildNativeQueue(
+        currentVerseKey: string,
+        reciterId: number,
+        currentUrl: string,
+        currentTitle: string,
+        artistName: string
+    ): Promise<{ items: any[]; startPositionMs: number }> {
+        const queue: any[] = [];
+        let startPositionMs = 0;
+
+        // Ensure metadata is loaded (Critical for getNextVerseKeyFrom)
+        if (!this.cachedSurahsData || this.cachedSurahsData.length === 0) {
+            console.log('[AudioService] Native queue waiting for metadata...');
+            try {
+                const meta = await firstValueFrom(this.dataService.getMetadata().pipe(timeout(6000)));
+                this.cachedSurahsData = meta.surahs;
+            } catch (e) {
+                console.warn('[AudioService] Failed to load metadata for native queue:', e);
+            }
+        }
+
+        const state = this.snapshot;
+        const isSurahType = this.isSurahReciter(reciterId);
+
+        // --- COMMON REPETITION LOGIC (Calculated once) ---
+        // We use a simulation flag to track if we are in a repeat cycle (Cycles 2+)
+        let isLoopingSimulation = state.currentGroupRepeatCount > 0;
+        let simAyahRepsRemaining = isLoopingSimulation ? 1 : Math.max(1, state.repeatAyah);
+        let simGroupRepsRemaining = Math.max(1, state.repeatGroup - state.currentGroupRepeatCount);
+
+        const getRangeStart = (): string | null => {
+            if (state.specificRange && state.specificRange.start) return state.specificRange.start.trim();
+            if (state.playbackRange === 'surah') {
+                const [surahId] = currentVerseKey.split(':');
+                return `${surahId}:1`;
+            }
+            if (state.playbackRange === 'single') return currentVerseKey.trim();
+            return null;
+        };
+        const rangeStartKey = getRangeStart()?.trim();
+
+        // Safeguard for repetition
+        if (!rangeStartKey && state.repeatGroup > 1) simGroupRepsRemaining = 1;
+        if (simGroupRepsRemaining > 20) simGroupRepsRemaining = 20;
+
+        // ANDROID HIFZ FIX: For Standard Reciters in Hifz mode, use single-verse queue to allow JS gaps.
+        // For Teacher Reciters (Muallim), allow full native queue as they have natural gaps.
+        const isTeacher = this.TEACHER_RECITERS.has(reciterId);
+        if (state.externalPlaybackControl && !isTeacher) {
+            console.log('[AudioService] Memorization Mode (Standard Reciter): building single-verse native queue.');
+            simAyahRepsRemaining = 1;
+            simGroupRepsRemaining = 1;
+        }
+
+        // --- SURAH RECITERS (Atomic Surah Files / Clipped segments) ---
+        if (this.isSurahReciter(reciterId)) {
+            console.log(`[AudioService] SURAH_RECITER multi-pass build: Group Reps Left=${simGroupRepsRemaining}`);
+
+            for (let g = 0; g < simGroupRepsRemaining; g++) {
+                if (queue.length >= 100) break;
+
+                let simSurahKey: string | null = (g === 0) ? currentVerseKey : (rangeStartKey || currentVerseKey);
+
+                while (simSurahKey && this.isWithinRange(simSurahKey)) {
+                    const surahId = parseInt(simSurahKey.split(':')[0]);
+
+                    // 1. Get Metadata for this Surah in the range
+                    let surahUrl = currentUrl;
+                    let surahDisplayTitle = currentTitle;
+
+                    if (g > 0 || surahId !== parseInt(currentVerseKey.split(':')[0])) {
+                        const nextUrl = await this.getVerseAudioUrl(`${surahId}:1`, reciterId);
+                        if (!nextUrl) break;
+                        surahUrl = nextUrl;
+
+                        const surahMeta = this.cachedSurahsData?.find(s => s.id === surahId);
+                        surahDisplayTitle = surahMeta?.name_arabic || `سورة ${surahId}`;
+
+                        // If it's a specific verse in the surah, add suffix
+                        const ayahNum = simSurahKey.split(':')[1];
+                        if (ayahNum !== '1') surahDisplayTitle += ` - الآية ${ayahNum}`;
+                    }
+
+                    // 2. Handle Clipping (Clipped Segment vs Full File)
+                    // Note: currentSurahTimings refers to the timings of the surah being built.
+                    // If we span multiple surahs, we'd need to fetch timings for each.
+                    // For now, we prioritze the starting surah's timings if they exist.
+                    let item: any = {
+                        url: surahUrl,
+                        title: surahDisplayTitle,
+                        artist: artistName,
+                        verseKey: simSurahKey,
+                        clippingStartMs: -1,
+                        clippingEndMs: -1
+                    };
+
+                    // Only apply clipping if we have timings for THIS surah
+                    const hasLoadedTimingsForThisSurah = this.currentSurahTimings.length > 0 &&
+                        parseInt(this.currentSurahTimings[0].verse_key.split(':')[0]) === surahId;
+
+                    if (hasLoadedTimingsForThisSurah) {
+                        const startTiming = this.currentSurahTimings.find(t => t.verse_key === simSurahKey);
+
+                        // Range end boundary for this specific surah
+                        const globalRangeEnd = state.rangeEndVerseKey || state.specificRange?.end || simSurahKey;
+                        const [endSurahId, endAyahNum] = globalRangeEnd.split(':');
+
+                        let surahClipEndKey = simSurahKey;
+                        if (parseInt(endSurahId) === surahId) {
+                            surahClipEndKey = globalRangeEnd;
+                        } else {
+                            surahClipEndKey = this.currentSurahTimings[this.currentSurahTimings.length - 1].verse_key;
+                        }
+
+                        const endTiming = this.currentSurahTimings.find(t => t.verse_key === surahClipEndKey);
+
+                        if (startTiming && endTiming) {
+                            item.clippingStartMs = startTiming.timestamp_from;
+                            item.clippingEndMs = endTiming.timestamp_to;
+                            // Only set startPositionMs for the very first item in the very first pass
+                            if (g === 0 && queue.length === 0) startPositionMs = startTiming.timestamp_from;
+                        }
+                    }
+
+                    queue.push(item);
+
+                    // 3. Advance to NEXT SURAH in range
+                    if (surahId < 114) {
+                        simSurahKey = `${surahId + 1}:1`;
+                    } else {
+                        simSurahKey = null;
+                    }
+
+                    // CRITICAL: In Hifz Mode (External Control), we only queue ONE verse to allow the component to handle logic
+                    if (state.externalPlaybackControl && !isTeacher) {
+                        simSurahKey = null; // Force exit after adding one item
+                    }
+                }
+            }
+            this.lastQueuedKeyNative = queue[queue.length - 1]?.verseKey || currentVerseKey;
+            this.lastNativeQueueIndex = 0;
+            return { items: queue, startPositionMs };
+        }
+
+        // --- AYAH TYPE HANDLER (Standard) ---
+        let simVerseKey: string | null = currentVerseKey;
+        const MAX_QUEUE_SIZE = 100;
+
+        // Reset counters for simulation (we use the ones at the top)
+        let simAyahRepsLeft = simAyahRepsRemaining; // from top calc
+        let simGroupRepsLeft = simGroupRepsRemaining; // from top calc (e.g. 2 if repeatGroup=2)
+
+        while (queue.length < MAX_QUEUE_SIZE && simVerseKey) {
+
+            // 1. ADD CURRENT VERSE (Recorded simAyahRepsLeft times)
+            let verseUrl = '';
+            let title = '';
+
+            // Optimization for first item
+            if (queue.length === 0 && simVerseKey === currentVerseKey) {
+                verseUrl = currentUrl;
+                title = currentTitle;
+            } else {
+                const u = await this.getVerseAudioUrl(simVerseKey, reciterId);
+                if (!u) {
+                    console.warn(`[AudioService] Could not find URL for ${simVerseKey}, stopping queue.`);
+                    break;
+                }
+                verseUrl = u;
+
+                const [sId, aNum] = simVerseKey.split(':');
+                const sMeta = this.cachedSurahsData?.find(s => s.id === parseInt(sId)) as any;
+                const sName = sMeta?.name_arabic || sMeta?.name || `سورة ${sId} `;
+                title = `${sName} - الآية ${aNum} `;
+            }
+
+            // Fill Ayah repetitions for this verse
+            while (simAyahRepsLeft > 0 && queue.length < MAX_QUEUE_SIZE) {
+                const item: any = {
+                    url: verseUrl,
+                    title: title,
+                    artist: artistName,
+                    verseKey: simVerseKey,
+                    clippingStartMs: -1,
+                    clippingEndMs: -1
+                };
+
+                if (isSurahType && this.currentSurahTimings.length > 0) {
+                    const timing = this.currentSurahTimings.find(t => t.verse_key === simVerseKey);
+                    if (timing) {
+                        item.clippingStartMs = timing.timestamp_from;
+                        item.clippingEndMs = timing.timestamp_to;
+                    } else {
+                        simAyahRepsLeft = 1;
+                    }
+                }
+
+                queue.push(item);
+                simAyahRepsLeft--;
+            }
+
+            if (queue.length >= MAX_QUEUE_SIZE) break;
+
+            // 2. ADVANCE LOGIC
+            let nextKey: string | null = this.getNextVerseKeyFrom(simVerseKey);
+            const isNextInRange = nextKey && this.isWithinRange(nextKey);
+
+            if (isNextInRange) {
+                simVerseKey = nextKey;
+                // For Teacher reciters in Hifz, we respect the Ayah repetitive count in the first pass
+                // Standard reciters in Hifz are limited to 1x by the simAyahRepsRemaining setting at top.
+                // FIX: Respect isLoopingSimulation flag to prevent ayah repetition leaking into group passes
+                simAyahRepsLeft = isLoopingSimulation ? 1 : Math.max(1, state.repeatAyah);
+
+                // CRITICAL: In Hifz Mode (External Control), we only queue ONE verse to allow the component to handle logic
+                if (state.externalPlaybackControl && !isTeacher) {
+                    simVerseKey = null; // Force exit loop
+                }
+            } else {
+                // END OF RANGE -> Check for next Cycle (Group Repetition)
+                if (simGroupRepsLeft > 1 && rangeStartKey && state.repeatGroup > 1) {
+                    simGroupRepsLeft--;
+                    simVerseKey = rangeStartKey;
+                    isLoopingSimulation = true; // Force 1x for all subsequent cycles
+                    simAyahRepsLeft = 1;
+                    console.log(`[AudioService] Multi-pass cycle added to queue. Cycles remaining: ${simGroupRepsLeft}`);
+                } else {
+                    simVerseKey = null; // Truly finished
+                }
+            }
+        }
+
+        this.lastQueuedKeyNative = simVerseKey || queue[queue.length - 1]?.verseKey || currentVerseKey;
+        this.lastNativeQueueIndex = 0;
+        console.info(`[AudioService] Built multi-pass native queue with ${queue.length} items. Cycles handled: ${simGroupRepsRemaining - simGroupRepsLeft + 1}`);
+        return { items: queue, startPositionMs };
+    }
+
+    // Helper to get next verse key from a given key
+    private getNextVerseKeyFrom(verseKey: string): string | null {
+        if (!verseKey) return null;
+        const [surahStr, ayahStr] = verseKey.trim().split(':');
+        const surah = parseInt(surahStr);
+        const ayah = parseInt(ayahStr);
+
+        // Fallback checks using hardcoded verse counts if metadata is missing
+        // This prevents the "1:8" bug where it tries to play past the surah end
+        const surahVerseCounts = [
+            7, 286, 200, 176, 120, 165, 206, 75, 129, 109, 123, 111, 43, 52, 99, 128, 111, 110, 98, 135,
+            112, 78, 118, 64, 77, 227, 93, 88, 69, 60, 34, 30, 73, 54, 45, 83, 182, 88, 75, 85,
+            54, 53, 89, 59, 37, 35, 38, 29, 18, 45, 60, 49, 62, 55, 78, 96, 29, 22, 24, 13,
+            14, 11, 11, 18, 12, 12, 30, 52, 52, 44, 28, 28, 20, 56, 40, 31, 50, 40, 46, 42,
+            29, 19, 36, 25, 22, 17, 19, 26, 30, 20, 15, 21, 11, 8, 8, 19, 5, 8, 8, 11,
+            11, 8, 3, 9, 5, 4, 7, 3, 6, 3, 5, 4, 5, 6
+        ];
+
+        // Check if there's a next ayah in this surah
+        // Priority 1: Use hardcoded counts (Most reliable)
+        // Priority 2: Use cached metadata
+        let maxVerses = surahVerseCounts[surah - 1];
+
+        // DEBUG: Debugging 1:8 issue
+        console.log(`[AudioService DEBUG] getNextVerseKeyFrom: Input=${verseKey}, Surah=${surah}, Ayah=${ayah}, MaxVerses=${maxVerses}, Condition=${maxVerses && ayah < maxVerses}`);
+
+        if (!maxVerses) {
+            const surahData = this.cachedSurahsData?.find(s => s.id === surah);
+            if (surahData) maxVerses = surahData.verses_count;
+        }
+
+        if (maxVerses && ayah < maxVerses) {
+            return `${surah}:${ayah + 1}`;
+        }
+
+        // Move to next surah (if exists and not Al-Nas)
+        if (surah < 114) {
+            return `${surah + 1}:1`;
+        }
+
+        return null;
+    }
+
+    // Helper to get audio URL for a verse
+    private async getVerseAudioUrl(verseKey: string, reciterId: number): Promise<string | null> {
+        // Check for local file first
+        const localResult = await this.getLocalUri(verseKey, reciterId);
+        if (localResult) {
+            return Capacitor.getPlatform() === 'android' ? localResult.raw : localResult.converted;
+        }
+
+        // Check for surah reciters (FULL SURAH SOURCES)
+        if (this.SURAH_RECITERS.has(reciterId)) {
+            const [surah] = verseKey.split(':');
+            const paddedSurah = surah.padStart(3, '0');
+            return `${this.SURAH_SOURCES[reciterId]}/${paddedSurah}.mp3`;
+        }
+
+        // Check for reciter overrides (Ayah-level overrides)
+        if (this.RECITER_OVERRIDES[reciterId]) {
+            const [surah, ayah] = verseKey.split(':');
+            const paddedSurah = surah.padStart(3, '0');
+            const paddedAyah = ayah.padStart(3, '0');
+            return `${this.RECITER_OVERRIDES[reciterId]}/${paddedSurah}${paddedAyah}.mp3`;
+        }
+
+        // Fetch from API
+        try {
+            const metadataUrl = `${this.audioUrlBase}/${reciterId}/by_ayah/${verseKey}`;
+            const response = await firstValueFrom(this.http.get<any>(metadataUrl));
+            return response?.audio_file?.audio_url || null;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    private cachedSurahsData: { id: number; verses_count: number; name?: string; name_arabic?: string }[] | null = null;
+
+    private isRefillingQueue = false;
+
+    // AUTO-REFILL: Add more verses to queue when running low (called during background playback)
+    private async refillNativeQueueIfNeeded(currentVerseKey: string, reciterId: number, reciterName: string) {
+        if (this.isRefillingQueue) return;
+
+        // CRITICAL: Surah reciters are atomic. We do NOT refill them verse-by-verse.
+        // They play a single file for the entire requested segment.
+        if (this.isSurahReciter(reciterId)) {
+            return;
+        }
+
+        // ANDROID HIFZ FIX: Use native engine for Teacher reciters even in Hifz mode.
+        // But for Standard reciters, the JS layer manages gaps so we don't refill.
+        const isTeacher = this.TEACHER_RECITERS.has(reciterId);
+        if (this.state.value.externalPlaybackControl && !isTeacher) {
+            return;
+        }
+
+        try {
+            this.isRefillingQueue = true;
+            // console.log(`[AutoRepeat] Logic Start. GroupPhase=${this.isGroupPhase}, CurrentRep=${this.currentRepetition}, TargetRep=${this.memorizationSettings.ayahRepeat}`); // This line was from a different context, removed.
+            const status = await MediaBridge.getStatus().catch(() => null);
+            if (!status) return;
+
+            const remainingInQueue = (status.queueSize || 0) - (status.queueIndex || 0) - 1;
+
+            console.log(`[AudioService] Queue status: ${(status.queueIndex || 0) + 1}/${status.queueSize}, remaining: ${remainingInQueue}`);
+
+            // PROTECTION: If queue is already very large, don't add more (Memory safety)
+            if ((status.queueSize || 0) > 150) {
+                console.warn('[AudioService] Native queue reached hard cap (150). Skipping refill.');
+                return;
+            }
+
+            // Only refill when 3 or fewer items remain
+            if (remainingInQueue > 3) return;
+
+            // Find the last verse in the current queue to start adding from there
+            const lastQueueKey = this.lastQueuedKeyNative || (status as any).lastQueuedVerseKey || status.currentVerseKey || currentVerseKey;
+
+            const state = this.state.value;
+            let simVerseKey: string | null = lastQueueKey;
+
+            // FIX: Smart Repetition logic for refills
+            let isLooping = state.currentGroupRepeatCount > 0;
+
+            // Advance to the next item after the current lastQueueKey
+            let nextKey = this.getNextVerseKeyFrom(simVerseKey!);
+
+            if (!nextKey || !this.isWithinRange(nextKey)) {
+                console.log('[AudioService] Refill: End of range reached. No loop-back allowed in refill to prevent bloat.');
+                return;
+            }
+
+            let addedCount = 0;
+
+            while (addedCount < 10 && nextKey) {
+                try {
+                    const isNextInRange = this.isWithinRange(nextKey);
+
+                    if (!isNextInRange) {
+                        console.log(`[AudioService] Refill: Stopping at boundary ${nextKey}`);
+                        break;
+                    }
+
+                    const verseUrl = await this.getVerseAudioUrl(nextKey, reciterId);
+                    if (!verseUrl) break;
+
+                    const [surahId, ayahNum] = nextKey.split(':');
+                    const surahMeta = this.cachedSurahsData?.find(s => s.id === parseInt(surahId));
+                    const currentSurahName = surahMeta?.name_arabic || `سورة ${surahId}`;
+                    const title = `${currentSurahName} - الآية ${ayahNum}`;
+
+                    const isSurahType = this.isSurahReciter(reciterId);
+
+                    // Add repetitions for this verse
+                    const ayahRep = isLooping ? 1 : Math.max(1, state.repeatAyah);
+
+                    for (let r = 0; r < ayahRep; r++) {
+                        const item: QueueItem = {
+                            url: verseUrl,
+                            title: title,
+                            artist: reciterName,
+                            verseKey: nextKey!,
+                            clippingStartMs: -1,
+                            clippingEndMs: -1
+                        };
+
+                        if (isSurahType && this.currentSurahTimings.length > 0) {
+                            const timing = this.currentSurahTimings.find(t => t.verse_key === nextKey);
+                            if (timing) {
+                                item.clippingStartMs = timing.timestamp_from;
+                                item.clippingEndMs = timing.timestamp_to;
+                            }
+                        }
+
+                        await MediaBridge.addToQueue(item);
+                        addedCount++;
+                        this.lastQueuedKeyNative = nextKey!;
+                    }
+
+                    if (nextKey) {
+                        nextKey = this.getNextVerseKeyFrom(nextKey);
+                    } else {
+                        break;
+                    }
+                } catch (e) {
+                    console.warn('[AudioService] Failed to add verse to queue:', nextKey, e);
+                    break;
+                }
+            }
+
+            if (addedCount > 0) {
+                console.log(`[AudioService] Refilled queue with ${addedCount} positions`);
+            }
+        } catch (e) {
+            console.error('[AudioService] refillNativeQueueIfNeeded error:', e);
+        } finally {
+            this.isRefillingQueue = false;
         }
     }
 
     private async getLocalUri(verseKey: string, reciterId: number, surahIdOverride?: number): Promise<{ raw: string, converted: string } | null> {
         if (!Capacitor.isNativePlatform()) return null;
         try {
-            let surah, ayah;
+            let surah: string, ayah: string;
+            // 1. SURAH-LEVEL CHECK (Highest Priority for SURAH_RECITERS)
+            if (this.isSurahReciter(reciterId)) {
+                surah = surahIdOverride ? surahIdOverride.toString() : verseKey.split(':')[0];
+                const surahFileName = `audio/${reciterId}/${surah}/full.mp3`;
+                try {
+                    const res = await Filesystem.getUri({ directory: Directory.Data, path: surahFileName });
+                    await Filesystem.stat({ directory: Directory.Data, path: surahFileName });
+                    return { raw: res.uri, converted: Capacitor.convertFileSrc(res.uri) };
+                } catch (e) { /* fallback to verse */ }
+            }
+
+            // 2. VERSE-LEVEL CHECK
             if (verseKey === 'full' && surahIdOverride) {
                 surah = surahIdOverride.toString();
                 ayah = 'full';
@@ -545,9 +1174,6 @@ export class QuranAudioService {
             if (res3.ok && res3.headers.get('content-type')?.includes('audio')) return m4aUrl;
 
             // 4. Try alternate Miracle CDN
-            // Example: https://everyayah.com/data/AbdulSamad_64kbps_QuranExplorer.Com/001001.mp3
-            // Keeping it simple for now, just logging failure
-            console.error(`[AudioService] All probes failed for ${originalUrl}`);
             return null;
         } catch (e) {
             console.warn('[AudioService] Probe network error, assuming original might work:', e);
@@ -555,7 +1181,7 @@ export class QuranAudioService {
         }
     }
 
-    async playVerse(verseKey: string, reciterId?: number, muted?: boolean) {
+    async playVerse(verseKey: string, reciterId?: number, muted?: boolean, isNewSession: boolean = true, force: boolean = false, externalControl?: boolean) {
         // CRITICAL: Aggressive mutex to prevent NativeAudio hammering
         if (this.isPlayingNewAudio) {
             // Already processing - completely ignore this call
@@ -564,17 +1190,29 @@ export class QuranAudioService {
 
         const now = Date.now();
         const timeDiff = now - this.lastPlayCallTime;
-        console.log(`[AudioService DEBUG] playVerse called: ${verseKey} (Reciter: ${reciterId}, Muted: ${muted}), Diff: ${timeDiff}ms, PlayingNew: ${this.isPlayingNewAudio}, CurrentKey: ${this.state.value.currentVerseKey}, IsPlaying: ${this.state.value.isPlaying}`);
+        const s = this.state.value;
+
+        console.log(`[AudioService DEBUG] playVerse called: ${verseKey} (Reciter: ${reciterId}, Muted: ${muted}), Diff: ${timeDiff}ms, PlayingNew: ${this.isPlayingNewAudio}, CurrentKey: ${s.currentVerseKey}, IsPlaying: ${s.isPlaying}, ExternalControl: ${s.externalPlaybackControl}`);
 
         // Extended debounce - prevent rapid re-triggering for same verse (1.5 seconds)
         // BUT: Skip debounce for muted plays (simulation mode needs rapid replays)
-        if (!muted && verseKey === this.lastPlayCallVerseKey && timeDiff < 1500) {
+        // AND: Skip debounce for force=true (Hifz repetition needs immediate replays)
+        // AND: Skip debounce for new sessions (Manual restarts/advances should always work)
+        if (!muted && !force && !isNewSession && verseKey === this.lastPlayCallVerseKey && timeDiff < 1500) {
             console.log(`[AudioService] Debounced rapid play request for ${verseKey}. Diff was ${timeDiff}ms`);
             return;
         }
 
-        // If currently playing the same verse, ignore (but allow muted to override)
-        if (!muted && this.state.value.currentVerseKey === verseKey && this.state.value.isPlaying) {
+        // 1. Resolve Reciter
+        // Fallback to state or default (1: Al-Afasy)
+        const rId = Number(reciterId || s.reciterId || 1);
+        const currentReciterId = s.reciterId;
+        const reciterChanged = currentReciterId !== rId;
+
+        // 2. Performance: If already playing this verse, do nothing (unless forced or externally controlled)
+        // We allow replay if 'force' is true OR if we are in External Control mode (Hifz/AutoRepeat)
+        // because the component manages the loop and might explicitly request the same verse again.
+        if (!force && !s.externalPlaybackControl && !isNewSession && s.isPlaying && this.activeAudio.src && (this.activeAudio as any).verseKey === verseKey && !reciterChanged && !muted) {
             console.log(`[AudioService] Already playing ${verseKey}, ignoring duplicate request`);
             return;
         }
@@ -585,8 +1223,36 @@ export class QuranAudioService {
         this.lastPlayCallTime = now;
         this.lastValidDuration = 0; // RESET LATCh for new verse
 
-        const rId = reciterId || this.state.value.reciterId;
-        console.log(`[AudioService] Playing Verse: ${verseKey}, Reciter: ${rId}`);
+        console.log(`[AudioService] Playing Verse: ${verseKey}, Reciter: ${rId}, isNewSession: ${isNewSession}`);
+
+        const wasSurah = this.isSurahReciter(s.reciterId);
+        const isSurah = this.isSurahReciter(rId);
+
+        // Reset counters only if this is a fresh manual start
+        if (isNewSession) {
+            console.log(`[AudioService] Fresh session started. Resetting ayah counter and external control.`);
+            this.updateState({
+                currentAyahRepeatCount: 0,
+                externalPlaybackControl: externalControl ?? false
+            });
+
+            if (s.reciterId !== 0 && wasSurah !== isSurah) {
+                console.log(`[AudioService] Reciter type changed (${wasSurah ? 'Surah' : 'Ayah'} -> ${isSurah ? 'Surah' : 'Ayah'}). Swapping repetition settings.`);
+                if (isSurah) {
+                    this.updateState({
+                        repeatAyah: 1,
+                        repeatGroup: s.surahModeSettings.repeatGroup
+                    });
+                } else {
+                    this.updateState({
+                        repeatAyah: s.ayahModeSettings.repeatAyah,
+                        repeatGroup: s.ayahModeSettings.repeatGroup
+                    });
+                }
+            }
+        } else {
+            console.log(`[AudioService] Internal transition. Preserving counters: Ayah=${s.currentAyahRepeatCount}, Group=${s.currentGroupRepeatCount}`);
+        }
 
         // Cancel any pending operation
         this.currentOperationId++;
@@ -645,7 +1311,8 @@ export class QuranAudioService {
                 currentVerseKey: verseKey,
                 reciterId: rId,
                 isBuffering: false,
-                currentAyahRepeatCount: 0
+                currentAyahRepeatCount: isNewSession ? 0 : this.state.value.currentAyahRepeatCount,
+                currentGroupRepeatCount: isNewSession ? 0 : this.state.value.currentGroupRepeatCount
             });
 
             this.nextVerseKey = null; // Consumed
@@ -687,7 +1354,13 @@ export class QuranAudioService {
         }
 
         (this.activeAudio as any).verseKey = verseKey; // STAMP PLAYER
-        this.updateState({ currentVerseKey: verseKey, reciterId: rId, isBuffering: true, currentAyahRepeatCount: 0 });
+        this.updateState({
+            currentVerseKey: verseKey,
+            reciterId: rId,
+            isBuffering: true,
+            currentAyahRepeatCount: isNewSession ? 0 : this.state.value.currentAyahRepeatCount,
+            currentGroupRepeatCount: isNewSession ? 0 : this.state.value.currentGroupRepeatCount
+        });
 
         // NATIVE OFFLINE CHECK: Check if file exists in filesystem FIRST
         const localResult = await this.getLocalUri(verseKey, rId);
@@ -698,38 +1371,23 @@ export class QuranAudioService {
             this.updateMediaSessionMetadata(verseKey, rId);
             this.startForegroundService();
 
-            if (Capacitor.getPlatform() === 'android') {
-                try {
-                    const reciters = await firstValueFrom(this.getReciters());
-                    const reciterName = reciters.find(r => r.id === rId)?.name || 'القارئ';
-
-                    await MediaBridge.play({
-                        url: audioUrl,
-                        title: `الآية ${verseKey}`,
-                        artist: reciterName
-                    });
-                    this.updateState({ isBuffering: false, isPlaying: true });
-                    this.isPlayingNewAudio = false;
-                    this.isGaplessTransitioning = false;
-                    return;
-                } catch (e) {
-                    console.error('[AudioService] Native MediaBridge failed for local file, falling back...', e);
-                }
+            // ANDROID: Let this fall through to the native bridge logic below
+            // This ensures buildNativeQueue is used which handles repetitions and speed.
+            if (Capacitor.getPlatform() !== 'android') {
+                this.audio.src = audioUrl;
+                this.audio.load();
+                await this.audio.play();
+                this.updateState({ isBuffering: false, isPlaying: true });
+                this.isPlayingNewAudio = false;
+                this.isGaplessTransitioning = false;
+                return;
             }
-
-            this.audio.src = audioUrl;
-            this.audio.load();
-            await this.audio.play();
-            this.updateState({ isBuffering: false, isPlaying: true });
-            this.isPlayingNewAudio = false;
-            this.isGaplessTransitioning = false;
-            return;
         }
 
         this.updateMediaSessionMetadata(verseKey, rId);
         this.startForegroundService();
 
-        if (this.isTimedPlayback) {
+        if (this.isTimedPlayback && Capacitor.getPlatform() !== 'android') {
             return this.playTimedVerse(verseKey, rId);
         }
 
@@ -833,6 +1491,9 @@ export class QuranAudioService {
 
                 // PRODUCTION GRADE: Use Native MediaBridge for Android to support reliable background audio
                 if (Capacitor.getPlatform() === 'android') {
+                    this.nextVerseKey = null; // Clear stale preloads for native session
+                    this.lastNativeQueueIndex = null; // Reset index tracking
+                    this.lastTrackedVerseKey = null; // Reset key tracking
                     console.log('[AudioService] Using Native MediaBridge for Android');
 
                     // SILENCE HTML5 Audio to save battery/CPU, but don't clear SRC yet
@@ -852,15 +1513,39 @@ export class QuranAudioService {
                     const title = `${surahName} - الآية ${verseKey.split(':')[1]}`;
 
                     try {
-                        await MediaBridge.play({
-                            url: audioUrl,
-                            title: title,
-                            artist: reciterName
-                        });
+                        // RESET tracking for fresh play operation
+                        this.lastQueuedKeyNative = null;
+
+                        // CRITICAL: Ensure surah timings are loaded for Surah-type reciters/sources
+                        if (this.isSurahReciter(rId)) {
+                            const surahId = parseInt(verseKey.split(':')[0]);
+                            const needsRefresh = this.currentSurahTimings.length === 0 ||
+                                this.currentSurahTimings[0].verse_key.split(':')[0] !== surahId.toString();
+
+                            if (needsRefresh) {
+                                this.currentSurahTimings = await this.getOrFetchSurahTimings(surahId, rId);
+                            }
+                        }
+
+                        // Build queue with current verse + next verses for native background transitions
+                        const { items: queueItems, startPositionMs } = await this.buildNativeQueue(verseKey, rId, audioUrl, title, reciterName);
+
+                        if (queueItems.length > 0) {
+                            // Use native queue for seamless background transitions
+                            console.log(`[AudioService] Setting native queue with ${queueItems.length} items, startPos: ${startPositionMs}`);
+                            await MediaBridge.setQueue({
+                                items: queueItems,
+                                startIndex: 0,
+                                startPositionMs: startPositionMs
+                            });
+                        }
+
+                        // APPLY INITIAL SPEED
+                        await MediaBridge.setRate({ rate: this.state.value.playbackRate }).catch(() => { });
 
                         this.updateState({ isPlaying: true, isBuffering: false });
                         this.isPlayingNewAudio = false;
-                        this.startAndroidStatusPolling();
+                        this.startAndroidProgressPolling();
 
                         // ANDROID FIX: Immediate attempt to capture duration for simulation logic
                         setTimeout(async () => {
@@ -870,7 +1555,7 @@ export class QuranAudioService {
                             } catch (e) { /* ignore */ }
                         }, 500);
 
-                        // We still use currentVerseKey for UI tracking
+                        // Preload for HTML5 fallback (web platform)
                         this.preloadNextVerse(verseKey, rId);
                         return;
                     } catch (bridgeError) {
@@ -1010,7 +1695,7 @@ export class QuranAudioService {
 
         if (Capacitor.getPlatform() === 'android') {
             MediaBridge.pause().catch(() => { });
-            this.stopAndroidStatusPolling();
+            this.stopAndroidProgressPolling();
         }
 
         if (this.useNativeAudio) {
@@ -1022,7 +1707,6 @@ export class QuranAudioService {
         }
 
         this.updateState({ isPlaying: false });
-        this.stopForegroundService();
     }
 
     async resume() {
@@ -1030,7 +1714,7 @@ export class QuranAudioService {
 
         if (Capacitor.getPlatform() === 'android') {
             MediaBridge.resume().catch(() => { });
-            this.startAndroidStatusPolling();
+            this.startAndroidProgressPolling();
         }
 
         if (this.useNativeAudio) {
@@ -1038,7 +1722,7 @@ export class QuranAudioService {
                 NativeAudio.play({ assetId: this.activeNativeAssetId }).catch(e => console.warn('Native resume (play) failed', e));
             } else {
                 if (this.state.value.currentVerseKey) {
-                    this.playVerse(this.state.value.currentVerseKey);
+                    this.playVerse(this.state.value.currentVerseKey, undefined, false, false); // isNewSession = false
                 }
             }
         } else {
@@ -1051,20 +1735,41 @@ export class QuranAudioService {
 
     stop() {
         this.userExplicitlyPaused = true;
+        this.lastQueuedKeyNative = null; // RESET TRACKING
         this.currentOperationId++;
         this.isPlayingNewAudio = false; // Force release lock
         this.lastPlayCallVerseKey = ''; // Allow immediate replay
 
         if (Capacitor.getPlatform() === 'android') {
             MediaBridge.stop().catch(() => { });
-            this.stopAndroidStatusPolling();
+            this.stopAndroidProgressPolling();
         }
 
         this.stopAudioCompletely();
         this.stopForegroundService();
         // CRITICAL: Set currentVerseKey to null to tell UI that the session is OVER.
-        // This resets the "Play" button to its initial state (opening options).
-        this.updateState({ isPlaying: false, progress: 0, isBuffering: false, currentVerseKey: null });
+        // Also reset external control flag to restore normal behavior.
+        this.updateState({ isPlaying: false, progress: 0, isBuffering: false, currentVerseKey: null, externalPlaybackControl: false });
+    }
+
+    /**
+     * Soft stop: Stops audio playback WITHOUT resetting Hifz state.
+     * Use this during simulation waits in Hifz mode to prevent
+     * externalPlaybackControl and currentVerseKey from being cleared.
+     */
+    softStop() {
+        this.currentOperationId++;
+        this.isPlayingNewAudio = false;
+        this.lastPlayCallVerseKey = ''; // Allow immediate replay
+
+        if (Capacitor.getPlatform() === 'android') {
+            MediaBridge.stop().catch(() => { });
+            this.stopAndroidProgressPolling();
+        }
+
+        this.stopAudioCompletely();
+        // NOTE: We intentionally do NOT reset externalPlaybackControl or currentVerseKey
+        this.updateState({ isPlaying: false, progress: 0, isBuffering: false });
     }
 
     async stopAudioCompletely() {
@@ -1073,7 +1778,7 @@ export class QuranAudioService {
         // ANDROID FIX: Stop MediaBridge playback immediately
         if (Capacitor.getPlatform() === 'android') {
             MediaBridge.stop().catch(() => { });
-            this.stopAndroidStatusPolling();
+            this.stopAndroidProgressPolling();
         }
 
         // Stop BOTH HTML5 players to prevent overlaps during swaps/reciter changes
@@ -1094,37 +1799,11 @@ export class QuranAudioService {
             if (this.activeNativeAssetId) {
                 await NativeAudio.stop({ assetId: this.activeNativeAssetId }).catch(() => { });
                 await NativeAudio.unload({ assetId: this.activeNativeAssetId }).catch(() => { });
-                this.activeNativeAssetId = null;
             }
         }
     }
 
-    private startAndroidStatusPolling() {
-        this.stopAndroidStatusPolling();
-        if (Capacitor.getPlatform() !== 'android') return;
-
-        this.androidStatusTimer = setInterval(async () => {
-            try {
-                const status = await MediaBridge.getStatus();
-                if (status.duration > 0) {
-                    this.lastValidDuration = status.duration / 1000;
-                    this.updateState({
-                        progress: status.position / 1000,
-                        duration: status.duration / 1000
-                    });
-                }
-            } catch (e) {
-                console.warn('[AudioService] Android status polling error:', e);
-            }
-        }, 800);
-    }
-
-    private stopAndroidStatusPolling() {
-        if (this.androidStatusTimer) {
-            clearInterval(this.androidStatusTimer);
-            this.androidStatusTimer = null;
-        }
-    }
+    // Old polling functions removed - using startAndroidProgressPolling/stopAndroidProgressPolling instead
 
     prime() {
         if (!this.useNativeAudio) {
@@ -1195,7 +1874,10 @@ export class QuranAudioService {
     async setPlaybackRate(rate: number) {
         this.updateState({ playbackRate: rate });
 
-        if (this.useNativeAudio && !this.isTimedPlayback) {
+        if (Capacitor.getPlatform() === 'android') {
+            // Use MediaBridge for persistent queue speed control
+            await MediaBridge.setRate({ rate }).catch(() => { });
+        } else if (this.useNativeAudio && !this.isTimedPlayback) {
             const currentKey = this.state.value.currentVerseKey;
             if (currentKey) {
                 const assetId = `verse_${currentKey.replace(':', '_')}`;
@@ -1204,6 +1886,12 @@ export class QuranAudioService {
         }
 
         this.audio.playbackRate = rate;
+    }
+
+    async setSleepTimer(minutes: number) {
+        if (Capacitor.getPlatform() === 'android') {
+            await MediaBridge.setSleepTimer({ minutes }).catch(() => { });
+        }
     }
 
     async setVolume(volume: number) {
@@ -1228,6 +1916,8 @@ export class QuranAudioService {
     }
 
     setPlaybackRange(range: 'surah' | 'page' | 'juz' | 'quran' | 'single' | 'custom', specificRange?: { start: string; end: string }, rangeEndVerseKey?: string | null) {
+        // NOTE: specificRange should be passed explicitly by the component when needed
+        // Do NOT auto-compute here as currentVerseKey might not be updated yet
         this.updateState({ playbackRange: range, specificRange, rangeEndVerseKey, currentGroupRepeatCount: 0 });
     }
 
@@ -1290,10 +1980,30 @@ export class QuranAudioService {
             }
         }
 
-        // Stop polling when verse ends
-        this.stopAndroidStatusPolling();
+        // NOTE: Don't stop polling here - we want to keep the service alive during verse transitions
+        // Polling will be stopped only when playback is explicitly stopped by user
+        console.log('[AudioService] handleAudioEnded - verse transition in progress');
+
+        // ANDROID QUEUE GUARD: If using native queue, ignore handleAudioEnded for individual assets
+        // because the native player handles the transitions itself.
+        // We only process it via MediaBridge.playbackEnded when the WHOLE queue is done.
+        if (Capacitor.getPlatform() === 'android' && sourceAssetId) {
+            console.log(`[AudioService] Ignoring handleAudioEnded for asset ${sourceAssetId} on Android (Bridge active)`);
+            return;
+        }
 
         const s = this.state.value;
+
+        // FIX: SURAH RECITER STATE SYNC
+        // Since Surah reciters play a multi-verse clip as a single item, when it ends,
+        // we essentially completed all verses up to lastQueuedKeyNative.
+        // We must update the state so logic proceeds from THERE, not the starting verse.
+        if (this.SURAH_RECITERS.has(s.reciterId) && this.lastQueuedKeyNative) {
+            console.log(`[AudioService] Surah Reciter ended. Fast-forwarding state from ${s.currentVerseKey} to ${this.lastQueuedKeyNative}`);
+            // Force update internal state so subsequent logic uses the correct "ended" verse
+            this.updateState({ currentVerseKey: this.lastQueuedKeyNative });
+            s.currentVerseKey = this.lastQueuedKeyNative;
+        }
 
         // VERSE VALIDATION
         const effectiveVerseKey = sourceVerseKey || s.currentVerseKey;
@@ -1331,9 +2041,18 @@ export class QuranAudioService {
             return;
         }
 
-        // 1. Ayah Repetition (Skip if external control is active)
-        if (!s.externalPlaybackControl && s.repeatAyah > 1 && s.currentAyahRepeatCount + 1 < s.repeatAyah) {
-            console.log(`[AudioService] Repeating Ayah (${s.currentAyahRepeatCount + 2}/${s.repeatAyah})`);
+        // 1. Ayah Repetition (Skip if external control is active OR SURAH RECITER)
+        // FIX: Disable ayah repetition for Surah Reciters to prevent "repeat whole surah per ayah" bug
+        // FIX: Disable ayah repetition if we are in a group repetition > 0 (Smart Repetition)
+        const isSurahReciter = s.reciterId && this.SURAH_RECITERS.has(s.reciterId);
+        console.log(`[AudioService] handleAudioEnded Check: Reciter=${s.reciterId} (Surah=${isSurahReciter}), External=${s.externalPlaybackControl}, RepeatAyah=${s.repeatAyah}, CurrentAyahRep=${s.currentAyahRepeatCount}, RepeatGroup=${s.repeatGroup}, CurrentGroupRep=${s.currentGroupRepeatCount}`);
+
+        // "lo kan youjad takrar lil ayat la to3id takraraha marra okhra fi al majmou3a"
+        // Only repeat ayahs during the FIRST pass of the group (currentGroupRepeatCount === 0)
+        const isFirstGroupPass = s.currentGroupRepeatCount === 0;
+
+        if (!isSurahReciter && !s.externalPlaybackControl && s.repeatAyah > 1 && isFirstGroupPass && s.currentAyahRepeatCount + 1 < s.repeatAyah) {
+            console.log(`[AudioService] Repeating Ayah (${s.currentAyahRepeatCount + 2}/${s.repeatAyah}) - Group Pass: ${s.currentGroupRepeatCount}`);
             this.updateState({ currentAyahRepeatCount: s.currentAyahRepeatCount + 1 });
 
             if (this.useNativeAudio && !this.isTimedPlayback) {
@@ -1360,19 +2079,69 @@ export class QuranAudioService {
         if (s.externalPlaybackControl) {
             console.log('[AudioService] External control active, skipping internal auto-advance.');
             // Fall through to step 3 (notify verseCompleted)
-        } else if (s.currentVerseKey && s.currentVerseKey !== this.lastEndTriggeredVerseKey) {
+        } else if (s.currentVerseKey && s.currentVerseKey !== this.lastEndTriggeredVerseKey && Capacitor.getPlatform() !== 'android') {
             const nextKey = this.nextVerseKey;
 
-            // CRITICAL: Check if nextKey is within boundaries
-            if (nextKey && this.standbyAudio.src && this.isWithinRange(nextKey)) {
-                console.log(`[AudioService] Auto-advancing internally to ${nextKey}`);
-                this.playVerse(nextKey); // Trigger swap and play
-                return; // Transition handled internally
-            } else if (nextKey && !this.isWithinRange(nextKey)) {
-                // Truly out of range -> handle group repetitions or stop
-                if (!s.externalPlaybackControl && s.repeatGroup > 1 && s.currentGroupRepeatCount + 1 < s.repeatGroup) {
+            // SURAH RECITERS: Do NOT auto-advance to the next Surah.
+            // The segment plays as a single block. When it ends, fall through to stop/group-repeat logic.
+            const rId = Number(s.reciterId);
+            if (this.SURAH_RECITERS.has(rId)) {
+                console.log(`[AudioService] Surah Reciter segment ended. Skipping auto-advance. Will check group repeat.`);
+                // Fall through to stop/group-repeat logic below
+            }
+
+            else {
+                // CRITICAL: Check if nextKey is within boundaries
+                if (nextKey && this.standbyAudio.src && this.isWithinRange(nextKey)) {
+                    console.log(`[AudioService] Auto-advancing internally to ${nextKey} (preloaded)`);
+                    this.playVerse(nextKey, undefined, false, false); // Trigger swap and play
+                    return; // Transition handled internally
+                } else if (nextKey && !this.standbyAudio.src && this.isWithinRange(nextKey)) {
+                    // Preload not ready but next verse is in range - play it anyway
+                    console.log(`[AudioService] Auto-advancing to ${nextKey} (not preloaded, loading now)`);
+                    this.playVerse(nextKey, undefined, false, false);
+                    return;
+                } else if (!nextKey && s.currentVerseKey) {
+                    // No preloaded next verse - calculate it dynamically
+                    const calculatedNext = this.getNextVerseKeyFrom(s.currentVerseKey);
+                    console.log(`[AudioService DEBUG] Standard Advance: Cur=${s.currentVerseKey}, Next=${calculatedNext}, InRange=${calculatedNext ? this.isWithinRange(calculatedNext) : false}, Range=${s.playbackRange}`);
+                    if (calculatedNext && this.isWithinRange(calculatedNext)) {
+                        console.log(`[AudioService] Auto-advancing to calculated next: ${calculatedNext}`);
+                        this.playVerse(calculatedNext, undefined, false, false);
+                        return;
+                    }
+                }
+
+            }
+        }
+        // End of Standard Logic Else Block
+
+        // Check if out of range or truly no next verse -> handle group repetitions or stop
+        // ANDROID FIX: Ignore nextVerseKey as it may be stale (preloaded at start). 
+        // Always calculate from current position to ensure boundary accuracy.
+        let effectiveNextKey = (Capacitor.getPlatform() === 'android')
+            ? (s.currentVerseKey ? this.getNextVerseKeyFrom(s.currentVerseKey) : null)
+            : (this.nextVerseKey || (s.currentVerseKey ? this.getNextVerseKeyFrom(s.currentVerseKey) : null));
+
+        // For Surah Reciters, the segment is atomic. The "next" is always out of range
+        // (since the entire Surah was played as one block), so we force effectiveNextKey
+        // to null to ensure we hit the stop/group-repeat logic.
+        if (this.SURAH_RECITERS.has(Number(s.reciterId))) {
+            effectiveNextKey = null;
+        }
+
+        if ((effectiveNextKey && !this.isWithinRange(effectiveNextKey)) || !effectiveNextKey) {
+            // HIFZ FIX: If external control is active (Hifz/Revision), DO NOT handle group repetitions or stop here.
+            // We must fall through to fire 'verseCompleted' so the Component determines the next step (Wait/Repeat/Exit).
+            // Surah Reciters are atomic, so they still follow internal logic.
+            if (s.externalPlaybackControl && !this.SURAH_RECITERS.has(Number(s.reciterId))) {
+                console.log('[AudioService] End of range in External Control Mode. Falling through to notify component.');
+            } else {
+                // Truly out of range OR no next verse (end of surah/queue) -> handle group repetitions or stop
+                if (s.repeatGroup > 1 && s.currentGroupRepeatCount + 1 < s.repeatGroup) {
                     let restartKey = '';
-                    if (s.playbackRange === 'custom' && s.specificRange) {
+                    // FIX: Use specificRange for restart if available (covers custom, page, juz, quran)
+                    if (s.specificRange && s.specificRange.start) {
                         restartKey = s.specificRange.start;
                     } else if (s.playbackRange === 'surah' && s.currentVerseKey) {
                         restartKey = s.currentVerseKey.split(':')[0] + ':1';
@@ -1386,22 +2155,27 @@ export class QuranAudioService {
                             currentGroupRepeatCount: s.currentGroupRepeatCount + 1,
                             currentAyahRepeatCount: 0
                         });
-                        this.playVerse(restartKey);
+                        this.playVerse(restartKey, s.reciterId, false, false); // isNewSession = false
                         return;
                     }
                 }
 
                 // Truly END of selected range
-                console.log(`[AudioService] Range Reached (${nextKey} out of range ${s.rangeEndVerseKey}). Stopping playback.`);
+                if (effectiveNextKey) {
+                    console.log(`[AudioService] Range Reached (${effectiveNextKey} out of range ${s.rangeEndVerseKey}). Stopping playback.`);
+                } else {
+                    console.log(`[AudioService] No next verse available. Stopping playback.`);
+                }
                 this.stop();
                 return;
             }
-            console.log(`[AudioService] Next key ${nextKey} is within range or unknown. Falling through to notify.`);
         }
+        console.log(`[AudioService] Next key ${effectiveNextKey} is within range or unknown. Falling through to notify.`);
+
 
         // 3. Smart Shuffle: If Surah ended and Shuffle is ON, notify component to pick random
-        if (s.isShuffle && effectiveVerseKey) {
-            const [surahId, ayahNum] = effectiveVerseKey.split(':').map(Number);
+        if (s.isShuffle && effectiveNextKey) {
+            const [surahId, ayahNum] = effectiveNextKey.split(':').map(Number);
             // We need metadata to know if it's the last ayah, but service doesn't have easy access to surah lengths for all 114 here without fetching.
             // Component already handles shuffle in playNextVerseAudio.
             // Here we just ensure we NOTIFY the component via verseCompleted.
@@ -1409,7 +2183,7 @@ export class QuranAudioService {
 
         // 4. Clear Ayah Repeat count and notify completion to advance
         if (effectiveVerseKey && effectiveVerseKey !== this.lastEndTriggeredVerseKey) {
-            console.log(`[AudioService] Verse ${effectiveVerseKey} completed. Notifying advance. (Range: ${s.playbackRange})`);
+            console.log(`[AudioService] Verse ${effectiveVerseKey} completed. Notifying listeners. (Range: ${s.playbackRange})`);
             this.lastEndTriggeredVerseKey = effectiveVerseKey;
             this.updateState({ currentAyahRepeatCount: 0 });
             this.verseCompleted.next({ verseKey: effectiveVerseKey, duration: this.lastValidDuration });
@@ -1567,7 +2341,7 @@ export class QuranAudioService {
                 const timingsUrl = `${this.qdcAudioUrlBase}/${reciterId}/audio_files?chapter=${surahId}&segments=true`;
                 const cachedTimings = await cache.match(timingsUrl);
 
-                let timingsRes;
+                let timingsRes: any;
                 if (cachedTimings) {
                     timingsRes = await cachedTimings.json();
                 } else {
@@ -1737,11 +2511,20 @@ export class QuranAudioService {
         const updateProgress = (pct: number) => {
             const map = this.downloadProgress.value;
             map.set(cancellationKey, Math.floor(pct));
-            this.downloadProgress.next(map);
+            this.downloadProgress.next(new Map(map)); // Trigger UI update with new instance
         };
 
         console.log(`[AudioService] Starting download: Surah ${surahId}, Reciter ${reciterId}`);
-        const cache = await caches.open(this.CACHE_NAME);
+        updateProgress(0);
+
+        let cache: any;
+        try {
+            cache = await caches.open(this.CACHE_NAME);
+            console.log('[AudioService] Cache opened successfully');
+        } catch (e) {
+            console.warn('[AudioService] Failed to open cache, proceeding without web cache:', e);
+        }
+
         const isTimed = this.TIMED_RECITERS.includes(reciterId);
 
         // ABU SHARIDA (175) SPECIAL HANDLER
@@ -1779,6 +2562,61 @@ export class QuranAudioService {
                 return;
             } catch (e) {
                 console.error('[AudioService] Abu Sharida download failed:', e);
+                this.clearProgress(cancellationKey);
+                throw e;
+            }
+        }
+
+        // SURAH RECITERS (2001-2013) - mp3quran.net format
+        if (this.SURAH_RECITERS.has(reciterId)) {
+            const baseUrl = this.SURAH_SOURCES[reciterId];
+            if (!baseUrl) {
+                console.error('[AudioService] No SURAH_SOURCE for reciter:', reciterId);
+                this.clearProgress(cancellationKey);
+                throw new Error('Surah source not configured for this reciter');
+            }
+
+            // mp3quran.net uses XXX.mp3 format (e.g., 001.mp3 for Al-Fatiha)
+            const paddedSurah = surahId.toString().padStart(3, '0');
+            const audioUrl = `${baseUrl}${paddedSurah}.mp3`;
+
+            try {
+                // Download Audio File to Filesystem
+                const fileName = `audio/${reciterId}/${surahId}/full.mp3`;
+                await this.ensureDirectory(`audio/${reciterId}/${surahId}`);
+
+                updateProgress(10);
+                console.log(`[AudioService] Downloading surah reciter audio: ${audioUrl}`);
+
+                console.log(`[AudioService] Starting Filesystem.downloadFile: ${audioUrl} -> ${fileName}`);
+                await Filesystem.downloadFile({
+                    url: audioUrl,
+                    directory: Directory.Data,
+                    path: fileName
+                });
+                console.log(`[AudioService] Filesystem.downloadFile sequence complete: ${fileName}`);
+
+                if (this.pendingCancellations.has(cancellationKey)) {
+                    this.pendingCancellations.delete(cancellationKey);
+                    this.clearProgress(cancellationKey);
+                    console.log('[AudioService] Surah download cancelled.');
+                    return;
+                }
+
+                updateProgress(95);
+                // Fetch and Cache Timings (Required for Hifz repetition/clipping offline)
+                await this.getOrFetchSurahTimings(surahId, reciterId);
+
+                // Cache marker for isSurahCached calls
+                const v4MarkerUrl = `https://api.quran.com/api/v4/recitations/${reciterId}/by_chapter/${surahId}`;
+                await cache.put(v4MarkerUrl, new Response(JSON.stringify({ downloaded: true })));
+
+                updateProgress(100);
+                console.log(`[AudioService] Surah reciter download complete: Surah ${surahId}, Reciter ${reciterId}`);
+                this.clearProgress(cancellationKey);
+                return;
+            } catch (e) {
+                console.error('[AudioService] Surah reciter download failed:', e);
                 this.clearProgress(cancellationKey);
                 throw e;
             }
@@ -1910,11 +2748,13 @@ export class QuranAudioService {
 
                 if (!exists) {
                     try {
+                        console.log(`[AudioService] Initializing ayah download: ${audioUrl}`);
                         await Filesystem.downloadFile({
                             url: audioUrl,
                             directory: Directory.Data,
                             path: fileName
                         });
+                        console.log(`[AudioService] Ayah download success: ${item.verse_key}`);
                         successCount++;
                     } catch (e) {
                         console.warn(`[AudioService] Failed to download ayah ${item.verse_key}`, e);
@@ -2074,7 +2914,7 @@ export class QuranAudioService {
         }
 
         const cachedAudio = await cache.match(audioUrl);
-        if (cachedAudio) {
+        if (cachedAudio && Capacitor.getPlatform() !== 'android') {
             const blob = await cachedAudio.blob();
             return URL.createObjectURL(blob);
         }
@@ -2093,13 +2933,12 @@ export class QuranAudioService {
             let nextVerseKey = specificNextKey;
 
             // If no specific key provided, try simple +1 logic (fallback)
+            // If no specific key provided, use smart calculation
             if (!nextVerseKey) {
-                const parts = currentVerseKey.split(':');
-                const surah = parseInt(parts[0]);
-                const ayah = parseInt(parts[1]);
-                // Fallback within current surah ONLY. 
-                // Cross-surah preloading depends on component calling setNextVerseToPreload()
-                nextVerseKey = `${surah}:${ayah + 1}`;
+                // FIX: Use getNextVerseKeyFrom to handle boundaries correctly
+                const calculated = this.getNextVerseKeyFrom(currentVerseKey);
+                if (!calculated) return; // End of Quran or invalid
+                nextVerseKey = calculated;
             }
 
             // Don't preload if already holding it
@@ -2159,7 +2998,9 @@ export class QuranAudioService {
             // CRITICAL: Skip overlap when external control is active (memorization mode uses its own logic)
             if (rem <= this.OVERLAP_TRIGGER_SEC && !this.isGaplessTransitioning && !s.externalPlaybackControl) {
                 // CRITICAL: Only trigger overlap if it's the LAST repetition of this ayah
-                const isLastRepeat = s.currentAyahRepeatCount + 1 >= s.repeatAyah;
+                // Smart Repetition: If currentGroupRepeatCount > 0, we treat repeatAyah as 1 (no repetition)
+                const effectiveRepeatAyah = s.currentGroupRepeatCount === 0 ? s.repeatAyah : 1;
+                const isLastRepeat = s.currentAyahRepeatCount + 1 >= effectiveRepeatAyah;
 
                 if (isLastRepeat && nextKey && this.standbyAudio.src && this.isWithinRange(nextKey)) {
                     this.isGaplessTransitioning = true;
@@ -2212,32 +3053,114 @@ export class QuranAudioService {
         });
     }
 
-    private isWithinRange(verseKey: string): boolean {
+    isWithinRange(verseKey: string): boolean {
+        const s = this.snapshot; // Use snapshot for consistency
+        const end = s.rangeEndVerseKey;
+
+        // PRIORITY 1: specificRange (Page, Juz, Custom)
+        if (s.specificRange && s.specificRange.start && s.specificRange.end) {
+            const currentTotal = this.getTotalAyahIndex(verseKey);
+            const startTotal = this.getTotalAyahIndex(s.specificRange.start);
+            const endTotal = this.getTotalAyahIndex(s.specificRange.end);
+            return currentTotal >= startTotal && currentTotal <= endTotal;
+        }
+
+        // PRIORITY 2: rangeEndVerseKey (Boundary after manual navigation)
+        if (end) {
+            const currentTotal = this.getTotalAyahIndex(verseKey);
+            const endTotal = this.getTotalAyahIndex(end);
+            return currentTotal <= endTotal;
+        }
+
+        // Mode specific boundaries
+        switch (s.playbackRange) {
+            case 'surah':
+                const surahInRange = s.currentVerseKey?.split(':')[0] || verseKey.split(':')[0];
+                return verseKey.startsWith(`${surahInRange}:`);
+            case 'single':
+                return verseKey === (s.currentVerseKey || verseKey);
+            case 'juz':
+            case 'page':
+            case 'custom':
+                // If we reach here, specificRange was missing/incomplete
+                return true;
+            case 'quran':
+                return true;
+            default:
+                return true;
+        }
+    }
+
+    private getPlaybackRangeStart(): string | null {
         const s = this.state.value;
-        if (!s.playbackRange || !verseKey) return true;
+        // Priority 1: specificRange (Page, Juz, Custom)
+        if (s.specificRange && s.specificRange.start) return s.specificRange.start.trim();
 
-        // If it's quran mode, it's always within range unless we reach the very end (handled by ID < 114 check elsewhere)
-        if (s.playbackRange === 'quran') return true;
+        // Priority 2: Mode defaults
+        if (s.playbackRange === 'surah' && s.currentVerseKey) return `${s.currentVerseKey.split(':')[0]}:1`;
+        if (s.playbackRange === 'single') return s.currentVerseKey?.trim() || null;
+        if (s.playbackRange === 'quran') return '1:1';
 
-        const parseKey = (key: string) => {
-            const parts = key.split(':').map(Number);
-            return (parts[0] || 0) * 1000 + (parts[1] || 0);
+        return s.currentVerseKey?.trim() || null;
+    }
+
+    private getTotalAyahIndex(key: string): number {
+        if (!key || !key.includes(':')) return 1001;
+        const parts = key.split(':');
+        return parseInt(parts[0] || '1') * 1000 + parseInt(parts[1] || '1');
+    }
+
+    /**
+     * Helper to get Surah timings with CACHE-FIRST strategy for offline synchronization.
+     * Maps custom reciter IDs to QDC IDs where necessary.
+     */
+    private async getOrFetchSurahTimings(surahId: number, reciterId: number): Promise<VerseTiming[]> {
+        // 1. Determine Timings ID (Handle custom Surah IDs)
+        const timingsIdMap: { [key: number]: number } = {
+            2002: 71,   // Idris Abkar -> Idris Abkar QDC ID
+            2010: 159,  // Maher Al-Muaiqly -> Maher Al-Muaiqly
+            2011: 160,  // Bandar Balila -> Bandar Balila
+            2012: 161,  // Khalifa Al-Tunaiji -> Khalifa Al-Tunaiji
         };
 
-        // If we have an explicit boundary, use it
-        if (s.rangeEndVerseKey) {
-            const currentVal = parseKey(verseKey);
-            const endVal = parseKey(s.rangeEndVerseKey);
-            return currentVal <= endVal;
+        const timingsId = timingsIdMap[reciterId] || reciterId;
+
+        // Canonical URL pattern used for both download-caching and play-fetching
+        const timingsUrl = `${this.qdcAudioUrlBase}/${timingsId}/audio_files?chapter=${surahId}&segments=true`;
+
+        // 2. Try Cache First (Works Offline)
+        try {
+            const cache = await caches.open(this.CACHE_NAME);
+            const cached = await cache.match(timingsUrl);
+            if (cached) {
+                const res = await cached.json();
+                if (res?.audio_files?.[0]?.verse_timings) {
+                    console.info(`[AudioService] Surah timings loaded from CACHED QDC metadata (Surah ${surahId})`);
+                    return res.audio_files[0].verse_timings;
+                }
+            }
+        } catch (e) {
+            console.warn('[AudioService] Failed to read timings from cache:', e);
         }
 
-        // Fallback for custom if rangeEndVerseKey wasn't set (structural safety)
-        if (s.playbackRange === 'custom' && s.specificRange) {
-            const currentVal = parseKey(verseKey);
-            const endVal = parseKey(s.specificRange.end);
-            return currentVal <= endVal;
+        // 3. Fallback to Network
+        if (!navigator.onLine) return [];
+
+        try {
+            console.log(`[AudioService] Fetching surah timings from network: ${timingsUrl}`);
+            const res = await firstValueFrom(this.http.get<any>(timingsUrl).pipe(timeout(12000)));
+            if (res?.audio_files?.[0]?.verse_timings) {
+                // Store in cache for offline use
+                try {
+                    const cache = await caches.open(this.CACHE_NAME);
+                    await cache.put(timingsUrl, new Response(JSON.stringify(res)));
+                } catch (e) { }
+                return res.audio_files[0].verse_timings;
+            }
+        } catch (e) {
+            console.warn(`[AudioService] Timings network fetch failed for reciter ${timingsId}`, e);
         }
 
-        return true;
+        return [];
     }
 }

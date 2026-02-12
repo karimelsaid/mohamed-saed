@@ -149,14 +149,9 @@ const routes: Routes = [
   { path: 'الشروط-والاحكام', component: TermsConditionsComponent },
   { path: 'achievements', component: GamificationDashboardComponent },
   { path: 'earn', component: HowToEarnComponent },
-  {
-    path: 'mushaf',
-    loadChildren: () => import('./features/mushaf/mushaf.module').then(m => m.MushafModule)
-  },
-  {
-    path: 'quran-dashboard',
-    loadChildren: () => import('./features/dashboard/dashboard.module').then(m => m.DashboardModule)
-  },
+  // Mushaf and Quran Dashboard routes removed for build separation
+  // path: 'mushaf', loadChildren: ...
+  // path: 'quran-dashboard', loadChildren: ...
   // يجب أن يكون هذا المسار قرب النهاية لتجنب التعارض مع المسارات الثابتة الأخرى
   { path: ':username', component: MerchantProfileComponent },
   { path: '**', component: NotFoundComponent }

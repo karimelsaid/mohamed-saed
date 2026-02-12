@@ -1,5 +1,6 @@
 import { Component, OnInit, Output, EventEmitter } from '@angular/core';
-import { forkJoin } from 'rxjs';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { HifzPlanService, DailyCapacity, MemorizedVerse } from '../../../../services/hifz-plan.service';
 import { MushafDataService } from '../../../../core/services/mushaf-data.service';
 import { SurahMetadata, JuzMetadata } from '../../../../core/models/mushaf.model';
@@ -70,7 +71,12 @@ export class HifzWizardComponent implements OnInit {
 
         forkJoin({
             metadata: this.dataService.getMetadata(),
-            planData: this.hifzPlanService.getPlan()
+            planData: this.hifzPlanService.getPlan().pipe(
+                catchError(err => {
+                    console.warn('[HifzWizard] Failed to load plan (offline?), proceeding with defaults.', err);
+                    return of(null);
+                })
+            )
         }).subscribe({
             next: (data) => {
                 if (data.metadata) {
@@ -331,10 +337,7 @@ export class HifzWizardComponent implements OnInit {
         return this.memorizedSurahs.length > 0;
     }
 
-    updateSurahStrength(surahId: number, strength: string): void {
-        const surah = this.memorizedSurahs.find(s => s.surahId === surahId);
-        if (surah) surah.strength = strength;
-    }
+
 
     // --- Weekday Selection Methods ---
     toggleDay(taskType: 'tilawa' | 'hifz' | 'muraja' | 'rabt', dayIndex: number): void {

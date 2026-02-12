@@ -105,6 +105,8 @@ export interface ReadingProgress {
     highlights: Highlight[];
     settings: ReaderSettings;
     readingTimeMinutes: number;
+    createdAt?: Date;
+    updatedAt?: Date;
 }
 
 // Access Check Response

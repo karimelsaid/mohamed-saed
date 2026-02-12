@@ -53,6 +53,8 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
     private touchStartX: number = 0;
     private touchStartY: number = 0;
     private readonly SWIPE_THRESHOLD = 50; // Minimum distance for swipe
+    dragOffset: number = 0; // Real-time drag offset for smooth animation
+    isDragging: boolean = false; // Track if user is actively dragging
 
     // UI State
     isControlsVisible = true;
@@ -78,11 +80,17 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
     // Reader State
     currentPage = 0;
     totalPages = 0;
+    currentCfi: string | null = null;
     progressPercent = 0;
     currentChapter = '';
 
     // Table of Contents
     toc: NavItem[] = [];
+
+    // Persistence State
+    private isProgressLoaded = false;
+    private lastSaveTime = 0;
+    private readonly SAVE_DEBOUNCE_MS = 2000;
 
     // Settings
     settings: ReaderSettings = {
@@ -184,6 +192,11 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
             this.contentWidth = this.effectiveMaxWidth;
             if (this.bookType === 'epub') this.resizeRendition();
         }
+    }
+
+    @HostListener('window:beforeunload')
+    onBeforeUnload() {
+        this.saveProgress();
     }
 
     private handleKeydown(event: KeyboardEvent): void {
@@ -356,45 +369,70 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     private async loadReadingProgress() {
+        const localKey = `kenouz_progress_${this.ebookId}`;
+        const localDataString = localStorage.getItem(localKey);
+        let localProgress: any = null;
+
+        if (localDataString) {
+            try {
+                localProgress = JSON.parse(localDataString);
+
+                // Instantly apply local progress to UI
+                this.progress = localProgress;
+                if (localProgress.settings) {
+                    this.settings = { ...this.settings, ...localProgress.settings };
+                    if (this.bookType === 'epub') this.applyThemeToWrapper();
+                }
+
+                if (this.bookType === 'bok' && localProgress.currentPage !== undefined) {
+                    this.currentPage = localProgress.currentPage;
+                    this.updateBokProgress();
+                } else if (this.bookType === 'epub' && localProgress.currentCfi) {
+                    this.currentCfi = localProgress.currentCfi;
+                }
+
+                this.isProgressLoaded = true;
+            } catch (e) {
+                console.warn('Failed to parse local progress', e);
+            }
+        }
+
         try {
+            // Background fetch from server
             const progressResponse = await this.readingProgressService.getProgress(this.ebookId).toPromise();
             if (progressResponse?.success && progressResponse.data) {
-                console.log('Progress loaded:', progressResponse.data);
-                this.progress = progressResponse.data;
-                this.bookmarks = progressResponse.data.bookmarks || [];
-                this.highlights = progressResponse.data.highlights || [];
-                console.log('Loaded highlights:', this.highlights);
+                const serverProgress = progressResponse.data;
 
-                if (progressResponse.data.settings) {
-                    this.settings = { ...this.settings, ...progressResponse.data.settings };
-                    if (this.bookType === 'epub') {
-                        this.applyThemeToWrapper();
-                        // CRITICAL FIX: Restore highlights to the rendition
-                        // We need to wait for rendition to be ready or do it on every location change
+                // Sync Logic: Favor Server only if it's strictly newer
+                const serverTime = new Date(serverProgress.updatedAt || 0).getTime();
+                const localTime = localProgress?.timestamp || 0;
+
+                if (serverTime > localTime || !localProgress) {
+                    this.progress = serverProgress;
+                    this.bookmarks = serverProgress.bookmarks || [];
+                    this.highlights = serverProgress.highlights || [];
+
+                    if (serverProgress.settings) {
+                        this.settings = { ...this.settings, ...serverProgress.settings };
+                        if (this.bookType === 'epub') this.applyThemeToWrapper();
                     }
-                }
 
-                // Initial Restore attempt
-                if (this.bookType === 'epub' && this.rendition) {
-                    // We use a small timeout to let the rendition settle if called during init
-                    setTimeout(() => {
-                        // We can't pass 'contents' easily here, but restoreHighlights mainly needs 'this.rendition'
-                        // However, restoreHighlights iterates and adds to rendition.annotations
-                        this.restoreHighlights(null);
-                    }, 500);
-                }
-
-                // For BOK, apply settings or trigger detectChanges
-                if (this.bookType === 'bok') {
-                    if (this.progress?.currentPage) {
+                    if (this.bookType === 'bok' && this.progress?.currentPage !== undefined) {
                         this.currentPage = this.progress.currentPage;
                         this.updateBokProgress();
+                    } else if (this.bookType === 'epub' && this.progress?.currentCfi) {
+                        this.currentCfi = this.progress.currentCfi;
+                        // If book is already displayed, jump to the new CFI
+                        if (this.rendition) {
+                            this.rendition.display(this.currentCfi);
+                        }
                     }
-                    this.cdr.detectChanges();
                 }
             }
         } catch (e) {
-            console.log('No saved progress found or offline');
+            console.warn('Could not sync with server, using local progress only.', e);
+        } finally {
+            this.isProgressLoaded = true;
         }
     }
 
@@ -453,6 +491,9 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
             this.totalPages = this.bokPages.length;
             this.isLoading = false;
 
+            // Load Progress FIRST for BOK
+            await this.loadReadingProgress();
+
             // Load TOC for BOK
             const tocData = await this.downloadManager.getBookTOC(this.ebookId);
             this.idMap = await this.downloadManager.getBookIdMap(this.ebookId);
@@ -496,12 +537,9 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
                 this.toc = [];
             }
 
-            // Restore progress
+            // Restore progress ensures UI reflects what was loaded
             if (this.currentPage >= this.totalPages) this.currentPage = 0;
             this.updateBokProgress();
-
-            // Load bookmarks/highlights
-            await this.loadReadingProgress();
 
         } catch (e: any) {
             console.error(e);
@@ -669,33 +707,72 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
 
         // Check if movement is horizontal enough (ignore vertical scrolls)
         if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > this.SWIPE_THRESHOLD) {
-            // For RTL (Arabic): 
-            // Swipe Right (startX < endX, diffX < 0) -> Next Page (Logic: Pulling content from left?)
-            // Swipe Left (startX > endX, diffX > 0) -> Prev Page
-
-            // Correction:
-            // "Next" in RTL is usually physically on the LEFT. So to go Next, you swipe logic moves viewport to the left...
-            // Standard Book Flip:
-            // Turn page Right-to-Left (Swipe Left) -> Next Page.
-            // Turn page Left-to-Right (Swipe Right) -> Prev Page.
-
-            // However, the user said it doesn't match Mushaf.
-            // In Mushaf code:
-            // Swipe Right (deltaX > 0) -> Next.
-            // Swipe Left (deltaX < 0) -> Prev.
-
-            // My 'diffX' = start - end.
-            // Swipe Right: end > start => diffX is NEGATIVE.
-            // Swipe Left: start > end => diffX is POSITIVE.
+            // Arabic RTL Logic (Like Physical Book):
+            // Swipe Right (diffX < 0) -> Next Page (Flip page from left to right)
+            // Swipe Left (diffX > 0) -> Prev Page (Flip page from right to left)
 
             if (diffX < 0) {
-                // diffX negative => endX > startX => Swipe Right.
-                // Mushaf logic: Swipe Right -> Next.
+                // Swipe Right -> Next Page
                 this.nextPage();
             } else {
-                // diffX positive => startX > endX => Swipe Left.
-                // Mushaf logic: Swipe Left -> Prev.
+                // Swipe Left -> Prev Page
                 this.prevPage();
+            }
+        }
+    }
+
+    // Public touch handlers for template binding
+    onTouchStart(event: TouchEvent) {
+        this.touchStartX = event.changedTouches[0].clientX;
+        this.touchStartY = event.changedTouches[0].clientY;
+        // Only track drag for BOK mode (EPUB uses iframe touch handlers)
+        if (this.bookType === 'bok') {
+            this.isDragging = true;
+            this.dragOffset = 0;
+        }
+    }
+
+    onTouchMove(event: TouchEvent) {
+        if (!this.isDragging || this.bookType !== 'bok') return;
+        const currentX = event.changedTouches[0].clientX;
+        const currentY = event.changedTouches[0].clientY;
+        const diffX = currentX - this.touchStartX;
+        const diffY = currentY - this.touchStartY;
+
+        // Only track horizontal movement
+        if (Math.abs(diffX) > Math.abs(diffY)) {
+            this.dragOffset = diffX;
+        }
+    }
+
+    onTouchEnd(event: TouchEvent) {
+        const touchEndX = event.changedTouches[0].clientX;
+        const touchEndY = event.changedTouches[0].clientY;
+        const diffX = this.touchStartX - touchEndX;
+
+        // BOK Mode: Use drag animation
+        if (this.bookType === 'bok') {
+            this.isDragging = false;
+            if (Math.abs(diffX) > this.SWIPE_THRESHOLD && Math.abs(diffX) > Math.abs(this.touchStartY - touchEndY)) {
+                // Arabic RTL: Swipe Right -> Next, Swipe Left -> Prev
+                if (diffX < 0) {
+                    this.nextPage();
+                } else {
+                    this.prevPage();
+                }
+            }
+            setTimeout(() => {
+                this.dragOffset = 0;
+            }, 50);
+        }
+        // EPUB Mode: Simple swipe (iframe handles rendering)
+        else if (this.bookType === 'epub') {
+            if (Math.abs(diffX) > this.SWIPE_THRESHOLD && Math.abs(diffX) > Math.abs(this.touchStartY - touchEndY)) {
+                if (diffX < 0) {
+                    this.nextPage();
+                } else {
+                    this.prevPage();
+                }
             }
         }
     }
@@ -764,6 +841,8 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
                 color: ${textColor} !important;
                 font-family: ${this.settings.fontFamily} !important;
                 padding: 0 10px !important;
+                direction: rtl !important;
+                text-align: right !important;
             }
             p, span, div, h1, h2, h3, h4, h5, h6, li, a { 
                 font-family: ${this.settings.fontFamily} !important;
@@ -902,14 +981,22 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
         const percent = event.target.value;
 
         // Preview Restriction for Slider
-        // Preview Restriction for Slider
-        if (this.isPreviewMode && percent > 20) { // Limit to 20% of the book
+        if (this.isPreviewMode && percent > 20) {
             this.showSubscriptionPrompt = true;
-            // Reset slider visual if possible or just block navigation
             return;
         }
 
+        // BOK Mode Navigation
+        if (this.bookType === 'bok') {
+            const targetPage = Math.floor((percent / 100) * this.totalPages);
+            this.currentPage = Math.min(Math.max(0, targetPage), this.totalPages - 1);
+            this.updateBokProgress();
+            window.scrollTo(0, 0);
+            this.saveProgress();
+            return;
+        }
 
+        // EPUB Mode Navigation
         let cfi = null;
         try {
             cfi = this.book?.locations.cfiFromPercentage(percent / 100);
@@ -932,7 +1019,15 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     // Save progress to backend/local storage
-    saveProgress() {
+    saveProgress(force: boolean = false) {
+        if (!this.isProgressLoaded || !this.ebookId) return;
+
+        const now = Date.now();
+        if (!force && (now - this.lastSaveTime < this.SAVE_DEBOUNCE_MS)) {
+            return;
+        }
+        this.lastSaveTime = now;
+
         let progressData: any = null;
         let visibleWordCount = 0;
 
@@ -944,6 +1039,7 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
                 currentPage: this.currentPage,
                 totalPages: this.totalPages
             };
+
             // Calculate words in current BOK page
             if (this.bokPages && this.bokPages[this.currentPage]) {
                 const text = this.bokPages[this.currentPage];
@@ -964,29 +1060,47 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
                 // Calculate words in current EPUB view (Anti-Cheat)
                 try {
                     // Try to get text range for current view
-                    if (currentLocation.end) {
-                        const range = this.rendition.getRange(currentLocation.start.cfi, currentLocation.end.cfi);
-                        if (range) {
-                            visibleWordCount = range.toString().trim().split(/\s+/).length;
+                    if (currentLocation.end && currentLocation.start.cfi && currentLocation.end.cfi) {
+                        try {
+                            const range = this.rendition.getRange(currentLocation.start.cfi, currentLocation.end.cfi);
+                            if (range) {
+                                visibleWordCount = range.toString().trim().split(/\s+/).length;
+                            }
+                        } catch (cfiErr) {
+                            // Only log once to avoid console flood if it's a persistent mismatch
+                            // console.warn('KENOUZ DEBUG: EPUB Range calculation failed');
                         }
                     }
 
-                    // Fallback: If range fails, estimate from chapter text (rough average)
+                    // Fallback: If range fails or is empty, estimate from chapter text (rough average)
                     if (visibleWordCount === 0 && this.currentSelectionContents) {
-                        const chapterText = this.currentSelectionContents.document.body.innerText;
-                        // Using a fraction assuming typical page view? safer to just use a fixed cap if precise count fails.
-                        // But let's try to be generous if we can't be precise.
-                        visibleWordCount = 300; // Default fallback for unknown view
+                        try {
+                            const chapterText = this.currentSelectionContents.document.body.innerText;
+                            if (chapterText) {
+                                // If we can see the whole chapter, let's assume a page is ~1/10th or just use a fixed number
+                                visibleWordCount = 250;
+                            }
+                        } catch (docErr) {
+                            visibleWordCount = 200;
+                        }
                     }
                 } catch (e) {
-                    console.warn('Word count calculation failed', e);
                     visibleWordCount = 200; // Safe default
                 }
             }
         }
 
         if (progressData) {
-            // Call service to save
+            // Instant Local Save
+            const localKey = `kenouz_progress_${this.ebookId}`;
+            const localSaveObj = {
+                ...progressData,
+                settings: this.settings,
+                timestamp: Date.now()
+            };
+            localStorage.setItem(localKey, JSON.stringify(localSaveObj));
+
+            // Background API Sync
             this.readingProgressService.updateProgress(this.ebookId, progressData).subscribe({
                 next: () => {
                     // Sync Gamification (XP & Streak) with Anti-Cheat
@@ -1068,7 +1182,6 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
     async nextPage() {
         // BOK Mode
         if (this.bookType === 'bok') {
-            // Check if next page exceeds 20%
             const nextPageIndex = this.currentPage + 1;
             const progress = (nextPageIndex / this.totalPages) * 100;
 
@@ -1081,41 +1194,32 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
                 this.currentPage++;
                 this.updateBokProgress();
                 window.scrollTo(0, 0);
+
+                // Add slide-in animation for BOK (next comes from left in RTL)
+                this.animationClass = 'slide-in-left';
+                setTimeout(() => { this.animationClass = ''; }, 300);
+
+                this.saveProgress();
             }
             return;
         }
 
-        // EPUB Mode
+        // EPUB Mode - Simple navigation without animation delays
         if (this.rendition && !this.isNavigating) {
-            // Preview Restriction Logic
-            // Preview Restriction Logic
-            if (this.isPreviewMode) {
-                console.log('KENOUZ DEBUG: NextPage Check. Percent:', this.progressPercent);
-                if (this.progressPercent >= 20) {
-                    this.showSubscriptionPrompt = true;
-                    return;
-                }
+            if (this.isPreviewMode && this.progressPercent >= 20) {
+                this.showSubscriptionPrompt = true;
+                return;
             }
 
-
             this.isNavigating = true;
-
-            // RTL Animation: Next Page moves content to Right (pulling from Left)?
-            // "Connected" feel: Next Page -> Slide current OUT to Right, New IN from Left.
-            this.animationClass = 'slide-out-right';
-
             try {
-                // Wait for exit animation
-                await new Promise(r => setTimeout(r, 150));
-
                 await this.rendition.next();
-
-                // In animation
+                // Slide in from left (RTL: next comes from left)
                 this.animationClass = 'slide-in-left';
-                setTimeout(() => {
-                    this.animationClass = '';
-                }, 300);
-
+                setTimeout(() => { this.animationClass = ''; }, 300);
+                this.saveProgress();
+            } catch (e) {
+                console.error('EPUB next error:', e);
             } finally {
                 this.isNavigating = false;
             }
@@ -1129,26 +1233,27 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
                 this.currentPage--;
                 this.updateBokProgress();
                 window.scrollTo(0, 0);
+
+                // Add slide-in animation for BOK (prev comes from right in RTL)
+                this.animationClass = 'slide-in-right';
+                setTimeout(() => { this.animationClass = ''; }, 300);
+
+                this.saveProgress();
             }
             return;
         }
 
-        // EPUB Mode
+        // EPUB Mode - Simple navigation with slide-in animation
         if (this.rendition && !this.isNavigating) {
             this.isNavigating = true;
-
-            // RTL Animation: Prev Page -> Slide current OUT to Left, New IN from Right
-            this.animationClass = 'slide-out-left';
-
             try {
-                await new Promise(r => setTimeout(r, 150));
-
                 await this.rendition.prev();
-
+                // Slide in from right (RTL: prev comes from right)
                 this.animationClass = 'slide-in-right';
-                setTimeout(() => {
-                    this.animationClass = '';
-                }, 300);
+                setTimeout(() => { this.animationClass = ''; }, 300);
+                this.saveProgress();
+            } catch (e) {
+                console.error('EPUB prev error:', e);
             } finally {
                 this.isNavigating = false;
             }

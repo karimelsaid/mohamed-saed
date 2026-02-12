@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Observable, Subject, of, map, tap } from 'rxjs';
+import { HifzPlanService } from './hifz-plan.service';
 
 export interface MutabaaPlan {
     tilawoTarget: number;
@@ -81,7 +82,8 @@ export class MutabaaService {
         return this.getMutabaaData().pipe(
             tap(data => {
                 const previousLog = (data.todayLog as any)[taskType];
-                const previousAmountDone = previousLog?.pagesCompleted || previousLog?.amountDone || 0;
+                const isHifzUnit = (taskType === 'hifz' || taskType === 'new_memorization' || taskType === 'rabt');
+                const previousAmountDone = isHifzUnit ? (previousLog?.versesCompleted || 0) : (previousLog?.pagesCompleted || previousLog?.amountDone || 0);
                 const previousStatus = previousLog?.status;
                 let finalStatus = status;
                 if ((taskType === 'hifz' || taskType === 'new_memorization') && status === 'done') {
@@ -97,7 +99,12 @@ export class MutabaaService {
                     }
                 }
 
-                (data.todayLog as any)[taskType] = { status: finalStatus, pagesCompleted: amountDone, versesCompleted: amountDone };
+                const isHifz = taskType === 'hifz' || taskType === 'new_memorization' || taskType === 'rabt';
+                (data.todayLog as any)[taskType] = {
+                    status: finalStatus,
+                    pagesCompleted: isHifz ? 0 : amountDone,
+                    versesCompleted: isHifz ? amountDone : 0
+                };
 
                 // Moved save call to the end of the method to ensure all modifications (including Al-Rabt reset) are captured.
 
@@ -172,14 +179,32 @@ export class MutabaaService {
                             hifzPlan.stats.lastActiveDate = new Date().toISOString();
                         }
 
-                        // 3. Update Current Position for Hifz based on progress
+                        // 3. Update Current Position for Hifz based on progress (with wrap-around)
                         if ((taskType === 'hifz' || taskType === 'new_memorization') && currentPosition?.verseKey) {
                             const parts = currentPosition.verseKey.split(':');
-                            hifzPlan.currentPosition = {
-                                surah: parseInt(parts[0]),
-                                verse: parseInt(parts[1])
-                            };
-                            console.log(`📍 [Mutabaa] Advanced Hifz position to ${hifzPlan.currentPosition.surah}:${hifzPlan.currentPosition.verse}`);
+                            const lastSurah = parseInt(parts[0]);
+                            const lastVerse = parseInt(parts[1]);
+
+                            // Build set of all memorized verse keys
+                            const memorizedKeys = new Set<string>(
+                                (hifzPlan.memorizedContent || []).map((m: any) => m.verseKey)
+                            );
+
+                            // Find the next unmemorized verse with wrap-around
+                            const nextPosition = HifzPlanService.getNextUnmemorizedVerse(
+                                lastSurah,
+                                lastVerse,
+                                memorizedKeys
+                            );
+
+                            if (nextPosition) {
+                                hifzPlan.currentPosition = nextPosition;
+                                console.log(`📍 [Mutabaa] Advanced Hifz position to ${nextPosition.surah}:${nextPosition.verse} (wrap-around enabled)`);
+                            } else {
+                                // All Quran memorized! Do NOT reset to 1:1. 
+                                // Keep at current position or a terminal position.
+                                console.log('🎉 [Mutabaa] All Quran verses are memorized! No movement needed.');
+                            }
                         }
 
                         localStorage.setItem('guest_hifz_plan', JSON.stringify(hifzPlan));

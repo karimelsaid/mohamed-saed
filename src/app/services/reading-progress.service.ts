@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject } from 'rxjs';
 import { tap } from 'rxjs/operators';
+import { finalize } from 'rxjs';
 import { ReadingProgress, Bookmark, Highlight, ReaderSettings } from '../models/ebook.model';
 import { environment } from '../../environments/environment';
 
@@ -13,6 +14,8 @@ export class ReadingProgressService {
 
     private currentProgressSubject = new BehaviorSubject<ReadingProgress | null>(null);
     public currentProgress$ = this.currentProgressSubject.asObservable();
+
+    private savingIds = new Set<string>();
 
     constructor(private http: HttpClient) { }
 
@@ -35,11 +38,20 @@ export class ReadingProgressService {
         progressPercent?: number;
         readingTimeMinutes?: number;
     }): Observable<{ success: boolean; message: string; data: ReadingProgress }> {
+        if (this.savingIds.has(ebookId)) {
+            // Return an empty observable or mock response to satisfy the subscriber
+            return new Observable(obs => obs.complete());
+        }
+
+        this.savingIds.add(ebookId);
         return this.http.put<{ success: boolean; message: string; data: ReadingProgress }>(`${this.apiUrl}/${ebookId}`, data).pipe(
             tap(response => {
                 if (response.success) {
                     this.currentProgressSubject.next(response.data);
                 }
+            }),
+            finalize(() => {
+                this.savingIds.delete(ebookId);
             })
         );
     }

@@ -90,6 +90,12 @@
     flex-direction: column;
     position: relative;
     z-index: 1;
+    will-change: transform;
+}
+
+/* Smooth snap-back transition when not dragging */
+.reader-container.transitioning {
+    transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 /* Navigation Arrows */
@@ -1381,14 +1387,14 @@
     }
 
     to {
-        transform: translateX(50px);
+        transform: translateX(100%);
         opacity: 0;
     }
 }
 
 @keyframes slideInLeft {
     from {
-        transform: translateX(-50px);
+        transform: translateX(-100%);
         opacity: 0;
     }
 
@@ -1405,14 +1411,14 @@
     }
 
     to {
-        transform: translateX(-50px);
+        transform: translateX(-100%);
         opacity: 0;
     }
 }
 
 @keyframes slideInRight {
     from {
-        transform: translateX(50px);
+        transform: translateX(100%);
         opacity: 0;
     }
 

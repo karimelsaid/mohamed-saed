@@ -15,6 +15,7 @@ dependencies {
     implementation project(':capacitor-status-bar')
     implementation project(':capawesome-team-capacitor-android-foreground-service')
     implementation project(':capgo-native-audio')
+    implementation project(':capacitor-community-keep-awake')
 
 }
 

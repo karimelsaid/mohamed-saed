@@ -11,11 +11,17 @@
     "capacitor:sync": "npx cap sync android",
     "android:open": "npx cap open android",
     "android:run": "npm run build:prod && npm run capacitor:sync && npx cap open android",
+    "capacitor:sync:ios": "npx cap sync ios",
+    "ios:open": "npx cap open ios",
+    "ios:run": "npm run build:prod && npm run capacitor:sync:ios && npx cap open ios",
     "kenouz:build": "ng build kenouz",
     "mushaf:build": "ng build mushaf-wird",
     "mushaf:android:sync": "cd mushaf-wird-mobile && npx cap sync android",
     "mushaf:android:open": "cd mushaf-wird-mobile && npx cap open android",
-    "mushaf:android:run": "npm run mushaf:build && npm run mushaf:android:sync && npm run mushaf:android:open"
+    "mushaf:android:run": "npm run mushaf:build && npm run mushaf:android:sync && npm run mushaf:android:open",
+    "mushaf:ios:sync": "cd mushaf-wird-mobile && npx cap sync ios",
+    "mushaf:ios:open": "cd mushaf-wird-mobile && npx cap open ios",
+    "mushaf:ios:run": "npm run mushaf:build && npm run mushaf:ios:sync && npm run mushaf:ios:open"
   },
   "private": true,
   "dependencies": {
@@ -36,6 +42,7 @@
     "@capacitor/core": "^7.4.1",
     "@capacitor/dialog": "^7.0.3",
     "@capacitor/filesystem": "^8.0.0",
+    "@capacitor/ios": "^7.5.0",
     "@capacitor/local-notifications": "^7.0.4",
     "@capacitor/push-notifications": "^7.0.4",
     "@capacitor/share": "^8.0.0",

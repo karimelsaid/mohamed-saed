@@ -10,7 +10,8 @@ import { Capacitor } from '@capacitor/core';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import {
   faUser, faEnvelope, faLock, faPhone, faMapMarkerAlt,
-  faStore, faIdCard, faImage, faEye, faEyeSlash, faBuilding, faGift, faCheckCircle
+  faStore, faIdCard, faImage, faEye, faEyeSlash, faBuilding, faGift, faCheckCircle,
+  faMars, faVenus
 } from '@fortawesome/free-solid-svg-icons';
 
 @Component({
@@ -35,6 +36,8 @@ export class RegisterComponent implements OnInit, AfterViewInit {
   faBuilding = faBuilding;
   faGift = faGift;
   faCheckCircle = faCheckCircle;
+  faMars = faMars;
+  faVenus = faVenus;
 
   governorates: any[] = governoratesData.governorates;
   buyerCities: string[] = [];
@@ -51,7 +54,8 @@ export class RegisterComponent implements OnInit, AfterViewInit {
     phone: '',
     governorate: '',
     city: '',
-    village: ''
+    village: '',
+    gender: '' // 'male' or 'female'
   };
 
   // Merchant user data
@@ -281,7 +285,8 @@ export class RegisterComponent implements OnInit, AfterViewInit {
       !this.buyerPasswordMismatch &&
       this.phoneValid &&
       this.user.governorate &&
-      this.user.city
+      this.user.city &&
+      this.user.gender
     );
 
     return isValid;
@@ -340,6 +345,7 @@ export class RegisterComponent implements OnInit, AfterViewInit {
       this.user.governorate,
       this.user.city,
       this.user.village || '',
+      this.user.gender,
       finalReferralCode || undefined
     )
       .subscribe({

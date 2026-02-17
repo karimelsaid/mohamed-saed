@@ -84,6 +84,7 @@
   z-index: 15000;
   display: flex;
   flex-direction: column;
+  padding-bottom: calc(100px + env(safe-area-inset-bottom, 20px));
   box-shadow: -5px 0 20px rgba(0, 0, 0, 0.4);
   border-left: 1px solid rgba(194, 168, 122, 0.1);
 }
@@ -4781,7 +4782,7 @@ input:checked+.slider:before {
 /* Ultra-Compact Floating Integrity Pill for Recitation */
 .reading-integrity-bar {
   position: fixed !important;
-  bottom: 6px !important;
+  bottom: 32px !important; /* Raised to clear system gesture area */
   left: 50% !important;
   transform: translateX(-50%) !important;
   width: auto !important;

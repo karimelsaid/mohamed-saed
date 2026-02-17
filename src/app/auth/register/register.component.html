@@ -121,6 +121,26 @@
               [ngClass]="{'border-red-300 focus:ring-red-200': !phoneValid && phoneTouched, 'border-green-300 focus:ring-green-200': phoneValid && phoneTouched}">
           </div>
 
+          <!-- Gender Selection -->
+          <div class="space-y-2">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mr-1">تحديد الجنس (إلزامي
+              للخصوصية)</label>
+            <div class="grid grid-cols-2 gap-4">
+              <button type="button" (click)="user.gender = 'male'"
+                [ngClass]="user.gender === 'male' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' : 'bg-gray-100 dark:bg-gray-700 text-gray-500'"
+                class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl transition-all duration-200 font-bold">
+                <fa-icon [icon]="faMars" class="text-xl"></fa-icon>
+                <span>ذكر</span>
+              </button>
+              <button type="button" (click)="user.gender = 'female'"
+                [ngClass]="user.gender === 'female' ? 'bg-pink-500 text-white shadow-lg shadow-pink-500/30' : 'bg-gray-100 dark:bg-gray-700 text-gray-500'"
+                class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl transition-all duration-200 font-bold">
+                <fa-icon [icon]="faVenus" class="text-xl"></fa-icon>
+                <span>أنثى</span>
+              </button>
+            </div>
+          </div>
+
           <!-- Location Grid -->
           <div class="grid grid-cols-2 gap-4">
             <div class="relative">

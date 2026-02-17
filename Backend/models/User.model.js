@@ -23,6 +23,9 @@ const userSchema = new mongoose.Schema({
     name: String
   },
   googleId: { type: String, required: false, unique: true, sparse: true },
+  gender: { type: String, enum: ['male', 'female'], required: false }, // إلزامي للمجتمع التفاعلي
+  country: { type: String },
+  isSheikh: { type: Boolean, default: false }, // للمقرئين المعتمدين
 
   // حقول التاجر الجديدة
   role: { type: String, required: true, default: 'user', enum: ['user', 'merchant', 'admin'] },

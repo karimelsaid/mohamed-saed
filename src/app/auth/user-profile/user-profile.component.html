@@ -207,6 +207,35 @@
               </div>
 
               <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الجنس (للحلقات
+                  والمجتمع)</label>
+                <div *ngIf="isEditingAddress" class="grid grid-cols-2 gap-4">
+                  <button type="button" (click)="profileForm.get('gender')?.setValue('male')"
+                    [ngClass]="profileForm.get('gender')?.value === 'male' ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-500'"
+                    class="flex items-center justify-center gap-2 py-3 rounded-xl transition-all font-bold">
+                    <fa-icon [icon]="faMars"></fa-icon>
+                    <span>ذكر</span>
+                  </button>
+                  <button type="button" (click)="profileForm.get('gender')?.setValue('female')"
+                    [ngClass]="profileForm.get('gender')?.value === 'female' ? 'bg-pink-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-500'"
+                    class="flex items-center justify-center gap-2 py-3 rounded-xl transition-all font-bold">
+                    <fa-icon [icon]="faVenus"></fa-icon>
+                    <span>أنثى</span>
+                  </button>
+                </div>
+                <!-- View Mode -->
+                <div *ngIf="!isEditingAddress"
+                  class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                  <fa-icon *ngIf="profileForm.get('gender')?.value === 'male'" [icon]="faMars"
+                    class="text-blue-500"></fa-icon>
+                  <fa-icon *ngIf="profileForm.get('gender')?.value === 'female'" [icon]="faVenus"
+                    class="text-pink-500"></fa-icon>
+                  <span>{{ profileForm.get('gender')?.value === 'male' ? 'ذكر' : (profileForm.get('gender')?.value ===
+                    'female' ? 'أنثى' : 'لم يتم التحديد') }}</span>
+                </div>
+              </div>
+
+              <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">رقم الهاتف</label>
                 <input type="tel" formControlName="phone" (input)="validatePhone()" [ngClass]="{
                     'border-red-500 focus:ring-red-500': !phoneValid && phoneTouched && isEditingAddress,

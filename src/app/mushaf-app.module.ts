@@ -4,6 +4,7 @@ import { RouterModule, Routes } from '@angular/router';
 import { HttpClientModule } from '@angular/common/http';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { ServiceWorkerModule } from '@angular/service-worker'; // Added
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 
 import { MushafRootComponent } from './mushaf-root.component';
 import { MushafModule } from './features/mushaf/mushaf.module';
@@ -39,8 +40,8 @@ const routes: Routes = [
         BrowserModule,
         BrowserAnimationsModule,
         HttpClientModule,
-        MushafModule,
         RouterModule.forRoot(routes),
+        FontAwesomeModule,
         ServiceWorkerModule.register('ngsw-worker.js', {
             enabled: false,
             registrationStrategy: 'registerWhenStable:30000'

@@ -168,9 +168,10 @@ export class AuthService {
     governorate: string,
     city: string,
     village: string = '',
+    gender: string = '',
     referralCode?: string
   ): Observable<any> {
-    const body: any = { username, email, password, phone, governorate, city, village };
+    const body: any = { username, email, password, phone, governorate, city, village, gender };
     if (referralCode) {
       body.referralCode = referralCode;
     }

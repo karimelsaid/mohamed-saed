@@ -1,6 +1,25 @@
 {
     "appId": "com.kenouz.mushafwird",
-    "appName": "وِرد - مصحف للحفظ والمتابعة",
+    "appName": "مصحف وِرد",
     "webDir": "../Backend/dist/mushaf-wird/browser",
-    "bundledWebRuntime": false
+    "bundledWebRuntime": false,
+    "server": {
+        "iosScheme": "capacitor",
+        "androidScheme": "capacitor",
+        "allowNavigation": [
+            "*"
+        ]
+    },
+    "plugins": {
+        "SplashScreen": {
+            "launchShowDuration": 1000,
+            "launchAutoHide": true,
+            "backgroundColor": "#ffffffff",
+            "showSpinner": false,
+            "iosSpinnerStyle": "small",
+            "spinnerColor": "#999999",
+            "splashFullScreen": true,
+            "splashImmersive": true
+        }
+    }
 }

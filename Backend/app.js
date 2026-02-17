@@ -509,6 +509,7 @@ app.use('/api/notifications', notificationRoutes); // Notification Routes
 app.use('/api/quran-progress', quranProgressRoutes); // Quran Progress Routes
 app.use('/api/mutabaa', require('./routes/mutabaa.routes')); // Smart Mutaba'a Routes
 app.use('/api/hifz-plan', require('./routes/hifzPlan.routes')); // Dynamic Hifz Plan Routes
+app.use('/api/halaqa', require('./routes/halaqa.routes')); // Community Halaqa Routes
 app.use('/api/feedback', feedbackRoutes); // Feedback Routes
 
 

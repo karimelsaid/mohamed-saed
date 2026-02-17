@@ -23,6 +23,8 @@ import { KeepAwake } from '@capacitor-community/keep-awake';
 import { NativeAudio } from '@capgo/native-audio';
 import { BookmarkService } from '../../../core/services/bookmark.service';
 import { Bookmark } from '../../../core/models/bookmark.model';
+import { faUsers, faUser, faSignOutAlt, faSignInAlt, faUserPlus } from '@fortawesome/free-solid-svg-icons';
+import { AuthService } from '../../../auth/auth.service';
 
 // --- Performance Optimization Interfaces ---
 export interface EnrichedMushafSegment extends MushafSegment {
@@ -365,6 +367,11 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
     isPageBookmarked: boolean = false;
 
     Math = Math;
+    faUsers = faUsers;
+    faUser = faUser;
+    faSignOutAlt = faSignOutAlt;
+    faSignInAlt = faSignInAlt;
+    faUserPlus = faUserPlus;
 
     // State for Wizard Synchronization
     private isPlanLoaded: boolean = false;
@@ -388,7 +395,8 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
         private http: HttpClient,
         private ngZone: NgZone,
         private renderer: Renderer2,
-        public bookmarkService: BookmarkService
+        public bookmarkService: BookmarkService,
+        private authService: AuthService
     ) { }
 
     private nextVerseKeyToPlay: string | null = null;
@@ -417,7 +425,13 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
         // Setup Audio State
         this.audioState$ = this.audioService.state$;
         this.audioState$.pipe(takeUntil(this.destroy$)).subscribe(state => {
-            const newKey = state.currentVerseKey; // Directly map to currentVerseKey
+            // AUTO-HIDE UI: Hide navbar when audio starts playing
+            if (state.isPlaying && this.showNavbar) {
+                this.showNavbar = false;
+                this.cdr.detectChanges();
+            }
+
+            const newKey = state.currentVerseKey;
 
             // SURAH RECITER OVERRIDE: Disable verse-level UI features (highlighting, auto-scroll, auto-nav)
             // for Surah-only reciters as they play continuous large files as a single atomic block.
@@ -720,6 +734,12 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
                 }
             },
             error: (err) => console.error('Failed to record daily activity:', err)
+        });
+
+        // Initialize user login status
+        this.authService.user$.pipe(takeUntil(this.destroy$)).subscribe((user: any) => {
+            this.isLoggedIn = !!user;
+            this.cdr.detectChanges();
         });
     }
 
@@ -1786,6 +1806,13 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
             this.memorizationSettings.groupRepeat = 1;
         }
 
+        // SYNC RECITER: Proactively set the reciter for the audio service for Hifz/Muraaja tasks
+        // This ensures the dashboard and background services show the correct reciter even before Play is pressed.
+        const isHifzMode = task.type === 'hifz' || task.type === 'new_memorization' || task.type === 'revision' || task.type === 'consolidation' || task.type === 'muraaja';
+        if (isHifzMode) {
+            await this.audioService.setReciter(this.hifzReciterId, false);
+        }
+
         // C. Set Range and Values
         // Backend might use 'unit' or 'target' for the range type (e.g. 'half_page', 'verses', 'page')
         console.log(`🎯 [Mushaf] Detected Task Unit/Target: ${unit}`);
@@ -2613,6 +2640,9 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
             this.audioService.playVerse(this.computedRange.start, activeReciterId, undefined, true, false, isExternal);
             this.selectedVerseKey = this.computedRange.start;
 
+            // AUTO-HIDE UI: Promptly hide navbar
+            this.showNavbar = false;
+
             // User Request: Clear the visual selection (shading) once playback starts
             this.computedRange = null;
             this.selectedVersesSet.clear();
@@ -2629,15 +2659,15 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
             // Only enforce external control if we actually NEED to intervene (repetitions > 1 or Group Phase active)
             // We enable this for Surah/Gapless reciters too in Hifz mode because we need precise control (breaks, waiting).
             const isSurahReciter = this.audioService.isSurahReciter(activeReciterId);
-            const needsExternalControl = (
-                (this.isMemorizationMode || this.isAutoRepeat) &&
-                (this.memorizationSettings.ayahRepeat > 1 || this.memorizationSettings.groupRepeat > 1 || this.isGroupPhase)
-            );
+            const needsExternalControl = (this.isMemorizationMode || this.isAutoRepeat);
 
             // Pass needsExternalControl directly to playVerse so the isNewSession reset
             // uses the correct value (avoids overwriting the setExternalPlaybackControl call)
-            this.audioService.playVerse(verseKey, activeReciterId, undefined, true, false, needsExternalControl);
+            await this.audioService.playVerse(verseKey, activeReciterId, undefined, true, false, needsExternalControl);
             this.selectedVerseKey = verseKey;
+
+            // AUTO-HIDE UI: Promptly hide navbar
+            this.showNavbar = false;
         }
 
         // --- GAPLESS OPTIMIZATION ---
@@ -2653,6 +2683,7 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
     }
 
     private async syncPlaybackBoundary(refKey: string): Promise<void> {
+        if (!refKey) return;
         const state = await firstValueFrom(this.audioService.state$);
         let range = state.playbackRange; // We might override this locally if in memorization mode
         let rangeEndKey: string | null = null;
@@ -2745,6 +2776,7 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
             this.isSettingsOpen = false;
             this.showOptionsSheet = false;
             this.isSearchOpen = false;
+            this.showAudioManager = false; // NAVIGATION FIX
             this.closeTafsir();
         }
         localStorage.setItem('showAudioPlayer', this.showAudioPlayer.toString());
@@ -3051,6 +3083,12 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
 
         this.selectedVerseKey = key;
         this.isTafsirOpen = true;
+
+        // Close other panels
+        this.showAudioManager = false; // NAVIGATION FIX
+        this.isSidebarOpen = false;
+        this.isSettingsOpen = false;
+
         this.loadTafsirContent(this.selectedTafsirId, key);
         this.cdr.detectChanges();
     }
@@ -4375,14 +4413,17 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
     toggleSidebar(): void {
         this.isSidebarOpen = !this.isSidebarOpen;
         if (this.isSidebarOpen) {
-            this.showAudioPlayer = false; // Close audio player when opening index
             this.isSettingsOpen = false;
             this.showOptionsSheet = false;
+            this.isSearchOpen = false;
+            this.showAudioPlayer = false;
+            this.showAudioManager = false; // NAVIGATION FIX
             this.closeTafsir();
             this.updateDownloadedStatus();
         } else {
             this.isDownloadMode = false; // Reset download mode when closing
         }
+        this.cdr.detectChanges();
     }
 
     private async updateDownloadedStatus(): Promise<void> {
@@ -4465,11 +4506,14 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
         }
 
         if (this.isSettingsOpen) {
-            this.isSidebarOpen = false; // Close index when opening settings
-            this.showAudioPlayer = false; // Close audio when opening settings
-            this.showOptionsSheet = false; // Close Hifz options
+            this.isSidebarOpen = false;
+            this.showOptionsSheet = false;
+            this.isSearchOpen = false;
+            this.showAudioPlayer = false;
+            this.showAudioManager = false; // NAVIGATION FIX
             this.closeTafsir();
         }
+        this.cdr.detectChanges();
     }
 
     setTheme(theme: string): void {
@@ -4759,6 +4803,11 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
         if (this.isLongPressTriggered) {
             event.preventDefault();
             event.stopPropagation();
+            return;
+        }
+
+        // TOUCH CONFLICT FIX: If user actually moved, don't trigger selection
+        if (this.hasMoved) {
             return;
         }
 
@@ -5088,7 +5137,8 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
     async startMemorization(): Promise<void> {
         this.showOptionsSheet = false;
         this.isMemorizationMode = true;
-        this.showNavbar = this.memorizationSettings.type === 'recitation'; // Keep navbar for recitation
+        await this.audioService.setReciter(this.hifzReciterId, false); // Ensure reciter is synced when entering mode
+        this.showNavbar = false; // AUTO-HIDE UI: Promptly hide navbar for all hifz/ward modes
         this.showAudioPlayer = false; // NEW: Close audio player when starting new memorization
         this.isTestPhase = false;
         this.isGroupPhase = false;
@@ -5963,28 +6013,27 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
 
         if (this.isAutoRepeat) {
             this.currentRepetition = 1;
-            // User pressed PLAY
-            // 1. Unlock audio context for Android (direct user gesture) - AWAIT completion
-            await this.audioService.unlockAudio();
+            await this.audioService.setReciter(this.hifzReciterId, false); // Ensure reciter is synced
 
-            // Check if still active after async wait
-            if (!this.isAutoRepeat) return;
-
-            // 2. Set service to manual mode (User confirmed via toggleAutoRepeat)
+            // 2. Set service to manual mode
             this.audioService.setExternalPlaybackControl(true);
             this.audioService.updateState({ isGroupPhase: this.isGroupPhase });
 
-            // Use the COMPONENT helper that controls the 'Normal Audio' (User confirmed valid)
             if (this.sessionAyahs.length > 0 && this.currentAyahIndex < this.sessionAyahs.length) {
                 const verseToPlay = this.sessionAyahs[this.currentAyahIndex];
-                await this.playVerseAudio(verseToPlay);
+                if (verseToPlay) {
+                    await this.playVerseAudio(verseToPlay);
+                } else {
+                    console.warn('[Hifz] toggleAutoRepeat: No verse key found at index', this.currentAyahIndex);
+                    this.isAutoRepeat = false;
+                }
             }
         } else {
             // User pressed PAUSE
             this.audioService.setExternalPlaybackControl(false);
             this.audioService.stop();
 
-            // CLEANUP: Stop any active waits/timers when paused
+            // CLEANUP
             this.isWaitingForRepetition = false;
             this.isSimulationPlaying = false;
             if (this.countdownInterval) {
@@ -5997,7 +6046,6 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
     setMemoMethod(method: 'manual' | 'auto'): void {
         this.memoMethod = method;
         if (method === 'manual') {
-            // Stop any playing audio when switching to manual
             this.isAutoRepeat = false;
             this.audioService.setExternalPlaybackControl(false);
             this.audioService.stop();
@@ -6105,7 +6153,8 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
         }
 
         const effectiveDuration = verseDuration || this.audioService.lastKnownDuration || (this.isAndroid ? 5 : 5);
-        const isTeacher = this.audioService.isTeacherReciter(this.currentReciterId);
+        const activeReciterId = (this.isMemorizationMode || this.isAutoRepeat) ? this.hifzReciterId : this.currentReciterId;
+        const isTeacher = this.audioService.isTeacherReciter(activeReciterId);
         const isMimic = this.delayBetweenRepetitions === -1;
 
         console.log(`[AutoRepeat] Event for ${completedVerseKey} (Duration: ${effectiveDuration}s, Teacher: ${isTeacher}, Mimic: ${isMimic})`);
@@ -6406,6 +6455,7 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
         this.showAudioPlayer = false; // Close audio player
         this.isSettingsOpen = false; // Close settings
         this.isSidebarOpen = false; // Close sidebar
+        this.showAudioManager = false; // NAVIGATION FIX
         this.closeTafsir();
         // Default to current page's FIRST surah if not set or invalid
         if (this.currentSurah$) {
@@ -6701,7 +6751,7 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
         return false;
     }
 
-    exitMemorization(): void {
+    async exitMemorization(): Promise<void> {
         if (this.isExiting) return;
         this.isExiting = true;
 
@@ -6752,6 +6802,7 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
         }, 500);
 
         this.audioService.setExternalPlaybackControl(false);
+        await this.audioService.setReciter(this.currentReciterId, false); // Restore global reciter context
         this.isExiting = false; // Reset for next time
     }
 
@@ -7652,14 +7703,25 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
         }
     }
 
+    private accumulatedScroll: number = 0; // Fractional accumulator for smooth scrolling
+
     private animateScroll(): void {
         if (!this.isAutoScrolling) return;
 
         const container = document.querySelector('.mushaf-vertical-viewer');
         if (container) {
             // Speed calculation: 1.0 = approx 0.3 pixels per frame
+            // On Retina/High-DPI screens, standard scrollTop simply rounds small values down to 0, stopping the scroll.
+            // We must accumulate fractions until they exceed 1 pixel.
             const pixelsPerFrame = (0.3 * this.autoScrollSpeed);
-            container.scrollTop += pixelsPerFrame;
+
+            // Sync accumulator if it's lagging or fresh start
+            if (this.accumulatedScroll === 0 || Math.abs(this.accumulatedScroll - container.scrollTop) > 50) {
+                this.accumulatedScroll = container.scrollTop;
+            }
+
+            this.accumulatedScroll += pixelsPerFrame;
+            container.scrollTop = this.accumulatedScroll;
 
             // Load more if near bottom
             if (container.scrollHeight - container.scrollTop < window.innerHeight * 2) {
@@ -7757,5 +7819,16 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
             }
         }
         return currentJuz ? currentJuz.id : 1;
+    }
+
+    onLogout(): void {
+        this.authService.logout();
+        this.router.navigate(['/login']);
+    }
+
+    navigateTo(path: string): void {
+        this.router.navigate([path]);
+        this.isSettingsOpen = false;
+        this.isSidebarOpen = false;
     }
 }

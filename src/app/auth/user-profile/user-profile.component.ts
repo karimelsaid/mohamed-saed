@@ -17,7 +17,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { GamificationService, GamificationProfile } from '../../services/gamification.service';
 import { PushNotificationService } from '../../services/push-notification.service';
-import { faUser, faUsers, faTrophy, faSignOutAlt, faCopy, faCheckCircle, faCoins, faGift, faEdit, faSave, faTimes, faCamera, faBell } from '@fortawesome/free-solid-svg-icons';
+import { faUser, faUsers, faTrophy, faSignOutAlt, faCopy, faCheckCircle, faCoins, faGift, faEdit, faSave, faTimes, faCamera, faBell, faMars, faVenus } from '@fortawesome/free-solid-svg-icons';
 import { NativeSettings, AndroidSettings, IOSSettings } from 'capacitor-native-settings';
 
 @Component({
@@ -45,6 +45,8 @@ export class UserProfileComponent implements OnInit, OnDestroy {
   faTimes = faTimes;
   faCamera = faCamera;
   faBell = faBell;
+  faMars = faMars;
+  faVenus = faVenus;
 
   // Notification Loading State
   isEnablingNotifications = false;
@@ -153,7 +155,8 @@ export class UserProfileComponent implements OnInit, OnDestroy {
       phone: ['', [Validators.required, Validators.pattern(/^(010|011|012|015)[0-9]{8}$/)]],
       governorate: [''],
       city: [''],
-      village: ['', Validators.required]
+      village: ['', Validators.required],
+      gender: ['']
     });
   }
 

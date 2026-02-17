@@ -6,6 +6,9 @@ export interface User {
     governorate: string;
     city: string;
     village: string;
+    gender?: 'male' | 'female';
+    country?: string;
+    isSheikh?: boolean;
     referralCode?: string;
     referralBalance?: number;
     profileImage?: string;

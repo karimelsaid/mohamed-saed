@@ -11,7 +11,7 @@ const SystemSettings = require('../models/SystemSettings');
 // Function to update user profile and sync orders' shippingAddress
 async function updateUserProfile(req, res) {
   const { userId } = req.params;
-  const { username, email, phone, governorate, city, village, postOffice } = req.body;
+  const { username, email, phone, governorate, city, village, gender, postOffice } = req.body;
 
   try {
     const user = await User.findById(userId);
@@ -23,6 +23,7 @@ async function updateUserProfile(req, res) {
     if (username) user.username = username;
     if (email) user.email = email;
     if (phone) user.phone = phone;
+    if (gender) user.gender = gender;
     if (governorate) user.governorate = governorate;
     if (city) user.city = city;
     if (village) user.village = village;

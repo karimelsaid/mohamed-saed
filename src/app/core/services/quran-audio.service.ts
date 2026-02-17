@@ -60,7 +60,7 @@ export class QuranAudioService {
     private get standbyAudio(): HTMLAudioElement {
         return this.activeAudio === this.audioPrimary ? this.audioSecondary : this.audioPrimary;
     }
-    private readonly SILENT_SRC = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+    private readonly SILENT_SRC = 'data:audio/wav;base64,UklGRiQAAABXQVZFRm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
     private audioUrlBase = 'https://api.quran.com/api/v4/recitations';
     private qdcAudioUrlBase = 'https://api.quran.com/api/qdc/audio/reciters';
     private readonly CACHE_NAME = 'quran-audio-v1';
@@ -90,13 +90,14 @@ export class QuranAudioService {
 
     // PERFECTION: Precision Clocking and Cross-fade
     private overlapTimer: any = null;
-    private readonly OVERLAP_TRIGGER_SEC = 0.18; // Hyper-Precise overlap (0.18s)
+    private readonly OVERLAP_TRIGGER_SEC = (Capacitor.getPlatform() === 'ios') ? 0.25 : 0.15; // Increased padding for iOS to prevent gaps
     private readonly FADE_DURATION_MS = 400; // Duration of volume fade (Balanced for exit)
     private readonly PRECISION_INTERVAL_MS = 16; // 60fps check frequency
 
     // Fallback URLs for reciters with missing/broken specific verse audio on QDC API
     private readonly RECITER_OVERRIDES: { [key: number]: string } = {
         19: 'https://everyayah.com/data/Ahmed_ibn_Ali_al-Ajamy_128kbps_ketaballah.net',
+        12: 'https://everyayah.com/data/Husary_Muallim_128kbps',
         13: 'https://everyayah.com/data/Hudhaify_128kbps',
         85: 'https://everyayah.com/data/Ghamadi_40kbps',
         110: 'https://everyayah.com/data/Abdullah_Basfar_64kbps',
@@ -163,13 +164,16 @@ export class QuranAudioService {
     });
 
     // Flag to force HTML5 Audio usage even on Native platforms (Android/iOS)
-    // NativeAudio has issues on some devices. For now, use HTML5 Audio.
-    // Background playback requires additional native configuration.
-    private readonly FORCE_HTML5_AUDIO = false;
+    // Native Audio is extremely reliable for gapless on Android
+    // BUT: For iOS, we prefer HTML5 now that 'audio' background mode is enabled,
+    // as it allows for superior Dual Player gapless logic (cross-fading & preloading).
+    private readonly FORCE_HTML5_SOLO = false;
 
     private get useNativeAudio(): boolean {
-        // Only use native audio if we are on a native platform AND NOT forced to use HTML5
-        return Capacitor.isNativePlatform() && !this.FORCE_HTML5_AUDIO;
+        // Native Audio is extremely reliable for gapless on Android
+        // BUT: For iOS, we prefer HTML5 now that 'audio' background mode is enabled,
+        // as it allows for superior Dual Player gapless logic (cross-fading & preloading).
+        return Capacitor.getPlatform() === 'android' && !this.FORCE_HTML5_SOLO;
     }
 
     // Stutter guard and cancellation state
@@ -1223,6 +1227,9 @@ export class QuranAudioService {
         this.lastPlayCallTime = now;
         this.lastValidDuration = 0; // RESET LATCh for new verse
 
+        // IMMEDIATE UI HIGHLIGHT: Ensure the verse is highlighted before any async fetch
+        this.updateState({ currentVerseKey: verseKey, reciterId: rId });
+
         console.log(`[AudioService] Playing Verse: ${verseKey}, Reciter: ${rId}, isNewSession: ${isNewSession}`);
 
         const wasSurah = this.isSurahReciter(s.reciterId);
@@ -1233,7 +1240,7 @@ export class QuranAudioService {
             console.log(`[AudioService] Fresh session started. Resetting ayah counter and external control.`);
             this.updateState({
                 currentAyahRepeatCount: 0,
-                externalPlaybackControl: externalControl ?? false
+                externalPlaybackControl: externalControl ?? s.externalPlaybackControl // Preserve if not explicitly passed
             });
 
             if (s.reciterId !== 0 && wasSurah !== isSurah) {
@@ -1267,8 +1274,8 @@ export class QuranAudioService {
         // Check if we are in "Handover Mode" (Silent audio playing to keep session alive)
         const isUnlockHandover = this.audio.src === this.SILENT_SRC && !this.audio.paused;
 
-        // Stop audio only if switching modes or if current audio is still playing (and NOT in handover)
-        if (!isUnlockHandover && (!willBeTimed || wasTimed !== willBeTimed)) {
+        // Stop audio only if switching modes, reciter changed, or if current audio is still playing (and NOT in handover)
+        if (!isUnlockHandover && (!willBeTimed || wasTimed !== willBeTimed || s.reciterId !== rId)) {
             await this.stopAudioCompletely();
         } else {
             if (!this.audio.paused && !isUnlockHandover) {
@@ -1310,6 +1317,7 @@ export class QuranAudioService {
             this.updateState({
                 currentVerseKey: verseKey,
                 reciterId: rId,
+                isPlaying: true, // Mark as playing
                 isBuffering: false,
                 currentAyahRepeatCount: isNewSession ? 0 : this.state.value.currentAyahRepeatCount,
                 currentGroupRepeatCount: isNewSession ? 0 : this.state.value.currentGroupRepeatCount
@@ -1335,6 +1343,11 @@ export class QuranAudioService {
                 this.isPlayingNewAudio = false;
                 this.isGaplessTransitioning = false;
                 console.log(`[AudioService] STUDIO SWAP Success: ${verseKey}`);
+
+                // CRITICAL FIX: Restart precision clock for the *new* active audio
+                // to ensure the NEXT verse (N+2) is also pre-triggered correctly.
+                this.startPrecisionClock(this.activeAudio);
+
                 this.preloadNextVerse(verseKey, rId); // Trigger next preload on the *new* standby
                 return;
             } catch (err) {
@@ -1377,7 +1390,7 @@ export class QuranAudioService {
                 this.audio.src = audioUrl;
                 this.audio.load();
                 await this.audio.play();
-                this.updateState({ isBuffering: false, isPlaying: true });
+                this.updateState({ isBuffering: false, isPlaying: true, currentVerseKey: verseKey });
                 this.isPlayingNewAudio = false;
                 this.isGaplessTransitioning = false;
                 return;
@@ -1663,8 +1676,15 @@ export class QuranAudioService {
                     this.audio.loop = false; // Reset unlocking loop
                     await this.audio.play();
                     console.log('[AudioService] Playback started successfully');
+
+                    // CRITICAL: Start precision clock for the first verse or standard loads
+                    // This ensures the chain of pre-triggers begins.
+                    this.startPrecisionClock(this.audio);
+
                     this.isPlayingNewAudio = false;
                     this.isGaplessTransitioning = false;
+                    this.updateState({ isPlaying: true, isBuffering: false, currentVerseKey: verseKey });
+
                     // CRITICAL FIX: Preload next verse after standard load completes
                     this.preloadNextVerse(verseKey, rId);
                 } catch (playError) {
@@ -1673,14 +1693,6 @@ export class QuranAudioService {
                     this.isGaplessTransitioning = false;
                     this.updateState({ isPlaying: false, isBuffering: false });
                 }
-            } else {
-                console.warn(`[AudioService] No audio URL found for ${rId}/${verseKey}`);
-                if (audioData) {
-                    console.error('[AudioService] Invalid Audio Data structure:', audioData);
-                }
-                this.updateState({ isBuffering: false, isPlaying: false });
-                this.isPlayingNewAudio = false;
-                this.isGaplessTransitioning = false;
             }
         } catch (error) {
             console.error(`[AudioService] Error in playVerse for ${verseKey}:`, error);
@@ -1811,7 +1823,7 @@ export class QuranAudioService {
         }
     }
 
-    async setReciter(id: number) {
+    async setReciter(id: number, autoResume: boolean = true) {
         const currentKey = this.state.value.currentVerseKey;
         const wasPlaying = this.state.value.isPlaying;
 
@@ -1863,7 +1875,7 @@ export class QuranAudioService {
         // If we were playing (or even if just paused on a verse), we usually want to 
         // start playing with the new reciter immediately or at least load it.
         // The user expectation is usually "Change Reciter -> Continue Hearing"
-        if (currentKey) {
+        if (currentKey && autoResume) {
             console.log(`[AudioService] Re-triggering playVerse for new reciter ${id}`);
             setTimeout(() => {
                 this.playVerse(currentKey, id);
@@ -2302,6 +2314,8 @@ export class QuranAudioService {
     }
 
     private async playTimedVerse(verseKey: string, reciterId: number) {
+        // IMMEDIATE UI HIGHLIGHT
+        this.updateState({ currentVerseKey: verseKey, reciterId: reciterId });
         try {
             const [surahStr, verseStr] = verseKey.split(':');
             const surahId = parseInt(surahStr);
@@ -3004,7 +3018,7 @@ export class QuranAudioService {
 
                 if (isLastRepeat && nextKey && this.standbyAudio.src && this.isWithinRange(nextKey)) {
                     this.isGaplessTransitioning = true;
-                    this.playVerse(nextKey);
+                    this.playVerse(nextKey, undefined, false, false); // isNewSession = false to preserve counters
                 } else if (!isLastRepeat) {
                     // Still repeating - let handleAudioEnded handle the loop
                     // No-op here

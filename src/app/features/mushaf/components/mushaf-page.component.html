@@ -80,9 +80,10 @@
                     <button class="audio-toggle-btn no-rotate" (click)="toggleSearch()" title="البحث">
                         <i class="fas fa-magnifying-glass"></i>
                     </button>
-                    <button class="audio-toggle-btn" (click)="sidebarTab = 'bookmarks'" title="العلامات المرجعية">
-                        <i class="fas fa-bookmark"></i>
+                    <button class="audio-toggle-btn no-rotate" (click)="navigateTo('/community')" title="المجتمع">
+                        <fa-icon [icon]="faUsers"></fa-icon>
                     </button>
+
                     <button class="close-btn" (click)="$event.stopPropagation(); toggleSidebar()">
                         <i class="fas fa-times"></i>
                     </button>
@@ -187,6 +188,38 @@
                     </button>
                 </div>
             </div>
+        </div>
+
+        <!-- NEW: User & Community Access in Settings -->
+        <div class="settings-auth-section"
+            style="padding: 15px; border-bottom: 1px solid rgba(194,168,122,0.15); display: flex; gap: 10px; flex-wrap: wrap;">
+            <button *ngIf="isLoggedIn" (click)="navigateTo('/profile')" class="btn-auth-mushaf profile-btn"
+                style="flex: 1; padding: 10px; border-radius: 10px; border: 1px solid #c2a87a; background: rgba(194,168,122,0.1); color: #c2a87a; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <fa-icon [icon]="faUser"></fa-icon>
+                <span>حسابي</span>
+            </button>
+            <button *ngIf="isLoggedIn" (click)="onLogout()" class="btn-auth-mushaf logout-btn"
+                style="padding: 10px; border-radius: 10px; border: 1px solid #ff4444; background: rgba(255,68,68,0.05); color: #ff4444;">
+                <fa-icon [icon]="faSignOutAlt"></fa-icon>
+            </button>
+
+            <!-- Login / Register if not logged in -->
+            <button *ngIf="!isLoggedIn" (click)="navigateTo('/login')" class="btn-auth-mushaf login-btn"
+                style="flex: 1; padding: 10px; border-radius: 10px; border: 1px solid #c2a87a; background: #c2a87a; color: white; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <fa-icon [icon]="faSignInAlt"></fa-icon>
+                <span>دخول</span>
+            </button>
+            <button *ngIf="!isLoggedIn" (click)="navigateTo('/register')" class="btn-auth-mushaf register-btn"
+                style="flex: 1; padding: 10px; border-radius: 10px; border: 1px solid #c2a87a; background: rgba(194,168,122,0.1); color: #c2a87a; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <fa-icon [icon]="faUserPlus"></fa-icon>
+                <span>تسجيل</span>
+            </button>
+
+            <button (click)="navigateTo('/community')" class="btn-auth-mushaf community-btn"
+                style="width: 100%; padding: 12px; border-radius: 10px; border: none; background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 5px; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);">
+                <fa-icon [icon]="faUsers"></fa-icon>
+                <span>المجتمع والحلقات</span>
+            </button>
         </div>
 
 

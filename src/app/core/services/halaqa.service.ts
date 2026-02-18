@@ -49,4 +49,10 @@ export class HalaqaService {
     sendMessage(halaqaId: string, userId: string, content: string, type: string = 'text'): Observable<any> {
         return this.http.post(`${this.apiUrl}/${halaqaId}/messages`, { userId, content, type });
     }
+
+    deleteHalaqa(id: string, userId: string): Observable<any> {
+        // Since we need to pass userId in body for verification, we use request method or a custom post?
+        // Standard delete might not support body in some environments, but HttpClient.delete(url, {body}) works.
+        return this.http.request('delete', `${this.apiUrl}/${id}`, { body: { userId } });
+    }
 }

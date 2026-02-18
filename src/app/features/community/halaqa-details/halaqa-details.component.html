@@ -1,4 +1,13 @@
-<div class="h-screen flex flex-col bg-gray-50 dark:bg-gray-900 rtl" dir="rtl">
+<div class="h-screen flex flex-col bg-gray-50 dark:bg-gray-900 rtl relative" dir="rtl">
+    <!-- Full Screen Loading Overlay -->
+    <div *ngIf="isLoadingDetails || checkingMembership"
+        class="absolute inset-0 z-50 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm flex flex-col items-center justify-center">
+        <div
+            class="w-16 h-16 border-4 border-blue-100 dark:border-blue-900 border-t-blue-600 rounded-full animate-spin mb-4">
+        </div>
+        <p class="text-blue-600 font-bold animate-pulse">جاري التحقق من العضوية...</p>
+    </div>
+
     <!-- Header -->
     <header
         class="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 p-4 sticky top-0 z-10 shadow-sm">
@@ -182,7 +191,74 @@
                         {{ halaqaData?.description || 'لا يوجد وصف متاح لهذه الحلقة.' }}
                     </p>
                 </div>
+
+                <!-- Delete Actions (Leader Only) -->
+                <div *ngIf="halaqaData?.leader?._id === (currentUser?.id || currentUser?._id) || halaqaData?.leader === (currentUser?.id || currentUser?._id)"
+                    class="pt-6 border-t border-gray-100 dark:border-gray-700">
+                    <button (click)="deleteHalaqa()"
+                        class="w-full bg-red-50 dark:bg-red-900/20 text-red-600 p-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-red-100 transition-all border border-red-100 dark:border-red-900/30">
+                        <fa-icon [icon]="faTrash"></fa-icon>
+                        حذف المجموعة نهائياً
+                    </button>
+                    <p class="text-[10px] text-center text-gray-400 mt-2">
+                        * سيتم حذف كافة الرسائل وبيانات الأعضاء فوراً
+                    </p>
+                </div>
             </div>
         </div>
     </main>
+
+    <!-- Custom Deletion Confirmation Modal -->
+    <div *ngIf="showDeleteConfirm"
+        class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-300">
+        <div class="bg-white dark:bg-gray-800 rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95"
+            (click)="$event.stopPropagation()">
+            <div class="p-8 text-center" dir="rtl">
+                <div
+                    class="w-20 h-20 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <fa-icon [icon]="faTrash" class="text-3xl text-red-600"></fa-icon>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">حذف الحلقة نهائياً؟</h3>
+                <p class="text-gray-500 dark:text-gray-400 leading-relaxed mb-8">
+                    هل أنت متأكد من حذف هذه الحلقة؟ سيتم مسح كافة الرسائل والبيانات المرتبطة بها، ولا يمكن التراجع عن
+                    هذا الإجراء لاحقاً.
+                </p>
+                <div class="flex flex-col gap-3">
+                    <button (click)="confirmDelete()"
+                        class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-red-500/20 transition-all transform active:scale-95">
+                        نعم، احذفها الآن
+                    </button>
+                    <button (click)="closeDeleteModals()"
+                        class="w-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-650 text-gray-700 dark:text-gray-300 font-bold py-4 rounded-2xl transition-all">
+                        تراجع
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div *ngIf="showDeleteSuccess"
+        class="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-blue-600/90 backdrop-blur-xl animate-in fade-in duration-500">
+        <div class="text-center text-white animate-in slide-in-from-bottom-10" dir="rtl">
+            <div
+                class="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-8 animate-bounce">
+                <fa-icon [icon]="faCheck" class="text-5xl"></fa-icon>
+            </div>
+            <h2 class="text-4xl font-extrabold mb-4">تم الحذف بنجاح</h2>
+            <p class="text-blue-100 text-lg opacity-80">جاري التوجيه إلى صفحة المجتمع التفاعلي...</p>
+        </div>
+    </div>
+
+    <!-- Error Toast -->
+    <div *ngIf="deleteError"
+        class="fixed bottom-10 left-1/2 -translate-x-1/2 z-[80] bg-red-600 text-white px-8 py-4 rounded-2xl shadow-2xl flex items-center gap-4 animate-in slide-in-from-bottom-10"
+        dir="rtl">
+        <fa-icon [icon]="faInfoCircle"></fa-icon>
+        <span class="font-bold">{{ deleteError }}</span>
+        <button (click)="deleteError = ''" class="hover:bg-white/20 p-1 rounded-lg">
+            <fa-icon [icon]="faSync" class="animate-spin" *ngIf="isLoadingDetails"></fa-icon>
+            <span *ngIf="!isLoadingDetails">×</span>
+        </button>
+    </div>
 </div>

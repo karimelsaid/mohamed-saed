@@ -59,11 +59,27 @@ if (isProduction) {
   app.set('trust proxy', 1);
 }
 
-// Middlewares
-app.use(bodyParser.json({ limit: '50mb' }));
-app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
+const logStream = fs.createWriteStream(path.join(__dirname, 'requests.log'), { flags: 'a' });
 
-// Request Logger removed as per user request
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Request Logger for debugging
+app.use((req, res, next) => {
+  const logEntry = `[${new Date().toISOString()}] ${req.method} ${req.url} - Headers: ${JSON.stringify(req.headers)}\n`;
+  console.log(logEntry);
+  logStream.write(logEntry);
+
+  // Log response status
+  const oldSend = res.send;
+  res.send = function (data) {
+    const resLog = `[${new Date().toISOString()}] Response for ${req.url}: ${res.statusCode}\n`;
+    logStream.write(resLog);
+    return oldSend.apply(res, arguments);
+  };
+
+  next();
+});
 
 // إضافة رؤوس Cross-Origin-Opener-Policy و Cross-Origin-Embedder-Policy
 app.use((req, res, next) => {

@@ -114,22 +114,20 @@ export class MushafLoginComponent {
 
         this.authService.login(this.email, this.password).subscribe({
             next: (response: any) => {
+                this.isLoading = false;
                 this.message = '✅ تم تسجيل الدخول بنجاح! جاري التوجيه...';
-                // Store user data
-                const userWithToken = { ...response.user, token: response.user.token };
-                this.authService.setUser(userWithToken);
 
+                // Redirection already handled by AuthService tap ( setUser )
+                // But we add a safety timeout here for UI transition
                 setTimeout(() => {
-                    // Check query params for returnUrl
-                    const urlTree = this.router.parseUrl(this.router.url);
-                    const returnUrl = urlTree.queryParams['returnUrl'];
-                    if (returnUrl) {
-                        this.router.navigateByUrl(returnUrl);
+                    const currentUrl = this.router.url;
+                    if (currentUrl.includes('returnUrl=')) {
+                        const returnUrl = currentUrl.split('returnUrl=')[1].split('&')[0];
+                        this.router.navigateByUrl(decodeURIComponent(returnUrl));
                     } else {
-                        // Default to Mushaf home
                         this.router.navigate(['/']);
                     }
-                }, 800);
+                }, 1000);
             },
             error: (err: any) => {
                 this.isLoading = false;

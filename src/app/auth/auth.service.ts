@@ -122,14 +122,12 @@ export class AuthService {
           localStorage.setItem('user', JSON.stringify(parsedUser)); // Update storage
         }
 
-        setTimeout(() => {
-          this.isLoggedInSubject.next(true);
-          this.userSubject.next(parsedUser);
-          // Load user-specific data such as favorites and cart
-          if (parsedUser && parsedUser.id) {
-            this.loadUserData(parsedUser.id);
-          }
-        }, 50);
+        this.isLoggedInSubject.next(true);
+        this.userSubject.next(parsedUser);
+        // Load user-specific data such as favorites and cart
+        if (parsedUser && parsedUser.id) {
+          this.loadUserData(parsedUser.id);
+        }
       } catch (e) {
         console.error('Error parsing stored user:', e);
         this.logout();
@@ -143,6 +141,10 @@ export class AuthService {
 
   isLoggedIn(): boolean {
     return this.isLoggedInSubject.getValue();
+  }
+
+  get currentUserValue() {
+    return this.userSubject.getValue();
   }
 
   setUser(user: any): void {

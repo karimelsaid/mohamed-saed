@@ -5,7 +5,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import {
     faArrowRight, faPaperPlane, faInfoCircle, faUsers, faCopy, faCheck,
-    faComments, faUserShield, faUser, faSync, faLink
+    faComments, faUserShield, faUser, faSync, faLink, faTrash
 } from '@fortawesome/free-solid-svg-icons';
 import { HalaqaService } from '../../../core/services/halaqa.service';
 import { AuthService } from '../../../auth/auth.service';
@@ -30,6 +30,7 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
     faUser = faUser;
     faSync = faSync;
     faLink = faLink;
+    faTrash = faTrash;
 
     // State
     activeTab: 'chat' | 'info' = 'chat';
@@ -43,6 +44,13 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
     isLoadingMessages = false;
     isSending = false;
     copySuccess = false;
+    checkingMembership = true;
+    isDeleting = false;
+
+    // Modal State
+    showDeleteConfirm = false;
+    showDeleteSuccess = false;
+    deleteError = '';
 
     @ViewChild('scrollContainer') private scrollContainer: ElementRef | undefined;
 
@@ -86,28 +94,43 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
     }
 
     loadHalaqaDetails() {
+        if (this.isDeleting) return;
         this.isLoadingDetails = true;
         this.halaqaService.getHalaqaDetails(this.halaqaId).subscribe({
             next: (res) => {
                 this.halaqaData = res.data;
                 this.isLoadingDetails = false;
 
+                // Robust ID extraction
+                const currentUserId = (this.currentUser?.id || this.currentUser?._id)?.toString();
+                const leaderId = (this.halaqaData.leader?._id || this.halaqaData.leader)?.toString();
+
                 // Membership Check
-                const isLeader = this.halaqaData.leader?._id === this.currentUser?.id || this.halaqaData.leader === this.currentUser?.id || this.halaqaData.leader?._id === this.currentUser?._id || this.halaqaData.leader === this.currentUser?._id;
-                const isMember = this.halaqaData.members?.some((m: any) => (m._id || m) === (this.currentUser?.id || this.currentUser?._id));
+                const isLeader = leaderId === currentUserId;
+                const isMember = this.halaqaData.members?.some((m: any) => (m._id || m)?.toString() === currentUserId);
 
                 if (!isLeader && !isMember) {
+                    this.checkingMembership = false;
                     alert('عذراً، يجب الانضمام للحلقة أولاً عبر كود الدعوة للمشاركة في الدردشة.');
                     this.goBack();
                     return;
                 }
 
+                this.checkingMembership = false;
                 this.loadMessages();
             },
             error: (err) => {
-                console.error('Failed to load details', err);
+                console.error('❌ Failed to load details', err);
                 this.isLoadingDetails = false;
-                this.goBack();
+                this.checkingMembership = false;
+                if (err.status === 404) {
+                    alert('عذراً، لم يتم العثور على هذه الحلقة أو تم حذفها.');
+                    this.router.navigate(['/community']).then(res => {
+                        if (!res) this.router.navigate(['community']);
+                    });
+                } else {
+                    this.goBack();
+                }
             }
         });
     }
@@ -171,5 +194,72 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
             console.error('Copy failed', err);
         }
         document.body.removeChild(textArea);
+    }
+
+    deleteHalaqa() {
+        this.showDeleteConfirm = true;
+    }
+
+    confirmDelete() {
+        this.isDeleting = true;
+        this.showDeleteConfirm = false;
+        this.isLoadingDetails = true;
+        const userId = this.currentUser.id || this.currentUser._id;
+
+        console.log('🚀 [HalaqaDetails] Starting deletion for:', this.halaqaId);
+
+        this.halaqaService.deleteHalaqa(this.halaqaId, userId).subscribe({
+            next: (res) => {
+                console.log('✅ [HalaqaDetails] Deletion successful');
+                this.isLoadingDetails = false;
+                this.checkingMembership = false;
+                this.showDeleteSuccess = true;
+
+                // Auto-navigate after 1.5 seconds (slightly faster)
+                setTimeout(() => {
+                    console.log('🔄 [HalaqaDetails] Navigating back to community...');
+
+                    // Priority 1: Relative to app root. Priority 2: With mushaf prefix.
+                    const paths = ['/community', 'community', '/mushaf/community', '../'];
+
+                    const tryNavigate = (index: number) => {
+                        if (index >= paths.length) {
+                            console.error('🚫 [HalaqaDetails] All navigation attempts failed. Falling back to window.location.');
+                            // Best fallback: go to the parent directory of current URL
+                            const currentUrl = window.location.href;
+                            const parentUrl = currentUrl.substring(0, currentUrl.lastIndexOf('/'));
+                            window.location.href = parentUrl;
+                            return;
+                        }
+
+                        const path = paths[index];
+                        this.router.navigate([path]).then(success => {
+                            if (success) {
+                                console.log(`✅ [HalaqaDetails] Successfully navigated to: ${path}`);
+                            } else {
+                                console.warn(`⚠️ [HalaqaDetails] Navigation to ${path} failed, trying next...`);
+                                tryNavigate(index + 1);
+                            }
+                        }).catch(err => {
+                            tryNavigate(index + 1);
+                        });
+                    };
+
+                    tryNavigate(0);
+                }, 1500);
+            },
+            error: (err) => {
+                console.error('❌ [HalaqaDetails] Failed to delete halaqa', err);
+                this.deleteError = err.error?.message || err.message;
+                this.isLoadingDetails = false;
+                this.isDeleting = false;
+            }
+        });
+    }
+
+    closeDeleteModals() {
+        this.showDeleteConfirm = false;
+        this.showDeleteSuccess = false;
+        this.deleteError = '';
     }
 }

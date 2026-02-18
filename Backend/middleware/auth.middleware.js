@@ -7,16 +7,20 @@ const verifyToken = async (req, res, next) => {
 
 
         if (!token) {
+            console.log('❌ [AuthMiddleware] No token provided in headers:', req.headers);
             return res.status(401).json({
                 success: false,
                 message: 'الوصول مرفوض. لم يتم توفير رمز المصادقة.'
             });
         }
 
+        console.log('🔑 [AuthMiddleware] Validating token...');
         let decoded;
         try {
             decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+            console.log('✅ [AuthMiddleware] Token decoded successfully:', { userId: decoded.userId });
         } catch (err) {
+            console.error('❌ [AuthMiddleware] Token verification failed:', err.message);
             return res.status(401).json({
                 success: false,
                 message: 'رمز المصادقة غير صالح أو منتهي الصلاحية.'

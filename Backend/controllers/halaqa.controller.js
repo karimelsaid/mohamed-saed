@@ -153,3 +153,29 @@ exports.sendMessage = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
+// حذف الحلقة (للقائد فقط)
+exports.deleteHalaqa = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { userId } = req.body; // or from req.user if using auth middleware
+
+        const halaqa = await Halaqa.findById(id);
+        if (!halaqa) return res.status(404).json({ success: false, message: 'Halaqa not found' });
+
+        // Verify leader
+        if (halaqa.leader.toString() !== userId) {
+            return res.status(403).json({ success: false, message: 'Only the leader can delete this Halaqa' });
+        }
+
+        // Delete all messages associated with this Halaqa
+        await Message.deleteMany({ halaqaId: id });
+
+        // Delete the Halaqa itself
+        await Halaqa.findByIdAndDelete(id);
+
+        res.status(200).json({ success: true, message: 'Halaqa and all messages deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};

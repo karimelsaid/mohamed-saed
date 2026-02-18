@@ -20,4 +20,7 @@ router.get('/:id', halaqaController.getHalaqaDetails);
 router.get('/:id/messages', halaqaController.getMessages);
 router.post('/:id/messages', halaqaController.sendMessage);
 
+// حذف الحلقة
+router.delete('/:id', halaqaController.deleteHalaqa);
+
 module.exports = router;

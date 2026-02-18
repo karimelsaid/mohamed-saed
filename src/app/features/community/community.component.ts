@@ -3,6 +3,7 @@ import { CommonModule, Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { faUsers, faPlus, faLink, faUserGraduate, faLock, faCheckCircle, faInfoCircle, faMars, faVenus, faSearch, faArrowRight, faShareAlt } from '@fortawesome/free-solid-svg-icons';
+import { Share } from '@capacitor/share';
 import { HalaqaService, Halaqa } from '../../core/services/halaqa.service';
 import { AuthService } from '../../auth/auth.service';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -54,7 +55,7 @@ export class CommunityComponent implements OnInit {
     ngOnInit(): void {
         this.authService.user$.subscribe((user: any) => {
             if (user) {
-                this.userId = user.id || user._id;
+                this.userId = (user.id || user._id)?.toString();
                 this.userGender = user.gender || '';
                 if (this.userGender) {
                     this.loadHalaqas();
@@ -96,22 +97,39 @@ export class CommunityComponent implements OnInit {
         });
     }
 
-    shareInviteCode(event: Event, code?: string) {
+    async shareInviteCode(event: Event, code?: string) {
         event.stopPropagation();
         if (!code) return;
 
-        if (navigator.share) {
-            navigator.share({
+        try {
+            await Share.share({
                 title: 'انضم لحلقتي في تطبيق كـنـوز',
-                text: `كود الانضمام: ${code}`,
-                url: window.location.origin
-            }).catch(console.error);
-        } else {
-            navigator.clipboard.writeText(code).then(() => {
-                this.message = '✅ تم نسخ كود الدعوة!';
-                setTimeout(() => this.message = '', 3000);
+                text: `كود الانضمام للحلقة: ${code}`,
+                url: 'https://knoozbook.com',
+                dialogTitle: 'مشاركة كود الانضمام',
             });
+        } catch (err) {
+            // Fallback for browsers
+            if (navigator.share) {
+                navigator.share({
+                    title: 'انضم لحلقتي في تطبيق كـنـوز',
+                    text: `كود الانضمام: ${code}`,
+                }).catch(() => this.copyToClipboard(code));
+            } else {
+                this.copyToClipboard(code);
+            }
         }
+    }
+
+    private copyToClipboard(code: string) {
+        navigator.clipboard.writeText(code).then(() => {
+            this.message = '✅ تم نسخ كود الدعوة!';
+            setTimeout(() => this.message = '', 3000);
+        });
+    }
+
+    isLeader(h: Halaqa): boolean {
+        return (h.leader?._id || h.leader)?.toString() === this.userId;
     }
 
     joinByCode() {

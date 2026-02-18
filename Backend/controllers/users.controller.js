@@ -149,9 +149,12 @@ async function login(req, res) {
   const { email, password } = req.body;
 
   try {
-    // Case-insensitive email search with trim
     const normalizedEmail = email ? email.trim() : '';
-    const user = await User.findOne({ email: { $regex: new RegExp(`^${normalizedEmail}$`, 'i') } });
+    // Use collation for case-insensitive search if supported, or just use a simpler query.
+    // For now, let's use a simpler match and add a timeout safely.
+    const user = await User.findOne({
+      email: { $regex: new RegExp(`^${normalizedEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }
+    }).maxTimeMS(5000); // 5 second timeout on the query itself
     if (!user) {
       return res.status(401).json({
         message: 'البريد الإلكتروني غير مسجل',

@@ -1,10 +1,15 @@
 import { ErrorHandler, NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 import { RouterModule, Routes } from '@angular/router';
-import { HttpClientModule } from '@angular/common/http';
+import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { ServiceWorkerModule } from '@angular/service-worker'; // Added
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+
+// Interceptors
+import { MerchantAuthInterceptor } from './interceptors/merchant-auth.interceptor';
+import { AdminAuthInterceptor } from './interceptors/admin-auth.interceptor';
+import { AuthInterceptor } from './interceptors/auth.interceptor';
 
 import { MushafRootComponent } from './mushaf-root.component';
 import { MushafModule } from './features/mushaf/mushaf.module';
@@ -49,6 +54,9 @@ const routes: Routes = [
     ],
     providers: [
         { provide: ErrorHandler, useClass: GlobalErrorHandler },
+        { provide: HTTP_INTERCEPTORS, useClass: MerchantAuthInterceptor, multi: true },
+        { provide: HTTP_INTERCEPTORS, useClass: AdminAuthInterceptor, multi: true },
+        { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
         MushafDataService,
         MushafFontService,
         MushafAssetService,

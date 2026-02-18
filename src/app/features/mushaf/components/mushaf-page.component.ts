@@ -7822,6 +7822,10 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
     }
 
     onLogout(): void {
+        console.warn('🛑 [MushafPage] onLogout triggered!', {
+            isLoggedIn: this.authService.isLoggedIn(),
+            user: this.authService.currentUserValue?.username
+        });
         this.authService.logout();
         this.router.navigate(['/login']);
     }

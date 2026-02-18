@@ -37,10 +37,14 @@ export class AuthInterceptor implements HttpInterceptor {
             req.url.includes('googleapis.com') ||
             req.url.includes('jsdelivr.net');
 
+        console.log(`🔍 [AuthInterceptor] Intercepting: ${req.url} (isInternal: ${isInternal}, isExternalMedia: ${isExternalMedia})`);
+
         if (isInternal && !isExternalMedia) {
             const userStr = localStorage.getItem('user');
             const merchantToken = localStorage.getItem('merchant_token');
             const authToken = localStorage.getItem('auth_token');
+
+            console.log(`🔍 [AuthInterceptor] Tokens found: user=${!!userStr}, merchant=${!!merchantToken}, auth=${!!authToken}`);
 
             if (userStr || merchantToken || authToken) {
                 try {

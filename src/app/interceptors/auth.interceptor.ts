@@ -43,6 +43,9 @@ export class AuthInterceptor implements HttpInterceptor {
         console.log(`🔍 [AuthInterceptor] Intercepting: ${req.url} (isInternal: ${isInternal}, Origin: ${window.location.origin})`);
 
         if (isInternal && !isExternalMedia) {
+            // ALWAYS set withCredentials for internal Kenouz API to ensure cookies/session work correctly across origins (Capacitor/CORS)
+            authReq = authReq.clone({ withCredentials: true });
+
             const userStr = localStorage.getItem('user');
             const merchantToken = localStorage.getItem('merchant_token');
             const authToken = localStorage.getItem('auth_token');

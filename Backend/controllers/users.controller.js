@@ -150,12 +150,14 @@ async function login(req, res) {
 
   try {
     const normalizedEmail = email ? email.trim() : '';
-    // Use collation for case-insensitive search if supported, or just use a simpler query.
-    // For now, let's use a simpler match and add a timeout safely.
+    console.log(`🔑 [Login] Attempt for: ${normalizedEmail}`);
+
     const user = await User.findOne({
       email: { $regex: new RegExp(`^${normalizedEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }
-    }).maxTimeMS(5000); // 5 second timeout on the query itself
+    }).maxTimeMS(5000);
+
     if (!user) {
+      console.warn(`❌ [Login] User not found: ${normalizedEmail}`);
       return res.status(401).json({
         message: 'البريد الإلكتروني غير مسجل',
         debugInfo: {
@@ -168,8 +170,11 @@ async function login(req, res) {
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
+      console.warn(`❌ [Login] Password mismatch for: ${normalizedEmail}`);
       return res.status(401).json({ message: 'كلمة المرور غير صحيحة' });
     }
+
+    console.log(`✅ [Login] Success for: ${normalizedEmail} (${user.role})`);
 
     // Generate JWT token for all users
     const jwt = require('jsonwebtoken');

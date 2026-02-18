@@ -279,14 +279,14 @@ async function addProduct(req, res) {
     await addProductToExcel(productData);
 
     // Update Excel file after product addition
-    // await updateExcelFromJson(process.env.GOOGLE_DRIVE_FILE_ID); // Redundant: addProductToExcel already updates the file
-    // Then update the update file to keep in sync
-    // await updateExcelFromJson(process.env.GOOGLE_DRIVE_FILE_update); // Optimized: Background this or remove if possible, but for now just commenting the main redundant one.
-    // Removed second update to main file
-    // await updateExcelFromJson(process.env.GOOGLE_DRIVE_FILE_ID);
+    // await updateExcelFromJson(process.env.GOOGLE_DRIVE_FILE_ID); // Redundant
 
     // Update sitemap.xml after product addition
-    sitemapService.generateSitemap();
+    try {
+      sitemapService.generateSitemap();
+    } catch (sitemapError) {
+      console.warn('⚠️ Failed to generate sitemap:', sitemapError.message);
+    }
 
     res.json({ success: true, message: 'Product added successfully', barcode });
   } catch (error) {
@@ -395,20 +395,40 @@ async function updateProduct(req, res) {
       return res.status(500).json({ success: false, message: 'Missing Google Drive file ID' });
     }
 
-    const client = await require('../config/drive').auth.getClient();
-    const drive = require('googleapis').google.drive({ version: 'v3', auth: client });
+    let json;
+    let drive;
+    let workbook;
+    let sheetName;
 
-    const resDrive = await drive.files.get({
-      fileId,
-      alt: 'media',
-    }, { responseType: 'arraybuffer' });
+    try {
+      const client = await require('../config/drive').auth.getClient();
+      drive = require('googleapis').google.drive({ version: 'v3', auth: client });
 
-    const buffer = Buffer.from(resDrive.data);
-    const xlsx = require('xlsx');
-    const workbook = xlsx.read(buffer, { type: 'buffer' });
-    const sheetName = workbook.SheetNames[0];
-    const sheet = workbook.Sheets[sheetName];
-    let json = xlsx.utils.sheet_to_json(sheet);
+      const resDrive = await drive.files.get({
+        fileId,
+        alt: 'media',
+      }, { responseType: 'arraybuffer' });
+
+      const buffer = Buffer.from(resDrive.data);
+      const xlsx = require('xlsx');
+      workbook = xlsx.read(buffer, { type: 'buffer' });
+      sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      json = xlsx.utils.sheet_to_json(sheet);
+    } catch (driveError) {
+      console.warn('⚠️ Failed to download Excel from Drive, falling back to local output_raw.json:', driveError.message);
+      const rawDataPath = path.join(__dirname, '..', 'output_raw.json');
+      if (fs.existsSync(rawDataPath)) {
+        json = JSON.parse(fs.readFileSync(rawDataPath, 'utf-8'));
+      } else {
+        const outputPath = path.join(__dirname, '..', 'output.json');
+        if (fs.existsSync(outputPath)) {
+          json = JSON.parse(fs.readFileSync(outputPath, 'utf-8'));
+        } else {
+          return res.status(500).json({ success: false, message: 'Fallback failed: No local product data available' });
+        }
+      }
+    }
 
     // Find product by barcode and update fields
     const productIndex = json.findIndex(p => {
@@ -428,29 +448,66 @@ async function updateProduct(req, res) {
     if (product_price !== undefined) json[productIndex].product_price = product_price;
     if (price_cost !== undefined) json[productIndex].price_cost = price_cost;
 
-    // Convert JSON back to sheet
-    const newSheet = xlsx.utils.json_to_sheet(json);
-    workbook.Sheets[sheetName] = newSheet;
+    // Write raw data locally immediately
+    const rawDataPath = path.join(__dirname, '..', 'output_raw.json');
+    try {
+      fs.writeFileSync(rawDataPath, JSON.stringify(json, null, 2));
 
-    // Write workbook to buffer
-    const wbout = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+      // Process and Update output.json locally immediately
+      const PromotionDate = require('../models/PromotionDate.model');
+      const promoDoc = await PromotionDate.findOne().sort({ createdAt: -1 }).exec();
+      const pStart = promoDoc ? promoDoc.startDate : new Date();
+      const pEnd = promoDoc ? promoDoc.endDate : new Date();
 
-    // Upload updated Excel file back to Google Drive
-    await drive.files.update({
-      fileId,
-      media: {
-        mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        body: wbout
+      const { processAndSaveData } = require('../services/excel.service');
+      await processAndSaveData(json, pStart, pEnd);
+
+      console.log('✅ Local data updated successfully');
+    } catch (fsError) {
+      console.error('❌ Failed to update local data files:', fsError.message);
+    }
+
+    // Attempt to sync back to Google Drive (resilient to missing workbook)
+    if (drive) {
+      try {
+        const xlsx = require('xlsx');
+
+        if (!workbook) {
+          workbook = xlsx.utils.book_new();
+          sheetName = 'Sheet1';
+          const newSheet = xlsx.utils.json_to_sheet(json);
+          xlsx.utils.book_append_sheet(workbook, newSheet, sheetName);
+        } else {
+          const newSheet = xlsx.utils.json_to_sheet(json);
+          workbook.Sheets[sheetName] = newSheet;
+        }
+        const wbout = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+
+        await drive.files.update({
+          fileId,
+          media: {
+            mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            body: wbout
+          }
+        });
+        console.log('✅ Product updated in Excel on Google Drive');
+
+        // Sync to update-file as well
+        const updateFileId = process.env.GOOGLE_DRIVE_FILE_update;
+        if (updateFileId && updateFileId !== fileId) {
+          await drive.files.update({
+            fileId: updateFileId,
+            media: {
+              mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+              body: wbout
+            }
+          });
+          console.log('✅ Product updated in update-Excel file on Google Drive');
+        }
+      } catch (syncError) {
+        console.warn('⚠️ Failed to sync product update to Google Drive:', syncError.message);
       }
-    });
-
-    // Update output.json by re-running downloadAndConvertExcel
-    await downloadAndConvertExcel(fileId);
-
-    // Update Excel file after product update
-    await updateExcelFromJson(process.env.GOOGLE_DRIVE_FILE_update);
-    // Removed additional update to main file as per user request
-    // await updateExcelFromJson(process.env.GOOGLE_DRIVE_FILE_ID);
+    }
 
     res.json({ success: true, message: 'Product updated successfully' });
   } catch (error) {
@@ -817,17 +874,16 @@ async function deleteProduct(req, res) {
           body: Buffer.from(wbout)
         }
       });
+      console.log('✅ Product deleted from Excel on Google Drive');
     } catch (uploadError) {
-      console.error('Error uploading updated Excel file:', uploadError);
-      return res.status(500).json({ success: false, message: 'Error uploading updated Excel file' });
+      console.warn('⚠️ Failed to sync product deletion to Google Drive:', uploadError.message);
     }
 
     // Update output.json by re-running downloadAndConvertExcel
     try {
       await require('../services/excel.service').downloadAndConvertExcel(fileId);
     } catch (updateError) {
-      console.error('Error updating output.json after Excel update:', updateError);
-      return res.status(500).json({ success: false, message: 'Error updating output.json after Excel update' });
+      console.warn('⚠️ Failed to refresh output.json after deletion:', updateError.message);
     }
 
     // Delete from Product model (covers both admin and merchant products)
@@ -994,20 +1050,36 @@ async function batchUpdateProductsMain(req, res) {
       return res.status(500).json({ success: false, message: 'Missing Google Drive file ID' });
     }
 
-    const client = await require('../config/drive').auth.getClient();
-    const drive = require('googleapis').google.drive({ version: 'v3', auth: client });
+    try {
+      const client = await require('../config/drive').auth.getClient();
+      drive = require('googleapis').google.drive({ version: 'v3', auth: client });
 
-    const resDrive = await drive.files.get({
-      fileId,
-      alt: 'media',
-    }, { responseType: 'arraybuffer' });
+      const resDrive = await drive.files.get({
+        fileId,
+        alt: 'media',
+      }, { responseType: 'arraybuffer' });
 
-    const buffer = Buffer.from(resDrive.data);
-    const xlsx = require('xlsx');
-    const workbook = xlsx.read(buffer, { type: 'buffer' });
-    const sheetName = workbook.SheetNames[0];
-    const sheet = workbook.Sheets[sheetName];
-    let json = xlsx.utils.sheet_to_json(sheet);
+      const buffer = Buffer.from(resDrive.data);
+      const xlsx = require('xlsx');
+      workbook = xlsx.read(buffer, { type: 'buffer' });
+      sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      json = xlsx.utils.sheet_to_json(sheet);
+    } catch (driveError) {
+      console.warn('⚠️ Failed to download Excel from Drive for batch update, falling back to local output_raw.json:', driveError.message);
+      const rawDataPath = path.join(__dirname, '..', 'output_raw.json');
+      if (fs.existsSync(rawDataPath)) {
+        json = JSON.parse(fs.readFileSync(rawDataPath, 'utf-8'));
+      } else {
+        // Very late fallback to output.json if raw is missing
+        const outputPath = path.join(__dirname, '..', 'output.json');
+        if (fs.existsSync(outputPath)) {
+          json = JSON.parse(fs.readFileSync(outputPath, 'utf-8'));
+        } else {
+          return res.status(500).json({ success: false, message: 'Fallback failed: No local product data available' });
+        }
+      }
+    }
 
     // Update products in JSON
     products.forEach(update => {
@@ -1027,26 +1099,68 @@ async function batchUpdateProductsMain(req, res) {
       }
     });
 
-    // Convert JSON back to sheet
-    const newSheet = xlsx.utils.json_to_sheet(json);
-    workbook.Sheets[sheetName] = newSheet;
+    // Write raw data locally immediately
+    const rawDataPath = path.join(__dirname, '..', 'output_raw.json');
+    try {
+      fs.writeFileSync(rawDataPath, JSON.stringify(json, null, 2));
 
-    // Write workbook to buffer
-    const wbout = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+      // Process and Update output.json locally immediately
+      const PromotionDate = require('../models/PromotionDate.model');
+      const promoDoc = await PromotionDate.findOne().sort({ createdAt: -1 }).exec();
+      const pStart = promoDoc ? promoDoc.startDate : new Date();
+      const pEnd = promoDoc ? promoDoc.endDate : new Date();
 
-    // Upload updated Excel file back to Google Drive
-    await drive.files.update({
-      fileId,
-      media: {
-        mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        body: wbout
+      const { processAndSaveData } = require('../services/excel.service');
+      await processAndSaveData(json, pStart, pEnd);
+
+      console.log('✅ Local data (output_raw.json & output.json) updated successfully during batch update');
+    } catch (fsError) {
+      console.error('❌ Failed to update local data files:', fsError.message);
+    }
+
+    // Attempt to sync back to Google Drive (resilient to missing workbook)
+    if (drive) {
+      try {
+        const xlsx = require('xlsx');
+
+        if (!workbook) {
+          workbook = xlsx.utils.book_new();
+          sheetName = 'Sheet1';
+          const newSheet = xlsx.utils.json_to_sheet(json);
+          xlsx.utils.book_append_sheet(workbook, newSheet, sheetName);
+        } else {
+          const newSheet = xlsx.utils.json_to_sheet(json);
+          workbook.Sheets[sheetName] = newSheet;
+        }
+        const wbout = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+
+        await drive.files.update({
+          fileId,
+          media: {
+            mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            body: wbout
+          }
+        });
+        console.log('✅ Batch updates synced to main Excel file on Google Drive');
+
+        // Sync to update-file as well
+        const updateFileId = process.env.GOOGLE_DRIVE_FILE_update;
+        if (updateFileId && updateFileId !== fileId) {
+          await drive.files.update({
+            fileId: updateFileId,
+            media: {
+              mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+              body: wbout
+            }
+          });
+          console.log('✅ Batch updates synced to update-Excel file on Google Drive');
+        }
+      } catch (syncError) {
+        console.warn('⚠️ Failed to sync batch update to Google Drive:', syncError.message);
       }
-    });
+    }
 
-    // Update output.json by re-running downloadAndConvertExcel
-    await downloadAndConvertExcel(fileId);
-
-    res.json({ success: true, message: 'Batch update of products in main file successful' });
+    res.json({ success: true, message: 'Batch update of products successful (locally persistent)' });
   } catch (error) {
     console.error('Error in batchUpdateProductsMain:', error);
     res.status(500).json({ success: false, message: 'Server error' });
@@ -1099,7 +1213,11 @@ async function updatePromotionDates(req, res) {
     // Update output.json by re-running downloadAndConvertExcel with new dates
     const fileId = process.env.GOOGLE_DRIVE_FILE_ID;
     if (fileId) {
-      await downloadAndConvertExcel(fileId, startDate, endDate);
+      try {
+        await downloadAndConvertExcel(fileId, startDate, endDate);
+      } catch (syncError) {
+        console.warn('⚠️ Failed to sync promotion dates to Google Drive:', syncError.message);
+      }
     }
 
     res.json({ success: true, message: 'Promotion dates updated successfully' });
@@ -1253,63 +1371,23 @@ async function updateProductApproval(req, res) {
     const barcode = product.product_image ? product.product_image.replace('.webp', '') : productId;
 
     if (status === 'rejected') {
-      // Remove product from Excel file if rejected
-      const fileId = process.env.GOOGLE_DRIVE_FILE_ID;
-      if (fileId) {
-        const client = await require('../config/drive').auth.getClient();
-        const drive = require('googleapis').google.drive({ version: 'v3', auth: client });
-
-        const resDrive = await drive.files.get({
-          fileId,
-          alt: 'media',
-        }, { responseType: 'arraybuffer' });
-
-        const buffer = Buffer.from(resDrive.data);
-        const xlsx = require('xlsx');
-        const workbook = xlsx.read(buffer, { type: 'buffer' });
-        const sheetName = workbook.SheetNames[0];
-        const sheet = workbook.Sheets[sheetName];
-        let json = xlsx.utils.sheet_to_json(sheet);
-
-        // Find and remove product by barcode (not MongoDB ID)
-        const productIndex = json.findIndex(p => {
-          if (!p.products_id) return false;
-          const pId = String(p.products_id).trim();
-          const bId = String(barcode).trim();
-          return pId === bId || Number(pId) === Number(bId) || pId === String(Number(bId)) || String(Number(pId)) === bId;
-        });
-        if (productIndex !== -1) {
-          json.splice(productIndex, 1);
-
-          // Convert JSON back to sheet
-          const newSheet = xlsx.utils.json_to_sheet(json);
-          workbook.Sheets[sheetName] = newSheet;
-
-          // Write workbook to buffer
-          const wbout = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
-
-          // Upload updated Excel file back to Google Drive
-          await drive.files.update({
-            fileId,
-            media: {
-              mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-              body: wbout
-            }
-          });
-
-          // Update output.json by re-running downloadAndConvertExcel
-          await downloadAndConvertExcel(fileId);
-
-          // Update the update file to keep in sync
-          await updateExcelFromJson(process.env.GOOGLE_DRIVE_FILE_update);
-        }
+      try {
+        // Remove product from Excel file using the service function
+        const fileId = process.env.GOOGLE_DRIVE_FILE_ID;
+        await removeProductFromExcel(barcode, fileId);
+      } catch (syncError) {
+        console.warn('⚠️ Failed to sync product rejection to Google Drive:', syncError.message);
       }
 
       // Delete product image if exists
       const uploadDir = path.join(__dirname, '../uploads/books');
       const imagePath = path.join(uploadDir, product.product_image || (barcode + '.webp'));
       if (fs.existsSync(imagePath)) {
-        fs.unlinkSync(imagePath);
+        try {
+          fs.unlinkSync(imagePath);
+        } catch (imgError) {
+          console.error('Error deleting product image:', imgError);
+        }
       }
     }
 
@@ -1317,50 +1395,50 @@ async function updateProductApproval(req, res) {
     await product.save();
 
     if (status === 'approved') {
-      // Determine category prefix
-      let categoryPrefix = '';
-      if (categoryMap.hasOwnProperty(product.product_category)) {
-        if (product.product_category === 'رواية') {
-          categoryPrefix = 'رواية-';
-        } else if (product.product_category === 'تنمية') {
-          categoryPrefix = 'تنمية-';
-        } else if (product.product_category === 'ديني') {
-          categoryPrefix = 'ديني-';
-        } else if (product.product_category === 'قاموس') {
-          categoryPrefix = 'قاموس-';
-        } else if (product.product_category === 'صحة') {
-          categoryPrefix = 'صحة-';
-        } else if (product.product_category === 'اعمال') {
-          categoryPrefix = 'اعمال-';
-        } else if (product.product_category === 'فن') {
-          categoryPrefix = 'فن-';
-        } else if (product.product_category === 'تاريخ') {
-          categoryPrefix = 'تاريخ-';
-        } else if (product.product_category === 'تربية') {
-          categoryPrefix = 'تربية-';
+      try {
+        // Determine category prefix
+        let categoryPrefix = '';
+        if (categoryMap.hasOwnProperty(product.product_category)) {
+          if (product.product_category === 'رواية') {
+            categoryPrefix = 'رواية-';
+          } else if (product.product_category === 'تنمية') {
+            categoryPrefix = 'تنمية-';
+          } else if (product.product_category === 'ديني') {
+            categoryPrefix = 'ديني-';
+          } else if (product.product_category === 'قاموس') {
+            categoryPrefix = 'قاموس-';
+          } else if (product.product_category === 'صحة') {
+            categoryPrefix = 'صحة-';
+          } else if (product.product_category === 'اعمال') {
+            categoryPrefix = 'اعمال-';
+          } else if (product.product_category === 'فن') {
+            categoryPrefix = 'فن-';
+          } else if (product.product_category === 'تاريخ') {
+            categoryPrefix = 'تاريخ-';
+          } else if (product.product_category === 'تربية') {
+            categoryPrefix = 'تربية-';
+          }
         }
+
+        // Prepare product data
+        const productData = {
+          barcode,
+          product_name: product.product_name,
+          product_quantity: product.product_quantity,
+          product_category: product.product_category,
+          product_description: product.product_description,
+          categoryPrefix, // Pass category prefix
+          product_price: product.product_price,
+          price_cost: product.price_cost,
+          createdAt: product.createdAt.toISOString(),
+          merchantId: product.merchantId // Pass merchantId to be used by excel service
+        };
+
+        // Add product to Excel (service function handles local-first persistence)
+        await addProductToExcel(productData, product.merchantId);
+      } catch (syncError) {
+        console.warn('⚠️ Failed to sync product approval (handled locally):', syncError.message);
       }
-
-      // Prepare product data
-      const productData = {
-        barcode,
-        product_name: product.product_name,
-        product_quantity: product.product_quantity,
-        product_category: product.product_category,
-        product_description: product.product_description,
-        categoryPrefix, // Pass category prefix
-        product_price: product.product_price,
-        price_cost: product.price_cost,
-        createdAt: product.createdAt.toISOString(),
-        merchantId: product.merchantId // Pass merchantId to be used by excel service
-      };
-
-      // Add product to Excel
-      await addProductToExcel(productData, product.merchantId);
-
-      // Update Excel files
-      await updateExcelFromJson(process.env.GOOGLE_DRIVE_FILE_ID);
-      await updateExcelFromJson(process.env.GOOGLE_DRIVE_FILE_update);
     }
 
     // If product is approved, update the product status in the Product collection
@@ -1998,42 +2076,7 @@ async function updateProductQuantity(req, res) {
     res.status(500).json({ success: false, message: 'Server error' });
   }
 }
-
-module.exports = {
-  upload,
-  addProduct,
-  listProducts,
-  updateProduct,
-  replaceProductImage,
-  replaceProductEpub,
-  deleteProduct,
-  bulkDeleteProducts,
-  syncJsonToExcel,
-  batchUpdateProducts,
-  batchUpdateProductsMain,
-  getPromotionDates,
-  updatePromotionDates,
-  getFreeShippingRules,
-  saveFreeShippingRules,
-  listMerchants,
-  updateMerchantApproval,
-  listMerchantProducts,
-  updateProductApproval,
-  updateMerchantSuspension,
-  getProductUpdateRequests,
-  updateProductUpdateRequest,
-  getMerchantProducts,
-  getMerchantProductsByMerchant,
-  getPaymentRequests,
-  userHierarchy,
-  getStats,
-  getAllUrgencyRequests,
-  updateUrgencyRequestStatus,
-  deleteUrgencyRequest,
-  updateProductQuantity,
-  updatePaymentRequestStatus,
-  getDonationStats
-};
+// End of Admin Controller
 
 async function updateUrgencyRequestStatus(req, res) {
   try {
@@ -2220,3 +2263,38 @@ async function updateProductQuantity(req, res) {
     res.status(500).json({ success: false, message: 'Server error' });
   }
 }
+module.exports = {
+  upload,
+  addProduct,
+  listProducts,
+  updateProduct,
+  replaceProductImage,
+  replaceProductEpub,
+  deleteProduct,
+  bulkDeleteProducts,
+  syncJsonToExcel,
+  batchUpdateProducts,
+  batchUpdateProductsMain,
+  getPromotionDates,
+  updatePromotionDates,
+  getFreeShippingRules,
+  saveFreeShippingRules,
+  listMerchants,
+  updateMerchantApproval,
+  listMerchantProducts,
+  updateProductApproval,
+  updateMerchantSuspension,
+  getProductUpdateRequests,
+  updateProductUpdateRequest,
+  getMerchantProducts,
+  getMerchantProductsByMerchant,
+  getPaymentRequests,
+  userHierarchy,
+  getStats,
+  getAllUrgencyRequests,
+  updateUrgencyRequestStatus,
+  deleteUrgencyRequest,
+  updateProductQuantity,
+  updatePaymentRequestStatus,
+  getDonationStats
+};

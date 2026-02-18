@@ -99,16 +99,34 @@ async function downloadAndConvertExcel(fileId, promotionStartDateStr, promotionE
     return !(product.product_quantity < 0);
   });
 
+  // Save raw data for local-first updates if needed
+  fs.writeFileSync(path.join(__dirname, '..', 'output_raw.json'), JSON.stringify(filteredJson, null, 2));
+
   // Preload all merchant products and merchants for fast lookup
-  const Product = require('../models/Product.model');
   const User = require('../models/User.model');
   const allMerchants = await User.find({ role: 'merchant' }, '_id username logo');
   // Create a map from merchantId to username for quick lookup
   const merchantMap = new Map(allMerchants.map(m => [m._id.toString(), { username: m.username, logo: m.logo }]));
 
+  return processAndSaveData(filteredJson, promotionStartDate, promoEndDate, merchantMap);
+}
+
+// Separate function for processing data and saving output.json
+async function processAndSaveData(filteredJson, promotionStartDate, promoEndDate, merchantMap = null) {
+  if (!merchantMap) {
+    const User = require('../models/User.model');
+    const allMerchants = await User.find({ role: 'merchant' }, '_id username logo');
+    merchantMap = new Map(allMerchants.map(m => [m._id.toString(), { username: m.username, logo: m.logo }]));
+  }
+
+  // Ensure promoEndDate/promotionStartDate are Dates if they came from JSON
+  promotionStartDate = new Date(promotionStartDate);
+  promoEndDate = new Date(promoEndDate);
+
   const updatedData = [];
   for (const product of filteredJson) {
     const product_id = product.products_id;
+    const isAlreadyProcessed = product.is_processed === true;
 
     // Map Barcode column (handle case sensitivity)
     if (product['Barcode']) {
@@ -116,8 +134,8 @@ async function downloadAndConvertExcel(fileId, promotionStartDateStr, promotionE
     } else if (product['barcode']) {
       product.barcode = String(product['barcode']).trim();
     } else {
-        // Fallback: Use products_id as barcode (User Request)
-        product.barcode = String(product_id).trim();
+      // Fallback: Use products_id as barcode (User Request)
+      product.barcode = String(product_id).trim();
     }
 
     let name = product.product_name || '';
@@ -159,16 +177,20 @@ async function downloadAndConvertExcel(fileId, promotionStartDateStr, promotionE
     // Add promotionEndDate property for frontend countdown
     product.promotionEndDate = promoEndDate.toISOString();
 
-    // Adjust product_price according to the clarified rule
-    let price = 0;
-    if (typeof product.product_price === 'string') {
-      price = parseFloat(product.product_price);
+    // Adjust product_price ONLY if not already processed to avoid double multiplication (fallback scenarios)
+    if (!isAlreadyProcessed) {
+      if (typeof product.product_price === 'string') {
+        price = parseFloat(product.product_price);
+      } else {
+        price = product.product_price;
+      }
+
+      // First increase price by 175%
+      price = price * 2.75;
     } else {
+      // Already processed, use the price as is (it's already adjusted)
       price = product.product_price;
     }
-
-    // First increase price by 175%
-    price = price * 2.75;
 
     // Save increased price before discount for comparison
     let increasedPrice = price;
@@ -194,7 +216,9 @@ async function downloadAndConvertExcel(fileId, promotionStartDateStr, promotionE
       }
     }
 
-    product.product_price_before_discount = increasedAdjustedPrice;
+    if (!isAlreadyProcessed) {
+      product.product_price_before_discount = increasedAdjustedPrice;
+    }
 
     // Add rival property: true if in promotion period, else false
     const today = new Date();
@@ -235,7 +259,9 @@ async function downloadAndConvertExcel(fileId, promotionStartDateStr, promotionE
       }
     }
 
-    product.product_price = adjustedPrice;
+    if (!isAlreadyProcessed) {
+      product.product_price = adjustedPrice;
+    }
 
     // Calculate discount percentage and round up to nearest 5
     let discountPercent = 0;
@@ -244,6 +270,7 @@ async function downloadAndConvertExcel(fileId, promotionStartDateStr, promotionE
     }
     product.product_discount_percent = roundUpToNearestFive(discountPercent);
 
+    product.is_processed = true; // Mark as processed for idempotency
     updatedData.push(product);
   }
 
@@ -259,22 +286,49 @@ async function addProductToExcel(productData, merchantId = null) {
     if (!fileId) {
       throw new Error('Missing required environment variable: GOOGLE_DRIVE_FILE_ID');
     }
-    const client = await auth.getClient();
-    const drive = google.drive({ version: 'v3', auth: client });
+    // Try to get data from Drive, fallback to local if needed
+    let json;
+    let workbook;
+    let sheetName;
+    let driveObj;
 
-    // Download current Excel file
-    const res = await drive.files.get({
-      fileId,
-      alt: 'media',
-    }, { responseType: 'arraybuffer' });
+    try {
+      const client = await auth.getClient();
+      driveObj = google.drive({ version: 'v3', auth: client });
 
-    const buffer = Buffer.from(res.data);
-    const workbook = xlsx.read(buffer, { type: 'buffer' });
-    const sheetName = workbook.SheetNames[0];
-    const sheet = workbook.Sheets[sheetName];
+      // Download current Excel file
+      const res = await driveObj.files.get({
+        fileId,
+        alt: 'media',
+      }, { responseType: 'arraybuffer' });
 
-    // Convert sheet to JSON
-    let json = xlsx.utils.sheet_to_json(sheet);
+      const buffer = Buffer.from(res.data);
+      workbook = xlsx.read(buffer, { type: 'buffer' });
+      sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+
+      // Convert sheet to JSON
+      json = xlsx.utils.sheet_to_json(sheet);
+    } catch (driveErr) {
+      console.warn('⚠️ Could not download Excel from Drive, falling back to local output_raw.json:', driveErr.message);
+      try {
+        const rawDataPath = path.join(__dirname, '..', 'output_raw.json');
+        if (fs.existsSync(rawDataPath)) {
+          json = JSON.parse(fs.readFileSync(rawDataPath, 'utf-8'));
+        } else {
+          // If no raw data, try output.json (might be processed but better than nothing as a base)
+          const outputPath = path.join(__dirname, '..', 'output.json');
+          if (fs.existsSync(outputPath)) {
+            json = JSON.parse(fs.readFileSync(outputPath, 'utf-8'));
+          } else {
+            json = [];
+          }
+        }
+      } catch (localErr) {
+        console.error('❌ Failed to read local data fallback:', localErr.message);
+        json = [];
+      }
+    }
 
     // Prepare new product row with all fields including category-specific ones
     const newRow = {
@@ -328,35 +382,76 @@ async function addProductToExcel(productData, merchantId = null) {
     // Add new row to JSON
     json.push(newRow);
 
-    // Convert JSON back to sheet
-    const newSheet = xlsx.utils.json_to_sheet(json);
+    // Write raw data locally immediately
+    const rawDataPath = path.join(__dirname, '..', 'output_raw.json');
+    fs.writeFileSync(rawDataPath, JSON.stringify(json, null, 2));
 
-    // Replace sheet in workbook
-    workbook.Sheets[sheetName] = newSheet;
+    // Process and Update output.json locally immediately
+    try {
+      // Fetch latest promotion dates for processing
+      const PromotionDate = require('../models/PromotionDate.model');
+      const promoDoc = await PromotionDate.findOne().sort({ createdAt: -1 }).exec();
+      const pStart = promoDoc ? promoDoc.startDate : new Date();
+      const pEnd = promoDoc ? promoDoc.endDate : new Date();
 
-    // Write workbook to buffer
-    const wbout = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+      await processAndSaveData(json, pStart, pEnd);
+      console.log('✅ Local data (output.json) updated successfully.');
+    } catch (procErr) {
+      console.warn('⚠️ Failed to process local data update:', procErr.message);
+    }
 
-    // Save updated Excel file locally (optional)
-    // fs.writeFileSync('updated_products.xlsx', wbout); // Disabled for security reasons
+    // Attempt to upload back to Google Drive (even if drive download failed initially)
+    if (driveObj) {
+      try {
+        const xlsx = require('xlsx');
 
-    // Upload updated Excel file back to Google Drive
-    await drive.files.update({
-      fileId,
-      media: {
-        mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        body: wbout // Upload directly from buffer without saving locally
+        if (!workbook) {
+          workbook = xlsx.utils.book_new();
+          sheetName = 'Sheet1';
+          const newSheet = xlsx.utils.json_to_sheet(json);
+          xlsx.utils.book_append_sheet(workbook, newSheet, sheetName);
+        } else {
+          const newSheet = xlsx.utils.json_to_sheet(json);
+          workbook.Sheets[sheetName] = newSheet;
+        }
+
+        // Write workbook to buffer
+        const wbout = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+
+        await driveObj.files.update({
+          fileId,
+          media: {
+            mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            body: wbout
+          }
+        });
+        console.log('✅ Excel file synced to Google Drive (Add)');
+
+        // Also update the second file if it exists
+        const updateFileId = process.env.GOOGLE_DRIVE_FILE_update;
+        if (updateFileId && updateFileId !== fileId) {
+          try {
+            await driveObj.files.update({
+              fileId: updateFileId,
+              media: {
+                mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                body: wbout
+              }
+            });
+            console.log('✅ Update-Excel file synced to Google Drive (Add)');
+          } catch (updateErr) {
+            console.warn('⚠️ Failed to sync update-file:', updateErr.message);
+          }
+        }
+      } catch (uploadErr) {
+        console.warn('⚠️ Failed to sync Excel file to Google Drive (Add):', uploadErr.message);
       }
-    });
+    }
 
-    // Update output.json by re-running downloadAndConvertExcel
-    await downloadAndConvertExcel(fileId);
-
-    console.log('✅ Product added to Excel and output.json updated.');
-    return true;
+    return true; // Return true because local update succeeded
   } catch (error) {
-    console.error('❌ Error adding product to Excel:', error);
-    throw error;
+    console.error('❌ Critical error in addProductToExcel:', error.message);
+    return false;
   }
 }
 
@@ -403,19 +498,23 @@ async function uploadExcelFromJson(createCopy = false) {
       return response.data;
     } else {
       // Update existing file
-      await drive.files.update({
-        fileId,
-        media: {
-          mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-          body: wbout
-        }
-      });
-      console.log('✅ Excel file uploaded from output.json to Google Drive.');
+      try {
+        await drive.files.update({
+          fileId,
+          media: {
+            mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            body: wbout
+          }
+        });
+        console.log('✅ Excel file uploaded from output.json to Google Drive.');
+      } catch (driveError) {
+        console.warn('⚠️ Failed to update main Excel file on Google Drive:', driveError.message);
+      }
       return true;
     }
   } catch (error) {
-    console.error('❌ Error uploading Excel from JSON:', error);
-    throw error;
+    console.warn('⚠️ Failed to upload Excel from local JSON to Google Drive:', error.message);
+    return false;
   }
 }
 
@@ -444,19 +543,149 @@ async function updateExcelFromJson(fileId) {
     const wbout = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
 
     // Upload updated Excel file back to Google Drive
-    await drive.files.update({
-      fileId,
-      media: {
-        mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        body: wbout
-      }
-    });
+    try {
+      await drive.files.update({
+        fileId,
+        media: {
+          mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          body: wbout
+        }
+      });
+      console.log('✅ Excel file updated from output.json on Google Drive.');
+    } catch (driveError) {
+      console.warn('⚠️ Failed to sync JSON to Google Drive:', driveError.message);
+    }
 
-    console.log('✅ Excel file updated from output.json on Google Drive.');
     return true;
   } catch (error) {
-    console.error('❌ Error updating Excel from JSON:', error);
-    throw error;
+    console.warn('⚠️ Failed to update Google Drive Excel from local JSON:', error.message);
+    return false;
+  }
+}
+
+// New function to remove product from Excel file and update output.json
+async function removeProductFromExcel(barcode, fileId) {
+  try {
+    if (!fileId) {
+      fileId = process.env.GOOGLE_DRIVE_FILE_ID;
+    }
+    if (!fileId) {
+      throw new Error('Missing required file ID for Excel update');
+    }
+
+    // Try to get data from Drive, fallback to local if needed
+    let json;
+    let workbook;
+    let sheetName;
+    let driveObj;
+
+    try {
+      const client = await auth.getClient();
+      driveObj = google.drive({ version: 'v3', auth: client });
+
+      const res = await driveObj.files.get({
+        fileId,
+        alt: 'media',
+      }, { responseType: 'arraybuffer' });
+
+      const buffer = Buffer.from(res.data);
+      workbook = xlsx.read(buffer, { type: 'buffer' });
+      sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      json = xlsx.utils.sheet_to_json(sheet);
+    } catch (driveErr) {
+      console.warn('⚠️ Could not download Excel from Drive for removal, falling back to local output_raw.json:', driveErr.message);
+      try {
+        const rawDataPath = path.join(__dirname, '..', 'output_raw.json');
+        if (fs.existsSync(rawDataPath)) {
+          json = JSON.parse(fs.readFileSync(rawDataPath, 'utf-8'));
+        } else {
+          json = [];
+        }
+      } catch (localErr) {
+        console.error('❌ Failed to read local raw data fallback:', localErr.message);
+        json = [];
+      }
+    }
+
+    // Find and remove product by barcode
+    const productIndex = json.findIndex(p => {
+      if (!p.products_id) return false;
+      const pId = String(p.products_id).trim();
+      const bId = String(barcode).trim();
+      return pId === bId || Number(pId) === Number(bId) || pId === String(Number(bId)) || String(Number(pId)) === bId;
+    });
+
+    if (productIndex !== -1) {
+      json.splice(productIndex, 1);
+
+      // Write raw data locally immediately
+      const rawDataPath = path.join(__dirname, '..', 'output_raw.json');
+      fs.writeFileSync(rawDataPath, JSON.stringify(json, null, 2));
+
+      // Process and Update output.json locally immediately
+      try {
+        const PromotionDate = require('../models/PromotionDate.model');
+        const promoDoc = await PromotionDate.findOne().sort({ createdAt: -1 }).exec();
+        const pStart = promoDoc ? promoDoc.startDate : new Date();
+        const pEnd = promoDoc ? promoDoc.endDate : new Date();
+        await processAndSaveData(json, pStart, pEnd);
+        console.log('✅ Local data (output.json) updated successfully after removal.');
+      } catch (procErr) {
+        console.warn('⚠️ Failed to process local data update after removal:', procErr.message);
+      }
+
+      // Attempt to upload back to Google Drive (even if drive download failed initially)
+      if (driveObj) {
+        try {
+          const xlsx = require('xlsx');
+
+          if (!workbook) {
+            workbook = xlsx.utils.book_new();
+            sheetName = 'Sheet1';
+            const newSheet = xlsx.utils.json_to_sheet(json);
+            xlsx.utils.book_append_sheet(workbook, newSheet, sheetName);
+          } else {
+            const newSheet = xlsx.utils.json_to_sheet(json);
+            workbook.Sheets[sheetName] = newSheet;
+          }
+          const wbout = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+
+          await driveObj.files.update({
+            fileId,
+            media: {
+              mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+              body: wbout
+            }
+          });
+          console.log('✅ Excel file synced to Google Drive after removal');
+
+          // Also update the second file if it exists
+          const updateFileId = process.env.GOOGLE_DRIVE_FILE_update;
+          if (updateFileId && updateFileId !== fileId) {
+            try {
+              await driveObj.files.update({
+                fileId: updateFileId,
+                media: {
+                  mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                  body: wbout
+                }
+              });
+              console.log('✅ Update-Excel file synced to Google Drive after removal');
+            } catch (updateErr) {
+              console.warn('⚠️ Failed to sync update-file after removal:', updateErr.message);
+            }
+          }
+        } catch (uploadErr) {
+          console.warn('⚠️ Failed to sync Excel file to Google Drive after removal:', uploadErr.message);
+        }
+      }
+    }
+
+    return true;
+  } catch (error) {
+    console.error('❌ Critical error in removeProductFromExcel:', error.message);
+    return false;
   }
 }
 
@@ -466,6 +695,8 @@ module.exports = {
   reverseCategoryMap,
   categoryFieldsMap,
   addProductToExcel,
+  removeProductFromExcel,
   uploadExcelFromJson,
-  updateExcelFromJson
+  updateExcelFromJson,
+  processAndSaveData
 };

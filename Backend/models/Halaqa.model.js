@@ -8,7 +8,7 @@ const halaqaSchema = new mongoose.Schema({
     assistants: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     members: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     maxMembers: { type: Number, default: 20 },
-    inviteCode: { type: String, unique: true, required: true },
+    inviteCode: { type: String, required: true },
     inviteCodeExpiry: { type: Date },
     isPrivate: { type: Boolean, default: false },
     active: { type: Boolean, default: true },
@@ -16,7 +16,7 @@ const halaqaSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now }
 }, { timestamps: true });
 
-// إنشاء فهرس للبحث السريع بالكود
-halaqaSchema.index({ inviteCode: 1 });
+// إنشاء فهرس فريد للبحث السريع بالكود
+halaqaSchema.index({ inviteCode: 1 }, { unique: true });
 
 module.exports = mongoose.model('Halaqa', halaqaSchema);

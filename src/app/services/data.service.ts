@@ -27,14 +27,25 @@ export class DataService {
     return forkJoin([books$, products$]).pipe(
       map(([books, products]) => {
         const combined = [...books, ...products];
-        // Remove duplicates based on products_id to ensure unique products
-        const uniqueMap = new Map();
+        const uniqueItems = new Map();
+        const now = new Date().getTime();
+
         for (const item of combined) {
           if (item.products_id) {
-            uniqueMap.set(item.products_id, item);
+            // Normalize property names for Home Page and other components
+            item.old_price = item.product_price_before_discount;
+            item.discount = item.product_discount_percent;
+
+            // Ensure rival flag is resilient to time drift
+            if (item.promotionEndDate) {
+              const promoEnd = new Date(item.promotionEndDate).getTime();
+              item.rival = item.rival || promoEnd > now;
+            }
+
+            uniqueItems.set(item.products_id, item);
           }
         }
-        return Array.from(uniqueMap.values());
+        return Array.from(uniqueItems.values());
       })
     );
   }

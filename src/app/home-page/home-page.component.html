@@ -71,8 +71,12 @@
 
               <!-- Badges (Optional) -->
               <div *ngIf="product.discount"
-                class="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-md shadow-sm">
+                class="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-md shadow-sm z-10">
                 -{{ product.discount }}%
+              </div>
+              <div *ngIf="product.rival"
+                class="absolute top-2 left-2 bg-yellow-400 text-black text-xs font-bold px-2 py-1 rounded-md shadow-sm z-10">
+                عرض خاص
               </div>
             </div>
 

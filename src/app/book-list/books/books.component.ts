@@ -72,9 +72,11 @@ export class BooksComponent implements OnInit, OnDestroy {
             const now = new Date().getTime();
             filteredBooks = filteredBooks.map((book: Book) => {
                 if (book.promotionEndDate) {
+                    const now = new Date().getTime();
                     const promoEnd = new Date(book.promotionEndDate).getTime();
-                    book.rival = promoEnd > now;
-                } else {
+                    // Respect server-side rival status or local calculation
+                    book.rival = book.rival || promoEnd > now;
+                } else if (book.rival === undefined) {
                     book.rival = false;
                 }
                 book.product_discount_percent = Number(book.product_discount_percent) || 0;

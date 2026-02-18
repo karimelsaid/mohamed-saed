@@ -86,6 +86,29 @@ async function getExcelData(req, res) {
           });
         }
 
+        // Enrich with promotion dates to ensure countdown timer works even if sync fails
+        try {
+          const PromotionDate = require('../models/PromotionDate.model');
+          const promoDoc = await PromotionDate.findOne().sort({ createdAt: -1 }).exec();
+          if (promoDoc) {
+            const now = new Date();
+            const promoEndDate = promoDoc.endDate;
+            const promotionStartDate = promoDoc.startDate;
+
+            jsonData.forEach(book => {
+              book.promotionEndDate = promoEndDate.toISOString();
+              // Recalculate rival flag based on real-time dates
+              if (promoEndDate.getTime() <= promotionStartDate.getTime()) {
+                book.rival = false;
+              } else {
+                book.rival = now.getTime() >= promotionStartDate.getTime() && now.getTime() <= promoEndDate.getTime();
+              }
+            });
+          }
+        } catch (promoError) {
+          console.error('Error enriching with promotion dates:', promoError);
+        }
+
         res.json(jsonData);
       } catch (error) {
         res.status(500).json({
@@ -185,6 +208,29 @@ async function getRecentBooks(req, res) {
             book.averageRating = 0;
             book.ratingCount = 0;
           });
+        }
+
+        // Enrich with promotion dates to ensure countdown timer works even if sync fails
+        try {
+          const PromotionDate = require('../models/PromotionDate.model');
+          const promoDoc = await PromotionDate.findOne().sort({ createdAt: -1 }).exec();
+          if (promoDoc) {
+            const now = new Date();
+            const promoEndDate = promoDoc.endDate;
+            const promotionStartDate = promoDoc.startDate;
+
+            recentBooks.forEach(book => {
+              book.promotionEndDate = promoEndDate.toISOString();
+              // Recalculate rival flag based on real-time dates
+              if (promoEndDate.getTime() <= promotionStartDate.getTime()) {
+                book.rival = false;
+              } else {
+                book.rival = now.getTime() >= promotionStartDate.getTime() && now.getTime() <= promoEndDate.getTime();
+              }
+            });
+          }
+        } catch (promoError) {
+          console.error('Error enriching with promotion dates in recent books:', promoError);
         }
 
         res.json(recentBooks);

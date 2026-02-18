@@ -55,23 +55,16 @@ export class IslamicComponent implements OnInit, OnDestroy {
     });
 
     this.dataService.getData().subscribe(data => {
-      console.log('Raw data received:', data); // Debug raw data
-
       // Filter books by category 'كتب دينية'
       let filteredBooks = data.filter((book: Book) => book.product_category.includes('كتب دينية'));
-
-      // Debug promotionEndDate values before processing
-      filteredBooks.forEach((book: Book) => {
-        console.log(`Book: ${book.product_name}, promotionEndDate raw: ${book.promotionEndDate}`);
-      });
 
       // Parse promotionEndDate and update rival flag based on current date
       const now = new Date().getTime();
       filteredBooks = filteredBooks.map((book: Book) => {
         if (book.promotionEndDate) {
           const promoEnd = new Date(book.promotionEndDate).getTime();
-          console.log(`Now: ${now}, PromoEnd: ${promoEnd}, PromoEnd > Now: ${promoEnd > now}`);
-          book.rival = promoEnd > now;
+          // Respect server-side rival status or local calculation
+          book.rival = book.rival || promoEnd > now;
         } else {
           book.rival = false;
         }
@@ -81,11 +74,6 @@ export class IslamicComponent implements OnInit, OnDestroy {
       });
 
       this.books = filteredBooks;
-
-      console.log('Loaded books with updated rival flags:', this.books);
-      this.books.forEach((book: Book) => {
-        console.log(`Book: ${book.product_name}, rival: ${book.rival}, discount: ${book.product_discount_percent}, promotionEndDate: ${book.promotionEndDate}`);
-      });
 
       this.totalPages = Math.ceil(this.books.length / this.booksPerPage); // حساب عدد الصفحات
       this.currentPage = Math.min(this.currentPage, this.totalPages); // التأكد من أن الصفحة الحالية صحيحة
@@ -398,7 +386,7 @@ export class IslamicComponent implements OnInit, OnDestroy {
         const distance = promoEndDate - now;
 
         if (distance < 0) {
-          book.remainingTime = 'انتهى العرض';
+          book.remainingTime = book.rival ? '' : 'انتهى العرض';
           return;
         }
 

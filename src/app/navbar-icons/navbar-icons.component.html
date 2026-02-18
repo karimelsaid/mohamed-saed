@@ -61,18 +61,6 @@
     </span>
   </div>
 
-  <!-- Community (New) -->
-  <div class="relative flex items-center justify-center">
-    <div *ngIf="!showOnlyNotification" routerLink="/community" routerLinkActive="active-pill"
-      [routerLinkActiveOptions]="{exact:true}" class="nav-item-pill group" #communityLink="routerLinkActive">
-      <fa-icon [icon]="faUsers" class="text-xl text-blue-500"></fa-icon>
-      <span class="nav-label text-blue-600 dark:text-blue-400 font-bold">المجتمع</span>
-    </div>
-    <span *ngIf="!showOnlyNotification"
-      class="absolute -top-3 left-1/2 -translate-x-1/2 text-blue-500 text-[9px] font-extrabold z-50 pointer-events-none tracking-tighter whitespace-nowrap animate-pulse">
-      جديد
-    </span>
-  </div>
 
   <!-- Notifications -->
   <div class="relative notifications-wrapper">

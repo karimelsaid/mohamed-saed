@@ -1,5 +1,5 @@
 import { Component, OnInit, AfterViewInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, Location } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -11,7 +11,7 @@ import { Capacitor } from '@capacitor/core';
 import { RouterModule } from '@angular/router';
 
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { faEnvelope, faLock, faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
+import { faEnvelope, faLock, faEye, faEyeSlash, faArrowRight } from '@fortawesome/free-solid-svg-icons';
 
 @Component({
   selector: 'app-login',
@@ -26,6 +26,7 @@ export class LoginComponent implements OnInit, AfterViewInit {
   faLock = faLock;
   faEye = faEye;
   faEyeSlash = faEyeSlash;
+  faArrowRight = faArrowRight;
 
   email: string = '';
   password: string = '';
@@ -39,7 +40,8 @@ export class LoginComponent implements OnInit, AfterViewInit {
     private http: HttpClient,
     private authService: AuthService,
     private merchantAuthService: MerchantAuthService,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private location: Location
   ) { }
 
   ngOnInit() {
@@ -234,5 +236,9 @@ export class LoginComponent implements OnInit, AfterViewInit {
         this.isSuccess = false;
       }
     });
+  }
+
+  goBack() {
+    this.location.back();
   }
 }

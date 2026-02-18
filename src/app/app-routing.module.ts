@@ -53,7 +53,6 @@ import { SubscriptionComponent } from './subscription/subscription.component';
 import { DownloadsComponent } from './downloads/downloads.component';
 import { GamificationDashboardComponent } from './gamification/dashboard/dashboard.component';
 import { HowToEarnComponent } from './pages/how-to-earn/how-to-earn.component';
-import { CommunityComponent } from './features/community/community.component';
 // Removed static imports of Mushaf for lazy loading
 const routes: Routes = [
   {
@@ -150,7 +149,6 @@ const routes: Routes = [
   { path: 'الشروط-والاحكام', component: TermsConditionsComponent },
   { path: 'achievements', component: GamificationDashboardComponent },
   { path: 'earn', component: HowToEarnComponent },
-  { path: 'community', component: CommunityComponent },
   // Mushaf and Quran Dashboard routes removed for build separation
   // path: 'mushaf', loadChildren: ...
   // path: 'quran-dashboard', loadChildren: ...

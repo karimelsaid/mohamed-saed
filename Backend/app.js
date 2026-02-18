@@ -74,7 +74,7 @@ app.use((req, res, next) => {
 });
 
 // إعداد CORS للسماح بالمصادر المناسبة
-const allowedOrigins = ['https://knoozbook.com', 'https://www.knoozbook.com', 'https://localhost', 'http://localhost', 'http://localhost:3000'];
+const allowedOrigins = ['https://knoozbook.com', 'https://www.knoozbook.com', 'https://localhost', 'http://localhost', 'http://localhost:3000', 'capacitor://localhost'];
 if (!isProduction) {
   allowedOrigins.push('http://localhost:4200');
 }

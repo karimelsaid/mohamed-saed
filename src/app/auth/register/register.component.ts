@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+import { CommonModule, Location } from '@angular/common';
 import { Component, OnInit, AfterViewInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../auth.service';
@@ -11,7 +11,7 @@ import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import {
   faUser, faEnvelope, faLock, faPhone, faMapMarkerAlt,
   faStore, faIdCard, faImage, faEye, faEyeSlash, faBuilding, faGift, faCheckCircle,
-  faMars, faVenus
+  faMars, faVenus, faArrowRight
 } from '@fortawesome/free-solid-svg-icons';
 
 @Component({
@@ -38,6 +38,7 @@ export class RegisterComponent implements OnInit, AfterViewInit {
   faCheckCircle = faCheckCircle;
   faMars = faMars;
   faVenus = faVenus;
+  faArrowRight = faArrowRight;
 
   governorates: any[] = governoratesData.governorates;
   buyerCities: string[] = [];
@@ -91,7 +92,7 @@ export class RegisterComponent implements OnInit, AfterViewInit {
 
   referralCode: string = '';
 
-  constructor(private authService: AuthService, private router: Router, private route: ActivatedRoute) { }
+  constructor(private authService: AuthService, private router: Router, private route: ActivatedRoute, private location: Location) { }
 
   ngOnInit() {
     // اقرأ returnUrl من الرابط
@@ -404,5 +405,9 @@ export class RegisterComponent implements OnInit, AfterViewInit {
         console.error('Error creating merchant account:', error);
       }
     });
+  }
+
+  goBack() {
+    this.location.back();
   }
 }

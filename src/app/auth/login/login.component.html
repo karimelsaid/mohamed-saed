@@ -7,10 +7,18 @@
   </div>
 
   <div class="max-w-md mx-auto relative z-10">
+    <!-- Back Button -->
+    <button (click)="goBack()"
+      class="mb-4 flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 group">
+      <fa-icon [icon]="faArrowRight"
+        class="text-lg group-hover:translate-x-1 transition-transform duration-200"></fa-icon>
+      <span class="font-medium">رجوع</span>
+    </button>
+
     <!-- Logo or Branding Header -->
     <div class="text-center mb-8 md:mt-20">
       <h2 class="text-3xl font-extrabold text-gray-900 dark:text-white mb-2">أهلاً بعودتك! 👋</h2>
-      <p class="text-gray-500 dark:text-gray-400">سجل الدخول للمتابعة في عالم كنوز بوك</p>
+      <p class="text-gray-500 dark:text-gray-400">سجل الدخول للمتابعة</p>
     </div>
 
     <!-- Main Card -->

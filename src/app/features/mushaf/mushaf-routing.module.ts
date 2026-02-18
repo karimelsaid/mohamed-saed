@@ -1,17 +1,25 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { MushafPageComponent } from './components/mushaf-page.component';
-import { LoginComponent } from '../../auth/login/login.component';
-import { RegisterComponent } from '../../auth/register/register.component';
-import { UserProfileComponent } from '../../auth/user-profile/user-profile.component';
-import { CommunityComponent } from '../community/community.component';
 
 const routes: Routes = [
     { path: '', component: MushafPageComponent },
-    { path: 'login', component: LoginComponent },
-    { path: 'register', component: RegisterComponent },
-    { path: 'profile', component: UserProfileComponent },
-    { path: 'community', component: CommunityComponent }
+    {
+        path: 'login',
+        loadComponent: () => import('../../auth/login/login.component').then(m => m.LoginComponent)
+    },
+    {
+        path: 'register',
+        loadComponent: () => import('../../auth/register/register.component').then(m => m.RegisterComponent)
+    },
+    {
+        path: 'profile',
+        loadComponent: () => import('../../auth/user-profile/user-profile.component').then(m => m.UserProfileComponent)
+    },
+    {
+        path: 'community',
+        loadComponent: () => import('../community/community.component').then(m => m.CommunityComponent)
+    }
 ];
 
 @NgModule({

@@ -142,12 +142,17 @@ exports.joinHalaqa = async (req, res) => {
 exports.getHalaqaDetails = async (req, res) => {
     try {
         const { id } = req.params;
+        console.log(`🔍 [HalaqaController] Fetching details for ID: ${id}`);
         const halaqa = await Halaqa.findById(id)
             .populate('leader', 'username profileImage')
             .populate('members', 'username profileImage gender') // Include gender to valid
             .populate('assistants', 'username profileImage');
 
-        if (!halaqa) return res.status(404).json({ success: false, message: 'Halaqa not found' });
+        if (!halaqa) {
+            console.warn(`⚠️ [HalaqaController] Halaqa not found for ID: ${id}`);
+            return res.status(404).json({ success: false, message: 'Halaqa not found' });
+        }
+        console.log(`✅ [HalaqaController] Found Halaqa: ${halaqa.name}`);
 
         // Check if user is member (Optional privacy check)
         // For now open details is fine, or check req.user if available

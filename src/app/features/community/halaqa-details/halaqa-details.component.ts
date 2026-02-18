@@ -11,6 +11,7 @@ import { HalaqaService } from '../../../core/services/halaqa.service';
 import { PresenceService, ActiveUser } from '../../../core/services/presence.service';
 import { VoiceCallService } from '../../../core/services/voice-call.service';
 import { AuthService } from '../../../auth/auth.service';
+import { environment } from '../../../../environments/environment';
 import { Subscription } from 'rxjs';
 import { VoiceCallComponent } from '../voice-call/voice-call.component';
 
@@ -187,8 +188,10 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
     loadHalaqaDetails() {
         if (this.isDeleting) return;
         this.isLoadingDetails = true;
+        console.log(`🔍 [HalaqaDetails] Loading details for ID: ${this.halaqaId} from ${environment.apiBaseUrl}`);
         this.halaqaService.getHalaqaDetails(this.halaqaId).subscribe({
             next: (res) => {
+                console.log('✅ [HalaqaDetails] Data received:', res.data?.name);
                 this.halaqaData = res.data;
                 this.isLoadingDetails = false;
 

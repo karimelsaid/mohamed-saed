@@ -4,6 +4,7 @@ import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
+import { environment } from '../../environments/environment';
 
 @Injectable()
 export class AuthInterceptor implements HttpInterceptor {
@@ -26,6 +27,7 @@ export class AuthInterceptor implements HttpInterceptor {
 
         // Determine if request is internal (Kenouz API or local)
         const isInternal = req.url.startsWith('/api') ||
+            req.url.startsWith(environment.apiBaseUrl) ||
             req.url.startsWith('/auth') ||
             req.url.startsWith('/admin') ||
             req.url.startsWith('/uploads') ||

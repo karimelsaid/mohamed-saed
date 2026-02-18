@@ -234,7 +234,7 @@ exports.deleteHalaqa = async (req, res) => {
         if (!halaqa) return res.status(404).json({ success: false, message: 'Halaqa not found' });
 
         // Verify leader
-        if (halaqa.leader.toString() !== userId) {
+        if (halaqa.leader.toString() !== userId.toString()) {
             return res.status(403).json({ success: false, message: 'Only the leader can delete this Halaqa' });
         }
 

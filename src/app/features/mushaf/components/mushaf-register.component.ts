@@ -82,6 +82,15 @@ import { AuthService } from '../../../auth/auth.service';
                             class="appearance-none block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
                             placeholder="كلمة مرور قوية">
                     </div>
+
+                    <!-- Confirm Password -->
+                    <div>
+                        <label for="confirmPassword" class="block text-sm font-medium text-gray-700 mb-1">تأكيد كلمة المرور</label>
+                        <input id="confirmPassword" name="confirmPassword" type="password" autocomplete="new-password" required
+                            [(ngModel)]="confirmPassword"
+                            class="appearance-none block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
+                            placeholder="أعد كتابة كلمة المرور">
+                    </div>
                 </div>
 
                 <div>
@@ -122,6 +131,7 @@ export class MushafRegisterComponent {
         password: '',
         gender: ''
     };
+    confirmPassword = '';
 
     message = '';
     isLoading = false;
@@ -149,6 +159,11 @@ export class MushafRegisterComponent {
             return;
         }
 
+        if (this.user.password !== this.confirmPassword) {
+            this.message = '❌ كلمة المرور وتأكيد كلمة المرور غير متطابقين';
+            return;
+        }
+
         this.isLoading = true;
         this.message = '';
 
@@ -164,9 +179,6 @@ export class MushafRegisterComponent {
         ).subscribe({
             next: (response: any) => {
                 this.message = '✅ تم إنشاء الحساب بنجاح! جاري التوجيه...';
-                // Auto login might be needed if creating account doesn't auto login, 
-                // but usually createAccount returns token or we redirect to login.
-                // Based on auth service, createAccount returns token.
                 if (response.user && response.user.token) {
                     const userWithToken = { ...response.user, token: response.user.token };
                     this.authService.setUser(userWithToken);

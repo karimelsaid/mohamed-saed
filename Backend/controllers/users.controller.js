@@ -53,8 +53,9 @@ async function createAccount(req, res) {
   const { username, email, password, phone, governorate, city, village, gender, referralCode, bookId } = req.body;
 
   try {
-    // التحقق من البريد الإلكتروني
-    const existingUser = await User.findOne({ email });
+    // التحقق من البريد الإلكتروني (Case Insensitive)
+    const normalizedEmail = email ? email.trim() : '';
+    const existingUser = await User.findOne({ email: { $regex: new RegExp(`^${normalizedEmail}$`, 'i') } });
     if (existingUser) {
       return res.status(400).json({ message: 'هذا البريد الإلكتروني مسجل من قبل.' });
     }
@@ -148,7 +149,9 @@ async function login(req, res) {
   const { email, password } = req.body;
 
   try {
-    const user = await User.findOne({ email });
+    // Case-insensitive email search with trim
+    const normalizedEmail = email ? email.trim() : '';
+    const user = await User.findOne({ email: { $regex: new RegExp(`^${normalizedEmail}$`, 'i') } });
     if (!user) {
       return res.status(401).json({ message: 'البريد الإلكتروني غير مسجل' });
     }

@@ -232,7 +232,11 @@ export class LoginComponent implements OnInit, AfterViewInit {
       },
       error: (err) => {
         console.error(err);
-        this.message = err.error?.message || '❌ حدث خطأ أثناء تسجيل الدخول';
+        if (err.status === 0) {
+          this.message = '❌ فشل الاتصال بالسيرفر. يرجى التأكد من اتصال الإنترنت أو إعدادات السيرفر (CORS).';
+        } else {
+          this.message = err.error?.message || '❌ حدث خطأ أثناء تسجيل الدخول';
+        }
         this.isSuccess = false;
       }
     });

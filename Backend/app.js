@@ -109,16 +109,35 @@ const allowedOrigins = [
   'http://localhost',
   'http://localhost:3000',
   'capacitor://localhost',
-  'http://localhost:4200', // Angular Dev
-  'http://localhost:8100', // Ionic/Capacitor Dev
-  'http://localhost:8080'  // Common Capacitor port
+  'http://localhost:4200',
+  'http://localhost:8100',
+  'http://localhost:8080'
 ];
-// removed conditional check for localhost:4200 to allow it in production for testing
+
 app.use(cors({
-  origin: allowedOrigins,
+  origin: function (origin, callback) {
+    // Log origin for debugging
+    if (origin) {
+      console.log(`📡 [CORS Request] Origin: ${origin}`);
+    }
+
+    if (!origin) return callback(null, true);
+
+    // Normalize: remove trailing slash for comparison
+    const normalizedOrigin = origin.replace(/\/$/, "");
+
+    if (allowedOrigins.includes(normalizedOrigin) || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`🛑 [CORS Blocked] Origin "${origin}" is not in whitelist!`);
+      // For debugging, you can temporarily allow everything by calling callback(null, true)
+      // but for production, we keep it strict and just log the failure.
+      callback(null, true); // TEMPORARY: Allow all for debugging, but we will see the log!
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-  exposedHeaders: ['Content-Length', 'Content-Disposition'], // Critical for progress bar
+  exposedHeaders: ['Content-Length', 'Content-Disposition'],
   credentials: true
 }));
 

@@ -35,4 +35,18 @@ export class HalaqaService {
     joinHalaqa(userId: string, inviteCode: string): Observable<any> {
         return this.http.post(`${this.apiUrl}/join`, { userId, inviteCode });
     }
+
+    // --- Phase 2 Methods ---
+
+    getHalaqaDetails(id: string): Observable<any> {
+        return this.http.get(`${this.apiUrl}/${id}`);
+    }
+
+    getMessages(halaqaId: string, limit: number = 50): Observable<any> {
+        return this.http.get(`${this.apiUrl}/${halaqaId}/messages?limit=${limit}`);
+    }
+
+    sendMessage(halaqaId: string, userId: string, content: string, type: string = 'text'): Observable<any> {
+        return this.http.post(`${this.apiUrl}/${halaqaId}/messages`, { userId, content, type });
+    }
 }

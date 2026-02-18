@@ -19,6 +19,10 @@ const routes: Routes = [
     {
         path: 'community',
         loadComponent: () => import('../community/community.component').then(m => m.CommunityComponent)
+    },
+    {
+        path: 'community/:id',
+        loadComponent: () => import('../community/halaqa-details/halaqa-details.component').then(m => m.HalaqaDetailsComponent)
     }
 ];
 

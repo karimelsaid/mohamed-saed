@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { faUsers, faPlus, faLink, faUserGraduate, faLock, faCheckCircle, faInfoCircle, faMars, faVenus, faSearch, faArrowRight } from '@fortawesome/free-solid-svg-icons';
+import { faUsers, faPlus, faLink, faUserGraduate, faLock, faCheckCircle, faInfoCircle, faMars, faVenus, faSearch, faArrowRight, faShareAlt } from '@fortawesome/free-solid-svg-icons';
 import { HalaqaService, Halaqa } from '../../core/services/halaqa.service';
 import { AuthService } from '../../auth/auth.service';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -26,6 +26,7 @@ export class CommunityComponent implements OnInit {
     faVenus = faVenus;
     faSearch = faSearch;
     faArrowRight = faArrowRight;
+    faShareAlt = faShareAlt;
 
     availableHalaqas: Halaqa[] = [];
     userGender: string = '';
@@ -77,6 +78,10 @@ export class CommunityComponent implements OnInit {
         }
     }
 
+    openDetails(id: string) {
+        this.router.navigate([id], { relativeTo: this.route });
+    }
+
     loadHalaqas() {
         this.isLoading = true;
         this.halaqaService.getAvailableHalaqas(this.userGender).subscribe({
@@ -89,6 +94,24 @@ export class CommunityComponent implements OnInit {
                 this.isLoading = false;
             }
         });
+    }
+
+    shareInviteCode(event: Event, code?: string) {
+        event.stopPropagation();
+        if (!code) return;
+
+        if (navigator.share) {
+            navigator.share({
+                title: 'انضم لحلقتي في تطبيق كـنـوز',
+                text: `كود الانضمام: ${code}`,
+                url: window.location.origin
+            }).catch(console.error);
+        } else {
+            navigator.clipboard.writeText(code).then(() => {
+                this.message = '✅ تم نسخ كود الدعوة!';
+                setTimeout(() => this.message = '', 3000);
+            });
+        }
     }
 
     joinByCode() {

@@ -74,10 +74,18 @@ app.use((req, res, next) => {
 });
 
 // إعداد CORS للسماح بالمصادر المناسبة
-const allowedOrigins = ['https://knoozbook.com', 'https://www.knoozbook.com', 'https://localhost', 'http://localhost', 'http://localhost:3000', 'capacitor://localhost'];
-if (!isProduction) {
-  allowedOrigins.push('http://localhost:4200');
-}
+// إعداد CORS للسماح بالمصادر المناسبة
+const allowedOrigins = [
+  'https://knoozbook.com',
+  'https://www.knoozbook.com',
+  'https://localhost',
+  'http://localhost',
+  'http://localhost:3000',
+  'capacitor://localhost',
+  'http://localhost:4200', // Angular Dev
+  'http://localhost:8100'  // Ionic/Capacitor Dev
+];
+// removed conditional check for localhost:4200 to allow it in production for testing
 app.use(cors({
   origin: allowedOrigins,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],

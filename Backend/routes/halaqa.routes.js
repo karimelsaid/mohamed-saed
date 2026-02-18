@@ -11,4 +11,13 @@ router.get('/available', halaqaController.getAvailableHalaqas);
 // الانضمام لحلقة
 router.post('/join', halaqaController.joinHalaqa);
 
+// --- Phase 2 Routes ---
+
+// تفاصيل الحلقة
+router.get('/:id', halaqaController.getHalaqaDetails);
+
+// رسائل المحادثة
+router.get('/:id/messages', halaqaController.getMessages);
+router.post('/:id/messages', halaqaController.sendMessage);
+
 module.exports = router;

@@ -153,7 +153,14 @@ async function login(req, res) {
     const normalizedEmail = email ? email.trim() : '';
     const user = await User.findOne({ email: { $regex: new RegExp(`^${normalizedEmail}$`, 'i') } });
     if (!user) {
-      return res.status(401).json({ message: 'البريد الإلكتروني غير مسجل' });
+      return res.status(401).json({
+        message: 'البريد الإلكتروني غير مسجل',
+        debugInfo: {
+          receivedEmail: email,
+          normalizedEmail: normalizedEmail,
+          version: '1.2-fix-casing'
+        }
+      });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);

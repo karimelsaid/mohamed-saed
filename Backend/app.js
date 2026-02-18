@@ -51,6 +51,17 @@ const quranProgressRoutes = require('./routes/quran-progress.routes');
 const express = require('express');
 const bodyParser = require('body-parser');
 const app = express();
+const http = require('http');
+const server = http.createServer(app);
+const { Server } = require('socket.io');
+
+const io = new Server(server, {
+  cors: {
+    origin: "*", // Adjust origins later if needed
+    methods: ["GET", "POST"]
+  }
+});
+
 const port = process.env.PORT || 3000;
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -601,6 +612,45 @@ app.get('*', (req, res, next) => {
   res.sendFile(path.join(__dirname, 'dist/browser/index.html'));
 });
 
+// Socket.io Logic for Presence
+const activeUsersInRooms = {}; // { halaqaId: Set(userIds) }
+
+io.on('connection', (socket) => {
+  console.log('👤 New socket connection:', socket.id);
+
+  socket.on('join_halaqa', ({ halaqaId, userId, username }) => {
+    socket.join(halaqaId);
+    socket.userId = userId;
+    socket.halaqaId = halaqaId;
+    socket.username = username;
+
+    if (!activeUsersInRooms[halaqaId]) {
+      activeUsersInRooms[halaqaId] = new Map();
+    }
+
+    // Store user info
+    activeUsersInRooms[halaqaId].set(userId, {
+      userId,
+      username,
+      socketId: socket.id,
+      joinedAt: new Date()
+    });
+
+    // Notify others
+    io.to(halaqaId).emit('presence_update', Array.from(activeUsersInRooms[halaqaId].values()));
+    console.log(`✅ User ${username} joined Halaqa ${halaqaId}`);
+  });
+
+  socket.on('disconnect', () => {
+    const { halaqaId, userId } = socket;
+    if (halaqaId && userId && activeUsersInRooms[halaqaId]) {
+      activeUsersInRooms[halaqaId].delete(userId);
+      io.to(halaqaId).emit('presence_update', Array.from(activeUsersInRooms[halaqaId].values()));
+      console.log(`❌ User ${userId} disconnected from Room ${halaqaId}`);
+    }
+  });
+});
+
 // Global Error Handler
 app.use((err, req, res, next) => {
   console.error('🔥 Global Error Handler:', err);
@@ -617,7 +667,7 @@ async function startServer() {
   try {
     await connectDB();
 
-    app.listen(port, '0.0.0.0', () => {
+    server.listen(port, '0.0.0.0', () => {
       console.log(`🚀 الخادم يعمل على http://0.0.0.0:${port}`);
       // Initialize Cron Jobs
       cronJobs.initCronJobs();

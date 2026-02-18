@@ -1,4 +1,5 @@
 const Halaqa = require('../models/Halaqa.model');
+const HalaqaRating = require('../models/HalaqaRating.model');
 const User = require('../models/User.model');
 const Message = require('../models/Message.model');
 const crypto = require('crypto');
@@ -30,15 +31,76 @@ exports.createHalaqa = async (req, res) => {
     }
 };
 
-// جلب الحلقات المتاحة لنفس جنس المستخدم
+// جلب الحلقات المتاحة لنفس جنس المستخدم (العامة فقط)
 exports.getAvailableHalaqas = async (req, res) => {
     try {
-        const { gender } = req.query; // يفضل تمريره من الـ Frontend بناءً على بيانات المستخدم المسجل
-        const halaqas = await Halaqa.find({ gender, active: true, isPrivate: false })
+        const { gender, userId } = req.query;
+        const query = { gender, active: true, isPrivate: false };
+
+        // If userId is provided, exclude halaqas where user is already leader or member
+        // to keep "Available" list clean
+        const halaqas = await Halaqa.find(query)
             .populate('leader', 'username profileImage')
-            .select('-inviteCode'); // إخفاء كود الدعوة للحلقات العامة حتى يتم الانضمام
+            .select('-inviteCode');
+
+        let filtered = halaqas;
+        if (userId) {
+            filtered = halaqas.filter(h =>
+                h.leader.toString() !== userId &&
+                !h.members.some(m => m.toString() === userId)
+            );
+        }
+
+        res.status(200).json({ success: true, data: filtered });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// جلب الحلقات الخاصة بالمستخدم (التي يقودها أو انضم إليها)
+exports.getMyHalaqas = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const halaqas = await Halaqa.find({
+            $or: [
+                { leader: userId },
+                { members: userId }
+            ],
+            active: true
+        }).populate('leader', 'username profileImage');
 
         res.status(200).json({ success: true, data: halaqas });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+exports.rateMember = async (req, res) => {
+    try {
+        const { fromUserId, toUserId, halaqaId, rating, feedback } = req.body;
+
+        // Verify that they are both in the same halaqa
+        const halaqa = await Halaqa.findById(halaqaId);
+        if (!halaqa) return res.status(404).json({ success: false, message: 'Halaqa not found' });
+
+        const isFromMember = halaqa.members.some(m => m.toString() === fromUserId.toString()) || halaqa.leader.toString() === fromUserId.toString();
+        const isToMember = halaqa.members.some(m => m.toString() === toUserId.toString()) || halaqa.leader.toString() === toUserId.toString();
+
+        if (!isFromMember || !isToMember) {
+            return res.status(403).json({ success: false, message: 'Both users must be members of the same Halaqa' });
+        }
+
+        const newRating = new HalaqaRating({
+            fromUser: fromUserId,
+            toUser: toUserId,
+            halaqaId,
+            rating,
+            feedback
+        });
+
+        await newRating.save();
+        res.status(201).json({ success: true, message: 'Rating submitted successfully' });
+
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -61,7 +123,7 @@ exports.joinHalaqa = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Halaqa is full' });
         }
 
-        if (halaqa.members.includes(userId) || halaqa.leader.toString() === userId) {
+        if (halaqa.members.some(m => m.toString() === userId.toString()) || halaqa.leader.toString() === userId.toString()) {
             return res.status(400).json({ success: false, message: 'Already a member' });
         }
 
@@ -131,8 +193,11 @@ exports.sendMessage = async (req, res) => {
         const halaqa = await Halaqa.findById(id);
         if (!halaqa) return res.status(404).json({ success: false, message: 'Halaqa not found' });
 
-        // Verify membership
-        if (halaqa.leader.toString() !== userId && !halaqa.members.includes(userId)) {
+        // Verify membership (using .toString() for robustness)
+        const isMember = halaqa.members.some(m => m.toString() === userId.toString());
+        const isLeader = halaqa.leader.toString() === userId.toString();
+
+        if (!isLeader && !isMember) {
             return res.status(403).json({ success: false, message: 'Not a member of this Halaqa' });
         }
 

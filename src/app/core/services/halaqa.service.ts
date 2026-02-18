@@ -28,8 +28,14 @@ export class HalaqaService {
         return this.http.post(`${this.apiUrl}/create`, data);
     }
 
-    getAvailableHalaqas(gender: string): Observable<any> {
-        return this.http.get(`${this.apiUrl}/available?gender=${gender}`);
+    getAvailableHalaqas(gender: string, userId?: string): Observable<any> {
+        let url = `${this.apiUrl}/available?gender=${gender}`;
+        if (userId) url += `&userId=${userId}`;
+        return this.http.get(url);
+    }
+
+    getMyHalaqas(userId: string): Observable<any> {
+        return this.http.get(`${this.apiUrl}/my/${userId}`);
     }
 
     joinHalaqa(userId: string, inviteCode: string): Observable<any> {
@@ -51,8 +57,10 @@ export class HalaqaService {
     }
 
     deleteHalaqa(id: string, userId: string): Observable<any> {
-        // Since we need to pass userId in body for verification, we use request method or a custom post?
-        // Standard delete might not support body in some environments, but HttpClient.delete(url, {body}) works.
         return this.http.request('delete', `${this.apiUrl}/${id}`, { body: { userId } });
+    }
+
+    rateMember(data: any): Observable<any> {
+        return this.http.post(`${this.apiUrl}/rate`, data);
     }
 }

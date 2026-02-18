@@ -5,15 +5,19 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import {
     faArrowRight, faPaperPlane, faInfoCircle, faUsers, faCopy, faCheck,
-    faComments, faUserShield, faUser, faSync, faLink, faTrash
+    faComments, faUserShield, faUser, faSync, faLink, faTrash, faUserGraduate, faStar
 } from '@fortawesome/free-solid-svg-icons';
 import { HalaqaService } from '../../../core/services/halaqa.service';
+import { PresenceService, ActiveUser } from '../../../core/services/presence.service';
+import { VoiceCallService } from '../../../core/services/voice-call.service';
 import { AuthService } from '../../../auth/auth.service';
+import { Subscription } from 'rxjs';
+import { VoiceCallComponent } from '../voice-call/voice-call.component';
 
 @Component({
     selector: 'app-halaqa-details',
     standalone: true,
-    imports: [CommonModule, FormsModule, FontAwesomeModule],
+    imports: [CommonModule, FormsModule, FontAwesomeModule, VoiceCallComponent],
     templateUrl: './halaqa-details.component.html',
     styleUrls: ['./halaqa-details.component.css']
 })
@@ -31,6 +35,8 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
     faSync = faSync;
     faLink = faLink;
     faTrash = faTrash;
+    faUserGraduate = faUserGraduate;
+    faStar = faStar;
 
     // State
     activeTab: 'chat' | 'info' = 'chat';
@@ -38,7 +44,10 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
     halaqaData: any = null;
     messages: any[] = [];
     currentUser: any = null;
+    currentUserId: string = '';
     newMessageContent: string = '';
+    activeUsers: ActiveUser[] = [];
+    private presenceSub?: Subscription;
 
     isLoadingDetails = true;
     isLoadingMessages = false;
@@ -50,6 +59,11 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
     // Modal State
     showDeleteConfirm = false;
     showDeleteSuccess = false;
+    showRatingModal = false;
+    ratingTargetUser: any = null;
+    currentRating = 0;
+    ratingFeedback = '';
+    isSubmittingRating = false;
     deleteError = '';
 
     @ViewChild('scrollContainer') private scrollContainer: ElementRef | undefined;
@@ -58,6 +72,8 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
         private route: ActivatedRoute,
         private router: Router,
         private halaqaService: HalaqaService,
+        private presenceService: PresenceService,
+        private voiceCallService: VoiceCallService,
         private authService: AuthService,
         private location: Location
     ) { }
@@ -72,9 +88,84 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
         this.authService.user$.subscribe(user => {
             this.currentUser = user;
             if (user) {
+                this.currentUserId = (user.id || (user as any)._id)?.toString() || '';
                 this.loadHalaqaDetails();
+
+                if (this.halaqaId && this.currentUserId) {
+                    // Join presence room
+                    this.presenceService.joinHalaqa(
+                        this.halaqaId,
+                        this.currentUserId,
+                        user.username || 'طالب علم'
+                    );
+                    // Initialize Voice Service
+                    this.voiceCallService.init(this.currentUserId);
+                }
             }
         });
+
+        this.presenceSub = this.presenceService.activeUsers$.subscribe(users => {
+            this.activeUsers = users;
+        });
+
+        // Listen for call endings to show rating
+        this.voiceCallService.callSession$.subscribe(session => {
+            if (session && !session.isIncoming) {
+                this.ratingTargetUser = { userId: session.peerId, username: session.username };
+            }
+        });
+
+        this.voiceCallService.onCallEnded$.subscribe(() => {
+            if (this.ratingTargetUser) {
+                this.showRatingModal = true;
+            }
+        });
+    }
+
+    ngOnDestroy(): void {
+        if (this.presenceSub) {
+            this.presenceSub.unsubscribe();
+        }
+    }
+
+    startVoiceCall(user: ActiveUser) {
+        if (!user || user.userId === this.currentUserId) return;
+        this.voiceCallService.startCall(user.userId, user.username);
+    }
+
+    isRoomLeader(userId: string): boolean {
+        if (!this.halaqaData?.leader) return false;
+        const leaderId = (this.halaqaData.leader._id || this.halaqaData.leader).toString();
+        return leaderId === userId;
+    }
+
+    submitRating() {
+        if (!this.ratingTargetUser || this.currentRating === 0 || this.isSubmittingRating) return;
+
+        this.isSubmittingRating = true;
+        this.halaqaService.rateMember({
+            fromUserId: this.currentUserId,
+            toUserId: this.ratingTargetUser.userId,
+            halaqaId: this.halaqaId,
+            rating: this.currentRating,
+            feedback: this.ratingFeedback
+        }).subscribe({
+            next: () => {
+                this.showRatingModal = false;
+                this.isSubmittingRating = false;
+                this.resetRating();
+            },
+            error: (err: any) => {
+                console.error('Rating failed', err);
+                this.isSubmittingRating = false;
+            }
+        });
+    }
+
+    resetRating() {
+        this.currentRating = 0;
+        this.ratingFeedback = '';
+        this.ratingTargetUser = null;
     }
 
     ngAfterViewChecked() {

@@ -30,6 +30,7 @@ export class CommunityComponent implements OnInit {
     faShareAlt = faShareAlt;
 
     availableHalaqas: Halaqa[] = [];
+    myHalaqas: Halaqa[] = [];
     userGender: string = '';
     userId: string = '';
     inviteCode: string = '';
@@ -85,16 +86,35 @@ export class CommunityComponent implements OnInit {
 
     loadHalaqas() {
         this.isLoading = true;
-        this.halaqaService.getAvailableHalaqas(this.userGender).subscribe({
+
+        // Fetch Available Groups (filtered by gender, excluding user groups)
+        this.halaqaService.getAvailableHalaqas(this.userGender, this.userId).subscribe({
             next: (res) => {
                 this.availableHalaqas = res.data;
-                this.isLoading = false;
+                this.checkLoadingState();
             },
             error: (err) => {
                 console.error('Error loading halaqas', err);
-                this.isLoading = false;
+                this.checkLoadingState();
             }
         });
+
+        // Fetch My Groups
+        this.halaqaService.getMyHalaqas(this.userId).subscribe({
+            next: (res) => {
+                this.myHalaqas = res.data;
+                this.checkLoadingState();
+            },
+            error: (err) => {
+                console.error('Error loading my halaqas', err);
+                this.checkLoadingState();
+            }
+        });
+    }
+
+    private checkLoadingState() {
+        // Simple heuristic: if we have any data or both finished
+        this.isLoading = false;
     }
 
     async shareInviteCode(event: Event, code?: string) {
@@ -135,13 +155,22 @@ export class CommunityComponent implements OnInit {
     joinByCode() {
         if (!this.inviteCode) return;
         this.message = '';
+        this.isLoading = true;
         this.halaqaService.joinHalaqa(this.userId, this.inviteCode).subscribe({
             next: (res) => {
-                this.message = '✅ تم الانضمام للحلقة بنجاح!';
+                this.message = '✅ تم الانضمام للحلقة بنجاح! جاري توجيهك...';
                 this.inviteCode = '';
                 this.loadHalaqas();
+
+                // Redirection
+                setTimeout(() => {
+                    if (res.data?._id) {
+                        this.openDetails(res.data._id);
+                    }
+                }, 1500);
             },
             error: (err) => {
+                this.isLoading = false;
                 this.message = `❌ ${err.error.message || 'فشل الانضمام'}`;
             }
         });

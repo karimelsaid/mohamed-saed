@@ -69,7 +69,9 @@
     "mongoose": "^9.2.1",
     "ngx-skeleton-loader": "^11.2.1",
     "pdf-parse": "^2.4.5",
+    "peerjs": "^1.5.5",
     "rxjs": "~7.8.0",
+    "socket.io-client": "^4.8.3",
     "tslib": "^2.3.0",
     "xlsx": "^0.18.5",
     "zone.js": "~0.15.0"

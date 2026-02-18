@@ -86,9 +86,33 @@
                     </div>
                 </div>
 
-                <div *ngIf="messages.length === 0 && !isLoadingMessages" class="text-center py-20 text-gray-400">
+                <div *ngIf="messages.length === 0 && !isLoadingMessages" class="text-center py-10 text-gray-400">
                     <fa-icon [icon]="faComments" class="text-5xl mb-4 opacity-10"></fa-icon>
                     <p>لا توجد رسائل بعد. ابدأ المحادثة الآن!</p>
+                </div>
+
+                <!-- Active Members Toggle / Indicator for Mobile -->
+                <div class="mt-4 p-4 lg:hidden border-t border-gray-100 dark:border-gray-700">
+                    <p
+                        class="text-[10px] font-bold text-gray-400 mb-3 uppercase tracking-wider flex items-center gap-2">
+                        <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+                        المتواجدون الآن
+                    </p>
+                    <div class="flex flex-wrap gap-2">
+                        <div *ngFor="let user of activeUsers"
+                            (click)="user.userId !== currentUserId ? startVoiceCall(user) : null"
+                            class="flex items-center gap-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-3 py-2 rounded-2xl text-xs font-bold border border-gray-100 dark:border-gray-700 shadow-sm active:scale-95 transition-all">
+                            <div
+                                class="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-[10px]">
+                                {{ user.username.charAt(0) }}
+                            </div>
+                            <span>{{ user.username }}</span>
+                            <span *ngIf="isRoomLeader(user.userId)"
+                                class="text-[7px] bg-blue-50 text-blue-600 px-1 rounded-full border border-blue-100">المنشئ</span>
+                            <fa-icon *ngIf="user.userId !== currentUserId" [icon]="faUserGraduate"
+                                class="text-blue-500 ml-1"></fa-icon>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -144,7 +168,7 @@
                         class="p-4 border-b border-gray-50 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50 flex items-center justify-between">
                         <h3 class="font-bold flex items-center gap-2">
                             <fa-icon [icon]="faUsers" class="text-blue-600"></fa-icon>
-                            الأعضاء ({{ halaqaData?.members?.length || 0 }})
+                            الأعضاء ({{ (halaqaData?.members?.length || 0) + 1 }})
                         </h3>
                         <span class="text-xs text-gray-500">الحد الأقصى: {{ halaqaData?.maxMembers }}</span>
                     </div>
@@ -204,9 +228,95 @@
                         * سيتم حذف كافة الرسائل وبيانات الأعضاء فوراً
                     </p>
                 </div>
+
+                <!-- Active Members Sidebar -->
+                <div
+                    class="bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+                    <div class="p-5 border-b border-gray-50 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50">
+                        <h3 class="font-bold flex items-center gap-2">
+                            <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                            المتواجدون الآن ({{ activeUsers.length }})
+                        </h3>
+                    </div>
+                    <div class="p-2 max-h-[400px] overflow-y-auto">
+                        <div *ngIf="activeUsers.length <= 1" class="py-10 text-center text-gray-400 text-sm">
+                            لا يوجد أحد غيرك حالياً
+                        </div>
+                        <div *ngFor="let user of activeUsers"
+                            class="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-2xl transition-all group">
+                            <div class="flex items-center gap-3">
+                                <div
+                                    class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs">
+                                    {{ user.username.charAt(0) }}
+                                </div>
+                                <div>
+                                    <div class="flex items-center gap-1.5">
+                                        <p class="text-xs font-bold dark:text-white">{{ user.username }}</p>
+                                        <span *ngIf="isRoomLeader(user.userId)"
+                                            class="text-[8px] bg-blue-50 dark:bg-blue-900/30 text-blue-600 px-1.5 py-0.5 rounded-full border border-blue-100 dark:border-blue-800">المنشئ</span>
+                                    </div>
+                                    <p class="text-[9px] text-green-500" *ngIf="user.userId !== currentUserId">نشط الآن
+                                    </p>
+                                    <p class="text-[9px] text-blue-500" *ngIf="user.userId === currentUserId">أنت (متصل)
+                                    </p>
+                                </div>
+                            </div>
+                            <button *ngIf="user.userId !== currentUserId" (click)="startVoiceCall(user)"
+                                class="p-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white transition-all opacity-0 group-hover:opacity-100"
+                                title="بدء تسميع">
+                                <fa-icon [icon]="faUserGraduate"></fa-icon>
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </main>
+
+    <!-- Voice Call Component Overlay -->
+    <app-voice-call></app-voice-call>
+
+    <!-- Member Rating Modal -->
+    <div *ngIf="showRatingModal"
+        class="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
+        <div class="bg-white dark:bg-gray-800 rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95"
+            (click)="$event.stopPropagation()">
+            <div class="p-8 text-center" dir="rtl">
+                <div
+                    class="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <fa-icon [icon]="faStar" class="text-2xl text-blue-600"></fa-icon>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">كيف كانت تجربة التسميع؟</h3>
+                <p class="text-gray-500 dark:text-gray-400 text-sm mb-6">قيم أداء العضو: <b>{{
+                        ratingTargetUser?.username }}</b></p>
+
+                <!-- Stars -->
+                <div class="flex items-center justify-center gap-2 mb-8">
+                    <button *ngFor="let star of [1,2,3,4,5]" (click)="currentRating = star"
+                        class="text-3xl transition-transform active:scale-90"
+                        [class.text-yellow-400]="star <= currentRating" [class.text-gray-200]="star > currentRating">
+                        <fa-icon [icon]="faStar"></fa-icon>
+                    </button>
+                </div>
+
+                <!-- Feedback Text -->
+                <textarea [(ngModel)]="ratingFeedback" placeholder="أضف تعليقاً إضافياً (اختياري)..."
+                    class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700 p-4 rounded-2xl mb-6 text-sm resize-none focus:ring-2 focus:ring-blue-500 outline-none h-24"></textarea>
+
+                <div class="flex flex-col gap-3">
+                    <button (click)="submitRating()" [disabled]="currentRating === 0 || isSubmittingRating"
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-500/20 transition-all transform active:scale-95 disabled:opacity-50">
+                        <span *ngIf="!isSubmittingRating">إرسال التقييم</span>
+                        <fa-icon *ngIf="isSubmittingRating" [icon]="faSync" class="animate-spin"></fa-icon>
+                    </button>
+                    <button (click)="showRatingModal = false; resetRating()"
+                        class="w-full text-gray-400 font-bold py-2 text-sm hover:text-gray-600 transition-all">
+                        إغلاق
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Custom Deletion Confirmation Modal -->
     <div *ngIf="showDeleteConfirm"

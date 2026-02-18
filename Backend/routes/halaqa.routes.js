@@ -11,6 +11,9 @@ router.get('/available', halaqaController.getAvailableHalaqas);
 // الانضمام لحلقة
 router.post('/join', halaqaController.joinHalaqa);
 
+// حلقات المستخدم
+router.get('/my/:userId', halaqaController.getMyHalaqas);
+
 // --- Phase 2 Routes ---
 
 // تفاصيل الحلقة
@@ -22,5 +25,8 @@ router.post('/:id/messages', halaqaController.sendMessage);
 
 // حذف الحلقة
 router.delete('/:id', halaqaController.deleteHalaqa);
+
+// تقييم الأعضاء
+router.post('/rate', halaqaController.rateMember);
 
 module.exports = router;

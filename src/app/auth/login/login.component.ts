@@ -234,6 +234,8 @@ export class LoginComponent implements OnInit, AfterViewInit {
         console.error(err);
         if (err.status === 0) {
           this.message = '❌ فشل الاتصال بالسيرفر. يرجى التأكد من اتصال الإنترنت أو إعدادات السيرفر (CORS).';
+        } else if (err.status >= 500) {
+          this.message = '❌ السيرفر يواجه مشكلة حالياً (502/500). يرجى التأكد من تشغيل الباكإند على السيرفر.';
         } else {
           this.message = err.error?.message || '❌ حدث خطأ أثناء تسجيل الدخول';
         }

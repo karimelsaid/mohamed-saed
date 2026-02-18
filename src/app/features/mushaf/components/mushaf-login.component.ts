@@ -132,7 +132,13 @@ export class MushafLoginComponent {
             error: (err: any) => {
                 this.isLoading = false;
                 console.error('Login error:', err);
-                this.message = err.error?.message || '❌ البريد الإلكتروني أو كلمة المرور غير صحيحة';
+                if (err.status === 0) {
+                    this.message = '❌ فشل الاتصال بالسيرفر. يرجى التأكد من اتصال الإنترنت (CORS/Network Error).';
+                } else if (err.status >= 500) {
+                    this.message = '❌ السيرفر يواجه مشكلة حالياً (502/500). يرجى التأكد من تشغيل الباكإند على السيرفر.';
+                } else {
+                    this.message = err.error?.message || '❌ البريد الإلكتروني أو كلمة المرور غير صحيحة';
+                }
             }
         });
     }

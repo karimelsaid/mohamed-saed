@@ -28,6 +28,7 @@ export class AuthInterceptor implements HttpInterceptor {
         // Determine if request is internal (Kenouz API or local)
         const isInternal = req.url.startsWith('/api') ||
             req.url.startsWith(environment.apiBaseUrl) ||
+            req.url.includes('knoozbook.com') ||
             req.url.startsWith('/auth') ||
             req.url.startsWith('/admin') ||
             req.url.startsWith('/uploads') ||
@@ -39,7 +40,7 @@ export class AuthInterceptor implements HttpInterceptor {
             req.url.includes('googleapis.com') ||
             req.url.includes('jsdelivr.net');
 
-        console.log(`🔍 [AuthInterceptor] Intercepting: ${req.url} (isInternal: ${isInternal}, isExternalMedia: ${isExternalMedia})`);
+        console.log(`🔍 [AuthInterceptor] Intercepting: ${req.url} (isInternal: ${isInternal}, Origin: ${window.location.origin})`);
 
         if (isInternal && !isExternalMedia) {
             const userStr = localStorage.getItem('user');

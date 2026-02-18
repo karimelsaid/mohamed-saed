@@ -77,7 +77,7 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Request Logger for debugging
 app.use((req, res, next) => {
-  const logEntry = `[${new Date().toISOString()}] ${req.method} ${req.url} - Headers: ${JSON.stringify(req.headers)}\n`;
+  const logEntry = `[${new Date().toISOString()}] ${req.method} ${req.url} - Origin: ${req.headers.origin || 'no-origin'} - Headers: ${JSON.stringify(req.headers)}\n`;
   console.log(logEntry);
   logStream.write(logEntry);
 
@@ -110,7 +110,8 @@ const allowedOrigins = [
   'http://localhost:3000',
   'capacitor://localhost',
   'http://localhost:4200', // Angular Dev
-  'http://localhost:8100'  // Ionic/Capacitor Dev
+  'http://localhost:8100', // Ionic/Capacitor Dev
+  'http://localhost:8080'  // Common Capacitor port
 ];
 // removed conditional check for localhost:4200 to allow it in production for testing
 app.use(cors({

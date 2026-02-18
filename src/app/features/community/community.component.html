@@ -1,6 +1,13 @@
 <div class="min-h-screen bg-gray-50 dark:bg-gray-900 pt-24 pb-12 px-4 sm:px-6 lg:px-8 rtl" dir="rtl">
     <div class="max-w-7xl mx-auto">
 
+        <!-- Back Button -->
+        <button (click)="goBack()"
+            class="mb-6 flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-blue-600 transition-colors group">
+            <fa-icon [icon]="faArrowRight" class="group-hover:translate-x-1 transition-transform"></fa-icon>
+            <span class="font-medium">رجوع</span>
+        </button>
+
         <!-- Header Section -->
         <div class="mb-10 text-center md:text-right flex flex-col md:flex-row md:items-end justify-between gap-6">
             <div>

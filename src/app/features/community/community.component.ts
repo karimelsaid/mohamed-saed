@@ -1,11 +1,11 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { faUsers, faPlus, faLink, faUserGraduate, faLock, faCheckCircle, faInfoCircle, faMars, faVenus, faSearch } from '@fortawesome/free-solid-svg-icons';
+import { faUsers, faPlus, faLink, faUserGraduate, faLock, faCheckCircle, faInfoCircle, faMars, faVenus, faSearch, faArrowRight } from '@fortawesome/free-solid-svg-icons';
 import { HalaqaService, Halaqa } from '../../core/services/halaqa.service';
 import { AuthService } from '../../auth/auth.service';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 
 @Component({
     selector: 'app-community',
@@ -25,6 +25,7 @@ export class CommunityComponent implements OnInit {
     faMars = faMars;
     faVenus = faVenus;
     faSearch = faSearch;
+    faArrowRight = faArrowRight;
 
     availableHalaqas: Halaqa[] = [];
     userGender: string = '';
@@ -44,21 +45,28 @@ export class CommunityComponent implements OnInit {
     constructor(
         private halaqaService: HalaqaService,
         private authService: AuthService,
-        private router: Router
+        private router: Router,
+        private route: ActivatedRoute,
+        private location: Location
     ) { }
 
     ngOnInit(): void {
-        this.authService.user$.subscribe(user => {
+        this.authService.user$.subscribe((user: any) => {
             if (user) {
-                this.userId = user.id || (user as any)._id;
+                this.userId = user.id || user._id;
                 this.userGender = user.gender || '';
                 if (this.userGender) {
                     this.loadHalaqas();
                 }
             } else {
-                this.router.navigate(['/login'], { queryParams: { returnUrl: '/community' } });
+                // Use relative navigation so it works in both main app and Mushaf
+                this.router.navigate(['../login'], { relativeTo: this.route, queryParams: { returnUrl: this.router.url } });
             }
         });
+    }
+
+    goBack() {
+        this.location.back();
     }
 
     loadHalaqas() {

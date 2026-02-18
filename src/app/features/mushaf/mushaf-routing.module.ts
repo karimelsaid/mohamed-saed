@@ -6,11 +6,11 @@ const routes: Routes = [
     { path: '', component: MushafPageComponent },
     {
         path: 'login',
-        loadComponent: () => import('../../auth/login/login.component').then(m => m.LoginComponent)
+        loadComponent: () => import('./components/mushaf-login.component').then(m => m.MushafLoginComponent)
     },
     {
         path: 'register',
-        loadComponent: () => import('../../auth/register/register.component').then(m => m.RegisterComponent)
+        loadComponent: () => import('./components/mushaf-register.component').then(m => m.MushafRegisterComponent)
     },
     {
         path: 'profile',
@@ -27,3 +27,4 @@ const routes: Routes = [
     exports: [RouterModule]
 })
 export class MushafRoutingModule { }
+

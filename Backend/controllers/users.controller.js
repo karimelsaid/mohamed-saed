@@ -50,7 +50,7 @@ async function updateUserProfile(req, res) {
 
 
 async function createAccount(req, res) {
-  const { username, email, password, phone, governorate, city, village, referralCode, bookId } = req.body;
+  const { username, email, password, phone, governorate, city, village, gender, referralCode, bookId } = req.body;
 
   try {
     // التحقق من البريد الإلكتروني
@@ -76,7 +76,8 @@ async function createAccount(req, res) {
       phone,
       governorate,
       city,
-      village
+      village,
+      gender
     });
     await newUser.save();
 
@@ -131,8 +132,9 @@ async function createAccount(req, res) {
         email: newUser.email,
         phone: newUser.phone,
         role: newUser.role,
+        gender: newUser.gender,
         bookId: bookId,
-        profileImage: newUser.profileImage, // Added profileImage
+        profileImage: newUser.profileImage,
         token: token
       }
     };
@@ -175,14 +177,14 @@ async function login(req, res) {
         username: user.username,
         email: user.email,
         phone: user.phone,
-        role: user.role, // Add address fields to the login response
+        role: user.role,
+        gender: user.gender,
         governorate: user.governorate,
         city: user.city,
         village: user.village,
-        village: user.village,
         referralCode: user.referralCode,
-        profileImage: user.profileImage, // Added profileImage
-        token: token // Include token for all users
+        profileImage: user.profileImage,
+        token: token
       }
     });
   } catch (error) {

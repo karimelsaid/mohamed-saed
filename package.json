@@ -15,6 +15,7 @@
     "ios:open": "npx cap open ios",
     "ios:run": "npm run build:prod && npm run capacitor:sync:ios && npx cap open ios",
     "kenouz:build": "ng build kenouz",
+    "mushaf:serve": "ng serve mushaf-wird --proxy-config proxy.conf.json",
     "mushaf:build": "ng build mushaf-wird",
     "mushaf:android:sync": "cd mushaf-wird-mobile && npx cap sync android",
     "mushaf:android:open": "cd mushaf-wird-mobile && npx cap open android",

@@ -1,140 +1,120 @@
 import { Component } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
-import { AuthService } from '../../../auth/auth.service';
+import { Router, RouterLink } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { faUser, faEnvelope, faLock, faPhone, faArrowRight, faCheckCircle, faMars, faVenus } from '@fortawesome/free-solid-svg-icons';
+import { faArrowRight, faUserPlus, faSpinner } from '@fortawesome/free-solid-svg-icons';
+import { AuthService } from '../../../auth/auth.service';
 
 @Component({
     selector: 'app-mushaf-register',
     standalone: true,
-    imports: [CommonModule, FormsModule, FontAwesomeModule],
+    imports: [CommonModule, FormsModule, FontAwesomeModule, RouterLink],
     template: `
-    <div class="min-h-screen bg-gradient-to-b from-emerald-50 to-white dark:from-gray-900 dark:to-gray-800 pt-8 pb-12 px-4 rtl" dir="rtl">
-      <div class="max-w-md mx-auto relative z-10">
-
-        <!-- Back Button -->
-        <button (click)="goBack()"
-          class="mb-6 flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-emerald-600 transition-colors group">
-          <fa-icon [icon]="faArrowRight" class="group-hover:translate-x-1 transition-transform"></fa-icon>
-          <span class="font-medium">رجوع للمصحف</span>
-        </button>
-
-        <!-- Header -->
-        <div class="text-center mb-8">
-          <div class="w-20 h-20 bg-emerald-600 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-emerald-500/30">
-            <span class="text-3xl text-white">📖</span>
-          </div>
-          <h2 class="text-2xl font-extrabold text-gray-900 dark:text-white mb-2">إنشاء حساب جديد</h2>
-          <p class="text-gray-500 dark:text-gray-400 text-sm">انضم لمجتمع مصحف وِرد</p>
-        </div>
-
-        <!-- Card -->
-        <div class="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-3xl shadow-xl border border-emerald-100 dark:border-gray-700 p-8">
-
-          <!-- Message -->
-          <div *ngIf="message" class="mb-6 p-4 rounded-xl text-center text-sm font-bold"
-            [ngClass]="message.includes('✅') ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'">
-            {{ message }}
-          </div>
-
-          <form (ngSubmit)="onRegister()" class="space-y-5">
-
-            <!-- Name -->
-            <div class="relative">
-              <div class="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none text-gray-400">
-                <fa-icon [icon]="faUser"></fa-icon>
-              </div>
-              <input type="text" [(ngModel)]="user.username" name="username" required placeholder="الاسم الكامل"
-                class="w-full pr-11 pl-4 py-4 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none dark:text-white">
-            </div>
-
-            <!-- Email -->
-            <div class="relative">
-              <div class="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none text-gray-400">
-                <fa-icon [icon]="faEnvelope"></fa-icon>
-              </div>
-              <input type="email" [(ngModel)]="user.email" name="email" required placeholder="البريد الإلكتروني"
-                class="w-full pr-11 pl-4 py-4 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none dark:text-white">
-            </div>
-
-            <!-- Phone -->
-            <div class="relative">
-              <div class="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none text-gray-400">
-                <fa-icon [icon]="faPhone"></fa-icon>
-              </div>
-              <input type="tel" [(ngModel)]="user.phone" name="phone" required placeholder="رقم الهاتف (01xxxxxxxxx)"
-                class="w-full pr-11 pl-4 py-4 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none dark:text-white">
-            </div>
-
-            <!-- Gender Selection -->
-            <div class="space-y-2">
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">تحديد الجنس (إلزامي للخصوصية في الحلقات)</label>
-              <div class="grid grid-cols-2 gap-4">
-                <button type="button" (click)="user.gender = 'male'"
-                  [ngClass]="user.gender === 'male' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' : 'bg-gray-100 dark:bg-gray-700 text-gray-500'"
-                  class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl transition-all duration-200 font-bold">
-                  <fa-icon [icon]="faMars" class="text-xl"></fa-icon>
-                  <span>ذكر</span>
-                </button>
-                <button type="button" (click)="user.gender = 'female'"
-                  [ngClass]="user.gender === 'female' ? 'bg-pink-500 text-white shadow-lg shadow-pink-500/30' : 'bg-gray-100 dark:bg-gray-700 text-gray-500'"
-                  class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl transition-all duration-200 font-bold">
-                  <fa-icon [icon]="faVenus" class="text-xl"></fa-icon>
-                  <span>أنثى</span>
-                </button>
-              </div>
-            </div>
-
-            <!-- Password -->
-            <div class="relative">
-              <div class="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none text-gray-400">
-                <fa-icon [icon]="faLock"></fa-icon>
-              </div>
-              <input type="password" [(ngModel)]="user.password" name="password" required minlength="8" placeholder="كلمة المرور (8 أحرف على الأقل)"
-                class="w-full pr-11 pl-4 py-4 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none dark:text-white">
-            </div>
-
-            <!-- Confirm Password -->
-            <div class="relative">
-              <div class="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none text-gray-400">
-                <fa-icon [icon]="faCheckCircle"></fa-icon>
-              </div>
-              <input type="password" [(ngModel)]="confirmPassword" name="confirmPassword" required placeholder="تأكيد كلمة المرور"
-                class="w-full pr-11 pl-4 py-4 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none dark:text-white">
-            </div>
-
-            <p *ngIf="user.password && confirmPassword && user.password !== confirmPassword" class="text-xs text-red-500">كلمتا المرور غير متطابقتين.</p>
-
-            <button type="submit" [disabled]="!isFormValid"
-              class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-emerald-500/30 transition-all transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed">
-              إنشاء حساب
+    <div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8 rtl" dir="rtl">
+        <div class="max-w-md w-full space-y-8 bg-white p-8 rounded-2xl shadow-lg border-t-4 border-emerald-600 relative">
+            
+            <!-- Back Button -->
+            <button (click)="goBack()" class="absolute top-4 right-4 text-gray-400 hover:text-emerald-600 transition-colors" title="رجوع">
+                 <fa-icon [icon]="faArrowRight" size="lg"></fa-icon>
             </button>
-          </form>
 
-          <!-- Footer -->
-          <div class="mt-6 text-center border-t border-gray-100 dark:border-gray-700 pt-6">
-            <p class="text-gray-600 dark:text-gray-400 text-sm">
-              لديك حساب بالفعل؟
-              <a (click)="navigateToLogin()" class="text-emerald-600 dark:text-emerald-400 font-bold hover:underline cursor-pointer">سجل دخولك</a>
-            </p>
-          </div>
+            <div class="mb-8 text-center pt-4">
+                <!-- Mushaf Icon -->
+                <img src="mushaf-wird.png" alt="المصحف" class="w-24 h-24 mx-auto mb-4 drop-shadow-md">
+                <h2 class="text-3xl font-bold text-gray-900 font-kufi mb-2">إنشاء حساب جديد</h2>
+                <p class="text-gray-600">انضم لمجتمع حفظة القرآن</p>
+            </div>
+
+            <form class="mt-8 space-y-6" (ngSubmit)="onRegister()">
+                <div class="rounded-md shadow-sm space-y-4">
+                    <!-- Name -->
+                    <div>
+                        <label for="username" class="block text-sm font-medium text-gray-700 mb-1">الاسم</label>
+                        <input id="username" name="username" type="text" required
+                            [(ngModel)]="user.username"
+                            class="appearance-none block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
+                            placeholder="الاسم الكامل">
+                    </div>
+
+                    <!-- Email -->
+                    <div>
+                        <label for="email-address" class="block text-sm font-medium text-gray-700 mb-1">البريد الإلكتروني</label>
+                        <input id="email-address" name="email" type="email" autocomplete="email" required
+                            [(ngModel)]="user.email"
+                            class="appearance-none block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
+                            placeholder="example@gmail.com">
+                    </div>
+
+                    <!-- Phone -->
+                    <div>
+                        <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">رقم الهاتف</label>
+                        <input id="phone" name="phone" type="tel" autocomplete="tel" required
+                            [(ngModel)]="user.phone"
+                            class="appearance-none block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
+                            placeholder="01xxxxxxxxx">
+                    </div>
+
+                    <!-- Gender -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">الجنس</label>
+                        <div class="flex gap-4">
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="gender" value="male" [(ngModel)]="user.gender" class="sr-only peer">
+                                <div class="p-3 text-center border rounded-lg peer-checked:bg-emerald-50 peer-checked:border-emerald-500 peer-checked:text-emerald-700 hover:bg-gray-50 transition-colors">
+                                    ذكر
+                                </div>
+                            </label>
+                            <label class="flex-1 cursor-pointer">
+                                <input type="radio" name="gender" value="female" [(ngModel)]="user.gender" class="sr-only peer">
+                                <div class="p-3 text-center border rounded-lg peer-checked:bg-emerald-50 peer-checked:border-emerald-500 peer-checked:text-emerald-700 hover:bg-gray-50 transition-colors">
+                                    أنثى
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Password -->
+                    <div>
+                        <label for="password" class="block text-sm font-medium text-gray-700 mb-1">كلمة المرور</label>
+                        <input id="password" name="password" type="password" autocomplete="new-password" required
+                            [(ngModel)]="user.password"
+                            class="appearance-none block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
+                            placeholder="كلمة مرور قوية">
+                    </div>
+                </div>
+
+                <div>
+                    <button type="submit" [disabled]="isLoading"
+                        class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-colors shadow-md disabled:opacity-70 disabled:cursor-not-allowed">
+                        <span class="absolute left-0 inset-y-0 flex items-center pl-3" *ngIf="isLoading">
+                            <fa-icon [icon]="faSpinner" [class.fa-spin]="true"></fa-icon>
+                        </span>
+                        <span class="absolute left-0 inset-y-0 flex items-center pl-3" *ngIf="!isLoading">
+                            <fa-icon [icon]="faUserPlus"></fa-icon>
+                        </span>
+                        {{ isLoading ? 'جاري إنشاء الحساب...' : 'إنشاء الحساب' }}
+                    </button>
+
+                    <p class="mt-4 text-center text-sm text-gray-600">
+                        لديك حساب بالفعل؟ 
+                        <a routerLink="/login" class="font-medium text-emerald-600 hover:text-emerald-500">
+                            تسجيل الدخول
+                        </a>
+                    </p>
+                </div>
+
+                <div *ngIf="message" class="p-3 rounded-lg text-sm text-center font-medium transition-all duration-300"
+                     [class.opacity-0]="!message"
+                     [ngClass]="message.includes('نجح') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'">
+                    {{ message }}
+                </div>
+            </form>
         </div>
-      </div>
     </div>
     `
 })
 export class MushafRegisterComponent {
-    faUser = faUser;
-    faEnvelope = faEnvelope;
-    faLock = faLock;
-    faPhone = faPhone;
-    faArrowRight = faArrowRight;
-    faCheckCircle = faCheckCircle;
-    faMars = faMars;
-    faVenus = faVenus;
-
     user = {
         username: '',
         email: '',
@@ -142,14 +122,12 @@ export class MushafRegisterComponent {
         password: '',
         gender: ''
     };
-    confirmPassword = '';
-    message = '';
 
-    get isFormValid(): boolean {
-        return !!(this.user.username && this.user.email && this.user.phone &&
-            this.user.password && this.user.password.length >= 8 &&
-            this.user.gender && this.user.password === this.confirmPassword);
-    }
+    message = '';
+    isLoading = false;
+    faArrowRight = faArrowRight;
+    faUserPlus = faUserPlus;
+    faSpinner = faSpinner;
 
     constructor(
         private authService: AuthService,
@@ -157,40 +135,52 @@ export class MushafRegisterComponent {
         private location: Location
     ) { }
 
+    goBack() {
+        if (window.history.length > 1) {
+            this.location.back();
+        } else {
+            this.router.navigate(['/']);
+        }
+    }
+
     onRegister() {
-        if (!this.isFormValid) {
-            this.message = '❌ يرجى ملء جميع الحقول بشكل صحيح';
+        if (!this.user.username || !this.user.email || !this.user.password || !this.user.phone || !this.user.gender) {
+            this.message = '❌ جميع الحقول مطلوبة، بما في ذلك النوع';
             return;
         }
+
+        this.isLoading = true;
+        this.message = '';
 
         this.authService.createAccount(
             this.user.username,
             this.user.email,
             this.user.password,
             this.user.phone,
-            '',  // governorate - not needed for Mushaf
-            '',  // city - not needed for Mushaf
-            '',  // village - not needed for Mushaf
+            '', // governorate
+            '', // city
+            '', // village
             this.user.gender
         ).subscribe({
             next: (response: any) => {
                 this.message = '✅ تم إنشاء الحساب بنجاح! جاري التوجيه...';
+                // Auto login might be needed if creating account doesn't auto login, 
+                // but usually createAccount returns token or we redirect to login.
+                // Based on auth service, createAccount returns token.
+                if (response.user && response.user.token) {
+                    const userWithToken = { ...response.user, token: response.user.token };
+                    this.authService.setUser(userWithToken);
+                }
+
                 setTimeout(() => {
                     this.router.navigate(['/']);
                 }, 1000);
             },
             error: (err: any) => {
+                this.isLoading = false;
                 console.error('Registration error:', err);
-                this.message = err.error?.message || '❌ حدث خطأ أثناء إنشاء الحساب. يرجى المحاولة لاحقًا.';
+                this.message = err.error?.message || '❌ حدث خطأ أثناء إنشاء الحساب. تأكد من صحة البيانات.';
             }
         });
-    }
-
-    navigateToLogin() {
-        this.router.navigate(['/login']);
-    }
-
-    goBack() {
-        this.location.back();
     }
 }

@@ -1,146 +1,141 @@
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
-import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { HttpClient } from '@angular/common/http';
-import { AuthService } from '../../../auth/auth.service';
-import { environment } from '../../../../environments/environment';
+import { Router, RouterLink } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { faEnvelope, faLock, faArrowRight } from '@fortawesome/free-solid-svg-icons';
+import { faArrowRight, faSignInAlt, faSpinner } from '@fortawesome/free-solid-svg-icons';
+import { AuthService } from '../../../auth/auth.service';
 
 @Component({
     selector: 'app-mushaf-login',
     standalone: true,
-    imports: [CommonModule, FormsModule, FontAwesomeModule],
+    imports: [CommonModule, FormsModule, FontAwesomeModule, RouterLink],
     template: `
-    <div class="min-h-screen bg-gradient-to-b from-emerald-50 to-white dark:from-gray-900 dark:to-gray-800 pt-8 pb-12 px-4 rtl" dir="rtl">
-      <div class="max-w-md mx-auto relative z-10">
-
-        <!-- Back Button -->
-        <button (click)="goBack()"
-          class="mb-6 flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-emerald-600 transition-colors group">
-          <fa-icon [icon]="faArrowRight" class="group-hover:translate-x-1 transition-transform"></fa-icon>
-          <span class="font-medium">رجوع للمصحف</span>
-        </button>
-
-        <!-- Header -->
-        <div class="text-center mb-8">
-          <div class="w-20 h-20 bg-emerald-600 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-emerald-500/30">
-            <span class="text-3xl text-white">📖</span>
-          </div>
-          <h2 class="text-2xl font-extrabold text-gray-900 dark:text-white mb-2">تسجيل الدخول</h2>
-          <p class="text-gray-500 dark:text-gray-400 text-sm">سجل دخولك للوصول إلى المجتمع والحلقات</p>
-        </div>
-
-        <!-- Card -->
-        <div class="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-3xl shadow-xl border border-emerald-100 dark:border-gray-700 p-8">
-
-          <!-- Message -->
-          <div *ngIf="message" class="mb-6 p-4 rounded-xl text-center text-sm font-bold"
-            [ngClass]="isSuccess ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'">
-            {{ message }}
-          </div>
-
-          <form (submit)="onLogin(); $event.preventDefault()" class="space-y-5">
-            <!-- Email -->
-            <div class="relative">
-              <div class="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none text-gray-400">
-                <fa-icon [icon]="faEnvelope"></fa-icon>
-              </div>
-              <input type="email" [(ngModel)]="email" name="email" required placeholder="البريد الإلكتروني"
-                class="w-full pr-11 pl-4 py-4 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none dark:text-white">
-            </div>
-
-            <!-- Password -->
-            <div class="relative">
-              <div class="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none text-gray-400">
-                <fa-icon [icon]="faLock"></fa-icon>
-              </div>
-              <input type="password" [(ngModel)]="password" name="password" required placeholder="كلمة المرور"
-                class="w-full pr-11 pl-4 py-4 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none dark:text-white">
-            </div>
-
-            <button type="submit"
-              class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-emerald-500/30 transition-all transform hover:-translate-y-0.5">
-              تسجيل الدخول
+    <div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8 rtl" dir="rtl">
+        <div class="max-w-md w-full space-y-8 bg-white p-8 rounded-2xl shadow-lg border-t-4 border-emerald-600 relative">
+            <!-- Back Button -->
+            <button (click)="goBack()" class="absolute top-4 right-4 text-gray-400 hover:text-emerald-600 transition-colors" title="رجوع">
+                 <fa-icon [icon]="faArrowRight" size="lg"></fa-icon>
             </button>
-          </form>
 
-          <!-- Footer -->
-          <div class="mt-6 text-center border-t border-gray-100 dark:border-gray-700 pt-6">
-            <p class="text-gray-600 dark:text-gray-400 text-sm">
-              ليس لديك حساب؟
-              <a (click)="navigateToRegister()" class="text-emerald-600 dark:text-emerald-400 font-bold hover:underline cursor-pointer">إنشاء حساب</a>
-            </p>
-          </div>
+            <div class="mb-8 text-center pt-4">
+                <!-- Mushaf Icon -->
+                <img src="mushaf-wird.png" alt="المصحف" class="w-24 h-24 mx-auto mb-4 drop-shadow-md">
+                <h2 class="text-3xl font-bold text-gray-900 font-kufi mb-2">تسجيل الدخول</h2>
+                <p class="text-gray-600">أهلاً بك في رحلة القرآن</p>
+            </div>
+
+            <form class="mt-8 space-y-6" (ngSubmit)="onLogin()">
+                <div class="rounded-md shadow-sm space-y-4">
+                    <div>
+                        <label for="email-address" class="block text-sm font-medium text-gray-700 mb-1">البريد الإلكتروني</label>
+                        <input id="email-address" name="email" type="email" autocomplete="email" required
+                            [(ngModel)]="email"
+                            class="appearance-none relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 focus:z-10 sm:text-sm"
+                            placeholder="example@gmail.com">
+                    </div>
+                    <div>
+                        <label for="password" class="block text-sm font-medium text-gray-700 mb-1">كلمة المرور</label>
+                        <input id="password" name="password" type="password" autocomplete="current-password" required
+                            [(ngModel)]="password"
+                            class="appearance-none relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 focus:z-10 sm:text-sm"
+                            placeholder="••••••••">
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <div class="text-sm">
+                        <a href="javascript:void(0)" class="font-medium text-emerald-600 hover:text-emerald-500">
+                            نسيت كلمة المرور؟
+                        </a>
+                    </div>
+                </div>
+
+                <div>
+                    <button type="submit" [disabled]="isLoading"
+                        class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-colors shadow-md disabled:opacity-70 disabled:cursor-not-allowed">
+                        <span class="absolute left-0 inset-y-0 flex items-center pl-3" *ngIf="isLoading">
+                            <fa-icon [icon]="faSpinner" [class.fa-spin]="true"></fa-icon>
+                        </span>
+                        <span class="absolute left-0 inset-y-0 flex items-center pl-3" *ngIf="!isLoading">
+                            <fa-icon [icon]="faSignInAlt"></fa-icon>
+                        </span>
+                        {{ isLoading ? 'جاري الدخول...' : 'تسجيل الدخول' }}
+                    </button>
+                    
+                    <p class="mt-4 text-center text-sm text-gray-600">
+                        ليس لديك حساب؟ 
+                        <a routerLink="/register" class="font-medium text-emerald-600 hover:text-emerald-500">
+                            إنشاء حساب جديد
+                        </a>
+                    </p>
+                </div>
+
+                <div *ngIf="message" class="p-3 rounded-lg text-sm text-center font-medium" 
+                     [ngClass]="message.includes('نجح') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'">
+                    {{ message }}
+                </div>
+            </form>
         </div>
-      </div>
     </div>
     `
 })
-export class MushafLoginComponent implements OnInit {
-    faEnvelope = faEnvelope;
-    faLock = faLock;
-    faArrowRight = faArrowRight;
-
+export class MushafLoginComponent {
     email = '';
     password = '';
     message = '';
-    isSuccess = false;
+    isLoading = false;
+    faArrowRight = faArrowRight;
+    faSignInAlt = faSignInAlt;
+    faSpinner = faSpinner;
 
     constructor(
-        private router: Router,
-        private http: HttpClient,
         private authService: AuthService,
+        private router: Router,
         private location: Location
     ) { }
 
-    ngOnInit() { }
+    goBack() {
+        if (window.history.length > 1) {
+            this.location.back();
+        } else {
+            this.router.navigate(['/']);
+        }
+    }
 
     onLogin() {
         if (!this.email || !this.password) {
-            this.message = '❌ من فضلك أدخل البريد الإلكتروني وكلمة المرور';
-            this.isSuccess = false;
+            this.message = '❌ البريد الإلكتروني وكلمة المرور مطلوبان';
             return;
         }
 
-        this.http.post<any>(`${environment.apiBaseUrl}/users/login`, {
-            email: this.email,
-            password: this.password
-        }).subscribe({
-            next: (response) => {
-                if (response && response.user) {
-                    this.message = '✅ تم تسجيل الدخول بنجاح';
-                    this.isSuccess = true;
+        this.isLoading = true;
+        this.message = '';
 
-                    // Normalize ID
-                    if (!response.user.id && response.user._id) {
-                        response.user.id = response.user._id;
-                    }
-                    const userWithToken = { ...response.user };
-                    if (response.token) {
-                        userWithToken.token = response.token;
-                    }
-                    this.authService.setUser(userWithToken);
+        this.authService.login(this.email, this.password).subscribe({
+            next: (response: any) => {
+                this.message = '✅ تم تسجيل الدخول بنجاح! جاري التوجيه...';
+                // Store user data
+                const userWithToken = { ...response.user, token: response.user.token };
+                this.authService.setUser(userWithToken);
 
-                    setTimeout(() => {
+                setTimeout(() => {
+                    // Check query params for returnUrl
+                    const urlTree = this.router.parseUrl(this.router.url);
+                    const returnUrl = urlTree.queryParams['returnUrl'];
+                    if (returnUrl) {
+                        this.router.navigateByUrl(returnUrl);
+                    } else {
+                        // Default to Mushaf home
                         this.router.navigate(['/']);
-                    }, 800);
-                }
+                    }
+                }, 800);
             },
-            error: (err) => {
-                console.error(err);
-                this.message = err.error?.message || '❌ حدث خطأ أثناء تسجيل الدخول';
-                this.isSuccess = false;
+            error: (err: any) => {
+                this.isLoading = false;
+                console.error('Login error:', err);
+                this.message = err.error?.message || '❌ البريد الإلكتروني أو كلمة المرور غير صحيحة';
             }
         });
-    }
-
-    navigateToRegister() {
-        this.router.navigate(['/register']);
-    }
-
-    goBack() {
-        this.location.back();
     }
 }

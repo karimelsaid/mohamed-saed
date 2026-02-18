@@ -13,9 +13,9 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: function () { return !this.googleId; } },
   phone: { type: String, required: function () { return !this.googleId; } },
-  governorate: { type: String, required: function () { return !this.googleId; } }, // المحافظة
-  city: { type: String, required: function () { return !this.googleId; } },       // المدينة
-  village: { type: String, required: function () { return !this.googleId; } },                    // القرية (إجباري)
+  governorate: { type: String, required: false }, // المحافظة
+  city: { type: String, required: false },       // المدينة
+  village: { type: String, required: false },    // القرية
   postOffice: {
     governorate: String,
     city: String,

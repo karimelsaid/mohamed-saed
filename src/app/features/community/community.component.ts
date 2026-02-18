@@ -60,13 +60,21 @@ export class CommunityComponent implements OnInit {
                 }
             } else {
                 // Use relative navigation so it works in both main app and Mushaf
-                this.router.navigate(['../login'], { relativeTo: this.route, queryParams: { returnUrl: this.router.url } });
+                this.router.navigate(['../login'], {
+                    relativeTo: this.route,
+                    queryParams: { returnUrl: this.router.url },
+                    replaceUrl: true
+                });
             }
         });
     }
 
     goBack() {
-        this.location.back();
+        if (window.history.length > 1) {
+            this.location.back();
+        } else {
+            this.router.navigate(['/']);
+        }
     }
 
     loadHalaqas() {

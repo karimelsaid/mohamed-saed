@@ -65,9 +65,6 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
             this.currentUser = user;
             if (user) {
                 this.loadHalaqaDetails();
-                this.loadMessages(); // Load immediately
-                // Setup polling or socket here if needed. Polling every 10s for now?
-                // setInterval(() => this.loadMessages(true), 10000);
             }
         });
     }
@@ -85,7 +82,7 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
     }
 
     goBack() {
-        this.router.navigate(['/mushaf/community']);
+        this.location.back();
     }
 
     loadHalaqaDetails() {
@@ -94,11 +91,23 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
             next: (res) => {
                 this.halaqaData = res.data;
                 this.isLoadingDetails = false;
+
+                // Membership Check
+                const isLeader = this.halaqaData.leader?._id === this.currentUser?.id || this.halaqaData.leader === this.currentUser?.id || this.halaqaData.leader?._id === this.currentUser?._id || this.halaqaData.leader === this.currentUser?._id;
+                const isMember = this.halaqaData.members?.some((m: any) => (m._id || m) === (this.currentUser?.id || this.currentUser?._id));
+
+                if (!isLeader && !isMember) {
+                    alert('عذراً، يجب الانضمام للحلقة أولاً عبر كود الدعوة للمشاركة في الدردشة.');
+                    this.goBack();
+                    return;
+                }
+
+                this.loadMessages();
             },
             error: (err) => {
                 console.error('Failed to load details', err);
-                // show error
                 this.isLoadingDetails = false;
+                this.goBack();
             }
         });
     }
@@ -125,27 +134,42 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
 
         this.isSending = true;
         const content = this.newMessageContent;
-        this.newMessageContent = ''; // Clear immediately for UX
+        this.newMessageContent = '';
 
         this.halaqaService.sendMessage(this.halaqaId, this.currentUser.id || this.currentUser._id, content).subscribe({
             next: (res) => {
-                this.messages.push(res.data); // Optimistic append or use response
+                // Use spread to ensure change detection triggers
+                this.messages = [...this.messages, res.data];
                 this.isSending = false;
-                this.scrollToBottom();
+                setTimeout(() => this.scrollToBottom(), 100);
             },
             error: (err) => {
                 console.error('Failed to send', err);
                 this.isSending = false;
-                this.newMessageContent = content; // Restore on error
+                this.newMessageContent = content;
             }
         });
     }
 
+    trackByMsgId(index: number, item: any): string {
+        return item._id || index;
+    }
+
     copyInviteCode() {
         if (!this.halaqaData?.inviteCode) return;
-        navigator.clipboard.writeText(this.halaqaData.inviteCode).then(() => {
+
+        // Fallback for non-https or restricted environments
+        const textArea = document.createElement("textarea");
+        textArea.value = this.halaqaData.inviteCode;
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+            document.execCommand('copy');
             this.copySuccess = true;
             setTimeout(() => this.copySuccess = false, 2000);
-        });
+        } catch (err) {
+            console.error('Copy failed', err);
+        }
+        document.body.removeChild(textArea);
     }
 }

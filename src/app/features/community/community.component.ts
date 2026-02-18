@@ -35,6 +35,13 @@ export class CommunityComponent implements OnInit {
     userId: string = '';
     inviteCode: string = '';
 
+    // Pagination & Search
+    searchTerm: string = '';
+    currentPage: number = 1;
+    itemsPerPage: number = 10;
+    totalPages: number = 1;
+    totalItems: number = 0;
+
     showCreateModal = false;
     newHalaqa = {
         name: '',
@@ -87,33 +94,58 @@ export class CommunityComponent implements OnInit {
     loadHalaqas() {
         this.isLoading = true;
 
-        // Fetch Available Groups (filtered by gender, excluding user groups)
-        this.halaqaService.getAvailableHalaqas(this.userGender, this.userId).subscribe({
+        // Fetch Available Groups (with search and pagination)
+        this.halaqaService.getAvailableHalaqas(
+            this.userGender,
+            this.userId,
+            this.searchTerm,
+            this.currentPage,
+            this.itemsPerPage
+        ).subscribe({
             next: (res) => {
                 this.availableHalaqas = res.data;
-                this.checkLoadingState();
+                if (res.pagination) {
+                    this.totalItems = res.pagination.total;
+                    this.totalPages = res.pagination.pages;
+                }
+                this.isLoading = false;
             },
             error: (err) => {
                 console.error('Error loading halaqas', err);
-                this.checkLoadingState();
+                this.isLoading = false;
             }
         });
 
-        // Fetch My Groups
-        this.halaqaService.getMyHalaqas(this.userId).subscribe({
-            next: (res) => {
-                this.myHalaqas = res.data;
-                this.checkLoadingState();
-            },
-            error: (err) => {
-                console.error('Error loading my halaqas', err);
-                this.checkLoadingState();
-            }
-        });
+        // Fetch My Groups (only on first page or when no search)
+        if (this.currentPage === 1 && !this.searchTerm) {
+            this.halaqaService.getMyHalaqas(this.userId).subscribe({
+                next: (res) => {
+                    this.myHalaqas = res.data;
+                },
+                error: (err) => {
+                    console.error('Error loading my halaqas', err);
+                }
+            });
+        } else {
+            // Keep existing myHalaqas but don't re-fetch if just paginating suggestions
+        }
+    }
+
+    onSearch() {
+        this.currentPage = 1;
+        this.loadHalaqas();
+    }
+
+    onPageChange(page: number) {
+        if (page < 1 || page > this.totalPages) return;
+        this.currentPage = page;
+        this.loadHalaqas();
+        // Scroll to top of suggestions
+        window.scrollTo({ top: 400, behavior: 'smooth' });
     }
 
     private checkLoadingState() {
-        // Simple heuristic: if we have any data or both finished
+        // No longer needed with direct isLoading assignment
         this.isLoading = false;
     }
 

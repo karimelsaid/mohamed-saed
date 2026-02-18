@@ -141,6 +141,12 @@ app.use(cors({
   credentials: true
 }));
 
+// Inject IO into request for controllers
+app.use((req, res, next) => {
+  req.io = io;
+  next();
+});
+
 app.use('/api/print', printRoutes);
 
 // Session middleware
@@ -633,10 +639,20 @@ app.get('*', (req, res, next) => {
 });
 
 // Socket.io Logic for Presence
-const activeUsersInRooms = {}; // { halaqaId: Set(userIds) }
+const activeUsersInRooms = {}; // { halaqaId: Map(userIds) }
+const globalOnlineUsers = new Map(); // Map(userId -> { username, socketId })
 
 io.on('connection', (socket) => {
   console.log('👤 New socket connection:', socket.id);
+
+  // Global login/presence
+  socket.on('user_online', ({ userId, username }) => {
+    socket.userId = userId;
+    socket.username = username;
+    globalOnlineUsers.set(userId, { username, socketId: socket.id, lastSeen: new Date() });
+    io.emit('global_presence_update', Array.from(globalOnlineUsers.keys()));
+    console.log(`📡 User ${username} is globally online`);
+  });
 
   socket.on('join_halaqa', ({ halaqaId, userId, username }) => {
     socket.join(halaqaId);
@@ -648,7 +664,6 @@ io.on('connection', (socket) => {
       activeUsersInRooms[halaqaId] = new Map();
     }
 
-    // Store user info
     activeUsersInRooms[halaqaId].set(userId, {
       userId,
       username,
@@ -656,13 +671,20 @@ io.on('connection', (socket) => {
       joinedAt: new Date()
     });
 
-    // Notify others
     io.to(halaqaId).emit('presence_update', Array.from(activeUsersInRooms[halaqaId].values()));
     console.log(`✅ User ${username} joined Halaqa ${halaqaId}`);
   });
 
   socket.on('disconnect', () => {
     const { halaqaId, userId } = socket;
+
+    // Remove from global
+    if (userId) {
+      globalOnlineUsers.delete(userId);
+      io.emit('global_presence_update', Array.from(globalOnlineUsers.keys()));
+    }
+
+    // Remove from room
     if (halaqaId && userId && activeUsersInRooms[halaqaId]) {
       activeUsersInRooms[halaqaId].delete(userId);
       io.to(halaqaId).emit('presence_update', Array.from(activeUsersInRooms[halaqaId].values()));

@@ -34,24 +34,45 @@ exports.createHalaqa = async (req, res) => {
 // جلب الحلقات المتاحة لنفس جنس المستخدم (العامة فقط)
 exports.getAvailableHalaqas = async (req, res) => {
     try {
-        const { gender, userId } = req.query;
+        const { gender, userId, search, page = 1, limit = 10 } = req.query;
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+
         const query = { gender, active: true, isPrivate: false };
 
-        // If userId is provided, exclude halaqas where user is already leader or member
-        // to keep "Available" list clean
-        const halaqas = await Halaqa.find(query)
-            .populate('leader', 'username profileImage')
-            .select('-inviteCode');
-
-        let filtered = halaqas;
-        if (userId) {
-            filtered = halaqas.filter(h =>
-                h.leader.toString() !== userId &&
-                !h.members.some(m => m.toString() === userId)
-            );
+        // Search filter
+        if (search) {
+            query.name = { $regex: search, $options: 'i' };
         }
 
-        res.status(200).json({ success: true, data: filtered });
+        // Exclude halaqas where user is already leader or member
+        if (userId) {
+            query._id = { $nin: [] }; // Initialize
+            const myGroups = await Halaqa.find({
+                $or: [{ leader: userId }, { members: userId }],
+                active: true
+            }).select('_id');
+            const myGroupIds = myGroups.map(g => g._id);
+            query._id = { $nin: myGroupIds };
+        }
+
+        const totalCount = await Halaqa.countDocuments(query);
+        const halaqas = await Halaqa.find(query)
+            .populate('leader', 'username profileImage')
+            .select('-inviteCode')
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(parseInt(limit));
+
+        res.status(200).json({
+            success: true,
+            data: halaqas,
+            pagination: {
+                total: totalCount,
+                page: parseInt(page),
+                limit: parseInt(limit),
+                pages: Math.ceil(totalCount / parseInt(limit))
+            }
+        });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -109,7 +130,12 @@ exports.rateMember = async (req, res) => {
 // الانضمام لحلقة عبر كود الدعوة
 exports.joinHalaqa = async (req, res) => {
     try {
-        const { userId, inviteCode } = req.body;
+        let { userId, inviteCode } = req.body;
+
+        // Normalize invite code
+        if (inviteCode) {
+            inviteCode = inviteCode.trim().toUpperCase();
+        }
 
         const user = await User.findById(userId);
         const halaqa = await Halaqa.findOne({ inviteCode, active: true });
@@ -217,6 +243,14 @@ exports.sendMessage = async (req, res) => {
 
         // Populate sender for immediate display
         await newMessage.populate('sender', 'username profileImage');
+
+        // Broadcast to room
+        if (req.io) {
+            req.io.to(id).emit('new_message', {
+                halaqaId: id,
+                message: newMessage
+            });
+        }
 
         res.status(201).json({ success: true, data: newMessage });
     } catch (error) {

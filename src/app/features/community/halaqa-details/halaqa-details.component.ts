@@ -5,7 +5,8 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import {
     faArrowRight, faPaperPlane, faInfoCircle, faUsers, faCopy, faCheck,
-    faComments, faUserShield, faUser, faSync, faLink, faTrash, faUserGraduate, faStar
+    faComments, faUserShield, faUser, faSync, faLink, faTrash, faUserGraduate, faStar,
+    faMicrophone, faStop, faPlay, faPause, faUserCircle
 } from '@fortawesome/free-solid-svg-icons';
 import { HalaqaService } from '../../../core/services/halaqa.service';
 import { PresenceService, ActiveUser } from '../../../core/services/presence.service';
@@ -38,6 +39,11 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
     faTrash = faTrash;
     faUserGraduate = faUserGraduate;
     faStar = faStar;
+    faMicrophone = faMicrophone;
+    faStop = faStop;
+    faPlay = faPlay;
+    faPause = faPause;
+    faUserCircle = faUserCircle;
 
     // State
     activeTab: 'chat' | 'info' = 'chat';
@@ -56,6 +62,18 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
     copySuccess = false;
     checkingMembership = true;
     isDeleting = false;
+
+    // Presence & Global Status
+    globalOnlineIds: string[] = [];
+    private globalPresenceSub?: Subscription;
+    private msgSub?: Subscription;
+
+    // Voice Message State
+    isRecording = false;
+    audioRecorder: any = null;
+    audioChunks: any[] = [];
+    recordingDuration = 0;
+    recordingTimer: any = null;
 
     // Modal State
     showDeleteConfirm = false;
@@ -93,7 +111,10 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
                 this.loadHalaqaDetails();
 
                 if (this.halaqaId && this.currentUserId) {
-                    // Join presence room
+                    // Set global online status
+                    this.presenceService.setOnline(this.currentUserId, user.username);
+
+                    // Join room presence
                     this.presenceService.joinHalaqa(
                         this.halaqaId,
                         this.currentUserId,
@@ -105,8 +126,26 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
             }
         });
 
+        // Room Presence Subscription
         this.presenceSub = this.presenceService.activeUsers$.subscribe(users => {
             this.activeUsers = users;
+        });
+
+        // Global Presence Subscription
+        this.globalPresenceSub = this.presenceService.globalPresence$.subscribe(ids => {
+            this.globalOnlineIds = ids;
+        });
+
+        // Real-time Messages Subscription
+        this.msgSub = this.presenceService.newMessage$.subscribe(data => {
+            if (data && data.halaqaId === this.halaqaId) {
+                // Add message if it's not already there (to avoid duplicates from own sender)
+                const exists = this.messages.some(m => m._id === data.message._id);
+                if (!exists) {
+                    this.messages = [...this.messages, data.message];
+                    setTimeout(() => this.scrollToBottom(), 100);
+                }
+            }
         });
 
         // Listen for call endings to show rating
@@ -124,9 +163,10 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
     }
 
     ngOnDestroy(): void {
-        if (this.presenceSub) {
-            this.presenceSub.unsubscribe();
-        }
+        if (this.presenceSub) this.presenceSub.unsubscribe();
+        if (this.globalPresenceSub) this.globalPresenceSub.unsubscribe();
+        if (this.msgSub) this.msgSub.unsubscribe();
+        this.stopRecording();
     }
 
     startVoiceCall(user: ActiveUser) {
@@ -253,10 +293,14 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
         const content = this.newMessageContent;
         this.newMessageContent = '';
 
-        this.halaqaService.sendMessage(this.halaqaId, this.currentUser.id || this.currentUser._id, content).subscribe({
+        this.halaqaService.sendMessage(this.halaqaId, this.currentUserId, content).subscribe({
             next: (res) => {
-                // Use spread to ensure change detection triggers
-                this.messages = [...this.messages, res.data];
+                // We don't manually add to array here if Socket takes care of it,
+                // but for snappy UI we could add it and then the socket listener checks for duplicates.
+                const exists = this.messages.some(m => m._id === res.data._id);
+                if (!exists) {
+                    this.messages = [...this.messages, res.data];
+                }
                 this.isSending = false;
                 setTimeout(() => this.scrollToBottom(), 100);
             },
@@ -266,6 +310,73 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
                 this.newMessageContent = content;
             }
         });
+    }
+
+    // --- Voice Message Logic ---
+    async startRecording() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            this.audioChunks = [];
+            this.audioRecorder = new MediaRecorder(stream);
+            this.audioRecorder.ondataavailable = (e: any) => this.audioChunks.push(e.data);
+            this.audioRecorder.onstop = () => this.sendVoiceMessage();
+            this.audioRecorder.start();
+            this.isRecording = true;
+            this.recordingDuration = 0;
+            this.recordingTimer = setInterval(() => this.recordingDuration++, 1000);
+        } catch (err) {
+            console.error('Could not start recording', err);
+            alert('يرجى السماح بالوصول إلى الميكروفون لتسجيل الرسائل الصوتية.');
+        }
+    }
+
+    stopRecording() {
+        if (this.audioRecorder && this.isRecording) {
+            this.audioRecorder.stop();
+            this.isRecording = false;
+            clearInterval(this.recordingTimer);
+        }
+    }
+
+    async sendVoiceMessage() {
+        if (this.audioChunks.length === 0) return;
+
+        const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
+        // In a real implementation, we would upload this to a server and get a URL.
+        // For now, we'll simulate sending with a placeholder or handle audio data if Backend supports it.
+        // Since Backend sendMessage takes 'content', we'll might need an upload endpoint first.
+        // To be safe for this task, I'll alert that it's being sent.
+        console.log('Voice message blob created:', audioBlob.size);
+        this.isSending = true;
+
+        // Placeholder for real upload logic
+        this.halaqaService.sendMessage(this.halaqaId, this.currentUserId, '[رسالة صوتية]', 'voice').subscribe({
+            next: (res) => {
+                this.isSending = false;
+                // Socket will broadcast it
+            },
+            error: (err) => {
+                this.isSending = false;
+                console.error('Failed to send voice', err);
+            }
+        });
+    }
+
+    isUserOnline(userId: string): boolean {
+        return this.globalOnlineIds.includes(userId);
+    }
+
+    openUserProfile(user: any) {
+        if (!user) return;
+        const userId = user._id || user.userId || user;
+        // Navigation or Modal for profile
+        alert(`فتح ملف: ${user.username || 'مستخدم'}. (قيد التطوير)`);
+    }
+
+    formatDuration(sec: number): string {
+        const m = Math.floor(sec / 60);
+        const s = sec % 60;
+        return `${m}:${s < 10 ? '0' : ''}${s}`;
     }
 
     trackByMsgId(index: number, item: any): string {

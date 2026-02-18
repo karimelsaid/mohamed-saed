@@ -88,8 +88,10 @@
                     class="bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl p-4 rounded-3xl shadow-sm border border-white/20 flex flex-wrap gap-4 items-center">
                     <div class="relative flex-1 min-w-[200px]">
                         <fa-icon [icon]="faSearch"
-                            class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400"></fa-icon>
-                        <input type="text" placeholder="ابحث عن حلقة بالاسم..."
+                            class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold clickable"
+                            (click)="onSearch()"></fa-icon>
+                        <input type="text" [(ngModel)]="searchTerm" (keyup.enter)="onSearch()" 
+                            placeholder="ابحث عن حلقة بالاسم..."
                             class="w-full pr-12 pl-4 py-3 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 outline-none">
                     </div>
                 </div>
@@ -208,6 +210,28 @@
                                 </button>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- Pagination Controls -->
+                    <div *ngIf="totalPages > 1" class="mt-12 flex justify-center items-center gap-2">
+                        <button (click)="onPageChange(currentPage - 1)" [disabled]="currentPage === 1"
+                            class="p-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-gray-400 disabled:opacity-30 hover:bg-blue-50 group">
+                            <fa-icon [icon]="faArrowRight"></fa-icon>
+                        </button>
+                        
+                        <div class="flex gap-1">
+                            <button *ngFor="let p of [].constructor(totalPages); let i = index"
+                                (click)="onPageChange(i + 1)"
+                                [class]="(i + 1) === currentPage ? 'bg-blue-600 text-white' : 'bg-white dark:bg-gray-800 border-gray-100 text-gray-600 hover:bg-blue-50'"
+                                class="w-10 h-10 rounded-xl font-bold transition-all shadow-sm">
+                                {{ i + 1 }}
+                            </button>
+                        </div>
+
+                        <button (click)="onPageChange(currentPage + 1)" [disabled]="currentPage === totalPages"
+                            class="p-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-gray-400 disabled:opacity-30 hover:bg-blue-50 rotate-180">
+                            <fa-icon [icon]="faArrowRight"></fa-icon>
+                        </button>
                     </div>
                 </div>
 

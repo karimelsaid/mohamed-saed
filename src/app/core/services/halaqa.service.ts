@@ -28,9 +28,10 @@ export class HalaqaService {
         return this.http.post(`${this.apiUrl}/create`, data);
     }
 
-    getAvailableHalaqas(gender: string, userId?: string): Observable<any> {
-        let url = `${this.apiUrl}/available?gender=${gender}`;
+    getAvailableHalaqas(gender: string, userId?: string, search?: string, page: number = 1, limit: number = 10): Observable<any> {
+        let url = `${this.apiUrl}/available?gender=${gender}&page=${page}&limit=${limit}`;
         if (userId) url += `&userId=${userId}`;
+        if (search) url += `&search=${encodeURIComponent(search)}`;
         return this.http.get(url);
     }
 

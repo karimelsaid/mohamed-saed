@@ -10,6 +10,11 @@ export interface ActiveUser {
     joinedAt: Date;
 }
 
+export interface PresenceUpdate {
+    halaqaId: string;
+    message: any;
+}
+
 @Injectable({
     providedIn: 'root'
 })
@@ -17,6 +22,12 @@ export class PresenceService implements OnDestroy {
     private socket: Socket;
     private activeUsersSubject = new BehaviorSubject<ActiveUser[]>([]);
     public activeUsers$ = this.activeUsersSubject.asObservable();
+
+    private globalPresenceSubject = new BehaviorSubject<string[]>([]);
+    public globalPresence$ = this.globalPresenceSubject.asObservable();
+
+    private newMessageSubject = new BehaviorSubject<PresenceUpdate | null>(null);
+    public newMessage$ = this.newMessageSubject.asObservable();
 
     constructor() {
         // Use the same base URL as API but without /api prefix for socket
@@ -31,9 +42,22 @@ export class PresenceService implements OnDestroy {
             this.activeUsersSubject.next(users);
         });
 
+        this.socket.on('global_presence_update', (userIds: string[]) => {
+            this.globalPresenceSubject.next(userIds);
+        });
+
+        this.socket.on('new_message', (data: PresenceUpdate) => {
+            this.newMessageSubject.next(data);
+        });
+
         this.socket.on('connect', () => {
             console.log('✅ Connected to presence server');
+            // We'll re-sync online status if needed
         });
+    }
+
+    setOnline(userId: string, username: string) {
+        this.socket.emit('user_online', { userId, username });
     }
 
     joinHalaqa(halaqaId: string, userId: string, username: string) {

@@ -32,7 +32,8 @@ const {
   submitUrgencyRequest,
   getAllUrgencyRequests,
   updateUrgencyRequestStatus,
-  requestPayment
+  requestPayment,
+  getPublicProfile
 } = require('../controllers/users.controller'); // Removed getPaymentRequests
 
 const userMediaController = require('../controllers/user-media.controller'); // Import media controller

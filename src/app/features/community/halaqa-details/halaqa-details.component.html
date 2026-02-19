@@ -232,7 +232,8 @@
 
                     <div class="divide-y divide-gray-50 dark:divide-gray-700">
                         <!-- Leader -->
-                        <div class="p-4 flex items-center justify-between group">
+                        <div (click)="openUserProfile(halaqaData?.leader)"
+                            class="p-4 flex items-center justify-between group cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                             <div class="flex items-center gap-3">
                                 <div
                                     class="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 flex items-center justify-center font-bold">

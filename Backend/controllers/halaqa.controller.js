@@ -314,3 +314,27 @@ exports.deleteHalaqa = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
+// --- Voice Message Upload ---
+
+exports.uploadVoiceMessage = [
+    voiceUpload.single('audio'),
+    async (req, res) => {
+        try {
+            if (!req.file) {
+                return res.status(400).json({ success: false, message: 'No audio file uploaded' });
+            }
+
+            const publicUrl = `/uploads/voice/${req.file.filename}`;
+
+            res.status(200).json({
+                success: true,
+                message: 'Voice message uploaded successfully',
+                url: publicUrl
+            });
+        } catch (error) {
+            console.error('Error uploading voice message:', error);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+];

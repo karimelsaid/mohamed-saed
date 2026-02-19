@@ -37,8 +37,16 @@ export class PresenceService implements OnDestroy {
 
     constructor() {
         let socketUrl = environment.apiBaseUrl.split('/api')[0];
-        if (!socketUrl.startsWith('http')) {
-            socketUrl = window.location.origin;
+        // Ensure we don't have trailing slashes
+        if (socketUrl.endsWith('/')) {
+            socketUrl = socketUrl.slice(0, -1);
+        }
+
+        // Fallback for relative URLs or missing protocol
+        if (socketUrl && !socketUrl.startsWith('http') && typeof window !== 'undefined') {
+            const proto = window.location.protocol;
+            const host = window.location.host;
+            socketUrl = `${proto}//${host}`;
         }
 
         console.log('🔌 Initializing socket at:', socketUrl, 'with path /api/socket.io');
@@ -46,9 +54,12 @@ export class PresenceService implements OnDestroy {
 
         this.socket = io(socketUrl, {
             path: '/api/socket.io',
-            transports: ['websocket', 'polling'],
-            reconnectionAttempts: 10,
-            reconnectionDelay: 2000
+            transports: ['polling', 'websocket'], // Start with polling for better compatibility
+            reconnectionAttempts: 15,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 5000,
+            timeout: 20000, // 20 second timeout for mobile stability
+            randomizationFactor: 0.5
         });
 
         this.socket.on('presence_update', (users: ActiveUser[]) => {

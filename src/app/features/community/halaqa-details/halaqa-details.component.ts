@@ -443,11 +443,21 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
         this.halaqaService.getOrCreateDM(this.currentUserId, otherUserId).subscribe({
             next: (res) => {
                 this.selectedUser = null; // Close modal
-                // Redirect to the same component but with the new DM ID
-                this.router.navigate(['/community/halaqa', res.data._id]).then(() => {
-                    // Force refresh if already on the same component but different ID
-                    window.location.reload();
-                });
+
+                // Use absolute path for consistency, but correct one
+                // If in Mushaf app, it will be /community/:id
+                // If in main app, it might be /community/halaqa/:id
+
+                const currentUrl = this.router.url;
+                if (currentUrl.includes('/mushaf') || !currentUrl.includes('/community/halaqa')) {
+                    // Assuming Mushaf app or similar flat structure
+                    this.router.navigate(['/community', res.data._id]);
+                } else {
+                    // Assuming main app structure
+                    this.router.navigate(['/community/halaqa', res.data._id]);
+                }
+
+                this.isLoadingDetails = false;
             },
             error: (err) => {
                 console.error('Failed to start DM', err);

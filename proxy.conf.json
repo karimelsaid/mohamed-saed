@@ -7,8 +7,8 @@
     "logLevel": "debug"
   },
   "/uploads": {
-    "target": "http://localhost:3000",
-    "secure": false,
+    "target": "https://knoozbook.com",
+    "secure": true,
     "changeOrigin": true,
     "ws": true,
     "logLevel": "debug"

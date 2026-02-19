@@ -78,7 +78,10 @@ export class AppComponent implements OnInit {
     this.appUpdateService.checkForUpdate(); // Check for updates on startup
 
     // Auto specific actions
-    this.pushService.initialPermissionRequest();
+    // Auto specific actions (Only if not Android or wrapped)
+    if (Capacitor.getPlatform() !== 'android') {
+      this.pushService.initialPermissionRequest();
+    }
 
     if (Capacitor.isNativePlatform()) {
       // Hide Status Bar (Full Screen Mode)
@@ -191,7 +194,9 @@ export class AppComponent implements OnInit {
     this.authService.user$.subscribe(user => {
       if (user && user.id) {
         // This ensures that valid token is sent to backend whenever user is known
-        this.pushService.subscribeToNotifications();
+        if (Capacitor.getPlatform() !== 'android') {
+          this.pushService.subscribeToNotifications();
+        }
 
         // Initialize Voice Call Peer
         this.voiceCallService.init(user.id);

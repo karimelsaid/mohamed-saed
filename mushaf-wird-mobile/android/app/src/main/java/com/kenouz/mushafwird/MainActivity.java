@@ -6,6 +6,11 @@ import android.content.Context;
 import android.content.res.Configuration;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
+import android.webkit.PermissionRequest;
+import android.webkit.WebChromeClient;
+import android.content.pm.PackageManager;
+import android.Manifest;
+import java.util.Arrays;
 import com.getcapacitor.BridgeActivity;
 import com.kenouz.mushafwird.MediaBridgePlugin;
 
@@ -34,6 +39,26 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(MediaBridgePlugin.class);
         
         super.onCreate(savedInstanceState);
+
+        // Explicitly check for microphone permission to trigger the system dialog if needed
+        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, 1);
+        }
+
+        // Configure WebView for media capture
+        WebView webView = getBridge().getWebView();
+        if (webView != null) {
+            webView.setWebChromeClient(new WebChromeClient() {
+                @Override
+                public void onPermissionRequest(final PermissionRequest request) {
+                    if (Arrays.asList(request.getResources()).contains(PermissionRequest.RESOURCE_AUDIO_CAPTURE)) {
+                        request.grant(request.getResources());
+                    } else {
+                        super.onPermissionRequest(request);
+                    }
+                }
+            });
+        }
     }
 
     @Override

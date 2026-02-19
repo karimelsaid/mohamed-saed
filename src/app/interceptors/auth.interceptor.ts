@@ -26,13 +26,12 @@ export class AuthInterceptor implements HttpInterceptor {
         let authReq = req;
 
         // Determine if request is internal (Kenouz API or local)
-        const isInternal = req.url.startsWith('/api') ||
+        const isInternal = req.url.includes('/api/') ||
             req.url.startsWith(environment.apiBaseUrl) ||
-            req.url.includes('knoozbook.com') ||
-            req.url.startsWith('/auth') ||
-            req.url.startsWith('/admin') ||
-            req.url.startsWith('/uploads') ||
-            req.url.includes(window.location.host);
+            req.url.includes('knoozbook.com/api') ||
+            req.url.startsWith('/auth/') ||
+            req.url.startsWith('/admin/') ||
+            req.url.includes('knoozbook.com/auth');
 
         // EXTRA safety: Explicitly skip external audio/font domains
         const isExternalMedia = req.url.includes('quranicaudio.com') ||
@@ -43,8 +42,9 @@ export class AuthInterceptor implements HttpInterceptor {
         console.log(`🔍 [AuthInterceptor] Intercepting: ${req.url} (isInternal: ${isInternal}, Origin: ${window.location.origin})`);
 
         if (isInternal && !isExternalMedia) {
-            // ALWAYS set withCredentials for internal Kenouz API to ensure cookies/session work correctly across origins (Capacitor/CORS)
-            authReq = authReq.clone({ withCredentials: true });
+            // NOT using withCredentials as we use Bearer tokens. 
+            // Enabling this can cause CORS issues on mobile origins (capacitor://localhost or https://localhost).
+            // authReq = authReq.clone({ withCredentials: true });
 
             const userStr = localStorage.getItem('user');
             const merchantToken = localStorage.getItem('merchant_token');

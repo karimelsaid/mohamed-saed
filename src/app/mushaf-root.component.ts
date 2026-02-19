@@ -26,8 +26,12 @@ export class MushafRootComponent implements OnInit, OnDestroy {
                 // Initialize Voice Call Peer
                 this.voiceCallService.init(userId);
 
-                // Subscribe to notifications
-                this.pushService.subscribeToNotifications();
+                // Subscribe to notifications (Skip Android for now if it crashes)
+                import('@capacitor/core').then(cap => {
+                    if (cap.Capacitor.getPlatform() !== 'android') {
+                        this.pushService.subscribeToNotifications();
+                    }
+                });
             }
         });
     }

@@ -28,17 +28,24 @@ export class PushNotificationService {
      */
     async initialPermissionRequest() {
         if (Capacitor.isNativePlatform()) {
-            const permStatus = await PushNotifications.checkPermissions();
+            // Android often crashes here if google-services.json is missing
+            try {
+                const permStatus = await PushNotifications.checkPermissions();
 
-            if (permStatus.receive === 'prompt') {
-                // Initial Request
-                const newStatus = await PushNotifications.requestPermissions();
-                if (newStatus.receive === 'granted') {
-                    await PushNotifications.register();
+                if (permStatus.receive === 'prompt') {
+                    const newStatus = await PushNotifications.requestPermissions();
+                    if (newStatus.receive === 'granted') {
+                        await PushNotifications.register().catch(e => {
+                            console.warn('⚠️ [PushService] Native register() failed:', e);
+                        });
+                    }
+                } else if (permStatus.receive === 'granted') {
+                    await PushNotifications.register().catch(e => {
+                        console.warn('⚠️ [PushService] Native register() caught error:', e);
+                    });
                 }
-            } else if (permStatus.receive === 'granted') {
-                // Already granted, just ensure valid registration
-                await PushNotifications.register();
+            } catch (e) {
+                console.warn('⚠️ [PushService] Firebase not initialized or Push plugin error:', e);
             }
         }
     }
@@ -123,23 +130,31 @@ export class PushNotificationService {
     // --- Native Implementation ---
 
     private async registerNativePush() {
-        // Request permission
-        let permStatus = await PushNotifications.checkPermissions();
+        if (!Capacitor.isNativePlatform()) return false;
 
-        if (permStatus.receive === 'prompt') {
-            permStatus = await PushNotifications.requestPermissions();
+        try {
+            let permStatus = await PushNotifications.checkPermissions();
+
+            if (permStatus.receive === 'prompt') {
+                permStatus = await PushNotifications.requestPermissions();
+            }
+
+            if (permStatus.receive !== 'granted') {
+                throw new Error('User denied permissions!');
+            }
+
+            // Register with Apple / Google to get token
+            await PushNotifications.register();
+            return true;
+        } catch (e) {
+            console.error('❌ [PushService] Native registration failed:', e);
+            // On iOS we want to know, on Android we might want to be silent if missing Firebase
+            if (Capacitor.getPlatform() === 'android') {
+                console.warn('⚠️ [PushService] Android Push registration failed. Verify google-services.json.');
+                return false;
+            }
+            throw new Error('فشل تسجيل التنبيهات. تأكد من إعدادات الخدمة.');
         }
-
-        if (permStatus.receive !== 'granted') {
-            throw new Error('User denied permissions!');
-        }
-
-        // Register with Apple / Google to get token
-        await PushNotifications.register();
-
-        // Return a promise that resolves when the token is received (via listener)
-        // For UI feedback, we just resolve true essentially immediately
-        return true;
     }
 
     // Subject to notify components (Navbar) that a push arrived

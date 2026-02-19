@@ -342,57 +342,58 @@ exports.uploadVoiceMessage = [
 // --- Private DM Logic ---
 
 exports.getOrCreateDM = async (req, res) => {
-    const { userId, otherUserId } = req.body;
+    try {
+        const { userId, otherUserId } = req.body;
 
-    if (!userId || !otherUserId) {
-        return res.status(400).json({ success: false, message: 'Both user IDs are required' });
+        if (!userId || !otherUserId) {
+            return res.status(400).json({ success: false, message: 'Both user IDs are required' });
+        }
+
+        // Check for existing DM
+        let dm = await Halaqa.findOne({
+            isDM: true,
+            dmParticipants: { $all: [userId, otherUserId] },
+            active: true
+        });
+
+        if (dm) {
+            return res.status(200).json({ success: true, data: dm });
+        }
+
+        // Fetch users to ensure they exist and get their usernames + gender
+        const users = await User.find({ _id: { $in: [userId, otherUserId] } });
+
+        if (users.length < 2 && userId !== otherUserId) {
+            return res.status(404).json({ success: false, message: 'One or more users not found' });
+        }
+
+        const user1 = users.find(u => u._id.toString() === userId.toString());
+        const user2 = users.find(u => u._id.toString() === otherUserId.toString());
+
+        if (!user1 || !user2) {
+            return res.status(404).json({ success: false, message: 'User verification failed' });
+        }
+
+        const title = `دردشة خاصة: ${user1.username} و ${user2.username}`;
+
+        // Create new DM "Halaqa"
+        const inviteCode = crypto.randomBytes(4).toString('hex').toUpperCase();
+        dm = new Halaqa({
+            name: title,
+            description: 'دردشة خاصة',
+            gender: user1.gender, // Use gender from one of participants
+            leader: userId,
+            members: [otherUserId],
+            dmParticipants: [userId, otherUserId],
+            isDM: true,
+            isPrivate: true,
+            inviteCode
+        });
+
+        await dm.save();
+        res.status(201).json({ success: true, data: dm });
+    } catch (error) {
+        console.error('Error in getOrCreateDM:', error);
+        res.status(500).json({ success: false, message: error.message });
     }
-
-    // Check for existing DM
-    let dm = await Halaqa.findOne({
-        isDM: true,
-        dmParticipants: { $all: [userId, otherUserId] },
-        active: true
-    });
-
-    if (dm) {
-        return res.status(200).json({ success: true, data: dm });
-    }
-
-    // Fetch users to ensure they exist and get their usernames + gender
-    const users = await User.find({ _id: { $in: [userId, otherUserId] } });
-
-    if (users.length < 2 && userId !== otherUserId) {
-        return res.status(404).json({ success: false, message: 'One or more users not found' });
-    }
-
-    const user1 = users.find(u => u._id.toString() === userId.toString());
-    const user2 = users.find(u => u._id.toString() === otherUserId.toString());
-
-    if (!user1 || !user2) {
-        return res.status(404).json({ success: false, message: 'User verification failed' });
-    }
-
-    const title = `دردشة خاصة: ${user1.username} و ${user2.username}`;
-
-    // Create new DM "Halaqa"
-    const inviteCode = crypto.randomBytes(4).toString('hex').toUpperCase();
-    dm = new Halaqa({
-        name: title,
-        description: 'دردشة خاصة',
-        gender: user1.gender, // Use gender from one of participants
-        leader: userId,
-        members: [otherUserId],
-        dmParticipants: [userId, otherUserId],
-        isDM: true,
-        isPrivate: true,
-        inviteCode
-    });
-
-    await dm.save();
-    res.status(201).json({ success: true, data: dm });
-} catch (error) {
-    console.error('Error in getOrCreateDM:', error);
-    res.status(500).json({ success: false, message: error.message });
-}
 };

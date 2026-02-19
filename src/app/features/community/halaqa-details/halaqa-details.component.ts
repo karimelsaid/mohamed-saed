@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef, AfterViewChecked, inject } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -10,7 +10,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { HalaqaService } from '../../../core/services/halaqa.service';
 import { PresenceService, ActiveUser } from '../../../core/services/presence.service';
-import { VoiceCallService } from '../../../core/services/voice-call.service';
+import { VoiceCallService, CallSession } from '../../../core/services/voice-call.service';
 import { AuthService } from '../../../auth/auth.service';
 import { environment } from '../../../../environments/environment';
 import { Subscription } from 'rxjs';
@@ -93,15 +93,15 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
 
     @ViewChild('scrollContainer') private scrollContainer: ElementRef | undefined;
 
-    constructor(
-        private route: ActivatedRoute,
-        private router: Router,
-        private halaqaService: HalaqaService,
-        private presenceService: PresenceService,
-        private voiceCallService: VoiceCallService,
-        private authService: AuthService,
-        private location: Location
-    ) { }
+    private route = inject(ActivatedRoute);
+    private router = inject(Router);
+    private halaqaService = inject(HalaqaService);
+    private presenceService = inject(PresenceService);
+    private voiceCallService = inject(VoiceCallService);
+    private authService = inject(AuthService);
+    private location = inject(Location);
+
+    constructor() { }
 
     ngOnInit(): void {
         this.halaqaId = this.route.snapshot.paramMap.get('id') || '';
@@ -110,7 +110,7 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
             return;
         }
 
-        this.authService.user$.subscribe(user => {
+        this.authService.user$.subscribe((user: any) => {
             this.currentUser = user;
             if (user) {
                 this.currentUserId = (user.id || (user as any)._id)?.toString() || '';
@@ -133,17 +133,17 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
         });
 
         // Room Presence Subscription
-        this.presenceSub = this.presenceService.activeUsers$.subscribe(users => {
+        this.presenceSub = this.presenceService.activeUsers$.subscribe((users: ActiveUser[]) => {
             this.activeUsers = users;
         });
 
         // Global Presence Subscription
-        this.globalPresenceSub = this.presenceService.globalPresence$.subscribe(ids => {
+        this.globalPresenceSub = this.presenceService.globalPresence$.subscribe((ids: string[]) => {
             this.globalOnlineIds = ids;
         });
 
         // Real-time Messages Subscription
-        this.msgSub = this.presenceService.newMessage$.subscribe(data => {
+        this.msgSub = this.presenceService.newMessage$.subscribe((data: any) => {
             if (data && data.halaqaId === this.halaqaId) {
                 // Add message if it's not already there (to avoid duplicates from own sender)
                 const exists = this.messages.some(m => m._id === data.message._id);
@@ -155,7 +155,7 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
         });
 
         // Listen for call endings to show rating
-        this.voiceCallService.callSession$.subscribe(session => {
+        this.voiceCallService.callSession$.subscribe((session: CallSession | null) => {
             if (session && !session.isIncoming) {
                 this.ratingTargetUser = { userId: session.peerId, username: session.username };
             }

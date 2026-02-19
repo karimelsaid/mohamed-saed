@@ -48,7 +48,7 @@ export class VoiceCallService implements OnDestroy {
             // Re-init if necessary or notify UI
         });
 
-        this.peer.on('call', (call) => {
+        this.peer.on('call', (call: MediaConnection) => {
             console.log('📞 Incoming call from:', call.peer);
             this.callSessionSubject.next({
                 peerId: call.peer,
@@ -80,7 +80,7 @@ export class VoiceCallService implements OnDestroy {
                 stream: undefined
             });
 
-            call.on('stream', (remoteStream) => {
+            call.on('stream', (remoteStream: MediaStream) => {
                 const current = this.callSessionSubject.value;
                 if (current) {
                     this.callSessionSubject.next({ ...current, stream: remoteStream });
@@ -103,7 +103,7 @@ export class VoiceCallService implements OnDestroy {
             this.myStream = await navigator.mediaDevices.getUserMedia({ audio: true });
             call.answer(this.myStream);
 
-            call.on('stream', (remoteStream) => {
+            call.on('stream', (remoteStream: MediaStream) => {
                 const current = this.callSessionSubject.value;
                 if (current) {
                     this.callSessionSubject.next({ ...current, stream: remoteStream });

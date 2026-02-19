@@ -179,13 +179,33 @@ exports.sendMessage = async (req, res) => {
       matchedBooks = findMatchingBooks(lastUserContent, books);
     }
 
-    // إذا تم العثور على كتب مطابقة، أضف عناوين الكتب إلى الرسائل كرسالة نظام لتحسين الوصف
+    // تجهيز الرسائل مع التعليمات الصارمة
     let enhancedMessages = [...messages];
+
+    // إضافة تعليمات النظام
+    const systemInstruction = `
+    أنت مساعد ذكي لمكتبة "كنوز" (Kenouz) فقط.
+    1. ممنوع منعاً باتاً ذكر أو ترشيح أي مكتبات أخرى أو مواقع بيع كتب أخرى. إذا سألك المستخدم عن أماكن أخرى، قل له بلطف أنك لا تعرف إلا مكتبة كنوز.
+    2. إذا وجدت كتباً مناسبة في القائمة المقدمة لك، رشحها.
+    3. يجب أن يكون ردك بصيغة JSON فقط، بالشكل التالي:
+    {
+      "text": "نص الرد هنا موجه للمستخدم...",
+      "recommended_books": ["اسم الكتاب 1 تماماً كما ورد في القائمة", "اسم الكتاب 2"]
+    }
+    4. في حقل "text"، تحدث مع المستخدم بشكل طبيعي وجذاب، واشرح لماذا رشحت هذه الكتب.
+    5. لا تضع أي روابط في النص، سيقوم النظام بإضافة الروابط تلقائياً.
+    `;
+
+    enhancedMessages.push({
+      role: 'system',
+      content: systemInstruction
+    });
+
     if (matchedBooks.length > 0) {
       const bookTitles = matchedBooks.map(book => book.title).join(', ');
       enhancedMessages.push({
         role: 'system',
-        content: `هذه قائمة بعناوين الكتب التي قد تكون ذات صلة: ${bookTitles}. يرجى تضمين وصف دقيق ومفصل لهذه الكتب في الرد. كما يرجى تمييز أسماء الكتب في النص باستخدام علامات **bold** (أي بين علامتي نجمة مزدوجة).`
+        content: `قائمة الكتب المتوفرة في مكتبة كنوز والتي قد تكون ذات صلة بطلب المستخدم: [${bookTitles}]. اختر منها الأنسب فقط.`
       });
     }
 
@@ -195,55 +215,96 @@ exports.sendMessage = async (req, res) => {
       'HTTP-Referer': req.headers.origin || 'https://yourwebsite.com',
       'X-Title': 'Your Website Chat'
     };
+
+    // إجبار النموذج على إخراج JSON
     const requestBody = {
       model: model || 'deepseek/deepseek-chat',
       messages: enhancedMessages,
       temperature,
       max_tokens,
+      response_format: { type: 'json_object' }
     };
-    const response = await axios.post(OPENROUTER_API_URL, requestBody, { headers });
+
+    let response;
+    try {
+      response = await axios.post(OPENROUTER_API_URL, requestBody, { headers });
+    } catch (apiError) {
+      // محاولة ثانية بدون JSON format إذا فشل النموذج في دعمه
+      if (apiError.response && apiError.response.status === 400) {
+        delete requestBody.response_format;
+        response = await axios.post(OPENROUTER_API_URL, requestBody, { headers });
+      } else {
+        throw apiError;
+      }
+    }
 
     let combinedResponse = response.data;
 
-    // لف محتوى رد المساعد بعنصر div مع اتجاه النص من اليمين إلى اليسار
+    // معالجة الرد
     if (combinedResponse.choices && combinedResponse.choices.length > 0) {
       let content = combinedResponse.choices[0].message.content;
-      // استبدال علامات **bold** بوسم span مع خلفية صفراء ونص عريض ولون نص داكن
-      content = highlightBoldBookTitles(content);
-      combinedResponse.choices[0].message.content = `<div dir="rtl">${content}</div>`;
-    }
+      let recommendedBookTitles = [];
+      let replyText = content;
 
-    // إذا تم العثور على كتب مطابقة، أضفها إلى الاستجابة مع تنسيق جدول HTML مع زر "اضغط هنا"
-    // if (matchedBooks.length > 0) {
-    //   const booksInfo = `<table style="width: 100%; border-collapse: collapse; direction: rtl;">
-    //     <thead>
-    //       <tr style="background-color: #3b82f6; color: white;">
-    //         <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">عنوان الكتاب</th>
-    //         <th style="border: 1px solid #ddd; padding: 8px; text-align: center;">رابط</th>
-    //       </tr>
-    //     </thead>
-    //     <tbody>
-    //       ${matchedBooks.map(book => `
-    //         <tr style="border-bottom: 1px solid #ddd;">
-    //           <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${book.title}</td>
-    //           <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">
-    //             <a href="${book.url}" target="_blank" rel="noopener noreferrer" style="background-color: #3b82f6; color: white; padding: 4px 12px; border-radius: 4px; text-decoration: none; font-weight: bold;">اضغط هنا</a>
-    //           </td>
-    //         </tr>
-    //       `).join('')}
-    //     </tbody>
-    //   </table>`;
-    //   const additionalMessage = {
-    //     role: 'system',
-    //     content: `بناءً على طلبك، هذه بعض الكتب التي قد تهمك:<br>${booksInfo}`
-    //   };
-    //   // أضف الرسالة الإضافية إلى الرد
-    //   if (!combinedResponse.choices || combinedResponse.choices.length === 0) {
-    //     combinedResponse.choices = [{ message: additionalMessage }];
-    //   } else {
-    //     combinedResponse.choices[0].message.content += `<br><br>${additionalMessage.content}`;
-    //   }
-    // }
+      try {
+        const jsonResponse = JSON.parse(content);
+        if (jsonResponse.text) replyText = jsonResponse.text;
+        if (jsonResponse.recommended_books && Array.isArray(jsonResponse.recommended_books)) {
+          recommendedBookTitles = jsonResponse.recommended_books;
+        }
+      } catch (e) {
+        // فشل تحليل JSON، نستخدم النص كما هو
+        console.warn('AI did not return valid JSON:', content);
+      }
+
+      // تنسيق النص
+      // استبدال علامات **bold** بوسم span مع خلفية صفراء ونص عريض ولون نص داكن
+      replyText = highlightBoldBookTitles(replyText);
+
+      // إنشاء جدول الكتب المقترحة
+      let booksTableHtml = '';
+      if (recommendedBookTitles.length > 0) {
+        // البحث عن تفاصيل الكتب المقترحة
+        const verifiedBooks = [];
+        recommendedBookTitles.forEach(title => {
+          // بحث مرن قليلًا عن العنوان
+          const book = books.find(b => b.title.includes(title) || title.includes(b.title));
+          if (book) verifiedBooks.push(book);
+        });
+
+        if (verifiedBooks.length > 0) {
+          booksTableHtml = `
+            <div style="margin-top: 15px; overflow-x: auto;">
+              <table style="width: 100%; border-collapse: collapse; direction: rtl; font-size: 0.9em; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                <thead style="background: linear-gradient(to left, #4f46e5, #3b82f6); color: white;">
+                  <tr>
+                    <th style="padding: 12px 15px; text-align: right;">الكتاب</th>
+                    <th style="padding: 12px 15px; text-align: center;">السعر</th>
+                    <th style="padding: 12px 15px; text-align: center;">التفاصيل</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${verifiedBooks.map(book => `
+                    <tr style="border-bottom: 1px solid #eee;">
+                      <td style="padding: 10px 15px; font-weight: 500; color: #333;">${book.title}</td>
+                      <td style="padding: 10px 15px; text-align: center; color: #666;">${book.price ? book.price + ' ج.م' : 'غير محدد'}</td>
+                      <td style="padding: 10px 15px; text-align: center;">
+                        <a href="${book.url}" target="_blank" rel="noopener noreferrer" 
+                           style="display: inline-block; background-color: #3b82f6; color: white; padding: 6px 16px; border-radius: 20px; text-decoration: none; font-size: 0.85em; transition: background 0.2s;">
+                           عرض
+                        </a>
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>`;
+        }
+      }
+
+      // دمج النص مع الجدول
+      combinedResponse.choices[0].message.content = `<div dir="rtl" style="line-height: 1.6;">${replyText}${booksTableHtml}</div>`;
+    }
 
     return res.status(200).json({
       success: true,

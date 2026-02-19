@@ -70,5 +70,9 @@
 	</dict>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>نحتاج للوصول للميكروفون لتتمكن من إرسال رسائل صوتية والمشاركة في التسميع.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>نحتاج للوصول للكاميرا للميزات التفاعلية.</string>
 </dict>
 </plist>

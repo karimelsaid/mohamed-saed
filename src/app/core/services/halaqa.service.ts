@@ -71,4 +71,8 @@ export class HalaqaService {
     rateMember(data: any): Observable<any> {
         return this.http.post(`${this.apiUrl}/rate`, data);
     }
+
+    getOrCreateDM(userId: string, otherUserId: string): Observable<any> {
+        return this.http.post(`${this.apiUrl}/get-or-create-dm`, { userId, otherUserId });
+    }
 }

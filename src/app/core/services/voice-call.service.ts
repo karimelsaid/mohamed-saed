@@ -31,36 +31,46 @@ export class VoiceCallService implements OnDestroy {
     }
 
     init(userId: string) {
-        if (this.myId === userId) return;
+        if (this.myId === userId && this.peer && !this.peer.destroyed) return;
 
+        console.log('📡 Initializing VoiceCallService for:', userId);
         if (this.peer) this.peer.destroy();
 
         this.myId = userId;
         this.peer = new Peer(userId);
 
+        this.peer.on('open', (id) => {
+            console.log('✅ PeerJS connection opened with ID:', id);
+        });
+
+        this.peer.on('error', (err) => {
+            console.error('❌ PeerJS error:', err);
+            // Re-init if necessary or notify UI
+        });
+
         this.peer.on('call', (call) => {
             console.log('📞 Incoming call from:', call.peer);
-            // In a real app, we'd show a "Accept/Reject" UI. 
-            // For now, let's expose the incoming call state.
             this.callSessionSubject.next({
                 peerId: call.peer,
                 username: 'عضو آخر',
                 isIncoming: true
             });
-
-            // Note: We don't answer yet until the user clicks "Answer" in UI
             this.handleIncomingCall(call);
         });
     }
 
     private handleIncomingCall(call: MediaConnection) {
-        // This will be stored for when UI calls 'answer()'
         (window as any).incomingCall = call;
     }
 
     async startCall(remotePeerId: string, remoteUsername: string): Promise<void> {
+        if (!this.peer || this.peer.destroyed) {
+            throw new Error('Peer connection not active');
+        }
         try {
+            console.log('🎤 Requesting microphone for call...');
             this.myStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            console.log('📞 Starting call to:', remotePeerId);
             const call = this.peer.call(remotePeerId, this.myStream);
 
             this.callSessionSubject.next({

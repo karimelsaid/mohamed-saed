@@ -32,4 +32,7 @@ router.post('/rate', halaqaController.rateMember);
 // رفع رسالة صوتية
 router.post('/upload-voice', halaqaController.uploadVoiceMessage);
 
+// الدردشة الخاصة
+router.post('/get-or-create-dm', halaqaController.getOrCreateDM);
+
 module.exports = router;

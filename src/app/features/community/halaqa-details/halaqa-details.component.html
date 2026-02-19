@@ -500,6 +500,11 @@
                 </div>
 
                 <div class="flex flex-col gap-3">
+                    <button (click)="startPrivateChat(selectedUser)" *ngIf="selectedUser.id !== currentUserId"
+                        class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-green-500/20 transition-all active:scale-95 flex items-center justify-center gap-2">
+                        <fa-icon [icon]="faComments"></fa-icon>
+                        بدء دردشة خاصة
+                    </button>
                     <button (click)="startVoiceCall(selectedUser)" *ngIf="selectedUser.id !== currentUserId"
                         class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-500/20 transition-all active:scale-95 flex items-center justify-center gap-2">
                         <fa-icon [icon]="faPhone"></fa-icon>

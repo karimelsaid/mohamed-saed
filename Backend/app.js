@@ -56,6 +56,7 @@ const server = http.createServer(app);
 const { Server } = require('socket.io');
 
 const io = new Server(server, {
+  path: '/api/socket.io',
   cors: {
     origin: "*", // Adjust origins later if needed
     methods: ["GET", "POST"]

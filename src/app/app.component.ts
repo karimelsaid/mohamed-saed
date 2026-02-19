@@ -17,6 +17,7 @@ import { StatusBar, Style } from '@capacitor/status-bar'; // Import StatusBar
 import { Subscription, Observable } from 'rxjs';
 import { filter } from 'rxjs/operators';
 import { MushafAssetService } from './core/services/mushaf-asset.service';
+import { VoiceCallService } from './core/services/voice-call.service';
 
 @Component({
   selector: 'app-root',
@@ -62,7 +63,8 @@ export class AppComponent implements OnInit {
     private notificationService: NotificationService, // Inject NotificationService
     private localReminderService: LocalReminderService, // Inject LocalReminderService
     private authService: AuthService,
-    private mushafAssetService: MushafAssetService
+    private mushafAssetService: MushafAssetService,
+    private voiceCallService: VoiceCallService
   ) {
     this.initializeApp();
     // Initialize local reminders (works without server)
@@ -185,11 +187,14 @@ export class AppComponent implements OnInit {
       }
     });
 
-    // Auto-subscribe logged in users to push system
+    // Auto-subscribe logged in users to push system and voice calling
     this.authService.user$.subscribe(user => {
       if (user && user.id) {
         // This ensures that valid token is sent to backend whenever user is known
         this.pushService.subscribeToNotifications();
+
+        // Initialize Voice Call Peer
+        this.voiceCallService.init(user.id);
       }
     });
   }

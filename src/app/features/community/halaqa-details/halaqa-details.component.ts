@@ -175,11 +175,6 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
         this.stopRecording();
     }
 
-    startVoiceCall(user: ActiveUser) {
-        if (!user || user.userId === this.currentUserId) return;
-        this.voiceCallService.startCall(user.userId, user.username);
-    }
-
     isRoomLeader(userId: string): boolean {
         if (!this.halaqaData?.leader) return false;
         const leaderId = (this.halaqaData.leader._id || this.halaqaData.leader).toString();
@@ -322,21 +317,25 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
     async startRecording() {
         try {
             // Check for permissions first
-            const permission = await navigator.mediaDevices.getUserMedia({ audio: true });
-            if (!permission) throw new Error('Permission denied');
+            // Note: On mobile/WebView, we might need to ensure HTTPS and correct configuration
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
             this.audioChunks = [];
-            this.audioRecorder = new MediaRecorder(permission);
+            this.audioRecorder = new MediaRecorder(stream);
             this.audioRecorder.ondataavailable = (e: any) => this.audioChunks.push(e.data);
-            this.audioRecorder.onstop = () => this.sendVoiceMessage();
+            this.audioRecorder.onstop = () => {
+                this.sendVoiceMessage();
+                // Important: Stop the tracks to release microphone immediately
+                stream.getTracks().forEach(track => track.stop());
+            };
             this.audioRecorder.start();
             this.isRecording = true;
             this.recordingDuration = 0;
             this.recordingTimer = setInterval(() => this.recordingDuration++, 1000);
         } catch (err: any) {
             console.error('Could not start recording', err);
-            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-                alert('يرجى السماح بالوصول إلى الميكروفون من إعدادات المتصفح أو الهاتف لتتمكن من إرسال رسائل صوتية.');
+            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError' || err.name === 'SecurityError') {
+                alert('يرجى السماح بالوصول إلى الميكروفون من إعدادات المتصفح أو الهاتف. تأكد من أن الموقع يعمل عبر رابط آمن (HTTPS).');
             } else {
                 alert('حدث خطأ أثناء محاولة الوصول للميكروفون. يرجى التأكد من توصيله وإعطاء الصلاحية.');
             }
@@ -401,6 +400,45 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
                 alert('عذراً، تعذر تحميل بيانات الملف الشخصي حالياً.');
             }
         });
+    }
+
+    startPrivateChat(otherUser: any) {
+        if (!otherUser) return;
+        const otherUserId = otherUser.id || otherUser._id;
+
+        if (otherUserId === this.currentUserId) {
+            alert('لا يمكنك بدء دردشة خاصة مع نفسك.');
+            return;
+        }
+
+        this.isLoadingDetails = true;
+        this.halaqaService.getOrCreateDM(this.currentUserId, otherUserId).subscribe({
+            next: (res) => {
+                this.selectedUser = null; // Close modal
+                // Redirect to the same component but with the new DM ID
+                this.router.navigate(['/community/halaqa', res.data._id]).then(() => {
+                    // Force refresh if already on the same component but different ID
+                    window.location.reload();
+                });
+            },
+            error: (err) => {
+                console.error('Failed to start DM', err);
+                this.isLoadingDetails = false;
+                alert('فشل بدء الدردشة الخاصة. يرجى المحاولة مرة أخرى.');
+            }
+        });
+    }
+
+    async startVoiceCall(user: any) {
+        if (!user) return;
+        const userId = user.id || user._id;
+        try {
+            await this.voiceCallService.startCall(userId, user.username);
+            this.selectedUser = null; // Close modal
+        } catch (err: any) {
+            console.error('Call failed', err);
+            alert('فشل بدء المكالمة الصوتية. تأكد من إعطاء صلاحية الميكروفون وأن الطرف الآخر متصل.');
+        }
     }
 
     closeProfileModal() {

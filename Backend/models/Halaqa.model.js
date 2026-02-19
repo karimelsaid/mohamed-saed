@@ -11,6 +11,8 @@ const halaqaSchema = new mongoose.Schema({
     inviteCode: { type: String, required: true },
     inviteCodeExpiry: { type: Date },
     isPrivate: { type: Boolean, default: false },
+    isDM: { type: Boolean, default: false },
+    dmParticipants: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     active: { type: Boolean, default: true },
     tags: [String],
     createdAt: { type: Date, default: Date.now }

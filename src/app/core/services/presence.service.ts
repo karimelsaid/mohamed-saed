@@ -1,6 +1,6 @@
 import { Injectable, OnDestroy } from '@angular/core';
 import { io, Socket } from 'socket.io-client';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject, Observable, Subject } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 export interface ActiveUser {
@@ -26,17 +26,19 @@ export class PresenceService implements OnDestroy {
     private globalPresenceSubject = new BehaviorSubject<string[]>([]);
     public globalPresence$ = this.globalPresenceSubject.asObservable();
 
-    private newMessageSubject = new BehaviorSubject<PresenceUpdate | null>(null);
+    private newMessageSubject = new Subject<PresenceUpdate | null>();
     public newMessage$ = this.newMessageSubject.asObservable();
 
     constructor() {
         // Use the same base URL as API but without /api prefix for socket
-        // Or handle it via proxy if it's configured for WS
+        // Path is set to /api/socket.io to match backend proxy configuration
         const socketUrl = environment.apiBaseUrl.includes('localhost')
             ? 'http://localhost:3000'
             : 'https://knoozbook.com';
 
-        this.socket = io(socketUrl);
+        this.socket = io(socketUrl, {
+            path: '/api/socket.io'
+        });
 
         this.socket.on('presence_update', (users: ActiveUser[]) => {
             this.activeUsersSubject.next(users);

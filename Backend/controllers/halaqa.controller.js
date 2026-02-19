@@ -338,3 +338,46 @@ exports.uploadVoiceMessage = [
         }
     }
 ];
+
+// --- Private DM Logic ---
+
+exports.getOrCreateDM = async (req, res) => {
+    try {
+        const { userId, otherUserId } = req.body;
+
+        // Check for existing DM
+        let dm = await Halaqa.findOne({
+            isDM: true,
+            dmParticipants: { $all: [userId, otherUserId] },
+            active: true
+        });
+
+        if (dm) {
+            return res.status(200).json({ success: true, data: dm });
+        }
+
+        // Fetch user names for DM title (optional, or just "Private Chat")
+        const users = await User.find({ _id: { $in: [userId, otherUserId] } });
+        const title = `دردشة خاصة: ${users.map(u => u.username).join(' و ')}`;
+
+        // Create new DM "Halaqa"
+        const inviteCode = crypto.randomBytes(4).toString('hex').toUpperCase();
+        dm = new Halaqa({
+            name: title,
+            description: 'دردشة خاصة',
+            gender: users[0].gender, // Not strictly used for DM but required by model
+            leader: userId,
+            members: [otherUserId],
+            dmParticipants: [userId, otherUserId],
+            isDM: true,
+            isPrivate: true,
+            inviteCode
+        });
+
+        await dm.save();
+        res.status(201).json({ success: true, data: dm });
+    } catch (error) {
+        console.error('Error in getOrCreateDM:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};

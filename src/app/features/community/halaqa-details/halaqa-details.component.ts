@@ -6,7 +6,7 @@ import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import {
     faArrowRight, faPaperPlane, faInfoCircle, faUsers, faCopy, faCheck,
     faComments, faUserShield, faUser, faSync, faLink, faTrash, faUserGraduate, faStar,
-    faMicrophone, faStop, faPlay, faPause, faUserCircle
+    faMicrophone, faStop, faPlay, faPause, faUserCircle, faTimes, faPhone
 } from '@fortawesome/free-solid-svg-icons';
 import { HalaqaService } from '../../../core/services/halaqa.service';
 import { PresenceService, ActiveUser } from '../../../core/services/presence.service';
@@ -44,6 +44,8 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
     faPlay = faPlay;
     faPause = faPause;
     faUserCircle = faUserCircle;
+    faTimes = faTimes;
+    faPhone = faPhone;
 
     // State
     activeTab: 'chat' | 'info' = 'chat';

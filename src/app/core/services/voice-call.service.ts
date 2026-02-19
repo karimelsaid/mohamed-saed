@@ -64,13 +64,20 @@ export class VoiceCallService implements OnDestroy {
     }
 
     async startCall(remotePeerId: string, remoteUsername: string): Promise<void> {
-        if (!this.peer || this.peer.destroyed) {
+        if (!this.peer || this.peer.destroyed || !this.peer.open) {
+            console.error('🚫 [VoiceCall] Cannot start call: Peer connection not active or not open');
             throw new Error('Peer connection not active');
         }
+        if (!remotePeerId || remotePeerId === 'undefined' || remotePeerId === 'null') {
+            console.error('🚫 [VoiceCall] Cannot start call: Invalid remotePeerId', remotePeerId);
+            throw new Error('Invalid remotePeerId');
+        }
+
         try {
             console.log('🎤 Requesting microphone for call...');
             this.myStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            console.log('📞 Starting call to:', remotePeerId);
+
+            console.log('📞 Initiating PeerJS call to:', remotePeerId);
             const call = this.peer.call(remotePeerId, this.myStream);
 
             this.callSessionSubject.next({

@@ -57,10 +57,21 @@ const { Server } = require('socket.io');
 
 const io = new Server(server, {
   path: '/api/socket.io',
+  transports: ['websocket'], // Force websocket to avoid XHR polling errors on mobile/proxies
   cors: {
-    origin: "*", // Adjust origins later if needed
-    methods: ["GET", "POST"]
-  }
+    origin: (origin, callback) => {
+      // Allow all origins for socket in production if needed, or stick to allowedOrigins
+      if (!origin || allowedOrigins.includes(origin.replace(/\/$/, ""))) {
+        callback(null, true);
+      } else {
+        console.warn(`📡 [Socket CORS] Origin ${origin} allowed via fallback logic`);
+        callback(null, true);
+      }
+    },
+    methods: ["GET", "POST"],
+    credentials: true
+  },
+  allowEIO3: true // Support older clients if any
 });
 
 const port = process.env.PORT || 3000;

@@ -58,8 +58,15 @@ export class HalaqaService {
     }
 
     uploadVoiceMessage(audioBlob: Blob, userId: string): Observable<any> {
+        let extension = 'webm';
+        const type = audioBlob.type.toLowerCase();
+        if (type.includes('mp4') || type.includes('m4a')) extension = 'm4a';
+        else if (type.includes('ogg')) extension = 'ogg';
+        else if (type.includes('aac')) extension = 'aac';
+        else if (type.includes('wav')) extension = 'wav';
+
         const formData = new FormData();
-        formData.append('audio', audioBlob, 'voice-message.webm');
+        formData.append('audio', audioBlob, `voice-message.${extension}`);
         formData.append('userId', userId);
         return this.http.post(`${this.apiUrl}/upload-voice`, formData);
     }

@@ -3,18 +3,28 @@
     "target": "https://knoozbook.com",
     "secure": true,
     "changeOrigin": true,
+    "ws": true,
     "logLevel": "debug"
   },
   "/uploads": {
+    "target": "http://localhost:3000",
+    "secure": false,
+    "changeOrigin": true,
+    "ws": true,
+    "logLevel": "debug"
+  },
+  "/socket.io": {
     "target": "https://knoozbook.com",
     "secure": true,
     "changeOrigin": true,
+    "ws": true,
     "logLevel": "debug"
   },
   "/admin": {
     "target": "https://knoozbook.com",
     "secure": true,
     "changeOrigin": true,
+    "ws": true,
     "logLevel": "debug"
   }
 }

@@ -262,12 +262,12 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
                 this.isLoadingDetails = false;
 
                 // Robust ID extraction
-                const currentUserId = (this.currentUser?.id || this.currentUser?._id)?.toString();
+                const userId = (this.currentUser?.id || this.currentUser?._id)?.toString();
                 const leaderId = (this.halaqaData.leader?._id || this.halaqaData.leader)?.toString();
 
                 // Membership Check
-                const isLeader = leaderId === currentUserId;
-                const isMember = this.halaqaData.members?.some((m: any) => (m._id || m)?.toString() === currentUserId);
+                const isLeader = leaderId === userId;
+                const isMember = this.halaqaData.members?.some((m: any) => (m._id || m)?.toString() === userId);
 
                 if (!isLeader && !isMember) {
                     this.checkingMembership = false;
@@ -338,18 +338,32 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
         });
     }
 
+    private getSupportedMimeType(): string {
+        const types = [
+            'audio/mp4',   // Best for iOS/Safari
+            'audio/webm',  // Good for Chrome/Firefox
+            'audio/ogg',
+            'audio/aac',
+            'audio/wav'
+        ];
+        for (const type of types) {
+            if (MediaRecorder.isTypeSupported(type)) return type;
+        }
+        return '';
+    }
+
     // --- Voice Message Logic ---
     async startRecording() {
         try {
-            // Check for permissions first
-            // Note: On mobile/WebView, we might need to ensure HTTPS and correct configuration
+            const mimeType = this.getSupportedMimeType();
+            console.log(`🎙️ [HalaqaDetails] Starting record session. MimeType: ${mimeType || 'default'}`);
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
             this.audioChunks = [];
-            this.audioRecorder = new MediaRecorder(stream);
+            this.audioRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
             this.audioRecorder.ondataavailable = (e: any) => this.audioChunks.push(e.data);
             this.audioRecorder.onstop = () => {
-                this.sendVoiceMessage();
+                this.sendVoiceMessage(mimeType);
                 // Important: Stop the tracks to release microphone immediately
                 stream.getTracks().forEach(track => track.stop());
             };
@@ -375,10 +389,11 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
         }
     }
 
-    async sendVoiceMessage() {
+    async sendVoiceMessage(mimeType?: string) {
         if (this.audioChunks.length === 0) return;
 
-        const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
+        const type = mimeType || 'audio/webm';
+        const audioBlob = new Blob(this.audioChunks, { type });
         this.isSending = true;
 
         this.halaqaService.uploadVoiceMessage(audioBlob, this.currentUserId).subscribe({
@@ -386,8 +401,14 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
                 if (res.success) {
                     // Send actual message with audio URL
                     this.halaqaService.sendMessage(this.halaqaId, this.currentUserId, res.url, 'voice').subscribe({
-                        next: () => {
+                        next: (sendRes) => {
                             this.isSending = false;
+                            // Optimistic update for voice message
+                            const exists = this.messages.some(m => m._id === sendRes.data._id);
+                            if (!exists) {
+                                this.messages = [...this.messages, sendRes.data];
+                            }
+                            setTimeout(() => this.scrollToBottom(), 100);
                         },
                         error: (err) => {
                             this.isSending = false;
@@ -469,9 +490,13 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
 
     async startVoiceCall(user: any) {
         if (!user) return;
-        const userId = user.id || user._id;
+        const targetPeerId = user.userId || user.id || user._id;
+        if (!targetPeerId) {
+            console.error('🚫 [HalaqaDetails] Cannot start call: No peer ID found for user', user);
+            return;
+        }
         try {
-            await this.voiceCallService.startCall(userId, user.username);
+            await this.voiceCallService.startCall(targetPeerId, user.username);
             this.selectedUser = null; // Close modal
         } catch (err: any) {
             console.error('Call failed', err);

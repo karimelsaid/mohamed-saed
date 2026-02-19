@@ -6,7 +6,7 @@ const messageSchema = new mongoose.Schema({
     content: { type: String, required: true }, // Text content or URL for media
     type: {
         type: String,
-        enum: ['text', 'image', 'audio', 'system'],
+        enum: ['text', 'image', 'audio', 'voice', 'system'],
         default: 'text'
     },
     isDeleted: { type: Boolean, default: false },

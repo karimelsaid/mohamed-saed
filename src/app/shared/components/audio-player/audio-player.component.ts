@@ -1,7 +1,7 @@
 import { Component, Input, OnDestroy, ViewChild, ElementRef, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { faPlay, faPause, faDownload } from '@fortawesome/free-solid-svg-icons';
+import { faPlay, faPause } from '@fortawesome/free-solid-svg-icons';
 
 @Component({
   selector: 'app-audio-player',
@@ -12,7 +12,8 @@ import { faPlay, faPause, faDownload } from '@fortawesome/free-solid-svg-icons';
       <div class="flex items-center gap-3">
         <!-- Play/Pause Button -->
         <button (click)="togglePlay()" 
-                [class]="(isDarkBackground ? 'bg-white/20 text-white' : 'bg-gray-100 text-blue-600') + ' w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-110 active:scale-90'">
+                [disabled]="isError"
+                [class]="(isDarkBackground ? 'bg-white/20 text-white' : 'bg-gray-100 text-blue-600') + ' w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-110 active:scale-90 disabled:opacity-50'">
           <fa-icon [icon]="isPlaying ? faPause : faPlay" [class.translate-x-0.5]="!isPlaying"></fa-icon>
         </button>
 
@@ -33,19 +34,13 @@ import { faPlay, faPause, faDownload } from '@fortawesome/free-solid-svg-icons';
           <div class="flex justify-between items-center opacity-70 text-[10px] font-medium"
                [class.text-white]="isDarkBackground"
                [class.text-gray-500]="!isDarkBackground">
-            <span>{{ isPlaying ? formatTime(currentTime) : formatTime(duration) }}</span>
-            <span *ngIf="isPlaying" class="animate-pulse">جاري التشغيل...</span>
-            <span *ngIf="!isPlaying && duration > 0">جاهز للتشغيل</span>
+            <span>{{ (isPlaying || isBuffering) ? formatTime(currentTime) : formatTime(duration) }}</span>
+            <span *ngIf="isBuffering" class="animate-pulse">جاري التحميل...</span>
+            <span *ngIf="isPlaying && !isBuffering" class="animate-pulse">جاري التشغيل...</span>
+            <span *ngIf="isError" class="text-red-500">فشل التحميل</span>
+            <span *ngIf="!isPlaying && !isBuffering && !isError && duration > 0">جاهز للتشغيل</span>
           </div>
         </div>
-
-        <!-- Download Link -->
-        <a [href]="audioUrl" target="_blank" download 
-           [class.text-white]="isDarkBackground"
-           [class.text-gray-400]="!isDarkBackground"
-           class="opacity-40 hover:opacity-100 transition-opacity">
-           <fa-icon [icon]="faDownload" class="text-xs"></fa-icon>
-        </a>
       </div>
 
       <audio #audioElement 
@@ -53,6 +48,9 @@ import { faPlay, faPause, faDownload } from '@fortawesome/free-solid-svg-icons';
         (timeupdate)="onTimeUpdate()" 
         (loadedmetadata)="onLoadedMetadata()"
         (ended)="onEnded()"
+        (playing)="onPlaying()"
+        (waiting)="onWaiting()"
+        (pause)="onPaused()"
         (error)="onError($event)"
         preload="metadata"
         hidden>
@@ -72,9 +70,10 @@ export class AudioPlayerComponent implements OnDestroy {
 
   faPlay = faPlay;
   faPause = faPause;
-  faDownload = faDownload;
 
   isPlaying = false;
+  isBuffering = false;
+  isError = false;
   currentTime = 0;
   duration = 0;
   progress = 0;
@@ -82,13 +81,37 @@ export class AudioPlayerComponent implements OnDestroy {
   constructor(private cdr: ChangeDetectorRef) { }
 
   togglePlay() {
+    if (this.isError) return;
     const audio = this.audioRef.nativeElement;
     if (this.isPlaying) {
       audio.pause();
     } else {
-      audio.play().catch(err => console.error('Play failed', err));
+      audio.play().catch(err => {
+        console.error('Play failed', err);
+        this.isPlaying = false;
+        this.isError = true;
+        this.cdr.detectChanges();
+      });
     }
-    this.isPlaying = !this.isPlaying;
+    // Note: isPlaying will be updated by events
+  }
+
+  onPlaying() {
+    this.isPlaying = true;
+    this.isBuffering = false;
+    this.isError = false;
+    this.cdr.detectChanges();
+  }
+
+  onWaiting() {
+    this.isBuffering = true;
+    this.cdr.detectChanges();
+  }
+
+  onPaused() {
+    this.isPlaying = false;
+    this.isBuffering = false;
+    this.cdr.detectChanges();
   }
 
   onTimeUpdate() {
@@ -103,11 +126,13 @@ export class AudioPlayerComponent implements OnDestroy {
   onLoadedMetadata() {
     const audio = this.audioRef.nativeElement;
     this.duration = audio.duration;
+    this.isError = false;
     this.cdr.detectChanges();
   }
 
   onEnded() {
     this.isPlaying = false;
+    this.isBuffering = false;
     this.currentTime = 0;
     this.progress = 0;
     this.cdr.detectChanges();
@@ -126,6 +151,10 @@ export class AudioPlayerComponent implements OnDestroy {
 
   onError(err: any) {
     console.error('Audio element error', err);
+    this.isError = true;
+    this.isPlaying = false;
+    this.isBuffering = false;
+    this.cdr.detectChanges();
   }
 
   formatTime(sec: number): string {
@@ -137,9 +166,10 @@ export class AudioPlayerComponent implements OnDestroy {
 
   ngOnDestroy() {
     if (this.audioRef) {
-      this.audioRef.nativeElement.pause();
-      this.audioRef.nativeElement.src = '';
-      this.audioRef.nativeElement.load();
+      const audio = this.audioRef.nativeElement;
+      audio.pause();
+      audio.src = '';
+      audio.load();
     }
   }
 }

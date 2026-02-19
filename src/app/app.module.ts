@@ -51,6 +51,7 @@ import { BooksComponent } from './book-list/books/books.component';
 import { HowToEarnComponent } from './pages/how-to-earn/how-to-earn.component';
 import { ServiceWorkerModule } from '@angular/service-worker';
 import { LandingComponent } from './core/components/landing/landing.component';
+import { VoiceCallComponent } from './features/community/voice-call/voice-call.component';
 
 
 @NgModule({
@@ -81,7 +82,7 @@ import { LandingComponent } from './core/components/landing/landing.component';
     BooksComponent,
 
     HowToEarnComponent,
-      LandingComponent,
+    LandingComponent,
   ],
   imports: [
     BrowserModule,
@@ -99,6 +100,7 @@ import { LandingComponent } from './core/components/landing/landing.component';
     MerchantDashboardComponent,
     TutorialComponent,
     AccountModalComponent,
+    VoiceCallComponent,
     ServiceWorkerModule.register('ngsw-worker.js', {
       enabled: true, // Force enabled for testing Browser Notifications in Dev Mode
       // Register the ServiceWorker as soon as the application is stable

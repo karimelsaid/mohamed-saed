@@ -27,19 +27,43 @@
                 </div>
             </div>
 
-            <div class="flex items-center gap-2">
-                <button (click)="activeTab = 'chat'" [class.bg-blue-600]="activeTab === 'chat'"
-                    [class.text-white]="activeTab === 'chat'"
-                    class="p-2 px-4 rounded-xl text-sm font-bold transition-all">
-                    <fa-icon [icon]="faComments" class="ml-1"></fa-icon>
-                    الدردشة
-                </button>
-                <button (click)="activeTab = 'info'" [class.bg-blue-600]="activeTab === 'info'"
-                    [class.text-white]="activeTab === 'info'"
-                    class="p-2 px-4 rounded-xl text-sm font-bold transition-all">
-                    <fa-icon [icon]="faInfoCircle" class="ml-1"></fa-icon>
-                    التفاصيل
-                </button>
+            <!-- Sync & Status -->
+            <div class="flex items-center gap-3">
+                <div class="flex flex-col items-end">
+                    <div class="flex items-center gap-1.5">
+                        <span class="relative flex h-2 w-2">
+                            <span *ngIf="isSocketConnected"
+                                class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                            <span [ngClass]="isSocketConnected ? 'bg-green-500' : 'bg-red-500'"
+                                class="relative inline-flex rounded-full h-2 w-2"></span>
+                        </span>
+                        <span
+                            [ngClass]="isSocketConnected ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'"
+                            class="text-[10px] font-bold">
+                            {{ socketStatus }}
+                        </span>
+                    </div>
+                    <button (click)="manualSync()"
+                        class="text-[9px] text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
+                        <fa-icon [icon]="faSync" [class.animate-spin]="isLoadingMessages"></fa-icon>
+                        تحديث التزامن
+                    </button>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <button (click)="activeTab = 'chat'" [class.bg-blue-600]="activeTab === 'chat'"
+                        [class.text-white]="activeTab === 'chat'"
+                        class="p-2 px-4 rounded-xl text-sm font-bold transition-all">
+                        <fa-icon [icon]="faComments" class="ml-1"></fa-icon>
+                        الدردشة
+                    </button>
+                    <button (click)="activeTab = 'info'" [class.bg-blue-600]="activeTab === 'info'"
+                        [class.text-white]="activeTab === 'info'"
+                        class="p-2 px-4 rounded-xl text-sm font-bold transition-all">
+                        <fa-icon [icon]="faInfoCircle" class="ml-1"></fa-icon>
+                        التفاصيل
+                    </button>
+                </div>
             </div>
         </div>
     </header>
@@ -92,21 +116,10 @@
 
                             <!-- Content -->
                             <div *ngIf="msg.type !== 'voice'">{{ msg.content }}</div>
-                            <div *ngIf="msg.type === 'voice'" class="flex flex-col gap-2 py-1 min-w-[150px]">
-                                <div class="flex items-center gap-3">
-                                    <fa-icon [icon]="faPlay" class="text-lg clickable"
-                                        (click)="audioPlayer.play()"></fa-icon>
-                                    <audio #audioPlayer [src]="getProfileImageUrl(msg.content)"
-                                        preload="metadata"></audio>
-                                    <div class="flex-1 h-1 bg-current opacity-20 rounded-full relative overflow-hidden">
-                                        <div class="absolute inset-0 bg-current opacity-40 animate-pulse"></div>
-                                    </div>
-                                </div>
-                                <div class="flex justify-between items-center opacity-70">
-                                    <span class="text-[8px] font-bold">رسالة صوتية</span>
-                                    <a [href]="getProfileImageUrl(msg.content)" target="_blank" download
-                                        class="text-[8px] underline">تحميل</a>
-                                </div>
+                            <div *ngIf="msg.type === 'voice'" class="py-1">
+                                <app-audio-player [audioUrl]="getProfileImageUrl(msg.content)"
+                                    [isDarkBackground]="msg.sender?._id === currentUserId">
+                                </app-audio-player>
                             </div>
 
                             <!-- Timestamp -->
@@ -235,15 +248,24 @@
                         <div (click)="openUserProfile(halaqaData?.leader)"
                             class="p-4 flex items-center justify-between group cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                             <div class="flex items-center gap-3">
-                                <div
-                                    class="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 flex items-center justify-center font-bold">
-                                    {{ halaqaData?.leader?.username?.charAt(0) }}
+                                <div class="relative">
+                                    <div
+                                        class="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 flex items-center justify-center font-bold">
+                                        {{ halaqaData?.leader?.username?.charAt(0) }}
+                                    </div>
+                                    <div *ngIf="isUserOnline(halaqaData?.leader)"
+                                        class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full">
+                                    </div>
                                 </div>
                                 <div>
                                     <p class="font-bold text-gray-900 dark:text-white">{{ halaqaData?.leader?.username
                                         }}</p>
-                                    <span
-                                        class="text-[10px] bg-blue-50 dark:bg-blue-900/30 text-blue-600 px-2 py-0.5 rounded-full border border-blue-100 dark:border-blue-800">المنشئ</span>
+                                    <div class="flex items-center gap-2">
+                                        <span
+                                            class="text-[10px] bg-blue-50 dark:bg-blue-900/30 text-blue-600 px-2 py-0.5 rounded-full border border-blue-100 dark:border-blue-800">المنشئ</span>
+                                        <span class="text-[10px] text-green-500 font-medium"
+                                            *ngIf="isUserOnline(halaqaData?.leader)">متصل الآن</span>
+                                    </div>
                                 </div>
                             </div>
                             <fa-icon [icon]="faUserShield" class="text-yellow-500"></fa-icon>
@@ -256,7 +278,7 @@
                                 <div class="relative">
                                     <div *ngIf="member.profileImage"
                                         class="w-10 h-10 rounded-full border border-gray-100 shadow-sm overflow-hidden">
-                                        <img [src]="member.profileImage" alt="avatar"
+                                        <img [src]="getProfileImageUrl(member.profileImage)" alt="avatar"
                                             class="w-full h-full object-cover">
                                     </div>
                                     <div *ngIf="!member.profileImage"
@@ -264,7 +286,7 @@
                                         {{ member.username?.charAt(0) }}
                                     </div>
                                     <!-- Online indicator -->
-                                    <div *ngIf="isUserOnline(member._id)"
+                                    <div *ngIf="isUserOnline(member)"
                                         class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full">
                                     </div>
                                 </div>
@@ -272,7 +294,8 @@
                                     <p
                                         class="font-medium text-gray-700 dark:text-gray-200 group-hover:text-blue-600 transition-colors">
                                         {{ member.username }}</p>
-                                    <p class="text-[10px] text-gray-400" *ngIf="isUserOnline(member._id)">نشط الآن</p>
+                                    <p class="text-[10px] text-green-500 font-medium" *ngIf="isUserOnline(member)">متصل
+                                        الآن</p>
                                 </div>
                             </div>
                             <fa-icon [icon]="faUserGraduate"
@@ -349,9 +372,6 @@
             </div>
         </div>
     </main>
-
-    <!-- Voice Call Component Overlay -->
-    <app-voice-call></app-voice-call>
 
     <!-- Member Rating Modal -->
     <div *ngIf="showRatingModal"

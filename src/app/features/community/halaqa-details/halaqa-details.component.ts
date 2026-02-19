@@ -14,12 +14,12 @@ import { VoiceCallService, CallSession } from '../../../core/services/voice-call
 import { AuthService } from '../../../auth/auth.service';
 import { environment } from '../../../../environments/environment';
 import { Subscription } from 'rxjs';
-import { VoiceCallComponent } from '../voice-call/voice-call.component';
+import { AudioPlayerComponent } from '../../../shared/components/audio-player/audio-player.component';
 
 @Component({
     selector: 'app-halaqa-details',
     standalone: true,
-    imports: [CommonModule, FormsModule, FontAwesomeModule, VoiceCallComponent],
+    imports: [CommonModule, FormsModule, FontAwesomeModule, AudioPlayerComponent],
     templateUrl: './halaqa-details.component.html',
     styleUrls: ['./halaqa-details.component.css']
 })
@@ -71,8 +71,12 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
 
     // Presence & Global Status
     globalOnlineIds: string[] = [];
+    isSocketConnected = false;
+    socketStatus = 'جاري التزامن...';
     private globalPresenceSub?: Subscription;
     private msgSub?: Subscription;
+    private connSub?: Subscription;
+    private statusSub?: Subscription;
 
     // Voice Message State
     isRecording = false;
@@ -161,17 +165,38 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
             }
         });
 
-        this.voiceCallService.onCallEnded$.subscribe(() => {
-            if (this.ratingTargetUser) {
-                this.showRatingModal = true;
+        // Connection Status Subscription
+        this.connSub = this.presenceService.isConnected$.subscribe(status => {
+            this.isSocketConnected = status;
+            if (status && this.halaqaId && this.currentUserId) {
+                // Re-join room if reconnected
+                this.presenceService.joinHalaqa(this.halaqaId, this.currentUserId, this.currentUser?.username || 'طالب علم');
             }
+        });
+
+        this.statusSub = this.presenceService.socketStatus$.subscribe(status => {
+            this.socketStatus = status;
         });
     }
 
+    manualSync() {
+        if (this.halaqaId && this.currentUserId) {
+            console.log('🔄 Manual Sync Triggered');
+            this.presenceService.joinHalaqa(
+                this.halaqaId,
+                this.currentUserId,
+                this.currentUser?.username || 'طالب علم'
+            );
+            this.loadHalaqaDetails();
+        }
+    }
+
     ngOnDestroy(): void {
-        if (this.presenceSub) this.presenceSub.unsubscribe();
-        if (this.globalPresenceSub) this.globalPresenceSub.unsubscribe();
-        if (this.msgSub) this.msgSub.unsubscribe();
+        this.presenceSub?.unsubscribe();
+        this.globalPresenceSub?.unsubscribe();
+        this.msgSub?.unsubscribe();
+        this.connSub?.unsubscribe();
+        this.statusSub?.unsubscribe();
         this.stopRecording();
     }
 
@@ -379,8 +404,11 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
         });
     }
 
-    isUserOnline(userId: string): boolean {
-        return this.globalOnlineIds.includes(userId);
+    isUserOnline(user: any): boolean {
+        if (!user) return false;
+        const id = (user._id || user.id || user).toString();
+        const isOnline = this.globalOnlineIds.includes(id);
+        return isOnline;
     }
 
     openUserProfile(user: any) {

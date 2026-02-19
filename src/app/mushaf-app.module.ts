@@ -14,6 +14,7 @@ import { AuthInterceptor } from './interceptors/auth.interceptor';
 import { MushafRootComponent } from './mushaf-root.component';
 import { MushafModule } from './features/mushaf/mushaf.module';
 import { GlobalErrorHandler } from './global-error-handler';
+import { VoiceCallComponent } from './features/community/voice-call/voice-call.component';
 
 // Services
 import { MushafDataService } from './core/services/mushaf-data.service';
@@ -47,6 +48,7 @@ const routes: Routes = [
         HttpClientModule,
         RouterModule.forRoot(routes),
         FontAwesomeModule,
+        VoiceCallComponent,
         ServiceWorkerModule.register('ngsw-worker.js', {
             enabled: false,
             registrationStrategy: 'registerWhenStable:30000'

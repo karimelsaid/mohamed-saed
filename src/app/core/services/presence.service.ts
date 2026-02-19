@@ -26,44 +26,91 @@ export class PresenceService implements OnDestroy {
     private globalPresenceSubject = new BehaviorSubject<string[]>([]);
     public globalPresence$ = this.globalPresenceSubject.asObservable();
 
-    private newMessageSubject = new Subject<PresenceUpdate | null>();
+    private newMessageSubject = new BehaviorSubject<PresenceUpdate | null>(null);
     public newMessage$ = this.newMessageSubject.asObservable();
 
+    private isConnectedSubject = new BehaviorSubject<boolean>(false);
+    public isConnected$ = this.isConnectedSubject.asObservable();
+
+    private socketStatusSubject = new BehaviorSubject<string>('جاري التهيئة...');
+    public socketStatus$ = this.socketStatusSubject.asObservable();
+
     constructor() {
-        // Use the same base URL as API but without /api prefix for socket
-        // Path is set to /api/socket.io to match backend proxy configuration
-        const socketUrl = environment.apiBaseUrl.includes('localhost')
-            ? 'http://localhost:3000'
-            : 'https://knoozbook.com';
+        let socketUrl = environment.apiBaseUrl.split('/api')[0];
+        if (!socketUrl.startsWith('http')) {
+            socketUrl = window.location.origin;
+        }
+
+        console.log('🔌 Initializing socket at:', socketUrl, 'with path /api/socket.io');
+        this.socketStatusSubject.next('جاري الاتصال بالسيرفر...');
 
         this.socket = io(socketUrl, {
-            path: '/api/socket.io'
+            path: '/api/socket.io',
+            transports: ['websocket', 'polling'],
+            reconnectionAttempts: 10,
+            reconnectionDelay: 2000
         });
 
         this.socket.on('presence_update', (users: ActiveUser[]) => {
+            console.log('👥 Presence update in room:', users.length, 'users');
             this.activeUsersSubject.next(users);
         });
 
         this.socket.on('global_presence_update', (userIds: string[]) => {
+            console.log('🌎 Global presence update:', userIds.length, 'online');
             this.globalPresenceSubject.next(userIds);
         });
 
         this.socket.on('new_message', (data: PresenceUpdate) => {
+            console.log('📨 New real-time message received:', data);
             this.newMessageSubject.next(data);
         });
 
         this.socket.on('connect', () => {
-            console.log('✅ Connected to presence server');
-            // We'll re-sync online status if needed
+            console.log('✅ Connected to presence server', this.socket.id);
+            this.isConnectedSubject.next(true);
+            this.socketStatusSubject.next('متصل الآن');
+
+            const lastUserId = localStorage.getItem('last_user_id');
+            const lastUsername = localStorage.getItem('last_username');
+            if (lastUserId && lastUsername) {
+                this.setOnline(lastUserId, lastUsername);
+            }
+        });
+
+        this.socket.on('reconnect', (attempt) => {
+            console.log('🔄 Reconnected after attempt:', attempt);
+            this.isConnectedSubject.next(true);
+            this.socketStatusSubject.next('تم إعادة الاتصال');
+        });
+
+        this.socket.on('disconnect', (reason) => {
+            console.warn('❌ Disconnected from presence server:', reason);
+            this.isConnectedSubject.next(false);
+            this.socketStatusSubject.next('انقطع الاتصال: ' + reason);
+        });
+
+        this.socket.on('connect_error', (error) => {
+            console.error('⚠️ Socket Connection Error:', error);
+            this.isConnectedSubject.next(false);
+            this.socketStatusSubject.next('خطأ في الاتصال: ' + error.message);
         });
     }
 
     setOnline(userId: string, username: string) {
+        localStorage.setItem('last_user_id', userId);
+        localStorage.setItem('last_username', username);
         this.socket.emit('user_online', { userId, username });
     }
 
     joinHalaqa(halaqaId: string, userId: string, username: string) {
+        console.log(`🏠 Joining Halaqa room: ${halaqaId} as ${username}`);
         this.socket.emit('join_halaqa', { halaqaId, userId, username });
+    }
+
+    forceReconnect() {
+        this.socketStatusSubject.next('إعادة اتصال يدوي...');
+        this.socket.disconnect().connect();
     }
 
     ngOnDestroy() {

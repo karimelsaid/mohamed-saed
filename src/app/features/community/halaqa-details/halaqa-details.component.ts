@@ -72,11 +72,13 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
     // Presence & Global Status
     globalOnlineIds: string[] = [];
     isSocketConnected = false;
+    isPeerOpen = false;
     socketStatus = 'جاري التزامن...';
     private globalPresenceSub?: Subscription;
     private msgSub?: Subscription;
     private connSub?: Subscription;
     private statusSub?: Subscription;
+    private peerSub?: Subscription;
 
     // Voice Message State
     isRecording = false;
@@ -165,6 +167,10 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
             }
         });
 
+        this.peerSub = this.voiceCallService.isPeerOpen$.subscribe(status => {
+            this.isPeerOpen = status;
+        });
+
         // Connection Status Subscription
         this.connSub = this.presenceService.isConnected$.subscribe(status => {
             this.isSocketConnected = status;
@@ -197,6 +203,7 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
         this.msgSub?.unsubscribe();
         this.connSub?.unsubscribe();
         this.statusSub?.unsubscribe();
+        this.peerSub?.unsubscribe();
         this.stopRecording();
     }
 
@@ -500,7 +507,8 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
             this.selectedUser = null; // Close modal
         } catch (err: any) {
             console.error('Call failed', err);
-            alert('فشل بدء المكالمة الصوتية. تأكد من إعطاء صلاحية الميكروفون وأن الطرف الآخر متصل.');
+            const msg = err.message || 'فشل بدء المكالمة الصوتية';
+            alert(msg + '. يرجى التأكد من إعطاء صلاحية الميكروفون وأن الطرف الآخر متاح.');
         }
     }
 

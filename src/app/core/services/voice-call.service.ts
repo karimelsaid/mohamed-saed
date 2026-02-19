@@ -13,11 +13,15 @@ export interface CallSession {
     providedIn: 'root'
 })
 export class VoiceCallService implements OnDestroy {
-    private peer: Peer;
+    private peer?: Peer;
     private myId: string = '';
+    private isInitialized = false;
 
     private callSessionSubject = new BehaviorSubject<CallSession | null>(null);
     public callSession$ = this.callSessionSubject.asObservable();
+
+    private isPeerOpenSubject = new BehaviorSubject<boolean>(false);
+    public isPeerOpen$ = this.isPeerOpenSubject.asObservable();
 
     private onCallEndedSource = new Subject<void>();
     public onCallEnded$ = this.onCallEndedSource.asObservable();
@@ -25,31 +29,54 @@ export class VoiceCallService implements OnDestroy {
     private myStream?: MediaStream;
 
     constructor() {
-        // PeerJS will auto-generate an ID if none provided, 
-        // but we'll initialize it later with userId for consistency
-        this.peer = new Peer();
+        // We will initialize in init() once we have the userId
     }
 
     init(userId: string) {
+        if (!userId) return;
         if (this.myId === userId && this.peer && !this.peer.destroyed) return;
 
-        console.log('📡 Initializing VoiceCallService for:', userId);
-        if (this.peer) this.peer.destroy();
+        console.log('📡 [VoiceCall] Initializing for:', userId);
+        if (this.peer) {
+            try { this.peer.destroy(); } catch (e) { }
+        }
 
         this.myId = userId;
-        this.peer = new Peer(userId);
+        this.peer = new Peer(userId, {
+            debug: 2,
+            config: {
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' },
+                    { urls: 'stun:stun2.l.google.com:19302' },
+                    { urls: 'stun:stun3.l.google.com:19302' },
+                    { urls: 'stun:stun4.l.google.com:19302' },
+                ]
+            }
+        });
 
         this.peer.on('open', (id) => {
-            console.log('✅ PeerJS connection opened with ID:', id);
+            console.log('✅ [VoiceCall] PeerJS connection opened with ID:', id);
+            this.isInitialized = true;
         });
 
         this.peer.on('error', (err) => {
-            console.error('❌ PeerJS error:', err);
-            // Re-init if necessary or notify UI
+            console.error('❌ [VoiceCall] PeerJS error:', err);
+            if (err.type === 'peer-unavailable') {
+                // Ignore "peer-unavailable" as it's handled in the call logic
+            } else if (err.type === 'disconnected' || err.type === 'network') {
+                this.isInitialized = false;
+            }
+        });
+
+        this.peer.on('disconnected', () => {
+            console.warn('⚠️ [VoiceCall] PeerJS disconnected, attempting reconnect...');
+            this.isInitialized = false;
+            this.peer?.reconnect();
         });
 
         this.peer.on('call', (call: MediaConnection) => {
-            console.log('📞 Incoming call from:', call.peer);
+            console.log('📞 [VoiceCall] Incoming call from:', call.peer);
             this.callSessionSubject.next({
                 peerId: call.peer,
                 username: 'عضو آخر',
@@ -64,13 +91,27 @@ export class VoiceCallService implements OnDestroy {
     }
 
     async startCall(remotePeerId: string, remoteUsername: string): Promise<void> {
-        if (!this.peer || this.peer.destroyed || !this.peer.open) {
-            console.error('🚫 [VoiceCall] Cannot start call: Peer connection not active or not open');
+        if (!this.peer || this.peer.destroyed) {
+            console.error('🚫 [VoiceCall] Peer object is missing or destroyed');
             throw new Error('Peer connection not active');
         }
+
+        if (!this.peer.open) {
+            console.warn('📡 [VoiceCall] Peer not open yet, waiting 1s...');
+            // Wait up to 2 seconds for it to open
+            let attempts = 0;
+            while (!this.peer.open && attempts < 4) {
+                await new Promise(r => setTimeout(r, 500));
+                attempts++;
+            }
+            if (!this.peer.open) {
+                throw new Error('لم يتم تفعيل اتصال المكالمات بعد، يرجى المحاولة مرة أخرى');
+            }
+        }
+
         if (!remotePeerId || remotePeerId === 'undefined' || remotePeerId === 'null') {
             console.error('🚫 [VoiceCall] Cannot start call: Invalid remotePeerId', remotePeerId);
-            throw new Error('Invalid remotePeerId');
+            throw new Error('معرف المستخدم الآخر غير صحيح');
         }
 
         try {

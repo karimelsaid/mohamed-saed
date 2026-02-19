@@ -307,6 +307,26 @@ async function getUserProfile(req, res) {
   }
 }
 
+async function getPublicProfile(req, res) {
+  try {
+    const user = await User.findById(req.params.userId);
+    if (!user) return res.status(404).json({ message: 'المستخدم غير موجود' });
+
+    res.status(200).json({
+      id: user._id,
+      username: user.username,
+      profileImage: user.profileImage,
+      gender: user.gender,
+      isSheikh: user.isSheikh,
+      bio: user.bio,
+      createdAt: user.createdAt
+    });
+  } catch (error) {
+    console.error('GetPublicProfile Error:', error);
+    res.status(500).json({ message: 'حدث خطأ أثناء جلب بيانات الملف الشخصي', error: error.message });
+  }
+}
+
 async function updateOrderShippingAddress(req, res) {
   const { userId, orderId } = req.params;
   const { governorate, city, village, phone } = req.body;
@@ -1034,6 +1054,7 @@ module.exports = {
   removeFromCart,
   getUserData,
   getUserProfile,
+  getPublicProfile,
   updateOrderShippingAddress,
   updateUserProfile,
   requestBook,

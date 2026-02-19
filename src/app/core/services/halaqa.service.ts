@@ -57,6 +57,13 @@ export class HalaqaService {
         return this.http.post(`${this.apiUrl}/${halaqaId}/messages`, { userId, content, type });
     }
 
+    uploadVoiceMessage(audioBlob: Blob, userId: string): Observable<any> {
+        const formData = new FormData();
+        formData.append('audio', audioBlob, 'voice-message.webm');
+        formData.append('userId', userId);
+        return this.http.post(`${this.apiUrl}/upload-voice`, formData);
+    }
+
     deleteHalaqa(id: string, userId: string): Observable<any> {
         return this.http.request('delete', `${this.apiUrl}/${id}`, { body: { userId } });
     }

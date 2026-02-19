@@ -1,6 +1,37 @@
 const Halaqa = require('../models/Halaqa.model');
 const HalaqaRating = require('../models/HalaqaRating.model');
 const User = require('../models/User.model');
+const fs = require('fs');
+const path = require('path');
+const multer = require('multer');
+
+// Multer Config for Voice Messages
+const voiceStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const voiceDir = path.join(__dirname, '../uploads/voice');
+        if (!fs.existsSync(voiceDir)) {
+            fs.mkdirSync(voiceDir, { recursive: true });
+        }
+        cb(null, voiceDir);
+    },
+    filename: (req, file, cb) => {
+        const userId = req.body.userId || 'unknown';
+        const ext = path.extname(file.originalname) || '.webm';
+        cb(null, `voice-${userId}-${Date.now()}${ext}`);
+    }
+});
+
+const voiceUpload = multer({
+    storage: voiceStorage,
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit for audio
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype.startsWith('audio/') || file.originalname.endsWith('.webm') || file.originalname.endsWith('.m4a')) {
+            cb(null, true);
+        } else {
+            cb(new Error('Only audio files are allowed!'), false);
+        }
+    }
+});
 const Message = require('../models/Message.model');
 const crypto = require('crypto');
 

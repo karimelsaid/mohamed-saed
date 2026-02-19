@@ -63,6 +63,10 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
     checkingMembership = true;
     isDeleting = false;
 
+    // Profile Modal
+    selectedUser: any = null;
+    isLoadingProfile = false;
+
     // Presence & Global Status
     globalOnlineIds: string[] = [];
     private globalPresenceSub?: Subscription;
@@ -315,18 +319,25 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
     // --- Voice Message Logic ---
     async startRecording() {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            // Check for permissions first
+            const permission = await navigator.mediaDevices.getUserMedia({ audio: true });
+            if (!permission) throw new Error('Permission denied');
+
             this.audioChunks = [];
-            this.audioRecorder = new MediaRecorder(stream);
+            this.audioRecorder = new MediaRecorder(permission);
             this.audioRecorder.ondataavailable = (e: any) => this.audioChunks.push(e.data);
             this.audioRecorder.onstop = () => this.sendVoiceMessage();
             this.audioRecorder.start();
             this.isRecording = true;
             this.recordingDuration = 0;
             this.recordingTimer = setInterval(() => this.recordingDuration++, 1000);
-        } catch (err) {
+        } catch (err: any) {
             console.error('Could not start recording', err);
-            alert('يرجى السماح بالوصول إلى الميكروفون لتسجيل الرسائل الصوتية.');
+            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                alert('يرجى السماح بالوصول إلى الميكروفون من إعدادات المتصفح أو الهاتف لتتمكن من إرسال رسائل صوتية.');
+            } else {
+                alert('حدث خطأ أثناء محاولة الوصول للميكروفون. يرجى التأكد من توصيله وإعطاء الصلاحية.');
+            }
         }
     }
 
@@ -342,22 +353,27 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
         if (this.audioChunks.length === 0) return;
 
         const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
-        // In a real implementation, we would upload this to a server and get a URL.
-        // For now, we'll simulate sending with a placeholder or handle audio data if Backend supports it.
-        // Since Backend sendMessage takes 'content', we'll might need an upload endpoint first.
-        // To be safe for this task, I'll alert that it's being sent.
-        console.log('Voice message blob created:', audioBlob.size);
         this.isSending = true;
 
-        // Placeholder for real upload logic
-        this.halaqaService.sendMessage(this.halaqaId, this.currentUserId, '[رسالة صوتية]', 'voice').subscribe({
+        this.halaqaService.uploadVoiceMessage(audioBlob, this.currentUserId).subscribe({
             next: (res) => {
-                this.isSending = false;
-                // Socket will broadcast it
+                if (res.success) {
+                    // Send actual message with audio URL
+                    this.halaqaService.sendMessage(this.halaqaId, this.currentUserId, res.url, 'voice').subscribe({
+                        next: () => {
+                            this.isSending = false;
+                        },
+                        error: (err) => {
+                            this.isSending = false;
+                            console.error('Failed to send message with voice URL', err);
+                        }
+                    });
+                }
             },
             error: (err) => {
                 this.isSending = false;
-                console.error('Failed to send voice', err);
+                console.error('Failed to upload voice', err);
+                alert('فشل رفع الرسالة الصوتية. يرجى المحاولة مرة أخرى.');
             }
         });
     }
@@ -369,8 +385,31 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
     openUserProfile(user: any) {
         if (!user) return;
         const userId = user._id || user.userId || user;
-        // Navigation or Modal for profile
-        alert(`فتح ملف: ${user.username || 'مستخدم'}. (قيد التطوير)`);
+        this.isLoadingProfile = true;
+        this.selectedUser = null; // Reset
+
+        this.authService.getPublicProfile(userId).subscribe({
+            next: (data) => {
+                this.selectedUser = data;
+                this.isLoadingProfile = false;
+            },
+            error: (err) => {
+                console.error('Error loading profile', err);
+                this.isLoadingProfile = false;
+                alert('عذراً، تعذر تحميل بيانات الملف الشخصي حالياً.');
+            }
+        });
+    }
+
+    closeProfileModal() {
+        this.selectedUser = null;
+    }
+
+    getProfileImageUrl(url: string | null | undefined): string {
+        if (!url) return '';
+        if (url.startsWith('http')) return url;
+        const rootUrl = environment.apiBaseUrl.replace('/api', '');
+        return `${rootUrl}${url.startsWith('/') ? '' : '/'}${url}`;
     }
 
     formatDuration(sec: number): string {

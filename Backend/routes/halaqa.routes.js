@@ -29,4 +29,7 @@ router.delete('/:id', halaqaController.deleteHalaqa);
 // تقييم الأعضاء
 router.post('/rate', halaqaController.rateMember);
 
+// رفع رسالة صوتية
+router.post('/upload-voice', halaqaController.uploadVoiceMessage);
+
 module.exports = router;

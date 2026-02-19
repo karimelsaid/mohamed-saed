@@ -147,6 +147,10 @@ export class AuthService {
     return this.userSubject.getValue();
   }
 
+  getPublicProfile(userId: string): Observable<any> {
+    return this.http.get(`${this.apiUrl}/users/public-profile/${userId}`);
+  }
+
   setUser(user: any): void {
     this.userSubject.next(user);
     this.setLoginStatus(true);

@@ -47,6 +47,7 @@ router.get('/urgency-requests', getAllUrgencyRequests);
 
 router.get('/:userId', getUserData);
 router.get('/profile/:userId', getUserProfile); // This serves general profile data
+router.get('/public-profile/:userId', getPublicProfile); // New public profile route
 // Note: /profile-image (below) handles the image upload via multer
 
 router.put('/profile/:userId', updateUserProfile);

@@ -29,7 +29,7 @@
 <app-search-results *ngIf="isSearchPage"></app-search-results>
 
 <!-- زر التواصل - تصميم احترافي ومبهر -->
-<div *ngIf="!isMushafPage" [ngClass]="{'out':outOn,'on':!outOn}"
+<div *ngIf="!isMushafPage && !isAdminPage" [ngClass]="{'out':outOn,'on':!outOn}"
   class="z-50 fixed top-[20%] -left-10 transform transition-all duration-500 ease-in-out">
   <div class="relative group">
     <div
@@ -200,7 +200,7 @@
     <app-chat-window *ngIf="!isMushafPage"></app-chat-window>
   </div>
 
-  <footer *ngIf="!isMushafPage"
+  <footer *ngIf="!isMushafPage && !isAdminPage"
     class="bg-slate-950 text-gray-300 pb-24 md:pb-10 py-8 lg:py-12 mt-auto border-t border-white/5 relative overflow-hidden text-center">
     <div class="absolute inset-0 opacity-[0.03]"
       style="background-image: radial-gradient(#ffffff 1px, transparent 1px); background-size: 32px 32px;"></div>
@@ -301,4 +301,6 @@
   [cancelText]="modalConfig.cancelText || 'إلغاء'" [showCancel]="modalConfig.showCancel || false"
   [type]="modalConfig.type || 'info'" (confirmed)="modalConfig.action?.() ?? closeModal()" (cancelled)="closeModal()"
   (closed)="closeModal()"></app-modal-dialog>
-<app-tutorial class="z-50"></app-tutorial><app-voice-call></app-voice-call>
+<app-tutorial class="z-50"></app-tutorial>
+<app-voice-call></app-voice-call>
+<app-floating-wheel-widget *ngIf="!isMushafPage && !isAdminPage"></app-floating-wheel-widget>

@@ -202,6 +202,9 @@ async function login(req, res) {
         village: user.village,
         referralCode: user.referralCode,
         profileImage: user.profileImage,
+        quranProgress: user.quranProgress,
+        gamification: user.gamification,
+        earnedCoupons: user.earnedCoupons,
         token: token
       }
     });
@@ -276,7 +279,23 @@ async function getUserData(req, res) {
 
     res.status(200).json({
       favorites: user.favorites,
-      cart: user.cart
+      cart: user.cart,
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+        gender: user.gender,
+        governorate: user.governorate,
+        city: user.city,
+        village: user.village,
+        referralCode: user.referralCode,
+        profileImage: user.profileImage,
+        quranProgress: user.quranProgress,
+        gamification: user.gamification,
+        earnedCoupons: user.earnedCoupons
+      }
     });
   } catch (error) {
     console.error('GetUserData Error:', error);
@@ -298,8 +317,11 @@ async function getUserProfile(req, res) {
       city: user.city,
       village: user.village,
       postOffice: user.postOffice,
-      referralBalance: user.referralBalance || 0, // Add referralBalance
-      profileImage: user.profileImage // Add profileImage
+      referralBalance: user.referralBalance || 0,
+      profileImage: user.profileImage,
+      quranProgress: user.quranProgress,
+      gamification: user.gamification,
+      earnedCoupons: user.earnedCoupons
     });
   } catch (error) {
     console.error('GetUserProfile Error:', error);

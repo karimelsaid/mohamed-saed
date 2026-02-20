@@ -137,8 +137,22 @@ const userSchema = new mongoose.Schema({
     lastStreakUpdate: { type: Date },
     coins: { type: Number, default: 0 },
     lastLoginRewardDate: { type: Date },
-    lastRewardDateString: { type: String } // For atomic checks (YYYY-MM-DD)
+    lastRewardDateString: { type: String }, // For atomic checks (YYYY-MM-DD)
+    lastWheelSpin: { type: Date }, // To limit lucky wheel usage
+    dailySpinCount: { type: Number, default: 0 }
   },
+  earnedCoupons: [{
+    couponId: { type: mongoose.Schema.Types.ObjectId, ref: 'Coupon' },
+    code: String,
+    earnedAt: { type: Date, default: Date.now },
+    isUsed: { type: Boolean, default: false }
+  }],
+  prizes: [{
+    type: { type: String }, // 'book', 'points'
+    value: String,
+    receivedAt: { type: Date, default: Date.now },
+    isClaimed: { type: Boolean, default: false }
+  }],
   // نظام تقدم القرآن الكريم
   quranProgress: {
     totalPoints: { type: Number, default: 0 },          // إجمالي نقاط القرآن

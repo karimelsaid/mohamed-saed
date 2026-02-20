@@ -250,10 +250,23 @@ export class AuthService {
       console.warn('⚠️ لا يوجد userId لتحميل البيانات.');
       return;
     }
-    this.http.get<{ favorites: string[]; cart: string[] }>(`${this.apiUrl}/users/${userId}`).subscribe({
+    this.http.get<any>(`${this.apiUrl}/users/${userId}`).subscribe({
       next: data => {
-        this.favoriteBookIds.next(data.favorites);
-        this.cartBookIds.next(data.cart);
+        this.favoriteBookIds.next(data.favorites || []);
+        this.cartBookIds.next(data.cart || []);
+        if (data.user) {
+          const currentUser = this.currentUserValue;
+
+          // Check if user data actually changed to prevent infinite loop
+          const hasChanged = JSON.stringify(currentUser?.quranProgress) !== JSON.stringify(data.user.quranProgress) ||
+            JSON.stringify(currentUser?.gamification) !== JSON.stringify(data.user.gamification) ||
+            JSON.stringify(currentUser?.earnedCoupons) !== JSON.stringify(data.user.earnedCoupons);
+
+          if (hasChanged) {
+            console.log('🔄 [AuthService] User data changed, updating user state.');
+            this.setUser({ ...currentUser, ...data.user });
+          }
+        }
       },
       error: err => console.error('❌ خطأ أثناء تحميل بيانات المستخدم:', err)
     });

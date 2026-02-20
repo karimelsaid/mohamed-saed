@@ -210,9 +210,52 @@ export class NavbarComponent implements OnInit {
 
     // الاشتراك في تحديثات المستخدمين العاديين
     this.authService.user$.subscribe((user) => {
+      const oldId = this.user?.id || (this.user as any)?._id;
+      const newId = user?.id || (user as any)?._id;
+
       this.user = user;
       this.updateLoginStatus();
-      this.cdr.markForCheck(); // Ensure view updates immediately
+
+      // Only load extra data if the user ID actually changed (login/logout/switch)
+      if (newId && newId !== oldId) {
+        console.log('👤 [Navbar] User ID changed, loading initial data');
+        this.authService.loadUserData(newId);
+        this.dataService.loadOrders(newId).subscribe();
+        this.notificationService.refreshNotifications(newId);
+      }
+
+      this.cdr.markForCheck();
+    });
+
+    // Subscriptions for favorites, cart, orders, and notifications (Moved from updateLoginStatus to prevent leaks)
+    this.authService.favoriteBookIds.subscribe((favorites) => {
+      this.favoritesCount = favorites.length;
+      this.cdr.markForCheck();
+    });
+
+    this.authService.cartBookIds.subscribe((cart) => {
+      this.cartCount = cart.length;
+      this.cdr.markForCheck();
+    });
+
+    this.dataService.orders$.subscribe((orders) => {
+      this.orderCount = orders.length;
+      this.cdr.markForCheck();
+    });
+
+    this.notificationService.notifications$.subscribe((notifications) => {
+      this.notifications = notifications.map(n => ({ ...n, swipeOffset: -15 }));
+      this.unreadCount = notifications.filter(n => !n.read).length;
+      this.cdr.markForCheck();
+    });
+
+    // Subscribe to router events for active states
+    this.router.events.subscribe((event) => {
+      if (event.constructor.name === 'NavigationEnd') {
+        this.isOrdersActive = this.router.isActive('/requests', true);
+        this.isAccountActive = this.showAccountModal;
+        this.cdr.markForCheck();
+      }
     });
 
     // الاشتراك في تحديثات التجار
@@ -263,54 +306,6 @@ export class NavbarComponent implements OnInit {
     }, 100);
 
     if (this.user) {
-      if (this.user.role !== 'merchant') {
-        // Load user data for regular users
-        if (this.user.id) {
-          this.authService.loadUserData(this.user.id);
-
-          // Load orders explicitly on user login to update orderCount
-          this.dataService.loadOrders(this.user.id).subscribe();
-        }
-
-        // الاشتراك في تحديثات المفضلة والسلة والطلبات
-        this.authService.favoriteBookIds.subscribe((favorites) => {
-          this.favoritesCount = favorites.length;
-        });
-
-        this.authService.cartBookIds.subscribe((cart) => {
-          this.cartCount = cart.length;
-        });
-
-        this.dataService.orders$.subscribe((orders) => {
-          this.orderCount = orders.length;
-          this.cdr.markForCheck();
-        });
-
-        // Subscribe to notifications observable for real-time updates
-        this.notificationService.notifications$.subscribe((notifications) => {
-          this.notifications = notifications.map(n => ({ ...n, swipeOffset: -15 }));
-          this.unreadCount = notifications.filter(n => !n.read).length;
-          this.cdr.markForCheck();
-        });
-
-        // Load notifications initially
-        if (this.user.id) {
-          this.notificationService.refreshNotifications(this.user.id);
-        }
-      }
-
-      // Subscribe to router events to update active states for orders and account
-      this.router.events.subscribe((event) => {
-        // Only update on NavigationEnd event
-        if (event.constructor.name === 'NavigationEnd') {
-          const currentUrl = this.router.url;
-          this.isOrdersActive = this.router.isActive('/requests', true);
-          // For account, if modal is open, set active, else false
-          this.isAccountActive = this.showAccountModal;
-          this.cdr.markForCheck();
-        }
-      });
-
       this.onResize(window); // تحديد حالة القائمة الجانبية بناءً على حجم الشاشة عند تحميل الصفحة
     }
   }

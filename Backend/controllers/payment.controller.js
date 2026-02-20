@@ -1,6 +1,6 @@
 const axios = require('axios');
 
-exports.createPaymentSession = async (req, res) => {
+const createPaymentSession = async (req, res) => {
     try {
         const { amount, currency, orderId, customerEmail, merchantRedirect } = req.body;
 
@@ -61,15 +61,18 @@ exports.createPaymentSession = async (req, res) => {
     } catch (error) {
         console.error('Error creating payment session:', error);
         if (error.response) {
-            console.error('Response data:', error.response.data);
-            console.error('Response status:', error.response.status);
-            console.error('Response headers:', error.response.headers);
+            console.error('Kashier Response Error:', error.response.data);
+            return res.status(500).json({
+                error: 'Failed to create payment session (Kashier Error)',
+                details: error.response.data,
+                message: error.message
+            });
         }
         res.status(500).json({ error: 'Failed to create payment session', details: error.message });
     }
 };
 
-exports.createSubscriptionPaymentSession = async (req, res) => {
+const createSubscriptionPaymentSession = async (req, res) => {
     try {
         const { amount, currency, subscriptionId, customerEmail, merchantRedirect } = req.body;
 
@@ -129,7 +132,7 @@ exports.createSubscriptionPaymentSession = async (req, res) => {
     }
 };
 
-exports.verifyPayment = async (req, res) => {
+const verifyPayment = async (req, res) => {
     try {
         const { paymentId, merchantId, orderId, signature, status, paymentStatus, merchantOrderId } = req.query;
 
@@ -183,7 +186,7 @@ exports.verifyPayment = async (req, res) => {
     }
 };
 
-exports.verifyOrderPayment = async (req, res) => {
+const verifyOrderPayment = async (req, res) => {
     try {
         const { paymentId, merchantId, orderId, signature, status, paymentStatus, merchantOrderId } = req.query;
 
@@ -222,36 +225,10 @@ exports.verifyOrderPayment = async (req, res) => {
         }
 
         // Update Order
-        // Note: 'paid' is not in the ENUM of status in Order schema, but this is a subdocument in User.
-        // User schema for orders: status: { type: String, default: 'قيد الإنتظار' }
-        // We should likely set it to 'processing' or 'pending' but with payment completed.
-        // Let's check User.model.js order schema... 
-        // status: { type: String, default: 'قيد الإنتظار' }
-        // It's just a String, not restricted by enum in User model (line 68 in User.model.js).
-
         order.status = 'قيد الـتجهيز'; // Or 'Processing'
-        order.paymentStatus = 'completed'; // Ensure schema supports this. User model line 67 has paymentSessionUrl, but NOT paymentStatus.
-        // line 66: shippingCost, 67: paymentSessionUrl, 68: status.
-        // The User model order schema DOES NOT have paymentStatus field! 
-        // We should add it or use 'status' field.
+        order.paymentStatus = 'completed';
 
-        // Let's reuse 'paymentSessionUrl' to maybe store 'PAID'? No that's for URL.
-        // We can append to notes or just rely on status.
-
-        // Actually, we should probably add paymentStatus to User model schema if we want to track it properly.
-        // For now, let's update status to something that indicates payment.
-
-        // Check orders.controller validation: validStatuses = ['قيد الإنتظار', 'تم الإلغاء', 'تم الشحن', 'تم الاستلام', 'تم التسليم', 'مؤرشف'];
-        // We should probably stick to 'قيد الإنتظار' but somehow mark it paid?
-        // Or adding 'paymentStatus' to the schema is the right way (requires editing User.model.js).
-
-        // For now, I'll set status to 'قيد الإنتظار' (it already is) but we need to know it's paid.
-        // I will add 'paymentStatus' to User.model.js orders definition.
-
-        order.paymentStatus = 'completed'; // I will add this field to User model next.
-        // Also update backend logic. 
-
-        await user.save({ validateBeforeSave: false }); // Bypass any strict validation if needed, but better to update schema.
+        await user.save({ validateBeforeSave: false });
 
         res.json({ success: true, message: 'Payment verified and order updated' });
 
@@ -259,4 +236,11 @@ exports.verifyOrderPayment = async (req, res) => {
         console.error('Error verifying order payment:', error);
         res.status(500).json({ success: false, message: 'Verification error', details: error.message });
     }
+};
+
+module.exports = {
+    createPaymentSession,
+    createSubscriptionPaymentSession,
+    verifyPayment,
+    verifyOrderPayment
 };

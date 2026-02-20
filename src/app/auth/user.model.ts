@@ -16,6 +16,17 @@ export interface User {
     favorites: string[];
     cart: string[];
     role?: 'user' | 'merchant' | 'admin';
+    quranProgress?: {
+        totalPoints: number;
+        [key: string]: any;
+    };
+    gamification?: {
+        xp: number;
+        coins: number;
+        level: number;
+        [key: string]: any;
+    };
+    earnedCoupons?: any[];
     postOffice?: {
         governorate: string;
         city: string;

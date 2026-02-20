@@ -2,7 +2,7 @@ import { Component, OnInit, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { faUserCircle, faEnvelope, faPhone, faRightFromBracket, faRightToBracket, faUserPlus, faClipboardList, faMoneyBillWave, faLink, faMapMarkerAlt } from '@fortawesome/free-solid-svg-icons';
+import { faUserCircle, faEnvelope, faPhone, faRightFromBracket, faRightToBracket, faUserPlus, faClipboardList, faMoneyBillWave, faLink, faMapMarkerAlt, faGift, faChevronLeft } from '@fortawesome/free-solid-svg-icons';
 import { AuthService } from '../auth.service';
 import { MerchantAuthService } from '../../services/merchant-auth.service';
 import { ChangeDetectorRef } from '@angular/core';
@@ -30,6 +30,8 @@ export class AccountModalComponent implements OnInit {
   faMoneyBillWave = faMoneyBillWave;
   faLink = faLink;
   faMapMarkerAlt = faMapMarkerAlt;
+  faGift = faGift;
+  faChevronLeft = faChevronLeft;
 
   show = false;
   showReferralModal = false;
@@ -65,8 +67,15 @@ export class AccountModalComponent implements OnInit {
     // اسمع لتحديث بيانات المستخدم
     this.authService.user$.subscribe(user => {
       if (user) {
+        const oldId = this.user?.id || (this.user as any)?._id;
+        const newId = user.id || (user as any)._id;
+
         this.user = user;
-        this.loadReferralBalance();
+
+        // Only load balance if user ID changed or was missing
+        if (newId && newId !== oldId) {
+          this.loadReferralBalance();
+        }
       }
     });
 
@@ -223,6 +232,17 @@ export class AccountModalComponent implements OnInit {
     }
     this.closeModal();
     this.router.navigate(['/']);
+  }
+
+  copyCoupon(code: string) {
+    navigator.clipboard.writeText(code).then(() => {
+      alert('تم نسخ الكود: ' + code);
+    });
+  }
+
+  goToOffers() {
+    this.closeModal();
+    this.router.navigate(['/promotions']);
   }
 
   setUserData(userData: { username: string; email: string; phone: string }) {

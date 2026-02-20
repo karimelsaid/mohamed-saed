@@ -90,7 +90,7 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 // Request Logger for debugging
 app.use((req, res, next) => {
   const logEntry = `[${new Date().toISOString()}] ${req.method} ${req.url} - Origin: ${req.headers.origin || 'no-origin'} - Headers: ${JSON.stringify(req.headers)}\n`;
-  console.log(logEntry);
+  // console.log(logEntry);
   logStream.write(logEntry);
 
   // Log response status
@@ -129,9 +129,9 @@ const allowedOrigins = [
 app.use(cors({
   origin: function (origin, callback) {
     // Log origin for debugging
-    if (origin) {
-      console.log(`📡 [CORS Request] Origin: ${origin}`);
-    }
+    // if (origin) {
+    //   console.log(`📡 [CORS Request] Origin: ${origin}`);
+    // }
 
     if (!origin) return callback(null, true);
 
@@ -522,6 +522,8 @@ app.get('/api/extract-book', async (req, res) => {
 const uploadsAbsolutePath = path.resolve(__dirname, 'uploads');
 app.use('/uploads', express.static(uploadsAbsolutePath));
 
+const promotionRoutes = require('./routes/promotion.routes');
+app.use('/api/promotions', promotionRoutes);
 // Dedicated route to serve files with Content-Disposition attachment to force download
 app.get('/uploads/:filename', (req, res) => {
   const encodedFilename = req.params.filename;

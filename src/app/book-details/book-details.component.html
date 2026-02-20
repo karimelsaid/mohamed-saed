@@ -11,10 +11,20 @@
       <h2 class="text-2xl sm:text-3xl font-bold mb-4 mt-1 text-gray-900 dark:text-gray-100 leading-tight">{{
         book.product_name }}</h2>
       <!-- اسم التاجر -->
-      <div *ngIf="book.merchantName" class="mb-4">
+      <div *ngIf="book.merchantName" class="mb-4 flex items-center justify-between flex-wrap gap-4">
         <a [routerLink]="['/', book.merchantName]"
           class="text-sm text-blue-600 dark:text-blue-400 hover:underline cursor-pointer font-medium">بواسطة {{
           book.merchantName }}</a>
+
+        <!-- Coupon Applied Banner -->
+        <div *ngIf="appliedCoupon" class="animate-in fade-in slide-in-from-top-2 duration-500">
+          <div
+            class="bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800 px-3 py-2 rounded-xl flex items-center gap-2 shadow-sm text-green-800 dark:text-green-300">
+            <fa-icon [icon]="['fas', 'gift']" class="text-green-500"></fa-icon>
+            <span class="text-xs font-bold">كوبون فعال: {{ appliedCoupon.value }}{{ appliedCoupon.discountType ===
+              'percentage' ? '%' : ' EGP' }} خصم</span>
+          </div>
+        </div>
       </div>
 
       <!-- Amazon-like layout: left images, right details -->
@@ -74,35 +84,42 @@
           </div>
 
           <!-- السعر -->
-          <div *ngIf="book.rival" class="flex flex-col mb-4 bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg w-fit">
+          <div class="flex flex-col mb-4 bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg w-fit"
+            *ngIf="calculateDiscountedPrice(book.product_price, book.products_id, 1) as discount">
             <div class="flex items-center gap-3">
-              <span class="text-3xl font-bold text-green-600 dark:text-green-400">{{ book.product_price }} <span
-                  class="text-sm font-normal">جنيه</span></span>
-              <span class="text-gray-400 line-through text-lg" *ngIf="book.product_price_before_discount">{{
-                book.product_price_before_discount }} جنيه</span>
+              <!-- New Price -->
+              <span class="text-3xl font-bold text-green-600 dark:text-green-400">
+                {{ discount.discountedQty > 0 ? (discount.discountedPrice | number:'1.0-0') : (book.product_price |
+                number:'1.0-0') }}
+                <span class="text-sm font-normal">جنيه</span>
+              </span>
+              <!-- Original Price -->
+              <span class="text-gray-400 line-through text-lg" *ngIf="discount.discountedQty > 0">
+                {{ book.product_price }} جنيه
+              </span>
+              <!-- Rival Price (if exists and no coupon is better) -->
+              <span class="text-gray-400 line-through text-lg"
+                *ngIf="book.rival && discount.discountedQty === 0 && book.product_price_before_discount">
+                {{ book.product_price_before_discount }} جنيه
+              </span>
+
               <span class="bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded"
-                *ngIf="book.product_discount_percent">
+                *ngIf="book.product_discount_percent && discount.discountedQty === 0">
                 خصم {{ book.product_discount_percent }}%
               </span>
             </div>
+            <!-- Savings label -->
+            <p *ngIf="discount.discountedQty > 0" class="text-xs text-green-600 dark:text-green-400 font-semibold mt-1">
+              وفرت {{ (book.product_price - discount.discountedPrice) | number:'1.0-0' }} جنيه
+              باستخدام الكوبون
+            </p>
             <!-- Digital Price -->
             <span
               class="text-sm text-yellow-600 dark:text-yellow-400 font-bold flex items-center gap-1 mt-1 bg-yellow-50 dark:bg-yellow-900/20 px-2 py-0.5 rounded-md w-fit">
               <fa-icon [icon]="faCoins" class="text-yellow-500"></fa-icon>
-              {{ (book.product_price * gamificationService.poundValue) | number:'1.0-0' }} عملة
-            </span>
-          </div>
-          <div *ngIf="!book.rival" class="flex flex-col mb-4 bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg w-fit">
-            <div class="flex items-center gap-3">
-              <span class="text-3xl font-bold text-green-600 dark:text-green-400">{{ book.product_price_before_discount
-                }} <span class="text-sm font-normal">جنيه</span></span>
-              <!-- Optionally show estimated original price if needed -->
-            </div>
-            <!-- Digital Price -->
-            <span
-              class="text-sm text-yellow-600 dark:text-yellow-400 font-bold flex items-center gap-1 mt-1 bg-yellow-50 dark:bg-yellow-900/20 px-2 py-0.5 rounded-md w-fit">
-              <fa-icon [icon]="faCoins" class="text-yellow-500"></fa-icon>
-              {{ (book.product_price_before_discount * gamificationService.poundValue) | number:'1.0-0' }} عملة
+              {{ ((discount.discountedQty > 0 ? discount.discountedPrice : book.product_price) *
+              gamificationService.poundValue) | number:'1.0-0' }}
+              عملة
             </span>
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">

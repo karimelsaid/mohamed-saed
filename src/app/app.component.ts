@@ -18,6 +18,7 @@ import { Subscription, Observable } from 'rxjs';
 import { filter } from 'rxjs/operators';
 import { MushafAssetService } from './core/services/mushaf-asset.service';
 import { VoiceCallService } from './core/services/voice-call.service';
+import { PromotionService } from './services/promotion.service';
 
 @Component({
   selector: 'app-root',
@@ -38,7 +39,8 @@ export class AppComponent implements OnInit {
   faYoutube = faYoutube;
   outOn = false;
   isSearchPage: boolean = false; // متغير لتحديد إذا كانت الصفحة هي صفحة البحث
-  isMushafPage: boolean = false; // Added to fix compilation error
+  isMushafPage: boolean = false;
+  isAdminPage: boolean = false;
 
   allBooks: any[] = []; // جميع الكتب في الموقع
 
@@ -64,7 +66,8 @@ export class AppComponent implements OnInit {
     private localReminderService: LocalReminderService, // Inject LocalReminderService
     private authService: AuthService,
     private mushafAssetService: MushafAssetService,
-    private voiceCallService: VoiceCallService
+    private voiceCallService: VoiceCallService,
+    private promotionService: PromotionService
   ) {
     this.initializeApp();
     // Initialize local reminders (works without server)
@@ -119,10 +122,11 @@ export class AppComponent implements OnInit {
       }
     });
 
-    // Scroll to top and update page status on navigation
     this.router.events.subscribe((event: any) => {
       if (event instanceof NavigationEnd) {
         window.scrollTo(0, 0);
+
+        this.isAdminPage = event.urlAfterRedirects.includes('/admin');
 
         // CRITICAL: Do NOT overwrite state if we are just landing!
         // Only update state if we are navigating to a "real" page (Home or Mushaf)
@@ -202,6 +206,26 @@ export class AppComponent implements OnInit {
         this.voiceCallService.init(user.id);
       }
     });
+
+    // Promotion Theme Propagation
+    this.promotionService.initializeTheme();
+    this.promotionService.activeTheme$.subscribe(theme => {
+      if (theme) {
+        this.applyPromotionTheme(theme);
+      }
+    });
+  }
+
+  applyPromotionTheme(theme: any) {
+    const root = document.documentElement;
+    if (theme.themeConfig?.primaryColor) {
+      root.style.setProperty('--promo-primary', theme.themeConfig.primaryColor);
+    }
+    if (theme.themeConfig?.secondaryColor) {
+      root.style.setProperty('--promo-secondary', theme.themeConfig.secondaryColor);
+    }
+    // Also set specific colors for different elements if needed
+    root.style.setProperty('--promo-bg-image', theme.themeConfig?.bgImage ? `url(${theme.themeConfig.bgImage})` : 'none');
   }
 
   toggleDarkMode(): void {

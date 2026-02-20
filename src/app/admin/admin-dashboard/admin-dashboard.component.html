@@ -57,6 +57,13 @@
         <span>الكتب الإلكترونية</span>
       </button>
 
+      <button (click)="switchView('promotions'); showSidebar = false"
+        [class]="currentView === 'promotions' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
+        class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
+        <fa-icon [icon]="['fas', 'gift']"></fa-icon>
+        <span>إدارة العروض والترويج</span>
+      </button>
+
 
       <div class="pt-4 pb-2 px-4 text-xs font-bold text-gray-400 uppercase tracking-wider">التجار & المستخدمين</div>
 
@@ -576,6 +583,10 @@
 
       <div *ngIf="currentView === 'paymentRequests'" class="mb-28 md:mb-0 px-4">
         <app-payment-requests></app-payment-requests>
+      </div>
+
+      <div *ngIf="currentView === 'promotions'" class="mb-28 md:mb-0 px-4">
+        <app-promotions-manager></app-promotions-manager>
       </div>
 
       <!-- GAMIFICATION CONTROL ROOM VIEW -->

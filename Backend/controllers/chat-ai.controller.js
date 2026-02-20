@@ -4,7 +4,7 @@ const path = require('path');
 const xml2js = require('xml2js');
 require('dotenv').config();
 
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || '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';
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 // تعديل المسار ليكون متوافقًا مع بيئة الإنتاج بعد البناء
@@ -250,12 +250,20 @@ exports.sendMessage = async (req, res) => {
       data: combinedResponse,
     });
   } catch (error) {
-    console.error('خطأ في إرسال الرسالة إلى API الذكاء الاصطناعي:', error.response?.data || error.message);
+    const statusCode = error.response?.status || 500;
+    const errorData = error.response?.data || error.message;
 
-    return res.status(error.response?.status || 500).json({
+    console.error('خطأ في إرسال الرسالة إلى API الذكاء الاصطناعي:', errorData);
+
+    let userMessage = 'حدث خطأ أثناء معالجة طلبك';
+    if (statusCode === 401) {
+      userMessage = 'خطأ في صلاحية الوصول (API Key غير صالح). يرجى مراجعة إدارة الموقع.';
+    }
+
+    return res.status(statusCode).json({
       success: false,
-      message: 'حدث خطأ أثناء معالجة طلبك',
-      error: error.response?.data || error.message,
+      message: userMessage,
+      error: errorData,
     });
   }
 };

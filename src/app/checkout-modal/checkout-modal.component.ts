@@ -12,6 +12,7 @@ import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { environment } from '../../environments/environment';
 import { FreeShippingService, FreeShippingRules } from '../services/free-shipping.service';
 import { PaymentModalComponent } from '../payment-modal/payment-modal.component';
+import { PromotionService } from '../services/promotion.service';
 
 @Component({
   selector: 'app-checkout-modal',
@@ -26,6 +27,7 @@ export class CheckoutModalComponent implements OnInit {
   @Output() close = new EventEmitter<void>();
   cartItems: any[] = [];
   totalPrice: number = 0;
+  appliedCoupon: any = null;
   shippingCost: number = 0;
   isLoading = true;
   showSuccessMessage: boolean = false;
@@ -91,8 +93,35 @@ export class CheckoutModalComponent implements OnInit {
     private authService: AuthService,
     private dataService: DataService,
     private paymentService: PaymentService,
-    private freeShippingService: FreeShippingService
+    private freeShippingService: FreeShippingService,
+    private promotionService: PromotionService
   ) { }
+
+  calculateDiscountedPrice(price: number, bookId?: string, quantity: number = 1): { discountedPrice: number, discountedQty: number } {
+    if (!this.appliedCoupon) return { discountedPrice: price, discountedQty: quantity };
+
+    // Check price range
+    const min = this.appliedCoupon.minPrice;
+    const max = this.appliedCoupon.maxPrice;
+    if ((min && price < min) || (max && price > max)) {
+      return { discountedPrice: price, discountedQty: 0 };
+    }
+
+    // Handle Quantity Limit Per Product
+    let discountedQty = quantity;
+    if (this.appliedCoupon.maxQtyPerProduct > 0) {
+      discountedQty = Math.min(quantity, this.appliedCoupon.maxQtyPerProduct);
+    }
+
+    let finalDiscountedPrice = price;
+    if (this.appliedCoupon.discountType === 'percentage') {
+      finalDiscountedPrice = price * (1 - this.appliedCoupon.value / 100);
+    } else {
+      finalDiscountedPrice = Math.max(0, price - this.appliedCoupon.value);
+    }
+
+    return { discountedPrice: finalDiscountedPrice, discountedQty: discountedQty };
+  }
 
   loadFreeShippingRules(): void {
     this.freeShippingService.getRules().subscribe({
@@ -156,6 +185,10 @@ export class CheckoutModalComponent implements OnInit {
 
   ngOnInit(): void {
     console.log('CheckoutModalComponent initialized');
+    this.promotionService.activeCoupon$.subscribe(coupon => {
+      this.appliedCoupon = coupon;
+      this.calculateTotalPrice();
+    });
     this.loadCartItems();
     this.loadUserProfile();
     this.loadFreeShippingRules();
@@ -217,13 +250,27 @@ export class CheckoutModalComponent implements OnInit {
         console.log('Received book IDs:', bookIds);
         if (bookIds.length > 0) {
           this.dataService.getData().pipe(
-            map((books: any[]) => books.filter(book => bookIds.includes(book.products_id)))
+            map((books: any[]) => {
+              return bookIds.map(idInCart => {
+                const isFree = idInCart.endsWith(':free');
+                const realId = isFree ? idInCart.split(':')[0] : idInCart;
+
+                const bookMatch = books.find(b => b.products_id === realId);
+                if (bookMatch) {
+                  return {
+                    ...bookMatch,
+                    products_id: idInCart,
+                    product_price: isFree ? 0 : bookMatch.product_price,
+                    isFree: isFree,
+                    quantity: bookMatch.quantity ?? 1
+                  };
+                }
+                return null;
+              }).filter(b => b !== null);
+            })
           ).subscribe({
             next: (filteredBooks) => {
-              this.cartItems = filteredBooks.map(item => ({
-                ...item,
-                quantity: item.quantity ?? 1
-              })).sort((a, b) => {
+              this.cartItems = filteredBooks.sort((a, b) => {
                 if (a.product_quantity > 0 && b.product_quantity <= 0) return -1;
                 if (a.product_quantity <= 0 && b.product_quantity > 0) return 1;
                 return b.product_quantity - a.product_quantity;
@@ -318,9 +365,34 @@ export class CheckoutModalComponent implements OnInit {
   }
 
   calculateTotalPrice(): void {
+    let discountedProductCount = 0;
+    const maxProducts = this.appliedCoupon?.maxProducts || 0;
+
     const itemsTotal = this.cartItems.reduce((total, book) => {
       if (book.product_quantity > 0) {
-        return total + (parseFloat(book.product_price) * (book.quantity || 1));
+        const price = parseFloat(book.product_price);
+        const qty = book.quantity || 1;
+
+        if (book.isFree) {
+          return total + 0;
+        }
+
+        // If maxProducts limit reached, don't apply discount to this item
+        if (this.appliedCoupon && maxProducts > 0 && discountedProductCount >= maxProducts) {
+          return total + (price * qty);
+        }
+
+        const { discountedPrice, discountedQty } = this.calculateDiscountedPrice(price, book.products_id, qty);
+
+        // If a discount was actually applied (price or qty changed)
+        if (this.appliedCoupon && (discountedPrice !== price) && discountedQty > 0) {
+          discountedProductCount++;
+          const discountedPart = discountedPrice * discountedQty;
+          const normalPart = price * (qty - discountedQty);
+          return total + discountedPart + normalPart;
+        }
+
+        return total + (price * qty);
       }
       return total;
     }, 0);
@@ -616,7 +688,7 @@ export class CheckoutModalComponent implements OnInit {
             bookId: item.products_id,
             bookName: item.product_name,
             quantity: item.quantity || 1,
-            price: parseFloat(item.product_price)
+            price: item.isFree ? 0 : this.calculateDiscountedPrice(parseFloat(item.product_price), item.products_id, item.quantity || 1).discountedPrice
           })),
           shippingCost: this.shippingCost,
           totalAmount: this.totalPrice,
@@ -631,7 +703,7 @@ export class CheckoutModalComponent implements OnInit {
           postOfficeName: this.isPostOffice ? this.postOfficeName : null,
           phone: this.userProfile?.phone,
           referralCode: referralCode,
-
+          couponCode: this.appliedCoupon?.code,
           bookId: bookId,
           useWallet: this.useWallet
         };
@@ -649,7 +721,24 @@ export class CheckoutModalComponent implements OnInit {
             const merchantRedirect = window.location.origin + '/order/callback';
 
             if (orderId && this.userProfile && this.userProfile.email) {
-              this.paymentService.createPayment(orderId, this.totalPrice, currency, this.userProfile.email, merchantRedirect).subscribe({
+              // FOR ZERO TOTAL ORDERS: Complete directly
+              if (this.finalTotal <= 0) {
+                console.log('[Checkout] Zero total detected, completing order skipping payment');
+                if (referralCode) {
+                  localStorage.removeItem('referralCode');
+                  localStorage.removeItem('referralBookId');
+                }
+                this.promotionService.setActiveCoupon(null);
+                this.isProcessing = false;
+                this.showSuccessMessage = true;
+                setTimeout(() => {
+                  this.onClose();
+                  window.location.href = '/requests';
+                }, 2000);
+                return;
+              }
+
+              this.paymentService.createPayment(orderId, this.finalTotal, currency, this.userProfile.email, merchantRedirect).subscribe({
                 next: (paymentResponse: any) => {
                   if (paymentResponse.sessionUrl) {
                     this.paymentUrl = paymentResponse.sessionUrl;
@@ -717,7 +806,7 @@ export class CheckoutModalComponent implements OnInit {
             bookId: item.products_id,
             bookName: item.product_name,
             quantity: item.quantity || 1,
-            price: parseFloat(item.product_price)
+            price: item.isFree ? 0 : this.calculateDiscountedPrice(parseFloat(item.product_price), item.products_id, item.quantity || 1).discountedPrice
           })),
           shippingCost: this.shippingCost,
           totalAmount: this.totalPrice,
@@ -732,7 +821,7 @@ export class CheckoutModalComponent implements OnInit {
           postOfficeName: this.isPostOffice ? this.postOfficeName : null,
           phone: this.userProfile?.phone,
           referralCode: referralCode,
-
+          couponCode: this.appliedCoupon?.code,
           bookId: bookId,
           useWallet: this.useWallet,
           paymentMethod: 'cod'

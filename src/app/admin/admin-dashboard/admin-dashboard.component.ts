@@ -16,13 +16,14 @@ import * as XLSX from 'xlsx';
 import { FreeShippingRulesComponent } from './free-shipping/free-shipping-rules.component';
 import { Subscription } from 'rxjs';
 import { FaIconLibrary, FontAwesomeModule, FaIconComponent } from '@fortawesome/angular-fontawesome';
-import { faShoppingCart, faStore, faBook, faPrint, faPlus, faEdit, faTruck, faUsers, faCheckCircle, faMoneyBillWave, faSitemap, faPlusCircle, faImage, faTag, faHashtag, faList, faDollarSign, faAlignLeft, faExclamationTriangle, faCartPlus, faHeart, faMobileAlt, faCamera, faTimes, faHome, faChartLine, faCog, faBars, faUserClock, faCoins, faUserPlus, faChartBar, faBell, faSearch, faSlidersH } from '@fortawesome/free-solid-svg-icons';
+import { faShoppingCart, faStore, faBook, faPrint, faPlus, faEdit, faTruck, faUsers, faCheckCircle, faMoneyBillWave, faSitemap, faPlusCircle, faImage, faTag, faHashtag, faList, faDollarSign, faAlignLeft, faExclamationTriangle, faCartPlus, faHeart, faMobileAlt, faCamera, faTimes, faHome, faChartLine, faCog, faBars, faUserClock, faCoins, faUserPlus, faChartBar, faBell, faSearch, faSlidersH, faGift } from '@fortawesome/free-solid-svg-icons';
 import { PaymentRequestsComponent } from '../payment-requests/payment-requests.component';
 import { UserHierarchyComponent } from '../user-hierarchy/user-hierarchy.component';
 import { AmazonPriceCalculatorComponent } from '../amazon-price-calculator/amazon-price-calculator.component';
 import { AdminEbooksComponent } from '../admin-ebooks/admin-ebooks.component';
 import { AdminNotificationsComponent } from '../admin-notifications/admin-notifications.component';
 import { SubscriptionSettingsComponent } from '../subscription-settings/subscription-settings.component';
+import { PromotionsManagerComponent } from '../promotions-manager/promotions-manager.component';
 
 interface Order {
   _id: string;
@@ -201,7 +202,8 @@ interface SystemSettings {
     AmazonPriceCalculatorComponent,
     AdminEbooksComponent,
     AdminNotificationsComponent,
-    SubscriptionSettingsComponent
+    SubscriptionSettingsComponent,
+    PromotionsManagerComponent
   ],
   templateUrl: './admin-dashboard.component.html',
   styleUrls: ['./admin-dashboard.component.css']
@@ -214,7 +216,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   feedbacks: ReaderFeedback[] = [];
   isAdmin: boolean = false; // Add paymentRequests to the type union
   showSidebar: boolean = true;
-  currentView: 'dashboard' | 'userIntelligence' | 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' | 'gamificationControl' | 'notifications' | 'subscriptionControl' | 'readerFeedback' = 'dashboard';
+  currentView: 'dashboard' | 'userIntelligence' | 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' | 'gamificationControl' | 'notifications' | 'subscriptionControl' | 'readerFeedback' | 'promotions' = 'dashboard';
 
   // Gamification Control Properties
   systemSettings: SystemSettings = {
@@ -338,6 +340,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   faChartBar = faChartBar;
   faBell = faBell;
   faSearch = faSearch; // Ensure faSearch is imported or added to library
+  faSlidersH = faSlidersH;
+  faGift = faGift;
 
   // User Intelligence Phase 2
   usersList: any[] = [];
@@ -868,7 +872,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     }
   }
 
-  switchView(view: 'dashboard' | 'userIntelligence' | 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' | 'gamificationControl' | 'notifications' | 'subscriptionControl' | 'readerFeedback'): void {
+  switchView(view: 'dashboard' | 'userIntelligence' | 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' | 'gamificationControl' | 'notifications' | 'subscriptionControl' | 'readerFeedback' | 'promotions'): void {
     this.currentView = view;
 
     if (view === 'dashboard') {

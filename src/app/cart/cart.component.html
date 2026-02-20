@@ -4,56 +4,71 @@
     <div class="flex items-center justify-center mb-4">
       <div class="bg-gradient-to-r from-blue-500 to-purple-600 p-3 rounded-full shadow-lg">
         <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-1.1 5H19M7 13l-1.1 5M7 13h10m0 0v5a2 2 0 01-2 2H9a2 2 0 01-2-2v-5"></path>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-1.1 5H19M7 13l-1.1 5M7 13h10m0 0v5a2 2 0 01-2 2H9a2 2 0 01-2-2v-5">
+          </path>
         </svg>
       </div>
     </div>
-    <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">سلة المشتريات</h1>
+    <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">سلة
+      المشتريات</h1>
     <p class="text-gray-600 dark:text-gray-400 mt-2">استمتع بتسوقك وأضف المزيد من الكتب المفضلة</p>
   </div>
 
   <div *ngIf="isLoading" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-8 items-start">
     <div *ngFor="let skeleton of [].constructor(6); let i = index"
-         class="group bg-white dark:bg-gray-800 rounded-2xl md:rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border border-gray-100 dark:border-gray-700 overflow-hidden fade-in h-full"
-         [style.animationDelay]="i * 400 + 'ms'">
+      class="group bg-white dark:bg-gray-800 rounded-2xl md:rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border border-gray-100 dark:border-gray-700 overflow-hidden fade-in h-full"
+      [style.animationDelay]="i * 400 + 'ms'">
 
       <!-- Book Image Section Skeleton -->
-      <div class="relative w-full h-32 sm:h-40 md:h-48 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center p-3 md:p-4">
-        <ngx-skeleton-loader count="1" appearance="circle" [theme]="{ width: '80px', height: '80px', 'background-color': 'rgba(156, 163, 175, 0.2)' }"></ngx-skeleton-loader>
-        <div class="absolute top-2 right-2 md:top-3 md:right-3 bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 md:px-2 md:py-1 rounded-full shadow-md opacity-60">
-          <ngx-skeleton-loader count="1" [theme]="{ width: '12px', height: '12px', 'background-color': 'transparent' }"></ngx-skeleton-loader>
+      <div
+        class="relative w-full h-32 sm:h-40 md:h-48 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center p-3 md:p-4">
+        <ngx-skeleton-loader count="1" appearance="circle"
+          [theme]="{ width: '80px', height: '80px', 'background-color': 'rgba(156, 163, 175, 0.2)' }"></ngx-skeleton-loader>
+        <div
+          class="absolute top-2 right-2 md:top-3 md:right-3 bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 md:px-2 md:py-1 rounded-full shadow-md opacity-60">
+          <ngx-skeleton-loader count="1"
+            [theme]="{ width: '12px', height: '12px', 'background-color': 'transparent' }"></ngx-skeleton-loader>
         </div>
       </div>
 
       <!-- Book Details Section Skeleton -->
       <div class="p-4 md:p-6">
-        <ngx-skeleton-loader count="1" [theme]="{ height: '24px', 'margin-bottom': '12px', width: '80%' }"></ngx-skeleton-loader>
+        <ngx-skeleton-loader count="1"
+          [theme]="{ height: '24px', 'margin-bottom': '12px', width: '80%' }"></ngx-skeleton-loader>
 
         <div class="flex items-center justify-between mb-3 md:mb-4">
           <div class="flex items-center space-x-1 md:space-x-2">
             <ngx-skeleton-loader count="1" [theme]="{ width: '60px', height: '28px' }"></ngx-skeleton-loader>
             <ngx-skeleton-loader count="1" [theme]="{ width: '30px', height: '20px' }"></ngx-skeleton-loader>
           </div>
-          <ngx-skeleton-loader count="1" [theme]="{ width: '50px', height: '24px', 'border-radius': '9999px' }"></ngx-skeleton-loader>
+          <ngx-skeleton-loader count="1"
+            [theme]="{ width: '50px', height: '24px', 'border-radius': '9999px' }"></ngx-skeleton-loader>
         </div>
 
         <!-- Action Button Skeleton -->
-        <ngx-skeleton-loader count="1" [theme]="{ height: '44px', 'border-radius': '12px', width: '100%' }"></ngx-skeleton-loader>
+        <ngx-skeleton-loader count="1"
+          [theme]="{ height: '44px', 'border-radius': '12px', width: '100%' }"></ngx-skeleton-loader>
       </div>
     </div>
   </div>
   <!-- Empty State -->
   <div *ngIf="!isLoading && cartBooks.length === 0" class="text-center py-16">
     <div class="mb-6">
-      <svg class="w-24 h-24 mx-auto text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-1.1 5H19M7 13l-1.1 5M7 13h10m0 0v5a2 2 0 01-2 2H9a2 2 0 01-2-2v-5"></path>
+      <svg class="w-24 h-24 mx-auto text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor"
+        viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1"
+          d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-1.1 5H19M7 13l-1.1 5M7 13h10m0 0v5a2 2 0 01-2 2H9a2 2 0 01-2-2v-5">
+        </path>
       </svg>
     </div>
     <h2 class="text-2xl font-semibold text-gray-700 dark:text-gray-300 mb-2">سلتك فارغة</h2>
     <p class="text-gray-500 dark:text-gray-400 mb-6">ابدأ رحلتك في اكتشاف الكتب المثيرة</p>
-    <button (click)="navigateHome()" class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-medium rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+    <button (click)="navigateHome()"
+      class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-medium rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
       <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
       </svg>
       تصفح الكتب
     </button>
@@ -62,32 +77,46 @@
   <!-- Book Cards -->
   <div *ngIf="!isLoading && cartBooks.length > 0" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-8">
     <div *ngFor="let book of cartBooks ; let i = index"
-         class="group bg-white dark:bg-gray-800 rounded-2xl md:rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border border-gray-100 dark:border-gray-700 overflow-hidden fade-in"
-         [style.animationDelay]="i * 400 + 'ms'">
+      class="group bg-white dark:bg-gray-800 rounded-2xl md:rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border border-gray-100 dark:border-gray-700 overflow-hidden fade-in"
+      [style.animationDelay]="i * 400 + 'ms'">
 
       <!-- Book Image Section -->
-      <div class="relative w-full h-32 sm:h-40 md:h-48 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center p-3 md:p-4">
-        <img
-          [src]="getBookImageUrl(book)"
-          [alt]="book.product_name"
+      <div
+        class="relative w-full h-32 sm:h-40 md:h-48 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center p-3 md:p-4">
+        <img [src]="getBookImageUrl(book)" [alt]="book.product_name"
           class="max-w-full max-h-full object-contain rounded-lg md:rounded-xl shadow-md group-hover:scale-105 transition-transform duration-300"
-          data-attempt="0"
-        />
-        <div class="absolute top-2 right-2 md:top-3 md:right-3 bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 md:px-2 md:py-1 rounded-full shadow-md">
+          data-attempt="0" />
+        <div
+          class="absolute top-2 right-2 md:top-3 md:right-3 bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 md:px-2 md:py-1 rounded-full shadow-md">
           {{ i + 1 }}
         </div>
       </div>
 
       <!-- Book Details Section -->
       <div class="p-4 md:p-6">
-        <h3 class="font-bold text-lg md:text-xl mb-2 md:mb-3 text-gray-800 dark:text-white line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+        <h3
+          class="font-bold text-lg md:text-xl mb-2 md:mb-3 text-gray-800 dark:text-white line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
           {{book.product_name}}
         </h3>
 
         <div class="flex items-center justify-between mb-3 md:mb-4">
-          <div class="flex items-center space-x-1 md:space-x-2">
-            <span class="text-xl md:text-2xl font-bold text-green-600 dark:text-green-400">{{book.product_price}}</span>
-            <span class="text-base md:text-lg text-gray-500 dark:text-gray-400">ج.م</span>
+          <div class="flex flex-col"
+            *ngIf="calculateDiscountedPrice(book.product_price, book.products_id, book.quantity || 1) as discount">
+            <div class="flex items-center space-x-1 md:space-x-2">
+              <span class="text-xl md:text-2xl font-bold text-green-600 dark:text-green-400">
+                {{ (discount.discountedPrice * discount.discountedQty + book.product_price * ((book.quantity || 1) -
+                discount.discountedQty)) | number:'1.0-0' }}
+              </span>
+              <span class="text-base md:text-lg text-gray-500 dark:text-gray-400">ج.م</span>
+            </div>
+            <!-- Original Price -->
+            <span *ngIf="discount.discountedQty > 0" class="text-sm text-gray-400 line-through">
+              {{book.product_price * (book.quantity || 1)}} ج.م
+            </span>
+            <span *ngIf="discount.discountedQty > 0 && discount.discountedQty < (book.quantity || 1)"
+              class="text-[10px] text-amber-600 font-bold">
+              (مخصوم لعدد {{ discount.discountedQty }} قطع فقط)
+            </span>
           </div>
           <div class="bg-green-100 dark:bg-green-900 px-2 py-0.5 md:px-3 md:py-1 rounded-full">
             <span class="text-green-800 dark:text-green-200 text-xs md:text-sm font-medium">متوفر</span>
@@ -95,11 +124,12 @@
         </div>
 
         <!-- Action Button -->
-        <button
-          (click)="removeFromCart(book.products_id)"
+        <button (click)="removeFromCart(book.products_id)"
           class="w-full bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium py-2 md:py-3 px-3 md:px-4 rounded-lg md:rounded-xl transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 flex items-center justify-center space-x-1 md:space-x-2">
           <svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
+            </path>
           </svg>
           <span class="text-sm md:text-base">إزالة من السلة</span>
         </button>
@@ -109,32 +139,59 @@
 
   <!-- Checkout Section -->
   <div *ngIf="!isLoading && cartBooks.length > 0" class="mt-8 md:mt-12">
-    <div class="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-700 rounded-2xl p-6 md:p-8 shadow-lg border border-gray-100 dark:border-gray-600">
+    <!-- Coupon Informational Banner -->
+    <div *ngIf="appliedCoupon"
+      class="mb-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4 rounded-2xl flex items-center justify-between">
+      <div class="flex items-center gap-3 text-green-800 dark:text-green-300">
+        <svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7">
+          </path>
+        </svg>
+        <div>
+          <p class="font-bold">كوبون فعال: {{ appliedCoupon.code }}</p>
+          <p class="text-xs">تم تطبيق الخصم على إجمالي الطلب.</p>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-700 rounded-2xl p-6 md:p-8 shadow-lg border border-gray-100 dark:border-gray-600">
       <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
         <!-- Total Section -->
         <div class="text-center md:text-right">
           <div class="flex items-center justify-center md:justify-end mb-2">
-            <svg class="w-6 h-6 text-green-600 dark:text-green-400 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+            <svg class="w-6 h-6 text-green-600 dark:text-green-400 ml-2" fill="none" stroke="currentColor"
+              viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z">
+              </path>
             </svg>
             <span class="text-sm text-gray-600 dark:text-gray-400 font-medium">إجمالي الطلب</span>
           </div>
           <div class="flex items-center justify-center md:justify-end">
-            <span class="text-3xl md:text-4xl font-bold text-green-600 dark:text-green-400">{{ totalPrice }}</span>
+            <span class="text-3xl md:text-4xl font-bold text-green-600 dark:text-green-400">
+              {{ totalPrice | number:'1.0-0' }}
+            </span>
             <span class="text-xl md:text-2xl text-gray-600 dark:text-gray-400 mr-2">ج.م</span>
           </div>
-          <!-- <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">شامل الضرائب والشحن</p> -->
+          <p *ngIf="appliedCoupon" class="text-xs text-green-600 dark:text-green-400 mt-1 font-bold">
+            (تم تطبيق خصم الكوبون)
+          </p>
         </div>
 
         <!-- Checkout Button -->
         <div class="flex justify-center md:justify-end">
           <button (click)="showCheckoutModal = true"
-                  class="group bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold py-4 px-8 md:px-10 rounded-2xl transition-all duration-300 shadow-lg hover:shadow-2xl transform hover:scale-105 hover:-translate-y-1 flex items-center space-x-3">
+            class="group bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold py-4 px-8 md:px-10 rounded-2xl transition-all duration-300 shadow-lg hover:shadow-2xl transform hover:scale-105 hover:-translate-y-1 flex items-center space-x-3">
             <svg class="w-6 h-6 group-hover:animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-1.1 5H19M7 13l-1.1 5M7 13h10m0 0v5a2 2 0 01-2 2H9a2 2 0 01-2-2v-5"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-1.1 5H19M7 13l-1.1 5M7 13h10m0 0v5a2 2 0 01-2 2H9a2 2 0 01-2-2v-5">
+              </path>
             </svg>
             <span class="text-lg">إتمام الشراء</span>
-            <svg class="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor"
+              viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
             </svg>
           </button>
@@ -152,13 +209,16 @@
           </div>
           <div class="flex items-center space-x-2">
             <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
             </svg>
             <span>شحن مجاني</span>
           </div>
           <div class="flex items-center space-x-2">
             <svg class="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z">
+              </path>
             </svg>
             <span>ضمان الجودة</span>
           </div>
@@ -168,7 +228,5 @@
   </div>
 </div>
 
-<app-checkout-modal
-  *ngIf="showCheckoutModal"
-  (close)="showCheckoutModal = false">
+<app-checkout-modal *ngIf="showCheckoutModal" (close)="showCheckoutModal = false">
 </app-checkout-modal>

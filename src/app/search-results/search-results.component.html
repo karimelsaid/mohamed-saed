@@ -1,5 +1,33 @@
 <div class="pt-10 md:pt-40 p-3 text-center text-2xl font-bold text-amber-600 dark:text-amber-400">نتيجة البحث</div>
 
+<!-- Coupon Applied Banner -->
+<div *ngIf="appliedCoupon" class="mx-auto max-w-2xl mt-4 animate-in fade-in slide-in-from-top-4 duration-500">
+  <div
+    class="bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800 p-4 rounded-2xl flex items-center justify-between shadow-sm">
+    <div class="flex items-center gap-3 text-green-800 dark:text-green-300">
+      <div class="bg-green-500 text-white p-2 rounded-xl">
+        <fa-icon [icon]="faGift"></fa-icon>
+      </div>
+      <div>
+        <p class="font-bold">تم تطبيق الكوبون: {{ searchQuery }}</p>
+        <p class="text-sm">مبروك! حصلت على خصم {{ appliedCoupon.value }}{{ appliedCoupon.discountType === 'percentage' ?
+          '%' : ' EGP' }} على جميع المنتجات.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Expired Coupon Banner -->
+<div *ngIf="expiredCouponMessage" class="mx-auto max-w-2xl mt-4 animate-in fade-in slide-in-from-top-4 duration-500">
+  <div
+    class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-6 rounded-2xl text-center shadow-sm">
+    <div class="text-amber-600 dark:text-amber-400 text-4xl mb-3">⏰</div>
+    <p class="font-bold text-lg text-amber-800 dark:text-amber-300 mb-2">تم انتهاء مدة صلاحية هذا الكوبون</p>
+    <p class="text-amber-700 dark:text-amber-400 text-sm mb-1">انتظر الكوبون التالي في الساعات القادمة</p>
+    <p class="text-amber-600 dark:text-amber-500 text-sm font-semibold">نسعى دائماً لإرضائك 💜</p>
+  </div>
+</div>
+
 <div *ngIf="isLoading" class="pt-10 md:pt-10 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 mx-8 gap-4">
   <div *ngFor="let skeleton of [].constructor(10); let i = index"
     class="flex dark:bg-gray-800 rounded-2xl shadow dark:shadow-lg dark:shadow-black/50 p-4 mb-4 fade-in relative"
@@ -71,34 +99,30 @@
         </div>
 
         <!-- السعر -->
-        <div *ngIf="book.rival" class="flex flex-col mb-2">
+        <div class="flex flex-col mb-2"
+          *ngIf="calculateDiscountedPrice(book.product_price, book.products_id, 1) as discount">
           <div class="flex items-center space-x-2">
-            <p class="text-green-600 dark:text-green-400 font-bold text-lg">{{ book.product_price }} EGP</p>
+            <!-- New Price (if coupon) or Regular Price -->
+            <p class="text-green-600 dark:text-green-400 font-bold text-lg">
+              {{ (discount.discountedQty > 0 ? discount.discountedPrice : book.product_price) | number:'1.0-0' }} EGP
+            </p>
+            <!-- Original Price (strikethrough) -->
             <p class="text-gray-400 dark:text-gray-500 line-through text-sm">
-              {{ (book.product_price_before_discount) | number:'1.0-0' }} EGP
+              {{ (book.rival ? book.product_price_before_discount : (book.product_price * 1.75)) | number:'1.0-0' }} EGP
             </p>
           </div>
+
+          <!-- Coupon Savings Label -->
+          <p *ngIf="discount.discountedQty > 0" class="text-xs text-green-600 dark:text-green-400 font-semibold mb-1">
+            وفرت {{ (book.product_price - discount.discountedPrice) | number:'1.0-0' }} EGP باستخدام الكوبون
+          </p>
+
           <!-- Digital Price -->
           <span
             class="text-xs text-yellow-600 dark:text-yellow-400 font-bold flex items-center gap-1 mt-1 bg-yellow-50 dark:bg-yellow-900/20 px-2 py-0.5 rounded-md w-fit">
             <fa-icon [icon]="faCoins" class="text-yellow-500"></fa-icon>
-            {{ (book.product_price * gamificationService.poundValue) | number:'1.0-0' }} عملة
-          </span>
-        </div>
-        <!-- السعر -->
-        <div *ngIf="!book.rival" class="flex flex-col mb-2">
-          <div class="flex items-center space-x-2">
-            <p class="text-green-600 dark:text-green-400 font-bold text-lg">{{ book.product_price_before_discount}} EGP
-            </p>
-            <p class="text-gray-400 dark:text-gray-500 line-through text-sm">
-              {{ (book.product_price_before_discount * 1.75) | number:'1.0-0' }} EGP
-            </p>
-          </div>
-          <!-- Digital Price -->
-          <span
-            class="text-xs text-yellow-600 dark:text-yellow-400 font-bold flex items-center gap-1 mt-1 bg-yellow-50 dark:bg-yellow-900/20 px-2 py-0.5 rounded-md w-fit">
-            <fa-icon [icon]="faCoins" class="text-yellow-500"></fa-icon>
-            {{ (book.product_price_before_discount * gamificationService.poundValue) | number:'1.0-0' }} عملة
+            {{ ((discount.discountedQty > 0 ? discount.discountedPrice : book.product_price) *
+            gamificationService.poundValue) | number:'1.0-0' }} عملة
           </span>
         </div>
 
@@ -133,7 +157,11 @@
           تم نسخ الرابط
         </div>
 
-        <button [routerLink]="getProductRoute(book)"
+        <button *ngIf="appliedCoupon" (click)="buyNow(book.products_id)"
+          class="bg-green-600 dark:bg-green-700 text-white px-4 py-1 rounded-lg hover:bg-green-700 dark:hover:bg-green-800 transition shadow-lg font-bold">
+          شراء الآن
+        </button>
+        <button *ngIf="!appliedCoupon" [routerLink]="getProductRoute(book)"
           class="bg-blue-600 dark:bg-[#0a1325] text-white px-4 py-1 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-800 transition">
           المزيد
         </button>
@@ -341,14 +369,14 @@
   </button>
 
   <ng-container *ngFor="let page of getDisplayedPages()">
-    <button *ngIf="typeof page === 'number'"
+    <button *ngIf="isNumber(page)"
       class="px-2 py-[1px] sm:px-3 sm:py-1  rounded-lg border border-gray-300 dark:border-gray-600" [ngClass]="{
         'bg-blue-600 text-white dark:bg-blue-700': page === currentPage,
         'bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700': page !== currentPage
       }" (click)="onPageClick(page)">
       {{ page }}
     </button>
-    <span *ngIf="typeof page === 'string'" class="px-2 py-[1px] sm:px-3 sm:py-1  text-gray-500 dark:text-gray-400">
+    <span *ngIf="!isNumber(page)" class="px-2 py-[1px] sm:px-3 sm:py-1  text-gray-500 dark:text-gray-400">
       {{ page }}
     </span>
   </ng-container>

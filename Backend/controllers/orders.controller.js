@@ -4,12 +4,13 @@ const fs = require('fs');
 const path = require('path');
 const Product = require('../models/Product.model');
 const Referral = require('../models/Referral.model');
+const Coupon = require('../models/Coupon.model');
 
 exports.submitOrder = async (req, res) => {
   try {
     const { userId, products, totalAmount, shippingCost, preparationTime: reqPreparationTime, merchantId, isPickup, pickupLocation, isPostOffice, referralCode, bookId, address } = req.body;
 
-    if (!userId || !products || !totalAmount) {
+    if (!userId || !products || (totalAmount === undefined || totalAmount === null)) {
       return res.status(400).json({ message: 'Missing required fields: userId, products, totalAmount' });
     }
 
@@ -87,6 +88,8 @@ exports.submitOrder = async (req, res) => {
     };
 
     user.orders.push(newOrder);
+    // Clear user cart after successful order placement
+    user.cart = [];
     await user.save();
 
     // Get the _id of the newly added order subdocument
@@ -135,6 +138,30 @@ exports.submitOrder = async (req, res) => {
       } else if (!referrer) {
         // console.log(`[Referral Submit] No referrer found for code: ${referralCode}`);
       } else {
+      }
+    }
+
+    // Handle coupon usage tracking
+    if (req.body.couponCode) {
+      try {
+        const normalizedCode = req.body.couponCode.trim().toUpperCase();
+        const coupon = await Coupon.findOne({ code: normalizedCode });
+        if (coupon) {
+          coupon.uses = (coupon.uses || 0) + 1;
+
+          // Track per-user usage
+          const userUsageIndex = coupon.usedBy.findIndex(u => u.userId && u.userId.toString() === userId.toString());
+          if (userUsageIndex !== -1) {
+            coupon.usedBy[userUsageIndex].count += 1;
+          } else {
+            coupon.usedBy.push({ userId: userId, count: 1 });
+          }
+
+          await coupon.save();
+          console.log(`[Order Submit] Coupon ${normalizedCode} usage updated for user ${userId}`);
+        }
+      } catch (couponError) {
+        console.error('[Order Submit] Error updating coupon usage:', couponError);
       }
     }
 

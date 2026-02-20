@@ -1,0 +1,47 @@
+<div class="fixed bottom-24 left-4 z-50">
+    <!-- Floating Button -->
+    <button (click)="toggleWidget()"
+        class="relative w-14 h-14 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 shadow-lg flex items-center justify-center text-white hover:scale-110 transition-transform duration-300 animate-pulse-slow group">
+        <fa-icon [icon]="isOpen ? faTimes : faGift" class="text-2xl transition-transform duration-300"
+            [class.rotate-180]="isOpen"></fa-icon>
+
+        <!-- Tooltip -->
+        <span
+            class="absolute right-full mr-3 bg-gray-900 text-white text-sm py-1 px-3 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap pointer-events-none">
+            جرب حظك! 🎁
+        </span>
+    </button>
+
+    <!-- Modal / Popover -->
+    <div *ngIf="isOpen" @fadeInOut
+        class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[350px] bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-purple-100 dark:border-gray-700 overflow-hidden z-[100]">
+
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-purple-600 to-pink-600 p-4 text-white flex justify-between items-center">
+            <h3 class="font-bold flex items-center gap-2">
+                <fa-icon [icon]="faGift"></fa-icon>
+                عجلة الحظ
+            </h3>
+            <button (click)="closeWidget()" class="text-white/80 hover:text-white transition-colors">
+                <fa-icon [icon]="faTimes"></fa-icon>
+            </button>
+        </div>
+
+        <!-- Content -->
+        <div class="p-4 bg-purple-50 dark:bg-gray-900/50 min-h-[400px] flex items-center justify-center relative">
+            <div class="absolute inset-0 bg-cover bg-center opacity-10 pointer-events-none"
+                style="background-image: url('assets/pattern-bg.png');"></div>
+
+            <div class="widget-content" [@slideInOut]>
+                <div class="content-body">
+                    <app-lucky-wheel [theme]="activeTheme" (onWin)="winningPrize = $event; closeWidget()"
+                        (onActionComplete)="closeWidget()">
+                    </app-lucky-wheel>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Standalone Prize Reveal (Separate from the small widget modal) -->
+    <app-prize-reveal [prize]="winningPrize" (onClose)="winningPrize = null"></app-prize-reveal>
+</div>

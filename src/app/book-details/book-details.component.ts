@@ -15,6 +15,7 @@ import { faStar, faShareAlt, faCoins } from '@fortawesome/free-solid-svg-icons';
 import { faStar as faStarRegular } from '@fortawesome/free-regular-svg-icons';
 import { environment } from '../../environments/environment';
 import { SlugService } from '../services/slug.service';
+import { PromotionService } from '../services/promotion.service';
 
 @Component({
   selector: 'app-book-details',
@@ -46,6 +47,7 @@ export class BookDetailsComponent implements OnInit {
 
   private bookId: string | null = null;
   private allBooks: Book[] = [];
+  appliedCoupon: any = null;
   constructor(
     private route: ActivatedRoute,
     private router: Router,
@@ -53,7 +55,8 @@ export class BookDetailsComponent implements OnInit {
     private authService: AuthService,
     private http: HttpClient,
     private slugService: SlugService,
-    public gamificationService: GamificationService
+    public gamificationService: GamificationService,
+    private promotionService: PromotionService
   ) { }
 
   ngOnInit(): void {
@@ -443,5 +446,30 @@ export class BookDetailsComponent implements OnInit {
   isArabicText(text: string): boolean {
     const arabicRegex = /[\u0600-\u06FF]/;
     return arabicRegex.test(text);
+  }
+
+  calculateDiscountedPrice(price: number, bookId?: string, quantity: number = 1): { discountedPrice: number, discountedQty: number } {
+    if (!this.appliedCoupon) return { discountedPrice: price, discountedQty: quantity };
+
+    const min = this.appliedCoupon.minPrice;
+    const max = this.appliedCoupon.maxPrice;
+    const isWithinRange = (min ? price >= min : true) && (max ? price <= max : true);
+
+    if (!isWithinRange) return { discountedPrice: price, discountedQty: 0 };
+
+    // Handle Quantity Limit Per Product
+    let discountedQty = quantity;
+    if (this.appliedCoupon.maxQtyPerProduct > 0) {
+      discountedQty = Math.min(quantity, this.appliedCoupon.maxQtyPerProduct);
+    }
+
+    let finalDiscountedPrice = price;
+    if (this.appliedCoupon.discountType === 'percentage') {
+      finalDiscountedPrice = price * (1 - this.appliedCoupon.value / 100);
+    } else if (this.appliedCoupon.discountType === 'fixed') {
+      finalDiscountedPrice = Math.max(0, price - this.appliedCoupon.value);
+    }
+
+    return { discountedPrice: finalDiscountedPrice, discountedQty: discountedQty };
   }
 }

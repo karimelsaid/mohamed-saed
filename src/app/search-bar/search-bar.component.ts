@@ -1,9 +1,11 @@
-import { Component, EventEmitter, Input, Output, ViewChild, ElementRef, HostListener } from '@angular/core';
+import { Component, EventEmitter, Input, Output, ViewChild, ElementRef, HostListener, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { faSearch, faFilter, faBook, faClock, faList } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { ActivatedRoute, Router, NavigationEnd } from '@angular/router';
+import { filter } from 'rxjs/operators';
 
 @Component({
   selector: 'app-search-bar',
@@ -12,7 +14,7 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
   standalone: true,
   imports: [CommonModule, FormsModule, FontAwesomeModule]
 })
-export class SearchBarComponent {
+export class SearchBarComponent implements OnInit {
   @Input() allBooks: any[] = [];
   @Output() searchExecuted = new EventEmitter<{ query: string, filter: string }>();
 
@@ -32,7 +34,31 @@ export class SearchBarComponent {
 
   @ViewChild('inputElement') inputElement!: ElementRef;
 
-  constructor(private sanitizer: DomSanitizer) {}
+  constructor(
+    private sanitizer: DomSanitizer,
+    private route: ActivatedRoute,
+    private router: Router
+  ) { }
+
+  ngOnInit(): void {
+    // Synchronize search query with URL parameters globally
+    this.router.events.pipe(
+      filter(event => event instanceof NavigationEnd)
+    ).subscribe(() => {
+      this.syncWithUrl();
+    });
+
+    // Initial check (for direct page load)
+    this.syncWithUrl();
+  }
+
+  private syncWithUrl() {
+    // Use URLSearchParams for the most direct and reliable access to query params
+    const q = new URLSearchParams(window.location.search).get('q');
+    if (q !== null) {
+      this.searchQuery = q;
+    }
+  }
 
   toggleFilterDropdown() {
     this.showFilterDropdown = !this.showFilterDropdown;

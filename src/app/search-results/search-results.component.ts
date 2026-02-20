@@ -2,7 +2,7 @@ import { Component, OnInit, ViewChild } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { DataService } from '../services/data.service';
 import { Book } from '../book';
-import { faHeart, faCartPlus, faShareAlt, faSignInAlt, faCoins } from '@fortawesome/free-solid-svg-icons';
+import { faHeart, faCartPlus, faShareAlt, faSignInAlt, faCoins, faGift } from '@fortawesome/free-solid-svg-icons';
 import { faStar } from '@fortawesome/free-solid-svg-icons';
 import { faStar as faStarRegular } from '@fortawesome/free-regular-svg-icons';
 import { AuthService } from '../auth/auth.service';
@@ -11,6 +11,7 @@ import { environment } from '../../environments/environment';
 import { ModalService } from '../services/modal.service';
 import { AccountModalComponent } from '../auth/account-modal/account-modal.component';
 import { GamificationService } from '../services/gamification.service';
+import { PromotionService } from '../services/promotion.service';
 @Component({
   selector: 'app-search-results',
   templateUrl: './search-results.component.html',
@@ -34,6 +35,7 @@ export class SearchResultsComponent implements OnInit {
   showLoginPrompt = false;
   faShareAlt = faShareAlt;
   faCoins = faCoins;
+  faGift = faGift;
   showCopySuccess = false;
   copiedBookId: string | null = null;
 
@@ -43,6 +45,8 @@ export class SearchResultsComponent implements OnInit {
   requestedAuthorName = '';
   requestSuccessMessage = '';
   isRequestSubmitting = false;
+  appliedCoupon: any = null;
+  expiredCouponMessage: string | null = null;
   // ratings: { [bookId: string]: any } = {}; // No longer needed since ratings come with books data
 
   filterType = 'all';
@@ -52,7 +56,16 @@ export class SearchResultsComponent implements OnInit {
 
   @ViewChild(AccountModalComponent, { static: false }) accountModal?: AccountModalComponent;
 
-  constructor(private dataService: DataService, private route: ActivatedRoute, private router: Router, private authService: AuthService, private http: HttpClient, private modalService: ModalService, public gamificationService: GamificationService) { }
+  constructor(
+    private dataService: DataService,
+    private route: ActivatedRoute,
+    private router: Router,
+    private authService: AuthService,
+    private http: HttpClient,
+    private modalService: ModalService,
+    public gamificationService: GamificationService,
+    private promotionService: PromotionService
+  ) { }
 
   ngOnInit(): void {
     // نحصل على قيمة البحث من الـ queryParams
@@ -298,6 +311,28 @@ export class SearchResultsComponent implements OnInit {
     }
   }
 
+  buyNow(bookId: string): void {
+    const userData = JSON.parse(localStorage.getItem('user') || '{}');
+    const userId = userData.id;
+
+    if (!userId) {
+      this.showLoginPrompt = true;
+      return;
+    }
+
+    if (this.isInCart(bookId)) {
+      this.router.navigate(['/basket']);
+    } else {
+      this.authService.addToCart(userId, bookId).subscribe({
+        next: () => {
+          this.loadUserData(userId);
+          this.router.navigate(['/basket']);
+        },
+        error: () => this.showErrorModal('حدث خطأ أثناء إضافة الكتاب إلى السلة')
+      });
+    }
+  }
+
   loadUserData(userId: string) {
     if (!userId) {
       console.warn('⚠️ لا يوجد userId لتحميل البيانات.');
@@ -382,8 +417,56 @@ export class SearchResultsComponent implements OnInit {
 
   searchBooks(): void {
     this.isLoading = true;
-    console.log('SearchResults: searchBooks called. searchQuery:', this.searchQuery, 'filterType:', this.filterType);
+    this.appliedCoupon = null; // Reset
+    this.promotionService.setActiveCoupon(null);
+    this.expiredCouponMessage = null; // Reset expired message
 
+    const query = this.searchQuery?.trim() || '';
+
+    // Check if query is a coupon
+    if (query && query.length >= 3 && query.length <= 15) {
+      const userData = JSON.parse(localStorage.getItem('user') || '{}');
+      this.promotionService.validateCoupon(query, userData.id, 0).subscribe({
+        next: (res: any) => {
+          this.appliedCoupon = res;
+          this.promotionService.setActiveCoupon(res);
+          // If it's a coupon, we show all books (or featured) as requested
+          this.loadAllBooksForCoupon();
+        },
+        error: (err: any) => {
+          const msg = err?.error?.message || '';
+          // Check if the error is specifically about an expired/exhausted coupon
+          if (msg.includes('انتهت صلاحية') || msg.includes('استنفدت') || msg.includes('استهلاك')) {
+            this.expiredCouponMessage = 'تم انتهاء مدة صلاحية هذا الكوبون\nانتظر الكوبون التالي في الساعات القادمة\nنسعى دائماً لإرضائك 💜';
+            this.isLoading = false;
+          } else {
+            this.executeNormalSearch();
+          }
+        }
+      });
+    } else {
+      this.executeNormalSearch();
+    }
+  }
+
+  private loadAllBooksForCoupon(): void {
+    this.dataService.getData().subscribe((data) => {
+      // Filter by price range if coupon specifies it
+      const min = this.appliedCoupon.minPrice;
+      const max = this.appliedCoupon.maxPrice;
+
+      this.books = data.filter((book: Book) => {
+        const price = book.product_price;
+        const matchesMin = min ? price >= min : true;
+        const matchesMax = max ? price <= max : true;
+        return matchesMin && matchesMax;
+      });
+
+      this.finishSearch();
+    });
+  }
+
+  private executeNormalSearch(): void {
     if (this.filterType === 'recentlyAdded') {
       this.dataService.getRecentBooks().subscribe((data) => {
         if (!this.searchQuery || this.searchQuery.trim() === '') {
@@ -403,6 +486,31 @@ export class SearchResultsComponent implements OnInit {
         this.finishSearch();
       });
     }
+  }
+
+  calculateDiscountedPrice(price: number, bookId?: string, quantity: number = 1): { discountedPrice: number, discountedQty: number } {
+    if (!this.appliedCoupon) return { discountedPrice: price, discountedQty: quantity };
+
+    // Check if price is within target range (if range exists)
+    const min = this.appliedCoupon.minPrice;
+    const max = this.appliedCoupon.maxPrice;
+    const isWithinRange = (min ? price >= min : true) && (max ? price <= max : true);
+
+    if (!isWithinRange) return { discountedPrice: price, discountedQty: 0 };
+
+    // Handle Quantity Limit Per Product
+    let discountedQty = quantity;
+    if (this.appliedCoupon.maxQtyPerProduct > 0) {
+      discountedQty = Math.min(quantity, this.appliedCoupon.maxQtyPerProduct);
+    }
+
+    let finalDiscountedPrice = price;
+    if (this.appliedCoupon.discountType === 'percentage') {
+      finalDiscountedPrice = price * (1 - this.appliedCoupon.value / 100);
+    } else if (this.appliedCoupon.discountType === 'fixed') {
+      finalDiscountedPrice = Math.max(0, price - this.appliedCoupon.value);
+    }
+    return { discountedPrice: finalDiscountedPrice, discountedQty: discountedQty };
   }
 
   private filterBooks(data: Book[]): void {
@@ -434,11 +542,13 @@ export class SearchResultsComponent implements OnInit {
   }
 
   private finishSearch(): void {
+    console.log('SearchResults: finishSearch called. Current books count:', this.books.length);
     this.totalBooks = this.books.length;
     this.totalPages = Math.ceil(this.totalBooks / this.booksPerPage);
-    this.currentPage = Math.min(this.currentPage, this.totalPages);
+    this.currentPage = Math.min(this.currentPage, this.totalPages || 1);
     this.updatePage();
-    this.isLoading = false; // Set loading false after all data is loaded
+    console.log('SearchResults: finishSearch completed. PaginatedBooks count:', this.paginatedBooks.length);
+    this.isLoading = false;
   }
 
   // دالة الانتقال إلى الصفحة التالية
@@ -564,6 +674,10 @@ export class SearchResultsComponent implements OnInit {
     }
 
     return pages;
+  }
+
+  isNumber(val: any): boolean {
+    return typeof val === 'number';
   }
 
   // Helper methods for showing modals

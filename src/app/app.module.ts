@@ -38,6 +38,7 @@ import { AuthInterceptor } from './interceptors/auth.interceptor';
 import { AdminModule } from './admin/admin.module';
 import { MerchantDashboardComponent } from './merchant/dashboard/dashboard.component';
 import { TutorialComponent } from './shared/tutorial/tutorial.component';
+import { FloatingWheelWidgetComponent } from './features/promotions/floating-wheel-widget/floating-wheel-widget.component';
 import { OfficeSuppliesComponent } from './book-list/office-supplies/office-supplies.component';
 import { ElectronicsComponent } from './book-list/electronics/electronics.component';
 import { ClothingComponent } from './book-list/clothing/clothing.component';
@@ -106,7 +107,8 @@ import { VoiceCallComponent } from './features/community/voice-call/voice-call.c
       // Register the ServiceWorker as soon as the application is stable
       // or after 30 seconds (whichever comes first).
       registrationStrategy: 'registerImmediately'
-    })
+    }),
+    FloatingWheelWidgetComponent
   ],
   providers: [
     provideHttpClient(withInterceptorsFromDi()), // استخدام provideHttpClient بدلاً من HttpClientModule

@@ -102,7 +102,8 @@ const routes: Routes = [
   { path: '', component: LandingComponent, pathMatch: 'full' }, // Landing component handles initial redirection
   { path: 'research', component: SearchResultsComponent }, // المسار الذي نوجه إليه المستخدم عند البحث
   { path: 'basket', component: CartComponent },
-  { path: 'Favorites', component: FavoritesComponent },
+  { path: 'promotions', loadChildren: () => import('./features/promotions/promotions.module').then(m => m.PromotionsModule) },
+  { path: 'favorites', component: FavoritesComponent },
   { path: 'login', component: LoginComponent },
   { path: 'register', component: RegisterComponent },
   { path: 'forgot-password', component: ForgotPasswordComponent },

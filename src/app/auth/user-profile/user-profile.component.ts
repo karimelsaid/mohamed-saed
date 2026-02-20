@@ -213,6 +213,7 @@ export class UserProfileComponent implements OnInit, OnDestroy {
       }
     });
 
+    this.loadConversionRate();
     if (this.profileForm && this.profileForm.valueChanges) {
       this.profileForm.valueChanges.subscribe(() => {
         this.validatePhone();
@@ -382,7 +383,18 @@ export class UserProfileComponent implements OnInit, OnDestroy {
   // Conversion Logic
   showConvertModal: boolean = false;
   coinsToConvert: number = 0;
-  conversionRate: number = 50;
+  conversionRate: number = 50; // default will be overwritten by loadConversionRate
+
+  loadConversionRate() {
+    this.http.get<any>(`${environment.apiBaseUrl}/admin/settings`).subscribe({
+      next: (settings) => {
+        if (settings && settings.economy?.coinExchangeRate) {
+          this.conversionRate = settings.economy.coinExchangeRate;
+        }
+      },
+      error: (err) => console.error('Error loading conversion rate:', err)
+    });
+  }
 
   openConvertModal() {
     this.showConvertModal = true;
@@ -394,16 +406,23 @@ export class UserProfileComponent implements OnInit, OnDestroy {
   }
 
   convertCoins() {
-    if (this.coinsToConvert < 50 || this.coinsToConvert > (this.gamificationProfile?.coins || 0)) return;
+    if (this.coinsToConvert < this.conversionRate || this.coinsToConvert > (this.gamificationProfile?.coins || 0)) return;
 
     this.gamificationService.convertCoins(this.coinsToConvert).subscribe({
       next: (res) => {
         if (res.success && this.gamificationProfile) {
           this.gamificationProfile.coins = res.data.newCoinBalance;
           this.gamificationProfile.referralBalance = res.data.newWalletBalance;
-          this.successMessage = `تم تحويل ${this.coinsToConvert} عملة بنجاح!`;
+
+          const deducted = res.data.coinsDeducted;
+          const gained = res.data.exchangedAmount;
+
+          this.successMessage = `تم تحويل ${deducted} عملة بنجاح إلى ${gained} جنيه!`;
           this.closeConvertModal();
           setTimeout(() => this.successMessage = null, 5000);
+
+          // Refresh profile just in case
+          this.loadGamificationProfile();
         }
       },
       error: (err) => this.errorMessage = err.error?.message || 'فشل التحويل'

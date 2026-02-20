@@ -86,7 +86,7 @@ export class GamificationService {
         return this.http.post(`${this.apiUrl}/progress/sync`, sessionData);
     }
 
-    convertCoins(coins: number): Observable<{ success: boolean, data: { newCoinBalance: number, newWalletBalance: number, exchangedAmount: number } }> {
+    convertCoins(coins: number): Observable<{ success: boolean, data: { newCoinBalance: number, newWalletBalance: number, exchangedAmount: number, coinsDeducted: number } }> {
         return this.http.post<{ success: boolean, data: any }>(`${this.apiUrl}/coins/convert`, { coins });
     }
 }

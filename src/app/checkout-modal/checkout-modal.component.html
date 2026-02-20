@@ -99,8 +99,27 @@
             <img [src]="getBookImageUrl(item)" class="max-w-full max-h-full object-contain">
           </div>
           <div class="flex-1">
-            <h3 class="font-semibold text-lg text-gray-800 dark:text-gray-200">{{item.product_name}}</h3>
-            <p class="text-green-600 dark:text-green-400 font-bold text-lg">{{item.product_price}} EGP</p>
+            <div class="flex flex-col"
+              *ngIf="calculateDiscountedPrice(item.product_price, item.products_id, item.quantity || 1) as discount">
+              <!-- If discount applies at all -->
+              <div *ngIf="discount.discountedQty > 0; else noDiscount">
+                <p class="text-green-600 dark:text-green-400 font-bold text-lg">
+                  {{ (discount.discountedPrice * discount.discountedQty + item.product_price * ((item.quantity || 1) -
+                  discount.discountedQty)) | number:'1.0-0' }} EGP
+                </p>
+                <p class="text-gray-400 line-through text-sm">
+                  {{ item.product_price * (item.quantity || 1) }} EGP
+                </p>
+                <p *ngIf="discount.discountedQty < (item.quantity || 1)" class="text-[10px] text-amber-600 font-bold">
+                  (مخصوم لعدد {{ discount.discountedQty }} قطع فقط)
+                </p>
+              </div>
+              <ng-template #noDiscount>
+                <p class="text-green-600 dark:text-green-400 font-bold text-lg">
+                  {{ item.product_price * (item.quantity || 1) }} EGP
+                </p>
+              </ng-template>
+            </div>
 
             <div *ngIf="item.product_quantity <= 0" class="relative opacity-50 grayscale">
               <div class="absolute inset-0 flex items-center pointer-events-none">
@@ -523,7 +542,10 @@
       <div class="space-y-2 mb-6 border-t border-gray-200 dark:border-gray-700 pt-4">
         <div class="flex justify-between text-gray-600 dark:text-gray-400">
           <span>المجموع الفرعي:</span>
-          <span>{{totalPrice}} EGP</span>
+          <div class="flex flex-col items-end">
+            <span [class.text-green-600]="appliedCoupon">{{ totalPrice - shippingCost | number:'1.0-0' }} EGP</span>
+            <span *ngIf="appliedCoupon" class="text-xs text-green-500 font-bold">(مخصوم)</span>
+          </div>
         </div>
         <div *ngIf="useWallet && walletDiscount > 0" class="flex justify-between text-green-600 dark:text-green-400">
           <span>خصم المحفظة:</span>
@@ -532,7 +554,7 @@
         <div
           class="flex justify-between font-bold text-xl text-gray-900 dark:text-gray-200 pt-2 border-t border-gray-200 dark:border-gray-700">
           <span>الإجمالي النهائي:</span>
-          <span>{{finalTotal}} EGP</span>
+          <span>{{finalTotal | number:'1.0-0' }} EGP</span>
         </div>
       </div>
 
@@ -551,7 +573,7 @@
               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
             </path>
           </svg>
-          {{ isProcessing ? 'جاري المعالجة...' : 'إتمام الشراء' }}
+          {{ isProcessing ? 'جاري المعالجة...' : (finalTotal === 0 ? 'إتمام الطلب المجاني' : 'إتمام الشراء') }}
         </button>
       </div>
       <!-- Security Badge -->
@@ -578,26 +600,47 @@
           class="absolute inset-0 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800 opacity-50">
         </div>
         <div class="relative z-10">
-          <div class="text-6xl mb-4 animate-pulse">💳</div>
-          <h3 class="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-4">تم الشراء بنجاح!</h3>
-          <p class="text-gray-600 dark:text-gray-400 mb-6 leading-relaxed">سيتم توجيهك إلى صفحة الدفع الآمنة لحظياً.
-            يرجى عدم إغلاق الصفحة أو الضغط مرة أخرى.</p>
-          <div class="flex flex-col gap-3 justify-center">
-            <div class="flex flex-col sm:flex-row gap-3 justify-center">
-              <button (click)="executePurchase()"
-                class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-2 px-4 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg font-semibold">
-                متابعة إلى الدفع
-              </button>
-              <button (click)="executeCashOnDelivery()"
-                class="bg-gradient-to-r from-green-600 to-green-700 text-white py-2 px-4 rounded-lg hover:from-green-700 hover:to-green-800 transition-all shadow-lg font-semibold">
-                دفع عند الإستلام
+          <!-- Normal Payment Confirmation -->
+          <ng-container *ngIf="finalTotal > 0">
+            <div class="text-6xl mb-4 animate-pulse">💳</div>
+            <h3 class="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-4">تأكيد عملية الشراء</h3>
+            <p class="text-gray-600 dark:text-gray-400 mb-6 leading-relaxed">يرجى اختيار وسيلة الدفع المناسبة لك لإتمام
+              الطلب.</p>
+            <div class="flex flex-col gap-3 justify-center">
+              <div class="flex flex-col sm:flex-row gap-3 justify-center">
+                <button (click)="executePurchase()"
+                  class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-2 px-4 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg font-semibold">
+                  متابعة إلى الدفع
+                </button>
+                <button (click)="executeCashOnDelivery()"
+                  class="bg-gradient-to-r from-green-600 to-green-700 text-white py-2 px-4 rounded-lg hover:from-green-700 hover:to-green-800 transition-all shadow-lg font-semibold">
+                  دفع عند الإستلام
+                </button>
+              </div>
+              <button (click)="cancelPurchase()"
+                class="bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-gray-200 py-2 px-4 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-700 transition-colors shadow-md">
+                إلغاء
               </button>
             </div>
-            <button (click)="cancelPurchase()"
-              class="bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-gray-200 py-2 px-4 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-700 transition-colors shadow-md">
-              إلغاء
-            </button>
-          </div>
+          </ng-container>
+
+          <!-- Free Order Confirmation -->
+          <ng-container *ngIf="finalTotal === 0">
+            <div class="text-6xl mb-4 animate-bounce">🎁</div>
+            <h3 class="text-2xl font-bold text-green-600 dark:text-green-400 mb-4">تأكيد الطلب المجاني</h3>
+            <p class="text-gray-600 dark:text-gray-400 mb-6 leading-relaxed">هذا الطلب مجاني بالكامل. اضغط على الزر
+              أدناه لتأكيد الطلب.</p>
+            <div class="flex flex-col gap-3 justify-center">
+              <button (click)="executePurchase()"
+                class="bg-gradient-to-r from-green-600 to-green-700 text-white py-3 px-6 rounded-lg hover:from-green-700 hover:to-green-800 transition-all shadow-lg font-bold text-lg">
+                تأكيد الطلب المجاني
+              </button>
+              <button (click)="cancelPurchase()"
+                class="bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-gray-200 py-2 px-4 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-700 transition-colors shadow-md">
+                إلغاء
+              </button>
+            </div>
+          </ng-container>
         </div>
       </div>
     </div>

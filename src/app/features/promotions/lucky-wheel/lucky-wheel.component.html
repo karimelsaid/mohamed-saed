@@ -1,0 +1,36 @@
+<div class="wheel-wrapper" [style.--theme-primary]="theme?.primaryColor || '#8b5cf6'"
+    [style.--theme-secondary]="theme?.secondaryColor || '#ede9fe'">
+    <div class="wheel-container" [class.spinning]="isSpinning" [style.transform]="'rotate(' + currentRotation + 'deg)'"
+        [style.background]="getWheelBackground()">
+        <!-- Labels positioned individually at each segment's bisector -->
+        <div class="prize-label-wrapper" *ngFor="let prize of prizes; let i = index"
+            [style.transform]="'rotate(' + getLabelRotation(i) + 'deg)'">
+            <span class="prize-label" [style.font-size]="getFontSize()">{{ prize.label }}</span>
+        </div>
+    </div>
+    <div class="wheel-pointer"></div>
+    <button class="spin-btn rtl" (click)="spin()" [disabled]="isSpinning || !canSpin">إضغط للفوز!</button>
+
+    <!-- Beautiful Login Modal -->
+    <div class="login-prompt-overlay" *ngIf="showLoginModal" (click)="showLoginModal = false">
+        <div class="login-prompt-card" (click)="$event.stopPropagation()">
+            <div class="icon-circle bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400">
+                <fa-icon [icon]="faSignInAlt" class="text-3xl"></fa-icon>
+            </div>
+            <h3 class="text-2xl font-bold mt-4 dark:text-white">سجل دخولك لتلعب!</h3>
+            <p class="text-gray-600 dark:text-gray-400 mt-2">عليك تسجيل الدخول أولاً لتتمكن من تدوير عجلة الحظ والفوز
+                بالجوائز الرائعة.</p>
+
+            <div class="modal-footer mt-6 flex gap-3">
+                <button (click)="openLogin()"
+                    class="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold py-3 rounded-xl shadow-lg hover:shadow-purple-500/20 active:scale-95 transition-all">
+                    تسجيل الدخول
+                </button>
+                <button (click)="showLoginModal = false"
+                    class="px-6 py-3 rounded-xl border border-gray-200 dark:border-gray-700 font-bold hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                    إلغاء
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

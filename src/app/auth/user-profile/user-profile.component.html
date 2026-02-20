@@ -416,26 +416,33 @@
         <div>
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">كم تريد أن
             تحول؟</label>
-          <input type="number" [(ngModel)]="coinsToConvert" [min]="50" [max]="gamificationProfile?.coins || 0"
-            [step]="50"
+          <input type="number" [(ngModel)]="coinsToConvert" [min]="conversionRate"
+            [max]="gamificationProfile?.coins || 0" [step]="conversionRate"
             class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-purple-500 text-center text-xl font-bold">
           <div class="flex justify-between text-xs text-gray-500 mt-2">
-            <span>الحد الأدنى: 50 عملة</span>
+            <span>الحد الأدنى: {{conversionRate}} عملة</span>
             <span>رصيدك: {{gamificationProfile?.coins}} عملة</span>
           </div>
         </div>
 
-        <div class="flex items-center justify-center gap-4 py-4">
+        <div class="flex items-center justify-center gap-4 py-4 bg-gray-50 dark:bg-gray-900/30 rounded-xl">
           <div class="text-center">
-            <p class="text-sm text-gray-500">ستدفع</p>
-            <p class="text-xl font-bold text-purple-600">{{coinsToConvert || 0}} عملة</p>
+            <p class="text-xs text-gray-500 mb-1">سيتم خصم</p>
+            <p class="text-lg font-bold text-purple-600">{{ Math.floor((coinsToConvert || 0) / conversionRate) *
+              conversionRate }} عملة</p>
           </div>
           <div class="text-gray-400">➡️</div>
           <div class="text-center">
-            <p class="text-sm text-gray-500">ستحصل على</p>
-            <p class="text-xl font-bold text-emerald-600">{{Math.floor((coinsToConvert || 0) / conversionRate)}}
-              جنيه</p>
+            <p class="text-xs text-gray-500 mb-1">ستحصل على</p>
+            <p class="text-lg font-bold text-emerald-600">{{ Math.floor((coinsToConvert || 0) / conversionRate) }} جنيه
+            </p>
           </div>
+        </div>
+
+        <div *ngIf="coinsToConvert % conversionRate !== 0 && coinsToConvert > conversionRate"
+          class="text-center text-[10px] text-gray-400 mt-1 italic">
+          * يتم التحويل بمضاعفات الـ {{conversionRate}} عملة فقط. سيتبقى في رصيدك {{ (coinsToConvert % conversionRate) +
+          ((gamificationProfile?.coins || 0) - coinsToConvert) }} عملة.
         </div>
       </div>
 

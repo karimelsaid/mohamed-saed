@@ -267,11 +267,34 @@
             <div
                 class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-2xl flex gap-3 text-blue-800 dark:text-blue-200 text-sm">
                 <fa-icon [icon]="faInfoCircle" class="mt-1"></fa-icon>
-                <p>ستكون هذه الحلقة مخصصة للـ <span class="font-extrabold">{{ userGender === 'male' ? 'رجال' : 'نساء'
+                <p *ngIf="userGender">ستكون هذه الحلقة مخصصة للـ <span class="font-extrabold">{{ userGender === 'male' ?
+                        'رجال' : 'نساء'
                         }}</span> فقط، بما يتوافق مع نوع حسابك.</p>
+                <p *ngIf="!userGender">يرجى اختيار جنسك لتحديد نوع الحلقة (رجال/نساء). سيتم حفظ هذا الاختيار في ملفك
+                    الشخصي.</p>
             </div>
 
             <div class="space-y-4">
+                <!-- Gender Selection (If missing) -->
+                <div *ngIf="!userGender">
+                    <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">نوع الحلقة
+                        (جنسك)</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button (click)="selectedGender = 'male'"
+                            [class]="selectedGender === 'male' ? 'bg-blue-600 text-white' : 'bg-gray-50 dark:bg-gray-900 text-gray-500 border border-gray-200 dark:border-gray-700'"
+                            class="py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2">
+                            <fa-icon [icon]="faMars"></fa-icon>
+                            <span>رجال</span>
+                        </button>
+                        <button (click)="selectedGender = 'female'"
+                            [class]="selectedGender === 'female' ? 'bg-pink-600 text-white' : 'bg-gray-50 dark:bg-gray-900 text-gray-500 border border-gray-200 dark:border-gray-700'"
+                            class="py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2">
+                            <fa-icon [icon]="faVenus"></fa-icon>
+                            <span>نساء</span>
+                        </button>
+                    </div>
+                </div>
+
                 <div>
                     <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">اسم الحلقة</label>
                     <input type="text" [(ngModel)]="newHalaqa.name" placeholder="مثال: حلقة الإمام عاصم"

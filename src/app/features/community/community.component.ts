@@ -51,6 +51,7 @@ export class CommunityComponent implements OnInit {
 
     message = '';
     isLoading = false;
+    selectedGender: string = '';
 
     constructor(
         private halaqaService: HalaqaService,
@@ -210,15 +211,24 @@ export class CommunityComponent implements OnInit {
 
     createHalaqa() {
         if (!this.newHalaqa.name) return;
+
+        // Check if gender is missing
+        if (!this.userGender && !this.selectedGender) {
+            this.message = '❌ يرجى اختيار جنسك أولاً (ذكر/أنثى)';
+            return;
+        }
+
         this.isLoading = true;
         this.halaqaService.createHalaqa({
             ...this.newHalaqa,
-            leaderId: this.userId
+            leaderId: this.userId,
+            gender: this.selectedGender || this.userGender
         }).subscribe({
             next: (res) => {
                 this.message = '✅ تم إنشاء الحلقة بنجاح!';
                 this.showCreateModal = false;
                 this.newHalaqa = { name: '', description: '', maxMembers: 20 };
+                this.selectedGender = '';
                 this.loadHalaqas();
                 this.isLoading = false;
             },

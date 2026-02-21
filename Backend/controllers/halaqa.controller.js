@@ -59,10 +59,25 @@ const crypto = require('crypto');
 // إنشاء حلقة جديدة
 exports.createHalaqa = async (req, res) => {
     try {
-        const { name, description, maxMembers, leaderId } = req.body;
+        const { name, description, maxMembers, leaderId, gender } = req.body;
 
         const leader = await User.findById(leaderId);
         if (!leader) return res.status(404).json({ success: false, message: 'User not found' });
+
+        // التحقق من وجود الجنس (مطلوب لإنشاء الحلقة)
+        const finalGender = gender || leader.gender;
+        if (!finalGender) {
+            return res.status(400).json({
+                success: false,
+                message: 'يجب تحديد الجنس (ذكر/أنثى) في ملفك الشخصي قبل إنشاء حلقة'
+            });
+        }
+
+        // إذا كان المستخدم ليس لديه جنس في الملف الشخصي، نقوم بتحديثه الآن
+        if (!leader.gender && finalGender) {
+            leader.gender = finalGender;
+            await leader.save();
+        }
 
         // توليد كود دعوة فريد
         const inviteCode = crypto.randomBytes(3).toString('hex').toUpperCase();
@@ -70,7 +85,7 @@ exports.createHalaqa = async (req, res) => {
         const newHalaqa = new Halaqa({
             name,
             description,
-            gender: leader.gender, // ضبط الجنس تلقائياً حسب منشئ الحلقة
+            gender: finalGender, // ضبط الجنس تلقائياً حسب منشئ الحلقة
             leader: leaderId,
             maxMembers: maxMembers || 20,
             inviteCode

@@ -756,12 +756,12 @@ const signalingUsers = new Map(); // userId -> socketId
 const callRooms = new Map(); // roomId -> Map(userId -> { socketId, username, joinedAt })
 
 signaling.on('connection', (socket) => {
-  console.log('📞 New signaling connection:', socket.id);
+  logger.info(`📞 New signaling connection: ${socket.id}`);
 
   socket.on('register', (userId) => {
     socket.userId = userId;
     signalingUsers.set(userId, socket.id);
-    console.log(`📡 [Signaling] User ${userId} registered`);
+    logger.info(`📡 [Signaling] User ${userId} registered`);
   });
 
   // === 1:1 Call Events (preserved) ===
@@ -839,7 +839,7 @@ signaling.on('connection', (socket) => {
       count: room.size
     });
 
-    console.log(`📞 [Group] ${username} joined call room ${roomId} (${room.size} users)`);
+    logger.info(`📞 [Group] ${username} joined call room ${roomId} (${room.size} users)`);
   });
 
   // Leave a call room
@@ -907,7 +907,7 @@ signaling.on('connection', (socket) => {
       if (socket.callRoomId) {
         handleLeaveRoom(socket, socket.callRoomId);
       }
-      console.log(`❌ [Signaling] User ${socket.userId} disconnected`);
+      logger.info(`❌ [Signaling] User ${socket.userId} disconnected`);
     }
   });
 });
@@ -947,7 +947,7 @@ function handleLeaveRoom(socket, roomId) {
 
 // Global Error Handler
 app.use((err, req, res, next) => {
-  console.error('🔥 Global Error Handler:', err);
+  logger.error('🔥 Global Error Handler:', { error: err.message, stack: err.stack });
   res.status(500).json({
     success: false,
     message: 'Internal Server Error',
@@ -962,12 +962,12 @@ async function startServer() {
     await connectDB();
 
     server.listen(port, '0.0.0.0', () => {
-      console.log(`🚀 الخادم يعمل على http://0.0.0.0:${port}`);
+      logger.info(`🚀 الخادم يعمل على http://0.0.0.0:${port}`);
       // Initialize Cron Jobs
       cronJobs.initCronJobs();
     });
   } catch (err) {
-    console.error('❌ فشل بدء الخادم بسبب خطأ في قاعدة البيانات:', err.message);
+    logger.error('❌ فشل بدء الخادم بسبب خطأ في قاعدة البيانات:', { error: err.message });
     process.exit(1);
   }
 }

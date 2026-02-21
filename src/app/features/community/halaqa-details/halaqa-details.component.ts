@@ -5,8 +5,10 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import {
     faArrowRight, faPaperPlane, faInfoCircle, faUsers, faCopy, faCheck,
-    faComments, faUserShield, faUser, faSync, faLink, faTrash, faUserGraduate, faStar,
-    faMicrophone, faStop, faPlay, faPause, faUserCircle, faTimes, faPhone
+    faComments, faUserShield, faUser, faSync, faLink, faTrash, faUserGraduate, faStar, faSearch,
+    faMicrophone, faStop, faPlay, faPause, faUserCircle, faTimes, faPhone, faReply, faThumbtack,
+    faFilePdf, faFileAlt, faDownload, faChartBar, faClock, faImages, faMicrophoneLines, faFileLines,
+    faPhoneVolume
 } from '@fortawesome/free-solid-svg-icons';
 import { HalaqaService } from '../../../core/services/halaqa.service';
 import { PresenceService, ActiveUser } from '../../../core/services/presence.service';
@@ -15,11 +17,13 @@ import { AuthService } from '../../../auth/auth.service';
 import { environment } from '../../../../environments/environment';
 import { Subscription } from 'rxjs';
 import { AudioPlayerComponent } from '../../../shared/components/audio-player/audio-player.component';
+import { GroupCallPanelComponent } from '../group-call-panel/group-call-panel.component';
+import { GroupCallService } from '../../../core/services/group-call.service';
 
 @Component({
     selector: 'app-halaqa-details',
     standalone: true,
-    imports: [CommonModule, FormsModule, FontAwesomeModule, AudioPlayerComponent],
+    imports: [CommonModule, FormsModule, FontAwesomeModule, AudioPlayerComponent, GroupCallPanelComponent],
     templateUrl: './halaqa-details.component.html',
     styleUrls: ['./halaqa-details.component.css']
 })
@@ -38,23 +42,64 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
     faLink = faLink;
     faTrash = faTrash;
     faUserGraduate = faUserGraduate;
+    faSearch = faSearch;
+    faReply = faReply;
+    faTimes = faTimes;
+    faThumbtack = faThumbtack;
+    faFilePdf = faFilePdf;
+    faFileAlt = faFileAlt;
+    faDownload = faDownload;
     faStar = faStar;
     faMicrophone = faMicrophone;
     faStop = faStop;
     faPlay = faPlay;
     faPause = faPause;
     faUserCircle = faUserCircle;
-    faTimes = faTimes;
     faPhone = faPhone;
+    faChartBar = faChartBar;
+    faClock = faClock;
+    faImages = faImages;
+    faMicrophoneLines = faMicrophoneLines;
+    faFileLines = faFileLines;
+    faPhoneVolume = faPhoneVolume;
+
+    // Group Call State
+    callRoomActive = false;
+    callRoomCount = 0;
+    callRoomParticipants: string[] = [];
 
     // State
-    activeTab: 'chat' | 'info' = 'chat';
+    activeTab: 'chat' | 'info' | 'gallery' = 'chat';
     halaqaId: string = '';
     halaqaData: any = null;
+    halaqaStats: any = null;
+    halaqaMedia: any[] = [];
+    isLoadingStats = false;
+    isLoadingMedia = false;
+    mediaFilter: 'all' | 'image' | 'video' | 'file' | 'voice' = 'all';
     messages: any[] = [];
     currentUser: any = null;
     currentUserId: string = '';
     newMessageContent: string = '';
+    replyToMessage: any = null;
+
+    // Pagination State
+    hasMoreMessages = true;
+    isLoadingMore = false;
+    pageSize = 30;
+
+    // Search State
+    showSearch = false;
+    searchQuery = '';
+    searchResults: any[] = [];
+    isSearchingMessages = false;
+
+    // Mentions State
+    showMentionSuggestions = false;
+    mentionSuggestions: any[] = [];
+    mentionFilter = '';
+    mentionStartIndex = -1;
+    pinnedMessages: any[] = [];
     activeUsers: ActiveUser[] = [];
     private presenceSub?: Subscription;
 
@@ -76,9 +121,11 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
     socketStatus = 'جاري التزامن...';
     private globalPresenceSub?: Subscription;
     private msgSub?: Subscription;
+    private pinSub?: Subscription;
     private connSub?: Subscription;
     private statusSub?: Subscription;
     private peerSub?: Subscription;
+    private callRoomSub?: Subscription;
 
     // Voice Message State
     isRecording = false;
@@ -96,6 +143,9 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
     ratingFeedback = '';
     isSubmittingRating = false;
     deleteError = '';
+    showImageModal = false;
+    selectedImageUrl = '';
+    private userIsNearBottom = true;
 
     @ViewChild('scrollContainer') private scrollContainer: ElementRef | undefined;
 
@@ -106,6 +156,7 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
     private voiceCallService = inject(VoiceCallService);
     private authService = inject(AuthService);
     private location = inject(Location);
+    public groupCallService = inject(GroupCallService);
 
     constructor() { }
 
@@ -132,6 +183,7 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
                         this.currentUserId,
                         user.username || 'طالب علم'
                     );
+                    localStorage.setItem('active_halaqa_id', this.halaqaId);
                     // Initialize Voice Service
                     this.voiceCallService.init(this.currentUserId);
                 }
@@ -151,12 +203,26 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
         // Real-time Messages Subscription
         this.msgSub = this.presenceService.newMessage$.subscribe((data: any) => {
             if (data && data.halaqaId === this.halaqaId) {
-                // Add message if it's not already there (to avoid duplicates from own sender)
                 const exists = this.messages.some(m => m._id === data.message._id);
                 if (!exists) {
                     this.messages = [...this.messages, data.message];
-                    setTimeout(() => this.scrollToBottom(), 100);
+                    // Only scroll if user was already at the bottom
+                    if (this.userIsNearBottom) {
+                        setTimeout(() => this.scrollToBottom(), 100);
+                    }
                 }
+            }
+        });
+
+        // Real-time Pin Updates
+        this.pinSub = this.presenceService.pinnedMessageUpdate$.subscribe((data: any) => {
+            if (data && data.halaqaId === this.halaqaId) {
+                // Find message in list and update
+                const msg = this.messages.find(m => m._id === data.message._id);
+                if (msg) {
+                    msg.isPinned = data.message.isPinned;
+                }
+                this.updateLocalPinnedList(data.message);
             }
         });
 
@@ -183,6 +249,46 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
         this.statusSub = this.presenceService.socketStatus$.subscribe(status => {
             this.socketStatus = status;
         });
+
+        // Group Call Presence Subscription
+        this.callRoomSub = this.presenceService.callRoomUpdate$.subscribe(data => {
+            if (data && data.roomId === this.halaqaId) {
+                this.callRoomActive = data.count > 0;
+                this.callRoomCount = data.count;
+                this.callRoomParticipants = data.participants;
+            }
+        });
+
+        // Check for active call on load
+        this.checkActiveCall();
+    }
+
+    private async checkActiveCall() {
+        if (!this.halaqaId) return;
+        try {
+            const info = await this.groupCallService['signalingService'].getRoomInfo(this.halaqaId);
+            if (info && info.active) {
+                this.callRoomActive = true;
+                this.callRoomCount = info.count;
+                this.callRoomParticipants = info.participants.map((p: any) => p.username);
+            }
+        } catch (e) {
+            console.warn('⚠️ Failed to check active call:', e);
+        }
+    }
+
+    joinGroupCall() {
+        if (this.halaqaId && this.currentUserId) {
+            this.groupCallService.joinCall(
+                this.halaqaId,
+                this.currentUserId,
+                this.currentUser?.username || 'طالب علم'
+            );
+        }
+    }
+
+    leaveGroupCall() {
+        this.groupCallService.leaveCall();
     }
 
     manualSync() {
@@ -201,9 +307,11 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
         this.presenceSub?.unsubscribe();
         this.globalPresenceSub?.unsubscribe();
         this.msgSub?.unsubscribe();
+        this.pinSub?.unsubscribe();
         this.connSub?.unsubscribe();
         this.statusSub?.unsubscribe();
         this.peerSub?.unsubscribe();
+        this.callRoomSub?.unsubscribe();
         this.stopRecording();
     }
 
@@ -243,7 +351,7 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
     }
 
     ngAfterViewChecked() {
-        this.scrollToBottom();
+        // Removed aggressive auto-scroll to prevent snapping
     }
 
     scrollToBottom(): void {
@@ -251,6 +359,19 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
             try {
                 this.scrollContainer.nativeElement.scrollTop = this.scrollContainer.nativeElement.scrollHeight;
             } catch (err) { }
+        }
+    }
+
+    switchTab(tab: 'chat' | 'info' | 'gallery') {
+        this.activeTab = tab;
+        if (tab === 'info') {
+            const userId = (this.currentUser?.id || this.currentUser?._id)?.toString();
+            const leaderId = (this.halaqaData?.leader?._id || this.halaqaData?.leader)?.toString();
+            if (userId === leaderId) {
+                this.loadHalaqaStats();
+            }
+        } else if (tab === 'gallery') {
+            this.loadHalaqaMedia();
         }
     }
 
@@ -267,6 +388,12 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
                 console.log('✅ [HalaqaDetails] Data received:', res.data?.name);
                 this.halaqaData = res.data;
                 this.isLoadingDetails = false;
+
+                // Initial load: scroll to bottom
+                setTimeout(() => {
+                    this.userIsNearBottom = true;
+                    this.scrollToBottom();
+                }, 500);
 
                 // Robust ID extraction
                 const userId = (this.currentUser?.id || this.currentUser?._id)?.toString();
@@ -285,6 +412,7 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
 
                 this.checkingMembership = false;
                 this.loadMessages();
+                this.loadPinnedMessages();
             },
             error: (err) => {
                 console.error('❌ Failed to load details', err);
@@ -304,9 +432,10 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
 
     loadMessages(silent = false) {
         if (!silent) this.isLoadingMessages = true;
-        this.halaqaService.getMessages(this.halaqaId).subscribe({
+        this.halaqaService.getMessages(this.halaqaId, this.pageSize).subscribe({
             next: (res) => {
                 this.messages = res.data;
+                this.hasMoreMessages = res.data.length >= this.pageSize;
                 if (!silent) {
                     this.isLoadingMessages = false;
                     this.scrollToBottom(); // Force scroll on first load
@@ -319,14 +448,75 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
         });
     }
 
+    loadMoreMessages() {
+        if (this.isLoadingMore || !this.hasMoreMessages || this.messages.length === 0) return;
+
+        this.isLoadingMore = true;
+        const oldestMsg = this.messages[0];
+        const before = oldestMsg.createdAt;
+
+        // Save current scroll height to prevent jump
+        const container = this.scrollContainer?.nativeElement;
+        const previousScrollHeight = container?.scrollHeight || 0;
+
+        this.halaqaService.getMessages(this.halaqaId, this.pageSize, false, before).subscribe({
+            next: (res) => {
+                const newMessages = res.data;
+                if (newMessages.length > 0) {
+                    this.messages = [...newMessages, ...this.messages];
+
+                    // Maintain scroll position
+                    setTimeout(() => {
+                        if (container) {
+                            container.scrollTop = container.scrollTop + (container.scrollHeight - previousScrollHeight);
+                        }
+                    }, 0);
+                }
+                this.hasMoreMessages = newMessages.length >= this.pageSize;
+                this.isLoadingMore = false;
+            },
+            error: (err) => {
+                console.error('Failed to load more messages', err);
+                this.isLoadingMore = false;
+            }
+        });
+    }
+
+    onScroll(event: any) {
+        const element = event.target;
+        // User is near bottom if within 100px
+        const threshold = 100;
+        this.userIsNearBottom = (element.scrollHeight - element.scrollTop <= element.clientHeight + threshold);
+
+        // Trigger if scrolled to the top (with a 50px threshold)
+        if (element.scrollTop < 50 && !this.isLoadingMore && this.hasMoreMessages) {
+            this.loadMoreMessages();
+        }
+    }
+
     sendMessage() {
         if (!this.newMessageContent.trim() || this.isSending) return;
 
         this.isSending = true;
         const content = this.newMessageContent;
-        this.newMessageContent = '';
+        const replyTo = this.replyToMessage?._id;
 
-        this.halaqaService.sendMessage(this.halaqaId, this.currentUserId, content).subscribe({
+        // Extract Mentions
+        const mentions: string[] = [];
+        if (this.halaqaData) {
+            const allMembers = [this.halaqaData.leader, ...this.halaqaData.members];
+            allMembers.forEach(m => {
+                if (m && content.includes(`@${m.username}`)) {
+                    mentions.push(m._id || m.userId);
+                }
+            });
+        }
+
+        this.newMessageContent = '';
+        this.replyToMessage = null;
+        this.showMentionSuggestions = false;
+
+        this.halaqaService.sendMessage(this.halaqaId, this.currentUserId, content, 'text', replyTo, mentions).subscribe({
             next: (res) => {
                 // We don't manually add to array here if Socket takes care of it,
                 // but for snappy UI we could add it and then the socket listener checks for duplicates.
@@ -335,6 +525,8 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
                     this.messages = [...this.messages, res.data];
                 }
                 this.isSending = false;
+                this.newMessageContent = '';
+                this.userIsNearBottom = true; // Force scroll to bottom for own message
                 setTimeout(() => this.scrollToBottom(), 100);
             },
             error: (err) => {
@@ -343,6 +535,64 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
                 this.newMessageContent = content;
             }
         });
+    }
+
+    setReply(msg: any) {
+        this.replyToMessage = msg;
+        // Focus input
+        setTimeout(() => {
+            const input = document.querySelector('input[type="text"]');
+            if (input) (input as any).focus();
+        }, 100);
+    }
+
+    cancelReply() {
+        this.replyToMessage = null;
+    }
+
+    onInputChange(event: any) {
+        const content = this.newMessageContent;
+        const cursorIndex = (event.target as HTMLInputElement).selectionStart || 0;
+        const textBeforeCursor = content.substring(0, cursorIndex);
+
+        const lastAtPos = textBeforeCursor.lastIndexOf('@');
+
+        if (lastAtPos !== -1 && (lastAtPos === 0 || textBeforeCursor[lastAtPos - 1] === ' ')) {
+            this.showMentionSuggestions = true;
+            this.mentionStartIndex = lastAtPos;
+            this.mentionFilter = textBeforeCursor.substring(lastAtPos + 1).toLowerCase();
+            this.updateMentionSuggestions();
+        } else {
+            this.showMentionSuggestions = false;
+        }
+    }
+
+    updateMentionSuggestions() {
+        if (!this.halaqaData) return;
+
+        const members = [this.halaqaData.leader, ...this.halaqaData.members];
+        this.mentionSuggestions = members.filter(m =>
+            m?.username?.toLowerCase().includes(this.mentionFilter)
+        );
+
+        if (this.mentionSuggestions.length === 0) {
+            this.showMentionSuggestions = false;
+        }
+    }
+
+    selectMention(user: any) {
+        const content = this.newMessageContent;
+        const beforeAt = content.substring(0, this.mentionStartIndex);
+        const afterMention = content.substring(this.mentionStartIndex + this.mentionFilter.length + 1);
+
+        this.newMessageContent = `${beforeAt}@${user.username} ${afterMention}`;
+        this.showMentionSuggestions = false;
+
+        // Focus back to input
+        setTimeout(() => {
+            const input = document.querySelector('input[type="text"]');
+            if (input) (input as any).focus();
+        }, 0);
     }
 
     private getSupportedMimeType(): string {
@@ -394,6 +644,56 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
             this.isRecording = false;
             clearInterval(this.recordingTimer);
         }
+    }
+
+    triggerFileUpload() {
+        const fileInput = document.getElementById('fileInput') as HTMLInputElement;
+        if (fileInput) fileInput.click();
+    }
+
+    onFileSelected(event: any) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        // Size limit check (10MB)
+        if (file.size > 10 * 1024 * 1024) {
+            alert('حجم الملف كبير جداً. الحد الأقصى هو 10 ميجابايت.');
+            return;
+        }
+
+        this.isSending = true;
+        this.halaqaService.uploadFile(file, this.currentUserId).subscribe({
+            next: (res) => {
+                if (res.success) {
+                    this.sendGenericMessage(res.url, 'file', res.fileMetadata);
+                }
+            },
+            error: (err) => {
+                this.isSending = false;
+                console.error('File upload failed', err);
+                alert('فشل رفع الملف. يرجى المحاولة مرة أخرى.');
+            }
+        });
+
+        // Clear input
+        event.target.value = '';
+    }
+
+    private sendGenericMessage(content: string, type: string, fileMetadata?: any) {
+        this.halaqaService.sendMessage(this.halaqaId, this.currentUserId, content, type, undefined, undefined, fileMetadata).subscribe({
+            next: (sendRes) => {
+                this.isSending = false;
+                const exists = this.messages.some(m => m._id === sendRes.data._id);
+                if (!exists) {
+                    this.messages = [...this.messages, sendRes.data];
+                }
+                setTimeout(() => this.scrollToBottom(), 100);
+            },
+            error: (err) => {
+                this.isSending = false;
+                console.error('Failed to send file message', err);
+            }
+        });
     }
 
     async sendVoiceMessage(mimeType?: string) {
@@ -516,6 +816,16 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
         this.selectedUser = null;
     }
 
+    openImageFull(url: string) {
+        this.selectedImageUrl = url;
+        this.showImageModal = true;
+    }
+
+    closeImageModal() {
+        this.showImageModal = false;
+        this.selectedImageUrl = '';
+    }
+
     getProfileImageUrl(url: string | null | undefined): string {
         if (!url) return '';
         if (url.startsWith('http')) return url;
@@ -616,5 +926,132 @@ export class HalaqaDetailsComponent implements OnInit, AfterViewChecked {
         this.showDeleteConfirm = false;
         this.showDeleteSuccess = false;
         this.deleteError = '';
+    }
+
+    loadPinnedMessages() {
+        this.halaqaService.getMessages(this.halaqaId, 10, true).subscribe({
+            next: (res) => {
+                this.pinnedMessages = res.data;
+            },
+            error: (err) => console.error('Failed to load pinned messages', err)
+        });
+    }
+
+    loadHalaqaStats() {
+        if (!this.halaqaId || this.isLoadingStats) return;
+        this.isLoadingStats = true;
+        this.halaqaService.getHalaqaStats(this.halaqaId).subscribe({
+            next: (res) => {
+                this.halaqaStats = res.data;
+                this.isLoadingStats = false;
+            },
+            error: (err) => {
+                console.error('Failed to load stats', err);
+                this.isLoadingStats = false;
+            }
+        });
+    }
+
+    loadHalaqaMedia() {
+        if (!this.halaqaId || this.isLoadingMedia) return;
+        this.isLoadingMedia = true;
+        this.halaqaService.getHalaqaMedia(this.halaqaId).subscribe({
+            next: (res) => {
+                this.halaqaMedia = res.data;
+                this.isLoadingMedia = false;
+            },
+            error: (err) => {
+                console.error('Failed to load media', err);
+                this.isLoadingMedia = false;
+            }
+        });
+    }
+
+    get filteredMedia() {
+        if (this.mediaFilter === 'all') return this.halaqaMedia;
+        return this.halaqaMedia.filter(m => {
+            if (this.mediaFilter === 'image') return m.fileMetadata?.mimeType?.startsWith('image/');
+            if (this.mediaFilter === 'voice') return m.type === 'voice' || m.type === 'audio';
+            if (this.mediaFilter === 'file') return m.type === 'file' && !m.fileMetadata?.mimeType?.startsWith('image/');
+            return false;
+        });
+    }
+
+    togglePin(msg: any) {
+        if (!msg?._id) return;
+        this.halaqaService.togglePinMessage(msg._id, this.currentUserId).subscribe({
+            next: (res) => {
+                msg.isPinned = res.data.isPinned;
+                this.updateLocalPinnedList(res.data);
+            },
+            error: (err) => console.error('Failed to toggle pin', err)
+        });
+    }
+
+    updateLocalPinnedList(msg: any) {
+        if (msg.isPinned) {
+            const exists = this.pinnedMessages.find(p => p._id === msg._id);
+            if (!exists) this.pinnedMessages = [msg, ...this.pinnedMessages];
+        } else {
+            this.pinnedMessages = this.pinnedMessages.filter(p => p._id !== msg._id);
+        }
+    }
+
+    scrollToMessage(messageId: string, attempts = 0) {
+        // Stop if too many attempts to avoid infinite loop
+        if (attempts > 10) {
+            alert('الرسالة قديمة جداً، يرجى التمرير للأعلى يدوياً.');
+            return;
+        }
+
+        const element = document.getElementById(`msg-${messageId}`);
+        if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            element.classList.add('animate-pulse', 'bg-blue-50', 'dark:bg-blue-900/20', 'ring-2', 'ring-blue-500', 'rounded-2xl');
+            setTimeout(() => {
+                element.classList.remove('animate-pulse', 'bg-blue-50', 'dark:bg-blue-900/20', 'ring-2', 'ring-blue-500', 'rounded-2xl');
+            }, 3000);
+            this.showSearch = false;
+        } else if (this.hasMoreMessages && !this.isLoadingMore) {
+            // Message not found, try loading more
+            console.log(`🔍 [HalaqaDetails] Message ${messageId} not found, loading more... (Attempt ${attempts + 1})`);
+            this.loadMoreMessages();
+            // Wait for messages to be added to DOM then try again
+            setTimeout(() => this.scrollToMessage(messageId, attempts + 1), 800);
+        } else {
+            alert('تعذر العثور على الرسالة في هذه الحلقة.');
+        }
+    }
+
+    toggleSearch() {
+        this.showSearch = !this.showSearch;
+        if (!this.showSearch) {
+            this.searchQuery = '';
+            this.searchResults = [];
+        } else {
+            setTimeout(() => {
+                const searchInput = document.getElementById('messageSearchInput');
+                if (searchInput) searchInput.focus();
+            }, 100);
+        }
+    }
+
+    onSearch() {
+        if (!this.searchQuery.trim()) {
+            this.searchResults = [];
+            return;
+        }
+
+        this.isSearchingMessages = true;
+        this.halaqaService.searchMessages(this.halaqaId, this.searchQuery).subscribe({
+            next: (res) => {
+                this.searchResults = res.data;
+                this.isSearchingMessages = false;
+            },
+            error: (err) => {
+                console.error('Search failed', err);
+                this.isSearchingMessages = false;
+            }
+        });
     }
 }

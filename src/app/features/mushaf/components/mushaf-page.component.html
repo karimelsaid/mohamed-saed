@@ -178,9 +178,9 @@
                         [class.fa-sliders]="settingsMode !== 'wird'"></i>
                     {{ settingsMode === 'wird' ? 'ورد اليوم' : 'الإعدادات' }}</h3>
                 <div class="header-actions">
-                    <button class="share-trigger sidebar-share" (click)="$event.stopPropagation(); sharePosition()"
-                        title="مشاركة الموقع">
-                        <i class="fas fa-share-nodes"></i>
+                    <button class="share-trigger sidebar-share" (click)="$event.stopPropagation(); broadcastPageSync()"
+                        title="مشاركة الموقع (مزامنة)">
+                        <i class="fas fa-tower-broadcast" [style.color]="'#3b82f6'"></i>
                     </button>
                     <button class="info-trigger sidebar-info" (click)="$event.stopPropagation(); showInfoModal = true"
                         title="معلومات التطبيق">
@@ -701,6 +701,25 @@
                 [title]="isPageBookmarked ? 'إزالة العلامة' : 'حفظ العلامة'">
                 <i class="fa-bookmark" [ngClass]="isPageBookmarked ? 'fas' : 'far'"></i>
             </button>
+        </div>
+    </div>
+
+    <!-- Teacher Page Sync Prompt -->
+    <div class="sync-prompt animate-in fade-in slide-in-from-bottom" *ngIf="showSyncPrompt"
+        style="position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); z-index: 1000; direction: rtl;">
+        <div (click)="jumpToRemotePage()"
+            style="background: #3b82f6; color: white; padding: 12px 24px; border-radius: 50px; display: flex; align-items: center; gap: 12px; box-shadow: 0 10px 25px rgba(59, 130, 246, 0.4); cursor: pointer; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+            <div
+                style="background: rgba(255,255,255,0.2); width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                <i class="fas fa-book-open"></i>
+            </div>
+            <div style="display: flex; flex-direction: column;">
+                <span style="font-size: 0.8rem; opacity: 0.9;">المعلم انتقل إلى</span>
+                <span style="font-weight: bold;">صفحة {{ remoteSyncData?.pageNumber }}</span>
+            </div>
+            <div style="margin-right: 15px; border-right: 1px solid rgba(255,255,255,0.3); padding-right: 15px;">
+                <i class="fas fa-chevron-left"></i>
+            </div>
         </div>
     </div>
 

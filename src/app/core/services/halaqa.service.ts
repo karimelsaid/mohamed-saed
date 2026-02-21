@@ -49,12 +49,24 @@ export class HalaqaService {
         return this.http.get(`${this.apiUrl}/${id}`);
     }
 
-    getMessages(halaqaId: string, limit: number = 50): Observable<any> {
-        return this.http.get(`${this.apiUrl}/${halaqaId}/messages?limit=${limit}`);
+    getMessages(halaqaId: string, limit: number = 50, pinned: boolean = false, before?: string): Observable<any> {
+        let url = `${this.apiUrl}/${halaqaId}/messages?limit=${limit}&pinned=${pinned}`;
+        if (before) url += `&before=${before}`;
+        return this.http.get(url);
     }
 
-    sendMessage(halaqaId: string, userId: string, content: string, type: string = 'text'): Observable<any> {
-        return this.http.post(`${this.apiUrl}/${halaqaId}/messages`, { userId, content, type });
+    sendMessage(halaqaId: string, userId: string, content: string, type: string = 'text', replyTo?: string, mentions?: string[], fileMetadata?: any): Observable<any> {
+        return this.http.post(`${this.apiUrl}/${halaqaId}/messages`, {
+            userId, content, type, replyTo, mentions, fileMetadata
+        });
+    }
+
+    searchMessages(halaqaId: string, query: string, offset: number = 0, limit: number = 20): Observable<any> {
+        return this.http.get(`${this.apiUrl}/${halaqaId}/search?q=${encodeURIComponent(query)}&offset=${offset}&limit=${limit}`);
+    }
+
+    togglePinMessage(messageId: string, userId: string): Observable<any> {
+        return this.http.post(`${this.apiUrl}/messages/${messageId}/pin`, { userId });
     }
 
     uploadVoiceMessage(audioBlob: Blob, userId: string): Observable<any> {
@@ -75,11 +87,26 @@ export class HalaqaService {
         return this.http.request('delete', `${this.apiUrl}/${id}`, { body: { userId } });
     }
 
+    uploadFile(file: File, userId: string): Observable<any> {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('userId', userId);
+        return this.http.post(`${this.apiUrl}/upload-file`, formData);
+    }
+
     rateMember(data: any): Observable<any> {
         return this.http.post(`${this.apiUrl}/rate`, data);
     }
 
     getOrCreateDM(userId: string, otherUserId: string): Observable<any> {
         return this.http.post(`${this.apiUrl}/get-or-create-dm`, { userId, otherUserId });
+    }
+
+    getHalaqaStats(halaqaId: string): Observable<any> {
+        return this.http.get(`${this.apiUrl}/${halaqaId}/stats`);
+    }
+
+    getHalaqaMedia(halaqaId: string): Observable<any> {
+        return this.http.get(`${this.apiUrl}/${halaqaId}/media`);
     }
 }

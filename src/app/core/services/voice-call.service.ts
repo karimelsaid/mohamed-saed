@@ -1,6 +1,7 @@
 import { Injectable, OnDestroy } from '@angular/core';
 import Peer, { MediaConnection } from 'peerjs';
 import { BehaviorSubject, Observable, Subject } from 'rxjs';
+import { SignalingService } from './signaling.service';
 
 export interface CallSession {
     peerId: string;
@@ -26,13 +27,17 @@ export class VoiceCallService implements OnDestroy {
     private onCallEndedSource = new Subject<void>();
     public onCallEnded$ = this.onCallEndedSource.asObservable();
 
-    private myStream?: MediaStream;
+    private networkQualitySubject = new BehaviorSubject<{ rtt: number, packetLoss: number } | null>(null);
+    public networkQuality$ = this.networkQualitySubject.asObservable();
 
-    constructor() {
+    private myStream?: MediaStream;
+    private statsInterval: any;
+
+    constructor(private signalingService: SignalingService) {
         // We will initialize in init() once we have the userId
     }
 
-    init(userId: string) {
+    async init(userId: string) {
         if (!userId) return;
         if (this.myId === userId && this.peer && !this.peer.destroyed) return;
 
@@ -42,16 +47,15 @@ export class VoiceCallService implements OnDestroy {
         }
 
         this.myId = userId;
+
+        // Fetch dynamic ICE servers (Phase 1 Hardening)
+        const iceServers = await this.signalingService.getIceServers();
+        console.log('🌐 [VoiceCall] Using ICE Servers:', iceServers.length);
+
         this.peer = new Peer(userId, {
             debug: 2,
             config: {
-                iceServers: [
-                    { urls: 'stun:stun.l.google.com:19302' },
-                    { urls: 'stun:stun1.l.google.com:19302' },
-                    { urls: 'stun:stun2.l.google.com:19302' },
-                    { urls: 'stun:stun3.l.google.com:19302' },
-                    { urls: 'stun:stun4.l.google.com:19302' },
-                ]
+                iceServers: iceServers
             }
         });
 
@@ -137,6 +141,8 @@ export class VoiceCallService implements OnDestroy {
 
             call.on('close', () => this.endCall());
             (window as any).currentCall = call;
+
+            this.startStatsMonitoring(call);
         } catch (err) {
             console.error('Failed to get media stream', err);
             throw err;
@@ -160,6 +166,8 @@ export class VoiceCallService implements OnDestroy {
 
             call.on('close', () => this.endCall());
             (window as any).currentCall = call;
+
+            this.startStatsMonitoring(call);
         } catch (err) {
             console.error('Failed to answer call', err);
             throw err;
@@ -177,8 +185,39 @@ export class VoiceCallService implements OnDestroy {
 
         this.callSessionSubject.next(null);
         this.onCallEndedSource.next();
+        this.networkQualitySubject.next(null);
+        if (this.statsInterval) clearInterval(this.statsInterval);
+
         (window as any).incomingCall = null;
         (window as any).currentCall = null;
+    }
+
+    private async startStatsMonitoring(call: MediaConnection) {
+        if (this.statsInterval) clearInterval(this.statsInterval);
+
+        this.statsInterval = setInterval(async () => {
+            const pc = (call as any).peerConnection as RTCPeerConnection;
+            if (!pc) return;
+
+            try {
+                const stats = await pc.getStats();
+                let rtt = 0;
+                let packetLoss = 0;
+
+                stats.forEach(report => {
+                    if (report.type === 'remote-candidate' && report.roundTripTime) {
+                        rtt = report.roundTripTime * 1000; // Convert to ms
+                    }
+                    if (report.type === 'inbound-rtp' && report.kind === 'audio') {
+                        packetLoss = report.packetsLost || 0;
+                    }
+                });
+
+                this.networkQualitySubject.next({ rtt, packetLoss });
+            } catch (e) {
+                console.warn('📊 [VoiceCall] Error getting stats:', e);
+            }
+        }, 3000);
     }
 
     ngOnDestroy() {

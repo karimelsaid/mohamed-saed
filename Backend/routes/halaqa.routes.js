@@ -21,7 +21,11 @@ router.get('/:id', halaqaController.getHalaqaDetails);
 
 // رسائل المحادثة
 router.get('/:id/messages', halaqaController.getMessages);
+router.get('/:id/search', halaqaController.searchMessages);
+router.get('/:id/stats', halaqaController.getHalaqaStats);
+router.get('/:id/media', halaqaController.getHalaqaMedia);
 router.post('/:id/messages', halaqaController.sendMessage);
+router.post('/messages/:messageId/pin', halaqaController.togglePinMessage);
 
 // حذف الحلقة
 router.delete('/:id', halaqaController.deleteHalaqa);
@@ -31,6 +35,7 @@ router.post('/rate', halaqaController.rateMember);
 
 // رفع رسالة صوتية
 router.post('/upload-voice', halaqaController.uploadVoiceMessage);
+router.post('/upload-file', halaqaController.uploadFile);
 
 // الدردشة الخاصة
 router.post('/get-or-create-dm', halaqaController.getOrCreateDM);

@@ -50,18 +50,39 @@
                     </button>
                 </div>
 
-                <div class="flex items-center gap-2">
-                    <button (click)="activeTab = 'chat'" [class.bg-blue-600]="activeTab === 'chat'"
+                <div class="h-8 w-[1px] bg-gray-100 dark:bg-gray-700 mx-1"></div>
+
+                <!-- Group Call Button -->
+                <button (click)="joinGroupCall()" [class.bg-green-50]="callRoomActive"
+                    [class.text-green-600]="callRoomActive"
+                    class="relative w-10 h-10 rounded-xl flex items-center justify-center text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
+                    title="مكالمة جماعية">
+                    <fa-icon [icon]="faPhoneVolume"></fa-icon>
+                    <!-- Active indicator -->
+                    <span *ngIf="callRoomActive"
+                        class="absolute top-2 right-2 w-2 h-2 bg-green-500 rounded-full animate-pulse border border-white dark:border-gray-800"></span>
+                </button>
+
+                <button (click)="toggleSearch()" [class.bg-blue-50]="showSearch" [class.text-blue-600]="showSearch"
+                    class="w-10 h-10 rounded-xl flex items-center justify-center text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all">
+                    <fa-icon [icon]="faSearch"></fa-icon>
+                </button>
+
+                <div class="flex items-center gap-1">
+                    <button (click)="switchTab('chat')" [class.bg-blue-600]="activeTab === 'chat'"
                         [class.text-white]="activeTab === 'chat'"
-                        class="p-2 px-4 rounded-xl text-sm font-bold transition-all">
-                        <fa-icon [icon]="faComments" class="ml-1"></fa-icon>
-                        الدردشة
+                        class="p-2 px-3 rounded-xl text-xs font-bold transition-all">
+                        <fa-icon [icon]="faComments"></fa-icon>
                     </button>
-                    <button (click)="activeTab = 'info'" [class.bg-blue-600]="activeTab === 'info'"
+                    <button (click)="switchTab('gallery')" [class.bg-blue-600]="activeTab === 'gallery'"
+                        [class.text-white]="activeTab === 'gallery'"
+                        class="p-2 px-3 rounded-xl text-xs font-bold transition-all">
+                        <fa-icon [icon]="faImages"></fa-icon>
+                    </button>
+                    <button (click)="switchTab('info')" [class.bg-blue-600]="activeTab === 'info'"
                         [class.text-white]="activeTab === 'info'"
-                        class="p-2 px-4 rounded-xl text-sm font-bold transition-all">
-                        <fa-icon [icon]="faInfoCircle" class="ml-1"></fa-icon>
-                        التفاصيل
+                        class="p-2 px-3 rounded-xl text-xs font-bold transition-all">
+                        <fa-icon [icon]="faInfoCircle"></fa-icon>
                     </button>
                 </div>
             </div>
@@ -73,13 +94,84 @@
 
         <!-- Chat Tab -->
         <div *ngIf="activeTab === 'chat'" class="flex-1 flex flex-col h-full overflow-hidden">
+
+            <!-- Search Header Overlay -->
+            <div *ngIf="showSearch"
+                class="absolute inset-x-0 top-0 z-20 bg-white/95 dark:bg-gray-800/95 backdrop-blur-md border-b border-gray-100 dark:border-gray-700 p-3 shadow-lg animate-in slide-in-from-top flex flex-col gap-3">
+                <div class="flex items-center gap-3">
+                    <div class="flex-1 relative">
+                        <input id="messageSearchInput" type="text" [(ngModel)]="searchQuery" (keyup.enter)="onSearch()"
+                            placeholder="ابحث عن رسالة..."
+                            class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-4 py-2 pr-10 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                        <fa-icon [icon]="faSearch"
+                            class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"></fa-icon>
+                    </div>
+                    <button (click)="toggleSearch()"
+                        class="text-xs text-gray-500 hover:text-red-500 font-bold">إلغاء</button>
+                </div>
+
+                <!-- Search Results -->
+                <div *ngIf="searchResults.length > 0 || isSearchingMessages"
+                    class="max-h-64 overflow-y-auto divide-y divide-gray-50 dark:divide-gray-700">
+                    <div *ngIf="isSearchingMessages" class="p-4 text-center">
+                        <fa-icon [icon]="faSync" class="animate-spin text-blue-500"></fa-icon>
+                    </div>
+                    <div *ngFor="let result of searchResults" (click)="scrollToMessage(result._id)"
+                        class="p-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer transition-colors flex flex-col gap-1">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[10px] font-bold text-blue-600">{{ result.sender?.username }}</span>
+                            <span class="text-[8px] text-gray-400">{{ result.createdAt | date:'short' }}</span>
+                        </div>
+                        <div class="text-xs text-gray-700 dark:text-gray-200 line-clamp-2">{{ result.content }}</div>
+                    </div>
+                </div>
+                <div *ngIf="searchQuery && searchResults.length === 0 && !isSearchingMessages"
+                    class="p-4 text-center text-xs text-gray-400">
+                    لا توجد نتائج مطابقة لبحثك.
+                </div>
+            </div>
+
             <!-- Messages List -->
-            <div #scrollContainer class="flex-1 overflow-y-auto p-4 space-y-4 pb-24">
+            <div #scrollContainer class="flex-1 overflow-y-auto p-4 space-y-4 pb-24 overscroll-contain"
+                (scroll)="onScroll($event)">
+
+                <!-- Loading More Indicator -->
+                <div *ngIf="isLoadingMore" class="flex justify-center py-2">
+                    <fa-icon [icon]="faSync" class="text-blue-500 animate-spin"></fa-icon>
+                </div>
+
+                <!-- Pinned Messages Bar -->
+                <div *ngIf="pinnedMessages.length > 0"
+                    class="sticky top-0 z-10 mx-auto w-full max-w-2xl bg-white/90 dark:bg-gray-800/90 backdrop-blur-md border border-blue-100 dark:border-blue-900/30 rounded-2xl shadow-lg p-3 mb-4 animate-in fade-in slide-in-from-top-2">
+                    <div class="flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-3 overflow-hidden"
+                            (click)="scrollToMessage(pinnedMessages[0]._id)">
+                            <div
+                                class="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
+                                <fa-icon [icon]="faThumbtack"></fa-icon>
+                            </div>
+                            <div class="overflow-hidden cursor-pointer">
+                                <div class="text-[10px] text-blue-500 font-bold uppercase tracking-wider">الرسائل
+                                    المثبتة</div>
+                                <div class="text-xs text-gray-700 dark:text-gray-200 truncate font-medium">{{
+                                    pinnedMessages[0].content }}</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full font-bold">{{
+                                pinnedMessages.length }}</span>
+                            <button
+                                class="w-8 h-8 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center justify-center text-gray-400">
+                                <fa-icon [icon]="faArrowRight" class="rotate-[-90deg]"></fa-icon>
+                            </button>
+                        </div>
+                    </div>
+                </div>
                 <div *ngIf="isLoadingMessages && messages.length === 0" class="flex justify-center py-10">
                     <fa-icon [icon]="faComments" class="text-3xl text-blue-500 animate-spin"></fa-icon>
                 </div>
 
-                <div *ngFor="let msg of messages; trackBy: trackByMsgId" class="flex gap-3"
+                <div [id]="'msg-' + msg._id" *ngFor="let msg of messages; trackBy: trackByMsgId" class="flex gap-3"
                     [class.flex-row-reverse]="msg.sender?._id === currentUserId" [class.items-end]="true">
 
                     <!-- Avatar -->
@@ -112,14 +204,58 @@
                             [class.dark:bg-gray-800]="msg.sender?._id !== currentUserId"
                             [class.rounded-tr-none]="msg.sender?._id === currentUserId"
                             [class.rounded-tl-none]="msg.sender?._id !== currentUserId"
-                            class="p-3 px-4 rounded-2xl shadow-sm text-sm break-words relative transition-all hover:shadow-md">
+                            class="p-3 px-4 rounded-2xl shadow-sm text-sm break-words relative transition-all group/bubble hover:shadow-md">
+
+                            <!-- Reply Reference -->
+                            <div *ngIf="msg.replyTo"
+                                class="mb-2 p-2 bg-black/5 dark:bg-white/5 rounded-xl border-r-4 border-blue-500 text-[10px] opacity-80 overflow-hidden cursor-pointer hover:bg-black/10 transition-all"
+                                (click)="scrollToMessage(msg.replyTo._id); $event.stopPropagation()">
+                                <div class="font-bold text-blue-600 mb-0.5">{{ msg.replyTo.sender?.username }}</div>
+                                <div class="truncate text-gray-600 dark:text-gray-300">{{ msg.replyTo.content }}</div>
+                            </div>
 
                             <!-- Content -->
-                            <div *ngIf="msg.type !== 'voice'">{{ msg.content }}</div>
+                            <div *ngIf="msg.type !== 'voice' && msg.type !== 'file'">{{ msg.content }}</div>
                             <div *ngIf="msg.type === 'voice'" class="py-1">
                                 <app-audio-player [audioUrl]="getProfileImageUrl(msg.content)"
                                     [isDarkBackground]="msg.sender?._id === currentUserId">
                                 </app-audio-player>
+                            </div>
+
+                            <!-- File / PDF Display -->
+                            <div *ngIf="msg.type === 'file'" class="py-1">
+                                <!-- Image Rendering -->
+                                <div *ngIf="msg.fileMetadata?.mimeType?.startsWith('image/')" class="mb-2">
+                                    <div
+                                        class="rounded-xl overflow-hidden shadow-sm border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 min-h-[100px] flex items-center justify-center">
+                                        <img [src]="getProfileImageUrl(msg.content)" alt="صورة مرفقة"
+                                            class="max-w-full max-h-[300px] object-contain cursor-zoom-in"
+                                            (click)="openImageFull(getProfileImageUrl(msg.content))">
+                                    </div>
+                                    <div class="mt-1 text-[10px] text-gray-400 truncate">{{ msg.fileMetadata?.name }}
+                                    </div>
+                                </div>
+
+                                <!-- Generic File / PDF -->
+                                <a *ngIf="!msg.fileMetadata?.mimeType?.startsWith('image/')"
+                                    [href]="getProfileImageUrl(msg.content)" target="_blank"
+                                    class="flex items-center gap-3 p-3 bg-black/5 dark:bg-white/5 rounded-xl hover:bg-black/10 dark:hover:bg-white/10 transition-all border border-gray-100 dark:border-gray-700">
+                                    <div
+                                        class="w-10 h-10 rounded-lg bg-red-50 dark:bg-red-900/30 text-red-600 flex items-center justify-center flex-shrink-0">
+                                        <fa-icon
+                                            [icon]="msg.fileMetadata?.mimeType?.includes('pdf') ? faFilePdf : faFileAlt"
+                                            class="text-xl"></fa-icon>
+                                    </div>
+                                    <div class="overflow-hidden">
+                                        <div class="text-xs font-bold truncate">{{ msg.fileMetadata?.name || 'ملف مرفق'
+                                            }}</div>
+                                        <div class="text-[10px] opacity-60 flex items-center gap-2">
+                                            <span>{{ (msg.fileMetadata?.size || 0) / 1024 / 1024 | number:'1.1-1' }}
+                                                MB</span>
+                                            <fa-icon [icon]="faDownload" class="text-[8px]"></fa-icon>
+                                        </div>
+                                    </div>
+                                </a>
                             </div>
 
                             <!-- Timestamp -->
@@ -128,6 +264,19 @@
                                 <fa-icon *ngIf="msg.sender?._id === currentUserId" [icon]="faCheck"
                                     class="text-[7px]"></fa-icon>
                             </div>
+
+                            <!-- Reply Action -->
+                            <button (click)="setReply(msg)"
+                                class="absolute top-0 -left-10 w-8 h-8 flex items-center justify-center bg-white dark:bg-gray-800 rounded-full shadow-sm text-gray-400 opacity-0 group-hover/bubble:opacity-100 transition-all hover:text-blue-500 hover:scale-110 active:scale-90">
+                                <fa-icon [icon]="faReply"></fa-icon>
+                            </button>
+
+                            <!-- Pin Action -->
+                            <button *ngIf="isRoomLeader(currentUserId)" (click)="togglePin(msg)"
+                                [class.text-blue-500]="msg.isPinned"
+                                class="absolute top-10 -left-10 w-8 h-8 flex items-center justify-center bg-white dark:bg-gray-800 rounded-full shadow-sm text-gray-400 opacity-0 group-hover/bubble:opacity-100 transition-all hover:text-blue-500 hover:scale-110 active:scale-90">
+                                <fa-icon [icon]="faThumbtack"></fa-icon>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -165,11 +314,57 @@
             <!-- Input Bar -->
             <div
                 class="absolute bottom-0 left-0 right-0 p-4 bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border-t border-gray-100 dark:border-gray-700">
+
+                <!-- Reply Preview -->
+                <div *ngIf="replyToMessage"
+                    class="max-w-4xl mx-auto mb-2 p-3 bg-gray-50/50 dark:bg-gray-900/50 rounded-2xl border border-blue-100 dark:border-blue-900/30 flex items-center justify-between animate-in slide-in-from-bottom-2">
+                    <div class="flex items-center gap-3 overflow-hidden">
+                        <fa-icon [icon]="faReply" class="text-blue-500"></fa-icon>
+                        <div class="overflow-hidden">
+                            <div class="text-[10px] font-bold text-blue-600 mb-0.5">{{ replyToMessage.sender?.username
+                                }}</div>
+                            <div class="text-xs text-gray-500 truncate">{{ replyToMessage.content }}</div>
+                        </div>
+                    </div>
+                    <button (click)="cancelReply()"
+                        class="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-red-500 transition-colors">
+                        <fa-icon [icon]="faTimes"></fa-icon>
+                    </button>
+                </div>
+
                 <div class="max-w-4xl mx-auto flex items-center gap-3">
                     <div class="flex-1 relative flex items-center">
                         <input type="text" [(ngModel)]="newMessageContent" (keyup.enter)="sendMessage()"
+                            (input)="onInputChange($event)" (click)="onInputChange($event)"
                             placeholder="اكتب رسالتك هنا..." [disabled]="isRecording"
-                            class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-4 py-3 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none text-gray-800 dark:text-white transition-all">
+                            class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-4 py-3 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none text-gray-800 dark:text-white transition-all pl-12">
+
+                        <!-- Attach File Button -->
+                        <button (click)="triggerFileUpload()" [disabled]="isSending || isRecording"
+                            class="absolute left-3 w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all">
+                            <fa-icon [icon]="faLink"></fa-icon>
+                        </button>
+                        <input type="file" id="fileInput" class="hidden" (change)="onFileSelected($event)"
+                            accept=".pdf,image/*,.doc,.docx">
+
+                        <!-- Mentions Suggestions -->
+                        <div *ngIf="showMentionSuggestions"
+                            class="absolute bottom-full left-0 mb-2 w-64 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden z-20 animate-in slide-in-from-bottom-2">
+                            <div
+                                class="px-3 py-2 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-100 dark:border-gray-700 text-[10px] text-gray-400 font-bold uppercase">
+                                الإشارة إلى عضو...</div>
+                            <div class="max-h-48 overflow-y-auto divide-y divide-gray-50 dark:divide-gray-700">
+                                <div *ngFor="let m of mentionSuggestions" (click)="selectMention(m)"
+                                    class="p-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer flex items-center gap-3 transition-colors">
+                                    <div
+                                        class="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-500">
+                                        {{ m.username.charAt(0) }}
+                                    </div>
+                                    <div class="text-sm font-bold text-gray-700 dark:text-gray-200">{{ m.username }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
                         <!-- Recording Indicator -->
                         <div *ngIf="isRecording"
@@ -209,163 +404,298 @@
             class="flex-1 overflow-y-auto p-4 md:p-8 animate-in fade-in slide-in-from-bottom-2">
             <div class="max-w-2xl mx-auto space-y-6 pb-20">
 
-                <!-- Invite Code Card (Leader Only) -->
-                <div *ngIf="halaqaData?.leader?._id === (currentUser?.id || currentUser?._id) || halaqaData?.leader === (currentUser?.id || currentUser?._id)"
-                    class="bg-gradient-to-br from-indigo-600 to-blue-700 p-6 rounded-3xl text-white shadow-xl">
-                    <div class="flex items-center justify-between mb-4">
-                        <div class="flex items-center gap-3">
-                            <fa-icon [icon]="faLink" class="text-2xl text-blue-200"></fa-icon>
-                            <h3 class="font-bold text-xl">كود الدعوة</h3>
-                        </div>
-                        <button (click)="copyInviteCode()"
-                            class="flex items-center gap-2 bg-white/20 hover:bg-white/30 p-2 px-4 rounded-xl transition-colors">
-                            <fa-icon [icon]="copySuccess ? faCheck : faCopy"></fa-icon>
-                            <span>{{ copySuccess ? 'تم النسخ!' : 'نسخ' }}</span>
-                        </button>
-                    </div>
-                    <p class="text-blue-100/80 text-sm mb-4">شارك هذا الكود مع زملائك للانضمام إلى هذه الحلقة مباشرة.
-                    </p>
-                    <div
-                        class="bg-black/20 p-4 rounded-2xl text-center font-mono text-3xl font-black tracking-widest uppercase">
-                        {{ halaqaData?.inviteCode || '------' }}
-                    </div>
-                </div>
-
-                <!-- Members List -->
-                <div
+                <!-- Statistics Dashboard (Leader Only) -->
+                <div *ngIf="(halaqaData?.leader?._id === (currentUser?.id || currentUser?._id) || halaqaData?.leader === (currentUser?.id || currentUser?._id)) && halaqaStats"
                     class="bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
                     <div
-                        class="p-4 border-b border-gray-50 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50 flex items-center justify-between">
+                        class="p-5 border-b border-gray-50 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50 flex items-center justify-between">
                         <h3 class="font-bold flex items-center gap-2">
-                            <fa-icon [icon]="faUsers" class="text-blue-600"></fa-icon>
-                            الأعضاء ({{ (halaqaData?.members?.length || 0) + 1 }})
+                            <fa-icon [icon]="faChartBar" class="text-indigo-600"></fa-icon>
+                            تقدم الحفظ
                         </h3>
-                        <span class="text-xs text-gray-500">الحد الأقصى: {{ halaqaData?.maxMembers }}</span>
+                        <span class="text-[10px] text-gray-500 font-medium">{{ halaqaStats.memberStats?.length }}
+                            أعضاء</span>
                     </div>
-
-                    <div class="divide-y divide-gray-50 dark:divide-gray-700">
-                        <!-- Leader -->
-                        <div (click)="openUserProfile(halaqaData?.leader)"
-                            class="p-4 flex items-center justify-between group cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                            <div class="flex items-center gap-3">
-                                <div class="relative">
-                                    <div
-                                        class="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 flex items-center justify-center font-bold">
-                                        {{ halaqaData?.leader?.username?.charAt(0) }}
-                                    </div>
-                                    <div *ngIf="isUserOnline(halaqaData?.leader)"
-                                        class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full">
-                                    </div>
-                                </div>
-                                <div>
-                                    <p class="font-bold text-gray-900 dark:text-white">{{ halaqaData?.leader?.username
-                                        }}</p>
-                                    <div class="flex items-center gap-2">
-                                        <span
-                                            class="text-[10px] bg-blue-50 dark:bg-blue-900/30 text-blue-600 px-2 py-0.5 rounded-full border border-blue-100 dark:border-blue-800">المنشئ</span>
-                                        <span class="text-[10px] text-green-500 font-medium"
-                                            *ngIf="isUserOnline(halaqaData?.leader)">متصل الآن</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <fa-icon [icon]="faUserShield" class="text-yellow-500"></fa-icon>
-                        </div>
-
-                        <!-- Regular Members -->
-                        <div *ngFor="let member of halaqaData?.members" (click)="openUserProfile(member)"
-                            class="p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors group">
-                            <div class="flex items-center gap-3">
-                                <div class="relative">
-                                    <div *ngIf="member.profileImage"
-                                        class="w-10 h-10 rounded-full border border-gray-100 shadow-sm overflow-hidden">
-                                        <img [src]="getProfileImageUrl(member.profileImage)" alt="avatar"
-                                            class="w-full h-full object-cover">
-                                    </div>
-                                    <div *ngIf="!member.profileImage"
-                                        class="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 flex items-center justify-center font-bold">
-                                        {{ member.username?.charAt(0) }}
-                                    </div>
-                                    <!-- Online indicator -->
-                                    <div *ngIf="isUserOnline(member)"
-                                        class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full">
-                                    </div>
-                                </div>
-                                <div>
-                                    <p
-                                        class="font-medium text-gray-700 dark:text-gray-200 group-hover:text-blue-600 transition-colors">
-                                        {{ member.username }}</p>
-                                    <p class="text-[10px] text-green-500 font-medium" *ngIf="isUserOnline(member)">متصل
-                                        الآن</p>
-                                </div>
-                            </div>
-                            <fa-icon [icon]="faUserGraduate"
-                                class="text-gray-300 group-hover:text-blue-500 transition-colors"></fa-icon>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Description -->
-                <div
-                    class="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700">
-                    <h3 class="font-bold mb-3 flex items-center gap-2">
-                        <fa-icon [icon]="faInfoCircle" class="text-blue-600"></fa-icon>
-                        حول الحلقة
-                    </h3>
-                    <p class="text-gray-600 dark:text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">
-                        {{ halaqaData?.description || 'لا يوجد وصف متاح لهذه الحلقة.' }}
-                    </p>
-                </div>
-
-                <!-- Delete Actions (Leader Only) -->
-                <div *ngIf="halaqaData?.leader?._id === (currentUser?.id || currentUser?._id) || halaqaData?.leader === (currentUser?.id || currentUser?._id)"
-                    class="pt-6 border-t border-gray-100 dark:border-gray-700">
-                    <button (click)="deleteHalaqa()"
-                        class="w-full bg-red-50 dark:bg-red-900/20 text-red-600 p-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-red-100 transition-all border border-red-100 dark:border-red-900/30">
-                        <fa-icon [icon]="faTrash"></fa-icon>
-                        حذف المجموعة نهائياً
-                    </button>
-                    <p class="text-[10px] text-center text-gray-400 mt-2">
-                        * سيتم حذف كافة الرسائل وبيانات الأعضاء فوراً
-                    </p>
-                </div>
-
-                <!-- Active Members Sidebar -->
-                <div
-                    class="bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-                    <div class="p-5 border-b border-gray-50 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50">
-                        <h3 class="font-bold flex items-center gap-2">
-                            <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                            المتواجدون الآن ({{ activeUsers.length }})
-                        </h3>
-                    </div>
-                    <div class="p-2 max-h-[400px] overflow-y-auto">
-                        <div *ngIf="activeUsers.length <= 1" class="py-10 text-center text-gray-400 text-sm">
-                            لا يوجد أحد غيرك حالياً
-                        </div>
-                        <div *ngFor="let user of activeUsers"
-                            class="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-2xl transition-all group">
+                    <div class="p-5 space-y-4">
+                        <div *ngFor="let m of halaqaStats.memberStats" class="space-y-2">
                             <div class="flex items-center gap-3">
                                 <div
-                                    class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs">
-                                    {{ user.username.charAt(0) }}
+                                    class="w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-xs font-bold text-emerald-600">
+                                    {{ m.username.charAt(0) }}
                                 </div>
-                                <div>
-                                    <div class="flex items-center gap-1.5">
-                                        <p class="text-xs font-bold dark:text-white">{{ user.username }}</p>
-                                        <span *ngIf="isRoomLeader(user.userId)"
-                                            class="text-[8px] bg-blue-50 dark:bg-blue-900/30 text-blue-600 px-1.5 py-0.5 rounded-full border border-blue-100 dark:border-blue-800">المنشئ</span>
+                                <div class="flex-1">
+                                    <div class="flex items-center justify-between mb-1">
+                                        <span class="font-bold text-sm text-gray-700 dark:text-gray-300">{{ m.username
+                                            }}</span>
+                                        <span class="text-xs font-bold text-emerald-600 dark:text-emerald-400">{{
+                                            (m.hifzProgress || 0) | number:'1.0-1' }}%</span>
                                     </div>
-                                    <p class="text-[9px] text-green-500" *ngIf="user.userId !== currentUserId">نشط الآن
-                                    </p>
-                                    <p class="text-[9px] text-blue-500" *ngIf="user.userId === currentUserId">أنت (متصل)
-                                    </p>
+                                    <div class="w-full h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                                        <div class="h-full bg-emerald-500 transition-all duration-1000 rounded-full"
+                                            [style.width.%]="m.hifzProgress || 0">
+                                        </div>
+                                    </div>
+                                    <div class="flex justify-end mt-1">
+                                        <span class="text-[8px] text-gray-400 flex items-center gap-1">
+                                            <fa-icon [icon]="faClock"></fa-icon>
+                                            آخر نشاط: {{ m.lastActive | date:'shortDate' }}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
-                            <button *ngIf="user.userId !== currentUserId" (click)="startVoiceCall(user)"
-                                class="p-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white transition-all opacity-0 group-hover:opacity-100"
-                                title="بدء تسميع">
-                                <fa-icon [icon]="faUserGraduate"></fa-icon>
+                        </div>
+                    </div>
+
+                    <div *ngIf="halaqaData?.leader?._id === (currentUser?.id || currentUser?._id) || halaqaData?.leader === (currentUser?.id || currentUser?._id)"
+                        class="bg-gradient-to-br from-indigo-600 to-blue-700 p-6 rounded-3xl text-white shadow-xl">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center gap-3">
+                                <fa-icon [icon]="faLink" class="text-2xl text-blue-200"></fa-icon>
+                                <h3 class="font-bold text-xl">كود الدعوة</h3>
+                            </div>
+                            <button (click)="copyInviteCode()"
+                                class="flex items-center gap-2 bg-white/20 hover:bg-white/30 p-2 px-4 rounded-xl transition-colors">
+                                <fa-icon [icon]="copySuccess ? faCheck : faCopy"></fa-icon>
+                                <span>{{ copySuccess ? 'تم النسخ!' : 'نسخ' }}</span>
                             </button>
+                        </div>
+                        <p class="text-blue-100/80 text-sm mb-4">شارك هذا الكود مع زملائك للانضمام إلى هذه الحلقة
+                            مباشرة.
+                        </p>
+                        <div
+                            class="bg-black/20 p-4 rounded-2xl text-center font-mono text-3xl font-black tracking-widest uppercase">
+                            {{ halaqaData?.inviteCode || '------' }}
+                        </div>
+                    </div>
+
+                    <!-- Members List -->
+                    <div
+                        class="bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+                        <div
+                            class="p-4 border-b border-gray-50 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50 flex items-center justify-between">
+                            <h3 class="font-bold flex items-center gap-2">
+                                <fa-icon [icon]="faUsers" class="text-blue-600"></fa-icon>
+                                الأعضاء ({{ (halaqaData?.members?.length || 0) + 1 }})
+                            </h3>
+                            <span class="text-xs text-gray-500">الحد الأقصى: {{ halaqaData?.maxMembers }}</span>
+                        </div>
+
+                        <div class="divide-y divide-gray-50 dark:divide-gray-700">
+                            <!-- Leader -->
+                            <div (click)="openUserProfile(halaqaData?.leader)"
+                                class="p-4 flex items-center justify-between group cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                                <div class="flex items-center gap-3">
+                                    <div class="relative">
+                                        <div
+                                            class="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 flex items-center justify-center font-bold">
+                                            {{ halaqaData?.leader?.username?.charAt(0) }}
+                                        </div>
+                                        <div *ngIf="isUserOnline(halaqaData?.leader)"
+                                            class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p class="font-bold text-gray-900 dark:text-white">{{
+                                            halaqaData?.leader?.username
+                                            }}</p>
+                                        <div class="flex items-center gap-2">
+                                            <span
+                                                class="text-[10px] bg-blue-50 dark:bg-blue-900/30 text-blue-600 px-2 py-0.5 rounded-full border border-blue-100 dark:border-blue-800">المنشئ</span>
+                                            <span class="text-[10px] text-green-500 font-medium"
+                                                *ngIf="isUserOnline(halaqaData?.leader)">متصل الآن</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <fa-icon [icon]="faUserShield" class="text-yellow-500"></fa-icon>
+                            </div>
+
+                            <!-- Regular Members -->
+                            <div *ngFor="let member of halaqaData?.members" (click)="openUserProfile(member)"
+                                class="p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors group">
+                                <div class="flex items-center gap-3">
+                                    <div class="relative">
+                                        <div *ngIf="member.profileImage"
+                                            class="w-10 h-10 rounded-full border border-gray-100 shadow-sm overflow-hidden">
+                                            <img [src]="getProfileImageUrl(member.profileImage)" alt="avatar"
+                                                class="w-full h-full object-cover">
+                                        </div>
+                                        <div *ngIf="!member.profileImage"
+                                            class="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 flex items-center justify-center font-bold">
+                                            {{ member.username?.charAt(0) }}
+                                        </div>
+                                        <!-- Online indicator -->
+                                        <div *ngIf="isUserOnline(member)"
+                                            class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p
+                                            class="font-medium text-gray-700 dark:text-gray-200 group-hover:text-blue-600 transition-colors">
+                                            {{ member.username }}</p>
+                                        <p class="text-[10px] text-green-500 font-medium" *ngIf="isUserOnline(member)">
+                                            متصل
+                                            الآن</p>
+                                    </div>
+                                </div>
+                                <fa-icon [icon]="faUserGraduate"
+                                    class="text-gray-300 group-hover:text-blue-500 transition-colors"></fa-icon>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Description -->
+                    <div
+                        class="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700">
+                        <h3 class="font-bold mb-3 flex items-center gap-2">
+                            <fa-icon [icon]="faInfoCircle" class="text-blue-600"></fa-icon>
+                            حول الحلقة
+                        </h3>
+                        <p class="text-gray-600 dark:text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">
+                            {{ halaqaData?.description || 'لا يوجد وصف متاح لهذه الحلقة.' }}
+                        </p>
+                    </div>
+
+                    <!-- Delete Actions (Leader Only) -->
+                    <div *ngIf="halaqaData?.leader?._id === (currentUser?.id || currentUser?._id) || halaqaData?.leader === (currentUser?.id || currentUser?._id)"
+                        class="pt-6 border-t border-gray-100 dark:border-gray-700">
+                        <button (click)="deleteHalaqa()"
+                            class="w-full bg-red-50 dark:bg-red-900/20 text-red-600 p-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-red-100 transition-all border border-red-100 dark:border-red-900/30">
+                            <fa-icon [icon]="faTrash"></fa-icon>
+                            حذف المجموعة نهائياً
+                        </button>
+                        <p class="text-[10px] text-center text-gray-400 mt-2">
+                            * سيتم حذف كافة الرسائل وبيانات الأعضاء فوراً
+                        </p>
+                    </div>
+
+                    <!-- Active Members Sidebar -->
+                    <div
+                        class="bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+                        <div class="p-5 border-b border-gray-50 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50">
+                            <h3 class="font-bold flex items-center gap-2">
+                                <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                                المتواجدون الآن ({{ activeUsers.length }})
+                            </h3>
+                        </div>
+                        <div class="p-2 max-h-[400px] overflow-y-auto">
+                            <div *ngIf="activeUsers.length <= 1" class="py-10 text-center text-gray-400 text-sm">
+                                لا يوجد أحد غيرك حالياً
+                            </div>
+                            <div *ngFor="let user of activeUsers"
+                                class="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-2xl transition-all group">
+                                <div class="flex items-center gap-3">
+                                    <div
+                                        class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs">
+                                        {{ user.username.charAt(0) }}
+                                    </div>
+                                    <div>
+                                        <div class="flex items-center gap-1.5">
+                                            <p class="text-xs font-bold dark:text-white">{{ user.username }}</p>
+                                            <span *ngIf="isRoomLeader(user.userId)"
+                                                class="text-[8px] bg-blue-50 dark:bg-blue-900/30 text-blue-600 px-1.5 py-0.5 rounded-full border border-blue-100 dark:border-blue-800">المنشئ</span>
+                                        </div>
+                                        <p class="text-[9px] text-green-500" *ngIf="user.userId !== currentUserId">نشط
+                                            الآن
+                                        </p>
+                                        <p class="text-[9px] text-blue-500" *ngIf="user.userId === currentUserId">أنت
+                                            (متصل)
+                                        </p>
+                                    </div>
+                                </div>
+                                <button *ngIf="user.userId !== currentUserId" (click)="startVoiceCall(user)"
+                                    class="p-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white transition-all opacity-0 group-hover:opacity-100"
+                                    title="بدء تسميع">
+                                    <fa-icon [icon]="faUserGraduate"></fa-icon>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gallery Tab -->
+        <div *ngIf="activeTab === 'gallery'" class="flex-1 overflow-y-auto p-4 md:p-8">
+            <div class="max-w-4xl mx-auto space-y-6 pb-20">
+                <!-- Media Filters -->
+                <div class="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+                    <button (click)="mediaFilter = 'all'" [class.bg-blue-600]="mediaFilter === 'all'"
+                        [class.text-white]="mediaFilter === 'all'"
+                        class="px-4 py-2 rounded-full text-xs font-bold bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 whitespace-nowrap">
+                        الكل
+                    </button>
+                    <button (click)="mediaFilter = 'image'" [class.bg-blue-600]="mediaFilter === 'image'"
+                        [class.text-white]="mediaFilter === 'image'"
+                        class="px-4 py-2 rounded-full text-xs font-bold bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-2 whitespace-nowrap">
+                        <fa-icon [icon]="faImages"></fa-icon>
+                        الصور
+                    </button>
+                    <button (click)="mediaFilter = 'file'" [class.bg-blue-600]="mediaFilter === 'file'"
+                        [class.text-white]="mediaFilter === 'file'"
+                        class="px-4 py-2 rounded-full text-xs font-bold bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-2 whitespace-nowrap">
+                        <fa-icon [icon]="faFileLines"></fa-icon>
+                        المستندات
+                    </button>
+                    <button (click)="mediaFilter = 'voice'" [class.bg-blue-600]="mediaFilter === 'voice'"
+                        [class.text-white]="mediaFilter === 'voice'"
+                        class="px-4 py-2 rounded-full text-xs font-bold bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-2 whitespace-nowrap">
+                        <fa-icon [icon]="faMicrophoneLines"></fa-icon>
+                        الصوتيات
+                    </button>
+                </div>
+
+                <!-- Gallery Grid -->
+                <div *ngIf="isLoadingMedia" class="flex flex-col items-center justify-center py-20 gap-4">
+                    <fa-icon [icon]="faSync" class="text-4xl text-blue-200 animate-spin"></fa-icon>
+                    <p class="text-gray-400">جاري تحميل الوسائط...</p>
+                </div>
+
+                <div *ngIf="!isLoadingMedia && filteredMedia.length === 0"
+                    class="flex flex-col items-center justify-center py-20 gap-4 bg-white dark:bg-gray-800 rounded-3xl border border-dashed border-gray-200 dark:border-gray-700">
+                    <fa-icon [icon]="faImages" class="text-6xl text-gray-100 dark:text-gray-700"></fa-icon>
+                    <p class="text-gray-400">لا توجد وسائط في هذه الفئة</p>
+                </div>
+
+                <div *ngIf="!isLoadingMedia && filteredMedia.length > 0"
+                    class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    <div *ngFor="let m of filteredMedia"
+                        class="group relative aspect-square rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800 border border-gray-100 dark:border-gray-700">
+                        <!-- Image Layout -->
+                        <ng-container *ngIf="m.fileMetadata?.mimeType?.startsWith('image/')">
+                            <img [src]="getProfileImageUrl(m.content)"
+                                class="w-full h-full object-cover cursor-zoom-in group-hover:scale-110 transition-transform duration-500"
+                                (click)="openImageFull(getProfileImageUrl(m.content))">
+                        </ng-container>
+
+                        <!-- File Layout -->
+                        <ng-container *ngIf="m.type === 'file' && !m.fileMetadata?.mimeType?.startsWith('image/')">
+                            <a [href]="getProfileImageUrl(m.content)" target="_blank"
+                                class="w-full h-full flex flex-col items-center justify-center p-4 gap-2 text-center">
+                                <fa-icon [icon]="m.fileMetadata?.mimeType?.includes('pdf') ? faFilePdf : faFileAlt"
+                                    class="text-4xl text-blue-500"></fa-icon>
+                                <span class="text-[10px] line-clamp-2 font-medium break-all">{{ m.fileMetadata?.name
+                                    ||
+                                    'مستند' }}</span>
+                            </a>
+                        </ng-container>
+
+                        <!-- Voice Layout -->
+                        <ng-container *ngIf="m.type === 'voice' || m.type === 'audio'">
+                            <div class="w-full h-full flex flex-col items-center justify-center p-4 gap-2 text-center">
+                                <div
+                                    class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                                    <fa-icon [icon]="faMicrophone"></fa-icon>
+                                </div>
+                                <span class="text-[10px] font-medium">رسالة صوتية</span>
+                                <span class="text-[8px] text-gray-400">{{ m.createdAt | date:'shortDate' }}</span>
+                            </div>
+                        </ng-container>
+
+                        <!-- Hover Overlay (Meta) -->
+                        <div
+                            class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3 pointer-events-none">
+                            <p class="text-[10px] text-white font-bold truncate">{{ m.sender?.username }}</p>
+                            <p class="text-[8px] text-white/70">{{ m.createdAt | date:'short' }}</p>
                         </div>
                     </div>
                 </div>
@@ -539,6 +869,25 @@
         </div>
     </div>
 
+    <!-- Image Modal -->
+    <div *ngIf="showImageModal" (click)="closeImageModal()"
+        class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-300">
+        <div class="relative max-w-5xl w-full h-full flex flex-col items-center justify-center"
+            (click)="$event.stopPropagation()">
+            <button (click)="closeImageModal()"
+                class="absolute top-0 right-0 p-4 text-white/70 hover:text-white transition-all z-10">
+                <fa-icon [icon]="faTimes" size="2x"></fa-icon>
+            </button>
+            <img [src]="selectedImageUrl" alt="صورة مكبرة"
+                class="max-w-full max-h-[90vh] object-contain shadow-2xl rounded-lg animate-in zoom-in-95 duration-300">
+            <a [href]="selectedImageUrl" target="_blank" download="image"
+                class="mt-6 bg-white/20 hover:bg-white/30 text-white px-8 py-3 rounded-2xl flex items-center gap-3 transition-all font-bold backdrop-blur-sm">
+                <fa-icon [icon]="faDownload"></fa-icon>
+                <span>تحميل الصورة</span>
+            </a>
+        </div>
+    </div>
+
     <!-- Error Toast -->
     <div *ngIf="deleteError"
         class="fixed bottom-10 left-1/2 -translate-x-1/2 z-[80] bg-red-600 text-white px-8 py-4 rounded-2xl shadow-2xl flex items-center gap-4 animate-in slide-in-from-bottom-10"
@@ -550,4 +899,8 @@
             <span *ngIf="!isLoadingDetails">×</span>
         </button>
     </div>
+
+    <!-- Group Call Panel Overlay -->
+    <app-group-call-panel [roomId]="halaqaId" [userId]="currentUserId" [username]="currentUser?.username || 'طالب علم'">
+    </app-group-call-panel>
 </div>

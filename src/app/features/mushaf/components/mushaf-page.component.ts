@@ -25,6 +25,7 @@ import { BookmarkService } from '../../../core/services/bookmark.service';
 import { Bookmark } from '../../../core/models/bookmark.model';
 import { faUsers, faUser, faSignOutAlt, faSignInAlt, faUserPlus } from '@fortawesome/free-solid-svg-icons';
 import { AuthService } from '../../../auth/auth.service';
+import { PresenceService } from '../../../core/services/presence.service';
 
 // --- Performance Optimization Interfaces ---
 export interface EnrichedMushafSegment extends MushafSegment {
@@ -396,7 +397,8 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
         private ngZone: NgZone,
         private renderer: Renderer2,
         public bookmarkService: BookmarkService,
-        private authService: AuthService
+        private authService: AuthService,
+        private presenceService: PresenceService
     ) { }
 
     private nextVerseKeyToPlay: string | null = null;
@@ -741,6 +743,50 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
             this.isLoggedIn = !!user;
             this.cdr.detectChanges();
         });
+
+        // Listen for Mushaf Page Sync updates from Halaqa
+        this.presenceService.pageSync$.pipe(takeUntil(this.destroy$)).subscribe(data => {
+            this.handleRemotePageSync(data);
+        });
+    }
+
+    public remoteSyncData: any = null;
+    showSyncPrompt: boolean = false;
+
+    handleRemotePageSync(data: any) {
+        // Don't prompt if it's our own sync (though the backend should handle this, extra safety)
+        const currentUser = this.authService.currentUserValue;
+        if (data.userId === currentUser?.id) return;
+
+        // Only show if the page is different
+        if (data.pageNumber !== this.pageNumber) {
+            this.remoteSyncData = data;
+            this.showSyncPrompt = true;
+            this.cdr.detectChanges();
+
+            // Auto-hide prompt after 10 seconds
+            setTimeout(() => {
+                this.showSyncPrompt = false;
+                this.cdr.detectChanges();
+            }, 10000);
+        }
+    }
+
+    jumpToRemotePage() {
+        if (this.remoteSyncData) {
+            this.goToPage(this.remoteSyncData.pageNumber);
+            this.showSyncPrompt = false;
+        }
+    }
+
+    broadcastPageSync() {
+        const activeHalaqaId = localStorage.getItem('active_halaqa_id');
+        const currentUser = this.authService.currentUserValue;
+
+        if (activeHalaqaId && currentUser) {
+            console.log(`📤 Broadcasting page sync: Page ${this.pageNumber} for Halaqa ${activeHalaqaId}`);
+            this.presenceService.syncPage(activeHalaqaId, currentUser.id, this.pageNumber);
+        }
     }
 
     ngAfterViewInit(): void {
@@ -4349,6 +4395,7 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
 
         // FIX: Update bookmark status when loading a new page
         this.updateBookmarkStatus();
+        this.broadcastPageSync();
 
         // Load data for current page PRIMARY
         console.log(`📡 [MushafPage] Loading page ${this.pageNumber}...`);

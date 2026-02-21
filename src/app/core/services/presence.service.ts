@@ -29,6 +29,15 @@ export class PresenceService implements OnDestroy {
     private newMessageSubject = new BehaviorSubject<PresenceUpdate | null>(null);
     public newMessage$ = this.newMessageSubject.asObservable();
 
+    private pinnedUpdateSubject = new Subject<any>();
+    public pinnedMessageUpdate$ = this.pinnedUpdateSubject.asObservable();
+
+    private pageSyncSubject = new Subject<any>();
+    public pageSync$ = this.pageSyncSubject.asObservable();
+
+    private callRoomUpdateSubject = new Subject<any>();
+    public callRoomUpdate$ = this.callRoomUpdateSubject.asObservable();
+
     private isConnectedSubject = new BehaviorSubject<boolean>(false);
     public isConnected$ = this.isConnectedSubject.asObservable();
 
@@ -77,6 +86,21 @@ export class PresenceService implements OnDestroy {
             this.newMessageSubject.next(data);
         });
 
+        this.socket.on('message_pinned_update', (data: any) => {
+            console.log('📌 Message pin update received:', data);
+            this.pinnedUpdateSubject.next(data);
+        });
+
+        this.socket.on('page_sync_update', (data: any) => {
+            console.log('📖 Mushaf Page Sync update received:', data);
+            this.pageSyncSubject.next(data);
+        });
+
+        this.socket.on('call_room_update', (data: any) => {
+            console.log('📞 Group call room update received:', data);
+            this.callRoomUpdateSubject.next(data);
+        });
+
         this.socket.on('connect', () => {
             console.log('✅ Connected to presence server', this.socket.id);
             this.isConnectedSubject.next(true);
@@ -122,6 +146,13 @@ export class PresenceService implements OnDestroy {
     forceReconnect() {
         this.socketStatusSubject.next('إعادة اتصال يدوي...');
         this.socket.disconnect().connect();
+    }
+
+    syncPage(halaqaId: string, userId: string, pageNumber: number) {
+        if (this.socket) {
+            console.log(`📤 Sending page sync: Page ${pageNumber} for Halaqa ${halaqaId}`);
+            this.socket.emit('sync_page', { halaqaId, userId, pageNumber });
+        }
     }
 
     ngOnDestroy() {

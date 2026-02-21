@@ -90,7 +90,7 @@
                         <fa-icon [icon]="faSearch"
                             class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold clickable"
                             (click)="onSearch()"></fa-icon>
-                        <input type="text" [(ngModel)]="searchTerm" (keyup.enter)="onSearch()" 
+                        <input type="text" [(ngModel)]="searchTerm" (keyup.enter)="onSearch()"
                             placeholder="ابحث عن حلقة بالاسم..."
                             class="w-full pr-12 pl-4 py-3 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 outline-none">
                     </div>
@@ -218,7 +218,7 @@
                             class="p-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-gray-400 disabled:opacity-30 hover:bg-blue-50 group">
                             <fa-icon [icon]="faArrowRight"></fa-icon>
                         </button>
-                        
+
                         <div class="flex gap-1">
                             <button *ngFor="let p of [].constructor(totalPages); let i = index"
                                 (click)="onPageChange(i + 1)"
@@ -263,7 +263,7 @@
             </button>
         </div>
 
-        <div class="p-8 space-y-6">
+        <div class="p-8 space-y-6 max-h-[60vh] overflow-y-auto custom-scrollbar overscroll-contain">
             <div
                 class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-2xl flex gap-3 text-blue-800 dark:text-blue-200 text-sm">
                 <fa-icon [icon]="faInfoCircle" class="mt-1"></fa-icon>
@@ -292,7 +292,7 @@
             </div>
         </div>
 
-        <div class="p-8 bg-gray-50 dark:bg-gray-900/50 flex gap-4">
+        <div class="p-8 bg-gray-50 dark:bg-gray-900/50 flex gap-4 mt-auto">
             <button (click)="createHalaqa()" [disabled]="!newHalaqa.name || isLoading"
                 class="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-4 rounded-2xl shadow-lg transition-all disabled:opacity-50">
                 <span *ngIf="!isLoading">تأكيد الإنشاء</span>

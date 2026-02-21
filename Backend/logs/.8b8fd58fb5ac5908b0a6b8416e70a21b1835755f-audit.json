@@ -1,0 +1,15 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 30
+    },
+    "auditLog": "/Users/orabi/Desktop/Kenouz/Backend/logs/.8b8fd58fb5ac5908b0a6b8416e70a21b1835755f-audit.json",
+    "files": [
+        {
+            "date": 1771641479477,
+            "name": "/Users/orabi/Desktop/Kenouz/Backend/logs/error-2026-02-21.log",
+            "hash": "2d905b644fa957e45d4bc984316c8c1aa91f92d3c6c7d39e1014199d679ef5f8"
+        }
+    ],
+    "hashType": "sha256"
+}

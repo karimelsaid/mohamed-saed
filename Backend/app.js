@@ -10,6 +10,8 @@ process.on('unhandledRejection', (reason, promise) => {
 
 
 require('dotenv').config();
+const logger = require('./services/logger.service');
+const { generalLimiter, messageLimiter, authLimiter, uploadLimiter } = require('./middleware/rate-limiter.middleware');
 const User = require('./models/User.model');
 const { ObjectId } = require('mongoose').Types;
 const cors = require('cors');
@@ -25,6 +27,7 @@ const cronJobs = require('./services/cron-jobs.service'); // Added cron jobs ser
 // const MDBReader = require('mdb-reader').default; // Moved to dynamic import inside route due to ESM
 // const unrar = require('unrar-promise'); // Moved to dynamic import inside route due to ESM
 const iconv = require('iconv-lite'); // For encoding conversion (Windows-1256 to UTF-8)
+const crypto = require('crypto');
 
 // استيراد المسارات
 const usersRoutes = require('./routes/users.routes');
@@ -86,6 +89,9 @@ const logStream = fs.createWriteStream(path.join(__dirname, 'requests.log'), { f
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Rate Limiting - Global
+app.use('/api/', generalLimiter);
 
 // Request Logger for debugging
 app.use((req, res, next) => {
@@ -585,6 +591,11 @@ app.use('/api/quran-progress', quranProgressRoutes); // Quran Progress Routes
 app.use('/api/mutabaa', require('./routes/mutabaa.routes')); // Smart Mutaba'a Routes
 app.use('/api/hifz-plan', require('./routes/hifzPlan.routes')); // Dynamic Hifz Plan Routes
 app.use('/api/halaqa', require('./routes/halaqa.routes')); // Community Halaqa Routes
+
+// Apply specific rate limiters to sensitive routes
+app.use('/api/users/login', authLimiter);
+app.use('/api/halaqa/upload-voice', uploadLimiter);
+app.use('/api/halaqa/upload-file', uploadLimiter);
 app.use('/api/feedback', feedbackRoutes); // Feedback Routes
 
 
@@ -652,14 +663,45 @@ app.get('*', (req, res, next) => {
   res.sendFile(path.join(__dirname, 'dist/browser/index.html'));
 });
 
+// Endpoint to provide dynamic ICE servers with TURN credentials
+app.get('/api/ice-servers', (req, res) => {
+  const secret = process.env.TURN_SECRET || 'kenouz_default_secret';
+  const turnDomain = process.env.TURN_DOMAIN || 'turn.knoozbook.com';
+
+  // Expiry time (24 hours from now)
+  const ttl = 24 * 3600;
+  const timestamp = Math.floor(Date.now() / 1000) + ttl;
+
+  // Username for Coturn in REST mode is just the timestamp
+  const username = timestamp.toString();
+
+  // Password is the HMAC-SHA1 of the username using the secret
+  const hmac = crypto.createHmac('sha1', secret);
+  hmac.update(username);
+  const password = hmac.digest('base64');
+
+  res.json({
+    success: true,
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+      {
+        urls: [`turn:${turnDomain}:3478?transport=udp`, `turn:${turnDomain}:3478?transport=tcp`],
+        username: username,
+        credential: password
+      }
+    ]
+  });
+});
+
 // Socket.io Logic for Presence
 const activeUsersInRooms = {}; // { halaqaId: Map(userIds) }
 const globalOnlineUsers = new Map(); // Map(userId -> { username, socketId })
 
+// Main Namespace: Presence & Messaging
 io.on('connection', (socket) => {
   console.log('👤 New socket connection:', socket.id);
 
-  // Global login/presence
   socket.on('user_online', ({ userId, username }) => {
     socket.userId = userId;
     socket.username = username;
@@ -689,16 +731,17 @@ io.on('connection', (socket) => {
     console.log(`✅ User ${username} joined Halaqa ${halaqaId}`);
   });
 
+  socket.on('sync_page', ({ halaqaId, userId, pageNumber }) => {
+    console.log(`📖 Page Sync: User ${userId} updated page to ${pageNumber} in Halaqa ${halaqaId}`);
+    socket.to(halaqaId).emit('page_sync_update', { userId, pageNumber, timestamp: new Date() });
+  });
+
   socket.on('disconnect', () => {
     const { halaqaId, userId } = socket;
-
-    // Remove from global
     if (userId) {
       globalOnlineUsers.delete(userId);
       io.emit('global_presence_update', Array.from(globalOnlineUsers.keys()));
     }
-
-    // Remove from room
     if (halaqaId && userId && activeUsersInRooms[halaqaId]) {
       activeUsersInRooms[halaqaId].delete(userId);
       io.to(halaqaId).emit('presence_update', Array.from(activeUsersInRooms[halaqaId].values()));
@@ -706,6 +749,201 @@ io.on('connection', (socket) => {
     }
   });
 });
+
+// Dedicated Signaling Namespace for Calls (1:1 + Group)
+const signaling = io.of('/signaling');
+const signalingUsers = new Map(); // userId -> socketId
+const callRooms = new Map(); // roomId -> Map(userId -> { socketId, username, joinedAt })
+
+signaling.on('connection', (socket) => {
+  console.log('📞 New signaling connection:', socket.id);
+
+  socket.on('register', (userId) => {
+    socket.userId = userId;
+    signalingUsers.set(userId, socket.id);
+    console.log(`📡 [Signaling] User ${userId} registered`);
+  });
+
+  // === 1:1 Call Events (preserved) ===
+  socket.on('call-user', ({ to, offer }) => {
+    const targetSocketId = signalingUsers.get(to);
+    if (targetSocketId) {
+      signaling.to(targetSocketId).emit('call-made', {
+        offer,
+        from: socket.userId
+      });
+    }
+  });
+
+  socket.on('make-answer', ({ to, answer }) => {
+    const targetSocketId = signalingUsers.get(to);
+    if (targetSocketId) {
+      signaling.to(targetSocketId).emit('answer-made', {
+        answer,
+        from: socket.userId
+      });
+    }
+  });
+
+  // 1:1 ice-candidate (by user ID)
+  socket.on('ice-candidate', ({ to, candidate }) => {
+    const targetSocketId = signalingUsers.get(to);
+    if (targetSocketId) {
+      signaling.to(targetSocketId).emit('ice-candidate', {
+        candidate,
+        from: socket.userId
+      });
+    }
+  });
+
+  // === Group Call Events ===
+
+  // Join a call room
+  socket.on('join-room', ({ roomId, username }) => {
+    const userId = socket.userId;
+    if (!userId) return;
+
+    socket.join(`call:${roomId}`);
+    socket.callRoomId = roomId;
+
+    if (!callRooms.has(roomId)) {
+      callRooms.set(roomId, new Map());
+    }
+
+    const room = callRooms.get(roomId);
+
+    // Get existing users BEFORE adding the new one
+    const existingUsers = Array.from(room.entries()).map(([uid, info]) => ({
+      userId: uid,
+      username: info.username,
+      socketId: info.socketId
+    }));
+
+    // Add new user to room
+    room.set(userId, { socketId: socket.id, username, joinedAt: new Date() });
+
+    // Send existing users list to the joiner
+    socket.emit('room-users', existingUsers);
+
+    // Notify everyone else about the new user
+    socket.to(`call:${roomId}`).emit('user-joined', {
+      userId,
+      username,
+      socketId: socket.id
+    });
+
+    // Broadcast updated room info to halaqa chat namespace too
+    io.to(roomId).emit('call_room_update', {
+      roomId,
+      participants: Array.from(room.values()).map(u => u.username),
+      count: room.size
+    });
+
+    console.log(`📞 [Group] ${username} joined call room ${roomId} (${room.size} users)`);
+  });
+
+  // Leave a call room
+  socket.on('leave-room', ({ roomId }) => {
+    handleLeaveRoom(socket, roomId);
+  });
+
+  // Group call signaling: relay offer to specific peer in room
+  socket.on('group-offer', ({ to, offer, roomId }) => {
+    const targetSocketId = signalingUsers.get(to);
+    if (targetSocketId) {
+      signaling.to(targetSocketId).emit('group-offer', {
+        offer,
+        from: socket.userId,
+        roomId
+      });
+    }
+  });
+
+  // Group call signaling: relay answer to specific peer in room
+  socket.on('group-answer', ({ to, answer, roomId }) => {
+    const targetSocketId = signalingUsers.get(to);
+    if (targetSocketId) {
+      signaling.to(targetSocketId).emit('group-answer', {
+        answer,
+        from: socket.userId,
+        roomId
+      });
+    }
+  });
+
+  // Group call signaling: relay ICE candidate to specific peer in room
+  socket.on('group-ice-candidate', ({ to, candidate, roomId }) => {
+    const targetSocketId = signalingUsers.get(to);
+    if (targetSocketId) {
+      signaling.to(targetSocketId).emit('group-ice-candidate', {
+        candidate,
+        from: socket.userId,
+        roomId
+      });
+    }
+  });
+
+  // Get current call room info (for showing active call indicator)
+  socket.on('get-room-info', ({ roomId }, callback) => {
+    const room = callRooms.get(roomId);
+    if (room && room.size > 0) {
+      callback({
+        active: true,
+        participants: Array.from(room.entries()).map(([uid, info]) => ({
+          userId: uid,
+          username: info.username
+        })),
+        count: room.size
+      });
+    } else {
+      callback({ active: false, participants: [], count: 0 });
+    }
+  });
+
+  socket.on('disconnect', () => {
+    if (socket.userId) {
+      signalingUsers.delete(socket.userId);
+      // If user was in a call room, clean up
+      if (socket.callRoomId) {
+        handleLeaveRoom(socket, socket.callRoomId);
+      }
+      console.log(`❌ [Signaling] User ${socket.userId} disconnected`);
+    }
+  });
+});
+
+function handleLeaveRoom(socket, roomId) {
+  const userId = socket.userId;
+  if (!userId) return;
+
+  socket.leave(`call:${roomId}`);
+
+  const room = callRooms.get(roomId);
+  if (room) {
+    const userInfo = room.get(userId);
+    room.delete(userId);
+
+    // Notify remaining users
+    signaling.to(`call:${roomId}`).emit('user-left', { userId });
+
+    // Update halaqa chat namespace
+    io.to(roomId).emit('call_room_update', {
+      roomId,
+      participants: Array.from(room.values()).map(u => u.username),
+      count: room.size
+    });
+
+    console.log(`📞 [Group] ${userInfo?.username || userId} left call room ${roomId} (${room.size} remaining)`);
+
+    // Cleanup empty rooms
+    if (room.size === 0) {
+      callRooms.delete(roomId);
+    }
+  }
+
+  socket.callRoomId = null;
+}
+
 
 // Global Error Handler
 app.use((err, req, res, next) => {

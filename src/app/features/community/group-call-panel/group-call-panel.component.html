@@ -55,7 +55,7 @@
                 <div class="flex flex-col items-center gap-3">
                     <div class="w-20 h-20 rounded-full bg-white/10 flex items-center justify-center text-3xl font-bold text-white backdrop-blur-sm border-2 border-white/20"
                         [class.ring-4]="!!p.stream" [class.ring-green-400]="!!p.stream">
-                        {{ p.username?.charAt(0) || '?' }}
+                        {{ p.username.charAt(0) || '?' }}
                     </div>
                     <span class="text-white font-bold text-sm">{{ p.username || 'عضو' }}</span>
                 </div>

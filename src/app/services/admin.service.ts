@@ -10,7 +10,7 @@ import { environment } from '../../environments/environment';
 export class AdminService {
   private apiUrl = `${environment.apiBaseUrl}/admin`;
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   private handleError(error: HttpErrorResponse) {
     let errorMessage = 'حدث خطأ غير متوقع';
@@ -98,8 +98,20 @@ export class AdminService {
     );
   }
 
+  getPrintingSettings(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/settings/printing`).pipe(
+      catchError(this.handleError)
+    );
+  }
+
   updateSystemSettings(settings: any): Observable<any> {
     return this.http.put(`${this.apiUrl}/settings`, settings).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  bulkAdjustPrices(payload: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}/products/bulk-adjust`, payload).pipe(
       catchError(this.handleError)
     );
   }

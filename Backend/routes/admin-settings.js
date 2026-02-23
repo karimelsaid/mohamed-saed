@@ -3,9 +3,8 @@ const router = express.Router();
 const SystemSettings = require('../models/SystemSettings');
 const adminController = require('../controllers/admin.controller'); // Import controller
 
-// Middleware to check if user is Admin (Simplified for internal use, add auth middleware if needed)
-// For now, we assume the frontend sends the token and app.js handles generic auth, 
-// but strictly this should be protected.
+// Middleware to check if user is Admin
+const authenticateAdmin = require('../middleware/admin.auth');
 
 // GET /admin/settings - Fetch current settings (or create default)
 router.get('/', async (req, res) => {
@@ -20,8 +19,18 @@ router.get('/', async (req, res) => {
 // GET /api/admin/settings/free-shipping-rules - Publicly accessible for calculation
 router.get('/free-shipping-rules', adminController.getFreeShippingRules);
 
-// PUT /admin/settings - Update settings
-router.put('/', async (req, res) => {
+// GET /api/admin/settings/printing - Publicly accessible for printing calculation
+router.get('/printing', async (req, res) => {
+    try {
+        const settings = await SystemSettings.getInstance();
+        res.status(200).json(settings.printing);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching printing settings', error: error.message });
+    }
+});
+
+// PUT /admin/settings - Update settings (Admin only)
+router.put('/', authenticateAdmin, async (req, res) => {
     try {
         const { gamification, quranPoints, economy, maintenanceMode } = req.body;
 
@@ -33,6 +42,7 @@ router.put('/', async (req, res) => {
         if (gamification) settings.gamification = { ...settings.gamification, ...gamification };
         if (req.body.quranPoints) settings.quranPoints = { ...settings.quranPoints, ...req.body.quranPoints };
         if (economy) settings.economy = { ...settings.economy, ...economy };
+        if (req.body.printing) settings.printing = { ...settings.printing, ...req.body.printing };
         if (req.body.subscription) settings.subscription = { ...settings.subscription, ...req.body.subscription };
         if (typeof maintenanceMode !== 'undefined') settings.maintenanceMode = maintenanceMode;
 

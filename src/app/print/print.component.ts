@@ -6,6 +6,7 @@ import { FormsModule } from '@angular/forms';
 import { AuthService } from '../auth/auth.service';
 import { AccountModalComponent } from '../auth/account-modal/account-modal.component';
 import { FreeShippingService, FreeShippingRules } from '../services/free-shipping.service';
+import { AdminService } from '../services/admin.service';
 import { User } from '../auth/user.model';
 import governoratesData from '../../../public/json/egypt-governorates.json';
 import { take } from 'rxjs/operators';
@@ -84,11 +85,21 @@ export class PrintComponent implements OnInit {
     freeShippingEnabled: true
   };
 
+  printingSettings: any = {
+    paperPrices: {
+      B5: { white: 0.20, yellow: 0.25, creamy: 0.35 },
+      A4: { white: 0.30, yellow: 0.40, creamy: 0.50 }
+    },
+    coverPrices: { soft: 25.0, hard: 60.0, luxuryLeather: 100.0 },
+    printColorPrices: { blackAndWhite: 0.40, color: 0.90 }
+  };
+
   constructor(
     private http: HttpClient,
     private router: Router,
     private authService: AuthService,
     private freeShippingService: FreeShippingService,
+    private adminService: AdminService,
     private cdr: ChangeDetectorRef
   ) { }
 
@@ -107,6 +118,7 @@ export class PrintComponent implements OnInit {
       }
     });
     this.loadFreeShippingRules();
+    this.loadPrintingSettings();
   }
 
   ngAfterViewChecked(): void {
@@ -306,47 +318,62 @@ export class PrintComponent implements OnInit {
     return isValid;
   }
 
+  loadPrintingSettings() {
+    this.adminService.getPrintingSettings().subscribe({
+      next: (settings) => {
+        if (settings) {
+          this.printingSettings = settings;
+          // Recalculate prices if projects exist
+          this.projects.forEach((_, i) => this.updateEstimatedPrice(i));
+          this.calculateTotalPrice();
+        }
+      },
+      error: (err) => console.error('Failed to load printing settings:', err)
+    });
+  }
+
   calculatePrice(project: any) {
+    if (!this.printingSettings) return 0;
+
     // 1. Printing cost per page
     let printingCostPerPage = 0;
-    if (project.printColor === 'أبيض وأسود') {
-      printingCostPerPage = 0.40;
-    } else if (project.printColor === 'ألوان') {
-      printingCostPerPage = 0.90;
+    if (project.printColor === 'أبيض وأسود' || project.printColor === 'Black & White') {
+      printingCostPerPage = this.printingSettings.printColorPrices.blackAndWhite;
+    } else if (project.printColor === 'ألوان' || project.printColor === 'Color') {
+      printingCostPerPage = this.printingSettings.printColorPrices.color;
     }
 
     // 2. Paper cost per page
     const pages = project.pages || 0;
+    let paperKey = 'white';
+    if (project.paperColor === '#DED5AF' || project.paperColor === 'yellow') paperKey = 'yellow';
+    else if (project.paperColor === '#F5F5DC' || project.paperColor === 'creamy') paperKey = 'creamy';
+
     let paperCostPerA4Sheet = 0;
     if (project.size === 'B5') {
-      if (project.paperColor === '#FFFFFF') { // White
-        paperCostPerA4Sheet = 0.20;
-      } else if (project.paperColor === '#DED5AF') { // Yellow
-        paperCostPerA4Sheet = 0.25;
-      } else if (project.paperColor === '#F5F5DC') { // Creamy
-        paperCostPerA4Sheet = 0.35;
-      }
-    } else if (project.paperColor === '#FFFFFF') { // White
-      paperCostPerA4Sheet = 0.30;
-    } else if (project.paperColor === '#DED5AF') { // Yellow
-      paperCostPerA4Sheet = 0.40;
-    } else if (project.paperColor === '#F5F5DC') { // Creamy
-      paperCostPerA4Sheet = 0.50;
+      paperCostPerA4Sheet = this.printingSettings.paperPrices.B5[paperKey];
+    } else if (project.size === 'A5') {
+      paperCostPerA4Sheet = this.printingSettings.paperPrices.A5[paperKey];
+    } else {
+      // Default to A4 prices for other sizes (or add more if needed)
+      paperCostPerA4Sheet = this.printingSettings.paperPrices.A4[paperKey];
     }
-    const pagesPerA4Sheet = (project.size === 'A5') ? 4 : 2; // A4 and B5 both use 2 pages per A4 sheet
+    const pagesPerA4Sheet = (project.size === 'A5') ? 4 : 2; // A4 and B5 both use 2 pages per A4 sheet, A5 use 4
 
     // 3. Cover price
     let coverPrice = 0;
-    if (project.coverType === 'غلاف ورقي') {
-      coverPrice = 25;
-    } else if (project.coverType === 'غلاف كرتوني') {
-      coverPrice = 60;
-    } else if (project.coverType === 'غلاف جلد فاخر') {
-      coverPrice = 100;
+    if (project.coverType === 'غلاف ورقي' || project.coverType === 'Soft Cover') {
+      coverPrice = this.printingSettings.coverPrices.soft;
+    } else if (project.coverType === 'غلاف كرتوني' || project.coverType === 'Hard Cover') {
+      coverPrice = this.printingSettings.coverPrices.hard;
+    } else if (project.coverType === 'غلاف جلد فاخر' || project.coverType === 'Luxury Leather') {
+      coverPrice = this.printingSettings.coverPrices.luxuryLeather;
     }
 
-    const copies = project.copies || 0; const numberOfA4Sheets = Math.ceil(pages / pagesPerA4Sheet);
-    const totalPaperCost = numberOfA4Sheets * paperCostPerA4Sheet; const totalPrintingCost = pages * printingCostPerPage;
+    const copies = project.copies || 0;
+    const numberOfA4Sheets = Math.ceil(pages / pagesPerA4Sheet);
+    const totalPaperCost = numberOfA4Sheets * paperCostPerA4Sheet;
+    const totalPrintingCost = pages * printingCostPerPage;
     const price = (totalPaperCost + totalPrintingCost + coverPrice) * copies;
     return Math.ceil(price); // Round up to the nearest integer
   }

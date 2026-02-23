@@ -360,9 +360,11 @@
                   (change)="onProjectChange(i)">
                   <option value="" disabled>اختر نوع الغلاف</option>
                   <option value="بدون غلاف">❌ بدون غلاف (0 جنيه)</option>
-                  <option value="غلاف ورقي">📄 غلاف ورقي (25 جنيه)</option>
-                  <option value="غلاف كرتوني" selected>📦 غلاف كرتوني (60 جنيه)</option>
-                  <option value="غلاف جلد فاخر">💎 غلاف جلد فاخر (100 جنيه)</option>
+                  <option value="غلاف ورقي">📄 غلاف ورقي ({{ printingSettings.coverPrices.soft }} جنيه)</option>
+                  <option value="غلاف كرتوني" selected>📦 غلاف كرتوني ({{ printingSettings.coverPrices.hard }} جنيه)
+                  </option>
+                  <option value="غلاف جلد فاخر">💎 غلاف جلد فاخر ({{ printingSettings.coverPrices.luxuryLeather }} جنيه)
+                  </option>
                 </select>
                 <div *ngIf="validationErrors[i]?.coverType"
                   class="mt-2 text-sm text-red-600 dark:text-red-400 flex items-center">
@@ -393,8 +395,9 @@
                   class="block w-full rounded-lg border-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 px-4 py-3 transition-all duration-200"
                   (change)="onProjectChange(i)">
                   <option value="" disabled>اختر لون الطباعة</option>
-                  <option value="أبيض وأسود" selected>⚫ أبيض وأسود (0.40 جنيه)</option>
-                  <option value="ألوان">🌈 ألوان (0.90 جنيه)</option>
+                  <option value="أبيض وأسود" selected>⚫ أبيض وأسود ({{ printingSettings.printColorPrices.blackAndWhite
+                    }} جنيه)</option>
+                  <option value="ألوان">🌈 ألوان ({{ printingSettings.printColorPrices.color }} جنيه)</option>
                 </select>
                 <div *ngIf="validationErrors[i]?.printColor"
                   class="mt-2 text-sm text-red-600 dark:text-red-400 flex items-center">
@@ -425,9 +428,15 @@
                     [ngClass]="{'border-red-500 focus:ring-red-500': validationErrors[i]?.paperColor, 'border-green-500 focus:ring-green-500': !validationErrors[i]?.paperColor && project.paperColor}"
                     class="flex-1 rounded-lg border-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 px-4 py-3 transition-all duration-200"
                     (change)="onProjectChange(i)">
-                    <option value="#FFFFFF">⚪ أبيض (0.30 جنيه)</option>
-                    <option value="#DED5AF">🟡 أصفر (0.40 جنيه)</option>
-                    <option value="#F5F5DC">📜 كريمي (0.50 جنيه)</option>
+                    <option value="#FFFFFF">⚪ أبيض ({{ project.size === 'B5' ? printingSettings.paperPrices.B5.white :
+                      (project.size === 'A5' ? printingSettings.paperPrices.A5.white :
+                      printingSettings.paperPrices.A4.white) }} جنيه)</option>
+                    <option value="#DED5AF">🟡 أصفر ({{ project.size === 'B5' ? printingSettings.paperPrices.B5.yellow :
+                      (project.size === 'A5' ? printingSettings.paperPrices.A5.yellow :
+                      printingSettings.paperPrices.A4.yellow) }} جنيه)</option>
+                    <option value="#F5F5DC">📜 كريمي ({{ project.size === 'B5' ? printingSettings.paperPrices.B5.creamy
+                      : (project.size === 'A5' ? printingSettings.paperPrices.A5.creamy :
+                      printingSettings.paperPrices.A4.creamy) }} جنيه)</option>
                   </select>
                   <div [style.background-color]="project.paperColor"
                     class="w-10 h-10 border-2 border-gray-300 dark:border-gray-600 rounded-lg shadow-inner"></div>

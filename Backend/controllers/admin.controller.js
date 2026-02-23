@@ -2188,6 +2188,103 @@ async function deleteUrgencyRequest(req, res) {
   }
 }
 
+async function bulkAdjustPrices(req, res) {
+  try {
+    const { category, minPrice, maxPrice, adjustmentType, adjustmentValue, direction } = req.body;
+    console.log('Bulk Adjustment Payload:', { category, adjustmentType, adjustmentValue, direction });
+
+    // Download current Excel file
+    const fileId = process.env.GOOGLE_DRIVE_FILE_ID;
+    if (!fileId) {
+      return res.status(500).json({ success: false, message: 'Missing Google Drive file ID' });
+    }
+
+    const client = await require('../config/drive').auth.getClient();
+    const drive = require('googleapis').google.drive({ version: 'v3', auth: client });
+
+    const resDrive = await drive.files.get({
+      fileId,
+      alt: 'media',
+    }, { responseType: 'arraybuffer' });
+
+    const buffer = Buffer.from(resDrive.data);
+    const xlsx = require('xlsx');
+    const workbook = xlsx.read(buffer, { type: 'buffer' });
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+    let json = xlsx.utils.sheet_to_json(sheet);
+
+    let updatedCount = 0;
+
+    // Apply adjustments
+    json.forEach(product => {
+      // 1. Filter by category
+      if (category && category.length > 0 && !category.includes('جميع الفئات')) {
+        const productCategory = product.product_category || '';
+        if (!category.includes(productCategory)) return;
+      }
+
+      // 2. Filter by price range
+      const currentPrice = parseFloat(product.product_price) || 0;
+      if (minPrice !== undefined && currentPrice < minPrice) return;
+      if (maxPrice !== undefined && currentPrice > maxPrice) return;
+
+      // 3. Calculate new price
+      let newPrice = currentPrice;
+      const value = parseFloat(adjustmentValue);
+      const type = (adjustmentType || '').toString().trim().toLowerCase();
+
+      if (type === 'percentage') {
+        const delta = (currentPrice * value) / 100;
+        newPrice = direction === 'increase' ? currentPrice + delta : currentPrice - delta;
+      } else {
+        // fixed value
+        newPrice = direction === 'increase' ? currentPrice + value : currentPrice - value;
+      }
+
+      // Ensure price is not negative
+      if (newPrice < 0) newPrice = 0;
+
+      // Rounding (same logic as in other places if needed, but here we do simple rounding for fixed updates)
+      newPrice = Math.round(newPrice);
+
+      product.product_price = newPrice;
+      updatedCount++;
+    });
+
+    if (updatedCount === 0) {
+      return res.json({ success: true, message: 'لم يتم العثور على منتجات مطابقة للفلاتر لتحديثها', updatedCount: 0 });
+    }
+
+    // Convert JSON back to sheet
+    const newSheet = xlsx.utils.json_to_sheet(json);
+    workbook.Sheets[sheetName] = newSheet;
+
+    // Write workbook to buffer
+    const wbout = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+
+    // Upload updated Excel file back to Google Drive
+    await drive.files.update({
+      fileId,
+      media: {
+        mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        body: wbout
+      }
+    });
+
+    // Update output.json by re-running downloadAndConvertExcel
+    await downloadAndConvertExcel(fileId);
+
+    // Update the update file to keep in sync
+    await updateExcelFromJson(process.env.GOOGLE_DRIVE_FILE_update);
+
+    res.json({ success: true, message: `تم تحديث أسعار ${updatedCount} من المنتجات بنجاح`, updatedCount });
+  } catch (error) {
+    console.error('Error in bulkAdjustPrices:', error);
+    res.status(500).json({ success: false, message: 'خطأ في الخادم أثناء التحديث الجماعي' });
+  }
+}
+
 async function updateProductQuantity(req, res) {
   try {
     const { barcode } = req.params;
@@ -2296,5 +2393,6 @@ module.exports = {
   deleteUrgencyRequest,
   updateProductQuantity,
   updatePaymentRequestStatus,
-  getDonationStats
+  getDonationStats,
+  bulkAdjustPrices
 };

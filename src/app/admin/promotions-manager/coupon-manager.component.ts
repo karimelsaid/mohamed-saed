@@ -54,8 +54,8 @@ import { PromotionService } from '../../services/promotion.service';
       </div>
 
       <!-- Modal -->
-      <div *ngIf="showModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 text-right" dir="rtl">
-        <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-2xl overflow-y-auto max-h-[90vh] border dark:border-gray-700 shadow-2xl">
+      <div *ngIf="showModal" (click)="closeModal()" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[1100] text-right" dir="rtl">
+        <div (click)="$event.stopPropagation()" class="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-2xl overflow-y-auto max-h-[90vh] border dark:border-gray-700 shadow-2xl">
           <h3 class="text-lg font-bold mb-4 dark:text-white border-b pb-2">
             {{ isEdit ? 'تعديل الكوبون' : 'إنشاء كوبون جديد' }}
           </h3>

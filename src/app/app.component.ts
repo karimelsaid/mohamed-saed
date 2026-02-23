@@ -126,7 +126,7 @@ export class AppComponent implements OnInit {
       if (event instanceof NavigationEnd) {
         window.scrollTo(0, 0);
 
-        this.isAdminPage = event.urlAfterRedirects.includes('/admin');
+        this.isAdminPage = event.urlAfterRedirects.includes('/admin') || event.urlAfterRedirects.includes('/ControlPanel');
 
         // CRITICAL: Do NOT overwrite state if we are just landing!
         // Only update state if we are navigating to a "real" page (Home or Mushaf)

@@ -65,6 +65,19 @@ class SitemapService extends EventEmitter {
     this.generateSitemap();
   }
 
+  /**
+   * Get a stable weekly date string (Monday of the current week).
+   * This prevents lastmod from changing on every regeneration.
+   */
+  getStableWeeklyDate() {
+    const now = new Date();
+    const day = now.getDay(); // 0=Sun, 1=Mon, ...
+    const diff = now.getDate() - day + (day === 0 ? -6 : 1); // Adjust to Monday
+    const monday = new Date(now.setDate(diff));
+    monday.setHours(0, 0, 0, 0);
+    return monday.toISOString().split('T')[0]; // YYYY-MM-DD format
+  }
+
   async generateSitemap() {
     const maxRetries = 5;
     const retryDelay = 2000;
@@ -75,7 +88,6 @@ class SitemapService extends EventEmitter {
         try {
           data = await fs.promises.readFile(this.outputJsonPath, 'utf8');
         } catch (readErr) {
-          // If file doesn't exist yet or is locked, throw to retry
           throw new Error(`Read error: ${readErr.message}`);
         }
 
@@ -91,34 +103,73 @@ class SitemapService extends EventEmitter {
         }
 
         if (!Array.isArray(books)) {
-          // If for some reason it's not an array (bad write), retry
           throw new Error('Content is not a JSON array');
         }
 
-        // Base URL - domain only
-        const baseUrl = 'https://knoozbook.com/';
+        const baseUrl = 'https://knoozbook.com';
+        const stableDate = this.getStableWeeklyDate();
+        const todayDate = new Date().toISOString().split('T')[0];
 
-        // Generate sitemap XML content
-        const urls = books.map(book => {
+        // --- Static Pages ---
+        const staticPages = [
+          { path: '/', changefreq: 'daily', priority: '1.0' },
+          { path: '/Home', changefreq: 'daily', priority: '0.9' },
+          { path: '/books', changefreq: 'daily', priority: '0.8' },
+          { path: '/Business-Marketing-Finance', changefreq: 'weekly', priority: '0.7' },
+          { path: '/Education-children', changefreq: 'weekly', priority: '0.7' },
+          { path: '/Arts-crafts', changefreq: 'weekly', priority: '0.7' },
+          { path: '/HealthMedicineScience', changefreq: 'weekly', priority: '0.7' },
+          { path: '/Islamic', changefreq: 'weekly', priority: '0.7' },
+          { path: '/Novels-stories', changefreq: 'weekly', priority: '0.7' },
+          { path: '/Self-development-psychology', changefreq: 'weekly', priority: '0.7' },
+          { path: '/History-Biographies', changefreq: 'weekly', priority: '0.7' },
+          { path: '/Dictionaries-References', changefreq: 'weekly', priority: '0.7' },
+          { path: '/electronics', changefreq: 'weekly', priority: '0.6' },
+          { path: '/clothing', changefreq: 'weekly', priority: '0.6' },
+          { path: '/cosmetics', changefreq: 'weekly', priority: '0.6' },
+          { path: '/shoes', changefreq: 'weekly', priority: '0.6' },
+          { path: '/furniture', changefreq: 'weekly', priority: '0.6' },
+          { path: '/games', changefreq: 'weekly', priority: '0.6' },
+          { path: '/office-supplies', changefreq: 'weekly', priority: '0.6' },
+          { path: '/عن-الموقع', changefreq: 'monthly', priority: '0.4' },
+          { path: '/سياسة-الخصوصية', changefreq: 'monthly', priority: '0.3' },
+          { path: '/الشروط-والاحكام', changefreq: 'monthly', priority: '0.3' },
+        ];
+
+        const staticUrls = staticPages.map(page => `
+  <url>
+    <loc>${baseUrl}${page.path}</loc>
+    <lastmod>${todayDate}</lastmod>
+    <changefreq>${page.changefreq}</changefreq>
+    <priority>${page.priority}</priority>
+  </url>`).join('');
+
+        // --- Product Pages ---
+        const productUrls = books.map(book => {
           const slug = slugify(book.product_name || '');
-          // Handle inconsistent product ID keys ('product_id' or 'products_id')
           const productId = book.product_id || book.products_id;
-          // Get category route (dynamic based on product category)
           const categoryRoute = getCategoryRoute(book.product_category);
-          // Construct the URL with the correct structure: /category-route/id/slug
-          const loc = `${baseUrl}${categoryRoute}/${productId}/${slug}`;
-          const lastmod = new Date().toISOString();
+          const loc = `${baseUrl}/${categoryRoute}/${productId}/${slug}`;
+          // Use promotion end date if available, otherwise stable weekly date
+          const lastmod = book.promotionEndDate
+            ? new Date(book.promotionEndDate).toISOString().split('T')[0]
+            : stableDate;
+          // Higher priority for in-stock and promoted items
+          const hasDiscount = (book.product_discount_percent || 0) > 0;
+          const inStock = (book.product_quantity || 0) > 0;
+          const priority = hasDiscount ? '0.9' : (inStock ? '0.8' : '0.5');
+
           return `
   <url>
     <loc>${loc}</loc>
     <lastmod>${lastmod}</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <priority>${priority}</priority>
   </url>`;
         }).join('');
 
         const sitemapContent = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls}
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${staticUrls}${productUrls}
 </urlset>`;
 
         // Ensure directory exists
@@ -126,6 +177,7 @@ class SitemapService extends EventEmitter {
 
         // Write sitemap.xml
         await fs.promises.writeFile(this.sitemapPath, sitemapContent, 'utf8');
+        console.log(`✅ Sitemap generated: ${books.length} products + ${staticPages.length} static pages`);
         return; // Success, exit loop
 
       } catch (error) {

@@ -139,6 +139,13 @@
         <span>طلبات الطباعة</span>
       </button>
 
+      <button (click)="switchView('printingSettings'); showSidebar = false"
+        [class]="currentView === 'printingSettings' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
+        class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
+        <fa-icon [icon]="['fas', 'cog']"></fa-icon>
+        <span>إعدادات الطباعة</span>
+      </button>
+
       <button (click)="switchView('freeShippingRules'); showSidebar = false"
         [class]="currentView === 'freeShippingRules' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
         class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
@@ -193,12 +200,46 @@
     <!-- Top Toolbar (Mobile Toggle & User Info) -->
     <header
       class="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4 shrink-0 shadow-sm z-20">
-      <button (click)="showSidebar = !showSidebar"
-        class="md:hidden text-gray-600 dark:text-gray-300 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
-        <fa-icon [icon]="['fas', 'bars']" class="text-xl"></fa-icon>
-      </button>
-      <div class="text-lg font-bold text-gray-800 dark:text-white hidden md:block">
-        {{currentView === 'dashboard' ? 'نظرة عامة' : ''}}
+      <div class="flex items-center gap-4 flex-1 max-w-2xl px-4">
+        <button (click)="showSidebar = !showSidebar"
+          class="md:hidden text-gray-600 dark:text-gray-300 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+          <fa-icon [icon]="['fas', 'bars']" class="text-xl"></fa-icon>
+        </button>
+
+        <!-- Dynamic Header Title -->
+        <h2
+          class="text-lg font-bold text-gray-800 dark:text-white hidden lg:block whitespace-nowrap overflow-hidden text-ellipsis">
+          {{ viewTitles[currentView] || 'نظرة عامة' }}
+        </h2>
+
+        <!-- Global Navigation Search -->
+        <div class="relative flex-1 hidden sm:block group">
+          <div
+            class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-gray-400 group-focus-within:text-blue-500 transition-colors">
+            <fa-icon [icon]="['fas', 'search']"></fa-icon>
+          </div>
+          <input type="text" [(ngModel)]="navSearchTerm" (focus)="showNavResults = true"
+            placeholder="ابحث عن قسم أو أداة (مثلاً: منتجات، طباعة...)"
+            class="block w-full pr-10 pl-3 py-2 bg-gray-100 dark:bg-gray-700/50 border-none rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-gray-700 transition-all">
+
+          <!-- Search Results Dropdown -->
+          <div *ngIf="showNavResults && filteredNavViews.length > 0"
+            class="absolute mt-2 w-full bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+            <div class="p-2 text-xs font-bold text-gray-400 uppercase px-4 py-2 bg-gray-50 dark:bg-gray-900/50">أدوات
+              لوحة التحكم</div>
+            <button *ngFor="let view of filteredNavViews" (click)="selectNavResult(view.id)"
+              class="w-full flex items-center gap-3 px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 text-right transition-colors group">
+              <div
+                class="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform">
+                <fa-icon [icon]="['fas', 'angle-left']"></fa-icon>
+              </div>
+              <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ view.title }}</span>
+            </button>
+          </div>
+
+          <!-- Overlay to close dropdown -->
+          <div *ngIf="showNavResults" class="fixed inset-0 z-[-1]" (click)="showNavResults = false"></div>
+        </div>
       </div>
       <div class="flex items-center gap-3">
         <span class="text-sm font-medium text-gray-600 dark:text-gray-300">مرحباً، الأدمن</span>
@@ -213,7 +254,8 @@
     <div class="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
 
       <!-- Progress Modal (Moved inside main) -->
-      <div *ngIf="progressModalOpen" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+      <div *ngIf="progressModalOpen"
+        class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-[1100]">
         <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-80 max-w-full text-center shadow-lg">
           <div class="text-blue-600 dark:text-blue-400 font-semibold flex items-center justify-center">
             <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none"
@@ -1370,9 +1412,19 @@
               class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded mb-2">
               حفظ الكل
             </button>
-            <button (click)="exportProductsToExcel()"
+            <button (click)="showExportModal = true"
               class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded mb-2">
               تصدير إلى Excel
+            </button>
+            <button (click)="openBulkAdjustModal()"
+              class="bg-orange-600 hover:bg-orange-700 text-white font-semibold py-2 px-4 rounded mb-2 flex items-center gap-2">
+              <fa-icon [icon]="['fas', 'percentage']"></fa-icon>
+              تعديل الأسعار جماعياً
+            </button>
+            <button (click)="inventoryMode = !inventoryMode"
+              class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded mb-2 flex items-center gap-2">
+              <fa-icon [icon]="inventoryMode ? ['fas', 'th-large'] : ['fas', 'list']"></fa-icon>
+              {{ inventoryMode ? 'عرض البطاقات' : 'وضع الجرد (جدول)' }}
             </button>
           </div>
           <button (click)="bulkDeleteSelectedProductsWithModal()" [disabled]="selectedProducts.size === 0"
@@ -1394,10 +1446,19 @@
                 <option value="withoutEbook">بدون نسخة إلكترونية</option>
               </select>
             </div>
+            <!-- Category Filter -->
+            <div class="flex items-center space-x-2 rtl">
+              <label for="categoryFilter" class="text-gray-700 dark:text-gray-300 font-semibold">الفئة:</label>
+              <select id="categoryFilter" [(ngModel)]="currentFilter" (ngModelChange)="onCategoryFilterChange()"
+                class="border rounded px-2 py-1 dark:bg-gray-700 dark:text-gray-200">
+                <option value="جميع الفئات">جميع الفئات</option>
+                <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
+              </select>
+            </div>
             <!-- Sort Controls -->
             <div class="flex items-center space-x-2 rtl">
               <label for="sortField" class="text-gray-700 dark:text-gray-300 font-semibold">ترتيب حسب:</label>
-              <select id="sortField" [(ngModel)]="sortField" (change)="onSortFieldChange($event)"
+              <select id="sortField" [ngModel]="sortField" (ngModelChange)="onSortFieldChange($event)"
                 class="border rounded px-2 py-1 dark:bg-gray-700 dark:text-gray-200">
                 <option value="">بدون ترتيب</option>
                 <option value="product_name">اسم المنتج</option>
@@ -1414,9 +1475,73 @@
             </div>
           </div>
         </div>
+
+        <!-- Barcode Quick Search for Inventory Mode -->
+        <div *ngIf="inventoryMode" class="mb-6">
+          <div class="relative max-w-md mx-auto">
+            <input type="text" placeholder="امسح الباركود أو ابحث سريعا..." [(ngModel)]="inventoryBarcodeSearch"
+              (keyup.enter)="focusProductByBarcode(inventoryBarcodeSearch)"
+              class="w-full pl-10 pr-4 py-3 bg-purple-50 dark:bg-purple-900/20 border-2 border-purple-200 dark:border-purple-800 rounded-2xl focus:ring-4 focus:ring-purple-500/20 focus:border-purple-500 outline-none transition-all text-lg font-bold text-center" />
+            <fa-icon [icon]="['fas', 'barcode']" class="absolute left-4 top-4 text-purple-500 text-xl"></fa-icon>
+          </div>
+          <p class="text-center text-xs text-gray-500 mt-2">اضغط Enter بعد المسح للانتقال للمنتج</p>
+        </div>
+
         <div class="overflow-x-auto">
-          <!-- New Product Card Layout -->
-          <div class="flex flex-col gap-6">
+          <!-- Quick Inventory Table Layout -->
+          <div *ngIf="inventoryMode"
+            class="bg-white dark:bg-gray-800 rounded-xl shadow-xl overflow-hidden mb-8 border border-gray-200 dark:border-gray-700">
+            <table class="w-full text-sm text-right">
+              <thead class="bg-gray-50 dark:bg-gray-900 border-b dark:border-gray-700">
+                <tr>
+                  <th class="px-4 py-3 font-bold text-gray-700 dark:text-gray-300 w-12 text-center">#</th>
+                  <th class="px-4 py-3 font-bold text-gray-700 dark:text-gray-300">المنتج</th>
+                  <th class="px-4 py-3 font-bold text-gray-700 dark:text-gray-300 w-24">الكمية</th>
+                  <th class="px-4 py-3 font-bold text-gray-700 dark:text-gray-300 w-28">التكلفة</th>
+                  <th class="px-4 py-3 font-bold text-gray-700 dark:text-gray-300 w-28">البيع</th>
+                  <th class="px-4 py-3 font-bold text-gray-700 dark:text-gray-300 w-16 text-center">تعديل</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y dark:divide-gray-700">
+                <tr *ngFor="let product of products; let i = index" [id]="'product-row-' + product.products_id"
+                  [ngClass]="{'bg-yellow-50 dark:bg-yellow-900/10': hasProductChanged(product)}"
+                  class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                  <td class="px-4 py-3 text-center text-gray-500">{{ i + 1 }}</td>
+                  <td class="px-4 py-3">
+                    <div class="font-bold text-gray-900 dark:text-gray-100 truncate max-w-[200px]"
+                      [title]="product.product_name">
+                      {{ product.product_name }}
+                    </div>
+                    <div class="text-[10px] text-gray-400">ID: {{ product.products_id }}</div>
+                  </td>
+                  <td class="px-2 py-3">
+                    <input type="number" [(ngModel)]="product.product_quantity"
+                      class="w-full p-1.5 border rounded dark:bg-gray-700 dark:border-gray-600 text-center font-bold"
+                      [id]="'input-qty-' + product.products_id">
+                  </td>
+                  <td class="px-2 py-3">
+                    <input type="number" [(ngModel)]="product.price_cost"
+                      class="w-full p-1.5 border rounded dark:bg-gray-700 dark:border-gray-600 text-center"
+                      [id]="'input-cost-' + product.products_id">
+                  </td>
+                  <td class="px-2 py-3">
+                    <input type="number" [(ngModel)]="product.product_price"
+                      class="w-full p-1.5 border rounded dark:bg-gray-700 dark:border-gray-600 text-center font-bold text-blue-600 dark:text-blue-400"
+                      [id]="'input-price-' + product.products_id">
+                  </td>
+                  <td class="px-4 py-3 text-center">
+                    <button (click)="handleEditClick(product)"
+                      class="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors">
+                      <fa-icon [icon]="['fas', 'save']"></fa-icon>
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- New Product Card Layout (Existing) -->
+          <div *ngIf="!inventoryMode" class="flex flex-col gap-6">
             <div *ngFor="let product of products; let i = index"
               class="relative bg-white dark:bg-gray-800 shadow-lg rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
 
@@ -2263,6 +2388,11 @@
         </div>
       </div>
 
+      <!-- عرض إعدادات الطباعة -->
+      <div *ngIf="currentView === 'printingSettings'" class="px-2 sm:px-10 mb-32 md:mb-0">
+        <app-admin-printing></app-admin-printing>
+      </div>
+
       <!-- عرض طلبات الطوارئ -->
       <div *ngIf="currentView === 'urgencyRequests'" class="px-2 sm:px-10 mb-32 md:mb-0">
         <h3 class="text-xl font-bold mb-4 text-gray-900 dark:text-gray-200">طلبات الطوارئ</h3>
@@ -2398,9 +2528,10 @@
       </div>
 
       <!-- Floating upload success indicator (only shows after successful upload) -->
-      <div *ngIf="uploadSuccess"
-        class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 mb-32 md:mb-0">
-        <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-80 max-w-full text-center shadow-lg">
+      <div *ngIf="uploadSuccess" (click)="uploadSuccess = false"
+        class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-[1100] mb-32 md:mb-0">
+        <div (click)="$event.stopPropagation()"
+          class="bg-white dark:bg-gray-800 rounded-lg p-6 w-80 max-w-full text-center shadow-lg">
           <div class="text-green-600 dark:text-green-400 font-semibold flex flex-col items-center space-y-2">
             <fa-icon [icon]="['fas', 'check-circle']" class="text-6xl animate-scale-up"></fa-icon>
             <div>تم الرفع بنجاح!</div>
@@ -2409,7 +2540,7 @@
 
       </div>
       <!-- Camera Modal -->
-      <div *ngIf="showCameraModal"
+      <div *ngIf="showCameraModal" (click)="closeCamera()"
         style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 99999; background-color: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center;"
         class="backdrop-blur-sm animate-in fade-in duration-200">
 
@@ -2470,4 +2601,241 @@
       </div>
     </div>
   </main>
+
+  <!-- Bulk Adjust Prices Modal -->
+  <div *ngIf="showBulkAdjustModal" (click)="closeBulkAdjustModal()"
+    class="fixed inset-0 z-[1100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+    <div (click)="$event.stopPropagation()"
+      class="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col">
+      <!-- Modal Header -->
+      <div class="bg-gradient-to-r from-orange-500 to-red-600 p-6 text-white shrink-0">
+        <div class="flex justify-between items-center">
+          <h3 class="text-2xl font-bold flex items-center gap-2">
+            <fa-icon [icon]="['fas', 'percentage']"></fa-icon>
+            تعديل الأسعار جماعياً
+          </h3>
+          <button (click)="closeBulkAdjustModal()" class="text-white/70 hover:text-white transition-colors">
+            <fa-icon [icon]="['fas', 'times']" class="text-xl"></fa-icon>
+          </button>
+        </div>
+        <p class="text-orange-100 mt-1">تحديث أسعار مئات المنتجات بضغطة واحدة</p>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-6 space-y-4 overflow-y-auto max-h-[70vh]">
+
+        <!-- Filter: Category (Multi-Select) -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">تحديد الفئات المستهدفة</label>
+          <div class="border dark:border-gray-700 rounded-xl overflow-hidden bg-gray-50 dark:bg-gray-900/30">
+            <div
+              class="max-h-48 overflow-y-auto p-2 space-y-1 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700">
+              <!-- All Categories Option -->
+              <button (click)="toggleCategorySelection('جميع الفئات')"
+                [class]="isCategorySelected('جميع الفئات') ? 'bg-orange-100 dark:bg-orange-900/30 border-orange-200 dark:border-orange-800' : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 hover:bg-gray-50'"
+                class="w-full flex items-center gap-3 p-3 rounded-lg border text-right transition-all group">
+                <div class="w-5 h-5 rounded border flex items-center justify-center transition-colors"
+                  [class]="isCategorySelected('جميع الفئات') ? 'bg-orange-500 border-orange-500 text-white' : 'border-gray-300 dark:border-gray-600'">
+                  <fa-icon *ngIf="isCategorySelected('جميع الفئات')" [icon]="['fas', 'check']"
+                    class="text-[10px]"></fa-icon>
+                </div>
+                <span class="text-sm font-bold"
+                  [class]="isCategorySelected('جميع الفئات') ? 'text-orange-700 dark:text-orange-400' : 'text-gray-700 dark:text-gray-300'">جميع
+                  الفئات</span>
+              </button>
+
+              <!-- Specific Categories -->
+              <div class="grid grid-cols-1 gap-1">
+                <button *ngFor="let cat of categories" (click)="toggleCategorySelection(cat)"
+                  [class]="isCategorySelected(cat) ? 'bg-blue-100 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800' : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 hover:bg-gray-50'"
+                  class="w-full flex items-center gap-3 p-3 rounded-lg border text-right transition-all group">
+                  <div class="w-5 h-5 rounded border flex items-center justify-center transition-colors"
+                    [class]="isCategorySelected(cat) ? 'bg-blue-500 border-blue-500 text-white' : 'border-gray-300 dark:border-gray-600'">
+                    <fa-icon *ngIf="isCategorySelected(cat)" [icon]="['fas', 'check']" class="text-[10px]"></fa-icon>
+                  </div>
+                  <span class="text-sm font-medium"
+                    [class]="isCategorySelected(cat) ? 'text-blue-700 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400'">{{
+                    cat }}</span>
+                </button>
+              </div>
+            </div>
+            <div
+              class="bg-gray-100 dark:bg-gray-800 px-4 py-2 text-[10px] text-gray-500 dark:text-gray-400 border-t dark:border-gray-700">
+              تم تحديد {{ isCategorySelected('جميع الفئات') ? 'جميع الفئات' : bulkAdjustData.category.length + ' فئة' }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Filter: Price Range -->
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">أقل سعر</label>
+            <input type="number" [(ngModel)]="bulkAdjustData.minPrice"
+              class="w-full p-2.5 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">أقصى سعر</label>
+            <input type="number" [(ngModel)]="bulkAdjustData.maxPrice"
+              class="w-full p-2.5 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+          </div>
+        </div>
+
+        <hr class="dark:border-gray-700">
+
+        <!-- Adjustment Type & Direction -->
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">نوع العملية</label>
+            <select [(ngModel)]="bulkAdjustData.direction"
+              class="w-full p-2.5 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+              <option value="increase">زيادة (+)</option>
+              <option value="decrease">نقصان (-)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">طريقة الحساب</label>
+            <select [(ngModel)]="bulkAdjustData.adjustmentType"
+              class="w-full p-2.5 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+              <option value="percentage">نسبة مئوية (%)</option>
+              <option value="fixed">مبلغ ثابت (جم)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Adjustment Value -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">القيمة</label>
+          <div class="relative">
+            <input type="number" [(ngModel)]="bulkAdjustData.adjustmentValue"
+              class="w-full p-3 pl-10 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white text-lg font-bold">
+            <span class="absolute left-4 top-3 text-gray-400 font-bold">
+              {{ bulkAdjustData.adjustmentType === 'percentage' ? '%' : 'جم' }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Warning Note -->
+        <div
+          class="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-100 dark:border-yellow-900/30 rounded-xl text-xs text-yellow-800 dark:text-yellow-400">
+          <fa-icon [icon]="['fas', 'exclamation-triangle']" class="ml-1"></fa-icon>
+          تنبيه: سيتم تطبيق هذا التعديل على جميع المنتجات التي تطابق الفلاتر المحددة أعلاه في ملف Excel الرئيسي على
+          Google Drive.
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-6 bg-gray-50 dark:bg-gray-900/50 flex gap-4 shrink-0">
+        <button (click)="closeBulkAdjustModal()"
+          class="flex-1 px-4 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-100 transition-colors">
+          إلغاء
+        </button>
+        <button (click)="onBulkAdjust()" [disabled]="isBulkAdjusting"
+          class="flex-[2] px-4 py-3 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-xl font-bold shadow-lg hover:shadow-xl hover:translate-y-[-2px] transition-all disabled:opacity-50 disabled:translate-y-0">
+          <span *ngIf="!isBulkAdjusting">تطبيق التعديلات الآن 🚀</span>
+          <span *ngIf="isBulkAdjusting" class="flex items-center justify-center gap-2">
+            <svg class="animate-spin h-5 w-5 text-white" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none">
+              </circle>
+              <path class="opacity-75" fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+              </path>
+            </svg>
+            جاري المعالجة...
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+  <!-- Export Options Modal -->
+  <div *ngIf="showExportModal" (click)="showExportModal = false"
+    class="fixed inset-0 z-[1200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-300">
+    <div (click)="$event.stopPropagation()"
+      class="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col transform animate-in zoom-in-95 duration-300">
+      <!-- Modal Header -->
+      <div class="bg-gradient-to-r from-blue-500 to-indigo-600 p-6 text-white shrink-0">
+        <div class="flex justify-between items-center">
+          <h3 class="text-2xl font-bold flex items-center gap-2">
+            <fa-icon [icon]="['fas', 'file-excel']"></fa-icon>
+            خيارات التصدير إلى Excel
+          </h3>
+          <button (click)="showExportModal = false" class="text-white/70 hover:text-white transition-colors">
+            <fa-icon [icon]="['fas', 'times']" class="text-xl"></fa-icon>
+          </button>
+        </div>
+        <p class="text-blue-100 mt-1">حدد الفلاتر لتصدير بيانات مخصصة</p>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-6 space-y-5 overflow-y-auto max-h-[70vh]">
+
+        <!-- Filter: Categories (Multi-Select) -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الفئات (متعدد)</label>
+          <div class="border dark:border-gray-700 rounded-xl overflow-hidden bg-gray-50 dark:bg-gray-900/30">
+            <div
+              class="max-h-48 overflow-y-auto p-2 space-y-1 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700">
+              <!-- All Categories -->
+              <button (click)="toggleExportCategorySelection('جميع الفئات')"
+                [class]="isExportCategorySelected('جميع الفئات') ? 'bg-blue-100 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800' : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 hover:bg-gray-50'"
+                class="w-full flex items-center gap-3 p-2.5 rounded-lg border text-right transition-all group">
+                <div class="w-4 h-4 rounded border flex items-center justify-center transition-colors"
+                  [class]="isExportCategorySelected('جميع الفئات') ? 'bg-blue-500 border-blue-500 text-white' : 'border-gray-300 dark:border-gray-600'">
+                  <fa-icon *ngIf="isExportCategorySelected('جميع الفئات')" [icon]="['fas', 'check']"
+                    class="text-[8px]"></fa-icon>
+                </div>
+                <span class="text-sm font-bold"
+                  [class]="isExportCategorySelected('جميع الفئات') ? 'text-blue-700 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300'">جميع
+                  الفئات</span>
+              </button>
+
+              <!-- Category List -->
+              <div class="grid grid-cols-1 gap-1">
+                <button *ngFor="let cat of categories" (click)="toggleExportCategorySelection(cat)"
+                  [class]="isExportCategorySelected(cat) ? 'bg-indigo-100 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-800' : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 hover:bg-gray-50'"
+                  class="w-full flex items-center gap-3 p-2.5 rounded-lg border text-right transition-all group">
+                  <div class="w-4 h-4 rounded border flex items-center justify-center transition-colors"
+                    [class]="isExportCategorySelected(cat) ? 'bg-indigo-500 border-indigo-500 text-white' : 'border-gray-300 dark:border-gray-600'">
+                    <fa-icon *ngIf="isExportCategorySelected(cat)" [icon]="['fas', 'check']"
+                      class="text-[8px]"></fa-icon>
+                  </div>
+                  <span class="text-sm font-medium"
+                    [class]="isExportCategorySelected(cat) ? 'text-indigo-700 dark:text-indigo-400' : 'text-gray-600 dark:text-gray-400'">{{
+                    cat }}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filter: Quantity Threshold -->
+        <div class="space-y-3">
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">كمية المنتج أقل من أو تساوي</label>
+          <div class="flex items-center gap-3">
+            <div class="relative flex-grow">
+              <input type="number" [(ngModel)]="exportOptions.maxQuantity" placeholder="أدخل الكمية أو اتركها فارغة"
+                class="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white font-bold">
+            </div>
+            <button (click)="exportOptions.maxQuantity = 5"
+              class="px-4 py-3 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-xl font-bold border border-red-200 dark:border-red-800 whitespace-nowrap hover:bg-red-200 transition-colors">
+              نواقص (≤ 5)
+            </button>
+          </div>
+          <p class="text-[10px] text-gray-400">اتركها فارغة لتصدير جميع الكميات</p>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-6 bg-gray-50 dark:bg-gray-900/50 flex gap-4 shrink-0">
+        <button (click)="showExportModal = false"
+          class="flex-1 px-4 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-200 transition-colors">
+          إلغاء
+        </button>
+        <button (click)="exportProductsToExcel()"
+          class="flex-[2] px-4 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl font-bold shadow-lg hover:shadow-xl hover:translate-y-[-2px] transition-all">
+          ابدأ التصدير الآن 📥
+        </button>
+      </div>
+    </div>
+  </div>
 </div>

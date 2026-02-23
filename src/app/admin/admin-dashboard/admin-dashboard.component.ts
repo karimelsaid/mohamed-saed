@@ -24,6 +24,7 @@ import { AdminEbooksComponent } from '../admin-ebooks/admin-ebooks.component';
 import { AdminNotificationsComponent } from '../admin-notifications/admin-notifications.component';
 import { SubscriptionSettingsComponent } from '../subscription-settings/subscription-settings.component';
 import { PromotionsManagerComponent } from '../promotions-manager/promotions-manager.component';
+import { AdminPrintingComponent } from '../admin-printing/admin-printing.component';
 
 interface Order {
   _id: string;
@@ -203,7 +204,8 @@ interface SystemSettings {
     AdminEbooksComponent,
     AdminNotificationsComponent,
     SubscriptionSettingsComponent,
-    PromotionsManagerComponent
+    PromotionsManagerComponent,
+    AdminPrintingComponent
   ],
   templateUrl: './admin-dashboard.component.html',
   styleUrls: ['./admin-dashboard.component.css']
@@ -216,7 +218,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   feedbacks: ReaderFeedback[] = [];
   isAdmin: boolean = false; // Add paymentRequests to the type union
   showSidebar: boolean = true;
-  currentView: 'dashboard' | 'userIntelligence' | 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' | 'gamificationControl' | 'notifications' | 'subscriptionControl' | 'readerFeedback' | 'promotions' = 'dashboard';
+  currentView: 'dashboard' | 'userIntelligence' | 'orders' | 'requestedBooks' | 'printOrders' | 'printingSettings' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' | 'gamificationControl' | 'notifications' | 'subscriptionControl' | 'readerFeedback' | 'promotions' = 'dashboard';
 
   // Gamification Control Properties
   systemSettings: SystemSettings = {
@@ -281,6 +283,18 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   productsPageSize: number = 50;
   searchTerm: string = '';
 
+  // Bulk Adjustment Properties
+  showBulkAdjustModal: boolean = false;
+  bulkAdjustData = {
+    category: ['جميع الفئات'] as string[],
+    minPrice: 0,
+    maxPrice: 100000,
+    adjustmentType: 'percentage' as 'percentage' | 'fixed',
+    adjustmentValue: 0,
+    direction: 'increase' as 'increase' | 'decrease'
+  };
+  isBulkAdjusting: boolean = false;
+
   // New properties for sorting
   sortField: keyof Product | '' = '';
   sortDirection: 'asc' | 'desc' = 'asc';
@@ -288,10 +302,45 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   // Ebook filter property
   ebookFilter: 'all' | 'withEbook' | 'withoutEbook' = 'all';
 
+  // Inventory Mode properties
+  inventoryMode: boolean = false;
+  inventoryBarcodeSearch: string = '';
+
   // Multi-select properties
   selectedProducts: Set<string> = new Set();
   selectedOrders: Set<string> = new Set();
   selectedPrintOrders: Set<string> = new Set();
+
+  // Export Filter Properties
+  showExportModal: boolean = false;
+  exportOptions = {
+    categories: [] as string[],
+    maxQuantity: null as number | null,
+    lowStockThreshold: 5
+  };
+
+  toggleExportCategorySelection(cat: string): void {
+    if (cat === 'جميع الفئات') {
+      this.exportOptions.categories = ['جميع الفئات'];
+    } else {
+      // Remove "All" if a specific category is selected
+      this.exportOptions.categories = this.exportOptions.categories.filter(c => c !== 'جميع الفئات');
+      const idx = this.exportOptions.categories.indexOf(cat);
+      if (idx > -1) {
+        this.exportOptions.categories.splice(idx, 1);
+      } else {
+        this.exportOptions.categories.push(cat);
+      }
+      // If empty, default back to all
+      if (this.exportOptions.categories.length === 0) {
+        this.exportOptions.categories = ['جميع الفئات'];
+      }
+    }
+  }
+
+  isExportCategorySelected(cat: string): boolean {
+    return this.exportOptions.categories.includes(cat);
+  }
 
   // Stats properties
   totalOrders: number = 0;
@@ -342,6 +391,52 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   faSearch = faSearch; // Ensure faSearch is imported or added to library
   faSlidersH = faSlidersH;
   faGift = faGift;
+
+  // Navigation Titles Mapping
+  viewTitles: Record<string, string> = {
+    'dashboard': 'لوحة التحكم الرئيسية',
+    'userIntelligence': 'ذكاء المستخدمين',
+    'orders': 'إدارة الطلبات',
+    'merchantOrders': 'طلبات التجار',
+    'requestedBooks': 'الكتب المطلوبة',
+    'printOrders': 'طلبات الطباعة',
+    'printingSettings': 'إعدادات الطباعة وتحكم السعر',
+    'addProduct': 'إضافة منتج جديد',
+    'products': 'إدارة المنتجات',
+    'newPage': 'إنشاء صفحة مقالية',
+    'freeShippingRules': 'قواعد الشحن المجاني',
+    'merchants': 'إدارة التجار',
+    'productApproval': 'اعتماد المنتجات',
+    'paymentRequests': 'سحب الأرباح',
+    'userHierarchy': 'شجرة العائلة (المسوقين)',
+    'urgencyRequests': 'طلبات الاستعجال',
+    'amazonCalculator': 'حاسبة أمازون',
+    'ebooks': 'إدارة الكتب الإلكترونية',
+    'mobileVersion': 'إعدادات التطبيق',
+    'gamificationControl': 'نظام النقاط والمكافآت',
+    'notifications': 'الإشعارات والعروض',
+    'subscriptionControl': 'إدارة الاشتراكات',
+    'readerFeedback': 'ملاحظات القراء',
+    'promotions': 'إدارة العروض والخصومات'
+  };
+
+  // Global Navigation Search
+  navSearchTerm: string = '';
+  showNavResults: boolean = false;
+
+  get filteredNavViews() {
+    if (!this.navSearchTerm.trim()) return [];
+    const term = this.navSearchTerm.toLowerCase();
+    return Object.entries(this.viewTitles)
+      .filter(([id, title]) => title.toLowerCase().includes(term) || id.toLowerCase().includes(term))
+      .map(([id, title]) => ({ id, title }));
+  }
+
+  selectNavResult(viewId: any): void {
+    this.switchView(viewId);
+    this.navSearchTerm = '';
+    this.showNavResults = false;
+  }
 
   // User Intelligence Phase 2
   usersList: any[] = [];
@@ -872,7 +967,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     }
   }
 
-  switchView(view: 'dashboard' | 'userIntelligence' | 'orders' | 'requestedBooks' | 'printOrders' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' | 'gamificationControl' | 'notifications' | 'subscriptionControl' | 'readerFeedback' | 'promotions'): void {
+  switchView(view: 'dashboard' | 'userIntelligence' | 'orders' | 'requestedBooks' | 'printOrders' | 'printingSettings' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' | 'gamificationControl' | 'notifications' | 'subscriptionControl' | 'readerFeedback' | 'promotions'): void {
     this.currentView = view;
 
     if (view === 'dashboard') {
@@ -1256,6 +1351,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
           });
           this.allProducts = response.products;
           this.originalProducts = JSON.parse(JSON.stringify(response.products)); // deep copy for change detection
+          this.rebuildFilteredProducts();
           this.updateProductsPage();
         }
       },
@@ -1277,8 +1373,118 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     });
   }
 
-  get filteredProducts(): Product[] {
+  openBulkAdjustModal(): void {
+    this.showBulkAdjustModal = true;
+  }
+
+  closeBulkAdjustModal(): void {
+    this.showBulkAdjustModal = false;
+  }
+
+  onBulkAdjust(): void {
+    if (this.bulkAdjustData.adjustmentValue <= 0) {
+      this.showErrorModal('يرجى إدخال قيمة صحيحة للتعديل');
+      return;
+    }
+
+    this.isBulkAdjusting = true;
+    this.http.post<any>(`${this.backendBaseUrl}/admin/products/bulk-adjust`, this.bulkAdjustData).subscribe({
+      next: (response) => {
+        this.isBulkAdjusting = false;
+        if (response.success) {
+          this.showSuccessModal(response.message);
+          this.closeBulkAdjustModal();
+          this.loadProducts(); // Reload all products to reflect changes
+        } else {
+          this.showErrorModal(response.message || 'فشل التعديل الجماعي للأسعار');
+        }
+      },
+      error: (err) => {
+        this.isBulkAdjusting = false;
+        this.showErrorModal('حدث خطأ أثناء التعديل الجماعي للأسعار');
+      }
+    });
+  }
+
+  toggleCategorySelection(cat: string): void {
+    if (cat === 'جميع الفئات') {
+      this.bulkAdjustData.category = ['جميع الفئات'];
+      return;
+    }
+
+    // Remove "All" if it's there and we're picking a specific one
+    const allIndex = this.bulkAdjustData.category.indexOf('جميع الفئات');
+    if (allIndex !== -1) {
+      this.bulkAdjustData.category.splice(allIndex, 1);
+    }
+
+    const index = this.bulkAdjustData.category.indexOf(cat);
+    if (index === -1) {
+      this.bulkAdjustData.category.push(cat);
+    } else {
+      this.bulkAdjustData.category.splice(index, 1);
+      // If none selected, default back to All
+      if (this.bulkAdjustData.category.length === 0) {
+        this.bulkAdjustData.category = ['جميع الفئات'];
+      }
+    }
+  }
+
+  focusProductByBarcode(barcode: string): void {
+    if (!barcode) return;
+
+    // Find product by barcode or products_id
+    const trimmed = barcode.trim();
+    const product = this.allProducts.find(p => p['barcode'] === trimmed || p.products_id === trimmed);
+
+    if (product) {
+      // Clear search to show the target product if it was filtered out
+      if (this.searchTerm) {
+        this.searchTerm = '';
+        this.onSearchTermChange();
+      }
+
+      // Small delay to ensure view is updated if search was cleared
+      setTimeout(() => {
+        const element = document.getElementById('product-row-' + product.products_id);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+          // Flash effect
+          element.classList.add('bg-purple-100', 'dark:bg-purple-900/40');
+          setTimeout(() => element.classList.remove('bg-purple-100', 'dark:bg-purple-900/40'), 1500);
+
+          // Focus quantity input
+          const qtyInput = document.getElementById('input-qty-' + product.products_id) as HTMLInputElement;
+          if (qtyInput) {
+            qtyInput.focus();
+            qtyInput.select();
+          }
+        }
+      }, 100);
+
+      this.inventoryBarcodeSearch = ''; // Clear the input
+    } else {
+      // Not found alert
+      alert('لم يتم العثور على منتج بهذا الباركود: ' + trimmed);
+      this.inventoryBarcodeSearch = '';
+    }
+  }
+
+  isCategorySelected(cat: string): boolean {
+    return this.bulkAdjustData.category.includes(cat);
+  }
+
+  // Cached filtered+sorted product array — rebuilt on any filter/sort change
+  private _filteredProducts: Product[] = [];
+
+  rebuildFilteredProducts(): void {
     let filtered = this.allProducts;
+
+    // Apply category filter
+    if (this.currentFilter && this.currentFilter !== 'جميع الفئات') {
+      filtered = filtered.filter(p => p.product_category === this.currentFilter);
+    }
 
     // Apply ebook filter
     if (this.ebookFilter === 'withEbook') {
@@ -1302,7 +1508,6 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
         if (this.sortField === 'createdAt' || this.sortField === 'fileOrder') {
           const aOrder = a.fileOrder ?? 0;
           const bOrder = b.fileOrder ?? 0;
-          // Sort by file order: asc means oldest first (first in file), desc means newest last (last in file)
           if (this.sortDirection === 'asc') {
             return aOrder - bOrder;
           } else {
@@ -1316,6 +1521,14 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
         if (aValue == null) return 1;
         if (bValue == null) return -1;
 
+        // Force numeric comparison for quantity and price fields
+        const numericFields = ['product_quantity', 'product_price', 'price_cost'];
+        if (numericFields.includes(this.sortField as string)) {
+          const aNum = Number(aValue) || 0;
+          const bNum = Number(bValue) || 0;
+          return this.sortDirection === 'asc' ? aNum - bNum : bNum - aNum;
+        }
+
         if (typeof aValue === 'string' && typeof bValue === 'string') {
           const comparison = aValue.localeCompare(bValue);
           return this.sortDirection === 'asc' ? comparison : -comparison;
@@ -1327,13 +1540,17 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       });
     }
 
-    return filtered;
+    this._filteredProducts = filtered;
+  }
+
+  get filteredProducts(): Product[] {
+    return this._filteredProducts;
   }
 
   updateProductsPage(): void {
     const start = (this.productsPage - 1) * this.productsPageSize;
     const end = this.productsPage * this.productsPageSize;
-    this.products = this.filteredProducts.slice(start, end);
+    this.products = this._filteredProducts.slice(start, end);
   }
 
   nextProductsPage(): void {
@@ -1346,31 +1563,38 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
   onSearchTermChange(): void {
     this.productsPage = 1;
+    this.rebuildFilteredProducts();
     this.updateProductsPage();
   }
 
   onEbookFilterChange(): void {
     this.productsPage = 1;
+    this.rebuildFilteredProducts();
     this.updateProductsPage();
   }
 
-  onSortFieldChange(event: Event): void {
-    const target = event.target as HTMLSelectElement;
-    if (!target) return;
-    const value = target.value as keyof Product | '';
+  onCategoryFilterChange(): void {
+    this.productsPage = 1;
+    this.rebuildFilteredProducts();
+    this.updateProductsPage();
+  }
+
+  onSortFieldChange(newValue: string): void {
+    const value = newValue as keyof Product | '';
     if (value === this.sortField) {
-      // Toggle direction
       this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
     } else {
       this.sortField = value;
       this.sortDirection = 'asc';
     }
     this.productsPage = 1;
+    this.rebuildFilteredProducts();
     this.updateProductsPage();
   }
 
   toggleSortDirection(): void {
     this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+    this.rebuildFilteredProducts();
     this.updateProductsPage();
   }
 
@@ -1383,7 +1607,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   }
 
   totalProductsPages(): number {
-    return Math.ceil(this.filteredProducts.length / this.productsPageSize);
+    return Math.ceil(this._filteredProducts.length / this.productsPageSize);
   }
 
   updateProduct(product: Product): void {
@@ -1540,10 +1764,38 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
 
   exportProductsToExcel(): void {
-    const worksheet = XLSX.utils.json_to_sheet(this.allProducts);
+    let filtered = [...this.allProducts];
+
+    // 1. Filter by categories
+    if (this.exportOptions.categories.length > 0 && !this.exportOptions.categories.includes('جميع الفئات')) {
+      filtered = filtered.filter(p => this.exportOptions.categories.includes(p.product_category));
+    }
+
+    // 2. Filter by max quantity
+    if (this.exportOptions.maxQuantity !== null) {
+      filtered = filtered.filter(p => p.product_quantity <= (this.exportOptions.maxQuantity || 0));
+    }
+
+    if (filtered.length === 0) {
+      this.showErrorModal('لا توجد منتجات تطابق هذه الفلاتر للتصدير.');
+      return;
+    }
+
+    const worksheet = XLSX.utils.json_to_sheet(filtered.map(p => ({
+      'المعرف': p.products_id,
+      'الباركود': p['barcode'] || '',
+      'اسم المنتج': p.product_name,
+      'الفئة': p.product_category,
+      'الكمية': p.product_quantity,
+      'سعر التكلفة': p.price_cost,
+      'سعر البيع': p.product_price,
+      'الوصف': p.product_description
+    })));
+
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Products');
-    XLSX.writeFile(workbook, 'products.xlsx');
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Filtered Products');
+    XLSX.writeFile(workbook, `products_export_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    this.showExportModal = false;
   }
 
   exportAllDataToExcel(): void {

@@ -57,6 +57,9 @@ router.post('/sync-json-to-google-sheets', async (req, res) => {
 // New route for batch update products
 router.post('/products/batch-update', adminController.batchUpdateProducts);
 
+// New route for bulk price adjustment
+router.post('/products/bulk-adjust', adminController.bulkAdjustPrices);
+
 // New route to update promotion start and end dates and update Excel/output.json
 router.post('/update-promotion-dates', adminController.updatePromotionDates);
 

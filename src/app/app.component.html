@@ -293,7 +293,7 @@
   </footer>
 </div>
 
-<app-navbar-icons (accountClick)="openAccountModal()" [isBottomNav]="true" *ngIf="!isMushafPage"
+<app-navbar-icons (accountClick)="openAccountModal()" [isBottomNav]="true" *ngIf="!isMushafPage && !isAdminPage"
   class="fixed bottom-0 left-0 right-0 block md:hidden bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-t border-gray-100 dark:border-gray-800 p-4 shadow-lg z-50"></app-navbar-icons>
 <app-account-modal #accountModal></app-account-modal>
 <app-modal-dialog *ngIf="modalConfig" [isOpen]="!!modalConfig" [title]="modalConfig.title || ''"

@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild } from '@angular/core';
 import { GamificationService } from '../services/gamification.service';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { take } from 'rxjs/operators';
@@ -16,6 +16,7 @@ import { faStar as faStarRegular } from '@fortawesome/free-regular-svg-icons';
 import { environment } from '../../environments/environment';
 import { SlugService } from '../services/slug.service';
 import { PromotionService } from '../services/promotion.service';
+import { SeoService } from '../services/seo.service';
 
 @Component({
   selector: 'app-book-details',
@@ -24,7 +25,7 @@ import { PromotionService } from '../services/promotion.service';
   templateUrl: './book-details.component.html',
   styleUrls: ['./book-details.component.css']
 })
-export class BookDetailsComponent implements OnInit {
+export class BookDetailsComponent implements OnInit, OnDestroy {
   uploadsBaseUrl = environment.uploadsBaseUrl;
   @ViewChild(AccountModalComponent, { static: false }) accountModal?: AccountModalComponent;
   faStar = faStar;
@@ -56,7 +57,8 @@ export class BookDetailsComponent implements OnInit {
     private http: HttpClient,
     private slugService: SlugService,
     public gamificationService: GamificationService,
-    private promotionService: PromotionService
+    private promotionService: PromotionService,
+    private seoService: SeoService
   ) { }
 
   ngOnInit(): void {
@@ -82,6 +84,7 @@ export class BookDetailsComponent implements OnInit {
               this.handleReferral(); // Handle referral after book is loaded
               this.fetchAverageRating(this.book.products_id.toString());
               this.loadRelatedProducts();
+              this.updateSeoTags(this.book);
               // Check if accessed via /product/ and redirect to category-specific URL
               this.route.url.subscribe(urlSegments => {
                 if (urlSegments.length > 0 && urlSegments[0].path === 'product') {
@@ -471,5 +474,51 @@ export class BookDetailsComponent implements OnInit {
     }
 
     return { discountedPrice: finalDiscountedPrice, discountedQty: discountedQty };
+  }
+
+  /**
+   * Update SEO meta tags and JSON-LD for the current product.
+   */
+  private updateSeoTags(book: Book): void {
+    const categoryRoute = this.getProductRoute(book);
+    const productUrl = `https://knoozbook.com/${categoryRoute.join('/')}`;
+    const imageUrl = this.getBookImageUrl(book);
+    const description = book.product_description
+      ? book.product_description.substring(0, 160)
+      : `${book.product_name} - متوفر الآن في مكتبة كنوز بسعر ${book.product_price} جنيه. ${book.product_category}. اطلب الآن مع خدمة توصيل لجميع المحافظات.`;
+
+    // Update meta tags
+    this.seoService.updateMetaTags({
+      title: book.product_name,
+      description: description,
+      keywords: `${book.product_name}, ${book.product_category}, مكتبة كنوز, شراء ${book.product_name}${book.author ? ', ' + book.author : ''}`,
+      image: imageUrl,
+      url: productUrl,
+      type: 'product',
+      price: book.product_price,
+      currency: 'EGP',
+      availability: (book.product_quantity > 0) ? 'in_stock' : 'out_of_stock'
+    });
+
+    // Set JSON-LD structured data
+    this.seoService.setProductJsonLd({
+      name: book.product_name,
+      description: description,
+      image: imageUrl,
+      price: book.product_price,
+      priceBefore: book.product_price_before_discount,
+      currency: 'EGP',
+      availability: (book.product_quantity > 0) ? 'in_stock' : 'out_of_stock',
+      category: book.product_category,
+      brand: book.author || book.publisher || book.brand || 'مكتبة كنوز',
+      url: productUrl,
+      rating: this.averageRating,
+      ratingCount: this.ratingCount
+    });
+  }
+
+  ngOnDestroy(): void {
+    // Reset to defaults when leaving the page
+    this.seoService.resetToDefaults();
   }
 }

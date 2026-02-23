@@ -1,0 +1,15 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 30
+    },
+    "auditLog": "D:\\My projects\\Kenouz\\Backend\\logs\\.e2ddb620b32ce0a6cae942a617f0214021c9856b-audit.json",
+    "files": [
+        {
+            "date": 1771769449781,
+            "name": "D:\\My projects\\Kenouz\\Backend\\logs\\error-2026-02-22.log",
+            "hash": "cc6e47fefcd1123ea7efef89ccc1a2baf8d30f5662424538e5f892bde046427e"
+        }
+    ],
+    "hashType": "sha256"
+}

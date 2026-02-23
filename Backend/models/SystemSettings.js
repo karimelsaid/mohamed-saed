@@ -34,6 +34,29 @@ const systemSettingsSchema = mongoose.Schema({
         dailyReward: { hour: { type: Number, default: 9 }, minute: { type: Number, default: 0 } },
         dailyWisdom: { hour: { type: Number, default: 14 }, minute: { type: Number, default: 0 } }
     },
+    printing: {
+        paperPrices: {
+            B5: {
+                white: { type: Number, default: 0.20 },
+                yellow: { type: Number, default: 0.25 },
+                creamy: { type: Number, default: 0.35 }
+            },
+            A4: {
+                white: { type: Number, default: 0.30 },
+                yellow: { type: Number, default: 0.40 },
+                creamy: { type: Number, default: 0.50 }
+            }
+        },
+        coverPrices: {
+            soft: { type: Number, default: 25.0 },
+            hard: { type: Number, default: 60.0 },
+            luxuryLeather: { type: Number, default: 100.0 }
+        },
+        printColorPrices: {
+            blackAndWhite: { type: Number, default: 0.40 }, // Extra per page
+            color: { type: Number, default: 0.90 }     // Extra per page
+        }
+    },
     maintenanceMode: { type: Boolean, default: false }
 }, { timestamps: true });
 

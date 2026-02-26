@@ -1,7 +1,7 @@
-import { Component, OnInit, ViewChild, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, ViewChild, ChangeDetectorRef, Inject, PLATFORM_ID } from '@angular/core';
 import { HttpClient, HttpEventType } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { CommonModule } from '@angular/common';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../auth/auth.service';
 import { AccountModalComponent } from '../auth/account-modal/account-modal.component';
@@ -86,12 +86,9 @@ export class PrintComponent implements OnInit {
   };
 
   printingSettings: any = {
-    paperPrices: {
-      B5: { white: 0.20, yellow: 0.25, creamy: 0.35 },
-      A4: { white: 0.30, yellow: 0.40, creamy: 0.50 }
-    },
-    coverPrices: { soft: 25.0, hard: 60.0, luxuryLeather: 100.0 },
-    printColorPrices: { blackAndWhite: 0.40, color: 0.90 }
+    paperTypes: [],
+    printers: [],
+    coverPrices: { soft: 25.0, hard: 60.0, luxuryLeather: 100.0 }
   };
 
   constructor(
@@ -100,7 +97,8 @@ export class PrintComponent implements OnInit {
     private authService: AuthService,
     private freeShippingService: FreeShippingService,
     private adminService: AdminService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    @Inject(PLATFORM_ID) private platformId: any
   ) { }
 
   ngOnInit(): void {
@@ -181,11 +179,14 @@ export class PrintComponent implements OnInit {
       coverType: '',
       printColor: '',
       pages: null,
+      fromPage: 1,
+      toPage: null,
       paperColor: '#FFFFFF', // Default to white
       copies: null,
       notes: '',
       projectTitle: '',
-      estimatedPrice: 0 // Add estimatedPrice property
+      estimatedPrice: 0, // Add estimatedPrice property
+      loadingPages: false // Added to track loading state
     });
     this.validationErrors.push({});
   }
@@ -252,11 +253,85 @@ export class PrintComponent implements OnInit {
     this.validationErrors.splice(index, 1);
   }
 
-  onFileChange(event: any, index: number) {
+  async onFileChange(event: any, index: number) {
+    if (!isPlatformBrowser(this.platformId)) return;
+
     const file = event.target.files[0];
     if (file && file.type === 'application/pdf') {
       this.projects[index].file = file;
+      this.projects[index].loadingPages = true;
       this.clearValidationError(index, 'file');
+      this.cdr.detectChanges();
+
+      try {
+        console.log('PDF: Starting processing for file:', file.name, 'Size:', file.size);
+
+        // Timeout for the whole process (30 seconds for larger files or slow networks)
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Timeout')), 30000)
+        );
+
+        const processPromise = (async () => {
+          try {
+            console.log('PDF: Importing pdfjs-dist...');
+            const pdfjsModule = await import('pdfjs-dist');
+            const pdfjsLib: any = (pdfjsModule as any).default || pdfjsModule;
+            console.log('PDF: pdfjs-dist imported, version:', pdfjsLib.version);
+
+            // Use unpkg for worker - generally more consistent for this purpose
+            if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
+              const version = pdfjsLib.version || '5.4.296';
+              pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${version}/build/pdf.worker.min.mjs`;
+              console.log('PDF: Worker source set to:', pdfjsLib.GlobalWorkerOptions.workerSrc);
+            }
+
+            console.log('PDF: Reading file as ArrayBuffer...');
+            const arrayBuffer = await file.arrayBuffer();
+
+            console.log('PDF: Getting document...');
+            const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+
+            // Add progress logging
+            loadingTask.onProgress = (progress: any) => {
+              if (progress.total > 0) {
+                console.log(`PDF: Loading progress: ${Math.round(progress.loaded / progress.total * 100)}%`);
+              }
+            };
+
+            const pdf = await loadingTask.promise;
+            console.log('PDF: Document loaded, numPages:', pdf.numPages);
+            return pdf.numPages;
+          } catch (innerError: any) {
+            console.error('PDF: Inner processing error:', innerError);
+            throw innerError;
+          }
+        })();
+
+        const totalPages = await Promise.race([processPromise, timeoutPromise]) as number;
+
+        this.projects[index].pages = totalPages;
+        this.projects[index].fromPage = 1;
+        this.projects[index].toPage = totalPages;
+        this.projects[index].loadingPages = false;
+
+        this.updateEstimatedPrice(index);
+        this.cdr.detectChanges();
+        console.log('PDF: UI Updated with pages:', totalPages);
+      } catch (error: any) {
+        console.error('PDF: Top level error:', error);
+        this.projects[index].loadingPages = false;
+        this.cdr.detectChanges();
+
+        let errorMsg = 'حدث خطأ أثناء قراءة صفحات الملف.';
+        if (error.message === 'Timeout') {
+          errorMsg = 'استغرق تحميل الصفحات وقتاً طويلاً (30 ثانية). يرجى التأكد من استقرار الاتصال بالإنترنت.';
+        } else {
+          errorMsg += `\n\nتفاصيل الخطأ: ${error.message || 'خطأ غير معروف'}`;
+          if (error.name) errorMsg += ` (${error.name})`;
+        }
+
+        alert(errorMsg);
+      }
     } else {
       alert('Please select a PDF file.');
       event.target.value = '';
@@ -333,54 +408,75 @@ export class PrintComponent implements OnInit {
   }
 
   calculatePrice(project: any) {
-    if (!this.printingSettings) return 0;
+    if (!this.printingSettings || !this.printingSettings.paperTypes || this.printingSettings.paperTypes.length === 0) return 0;
 
-    // 1. Printing cost per page
-    let printingCostPerPage = 0;
-    if (project.printColor === 'أبيض وأسود' || project.printColor === 'Black & White') {
-      printingCostPerPage = this.printingSettings.printColorPrices.blackAndWhite;
-    } else if (project.printColor === 'ألوان' || project.printColor === 'Color') {
-      printingCostPerPage = this.printingSettings.printColorPrices.color;
-    }
-
-    // 2. Paper cost per page
     const pages = project.pages || 0;
-    let paperKey = 'white';
+    const fromPage = project.fromPage || 1;
+    const toPage = project.toPage || pages;
+    const pagesToPrint = (toPage - fromPage + 1);
+
+    const copies = project.copies || 0;
+    if (pagesToPrint <= 0 || copies <= 0) return 0;
+
+    // 1. Paper Cost
+    const paper = this.printingSettings.paperTypes.find((p: any) => p.name === project.size) || this.printingSettings.paperTypes[0];
+    let paperKey: 'white' | 'yellow' | 'creamy' = 'white';
     if (project.paperColor === '#DED5AF' || project.paperColor === 'yellow') paperKey = 'yellow';
     else if (project.paperColor === '#F5F5DC' || project.paperColor === 'creamy') paperKey = 'creamy';
 
-    let paperCostPerA4Sheet = 0;
-    if (project.size === 'B5') {
-      paperCostPerA4Sheet = this.printingSettings.paperPrices.B5[paperKey];
-    } else if (project.size === 'A5') {
-      paperCostPerA4Sheet = this.printingSettings.paperPrices.A5[paperKey];
-    } else {
-      // Default to A4 prices for other sizes (or add more if needed)
-      paperCostPerA4Sheet = this.printingSettings.paperPrices.A4[paperKey];
+    const paperPricePerSheet = paper.prices[paperKey] || 0;
+
+    // Logic for sheets (Duplex is not yet in project object, but we follow standard 2 pages per sheet for now)
+    // Actually, let's keep it simple: 1 page = 1 sheet cost if user didn't specify duplex
+    const sheetsCount = pagesToPrint;
+    const totalPaperCost = sheetsCount * paperPricePerSheet;
+
+    // 2. Ink Cost
+    let inkCostTotal = 0;
+    const printer = this.printingSettings.printers[0]; // Use first printer as baseline
+    if (printer) {
+      const isColor = project.printColor === 'ألوان' || project.printColor === 'Color';
+      const yieldValue = isColor ? printer.pageYieldColor : printer.pageYieldBW;
+      const priceValue = isColor ? printer.inkPriceColor : printer.inkPriceBW;
+
+      const inkCostPerPage = (yieldValue > 0) ? (priceValue / yieldValue) : 0;
+      inkCostTotal = inkCostPerPage * pagesToPrint;
     }
-    const pagesPerA4Sheet = (project.size === 'A5') ? 4 : 2; // A4 and B5 both use 2 pages per A4 sheet, A5 use 4
 
     // 3. Cover price
     let coverPrice = 0;
     if (project.coverType === 'غلاف ورقي' || project.coverType === 'Soft Cover') {
       coverPrice = this.printingSettings.coverPrices.soft;
-    } else if (project.coverType === 'غلاف كرتوني' || project.coverType === 'Hard Cover') {
+    } else if (project.coverType === 'غلاف كرتوني' || project.coverType === 'Hard Cover' || project.coverType === 'غلاف مجلد') {
       coverPrice = this.printingSettings.coverPrices.hard;
     } else if (project.coverType === 'غلاف جلد فاخر' || project.coverType === 'Luxury Leather') {
       coverPrice = this.printingSettings.coverPrices.luxuryLeather;
     }
 
-    const copies = project.copies || 0;
-    const numberOfA4Sheets = Math.ceil(pages / pagesPerA4Sheet);
-    const totalPaperCost = numberOfA4Sheets * paperCostPerA4Sheet;
-    const totalPrintingCost = pages * printingCostPerPage;
-    const price = (totalPaperCost + totalPrintingCost + coverPrice) * copies;
-    return Math.ceil(price); // Round up to the nearest integer
+    const totalCost = (totalPaperCost + inkCostTotal + coverPrice);
+
+    // 4. Default Profit Margin (Assume 50% if not specified, or we could add it to settings)
+    const profitMargin = 50;
+    const finalPrice = totalCost + (totalCost * (profitMargin / 100));
+
+    return Math.ceil(finalPrice * copies);
   }
 
   updateEstimatedPrice(index: number) {
     const project = this.projects[index];
     project.estimatedPrice = this.calculatePrice(project);
+  }
+
+  getPaperPrice(size: string, colorKey: string): number {
+    if (!this.printingSettings || !this.printingSettings.paperTypes) return 0;
+    const paper = this.printingSettings.paperTypes.find((p: any) => p.name === size);
+    if (!paper) return 0;
+
+    let key: 'white' | 'yellow' | 'creamy' = 'white';
+    if (colorKey === '#DED5AF' || colorKey === 'yellow') key = 'yellow';
+    else if (colorKey === '#F5F5DC' || colorKey === 'creamy') key = 'creamy';
+
+    return paper.prices[key] || 0;
   }
 
   deleteOrder(orderId: string, index: number) {
@@ -757,6 +853,8 @@ export class PrintComponent implements OnInit {
       printColor: p.printColor,
       paperColor: p.paperColor || 'أبيض',
       pages: p.pages,
+      fromPage: p.fromPage,
+      toPage: p.toPage,
       copies: p.copies,
       notes: p.notes,
       projectTitle: p.projectTitle

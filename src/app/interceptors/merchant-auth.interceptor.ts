@@ -1,5 +1,6 @@
-import { Injectable, Injector } from '@angular/core';
+import { Injectable, Injector, Inject, PLATFORM_ID } from '@angular/core';
 import { HttpInterceptor, HttpRequest, HttpHandler, HttpEvent, HttpErrorResponse } from '@angular/common/http';
+import { isPlatformBrowser } from '@angular/common';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { MerchantAuthService } from '../services/merchant-auth.service';
@@ -9,10 +10,15 @@ import { Router } from '@angular/router';
 export class MerchantAuthInterceptor implements HttpInterceptor {
   constructor(
     private injector: Injector,
-    private router: Router
+    private router: Router,
+    @Inject(PLATFORM_ID) private platformId: Object
   ) { }
 
   intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
+    if (!isPlatformBrowser(this.platformId)) {
+      return next.handle(req);
+    }
+
     // Only intercept merchant API calls
     if (req.url.includes('/merchant')) {
       const merchantAuthService = this.injector.get(MerchantAuthService);
@@ -28,13 +34,10 @@ export class MerchantAuthInterceptor implements HttpInterceptor {
         return next.handle(authReq).pipe(
           catchError((error: HttpErrorResponse) => {
             if (error.status === 401) {
-              // Clear authentication and redirect to login only on 401
               merchantAuthService.performLogout();
               this.router.navigate(['/login']);
-              // alert('انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى.');
             } else if (error.status === 403) {
-              // Just alert for forbidden access, do not logout
-              alert('ليس لديك صلاحية للوصول لهذا المحتوى.');
+              console.error('Forbidden merchant access');
               this.router.navigate(['/']);
             }
             return throwError(error);

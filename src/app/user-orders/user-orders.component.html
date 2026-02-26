@@ -216,7 +216,16 @@
               </td>
               <td class="py-4 px-6 text-center rtl" *ngIf="printProject === order.printProjects[0]"
                 [attr.rowspan]="order.printProjects.length">
-                <span class="font-semibold text-green-600 dark:text-green-400">{{ order.totalAmount + ' ج.م' }}</span>
+                <ng-container *ngIf="hasFinalPrice(order); else awaitingPriceDesktop">
+                  <span class="font-semibold text-green-600 dark:text-green-400">{{ order.totalAmount + ' ج.م' }}</span>
+                </ng-container>
+                <ng-template #awaitingPriceDesktop>
+                  <div class="flex flex-col items-center gap-1">
+                    <span class="text-amber-600 dark:text-amber-400 text-sm font-bold flex items-center gap-1">
+                      🕒 سيتم تحديد السعر قريباً
+                    </span>
+                  </div>
+                </ng-template>
               </td>
               <td class="py-4 px-6 text-center" *ngIf="printProject === order.printProjects[0]"
                 [attr.rowspan]="order.printProjects.length">
@@ -306,7 +315,13 @@
     <!-- السعر الإجمالي -->
     <div class="flex justify-between items-center mb-4 text-lg font-bold">
       <div class="text-gray-700 dark:text-gray-200">السعر الإجمالي:</div>
-      <div class="text-green-600 dark:text-green-400 rtl">{{ order.totalAmount + ' ج.م' }}</div>
+      <div *ngIf="hasFinalPrice(order); else awaitingPriceMobile" class="text-green-600 dark:text-green-400 rtl">{{
+        order.totalAmount + ' ج.م' }}</div>
+      <ng-template #awaitingPriceMobile>
+        <div class="text-amber-600 dark:text-amber-400 text-sm font-bold flex items-center gap-1">
+          🕒 سيتم تحديد السعر قريباً
+        </div>
+      </ng-template>
     </div>
 
     <!-- إجراءات -->

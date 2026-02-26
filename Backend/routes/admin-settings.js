@@ -34,15 +34,27 @@ router.put('/', authenticateAdmin, async (req, res) => {
     try {
         const { gamification, quranPoints, economy, maintenanceMode } = req.body;
 
-        let settings = await SystemSettings.findOne();
-        if (!settings) {
-            settings = new SystemSettings({});
-        }
+        let settings = await SystemSettings.getInstance();
 
         if (gamification) settings.gamification = { ...settings.gamification, ...gamification };
         if (req.body.quranPoints) settings.quranPoints = { ...settings.quranPoints, ...req.body.quranPoints };
         if (economy) settings.economy = { ...settings.economy, ...economy };
-        if (req.body.printing) settings.printing = { ...settings.printing, ...req.body.printing };
+
+        if (req.body.printing) {
+            console.log('Updating printing settings:', JSON.stringify(req.body.printing, null, 2));
+
+            // Use set for deep update and mark paths as modified
+            settings.set('printing', req.body.printing);
+            settings.markModified('printing');
+            settings.markModified('printing.paperTypes');
+            settings.markModified('printing.printers');
+            settings.markModified('printing.coverPrices');
+
+            // Cleanup old fields from Mongoose document
+            settings.set('printing.paperPrices', undefined);
+            settings.set('printing.printColorPrices', undefined);
+        }
+
         if (req.body.subscription) settings.subscription = { ...settings.subscription, ...req.body.subscription };
         if (typeof maintenanceMode !== 'undefined') settings.maintenanceMode = maintenanceMode;
 
@@ -60,6 +72,7 @@ router.put('/', authenticateAdmin, async (req, res) => {
 
         res.status(200).json({ message: 'Settings updated successfully', settings: updatedSettings });
     } catch (error) {
+        console.error('Save Error:', error);
         res.status(500).json({ message: 'Error updating settings', error: error.message });
     }
 });

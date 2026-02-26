@@ -1,5 +1,5 @@
-import { Component, EventEmitter, Input, Output, ViewChild, ElementRef, HostListener, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, EventEmitter, Input, Output, ViewChild, ElementRef, HostListener, OnInit, Inject, PLATFORM_ID } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { faSearch, faFilter, faBook, faClock, faList } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
@@ -37,7 +37,8 @@ export class SearchBarComponent implements OnInit {
   constructor(
     private sanitizer: DomSanitizer,
     private route: ActivatedRoute,
-    private router: Router
+    private router: Router,
+    @Inject(PLATFORM_ID) private platformId: Object
   ) { }
 
   ngOnInit(): void {
@@ -53,6 +54,7 @@ export class SearchBarComponent implements OnInit {
   }
 
   private syncWithUrl() {
+    if (!isPlatformBrowser(this.platformId)) return;
     // Use URLSearchParams for the most direct and reliable access to query params
     const q = new URLSearchParams(window.location.search).get('q');
     if (q !== null) {

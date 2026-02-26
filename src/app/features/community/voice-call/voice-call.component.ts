@@ -1,5 +1,5 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, OnDestroy, Inject, PLATFORM_ID } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { faPhone, faPhoneSlash, faMicrophone, faMicrophoneSlash, faVolumeUp, faWindowMinimize } from '@fortawesome/free-solid-svg-icons';
 import { VoiceCallService, CallSession } from '../../../core/services/voice-call.service';
@@ -100,11 +100,16 @@ export class VoiceCallComponent implements OnInit, OnDestroy {
     private sub?: Subscription;
     private sounds: { ringtone: HTMLAudioElement; calling: HTMLAudioElement } = {} as any;
 
-    constructor(private voiceCallService: VoiceCallService) {
-        this.sounds.ringtone = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
-        this.sounds.ringtone.loop = true;
-        this.sounds.calling = new Audio('https://assets.mixkit.co/active_storage/sfx/1359/1359-preview.mp3');
-        this.sounds.calling.loop = true;
+    constructor(
+        private voiceCallService: VoiceCallService,
+        @Inject(PLATFORM_ID) private platformId: Object
+    ) {
+        if (isPlatformBrowser(this.platformId)) {
+            this.sounds.ringtone = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
+            this.sounds.ringtone.loop = true;
+            this.sounds.calling = new Audio('https://assets.mixkit.co/active_storage/sfx/1359/1359-preview.mp3');
+            this.sounds.calling.loop = true;
+        }
     }
 
     ngOnInit() {
@@ -131,6 +136,7 @@ export class VoiceCallComponent implements OnInit, OnDestroy {
     }
 
     private manageSounds(session: CallSession) {
+        if (!isPlatformBrowser(this.platformId)) return;
         if (session.stream) {
             this.stopAllSounds();
             return;

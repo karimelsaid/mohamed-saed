@@ -1,5 +1,6 @@
-import { Injectable, NgZone } from '@angular/core';
+import { Injectable, NgZone, Inject, PLATFORM_ID } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { isPlatformBrowser } from '@angular/common';
 import { BehaviorSubject, Observable, map, firstValueFrom, timeout, catchError, of, throwError, tap, take } from 'rxjs';
 import { ForegroundService } from '@capawesome-team/capacitor-android-foreground-service';
 import { Capacitor } from '@capacitor/core';
@@ -48,9 +49,9 @@ export interface PlaybackState {
     providedIn: 'root'
 })
 export class QuranAudioService {
-    private audioPrimary = new Audio();
-    private audioSecondary = new Audio();
-    private activeAudio = this.audioPrimary;
+    private audioPrimary!: HTMLAudioElement;
+    private audioSecondary!: HTMLAudioElement;
+    private activeAudio!: HTMLAudioElement;
 
     // Getter to maintain compatibility with existing code using 'this.audio'
     private get audio(): HTMLAudioElement {
@@ -213,8 +214,15 @@ export class QuranAudioService {
     constructor(
         private http: HttpClient,
         private dataService: MushafDataService,
-        private ngZone: NgZone
+        private ngZone: NgZone,
+        @Inject(PLATFORM_ID) private platformId: Object
     ) {
+        if (!isPlatformBrowser(this.platformId)) return;
+
+        this.audioPrimary = new Audio();
+        this.audioSecondary = new Audio();
+        this.activeAudio = this.audioPrimary;
+
         // Restore shuffle mode
         const savedShuffle = localStorage.getItem('audio_shuffle_mode');
         if (savedShuffle !== null) {
@@ -428,7 +436,7 @@ export class QuranAudioService {
     }
 
     private updateMediaSessionMetadata(verseKey: string, reciterId: number) {
-        if ('mediaSession' in navigator) {
+        if (isPlatformBrowser(this.platformId) && 'mediaSession' in navigator) {
             // Find reciter name
             firstValueFrom(this.getReciters()).then((reciters: Reciter[]) => {
                 const reciterName = reciters.find((r: Reciter) => r.id === reciterId)?.name || 'القارئ';

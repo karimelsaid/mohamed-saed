@@ -35,29 +35,42 @@ const systemSettingsSchema = mongoose.Schema({
         dailyWisdom: { hour: { type: Number, default: 14 }, minute: { type: Number, default: 0 } }
     },
     printing: {
-        paperPrices: {
-            B5: {
-                white: { type: Number, default: 0.20 },
-                yellow: { type: Number, default: 0.25 },
-                creamy: { type: Number, default: 0.35 }
-            },
-            A4: {
-                white: { type: Number, default: 0.30 },
-                yellow: { type: Number, default: 0.40 },
-                creamy: { type: Number, default: 0.50 }
+        paperTypes: [{
+            name: { type: String, required: true }, // A4, A3, etc.
+            prices: {
+                white: { type: Number, default: 0 },
+                yellow: { type: Number, default: 0 },
+                creamy: { type: Number, default: 0 }
             }
-        },
+        }],
+        printers: [{
+            name: { type: String, required: true },
+            inkPriceColor: { type: Number, default: 0 }, // Cost of full color set
+            inkPriceBW: { type: Number, default: 0 },    // Cost of black ink
+            pageYieldColor: { type: Number, default: 0 }, // Pages per 100% color
+            pageYieldBW: { type: Number, default: 0 },    // Pages per 100% BW
+            inkLevels: {
+                black: { type: Number, default: 100 },
+                cyan: { type: Number, default: 100 },
+                magenta: { type: Number, default: 100 },
+                yellow: { type: Number, default: 100 }
+            },
+            lastUpdatedPages: { type: Number, default: 0 }
+        }],
         coverPrices: {
             soft: { type: Number, default: 25.0 },
             hard: { type: Number, default: 60.0 },
             luxuryLeather: { type: Number, default: 100.0 }
-        },
-        printColorPrices: {
-            blackAndWhite: { type: Number, default: 0.40 }, // Extra per page
-            color: { type: Number, default: 0.90 }     // Extra per page
         }
     },
-    maintenanceMode: { type: Boolean, default: false }
+    maintenanceMode: { type: Boolean, default: false },
+    shortageSettings: {
+        threshold: { type: Number, default: 10 },
+        categories: [{ type: String }],
+        includeSuggestions: { type: Boolean, default: false },
+        defaultOrderQuantity: { type: Number, default: 1 },
+        orderQuantities: { type: Map, of: Number, default: {} } // products_id -> quantity
+    }
 }, { timestamps: true });
 
 // Prevent multiple settings documents - Singleton Pattern

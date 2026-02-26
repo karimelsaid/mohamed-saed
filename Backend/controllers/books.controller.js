@@ -3,9 +3,25 @@ const fs = require('fs');
 const path = require('path');
 const FILE_ID = '1N6rRpXCZRnmw4Os9HK9X-tKS9ZWKOI9M';
 
+// Cache for enriched data
+let cachedEnrichedData = null;
+let lastCacheUpdate = 0;
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+// Cache for recent books
+let cachedRecentBooks = null;
+let lastRecentUpdate = 0;
+
 // جلب بيانات الكتب من ملف Excel
 async function getExcelData(req, res) {
   try {
+    const now = Date.now();
+    if (cachedEnrichedData && (now - lastCacheUpdate < CACHE_TTL)) {
+      console.log('📦 [BooksController] getExcelData: Cache HIT');
+      return res.json(cachedEnrichedData);
+    }
+    console.log('📂 [BooksController] getExcelData: Cache MISS - Reading from file');
+
     fs.readFile(path.join(__dirname, '..', 'output.json'), 'utf8', async (err, data) => {
       if (err) {
         return res.status(500).json({
@@ -109,6 +125,8 @@ async function getExcelData(req, res) {
           console.error('Error enriching with promotion dates:', promoError);
         }
 
+        cachedEnrichedData = jsonData;
+        lastCacheUpdate = Date.now();
         res.json(jsonData);
       } catch (error) {
         res.status(500).json({
@@ -128,6 +146,13 @@ async function getExcelData(req, res) {
 // دالة جديدة لإرجاع آخر 50 كتابًا مضافًا
 async function getRecentBooks(req, res) {
   try {
+    const now = Date.now();
+    if (cachedRecentBooks && (now - lastRecentUpdate < CACHE_TTL)) {
+      console.log('📦 [BooksController] getRecentBooks: Cache HIT');
+      return res.json(cachedRecentBooks);
+    }
+    console.log('📂 [BooksController] getRecentBooks: Cache MISS - Reading from file');
+
     fs.readFile(path.join(__dirname, '..', 'output.json'), 'utf8', async (err, data) => {
       if (err) {
         return res.status(500).json({
@@ -233,6 +258,8 @@ async function getRecentBooks(req, res) {
           console.error('Error enriching with promotion dates in recent books:', promoError);
         }
 
+        cachedRecentBooks = recentBooks;
+        lastRecentUpdate = Date.now();
         res.json(recentBooks);
       } catch (error) {
         res.status(500).json({

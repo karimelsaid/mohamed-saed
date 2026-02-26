@@ -1,4 +1,5 @@
-import { Injectable, OnDestroy } from '@angular/core';
+import { Injectable, OnDestroy, Inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { io, Socket } from 'socket.io-client';
 import { BehaviorSubject, Observable, Subject, lastValueFrom } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
@@ -41,14 +42,31 @@ export class SignalingService implements OnDestroy {
     private groupIceCandidateSubject = new Subject<{ candidate: any, from: string, roomId: string }>();
     public groupIceCandidate$ = this.groupIceCandidateSubject.asObservable();
 
-    constructor(private http: HttpClient) {
+    constructor(
+        private http: HttpClient,
+        @Inject(PLATFORM_ID) private platformId: Object
+    ) {
+        console.log('📡 [SignalingService] PLATFORM_ID:', this.platformId);
+        console.log('📡 [SignalingService] typeof window:', typeof window);
+
+        if (!isPlatformBrowser(this.platformId)) {
+            console.log('📡 [SignalingService] Server mode detected. Mocking socket.');
+            this.socket = {
+                on: () => this,
+                off: () => this,
+                emit: () => this,
+                disconnect: () => this
+            } as any;
+            return;
+        }
+
         let socketUrl = environment.apiBaseUrl.split('/api')[0] || '';
         if (socketUrl && socketUrl.endsWith('/')) {
             socketUrl = socketUrl.slice(0, -1);
         }
 
         // Fallback for mobile/relative paths
-        if (!socketUrl.startsWith('http') && typeof window !== 'undefined') {
+        if (!socketUrl.startsWith('http')) {
             const proto = window.location.protocol;
             const host = window.location.host;
             socketUrl = `${proto}//${host}`;
@@ -92,7 +110,6 @@ export class SignalingService implements OnDestroy {
     // === 1:1 Call Methods ===
 
     register(userId: string) {
-        console.log(`📡 [Signaling] Registering user: ${userId}`);
         this.socket.emit('register', userId);
     }
 

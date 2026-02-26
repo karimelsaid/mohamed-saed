@@ -326,9 +326,9 @@
                   class="block w-full rounded-lg border-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 px-4 py-3 transition-all duration-200"
                   (change)="onProjectChange(i)">
                   <option value="" disabled>اختر الحجم</option>
-                  <option value="A4">📄 A4 (29 × 21 سم)</option>
-                  <option value="A5" selected>📖 A5 (14 × 21 سم)</option>
-                  <option value="B5">📚 B5 (17 × 24 سم)</option>
+                  <option *ngFor="let type of printingSettings.paperTypes" [value]="type.name">
+                    {{ type.name }}
+                  </option>
                 </select>
                 <div *ngIf="validationErrors[i]?.size"
                   class="mt-2 text-sm text-red-600 dark:text-red-400 flex items-center">
@@ -360,10 +360,11 @@
                   (change)="onProjectChange(i)">
                   <option value="" disabled>اختر نوع الغلاف</option>
                   <option value="بدون غلاف">❌ بدون غلاف (0 جنيه)</option>
-                  <option value="غلاف ورقي">📄 غلاف ورقي ({{ printingSettings.coverPrices.soft }} جنيه)</option>
-                  <option value="غلاف كرتوني" selected>📦 غلاف كرتوني ({{ printingSettings.coverPrices.hard }} جنيه)
+                  <option value="غلاف ورقي">📄 غلاف ورقي ({{ printingSettings.coverPrices?.soft }} جنيه)</option>
+                  <option value="غلاف كرتوني" selected>📦 غلاف كرتوني ({{ printingSettings.coverPrices?.hard }} جنيه)
                   </option>
-                  <option value="غلاف جلد فاخر">💎 غلاف جلد فاخر ({{ printingSettings.coverPrices.luxuryLeather }} جنيه)
+                  <option value="غلاف جلد فاخر">💎 غلاف جلد فاخر ({{ printingSettings.coverPrices?.luxuryLeather }}
+                    جنيه)
                   </option>
                 </select>
                 <div *ngIf="validationErrors[i]?.coverType"
@@ -395,9 +396,10 @@
                   class="block w-full rounded-lg border-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 px-4 py-3 transition-all duration-200"
                   (change)="onProjectChange(i)">
                   <option value="" disabled>اختر لون الطباعة</option>
-                  <option value="أبيض وأسود" selected>⚫ أبيض وأسود ({{ printingSettings.printColorPrices.blackAndWhite
-                    }} جنيه)</option>
-                  <option value="ألوان">🌈 ألوان ({{ printingSettings.printColorPrices.color }} جنيه)</option>
+                  <option value="أبيض وأسود" selected>⚫ أبيض وأسود ({{ printingSettings.printers?.[0]?.inkPriceBW /
+                    printingSettings.printers?.[0]?.pageYieldBW | number:'1.2-2' }} لليونيت)</option>
+                  <option value="ألوان">🌈 ألوان ({{ printingSettings.printers?.[0]?.inkPriceColor /
+                    printingSettings.printers?.[0]?.pageYieldColor | number:'1.2-2' }} لليونيت)</option>
                 </select>
                 <div *ngIf="validationErrors[i]?.printColor"
                   class="mt-2 text-sm text-red-600 dark:text-red-400 flex items-center">
@@ -428,15 +430,9 @@
                     [ngClass]="{'border-red-500 focus:ring-red-500': validationErrors[i]?.paperColor, 'border-green-500 focus:ring-green-500': !validationErrors[i]?.paperColor && project.paperColor}"
                     class="flex-1 rounded-lg border-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 px-4 py-3 transition-all duration-200"
                     (change)="onProjectChange(i)">
-                    <option value="#FFFFFF">⚪ أبيض ({{ project.size === 'B5' ? printingSettings.paperPrices.B5.white :
-                      (project.size === 'A5' ? printingSettings.paperPrices.A5.white :
-                      printingSettings.paperPrices.A4.white) }} جنيه)</option>
-                    <option value="#DED5AF">🟡 أصفر ({{ project.size === 'B5' ? printingSettings.paperPrices.B5.yellow :
-                      (project.size === 'A5' ? printingSettings.paperPrices.A5.yellow :
-                      printingSettings.paperPrices.A4.yellow) }} جنيه)</option>
-                    <option value="#F5F5DC">📜 كريمي ({{ project.size === 'B5' ? printingSettings.paperPrices.B5.creamy
-                      : (project.size === 'A5' ? printingSettings.paperPrices.A5.creamy :
-                      printingSettings.paperPrices.A4.creamy) }} جنيه)</option>
+                    <option value="#FFFFFF">⚪ أبيض ({{ getPaperPrice(project.size, '#FFFFFF') }} جنيه)</option>
+                    <option value="#DED5AF">🟡 أصفر ({{ getPaperPrice(project.size, '#DED5AF') }} جنيه)</option>
+                    <option value="#F5F5DC">📜 كريمي ({{ getPaperPrice(project.size, '#F5F5DC') }} جنيه)</option>
                   </select>
                   <div [style.background-color]="project.paperColor"
                     class="w-10 h-10 border-2 border-gray-300 dark:border-gray-600 rounded-lg shadow-inner"></div>
@@ -452,33 +448,62 @@
                 </div>
               </div>
 
-              <!-- Pages -->
-              <div>
-                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                  <span class="flex items-center">
-                    <svg class="w-5 h-5 mr-2 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z">
-                      </path>
-                    </svg>
-                    عدد الصفحات
-                    <span class="text-red-500 ml-1">*</span>
-                  </span>
-                </label>
-                <input type="number" [(ngModel)]="project.pages" name="pages{{i}}" min="1" required [ngClass]="{
-                    'border-red-500 focus:ring-red-500': validationErrors[i]?.pages,
-                    'border-green-500 focus:ring-green-500': !validationErrors[i]?.pages && project.pages
-                  }"
-                  class="block w-full rounded-lg border-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 px-4 py-3 transition-all duration-200"
-                  placeholder="أدخل عدد الصفحات..." (input)="clearValidationError(i, 'pages'); onProjectChange(i)" />
-                <div *ngIf="validationErrors[i]?.pages"
-                  class="mt-2 text-sm text-red-600 dark:text-red-400 flex items-center">
-                  <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd"
-                      d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                      clip-rule="evenodd"></path>
-                  </svg>
-                  يرجى إدخال عدد الصفحات
+              <!-- PDF Info & Range Selection -->
+              <div
+                class="col-span-full md:col-span-2 bg-blue-50/50 dark:bg-blue-900/10 p-4 rounded-xl border border-blue-100 dark:border-blue-900/30">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <!-- Total Pages (Auto-detected) -->
+                  <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                      إجمالي الصفحات 📄
+                    </label>
+                    <div
+                      class="px-4 py-3 bg-white dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 font-bold text-center">
+                      <ng-container *ngIf="project.loadingPages; else pageCount">
+                        <span class="inline-flex items-center">
+                          <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
+                            </circle>
+                            <path class="opacity-75" fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                            </path>
+                          </svg>
+                          جارٍ التحميل...
+                        </span>
+                      </ng-container>
+                      <ng-template #pageCount>
+                        {{ project.pages || 'قم برفع ملف أولاً' }}
+                      </ng-template>
+                    </div>
+                  </div>
+
+                  <!-- Print From -->
+                  <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                      طباعة من صفحة
+                    </label>
+                    <input type="number" [(ngModel)]="project.fromPage" name="fromPage{{i}}" [min]="1"
+                      [max]="project.toPage || project.pages"
+                      class="block w-full rounded-lg border-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 px-4 py-3 transition-all duration-200"
+                      (change)="onProjectChange(i)" [disabled]="!project.file" />
+                  </div>
+
+                  <!-- Print To -->
+                  <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                      إلى صفحة
+                    </label>
+                    <input type="number" [(ngModel)]="project.toPage" name="toPage{{i}}" [min]="project.fromPage || 1"
+                      [max]="project.pages"
+                      class="block w-full rounded-lg border-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 px-4 py-3 transition-all duration-200"
+                      (change)="onProjectChange(i)" [disabled]="!project.file" />
+                  </div>
+                </div>
+                <!-- Selection Confirmation Message -->
+                <div *ngIf="project.file && project.fromPage && project.toPage"
+                  class="mt-4 text-center p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-green-700 dark:text-green-300 text-sm font-medium">
+                  سيتم طباعة {{ project.toPage - project.fromPage + 1 }} صفحة (من صفحة {{ project.fromPage }} إلى {{
+                  project.toPage }})
                 </div>
               </div>
 
@@ -748,8 +773,9 @@
                       project.paperColor === '#DED5AF' ? 'أصفر' : 'كريمي' }}</span>
                   </div>
                   <div class="flex items-center">
-                    <span class="font-semibold text-gray-600 dark:text-gray-400">الصفحات:</span>
-                    <span class="text-gray-800 dark:text-gray-200 mr-2">{{ project.pages }}</span>
+                    <span class="font-semibold text-gray-600 dark:text-gray-400">نطاق الطباعة:</span>
+                    <span class="text-gray-800 dark:text-gray-200 mr-2">من {{ project.fromPage }} إلى {{ project.toPage
+                      }} ({{ project.toPage - project.fromPage + 1 }} صفحة)</span>
                   </div>
                   <div class="flex items-center">
                     <span class="font-semibold text-gray-600 dark:text-gray-400">النسخ:</span>
@@ -757,9 +783,13 @@
                   </div>
                 </div>
                 <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center">
-                  <span class="text-base font-semibold text-gray-700 dark:text-gray-300">السعر التقديري:</span>
-                  <span class="text-lg font-bold text-green-600 dark:text-green-400">{{ project.estimatedPrice }}
-                    جنيه</span>
+                  <span class="text-base font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    سيتم تحديد السعر النهائي بعد مراجعة الطلب
+                  </span>
                 </div>
               </div>
             </div>
@@ -772,12 +802,15 @@
               <p>تكلفة الشحن: {{ shippingCost }} جنيه</p>
             </div>
 
-            <!-- Total Cost -->
+            <!-- Price Quote Notice -->
             <div
-              class="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 p-6 rounded-xl border border-green-200 dark:border-green-800">
-              <div class="flex justify-between items-center text-xl font-bold">
-                <span>الإجمالي:</span>
-                <span class="text-green-600 dark:text-green-400">{{ totalPrice }} جنيه</span>
+              class="bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 p-6 rounded-xl border border-amber-200 dark:border-amber-800">
+              <div class="flex items-center gap-3 text-lg font-bold text-amber-700 dark:text-amber-400">
+                <svg class="w-7 h-7 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <span>سيتم إرسال عرض الأسعار النهائي خلال ساعات من إرسال الطلب</span>
               </div>
             </div>
           </div>
@@ -792,12 +825,13 @@
               السابق
             </button>
             <button (click)="submit()"
-              class="inline-flex items-center px-8 py-4 bg-gradient-to-r from-green-600 to-green-700 text-white font-bold text-lg rounded-xl hover:from-green-700 hover:to-green-800 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105">
+              class="inline-flex items-center px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-bold text-lg rounded-xl hover:from-amber-600 hover:to-orange-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105">
               <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2">
+                </path>
               </svg>
-              إرسال الطلب
+              طلب عرض أسعار
             </button>
           </div>
 

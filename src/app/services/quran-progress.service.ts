@@ -1,4 +1,5 @@
-import { Injectable } from '@angular/core';
+import { Injectable, Inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { Observable, BehaviorSubject, of } from 'rxjs';
 import { tap } from 'rxjs/operators';
 
@@ -62,8 +63,10 @@ export class QuranProgressService {
         REVISION_VERSE_COMPLETE: 2
     };
 
-    constructor() {
-        this.loadLocalProgress();
+    constructor(@Inject(PLATFORM_ID) private platformId: Object) {
+        if (isPlatformBrowser(this.platformId)) {
+            this.loadLocalProgress();
+        }
     }
 
     private loadLocalProgress(): void {
@@ -81,7 +84,9 @@ export class QuranProgressService {
     }
 
     private saveLocalProgress(progress: QuranProgress): void {
-        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(progress));
+        if (isPlatformBrowser(this.platformId)) {
+            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(progress));
+        }
         this.progressSubject.next(progress);
     }
 
@@ -151,7 +156,9 @@ export class QuranProgressService {
         const current = this.progressSubject.value || this.getDefaultProgress();
         const updated = { ...current, lastPage: pageNumber };
         this.saveLocalProgress(updated);
-        localStorage.setItem('lastMushafPage', pageNumber.toString());
+        if (isPlatformBrowser(this.platformId)) {
+            localStorage.setItem('lastMushafPage', pageNumber.toString());
+        }
         return of({ success: true, lastPage: pageNumber });
     }
 

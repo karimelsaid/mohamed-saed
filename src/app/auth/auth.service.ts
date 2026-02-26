@@ -1,5 +1,6 @@
 
-import { Injectable } from '@angular/core';
+import { Injectable, Inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject } from 'rxjs';
 import { tap } from 'rxjs/operators';
@@ -27,9 +28,12 @@ export class AuthService {
     private http: HttpClient,
     private merchantAuthService: MerchantAuthService,
     private subscriptionService: SubscriptionService,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    @Inject(PLATFORM_ID) private platformId: Object
   ) {
-    this.checkInitialLogin();
+    if (isPlatformBrowser(this.platformId)) {
+      this.checkInitialLogin();
+    }
   }
 
   /** Google Sign‑In */
@@ -58,7 +62,7 @@ export class AuthService {
           userWithToken.token = token;
 
           // SPECIAL HANDLING FOR MERCHANTS
-          if (user.role === 'merchant') {
+          if (user.role === 'merchant' && isPlatformBrowser(this.platformId)) {
             localStorage.setItem('merchant_token', token);
             // Also notify merchant service if possible/needed, but localStorage is the critical fix for interceptors
             this.merchantAuthService.setMerchantAuthFromExternal(token, user);
@@ -76,9 +80,11 @@ export class AuthService {
   login(email: string, password: string): Observable<User> {
     return this.http.post<User>(`${this.apiUrl}/users/login`, { email, password }).pipe(
       tap((response: any) => {
-        localStorage.removeItem('referralCode');
-        localStorage.removeItem('referralBookId');
-        console.log('[Auth] User logged in. Cleared any existing referral data from localStorage.');
+        if (isPlatformBrowser(this.platformId)) {
+          localStorage.removeItem('referralCode');
+          localStorage.removeItem('referralBookId');
+          console.log('[Auth] User logged in. Cleared any existing referral data from localStorage.');
+        }
 
         const user = response.user || response;
 
@@ -118,8 +124,9 @@ export class AuthService {
         if (parsedUser && !parsedUser.id && parsedUser._id) {
           console.log('🛠️ [AuthService] Auto-fixing missing ID in stored session');
           parsedUser.id = parsedUser._id;
-          // Create userWithToken logic here if needed, but mostly just fixing the object
-          localStorage.setItem('user', JSON.stringify(parsedUser)); // Update storage
+          if (isPlatformBrowser(this.platformId)) {
+            localStorage.setItem('user', JSON.stringify(parsedUser)); // Update storage
+          }
         }
 
         this.isLoggedInSubject.next(true);
@@ -154,14 +161,18 @@ export class AuthService {
   setUser(user: any): void {
     this.userSubject.next(user);
     this.setLoginStatus(true);
-    localStorage.setItem('user', JSON.stringify(user));
+    if (isPlatformBrowser(this.platformId)) {
+      localStorage.setItem('user', JSON.stringify(user));
+    }
   }
 
   clearUser(): void {
     console.warn('⚠️ [AuthService] Clearing User!');
     this.userSubject.next(null);
     this.setLoginStatus(false);
-    localStorage.removeItem('user');
+    if (isPlatformBrowser(this.platformId)) {
+      localStorage.removeItem('user');
+    }
     this.userSubject.next(null);
   }
 
@@ -184,9 +195,11 @@ export class AuthService {
     return this.http.post(`${this.apiUrl}/users/register`, body).pipe(
       tap((response: any) => {
         if (response && response.user) {
-          localStorage.removeItem('referralCode');
-          localStorage.removeItem('referralBookId');
-          console.log('[Auth] Account created. Cleared any existing referral data from localStorage.');
+          if (isPlatformBrowser(this.platformId)) {
+            localStorage.removeItem('referralCode');
+            localStorage.removeItem('referralBookId');
+            console.log('[Auth] Account created. Cleared any existing referral data from localStorage.');
+          }
           console.log('🧠 تم إنشاء الحساب وتسجيل الدخول تلقائياً:', response.user);
 
           // CRITICAL FIX: Normalize ID
@@ -300,9 +313,11 @@ export class AuthService {
     this.isLoggedInSubject.next(false);
     this.favoriteBookIds.next([]);
     this.cartBookIds.next([]);
-    localStorage.removeItem('user');
-    localStorage.removeItem('referralCode');
-    localStorage.removeItem('referralBookId');
+    if (isPlatformBrowser(this.platformId)) {
+      localStorage.removeItem('user');
+      localStorage.removeItem('referralCode');
+      localStorage.removeItem('referralBookId');
+    }
 
     // CRITICAL FIX: Also clear merchant session
     this.merchantAuthService.performLogout();

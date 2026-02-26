@@ -1,4 +1,5 @@
-import { Injectable } from '@angular/core';
+import { Injectable, Inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, from, firstValueFrom } from 'rxjs';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
@@ -24,7 +25,10 @@ export class MushafAssetService {
     private totalFiles = 604 + 1 + 3 + 30; // 604 pages + Basmalah + 3 JSONs + 30 juz chunks
     private completedFiles = 0;
 
-    constructor(private http: HttpClient) { }
+    constructor(
+        private http: HttpClient,
+        @Inject(PLATFORM_ID) private platformId: Object
+    ) { }
 
     /**
      * Checks if the Mushaf assets are already downloaded on the device.
@@ -245,14 +249,16 @@ export class MushafAssetService {
                 const data = await firstValueFrom(this.http.get<T>(url));
                 // Cache it for offline use on Web
                 try {
-                    localStorage.setItem(cacheKey, JSON.stringify(data));
+                    if (isPlatformBrowser(this.platformId)) {
+                        localStorage.setItem(cacheKey, JSON.stringify(data));
+                    }
                 } catch (e) {
                     console.warn('[MushafAsset] LocalStorage quota exceeded, skipping cache.');
                 }
                 return data;
             } catch (err) {
                 console.warn(`[MushafAsset] Web fetch failed for ${path}, trying localStorage cache.`);
-                const cached = localStorage.getItem(cacheKey);
+                const cached = isPlatformBrowser(this.platformId) ? localStorage.getItem(cacheKey) : null;
                 if (cached) {
                     return JSON.parse(cached);
                 }
@@ -269,7 +275,9 @@ export class MushafAssetService {
             const data = JSON.parse(result.data as string);
             // Also update localStorage cache for consistency
             try {
-                localStorage.setItem(cacheKey, JSON.stringify(data));
+                if (isPlatformBrowser(this.platformId)) {
+                    localStorage.setItem(cacheKey, JSON.stringify(data));
+                }
             } catch (e) {
                 console.warn('[MushafAsset] LocalStorage quota exceeded (Native file read), skipping cache update.');
             }
@@ -277,7 +285,7 @@ export class MushafAssetService {
             return data;
         } catch (e) {
             // Check cache FIRST before attempting any network requests if file is missing from filesystem
-            const cached = localStorage.getItem(cacheKey);
+            const cached = isPlatformBrowser(this.platformId) ? localStorage.getItem(cacheKey) : null;
             if (cached) {
                 console.log(`[MushafAsset] File ${path} missing from Storage, returning cached version.`);
                 return JSON.parse(cached);

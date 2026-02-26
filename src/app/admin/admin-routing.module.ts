@@ -6,7 +6,9 @@ import { PaymentRequestsComponent } from './payment-requests/payment-requests.co
 const routes: Routes = [
     { path: '', component: AdminDashboardComponent },
     { path: 'payment-requests', component: PaymentRequestsComponent },
-    { path: 'promotions-manager', loadComponent: () => import('./promotions-manager/promotions-manager.component').then(m => m.PromotionsManagerComponent) }
+    { path: 'promotions-manager', loadComponent: () => import('./promotions-manager/promotions-manager.component').then(m => m.PromotionsManagerComponent) },
+    { path: 'sales-registration', loadComponent: () => import('./sales-registration/sales-registration.component').then(m => m.SalesRegistrationComponent) },
+    { path: 'shortages-report', loadComponent: () => import('./shortages-report/shortages-report.component').then(m => m.ShortagesReportComponent) }
 ];
 
 @NgModule({

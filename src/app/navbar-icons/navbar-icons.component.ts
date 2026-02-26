@@ -1,4 +1,5 @@
-import { Component, OnInit, ViewChild, ChangeDetectorRef, Output, EventEmitter, ElementRef, HostListener, CUSTOM_ELEMENTS_SCHEMA, ViewEncapsulation, Input } from '@angular/core';
+import { Component, OnInit, ViewChild, ChangeDetectorRef, Output, EventEmitter, ElementRef, HostListener, CUSTOM_ELEMENTS_SCHEMA, ViewEncapsulation, Input, Inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive, NavigationEnd } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { faBars, faClose, faHome, faBook, faFilePdf, faUser, faChevronUp, faChevronDown, faSearch, faHeart, faCartPlus, faClipboardList, faTachometerAlt, faBell, faTrash, faStore, faFilter, faExpand, faBookReader, faCoins, faBookQuran } from '@fortawesome/free-solid-svg-icons';
@@ -83,11 +84,14 @@ export class NavbarIconsComponent implements OnInit {
     private merchantAuthService: MerchantAuthService,
     private notificationService: NotificationService,
     public pushService: PushNotificationService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    @Inject(PLATFORM_ID) private platformId: Object
   ) { }
 
   ngOnInit(): void {
-    this.isFullScreen = !!document.fullscreenElement;
+    if (isPlatformBrowser(this.platformId)) {
+      this.isFullScreen = !!document.fullscreenElement;
+    }
     // Check both AuthService and MerchantAuthService for user state
     this.authService.user$.subscribe((user) => {
       this.isLoggedIn = !!user;
@@ -124,7 +128,7 @@ export class NavbarIconsComponent implements OnInit {
           this.notificationService.refreshNotifications(user.id);
         }
 
-        this.router.events.subscribe((event) => {
+        this.router.events.subscribe((event: any) => {
           if (event instanceof NavigationEnd) {
             this.isOrdersActive = this.router.isActive('/requests', true);
             this.isAccountActive = this.showAccountModal;
@@ -217,11 +221,13 @@ export class NavbarIconsComponent implements OnInit {
 
   toggleDarkMode(): void {
     this.isDarkMode = !this.isDarkMode;
-    localStorage.setItem('darkMode', this.isDarkMode.toString());
-    if (this.isDarkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
+    if (isPlatformBrowser(this.platformId)) {
+      localStorage.setItem('darkMode', this.isDarkMode.toString());
+      if (this.isDarkMode) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
     }
   }
 
@@ -277,11 +283,13 @@ export class NavbarIconsComponent implements OnInit {
 
   @HostListener('window:resize', ['$event'])
   onResize(event: any): void {
-    this.y = window.innerWidth;
-    if (this.y >= 768) {  // md breakpoint and above
-      this.openBars = true;
-    } else {
-      this.openBars = false;
+    if (isPlatformBrowser(this.platformId)) {
+      this.y = window.innerWidth;
+      if (this.y >= 768) {  // md breakpoint and above
+        this.openBars = true;
+      } else {
+        this.openBars = false;
+      }
     }
   }
 
@@ -342,16 +350,20 @@ export class NavbarIconsComponent implements OnInit {
   }
 
   toggleFullScreen(): void {
-    if (!this.isFullScreen) {
-      document.documentElement.requestFullscreen();
-    } else {
-      document.exitFullscreen();
+    if (isPlatformBrowser(this.platformId)) {
+      if (!this.isFullScreen) {
+        document.documentElement.requestFullscreen();
+      } else {
+        document.exitFullscreen();
+      }
     }
   }
 
   @HostListener('document:fullscreenchange', ['$event'])
   onFullScreenChange(event: any): void {
-    this.isFullScreen = !!document.fullscreenElement;
+    if (isPlatformBrowser(this.platformId)) {
+      this.isFullScreen = !!document.fullscreenElement;
+    }
     this.cdr.markForCheck();
   }
   // Touch Handling for Swipe to Delete

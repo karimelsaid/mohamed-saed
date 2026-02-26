@@ -61,10 +61,13 @@ const userSchema = new mongoose.Schema({
       coverType: { type: String, required: true },
       printColor: { type: String, required: true },
       pages: { type: Number, required: true },
+      fromPage: { type: Number, default: 1 },
+      toPage: { type: Number },
       copies: { type: Number, required: true },
       notes: { type: String },
       projectTitle: { type: String, required: true },
       estimatedPrice: { type: Number, required: true },
+      finalPrice: { type: Number, default: null },
       createdAt: { type: Date, default: Date.now }
     }],
     shippingCost: Number,

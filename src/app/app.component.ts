@@ -1,6 +1,6 @@
-import { Component, ViewChild, ElementRef, NgZone, OnInit } from '@angular/core';
+import { Component, ViewChild, ElementRef, NgZone, OnInit, Inject, PLATFORM_ID } from '@angular/core';
 import { Router, NavigationEnd } from '@angular/router';
-import { Location } from '@angular/common'; // Import Location
+import { Location, isPlatformBrowser } from '@angular/common'; // Import Location
 import { App } from '@capacitor/app'; // Import App
 import { Capacitor } from '@capacitor/core'; // Import Capacitor
 import { faChevronLeft, faChevronRight, faSearch } from '@fortawesome/free-solid-svg-icons';
@@ -67,17 +67,21 @@ export class AppComponent implements OnInit {
     private authService: AuthService,
     private mushafAssetService: MushafAssetService,
     private voiceCallService: VoiceCallService,
-    private promotionService: PromotionService
+    private promotionService: PromotionService,
+    @Inject(PLATFORM_ID) private platformId: Object
   ) {
-    this.initializeApp();
-    // Initialize local reminders (works without server)
-    this.localReminderService.initializeReminders();
+    if (isPlatformBrowser(this.platformId)) {
+      this.initializeApp();
+      // Initialize local reminders (works without server)
+      this.localReminderService.initializeReminders();
+    }
     this.isDownloadingAssets$ = this.mushafAssetService.loading$;
     this.downloadProgress$ = this.mushafAssetService.progress$;
     this.downloadMessage$ = this.mushafAssetService.message$;
   }
 
   initializeApp() {
+    if (!isPlatformBrowser(this.platformId)) return;
     this.appUpdateService.checkForUpdate(); // Check for updates on startup
 
     // Auto specific actions
@@ -124,7 +128,9 @@ export class AppComponent implements OnInit {
 
     this.router.events.subscribe((event: any) => {
       if (event instanceof NavigationEnd) {
-        window.scrollTo(0, 0);
+        if (isPlatformBrowser(this.platformId)) {
+          window.scrollTo(0, 0);
+        }
 
         this.isAdminPage = event.urlAfterRedirects.includes('/admin') || event.urlAfterRedirects.includes('/ControlPanel');
 
@@ -133,7 +139,9 @@ export class AppComponent implements OnInit {
         if (event.urlAfterRedirects !== '/' && !event.urlAfterRedirects.includes('landing')) {
           this.isMushafPage = event.urlAfterRedirects.includes('/mushaf');
           // Persist state
-          localStorage.setItem('last_mushaf_state', this.isMushafPage ? 'mushaf' : 'home');
+          if (isPlatformBrowser(this.platformId)) {
+            localStorage.setItem('last_mushaf_state', this.isMushafPage ? 'mushaf' : 'home');
+          }
         }
       }
     });
@@ -143,22 +151,24 @@ export class AppComponent implements OnInit {
       this.allBooks = data;
     });
 
-    // Initialize dark mode from localStorage or system preference
-    const darkModeStored = localStorage.getItem('darkMode');
-    if (darkModeStored !== null) {
-      this.isDarkMode = darkModeStored === 'true';
-    } else {
-      // Use system preference
-      this.isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-    }
-    this.updateDarkModeClass();
+    if (isPlatformBrowser(this.platformId)) {
+      // Initialize dark mode from localStorage or system preference
+      const darkModeStored = localStorage.getItem('darkMode');
+      if (darkModeStored !== null) {
+        this.isDarkMode = darkModeStored === 'true';
+      } else {
+        // Use system preference
+        this.isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      }
+      this.updateDarkModeClass();
 
-    // Reset and start tutorial unconditionally to show the tutorial window always, unless permanently disabled
-    if (!this.tutorialService.isTutorialDisabledPermanently()) {
-      this.tutorialService.resetTutorial();
-      setTimeout(() => {
-        this.tutorialService.startTutorial();
-      }, 5000); // Show tutorial after 5 seconds delay
+      // Reset and start tutorial unconditionally to show the tutorial window always, unless permanently disabled
+      if (!this.tutorialService.isTutorialDisabledPermanently()) {
+        this.tutorialService.resetTutorial();
+        setTimeout(() => {
+          this.tutorialService.startTutorial();
+        }, 5000); // Show tutorial after 5 seconds delay
+      }
     }
 
     // Subscribe to modal service
@@ -196,7 +206,7 @@ export class AppComponent implements OnInit {
 
     // Auto-subscribe logged in users to push system and voice calling
     this.authService.user$.subscribe(user => {
-      if (user && user.id) {
+      if (user && user.id && isPlatformBrowser(this.platformId)) {
         // This ensures that valid token is sent to backend whenever user is known
         if (Capacitor.getPlatform() !== 'android') {
           this.pushService.subscribeToNotifications();
@@ -217,6 +227,7 @@ export class AppComponent implements OnInit {
   }
 
   applyPromotionTheme(theme: any) {
+    if (!isPlatformBrowser(this.platformId)) return;
     const root = document.documentElement;
     if (theme.themeConfig?.primaryColor) {
       root.style.setProperty('--promo-primary', theme.themeConfig.primaryColor);
@@ -230,11 +241,14 @@ export class AppComponent implements OnInit {
 
   toggleDarkMode(): void {
     this.isDarkMode = !this.isDarkMode;
-    localStorage.setItem('darkMode', this.isDarkMode.toString());
+    if (isPlatformBrowser(this.platformId)) {
+      localStorage.setItem('darkMode', this.isDarkMode.toString());
+    }
     this.updateDarkModeClass();
   }
 
   updateDarkModeClass(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
     if (this.isDarkMode) {
       document.documentElement.classList.add('dark');
     } else {
@@ -254,11 +268,13 @@ export class AppComponent implements OnInit {
 
   copyPhoneNumber(): void {
     const phoneNumber = '01094612729';
-    navigator.clipboard.writeText(phoneNumber).then(() => {
-      alert('تم نسخ الرقم');
-    }).catch(() => {
-      alert('فشل نسخ الرقم');
-    });
+    if (isPlatformBrowser(this.platformId)) {
+      navigator.clipboard.writeText(phoneNumber).then(() => {
+        alert('تم نسخ الرقم');
+      }).catch(() => {
+        alert('فشل نسخ الرقم');
+      });
+    }
   }
 
   ngOnDestroy(): void {

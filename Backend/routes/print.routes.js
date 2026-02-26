@@ -14,4 +14,7 @@ router.get('/download-file/:userId/:orderId/:fileIndex', printController.downloa
 // New route to update print order status
 router.patch('/update-status/:userId/:orderId', printController.updatePrintOrderStatus);
 
+// Route to update final price of a print order project
+router.patch('/update-final-price/:userId/:orderId/:projectIndex', printController.updateFinalPrice);
+
 module.exports = router;

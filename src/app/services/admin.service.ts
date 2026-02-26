@@ -115,4 +115,16 @@ export class AdminService {
       catchError(this.handleError)
     );
   }
+
+  getPromotionDates(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/promotion-dates`).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  updatePromotionDates(dates: { startDate: string; endDate: string }): Observable<any> {
+    return this.http.post(`${this.apiUrl}/update-promotion-dates`, dates).pipe(
+      catchError(this.handleError)
+    );
+  }
 }

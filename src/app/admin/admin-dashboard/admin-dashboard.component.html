@@ -64,6 +64,13 @@
         <span>إدارة العروض والترويج</span>
       </button>
 
+      <button (click)="switchView('promotionDates'); showSidebar = false"
+        [class]="currentView === 'promotionDates' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
+        class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
+        <fa-icon [icon]="['fas', 'calendar-alt']"></fa-icon>
+        <span>إدارة تواريخ العروض</span>
+      </button>
+
 
       <div class="pt-4 pb-2 px-4 text-xs font-bold text-gray-400 uppercase tracking-wider">التجار & المستخدمين</div>
 
@@ -130,6 +137,20 @@
         class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
         <fa-icon [icon]="['fas', 'book']"></fa-icon>
         <span>اقتراحات الكتب</span>
+      </button>
+
+      <button (click)="switchView('salesRegistration'); showSidebar = false"
+        [class]="currentView === 'salesRegistration' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
+        class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
+        <fa-icon [icon]="['fas', 'cart-plus']"></fa-icon>
+        <span>تسجيل مبيعات خارجية</span>
+      </button>
+
+      <button (click)="switchView('shortagesReport'); showSidebar = false"
+        [class]="currentView === 'shortagesReport' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
+        class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
+        <fa-icon [icon]="['fas', 'chart-bar']"></fa-icon>
+        <span>تقرير النواقص</span>
       </button>
 
       <button (click)="switchView('printOrders'); showSidebar = false"
@@ -569,31 +590,7 @@
       </div>
 
 
-      <div class="promotion-date-controls my-6 max-w-md mx-auto p-4 border rounded bg-gray-50 dark:bg-gray-800">
-        <h3 class="text-lg text-center font-semibold mb-2 text-gray-900 dark:text-gray-200">تاريخ بداية ونهاية العرض
-        </h3>
-
-        <div class="flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-4 sm:space-y-0">
-          <div class="flex flex-col">
-            <div class="flex flex-col">
-              <label for="startDate" class="mb-1 text-gray-700 dark:text-gray-300">تاريخ بداية العرض:</label>
-              <input id="startDate" type="date" [(ngModel)]="manualPromotionStartDate"
-                class="border rounded px-3 py-2 dark:bg-gray-700 dark:text-gray-200" />
-            </div>
-            <div class="flex flex-col">
-              <label for="endDate" class="mb-1 text-gray-700 dark:text-gray-300">تاريخ نهاية العرض:</label>
-              <input id="endDate" type="date" [(ngModel)]="manualPromotionEndDate"
-                class="border rounded px-3 py-2 dark:bg-gray-700 dark:text-gray-200" />
-            </div>
-            <div class="flex items-center mt-4 sm:mt-0">
-              <button (click)="savePromotionDates()"
-                class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded">
-                حفظ
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <!-- Remaining content -->
 
       <!-- Component Modal Dialog -->
       <app-modal-dialog [isOpen]="modalOpen" [title]="modalTitle" [message]="modalMessage" [type]="modalType"
@@ -629,6 +626,18 @@
 
       <div *ngIf="currentView === 'promotions'" class="mb-28 md:mb-0 px-4">
         <app-promotions-manager></app-promotions-manager>
+      </div>
+
+      <div *ngIf="currentView === 'salesRegistration'" class="mb-28 md:mb-0 px-4">
+        <app-sales-registration></app-sales-registration>
+      </div>
+
+      <div *ngIf="currentView === 'shortagesReport'" class="mb-28 md:mb-0 px-4">
+        <app-shortages-report></app-shortages-report>
+      </div>
+
+      <div *ngIf="currentView === 'promotionDates'" class="mb-28 md:mb-0 px-4">
+        <app-promotion-dates></app-promotion-dates>
       </div>
 
       <!-- GAMIFICATION CONTROL ROOM VIEW -->
@@ -2225,10 +2234,13 @@
               <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">اسم الملف</th>
               <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">عدد الصفحات</th>
               <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">عدد النسخ</th>
+              <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">نطاق الطباعة</th>
               <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">نوع الغلاف</th>
               <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">لون الطباعة</th>
+              <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">الملاحظات</th>
               <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">الحجم</th>
               <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">السعر المقدر</th>
+              <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">السعر النهائي 💰</th>
               <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">تاريخ الطلب</th>
               <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">حالة الطلب</th>
               <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">إجراءات</th>
@@ -2283,15 +2295,46 @@
                 <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700">{{ project.pages }}</td>
                 <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700">{{ project.copies }}
                 </td>
+                <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700 text-xs">
+                  <div class="font-bold text-blue-600 dark:text-blue-400">
+                    من {{ project.fromPage || 1 }} إلى {{ project.toPage || project.pages }}
+                  </div>
+                  <div class="text-[10px] text-gray-500">
+                    (إجمالي: {{ (project.toPage || project.pages) - (project.fromPage || 1) + 1 }} صفحة)
+                  </div>
+                </td>
                 <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700">{{ project.coverType }}
                 </td>
                 <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700">{{ project.printColor }}
+                </td>
+                <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700">
+                  <div
+                    class="max-w-[150px] overflow-x-auto whitespace-pre-wrap text-xs text-gray-600 dark:text-gray-400"
+                    title="{{ project.notes }}">
+                    {{ project.notes || 'لا يوجد' }}
+                  </div>
                 </td>
                 <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700">{{ project.size }}</td>
                 <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700">{{
                   project.estimatedPrice +
                   '
                   ج.م' }}</td>
+                <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700">
+                  <div class="flex items-center gap-1 justify-center">
+                    <input type="number" [value]="project.finalPrice ?? ''" placeholder="أدخل السعر" #finalPriceInput
+                      class="w-20 p-1 text-center text-sm border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      [ngClass]="{'border-green-400': project.finalPrice, 'border-amber-400': !project.finalPrice}">
+                    <button
+                      (click)="updateFinalPrice(printOrder.userId, printOrder.orderId, projectIndex, +finalPriceInput.value)"
+                      class="bg-green-600 hover:bg-green-700 text-white text-xs font-semibold py-1 px-2 rounded transition-colors"
+                      title="حفظ السعر النهائي">
+                      حفظ
+                    </button>
+                  </div>
+                  <div *ngIf="project.finalPrice" class="text-xs text-green-600 dark:text-green-400 mt-1 font-bold">
+                    {{ project.finalPrice }} ج.م ✅
+                  </div>
+                </td>
                 <td *ngIf="projectIndex === 0"
                   class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700"
                   [attr.rowspan]="printOrder.printProjects.length">
@@ -2364,6 +2407,23 @@
               <div><strong>لون الطباعة:</strong> {{ project.printColor }}</div>
               <div><strong>الحجم:</strong> {{ project.size }}</div>
               <div><strong>السعر المقدر:</strong> {{ project.estimatedPrice + ' ج.م' }}</div>
+              <div class="mt-2">
+                <strong>السعر النهائي:</strong>
+                <div class="flex items-center gap-2 mt-1">
+                  <input type="number" [value]="project.finalPrice ?? ''" placeholder="أدخل السعر"
+                    #mobileFinalPriceInput
+                    class="w-24 p-1 text-center text-sm border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    [ngClass]="{'border-green-400': project.finalPrice, 'border-amber-400': !project.finalPrice}">
+                  <button
+                    (click)="updateFinalPrice(printOrder.userId, printOrder.orderId, projectIndex, +mobileFinalPriceInput.value)"
+                    class="bg-green-600 hover:bg-green-700 text-white text-xs font-semibold py-1 px-2 rounded">
+                    حفظ
+                  </button>
+                </div>
+                <div *ngIf="project.finalPrice" class="text-xs text-green-600 dark:text-green-400 mt-1 font-bold">
+                  {{ project.finalPrice }} ج.م ✅
+                </div>
+              </div>
               <div class="mt-2 flex gap-2">
                 <a [href]="getDownloadUrl(printOrder.userId, printOrder.orderId, projectIndex)" download
                   class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-1 px-3 rounded text-center">

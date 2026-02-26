@@ -1,4 +1,5 @@
-import { Injectable } from '@angular/core';
+import { Injectable, Inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { SwPush } from '@angular/service-worker';
 import { firstValueFrom, Subject, timeout, catchError, of, take } from 'rxjs';
@@ -15,7 +16,8 @@ export class PushNotificationService {
 
     constructor(
         private http: HttpClient,
-        private swPush: SwPush
+        private swPush: SwPush,
+        @Inject(PLATFORM_ID) private platformId: Object
     ) {
         // Initialize listeners if on native platform
         if (Capacitor.isNativePlatform()) {
@@ -55,7 +57,7 @@ export class PushNotificationService {
             const status = await PushNotifications.checkPermissions();
             return { permission: status.receive, hasSubscription: false }; // Capacitor handles this differently
         } else {
-            if (!('Notification' in window)) {
+            if (!isPlatformBrowser(this.platformId) || !('Notification' in window)) {
                 return { permission: 'denied', hasSubscription: false };
             }
 
@@ -74,7 +76,7 @@ export class PushNotificationService {
             }
 
             return {
-                permission: Notification.permission as string,
+                permission: isPlatformBrowser(this.platformId) ? Notification.permission as string : 'default',
                 hasSubscription: hasSub
             };
         }
@@ -92,7 +94,7 @@ export class PushNotificationService {
 
         try {
             // 1. Explicitly request permission first (independent of Service Worker)
-            if ('Notification' in window && Notification.permission !== 'granted') {
+            if (isPlatformBrowser(this.platformId) && 'Notification' in window && Notification.permission !== 'granted') {
                 const perm = await Notification.requestPermission();
                 if (perm !== 'granted') {
                     throw new Error('تم رفض تصريح التنبيهات من المتصفح.');

@@ -33,6 +33,7 @@ import { HTTP_INTERCEPTORS } from '@angular/common/http';
 import { MerchantAuthInterceptor } from './interceptors/merchant-auth.interceptor';
 import { AdminAuthInterceptor } from './interceptors/admin-auth.interceptor';
 import { AuthInterceptor } from './interceptors/auth.interceptor';
+import { ErrorInterceptor } from './interceptors/error.interceptor';
 // Removed static imports for lazy loading
 
 import { AdminModule } from './admin/admin.module';
@@ -53,6 +54,7 @@ import { HowToEarnComponent } from './pages/how-to-earn/how-to-earn.component';
 import { ServiceWorkerModule } from '@angular/service-worker';
 import { LandingComponent } from './core/components/landing/landing.component';
 import { VoiceCallComponent } from './features/community/voice-call/voice-call.component';
+import { NetworkStatusComponent } from './shared/components/network-status/network-status.component';
 
 
 @NgModule({
@@ -108,14 +110,16 @@ import { VoiceCallComponent } from './features/community/voice-call/voice-call.c
       // or after 30 seconds (whichever comes first).
       registrationStrategy: 'registerImmediately'
     }),
-    FloatingWheelWidgetComponent
+    FloatingWheelWidgetComponent,
+    NetworkStatusComponent
   ],
   providers: [
     provideHttpClient(withInterceptorsFromDi()), // استخدام provideHttpClient بدلاً من HttpClientModule
     { provide: LocationStrategy, useClass: PathLocationStrategy },
     { provide: HTTP_INTERCEPTORS, useClass: MerchantAuthInterceptor, multi: true },
     { provide: HTTP_INTERCEPTORS, useClass: AdminAuthInterceptor, multi: true },
-    { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true }
+    { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
+    { provide: HTTP_INTERCEPTORS, useClass: ErrorInterceptor, multi: true }
   ],
   bootstrap: [AppComponent]
 })

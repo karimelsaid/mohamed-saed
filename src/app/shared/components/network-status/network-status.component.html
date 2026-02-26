@@ -1,0 +1,8 @@
+<div *ngIf="showStatus" [@slideInOut] class="network-toast" [ngClass]="statusType">
+    <div class="toast-content">
+        <i class="fas" [ngClass]="isOnline ? 'fa-wifi' : 'fa-wifi-slash'"></i>
+        <span class="message">
+            {{ isOnline ? 'متصل بالإنترنت' : 'لا يوجد اتصال بالإنترنت' }}
+        </span>
+    </div>
+</div>

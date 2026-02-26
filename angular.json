@@ -26,6 +26,11 @@
             "outputPath": "../kenouz/Backend/dist",
             "index": "src/index.html",
             "browser": "src/main.ts",
+            "ssr": {
+              "entry": "src/server.ts"
+            },
+            "server": "src/main.server.ts",
+            "prerender": false,
             "polyfills": [
               "zone.js"
             ],

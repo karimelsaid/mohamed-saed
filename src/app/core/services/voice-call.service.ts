@@ -1,4 +1,5 @@
-import { Injectable, OnDestroy } from '@angular/core';
+import { Injectable, OnDestroy, Inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import Peer, { MediaConnection } from 'peerjs';
 import { BehaviorSubject, Observable, Subject } from 'rxjs';
 import { SignalingService } from './signaling.service';
@@ -33,12 +34,15 @@ export class VoiceCallService implements OnDestroy {
     private myStream?: MediaStream;
     private statsInterval: any;
 
-    constructor(private signalingService: SignalingService) {
+    constructor(
+        private signalingService: SignalingService,
+        @Inject(PLATFORM_ID) private platformId: Object
+    ) {
         // We will initialize in init() once we have the userId
     }
 
     async init(userId: string) {
-        if (!userId) return;
+        if (!userId || !isPlatformBrowser(this.platformId)) return;
         if (this.myId === userId && this.peer && !this.peer.destroyed) return;
 
         console.log('📡 [VoiceCall] Initializing for:', userId);
@@ -91,7 +95,9 @@ export class VoiceCallService implements OnDestroy {
     }
 
     private handleIncomingCall(call: MediaConnection) {
-        (window as any).incomingCall = call;
+        if (isPlatformBrowser(this.platformId)) {
+            (window as any).incomingCall = call;
+        }
     }
 
     async startCall(remotePeerId: string, remoteUsername: string): Promise<void> {
@@ -140,7 +146,9 @@ export class VoiceCallService implements OnDestroy {
             });
 
             call.on('close', () => this.endCall());
-            (window as any).currentCall = call;
+            if (isPlatformBrowser(this.platformId)) {
+                (window as any).currentCall = call;
+            }
 
             this.startStatsMonitoring(call);
         } catch (err) {
@@ -165,7 +173,9 @@ export class VoiceCallService implements OnDestroy {
             });
 
             call.on('close', () => this.endCall());
-            (window as any).currentCall = call;
+            if (isPlatformBrowser(this.platformId)) {
+                (window as any).currentCall = call;
+            }
 
             this.startStatsMonitoring(call);
         } catch (err) {
@@ -188,8 +198,10 @@ export class VoiceCallService implements OnDestroy {
         this.networkQualitySubject.next(null);
         if (this.statsInterval) clearInterval(this.statsInterval);
 
-        (window as any).incomingCall = null;
-        (window as any).currentCall = null;
+        if (isPlatformBrowser(this.platformId)) {
+            (window as any).incomingCall = null;
+            (window as any).currentCall = null;
+        }
     }
 
     private async startStatsMonitoring(call: MediaConnection) {

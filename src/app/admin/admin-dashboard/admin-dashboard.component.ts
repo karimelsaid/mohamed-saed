@@ -25,6 +25,10 @@ import { AdminNotificationsComponent } from '../admin-notifications/admin-notifi
 import { SubscriptionSettingsComponent } from '../subscription-settings/subscription-settings.component';
 import { PromotionsManagerComponent } from '../promotions-manager/promotions-manager.component';
 import { AdminPrintingComponent } from '../admin-printing/admin-printing.component';
+import { SalesRegistrationComponent } from '../sales-registration/sales-registration.component';
+import { ShortagesReportComponent } from '../shortages-report/shortages-report.component';
+import { PromotionDatesComponent } from '../promotion-dates/promotion-dates.component';
+import { AdminApiService } from '../../services/admin-api.service';
 
 interface Order {
   _id: string;
@@ -118,10 +122,13 @@ interface PrintOrder {
     coverType: string;
     printColor: string;
     pages: number;
+    fromPage?: number;
+    toPage?: number;
     copies: number;
     notes: string;
     projectTitle: string;
     estimatedPrice: number;
+    finalPrice?: number | null;
     createdAt: Date;
   }[];
 }
@@ -205,7 +212,10 @@ interface SystemSettings {
     AdminNotificationsComponent,
     SubscriptionSettingsComponent,
     PromotionsManagerComponent,
-    AdminPrintingComponent
+    AdminPrintingComponent,
+    SalesRegistrationComponent,
+    ShortagesReportComponent,
+    PromotionDatesComponent
   ],
   templateUrl: './admin-dashboard.component.html',
   styleUrls: ['./admin-dashboard.component.css']
@@ -218,7 +228,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   feedbacks: ReaderFeedback[] = [];
   isAdmin: boolean = false; // Add paymentRequests to the type union
   showSidebar: boolean = true;
-  currentView: 'dashboard' | 'userIntelligence' | 'orders' | 'requestedBooks' | 'printOrders' | 'printingSettings' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' | 'gamificationControl' | 'notifications' | 'subscriptionControl' | 'readerFeedback' | 'promotions' = 'dashboard';
+  currentView: 'dashboard' | 'userIntelligence' | 'orders' | 'requestedBooks' | 'printOrders' | 'printingSettings' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' | 'gamificationControl' | 'notifications' | 'subscriptionControl' | 'readerFeedback' | 'promotions' | 'salesRegistration' | 'shortagesReport' | 'promotionDates' = 'dashboard';
 
   // Gamification Control Properties
   systemSettings: SystemSettings = {
@@ -250,9 +260,6 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   };
   isSavingSettings: boolean = false;
   originalSettings: SystemSettings | null = null;
-
-  manualPromotionStartDate: string = '';
-  manualPromotionEndDate: string = '';
 
   // Pagination state for orders
   ordersPage: number = 1;
@@ -417,7 +424,9 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     'notifications': 'الإشعارات والعروض',
     'subscriptionControl': 'إدارة الاشتراكات',
     'readerFeedback': 'ملاحظات القراء',
-    'promotions': 'إدارة العروض والخصومات'
+    'promotions': 'إدارة العروض والخصومات',
+    'salesRegistration': 'تسجيل مبيعات خارجية',
+    'shortagesReport': 'تقرير النواقص'
   };
 
   // Global Navigation Search
@@ -920,7 +929,6 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       if (user && user.email === 'admin@example.com' && user.role === 'admin') {
         this.isAdmin = true;
         this.loadOrders();
-        this.loadPromotionDates();
         this.loadNotifications();
         this.loadStats();
         this.loadSystemSettings(); // Load settings on init
@@ -967,7 +975,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     }
   }
 
-  switchView(view: 'dashboard' | 'userIntelligence' | 'orders' | 'requestedBooks' | 'printOrders' | 'printingSettings' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' | 'gamificationControl' | 'notifications' | 'subscriptionControl' | 'readerFeedback' | 'promotions'): void {
+  switchView(view: 'dashboard' | 'userIntelligence' | 'orders' | 'requestedBooks' | 'printOrders' | 'printingSettings' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' | 'gamificationControl' | 'notifications' | 'subscriptionControl' | 'readerFeedback' | 'promotions' | 'salesRegistration' | 'shortagesReport' | 'promotionDates'): void {
     this.currentView = view;
 
     if (view === 'dashboard') {
@@ -1009,6 +1017,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       // No data loading needed as the component handles it
     } else if (view === 'readerFeedback') {
       this.loadFeedbacks();
+    } else if (view === 'promotionDates') {
+      // PromotionDatesComponent handles its own loading
     }
   }
 
@@ -1283,48 +1293,6 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   }
 
 
-
-  loadPromotionDates(): void {
-    this.http.get<{ success: boolean; startDate: string; endDate: string }>(`${this.backendBaseUrl}/admin/promotion-dates`).subscribe({
-      next: (response) => {
-        if (response.success) {
-          this.manualPromotionStartDate = response.startDate ? response.startDate.substring(0, 10) : '';
-          this.manualPromotionEndDate = response.endDate ? response.endDate.substring(0, 10) : '';
-        }
-      },
-      error: (err) => {
-        // Error handled silently
-      }
-    });
-  }
-
-  savePromotionDates(): void {
-    if (!this.manualPromotionStartDate || !this.manualPromotionEndDate) {
-      this.showErrorModal('يرجى إدخال تاريخ بداية ونهاية العرض.');
-      return;
-    }
-    if (this.manualPromotionEndDate <= this.manualPromotionStartDate) {
-      this.showErrorModal('يجب أن يكون تاريخ نهاية العرض بعد تاريخ البداية.');
-      return;
-    }
-    const payload = {
-      startDate: this.manualPromotionStartDate,
-      endDate: this.manualPromotionEndDate
-    };
-    this.http.post(`${this.backendBaseUrl}/admin/update-promotion-dates`, payload).subscribe({
-      next: (response: any) => {
-        if (response.success) {
-          this.showSuccessModal('تم حفظ تواريخ العرض بنجاح.');
-        } else {
-          this.showErrorModal('حدث خطأ أثناء حفظ تواريخ العرض.');
-        }
-      },
-      error: (err) => {
-        // Error handled silently
-        this.showErrorModal('حدث خطأ أثناء حفظ تواريخ العرض.');
-      }
-    });
-  }
 
   loadProducts(): void {
     this.http.get<{ success: boolean; products: Product[] }>(`${this.backendBaseUrl}/admin/products`).subscribe({
@@ -2105,6 +2073,22 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         // Error handled silently
+      }
+    });
+  }
+
+  updateFinalPrice(userId: string, orderId: string, projectIndex: number, finalPrice: number): void {
+    if (finalPrice === null || finalPrice === undefined || isNaN(finalPrice) || finalPrice < 0) {
+      this.showErrorModal('يرجى إدخال سعر نهائي صحيح');
+      return;
+    }
+    this.http.patch(`${this.backendBaseUrl}/print/update-final-price/${userId}/${orderId}/${projectIndex}`, { finalPrice }).subscribe({
+      next: () => {
+        this.showSuccessModal('تم تحديث السعر النهائي بنجاح');
+        this.loadPrintOrders();
+      },
+      error: (err) => {
+        this.showErrorModal('حدث خطأ أثناء تحديث السعر النهائي');
       }
     });
   }

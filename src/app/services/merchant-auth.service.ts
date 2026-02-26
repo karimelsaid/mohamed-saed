@@ -1,4 +1,5 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, PLATFORM_ID, Inject } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { ProductStateService } from './product-state.service';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, BehaviorSubject, throwError } from 'rxjs';
@@ -62,8 +63,13 @@ export class MerchantAuthService {
 
   private productStateService = inject(ProductStateService);
 
-  constructor(private http: HttpClient) {
-    this.checkInitialLogin();
+  constructor(
+    private http: HttpClient,
+    @Inject(PLATFORM_ID) private platformId: Object
+  ) {
+    if (isPlatformBrowser(this.platformId)) {
+      this.checkInitialLogin();
+    }
   }
 
   private checkInitialLogin() {
@@ -116,28 +122,34 @@ export class MerchantAuthService {
   }
 
   private setMerchantAuth(token: string, merchant: any) {
-    localStorage.setItem(this.merchantTokenKey, token);
-    localStorage.setItem(this.merchantDataKey, JSON.stringify(merchant));
+    if (isPlatformBrowser(this.platformId)) {
+      localStorage.setItem(this.merchantTokenKey, token);
+      localStorage.setItem(this.merchantDataKey, JSON.stringify(merchant));
+    }
     this.merchantSubject.next(merchant);
     this.isLoggedInSubject.next(true);
   }
 
   private clearMerchantAuth() {
-    localStorage.removeItem(this.merchantTokenKey);
-    localStorage.removeItem(this.merchantDataKey);
+    if (isPlatformBrowser(this.platformId)) {
+      localStorage.removeItem(this.merchantTokenKey);
+      localStorage.removeItem(this.merchantDataKey);
+    }
     this.merchantSubject.next(null);
     this.isLoggedInSubject.next(false);
   }
 
   getToken(): string | null {
-    // Safety check for SSR or unexpected environments
-    if (typeof localStorage === 'undefined') {
+    if (!isPlatformBrowser(this.platformId)) {
       return null;
     }
     return localStorage.getItem(this.merchantTokenKey);
   }
 
   getCurrentMerchant(): any {
+    if (!isPlatformBrowser(this.platformId)) {
+      return null;
+    }
     const merchantData = localStorage.getItem(this.merchantDataKey);
     return merchantData ? JSON.parse(merchantData) : null;
   }

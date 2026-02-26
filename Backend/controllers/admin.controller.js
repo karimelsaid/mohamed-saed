@@ -24,7 +24,15 @@ const PaymentRequest = require('../models/PaymentRequest.model');
 const Referral = require('../models/Referral.model');
 const Ebook = require('../models/Ebook.model');
 const Donation = require('../models/Donation.model');
+const FreeShippingRule = require('../models/FreeShippingRule.model');
+const ProductUpdateRequest = require('../models/ProductUpdateRequest.model');
+const Product = require('../models/Product.model');
+const Order = require('../models/Order.model');
+const User = require('../models/User.model');
+const SystemSettings = require('../models/SystemSettings.js');
 const { createMiniEpub } = require('../services/epub.service');
+const xlsx = require('xlsx');
+const { google } = require('googleapis');
 
 // Helper function to generate random barcode string
 function generateRandomBarcode(length = 12) {
@@ -340,7 +348,6 @@ async function listProducts(req, res) {
         let mappingsChanged = false;
 
         // Get all valid Ebook IDs from DB
-        const Ebook = require('../models/Ebook.model');
         const validEbookIds = await Ebook.find({}, '_id').lean();
         const validEbookIdSet = new Set(validEbookIds.map(e => e._id.toString()));
 
@@ -402,7 +409,7 @@ async function updateProduct(req, res) {
 
     try {
       const client = await require('../config/drive').auth.getClient();
-      drive = require('googleapis').google.drive({ version: 'v3', auth: client });
+      drive = google.drive({ version: 'v3', auth: client });
 
       const resDrive = await drive.files.get({
         fileId,
@@ -410,7 +417,6 @@ async function updateProduct(req, res) {
       }, { responseType: 'arraybuffer' });
 
       const buffer = Buffer.from(resDrive.data);
-      const xlsx = require('xlsx');
       workbook = xlsx.read(buffer, { type: 'buffer' });
       sheetName = workbook.SheetNames[0];
       const sheet = workbook.Sheets[sheetName];
@@ -454,7 +460,6 @@ async function updateProduct(req, res) {
       fs.writeFileSync(rawDataPath, JSON.stringify(json, null, 2));
 
       // Process and Update output.json locally immediately
-      const PromotionDate = require('../models/PromotionDate.model');
       const promoDoc = await PromotionDate.findOne().sort({ createdAt: -1 }).exec();
       const pStart = promoDoc ? promoDoc.startDate : new Date();
       const pEnd = promoDoc ? promoDoc.endDate : new Date();
@@ -470,7 +475,6 @@ async function updateProduct(req, res) {
     // Attempt to sync back to Google Drive (resilient to missing workbook)
     if (drive) {
       try {
-        const xlsx = require('xlsx');
 
         if (!workbook) {
           workbook = xlsx.utils.book_new();
@@ -531,7 +535,7 @@ async function batchUpdateProducts(req, res) {
     }
 
     const client = await require('../config/drive').auth.getClient();
-    const drive = require('googleapis').google.drive({ version: 'v3', auth: client });
+    const drive = google.drive({ version: 'v3', auth: client });
 
     const resDrive = await drive.files.get({
       fileId,
@@ -539,7 +543,6 @@ async function batchUpdateProducts(req, res) {
     }, { responseType: 'arraybuffer' });
 
     const buffer = Buffer.from(resDrive.data);
-    const xlsx = require('xlsx');
     const workbook = xlsx.read(buffer, { type: 'buffer' });
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
@@ -830,7 +833,7 @@ async function deleteProduct(req, res) {
     }
 
     const client = await require('../config/drive').auth.getClient();
-    const drive = require('googleapis').google.drive({ version: 'v3', auth: client });
+    const drive = google.drive({ version: 'v3', auth: client });
 
     const resDrive = await drive.files.get({
       fileId,
@@ -838,7 +841,6 @@ async function deleteProduct(req, res) {
     }, { responseType: 'arraybuffer' });
 
     const buffer = Buffer.from(resDrive.data);
-    const xlsx = require('xlsx');
     const workbook = xlsx.read(buffer, { type: 'buffer' });
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
@@ -887,7 +889,7 @@ async function deleteProduct(req, res) {
     }
 
     // Delete from Product model (covers both admin and merchant products)
-    await require('../models/Product.model').deleteMany({ product_image: { $regex: barcode } });
+    await Product.deleteMany({ product_image: { $regex: barcode } });
 
     res.json({ success: true, message: 'Product deleted successfully from admin and merchant' });
   } catch (error) {
@@ -918,7 +920,7 @@ async function bulkDeleteProducts(req, res) {
     }
 
     const client = await require('../config/drive').auth.getClient();
-    const drive = require('googleapis').google.drive({ version: 'v3', auth: client });
+    const drive = google.drive({ version: 'v3', auth: client });
 
     const resDrive = await drive.files.get({
       fileId,
@@ -926,7 +928,6 @@ async function bulkDeleteProducts(req, res) {
     }, { responseType: 'arraybuffer' });
 
     const buffer = Buffer.from(resDrive.data);
-    const xlsx = require('xlsx');
     const workbook = xlsx.read(buffer, { type: 'buffer' });
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
@@ -986,11 +987,9 @@ async function bulkDeleteProducts(req, res) {
     }
 
     // Now delete from merchant's products and uploads folders
-    const User = require('../models/User.model');
-    const ProductModel = require('../models/Product.model');
 
     // Find all merchant products that match the barcodes
-    const merchantProducts = await ProductModel.find({ product_image: { $in: barcodes.map(bc => new RegExp(bc)) } });
+    const merchantProducts = await Product.find({ product_image: { $in: barcodes.map(bc => new RegExp(bc)) } });
 
     for (const product of merchantProducts) {
       const merchantId = product.merchantId;
@@ -1052,7 +1051,7 @@ async function batchUpdateProductsMain(req, res) {
 
     try {
       const client = await require('../config/drive').auth.getClient();
-      drive = require('googleapis').google.drive({ version: 'v3', auth: client });
+      drive = google.drive({ version: 'v3', auth: client });
 
       const resDrive = await drive.files.get({
         fileId,
@@ -1060,7 +1059,6 @@ async function batchUpdateProductsMain(req, res) {
       }, { responseType: 'arraybuffer' });
 
       const buffer = Buffer.from(resDrive.data);
-      const xlsx = require('xlsx');
       workbook = xlsx.read(buffer, { type: 'buffer' });
       sheetName = workbook.SheetNames[0];
       const sheet = workbook.Sheets[sheetName];
@@ -1105,7 +1103,6 @@ async function batchUpdateProductsMain(req, res) {
       fs.writeFileSync(rawDataPath, JSON.stringify(json, null, 2));
 
       // Process and Update output.json locally immediately
-      const PromotionDate = require('../models/PromotionDate.model');
       const promoDoc = await PromotionDate.findOne().sort({ createdAt: -1 }).exec();
       const pStart = promoDoc ? promoDoc.startDate : new Date();
       const pEnd = promoDoc ? promoDoc.endDate : new Date();
@@ -1121,7 +1118,6 @@ async function batchUpdateProductsMain(req, res) {
     // Attempt to sync back to Google Drive (resilient to missing workbook)
     if (drive) {
       try {
-        const xlsx = require('xlsx');
 
         if (!workbook) {
           workbook = xlsx.utils.book_new();
@@ -1227,7 +1223,6 @@ async function updatePromotionDates(req, res) {
   }
 }
 
-const FreeShippingRule = require('../models/FreeShippingRule.model');
 
 async function getFreeShippingRules(req, res) {
   try {
@@ -1283,9 +1278,6 @@ async function saveFreeShippingRules(req, res) {
     res.status(500).json({ success: false, message: 'Server error' });
   }
 }
-
-const User = require('../models/User.model');
-const Product = require('../models/Product.model');
 
 // Admin: List all merchants
 async function listMerchants(req, res) {
@@ -1352,9 +1344,8 @@ async function listMerchantProducts(req, res) {
   }
 }
 
-// Admin: Approve or reject product
-const ProductUpdateRequest = require('../models/ProductUpdateRequest.model');
 
+// Admin: Approve or reject product
 async function updateProductApproval(req, res) {
   try {
     const { productId } = req.params;
@@ -1504,7 +1495,6 @@ async function updateMerchantSuspension(req, res) {
 // Admin: Get all product update requests
 async function getProductUpdateRequests(req, res) {
   try {
-    const ProductUpdateRequest = require('../models/ProductUpdateRequest.model');
 
     const requests = await ProductUpdateRequest.find()
       .populate('productId')
@@ -1528,8 +1518,6 @@ async function updateProductUpdateRequest(req, res) {
       return res.status(400).json({ success: false, message: 'Status must be approved or rejected' });
     }
 
-    const ProductUpdateRequest = require('../models/ProductUpdateRequest.model');
-    const Product = require('../models/Product.model');
 
     const request = await ProductUpdateRequest.findById(requestId);
     if (!request) {
@@ -1563,7 +1551,6 @@ async function updateProductUpdateRequest(req, res) {
 
       if (fileId) {
         const client = await require('../config/drive').auth.getClient();
-        const drive = require('googleapis').google.drive({ version: 'v3', auth: client });
 
         const resDrive = await drive.files.get({
           fileId,
@@ -1571,7 +1558,6 @@ async function updateProductUpdateRequest(req, res) {
         }, { responseType: 'arraybuffer' });
 
         const buffer = Buffer.from(resDrive.data);
-        const xlsx = require('xlsx');
         const workbook = xlsx.read(buffer, { type: 'buffer' });
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
@@ -1638,7 +1624,6 @@ async function updateProductUpdateRequest(req, res) {
 async function getMerchantProducts(req, res) {
   try {
     const { merchantId } = req.params;
-    const Product = require('../models/Product.model');
 
     const products = await Product.find({ merchantId }).sort({ createdAt: -1 });
     res.json({ success: true, products });
@@ -1749,7 +1734,6 @@ async function userHierarchy(req, res) {
 
     // Get counts for each user
     const userIds = users.map(u => u._id);
-    const Order = require('../models/Order.model');
 
     const ordersCounts = await Order.aggregate([
       { $match: { userId: { $in: userIds } } },
@@ -1919,7 +1903,6 @@ async function updateUrgencyRequestStatus(req, res) {
         }
 
         const client = await require('../config/drive').auth.getClient();
-        const drive = require('googleapis').google.drive({ version: 'v3', auth: client });
 
         const resDrive = await drive.files.get({
           fileId,
@@ -1927,7 +1910,6 @@ async function updateUrgencyRequestStatus(req, res) {
         }, { responseType: 'arraybuffer' });
 
         const buffer = Buffer.from(resDrive.data);
-        const xlsx = require('xlsx');
         const workbook = xlsx.read(buffer, { type: 'buffer' });
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
@@ -2021,7 +2003,7 @@ async function updateProductQuantity(req, res) {
     }
 
     const client = await require('../config/drive').auth.getClient();
-    const drive = require('googleapis').google.drive({ version: 'v3', auth: client });
+    const drive = google.drive({ version: 'v3', auth: client });
 
     const resDrive = await drive.files.get({
       fileId,
@@ -2029,7 +2011,6 @@ async function updateProductQuantity(req, res) {
     }, { responseType: 'arraybuffer' });
 
     const buffer = Buffer.from(resDrive.data);
-    const xlsx = require('xlsx');
     const workbook = xlsx.read(buffer, { type: 'buffer' });
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
@@ -2106,7 +2087,6 @@ async function updateUrgencyRequestStatus(req, res) {
         }
 
         const client = await require('../config/drive').auth.getClient();
-        const drive = require('googleapis').google.drive({ version: 'v3', auth: client });
 
         const resDrive = await drive.files.get({
           fileId,
@@ -2114,7 +2094,6 @@ async function updateUrgencyRequestStatus(req, res) {
         }, { responseType: 'arraybuffer' });
 
         const buffer = Buffer.from(resDrive.data);
-        const xlsx = require('xlsx');
         const workbook = xlsx.read(buffer, { type: 'buffer' });
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
@@ -2200,7 +2179,7 @@ async function bulkAdjustPrices(req, res) {
     }
 
     const client = await require('../config/drive').auth.getClient();
-    const drive = require('googleapis').google.drive({ version: 'v3', auth: client });
+    const drive = google.drive({ version: 'v3', auth: client });
 
     const resDrive = await drive.files.get({
       fileId,
@@ -2208,7 +2187,6 @@ async function bulkAdjustPrices(req, res) {
     }, { responseType: 'arraybuffer' });
 
     const buffer = Buffer.from(resDrive.data);
-    const xlsx = require('xlsx');
     const workbook = xlsx.read(buffer, { type: 'buffer' });
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
@@ -2305,7 +2283,7 @@ async function updateProductQuantity(req, res) {
     }
 
     const client = await require('../config/drive').auth.getClient();
-    const drive = require('googleapis').google.drive({ version: 'v3', auth: client });
+    const drive = google.drive({ version: 'v3', auth: client });
 
     const resDrive = await drive.files.get({
       fileId,
@@ -2313,7 +2291,6 @@ async function updateProductQuantity(req, res) {
     }, { responseType: 'arraybuffer' });
 
     const buffer = Buffer.from(resDrive.data);
-    const xlsx = require('xlsx');
     const workbook = xlsx.read(buffer, { type: 'buffer' });
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
@@ -2360,6 +2337,171 @@ async function updateProductQuantity(req, res) {
     res.status(500).json({ success: false, message: 'Server error' });
   }
 }
+async function registerSale(req, res) {
+  try {
+    const { soldItems } = req.body; // Array of { products_id, quantity }
+
+    if (!soldItems || !Array.isArray(soldItems) || soldItems.length === 0) {
+      return res.status(400).json({ success: false, message: 'Missing sold items' });
+    }
+
+    const rawDataPath = path.join(__dirname, '..', 'output_raw.json');
+    if (!fs.existsSync(rawDataPath)) {
+      return res.status(500).json({ success: false, message: 'Product data not found' });
+    }
+
+    let rawData = JSON.parse(fs.readFileSync(rawDataPath, 'utf-8'));
+    const updatedBarcodes = [];
+
+    for (const item of soldItems) {
+      const productIndex = rawData.findIndex(p => String(p.products_id).trim() === String(item.products_id).trim());
+      if (productIndex !== -1) {
+        const currentQty = parseInt(rawData[productIndex].product_quantity, 10) || 0;
+        rawData[productIndex].product_quantity = Math.max(0, currentQty - (parseInt(item.quantity, 10) || 1));
+        updatedBarcodes.push(item.products_id);
+      }
+    }
+
+    // Save updated raw data
+    fs.writeFileSync(rawDataPath, JSON.stringify(rawData, null, 2));
+
+    // Process and Update output.json locally
+    const promoDoc = await PromotionDate.findOne().sort({ createdAt: -1 }).exec();
+    const pStart = promoDoc ? promoDoc.startDate : new Date();
+    const pEnd = promoDoc ? promoDoc.endDate : new Date();
+
+    const { processAndSaveData } = require('../services/excel.service');
+    await processAndSaveData(rawData, pStart, pEnd);
+
+    // Sync to Google Drive
+    const fileId = process.env.GOOGLE_DRIVE_FILE_ID;
+    if (fileId) {
+      const { updateExcelFromJson } = require('../services/excel.service');
+      await updateExcelFromJson(fileId);
+    }
+
+    res.json({ success: true, message: 'Sale registered and inventory updated successfully' });
+  } catch (error) {
+    console.error('Error in registerSale:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+}
+
+async function updateShortageSettings(req, res) {
+  try {
+    const { threshold, categories, includeSuggestions, orderQuantities } = req.body;
+    const settings = await SystemSettings.getInstance();
+
+    if (threshold !== undefined) settings.shortageSettings.threshold = threshold;
+    if (categories !== undefined) settings.shortageSettings.categories = categories;
+    if (includeSuggestions !== undefined) settings.shortageSettings.includeSuggestions = includeSuggestions;
+
+    if (orderQuantities !== undefined) {
+      // Convert object to Map for Mongoose
+      for (const [key, value] of Object.entries(orderQuantities)) {
+        settings.shortageSettings.orderQuantities.set(key, value);
+      }
+    }
+
+    await settings.save();
+    res.json({ success: true, message: 'Shortage settings updated successfully', settings: settings.shortageSettings });
+  } catch (error) {
+    console.error('Error updating shortage settings:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+}
+
+async function getShortageSettings(req, res) {
+  try {
+    const settings = await SystemSettings.getInstance();
+    res.json({ success: true, settings: settings.shortageSettings });
+  } catch (error) {
+    console.error('Error fetching shortage settings:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+}
+
+async function getShortagesReport(req, res) {
+  try {
+    const settings = await SystemSettings.getInstance();
+    const { threshold, categories, includeSuggestions, orderQuantities, defaultOrderQuantity } = settings.shortageSettings;
+    const defaultQty = defaultOrderQuantity || 1;
+
+    const outputPath = path.join(__dirname, '..', 'output.json');
+    if (!fs.existsSync(outputPath)) {
+      return res.status(500).json({ success: false, message: 'Product data not found' });
+    }
+
+    const products = JSON.parse(fs.readFileSync(outputPath, 'utf-8'));
+
+    // Filter products based on threshold/categories OR if they have manual quantities set
+    let shortages = products.filter(p => {
+      const products_id = String(p.products_id).trim();
+      const qty = parseInt(p.product_quantity, 10) || 0;
+      const matchesThreshold = qty < threshold;
+      const matchesCategory = categories.length === 0 || categories.includes(p.product_category);
+      const isManual = orderQuantities.has(products_id);
+
+      return (matchesThreshold && matchesCategory) || isManual;
+    });
+
+    const protocol = req.protocol;
+    const host = req.get('host');
+    const baseUrl = `${protocol}://${host}`;
+
+    const reportData = shortages.map(p => {
+      const products_id = String(p.products_id).trim();
+      const orderQuantity = orderQuantities.get(products_id) || defaultQty;
+      const imageLink = `${baseUrl}${p.image_path}`;
+
+      return {
+        'اسم المنتج': p.product_name,
+        'كمية الطلب': orderQuantity,
+        'رابط الصورة': { t: 's', v: imageLink, l: { Target: imageLink, Tooltip: 'انقر لمشاهدة الصورة' } }
+      };
+    });
+
+    // Optionally include user suggestions
+    if (includeSuggestions) {
+      const users = await User.find({ 'requestedBooks.added': false }).select('requestedBooks');
+      users.forEach(u => {
+        u.requestedBooks.filter(rb => !rb.added).forEach(rb => {
+          reportData.push({
+            'اسم المنتج': `[اقتراح] ${rb.bookName} - ${rb.authorName || 'غير معروف'}`,
+            'كمية الطلب': 1,
+            'رابط الصورة': 'لا يوجد'
+          });
+        });
+      });
+    }
+
+    // Create Excel workbook
+    const wb = xlsx.utils.book_new();
+    const ws = xlsx.utils.json_to_sheet(reportData);
+
+    // Set column widths
+    ws['!cols'] = [
+      { wch: 40 }, // Name
+      { wch: 15 }, // Available
+      { wch: 15 }, // Order Qty
+      { wch: 20 }, // Category
+      { wch: 50 }, // Image Link
+    ];
+
+    xlsx.utils.book_append_sheet(wb, ws, 'النواقص');
+
+    const buffer = xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename=Shortages_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
+    res.send(buffer);
+
+  } catch (error) {
+    console.error('Error generating shortages report:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+}
+
 module.exports = {
   upload,
   addProduct,
@@ -2394,5 +2536,9 @@ module.exports = {
   updateProductQuantity,
   updatePaymentRequestStatus,
   getDonationStats,
+  registerSale,
+  getShortageSettings,
+  updateShortageSettings,
+  getShortagesReport,
   bulkAdjustPrices
 };

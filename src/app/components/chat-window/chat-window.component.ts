@@ -1,4 +1,5 @@
-import { Component, OnInit, ElementRef, ViewChild, HostListener, AfterViewInit, OnDestroy, Input } from '@angular/core';
+import { Component, OnInit, ElementRef, ViewChild, HostListener, AfterViewInit, OnDestroy, Input, Inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { ChatAiService } from '../../services/chat-ai.service';
 import { fromEvent, Subscription } from 'rxjs';
@@ -44,12 +45,19 @@ export class ChatWindowComponent implements OnInit, AfterViewInit, OnDestroy {
   chatWindowHeight: number = 400;
 
   private resizeSubscription!: Subscription;
-  private initialWindowHeight: number = window.innerHeight;
+  private initialWindowHeight: number = 0;
   private keyboardVisible: boolean = false;
 
-  constructor(private chatAiService: ChatAiService, private sanitizer: DomSanitizer) { }
+  constructor(
+    private chatAiService: ChatAiService,
+    private sanitizer: DomSanitizer,
+    @Inject(PLATFORM_ID) private platformId: Object
+  ) { }
 
   ngOnInit(): void {
+    if (isPlatformBrowser(this.platformId)) {
+      this.initialWindowHeight = window.innerHeight;
+    }
     // يمكن إضافة رسالة ترحيبية افتراضية
     this.messages.push({
       role: 'system',
@@ -58,6 +66,7 @@ export class ChatWindowComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   toggleFullscreen(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
     this.isFullscreen = !this.isFullscreen;
     if (this.isFullscreen) {
       // عند تفعيل ملء الشاشة، اضبط الموضع والحجم ليملأ الشاشة
@@ -74,6 +83,8 @@ export class ChatWindowComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngAfterViewInit(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+
     if (this.chatWindow && this.chatWindow.nativeElement) {
       const rect = this.chatWindow.nativeElement.getBoundingClientRect();
       this.chatWindowWidth = rect.width || 320;
@@ -100,6 +111,7 @@ export class ChatWindowComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private handleResize(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
     const currentHeight = window.innerHeight;
     const heightDiff = this.initialWindowHeight - currentHeight;
     const keyboardThreshold = 150; // px, threshold to detect keyboard
@@ -117,6 +129,7 @@ export class ChatWindowComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private updatePosition(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
     let newPosX = window.innerWidth - this.chatWindowWidth - this.marginRight;
     let newPosY = window.innerHeight - this.chatWindowHeight - this.marginBottom;
 
@@ -209,7 +222,7 @@ export class ChatWindowComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   onDragMove(event: MouseEvent): void {
-    if (this.isDragging) {
+    if (this.isDragging && isPlatformBrowser(this.platformId)) {
       this.posX = event.clientX - this.dragStartX;
       this.posY = event.clientY - this.dragStartY;
 
@@ -237,7 +250,7 @@ export class ChatWindowComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   onTouchMove(event: TouchEvent): void {
-    if (this.isDragging && event.touches.length === 1) {
+    if (this.isDragging && event.touches.length === 1 && isPlatformBrowser(this.platformId)) {
       this.posX = event.touches[0].clientX - this.dragStartX;
       this.posY = event.touches[0].clientY - this.dragStartY;
 

@@ -86,4 +86,12 @@ router.patch('/payment-requests/:requestId', adminController.updatePaymentReques
 // Route to get user hierarchy
 router.get('/user-hierarchy', adminController.userHierarchy);
 
+// 🛒 Manual Sales & Inventory Recording
+router.post('/register-sale', adminController.registerSale);
+
+// 📊 Shortages & Reports
+router.get('/shortage-settings', adminController.getShortageSettings);
+router.get('/shortages-report', adminController.getShortagesReport);
+router.patch('/shortage-settings', adminController.updateShortageSettings);
+
 module.exports = router;

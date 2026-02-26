@@ -1,4 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, Inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 import { DataService } from '../services/data.service';
 import { AuthService } from '../auth/auth.service';
@@ -47,12 +48,20 @@ export class HomePageComponent implements OnInit {
   touchStartX: number = 0;
   touchEndX: number = 0;
 
-  constructor(private dataService: DataService, private router: Router, private authService: AuthService, private seoService: SeoService) { }
+  constructor(
+    private dataService: DataService,
+    private router: Router,
+    private authService: AuthService,
+    private seoService: SeoService,
+    @Inject(PLATFORM_ID) private platformId: Object
+  ) { }
 
   ngOnInit(): void {
     this.isLoading = true;
     this.setPromoImages();
-    this.startPromoAutoScroll();
+    if (isPlatformBrowser(this.platformId)) {
+      this.startPromoAutoScroll();
+    }
 
     // Set SEO meta tags for the homepage
     this.seoService.updateMetaTags({

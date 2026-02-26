@@ -14,6 +14,21 @@
             "date": 1771798062817,
             "name": "D:\\My projects\\Kenouz\\Backend\\logs\\app-2026-02-23.log",
             "hash": "4c8b493b34f794bddad5ac71b93d7015521e32caf013fd154f497d44274eb552"
+        },
+        {
+            "date": 1771884354741,
+            "name": "D:\\My projects\\Kenouz\\Backend\\logs\\app-2026-02-24.log",
+            "hash": "95088b52be2b11a2dee158e746de3a69400077f44e73ea1cf9701884a8000a01"
+        },
+        {
+            "date": 1772030024989,
+            "name": "D:\\My projects\\Kenouz\\Backend\\logs\\app-2026-02-25.log",
+            "hash": "1709f87751529ff244e750ac95036a5ecbc33b3b1084d93aef1781d23fbe9479"
+        },
+        {
+            "date": 1772105931590,
+            "name": "D:\\My projects\\Kenouz\\Backend\\logs\\app-2026-02-26.log",
+            "hash": "0801b2d118924b8e25bed302f25c0d57facc722349aca36697a001024aa48e63"
         }
     ],
     "hashType": "sha256"

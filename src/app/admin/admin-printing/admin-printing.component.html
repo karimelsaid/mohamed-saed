@@ -2,139 +2,381 @@
     <div
         class="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl overflow-hidden border border-gray-100 dark:border-gray-700">
         <!-- Header Section -->
-        <div class="bg-gradient-to-r from-blue-600 to-blue-800 p-8 text-white relative overflow-hidden">
+        <div class="bg-gradient-to-r from-blue-600 to-indigo-800 p-8 text-white relative overflow-hidden">
             <div class="absolute top-0 right-0 p-10 opacity-10">
                 <fa-icon [icon]="faPrint" size="6x"></fa-icon>
             </div>
             <div class="relative z-10">
                 <h2 class="text-3xl font-extrabold flex items-center gap-3 mb-2">
                     <fa-icon [icon]="faPrint"></fa-icon>
-                    إعدادات وأسعار خدمة الطباعة
+                    حاسبة الطباعة وإدارة الإعدادات
                 </h2>
-                <p class="text-blue-100 opacity-90">إدارة تكاليف الورق، الأغلفة، وألوان الطباعة بشكل ديناميكي</p>
+                <p class="text-blue-100 opacity-90">إدارة تكاليف الورق، الطابعات، وتتبع الحبر بدقة عالية</p>
             </div>
         </div>
 
         <div *ngIf="isLoading" class="p-20 flex flex-col items-center justify-center space-y-4">
             <div class="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-            <p class="text-gray-500 dark:text-gray-400 font-medium">جاري تحميل الأسعار الحالية...</p>
+            <p class="text-gray-500 dark:text-gray-400 font-medium">جاري تحميل البيانات...</p>
         </div>
 
-        <div *ngIf="!isLoading" class="p-8 space-y-10">
-            <!-- Paper Prices Section -->
-            <section>
-                <h3
-                    class="text-xl font-bold text-gray-800 dark:text-gray-100 mb-6 flex items-center gap-2 border-r-4 border-blue-600 pr-3">
-                    <fa-icon [icon]="faLayerGroup" class="text-blue-600"></fa-icon>
-                    أسعار الورق (لكل ورقة A4 كاملة)
+        <div *ngIf="!isLoading" class="p-6 md:p-8 space-y-10">
+
+            <!-- 1. Interactive Printing Calculator -->
+            <section
+                class="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-3xl border border-blue-100 dark:border-blue-800 shadow-inner">
+                <h3 class="text-xl font-bold text-blue-800 dark:text-blue-300 mb-6 flex items-center gap-2">
+                    <fa-icon [icon]="faMoneyBillWave"></fa-icon>
+                    حاسبة تكلفة الطباعة الذكية
                 </h3>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    <!-- B5 Section -->
-                    <div
-                        class="bg-gray-50 dark:bg-gray-700/50 p-6 rounded-2xl border border-gray-200 dark:border-gray-600">
-                        <h4 class="font-bold text-lg mb-4 text-blue-700 dark:text-blue-400">حجم B5</h4>
-                        <div class="space-y-4">
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <!-- Inputs -->
+                    <div class="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="space-y-2">
+                            <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">اختر الورق</label>
+                            <select [(ngModel)]="calcInput.selectedPaper" (change)="calculatePrintCost()"
+                                class="w-full p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+                                <option *ngFor="let p of printingSettings.paperTypes" [value]="p.name">{{ p.name }}
+                                </option>
+                            </select>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">نوع الورق</label>
+                            <select [(ngModel)]="calcInput.selectedPaperType" (change)="calculatePrintCost()"
+                                class="w-full p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="white">أبيض</option>
+                                <option value="yellow">أصفر</option>
+                                <option value="creamy">كريمي</option>
+                            </select>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">اختر الطابعة</label>
+                            <select [(ngModel)]="calcInput.selectedPrinterIndex" (change)="calculatePrintCost()"
+                                class="w-full p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+                                <option *ngFor="let pr of printingSettings.printers; let i = index" [value]="i">{{
+                                    pr.name }}</option>
+                            </select>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">نوع الطباعة</label>
                             <div
-                                class="flex items-center justify-between bg-white dark:bg-gray-800 p-3 rounded-xl shadow-sm">
-                                <label class="text-gray-600 dark:text-gray-300">أبيض</label>
-                                <div class="relative w-32">
-                                    <input type="number" [(ngModel)]="printingSettings.paperPrices.B5.white" step="0.01"
-                                        class="w-full pl-8 pr-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-left">
-                                    <span class="absolute left-3 top-2 text-gray-400 text-xs">ج.م</span>
-                                </div>
+                                class="flex bg-white dark:bg-gray-800 p-1 rounded-xl border border-gray-200 dark:border-gray-600">
+                                <button (click)="calcInput.isColor = false; calculatePrintCost()"
+                                    [class.bg-blue-600]="!calcInput.isColor" [class.text-white]="!calcInput.isColor"
+                                    class="flex-1 py-2 rounded-lg transition-all text-sm font-medium">أبيض
+                                    وأسود</button>
+                                <button (click)="calcInput.isColor = true; calculatePrintCost()"
+                                    [class.bg-blue-600]="calcInput.isColor" [class.text-white]="calcInput.isColor"
+                                    class="flex-1 py-2 rounded-lg transition-all text-sm font-medium">ألوان</button>
                             </div>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">التنفيذ
+                                (وجه/وجهين)</label>
                             <div
-                                class="flex items-center justify-between bg-white dark:bg-gray-800 p-3 rounded-xl shadow-sm">
-                                <label class="text-gray-600 dark:text-gray-300">أصفر</label>
-                                <div class="relative w-32">
-                                    <input type="number" [(ngModel)]="printingSettings.paperPrices.B5.yellow"
-                                        step="0.01"
-                                        class="w-full pl-8 pr-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-left">
-                                    <span class="absolute left-3 top-2 text-gray-400 text-xs">ج.م</span>
-                                </div>
+                                class="flex bg-white dark:bg-gray-800 p-1 rounded-xl border border-gray-200 dark:border-gray-600">
+                                <button (click)="calcInput.isDoubleSided = false; calculatePrintCost()"
+                                    [class.bg-indigo-600]="!calcInput.isDoubleSided"
+                                    [class.text-white]="!calcInput.isDoubleSided"
+                                    class="flex-1 py-2 rounded-lg transition-all text-sm font-medium">وجه واحد</button>
+                                <button (click)="calcInput.isDoubleSided = true; calculatePrintCost()"
+                                    [class.bg-indigo-600]="calcInput.isDoubleSided"
+                                    [class.text-white]="calcInput.isDoubleSided"
+                                    class="flex-1 py-2 rounded-lg transition-all text-sm font-medium">وجهين</button>
                             </div>
-                            <div
-                                class="flex items-center justify-between bg-white dark:bg-gray-800 p-3 rounded-xl shadow-sm">
-                                <label class="text-gray-600 dark:text-gray-300">كريمي</label>
-                                <div class="relative w-32">
-                                    <input type="number" [(ngModel)]="printingSettings.paperPrices.B5.creamy"
-                                        step="0.01"
-                                        class="w-full pl-8 pr-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-left">
-                                    <span class="absolute left-3 top-2 text-gray-400 text-xs">ج.م</span>
-                                </div>
-                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">عدد النسخ /
+                                الصفحات</label>
+                            <input type="number" [(ngModel)]="calcInput.pageCount" (input)="calculatePrintCost()"
+                                class="w-full p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">نسبة الربح المطلوب
+                                (%)</label>
+                            <input type="number" [(ngModel)]="calcInput.profitMargin" (input)="calculatePrintCost()"
+                                class="w-full p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
                         </div>
                     </div>
 
-                    <!-- A4 Section -->
+                    <!-- Results Card -->
                     <div
-                        class="bg-gray-50 dark:bg-gray-700/50 p-6 rounded-2xl border border-gray-200 dark:border-gray-600">
-                        <h4 class="font-bold text-lg mb-4 text-blue-700 dark:text-blue-400">حجم A4</h4>
+                        class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-blue-200 dark:border-blue-700 flex flex-col justify-between">
                         <div class="space-y-4">
                             <div
-                                class="flex items-center justify-between bg-white dark:bg-gray-800 p-3 rounded-xl shadow-sm">
-                                <label class="text-gray-600 dark:text-gray-300">أبيض</label>
-                                <div class="relative w-32">
-                                    <input type="number" [(ngModel)]="printingSettings.paperPrices.A4.white" step="0.01"
-                                        class="w-full pl-8 pr-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-left">
-                                    <span class="absolute left-3 top-2 text-gray-400 text-xs">ج.م</span>
-                                </div>
+                                class="flex justify-between items-center border-b border-gray-100 dark:border-gray-700 pb-2">
+                                <span class="text-gray-500 dark:text-gray-400">تكلفة الورق</span>
+                                <span class="font-bold text-gray-800 dark:text-gray-100">{{ calcResult.paperCost |
+                                    number:'1.2-2' }} ج.م</span>
                             </div>
                             <div
-                                class="flex items-center justify-between bg-white dark:bg-gray-800 p-3 rounded-xl shadow-sm">
-                                <label class="text-gray-600 dark:text-gray-300">أصفر</label>
-                                <div class="relative w-32">
-                                    <input type="number" [(ngModel)]="printingSettings.paperPrices.A4.yellow"
-                                        step="0.01"
-                                        class="w-full pl-8 pr-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-left">
-                                    <span class="absolute left-3 top-2 text-gray-400 text-xs">ج.م</span>
-                                </div>
+                                class="flex justify-between items-center border-b border-gray-100 dark:border-gray-700 pb-2">
+                                <span class="text-gray-500 dark:text-gray-400">تكلفة الحبر</span>
+                                <span class="font-bold text-gray-800 dark:text-gray-100">{{ calcResult.inkCost |
+                                    number:'1.2-2' }} ج.م</span>
                             </div>
                             <div
-                                class="flex items-center justify-between bg-white dark:bg-gray-800 p-3 rounded-xl shadow-sm">
-                                <label class="text-gray-600 dark:text-gray-300">كريمي</label>
-                                <div class="relative w-32">
-                                    <input type="number" [(ngModel)]="printingSettings.paperPrices.A4.creamy"
-                                        step="0.01"
-                                        class="w-full pl-8 pr-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-left">
-                                    <span class="absolute left-3 top-2 text-gray-400 text-xs">ج.م</span>
-                                </div>
+                                class="flex justify-between items-center border-b border-gray-100 dark:border-gray-700 pb-2">
+                                <span class="text-gray-500 dark:text-gray-400">إجمالي التكلفة</span>
+                                <span class="font-bold text-gray-800 dark:text-gray-100">{{ calcResult.totalCost |
+                                    number:'1.2-2' }} ج.م</span>
+                            </div>
+                            <div class="flex justify-between items-center text-green-600 dark:text-green-400">
+                                <span>قيمة الربح</span>
+                                <span class="font-bold">{{ calcResult.profitValue | number:'1.2-2' }} ج.م</span>
+                            </div>
+                            <div
+                                class="pt-2 border-t border-dashed border-gray-100 dark:border-gray-700 flex justify-between items-center">
+                                <span class="text-[10px] text-gray-400">الحبر المتوقع بعد المشروع</span>
+                                <span class="text-sm font-black"
+                                    [ngClass]="{'text-red-500': calcResult.projectedInk < 10, 'text-indigo-600': calcResult.projectedInk >= 10}">
+                                    {{ calcResult.projectedInk | number:'1.0-0' }}%
+                                </span>
+                            </div>
+                        </div>
+                        <div
+                            class="mt-6 pt-6 border-t-2 border-dashed border-blue-100 dark:border-blue-800 text-center">
+                            <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">سعر البيع المقترح</p>
+                            <p class="text-4xl font-black text-blue-700 dark:text-blue-400">{{ calcResult.sellingPrice |
+                                number:'1.2-2' }} <span class="text-lg font-normal">ج.م</span></p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. Paper Management -->
+            <section>
+                <div class="flex items-center justify-between mb-6">
+                    <h3
+                        class="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2 border-r-4 border-blue-600 pr-3">
+                        <fa-icon [icon]="faLayerGroup" class="text-blue-600"></fa-icon>
+                        إدارة أنواع وأسعار الورق
+                    </h3>
+                    <button (click)="addPaperType()"
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-bold transition-all shadow-md">
+                        + إضافة حجم جديد
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                    <div *ngFor="let p of printingSettings.paperTypes; let i = index; trackBy: trackByIndex"
+                        class="bg-gray-50 dark:bg-gray-700/50 p-5 rounded-2xl border border-gray-200 dark:border-gray-600 relative group">
+                        <button (click)="removePaperType(i)"
+                            class="absolute top-2 left-2 text-red-500 opacity-0 group-hover:opacity-100 transition-all p-2 hover:bg-red-50 rounded-full">
+                            <fa-icon [icon]="faTrash"></fa-icon>
+                        </button>
+
+                        <input [(ngModel)]="p.name" (ngModelChange)="calculatePrintCost()"
+                            class="text-lg font-bold bg-transparent border-b border-gray-300 dark:border-gray-600 mb-4 focus:border-blue-500 outline-none w-full">
+
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between bg-white dark:bg-gray-800 p-2 rounded-lg">
+                                <label class="text-xs text-gray-500">أبيض</label>
+                                <input type="number" [(ngModel)]="p.prices.white" (ngModelChange)="calculatePrintCost()"
+                                    class="w-20 text-left bg-transparent font-bold text-sm outline-none">
+                            </div>
+                            <div class="flex items-center justify-between bg-white dark:bg-gray-800 p-2 rounded-lg">
+                                <label class="text-xs text-gray-500">أصفر</label>
+                                <input type="number" [(ngModel)]="p.prices.yellow"
+                                    (ngModelChange)="calculatePrintCost()"
+                                    class="w-20 text-left bg-transparent font-bold text-sm outline-none">
+                            </div>
+                            <div class="flex items-center justify-between bg-white dark:bg-gray-800 p-2 rounded-lg">
+                                <label class="text-xs text-gray-500">كريمي</label>
+                                <input type="number" [(ngModel)]="p.prices.creamy"
+                                    (ngModelChange)="calculatePrintCost()"
+                                    class="w-20 text-left bg-transparent font-bold text-sm outline-none">
                             </div>
                         </div>
                     </div>
+                </div>
+            </section>
 
-                    <!-- A5 Section -->
-                    <div
-                        class="bg-gray-50 dark:bg-gray-700/50 p-6 rounded-2xl border border-gray-200 dark:border-gray-600">
-                        <h4 class="font-bold text-lg mb-4 text-blue-700 dark:text-blue-400">حجم A5</h4>
-                        <div class="space-y-4">
-                            <div
-                                class="flex items-center justify-between bg-white dark:bg-gray-800 p-3 rounded-xl shadow-sm">
-                                <label class="text-gray-600 dark:text-gray-300">أبيض</label>
-                                <div class="relative w-32">
-                                    <input type="number" [(ngModel)]="printingSettings.paperPrices.A5.white" step="0.01"
-                                        class="w-full pl-8 pr-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-left">
-                                    <span class="absolute left-3 top-2 text-gray-400 text-xs">ج.م</span>
+            <!-- 3. Printer & Ink Management -->
+            <section>
+                <div class="flex items-center justify-between mb-6">
+                    <h3
+                        class="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2 border-r-4 border-indigo-600 pr-3">
+                        <fa-icon [icon]="faPrint" class="text-indigo-600"></fa-icon>
+                        إدارة الطابعات وتتبع الحبر
+                    </h3>
+                    <button (click)="addPrinter()"
+                        class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-bold transition-all shadow-md">
+                        + إضافة طابعة جديدة
+                    </button>
+                </div>
+
+                <div class="space-y-8">
+                    <div *ngFor="let pr of printingSettings.printers; let i = index; trackBy: trackByIndex"
+                        class="bg-gray-50 dark:bg-gray-700/50 p-6 rounded-3xl border border-gray-200 dark:border-gray-600 relative group">
+
+                        <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                            <!-- Printer Basic Info -->
+                            <div class="lg:col-span-1 border-l dark:border-gray-600 pl-6">
+                                <button (click)="removePrinter(i)"
+                                    class="text-red-500 mb-2 hover:bg-red-50 p-2 rounded-full transition-all">
+                                    <fa-icon [icon]="faTrash"></fa-icon> حذف الطابعة
+                                </button>
+                                <input [(ngModel)]="pr.name" (ngModelChange)="calculatePrintCost()"
+                                    class="text-xl font-black bg-transparent border-b border-indigo-300 dark:border-indigo-600 focus:border-indigo-500 outline-none w-full mb-4">
+
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="text-xs text-gray-500 block mb-1">تكلفة تعبئة الألوان
+                                            (كاملة)</label>
+                                        <input type="number" [(ngModel)]="pr.inkPriceColor"
+                                            (ngModelChange)="calculatePrintCost()"
+                                            class="w-full bg-white dark:bg-gray-800 p-2 rounded-lg border border-gray-200 dark:border-gray-600 font-bold">
+                                    </div>
+                                    <div>
+                                        <label class="text-xs text-gray-500 block mb-1">تكلفة تعبئة الأسود</label>
+                                        <input type="number" [(ngModel)]="pr.inkPriceBW"
+                                            (ngModelChange)="calculatePrintCost()"
+                                            class="w-full bg-white dark:bg-gray-800 p-2 rounded-lg border border-gray-200 dark:border-gray-600 font-bold">
+                                    </div>
                                 </div>
                             </div>
-                            <div
-                                class="flex items-center justify-between bg-white dark:bg-gray-800 p-3 rounded-xl shadow-sm">
-                                <label class="text-gray-600 dark:text-gray-300">أصفر</label>
-                                <div class="relative w-32">
-                                    <input type="number" [(ngModel)]="printingSettings.paperPrices.A5.yellow"
-                                        step="0.01"
-                                        class="w-full pl-8 pr-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-left">
-                                    <span class="absolute left-3 top-2 text-gray-400 text-xs">ج.م</span>
+
+                            <!-- Yield Settings & Counter Sync -->
+                            <div class="lg:col-span-1 border-l dark:border-gray-600 pl-6 flex flex-col justify-start">
+                                <h4 class="text-sm font-bold text-indigo-700 mb-4">اتصال العداد الذكي</h4>
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="text-xs text-gray-500 block mb-1">قراءة عداد الطابعة
+                                            الحالي</label>
+                                        <div class="flex gap-2">
+                                            <input type="number" #counterInput [value]="pr.lastUpdatedPages"
+                                                class="w-full bg-white dark:bg-gray-800 p-2 rounded-lg border border-gray-200 dark:border-gray-600 font-bold text-indigo-600">
+                                            <button (click)="syncCounter(i, +counterInput.value)"
+                                                class="bg-indigo-100 text-indigo-700 p-2 rounded-lg hover:bg-indigo-200 transition-all"
+                                                title="تزامن العداد">
+                                                <fa-icon [icon]="faSync"></fa-icon>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="pt-2 border-t dark:border-gray-600">
+                                        <label class="text-[10px] text-gray-400 block mb-1">المردود لكل 100%
+                                            (Yield)</label>
+                                        <div class="grid grid-cols-2 gap-2">
+                                            <input type="number" [(ngModel)]="pr.pageYieldColor"
+                                                (ngModelChange)="calculatePrintCost()" placeholder="ألوان"
+                                                class="text-[10px] p-1 border rounded dark:bg-gray-800">
+                                            <input type="number" [(ngModel)]="pr.pageYieldBW"
+                                                (ngModelChange)="calculatePrintCost()" placeholder="أسود"
+                                                class="text-[10px] p-1 border rounded dark:bg-gray-800">
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            <div
-                                class="flex items-center justify-between bg-white dark:bg-gray-800 p-3 rounded-xl shadow-sm">
-                                <label class="text-gray-600 dark:text-gray-300">كريمي</label>
-                                <div class="relative w-32">
-                                    <input type="number" [(ngModel)]="printingSettings.paperPrices.A5.creamy"
-                                        step="0.01"
-                                        class="w-full pl-8 pr-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-left">
-                                    <span class="absolute left-3 top-2 text-gray-400 text-xs">ج.م</span>
+
+                            <!-- Ink Levels Tracking -->
+                            <div class="lg:col-span-2">
+                                <h4 class="text-sm font-bold text-indigo-700 mb-4">تتبع مستويات الحبر (%)</h4>
+                                <div class="grid grid-cols-2 gap-6">
+                                    <!-- Black -->
+                                    <div class="space-y-2 relative group-ink">
+                                        <div class="flex justify-between items-center text-xs">
+                                            <span class="font-bold flex items-center gap-1">
+                                                <fa-icon [icon]="faCircle" class="text-black"></fa-icon> أسود
+                                            </span>
+                                            <div class="flex items-center gap-2">
+                                                <span class="text-[10px] text-gray-400">{{ getRemainingPages(pr, false)
+                                                    }} صفحة</span>
+                                                <input type="number" [(ngModel)]="pr.inkLevels.black"
+                                                    (ngModelChange)="calculatePrintCost()"
+                                                    class="w-8 bg-transparent text-left outline-none font-bold">
+                                                <button (click)="refillInk(i, 'black')"
+                                                    class="text-green-500 hover:scale-110 transition-transform">
+                                                    <fa-icon [icon]="faPlusCircle"></fa-icon>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div
+                                            class="h-3 w-full bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
+                                            <div class="h-full bg-black" [style.width]="pr.inkLevels.black + '%'"></div>
+                                        </div>
+                                    </div>
+                                    <!-- Cyan -->
+                                    <div class="space-y-2">
+                                        <div class="flex justify-between items-center text-xs">
+                                            <span class="font-bold flex items-center gap-1">
+                                                <fa-icon [icon]="faCircle" class="text-cyan-500"></fa-icon> أزرق
+                                            </span>
+                                            <div class="flex items-center gap-2">
+                                                <span class="text-[10px] text-gray-400">{{ getRemainingPages(pr, true)
+                                                    }} صفحة</span>
+                                                <input type="number" [(ngModel)]="pr.inkLevels.cyan"
+                                                    (ngModelChange)="calculatePrintCost()"
+                                                    class="w-8 bg-transparent text-left outline-none font-bold">
+                                                <button (click)="refillInk(i, 'cyan')"
+                                                    class="text-green-500 hover:scale-110 transition-transform">
+                                                    <fa-icon [icon]="faPlusCircle"></fa-icon>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div
+                                            class="h-3 w-full bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
+                                            <div class="h-full bg-cyan-500" [style.width]="pr.inkLevels.cyan + '%'">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!-- Magenta -->
+                                    <div class="space-y-2">
+                                        <div class="flex justify-between items-center text-xs">
+                                            <span class="font-bold flex items-center gap-1">
+                                                <fa-icon [icon]="faCircle" class="text-pink-500"></fa-icon> أحمر
+                                            </span>
+                                            <div class="flex items-center gap-2">
+                                                <span class="text-[10px] text-gray-400">{{ getRemainingPages(pr, true)
+                                                    }} صفحة</span>
+                                                <input type="number" [(ngModel)]="pr.inkLevels.magenta"
+                                                    (ngModelChange)="calculatePrintCost()"
+                                                    class="w-8 bg-transparent text-left outline-none font-bold">
+                                                <button (click)="refillInk(i, 'magenta')"
+                                                    class="text-green-500 hover:scale-110 transition-transform">
+                                                    <fa-icon [icon]="faPlusCircle"></fa-icon>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div
+                                            class="h-3 w-full bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
+                                            <div class="h-full bg-pink-500" [style.width]="pr.inkLevels.magenta + '%'">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!-- Yellow -->
+                                    <div class="space-y-2">
+                                        <div class="flex justify-between items-center text-xs">
+                                            <span class="font-bold flex items-center gap-1">
+                                                <fa-icon [icon]="faCircle" class="text-yellow-400"></fa-icon> أصفر
+                                            </span>
+                                            <div class="flex items-center gap-2">
+                                                <span class="text-[10px] text-gray-400">{{ getRemainingPages(pr, true)
+                                                    }} صفحة</span>
+                                                <input type="number" [(ngModel)]="pr.inkLevels.yellow"
+                                                    (ngModelChange)="calculatePrintCost()"
+                                                    class="w-8 bg-transparent text-left outline-none font-bold">
+                                                <button (click)="refillInk(i, 'yellow')"
+                                                    class="text-green-500 hover:scale-110 transition-transform">
+                                                    <fa-icon [icon]="faPlusCircle"></fa-icon>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div
+                                            class="h-3 w-full bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
+                                            <div class="h-full bg-yellow-400" [style.width]="pr.inkLevels.yellow + '%'">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div
+                                    class="mt-6 p-4 bg-white dark:bg-gray-800 rounded-xl border border-dashed border-gray-200 dark:border-gray-600">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-xs text-gray-500">تم تصفير العداد عند رقم صفحة:</span>
+                                        <input type="number" [(ngModel)]="pr.lastUpdatedPages"
+                                            class="font-bold bg-transparent text-left outline-none w-32">
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -142,80 +384,43 @@
                 </div>
             </section>
 
-            <!-- Covers and Colors Section -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6">
-                <!-- Cover Prices -->
-                <section>
-                    <h3
-                        class="text-xl font-bold text-gray-800 dark:text-gray-100 mb-6 flex items-center gap-2 border-r-4 border-purple-600 pr-3">
-                        <fa-icon [icon]="faPrint" class="text-purple-600"></fa-icon>
-                        أسعار التغليف
-                    </h3>
+            <!-- 4. Cover Prices -->
+            <section>
+                <h3
+                    class="text-xl font-bold text-gray-800 dark:text-gray-100 mb-6 flex items-center gap-2 border-r-4 border-purple-600 pr-3">
+                    <fa-icon [icon]="faPrint" class="text-purple-600"></fa-icon>
+                    أسعار التغليف
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div
-                        class="bg-gray-50 dark:bg-gray-700/50 p-6 rounded-2xl border border-gray-200 dark:border-gray-600 space-y-4">
-                        <div
-                            class="flex items-center justify-between bg-white dark:bg-gray-800 p-3 rounded-xl shadow-sm">
-                            <label class="text-gray-600 dark:text-gray-300">غلاف ورقي (Soft Cover)</label>
-                            <div class="relative w-32">
-                                <input type="number" [(ngModel)]="printingSettings.coverPrices.soft" step="1"
-                                    class="w-full pl-8 pr-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-left">
-                                <span class="absolute left-3 top-2 text-gray-400 text-xs">ج.م</span>
-                            </div>
-                        </div>
-                        <div
-                            class="flex items-center justify-between bg-white dark:bg-gray-800 p-3 rounded-xl shadow-sm">
-                            <label class="text-gray-600 dark:text-gray-300">غلاف مجلد (Hard Cover)</label>
-                            <div class="relative w-32">
-                                <input type="number" [(ngModel)]="printingSettings.coverPrices.hard" step="1"
-                                    class="w-full pl-8 pr-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-left">
-                                <span class="absolute left-3 top-2 text-gray-400 text-xs">ج.م</span>
-                            </div>
-                        </div>
-                        <div
-                            class="flex items-center justify-between bg-white dark:bg-gray-800 p-3 rounded-xl shadow-sm">
-                            <label class="text-gray-600 dark:text-gray-300">غلاف جلد فاخر (Luxury Leather)</label>
-                            <div class="relative w-32">
-                                <input type="number" [(ngModel)]="printingSettings.coverPrices.luxuryLeather" step="1"
-                                    class="w-full pl-8 pr-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-left">
-                                <span class="absolute left-3 top-2 text-gray-400 text-xs">ج.م</span>
-                            </div>
+                        class="bg-gray-50 dark:bg-gray-700/50 p-5 rounded-2xl border border-gray-200 dark:border-gray-600 flex justify-between items-center">
+                        <label class="font-bold text-purple-700 dark:text-purple-400">غلاف ورقي</label>
+                        <div class="relative w-24">
+                            <input type="number" [(ngModel)]="printingSettings.coverPrices.soft"
+                                class="w-full pl-8 pr-2 py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg outline-none text-left">
+                            <span class="absolute left-2 top-1 text-gray-400 text-xs">ج.م</span>
                         </div>
                     </div>
-                </section>
-
-                <!-- Color Extra Costs -->
-                <section>
-                    <h3
-                        class="text-xl font-bold text-gray-800 dark:text-gray-100 mb-6 flex items-center gap-2 border-r-4 border-green-600 pr-3">
-                        <fa-icon [icon]="faMoneyBillWave" class="text-green-600"></fa-icon>
-                        تكلفة اللون (إضافية لكل صفحة)
-                    </h3>
                     <div
-                        class="bg-gray-50 dark:bg-gray-700/50 p-6 rounded-2xl border border-gray-200 dark:border-gray-600 space-y-4">
-                        <div
-                            class="flex items-center justify-between bg-white dark:bg-gray-800 p-3 rounded-xl shadow-sm">
-                            <label class="text-gray-600 dark:text-gray-300">أبيض وأسود <small
-                                    class="text-gray-400">(إضافي)</small></label>
-                            <div class="relative w-32">
-                                <input type="number" [(ngModel)]="printingSettings.printColorPrices.blackAndWhite"
-                                    step="0.01"
-                                    class="w-full pl-8 pr-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-left">
-                                <span class="absolute left-3 top-2 text-gray-400 text-xs">ج.م</span>
-                            </div>
-                        </div>
-                        <div
-                            class="flex items-center justify-between bg-white dark:bg-gray-800 p-3 rounded-xl shadow-sm">
-                            <label class="text-gray-600 dark:text-gray-300">ألوان <small
-                                    class="text-gray-400">(إضافي)</small></label>
-                            <div class="relative w-32">
-                                <input type="number" [(ngModel)]="printingSettings.printColorPrices.color" step="0.01"
-                                    class="w-full pl-8 pr-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-left">
-                                <span class="absolute left-3 top-2 text-gray-400 text-xs">ج.م</span>
-                            </div>
+                        class="bg-gray-50 dark:bg-gray-700/50 p-5 rounded-2xl border border-gray-200 dark:border-gray-600 flex justify-between items-center">
+                        <label class="font-bold text-purple-700 dark:text-purple-400">غلاف مجلد</label>
+                        <div class="relative w-24">
+                            <input type="number" [(ngModel)]="printingSettings.coverPrices.hard"
+                                class="w-full pl-8 pr-2 py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg outline-none text-left">
+                            <span class="absolute left-2 top-1 text-gray-400 text-xs">ج.م</span>
                         </div>
                     </div>
-                </section>
-            </div>
+                    <div
+                        class="bg-gray-50 dark:bg-gray-700/50 p-5 rounded-2xl border border-gray-200 dark:border-gray-600 flex justify-between items-center">
+                        <label class="font-bold text-purple-700 dark:text-purple-400">جلد فاخر</label>
+                        <div class="relative w-24">
+                            <input type="number" [(ngModel)]="printingSettings.coverPrices.luxuryLeather"
+                                class="w-full pl-8 pr-2 py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg outline-none text-left">
+                            <span class="absolute left-2 top-1 text-gray-400 text-xs">ج.م</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
 
             <!-- Action Buttons -->
             <div class="flex items-center gap-4 pt-10 border-t border-gray-100 dark:border-gray-700">
@@ -224,12 +429,12 @@
                     <fa-icon [icon]="faSave" *ngIf="!isSaving"></fa-icon>
                     <div *ngIf="isSaving"
                         class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    {{ isSaving ? 'جاري الحفظ...' : 'حفظ التغييرات' }}
+                    {{ isSaving ? 'جاري الحفظ...' : 'حفظ الإعدادات بالكامل' }}
                 </button>
                 <button (click)="resetSettings()" [disabled]="isSaving"
                     class="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-bold py-4 px-8 rounded-2xl transition-all flex items-center justify-center gap-3 disabled:opacity-50">
                     <fa-icon [icon]="faUndo"></fa-icon>
-                    استعادة الأصلي
+                    إعادة تحميل
                 </button>
             </div>
         </div>

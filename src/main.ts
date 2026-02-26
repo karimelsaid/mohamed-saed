@@ -11,13 +11,13 @@ import { far } from '@fortawesome/free-regular-svg-icons';
 // Add all icons to the library
 library.add(fas, far);
 
-if (environment.production) {
+if (environment.production && typeof window !== 'undefined') {
   enableProdMode();
   // تعطيل جميع دوال الكونسول في بيئة الإنتاج
-  window.console.log = () => {};
-  window.console.debug = () => {};
-  window.console.info = () => {};
-  window.console.warn = () => {};
+  window.console.log = () => { };
+  window.console.debug = () => { };
+  window.console.info = () => { };
+  window.console.warn = () => { };
 }
 
 platformBrowserDynamic().bootstrapModule(AppModule, {

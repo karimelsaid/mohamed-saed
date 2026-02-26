@@ -1,4 +1,5 @@
-import { Injectable, NgZone } from '@angular/core';
+import { Injectable, NgZone, Inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { Capacitor } from '@capacitor/core';
 import { Router } from '@angular/router';
@@ -29,7 +30,8 @@ export class LocalReminderService {
 
     constructor(
         private zone: NgZone,
-        private router: Router
+        private router: Router,
+        @Inject(PLATFORM_ID) private platformId: Object
     ) {
         // Initialize on service creation
         // Initialize on service creation
@@ -41,6 +43,7 @@ export class LocalReminderService {
      * Initialize and start checking reminders
      */
     initializeReminders(): void {
+        if (!isPlatformBrowser(this.platformId)) return;
         // Clear any old scheduled notifications
         if (Capacitor.isNativePlatform()) {
             this.requestPermissions();
@@ -181,9 +184,10 @@ export class LocalReminderService {
             }
         }
 
-        // Save to localStorage
         try {
-            localStorage.setItem(this.NOTIFICATION_STORAGE_KEY, JSON.stringify(scheduled));
+            if (isPlatformBrowser(this.platformId)) {
+                localStorage.setItem(this.NOTIFICATION_STORAGE_KEY, JSON.stringify(scheduled));
+            }
             console.log(`[LocalReminder] Scheduled ${scheduled.length} reminders`);
 
             // If native, actually schedule them with the OS
@@ -214,7 +218,9 @@ export class LocalReminderService {
 
         // Save reminder settings
         try {
-            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(reminders));
+            if (isPlatformBrowser(this.platformId)) {
+                localStorage.setItem(this.STORAGE_KEY, JSON.stringify(reminders));
+            }
         } catch (e) {
             console.error('[LocalReminder] Failed to save reminder settings:', e);
         }
@@ -225,6 +231,7 @@ export class LocalReminderService {
      */
     checkAndTriggerReminders(): void {
         try {
+            if (!isPlatformBrowser(this.platformId)) return;
             const stored = localStorage.getItem(this.NOTIFICATION_STORAGE_KEY);
             if (!stored) return;
 
@@ -263,6 +270,7 @@ export class LocalReminderService {
      */
     private checkCurrentTimeMatch(): void {
         try {
+            if (!isPlatformBrowser(this.platformId)) return;
             const stored = localStorage.getItem(this.STORAGE_KEY);
             if (!stored) return;
 
@@ -351,12 +359,15 @@ export class LocalReminderService {
      */
     private removeScheduledNotification(id: string): void {
         try {
+            if (!isPlatformBrowser(this.platformId)) return;
             const stored = localStorage.getItem(this.NOTIFICATION_STORAGE_KEY);
             if (!stored) return;
 
             const scheduled: ScheduledNotification[] = JSON.parse(stored);
             const filtered = scheduled.filter(n => n.id !== id);
-            localStorage.setItem(this.NOTIFICATION_STORAGE_KEY, JSON.stringify(filtered));
+            if (isPlatformBrowser(this.platformId)) {
+                localStorage.setItem(this.NOTIFICATION_STORAGE_KEY, JSON.stringify(filtered));
+            }
         } catch (e) {
             console.error('[LocalReminder] Error removing scheduled notification:', e);
         }
@@ -376,10 +387,12 @@ export class LocalReminderService {
         };
 
         try {
-            const stored = localStorage.getItem(this.NOTIFICATION_STORAGE_KEY);
+            const stored = isPlatformBrowser(this.platformId) ? localStorage.getItem(this.NOTIFICATION_STORAGE_KEY) : null;
             const scheduled: ScheduledNotification[] = stored ? JSON.parse(stored) : [];
             scheduled.push(updated);
-            localStorage.setItem(this.NOTIFICATION_STORAGE_KEY, JSON.stringify(scheduled));
+            if (isPlatformBrowser(this.platformId)) {
+                localStorage.setItem(this.NOTIFICATION_STORAGE_KEY, JSON.stringify(scheduled));
+            }
         } catch (e) {
             console.error('[LocalReminder] Error rescheduling reminder:', e);
         }
@@ -390,13 +403,16 @@ export class LocalReminderService {
      */
     private clearOldNotifications(): void {
         try {
+            if (!isPlatformBrowser(this.platformId)) return;
             const stored = localStorage.getItem(this.NOTIFICATION_STORAGE_KEY);
             if (!stored) return;
 
             const scheduled: ScheduledNotification[] = JSON.parse(stored);
             const now = Date.now();
             const filtered = scheduled.filter(n => n.scheduledTime > now);
-            localStorage.setItem(this.NOTIFICATION_STORAGE_KEY, JSON.stringify(filtered));
+            if (isPlatformBrowser(this.platformId)) {
+                localStorage.setItem(this.NOTIFICATION_STORAGE_KEY, JSON.stringify(filtered));
+            }
         } catch (e) {
             console.error('[LocalReminder] Error clearing old notifications:', e);
         }
@@ -432,6 +448,7 @@ export class LocalReminderService {
      */
     getStoredReminders(): ReminderSettings | null {
         try {
+            if (!isPlatformBrowser(this.platformId)) return null;
             const stored = localStorage.getItem(this.STORAGE_KEY);
             return stored ? JSON.parse(stored) : null;
         } catch (e) {

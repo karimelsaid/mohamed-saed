@@ -1,4 +1,5 @@
-import { Injectable } from '@angular/core';
+import { Injectable, Inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { BehaviorSubject } from 'rxjs';
 import { Router } from '@angular/router';
 
@@ -34,8 +35,13 @@ export class TutorialService {
 
   public tutorialState$ = this.tutorialState.asObservable();
 
-  constructor(private router: Router) {
-    this.initializeTutorial();
+  constructor(
+    private router: Router,
+    @Inject(PLATFORM_ID) private platformId: Object
+  ) {
+    if (isPlatformBrowser(this.platformId)) {
+      this.initializeTutorial();
+    }
   }
 
   private initializeTutorial(): void {
@@ -140,7 +146,9 @@ export class TutorialService {
       isActive: true,
       currentStep: 0
     });
-    localStorage.setItem(this.CURRENT_STEP_KEY, '0');
+    if (isPlatformBrowser(this.platformId)) {
+      localStorage.setItem(this.CURRENT_STEP_KEY, '0');
+    }
   }
 
   nextStep(): void {
@@ -151,7 +159,9 @@ export class TutorialService {
         ...currentState,
         currentStep: nextStep
       });
-      localStorage.setItem(this.CURRENT_STEP_KEY, nextStep.toString());
+      if (isPlatformBrowser(this.platformId)) {
+        localStorage.setItem(this.CURRENT_STEP_KEY, nextStep.toString());
+      }
 
       // Execute step action if exists
       const step = currentState.steps[nextStep];
@@ -171,7 +181,9 @@ export class TutorialService {
         ...currentState,
         currentStep: prevStep
       });
-      localStorage.setItem(this.CURRENT_STEP_KEY, prevStep.toString());
+      if (isPlatformBrowser(this.platformId)) {
+        localStorage.setItem(this.CURRENT_STEP_KEY, prevStep.toString());
+      }
 
       // Execute step action if exists
       const step = currentState.steps[prevStep];
@@ -192,22 +204,31 @@ export class TutorialService {
       isActive: false,
       completed: true
     });
-    localStorage.setItem(this.STORAGE_KEY, 'true');
-    localStorage.removeItem(this.CURRENT_STEP_KEY);
+    if (isPlatformBrowser(this.platformId)) {
+      localStorage.setItem(this.STORAGE_KEY, 'true');
+      localStorage.removeItem(this.CURRENT_STEP_KEY);
+    }
   }
 
   resetTutorial(): void {
-    localStorage.removeItem(this.STORAGE_KEY);
-    localStorage.removeItem(this.CURRENT_STEP_KEY);
+    if (isPlatformBrowser(this.platformId)) {
+      localStorage.removeItem(this.STORAGE_KEY);
+      localStorage.removeItem(this.CURRENT_STEP_KEY);
+    }
     this.initializeTutorial();
   }
 
   disableTutorialPermanently(): void {
-    localStorage.setItem('tutorial_disabled_permanently', 'true');
+    if (isPlatformBrowser(this.platformId)) {
+      localStorage.setItem('tutorial_disabled_permanently', 'true');
+    }
     this.completeTutorial();
   }
 
   isTutorialDisabledPermanently(): boolean {
+    if (!isPlatformBrowser(this.platformId)) {
+      return true; // Default to disabled on server to avoid showing it
+    }
     return localStorage.getItem('tutorial_disabled_permanently') === 'true';
   }
 
@@ -217,6 +238,9 @@ export class TutorialService {
   }
 
   isTutorialCompleted(): boolean {
+    if (!isPlatformBrowser(this.platformId)) {
+      return true; // Default to completed on server
+    }
     return localStorage.getItem(this.STORAGE_KEY) === 'true';
   }
 

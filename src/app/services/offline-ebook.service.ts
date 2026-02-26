@@ -1,4 +1,5 @@
-import { Injectable } from '@angular/core';
+import { Injectable, Inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { EbookService } from './ebook.service';
 import { HttpClient, HttpEventType, HttpEvent } from '@angular/common/http';
 import { Observable, from, throwError, of } from 'rxjs';
@@ -18,8 +19,13 @@ export class OfflineEbookService {
     private encryptionKey: CryptoKey | null = null;
     private readonly IV_LENGTH = 12; // AES-GCM standard
 
-    constructor(private ebookService: EbookService) {
-        this.initDB();
+    constructor(
+        private ebookService: EbookService,
+        @Inject(PLATFORM_ID) private platformId: Object
+    ) {
+        if (isPlatformBrowser(this.platformId)) {
+            this.initDB();
+        }
     }
 
     private async initDB() {
@@ -60,7 +66,7 @@ export class OfflineEbookService {
         // OR just generate and store in a separate config Store.
 
         // For now: Generate a key and store it in localStorage (as JWK) to persist across sessions
-        const storedKey = localStorage.getItem('app_kek');
+        const storedKey = isPlatformBrowser(this.platformId) ? localStorage.getItem('app_kek') : null;
         if (storedKey) {
             this.encryptionKey = await window.crypto.subtle.importKey(
                 'jwk',
@@ -76,7 +82,9 @@ export class OfflineEbookService {
                 ['encrypt', 'decrypt']
             );
             const exportedKey = await window.crypto.subtle.exportKey('jwk', this.encryptionKey);
-            localStorage.setItem('app_kek', JSON.stringify(exportedKey));
+            if (isPlatformBrowser(this.platformId)) {
+                localStorage.setItem('app_kek', JSON.stringify(exportedKey));
+            }
         }
 
         return this.encryptionKey!;
@@ -342,7 +350,7 @@ export class OfflineEbookService {
     private readonly FAVORITES_KEY = 'local_favorites';
 
     getLocalFavorites(): string[] {
-        const stored = localStorage.getItem(this.FAVORITES_KEY);
+        const stored = isPlatformBrowser(this.platformId) ? localStorage.getItem(this.FAVORITES_KEY) : null;
         return stored ? JSON.parse(stored) : [];
     }
 
@@ -355,13 +363,17 @@ export class OfflineEbookService {
         const favorites = this.getLocalFavorites();
         if (!favorites.includes(ebookId)) {
             favorites.push(ebookId);
-            localStorage.setItem(this.FAVORITES_KEY, JSON.stringify(favorites));
+            if (isPlatformBrowser(this.platformId)) {
+                localStorage.setItem(this.FAVORITES_KEY, JSON.stringify(favorites));
+            }
         }
     }
 
     removeLocalFavorite(ebookId: string): void {
         let favorites = this.getLocalFavorites();
         favorites = favorites.filter(id => id !== ebookId);
-        localStorage.setItem(this.FAVORITES_KEY, JSON.stringify(favorites));
+        if (isPlatformBrowser(this.platformId)) {
+            localStorage.setItem(this.FAVORITES_KEY, JSON.stringify(favorites));
+        }
     }
 }

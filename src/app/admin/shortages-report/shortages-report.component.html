@@ -1,0 +1,156 @@
+<div class="report-container" dir="rtl">
+    <div class="header">
+        <h2><fa-icon [icon]="faChartBar"></fa-icon> تقرير النواقص والمقترحات</h2>
+        <p>قم بتحديد معايير النواقص وتحميل تقرير Excel للموردين.</p>
+    </div>
+
+    <!-- Settings Section -->
+    <div class="settings-section card">
+        <h3><fa-icon [icon]="faCog"></fa-icon> إعدادات التقرير</h3>
+
+        <div class="settings-grid">
+            <div class="setting-item">
+                <label for="threshold">حد النواقص (الكمية أقل من):</label>
+                <input type="number" id="threshold" [(ngModel)]="settings.threshold" min="0">
+            </div>
+
+            <div class="setting-item">
+                <label for="defaultOrderQuantity">الكمية الافتراضية للطلب:</label>
+                <input type="number" id="defaultOrderQuantity" [(ngModel)]="settings.defaultOrderQuantity" min="1">
+            </div>
+
+            <div class="setting-item checkbox">
+                <label>
+                    <input type="checkbox" [(ngModel)]="settings.includeSuggestions">
+                    تضمين مقترحات الكتب من المستخدمين
+                </label>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button class="btn-save" (click)="saveSettings()" [disabled]="isSaving">
+                <fa-icon [icon]="faCheckCircle" *ngIf="!isSaving"></fa-icon>
+                <span *ngIf="isSaving">جاري الحفظ...</span>
+                <span *ngIf="!isSaving">حفظ الإعدادات</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Actions Section -->
+    <div class="actions-section card">
+        <h3>توليد التقرير</h3>
+        <p>سيقوم النظام بحصر جميع الكتب التي تنطبق عليها المعايير أعلاه، وتجهيز ملف Excel يحتوي على روابط صور المنتجات
+            لسهولة التعرف عليها.</p>
+
+        <div class="report-actions">
+            <button class="btn-download" (click)="downloadReport()" [disabled]="isDownloading">
+                <fa-icon [icon]="faFileDownload" *ngIf="!isDownloading"></fa-icon>
+                <span *ngIf="isDownloading">جاري التحضير...</span>
+                <span *ngIf="!isDownloading">تحميل تقرير النواقص (Excel)</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Shortage Preview & Batch Editing -->
+    <div class="preview-section card">
+        <div class="section-header">
+            <h3><fa-icon [icon]="faChartBar"></fa-icon> مراجعة محتوى التقرير ({{ shortageItems.length }} منتج)</h3>
+            <button class="btn-save-all" [disabled]="!hasChanges() || isSaving" (click)="saveAllQuantities()">
+                <fa-icon [icon]="faCheckCircle"></fa-icon>
+                <span>حفظ التغييرات</span>
+            </button>
+        </div>
+        <p class="hint">هذه هي المنتجات التي ستظهر في ملف الإكسل. العناصر الملونه بالأصفر هي التي تم تعديل كميتها ولم
+            تُحفظ بعد.</p>
+
+        <div class="table-responsive">
+            <table class="shortage-table">
+                <thead>
+                    <tr>
+                        <th>المنتج</th>
+                        <th class="text-center">الكمية المتوفرة</th>
+                        <th class="text-center">كمية الطلب</th>
+                        <th>الفئة</th>
+                        <th class="text-center">إجراء</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let item of shortageItems"
+                        [class.changed]="manualQuantities[item.products_id] !== originalQuantities[item.products_id]">
+                        <td>
+                            <div class="product-info">
+                                <img [src]="item.image_path" alt="" class="mini-img">
+                                <span>{{ item.product_name }}</span>
+                            </div>
+                        </td>
+                        <td class="text-center">
+                            <span class="qty-available" [class.out-of-stock]="item.product_quantity <= 0">
+                                {{ item.product_quantity }}
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            <input type="number" [(ngModel)]="manualQuantities[item.products_id]" class="table-input"
+                                min="1">
+                        </td>
+                        <td>{{ item.product_category }}</td>
+                        <td class="text-center">
+                            <button class="btn-remove" (click)="removeProductFromReport(item.products_id)"
+                                title="حذف من التقرير">
+                                <fa-icon [icon]="faTrash"></fa-icon>
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="no-data" *ngIf="shortageItems.length === 0">
+            لا توجد منتجات حالياً في التقرير. ابحث وأضف منتجات بالأسفل أو قلل "حد النواقص".
+        </div>
+    </div>
+
+    <!-- Improved Add Item Section -->
+    <div class="quantities-section card">
+        <div class="section-header">
+            <h3><fa-icon [icon]="faPlus"></fa-icon> إضافة المزيد من الكتب للتقرير</h3>
+        </div>
+        <p>يمكنك إضافة أي كتاب للتقرير وتحديد كمية طلب له حتى لو لم يكن من النواقص.</p>
+
+        <div class="search-container">
+            <div class="search-input-wrapper">
+                <fa-icon [icon]="faSearch" class="search-icon"></fa-icon>
+                <input type="text" [(ngModel)]="bookSearchTerm" (input)="searchBooks()"
+                    placeholder="ابحث باسم الكتاب أو الباركود أو المعرف..." class="premium-search-input">
+                <button class="btn-clear" *ngIf="bookSearchTerm" (click)="bookSearchTerm=''; searchBooks()">
+                    <fa-icon [icon]="faTimes"></fa-icon>
+                </button>
+            </div>
+        </div>
+
+        <div class="search-results-list premium" *ngIf="bookSearchResults.length > 0">
+            <div class="result-item premium-card" *ngFor="let product of bookSearchResults">
+                <div class="result-info">
+                    <div class="img-wrapper">
+                        <img [src]="product.image_path" alt="" class="mini-img">
+                    </div>
+                    <div class="product-detail">
+                        <span class="p-name">{{ product.product_name }}</span>
+                        <div class="stock-badge" [class.in-stock]="product.product_quantity > 0"
+                            [class.out-of-stock]="product.product_quantity <= 0">
+                            <span class="dot"></span>
+                            المخزون الحالي: {{ product.product_quantity }}
+                        </div>
+                    </div>
+                </div>
+                <div class="qty-set">
+                    <button class="btn-add-item-premium" (click)="addToReport(product)">
+                        <fa-icon [icon]="faPlus"></fa-icon>
+                        <span>إضافة للتقرير</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="search-no-results" *ngIf="bookSearchTerm && bookSearchResults.length === 0">
+            <p>لا توجد نتائج مطابقة لـ "{{ bookSearchTerm }}"</p>
+        </div>
+    </div>
+</div>

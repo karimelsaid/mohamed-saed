@@ -34,6 +34,7 @@ interface PrintProject {
   notes?: string;
   projectTitle: string;
   estimatedPrice: number;
+  finalPrice?: number | null;
   createdAt: string;
 }
 
@@ -255,6 +256,16 @@ export class UserOrdersComponent implements OnInit {
     endDate.setDate(endDate.getDate() + 7); // Add 7 days for print projects
     const options: Intl.DateTimeFormatOptions = { weekday: 'long', year: 'numeric', month: 'numeric', day: 'numeric' };
     return `من ${new Intl.DateTimeFormat('ar-EG', options).format(startDate)} إلى ${new Intl.DateTimeFormat('ar-EG', options).format(endDate)}`;
+  }
+
+  // Check if a print order has all final prices set
+  hasFinalPrice(order: Order): boolean {
+    // Regular book orders always show price
+    if (!order.printProjects || order.printProjects.length === 0) {
+      return true;
+    }
+    // For print orders, check if at least one project has a finalPrice
+    return order.printProjects.some(p => p.finalPrice != null && p.finalPrice > 0);
   }
 
   resumePayment(order: Order): void {

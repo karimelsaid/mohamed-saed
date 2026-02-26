@@ -1,5 +1,6 @@
-import { Component, HostListener, OnInit, ViewChild, ChangeDetectorRef } from '@angular/core';
-import { Router } from '@angular/router';
+import { Component, HostListener, OnInit, ViewChild, ChangeDetectorRef, Inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { Router, NavigationEnd } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -121,15 +122,18 @@ export class NavbarComponent implements OnInit {
 
   toggleDarkMode(): void {
     this.isDarkMode = !this.isDarkMode;
-    localStorage.setItem('darkMode', this.isDarkMode.toString());
-    if (this.isDarkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
+    if (isPlatformBrowser(this.platformId)) {
+      localStorage.setItem('darkMode', this.isDarkMode.toString());
+      if (this.isDarkMode) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
     }
   }
 
   toggleFullScreen(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen();
       this.isFullScreen = true;
@@ -141,7 +145,9 @@ export class NavbarComponent implements OnInit {
 
   @HostListener('document:fullscreenchange')
   onFullScreenChange() {
-    this.isFullScreen = !!document.fullscreenElement;
+    if (isPlatformBrowser(this.platformId)) {
+      this.isFullScreen = !!document.fullscreenElement;
+    }
   }
 
   toggleAccountModal(): void {
@@ -185,23 +191,26 @@ export class NavbarComponent implements OnInit {
     private merchantAuthService: MerchantAuthService,
     private notificationService: NotificationService,
     public pushService: PushNotificationService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    @Inject(PLATFORM_ID) private platformId: Object
   ) { }
 
   ngOnInit(): void {
     this.isAndroidApp = Capacitor.getPlatform() === 'android';
 
-    // Initialize dark mode from localStorage, default to false (light mode)
-    const darkModeStored = localStorage.getItem('darkMode');
-    if (darkModeStored !== null) {
-      this.isDarkMode = darkModeStored === 'true';
-    } else {
-      this.isDarkMode = false; // default to light mode
-    }
-    if (this.isDarkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
+    if (isPlatformBrowser(this.platformId)) {
+      // Initialize dark mode from localStorage, default to false (light mode)
+      const darkModeStored = localStorage.getItem('darkMode');
+      if (darkModeStored !== null) {
+        this.isDarkMode = darkModeStored === 'true';
+      } else {
+        this.isDarkMode = false; // default to light mode
+      }
+      if (this.isDarkMode) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
     }
 
     this.dataService.getData().subscribe((data: any) => {
@@ -250,8 +259,8 @@ export class NavbarComponent implements OnInit {
     });
 
     // Subscribe to router events for active states
-    this.router.events.subscribe((event) => {
-      if (event.constructor.name === 'NavigationEnd') {
+    this.router.events.subscribe((event: any) => {
+      if (event instanceof NavigationEnd) {
         this.isOrdersActive = this.router.isActive('/requests', true);
         this.isAccountActive = this.showAccountModal;
         this.cdr.markForCheck();
@@ -306,7 +315,9 @@ export class NavbarComponent implements OnInit {
     }, 100);
 
     if (this.user) {
-      this.onResize(window); // تحديد حالة القائمة الجانبية بناءً على حجم الشاشة عند تحميل الصفحة
+      if (isPlatformBrowser(this.platformId)) {
+        this.onResize({ target: window }); // تحديد حالة القائمة الجانبية بناءً على حجم الشاشة عند تحميل الصفحة
+      }
     }
   }
 
@@ -344,11 +355,13 @@ export class NavbarComponent implements OnInit {
 
   @HostListener('window:resize', ['$event'])
   onResize(event: any): void {
-    this.y = window.innerWidth;
-    if (this.y >= 768) {  // md breakpoint and above
-      this.openBars = true;
-    } else {
-      this.openBars = false;
+    if (isPlatformBrowser(this.platformId)) {
+      this.y = window.innerWidth;
+      if (this.y >= 768) {  // md breakpoint and above
+        this.openBars = true;
+      } else {
+        this.openBars = false;
+      }
     }
   }
 

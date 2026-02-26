@@ -652,15 +652,45 @@ function generateRobotsTxt() {
   }
 }
 
-// في بيئة SSR، لم نعد بحاجة لتقديم ملفات Angular الثابتة أو مسار catch-all من هنا.
-// سيقوم خادم SSR (server.ts) بهذه المهمة.
-// Serve Angular Static Files (Enable for PWA Testing)
-app.use(express.static(path.join(__dirname, 'dist/browser')));
-app.get('*', (req, res, next) => {
+// --- Angular SSR Integration ---
+let angularAppPromise = null;
+
+if (isProduction) {
+  // Use dynamic import for ESM module in CommonJS
+  angularAppPromise = import('./dist/server/server.mjs').then(m => m.app());
+}
+
+// Serve static files from /browser
+app.use(express.static(path.join(__dirname, 'dist/browser'), {
+  maxAge: '1y',
+  index: false // Don't serve index.html directly from static middleware
+}));
+
+// SSR Catch-all route
+app.get('*', async (req, res, next) => {
   if (req.path.startsWith('/api/') || req.path.startsWith('/uploads/')) {
     return next();
   }
-  res.sendFile(path.join(__dirname, 'dist/browser/index.html'));
+
+  // If the request is for a file (has an extension) that wasn't caught by static middleware,
+  // it's likely a missing asset. Don't serve index.html for it.
+  if (path.extname(req.path)) {
+    return res.status(404).send('Not found');
+  }
+
+  if (isProduction && angularAppPromise) {
+    try {
+      const angularApp = await angularAppPromise;
+      return angularApp(req, res, next);
+    } catch (err) {
+      console.error('🔥 Angular SSR Error:', err);
+      // Fallback to CSR if SSR fails
+      return res.sendFile(path.join(__dirname, 'dist/browser/index.csr.html'));
+    }
+  }
+
+  // Development or if SSR is disabled: Fallback to CSR
+  res.sendFile(path.join(__dirname, 'dist/browser/index.csr.html'));
 });
 
 // Endpoint to provide dynamic ICE servers with TURN credentials

@@ -172,8 +172,12 @@ exports.uploadPrintProjects = async (req, res) => {
         const file = req.files[i];
         const data = projectsData[i];
 
+        const fromPage = data.fromPage || 1;
+        const toPage = data.toPage || data.pages;
+        const pagesToPrint = (toPage - fromPage + 1);
+
         const estimatedPrice = calculatePrice({
-          pages: data.pages,
+          pages: pagesToPrint,
           copies: data.copies,
           coverType: data.coverType,
           printColor: data.printColor,
@@ -191,6 +195,8 @@ exports.uploadPrintProjects = async (req, res) => {
           printColor: data.printColor,
           paperColor: data.paperColor,
           pages: data.pages,
+          fromPage: data.fromPage || 1,
+          toPage: data.toPage || data.pages,
           copies: data.copies,
           notes: data.notes || '',
           projectTitle: data.projectTitle,
@@ -297,7 +303,12 @@ exports.getAllPrintOrders = async (req, res) => {
           status: order.status,
           orderDate: order.date,
           totalAmount: order.totalAmount,
-          printProjects: order.printProjects.map(p => ({ ...p, filename: sanitizeFilename(p.filename) }))
+          printProjects: order.printProjects.map(p => ({
+            ...p,
+            filename: sanitizeFilename(p.filename),
+            fromPage: p.fromPage || 1,
+            toPage: p.toPage || p.pages
+          }))
         }))
     );
 
@@ -441,5 +452,71 @@ exports.updatePrintOrderStatus = async (req, res) => {
   } catch (error) {
     console.error('Error updating print order status:', error);
     res.status(500).json({ message: 'Error updating print order status', error: error.message });
+  }
+};
+
+// Update final price for a specific print project in an order
+exports.updateFinalPrice = async (req, res) => {
+  try {
+    const { userId, orderId, projectIndex } = req.params;
+    const { finalPrice } = req.body;
+
+    if (finalPrice === undefined || finalPrice === null || isNaN(finalPrice) || finalPrice < 0) {
+      return res.status(400).json({ message: 'يرجى إدخال سعر نهائي صحيح' });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'المستخدم غير موجود' });
+    }
+
+    const order = user.orders.id(orderId);
+    if (!order) {
+      return res.status(404).json({ message: 'الطلب غير موجود' });
+    }
+
+    const pIdx = parseInt(projectIndex, 10);
+    if (!order.printProjects || pIdx < 0 || pIdx >= order.printProjects.length) {
+      return res.status(404).json({ message: 'المشروع غير موجود' });
+    }
+
+    // Update the finalPrice for the specific project
+    order.printProjects[pIdx].finalPrice = finalPrice;
+
+    // Recalculate totalAmount based on finalPrices (or estimatedPrice as fallback)
+    let projectsTotal = 0;
+    order.printProjects.forEach(p => {
+      projectsTotal += (p.finalPrice != null ? p.finalPrice : p.estimatedPrice);
+    });
+    order.totalAmount = projectsTotal + (order.shippingCost || 0);
+
+    user.markModified('orders');
+    await user.save({ validateBeforeSave: false });
+
+    // Send notification to user
+    const projectTitle = order.printProjects[pIdx].projectTitle;
+    const notificationMessage = `تم تحديد السعر النهائي لمشروع "${projectTitle}" - ${finalPrice} ج.م`;
+    user.notifications.push({
+      message: notificationMessage,
+      type: 'print_order',
+      read: false,
+      relatedId: orderId
+    });
+    await user.save({ validateBeforeSave: false });
+
+    // Send Push Notification
+    const pushService = require('../services/push-notification.service');
+    const pushPayload = {
+      title: 'تم تحديد السعر النهائي ✅',
+      body: notificationMessage,
+      url: '/requests',
+      data: { orderId: orderId, type: 'print_order_price' }
+    };
+    pushService.sendToUser(user._id, pushPayload, { important: true }).catch(err => console.error('Push Error:', err));
+
+    res.status(200).json({ message: 'تم تحديث السعر النهائي بنجاح', totalAmount: order.totalAmount });
+  } catch (error) {
+    console.error('Error updating final price:', error);
+    res.status(500).json({ message: 'حدث خطأ أثناء تحديث السعر النهائي', error: error.message });
   }
 };

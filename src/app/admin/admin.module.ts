@@ -13,6 +13,7 @@ import { PaymentRequestsComponent } from './payment-requests/payment-requests.co
 import { AmazonPriceCalculatorComponent } from './amazon-price-calculator/amazon-price-calculator.component';
 import { AdminEbooksComponent } from './admin-ebooks/admin-ebooks.component';
 import { SubscriptionSettingsComponent } from './subscription-settings/subscription-settings.component';
+import { SalesHistoryComponent } from './sales-history/sales-history.component';
 
 import { AdminRoutingModule } from './admin-routing.module';
 
@@ -34,7 +35,8 @@ import { AdminRoutingModule } from './admin-routing.module';
     PaymentRequestsComponent,
     AmazonPriceCalculatorComponent,
     AdminEbooksComponent,
-    SubscriptionSettingsComponent
+    SubscriptionSettingsComponent,
+    SalesHistoryComponent
   ],
   exports: [
     MerchantManagementComponent,

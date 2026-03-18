@@ -1,0 +1,36 @@
+<div class="modal-overlay" *ngIf="status !== 'idle' && (status !== 'complete' || progress > 0)">
+  <div class="modal-container ripple-animation">
+    <div class="modal-header">
+      <div class="icon-wrapper" [class.rotating]="status === 'downloading' || status === 'applying'">
+        <fa-icon [icon]="statusIcon"></fa-icon>
+      </div>
+      <h2 class="title"> ! ✨تحديث جديد</h2>
+      <p class="version-tag">الإصدار {{ version }}</p>
+    </div>
+
+    <div class="modal-body">
+      <p class="status-msg">{{ statusText }}</p>
+      
+      <div class="progress-wrapper" *ngIf="status === 'downloading'">
+        <div class="progress-bar">
+          <div class="progress-fill" [style.width.%]="progress"></div>
+        </div>
+        <span class="progress-text">{{ progress }}%</span>
+      </div>
+
+      <div class="error-msg" *ngIf="status === 'error'">
+        {{ errorMessage }}
+      </div>
+
+      <div class="description" *ngIf="status === 'checking' || (status === 'error' && !progress)">
+        لقد قمنا ببعض التحسينات السحرية لجعل تجربتك أكثر سهولة وحيوية. دعنا ننتقل سوياً للإصدار الجديد لنبدأ رحلة ممتعة أكثر! 🌈
+      </div>
+    </div>
+
+    <div class="modal-footer" *ngIf="status === 'checking' || status === 'error'">
+      <button class="update-btn" (click)="update()">
+        <span>هيا بنا للتحديث! 🚀</span>
+      </button>
+    </div>
+  </div>
+</div>

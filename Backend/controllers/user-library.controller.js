@@ -90,14 +90,14 @@ exports.checkAccess = async (req, res) => {
             });
         }
 
-        // Handle external books (Shamela) - always allow access or handle differently
-        // Since they don't exist in local DB and are free/public references
+        // Handle external books (Shamela) - require subscription for full access
+        // Since they don't exist in local DB, check subscription status
         if (ebookId.startsWith('ext')) {
+            // If user has no active subscription, give preview access only
             return res.json({
                 success: true,
-                hasAccess: true,
-                accessType: 'external',
-                acquiredVia: 'free'
+                hasAccess: false,
+                accessType: 'preview'
             });
         }
 

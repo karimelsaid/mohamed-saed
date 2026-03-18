@@ -3,11 +3,12 @@ import { AdminService } from '../../services/admin.service';
 import { CommonModule } from '@angular/common';
 import { ModalService } from '../../services/modal.service';
 import { environment } from '../../../environments/environment';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-merchant-management',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './merchant-management.component.html',
   styleUrls: ['./merchant-management.component.css']
 })
@@ -29,6 +30,7 @@ export class MerchantManagementComponent implements OnInit {
     product_category: '',
     product_description: ''
   };
+
 
   // Product update requests properties
   showUpdateRequestsModal = false;
@@ -140,10 +142,11 @@ export class MerchantManagementComponent implements OnInit {
 
   closeProductsModal() {
     this.showProductsModal = false;
-    this.showUpdateRequestsModal = false; // Ensure update requests modal is also closed
+    this.showUpdateRequestsModal = false;
     this.selectedMerchant = null;
     this.merchantProducts = [];
   }
+
 
   editProduct(product: any) {
     this.editingProduct = product;

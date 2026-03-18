@@ -7,11 +7,11 @@
     0%,
     100% {
         opacity: 1;
-        box-shadow: 0 0 0 0 rgba(147, 51, 234, 0.7);
+        box-shadow: 0 0 0 0 var(--promo-primary-alpha-20);
     }
 
     50% {
         opacity: .9;
-        box-shadow: 0 0 0 15px rgba(147, 51, 234, 0);
+        box-shadow: 0 0 0 15px transparent;
     }
 }

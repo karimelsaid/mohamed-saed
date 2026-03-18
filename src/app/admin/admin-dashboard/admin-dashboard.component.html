@@ -1,13 +1,13 @@
 <!-- Main Layout Container -->
-<div class="flex h-screen bg-gray-100 dark:bg-gray-900 rtl overflow-hidden mt-10 md:mt-32" dir="rtl">
+<div class="flex flex-col md:flex-row min-h-screen bg-gray-100 dark:bg-gray-900 rtl mt-[70px] md:mt-32" dir="rtl">
 
   <!-- Sidebar -->
-  <aside [ngClass]="{'translate-x-0': showSidebar, 'translate-x-full': !showSidebar}"
-    class="fixed md:static inset-y-0 right-0 z-30 w-64 bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl border-l border-gray-200 dark:border-gray-700 transform transition-transform duration-300 ease-in-out md:translate-x-0 shadow-2xl flex flex-col pt-20 md:pt-0">
+  <aside [ngClass]="{'translate-x-0': showSidebar, '-translate-x-full md:translate-x-0': !showSidebar}"
+    class="fixed md:sticky top-[70px] md:top-32 inset-y-0 right-0 z-30 w-64 bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl border-l border-gray-200 dark:border-gray-700 transform transition-transform duration-300 ease-in-out shadow-2xl flex flex-col h-[calc(100vh-70px)] md:h-[calc(100vh-8rem)]">
 
     <!-- Sidebar Header (Logo/Title) -->
     <div
-      class="h-16 flex items-center justify-center border-b border-gray-100 dark:border-gray-700 bg-blue-600 dark:bg-blue-900">
+      class="sidebar-header h-16 flex items-center justify-center border-b border-gray-100 dark:border-gray-700 bg-blue-600 dark:bg-blue-900">
       <h1 class="text-xl font-bold text-white flex items-center gap-2">
         <fa-icon [icon]="['fas', 'check-circle']" class="text-yellow-400"></fa-icon>
         <span>لوحة التحكم</span>
@@ -25,7 +25,7 @@
         <span>الرئيسية</span>
       </button>
 
-      <div class="pt-4 pb-2 px-4 text-xs font-bold text-gray-400 uppercase tracking-wider">المتجر</div>
+      <div class="sidebar-nav-category pt-4 pb-2 px-4 text-xs font-bold text-gray-400 uppercase tracking-wider">المتجر</div>
 
       <button (click)="switchView('orders'); showSidebar = false"
         [class]="currentView === 'orders' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
@@ -72,7 +72,7 @@
       </button>
 
 
-      <div class="pt-4 pb-2 px-4 text-xs font-bold text-gray-400 uppercase tracking-wider">التجار & المستخدمين</div>
+      <div class="sidebar-nav-category pt-4 pb-2 px-4 text-xs font-bold text-gray-400 uppercase tracking-wider">التجار & المستخدمين</div>
 
       <button (click)="switchView('merchants'); showSidebar = false"
         [class]="currentView === 'merchants' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
@@ -123,7 +123,7 @@
         <span>مركز الإشعارات 🔔</span>
       </button>
 
-      <div class="pt-4 pb-2 px-4 text-xs font-bold text-gray-400 uppercase tracking-wider">أدوات & تقارير</div>
+      <div class="sidebar-nav-category pt-4 pb-2 px-4 text-xs font-bold text-gray-400 uppercase tracking-wider">أدوات & تقارير</div>
 
       <button (click)="switchView('urgencyRequests'); showSidebar = false"
         [class]="currentView === 'urgencyRequests' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
@@ -144,6 +144,13 @@
         class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
         <fa-icon [icon]="['fas', 'cart-plus']"></fa-icon>
         <span>تسجيل مبيعات خارجية</span>
+      </button>
+
+      <button (click)="switchView('salesHistory'); showSidebar = false"
+        [class]="currentView === 'salesHistory' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
+        class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
+        <fa-icon [icon]="['fas', 'history']"></fa-icon>
+        <span>سجل المبيعات والعملاء</span>
       </button>
 
       <button (click)="switchView('shortagesReport'); showSidebar = false"
@@ -404,78 +411,242 @@
 
       <!-- USER INTELLIGENCE VIEW -->
       <div *ngIf="currentView === 'userIntelligence'" class="space-y-6 animate-in fade-in duration-300">
+        
+        <!-- Header & Initial Loading State -->
         <div class="flex flex-col md:flex-row justify-between items-center gap-4">
           <div>
-            <h2 class="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
-              <fa-icon [icon]="['fas', 'chart-bar']" class="text-purple-600"></fa-icon>
-              مركز ذكاء المستخدمين
+            <h2 class="text-3xl font-bold text-gray-800 dark:text-white flex items-center gap-3">
+              <span class="bg-gradient-to-r from-purple-600 to-indigo-600 text-transparent bg-clip-text">ذكاء المستخدمين والإحصائيات</span>
+              <fa-icon [icon]="['fas', 'chart-bar']" class="text-purple-600 animate-pulse"></fa-icon>
             </h2>
-            <p class="text-gray-500 dark:text-gray-400 text-sm">حلل سلوك المستخدمين وارفع معدلات التحويل</p>
+            <p class="text-gray-500 dark:text-gray-400 mt-1">نظرة شاملة على أداء المنصة، نمو المستخدمين، وحركة المتاجر</p>
           </div>
-
-          <div class="relative w-full md:w-96">
-            <input type="text" [(ngModel)]="userSearchTerm" (input)="filterUsers()"
-              placeholder="ابحث باسم المستخدم، البريد، أو الهاتف..."
-              class="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 focus:ring-2 focus:ring-purple-500 transition-all">
-            <fa-icon [icon]="['fas', 'search']" class="absolute left-3 top-3 text-gray-400"></fa-icon>
-          </div>
+          
+          <button (click)="fetchUserIntelligenceData()" [disabled]="isLoadingAnalytics"
+            class="flex items-center gap-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-4 py-2 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition shadow-sm disabled:opacity-50">
+            <fa-icon [icon]="['fas', 'sync-alt']" [class.animate-spin]="isLoadingAnalytics"></fa-icon>
+            تحديث البيانات
+          </button>
         </div>
 
-        <!-- Users Table (Intelligence Edition) -->
-        <div
-          class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full text-right">
-              <thead class="bg-gray-50 dark:bg-gray-900/50 text-gray-600 dark:text-gray-300 text-sm">
-                <tr>
-                  <th class="p-4">المستخدم</th>
-                  <th class="p-4">تاريخ الانضمام</th>
-                  <th class="p-4">نقاط الولاء (Score)</th>
-                  <th class="p-4">الإجراء</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                <tr *ngFor="let user of filteredUsersList"
-                  class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                  <td class="p-4">
-                    <div class="flex items-center gap-3">
-                      <div
-                        class="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden relative border border-gray-200 dark:border-gray-600">
-                        <img *ngIf="user.profileImage" [src]="user.profileImage" alt="avatar"
-                          class="w-full h-full object-cover">
-                        <div *ngIf="!user.profileImage"
-                          class="absolute inset-0 flex items-center justify-center bg-purple-100 dark:bg-purple-900/30 text-purple-600 font-bold">
-                          {{ user.username ? user.username.charAt(0).toUpperCase() : '?' }}
-                        </div>
-                      </div>
-                      <div>
-                        <div class="font-bold text-gray-900 dark:text-white">{{ user.username || 'مستخدم مجهول' }}</div>
-                        <div class="text-xs text-gray-500">{{ user.email }}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td class="p-4 text-gray-600 dark:text-gray-400 text-sm">
-                    {{ user.createdAt | date:'shortDate' }}
-                  </td>
-                  <td class="p-4">
+        <div *ngIf="isLoadingAnalytics" class="flex flex-col items-center justify-center py-20">
+          <fa-icon [icon]="['fas', 'spinner']" class="text-4xl text-purple-600 animate-spin mb-4"></fa-icon>
+          <p class="text-gray-500 dark:text-gray-400 font-medium">جاري تجميع البيانات وتحليلها...</p>
+        </div>
+
+        <div *ngIf="analyticsError" class="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-4 rounded-xl flex items-center gap-3 border border-red-200 dark:border-red-800/30">
+          <fa-icon [icon]="['fas', 'exclamation-triangle']" class="text-xl"></fa-icon>
+          <span class="font-bold">{{ analyticsError }}</span>
+        </div>
+
+        <!-- Dashboard Content (Visible after loading) -->
+        <div *ngIf="!isLoadingAnalytics && analyticsData" class="space-y-6">
+          
+          <!-- Top Stat Cards -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <!-- Total Accounts -->
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 relative overflow-hidden group hover:shadow-md transition-shadow">
+               <div class="absolute right-0 top-0 w-24 h-24 bg-blue-50 dark:bg-blue-900/20 rounded-bl-full z-0 transition-transform group-hover:scale-110"></div>
+               <div class="relative z-10 flex justify-between items-start mb-4">
+                 <div class="p-4 bg-blue-100 dark:bg-blue-500/20 rounded-2xl text-blue-600 dark:text-blue-400">
+                   <fa-icon [icon]="['fas', 'users']" class="text-2xl"></fa-icon>
+                 </div>
+               </div>
+               <div class="relative z-10">
+                 <div class="text-4xl font-black text-gray-900 dark:text-white mb-1">{{ analyticsData.demographics.totalAccounts | number }}</div>
+                 <div class="text-gray-500 dark:text-gray-400 text-sm font-medium">إجمالي الحسابات المسجلة</div>
+               </div>
+            </div>
+
+            <!-- Total Merchants/Stores -->
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 relative overflow-hidden group hover:shadow-md transition-shadow">
+               <div class="absolute right-0 top-0 w-24 h-24 bg-green-50 dark:bg-green-900/20 rounded-bl-full z-0 transition-transform group-hover:scale-110"></div>
+               <div class="relative z-10 flex justify-between items-start mb-4">
+                 <div class="p-4 bg-green-100 dark:bg-green-500/20 rounded-2xl text-green-600 dark:text-green-400">
+                   <fa-icon [icon]="['fas', 'store']" class="text-2xl"></fa-icon>
+                 </div>
+               </div>
+               <div class="relative z-10">
+                 <div class="text-4xl font-black text-gray-900 dark:text-white mb-1">{{ analyticsData.demographics.merchants | number }}</div>
+                 <div class="text-gray-500 dark:text-gray-400 text-sm font-medium">متاجر / تجار المنصة</div>
+               </div>
+            </div>
+
+            <!-- Total Customers -->
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 relative overflow-hidden group hover:shadow-md transition-shadow">
+               <div class="absolute right-0 top-0 w-24 h-24 bg-orange-50 dark:bg-orange-900/20 rounded-bl-full z-0 transition-transform group-hover:scale-110"></div>
+               <div class="relative z-10 flex justify-between items-start mb-4">
+                 <div class="p-4 bg-orange-100 dark:bg-orange-500/20 rounded-2xl text-orange-600 dark:text-orange-400">
+                   <fa-icon [icon]="['fas', 'user-plus']" class="text-2xl"></fa-icon>
+                 </div>
+               </div>
+               <div class="relative z-10">
+                 <div class="text-4xl font-black text-gray-900 dark:text-white mb-1">{{ analyticsData.demographics.users | number }}</div>
+                 <div class="text-gray-500 dark:text-gray-400 text-sm font-medium">المستخدمين العاديين</div>
+               </div>
+            </div>
+
+            <!-- Global Platform Views -->
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 relative overflow-hidden group hover:shadow-md transition-shadow">
+               <div class="absolute right-0 top-0 w-24 h-24 bg-purple-50 dark:bg-purple-900/20 rounded-bl-full z-0 transition-transform group-hover:scale-110"></div>
+               <div class="relative z-10 flex justify-between items-start mb-4">
+                 <div class="p-4 bg-purple-100 dark:bg-purple-500/20 rounded-2xl text-purple-600 dark:text-purple-400">
+                   <fa-icon [icon]="['fas', 'eye']" class="text-2xl"></fa-icon>
+                 </div>
+               </div>
+               <div class="relative z-10">
+                 <div class="text-4xl font-black text-gray-900 dark:text-white mb-1">{{ analyticsData.totalPlatformViews | number }}</div>
+                 <div class="text-gray-500 dark:text-gray-400 text-sm font-medium">إجمالي مشاهدات المنصة</div>
+               </div>
+            </div>
+          </div>
+
+          <!-- Charts Section 1: Growth & Segments -->
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Line Chart: Approvals/Registrations -->
+            <div class="lg:col-span-2 bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700">
+              <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-6 flex items-center gap-2">
+                <div class="w-2 h-6 bg-blue-500 rounded-full"></div>
+                معدل نمو المستخدمين الجدد (تاريخ ٣٠ يوم)
+              </h3>
+              <div class="relative h-72 w-full">
+                <canvas id="usersGrowthChart"></canvas>
+              </div>
+            </div>
+
+            <!-- Doughnut Chart: Demographics -->
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700">
+              <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-6 flex items-center gap-2">
+                <div class="w-2 h-6 bg-green-500 rounded-full"></div>
+                توزيع أدوار المستخدمين
+              </h3>
+              <div class="relative h-64 w-full flex items-center justify-center">
+                <canvas id="userSegmentsChart"></canvas>
+              </div>
+              <div class="mt-6 space-y-3">
+                <div class="flex justify-between items-center text-sm">
+                  <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-blue-500"></div><span class="text-gray-600 dark:text-gray-300">مستخدمين</span></div>
+                  <span class="font-bold text-gray-900 dark:text-white">{{ (analyticsData.demographics.users / (analyticsData.demographics.totalAccounts || 1) * 100).toFixed(1) }}%</span>
+                </div>
+                <div class="flex justify-between items-center text-sm">
+                  <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-green-500"></div><span class="text-gray-600 dark:text-gray-300">تجار</span></div>
+                  <span class="font-bold text-gray-900 dark:text-white">{{ (analyticsData.demographics.merchants / (analyticsData.demographics.totalAccounts || 1) * 100).toFixed(1) }}%</span>
+                </div>
+                <div class="flex justify-between items-center text-sm">
+                  <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-yellow-500"></div><span class="text-gray-600 dark:text-gray-300">إدارة</span></div>
+                  <span class="font-bold text-gray-900 dark:text-white">{{ (analyticsData.demographics.admins / (analyticsData.demographics.totalAccounts || 1) * 100).toFixed(1) }}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Platform Views Trend -->
+          <div class="w-full bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 mb-6">
+            <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-6 flex items-center gap-2">
+              <div class="w-2 h-6 bg-emerald-500 rounded-full"></div>
+              حركة زيارات المنصة (تاريخ ٣٠ يوم)
+            </h3>
+            <div class="relative h-[300px] w-full">
+              <canvas id="adminViewsChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Charts Section 2: Orders & Top Categories -->
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+            <!-- Bar Chart: Global Orders -->
+            <div class="lg:col-span-2 bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700">
+              <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-6 flex items-center gap-2">
+                <div class="w-2 h-6 bg-purple-500 rounded-full"></div>
+                حركة الطلبات (تاريخ ٣٠ يوم)
+              </h3>
+              <div class="relative h-[300px] w-full">
+                <canvas id="adminOrdersChart"></canvas>
+              </div>
+            </div>
+
+            <!-- List: Top Categories by Platform Views -->
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700">
+              <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-6 flex items-center gap-2">
+                <div class="w-2 h-6 bg-orange-500 rounded-full"></div>
+                أكثر الفئات تفاعلاً ومشاهدة
+              </h3>
+              
+              <div class="space-y-4 max-h-[300px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-700">
+                <div *ngFor="let cat of analyticsData.categoryInsights; let i = index" class="group">
+                  <div class="flex justify-between text-sm mb-1">
                     <div class="flex items-center gap-2">
-                      <div class="h-2 w-24 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                        <div class="h-full bg-gradient-to-r from-purple-500 to-indigo-500"
-                          [style.width.%]="calculateUserScore(user)"></div>
-                      </div>
-                      <span class="font-bold text-purple-600 dark:text-purple-400">{{ calculateUserScore(user) }}</span>
+                      <span class="w-5 h-5 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700 text-xs font-bold text-gray-600 dark:text-gray-400">{{i + 1}}</span>
+                      <span class="font-medium text-gray-700 dark:text-gray-300">{{ cat.name }}</span>
                     </div>
-                  </td>
-                  <td class="p-4">
-                    <button (click)="analyzeUser(user)"
-                      class="text-sm bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 px-4 py-2 rounded-lg font-bold hover:bg-purple-100 dark:hover:bg-purple-900/40 transition-colors flex items-center gap-2">
-                      <fa-icon [icon]="['fas', 'chart-line']"></fa-icon>
-                      تحليل
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+                    <span class="font-bold text-gray-900 dark:text-white">{{ cat.views | number }} مشاهدة</span>
+                  </div>
+                  <div class="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
+                    <div class="bg-gradient-to-r from-orange-400 to-orange-500 h-2 rounded-full transition-all duration-1000 ease-out flex items-center justify-end"
+                      [style.width]="(cat.views / analyticsData.categoryInsights[0].views) * 100 + '%'">
+                    </div>
+                  </div>
+                  <div class="text-xs text-gray-400 mt-1 mr-7">إجمالي {{ cat.productCount }} منتج مدرج</div>
+                </div>
+                
+                <div *ngIf="analyticsData.categoryInsights?.length === 0" class="text-center py-6 text-gray-500">
+                  لا توجد تفاعلات على المنتجات حتى الآن
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Statistics Section 3: Deep Insights -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- List: Top 50 Viewed Products -->
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700">
+              <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-6 flex items-center gap-2">
+                <div class="w-2 h-6 bg-red-500 rounded-full"></div>
+                أعلى 50 منتج مشاهدة 🔥
+              </h3>
+              
+              <div class="space-y-3 max-h-96 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-700">
+                <div *ngFor="let product of analyticsData.topProducts; let i = index" class="flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-xl transition-colors">
+                  <span class="w-6 h-6 flex items-center justify-center rounded-full bg-red-100 dark:bg-red-900/40 text-xs font-bold text-red-600 dark:text-red-400 shrink-0">{{i + 1}}</span>
+                  <div class="w-10 h-10 rounded-lg overflow-hidden border border-gray-100 dark:border-gray-700 shrink-0 bg-white">
+                    <img *ngIf="product.image_path" [src]="backendBaseUrl + product.image_path" class="w-full h-full object-cover" [alt]="product.product_name">
+                    <div *ngIf="!product.image_path" class="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400">
+                       <fa-icon [icon]="['fas', 'image']"></fa-icon>
+                    </div>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="font-bold text-sm text-gray-800 dark:text-white truncate" [title]="product.product_name">{{ product.product_name }}</div>
+                    <div class="text-xs text-gray-500 font-mono">{{ product.products_id }}</div>
+                  </div>
+                  <div class="font-bold text-red-500 text-sm whitespace-nowrap">{{ product.views | number }} <fa-icon [icon]="['fas', 'eye']" class="text-xs"></fa-icon></div>
+                </div>
+
+                <div *ngIf="!analyticsData.topProducts || analyticsData.topProducts.length === 0" class="text-center py-6 text-gray-500">
+                  لا توجد مشاهدات للمنتجات
+                </div>
+              </div>
+            </div>
+
+            <!-- List: Top Search Terms -->
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700">
+              <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-6 flex items-center gap-2">
+                <div class="w-2 h-6 bg-teal-500 rounded-full"></div>
+                أكثر الكلمات بحثاً 🔍
+              </h3>
+              
+              <div class="max-h-96 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-700 flex flex-wrap gap-2 content-start">
+                <div *ngFor="let term of analyticsData.topSearches; let i = index" 
+                     class="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 px-3 py-2 rounded-xl text-sm w-full group transition-colors hover:bg-teal-50 dark:hover:bg-teal-900/30 border border-transparent hover:border-teal-200 dark:hover:border-teal-800">
+                  <span class="text-gray-400 dark:text-gray-500 font-bold shrink-0">#{{ i + 1 }}</span>
+                  <span class="font-bold text-gray-800 dark:text-gray-200 flex-1 truncate">{{ term.term }}</span>
+                  <span class="bg-gray-200 dark:bg-gray-600 group-hover:bg-teal-100 dark:group-hover:bg-teal-800 min-w-[30px] text-center px-1.5 py-0.5 rounded-md text-teal-700 dark:text-teal-300 font-mono text-xs">{{ term.count | number }}</span>
+                </div>
+
+                <div *ngIf="!analyticsData.topSearches || analyticsData.topSearches.length === 0" class="text-center w-full py-6 text-gray-500">
+                  لم يتم تسجيل كلمات بحث بعد
+                </div>
+              </div>
+            </div>
+
           </div>
         </div>
       </div>
@@ -630,6 +801,10 @@
 
       <div *ngIf="currentView === 'salesRegistration'" class="mb-28 md:mb-0 px-4">
         <app-sales-registration></app-sales-registration>
+      </div>
+
+      <div *ngIf="currentView === 'salesHistory'" class="mb-28 md:mb-0 px-4">
+        <app-sales-history></app-sales-history>
       </div>
 
       <div *ngIf="currentView === 'shortagesReport'" class="mb-28 md:mb-0 px-4">
@@ -867,6 +1042,72 @@
                 </div>
               </div>
             </div>
+
+            <!-- Live Update Settings -->
+            <div
+              class="border p-5 rounded-xl bg-blue-50 dark:bg-blue-900/20 dark:border-blue-800 hover:shadow-md transition-shadow md:col-span-2">
+              <h3
+                class="font-bold text-lg mb-4 text-blue-700 dark:text-blue-400 border-b pb-2 dark:border-blue-800 flex justify-between items-center">
+                <span>التحديث المباشر (Direct Update)</span>
+                <fa-icon [icon]="faSyncAlt" class="text-2xl opacity-80"></fa-icon>
+              </h3>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-4">
+                  <div>
+                    <label class="block text-sm font-medium mb-1.5 text-gray-700 dark:text-gray-300">رقم نسخة التحديث (Update Version)</label>
+                    <input type="text" [(ngModel)]="mobileVersionConfig.liveUpdate.version"
+                      placeholder="e.g. 1.2.0"
+                      class="w-full p-2.5 border rounded-lg dark:bg-gray-600 dark:border-gray-500 dark:text-white focus:ring-2 focus:ring-blue-500 transition-all font-mono" dir="ltr">
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium mb-1.5 text-gray-700 dark:text-gray-300">رابط ملف التحديث (ZIP URL)</label>
+                    <input type="text" [(ngModel)]="mobileVersionConfig.liveUpdate.zipUrl"
+                      class="w-full p-2.5 border rounded-lg dark:bg-gray-600 dark:border-gray-500 dark:text-white focus:ring-2 focus:ring-blue-500 transition-all text-xs" dir="ltr">
+                  </div>
+                  <div class="flex items-center gap-3 bg-white dark:bg-gray-600 p-3 rounded-lg border dark:border-gray-500">
+                    <input type="checkbox" [(ngModel)]="mobileVersionConfig.liveUpdate.enabled" id="liveUpdateEnabled"
+                      class="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 cursor-pointer">
+                    <label for="liveUpdateEnabled" class="font-bold cursor-pointer flex-1 text-blue-800 dark:text-blue-300">
+                      تفعيل التحديث المباشر
+                    </label>
+                  </div>
+                </div>
+
+                <div class="space-y-4 border-r dark:border-gray-700 pr-0 md:pr-6 rtl">
+                  <div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-100 dark:border-blue-800">
+                    <h4 class="text-blue-800 dark:text-blue-300 font-bold mb-2 flex items-center gap-2">
+                      <fa-icon [icon]="faSyncAlt"></fa-icon>
+                      نظام التحديث التلقائي
+                    </h4>
+                    <p class="text-xs text-blue-700 dark:text-blue-400 leading-relaxed mb-3">
+                      يتم الآن تحديث إصدار التطبيق تلقائياً عند رفعك لمجلد الـ (dist) الجديد للسيرفر. 
+                      سيقوم الخادم باكتشاف ملف (bundle.zip) وتحديث رقم الإصدار فوراً.
+                    </p>
+                    <div class="grid grid-cols-3 gap-2 text-center">
+                      <div class="bg-white dark:bg-gray-700 rounded-lg p-2 border dark:border-gray-600">
+                        <p class="text-[10px] text-gray-500 dark:text-gray-400">Android</p>
+                        <p class="font-mono font-bold text-green-600 dark:text-green-400">{{ mobileVersionConfig.android?.version || '—' }}</p>
+                      </div>
+                      <div class="bg-white dark:bg-gray-700 rounded-lg p-2 border dark:border-gray-600">
+                        <p class="text-[10px] text-gray-500 dark:text-gray-400">iOS</p>
+                        <p class="font-mono font-bold text-blue-600 dark:text-blue-400">{{ mobileVersionConfig.ios?.version || '—' }}</p>
+                      </div>
+                      <div class="bg-white dark:bg-gray-700 rounded-lg p-2 border dark:border-gray-600">
+                        <p class="text-[10px] text-gray-500 dark:text-gray-400">Live Update</p>
+                        <p class="font-mono font-bold text-purple-600 dark:text-purple-400">{{ mobileVersionConfig.liveUpdate?.version || '—' }}</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border dark:border-gray-600">
+                    <p class="text-[10px] text-gray-500 dark:text-gray-400">
+                      * آخر تحديث للملف تم اكتشافه: 
+                      <span class="font-mono">{{ mobileVersionConfig.liveUpdate.lastZipMtime | date:'yyyy-MM-dd HH:mm:ss' }}</span>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- Actions -->
@@ -1028,6 +1269,29 @@
                       النشر</label><input type="number" id="publishYear" [(ngModel)]="product.publishYear"
                       name="publishYear" class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700"
                       placeholder="سنة النشر (اختياري)" /></div>
+
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    <div>
+                      <label for="copyType" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">نوع
+                        النسخة</label>
+                      <select id="copyType" [(ngModel)]="product.copyType" name="copyType"
+                        class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700 dark:text-gray-200">
+                        <option value="">اختر نوع النسخة</option>
+                        <option value="أصلي">أصلي</option>
+                        <option value="هاي كوبي">هاي كوبي</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label for="condition"
+                        class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">حالة الكتاب</label>
+                      <select id="condition" [(ngModel)]="product.condition" name="condition"
+                        class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700 dark:text-gray-200">
+                        <option value="">اختر حالة الكتاب</option>
+                        <option value="جديد">جديد</option>
+                        <option value="مستعمل بحالة جيدة">مستعمل بحالة جيدة</option>
+                      </select>
+                    </div>
+                  </div>
                 </ng-container>
 
                 <!-- ✏️ أدوات مكتبية -->
@@ -1412,8 +1676,8 @@
         <app-product-approval></app-product-approval>
       </div>
 
-      <div *ngIf="currentView === 'products'" class="px-4 sm:px-10 max-w-6xl mx-auto mb-32 md:mb-0">
-        <h3 class="text-xl font-bold mb-4 text-gray-900 dark:text-gray-200">عرض وتعديل المنتجات</h3>
+      <div *ngIf="currentView === 'products'" class="px-4 sm:px-10 max-w-6xl mx-auto mb-32 md:mb-0 view-enter">
+        <h3 class="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">عرض وتعديل المنتجات</h3>
         <!-- Search bar for filtering products -->
         <div class="mb-4 flex justify-between items-center">
           <div class="flex gap-2">
@@ -1474,7 +1738,9 @@
                 <option value="product_quantity">الكمية</option>
                 <option value="product_price">سعر البيع</option>
                 <option value="price_cost">سعر الشراء</option>
+                <option value="purchaseValue">قيمة الشراء</option>
                 <option value="createdAt">الأحدث</option>
+                <option value="lastStockUpdate">آخر تغيير في المخزون</option>
               </select>
               <button (click)="toggleSortDirection()"
                 class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-3 py-1 rounded"
@@ -1508,7 +1774,6 @@
                   <th class="px-4 py-3 font-bold text-gray-700 dark:text-gray-300 w-24">الكمية</th>
                   <th class="px-4 py-3 font-bold text-gray-700 dark:text-gray-300 w-28">التكلفة</th>
                   <th class="px-4 py-3 font-bold text-gray-700 dark:text-gray-300 w-28">البيع</th>
-                  <th class="px-4 py-3 font-bold text-gray-700 dark:text-gray-300 w-16 text-center">تعديل</th>
                 </tr>
               </thead>
               <tbody class="divide-y dark:divide-gray-700">
@@ -1538,12 +1803,6 @@
                       class="w-full p-1.5 border rounded dark:bg-gray-700 dark:border-gray-600 text-center font-bold text-blue-600 dark:text-blue-400"
                       [id]="'input-price-' + product.products_id">
                   </td>
-                  <td class="px-4 py-3 text-center">
-                    <button (click)="handleEditClick(product)"
-                      class="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors">
-                      <fa-icon [icon]="['fas', 'save']"></fa-icon>
-                    </button>
-                  </td>
                 </tr>
               </tbody>
             </table>
@@ -1552,7 +1811,7 @@
           <!-- New Product Card Layout (Existing) -->
           <div *ngIf="!inventoryMode" class="flex flex-col gap-6">
             <div *ngFor="let product of products; let i = index"
-              class="relative bg-white dark:bg-gray-800 shadow-lg rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+              class="product-card relative bg-white dark:bg-gray-800 shadow-lg rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
 
               <!-- Checkbox for selection -->
               <div class="absolute top-2 right-2 z-10">
@@ -1689,6 +1948,24 @@
                           <p *ngIf="!product.editMode">{{ product['pages'] || '-' }}</p><input *ngIf="product.editMode"
                             type="text" [(ngModel)]="product['pages']"
                             class="mt-1 bg-gray-100 dark:bg-gray-700 border rounded p-1 w-full">
+                        </div>
+                        <div><label class="font-semibold text-gray-600 dark:text-gray-300">نوع النسخة:</label>
+                          <p *ngIf="!product.editMode">{{ product['copyType'] || '-' }}</p>
+                          <select *ngIf="product.editMode" [(ngModel)]="product['copyType']"
+                            class="mt-1 bg-gray-100 dark:bg-gray-700 border rounded p-1 w-full">
+                            <option value="">اختر نوع النسخة</option>
+                            <option value="أصلي">أصلي</option>
+                            <option value="هاي كوبي">هاي كوبي</option>
+                          </select>
+                        </div>
+                        <div><label class="font-semibold text-gray-600 dark:text-gray-300">الحالة:</label>
+                          <p *ngIf="!product.editMode">{{ product['condition'] || '-' }}</p>
+                          <select *ngIf="product.editMode" [(ngModel)]="product['condition']"
+                            class="mt-1 bg-gray-100 dark:bg-gray-700 border rounded p-1 w-full">
+                            <option value="">اختر الحالة</option>
+                            <option value="جديد">جديد</option>
+                            <option value="مستعمل بحالة جيدة">مستعمل بحالة جيدة</option>
+                          </select>
                         </div>
                         <!-- Add EPUB upload for edit mode -->
                         <div *ngIf="product.editMode"
@@ -2746,16 +3023,18 @@
         <div class="grid grid-cols-2 gap-4">
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">نوع العملية</label>
-            <select [(ngModel)]="bulkAdjustData.direction"
-              class="w-full p-2.5 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+            <select [(ngModel)]="bulkAdjustData.direction" [disabled]="bulkAdjustData.adjustmentType === 'sync_cost'"
+              class="w-full p-2.5 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white disabled:opacity-50">
               <option value="increase">زيادة (+)</option>
               <option value="decrease">نقصان (-)</option>
             </select>
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">طريقة الحساب</label>
+            <!-- RE-FORCING SAVE FOR SYNC OPTION -->
             <select [(ngModel)]="bulkAdjustData.adjustmentType"
               class="w-full p-2.5 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+              <option value="sync_cost">مساواة سعر البيع بسعر الشراء (🆕 مفعل)</option>
               <option value="percentage">نسبة مئوية (%)</option>
               <option value="fixed">مبلغ ثابت (جم)</option>
             </select>
@@ -2767,10 +3046,15 @@
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">القيمة</label>
           <div class="relative">
             <input type="number" [(ngModel)]="bulkAdjustData.adjustmentValue"
-              class="w-full p-3 pl-10 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white text-lg font-bold">
-            <span class="absolute left-4 top-3 text-gray-400 font-bold">
+              [disabled]="bulkAdjustData.adjustmentType === 'sync_cost'"
+              [placeholder]="bulkAdjustData.adjustmentType === 'sync_cost' ? 'سيتم استخدام سعر الشراء' : ''"
+              class="w-full p-3 pl-10 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white text-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed">
+            <span *ngIf="bulkAdjustData.adjustmentType !== 'sync_cost'"
+              class="absolute left-4 top-3 text-gray-400 font-bold">
               {{ bulkAdjustData.adjustmentType === 'percentage' ? '%' : 'جم' }}
             </span>
+            <fa-icon *ngIf="bulkAdjustData.adjustmentType === 'sync_cost'" [icon]="['fas', 'link']"
+              class="absolute left-4 top-4 text-orange-500"></fa-icon>
           </div>
         </div>
 

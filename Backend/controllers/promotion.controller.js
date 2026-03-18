@@ -3,9 +3,58 @@ const PromoPackage = require('../models/PromoPackage.model');
 const Coupon = require('../models/Coupon.model');
 const Product = require('../models/Product.model');
 const User = require('../models/User.model');
+const SystemSettings = require('../models/SystemSettings');
 const mongoose = require('mongoose');
 const fs = require('fs');
 const path = require('path');
+const multer = require('multer');
+
+// Hero Upload Config
+const heroStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const heroDir = path.join(__dirname, '..', 'uploads', 'hero');
+        if (!fs.existsSync(heroDir)) {
+            fs.mkdirSync(heroDir, { recursive: true });
+        }
+        cb(null, heroDir);
+    },
+    filename: (req, file, cb) => {
+        const ext = path.extname(file.originalname) || '.png';
+        cb(null, `hero-${Date.now()}-${Math.round(Math.random() * 1E9)}${ext}`);
+    }
+});
+
+const uploadHero = multer({
+    storage: heroStorage,
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit for high-res hero images
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype.startsWith('image/')) {
+            cb(null, true);
+        } else {
+            cb(new Error('Only images are allowed!'), false);
+        }
+    }
+});
+
+exports.uploadHeroImage = (req, res) => {
+    uploadHero.single('image')(req, res, (err) => {
+        if (err instanceof multer.MulterError) {
+            return res.status(400).json({ success: false, message: `Multer error: ${err.message}` });
+        } else if (err) {
+            return res.status(500).json({ success: false, message: `Upload error: ${err.message}` });
+        }
+
+        try {
+            if (!req.file) {
+                return res.status(400).json({ success: false, message: 'No image uploaded' });
+            }
+            const publicUrl = `/uploads/hero/${req.file.filename}`;
+            res.status(200).json({ success: true, imageUrl: publicUrl });
+        } catch (error) {
+            res.status(500).json({ success: false, message: 'Upload failed', error: error.message });
+        }
+    });
+};
 
 // Helper to calculate cost with fallback
 const getEffectiveCost = (product) => {
@@ -25,6 +74,58 @@ exports.getActivePromotion = async (req, res) => {
         res.status(200).json({ theme: activeTheme });
     } catch (error) {
         res.status(500).json({ message: 'Error fetching active promotion', error: error.message });
+    }
+};
+
+exports.getHeroConfig = async (req, res) => {
+    try {
+        const settings = await SystemSettings.getInstance();
+        res.status(200).json(settings.heroConfig || { mode: 'slider' });
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching hero config', error: error.message });
+    }
+};
+
+exports.getHeroBooks = async (req, res) => {
+    try {
+        // Fetch ~50 random products that have images
+        // Using $sample for randomness
+        const products = await Product.aggregate([
+            { $match: { product_image: { $exists: true, $ne: '' } } },
+            { $sample: { size: 32 } },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'merchantId',
+                    foreignField: '_id',
+                    as: 'merchant'
+                }
+            },
+            { $unwind: { path: '$merchant', preserveNullAndEmptyArrays: true } },
+            {
+                $project: {
+                    product_name: 1,
+                    product_image: 1,
+                    image_path: 1,
+                    product_price: 1,
+                    barcode: 1,
+                    author: 1,
+                    products_id: { $ifNull: ['$products_id', '$product_image'] },
+                    merchantId: 1,
+                    merchantName: {
+                        $cond: {
+                            if: { $eq: ['$merchant.role', 'admin'] },
+                            then: null, // Admin products should have null merchantName for consistency with other components
+                            else: { $ifNull: ['$merchant.merchantName', '$merchant.username'] }
+                        }
+                    },
+                    merchantRole: { $ifNull: ['$merchant.role', 'admin'] }
+                }
+            }
+        ]);
+        res.status(200).json({ success: true, products });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Error fetching hero books', error: error.message });
     }
 };
 
@@ -228,36 +329,135 @@ exports.getDynamicOffer = async (req, res) => {
             return res.status(400).json({ message: 'Invalid product selection' });
         }
 
-        const products = await Product.find({ _id: { $in: productIds } });
+        const settings = await SystemSettings.getInstance();
+        const targetMargin = settings.economy?.dynamicOfferProfitMargin || 50;
+
+        // Count occurrences of each ID (could be ObjectIds or Barcodes)
+        const idCounts = {};
+        productIds.forEach(id => {
+            idCounts[id] = (idCounts[id] || 0) + 1;
+        });
+
+        const outputDataPath = path.join(__dirname, '..', 'output.json');
+        let outputData = [];
+        try {
+            if (fs.existsSync(outputDataPath)) {
+                outputData = JSON.parse(fs.readFileSync(outputDataPath, 'utf8'));
+            }
+        } catch (err) {
+            console.error('[DynamicOffer] Error reading output.json:', err);
+        }
+        const adminMerchant = await User.findOne({ role: 'admin' });
+
+        const products = [];
+        const uniqueRequestedIds = Object.keys(idCounts);
+
+        for (const id of uniqueRequestedIds) {
+            let productDoc = null;
+
+            // 1. Try by ObjectId
+            if (mongoose.Types.ObjectId.isValid(id)) {
+                productDoc = await Product.findById(id).populate('merchantId');
+            }
+
+            // 2. Try by Barcode/Image (if not found or if id was not a valid ObjectId)
+            if (!productDoc) {
+                const barcodeStr = String(id).trim();
+                productDoc = await Product.findOne({
+                    $or: [
+                        { product_image: barcodeStr },
+                        { product_image: barcodeStr + '.webp' },
+                        { product_image: barcodeStr + '.jpg' }
+                    ]
+                }).populate('merchantId');
+
+                // 3. Sync on demand from Excel if still not found
+                if (!productDoc) {
+                    const excelProduct = outputData.find(p => String(p.products_id) === barcodeStr);
+                    if (excelProduct && adminMerchant) {
+                        try {
+                            productDoc = await Product.findOneAndUpdate(
+                                { product_image: barcodeStr },
+                                {
+                                    $setOnInsert: {
+                                        product_name: excelProduct.product_name || excelProduct.bookName,
+                                        product_quantity: parseInt(excelProduct.product_quantity) || 50,
+                                        product_category: excelProduct.product_category || 'General',
+                                        product_description: excelProduct.product_description || 'Auto-synced for Dynamic Offer',
+                                        product_price: parseFloat(excelProduct.product_price) || 0,
+                                        price_cost: parseFloat(excelProduct.price_cost) || 0,
+                                        status: 'approved',
+                                        merchantId: adminMerchant._id,
+                                        productType: 'physical'
+                                    }
+                                },
+                                { upsert: true, new: true }
+                            );
+                            console.log(`[DynamicOffer] Synced/found product ${barcodeStr} in MongoDB`);
+                        } catch (syncError) {
+                            console.error(`[DynamicOffer] Failed to sync ${barcodeStr}:`, syncError.message);
+                        }
+                    }
+                }
+            }
+
+            if (productDoc) {
+                // Ensure we store the ID used in the request to map back to idCounts
+                productDoc._originalRequestedId = id;
+                products.push(productDoc);
+            }
+        }
+
+        if (products.length === 0 && productIds.length > 0) {
+            return res.status(404).json({ message: 'No valid products found for offer calculation' });
+        }
 
         let totalCost = 0;
         let totalSellingPrice = 0;
 
         products.forEach(p => {
-            totalCost += getEffectiveCost(p);
-            totalSellingPrice += p.product_price;
+            const count = idCounts[p._originalRequestedId] || idCounts[p._id.toString()] || 0;
+            const costPerUnit = getEffectiveCost(p);
+            totalCost += (costPerUnit * count);
+            totalSellingPrice += (p.product_price * count);
         });
 
-        // Rule: FinalPrice >= 2 * TotalCost (50% net profit)
-        const minPriceFor50PercentProfit = totalCost * 2;
+        // Rule: FinalPrice should yield targetMargin
+        const marginDecimal = targetMargin / 100;
+        let minPriceForTargetProfit = totalCost / (1 - marginDecimal);
 
-        // Calculate best possible discount
-        let bestDiscountedPrice = totalSellingPrice;
-        let discountAmount = 0;
+        // Ensure we always GIVE a discount for a bundle (at least 10% or enough to be attractive)
+        const minBundleDiscountPercent = 0.10;
+        const maxPriceWithMinDiscount = totalSellingPrice * (1 - minBundleDiscountPercent);
 
-        if (totalSellingPrice > minPriceFor50PercentProfit) {
-            discountAmount = totalSellingPrice - minPriceFor50PercentProfit;
-            bestDiscountedPrice = minPriceFor50PercentProfit;
+        // We use the lower of (target profit price) or (10% discount price), 
+        // BUT we must not go below cost + small margin
+        const absoluteFloorPrice = totalCost * 1.10;
+
+        let bestDiscountedPrice = Math.min(minPriceForTargetProfit, maxPriceWithMinDiscount);
+
+        if (bestDiscountedPrice < absoluteFloorPrice) {
+            bestDiscountedPrice = absoluteFloorPrice;
         }
 
-        res.status(200).json({
+        if (bestDiscountedPrice > totalSellingPrice * 0.95) {
+            bestDiscountedPrice = totalSellingPrice * 0.95; // Always give at least 5%
+        }
+
+        const discountAmount = totalSellingPrice - bestDiscountedPrice;
+
+        const responseData = {
             originalPrice: totalSellingPrice,
-            discountedPrice: bestDiscountedPrice,
-            savings: discountAmount,
-            profitMargin: ((bestDiscountedPrice - totalCost) / bestDiscountedPrice) * 100
-        });
+            discountedPrice: Math.floor(bestDiscountedPrice),
+            savings: Math.floor(discountAmount),
+            profitMargin: bestDiscountedPrice > 0 ? ((bestDiscountedPrice - totalCost) / bestDiscountedPrice) * 100 : 0
+        };
+
+        console.log('[DynamicOffer] Calculated:', responseData);
+        res.status(200).json(responseData);
 
     } catch (error) {
+        console.error('[DynamicOffer] Critical Error:', error);
         res.status(500).json({ message: 'Error calculating dynamic offer', error: error.message });
     }
 };
@@ -450,7 +650,12 @@ exports.toggleTheme = async (req, res) => {
 
 exports.getAllPackages = async (req, res) => {
     try {
-        const packages = await PromoPackage.find().sort({ createdAt: -1 });
+        const packages = await PromoPackage.find()
+            .populate({
+                path: 'products',
+                populate: { path: 'merchantId' }
+            })
+            .sort({ createdAt: -1 });
         res.status(200).json(packages);
     } catch (error) {
         res.status(500).json({ message: 'Error fetching packages', error: error.message });
@@ -458,19 +663,82 @@ exports.getAllPackages = async (req, res) => {
 };
 
 exports.createPackage = async (req, res) => {
+    console.log('[PROMO_DEBUG_v2] Entering createPackage');
     try {
         const { name, products, fixedPrice, promoPrice, description } = req.body;
-        // Cast string IDs to ObjectIds safely
-        const productIds = (products || []).map(id => {
-            try { return new mongoose.Types.ObjectId(id); } catch (e) { return null; }
-        }).filter(Boolean);
+
+        const resolvedProductIds = [];
+        let outputData = [];
+        try {
+            const outputPath = path.join(__dirname, '..', 'output.json');
+            if (fs.existsSync(outputPath)) {
+                outputData = JSON.parse(fs.readFileSync(outputPath, 'utf8'));
+            }
+        } catch (e) {
+            console.error('[createPackage] Error reading output.json:', e.message);
+        }
+
+        // Find a fallback ADMIN merchant for synced products
+        const adminMerchant = await User.findOne({ role: 'admin' });
+
+        for (const id of (products || [])) {
+            if (mongoose.Types.ObjectId.isValid(id)) {
+                resolvedProductIds.push(new mongoose.Types.ObjectId(id));
+            } else {
+                const barcodeStr = String(id).trim();
+
+                // 1. Try to find in MongoDB
+                let productDoc = await Product.findOne({
+                    $or: [
+                        { product_image: barcodeStr },
+                        { product_image: barcodeStr + '.webp' },
+                        { product_image: barcodeStr + '.jpg' },
+                        { product_image: { $regex: new RegExp(`(^|[\\/\\-_])${barcodeStr}(\\.|_|\\-|$)`, 'i') } }
+                    ]
+                });
+
+                if (productDoc) {
+                    resolvedProductIds.push(productDoc._id);
+                    continue;
+                }
+
+                // 2. Not in MongoDB? Find-or-create from output.json (Sync on demand)
+                const excelProduct = outputData.find(p => String(p.products_id) === barcodeStr);
+                if (excelProduct && adminMerchant) {
+                    try {
+                        productDoc = await Product.findOneAndUpdate(
+                            { product_image: barcodeStr },
+                            {
+                                $setOnInsert: {
+                                    product_name: excelProduct.product_name || excelProduct.bookName,
+                                    product_quantity: parseInt(excelProduct.product_quantity) || 50,
+                                    product_category: excelProduct.product_category || 'General',
+                                    product_description: excelProduct.product_description || 'Auto-synced from Excel',
+                                    product_price: parseFloat(excelProduct.product_price) || 0,
+                                    price_cost: parseFloat(excelProduct.price_cost) || 0,
+                                    status: 'approved',
+                                    merchantId: adminMerchant._id,
+                                    productType: 'physical'
+                                }
+                            },
+                            { upsert: true, new: true }
+                        );
+
+                        console.log(`[createPackage] Synced/found product ${barcodeStr} in MongoDB: ${productDoc._id}`);
+                        resolvedProductIds.push(productDoc._id);
+                    } catch (syncError) {
+                        console.error(`[createPackage] Failed to sync product ${barcodeStr}:`, syncError.message);
+                    }
+                }
+            }
+        }
 
         const newPackage = new PromoPackage({
             name,
             description: description || '',
-            products: productIds,
+            products: resolvedProductIds,
             promoPrice: promoPrice || fixedPrice || 0,
-            totalOriginalPrice: fixedPrice || promoPrice || 0,
+            totalOriginalPrice: req.body.totalOriginalPrice || fixedPrice || promoPrice || 0,
             minPrice: req.body.minPrice,
             maxPrice: req.body.maxPrice,
             isActive: true
@@ -478,9 +746,8 @@ exports.createPackage = async (req, res) => {
         await newPackage.save();
         res.status(201).json({ message: 'Package created successfully', package: newPackage });
     } catch (error) {
-        console.log('[createPackage] req.body:', JSON.stringify(req.body, null, 2));
         console.error('[createPackage] ERROR:', error);
-        res.status(500).json({ message: 'Error creating package', error: error.message, details: error.errors });
+        res.status(500).json({ message: 'Error creating package', error: error.message });
     }
 };
 
@@ -515,5 +782,63 @@ exports.updateWheelConfig = async (req, res) => {
         res.status(200).json({ message: 'Wheel config updated', luckyWheel: theme.luckyWheel });
     } catch (error) {
         res.status(500).json({ message: 'Error updating wheel config', error: error.message });
+    }
+};
+
+const HeroSlide = require('../models/HeroSlide.model');
+
+exports.getHeroSlides = async (req, res) => {
+    try {
+        const slides = await HeroSlide.find().sort({ order: 1 });
+        res.status(200).json({ success: true, slides });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Error fetching hero slides', error: error.message });
+    }
+};
+
+exports.createHeroSlide = async (req, res) => {
+    try {
+        const slideData = req.body;
+        // In a real scenario, this would handle file uploads via multer.
+        // For now, we assume paths are provided or handled by a separate upload middleware.
+        const newSlide = new HeroSlide(slideData);
+        await newSlide.save();
+        res.status(201).json({ success: true, message: 'Hero slide created', slide: newSlide });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Error creating hero slide', error: error.message });
+    }
+};
+
+exports.deleteHeroSlide = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const slide = await HeroSlide.findById(id);
+        if (!slide) return res.status(404).json({ success: false, message: 'Slide not found' });
+
+        // Delete physical files if they exist in uploads
+        const deleteFile = (filePath) => {
+            if (!filePath) return;
+
+            // Generate absolute path to the file
+            // filePath is typically '/uploads/hero/...'
+            const cleanPath = filePath.startsWith('/') ? filePath.substring(1) : filePath;
+            const fullPath = path.resolve(__dirname, '..', cleanPath);
+
+            if (fs.existsSync(fullPath)) {
+                try {
+                    fs.unlinkSync(fullPath);
+                } catch (err) {
+                    console.error(`❌ [DeleteHero] Error unlinking ${fullPath}:`, err.message);
+                }
+            }
+        };
+
+        deleteFile(slide.desktopPath);
+        deleteFile(slide.mobilePath);
+
+        await HeroSlide.findByIdAndDelete(id);
+        res.status(200).json({ success: true, message: 'Hero slide and files deleted permanently' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Error deleting hero slide', error: error.message });
     }
 };

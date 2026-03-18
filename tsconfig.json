@@ -3,6 +3,7 @@
 {
   "compileOnSave": false,
   "compilerOptions": {
+    "baseUrl": ".",
     "outDir": "./dist/out-tsc",
     "strict": true,
     "noImplicitOverride": true,
@@ -14,9 +15,17 @@
     "esModuleInterop": true,
     "experimentalDecorators": true,
     "moduleResolution": "bundler",
+    "resolveJsonModule": true,
     "importHelpers": true,
     "target": "ES2020",
-    "module": "ES2022"
+    "module": "ES2022",
+    "paths": {
+      "@fortawesome/angular-fontawesome": ["node_modules/@fortawesome/angular-fontawesome"],
+      "@fortawesome/fontawesome-svg-core": ["node_modules/@fortawesome/fontawesome-svg-core"],
+      "@fortawesome/free-solid-svg-icons": ["node_modules/@fortawesome/free-solid-svg-icons"],
+      "@fortawesome/free-regular-svg-icons": ["node_modules/@fortawesome/free-regular-svg-icons"],
+      "@fortawesome/free-brands-svg-icons": ["node_modules/@fortawesome/free-brands-svg-icons"]
+    }
   },
   "angularCompilerOptions": {
     "enableI18nLegacyMessageIdFormat": false,

@@ -24,6 +24,7 @@ import { PromotionService } from '../services/promotion.service';
 export class CheckoutModalComponent implements OnInit {
   uploadsBaseUrl = environment.uploadsBaseUrl;
   @Input() bookId?: string;
+  @Input() customPackage?: { products: any[], totalPrice: number, name: string };
   @Output() close = new EventEmitter<void>();
   cartItems: any[] = [];
   totalPrice: number = 0;
@@ -32,6 +33,59 @@ export class CheckoutModalComponent implements OnInit {
   isLoading = true;
   showSuccessMessage: boolean = false;
   showPurchaseConfirmation: boolean = false;
+
+  get hasExternalMerchantProducts(): boolean {
+    const internalIds = ['Kenouz', 'admin', 'admin__karim_mohamed__'];
+
+    const isInternal = (item: any): boolean => {
+      const merchantId = item.merchantId;
+      const merchantName = item.merchantName;
+      const merchantRole = item.merchantRole;
+
+      if (!merchantId) return true; // Default to Kenouz (Internal)
+      if (merchantName === 'تاجر كنوز' || merchantRole === 'admin') return true;
+
+      const internalIds = ['Kenouz', 'admin', 'admin__karim_mohamed__'];
+
+      // If it's a string, check if it's in the internal list (case-insensitive)
+      if (typeof merchantId === 'string') {
+        const lowerId = merchantId.toLowerCase();
+        return internalIds.some(id => id.toLowerCase() === lowerId);
+      }
+
+      // If it's an object (populated), check common ID fields
+      if (typeof merchantId === 'object') {
+        const id = (merchantId._id || merchantId.id || '').toString();
+        const role = merchantId.role || merchantRole || '';
+        const lowerId = id.toLowerCase();
+
+        if (role === 'admin' || internalIds.some(id => id.toLowerCase() === lowerId)) {
+          return true;
+        }
+      }
+      return false;
+    };
+
+    // Case 1: Custom Package
+    if (this.customPackage) {
+      if (this.customPackage.products && this.customPackage.products.length > 0) {
+        return this.customPackage.products.some(p => !isInternal(p));
+      }
+      return false;
+    }
+
+    // Case 2: Regular Cart Items
+    if (!this.cartItems || this.cartItems.length === 0) return false;
+
+    return this.cartItems.some(item => !isInternal(item));
+  }
+
+  get checkOutItems(): any[] {
+    if (this.customPackage && this.customPackage.products) {
+      return this.customPackage.products;
+    }
+    return this.cartItems;
+  }
   isProcessing: boolean = false;
   faCheck = faCheck;
   faHandPointRight = faHandPointRight
@@ -61,6 +115,10 @@ export class CheckoutModalComponent implements OnInit {
   walletDiscount: number = 0;
   finalTotal: number = 0;
 
+  // Cash on Delivery Fee
+  codFee: number = 10;
+  showCodConfirmation: boolean = false;
+
   private cartItemsLoaded: boolean = false;
   private freeShippingRulesLoaded: boolean = false;
 
@@ -86,7 +144,8 @@ export class CheckoutModalComponent implements OnInit {
     includedProducts: [],
     includedCategories: [],
     includedGovernorates: [],
-    freeShippingEnabled: true
+    freeShippingEnabled: true,
+    codFee: 10
   };
 
   constructor(
@@ -128,6 +187,7 @@ export class CheckoutModalComponent implements OnInit {
       next: (rules) => {
         console.log('Free shipping rules loaded:', rules);
         this.freeShippingRules = rules;
+        this.codFee = rules.codFee ?? 10;
         this.calculateShippingCost();
       },
       error: (error) => {
@@ -227,7 +287,16 @@ export class CheckoutModalComponent implements OnInit {
 
   loadCartItems() {
     console.log('Loading cart items...');
-    if (this.bookId) {
+    if (this.customPackage) {
+      this.cartItems = this.customPackage.products.map(p => ({
+        ...p,
+        quantity: 1,
+        // Ensure we use the promo context
+        product_price: p.product_price // we will override total calculation anyway
+      }));
+      this.totalPrice = this.customPackage.totalPrice;
+      this.isLoading = false;
+    } else if (this.bookId) {
       this.dataService.getData().pipe(
         map((books: any[]) => books.filter(book => book.products_id === this.bookId))
       ).subscribe({
@@ -318,9 +387,10 @@ export class CheckoutModalComponent implements OnInit {
       return;
     }
 
-    const totalQuantity = this.cartItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
-    const totalPrice = this.cartItems.reduce((total, book) => {
-      if (book.product_quantity > 0) {
+    const items = this.checkOutItems;
+    const totalQuantity = items.reduce((sum, item) => sum + (item.quantity || 1), 0);
+    const totalPrice = this.customPackage ? this.customPackage.totalPrice : items.reduce((total, book) => {
+      if (book.product_quantity > 0 || this.customPackage) {
         return total + (parseFloat(book.product_price) * (book.quantity || 1));
       }
       return total;
@@ -368,7 +438,7 @@ export class CheckoutModalComponent implements OnInit {
     let discountedProductCount = 0;
     const maxProducts = this.appliedCoupon?.maxProducts || 0;
 
-    const itemsTotal = this.cartItems.reduce((total, book) => {
+    const itemsTotal = this.customPackage ? this.customPackage.totalPrice : this.cartItems.reduce((total, book) => {
       if (book.product_quantity > 0) {
         const price = parseFloat(book.product_price);
         const qty = book.quantity || 1;
@@ -418,8 +488,22 @@ export class CheckoutModalComponent implements OnInit {
   }
 
   get hasMerchantProducts(): boolean {
-    const result = this.cartItems.some(item => item.merchantId && item.merchantId.trim() !== '');
-    return result;
+    return this.checkOutItems.some(item => {
+      // It's a merchant product if it's NOT internal
+      const isInternal = (it: any): boolean => {
+        const mid = it.merchantId;
+        const mName = it.merchantName;
+        const mRole = it.merchantRole;
+        if (!mid) return true;
+        if (mName === 'تاجر كنوز' || mRole === 'admin') return true;
+        const internalIds = ['Kenouz', 'admin', 'admin__karim_mohamed__'];
+        const id = typeof mid === 'object' ? (mid._id || mid.id || '').toString() : mid.toString();
+        const role = (mid && typeof mid === 'object' ? mid.role : '') || mRole || '';
+        if (role === 'admin') return true;
+        return internalIds.some(iid => iid.toLowerCase() === id.toLowerCase());
+      };
+      return !isInternal(item);
+    });
   }
 
   get pickupLocationText(): string {
@@ -661,8 +745,8 @@ export class CheckoutModalComponent implements OnInit {
   executePurchase(): void {
     this.showPurchaseConfirmation = false;
 
-    const purchasedItems = this.cartItems
-      .filter(item => item.product_quantity > 0);
+    // Use standardized checkOutItems getter
+    const purchasedItems = this.checkOutItems.filter(item => (item.product_quantity > 0 || this.customPackage));
 
     const purchasedBookIds = purchasedItems.map(item => item.products_id);
 
@@ -692,7 +776,7 @@ export class CheckoutModalComponent implements OnInit {
           })),
           shippingCost: this.shippingCost,
           totalAmount: this.totalPrice,
-          merchantId: purchasedItems[0]?.merchantId,
+          merchantId: purchasedItems[0]?.merchantId || (this.customPackage ? 'Kenouz' : undefined),
           address: address,
           isPickup: this.isPickup,
           pickupLocation: this.isPickup ? this.pickupLocation : null,
@@ -777,10 +861,26 @@ export class CheckoutModalComponent implements OnInit {
   }
 
   executeCashOnDelivery(): void {
-    this.showPurchaseConfirmation = false;
+    if (this.isPickup) {
+      // No COD fee for library pickup — proceed directly
+      this.codFee = 0;
+      this.finalConfirmCOD();
+    } else {
+      this.showCodConfirmation = true;
+    }
+  }
 
-    const purchasedItems = this.cartItems
-      .filter(item => item.product_quantity > 0);
+  cancelCodConfirmation(): void {
+    this.showCodConfirmation = false;
+  }
+
+  finalConfirmCOD(): void {
+    this.showCodConfirmation = false;
+    this.showPurchaseConfirmation = false;
+    this.isProcessing = true;
+
+    // Use standardized checkOutItems getter
+    const purchasedItems = this.checkOutItems.filter(item => (item.product_quantity > 0 || this.customPackage));
 
     const purchasedBookIds = purchasedItems.map(item => item.products_id);
 
@@ -809,8 +909,7 @@ export class CheckoutModalComponent implements OnInit {
             price: item.isFree ? 0 : this.calculateDiscountedPrice(parseFloat(item.product_price), item.products_id, item.quantity || 1).discountedPrice
           })),
           shippingCost: this.shippingCost,
-          totalAmount: this.totalPrice,
-          merchantId: purchasedItems[0]?.merchantId,
+          merchantId: purchasedItems[0]?.merchantId || (this.customPackage ? 'Kenouz' : undefined),
           address: address,
           isPickup: this.isPickup,
           pickupLocation: this.isPickup ? this.pickupLocation : null,
@@ -824,7 +923,9 @@ export class CheckoutModalComponent implements OnInit {
           couponCode: this.appliedCoupon?.code,
           bookId: bookId,
           useWallet: this.useWallet,
-          paymentMethod: 'cod'
+          paymentMethod: 'cod',
+          codFee: this.codFee,
+          totalAmount: this.totalPrice + this.codFee
         };
 
         console.log('[Checkout] Submitting COD order with data:', orderData);

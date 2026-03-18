@@ -36,6 +36,7 @@ const {
   getPublicProfile
 } = require('../controllers/users.controller'); // Removed getPaymentRequests
 
+const verifyToken = require('../middleware/auth.middleware');
 const userMediaController = require('../controllers/user-media.controller'); // Import media controller
 
 router.post('/register', createAccount);
@@ -63,7 +64,10 @@ router.get('/:userId/print-orders', getUserPrintOrders);
 
 
 // مسار رفع الصورة الشخصية
-router.post('/profile-image', userMediaController.uploadProfileImage);
+router.post('/profile-image', verifyToken, userMediaController.uploadProfileImage);
+
+// مسار رفع صورة الغلاف
+router.post('/cover-image', verifyToken, userMediaController.uploadCoverImage);
 
 // تحديث عنوان الشحن لطلب معين
 router.put('/:userId/orders/:orderId/shipping-address', updateOrderShippingAddress);
@@ -84,6 +88,13 @@ router.get('/rated-books/:userId', getRatedBooks);
 
 // Add route for getting average rating for a book
 router.get('/average-rating/:bookId', getAverageRating);
+
+// Bulk version for list views
+router.post('/bulk-average-ratings', (req, res, next) => {
+  // Use a dynamic import or lazy require if needed, but since it's already in the users.controller, just use it
+  const { getBulkAverageRatings } = require('../controllers/users.controller');
+  return getBulkAverageRatings(req, res, next);
+});
 
 // Add routes for notifications
 router.get('/notifications/:userId', getNotifications);

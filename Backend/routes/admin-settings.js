@@ -19,6 +19,9 @@ router.get('/', async (req, res) => {
 // GET /api/admin/settings/free-shipping-rules - Publicly accessible for calculation
 router.get('/free-shipping-rules', adminController.getFreeShippingRules);
 
+// POST /api/admin/settings/free-shipping-rules - Save rules (Admin only)
+router.post('/free-shipping-rules', authenticateAdmin, adminController.saveFreeShippingRules);
+
 // GET /api/admin/settings/printing - Publicly accessible for printing calculation
 router.get('/printing', async (req, res) => {
     try {
@@ -32,13 +35,14 @@ router.get('/printing', async (req, res) => {
 // PUT /admin/settings - Update settings (Admin only)
 router.put('/', authenticateAdmin, async (req, res) => {
     try {
-        const { gamification, quranPoints, economy, maintenanceMode } = req.body;
+        const { gamification, quranPoints, economy, maintenanceMode, heroConfig } = req.body;
 
         let settings = await SystemSettings.getInstance();
 
         if (gamification) settings.gamification = { ...settings.gamification, ...gamification };
         if (req.body.quranPoints) settings.quranPoints = { ...settings.quranPoints, ...req.body.quranPoints };
         if (economy) settings.economy = { ...settings.economy, ...economy };
+        if (heroConfig) settings.heroConfig = { ...settings.heroConfig, ...heroConfig };
 
         if (req.body.printing) {
             console.log('Updating printing settings:', JSON.stringify(req.body.printing, null, 2));

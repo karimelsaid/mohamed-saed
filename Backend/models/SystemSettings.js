@@ -23,7 +23,8 @@ const systemSettingsSchema = mongoose.Schema({
         coinExchangeRate: { type: Number, default: 50 }, // For Store/EPUB
         quranPointsPerEGP: { type: Number, default: 500 }, // For Quran
         quranMinConversionPoints: { type: Number, default: 5 },
-        minimumWithdrawal: { type: Number, default: 500 }
+        minimumWithdrawal: { type: Number, default: 500 },
+        dynamicOfferProfitMargin: { type: Number, default: 50 }
     },
     subscription: {
         monthlyPrice: { type: Number, default: 50 },
@@ -70,6 +71,11 @@ const systemSettingsSchema = mongoose.Schema({
         includeSuggestions: { type: Boolean, default: false },
         defaultOrderQuantity: { type: Number, default: 1 },
         orderQuantities: { type: Map, of: Number, default: {} } // products_id -> quantity
+    },
+    heroConfig: {
+        mode: { type: String, enum: ['slider', 'scrolling'], default: 'slider' },
+        columnCount: { type: Number, default: 4 },
+        scrollingSpeed: { type: String, default: 'fast' } // 'slow', 'medium', 'fast'
     }
 }, { timestamps: true });
 

@@ -20,11 +20,12 @@ export class FreeShippingRulesComponent implements OnInit {
   includedCategories: string[] = [];
   includedGovernorates: string[] = [];
   freeShippingEnabled: boolean = true;
+  codFee: number = 10;
 
   loading: boolean = false;
   errorMessage: string = '';
 
-  constructor(private freeShippingService: FreeShippingService, private modalService: ModalService) {}
+  constructor(private freeShippingService: FreeShippingService, private modalService: ModalService) { }
 
   ngOnInit(): void {
     this.loadRules();
@@ -41,6 +42,7 @@ export class FreeShippingRulesComponent implements OnInit {
         this.includedCategories = rules.includedCategories;
         this.includedGovernorates = rules.includedGovernorates;
         this.freeShippingEnabled = rules.freeShippingEnabled;
+        this.codFee = rules.codFee ?? 10;
         this.loading = false;
       },
       error: (error) => {
@@ -60,7 +62,8 @@ export class FreeShippingRulesComponent implements OnInit {
       includedProducts: this.includedProducts,
       includedCategories: this.includedCategories,
       includedGovernorates: this.includedGovernorates,
-      freeShippingEnabled: this.freeShippingEnabled
+      freeShippingEnabled: this.freeShippingEnabled,
+      codFee: this.codFee
     };
     this.freeShippingService.saveRules(rules).subscribe({
       next: () => {

@@ -15,8 +15,8 @@ import { ModalDialogComponent } from '../../shared/modal-dialog/modal-dialog.com
 export class AddProductComponent implements OnInit, OnDestroy {
   productForm: FormGroup;
   loading = false;
-  selectedFile: File | null = null;
-  imagePreview: string | null = null;
+  selectedFiles: File[] = [];
+  imagePreviews: string[] = [];
   isApproved = false;
   isLoading = true;
 
@@ -39,11 +39,7 @@ export class AddProductComponent implements OnInit, OnDestroy {
     'أعمال وتسويق ومالية',
     'فنون وحرف',
     'تربية وأطفال',
-    'أخرى',
-    'التجميل والعناية الشخصية',
-    'الأحذية',
-    'أثاث وديكور المنزل',
-    'هداية وألعاب'
+    'أخرى'
   ];
 
   @ViewChild('videoElement') videoElement!: ElementRef;
@@ -66,7 +62,9 @@ export class AddProductComponent implements OnInit, OnDestroy {
       category: [''],
       book_category: [''],
       stock_quantity: [0, Validators.min(0)],
-      price_cost: ['']
+      price_cost: [''],
+      copyType: [''],
+      condition: ['']
     });
   }
 
@@ -112,15 +110,31 @@ export class AddProductComponent implements OnInit, OnDestroy {
   }
 
   onFileSelected(event: any) {
-    const file = event.target.files[0];
-    if (file) {
-      this.selectedFile = file;
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        this.imagePreview = e.target?.result as string;
-      };
-      reader.readAsDataURL(file);
+    const files = event.target.files;
+    if (files && files.length > 0) {
+      for (let i = 0; i < files.length; i++) {
+        if (this.selectedFiles.length >= 3) break;
+
+        const file = files[i];
+        if (file.size > 1 * 1024 * 1024) { // 1MB limit
+          alert('حجم هذه الصورة يتجاوز 1 ميجابايت. يرجى اختيار صورة أخرى أو تقليل حجمها.');
+          continue;
+        }
+        this.selectedFiles.push(file);
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          this.imagePreviews.push(e.target?.result as string);
+          this.cdr.detectChanges();
+        };
+        reader.readAsDataURL(file);
+      }
     }
+  }
+
+  removeImage(index: number) {
+    this.selectedFiles.splice(index, 1);
+    this.imagePreviews.splice(index, 1);
   }
 
   // --- Camera Logic ---
@@ -201,6 +215,12 @@ export class AddProductComponent implements OnInit, OnDestroy {
 
   captureImage() {
     if (this.videoElement && this.canvasElement) {
+      if (this.selectedFiles.length >= 3) {
+        alert('يمكنك إضافة 3 صور كحد أقصى');
+        this.closeCamera();
+        return;
+      }
+
       const video = this.videoElement.nativeElement;
       const canvas = this.canvasElement.nativeElement;
       const context = canvas.getContext('2d');
@@ -211,16 +231,24 @@ export class AddProductComponent implements OnInit, OnDestroy {
 
       canvas.toBlob((blob: Blob) => {
         if (blob) {
-          // Create file from blob
-          const file = new File([blob], "camera-capture.jpg", { type: "image/jpeg" });
+          // Check blob size before adding
+          if (blob.size > 1 * 1024 * 1024) { // 1MB limit
+            alert('حجم هذه الصورة يتجاوز 1 ميجابايت. يرجى اختيار صورة أخرى أو تقليل حجمها.');
+            this.closeCamera();
+            return;
+          }
 
-          // Set as selected file
-          this.selectedFile = file;
+          // Create file from blob
+          const file = new File([blob], `camera-capture-${Date.now()}.jpg`, { type: "image/jpeg" });
+
+          // Add to selected files
+          this.selectedFiles.push(file);
 
           // Generate preview
           const reader = new FileReader();
           reader.onload = (e) => {
-            this.imagePreview = e.target?.result as string;
+            this.imagePreviews.push(e.target?.result as string);
+            this.cdr.detectChanges();
           };
           reader.readAsDataURL(file);
 
@@ -242,7 +270,7 @@ export class AddProductComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (this.productForm.valid && this.selectedFile) {
+    if (this.productForm.valid && this.selectedFiles.length > 0) {
       this.loading = true;
       const formData = new FormData();
       formData.append('product_name', this.productForm.value.product_name);
@@ -251,7 +279,12 @@ export class AddProductComponent implements OnInit, OnDestroy {
       formData.append('product_quantity', this.productForm.value.stock_quantity);
       formData.append('price_cost', this.productForm.value.price_cost || '0');
       formData.append('product_category', this.productForm.value.category === 'كتب' ? this.productForm.value.book_category : this.productForm.value.category);
-      formData.append('image', this.selectedFile);
+      formData.append('copyType', this.productForm.value.copyType || '');
+      formData.append('condition', this.productForm.value.condition || '');
+
+      this.selectedFiles.forEach((file, index) => {
+        formData.append('images', file);
+      });
 
       this.merchantAuthService.addMerchantProduct(formData).subscribe({
         next: (response: any) => {
@@ -294,8 +327,8 @@ export class AddProductComponent implements OnInit, OnDestroy {
       stock_quantity: 0,
       price_cost: ''
     });
-    this.selectedFile = null;
-    this.imagePreview = null;
+    this.selectedFiles = [];
+    this.imagePreviews = [];
     // Scroll to top of the page
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }

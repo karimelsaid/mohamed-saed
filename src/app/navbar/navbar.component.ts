@@ -5,7 +5,7 @@ import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { faSearch, faUser, faShoppingCart, faBars, faClose, faHome, faBook, faBookReader, faChevronDown, faChevronUp, faMosque, faBrain, faScroll, faChartLine, faHeartbeat, faBookOpen, faChild, faHistory, faPalette, faBolt, faTshirt, faMagic, faShoePrints, faChair, faGamepad, faCut, faEllipsisH, faMoon, faExpand, faTrophy, faFilePdf, faHeart, faCartPlus, faClipboardList, faTachometerAlt, faBell, faTrash, faSun, faCoins } from '@fortawesome/free-solid-svg-icons';
+import { faSearch, faUser, faShoppingCart, faBars, faClose, faHome, faBook, faBookReader, faChevronDown, faChevronUp, faMosque, faBrain, faScroll, faChartLine, faHeartbeat, faBookOpen, faChild, faHistory, faPalette, faBolt, faTshirt, faMagic, faShoePrints, faChair, faGamepad, faCut, faEllipsisH, faMoon, faExpand, faTrophy, faFilePdf, faHeart, faCartPlus, faClipboardList, faTachometerAlt, faBell, faTrash, faSun, faCoins, faUsers } from '@fortawesome/free-solid-svg-icons';
 import { DataService } from '../services/data.service';
 import { AccountModalComponent } from '../auth/account-modal/account-modal.component';
 import { AuthService } from '../auth/auth.service';
@@ -68,7 +68,7 @@ export class NavbarComponent implements OnInit {
   faCut = faCut;
   faEllipsisH = faEllipsisH;
   faCoins = faCoins;
-
+  faUsers = faUsers;
 
   openBars = false;
   scrollBook = true;
@@ -377,6 +377,14 @@ export class NavbarComponent implements OnInit {
 
   isLibraryPage(): boolean {
     return this.router.url.startsWith('/library');
+  }
+
+  isPersonalProfilePage(): boolean {
+    return this.router.url.startsWith('/profile');
+  }
+
+  isReaderCommunityPage(): boolean {
+    return this.router.url.startsWith('/reader-community');
   }
 
   // Touch Handling for Swipe to Delete

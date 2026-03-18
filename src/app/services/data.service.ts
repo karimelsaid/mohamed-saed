@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject, forkJoin } from 'rxjs';
-import { tap, map } from 'rxjs/operators';
+import { tap, map, shareReplay } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 
 @Injectable({
@@ -17,36 +17,87 @@ export class DataService {
   private ordersSubject = new BehaviorSubject<any[]>([]);
   public orders$ = this.ordersSubject.asObservable();
 
+  private uploadsBaseUrl = environment.uploadsBaseUrl || '/uploads/books';
+
   constructor(private http: HttpClient) { }
 
-  getData(): Observable<any> {
-    // Fetch both books and products and combine them
-    const books$ = this.http.get<any[]>(this.apiUrl);
-    const products$ = this.http.get<any[]>(this.productsApiUrl);
+  getBookImageUrl(book: any): string {
+    let imagePath = book.product_image ? String(book.product_image) : '';
+    const products_id = book.products_id || (book as any)._id;
 
-    return forkJoin([books$, products$]).pipe(
-      map(([books, products]) => {
-        const combined = [...books, ...products];
-        const uniqueItems = new Map();
-        const now = new Date().getTime();
+    if (!imagePath) {
+      const isMerchant = book.merchantName && book.merchantName !== 'تاجر كنوز';
+      if (isMerchant) {
+        const sanitizedMerchantName = book.merchantName.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
+        imagePath = 'merchant_' + sanitizedMerchantName + '/' + products_id + '/' + products_id + '.webp';
+      } else {
+        imagePath = 'admin__karim_mohamed__/' + products_id + '/' + products_id + '.webp';
+      }
+    } else {
+      if (imagePath.includes('/')) {
+        const parts = imagePath.split('/');
+        const isMerchant = (imagePath.includes('merchant_') || book.merchantName) && book.merchantName !== 'تاجر كنوز';
 
-        for (const item of combined) {
-          if (item.products_id) {
-            // Normalize property names for Home Page and other components
-            item.old_price = item.product_price_before_discount;
-            item.discount = item.product_discount_percent;
-
-            // Ensure rival flag is resilient to time drift
-            if (item.promotionEndDate) {
-              const promoEnd = new Date(item.promotionEndDate).getTime();
-              item.rival = item.rival || promoEnd > now;
-            }
-
-            uniqueItems.set(item.products_id, item);
-          }
+        if (isMerchant) {
+          const filename = parts[parts.length - 1];
+          const id = parts[parts.length - 2];
+          const sanitizedMerchantName = book.merchantName.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
+          imagePath = 'merchant_' + sanitizedMerchantName + '/' + id + '/' + filename;
+        } else if (imagePath.includes('admin__') || book.merchantName === 'تاجر كنوز') {
+          const filename = parts[parts.length - 1];
+          const id = parts[parts.length - 2] || filename.split('.')[0];
+          imagePath = 'admin__karim_mohamed__/' + id + '/' + filename;
+        } else {
+          imagePath = parts[parts.length - 1];
         }
-        return Array.from(uniqueItems.values());
-      })
+      } else {
+        const isMerchant = book.merchantName && book.merchantName !== 'تاجر كنوز';
+        if (!imagePath.includes('.') && /^\d+$/.test(imagePath)) {
+          if (isMerchant) {
+            const sanitizedMerchantName = book.merchantName.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
+            imagePath = 'merchant_' + sanitizedMerchantName + '/' + imagePath + '/' + imagePath + '.webp';
+          } else {
+            imagePath = 'admin__karim_mohamed__/' + imagePath + '/' + imagePath + '.webp';
+          }
+        } else if (imagePath.includes('.') && /^\d+_\d+\.webp$/.test(imagePath)) {
+          const id = imagePath.split('_')[0];
+          if (isMerchant) {
+            const sanitizedMerchantName = book.merchantName.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
+            imagePath = 'merchant_' + sanitizedMerchantName + '/' + id + '/' + imagePath;
+          } else {
+            imagePath = 'admin__karim_mohamed__/' + id + '/' + imagePath;
+          }
+        } else if (!imagePath.includes('.')) {
+          imagePath += '.webp';
+        }
+      }
+    }
+    return this.uploadsBaseUrl + '/' + imagePath;
+  }
+
+  getData(): Observable<any[]> { // Changed return type to any[]
+    // Add timestamp to bypass browser/server cache for real-time data
+    const timestamp = new Date().getTime();
+    // Corrected URL to use this.apiUrl directly with timestamp
+    return this.http.get<any[]>(`${this.apiUrl}?t=${timestamp}`).pipe(
+      map(books => {
+        const uniqueItems = new Map<string, any>(); // Changed Book to any
+
+        books.forEach(book => {
+          let id = book.products_id || (book as any)._id;
+          if (id) {
+            id = id.toString();
+            // Keep the first occurrence — backend already handles dedup and pricing
+            if (!uniqueItems.has(id)) {
+              uniqueItems.set(id, { ...book, products_id: id });
+            }
+          }
+        });
+
+        const result = Array.from(uniqueItems.values());
+        return result;
+      }),
+      shareReplay(1)
     );
   }
 

@@ -12,7 +12,7 @@
         book.product_name }}</h2>
       <!-- اسم التاجر -->
       <div *ngIf="book.merchantName" class="mb-4 flex items-center justify-between flex-wrap gap-4">
-        <a [routerLink]="['/', book.merchantName]"
+        <a [routerLink]="['/', book.merchantName.trim().split(' ').join('-')]"
           class="text-sm text-blue-600 dark:text-blue-400 hover:underline cursor-pointer font-medium">بواسطة {{
           book.merchantName }}</a>
 
@@ -93,23 +93,28 @@
                 number:'1.0-0') }}
                 <span class="text-sm font-normal">جنيه</span>
               </span>
-              <!-- Original Price -->
-              <span class="text-gray-400 line-through text-lg" *ngIf="discount.discountedQty > 0">
-                {{ book.product_price }} جنيه
-              </span>
-              <!-- Rival Price (if exists and no coupon is better) -->
+
+              <!-- Real Original Price (System Discount) -->
               <span class="text-gray-400 line-through text-lg"
-                *ngIf="book.rival && discount.discountedQty === 0 && book.product_price_before_discount">
-                {{ book.product_price_before_discount }} جنيه
+                *ngIf="book.product_price_before_discount && book.product_price_before_discount > book.product_price">
+                {{ book.product_price_before_discount | number:'1.0-0' }} جنيه
               </span>
 
-              <span class="bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded"
+              <!-- Coupon Original Price (only if no system discount but coupon is applied and actually reduces price) -->
+              <span class="text-gray-400 line-through text-lg"
+                *ngIf="(!book.product_price_before_discount || book.product_price_before_discount <= book.product_price) && discount.discountedQty > 0 && discount.discountedPrice < book.product_price">
+                {{ (book.product_price) | number:'1.0-0' }} جنيه
+              </span>
+
+              <span
+                class="bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-xs font-bold px-2 py-1 rounded"
                 *ngIf="book.product_discount_percent && discount.discountedQty === 0">
                 خصم {{ book.product_discount_percent }}%
               </span>
             </div>
             <!-- Savings label -->
-            <p *ngIf="discount.discountedQty > 0" class="text-xs text-green-600 dark:text-green-400 font-semibold mt-1">
+            <p *ngIf="discount.discountedQty > 0 && (book.product_price - discount.discountedPrice) > 0"
+              class="text-xs text-green-600 dark:text-green-400 font-semibold mt-1">
               وفرت {{ (book.product_price - discount.discountedPrice) | number:'1.0-0' }} جنيه
               باستخدام الكوبون
             </p>
@@ -127,6 +132,28 @@
               book.product_quantity }}</p>
             <p class="text-gray-700 dark:text-gray-300 font-medium"><strong>التصنيف:</strong> {{ book.product_category
               }}</p>
+
+            <!-- نوع النسخة -->
+            <div *ngIf="book.copyType" class="flex items-center gap-2">
+              <strong class="text-gray-700 dark:text-gray-300">نوع النسخة:</strong>
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold" [ngClass]="{
+                  'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800': book.copyType === 'أصلي',
+                  'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300 border border-purple-200 dark:border-purple-800': book.copyType === 'هاي كوبي'
+                }">
+                {{ book.copyType }}
+              </span>
+            </div>
+
+            <!-- حالة الكتاب -->
+            <div *ngIf="book.condition" class="flex items-center gap-2">
+              <strong class="text-gray-700 dark:text-gray-300">حالة الكتاب:</strong>
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold" [ngClass]="{
+                  'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300 border border-green-200 dark:border-green-800': book.condition === 'جديد',
+                  'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300 border border-orange-200 dark:border-orange-800': book.condition === 'مستعمل بحالة جيدة'
+                }">
+                {{ book.condition }}
+              </span>
+            </div>
           </div>
 
           <!-- New product description section -->
@@ -464,8 +491,10 @@
             </div>
             <!-- Price -->
             <div class="text-lg font-black text-green-400 mb-1">{{ product.product_price }} EGP</div>
-            <div *ngIf="(product.product_discount_percent || 0) > 0" class="text-xs text-gray-300 line-through">
-              {{ (product.product_price * 1.75) | number:'1.0-0' }} EGP
+            <div
+              *ngIf="product.product_price_before_discount && product.product_price_before_discount > product.product_price"
+              class="text-xs text-gray-300 line-through">
+              {{ product.product_price_before_discount | number:'1.0-0' }} EGP
             </div>
           </div>
         </div>
@@ -497,9 +526,9 @@
                 <p class="text-lg font-black text-green-600 dark:text-green-400">
                   {{ product.product_price }} EGP
                 </p>
-                <p *ngIf="(product.product_discount_percent || 0) > 0"
+                <p *ngIf="product.product_price_before_discount && product.product_price_before_discount > product.product_price"
                   class="text-xs text-gray-500 dark:text-gray-400 line-through">
-                  {{ (product.product_price * 1.75) | number:'1.0-0' }} EGP
+                  {{ product.product_price_before_discount | number:'1.0-0' }} EGP
                 </p>
               </div>
             </div>

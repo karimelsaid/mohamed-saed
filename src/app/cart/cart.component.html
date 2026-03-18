@@ -100,23 +100,44 @@
         </h3>
 
         <div class="flex items-center justify-between mb-3 md:mb-4">
-          <div class="flex flex-col"
-            *ngIf="calculateDiscountedPrice(book.product_price, book.products_id, book.quantity || 1) as discount">
-            <div class="flex items-center space-x-1 md:space-x-2">
-              <span class="text-xl md:text-2xl font-bold text-green-600 dark:text-green-400">
-                {{ (discount.discountedPrice * discount.discountedQty + book.product_price * ((book.quantity || 1) -
-                discount.discountedQty)) | number:'1.0-0' }}
+          <div class="flex flex-col">
+            <!-- Price Display (Coupon or Regular) -->
+            <ng-container
+              *ngIf="calculateDiscountedPrice(book.product_price, book.products_id, book.quantity || 1) as discount; else regularPrice">
+              <div class="flex items-center space-x-1 md:space-x-2">
+                <span class="text-xl md:text-2xl font-bold text-green-600 dark:text-green-400">
+                  {{ (discount.discountedPrice * discount.discountedQty + book.product_price * ((book.quantity || 1) -
+                  discount.discountedQty)) | number:'1.0-0' }}
+                </span>
+                <span class="text-base md:text-lg text-gray-500 dark:text-gray-400">ج.م</span>
+              </div>
+              <!-- Original Price (Coupon Context) -->
+              <span
+                *ngIf="discount.discountedQty > 0 || (book.product_price_before_discount && book.product_price_before_discount > book.product_price)"
+                class="text-sm text-gray-400 line-through">
+                {{ (book.product_price_before_discount || book.product_price) * (book.quantity || 1) | number:'1.0-0' }}
+                ج.م
               </span>
-              <span class="text-base md:text-lg text-gray-500 dark:text-gray-400">ج.م</span>
-            </div>
-            <!-- Original Price -->
-            <span *ngIf="discount.discountedQty > 0" class="text-sm text-gray-400 line-through">
-              {{book.product_price * (book.quantity || 1)}} ج.م
-            </span>
-            <span *ngIf="discount.discountedQty > 0 && discount.discountedQty < (book.quantity || 1)"
-              class="text-[10px] text-amber-600 font-bold">
-              (مخصوم لعدد {{ discount.discountedQty }} قطع فقط)
-            </span>
+              <span *ngIf="discount.discountedQty > 0 && discount.discountedQty < (book.quantity || 1)"
+                class="text-[10px] text-amber-600 font-bold">
+                (مخصوم لعدد {{ discount.discountedQty }} قطع فقط)
+              </span>
+            </ng-container>
+
+            <!-- Regular Price Fallback -->
+            <ng-template #regularPrice>
+              <div class="flex items-center space-x-1 md:space-x-2">
+                <span class="text-xl md:text-2xl font-bold text-green-600 dark:text-green-400">
+                  {{ (book.product_price * (book.quantity || 1)) | number:'1.0-0' }}
+                </span>
+                <span class="text-base md:text-lg text-gray-500 dark:text-gray-400">ج.م</span>
+              </div>
+              <span
+                *ngIf="book.product_price_before_discount && book.product_price_before_discount > book.product_price"
+                class="text-sm text-gray-400 line-through">
+                {{ (book.product_price_before_discount * (book.quantity || 1)) | number:'1.0-0' }} ج.م
+              </span>
+            </ng-template>
           </div>
           <div class="bg-green-100 dark:bg-green-900 px-2 py-0.5 md:px-3 md:py-1 rounded-full">
             <span class="text-green-800 dark:text-green-200 text-xs md:text-sm font-medium">متوفر</span>

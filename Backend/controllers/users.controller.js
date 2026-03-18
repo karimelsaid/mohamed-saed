@@ -8,10 +8,38 @@ const { OAuth2Client } = require('google-auth-library');
 const client = new OAuth2Client('933338292435-c9bk3oo6i1oe3qkhkvp8crflmthhg0kc.apps.googleusercontent.com');
 const SystemSettings = require('../models/SystemSettings');
 
+// Helper to filter active/unexpired coupons
+const filterActiveCoupons = (coupons) => {
+  const now = new Date();
+  return (coupons || []).filter(c => {
+    // 1. Must have a valid populated couponId
+    if (!c.couponId || typeof c.couponId !== 'object') return false;
+
+    // 2. Must not be used
+    if (c.isUsed) return false;
+
+    // 3. Check expiry based on duration
+    const earnedAt = new Date(c.earnedAt || c.createdAt || now);
+    const durationValue = c.couponId.durationValue;
+    const durationUnit = c.couponId.durationUnit || 'days';
+
+    if (!durationValue) return true; // No explicit expiry duration set, keep it
+
+    const expiryDate = new Date(earnedAt);
+    if (durationUnit === 'hours') {
+      expiryDate.setHours(expiryDate.getHours() + durationValue);
+    } else {
+      expiryDate.setDate(expiryDate.getDate() + durationValue);
+    }
+
+    return expiryDate > now;
+  });
+};
+
 // Function to update user profile and sync orders' shippingAddress
 async function updateUserProfile(req, res) {
   const { userId } = req.params;
-  const { username, email, phone, governorate, city, village, gender, postOffice } = req.body;
+  const { username, email, phone, governorate, city, village, gender, postOffice, bio } = req.body;
 
   try {
     const user = await User.findById(userId);
@@ -30,6 +58,7 @@ async function updateUserProfile(req, res) {
     if (postOffice) {
       user.postOffice = postOffice;
     }
+    if (bio !== undefined) user.bio = bio;
 
     // Update all orders' shippingAddress fields to keep in sync
     user.orders.forEach(order => {
@@ -140,6 +169,19 @@ async function createAccount(req, res) {
       }
     };
     res.status(201).json(responsePayload);
+
+    // Push Notification to Admins - New Reader Registration
+    try {
+      const pushService = require('../services/push-notification.service');
+      pushService.sendToAdmins({
+        title: 'مستخدم جديد 🎉',
+        body: `انضم قارئ جديد: ${newUser.username} (${newUser.governorate || 'غير محدد'})`,
+        url: '/admin',
+        data: { type: 'new_reader_registration' }
+      }).catch(err => console.error('Admin Push Error:', err));
+    } catch (pushErr) {
+      console.error('Push Service Error:', pushErr);
+    }
   } catch (error) {
     res.status(500).json({ message: 'حدث خطأ أثناء إنشاء الحساب', error });
   }
@@ -154,7 +196,7 @@ async function login(req, res) {
 
     const user = await User.findOne({
       email: { $regex: new RegExp(`^${normalizedEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }
-    }).maxTimeMS(5000);
+    }).populate('earnedCoupons.couponId').maxTimeMS(5000);
 
     if (!user) {
       console.warn(`❌ [Login] User not found: ${normalizedEmail}`);
@@ -204,7 +246,7 @@ async function login(req, res) {
         profileImage: user.profileImage,
         quranProgress: user.quranProgress,
         gamification: user.gamification,
-        earnedCoupons: user.earnedCoupons,
+        earnedCoupons: filterActiveCoupons(user.earnedCoupons),
         token: token
       }
     });
@@ -274,7 +316,7 @@ const removeFromCart = async (req, res) => {
 
 async function getUserData(req, res) {
   try {
-    const user = await User.findById(req.params.userId);
+    const user = await User.findById(req.params.userId).populate('earnedCoupons.couponId');
     if (!user) return res.status(404).json({ message: 'المستخدم غير موجود' });
 
     res.status(200).json({
@@ -292,9 +334,10 @@ async function getUserData(req, res) {
         village: user.village,
         referralCode: user.referralCode,
         profileImage: user.profileImage,
+        coverPhoto: user.coverPhoto,
         quranProgress: user.quranProgress,
         gamification: user.gamification,
-        earnedCoupons: user.earnedCoupons
+        earnedCoupons: filterActiveCoupons(user.earnedCoupons)
       }
     });
   } catch (error) {
@@ -305,7 +348,7 @@ async function getUserData(req, res) {
 
 async function getUserProfile(req, res) {
   try {
-    const user = await User.findById(req.params.userId);
+    const user = await User.findById(req.params.userId).populate('earnedCoupons.couponId');
     if (!user) return res.status(404).json({ message: 'المستخدم غير موجود' });
 
     res.status(200).json({
@@ -316,12 +359,14 @@ async function getUserProfile(req, res) {
       governorate: user.governorate,
       city: user.city,
       village: user.village,
+      role: user.role,
       postOffice: user.postOffice,
       referralBalance: user.referralBalance || 0,
       profileImage: user.profileImage,
+      coverPhoto: user.coverPhoto,
       quranProgress: user.quranProgress,
       gamification: user.gamification,
-      earnedCoupons: user.earnedCoupons
+      earnedCoupons: filterActiveCoupons(user.earnedCoupons)
     });
   } catch (error) {
     console.error('GetUserProfile Error:', error);
@@ -340,6 +385,7 @@ async function getPublicProfile(req, res) {
       profileImage: user.profileImage,
       gender: user.gender,
       isSheikh: user.isSheikh,
+      role: user.role,
       bio: user.bio,
       createdAt: user.createdAt
     });
@@ -403,6 +449,15 @@ async function requestBook(req, res) {
 
     await user.save();
     res.status(200).json({ message: 'تم استلام طلب الكتاب وسيتم توفيره خلال بضعة أيام' });
+
+    // Push Notification to Admins
+    const pushService = require('../services/push-notification.service');
+    pushService.sendToAdmins({
+      title: 'اقتراح كتاب جديد 📚',
+      body: `المستخدم ${user.username} يقترح كتاب: ${bookName}`,
+      url: '/admin/requested-books',
+      data: { type: 'book_suggestion' }
+    }).catch(err => console.error('Admin Push Error:', err));
   } catch (error) {
     console.error('Error requesting book:', error);
     res.status(500).json({ message: 'حدث خطأ أثناء طلب الكتاب', error });
@@ -483,6 +538,17 @@ async function updateRequestedBookStatus(req, res) {
     // console.log(`Notification added and user saved successfully for userId: ${userId}`);
 
     res.status(200).json({ message: 'تم تحديث حالة اقتراح الكتاب بنجاح' });
+
+    // Push Notification to User
+    const pushService = require('../services/push-notification.service');
+    pushService.sendToUser(user._id, {
+      title: added ? 'تم توفير كتابك المقترح! 📚' : 'تحديث بخصوص اقتراح الكتاب',
+      body: added 
+        ? `خبر سار! تمت إضافة الكتاب الذي اقترحته "${requestedBook.bookName}" إلى مكتبتنا. تفحصه الآن.`
+        : `نعتذر، تمت إزالة اقتراح الكتاب "${requestedBook.bookName}" من قائمة الاهتمام حالياً.`,
+      url: added ? `/product-details/${bookId}` : '/my-suggestions',
+      data: { type: 'suggestion_update', bookId, added }
+    }).catch(err => console.error('User Push Error:', err));
   } catch (error) {
     console.error('Error updating requested book status:', error);
     res.status(500).json({ message: 'حدث خطأ أثناء تحديث حالة اقتراح الكتاب', error });
@@ -617,8 +683,7 @@ async function googleSignIn(req, res) {
     }
 
     const { sub: googleId, email, name } = payload;
-
-    let user = await User.findOne({ email });
+    let user = await User.findOne({ email }).populate('earnedCoupons.couponId');
 
     if (!user) {
       // Create new user with googleId, no password, and default values for required fields
@@ -633,6 +698,19 @@ async function googleSignIn(req, res) {
         googleId
       });
       await user.save();
+
+      // Push Notification to Admins - New Google Sign-In User
+      try {
+        const pushService = require('../services/push-notification.service');
+        pushService.sendToAdmins({
+          title: 'مستخدم جديد (Google) 🎉',
+          body: `انضم قارئ جديد عبر Google: ${user.username}`,
+          url: '/admin',
+          data: { type: 'new_google_registration' }
+        }).catch(err => console.error('Admin Push Error:', err));
+      } catch (pushErr) {
+        console.error('Push Service Error:', pushErr);
+      }
 
       // Generate referral code if not present
       if (!user.referralCode) {
@@ -698,9 +776,10 @@ async function googleSignIn(req, res) {
 
     res.status(200).json({
       message: 'تم تسجيل الدخول بنجاح',
-      user: userObject,
-      // Keep backward compatibility if frontend uses top-level fields (though it seems to use response.user)
-      ...userObject
+      user: {
+        ...userObject,
+        earnedCoupons: filterActiveCoupons(userObject.earnedCoupons)
+      }
     });
   } catch (error) {
     console.error('Error during Google sign-in:', error);
@@ -985,6 +1064,15 @@ async function submitUrgencyRequest(req, res) {
 
     await user.save();
     res.status(200).json({ message: 'تم إرسال طلب الاستعجال بنجاح' });
+
+    // Push Notification to Admins
+    const pushService = require('../services/push-notification.service');
+    pushService.sendToAdmins({
+      title: 'طلب استعجال جديد ⚡',
+      body: `المستخدم ${user.username} يطلب استعجال كتاب: ${bookName}`,
+      url: '/admin/urgency-requests',
+      data: { type: 'urgency_request' }
+    }).catch(err => console.error('Admin Push Error:', err));
   } catch (error) {
     console.error('Error submitting urgency request:', error);
     res.status(500).json({ message: 'حدث خطأ أثناء إرسال طلب الاستعجال', error });
@@ -1118,6 +1206,51 @@ module.exports = {
       return res.status(500).json({ message: 'Internal server error' });
     }
   },
+
+  // Optimized: Get average ratings for multiple books in a single query
+  getBulkAverageRatings: async (req, res) => {
+    try {
+      const { bookIds } = req.body;
+      if (!bookIds || !Array.isArray(bookIds) || bookIds.length === 0) {
+        return res.status(400).json({ message: 'bookIds array is required' });
+      }
+
+      // Aggregate ratings for all requested books in one pass
+      const results = await User.aggregate([
+        { $unwind: '$ratedBooks' },
+        { $match: { 'ratedBooks.bookId': { $in: bookIds } } },
+        {
+          $group: {
+            _id: '$ratedBooks.bookId',
+            averageRating: { $avg: '$ratedBooks.rating' },
+            ratingCount: { $sum: 1 }
+          }
+        }
+      ]);
+
+      // Create a map for easy frontend consumption: { bookId: { averageRating, ratingCount } }
+      const ratingsMap = {};
+
+      // Initialize with zeros for all requested IDs to avoid missing keys
+      bookIds.forEach(id => {
+        ratingsMap[id] = { averageRating: 0, ratingCount: 0 };
+      });
+
+      // Fill with actual data
+      results.forEach(item => {
+        ratingsMap[item._id] = {
+          averageRating: item.averageRating || 0,
+          ratingCount: item.ratingCount || 0
+        };
+      });
+
+      return res.json(ratingsMap);
+    } catch (error) {
+      console.error('Error getting bulk average ratings:', error);
+      return res.status(500).json({ message: 'Internal server error' });
+    }
+  },
+
   checkEmailExists,
   resetPassword,
   generateReferralLink,

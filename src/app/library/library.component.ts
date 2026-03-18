@@ -2,7 +2,8 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { Subscription as RxSubscription } from 'rxjs';
+import { Subscription as RxSubscription, Subject } from 'rxjs';
+import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { EbookService } from '../services/ebook.service';
 import { SubscriptionService } from '../services/subscription.service';
 import { UserLibraryService } from '../services/user-library.service';
@@ -45,6 +46,7 @@ export interface UnifiedBook {
 export class LibraryComponent implements OnInit, OnDestroy {
     // Internal Books State
     ebooks: Ebook[] = [];
+    allLoadedEbooks: Ebook[] = []; // Cache of all loaded books for instant client-side search
     filteredEbooks: Ebook[] = [];
     ownedEbookIds: Set<string> = new Set();
     favoriteEbookIds: Set<string> = new Set();
@@ -102,6 +104,7 @@ export class LibraryComponent implements OnInit, OnDestroy {
 
     private uploadsBaseUrl = environment.uploadsBaseUrl;
     private subscriptions: RxSubscription[] = [];
+    private searchSubject = new Subject<string>();
 
     constructor(
         private ebookService: EbookService,
@@ -171,6 +174,15 @@ export class LibraryComponent implements OnInit, OnDestroy {
         });
 
         this.checkInternalDownloads();
+
+        // Debounced backend search (only fires after 500ms of no typing)
+        const searchSub = this.searchSubject.pipe(
+            debounceTime(500),
+            distinctUntilChanged()
+        ).subscribe(query => {
+            this.loadData(false); // Fetch from backend with the search query
+        });
+        this.subscriptions.push(searchSub);
     }
 
     loadSubscriptionHistory() {
@@ -197,9 +209,9 @@ export class LibraryComponent implements OnInit, OnDestroy {
         if (append) {
             this.isLoadingMore = true;
         } else {
-            this.isLoading = true;
+            // Don't wipe ebooks list here - keep showing current results while API loads
+            if (this.ebooks.length === 0) this.isLoading = true;
             this.currentPage = 1;
-            this.ebooks = [];
         }
 
         this.error = null;
@@ -208,10 +220,37 @@ export class LibraryComponent implements OnInit, OnDestroy {
         this.ebookService.getEbooks(filters, this.currentPage, this.itemsPerPage).subscribe({
             next: (response) => {
                 console.log('KENOUZ DEBUG: Internal Ebooks API Response:', response);
-                if (append) this.ebooks = [...this.ebooks, ...response.data];
-                else this.ebooks = response.data;
+                if (append) {
+                    this.ebooks = [...this.ebooks, ...response.data];
+                } else {
+                    this.ebooks = response.data;
+                }
 
-                console.log('KENOUZ DEBUG: Current Internal Ebooks loaded:', this.ebooks.length);
+                // Update the cache: merge new results with any previously loaded books
+                if (!append) {
+                    // If search is active, merge with cache; if no search, replace cache
+                    if (!this.searchQuery) {
+                        this.allLoadedEbooks = [...this.ebooks];
+                    } else {
+                        // Merge backend results into cache (dedup by _id)
+                        const existingIds = new Set(this.allLoadedEbooks.map(e => e._id));
+                        response.data.forEach((e: Ebook) => {
+                            if (!existingIds.has(e._id)) {
+                                this.allLoadedEbooks.push(e);
+                            }
+                        });
+                    }
+                } else {
+                    // Append mode: add new items to cache
+                    const existingIds = new Set(this.allLoadedEbooks.map(e => e._id));
+                    response.data.forEach((e: Ebook) => {
+                        if (!existingIds.has(e._id)) {
+                            this.allLoadedEbooks.push(e);
+                        }
+                    });
+                }
+
+                console.log('KENOUZ DEBUG: Current Internal Ebooks loaded:', this.ebooks.length, 'Cache:', this.allLoadedEbooks.length);
 
                 this.totalBooks = response.total;
                 this.hasMoreBooks = this.ebooks.length < this.totalBooks;
@@ -348,8 +387,10 @@ export class LibraryComponent implements OnInit, OnDestroy {
     }
 
     applyFilters(): void {
-        let filtered = [...this.ebooks];
-        console.log('KENOUZ DEBUG: applyFilters Start. Ebooks Total:', this.ebooks.length);
+        // Use cached books for client-side search to enable instant partial matching
+        let source = this.searchQuery ? this.allLoadedEbooks : this.ebooks;
+        let filtered = [...source];
+        console.log('KENOUZ DEBUG: applyFilters Start. Source:', source.length, 'Search:', this.searchQuery);
 
         // ViewMode Logic
         if (this.viewMode === 'favorites') {
@@ -366,10 +407,10 @@ export class LibraryComponent implements OnInit, OnDestroy {
 
         // Search Filter
         if (this.searchQuery) {
-            const q = this.searchQuery.toLowerCase();
+            const q = this.normalizeArabic(this.searchQuery.toLowerCase());
             filtered = filtered.filter(e =>
-                e.title.toLowerCase().includes(q) ||
-                e.author.toLowerCase().includes(q)
+                this.normalizeArabic(e.title.toLowerCase()).includes(q) ||
+                this.normalizeArabic(e.author.toLowerCase()).includes(q)
             );
             console.log('KENOUZ DEBUG: After Search Filter:', filtered.length, 'Query:', q);
         }
@@ -412,8 +453,8 @@ export class LibraryComponent implements OnInit, OnDestroy {
 
         if (this.selectedCategory) filtered = filtered.filter(b => b.category === this.selectedCategory);
         if (this.searchQuery) {
-            const q = this.searchQuery.toLowerCase();
-            filtered = filtered.filter(b => b.title.toLowerCase().includes(q) || b.author.toLowerCase().includes(q));
+            const q = this.normalizeArabic(this.searchQuery.toLowerCase());
+            filtered = filtered.filter(b => this.normalizeArabic(b.title.toLowerCase()).includes(q) || this.normalizeArabic(b.author.toLowerCase()).includes(q));
         }
 
         if (this.showDownloadedOnly) {
@@ -497,9 +538,12 @@ export class LibraryComponent implements OnInit, OnDestroy {
     setDownloadsTab(tab: 'downloads' | 'favorites') { this.downloadsTab = tab; }
 
     onSearch(): void {
-        // Update both to ensure persistence when switching
-        this.loadData(false);
+        // 1. Instant client-side filtering (no API call, no delay)
+        this.applyFilters();
         this.applyExternalFilters();
+
+        // 2. Debounced backend call for more/better results
+        this.searchSubject.next(this.searchQuery);
     }
 
     onCategoryChange(): void {
@@ -538,6 +582,17 @@ export class LibraryComponent implements OnInit, OnDestroy {
     hasAccess(ebook: Ebook): boolean { return true; } // Allow access
     isOwned(ebook: Ebook): boolean { return this.ownedEbookIds.has(ebook._id); }
     isFavorite(ebook: Ebook): boolean { return this.offlineEbookService.isLocalFavorite(ebook._id); }
+
+    // Arabic character normalization for flexible search
+    private normalizeArabic(text: string): string {
+        return text
+            .replace(/[أإآ]/g, 'ا')
+            .replace(/[هة]/g, 'ه')
+            .replace(/[ىي]/g, 'ي')
+            .replace(/[^0-9a-zA-Z\u0600-\u06FF\s]/g, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
 
     toggleFavorite(ebook: Ebook, event: Event): void {
         event.preventDefault(); event.stopPropagation();

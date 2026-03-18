@@ -1,7 +1,7 @@
 import { Component, Input, Output, EventEmitter, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { faShoppingCart, faBolt, faGift, faTimes } from '@fortawesome/free-solid-svg-icons';
+import { faShoppingCart, faBolt, faGift, faTimes, faStar, faArrowRight, faBoxOpen, faClock } from '@fortawesome/free-solid-svg-icons';
 import { AuthService } from '../../../auth/auth.service';
 import { Router } from '@angular/router';
 import { ModalService } from '../../../services/modal.service';
@@ -20,7 +20,10 @@ import { environment } from '../../../../environments/environment';
             </button>
 
             <div class="reveal-header">
-                <h2 class="text-3xl font-black mb-1 bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">مبروك! 🎉</h2>
+                <h2 class="text-3xl font-black mb-1 bg-clip-text text-transparent"
+                    [style.background-image]="'linear-gradient(to right, var(--promo-accent), var(--promo-primary))'">
+                    مبروك! 🎉
+                </h2>
                 <p class="text-lg opacity-80">لقد حصلت على ميزة رائعة</p>
             </div>
 
@@ -40,7 +43,9 @@ import { environment } from '../../../../environments/environment';
                 </div>
 
                 <div class="actions-reveal-container">
-                    <button class="reveal-btn-cart" (click)="addToCart()">
+                    <button class="reveal-btn-cart" (click)="addToCart()"
+                            [style.background]="'linear-gradient(135deg, var(--promo-primary), var(--promo-accent))'"
+                            [style.box-shadow]="'0 8px 16px var(--promo-primary-alpha-20)'">
                         <fa-icon [icon]="faShoppingCart" class="ml-2"></fa-icon>
                         أضف الهدايا للسلة (مجاناً)
                     </button>
@@ -55,7 +60,9 @@ import { environment } from '../../../../environments/environment';
                 <h3 class="text-2xl font-bold my-4">{{ prize.label }}</h3>
                 
                 <div class="actions-reveal-container">
-                    <button class="reveal-btn-primary" (click)="goToReward()" *ngIf="prize.type !== 'nothing'">
+                    <button class="reveal-btn-primary" (click)="goToReward()" *ngIf="prize.type !== 'nothing'"
+                            [style.background]="'linear-gradient(135deg, var(--promo-primary), var(--promo-accent))'"
+                            [style.box-shadow]="'0 8px 16px var(--promo-primary-alpha-20)'">
                         <span *ngIf="prize.type === 'coupon'">استخدم الكوبون الآن</span>
                         <span *ngIf="prize.type === 'points'">شاهد نقاطك</span>
                         <span *ngIf="!['coupon', 'points'].includes(prize.type)">عرض التفاصيل</span>
@@ -156,7 +163,7 @@ import { environment } from '../../../../environments/environment';
     .reveal-glow {
         position: absolute;
         inset: -15%;
-        background: radial-gradient(circle, rgba(234, 179, 8, 0.25) 0%, transparent 70%);
+        background: radial-gradient(circle, var(--promo-accent-alpha-20) 0%, transparent 70%);
         z-index: -1;
         animation: revealPulse 2s infinite alternate;
     }
@@ -228,8 +235,8 @@ import { environment } from '../../../../environments/environment';
 
     .prize-icon-reveal {
         font-size: 4rem;
-        color: #f59e0b;
-        filter: drop-shadow(0 0 15px rgba(245, 158, 11, 0.25));
+        color: var(--promo-accent);
+        filter: drop-shadow(0 0 15px var(--promo-accent-alpha-20));
     }
 
     @keyframes revealFadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -245,12 +252,29 @@ import { environment } from '../../../../environments/environment';
 })
 export class PrizeRevealComponent {
     @Input() prize: any = null;
+    @Input() theme: any = null;
     @Output() onClose = new EventEmitter<void>();
 
     faShoppingCart = faShoppingCart;
     faBolt = faBolt;
     faGift = faGift;
     faTimes = faTimes;
+
+    getThemeIcon(propName: string, fallback: any): any {
+        if (!this.theme?.themeConfig?.icons) return fallback;
+        const iconName = this.theme.themeConfig.icons[propName];
+        if (!iconName) return fallback;
+
+        // Map string names from DB to FontAwesome objects
+        switch (iconName) {
+            case 'gift': return faGift;
+            case 'box': return faBoxOpen;
+            case 'star': return faStar; // Fixed: using faStar from imports
+            case 'arrow-right': return faArrowRight;
+            case 'clock': return faClock;
+            default: return fallback;
+        }
+    }
 
     constructor(
         private authService: AuthService,

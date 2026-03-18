@@ -9,7 +9,7 @@
     <app-navbar-icons class="hidden md:block" [isBottomNav]="false"
       (accountClick)="openAccountModal()"></app-navbar-icons>
 
-    <div [ngClass]="{'md:hidden': isLibraryPage()}"
+    <div [ngClass]="{'md:hidden': isLibraryPage() || isReaderCommunityPage() || isPersonalProfilePage()}"
       class="w-full md:absolute md:top-[72px] md:left-0 md:right-0 m-4 md:py-3 transition-all duration-300">
       <div class="search-bar-container relative flex justify-center max-w-4xl mx-auto">
         <app-search-bar class="w-full" [allBooks]="allBooks" (searchExecuted)="onSearchExecuted($event)">
@@ -60,9 +60,14 @@
           <span class="ml-1 text-sm sm:text-xs">المكتبة الرقمية</span>
         </div>
 
-
-
-
+        <div
+          class="flex items-end sm:items-center cursor-pointer px-1 py-2 rounded-lg hover:bg-blue-400/20 transition-all duration-300 hover:scale-105"
+          routerLink="/reader-community" routerLinkActive="text-blue-400 bg-blue-400/20"
+          [routerLinkActiveOptions]="{exact:true}">
+          <fa-icon class="m-1 text-2xl sm:text-sm text-right transition-transform duration-300 text-blue-500"
+            [icon]="faUsers"></fa-icon>
+          <span class="ml-1 text-sm sm:text-xs font-bold text-blue-600 dark:text-blue-400">مجتمع القراء</span>
+        </div>
 
         <div
           class="flex items-end sm:items-center cursor-pointer px-1 py-2 rounded-lg hover:bg-yellow-400/20 transition-all duration-300 hover:scale-105"
@@ -343,15 +348,54 @@
         <!-- Navigation Items -->
         <div class="space-y-2">
           <!-- Home -->
-          <div routerLink="/Home" routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
+          <div (click)="exitBars()" routerLink="/Home" routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
             class="flex gap-4 items-center p-4 rounded-xl cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all duration-200 group">
             <div
               class="flex items-center justify-center w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-800 mr-4 group-hover:scale-110 transition-transform duration-200">
               <fa-icon [icon]="faHome" class="text-blue-600 dark:text-blue-400"></fa-icon>
             </div>
             <div>
-              <span class="font-medium text-gray-900 dark:text-white block">إطبعلي</span>
-              <span class="text-sm text-gray-500 dark:text-gray-400">خدمة الطباعة</span>
+              <span class="font-medium text-gray-900 dark:text-white block">الرئيسية</span>
+              <span class="text-sm text-gray-500 dark:text-gray-400">الصفحة الرئيسية</span>
+            </div>
+          </div>
+
+          <!-- Library -->
+          <div (click)="exitBars()" routerLink="/library" routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
+            class="flex gap-4 items-center p-4 rounded-xl cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all duration-200 group">
+            <div
+              class="flex items-center justify-center w-10 h-10 rounded-lg bg-purple-100 dark:bg-purple-900/30 mr-4 group-hover:scale-110 transition-transform duration-200">
+              <fa-icon [icon]="faBookReader" class="text-purple-600 dark:text-purple-400"></fa-icon>
+            </div>
+            <div>
+              <span class="font-medium text-gray-900 dark:text-white block">المكتبة الرقمية</span>
+              <span class="text-sm text-gray-500 dark:text-gray-400">كتب الكترونية</span>
+            </div>
+          </div>
+
+          <!-- Readers Community -->
+          <div (click)="exitBars()" routerLink="/reader-community" routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
+            class="flex gap-4 items-center p-4 rounded-xl cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all duration-200 group">
+            <div
+              class="flex items-center justify-center w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-800 mr-4 group-hover:scale-110 transition-transform duration-200">
+              <fa-icon [icon]="faUsers" class="text-blue-600 dark:text-blue-400"></fa-icon>
+            </div>
+            <div>
+              <span class="font-medium text-gray-900 dark:text-white block">مجتمع القراء</span>
+              <span class="text-sm text-gray-500 dark:text-gray-400">تواصل مع القراء</span>
+            </div>
+          </div>
+
+          <!-- Earn -->
+          <div (click)="exitBars()" routerLink="/earn" routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
+            class="flex gap-4 items-center p-4 rounded-xl cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all duration-200 group">
+            <div
+              class="flex items-center justify-center w-10 h-10 rounded-lg bg-yellow-100 dark:bg-yellow-900/30 mr-4 group-hover:scale-110 transition-transform duration-200">
+              <fa-icon [icon]="faCoins" class="text-yellow-600 dark:text-yellow-400"></fa-icon>
+            </div>
+            <div>
+              <span class="font-medium text-gray-900 dark:text-white block">اكسب من القراءة</span>
+              <span class="text-sm text-gray-500 dark:text-gray-400">هدايا وجوائز</span>
             </div>
           </div>
 
@@ -454,8 +498,6 @@
             <div
               class="p-4 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center bg-gray-50/50 dark:bg-slate-800/50">
               <h3 class="font-bold text-gray-800 dark:text-white">الإشعارات</h3>
-              <span *ngIf="unreadCount > 0" class="bg-red-500 text-white text-xs px-2 py-1 rounded-full">{{unreadCount}}
-                جديد</span>
             </div>
 
             <div class="max-h-[70vh] overflow-y-auto">

@@ -1,109 +1,197 @@
-<div class="min-h-screen bg-gray-50 dark:bg-gray-900 pb-20 transition-colors duration-300">
+<div class="min-h-screen bg-[var(--knooz-bg)] dark:bg-[var(--knooz-dark-bg)] pb-20 transition-colors duration-300">
 
-  <!-- Hero Section (Promo Carousel) -->
-  <div class="relative w-full h-[330px] sm:h-[550px] md:h-[700px] overflow-hidden bg-gray-200 dark:bg-gray-800"
+  <!-- Hero Section (Premium Promo Carousel or Scrolling Columns) -->
+  <div *ngIf="heroConfig.mode === 'slider'"
+    class="relative w-full h-[400px] sm:h-[600px] md:h-[750px] overflow-hidden bg-gray-900"
     (touchstart)="onTouchStart($event)" (touchend)="onTouchEnd($event)">
     <div *ngFor="let image of promoImages; let i = index"
-      class="absolute inset-0 w-full h-full transition-opacity duration-1000 ease-in-out"
-      [class.opacity-100]="i === promoCurrentIndex" [class.opacity-0]="i !== promoCurrentIndex">
-      <img [src]="'/' + image" alt="Promo" class="w-full h-full object-cover">
-    </div>
+      class="absolute inset-0 w-full h-full transition-all duration-1000 ease-in-out"
+      [class.opacity-100]="i === promoCurrentIndex" [class.opacity-0]="i !== promoCurrentIndex"
+      [class.scale-105]="i === promoCurrentIndex" [class.scale-100]="i !== promoCurrentIndex">
+      <img [src]="image.startsWith('/uploads') ? image : '/' + image" alt="Promo"
+        class="w-full h-full object-cover opacity-70">
 
-    <!-- Carousel Indicators -->
-    <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2 z-10">
-      <button *ngFor="let image of promoImages; let i = index" (click)="setPromoIndex(i)"
-        class="w-2.5 h-2.5 rounded-full transition-all duration-300"
-        [ngClass]="{'bg-white w-6': i === promoCurrentIndex, 'bg-white/50 hover:bg-white/80': i !== promoCurrentIndex}">
-      </button> <!-- This button was not closed properly -->
-    </div>
-  </div>
+      <!-- Premium Overlay Content -->
+      <div
+        class="absolute inset-0 flex flex-col items-center justify-center text-center px-4 bg-gradient-to-t from-black/60 via-transparent to-black/30 pointer-events-none">
 
-  <!-- Categories Grid -->
-  <div class="container mx-auto px-4 py-12">
-    <h2 class="text-2xl font-bold text-gray-800 dark:text-white mb-8 text-center">تصفح حسب الفئة</h2>
-    <div id="categories-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-      <ng-container *ngFor="let cat of categories">
-        <a *ngIf="cat.id !== 'all'" [routerLink]="['/' + cat.id]" [id]="'category-' + cat.id"
-          class="glass-panel p-6 rounded-2xl flex flex-col items-center justify-center gap-4 group hover:bg-white transition-all duration-300 cursor-pointer">
+
+
+        <div
+          class="backdrop-blur-xl bg-black/5 p-8 sm:p-12 rounded-[2rem] border border-white/5 max-w-4xl pointer-events-auto">
           <div
-            class="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-xl group-hover:scale-110 transition-transform duration-300">
-            <fa-icon [icon]="cat.icon" *ngIf="cat.icon"></fa-icon>
+            class="text-white bg-transparent border-none p-0 m-0 text-4xl sm:text-6xl md:text-7xl font-bold mb-8 drop-shadow-2xl font-['Almarai'] pointer-events-auto">
+            <span class="text-[var(--knooz-gold)]">knooz</span>book
           </div>
-          <span class="font-medium text-gray-700 dark:text-white group-hover:text-blue-600 transition-colors">{{
-            cat.name }}</span>
-        </a>
-      </ng-container>
+          <p class="text-gray-200 text-lg sm:text-2xl max-w-3xl mb-8 drop-shadow-lg">
+            اكتشف أعظم المؤلفات والكتب… كتب ورقية تصلك حتى باب منزلك، وكتب رقمية تقرأها فورًا أينما كنت.
+          </p>
+          <div class="flex flex-col sm:flex-row gap-4 justify-center">
+            <a routerLink="/books"
+              class="px-8 py-3 bg-[var(--knooz-gold)] hover:bg-[var(--knooz-gold-dark)] text-indigo-900 font-bold rounded-full transition-all duration-300 transform hover:scale-105 shadow-xl">
+              تصفح الكتب
+            </a>
+            <a routerLink="/library"
+              class="px-8 py-3 bg-white/10 backdrop-blur-md border border-white/30 text-white font-bold rounded-full hover:bg-white/20 transition-all duration-300 transform hover:scale-105">
+              المكتبة الرقمية
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Carousel Indicators (Elegant Markers) -->
+    <div class="absolute bottom-10 left-1/2 transform -translate-x-1/2 flex gap-3 z-10">
+      <button *ngFor="let image of promoImages; let i = index" (click)="setPromoIndex(i)"
+        class="h-1.5 transition-all duration-500 rounded-full"
+        [ngStyle]="{'background-color': i === promoCurrentIndex ? 'var(--knooz-gold)' : 'rgba(255,255,255,0.3)', 'width': i === promoCurrentIndex ? '3rem' : '1rem'}">
+      </button>
     </div>
   </div>
 
-  <!-- New Arrivals Section (Tabbed) -->
+  <!-- New Scrolling Hero Mode -->
+  <div *ngIf="heroConfig.mode === 'scrolling'"
+    class="relative w-full scrolling-hero-container overflow-hidden bg-gray-950 flex">
+    <!-- Scrolling Columns -->
+    <div class="absolute inset-0 flex px-2 sm:px-4 gap-2 sm:gap-6 justify-center">
+      <div *ngFor="let col of heroColumns; let colIdx = index"
+        class="flex-1 max-w-[200px] h-full overflow-hidden relative">
+        <div class="flex flex-col gap-4 py-4" [class.scrolling-column]="colIdx % 2 === 0"
+          [class.scrolling-column-reverse]="colIdx % 2 !== 0"
+          [ngClass]="'speed-' + (heroConfig.scrollingSpeed || 'medium')">
+          <!-- Duplicate content for seamless scroll -->
+          <ng-container *ngFor="let duplicate of [1, 2]">
+            <div *ngFor="let book of col"
+              class="w-full aspect-[2/3] rounded-xl overflow-hidden shadow-2xl border border-white/5">
+              <img [src]="getBookImageUrl(book)" [alt]="book.product_name" loading="lazy"
+                class="w-full h-full object-cover grayscale-[30%] hover:grayscale-0 transition-all duration-500">
+            </div>
+          </ng-container>
+        </div>
+      </div>
+    </div>
+
+    <!-- Luxury Glassmorphism Overlay -->
+    <div
+      class="absolute inset-0 z-20 flex flex-col items-center justify-center text-center px-4 bg-gradient-to-t from-black/70 via-black/10 to-black/50 pointer-events-none">
+
+      <div
+        class="backdrop-blur-xl bg-black/5 p-8 sm:p-12 rounded-[2rem] border border-white/5 max-w-4xl pointer-events-auto">
+        <div
+          class="text-white bg-transparent border-none p-0 m-0 text-4xl sm:text-6xl md:text-7xl font-bold mb-8 drop-shadow-2xl font-['Almarai'] pointer-events-auto">
+          <span class="text-[var(--knooz-gold)]">knooz</span>book
+        </div>
+        <p class="text-gray-200 text-lg sm:text-2xl max-w-3xl mb-8 drop-shadow-lg">
+          اكتشف أعظم المؤلفات والكتب… كتب ورقية تصلك حتى باب منزلك، وكتب رقمية تقرأها فورًا أينما كنت.
+        </p>
+
+        <div class="flex flex-col sm:flex-row gap-5 justify-center">
+          <a routerLink="/books"
+            class="rtl px-10 py-4 bg-[var(--knooz-gold)] hover:bg-[var(--knooz-gold-dark)] text-indigo-950 font-black rounded-2xl transition-all duration-300 hover:scale-105 shadow-2xl text-lg flex items-center justify-center gap-3 group">
+            <span>تصفح الكتب</span>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 transition-transform group-hover:translate-x-[-5px]"
+              fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" />
+            </svg>
+          </a>
+          <a routerLink="/library"
+            class="px-10 py-4 bg-white/10 backdrop-blur-md border border-white/20 text-white font-black rounded-2xl hover:bg-white/20 transition-all duration-300 hover:scale-105 text-lg flex items-center justify-center gap-3">
+            المكتبة الرقمية
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Decorative side vignetting -->
+    <div
+      class="absolute inset-y-0 left-0 w-24 sm:w-48 bg-gradient-to-r from-black/80 to-transparent pointer-events-none z-10">
+    </div>
+    <div
+      class="absolute inset-y-0 right-0 w-24 sm:w-48 bg-gradient-to-l from-black/80 to-transparent pointer-events-none z-10">
+    </div>
+  </div>
+
+  <!-- New Arrivals Section (Luxury Book Gallery) -->
   <div class="container mx-auto px-4 py-8">
     <div class="flex flex-col items-center mb-10">
-      <h2 class="text-3xl font-bold text-gray-800 dark:text-white mb-2">وصل حديثاً</h2>
-      <div class="w-20 h-1 bg-blue-600 rounded-full"></div>
+      <h2 class="text-3xl font-bold text-[var(--knooz-indigo)] dark:text-white mb-2">جديد الكتب والمؤلفات</h2>
+      <p class="text-gray-500 dark:text-gray-400 mb-6">أحدث الإضافات إلى مكتبة كنوز</p>
+      <div class="w-20 h-1 bg-[var(--knooz-gold)] rounded-full"></div>
     </div>
 
-    <!-- Tabs -->
-    <div class="flex flex-wrap justify-center gap-2 mb-8">
-      <button *ngFor="let cat of categories" (click)="setActiveTab(cat.id)"
-        class="px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300 border" [ngClass]="{
-          'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-600/20': activeTab === cat.id,
-          'bg-white text-gray-600 border-gray-200 hover:border-blue-300 hover:text-blue-600': activeTab !== cat.id
+    <!-- Premium Tabs -->
+    <div class="flex flex-wrap justify-center gap-3 mb-12">
+      <button *ngFor="let genre of bookGenres" (click)="setActiveTab(genre.id)"
+        class="px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 border-2" [ngClass]="{
+          'bg-[var(--knooz-indigo)] text-white border-[var(--knooz-indigo)] shadow-xl': activeTab === genre.id,
+          'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-100 dark:border-gray-700 hover:border-[var(--knooz-gold)] hover:text-[var(--knooz-gold-dark)]': activeTab !== genre.id
         }">
-        {{ cat.name }}
+        {{ genre.name }}
       </button>
     </div>
 
-    <!-- Product Grid -->
-    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+    <!-- Luxury Product Grid (Book Centric) -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-8">
       <ng-container *ngIf="!isLoading; else loadingSkeleton">
         <div *ngFor="let product of filteredProducts" class="group relative">
-          <!-- Product Card -->
+          <!-- Premium Book Card -->
           <div (click)="navigateToProduct(product)"
-            class="block bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 h-full border border-gray-100 cursor-pointer">
-            <!-- Image Container -->
-            <div class="relative aspect-[3/4] overflow-hidden bg-gray-100 dark:bg-gray-700">
+            class="block bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 h-full border border-gray-100 dark:border-gray-700 cursor-pointer relative">
+
+            <!-- Book Spine Effect (Visual Decor) -->
+            <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-r from-black/20 to-transparent z-20"></div>
+
+            <!-- Image Container with 3D Book feel -->
+            <div class="relative aspect-[2/3] overflow-hidden bg-gray-100 dark:bg-gray-700 group-hover:shadow-inner">
               <img [src]="getBookImageUrl(product)" [alt]="product.product_name" loading="lazy"
-                class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+                class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
 
-              <!-- Overlay on Hover -->
-              <div class="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300"></div>
+              <!-- Luxury Hover Overlay -->
+              <div
+                class="absolute inset-0 bg-gradient-to-t from-[var(--knooz-indigo)]/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-end justify-center pb-6">
+                <span
+                  class="text-white text-xs font-bold px-4 py-2 border border-white/30 rounded-full backdrop-blur-sm">عرض
+                  التفاصيل</span>
+              </div>
 
-              <!-- Badges (Optional) -->
-              <div *ngIf="product.discount"
-                class="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-md shadow-sm z-10">
-                -{{ product.discount }}%
+              <!-- Badges -->
+              <div *ngIf="product.product_discount_percent"
+                class="absolute top-3 right-3 bg-red-600 text-white text-[10px] font-bold px-2 py-1 rounded shadow-lg z-30">
+                -{{ product.product_discount_percent }}%
               </div>
               <div *ngIf="product.rival"
-                class="absolute top-2 left-2 bg-yellow-400 text-black text-xs font-bold px-2 py-1 rounded-md shadow-sm z-10">
-                عرض خاص
+                class="absolute top-3 left-3 bg-[var(--knooz-gold)] text-indigo-900 text-[10px] font-bold px-2 py-1 rounded shadow-lg z-30">
+                إصدار مميز
               </div>
             </div>
 
             <!-- Content -->
-            <div class="p-4">
+            <div class="p-5">
               <h3
-                class="font-bold text-gray-800 text-sm mb-1 line-clamp-2 min-h-[2.5em] group-hover:text-blue-600 transition-colors">
+                class="font-bold text-[var(--knooz-indigo)] dark:text-white text-sm mb-1 line-clamp-2 min-h-[2.5em] group-hover:text-[var(--knooz-gold-dark)] transition-colors">
                 {{ product.product_name }}
               </h3>
-              <p class="text-xs text-gray-500 dark:text-gray-400 mb-2 line-clamp-1">{{ product.product_category }}</p>
+              <p class="text-[10px] uppercase tracking-tighter text-gray-500 dark:text-gray-400 mb-4">{{
+                product.product_category }}</p>
 
-              <div class="flex items-center justify-between mt-2">
+              <div class="flex items-center justify-between border-t border-gray-50 dark:border-gray-700 pt-4">
                 <div class="flex flex-col">
-                  <span class="font-bold text-blue-600 text-lg">
-                    {{ product.product_price | number:'1.0-2' }} <span class="text-xs font-normal">ج.م</span>
+                  <span class="font-black text-[var(--knooz-indigo)] dark:text-[var(--knooz-gold-light)] text-lg">
+                    {{ product.product_price | number:'1.0-2' }} <span
+                      class="text-[10px] font-normal opacity-70">ج.م</span>
                   </span>
-                  <span *ngIf="product.old_price" class="text-xs text-gray-400 line-through">
-                    {{ product.old_price | number:'1.0-2' }}
+                  <span
+                    *ngIf="product.product_price_before_discount && product.product_price_before_discount > product.product_price"
+                    class="text-[10px] text-gray-400 line-through">
+                    {{ product.product_price_before_discount | number:'1.0-0' }}
                   </span>
                 </div>
 
-                <!-- Favorite and Add to Cart Buttons -->
+                <!-- Action Group -->
                 <div class="flex gap-2">
-                  <!-- Favorite Button -->
                   <button (click)="toggleFavorite(product.products_id); $event.stopPropagation()"
-                    class="w-8 h-8 rounded-full bg-gray-50 text-gray-600 flex items-center justify-center hover:bg-red-50 hover:text-red-600 transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mx-auto"
+                    class="w-9 h-9 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-400 flex items-center justify-center hover:bg-red-50 hover:text-red-600 transition-all duration-300">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4"
                       [attr.fill]="isFavorite(product.products_id) ? 'currentColor' : 'none'" viewBox="0 0 24 24"
                       stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -111,9 +199,9 @@
                     </svg>
                   </button>
 
-                  <!-- Add to Cart Button (Icon) -->
-                  <button (click)="$event.preventDefault(); $event.stopPropagation()"
-                    class="w-8 h-8 rounded-full bg-gray-50 text-gray-600 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-colors">
+                  <button (click)="toggleCart(product.products_id); $event.stopPropagation()"
+                    class="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 shadow-md"
+                    [ngClass]="isInCart(product.products_id) ? 'bg-[var(--knooz-gold)] text-indigo-900' : 'bg-[var(--knooz-indigo)] text-white hover:bg-[var(--knooz-gold)]'">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
                       stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -136,108 +224,133 @@
         </div>
       </ng-template>
     </div>
+  </div>
 
-    <!-- Empty State -->
-    <div *ngIf="!isLoading && filteredProducts.length === 0" class="text-center py-20">
-      <div class="text-gray-400 text-6xl mb-4">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto" fill="none" viewBox="0 0 24 24"
-          stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-        </svg>
-      </div>
-      <p class="text-gray-500 text-lg">لا توجد منتجات في هذا القسم حالياً</p>
+  <!-- Featured Categories (Product Sections Focused) -->
+  <div class="container mx-auto px-4 py-16">
+    <div class="flex flex-col items-center mb-12">
+      <h2 class="text-3xl md:text-4xl font-bold text-[var(--knooz-indigo)] dark:text-white mb-4">كنوزنا المقسمة</h2>
+      <div class="w-24 h-1 bg-[var(--knooz-gold)] rounded-full"></div>
+    </div>
+
+    <div id="categories-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-6">
+      <ng-container *ngFor="let sec of mainSections">
+        <a [routerLink]="['/' + sec.id]" [id]="'category-' + sec.id"
+          class="glass-panel p-8 rounded-3xl flex flex-col items-center justify-center gap-6 group hover:border-[var(--knooz-gold)] transition-all duration-500 cursor-pointer relative overflow-hidden">
+
+          <!-- Background Accent -->
+          <div
+            class="absolute -top-10 -right-10 w-32 h-32 bg-[var(--knooz-gold)] opacity-0 group-hover:opacity-5 transition-opacity duration-500 rounded-full">
+          </div>
+
+          <div
+            class="w-16 h-16 rounded-2xl bg-indigo-50 dark:bg-indigo-900/30 text-[var(--knooz-indigo)] dark:text-[var(--knooz-gold-light)] flex items-center justify-center text-3xl group-hover:bg-[var(--knooz-gold)] group-hover:text-white transition-all duration-500 shadow-sm group-hover:shadow-lg group-hover:-translate-y-2">
+            <fa-icon [icon]="sec.icon" *ngIf="sec.icon"></fa-icon>
+          </div>
+          <div class="text-center">
+            <span
+              class="block font-bold text-lg text-[var(--knooz-indigo)] dark:text-white group-hover:text-[var(--knooz-gold-dark)] transition-colors">{{
+              sec.name }}</span>
+          </div>
+        </a>
+      </ng-container>
     </div>
   </div>
 
-  <!-- Digital Library Promo Section -->
-  <div class="bg-gradient-to-r from-indigo-900 to-purple-900 py-16 relative overflow-hidden">
-    <div class="absolute inset-0 opacity-20">
-      <div
-        class="absolute top-0 left-0 w-64 h-64 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl animate-blob">
+  <!-- Digital Library Promo Section (Refined) -->
+  <div class="bg-[var(--knooz-indigo)] py-20 relative overflow-hidden">
+    <!-- Subtle Background Pattern/Texture -->
+    <div class="absolute inset-0 opacity-10 pointer-events-none"
+      style="background-image: url('https://www.transparenttextures.com/patterns/pinstripe-dark.png');"></div>
+
+    <div class="absolute inset-0 opacity-30">
+      <div class="absolute -top-20 -left-20 w-80 h-80 bg-[var(--knooz-gold)]/20 rounded-full blur-3xl animate-pulse">
       </div>
       <div
-        class="absolute top-0 right-0 w-64 h-64 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000">
-      </div>
-      <div
-        class="absolute -bottom-32 left-20 w-64 h-64 bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000">
+        class="absolute -bottom-20 -right-20 w-80 h-80 bg-[var(--knooz-gold-dark)]/20 rounded-full blur-3xl animate-pulse animation-delay-2000">
       </div>
     </div>
 
     <div class="container mx-auto px-4 relative z-10">
-      <div class="flex flex-col md:flex-row items-center justify-between gap-12">
+      <div class="flex flex-col md:flex-row items-center justify-between gap-16">
         <div class="md:w-1/2 text-white">
           <div
-            class="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full mb-6 border border-white/20">
-            <span class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
-            <span class="text-sm font-medium">متاح الآن</span>
+            class="inline-flex items-center gap-3 bg-[var(--knooz-gold)]/10 backdrop-blur-md px-5 py-2 rounded-full mb-8 border border-[var(--knooz-gold)]/20">
+            <span
+              class="w-2.5 h-2.5 bg-[var(--knooz-gold)] rounded-full animate-pulse shadow-[0_0_10px_var(--knooz-gold)]"></span>
+            <span class="text-xs font-bold text-[var(--knooz-gold-light)] uppercase tracking-widest">كنوز المعرفة
+              الرقمية</span>
           </div>
-          <h2 class="text-4xl md:text-5xl font-bold mb-6 leading-tight">
-            المكتبة الرقمية
-            <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-pink-400">الشاملة</span>
+
+          <h2 class="text-4xl md:text-5xl font-bold mb-8 leading-tight font-almarai">
+            مكتبتكم الرقمية <br>
+            <span class="text-[var(--knooz-gold)]">بين أيديكم دائماً</span>
           </h2>
-          <p class="text-lg text-gray-300 mb-8 leading-relaxed">
-            اكتشف آلاف الكتب الإلكترونية في مختلف المجالات. اقرأ بلا حدود مع اشتراكاتنا المميزة، أو اشترِ كتبك المفضلة
-            واحتفظ بها للأبد.
+
+          <p class="text-lg text-gray-300 mb-10 leading-relaxed max-w-xl">
+            نقدم لكم تجربة قراءة فريدة عبر مكتبتنا الرقمية الشاملة. آلاف العناوين في مختلف التخصصات، متاحة للتحميل
+            والقراءة الفورية بأعلى جودة وتوافق مع كافة الأجهزة.
           </p>
 
-          <div class="flex flex-wrap gap-4">
+          <div class="flex flex-wrap gap-5">
             <a routerLink="/library"
-              class="px-8 py-4 bg-white text-indigo-900 font-bold rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 flex items-center gap-2">
-              <i class="fas fa-book-reader"></i>
+              class="px-10 py-4 bg-[var(--knooz-gold)] text-[var(--knooz-indigo)] font-black rounded-xl shadow-[0_10px_30px_rgba(197,160,89,0.3)] hover:shadow-[0_15px_40px_rgba(197,160,89,0.5)] hover:-translate-y-1 transition-all duration-300 flex items-center gap-3">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path
+                  d="M9 4.804A7.993 7.993 0 002 12a1 1 0 001 1h3.5c1.054 0 2.046.244 2.924.683l.92.46.92-.46A7.993 7.993 0 0117 13a1 1 0 001-1 7.993 7.993 0 00-7-7.196V11a1 1 0 01-2 0V4.804z" />
+              </svg>
               تصفح المكتبة
             </a>
             <a routerLink="/subscription"
-              class="px-8 py-4 bg-indigo-600/50 backdrop-blur-sm border border-indigo-400/30 text-white font-bold rounded-xl hover:bg-indigo-600 hover:scale-105 transition-all duration-300 flex items-center gap-2">
-              <i class="fas fa-crown"></i>
-              خطط الاشتراك
+              class="px-10 py-4 bg-white/5 backdrop-blur-sm border border-white/20 text-white font-bold rounded-xl hover:bg-white/10 hover:-translate-y-1 transition-all duration-300 flex items-center gap-3">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[var(--knooz-gold)]" viewBox="0 0 20 20"
+                fill="currentColor">
+                <path fill-rule="evenodd"
+                  d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z"
+                  clip-rule="evenodd" />
+              </svg>
+              باقات الاشتراك
             </a>
           </div>
 
-          <div class="mt-12 flex items-center gap-8 border-t border-white/10 pt-8">
+          <div class="mt-16 grid grid-cols-3 gap-8 border-t border-white/10 pt-10">
             <div>
-              <div class="text-3xl font-bold text-white mb-1">+5000</div>
-              <div class="text-sm text-gray-400">كتاب إلكتروني</div>
+              <div class="text-3xl font-bold text-[var(--knooz-gold-light)] mb-1">+5000</div>
+              <div class="text-[10px] text-gray-400 uppercase tracking-widest">إصدار رقمي</div>
             </div>
             <div>
-              <div class="text-3xl font-bold text-white mb-1">100%</div>
-              <div class="text-sm text-gray-400">قراءة غير محدودة</div>
+              <div class="text-3xl font-bold text-[var(--knooz-gold-light)] mb-1">24/7</div>
+              <div class="text-[10px] text-gray-400 uppercase tracking-widest">وصول غير محدود</div>
             </div>
             <div>
-              <div class="text-3xl font-bold text-white mb-1">24/7</div>
-              <div class="text-sm text-gray-400">وصول فوري</div>
+              <div class="text-3xl font-bold text-[var(--knooz-gold-light)] mb-1">100%</div>
+              <div class="text-[10px] text-gray-400 uppercase tracking-widest">جودة فائقة</div>
             </div>
           </div>
         </div>
 
         <div class="md:w-1/2 relative">
-          <div class="relative z-10 transform hover:scale-105 transition-transform duration-500">
-            <img src="ebook.png" onerror="this.src='https://placehold.co/600x400/1e1b4b/FFF?text=Digital+Library'"
-              alt="Digital Library Interface"
-              class="rounded-2xl shadow-2xl border-4 border-white/10 backdrop-blur-sm animate-float-slow">
+          <!-- 3D Book/Tablet Composition (Simulated with CSS) -->
+          <div
+            class="relative z-10 p-4 bg-white/5 rounded-3xl border border-white/10 backdrop-blur-sm shadow-2xl animate-float-slow">
+            <img src="ebook.png" onerror="this.src='/panar1.png'" alt="Digital Library"
+              class="rounded-2xl shadow-2xl object-cover aspect-video">
 
-            <!-- Floating Cards -->
-            <div class="absolute -top-6 -right-6 bg-white dark:bg-gray-800 p-4 rounded-xl shadow-xl animate-float">
-              <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-green-600">
-                  <i class="fas fa-check"></i>
-                </div>
-                <div>
-                  <div class="text-sm font-bold text-gray-800 dark:text-white">اشتراك نشط</div>
-                  <div class="text-xs text-gray-500">وصول كامل للمكتبة</div>
-                </div>
-              </div>
-            </div>
-
+            <!-- Floating Decorative Element -->
             <div
-              class="absolute -bottom-6 -left-6 bg-white dark:bg-gray-800 p-4 rounded-xl shadow-xl animate-float animation-delay-2000">
-              <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
-                  <i class="fas fa-book-open"></i>
+              class="absolute -bottom-10 -left-10 bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-gray-100 dark:border-gray-700 hidden lg:block">
+              <div class="flex items-center gap-4">
+                <div
+                  class="w-12 h-12 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center text-[var(--knooz-indigo)] dark:text-[var(--knooz-gold-light)]">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                  </svg>
                 </div>
                 <div>
-                  <div class="text-sm font-bold text-gray-800 dark:text-white">اقرأ في أي مكان</div>
-                  <div class="text-xs text-gray-500">موبايل، تابلت، لابتوب</div>
+                  <div class="text-sm font-black text-gray-800 dark:text-white">تطبيق knoozbook</div>
+                  <div class="text-[10px] text-gray-500">متوفر على iOS و Android</div>
                 </div>
               </div>
             </div>
@@ -248,259 +361,178 @@
   </div>
 
   <!-- Printing Services Section -->
-  <div
-    class="bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-slate-900 dark:via-purple-900/20 dark:to-pink-900/20 py-16 transition-colors duration-300">
+  <div class="bg-gray-50 dark:bg-[#0a0a0a] py-24 transition-colors duration-300">
     <div class="container mx-auto px-4">
-      <div class="flex flex-col items-center mb-12">
-        <h2 class="text-3xl font-bold text-gray-800 dark:text-white mb-2">خدمات الطباعة الاحترافية</h2>
-        <div class="w-20 h-1 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full"></div>
-        <p class="text-gray-600 dark:text-gray-300 mt-4 text-center max-w-2xl">نقدم لك أفضل خدمات الطباعة بجودة عالية
-          وأسعار تنافسية</p>
+      <div class="flex flex-col items-center mb-16 text-center">
+        <span class="text-[var(--knooz-gold-dark)] text-xs font-bold uppercase tracking-[0.3em] mb-4">خدمات الطباعة
+          والنشر</span>
+        <h2 class="text-3xl md:text-4xl font-bold text-[var(--knooz-indigo)] dark:text-white mb-6">جودة تليق بكلماتكم
+        </h2>
+        <div class="w-16 h-1 bg-[var(--knooz-gold)] rounded-full mb-8"></div>
+        <p class="text-gray-500 dark:text-gray-400 max-w-2xl leading-relaxed">
+          نحول أفكاركم إلى واقع ملموس من خلال أحدث تقنيات الطباعة وأجود أنواع الورق. من الكروت الشخصية إلى المجلدات
+          الفاخرة.
+        </p>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         <!-- Business Cards -->
         <a routerLink="/print"
-          class="group bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2">
-          <div class="relative h-48 bg-gradient-to-br from-blue-500 to-blue-600 overflow-hidden">
-            <div class="absolute inset-0 bg-black/10"></div>
-            <div class="absolute inset-0 flex items-center justify-center">
-              <svg class="w-24 h-24 text-white/90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                  d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+          class="group relative bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-sm hover:shadow-2xl transition-all duration-500 border border-gray-100 dark:border-gray-700 overflow-hidden">
+          <div
+            class="absolute -top-10 -right-10 w-32 h-32 bg-[var(--knooz-gold)]/5 rounded-full group-hover:scale-150 transition-transform duration-700">
+          </div>
+
+          <div
+            class="w-16 h-16 bg-[var(--knooz-indigo)]/5 text-[var(--knooz-indigo)] dark:text-[var(--knooz-gold-light)] rounded-2xl flex items-center justify-center mb-8 group-hover:bg-[var(--knooz-indigo)] group-hover:text-white transition-all duration-300">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24"
+              stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+            </svg>
+          </div>
+
+          <h3
+            class="text-xl font-bold text-[var(--knooz-indigo)] dark:text-white mb-3 group-hover:text-[var(--knooz-gold-dark)] transition-colors">
+            كروت شخصية فاخرة</h3>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mb-6 leading-relaxed">طباعة احترافية بخيارات متعددة من
+            الورق واللمسات الفنية التي تميز هويتكم.</p>
+
+          <div class="flex items-center justify-between mt-auto">
+            <span class="text-xs font-bold text-[var(--knooz-gold-dark)]">تبدأ من 50 ج.م</span>
+            <span
+              class="w-8 h-8 rounded-full border border-gray-100 dark:border-gray-700 flex items-center justify-center group-hover:bg-[var(--knooz-gold)] group-hover:text-white group-hover:border-[var(--knooz-gold)] transition-all duration-300">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
               </svg>
-            </div>
-            <div
-              class="absolute top-4 right-4 bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-white text-sm font-medium">
-              الأكثر طلباً
-            </div>
-          </div>
-          <div class="p-6">
-            <h3
-              class="text-xl font-bold text-gray-800 dark:text-white mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-              كروت شخصية</h3>
-            <p class="text-gray-600 dark:text-gray-300 text-sm mb-4">طباعة كروت شخصية احترافية بجودة عالية وتصاميم مميزة
-            </p>
-            <div class="flex items-center justify-between">
-              <span class="text-blue-600 dark:text-blue-400 font-semibold">ابدأ من 50 ج.م</span>
-              <span class="text-gray-400 group-hover:text-blue-600 transition-colors">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                </svg>
-              </span>
-
-            </div>
-
-          </div>
-
-        </a>
-
-        <!-- Brochures -->
-        <a routerLink="/print"
-          class="group bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2">
-          <div class="relative h-48 bg-gradient-to-br from-purple-500 to-purple-600 overflow-hidden">
-            <div class="absolute inset-0 bg-black/10"></div>
-            <div class="absolute inset-0 flex items-center justify-center">
-              <svg class="w-24 h-24 text-white/90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-            </div>
-          </div>
-          <div class="p-6">
-            <h3
-              class="text-xl font-bold text-gray-800 dark:text-white mb-2 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
-              بروشورات
-              ومطويات</h3>
-            <p class="text-gray-600 dark:text-gray-300 text-sm mb-4">تصميم وطباعة بروشورات ومطويات دعائية بألوان زاهية
-            </p>
-            <div class="flex items-center justify-between">
-              <span class="text-purple-600 dark:text-purple-400 font-semibold">ابدأ من 100 ج.م</span>
-              <span class="text-gray-400 group-hover:text-purple-600 transition-colors">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                </svg>
-              </span>
-            </div>
+            </span>
           </div>
         </a>
 
-        <!-- Banners -->
+        <!-- Publications -->
         <a routerLink="/print"
-          class="group bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2">
-          <div class="relative h-48 bg-gradient-to-br from-pink-500 to-pink-600 overflow-hidden">
-            <div class="absolute inset-0 bg-black/10"></div>
-            <div class="absolute inset-0 flex items-center justify-center">
-              <svg class="w-24 h-24 text-white/90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            </div>
+          class="group relative bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-sm hover:shadow-2xl transition-all duration-500 border border-gray-100 dark:border-gray-700 overflow-hidden">
+          <div
+            class="absolute -top-10 -right-10 w-32 h-32 bg-[var(--knooz-gold)]/5 rounded-full group-hover:scale-150 transition-transform duration-700">
           </div>
-          <div class="p-6">
-            <h3
-              class="text-xl font-bold text-gray-800 dark:text-white mb-2 group-hover:text-pink-600 dark:group-hover:text-pink-400 transition-colors">
-              لافتات وبنرات
-            </h3>
-            <p class="text-gray-600 dark:text-gray-300 text-sm mb-4">طباعة لافتات إعلانية كبيرة بجودة عالية ومقاومة
-              للعوامل الجوية</p>
-            <div class="flex items-center justify-between">
-              <span class="text-pink-600 dark:text-pink-400 font-semibold">ابدأ من 200 ج.م</span>
-              <span class="text-gray-400 group-hover:text-pink-600 transition-colors">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                </svg>
-              </span>
-            </div>
+
+          <div
+            class="w-16 h-16 bg-[var(--knooz-indigo)]/5 text-[var(--knooz-indigo)] dark:text-[var(--knooz-gold-light)] rounded-2xl flex items-center justify-center mb-8 group-hover:bg-[var(--knooz-indigo)] group-hover:text-white transition-all duration-300">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24"
+              stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+            </svg>
+          </div>
+
+          <h3
+            class="text-xl font-bold text-[var(--knooz-indigo)] dark:text-white mb-3 group-hover:text-[var(--knooz-gold-dark)] transition-colors">
+            طباعة الكتب والمجلات</h3>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mb-6 leading-relaxed">نقدم خدمات النشر والطباعة للمؤلفين
+            والمؤسسات بأعلى المعايير العالمية.</p>
+
+          <div class="flex items-center justify-between mt-auto">
+            <span class="text-xs font-bold text-[var(--knooz-gold-dark)]">حسب المواصفات</span>
+            <span
+              class="w-8 h-8 rounded-full border border-gray-100 dark:border-gray-700 flex items-center justify-center group-hover:bg-[var(--knooz-gold)] group-hover:text-white group-hover:border-[var(--knooz-gold)] transition-all duration-300">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+              </svg>
+            </span>
           </div>
         </a>
 
-        <!-- Stickers -->
+        <!-- Promotional -->
         <a routerLink="/print"
-          class="group bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2">
-          <div class="relative h-48 bg-gradient-to-br from-green-500 to-green-600 overflow-hidden">
-            <div class="absolute inset-0 bg-black/10"></div>
-            <div class="absolute inset-0 flex items-center justify-center">
-              <svg class="w-24 h-24 text-white/90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                  d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-              </svg>
-            </div>
+          class="group relative bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-sm hover:shadow-2xl transition-all duration-500 border border-gray-100 dark:border-gray-700 overflow-hidden">
+          <div
+            class="absolute -top-10 -right-10 w-32 h-32 bg-[var(--knooz-gold)]/5 rounded-full group-hover:scale-150 transition-transform duration-700">
           </div>
-          <div class="p-6">
-            <h3
-              class="text-xl font-bold text-gray-800 dark:text-white mb-2 group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors">
-              ستيكرات
-              ولاصقات</h3>
-            <p class="text-gray-600 dark:text-gray-300 text-sm mb-4">طباعة ستيكرات بأشكال وأحجام مختلفة لجميع
-              الاستخدامات</p>
-            <div class="flex items-center justify-between">
-              <span class="text-green-600 dark:text-green-400 font-semibold">ابدأ من 30 ج.م</span>
-              <span class="text-gray-400 group-hover:text-green-600 transition-colors">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                </svg>
-              </span>
-            </div>
-          </div>
-        </a>
 
-        <!-- Invitations -->
-        <a routerLink="/print"
-          class="group bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2">
-          <div class="relative h-48 bg-gradient-to-br from-orange-500 to-orange-600 overflow-hidden">
-            <div class="absolute inset-0 bg-black/10"></div>
-            <div class="absolute inset-0 flex items-center justify-center">
-              <svg class="w-24 h-24 text-white/90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                  d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-              </svg>
-            </div>
+          <div
+            class="w-16 h-16 bg-[var(--knooz-indigo)]/5 text-[var(--knooz-indigo)] dark:text-[var(--knooz-gold-light)] rounded-2xl flex items-center justify-center mb-8 group-hover:bg-[var(--knooz-indigo)] group-hover:text-white transition-all duration-300">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24"
+              stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+            </svg>
           </div>
-          <div class="p-6">
-            <h3
-              class="text-xl font-bold text-gray-800 dark:text-white mb-2 group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors">
-              كروت دعوة
-            </h3>
-            <p class="text-gray-600 dark:text-gray-300 text-sm mb-4">تصميم وطباعة كروت دعوة للمناسبات والأفراح بتصاميم
-              راقية</p>
-            <div class="flex items-center justify-between">
-              <span class="text-orange-600 dark:text-orange-400 font-semibold">ابدأ من 80 ج.م</span>
-              <span class="text-gray-400 group-hover:text-orange-600 transition-colors">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                </svg>
-              </span>
-            </div>
-          </div>
-        </a>
 
-        <!-- Custom Printing -->
-        <a routerLink="/print"
-          class="group bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2">
-          <div class="relative h-48 bg-gradient-to-br from-indigo-500 to-indigo-600 overflow-hidden">
-            <div class="absolute inset-0 bg-black/10"></div>
-            <div class="absolute inset-0 flex items-center justify-center">
-              <svg class="w-24 h-24 text-white/90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                  d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+          <h3
+            class="text-xl font-bold text-[var(--knooz-indigo)] dark:text-white mb-3 group-hover:text-[var(--knooz-gold-dark)] transition-colors">
+            المواد الدعائية</h3>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mb-6 leading-relaxed">بروشورات، بنرات، ستيكرات، وكل ما يلزم
+            للترويج لأعمالكم بلمسة فنية.</p>
+
+          <div class="flex items-center justify-between mt-auto">
+            <span class="text-xs font-bold text-[var(--knooz-gold-dark)]">تبدأ من 100 ج.م</span>
+            <span
+              class="w-8 h-8 rounded-full border border-gray-100 dark:border-gray-700 flex items-center justify-center group-hover:bg-[var(--knooz-gold)] group-hover:text-white group-hover:border-[var(--knooz-gold)] transition-all duration-300">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
               </svg>
-            </div>
-            <div
-              class="absolute top-4 right-4 bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-white text-sm font-medium">
-              جديد
-            </div>
-          </div>
-          <div class="p-6">
-            <h3
-              class="text-xl font-bold text-gray-800 dark:text-white mb-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-              طباعة مخصصة
-            </h3>
-            <p class="text-gray-600 dark:text-gray-300 text-sm mb-4">خدمات طباعة مخصصة حسب احتياجاتك على جميع الأسطح</p>
-            <div class="flex items-center justify-between">
-              <span class="text-indigo-600 dark:text-indigo-400 font-semibold">حسب الطلب</span>
-              <span class="text-gray-400 group-hover:text-indigo-600 transition-colors">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                </svg>
-              </span>
-            </div>
+            </span>
           </div>
         </a>
       </div>
 
-      <!-- CTA Button -->
-      <div class="text-center mt-12">
+      <div class="text-center mt-16">
         <a routerLink="/print"
-          class="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold rounded-full shadow-lg shadow-blue-600/30 hover:shadow-xl hover:shadow-blue-600/40 hover:scale-105 transition-all duration-300">
-          <span>استكشف جميع خدمات الطباعة</span>
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          class="inline-flex items-center gap-4 text-[var(--knooz-indigo)] dark:text-[var(--knooz-gold-light)] font-bold hover:text-[var(--knooz-gold-dark)] transition-colors">
+          <span>شاهد جميع خدماتنا الطباعية</span>
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
           </svg>
         </a>
       </div>
     </div>
   </div>
 
-  <!-- Features Section (Simplified) -->
+  <!-- Trust Features -->
   <div
-    class="bg-white dark:bg-gray-900 py-16 border-t border-gray-100 dark:border-gray-800 transition-colors duration-300">
+    class="bg-white dark:bg-[#0a0a0a] py-20 border-t border-gray-100 dark:border-gray-800 transition-colors duration-300">
     <div class="container mx-auto px-4">
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-        <div class="p-6">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-12">
+        <div class="flex flex-col items-center text-center group">
           <div
-            class="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24"
+            class="w-20 h-20 bg-[var(--knooz-gold)]/10 text-[var(--knooz-gold-dark)] rounded-3xl flex items-center justify-center mb-6 group-hover:bg-[var(--knooz-gold)] group-hover:text-white transition-all duration-500 transform group-hover:rotate-6">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24"
               stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
           </div>
-          <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-2">سرعة في التوصيل</h3>
-          <p class="text-gray-500 dark:text-gray-400 text-sm">نضمن وصول طلبك في أسرع وقت ممكن</p>
+          <h3 class="text-xl font-bold text-[var(--knooz-indigo)] dark:text-white mb-3">شحن سريع وموثوق</h3>
+          <p class="text-sm text-gray-500 dark:text-gray-400">نضمن وصول كنوزكم إليكم في أسرع وقت وبأمان تام.</p>
         </div>
-        <div class="p-6">
+
+        <div class="flex flex-col items-center text-center group">
           <div
-            class="w-16 h-16 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24"
+            class="w-20 h-20 bg-[var(--knooz-gold)]/10 text-[var(--knooz-gold-dark)] rounded-3xl flex items-center justify-center mb-6 group-hover:bg-[var(--knooz-gold)] group-hover:text-white transition-all duration-500 transform group-hover:-rotate-6">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24"
               stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                d="M9 12l2 2 4-4m5.618-4.016A9 9 0 1121 12c0-1.268-.263-2.474-.74-3.572M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
           </div>
-          <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-2">جودة مضمونة</h3>
-          <p class="text-gray-500 dark:text-gray-400 text-sm">منتجات أصلية وعالية الجودة 100%</p>
+          <h3 class="text-xl font-bold text-[var(--knooz-indigo)] dark:text-white mb-3">ضمان الجودة</h3>
+          <p class="text-sm text-gray-500 dark:text-gray-400">جميع منتجاتنا أصلية ومعتمدة، ونضمن رضاكم بنسبة 100%.</p>
         </div>
-        <div class="p-6">
+
+        <div class="flex flex-col items-center text-center group">
           <div
-            class="w-16 h-16 bg-green-50 text-green-600 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24"
+            class="w-20 h-20 bg-[var(--knooz-gold)]/10 text-[var(--knooz-gold-dark)] rounded-3xl flex items-center justify-center mb-6 group-hover:bg-[var(--knooz-gold)] group-hover:text-white transition-all duration-500 transform group-hover:rotate-6">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24"
               stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                 d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
             </svg>
           </div>
-          <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-2">دعم متواصل</h3>
-          <p class="text-gray-500 dark:text-gray-400 text-sm">فريق دعم فني جاهز لمساعدتك على مدار الساعة</p>
+          <h3 class="text-xl font-bold text-[var(--knooz-indigo)] dark:text-white mb-3">دعم فني متميز</h3>
+          <p class="text-sm text-gray-500 dark:text-gray-400">فريقنا متواجد دائماً للإجابة على استفساراتكم ومساعدتكم.
+          </p>
         </div>
       </div>
     </div>

@@ -18,6 +18,7 @@ export class AdminPrintingComponent implements OnInit {
     paperTypes: [],
     printers: [],
     coverPrices: {
+      none: 0,
       soft: 25.0,
       hard: 60.0,
       luxuryLeather: 100.0
@@ -50,6 +51,7 @@ export class AdminPrintingComponent implements OnInit {
     selectedPrinterIndex: 0,
     isColor: false,
     isDoubleSided: false,
+    coverType: 'none', // 'none', 'soft', 'hard', 'luxuryLeather'
     pageCount: 1,
     profitMargin: 50 // %
   };
@@ -57,6 +59,7 @@ export class AdminPrintingComponent implements OnInit {
   calcResult: any = {
     paperCost: 0,
     inkCost: 0,
+    coverSurcharge: 0,
     totalCost: 0,
     sellingPrice: 0,
     profitValue: 0,
@@ -227,10 +230,13 @@ export class AdminPrintingComponent implements OnInit {
       this.calcResult.inkCost = 0;
     }
 
-    // 3. Totals
-    this.calcResult.totalCost = this.calcResult.paperCost + this.calcResult.inkCost;
+    // 3. Cover Base Cost
+    const coverPrice = this.printingSettings.coverPrices[this.calcInput.coverType] || 0;
 
-    // 4. Selling Price with Profit
+    // 4. Totals
+    this.calcResult.totalCost = this.calcResult.paperCost + this.calcResult.inkCost + coverPrice;
+
+    // 5. Selling Price with Profit
     this.calcResult.profitValue = this.calcResult.totalCost * (this.calcInput.profitMargin / 100);
     this.calcResult.sellingPrice = this.calcResult.totalCost + this.calcResult.profitValue;
 

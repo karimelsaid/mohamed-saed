@@ -60,14 +60,14 @@ function getMerchantUploadDir(merchantUsername, barcode) {
   return path.join(__dirname, '../uploads/books', 'merchant_' + sanitizedUsername, barcode);
 }
 
-// Multer setup for logo upload
+// Multer setup for logo and cover uploads
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 1024 * 1024 }, // 1 MB limit
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB limit
   fileFilter: (req, file, cb) => {
-    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
     if (!allowedTypes.includes(file.mimetype)) {
-      return cb(new Error('Only PNG and JPG image files are allowed!'), false);
+      return cb(new Error('Only PNG, JPG and WEBP image files are allowed!'), false);
     }
     cb(null, true);
   }
@@ -141,25 +141,28 @@ async function registerMerchant(req, res) {
       { expiresIn: '7d' }
     );
 
-    // Return user data for auto-login (similar to login response)
-    res.json({
+    // Push Notification to Admins
+    try {
+      const pushService = require('../services/push-notification.service');
+      pushService.sendToAdmins({
+        title: 'تسجيل تاجر جديد 🏪',
+        body: `التاجر ${name} قام بالتسجيل وينتظر التفعيل`,
+        url: '/admin/merchants',
+        data: { type: 'new_merchant_registration' }
+      }).catch(err => console.error('Admin Push Error:', err));
+    } catch (pushErr) {
+      console.error('Push Service Error:', pushErr);
+    }
+
+    return res.status(201).json({
       success: true,
-      message: 'Merchant registered successfully. Awaiting admin approval.',
+      message: 'Merchant registered successfully. Please wait for admin approval.',
       token,
       merchant: {
         _id: merchant._id,
-        merchantName: merchant.merchantName || merchant.username,
-        name: merchant.username,
+        name: merchant.merchantName,
         email: merchant.email,
-        phone: merchant.phone,
-        governorate: merchant.governorate,
-        city: merchant.city,
-        village: merchant.village,
-        taxNumber: merchant.taxNumber,
-        logo: merchant.logo,
-        approved: merchant.approved,
-        suspended: merchant.suspended || false,
-        role: 'merchant' // Add role property for frontend identification
+        logo: merchant.logo
       }
     });
   } catch (error) {
@@ -174,11 +177,11 @@ async function registerMerchant(req, res) {
 // Multer setup for product image upload
 const productUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 1024 * 1024 }, // 1 MB limit
+  limits: { fileSize: 1 * 1024 * 1024 }, // 1 MB limit for each file (matching merchant requirements)
   fileFilter: (req, file, cb) => {
-    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
     if (!allowedTypes.includes(file.mimetype)) {
-      return cb(new Error('Only PNG and JPG image files are allowed!'), false);
+      return cb(new Error('Only PNG, JPG and WEBP image files are allowed!'), false);
     }
     cb(null, true);
   }
@@ -198,7 +201,7 @@ async function addProduct(req, res) {
 
     // Generate barcode if not present
     const barcode = generateRandomBarcode();
-    let { product_name, product_quantity, product_category, product_description, product_price, price_cost } = req.body;
+    let { product_name, product_quantity, product_category, product_description, product_price, price_cost, copyType, condition } = req.body;
 
     // Map merchant category to standard category
     product_category = merchantCategoryMap[product_category] || product_category;
@@ -207,23 +210,32 @@ async function addProduct(req, res) {
       return res.status(400).json({ success: false, message: 'Missing required fields or product description is empty' });
     }
 
-    if (!req.file) {
-      return res.status(400).json({ success: false, message: 'Image file is required' });
+    const files = req.files || (req.file ? [req.file] : []);
+    if (files.length === 0) {
+      return res.status(400).json({ success: false, message: 'At least one image file is required' });
     }
 
-    // Compress and save image using sharp
+    // Compress and save images using sharp
     const sanitizedUsername = req.merchant.username.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
-    const imagePath = 'merchant_' + sanitizedUsername + '/' + barcode + '/' + barcode + '.webp';
     const uploadDir = getMerchantUploadDir(req.merchant.username, barcode);
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
-    const filepath = path.join(uploadDir, barcode + '.webp');
 
-    await sharp(req.file.buffer)
-      .resize({ width: 800 }) // Resize width to max 800px, maintain aspect ratio
-      .webp({ quality: 80 }) // Convert to webp with quality 80
-      .toFile(filepath);
+    const savedImages = [];
+    for (let i = 0; i < Math.min(files.length, 3); i++) {
+      const file = files[i];
+      const suffix = i === 0 ? '' : `_${i}`;
+      const filename = `${barcode}${suffix}.webp`;
+      const filepath = path.join(uploadDir, filename);
+
+      await sharp(file.buffer)
+        .resize({ width: 800 }) // Resize width to max 800px, maintain aspect ratio
+        .webp({ quality: 80 }) // Convert to webp with quality 80
+        .toFile(filepath);
+
+      savedImages.push(filename);
+    }
 
     // Determine category prefix based on categoryMap keys
     let categoryPrefix = '';
@@ -256,6 +268,9 @@ async function addProduct(req, res) {
       price_cost: parseFloat(price_cost) || 0,
       products_id: barcode, // حفظ الباركود الرقمي فقط
       product_image: barcode, // حفظ الباركود الرقمي فقط
+      images: savedImages,
+      copyType: copyType || '',
+      condition: condition || '',
       status: 'pending',
       merchantId: req.merchant._id,
       createdAt: new Date()
@@ -266,6 +281,19 @@ async function addProduct(req, res) {
     // No Excel updates or sitemap generation for pending products
 
     res.json({ success: true, message: 'Product added successfully and pending admin approval', barcode });
+
+    // Push Notification to Admins - New Product Added
+    try {
+      const pushService = require('../services/push-notification.service');
+      pushService.sendToAdmins({
+        title: 'منتج جديد ينتظر الموافقة 📦',
+        body: `التاجر ${req.merchant.username} أضاف منتج: ${product_name}`,
+        url: '/admin/merchant-products',
+        data: { type: 'new_merchant_product', productId: newProduct._id }
+      }).catch(err => console.error('Admin Push Error:', err));
+    } catch (pushErr) {
+      console.error('Push Service Error:', pushErr);
+    }
   } catch (error) {
     console.error('Error in addProduct:', error);
     if (error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE') {
@@ -297,6 +325,7 @@ async function getCurrentMerchant(req, res) {
         phone: merchant.phone,
         taxNumber: merchant.taxNumber,
         logo: merchant.logo,
+        coverPhoto: merchant.coverPhoto,
         bio: merchant.bio,
         preparationTime: merchant.preparationTime,
         approved: merchant.approved,
@@ -319,20 +348,15 @@ async function getMerchantProducts(req, res) {
     const merchantId = req.merchant._id;
     const Product = require('../models/Product.model');
 
-    const products = await Product.find({ merchantId }).sort({ createdAt: -1 });
+    const products = await Product.find({ merchantId }).sort({ createdAt: -1 }).lean();
 
-    // Remove duplicates based on product_name and product_category, keeping the latest (first in sorted list)
-    const uniqueProducts = [];
-    const seen = new Set();
-    for (const product of products) {
-      const key = product.product_name + '|' + product.product_category;
-      if (!seen.has(key)) {
-        seen.add(key);
-        uniqueProducts.push(product);
-      }
-    }
+    // Ensure products_id is present for each product
+    const enrichedProducts = products.map(p => ({
+      ...p,
+      products_id: p.products_id || p._id.toString()
+    }));
 
-    res.json({ success: true, products: uniqueProducts });
+    res.json({ success: true, products: enrichedProducts });
   } catch (error) {
     console.error('❌ Error in getMerchantProducts:', error);
     res.status(500).json({ success: false, message: 'Server error' });
@@ -495,13 +519,47 @@ async function submitProductUpdateRequest(req, res) {
     const updateRequest = new ProductUpdateRequest({
       productId,
       merchantId,
-      updatedProduct: updateData,
+      originalProduct: {
+        product_name: product.product_name,
+        product_quantity: product.product_quantity,
+        product_category: product.product_category,
+        product_description: product.product_description,
+        product_price: product.product_price,
+        price_cost: product.price_cost,
+        copyType: product.copyType || '',
+        condition: product.condition || '',
+        images: product.images || []
+      },
+      updatedProduct: {
+        product_name: updateData.product_name,
+        product_quantity: parseInt(updateData.product_quantity, 10),
+        product_category: updateData.product_category,
+        product_description: updateData.product_description,
+        product_price: parseFloat(updateData.product_price) || 0,
+        price_cost: parseFloat(updateData.price_cost) || 0,
+        copyType: updateData.copyType || '',
+        condition: updateData.condition || '',
+        images: updateData.images || []
+      },
       status: 'pending'
     });
 
     await updateRequest.save();
 
     res.json({ success: true, message: 'Update request submitted successfully' });
+
+    // Push Notification to Admins - Product Update Request
+    try {
+      const pushService = require('../services/push-notification.service');
+      pushService.sendToAdmins({
+        title: 'طلب تعديل منتج 📝',
+        body: `التاجر ${req.merchant.username} يطلب تعديل منتج: ${product.product_name}`,
+        url: '/admin/product-update-requests',
+        data: { type: 'product_update_request', requestId: updateRequest._id }
+      }).catch(err => console.error('Admin Push Error:', err));
+    } catch (pushErr) {
+      console.error('Push Service Error:', pushErr);
+    }
   } catch (error) {
     console.error('Error in submitProductUpdateRequest:', error);
     res.status(500).json({ success: false, message: 'Server error' });
@@ -748,6 +806,7 @@ async function getMerchantById(req, res) {
         city: merchant.city,
         village: merchant.village,
         logo: merchant.logo,
+        coverPhoto: merchant.coverPhoto,
         bio: merchant.bio,
         createdAt: merchant.createdAt
       }
@@ -763,12 +822,59 @@ async function getMerchantById(req, res) {
 
 async function getMerchantByUsername(req, res) {
   try {
-    const { username } = req.params;
+    const rawUsername = req.params.username ? req.params.username.trim() : '';
 
-    // Find merchant by username
-    const merchant = await User.findOne({ username: username });
+    // Guard: ignore lookups that appear to be static assets (ending in common extensions)
+    const fileExtensions = /\.(js|css|png|jpg|jpeg|gif|svg|webp|ico|map|ttf|woff|woff2)$/i;
+    if (fileExtensions.test(rawUsername)) {
+      return res.status(404).json({ success: false, message: 'Invalid merchant name' });
+    }
 
-    if (!merchant || merchant.role !== 'merchant') {
+    // Support slugged URLs: convert dashes to spaces for lookup
+    const usernameWithSpaces = rawUsername.replace(/-/g, ' ');
+
+    // Use regex for flexible matching (case-insensitive, ignore surrounding spaces, handle Arabic variations)
+    const nameRegex = (name) => {
+      let pattern = name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      // Normalize Arabic characters in the regex pattern
+      pattern = pattern
+        .replace(/[أإآا]/g, '[أإآا]')
+        .replace(/[ةه]/g, '[ةه]')
+        .replace(/[ىي]/g, '[ىي]');
+      return { $regex: new RegExp('^\\s*' + pattern + '\\s*$', 'i') };
+    };
+
+    const searchQuery = {
+      role: 'merchant',
+      $or: [
+        { username: nameRegex(rawUsername) },
+        { username: nameRegex(usernameWithSpaces) },
+        { merchantName: nameRegex(rawUsername) },
+        { merchantName: nameRegex(usernameWithSpaces) }
+      ]
+    };
+
+    // Reduced noise: only log if we actually perform a real lookup (not an obvious asset request)
+    // console.log('🔍 [DEBUG] Merchant Lookup Request for:', rawUsername);
+
+    const merchant = await User.findOne(searchQuery);
+
+    if (!merchant) {
+      // Silenced: console.log('❌ [DEBUG] No merchant document matched the query.');
+      // Let's also check if the user exists but has a different role
+      const anyUser = await User.findOne({
+        $or: [
+          { username: rawUsername },
+          { username: usernameWithSpaces },
+          { merchantName: rawUsername },
+          { merchantName: usernameWithSpaces }
+        ]
+      });
+      if (anyUser) {
+        // Silenced: console.log('⚠️ [DEBUG] Found a user but role is:', anyUser.role, 'Approved:', anyUser.approved);
+      } else {
+        // Silenced: console.log('❌ [DEBUG] Absolutely no user found with these names.');
+      }
       return res.status(404).json({
         success: false,
         message: 'Merchant not found'
@@ -795,7 +901,9 @@ async function getMerchantByUsername(req, res) {
         city: merchant.city,
         village: merchant.village,
         logo: merchant.logo,
+        coverPhoto: merchant.coverPhoto,
         bio: merchant.bio,
+        role: merchant.role,
       }
     });
   } catch (error) {
@@ -823,9 +931,15 @@ async function getProductsByMerchantId(req, res) {
     const products = await Product.find({
       merchantId: id,
       status: 'approved'
-    }).sort({ createdAt: -1 });
+    }).sort({ createdAt: -1 }).lean();
 
-    res.json({ success: true, products });
+    // Ensure products_id is present — use product_image (barcode) as fallback, NOT _id
+    const enrichedProducts = products.map(p => ({
+      ...p,
+      products_id: p.products_id || p.product_image || p._id.toString()
+    }));
+
+    res.json({ success: true, products: enrichedProducts });
   } catch (error) {
     console.error('Error in getProductsByMerchantId:', error);
     res.status(500).json({ success: false, message: 'Server error' });
@@ -844,44 +958,57 @@ async function updateMerchantProfile(req, res) {
     }
 
     // Handle logo upload if provided
-    let logoPath = undefined; // Don't set logo by default
-    if (req.file) {
-      // Sanitize merchant name for folder name
-      const sanitizedUsername = (name || merchant.username).replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
+    let logoPath = undefined;
+    const logoFile = req.files && req.files['logo'] ? req.files['logo'][0] : null;
+    const sanitizedUsername = (name || merchant.username).replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
 
+    if (logoFile) {
       // Save logo image in uploads/books/merchant_username/logo/ folder
-      const uploadDir = path.join(__dirname, '../uploads/books', 'merchant_' + sanitizedUsername, 'logo');
-
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
+      const logoDir = path.join(__dirname, '../uploads/books', 'merchant_' + sanitizedUsername, 'logo');
+      if (!fs.existsSync(logoDir)) {
+        fs.mkdirSync(logoDir, { recursive: true });
       }
 
-      const filename = `logo.webp`;
-      const filepath = path.join(uploadDir, filename);
+      const logoFilename = `logo.webp`;
+      const logoFilepath = path.join(logoDir, logoFilename);
 
       try {
-        await sharp(req.file.buffer)
-          .resize({ width: 300 }) // Resize logo width to max 300px
-          .webp({ quality: 80 })
-          .toFile(filepath);
+        await sharp(logoFile.buffer)
+          .resize({ width: 400 }) // Resize logo width
+          .webp({ quality: 85 })
+          .toFile(logoFilepath);
+        logoPath = `merchant_${sanitizedUsername}/logo/logo.webp`;
       } catch (sharpError) {
-        // Try to save the original file as fallback
-        try {
-          fs.writeFileSync(filepath.replace('.webp', '.jpg'), req.file.buffer);
-          logoPath = `merchant_${sanitizedUsername}/logo/logo.jpg`;
-        } catch (fallbackError) {
-          throw sharpError; // Re-throw the original error
-        }
+        console.error('Sharp error processing logo:', sharpError);
+        // Fallback to original
+        fs.writeFileSync(logoFilepath.replace('.webp', '.jpg'), logoFile.buffer);
+        logoPath = `merchant_${sanitizedUsername}/logo/logo.jpg`;
+      }
+    }
+
+    // Handle cover photo upload if provided
+    let coverPhotoPath = undefined;
+    const coverFile = req.files && req.files['coverPhoto'] ? req.files['coverPhoto'][0] : null;
+
+    if (coverFile) {
+      const coverDir = path.join(__dirname, '../uploads/books', 'merchant_' + sanitizedUsername, 'cover');
+      if (!fs.existsSync(coverDir)) {
+        fs.mkdirSync(coverDir, { recursive: true });
       }
 
-      logoPath = `merchant_${sanitizedUsername}/logo/logo.webp`; // Store path relative to uploads/books/
+      const coverFilename = `cover.webp`;
+      const coverFilepath = path.join(coverDir, coverFilename);
 
-      // Delete old logo file if exists
-      if (merchant.logo) {
-        const oldLogoPath = path.join(__dirname, 'uploads/books', merchant.logo);
-        if (fs.existsSync(oldLogoPath)) {
-          fs.unlinkSync(oldLogoPath);
-        }
+      try {
+        await sharp(coverFile.buffer)
+          .resize({ width: 1920, height: 1080, fit: 'cover', withoutEnlargement: true })
+          .webp({ quality: 80 })
+          .toFile(coverFilepath);
+        coverPhotoPath = `merchant_${sanitizedUsername}/cover/cover.webp`;
+      } catch (sharpError) {
+        console.error('Sharp error processing cover photo:', sharpError);
+        fs.writeFileSync(coverFilepath.replace('.webp', '.jpg'), coverFile.buffer);
+        coverPhotoPath = `merchant_${sanitizedUsername}/cover/cover.jpg`;
       }
     }
 
@@ -893,6 +1020,9 @@ async function updateMerchantProfile(req, res) {
     merchant.bio = bio || merchant.bio;
     if (logoPath !== undefined) {
       merchant.logo = logoPath;
+    }
+    if (coverPhotoPath !== undefined) {
+      merchant.coverPhoto = coverPhotoPath;
     }
     merchant.preparationTime = preparationTime || merchant.preparationTime || 1;
 
@@ -908,6 +1038,7 @@ async function updateMerchantProfile(req, res) {
         phone: merchant.phone,
         taxNumber: merchant.taxNumber,
         logo: merchant.logo,
+        coverPhoto: merchant.coverPhoto,
         bio: merchant.bio,
         preparationTime: merchant.preparationTime,
         approved: merchant.approved,
@@ -918,7 +1049,7 @@ async function updateMerchantProfile(req, res) {
   } catch (error) {
     console.error('❌ Error in updateMerchantProfile:', error);
     if (error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE') {
-      return res.status(400).json({ success: false, message: 'Logo file size exceeds 1 MB limit' });
+      return res.status(400).json({ success: false, message: 'حجم ملف الصورة كبير جداً (الحد الأقصى 5 ميجابايت)' });
     }
     res.status(500).json({ success: false, message: 'Server error' });
   }

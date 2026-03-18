@@ -1,4 +1,5 @@
 import { NgModule, isDevMode } from '@angular/core';
+// Trigger rebuild to resolve metadata resolution issues
 import { BrowserModule } from '@angular/platform-browser';
 import { AccountModalComponent } from './auth/account-modal/account-modal.component';
 import { RouterModule } from '@angular/router';
@@ -15,7 +16,7 @@ import { FontAwesomeModule, FaIconLibrary } from '@fortawesome/angular-fontaweso
 import { fas, faBookOpen } from '@fortawesome/free-solid-svg-icons';
 import { fab, faAmazon } from '@fortawesome/free-brands-svg-icons';
 import { PrintComponent } from './print/print.component'
-import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
+import { provideHttpClient, withInterceptorsFromDi, withFetch } from '@angular/common/http';
 import { TarekhComponent } from './book-list/tarekh/tarekh.component';
 import { QamosComponent } from './book-list/qamos/qamos.component';
 import { FormsModule } from '@angular/forms';
@@ -34,12 +35,12 @@ import { MerchantAuthInterceptor } from './interceptors/merchant-auth.intercepto
 import { AdminAuthInterceptor } from './interceptors/admin-auth.interceptor';
 import { AuthInterceptor } from './interceptors/auth.interceptor';
 import { ErrorInterceptor } from './interceptors/error.interceptor';
+import { UniversalInterceptor } from './interceptors/universal.interceptor';
 // Removed static imports for lazy loading
 
 import { AdminModule } from './admin/admin.module';
 import { MerchantDashboardComponent } from './merchant/dashboard/dashboard.component';
 import { TutorialComponent } from './shared/tutorial/tutorial.component';
-import { FloatingWheelWidgetComponent } from './features/promotions/floating-wheel-widget/floating-wheel-widget.component';
 import { OfficeSuppliesComponent } from './book-list/office-supplies/office-supplies.component';
 import { ElectronicsComponent } from './book-list/electronics/electronics.component';
 import { ClothingComponent } from './book-list/clothing/clothing.component';
@@ -55,6 +56,8 @@ import { ServiceWorkerModule } from '@angular/service-worker';
 import { LandingComponent } from './core/components/landing/landing.component';
 import { VoiceCallComponent } from './features/community/voice-call/voice-call.component';
 import { NetworkStatusComponent } from './shared/components/network-status/network-status.component';
+import { PromotionsFabComponent } from './shared/components/promotions-fab/promotions-fab.component';
+import { LiveUpdateModalComponent } from './shared/components/live-update-modal/live-update-modal.component';
 
 
 @NgModule({
@@ -110,12 +113,14 @@ import { NetworkStatusComponent } from './shared/components/network-status/netwo
       // or after 30 seconds (whichever comes first).
       registrationStrategy: 'registerImmediately'
     }),
-    FloatingWheelWidgetComponent,
-    NetworkStatusComponent
+    NetworkStatusComponent,
+    PromotionsFabComponent,
+    LiveUpdateModalComponent
   ],
   providers: [
-    provideHttpClient(withInterceptorsFromDi()), // استخدام provideHttpClient بدلاً من HttpClientModule
+    provideHttpClient(withInterceptorsFromDi(), withFetch()), // استخدام provideHttpClient بدلاً من HttpClientModule مع تفعيل fetch
     { provide: LocationStrategy, useClass: PathLocationStrategy },
+    { provide: HTTP_INTERCEPTORS, useClass: UniversalInterceptor, multi: true },
     { provide: HTTP_INTERCEPTORS, useClass: MerchantAuthInterceptor, multi: true },
     { provide: HTTP_INTERCEPTORS, useClass: AdminAuthInterceptor, multi: true },
     { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },

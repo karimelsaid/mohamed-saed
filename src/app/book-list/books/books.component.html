@@ -1,32 +1,34 @@
-<div class="min-h-screen bg-gray-50 py-8 mt-10 md:mt-32" dir="rtl">
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 mt-10 md:mt-32" dir="rtl">
     <div class="container mx-auto px-4">
-        <h1 class="text-3xl font-bold text-gray-800 mb-8 text-center">جميع الكتب</h1>
+        <h1
+            class="text-3xl font-bold text-gray-800 dark:text-gray-100 mb-8 text-center dark:bg-gray-800/40 dark:backdrop-blur-md dark:border dark:border-white/10 p-6 rounded-[2rem] shadow-xl">
+            جميع الكتب</h1>
 
         <!-- Loading State -->
         <div *ngIf="isLoading" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
             <div *ngFor="let item of [1,2,3,4,5,6,7,8,9,10]" class="animate-pulse">
-                <div class="bg-gray-200 rounded-2xl aspect-[3/4] mb-4"></div>
-                <div class="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                <div class="h-3 bg-gray-200 rounded w-1/2"></div>
+                <div class="bg-gray-200 dark:bg-gray-700 rounded-2xl aspect-[3/4] mb-4"></div>
+                <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2"></div>
+                <div class="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
             </div>
         </div>
 
         <!-- Empty State -->
         <div *ngIf="!isLoading && books.length === 0" class="text-center py-20">
-            <div class="text-gray-400 text-6xl mb-4">
+            <div class="text-gray-400 dark:text-gray-600 text-6xl mb-4">
                 <fa-icon [icon]="faStar"></fa-icon>
             </div>
-            <p class="text-gray-500 text-lg">لا توجد كتب متاحة حالياً</p>
+            <p class="text-gray-500 dark:text-gray-400 text-lg">لا توجد كتب متاحة حالياً</p>
         </div>
 
         <!-- Books Grid -->
         <div *ngIf="!isLoading && books.length > 0"
             class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
             <div *ngFor="let book of paginatedBooks"
-                class="group relative bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-gray-100">
+                class="group relative bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-gray-100 dark:border-gray-700">
 
                 <!-- Image Container -->
-                <div class="relative aspect-[3/4] overflow-hidden bg-gray-100">
+                <div class="relative aspect-[3/4] overflow-hidden bg-gray-100 dark:bg-gray-900">
                     <a [routerLink]="['/book', book.products_id, getBookSlug(book.product_name)]">
                         <img [src]="getBookImageUrl(book)" [alt]="book.product_name" loading="lazy"
                             class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
@@ -67,37 +69,43 @@
                 <div class="p-4">
                     <a [routerLink]="['/book', book.products_id, getBookSlug(book.product_name)]">
                         <h3
-                            class="font-bold text-gray-800 text-sm mb-1 line-clamp-2 min-h-[2.5em] group-hover:text-blue-600 transition-colors">
+                            class="font-bold text-gray-800 dark:text-gray-100 text-sm mb-1 line-clamp-2 min-h-[2.5em] group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                             {{ book.product_name }}
                         </h3>
                     </a>
-                    <p class="text-xs text-gray-500 mb-2 line-clamp-1">{{ book.product_category }}</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-2 line-clamp-1">{{ book.product_category }}
+                    </p>
 
                     <!-- Rating -->
                     <div class="flex items-center mb-2 text-yellow-400 text-xs">
                         <ng-container *ngFor="let star of [1,2,3,4,5]">
                             <fa-icon [icon]="star <= getAverageRating(book) ? faStar : faStarRegular"></fa-icon>
                         </ng-container>
-                        <span class="text-gray-400 mr-1">({{ getRatingCount(book) }})</span>
+                        <span class="text-gray-400 dark:text-gray-500 mr-1">({{ getRatingCount(book) }})</span>
                     </div>
 
                     <div class="flex items-center justify-between mt-2">
-                        <div class="flex flex-col">
-                            <span class="font-bold text-blue-600 text-lg">
-                                {{ book.product_price | number:'1.0-2' }} <span class="text-xs font-normal">ج.م</span>
+                        <div class="flex items-baseline gap-2">
+                            <span class="font-bold text-blue-600 dark:text-blue-400 text-lg">
+                                {{ book.product_price | number:'1.0-0' }} <span class="text-xs font-normal">ج.م</span>
                             </span>
-                            <!-- Digital Price (Coins) -->
                             <span
-                                class="text-xs text-yellow-600 font-bold flex items-center gap-1 mt-1 bg-yellow-50 px-2 py-0.5 rounded-md w-fit">
-                                <fa-icon [icon]="faCoins" class="text-yellow-500"></fa-icon>
-                                {{ (book.product_price * gamificationService.poundValue) | number:'1.0-0' }} عملة
+                                *ngIf="book.product_price_before_discount && book.product_price_before_discount > book.product_price"
+                                class="text-xs text-gray-400 line-through">
+                                {{ book.product_price_before_discount | number:'1.0-0' }}
                             </span>
                         </div>
+                        <!-- Digital Price (Coins) -->
+                        <span
+                            class="text-xs text-yellow-600 dark:text-yellow-400 font-bold flex items-center gap-1 mt-1 bg-yellow-50 dark:bg-yellow-900/20 px-2 py-0.5 rounded-md w-fit">
+                            <fa-icon [icon]="faCoins" class="text-yellow-500"></fa-icon>
+                            {{ (book.product_price * gamificationService.poundValue) | number:'1.0-0' }} عملة
+                        </span>
                     </div>
 
                     <!-- Countdown -->
                     <div *ngIf="book.remainingTime"
-                        class="mt-2 text-xs text-red-500 font-medium text-center bg-red-50 rounded py-1">
+                        class="mt-2 text-xs text-red-500 font-medium text-center bg-red-50 dark:bg-red-900/20 rounded py-1">
                         {{ book.remainingTime }}
                     </div>
                 </div>
@@ -107,21 +115,21 @@
         <!-- Pagination -->
         <div *ngIf="totalPages > 1" class="flex justify-center items-center mt-12 gap-2">
             <button (click)="changePage('previous')" [disabled]="currentPage === 1"
-                class="px-4 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                class="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-750 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                 السابق
             </button>
 
             <ng-container *ngFor="let page of getDisplayedPages()">
                 <button *ngIf="page !== '...'" (click)="onPageClick(page)"
                     class="w-10 h-10 rounded-lg flex items-center justify-center transition-colors"
-                    [ngClass]="currentPage === page ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'">
+                    [ngClass]="currentPage === page ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750'">
                     {{ page }}
                 </button>
                 <span *ngIf="page === '...'" class="text-gray-400">...</span>
             </ng-container>
 
             <button (click)="changePage('next')" [disabled]="currentPage === totalPages"
-                class="px-4 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                class="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-750 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                 التالي
             </button>
         </div>
@@ -130,16 +138,17 @@
     <!-- Login Prompt -->
     <div *ngIf="showLoginPrompt"
         class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-        <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-center transform transition-all scale-100">
+        <div
+            class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 max-w-md w-full text-center transform transition-all scale-100">
             <div
-                class="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center text-3xl mx-auto mb-6">
+                class="w-16 h-16 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center text-3xl mx-auto mb-6">
                 <fa-icon [icon]="faCartPlus"></fa-icon>
             </div>
-            <h3 class="text-2xl font-bold text-gray-800 mb-2">تسجيل الدخول مطلوب</h3>
-            <p class="text-gray-500 mb-8">يرجى تسجيل الدخول لإضافة المنتجات إلى السلة أو المفضلة.</p>
+            <h3 class="text-2xl font-bold text-gray-800 dark:text-white mb-2">تسجيل الدخول مطلوب</h3>
+            <p class="text-gray-500 dark:text-gray-400 mb-8">يرجى تسجيل الدخول لإضافة المنتجات إلى السلة أو المفضلة.</p>
             <div class="flex gap-4">
                 <button (click)="closeLoginPrompt()"
-                    class="flex-1 px-6 py-3 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 font-medium transition-colors">
+                    class="flex-1 px-6 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-750 font-medium transition-colors">
                     إلغاء
                 </button>
                 <a routerLink="/login"

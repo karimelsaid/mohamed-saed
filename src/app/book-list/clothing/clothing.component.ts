@@ -181,24 +181,18 @@ export class ClothingComponent implements OnInit, OnDestroy {
   }
 
   fetchRatingsForProducts(): void {
-    this.products.forEach(product => {
-      if (product.products_id) {
-        this.http.get<{ productId: string; averageRating: number; ratingCount: number }>(`${environment.apiBaseUrl}/users/average-rating/${product.products_id}`)
-          .subscribe({
-            next: (res) => {
-              this.ratings[product.products_id] = {
-                averageRating: res.averageRating,
-                ratingCount: res.ratingCount
-              };
-            },
-            error: (err) => {
-              console.error('Error fetching average rating for product', product.products_id, err);
-              this.ratings[product.products_id] = {
-                averageRating: 0,
-                ratingCount: 0
-              };
-            }
-          });
+    const productIds = this.products.map(p => p.products_id).filter(id => !!id);
+    if (productIds.length === 0) return;
+
+    this.http.post<Record<string, { averageRating: number; ratingCount: number }>>(
+      `${environment.apiBaseUrl}/users/bulk-average-ratings`,
+      { bookIds: productIds }
+    ).subscribe({
+      next: (res) => {
+        this.ratings = { ...this.ratings, ...res };
+      },
+      error: (err) => {
+        console.error('Error fetching bulk ratings:', err);
       }
     });
   }

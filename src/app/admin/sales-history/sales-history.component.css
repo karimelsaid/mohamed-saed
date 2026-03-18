@@ -1,0 +1,333 @@
+.history-container {
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.header-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.header-section h2 {
+    color: #2c3e50;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.search-box {
+    position: relative;
+    width: 100%;
+    max-width: 450px;
+}
+
+.search-box input {
+    width: 100%;
+    padding: 12px 40px 12px 15px;
+    border-radius: 12px;
+    border: 1px solid #ddd;
+    background: white;
+    font-size: 1em;
+    transition: all 0.3s;
+}
+
+.search-box input:focus {
+    border-color: #3498db;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+    outline: none;
+}
+
+.search-icon {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #bdc3c7;
+}
+
+.card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+    position: relative;
+    min-height: 200px;
+}
+
+.history-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.history-table th {
+    background: #f8f9fa;
+    padding: 15px;
+    text-align: right;
+    color: #7f8c8d;
+    font-weight: 600;
+    font-size: 0.9em;
+    text-transform: uppercase;
+    border-bottom: 2px solid #edf2f7;
+}
+
+.history-table td {
+    padding: 15px;
+    border-bottom: 1px solid #edf2f7;
+    color: #2d3436;
+}
+
+.history-table tr:hover {
+    background: #fcfdfe;
+}
+
+.inv-cell {
+    font-family: monospace;
+    font-weight: bold;
+    color: #3498db;
+}
+
+.amount-cell {
+    font-weight: bold;
+    color: #27ae60;
+}
+
+.action-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.action-btn.view {
+    background: #e3f2fd;
+    color: #1976d2;
+}
+
+.action-btn.view:hover {
+    background: #1976d2;
+    color: white;
+}
+
+.no-data {
+    text-align: center;
+    padding: 40px !important;
+    color: #bdc3c7;
+    font-style: italic;
+}
+
+/* Loading State */
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 5;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #3498db;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 10px;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* Modal */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.modal-content {
+    background: white;
+    width: 100%;
+    max-width: 800px;
+    max-height: 90vh;
+    border-radius: 20px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 15px 50px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+    padding: 20px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: #2c3e50;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 1.5em;
+    color: #bdc3c7;
+    cursor: pointer;
+}
+
+.modal-body {
+    padding: 30px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.modal-footer {
+    padding: 20px;
+    border-top: 1px solid #eee;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.btn-print {
+    padding: 10px 25px;
+    background: #27ae60;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.btn-close {
+    padding: 10px 25px;
+    background: #f1f2f6;
+    color: #2d3436;
+    border: none;
+    border-radius: 10px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+/* Invoice View in Modal */
+.invoice-view {
+    color: black;
+}
+
+.inv-header {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 2px solid #000;
+    padding-bottom: 15px;
+    margin-bottom: 25px;
+}
+
+.shop-info h1 {
+    font-size: 24pt;
+    margin: 0;
+}
+
+.inv-meta {
+    text-align: left;
+}
+
+.inv-meta h2 {
+    margin: 0;
+}
+
+.client-info {
+    margin-bottom: 25px;
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 10px;
+}
+
+.inv-items-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+}
+
+.inv-items-table th {
+    background: #eee;
+    padding: 10px;
+    text-align: right;
+    border: 1px solid #ddd;
+}
+
+.inv-items-table td {
+    padding: 10px;
+    border: 1px solid #eee;
+    text-align: right;
+}
+
+.inv-total {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.total-line {
+    font-size: 1.4em;
+    font-weight: bold;
+    border: 2px solid #000;
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    min-width: 250px;
+}
+
+@media print {
+    body * {
+        visibility: hidden !important;
+    }
+
+    .print-section,
+    .print-section * {
+        visibility: visible !important;
+    }
+
+    .print-section {
+        position: absolute !important;
+        left: 0;
+        top: 0;
+        width: 100%;
+        background: white !important;
+    }
+
+    .no-print {
+        display: none !important;
+    }
+}

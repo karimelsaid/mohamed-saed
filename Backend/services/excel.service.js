@@ -177,6 +177,28 @@ async function processAndSaveData(filteredJson, promotionStartDate, promoEndDate
     // Add promotionEndDate property for frontend countdown
     product.promotionEndDate = promoEndDate.toISOString();
 
+    // Check if this is a merchant product (has merchantId)
+    const isMerchantProduct = !!merchantId;
+
+    if (isMerchantProduct) {
+      // === MERCHANT PRODUCTS: Use the exact price, add 20% markup for crossed-out price (marketing) ===
+      let merchantPrice = product.product_price;
+      if (typeof merchantPrice === 'string') {
+        merchantPrice = parseFloat(merchantPrice);
+      }
+      product.product_price = merchantPrice;
+      // Add 20% markup as "before discount" price for marketing
+      product.product_price_before_discount = Math.ceil(merchantPrice * 1.20);
+      // Calculate discount percentage
+      product.product_discount_percent = 20;
+      product.rival = false; // Merchant products don't participate in admin promotions
+      product.is_processed = true;
+      updatedData.push(product);
+      continue; // Skip to next product
+    }
+
+    // === ADMIN PRODUCTS: Apply price manipulation as before ===
+
     // Adjust product_price ONLY if not already processed to avoid double multiplication (fallback scenarios)
     if (!isAlreadyProcessed) {
       if (typeof product.product_price === 'string') {

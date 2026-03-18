@@ -1,6 +1,7 @@
 <h2 class="dark:text-gray-300 font-bold text-center">إدارة قواعد الشحن المجاني</h2>
 
-<form (ngSubmit)="saveRules()" class="max-w-xl mx-auto flex flex-col space-y-4 dark:bg-gray-800 dark:text-gray-300 p-6 rounded-lg shadow-md">
+<form (ngSubmit)="saveRules()"
+  class="max-w-xl mx-auto flex flex-col space-y-4 dark:bg-gray-800 dark:text-gray-300 p-6 rounded-lg shadow-md">
   <label class="font-bold">
     تفعيل الشحن المجاني:
     <input type="checkbox" [(ngModel)]="freeShippingEnabled" name="freeShippingEnabled" class="ml-2" />
@@ -8,30 +9,47 @@
 
   <div>
     <label class="font-bold block mb-1">الحد الأدنى للكمية للحصول على شحن مجاني:</label>
-    <input type="number" [(ngModel)]="minQuantity" name="minQuantity" min="0" class="w-full p-2 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200" />
+    <input type="number" [(ngModel)]="minQuantity" name="minQuantity" min="0"
+      class="w-full p-2 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200" />
   </div>
 
   <div>
     <label class="font-bold block mb-1">الحد الأدنى لقيمة الطلب للحصول على شحن مجاني:</label>
-    <input type="number" [(ngModel)]="minOrderValue" name="minOrderValue" min="0" step="0.01" class="w-full p-2 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200" />
+    <input type="number" [(ngModel)]="minOrderValue" name="minOrderValue" min="0" step="0.01"
+      class="w-full p-2 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200" />
   </div>
 
   <div>
     <label class="font-bold block mb-1">فئات المستخدمين المشمولة (يمكن إضافة لاحقاً):</label>
-    <input type="text" placeholder="مثال: VIP, Premium" disabled class="w-full p-2 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-400" />
+    <input type="text" placeholder="مثال: VIP, Premium" disabled
+      class="w-full p-2 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-400" />
   </div>
 
   <div>
     <label class="font-bold block mb-1">المنتجات أو الفئات المشمولة (يمكن إضافة لاحقاً):</label>
-    <input type="text" placeholder="مثال: كتب تعليمية" disabled class="w-full p-2 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-400" />
+    <input type="text" placeholder="مثال: كتب تعليمية" disabled
+      class="w-full p-2 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-400" />
   </div>
 
   <div>
     <label class="font-bold block mb-1">المحافظات المشمولة (يمكن إضافة لاحقاً):</label>
-    <input type="text" placeholder="مثال: القاهرة, الجيزة" disabled class="w-full p-2 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-400" />
+    <input type="text" placeholder="مثال: القاهرة, الجيزة" disabled
+      class="w-full p-2 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-400" />
   </div>
 
-  <button type="submit" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600">
+  <div class="border-t border-gray-200 dark:border-gray-600 pt-4 mt-4">
+    <h3 class="font-bold text-lg mb-3 text-green-600 dark:text-green-400">💰 رسوم الدفع عند الاستلام (COD)</h3>
+    <div>
+      <label class="font-bold block mb-1">قيمة رسوم الدفع عند الاستلام (جنيه):</label>
+      <input type="number" [(ngModel)]="codFee" name="codFee" min="0" step="1"
+        class="w-full p-2 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200" />
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">ملاحظة: لا تُضاف رسوم COD عند اختيار "استلام من المكتبة"
+      </p>
+    </div>
+  </div>
+
+  <button type="submit"
+    class="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600">
     حفظ القواعد
   </button>
 </form>

@@ -1,4 +1,4 @@
-/* 
+/*
   Home Page Styles
   Most styles are handled via Tailwind CSS utility classes in the HTML.
   Global styles (like .glass-panel) are defined in src/styles.css.
@@ -19,4 +19,51 @@
 
 .animate-float-slow {
   animation: float-slow 4s ease-in-out infinite;
+}
+
+/* Scrolling Columns Animations */
+@keyframes scroll-up {
+  0% {
+    transform: translateY(0);
+  }
+
+  100% {
+    transform: translateY(-50%);
+  }
+}
+
+@keyframes scroll-down {
+  0% {
+    transform: translateY(-50%);
+  }
+
+  100% {
+    transform: translateY(0);
+  }
+}
+
+.scrolling-column {
+  animation: scroll-up linear infinite;
+}
+
+.scrolling-column-reverse {
+  animation: scroll-down linear infinite;
+}
+
+/* Speed control */
+.speed-slow {
+  animation-duration: 60s;
+}
+
+.speed-medium {
+  animation-duration: 40s;
+}
+
+.speed-fast {
+  animation-duration: 25s;
+}
+
+/* Desktop/Mobile specific heights */
+.scrolling-hero-container {
+  height: clamp(500px, 80vh, 900px);
 }

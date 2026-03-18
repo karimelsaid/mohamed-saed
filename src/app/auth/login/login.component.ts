@@ -1,5 +1,5 @@
-import { Component, OnInit, AfterViewInit } from '@angular/core';
-import { CommonModule, Location } from '@angular/common';
+import { Component, OnInit, AfterViewInit, Inject, PLATFORM_ID } from '@angular/core';
+import { CommonModule, Location, isPlatformBrowser } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -41,7 +41,8 @@ export class LoginComponent implements OnInit, AfterViewInit {
     private authService: AuthService,
     private merchantAuthService: MerchantAuthService,
     private route: ActivatedRoute,
-    private location: Location
+    private location: Location,
+    @Inject(PLATFORM_ID) private platformId: Object
   ) { }
 
   ngOnInit() {
@@ -60,7 +61,7 @@ export class LoginComponent implements OnInit, AfterViewInit {
   }
 
   ngAfterViewInit() {
-    if (!this.isAndroid) {
+    if (!this.isAndroid && isPlatformBrowser(this.platformId)) {
       this.loadGoogleScript();
     }
   }
@@ -86,16 +87,20 @@ export class LoginComponent implements OnInit, AfterViewInit {
 
             // ROBUST NAVIGATION FIX: Ensure LocalStorage is ready before moving
             setTimeout(() => {
-              const storedUser = localStorage.getItem('user');
-              if (storedUser) {
-                console.log('✅ [Login] LocalStorage verified. Navigating...');
-                this.router.navigateByUrl(this.returnUrl);
-              } else {
-                console.warn('⚠️ [Login] LocalStorage empty! Retrying save...');
-                this.authService.setUser(user); // Force save again
-                setTimeout(() => {
+              if (isPlatformBrowser(this.platformId)) {
+                const storedUser = localStorage.getItem('user');
+                if (storedUser) {
+                  console.log('✅ [Login] LocalStorage verified. Navigating...');
                   this.router.navigateByUrl(this.returnUrl);
-                }, 1000); // Wait longer second time
+                } else {
+                  console.warn('⚠️ [Login] LocalStorage empty! Retrying save...');
+                  this.authService.setUser(user); // Force save again
+                  setTimeout(() => {
+                    this.router.navigateByUrl(this.returnUrl);
+                  }, 1000); // Wait longer second time
+                }
+              } else {
+                this.router.navigateByUrl(this.returnUrl);
               }
             }, 800); // Initial wait
           },
@@ -118,25 +123,29 @@ export class LoginComponent implements OnInit, AfterViewInit {
   }
 
   loadGoogleScript() {
-    const script = document.createElement('script');
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.defer = true;
-    script.onload = () => this.initializeGoogleSignIn();
-    document.body.appendChild(script);
+    if (isPlatformBrowser(this.platformId)) {
+      const script = document.createElement('script');
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      script.defer = true;
+      script.onload = () => this.initializeGoogleSignIn();
+      document.body.appendChild(script);
+    }
   }
 
   initializeGoogleSignIn() {
-    // @ts-ignore
-    google.accounts.id.initialize({
-      client_id: environment.googleClientId,
-      callback: (response: any) => this.handleGoogleCredentialResponse(response)
-    });
-    // @ts-ignore
-    google.accounts.id.renderButton(
-      document.getElementById('googleSignInDiv'),
-      { theme: 'outline', size: 'large' }
-    );
+    if (isPlatformBrowser(this.platformId)) {
+      // @ts-ignore
+      google.accounts.id.initialize({
+        client_id: environment.googleClientId,
+        callback: (response: any) => this.handleGoogleCredentialResponse(response)
+      });
+      // @ts-ignore
+      google.accounts.id.renderButton(
+        document.getElementById('googleSignInDiv'),
+        { theme: 'outline', size: 'large' }
+      );
+    }
   }
 
   handleGoogleCredentialResponse(response: any) {
@@ -212,7 +221,9 @@ export class LoginComponent implements OnInit, AfterViewInit {
               userData.token = response.accessToken;
             }
 
-            localStorage.setItem('user', JSON.stringify(userData));
+            if (isPlatformBrowser(this.platformId)) {
+              localStorage.setItem('user', JSON.stringify(userData));
+            }
             this.authService.setLoginStatus(true);
             this.authService.setUser(userData);
 

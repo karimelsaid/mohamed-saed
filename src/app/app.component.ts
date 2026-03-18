@@ -19,6 +19,7 @@ import { filter } from 'rxjs/operators';
 import { MushafAssetService } from './core/services/mushaf-asset.service';
 import { VoiceCallService } from './core/services/voice-call.service';
 import { PromotionService } from './services/promotion.service';
+import { LiveUpdateService } from './services/live-update.service';
 
 @Component({
   selector: 'app-root',
@@ -68,12 +69,15 @@ export class AppComponent implements OnInit {
     private mushafAssetService: MushafAssetService,
     private voiceCallService: VoiceCallService,
     private promotionService: PromotionService,
+    public liveUpdateService: LiveUpdateService,
     @Inject(PLATFORM_ID) private platformId: Object
   ) {
     if (isPlatformBrowser(this.platformId)) {
       this.initializeApp();
       // Initialize local reminders (works without server)
       this.localReminderService.initializeReminders();
+      // Initialize Live Updates
+      this.liveUpdateService.initialize().catch(err => console.error('Live Update Init Error:', err));
     }
     this.isDownloadingAssets$ = this.mushafAssetService.loading$;
     this.downloadProgress$ = this.mushafAssetService.progress$;
@@ -85,10 +89,7 @@ export class AppComponent implements OnInit {
     this.appUpdateService.checkForUpdate(); // Check for updates on startup
 
     // Auto specific actions
-    // Auto specific actions (Only if not Android or wrapped)
-    if (Capacitor.getPlatform() !== 'android') {
-      this.pushService.initialPermissionRequest();
-    }
+    this.pushService.initialPermissionRequest();
 
     if (Capacitor.isNativePlatform()) {
       // Hide Status Bar (Full Screen Mode)
@@ -208,9 +209,7 @@ export class AppComponent implements OnInit {
     this.authService.user$.subscribe(user => {
       if (user && user.id && isPlatformBrowser(this.platformId)) {
         // This ensures that valid token is sent to backend whenever user is known
-        if (Capacitor.getPlatform() !== 'android') {
-          this.pushService.subscribeToNotifications();
-        }
+        this.pushService.subscribeToNotifications();
 
         // Initialize Voice Call Peer
         this.voiceCallService.init(user.id);
@@ -293,3 +292,5 @@ export class AppComponent implements OnInit {
     }
   }
 }
+
+// Recompiled: 2026-03-13 22:15:00

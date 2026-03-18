@@ -72,11 +72,12 @@ export class SignalingService implements OnDestroy {
             socketUrl = `${proto}//${host}`;
         }
 
-        this.socket = io(`${socketUrl}/signaling`, {
-            path: '/api/socket.io',
-            transports: ['websocket'],
-            reconnectionAttempts: 10
-        });
+        const signalingOptions: any = {};
+        signalingOptions.path = '/api/socket.io';
+        signalingOptions.transports = ['websocket'];
+        signalingOptions.reconnectionAttempts = 10;
+        
+        this.socket = io(`${socketUrl}/signaling`, signalingOptions);
 
         this.socket.on('connect', () => {
             console.log('✅ [Signaling] Connected:', this.socket.id);
@@ -94,17 +95,17 @@ export class SignalingService implements OnDestroy {
         });
 
         // 1:1 call events
-        this.socket.on('call-made', (data) => this.callMadeSubject.next(data));
-        this.socket.on('answer-made', (data) => this.answerMadeSubject.next(data));
-        this.socket.on('ice-candidate', (data) => this.iceCandidateSubject.next(data));
+        this.socket.on('call-made', (data: any) => this.callMadeSubject.next(data));
+        this.socket.on('answer-made', (data: any) => this.answerMadeSubject.next(data));
+        this.socket.on('ice-candidate', (data: any) => this.iceCandidateSubject.next(data));
 
         // Group call events
-        this.socket.on('room-users', (data) => this.roomUsersSubject.next(data));
-        this.socket.on('user-joined', (data) => this.userJoinedSubject.next(data));
-        this.socket.on('user-left', (data) => this.userLeftSubject.next(data));
-        this.socket.on('group-offer', (data) => this.groupOfferSubject.next(data));
-        this.socket.on('group-answer', (data) => this.groupAnswerSubject.next(data));
-        this.socket.on('group-ice-candidate', (data) => this.groupIceCandidateSubject.next(data));
+        this.socket.on('room-users', (data: any) => this.roomUsersSubject.next(data));
+        this.socket.on('user-joined', (data: any) => this.userJoinedSubject.next(data));
+        this.socket.on('user-left', (data: any) => this.userLeftSubject.next(data));
+        this.socket.on('group-offer', (data: any) => this.groupOfferSubject.next(data));
+        this.socket.on('group-answer', (data: any) => this.groupAnswerSubject.next(data));
+        this.socket.on('group-ice-candidate', (data: any) => this.groupIceCandidateSubject.next(data));
     }
 
     // === 1:1 Call Methods ===

@@ -1,520 +1,780 @@
-<div class="min-h-screen bg-gray-50 dark:bg-gray-900 pt-24 pb-12 px-4 sm:px-6 lg:px-8 rtl" dir="rtl">
-  <div class="max-w-7xl mx-auto">
+<!-- Template Definition for Posts Feed to reuse in both Dashboard and Public Profile -->
+<ng-template #postsFeedTemplate>
+   <div *ngIf="isPostsLoading" class="py-12 text-center w-full">
+      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+      <p class="mt-4 text-gray-500">جاري تحميل منشوراتك...</p>
+   </div>
 
-    <!-- Header Section -->
-    <div class="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-      <div>
-        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">حسابي</h1>
-        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">إدارة ملفك الشخصي، الإحالات، والإنجازات.</p>
-      </div>
+   <div *ngIf="!isPostsLoading && userPosts.length === 0"
+      class="w-full bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-12 text-center border-2 border-dashed border-gray-100 dark:border-gray-700">
+      <fa-icon [icon]="faQuoteRight" class="text-5xl text-gray-200 dark:text-gray-700 mb-4"></fa-icon>
+      <h3 class="text-lg font-bold text-gray-400">لم تقم بنشر أي شيء بعد</h3>
+      <p class="text-gray-500 mt-2">ابدأ بمشاركة آرائك ومراجعاتك للكتب مع مجتمع القراء!</p>
+   </div>
 
-      <!-- Gamification Mini-Summary -->
-      <div *ngIf="gamificationProfile"
-        class="flex items-center gap-4 bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-        <div class="flex items-center gap-2">
-          <div
-            class="w-10 h-10 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center text-yellow-600 dark:text-yellow-400">
-            <fa-icon [icon]="faCoins" class="text-xl"></fa-icon>
-          </div>
-          <div>
-            <p class="text-xs text-gray-500 dark:text-gray-400">عملات كنوز</p>
-            <p class="font-bold text-gray-900 dark:text-white">{{ gamificationProfile.coins | number }}</p>
-          </div>
-        </div>
-        <div class="w-px h-8 bg-gray-200 dark:bg-gray-700"></div>
-        <div class="flex items-center gap-2">
-          <div
-            class="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-600 dark:text-purple-400">
-            <fa-icon [icon]="faTrophy" class="text-xl"></fa-icon>
-          </div>
-          <div>
-            <p class="text-xs text-gray-500 dark:text-gray-400">المستوى</p>
-            <p class="font-bold text-gray-900 dark:text-white">{{ gamificationProfile.level }}</p>
-          </div>
-        </div>
-      </div>
-    </div>
+   <div *ngIf="!isPostsLoading && userPosts.length > 0" class="grid grid-cols-1 gap-6 w-full">
+      <div *ngFor="let post of userPosts"
+         class="bg-white dark:bg-gray-800 rounded-3xl shadow-sm p-6 border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all relative">
+         <!-- Pinned Indicator -->
+         <div *ngIf="post.isPinned"
+            class="absolute -top-3 right-6 bg-blue-600 text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-lg flex items-center gap-1.5 z-10 animate-in fade-in zoom-in-95">
+            <fa-icon [icon]="faThumbtack" class="text-[8px]"></fa-icon>
+            <span>{{ post.pinType === 'community' ? 'مثبت في المجتمع' : 'منشور مثبت' }}</span>
+         </div>
 
-    <div class="flex flex-col lg:flex-row gap-8">
-
-      <!-- Sidebar Navigation -->
-      <div class="w-full lg:w-64 flex-shrink-0">
-        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden sticky top-24">
-          <!-- User Brief -->
-          <div class="p-6 text-center border-b border-gray-100 dark:border-gray-700">
-            <!-- Profile Image Container -->
-            <div class="relative w-24 h-24 mx-auto mb-4 group">
-              <!-- Image or Placeholder -->
-              <div
-                class="w-full h-full rounded-full overflow-hidden shadow-lg border-2 border-white dark:border-gray-600 bg-gray-100 dark:bg-gray-700">
-                <img *ngIf="profileImage" [src]="profileImage" alt="Profile" class="w-full h-full object-cover">
-                <div *ngIf="!profileImage"
-                  class="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-3xl font-bold">
-                  {{ user?.username?.charAt(0)?.toUpperCase() }}
-                </div>
-              </div>
-
-              <!-- Edit Overlay -->
-              <div
-                class="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 cursor-pointer backdrop-blur-sm"
-                (click)="triggerFileInput()">
-                <!-- Default click triggers file input, secondary buttons for specific actions -->
-                <button type="button" (click)="$event.stopPropagation(); triggerFileInput()"
-                  class="text-white hover:text-blue-200 p-1" title="رفع صورة">
-                  <fa-icon [icon]="faEdit"></fa-icon>
-                </button>
-                <button type="button" (click)="$event.stopPropagation(); openCamera()"
-                  class="text-white hover:text-blue-200 p-1" title=" التقاط صورة">
-                  <fa-icon [icon]="faCamera"></fa-icon>
-                </button>
-              </div>
-
-              <!-- Loading Indicator -->
-              <div *ngIf="isUploadingImage"
-                class="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center">
-                <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
-              </div>
+         <div class="flex items-center gap-3 mb-4">
+            <div class="relative flex-shrink-0">
+               <div (click)="viewProfile(post.userId)"
+                  class="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center border-2 border-white dark:border-gray-800 shadow-sm overflow-hidden cursor-pointer hover:scale-105 transition-transform">
+                  <img *ngIf="post.userAvatar" [src]="getProfileImageUrl(post.userAvatar)"
+                     class="w-full h-full object-cover">
+                  <div *ngIf="!post.userAvatar"
+                     class="w-full h-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-sm font-bold">
+                     {{ (post.userName || 'ق').substring(0, 1) }}
+                  </div>
+               </div>
+               <!-- Blue Verification Badge on Avatar -->
+               <div *ngIf="post.userRole === 'admin'"
+                  class="absolute -bottom-1 -right-1 bg-blue-600 text-white rounded-full w-5 h-5 flex items-center justify-center border-2 border-white dark:border-gray-800 shadow-sm z-10"
+                  title="توثيق احترافي">
+                  <fa-icon [icon]="faCheckCircle" class="text-[10px]"></fa-icon>
+               </div>
+            </div>
+            <div class="flex-grow min-w-0">
+               <div class="flex items-center gap-1.5">
+                  <h4 (click)="viewProfile(post.userId)"
+                     class="font-bold text-gray-900 dark:text-white truncate cursor-pointer hover:text-blue-600 transition-colors">
+                     {{ post.userName || 'قارئ مجهول' }}</h4>
+                  <span *ngIf="post.type === 'review'"
+                     class="text-[10px] text-blue-500 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded-full font-bold">مراجعة
+                     كتاب</span>
+               </div>
+               <p class="text-[10px] text-gray-500 truncate">{{ post.createdAt | date:'shortTime' }} • {{ post.createdAt
+                  | date:'mediumDate' }}</p>
             </div>
 
-            <!-- Hidden File Input -->
+            <div class="relative">
+               <!-- Post Menu Trigger -->
+               <button (click)="toggleMenu(post.id || post._id!)"
+                  class="text-gray-400 hover:text-blue-600 p-2 transition-colors">
+                  <fa-icon [icon]="faEllipsisV"></fa-icon>
+               </button>
+
+               <!-- Post Menu Dropdown -->
+               <div *ngIf="activeMenuId === (post.id || post._id)"
+                  class="absolute left-0 top-10 w-48 bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 py-2 z-50 animate-in fade-in zoom-in-95">
+
+                  <!-- Pin Logic -->
+                  <ng-container *ngIf="isAdminUser() || isOwner(post)">
+                     <button *ngIf="!post.isPinned" (click)="pinPost(post, isOwner(post) ? 'personal' : 'community')"
+                        class="w-full text-right px-4 py-2.5 text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2">
+                        <fa-icon [icon]="faThumbtack" class="text-blue-500"></fa-icon>
+                        تثبيت المنشور
+                     </button>
+                     <button *ngIf="post.isPinned" (click)="unpinPost(post)"
+                        class="w-full text-right px-4 py-2.5 text-xs font-bold text-blue-600 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2">
+                        <fa-icon [icon]="faThumbtack"></fa-icon>
+                        إلغاء التثبيت
+                     </button>
+                  </ng-container>
+
+                  <!-- Delete Logic -->
+                  <button *ngIf="isAdminUser() || isOwner(post)" (click)="deletePost(post.id || post._id!)"
+                     class="w-full text-right px-4 py-2.5 text-xs font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2">
+                     <fa-icon [icon]="faTrash"></fa-icon>
+                     حذف المنشور
+                  </button>
+               </div>
+            </div>
+         </div>
+
+         <div class="relative mb-4">
+            <fa-icon [icon]="faQuoteRight" class="absolute -top-2 -right-2 text-blue-500/10 text-4xl"></fa-icon>
+            <p class="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap mx-8">{{ post.content }}</p>
+         </div>
+
+         <div class="flex items-center gap-6 pt-4 border-t border-gray-50 dark:border-gray-700">
+            <button (click)="likePost(post.id || post._id)" class="flex items-center gap-2 transition-colors"
+               [class.text-red-500]="authService.userValue?.id && post.likes.includes(authService.userValue?.id || '')"
+               [class.text-gray-400]="!authService.userValue?.id || !post.likes.includes(authService.userValue?.id || '')">
+               <fa-icon [icon]="faHeart"></fa-icon>
+               <span class="text-xs font-bold">{{ post.likes.length || 0 }}</span>
+            </button>
+            <button (click)="toggleComments(post)"
+               class="flex items-center gap-2 text-gray-400 hover:text-blue-500 transition-colors">
+               <fa-icon [icon]="faComment"></fa-icon>
+               <span class="text-xs font-bold">{{ post.comments.length || 0 }}</span>
+            </button>
+         </div>
+
+         <!-- Comments Section -->
+         <div *ngIf="post.showComments" class="mt-4 pt-4 border-t border-gray-50 dark:border-gray-700 animate-fade-in">
+            <div class="space-y-3 mb-4 max-h-60 overflow-y-auto custom-scrollbar px-1">
+               <div *ngFor="let comment of post.comments" class="flex gap-2">
+                  <div class="w-8 h-8 relative flex-shrink-0">
+                     <div
+                        class="w-full h-full rounded-full bg-blue-50 dark:bg-blue-900/20 overflow-hidden flex items-center justify-center border border-gray-100 dark:border-gray-700">
+                        <img *ngIf="comment.userAvatar" [src]="getProfileImageUrl(comment.userAvatar)"
+                           class="w-full h-full object-cover">
+                        <div *ngIf="!comment.userAvatar" class="text-[10px] font-bold text-blue-600 dark:text-blue-400">
+                           {{ (comment.userName || 'ق').substring(0,1) }}
+                        </div>
+                     </div>
+                     <!-- Blue Verification Badge on Comment Avatar -->
+                     <div *ngIf="comment.userRole === 'admin'"
+                        class="absolute -bottom-0.5 -end-0.5 bg-blue-600 text-white rounded-full w-3.5 h-3.5 flex items-center justify-center border border-white dark:border-gray-800 shadow-sm z-10">
+                        <fa-icon [icon]="faCheckCircle" class="text-[6px]"></fa-icon>
+                     </div>
+                  </div>
+                  <div class="flex-grow min-w-0">
+                     <div class="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-3">
+                        <p class="text-[10px] font-bold dark:text-white mb-1 truncate">{{ comment.userName }}</p>
+                        <p class="text-xs text-gray-600 dark:text-gray-400 leading-relaxed break-words">{{
+                           comment.content }}</p>
+                     </div>
+                     <div class="flex items-center gap-3 mt-1 px-2">
+                        <span class="text-[10px] text-gray-400">{{ comment.createdAt | date:'shortTime' }}</span>
+                        <button (click)="toggleReplyInput(comment)"
+                           class="text-[10px] font-bold text-gray-500 hover:text-blue-500 transition-colors">رد</button>
+                     </div>
+
+                     <!-- Nested Replies -->
+                     <div *ngIf="comment.replies?.length"
+                        class="mt-2 space-y-2 border-r-2 border-gray-100 dark:border-gray-700 pr-3">
+                        <div *ngFor="let reply of comment.replies" class="flex gap-2">
+                           <div class="w-6 h-6 relative flex-shrink-0">
+                              <div
+                                 class="w-full h-full rounded-full bg-blue-50 dark:bg-blue-900/10 overflow-hidden flex items-center justify-center border border-gray-100 dark:border-gray-700">
+                                 <img *ngIf="reply.userAvatar" [src]="getProfileImageUrl(reply.userAvatar)"
+                                    class="w-full h-full object-cover">
+                                 <div *ngIf="!reply.userAvatar" class="text-[8px] font-bold text-blue-500">
+                                    {{ (reply.userName || 'ق').substring(0,1) }}
+                                 </div>
+                              </div>
+                              <!-- Blue Verification Badge on Reply Avatar -->
+                              <div *ngIf="reply.userRole === 'admin'"
+                                 class="absolute -bottom-0.5 -end-0.5 bg-blue-600 text-white rounded-full w-2.5 h-2.5 flex items-center justify-center border border-white dark:border-gray-800 shadow-sm z-10">
+                                 <fa-icon [icon]="faCheckCircle" class="text-[5px]"></fa-icon>
+                              </div>
+                           </div>
+                           <div class="bg-gray-50/80 dark:bg-gray-800/30 rounded-xl p-2 flex-grow min-w-0">
+                              <p class="text-[9px] font-bold dark:text-white mb-0.5 truncate">{{ reply.userName }}</p>
+                              <p class="text-[11px] text-gray-600 dark:text-gray-400 leading-tight break-words">{{
+                                 reply.content }}</p>
+                           </div>
+                        </div>
+                     </div>
+
+                     <!-- Reply Input -->
+                     <div *ngIf="comment.showReplyInput" class="mt-2 flex gap-2 items-center animate-fade-in pr-3">
+                        <div class="relative flex-grow min-w-0">
+                           <input type="text" [(ngModel)]="comment.replyText" (keyup.enter)="submitReply(post, comment)"
+                              placeholder="اكتب رداً..."
+                              class="w-full bg-gray-50 dark:bg-gray-700 border-none rounded-xl px-3 py-1.5 text-[11px] focus:ring-1 focus:ring-blue-500/20 dark:text-white outline-none">
+                           <button (click)="submitReply(post, comment)" [disabled]="!comment.replyText?.trim()"
+                              class="absolute left-2 top-1/2 -translate-y-1/2 text-blue-600 dark:text-blue-400 disabled:opacity-30 p-1">
+                              <fa-icon [icon]="faArrowRight" class="rotate-180 text-[10px]"></fa-icon>
+                           </button>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+            </div>
+
+            <!-- Add Comment Input -->
+            <div class="flex gap-2 items-center mt-2 pt-4 border-t border-gray-50 dark:border-gray-700">
+               <div class="w-8 h-8 relative flex-shrink-0">
+                  <div
+                     class="w-full h-full rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden flex items-center justify-center border border-gray-100 dark:border-gray-700">
+                     <img *ngIf="profileImage" [src]="profileImage" class="w-full h-full object-cover">
+                     <div *ngIf="!profileImage" class="text-[10px] font-bold dark:text-gray-400">
+                        {{ (profileUser?.username || 'ق').substring(0,1) }}
+                     </div>
+                  </div>
+                  <!-- Blue Verification Badge on My Comment Avatar -->
+                  <div *ngIf="isAdminUser()"
+                     class="absolute -bottom-0.5 -end-0.5 bg-blue-600 text-white rounded-full w-3.5 h-3.5 flex items-center justify-center border border-white dark:border-gray-800 shadow-sm z-10">
+                     <fa-icon [icon]="faCheckCircle" class="text-[6px]"></fa-icon>
+                  </div>
+               </div>
+               <div class="relative flex-grow min-w-0">
+                  <input type="text" [(ngModel)]="post.newCommentText" (keyup.enter)="addComment(post)"
+                     placeholder="اكتب تعليقاً..."
+                     class="w-full bg-gray-50 dark:bg-gray-700 border-none rounded-2xl px-4 py-2 text-xs focus:ring-2 focus:ring-blue-500/20 dark:text-white outline-none transition-all">
+                  <button (click)="addComment(post)" [disabled]="!post.newCommentText?.trim()"
+                     class="absolute left-2 top-1/2 -translate-y-1/2 text-blue-600 dark:text-blue-400 disabled:opacity-30 p-1">
+                     <fa-icon [icon]="faArrowRight" class="rotate-180"></fa-icon>
+                  </button>
+               </div>
+            </div>
+         </div>
+      </div>
+   </div>
+</ng-template>
+
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900 pt-4 md:pt-16 pb-12 px-4 md:px-8 rtl" dir="rtl">
+   <!-- Cover Photo Wrapper -->
+   <div class="max-w-7xl mx-auto">
+      <div
+         class="relative w-full h-72 sm:h-64 md:h-80 bg-gray-200 dark:bg-gray-800 rounded-lg sm:rounded-3xl overflow-hidden shadow-md group">
+         <img *ngIf="coverPhoto" [src]="coverPhoto" class="w-full h-full object-cover shadow-inner">
+         <div *ngIf="!coverPhoto" class="w-full h-full bg-gradient-to-r from-blue-400 to-purple-500"></div>
+
+         <!-- Edit Cover Button (If Own) -->
+         <button *ngIf="isOwnProfile" (click)="triggerCoverInput()"
+            class="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white px-4 py-2 rounded-xl backdrop-blur-sm transition-all flex items-center gap-2 cursor-pointer border border-white/20 z-10">
+            <fa-icon [icon]="faCamera"></fa-icon> <span class="hidden sm:inline">تعديل الغلاف</span>
+         </button>
+         <div *ngIf="isUploadingCover"
+            class="absolute inset-0 bg-black/40 flex items-center justify-center backdrop-blur-sm">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+         </div>
+         <input type="file" #coverInput (change)="onCoverSelected($event)" accept="image/*" class="hidden">
+      </div>
+   </div>
+
+   <!-- Profile Info Banner -->
+   <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative -mt-16 sm:-mt-24 mb-8">
+      <div
+         class="bg-white dark:bg-gray-800 rounded-3xl p-4 sm:p-6 shadow-xl border border-gray-100 dark:border-gray-700 flex flex-row flex-wrap md:flex-nowrap gap-4 sm:gap-6 items-center md:items-end">
+
+         <!-- Avatar -->
+         <div class="w-24 h-24 sm:w-32 md:w-40 md:h-40 relative group flex-shrink-0 -mt-10 sm:-mt-24">
+            <div
+               class="w-full h-full rounded-full border-4 border-white dark:border-gray-800 bg-gray-100 dark:bg-gray-700 overflow-hidden shadow-xl">
+               <img *ngIf="profileImage" [src]="profileImage" class="w-full h-full object-cover">
+               <div *ngIf="!profileImage"
+                  class="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-5xl font-bold">
+                  {{ profileUser?.username?.charAt(0)?.toUpperCase() }}
+               </div>
+            </div>
+            <!-- Admin Verification Badge -->
+            <div *ngIf="isProfileAdmin()"
+               class="absolute -bottom-1 sm:-bottom-2 -end-1 sm:-end-2 w-7 h-7 sm:w-10 sm:h-10 bg-blue-600 border-2 sm:border-4 border-white dark:border-gray-800 text-white rounded-full flex items-center justify-center shadow-lg z-30 animate-in zoom-in duration-300"
+               title="توثيق احترافي">
+               <fa-icon [icon]="faCheckCircle" class="text-[10px] sm:text-base"></fa-icon>
+            </div>
+            <!-- Edit Avatar (If Own) -->
+            <button *ngIf="isOwnProfile" (click)="triggerFileInput()"
+               class="absolute bottom-2 right-2 w-10 h-10 bg-gray-900 border-2 border-white dark:border-gray-800 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-gray-800 transition">
+               <fa-icon [icon]="faCamera"></fa-icon>
+            </button>
+            <div *ngIf="isUploadingImage"
+               class="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center">
+               <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+            </div>
             <input type="file" #fileInput (change)="onFileSelected($event)" accept="image/*" class="hidden">
-            <h3 class="font-bold text-gray-900 dark:text-white truncate">{{ user?.username }}</h3>
-            <p class="text-sm text-gray-500 dark:text-gray-400 truncate">{{ user?.email }}</p>
-          </div>
+         </div>
 
-          <!-- Navigation Menu -->
-          <nav class="p-2 space-y-1">
-            <button (click)="switchTab('profile')"
-              [ngClass]="activeTab === 'profile' ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'"
-              class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-medium">
-              <fa-icon [icon]="faUser" class="w-5 text-center"></fa-icon>
-              <span>الملف الشخصي</span>
-            </button>
+         <!-- User Text Info -->
+         <div class="flex-1 text-right pb-2 min-w-[50%]">
+            <h1 class="text-lg sm:text-2xl md:text-3xl font-bold text-gray-900 dark:text-white break-words">{{
+               profileUser?.username }}</h1>
 
-            <button (click)="switchTab('referrals')"
-              [ngClass]="activeTab === 'referrals' ? 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'"
-              class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-medium">
-              <fa-icon [icon]="faUsers" class="w-5 text-center"></fa-icon>
-              <span>دعوة الأصدقاء</span>
-              <span class="mr-auto bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full font-bold">جديد</span>
-            </button> <!-- End Referrals Button -->
-
-            <button (click)="enableNotifications()" [disabled]="isEnablingNotifications || notificationsEnabled"
-              class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
-              [ngClass]="{'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300': notificationsEnabled}">
-              <fa-icon [icon]="notificationsEnabled ? faCheckCircle : faBell" class="w-5 text-center"
-                [class.animate-pulse]="isEnablingNotifications"></fa-icon>
-              <span>{{ notificationsEnabled ? 'الإشعارات مفعلة' : (isEnablingNotifications ? 'جاري التفعيل...' : 'تفعيل
-                الإشعارات') }}</span>
-            </button>
-
-            <button (click)="switchTab('achievements')"
-              [ngClass]="activeTab === 'achievements' ? 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'"
-              class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-medium">
-              <fa-icon [icon]="faTrophy" class="w-5 text-center"></fa-icon>
-              <span>إنجازاتي</span>
-            </button>
-
-            <div class="pt-4 mt-4 border-t border-gray-100 dark:border-gray-700">
-              <button (click)="logout()"
-                class="w-full flex items-center gap-3 px-4 py-3 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all duration-200 font-medium">
-                <fa-icon [icon]="faSignOutAlt" class="w-5 text-center"></fa-icon>
-                <span>تسجيل الخروج</span>
-              </button>
+            <!-- Bio -->
+            <div class="mt-2 text-gray-600 dark:text-gray-400">
+               <div *ngIf="!isEditingBio">
+                  <p class="whitespace-pre-wrap text-sm sm:text-base leading-relaxed break-words">{{ bio ||
+                     (isOwnProfile ? 'أضف نبذة تعريفية عنك...' : '') }}</p>
+                  <button *ngIf="isOwnProfile" (click)="toggleBioEdit()"
+                     class="text-blue-500 font-bold text-xs sm:text-sm mt-1 hover:underline">تعديل النبذة</button>
+               </div>
+               <div *ngIf="isEditingBio" class="flex flex-col gap-2 mt-2 w-full max-w-lg">
+                  <textarea [(ngModel)]="bio" rows="3"
+                     class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-2 focus:ring-2 focus:ring-blue-500 dark:text-white text-sm"
+                     placeholder="تحدث عن نفسك، مجالات قراءتك المرجوة..."></textarea>
+                  <div class="flex gap-2 justify-end">
+                     <button (click)="toggleBioEdit()"
+                        class="px-4 py-1.5 text-xs font-bold text-gray-500 hover:text-gray-700 bg-gray-100 rounded-lg">إلغاء</button>
+                     <button (click)="updateBio()" [disabled]="isSubmitting"
+                        class="bg-blue-600 text-white font-bold text-xs px-4 py-1.5 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
+                        <span *ngIf="isSubmitting"
+                           class="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></span>
+                        حفظ
+                     </button>
+                  </div>
+               </div>
             </div>
-          </nav>
-        </div>
+         </div>
+
+         <!-- Actions (Follow / Edit) -->
+         <div
+            class="flex-shrink-0 w-full md:w-auto flex gap-3 pb-2 pt-4 md:pt-0 border-t border-gray-100 md:border-0 dark:border-gray-700">
+            <!-- Visit Store Button (If Merchant) -->
+            <a *ngIf="profileUser?.role === 'merchant'" 
+               [routerLink]="['/' + (profileUser?.merchantName || profileUser?.username)]"
+               class="w-full md:w-auto px-6 py-2.5 rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-md hover:shadow-lg transition-all flex justify-center items-center gap-2">
+               <fa-icon [icon]="faStore"></fa-icon>
+               <span>زيارة المتجر</span>
+            </a>
+
+            <button *ngIf="!isOwnProfile" (click)="toggleFollow()"
+               [ngClass]="isFollowing ? 'bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200' : 'bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg'"
+               class="w-full md:w-auto px-6 py-2.5 rounded-xl font-bold transition-all flex justify-center items-center gap-2">
+               <fa-icon [icon]="isFollowing ? faCheckCircle : faUser"></fa-icon>
+               {{ isFollowing ? 'إلغاء المتابعة' : 'متابعة' }}
+            </button>
+         </div>
+      </div>
+   </div>
+
+   <!-- Profile Navigation Tabs -->
+   <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
+      <div
+         class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-2 flex overflow-x-auto gap-2 custom-scrollbar">
+         <button (click)="switchTab('posts')"
+            [ngClass]="activeTab === 'posts' ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'"
+            class="flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all whitespace-nowrap outline-none">
+            <fa-icon [icon]="faQuoteRight"></fa-icon> المنشورات
+         </button>
+         <button *ngIf="isOwnProfile" (click)="switchTab('profile')"
+            [ngClass]="activeTab === 'profile' ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'"
+            class="flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all whitespace-nowrap outline-none">
+            <fa-icon [icon]="faEdit"></fa-icon> تعديل البيانات
+         </button>
+         <button *ngIf="isOwnProfile" (click)="switchTab('achievements')"
+            [ngClass]="activeTab === 'achievements' ? 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'"
+            class="flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all whitespace-nowrap outline-none">
+            <fa-icon [icon]="faTrophy"></fa-icon> إنجازاتي
+         </button>
+         <button *ngIf="isOwnProfile" (click)="switchTab('referrals')"
+            [ngClass]="activeTab === 'referrals' ? 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'"
+            class="flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all whitespace-nowrap outline-none">
+            <fa-icon [icon]="faUsers"></fa-icon> دعوة الأصدقاء
+         </button>
+         <div *ngIf="isOwnProfile"
+            class="h-8 w-px bg-gray-200 dark:bg-gray-700 my-auto mx-2 flex-shrink-0 hidden sm:block"></div>
+         <button *ngIf="isOwnProfile" (click)="enableNotifications()"
+            [disabled]="isEnablingNotifications || notificationsEnabled"
+            [ngClass]="notificationsEnabled ? 'text-green-600' : 'text-gray-500 hover:text-blue-500'"
+            class="flex items-center gap-2 px-4 py-3 font-bold transition-all whitespace-nowrap flex-shrink-0 outline-none">
+            <fa-icon [icon]="notificationsEnabled ? faCheckCircle : faBell"
+               [class.animate-pulse]="isEnablingNotifications"></fa-icon>
+            <span class="hidden sm:inline">{{ notificationsEnabled ? 'الإشعارات مفعلة' : 'تفعيل الإشعارات' }}</span>
+         </button>
+         <button *ngIf="isOwnProfile" (click)="logout()"
+            class="flex items-center gap-2 px-4 py-3 text-red-500 hover:text-red-700 font-bold transition-all whitespace-nowrap flex-shrink-0 mr-auto outline-none">
+            <fa-icon [icon]="faSignOutAlt"></fa-icon> خروج
+         </button>
+      </div>
+   </div>
+
+   <!-- Two Column Layout: Feed/Stats and Content -->
+   <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-3 gap-8 pb-12">
+
+      <!-- Right Col (Stats & Info) -->
+      <div class="lg:col-span-1 space-y-6 order-2 lg:order-1">
+         <!-- Social Stats Card -->
+         <div
+            class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 overflow-hidden relative">
+            <h3
+               class="font-bold text-gray-900 dark:text-white mb-4 text-base border-b border-gray-100 dark:border-gray-700 pb-3 flex items-center gap-2">
+               <fa-icon [icon]="faUsers" class="text-blue-500"></fa-icon> التفاعل الإجتماعي
+            </h3>
+            <div
+               class="grid grid-cols-3 gap-2 text-center divide-x divide-x-reverse divide-gray-100 dark:divide-gray-700">
+               <div class="flex flex-col items-center justify-center">
+                  <p class="font-bold text-xl text-gray-900 dark:text-white">{{ socialStats?.followersCount || 0 }}</p>
+                  <p class="text-[11px] text-gray-500 mt-1 font-medium">متابِع</p>
+               </div>
+               <div class="flex flex-col items-center justify-center">
+                  <p class="font-bold text-xl text-gray-900 dark:text-white">{{ socialStats?.followingCount || 0 }}</p>
+                  <p class="text-[11px] text-gray-500 mt-1 font-medium">يتابع</p>
+               </div>
+               <div class="flex flex-col items-center justify-center">
+                  <p class="font-bold text-xl text-gray-900 dark:text-white">{{ profileUser?.likesReceived || 0 }}</p>
+                  <p class="text-[11px] text-gray-500 mt-1 font-medium">إعجاب</p>
+               </div>
+            </div>
+         </div>
+
+         <!-- About Card -->
+         <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+            <h3
+               class="font-bold text-gray-900 dark:text-white mb-4 text-base border-b border-gray-100 dark:border-gray-700 pb-3 flex items-center gap-2">
+               <fa-icon [icon]="faBook" class="text-purple-500"></fa-icon> معلومات الحساب
+            </h3>
+            <div class="space-y-3">
+               <p class="text-sm text-gray-600 dark:text-gray-400 flex items-center justify-between">
+                  <span class="font-bold text-gray-900 dark:text-white">{{ profileUser?.createdAt ? (profileUser?.createdAt |
+                     date:'MMM yyyy') : 'غير محدد' }}</span>
+               </p>
+            </div>
+         </div>
+
+         <!-- Hero Card: Coins & Wallet (Only when referrals or achievements active) -->
+         <div *ngIf="isOwnProfile && (activeTab === 'referrals' || activeTab === 'achievements')"
+            class="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <!-- Coins Card -->
+            <div
+               class="bg-gradient-to-br from-purple-600 to-indigo-600 rounded-2xl shadow-lg p-6 text-white relative overflow-hidden">
+               <div class="relative z-10">
+                  <div class="flex items-center justify-between mb-4">
+                     <h3 class="font-bold text-lg text-purple-100">رصيد العملات</h3>
+                     <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                        <fa-icon [icon]="faCoins" class="text-yellow-300 text-xl"></fa-icon>
+                     </div>
+                  </div>
+                  <div class="text-4xl font-bold text-white mb-2">{{ gamificationProfile?.coins || 0 | number }}</div>
+                  <p class="text-sm text-purple-200 mb-4">عملة كنوز</p>
+                  <button (click)="openConvertModal()"
+                     class="w-full py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-bold transition-all">
+                     تحويل إلى رصيد
+                  </button>
+               </div>
+               <div class="absolute -right-8 -bottom-8 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
+            </div>
+
+            <!-- Cash Wallet Card -->
+            <div
+               class="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl shadow-lg p-6 text-white relative overflow-hidden">
+               <div class="relative z-10">
+                  <div class="flex items-center justify-between mb-4">
+                     <h3 class="font-bold text-lg text-emerald-100">المحفظة النقدية</h3>
+                     <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                        <div class="text-xl font-bold">ج.م</div>
+                     </div>
+                  </div>
+                  <div class="text-4xl font-bold text-white mb-2">{{ gamificationProfile?.referralBalance || 0 | number
+                     }}</div>
+                  <p class="text-sm text-emerald-100 mb-4">جنيه مصري</p>
+                  <div class="text-xs bg-black/10 rounded px-2 py-1 inline-block">
+                     يمكن استخدامه في الشراء
+                  </div>
+               </div>
+               <div class="absolute -right-8 -bottom-8 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
+            </div>
+         </div>
       </div>
 
-      <!-- Main Content Area -->
-      <div id="tab-content" class="flex-1">
-        <!-- Hero Card: Coins & Wallet (Always Visible) -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <!-- Coins Card -->
-          <div
-            class="bg-gradient-to-br from-purple-600 to-indigo-600 rounded-2xl shadow-lg p-6 text-white relative overflow-hidden">
-            <div class="relative z-10">
-              <div class="flex items-center justify-between mb-4">
-                <h3 class="font-bold text-lg text-purple-100">رصيد العملات</h3>
-                <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-                  <fa-icon [icon]="faCoins" class="text-yellow-300 text-xl"></fa-icon>
-                </div>
-              </div>
-              <div class="text-4xl font-bold text-white mb-2">{{ gamificationProfile?.coins || 0 | number }}</div>
-              <p class="text-sm text-purple-200 mb-4">عملة كنوز</p>
-              <button (click)="openConvertModal()"
-                class="w-full py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-bold transition-all">
-                تحويل إلى رصيد
-              </button>
+      <!-- Left Col (Main Content) -->
+      <div class="lg:col-span-2 space-y-6 order-1 lg:order-2">
+
+         <!-- Tab: Posts -->
+         <ng-container *ngIf="activeTab === 'posts'">
+            <div class="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
+               <div *ngIf="isOwnProfile"
+                  class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 flex gap-4 items-center cursor-pointer transition hover:bg-gray-50 dark:hover:bg-gray-750"
+                  (click)="handleCreatePostClick()">
+                  <div class="w-10 h-10 relative flex-shrink-0">
+                     <div class="w-full h-full rounded-full overflow-hidden bg-gray-200">
+                        <img *ngIf="profileImage" [src]="profileImage" class="w-full h-full object-cover">
+                     </div>
+                     <!-- Blue Verification Badge -->
+                     <div *ngIf="isAdminUser()"
+                        class="absolute -bottom-0.5 -end-0.5 bg-blue-600 text-white rounded-full w-4 h-4 flex items-center justify-center border-2 border-white dark:border-gray-800 shadow-sm z-10">
+                        <fa-icon [icon]="faCheckCircle" class="text-[8px]"></fa-icon>
+                     </div>
+                  </div>
+                  <div
+                     class="bg-gray-100 dark:bg-gray-700 rounded-full px-5 py-2.5 flex-grow text-gray-500 text-sm font-medium text-right rtl">
+                     بم تفكر الآن يا {{ profileUser?.username?.split(' ')?.[0] || 'قارئ' }}؟
+                  </div>
+                  <div
+                     class="relative text-blue-500 bg-blue-50 dark:bg-blue-900/20 w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110">
+                     <fa-icon [icon]="faQuoteRight"></fa-icon>
+                  </div>
+               </div>
+               <h3
+                  class="font-bold text-xl text-gray-900 dark:text-white px-2 mt-2 border-b-2 border-blue-500 inline-block pb-2">
+                  سجل المنشورات</h3>
+               <ng-container *ngTemplateOutlet="postsFeedTemplate"></ng-container>
             </div>
-            <div class="absolute -right-8 -bottom-8 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
-          </div>
+         </ng-container>
 
-          <!-- Cash Wallet Card -->
-          <div
-            class="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl shadow-lg p-6 text-white relative overflow-hidden">
-            <div class="relative z-10">
-              <div class="flex items-center justify-between mb-4">
-                <h3 class="font-bold text-lg text-emerald-100">المحفظة النقدية</h3>
-                <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-                  <div class="text-xl font-bold">ج.م</div>
-                </div>
-              </div>
-              <div class="text-4xl font-bold text-white mb-2">{{ gamificationProfile?.referralBalance || 0 | number }}
-              </div>
-              <p class="text-sm text-emerald-100 mb-4">جنيه مصري</p>
-              <div class="text-xs bg-black/10 rounded px-2 py-1 inline-block">
-                يمكن استخدامه في الشراء
-              </div>
-            </div>
-            <div class="absolute -right-8 -bottom-8 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
-          </div>
-        </div>
-
-        <!-- Tab: Profile Settings (Existing Form Refactored) -->
-        <div *ngIf="activeTab === 'profile'"
-          class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6 sm:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div class="flex items-center justify-between mb-6">
-            <h2 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <fa-icon [icon]="faEdit" class="text-blue-500"></fa-icon>
-              تعديل البيانات
-            </h2>
-            <button *ngIf="!isEditingAddress" (click)="toggleEdit(true)"
-              class="text-blue-600 hover:text-blue-700 dark:text-blue-400 font-medium text-sm">
-              تفعيل التعديل
-            </button>
-          </div>
-
-          <div *ngIf="isLoading" class="py-12 text-center">
-            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p class="mt-4 text-gray-500">جاري تحميل البيانات...</p>
-          </div>
-
-          <form *ngIf="!isLoading" [formGroup]="profileForm" (ngSubmit)="onSubmit()" class="space-y-6">
-            <!-- Grid Layout -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">اسم المستخدم</label>
-                <input type="text" formControlName="username"
-                  [ngClass]="{'bg-gray-50 dark:bg-gray-900/50': !isEditingAddress, 'bg-white dark:bg-gray-700': isEditingAddress}"
-                  class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
-              </div>
-
-              <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">البريد الإلكتروني</label>
-                <input type="email" formControlName="email"
-                  class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-900/50 text-gray-500 cursor-not-allowed">
-              </div>
-
-              <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الجنس (للحلقات
-                  والمجتمع)</label>
-                <div *ngIf="isEditingAddress" class="grid grid-cols-2 gap-4">
-                  <button type="button" (click)="profileForm.get('gender')?.setValue('male')"
-                    [ngClass]="profileForm.get('gender')?.value === 'male' ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-500'"
-                    class="flex items-center justify-center gap-2 py-3 rounded-xl transition-all font-bold">
-                    <fa-icon [icon]="faMars"></fa-icon>
-                    <span>ذكر</span>
-                  </button>
-                  <button type="button" (click)="profileForm.get('gender')?.setValue('female')"
-                    [ngClass]="profileForm.get('gender')?.value === 'female' ? 'bg-pink-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-500'"
-                    class="flex items-center justify-center gap-2 py-3 rounded-xl transition-all font-bold">
-                    <fa-icon [icon]="faVenus"></fa-icon>
-                    <span>أنثى</span>
-                  </button>
-                </div>
-                <!-- View Mode -->
-                <div *ngIf="!isEditingAddress"
-                  class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                  <fa-icon *ngIf="profileForm.get('gender')?.value === 'male'" [icon]="faMars"
-                    class="text-blue-500"></fa-icon>
-                  <fa-icon *ngIf="profileForm.get('gender')?.value === 'female'" [icon]="faVenus"
-                    class="text-pink-500"></fa-icon>
-                  <span>{{ profileForm.get('gender')?.value === 'male' ? 'ذكر' : (profileForm.get('gender')?.value ===
-                    'female' ? 'أنثى' : 'لم يتم التحديد') }}</span>
-                </div>
-              </div>
-
-              <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">رقم الهاتف</label>
-                <input type="tel" formControlName="phone" (input)="validatePhone()" [ngClass]="{
-                    'border-red-500 focus:ring-red-500': !phoneValid && phoneTouched && isEditingAddress,
-                    'bg-gray-50 dark:bg-gray-900/50': !isEditingAddress, 
-                    'bg-white dark:bg-gray-700': isEditingAddress
-                  }"
-                  class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
-                <p *ngIf="!phoneValid && phoneTouched && isEditingAddress" class="text-red-500 text-xs mt-1">رقم غير
-                  صالح</p>
-              </div>
-            </div>
-
-            <!-- Address Section -->
-            <div class="pt-6 border-t border-gray-100 dark:border-gray-700">
-              <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">العنوان</h3>
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">المحافظة</label>
-                  <select *ngIf="isEditingAddress" formControlName="governorate" (change)="onGovernorateChange()"
-                    class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 transition-all">
-                    <option value="" disabled>اختر محافظة</option>
-                    <option *ngFor="let gov of governorates" [value]="gov.governorate_name">{{gov.governorate_name}}
-                    </option>
-                  </select>
-                  <input *ngIf="!isEditingAddress" type="text" formControlName="governorate"
-                    class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed">
-                </div>
-
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">المدينة</label>
-                  <select *ngIf="isEditingAddress" formControlName="city" (change)="validateLocation()"
-                    class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 transition-all">
-                    <option value="" disabled>اختر مدينة</option>
-                    <option *ngFor="let city of cities" [value]="city">{{city}}</option>
-                  </select>
-                  <input *ngIf="!isEditingAddress" type="text" formControlName="city"
-                    class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed">
-                </div>
-
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">القرية / الشارع</label>
-                  <input type="text" formControlName="village"
-                    [ngClass]="{'bg-gray-50 dark:bg-gray-900/50': !isEditingAddress, 'bg-white dark:bg-gray-700': isEditingAddress}"
-                    class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 transition-all">
-                </div>
-              </div>
-            </div>
-
-            <!-- Messages -->
-            <div *ngIf="errorMessage"
-              class="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300 p-4 rounded-xl border border-red-100 dark:border-red-900/30 flex items-center gap-3">
-              <fa-icon [icon]="faTimes"></fa-icon>
-              {{ errorMessage }}
-            </div>
-            <div *ngIf="successMessage"
-              class="bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-300 p-4 rounded-xl border border-green-100 dark:border-green-900/30 flex items-center gap-3">
-              <fa-icon [icon]="faCheckCircle"></fa-icon>
-              {{ successMessage }}
-            </div>
-
-            <!-- Actions -->
-            <div *ngIf="isEditingAddress" class="flex gap-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-              <button type="submit" [disabled]="profileForm.invalid || isSubmitting || !locationValid"
-                class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg shadow-blue-500/30 transition-all disabled:opacity-50 disabled:shadow-none">
-                <span *ngIf="!isSubmitting">حفظ التغييرات</span>
-                <span *ngIf="isSubmitting">جاري الحفظ...</span>
-              </button>
-              <button type="button" (click)="toggleEdit(false)"
-                class="px-6 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 font-medium transition-all">
-                إلغاء
-              </button>
-            </div>
-          </form>
-        </div>
-
-        <!-- Tab: Referrals (New & Coin Based) -->
-        <div *ngIf="activeTab === 'referrals'" class="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <!-- Hero Card: Coins & Wallet -->
-
-
-          <!-- Code Box -->
-          <div
-            class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-8 border border-gray-100 dark:border-gray-700 text-center">
-            <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4">كود الدعوة الخاص بك</h3>
-            <p class="text-gray-500 mb-6 max-w-md mx-auto">شارك هذا الكود مع أصدقائك. ستحصل على <span
-                class="font-bold text-purple-600">100 عملة</span> لكل صديق يسجل باستخدامه!</p>
-
-            <div class="relative max-w-md mx-auto group">
-              <div
-                class="flex items-center bg-gray-50 dark:bg-gray-900 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 p-2 pl-28 transition-colors group-hover:border-purple-400">
-                <input type="text" readonly [value]="gamificationProfile?.referralCode || 'جاري التوليد...'"
-                  class="w-full bg-transparent border-none focus:ring-0 text-xl font-mono font-bold text-gray-700 dark:text-gray-200 text-center tracking-widest">
-              </div>
-              <button (click)="copyReferralCode()"
-                class="absolute left-1 top-1 bottom-1 px-6 rounded-lg font-bold text-white transition-all duration-200 flex items-center gap-2"
-                [ngClass]="copied ? 'bg-green-500' : 'bg-purple-600 hover:bg-purple-700'">
-                <fa-icon [icon]="copied ? faCheckCircle : faCopy"></fa-icon>
-                <span>{{ copied ? 'تم النسخ' : 'نسخ' }}</span>
-              </button>
-            </div>
-          </div>
-
-
-
-          <!-- How requests work -->
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+         <!-- Tab: Profile Settings -->
+         <ng-container *ngIf="activeTab === 'profile'">
             <div
-              class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 text-center">
-              <div
-                class="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">
-                1</div>
-              <h4 class="font-bold text-gray-900 dark:text-white mb-2">شارك الكود</h4>
-              <p class="text-sm text-gray-500">أرسل الكود لأصدقائك عبر الواتساب أو الفيسبوك.</p>
+               class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6 sm:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+               <div class="flex items-center justify-between mb-6">
+                  <h2 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                     <fa-icon [icon]="faEdit" class="text-blue-500"></fa-icon> تعديل البيانات
+                  </h2>
+                  <button *ngIf="!isEditingAddress" (click)="toggleEdit(true)"
+                     class="text-blue-600 hover:text-blue-700 dark:text-blue-400 font-medium text-sm">تفعيل
+                     التعديل</button>
+               </div>
+
+               <div *ngIf="isLoading" class="py-12 text-center">
+                  <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                  <p class="mt-4 text-gray-500">جاري تحميل البيانات...</p>
+               </div>
+
+               <form *ngIf="!isLoading" [formGroup]="profileForm" (ngSubmit)="onSubmit()" class="space-y-6">
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                     <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">اسم
+                           المستخدم</label>
+                        <input type="text" formControlName="username"
+                           [ngClass]="{'bg-gray-50 dark:bg-gray-900/50': !isEditingAddress, 'bg-white dark:bg-gray-700': isEditingAddress}"
+                           class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                     </div>
+                     <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">البريد
+                           الإلكتروني</label>
+                        <input type="email" formControlName="email"
+                           class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-900/50 text-gray-500 cursor-not-allowed">
+                     </div>
+                     <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الجنس</label>
+                        <div *ngIf="isEditingAddress" class="grid grid-cols-2 gap-4">
+                           <button type="button" (click)="profileForm.get('gender')?.setValue('male')"
+                              [ngClass]="profileForm.get('gender')?.value === 'male' ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-500'"
+                              class="flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all">
+                              <fa-icon [icon]="faMars"></fa-icon> <span>ذكر</span>
+                           </button>
+                           <button type="button" (click)="profileForm.get('gender')?.setValue('female')"
+                              [ngClass]="profileForm.get('gender')?.value === 'female' ? 'bg-pink-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-500'"
+                              class="flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all">
+                              <fa-icon [icon]="faVenus"></fa-icon> <span>أنثى</span>
+                           </button>
+                        </div>
+                        <div *ngIf="!isEditingAddress"
+                           class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 flex items-center gap-2">
+                           <fa-icon *ngIf="profileForm.get('gender')?.value === 'male'" [icon]="faMars"
+                              class="text-blue-500"></fa-icon>
+                           <fa-icon *ngIf="profileForm.get('gender')?.value === 'female'" [icon]="faVenus"
+                              class="text-pink-500"></fa-icon>
+                           <span>{{ profileForm.get('gender')?.value === 'male' ? 'ذكر' :
+                              (profileForm.get('gender')?.value === 'female' ? 'أنثى' : 'لم يتم التحديد') }}</span>
+                        </div>
+                     </div>
+                     <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">رقم
+                           الهاتف</label>
+                        <input type="tel" formControlName="phone" (input)="validatePhone()"
+                           [ngClass]="{'border-red-500': !phoneValid && phoneTouched && isEditingAddress, 'bg-gray-50': !isEditingAddress}"
+                           class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 transition-all">
+                     </div>
+                  </div>
+
+                  <div class="pt-6 border-t border-gray-100 dark:border-gray-700">
+                     <h3 class="text-lg font-semibold mb-4">العنوان</h3>
+                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                           <label class="block text-sm font-medium mb-2">المحافظة</label>
+                           <select *ngIf="isEditingAddress" formControlName="governorate"
+                              (change)="onGovernorateChange()"
+                              class="w-full px-4 py-3 rounded-xl border bg-white dark:bg-gray-700">
+                              <option *ngFor="let gov of governorates" [value]="gov.governorate_name">
+                                 {{gov.governorate_name}}</option>
+                           </select>
+                           <input *ngIf="!isEditingAddress" type="text" formControlName="governorate"
+                              class="w-full px-4 py-3 rounded-xl border bg-gray-50" readonly>
+                        </div>
+                        <div>
+                           <label class="block text-sm font-medium mb-2">المدينة</label>
+                           <select *ngIf="isEditingAddress" formControlName="city"
+                              class="w-full px-4 py-3 rounded-xl border bg-white dark:bg-gray-700">
+                              <option *ngFor="let city of cities" [value]="city">{{city}}</option>
+                           </select>
+                           <input *ngIf="!isEditingAddress" type="text" formControlName="city"
+                              class="w-full px-4 py-3 rounded-xl border bg-gray-50" readonly>
+                        </div>
+                        <div>
+                           <label class="block text-sm font-medium mb-2">القرية / الشارع</label>
+                           <input type="text" formControlName="village" [readonly]="!isEditingAddress"
+                              class="w-full px-4 py-3 rounded-xl border" [ngClass]="{'bg-gray-50': !isEditingAddress}">
+                        </div>
+                     </div>
+                  </div>
+
+                  <div *ngIf="errorMessage" class="bg-red-50 p-4 rounded-xl text-red-600 flex items-center gap-2">
+                     <fa-icon [icon]="faTimes"></fa-icon> {{ errorMessage }}</div>
+                  <div *ngIf="successMessage" class="bg-green-50 p-4 rounded-xl text-green-600 flex items-center gap-2">
+                     <fa-icon [icon]="faCheckCircle"></fa-icon> {{ successMessage }}</div>
+
+                  <div *ngIf="isEditingAddress" class="flex gap-4 pt-4 border-t">
+                     <button type="submit" [disabled]="profileForm.invalid || isSubmitting"
+                        class="flex-1 bg-blue-600 text-white font-bold py-3 rounded-xl shadow-lg">حفظ التغييرات</button>
+                     <button type="button" (click)="toggleEdit(false)"
+                        class="px-6 py-3 bg-gray-100 rounded-xl">إلغاء</button>
+                  </div>
+               </form>
             </div>
+         </ng-container>
+
+         <!-- Tab: Referrals -->
+         <ng-container *ngIf="activeTab === 'referrals'">
+            <div class="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
+               <div
+                  class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-8 border border-gray-100 dark:border-gray-700 text-center">
+                  <h3 class="text-lg font-bold mb-4">كود الدعوة الخاص بك</h3>
+                  <p class="text-gray-500 mb-6">شارك الكود واحصل على 100 عملة لكل صديق يسجل!</p>
+                  <div class="relative max-w-md mx-auto flex gap-2">
+                     <div
+                        class="flex-1 flex items-center bg-gray-50 dark:bg-gray-900 rounded-xl border-2 border-dashed p-2">
+                        <input type="text" readonly [value]="gamificationProfile?.referralCode || '...'"
+                           class="w-full bg-transparent border-none text-xl font-mono font-bold text-center tracking-widest outline-none">
+                     </div>
+                     <button (click)="copyReferralCode()"
+                        class="w-12 h-12 rounded-xl text-white flex items-center justify-center text-xl"
+                        [ngClass]="copied ? 'bg-green-500' : 'bg-purple-600'">
+                        <fa-icon [icon]="copied ? faCheckCircle : faCopy"></fa-icon>
+                     </button>
+                  </div>
+               </div>
+               <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm text-center">
+                     <div
+                        class="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 font-bold">
+                        1</div>
+                     <h4 class="font-bold mb-2">شارك الكود</h4>
+                     <p class="text-sm text-gray-500">أرسل الكود لأصدقائك.</p>
+                  </div>
+                  <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm text-center">
+                     <div
+                        class="w-12 h-12 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 font-bold">
+                        2</div>
+                     <h4 class="font-bold mb-2">يسجل صديقك</h4>
+                     <p class="text-sm text-gray-500">عند التسجيل باستخدام كودك.</p>
+                  </div>
+                  <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm text-center">
+                     <div
+                        class="w-12 h-12 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center mx-auto mb-4 font-bold">
+                        3</div>
+                     <h4 class="font-bold mb-2">اكسب عملات</h4>
+                     <p class="text-sm text-gray-500">100 عملة فوراً!</p>
+                  </div>
+               </div>
+            </div>
+         </ng-container>
+
+         <!-- Tab: Achievements -->
+         <ng-container *ngIf="activeTab === 'achievements'">
             <div
-              class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 text-center">
-              <div
-                class="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">
-                2</div>
-              <h4 class="font-bold text-gray-900 dark:text-white mb-2">يسجل صديقك</h4>
-              <p class="text-sm text-gray-500">عندما يسجل صديقك حساب جديد باستخدام الكود.</p>
+               class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-8 text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
+               <div class="w-24 h-24 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <fa-icon [icon]="faTrophy" class="text-4xl text-purple-600"></fa-icon>
+               </div>
+               <h2 class="text-2xl font-bold mb-4">لوحة الإنجازات</h2>
+               <p class="text-gray-600 mb-8">تابع تقدمك وترتيبك في لوحة القيادة الكاملة.</p>
+               <a [routerLink]="['/library']" [queryParams]="{tab: 'achievements'}"
+                  class="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold py-3 px-8 rounded-xl shadow-lg">
+                  <span>الذهاب إلى إنجازاتي</span> <fa-icon [icon]="faTrophy"></fa-icon>
+               </a>
             </div>
-            <div
-              class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 text-center">
-              <div
-                class="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">
-                3</div>
-              <h4 class="font-bold text-gray-900 dark:text-white mb-2">اكسب عملات</h4>
-              <p class="text-sm text-gray-500">تحصل فوراً على 100 عملة لكل صديق!</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Tab: Achievements -->
-        <div *ngIf="activeTab === 'achievements'"
-          class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-8 text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div
-            class="w-24 h-24 bg-purple-100 dark:bg-purple-900/20 rounded-full flex items-center justify-center mx-auto mb-6">
-            <fa-icon [icon]="faTrophy" class="text-4xl text-purple-600 dark:text-purple-400"></fa-icon>
-          </div>
-
-          <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">لوحة الإنجازات</h2>
-          <p class="text-gray-600 dark:text-gray-400 max-w-lg mx-auto mb-8">
-            تستطيع متابعة تقدمك الكامل، مستواك، وترتيبك بين القراء في لوحة القيادة الخاصة بالألعاب (Gamification
-            Dashboard).
-          </p>
-
-          <a [routerLink]="['/library']" [queryParams]="{tab: 'achievements'}"
-            class="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold py-3 px-8 rounded-xl shadow-lg transition-transform hover:scale-105">
-            <span>الذهاب إلى إنجازاتي</span>
-            <fa-icon [icon]="faTrophy"></fa-icon>
-          </a>
-        </div>
+         </ng-container>
 
       </div>
-    </div>
-  </div>
+   </div>
+</div>
 
-  <!-- Conversion Modal -->
-  <div *ngIf="showConvertModal"
-    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-    <div
+<!-- Conversion Modal -->
+<div *ngIf="showConvertModal"
+   class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+   <div
       class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
-      <div class="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
-        <h3 class="text-xl font-bold text-gray-900 dark:text-white">تحويل العملات</h3>
-        <button (click)="closeConvertModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-          <fa-icon [icon]="faTimes" class="text-lg"></fa-icon>
-        </button>
+      <div class="p-6 border-b flex justify-between items-center">
+         <h3 class="text-xl font-bold">تحويل العملات</h3>
+         <button (click)="closeConvertModal()"><fa-icon [icon]="faTimes"></fa-icon></button>
       </div>
-
       <div class="p-6 space-y-4">
-        <div
-          class="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-xl flex gap-3 text-yellow-800 dark:text-yellow-200 text-sm">
-          <fa-icon [icon]="faCoins" class="mt-1"></fa-icon>
-          <p>سعر التحويل الحالي: <span class="font-bold">{{conversionRate}} عملة = 1 جنيه</span></p>
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">كم تريد أن
-            تحول؟</label>
-          <input type="number" [(ngModel)]="coinsToConvert" [min]="conversionRate"
-            [max]="gamificationProfile?.coins || 0" [step]="conversionRate"
-            class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-purple-500 text-center text-xl font-bold">
-          <div class="flex justify-between text-xs text-gray-500 mt-2">
-            <span>الحد الأدنى: {{conversionRate}} عملة</span>
-            <span>رصيدك: {{gamificationProfile?.coins}} عملة</span>
-          </div>
-        </div>
-
-        <div class="flex items-center justify-center gap-4 py-4 bg-gray-50 dark:bg-gray-900/30 rounded-xl">
-          <div class="text-center">
-            <p class="text-xs text-gray-500 mb-1">سيتم خصم</p>
-            <p class="text-lg font-bold text-purple-600">{{ Math.floor((coinsToConvert || 0) / conversionRate) *
-              conversionRate }} عملة</p>
-          </div>
-          <div class="text-gray-400">➡️</div>
-          <div class="text-center">
-            <p class="text-xs text-gray-500 mb-1">ستحصل على</p>
-            <p class="text-lg font-bold text-emerald-600">{{ Math.floor((coinsToConvert || 0) / conversionRate) }} جنيه
-            </p>
-          </div>
-        </div>
-
-        <div *ngIf="coinsToConvert % conversionRate !== 0 && coinsToConvert > conversionRate"
-          class="text-center text-[10px] text-gray-400 mt-1 italic">
-          * يتم التحويل بمضاعفات الـ {{conversionRate}} عملة فقط. سيتبقى في رصيدك {{ (coinsToConvert % conversionRate) +
-          ((gamificationProfile?.coins || 0) - coinsToConvert) }} عملة.
-        </div>
+         <div class="bg-yellow-50 p-4 rounded-xl flex gap-3 text-yellow-800 text-sm">
+            <fa-icon [icon]="faCoins"></fa-icon>
+            <p>سعر التحويل: {{conversionRate}} عملة = 1 جنيه</p>
+         </div>
+         <input type="number" [(ngModel)]="coinsToConvert"
+            class="w-full p-4 rounded-xl border text-center text-xl font-bold" [max]="gamificationProfile?.coins || 0">
+         <div class="flex items-center justify-center gap-4 py-4 bg-gray-50 rounded-xl">
+            <div class="text-center">
+               <p class="text-xs text-gray-500">خصم عملة</p>
+               <p class="text-lg font-bold text-purple-600">{{ Math.floor((coinsToConvert || 0) / conversionRate) *
+                  conversionRate }}</p>
+            </div>
+            <div class="text-gray-400">➡️</div>
+            <div class="text-center">
+               <p class="text-xs text-gray-500">استلام جنيه</p>
+               <p class="text-lg font-bold text-emerald-600">{{ Math.floor((coinsToConvert || 0) / conversionRate) }}
+               </p>
+            </div>
+         </div>
       </div>
-
-      <div class="p-6 bg-gray-50 dark:bg-gray-900/50 flex gap-3">
-        <button (click)="convertCoins()"
-          [disabled]="!coinsToConvert || coinsToConvert < 50 || coinsToConvert > (gamificationProfile?.coins || 0)"
-          class="flex-1 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl transition-all">
-          تأكيد التحويل
-        </button>
-        <button (click)="closeConvertModal()"
-          class="px-6 py-3 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 font-medium">
-          إلغاء
-        </button>
+      <div class="p-6 bg-gray-50 flex gap-3">
+         <button (click)="convertCoins()"
+            class="flex-1 bg-purple-600 text-white font-bold py-3 rounded-xl disabled:bg-gray-300">تأكيد
+            التحويل</button>
+         <button (click)="closeConvertModal()" class="px-6 py-3 border rounded-xl">إلغاء</button>
       </div>
-    </div>
-  </div>
-
-  <!-- Camera Modal -->
+   </div>
 </div>
 
 <!-- Camera Modal -->
-<div *ngIf="showCameraModal"
-  style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 99999; background-color: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center;"
-  class="backdrop-blur-sm animate-in fade-in duration-200">
+<div *ngIf="showCameraModal" ...>...</div>
 
-  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden w-full max-w-lg relative flex flex-col"
-    style="max-height: 90vh;" (click)="$event.stopPropagation()">
-    <!-- Header -->
-    <div
-      class="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-900 shrink-0">
-      <h3 class="font-bold text-gray-900 dark:text-white flex items-center gap-2">
-        <fa-icon [icon]="faCamera" class="text-blue-500"></fa-icon>
-        التقاط صورة شخصية
-      </h3>
-      <button (click)="closeCamera()" class="text-gray-400 hover:text-red-500 transition-colors p-2 focus:outline-none">
-        <fa-icon [icon]="faTimes" class="text-xl"></fa-icon>
-      </button>
-    </div>
+<!-- Create Post Modal -->
+<div *ngIf="showCreatePost"
+   class="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in duration-300">
+   <div
+      class="bg-white dark:bg-gray-900 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-white/20">
+      <!-- Header -->
+      <div class="bg-gradient-to-l from-blue-600 to-indigo-700 p-6 text-white flex justify-between items-start">
+         <div>
+            <h3 class="text-xl font-bold">إنشاء منشور جديد</h3>
+            <p class="text-blue-100/80 text-sm mt-1">شارك أفكارك مع باقي القراء</p>
+         </div>
+         <button (click)="showCreatePost = false" class="text-white/50 hover:text-white transition-colors p-1">
+            <fa-icon [icon]="faTimes" size="lg"></fa-icon>
+         </button>
+      </div>
 
-    <!-- Video Feed -->
-    <div class="relative bg-gray-900 w-full flex items-center justify-center overflow-hidden shrink-0"
-      style="min-height: 300px; max-height: 60vh;">
-      <video #videoElement id="userProfileCameraVideo" class="w-full h-full object-cover" autoplay playsinline muted
-        style="max-height: 60vh;"></video>
-      <!-- Reticle -->
-      <div class="absolute inset-0 border-2 border-white/20 pointer-events-none rounded-full w-64 h-64 m-auto"></div>
-      <p class="absolute bottom-4 text-white/70 text-sm bg-black/40 px-3 py-1 rounded-full">تأكد من وجود وجهك داخل
-        الدائرة</p>
-    </div>
+      <div class="p-6 space-y-5">
+         <!-- Type Tabs -->
+         <div class="flex bg-gray-100 dark:bg-gray-800 p-1.5 rounded-2xl mb-4">
+            <button (click)="newPost.type = 'thought'" [class.bg-white]="newPost.type === 'thought'"
+               [class.shadow-sm]="newPost.type === 'thought'" [class.text-blue-600]="newPost.type === 'thought'"
+               [class.dark:bg-gray-700]="newPost.type === 'thought'"
+               class="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2">
+               <fa-icon [icon]="faQuoteRight" class="text-xs"></fa-icon>
+               خاطرة
+            </button>
+            <button (click)="newPost.type = 'review'" [class.bg-white]="newPost.type === 'review'"
+               [class.shadow-sm]="newPost.type === 'review'" [class.text-blue-600]="newPost.type === 'review'"
+               [class.dark:bg-gray-700]="newPost.type === 'review'"
+               class="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2">
+               <fa-icon [icon]="faBook" class="text-xs"></fa-icon>
+               مراجعة كتاب
+            </button>
+         </div>
 
-    <!-- Hidden Canvas for Capture -->
-    <canvas #canvasElement class="hidden"></canvas>
+         <!-- Review Specific Fields -->
+         <div *ngIf="newPost.type === 'review'" class="space-y-4 animate-in slide-in-from-top-2">
+            <div>
+               <label class="block text-xs font-bold text-gray-500 mb-2 pr-1">اسم الكتاب</label>
+               <input type="text" [(ngModel)]="newPost.bookTitle" placeholder="ما هو الكتاب الذي تراجعه؟"
+                  class="w-full bg-gray-50 dark:bg-gray-800 border-2 border-transparent focus:border-blue-500/30 rounded-2xl px-4 py-3 text-sm outline-none transition-all dark:text-white">
+            </div>
+            <div>
+               <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 pr-1">تقييمك</label>
+               <div class="flex gap-2 justify-center py-2">
+                  <button *ngFor="let star of [1,2,3,4,5]" (click)="newPost.rating = star"
+                     class="p-1 transition-transform hover:scale-125">
+                     <fa-icon [icon]="faStar" [class.text-yellow-400]="newPost.rating >= star"
+                        [class.text-gray-300]="newPost.rating < star" class="text-2xl"></fa-icon>
+                  </button>
+               </div>
+            </div>
+         </div>
 
-    <!-- Actions -->
-    <div class="p-6 flex justify-center items-center gap-8 bg-gray-50 dark:bg-gray-900 shrink-0">
+         <!-- Content -->
+         <div>
+            <label class="block text-xs font-bold text-gray-500 mb-2 pr-1">المحتوى</label>
+            <textarea [(ngModel)]="newPost.content" rows="5"
+               [placeholder]="newPost.type === 'review' ? 'ما رأيك في هذا الكتاب؟' : 'اكتب ما يدور في خاطرك...'"
+               class="w-full bg-gray-50 dark:bg-gray-800 border-2 border-transparent focus:border-blue-500/30 rounded-2xl px-4 py-3 text-sm outline-none transition-all dark:text-white resize-none"></textarea>
+         </div>
 
-      <!-- Switch Camera Button -->
-      <button (click)="switchCamera()" type="button"
-        class="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full w-12 h-12 flex items-center justify-center hover:bg-gray-300 dark:hover:bg-gray-600 transition shadow">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-        </svg>
-      </button>
-
-      <button type="button" (click)="captureImage()"
-        class="bg-blue-600 hover:bg-blue-700 text-white rounded-full w-20 h-20 flex items-center justify-center shadow-lg border-4 border-white dark:border-gray-700 transition-transform hover:scale-105 active:scale-95 focus:outline-none">
-        <div class="w-16 h-16 rounded-full border-2 border-white pointer-events-none"></div>
-      </button>
-
-      <!-- Placeholder -->
-      <div class="w-12"></div>
-    </div>
-  </div>
+         <!-- Actions -->
+         <div class="flex gap-3 justify-end pt-2">
+            <button (click)="showCreatePost = false"
+               class="px-6 py-2.5 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors">إلغاء</button>
+            <button (click)="createPost()" [disabled]="!newPost.content.trim() || isPostsLoading"
+               class="px-8 py-2.5 rounded-xl text-sm font-bold bg-blue-600 text-white hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50">
+               <fa-icon *ngIf="isPostsLoading" [icon]="faRefresh" [class.animate-spin]="isPostsLoading"
+                  class="ml-2"></fa-icon>
+               {{ isPostsLoading ? 'جاري النشر...' : 'نشر' }}
+            </button>
+         </div>
+      </div>
+   </div>
 </div>

@@ -63,6 +63,12 @@ export class AdminService {
     );
   }
 
+  updateMerchant(merchantId: string, data: any): Observable<any> {
+    return this.http.patch(`${this.apiUrl}/merchants/${merchantId}`, data).pipe(
+      catchError(this.handleError)
+    );
+  }
+
   getMerchantProducts(): Observable<any> {
     return this.http.get(`${this.apiUrl}/merchant-products`).pipe(
       catchError(this.handleError)
@@ -124,6 +130,18 @@ export class AdminService {
 
   updatePromotionDates(dates: { startDate: string; endDate: string }): Observable<any> {
     return this.http.post(`${this.apiUrl}/update-promotion-dates`, dates).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  getEconomySettings(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/economy-settings`).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  updateEconomySettings(settings: any): Observable<any> {
+    return this.http.patch(`${this.apiUrl}/economy-settings`, settings).pipe(
       catchError(this.handleError)
     );
   }

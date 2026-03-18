@@ -29,4 +29,12 @@ router.delete('/packages/:id', promotionController.deletePackage);
 router.get('/wheel-config', promotionController.getWheelConfig);
 router.put('/wheel-config', promotionController.updateWheelConfig);
 
+// --- Hero Slider Management ---
+router.get('/hero-slides', promotionController.getHeroSlides);
+router.post('/hero-slides', promotionController.createHeroSlide);
+router.post('/hero-slides/upload', promotionController.uploadHeroImage);
+router.delete('/hero-slides/:id', promotionController.deleteHeroSlide);
+router.get('/hero-config', promotionController.getHeroConfig);
+router.get('/hero-books', promotionController.getHeroBooks);
+
 module.exports = router;

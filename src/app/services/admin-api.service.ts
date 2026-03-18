@@ -11,15 +11,16 @@ export class AdminApiService {
 
     constructor(private http: HttpClient) { }
 
-    registerSale(soldItems: any[]): Observable<any> {
-        return this.http.post(`${this.baseUrl}/register-sale`, { soldItems });
+    registerSale(saleData: any): Observable<any> {
+        return this.http.post(`${this.baseUrl}/register-sale`, saleData);
+    }
+
+    getSalesHistory(): Observable<any[]> {
+        return this.http.get<any[]>(`${this.baseUrl}/sales-history`);
     }
 
     getShortageSettings(): Observable<any> {
-        const url = environment.apiBaseUrl + '/system-settings'; // Assuming it's exposed or I can use the new Patch endpoint to get it too
-        // For now, I'll rely on the PATCH endpoint returning the settings or a GET I might need to add.
-        // Let's assume I can get it from the general settings if available.
-        return this.http.get(`${this.baseUrl}/shortage-settings`); // I should add this route if not exist
+        return this.http.get(`${this.baseUrl}/shortage-settings`);
     }
 
     updateShortageSettings(settings: any): Observable<any> {

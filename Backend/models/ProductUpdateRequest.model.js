@@ -9,7 +9,10 @@ const productUpdateRequestSchema = new mongoose.Schema({
     product_category: String,
     product_description: String,
     product_price: Number,
-    price_cost: Number
+    price_cost: Number,
+    copyType: String,
+    condition: String,
+    images: [String]
   },
   updatedProduct: {
     product_name: String,
@@ -17,7 +20,10 @@ const productUpdateRequestSchema = new mongoose.Schema({
     product_category: String,
     product_description: String,
     product_price: Number,
-    price_cost: Number
+    price_cost: Number,
+    copyType: String,
+    condition: String,
+    images: [String]
   },
   status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
   createdAt: { type: Date, default: Date.now },

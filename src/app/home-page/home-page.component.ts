@@ -6,6 +6,7 @@ import { AuthService } from '../auth/auth.service';
 import { faBook, faTools, faLaptop, faTshirt, faSpa, faShoePrints, faCouch, faGamepad, faThLarge, faEllipsisH, faStar, faFileAlt, faHeart } from '@fortawesome/free-solid-svg-icons';
 import { environment } from '../../environments/environment';
 import { SeoService } from '../services/seo.service';
+import { PromotionService } from '../services/promotion.service';
 
 @Component({
   selector: 'app-home-page',
@@ -26,42 +27,60 @@ export class HomePageComponent implements OnInit {
   // Icons
   faStar = faStar;
 
-  categories = [
-    { id: 'all', name: 'الكل', icon: null },
-    { id: 'books', name: 'كتب', icon: faBook, filter: ['كتب', 'روايات وقصص', 'تطوير الذات وعلم النفس', 'كتب دينية', 'قواميس ومراجع', 'صحة وطب وعلوم', 'أعمال وتسويق ومالية', 'فنون وحرف', 'تاريخ وسير ذاتية', 'تربية وأطفال'] },
-    { id: 'print', name: 'طباعة', icon: faFileAlt, filter: ['مستندات'], comingSoon: true },
-    { id: 'electronics', name: 'إلكترونيات', icon: faLaptop, filter: ['إلكترونيات'], comingSoon: true },
-    { id: 'clothing', name: 'ملابس', icon: faTshirt, filter: ['ملابس'], comingSoon: true },
-    { id: 'cosmetics', name: 'تجميل', icon: faSpa, filter: ['تجميل'], comingSoon: true },
-    { id: 'office-supplies', name: 'أدوات مكتبية', icon: faTools, filter: ['أدوات مكتبية'], comingSoon: true },
-    { id: 'shoes', name: 'أحذية', icon: faShoePrints, filter: ['أحذية'], comingSoon: true },
-    { id: 'furniture', name: 'أثاث', icon: faCouch, filter: ['أثاث'], comingSoon: true },
-    { id: 'games', name: 'ألعاب', icon: faGamepad, filter: ['ألعاب'], comingSoon: true },
-    { id: 'fabrics', name: 'أقمشة', icon: faThLarge, filter: ['أقمشة'], comingSoon: true },
-    { id: 'others', name: 'أخرى', icon: faEllipsisH, filter: ['غير مصنف'], comingSoon: true }
+  // Sections & Categories
+  mainSections = [
+    { id: 'books', name: 'الكتب والمؤلفات', icon: faBook, filter: ['كتب'] },
+    { id: 'print', name: 'خدمات الطباعة', icon: faFileAlt, filter: ['مستندات', 'طباعة'] },
+    { id: 'electronics', name: 'إلكترونيات', icon: faLaptop, filter: ['إلكترونيات'] },
+    { id: 'office-supplies', name: 'أدوات مكتبية', icon: faTools, filter: ['أدوات مكتبية'] },
+    { id: 'cosmetics', name: 'تجميل وعناية', icon: faSpa, filter: ['تجميل', 'التجميل والعناية الشخصية'] },
+    { id: 'clothing', name: 'ملابس وأقمشة', icon: faTshirt, filter: ['ملابس', 'أقمشة', 'الأحذية'] },
+    { id: 'furniture', name: 'أثاث وديكور', icon: faCouch, filter: ['أثاث', 'أثاث وديكور المنزل'] },
+    { id: 'games', name: 'هدايا وألعاب', icon: faGamepad, filter: ['العاب', 'هدايا وألعاب'] },
+    { id: 'others', name: 'أقسام أخرى', icon: faEllipsisH, filter: ['غير مصنف', 'أخرى'] }
+  ];
+
+  bookGenres = [
+    { id: 'all', name: 'الكل' },
+    { id: 'novels', name: 'روايات وقصص', filter: ['روايات وقصص'] },
+    { id: 'islamic', name: 'كتب دينية', filter: ['كتب دينية'] },
+    { id: 'development', name: 'تطوير الذات', filter: ['تطوير الذات وعلم النفس'] },
+    { id: 'children', name: 'أطفال وتربية', filter: ['تربية وأطفال'] },
+    { id: 'history', name: 'تاريخ وسير', filter: ['تاريخ وسير ذاتية'] },
+    { id: 'business', name: 'أعمال ومالية', filter: ['أعمال وتسويق ومالية'] },
+    { id: 'reference', name: 'قواميس ومراجع', filter: ['قواميس ومراجع'] },
+    { id: 'health', name: 'صحة وعلوم', filter: ['صحة وطب وعلوم'] },
+    { id: 'arts', name: 'فنون وحرف', filter: ['فنون وحرف'] }
   ];
 
   // Promo Carousel
   promoImages: string[] = [];
+  dynamicSlides: any[] = [];
   promoCurrentIndex = 0;
   promoIntervalId: any;
   touchStartX: number = 0;
   touchEndX: number = 0;
+
+  // New Hero Configuration
+  heroConfig = {
+    mode: 'slider',
+    columnCount: 4,
+    scrollingSpeed: 'fast'
+  };
+  heroBooks: any[] = [];
+  heroColumns: any[][] = [];
 
   constructor(
     private dataService: DataService,
     private router: Router,
     private authService: AuthService,
     private seoService: SeoService,
+    private promotionService: PromotionService,
     @Inject(PLATFORM_ID) private platformId: Object
   ) { }
 
   ngOnInit(): void {
-    this.isLoading = true;
-    this.setPromoImages();
-    if (isPlatformBrowser(this.platformId)) {
-      this.startPromoAutoScroll();
-    }
+    this.initHero();
 
     // Set SEO meta tags for the homepage
     this.seoService.updateMetaTags({
@@ -76,22 +95,41 @@ export class HomePageComponent implements OnInit {
       this.isLoading = false;
     });
 
-    window.addEventListener('resize', () => {
-      this.setPromoImages();
-    });
+    if (isPlatformBrowser(this.platformId)) {
+      window.addEventListener('resize', () => {
+        this.setPromoImages();
+      });
+    }
   }
 
   get filteredProducts(): any[] {
+    // New Arrivals section should only show BOOKS
+    const books = this.allProducts.filter(p =>
+      p.product_category && (
+        p.product_category.includes('كتب') ||
+        p.product_category.includes('روايات') ||
+        p.product_category.includes('قصص') ||
+        p.product_category.includes('تطوير الذات') ||
+        p.product_category.includes('دينية') ||
+        p.product_category.includes('تاريخ') ||
+        p.product_category.includes('أطفال') ||
+        p.product_category.includes('أعمال') ||
+        p.product_category.includes('قواميس') ||
+        p.product_category.includes('صحة') ||
+        p.product_category.includes('فنون')
+      )
+    );
+
     if (this.activeTab === 'all') {
-      return this.allProducts.slice(0, 20); // Show top 20 new items
+      return books.slice(0, 50);
     }
 
-    const category = this.categories.find(c => c.id === this.activeTab);
-    if (!category || !category.filter) return [];
+    const genre = this.bookGenres.find(c => c.id === this.activeTab);
+    if (!genre || !genre.filter) return books.slice(0, 50);
 
-    return this.allProducts.filter(product =>
-      category.filter?.some(f => product.product_category && product.product_category.includes(f))
-    ).slice(0, 20);
+    return books.filter(product =>
+      genre.filter?.some(f => product.product_category && product.product_category.includes(f))
+    ).slice(0, 50);
   }
 
   setActiveTab(tabId: string): void {
@@ -104,52 +142,28 @@ export class HomePageComponent implements OnInit {
   }
 
   getProductRoute(product: any): string[] {
-    const slug = this.getBookSlug(product.product_name);
-    // Simple mapping based on category ID logic
-    let route = 'others';
+    const slug = this.getBookSlug(product.product_name || '');
+    const category = (product.product_category || '').toLowerCase();
 
-    // Find which category this product belongs to
-    const cat = this.categories.find(c =>
-      c.id !== 'all' && c.filter?.some(f => product.product_category?.includes(f))
+    // 1. Try to find a match in mainSections
+    const cat = this.mainSections.find(c =>
+      c.id !== 'all' && c.filter?.some(f => category.includes(f.toLowerCase()))
     );
 
     if (cat) {
-      route = cat.id === 'books' ? 'book' : cat.id;
+      return ['/' + (cat.id === 'books' ? 'book' : cat.id), product.products_id, slug];
     }
 
+    // 2. Broad check for book-related keywords if no specific match
+    const bookKeywords = ['كتب', 'روايات', 'قصص', 'تطوير الذات', 'دينية', 'تاريخ', 'أطفال', 'أعمال', 'قواميس', 'صحة', 'فنون'];
+    const isBook = bookKeywords.some(key => category.includes(key));
+
+    const route = isBook ? 'book' : 'others';
     return ['/' + route, product.products_id, slug];
   }
 
   getBookImageUrl(book: any): string {
-    let imagePath = book.product_image ? String(book.product_image) : '';
-
-    // Simplified image path logic
-    if (!imagePath) {
-      return this.uploadsBaseUrl + '/placeholder.webp'; // Fallback
-    }
-
-    // Existing complex logic for path sanitization (kept for compatibility)
-    const getSanitizedPath = (merchantName: string, id: string, filename: string) => {
-      const sanitizedMerchantName = merchantName.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
-      return 'merchant_' + sanitizedMerchantName + '/' + id + '/' + filename;
-    };
-
-    if (imagePath.includes('/')) {
-      // Already has path structure, ensure it's correct
-      if (!imagePath.startsWith('http')) {
-        return this.uploadsBaseUrl + '/' + imagePath;
-      }
-      return imagePath;
-    }
-
-    // If it's just a filename or ID
-    if (book.merchantName) {
-      imagePath = getSanitizedPath(book.merchantName, book.products_id, imagePath.includes('.') ? imagePath : imagePath + '.webp');
-    } else {
-      imagePath = 'admin__karim_mohamed__/' + book.products_id + '/' + (imagePath.includes('.') ? imagePath : imagePath + '.webp');
-    }
-
-    return this.uploadsBaseUrl + '/' + imagePath;
+    return this.dataService.getBookImageUrl(book);
   }
 
   // Promo Carousel Logic
@@ -199,12 +213,117 @@ export class HomePageComponent implements OnInit {
     }
   }
 
+  // New Hero Initialization
+  initHero(): void {
+    this.promotionService.getHeroConfig().subscribe({
+      next: (config) => {
+        if (config) this.heroConfig = { ...this.heroConfig, ...config };
+
+        // Adaptive Loading: Fallback to slider if network is slow
+        if (isPlatformBrowser(this.platformId) && (navigator as any).connection) {
+          const connection = (navigator as any).connection;
+          const speed = connection.effectiveType;
+          if (speed === 'slow-2g' || speed === '2g' || speed === '3g') {
+            console.warn(`🚀 Network speed (${speed}) is slow. Falling back to slider mode for better performance.`);
+            this.heroConfig.mode = 'slider';
+          }
+        }
+
+        if (this.heroConfig.mode === 'scrolling') {
+          this.loadHeroBooks();
+        } else {
+          this.setPromoImages();
+        }
+      },
+      error: () => this.setPromoImages()
+    });
+  }
+
+  loadHeroBooks(): void {
+    this.promotionService.getHeroBooks().subscribe({
+      next: (res: any) => {
+        if (res && res.success && res.products && res.products.length > 0) {
+          this.heroBooks = res.products;
+          this.prepareHeroColumns();
+          this.isLoading = false;
+          // Trigger change detection implicitly via property update
+        } else {
+          console.warn('Hero books response unsuccessful', res);
+          this.fallbackToSlider();
+        }
+      },
+      error: (err) => {
+        console.error('Error loading hero books', err);
+        this.fallbackToSlider();
+      }
+    });
+  }
+
+  private fallbackToSlider(): void {
+    this.heroConfig.mode = 'slider';
+    this.setPromoImages();
+    this.isLoading = false;
+  }
+
+  prepareHeroColumns(): void {
+    const count = this.heroConfig.columnCount || 4;
+    this.heroColumns = Array.from({ length: count }, () => []);
+
+    // Distribute books among columns randomly or sequentially
+    this.heroBooks.forEach((book, index) => {
+      this.heroColumns[index % count].push(book);
+    });
+
+    // Mirror books to ensure seamless infinite scroll if needed, 
+    // but the CSS marquee usually handles this by doubling the content.
+  }
+
   setPromoImages(): void {
-    const width = window.innerWidth;
-    if (width < 640) {
-      this.promoImages = ['spanar1.jpg', 'spanar2.jpg', 'spanar3.jpg'];
+    this.promotionService.getHeroSlides().subscribe({
+      next: (res: any) => {
+        if (res.success && res.slides && res.slides.length > 0) {
+          this.dynamicSlides = res.slides;
+          this.updateHeroImages();
+        } else {
+          this.setDefaultHeroImages();
+        }
+
+        if (isPlatformBrowser(this.platformId)) {
+          this.startPromoAutoScroll();
+        }
+      },
+      error: () => {
+        this.setDefaultHeroImages();
+        if (isPlatformBrowser(this.platformId)) {
+          this.startPromoAutoScroll();
+        }
+      }
+    });
+  }
+
+  updateHeroImages(): void {
+    if (isPlatformBrowser(this.platformId)) {
+      const isMobile = window.innerWidth < 768;
+      this.promoImages = this.dynamicSlides
+        .filter(s => s.isActive)
+        .sort((a, b) => (a.order || 0) - (b.order || 0))
+        .map(s => isMobile ? s.mobilePath : s.desktopPath);
     } else {
-      this.promoImages = ['panar1.jpg', 'panar2.jpg', 'panar3.jpg'];
+      // SSR fallback to desktop
+      this.promoImages = this.dynamicSlides.map(s => s.desktopPath);
+    }
+  }
+
+  setDefaultHeroImages(): void {
+    if (isPlatformBrowser(this.platformId)) {
+      const width = window.innerWidth;
+      if (width < 640) {
+        this.promoImages = ['spanar1.png', 'spanar2.png', 'spanar3.png'];
+      } else {
+        this.promoImages = ['panar1.png', 'panar2.png', 'panar3.png'];
+      }
+    } else {
+      this.promoImages = ['panar1.png', 'panar2.png', 'panar3.png'];
     }
   }
 
@@ -214,8 +333,11 @@ export class HomePageComponent implements OnInit {
   }
 
   toggleFavorite(productId: string): void {
-    const userData = JSON.parse(localStorage.getItem('user') || '{}');
-    const userId = userData.id;
+    let userId = null;
+    if (isPlatformBrowser(this.platformId)) {
+      const userData = JSON.parse(localStorage.getItem('user') || '{}');
+      userId = userData.id;
+    }
 
     if (userId) {
       if (this.isFavorite(productId)) {
@@ -230,7 +352,35 @@ export class HomePageComponent implements OnInit {
         });
       }
     } else {
-      // Redirect to login or show login modal
+      this.router.navigate(['/login']);
+    }
+  }
+
+  // Cart functionality
+  isInCart(productId: string): boolean {
+    return this.authService.isInCart(productId);
+  }
+
+  toggleCart(productId: string): void {
+    let userId = null;
+    if (isPlatformBrowser(this.platformId)) {
+      const userData = JSON.parse(localStorage.getItem('user') || '{}');
+      userId = userData.id;
+    }
+
+    if (userId) {
+      if (this.isInCart(productId)) {
+        this.authService.removeFromCart(userId, productId).subscribe({
+          next: () => this.authService.loadUserData(userId),
+          error: err => console.error('Error removing from cart', err)
+        });
+      } else {
+        this.authService.addToCart(userId, productId).subscribe({
+          next: () => this.authService.loadUserData(userId),
+          error: err => console.error('Error adding to cart', err)
+        });
+      }
+    } else {
       this.router.navigate(['/login']);
     }
   }

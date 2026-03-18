@@ -10,6 +10,9 @@ router.get('/stats', adminController.getStats);
 // Apply authentication to all other admin routes
 router.use(authenticateAdmin);
 
+// Route to get global platform analytics
+router.get('/analytics', adminController.getAdminGlobalAnalytics);
+
 // Route to get all urgency requests
 router.get('/urgency-requests', adminController.getAllUrgencyRequests);
 
@@ -57,6 +60,7 @@ router.post('/sync-json-to-google-sheets', async (req, res) => {
 // New route for batch update products
 router.post('/products/batch-update', adminController.batchUpdateProducts);
 
+
 // New route for bulk price adjustment
 router.post('/products/bulk-adjust', adminController.bulkAdjustPrices);
 
@@ -88,10 +92,13 @@ router.get('/user-hierarchy', adminController.userHierarchy);
 
 // 🛒 Manual Sales & Inventory Recording
 router.post('/register-sale', adminController.registerSale);
+router.get('/sales-history', adminController.getSalesHistory);
 
 // 📊 Shortages & Reports
 router.get('/shortage-settings', adminController.getShortageSettings);
 router.get('/shortages-report', adminController.getShortagesReport);
 router.patch('/shortage-settings', adminController.updateShortageSettings);
+router.get('/economy-settings', adminController.getEconomySettings);
+router.patch('/economy-settings', adminController.updateEconomySettings);
 
 module.exports = router;

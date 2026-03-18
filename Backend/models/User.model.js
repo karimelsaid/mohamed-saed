@@ -36,6 +36,7 @@ const userSchema = new mongoose.Schema({
   approved: { type: Boolean, default: false },
   suspended: { type: Boolean, default: false }, // إيقاف الحساب مؤقتاً
   merchantName: { type: String },
+  coverPhoto: { type: String }, // صورة غلاف المتجر
   preparationTime: { type: Number, default: 1 }, // مدة تجهيز الطلب (1 أو 2 يوم)
 
   // حقول الاشتراك في الكتب الإلكترونية
@@ -101,7 +102,9 @@ const userSchema = new mongoose.Schema({
       address: String,
       name: String
     },
-    address: String
+    address: String,
+    paymentMethod: { type: String, enum: ['online', 'cod', 'wallet'], default: 'online' },
+    codFee: { type: Number, default: 0 }
   }],
   requestedBooks: [{
     bookName: { type: String, required: true },
@@ -251,7 +254,15 @@ const userSchema = new mongoose.Schema({
       revision: { enabled: { type: Boolean, default: false }, time: { type: String, default: '10:00' } }
     }
   },
-  paymentRequests: [paymentRequestSchema]
+  paymentRequests: [paymentRequestSchema],
+  following: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  followers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  // Merchant Store Analytics
+  storeViews: { type: Number, default: 0 },
+  storeViewHistory: [{
+    date: { type: String }, // YYYY-MM-DD
+    count: { type: Number, default: 0 }
+  }]
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', userSchema);

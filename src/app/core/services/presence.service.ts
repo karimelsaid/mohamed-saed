@@ -61,15 +61,16 @@ export class PresenceService implements OnDestroy {
         console.log('🔌 Initializing socket at:', socketUrl, 'with path /api/socket.io');
         this.socketStatusSubject.next('جاري الاتصال بالسيرفر...');
 
-        this.socket = io(socketUrl, {
-            path: '/api/socket.io',
-            transports: ['websocket'], // Force websocket only to avoid polling issues (xhr poll error)
-            reconnectionAttempts: 20,
-            reconnectionDelay: 1000,
-            reconnectionDelayMax: 5000,
-            timeout: 20000, // 20 second timeout for mobile stability
-            randomizationFactor: 0.5
-        });
+        const socketOptions: any = {};
+        socketOptions.path = '/api/socket.io';
+        socketOptions.transports = ['websocket'];
+        socketOptions.reconnectionAttempts = 20;
+        socketOptions.reconnectionDelay = 1000;
+        socketOptions.reconnectionDelayMax = 5000;
+        socketOptions.timeout = 20000;
+        socketOptions.randomizationFactor = 0.5;
+        
+        this.socket = io(socketUrl, socketOptions);
 
         this.socket.on('presence_update', (users: ActiveUser[]) => {
             console.log('👥 Presence update in room:', users.length, 'users');
@@ -113,19 +114,19 @@ export class PresenceService implements OnDestroy {
             }
         });
 
-        this.socket.on('reconnect', (attempt) => {
+        this.socket.on('reconnect', (attempt: number) => {
             console.log('🔄 Reconnected after attempt:', attempt);
             this.isConnectedSubject.next(true);
             this.socketStatusSubject.next('تم إعادة الاتصال');
         });
 
-        this.socket.on('disconnect', (reason) => {
+        this.socket.on('disconnect', (reason: string) => {
             console.warn('❌ Disconnected from presence server:', reason);
             this.isConnectedSubject.next(false);
             this.socketStatusSubject.next('انقطع الاتصال: ' + reason);
         });
 
-        this.socket.on('connect_error', (error) => {
+        this.socket.on('connect_error', (error: any) => {
             console.error('⚠️ Socket Connection Error:', error);
             this.isConnectedSubject.next(false);
             this.socketStatusSubject.next('خطأ في الاتصال: ' + error.message);

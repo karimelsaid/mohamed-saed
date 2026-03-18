@@ -21,7 +21,15 @@ export class PushNotificationService {
     ) {
         // Initialize listeners if on native platform
         if (Capacitor.isNativePlatform()) {
-            // this.registerNativeListeners();
+            this.registerNativeListeners();
+        }
+
+        // Initialize Web Push foreground listeners
+        if (isPlatformBrowser(this.platformId) && !Capacitor.isNativePlatform() && this.swPush.isEnabled) {
+            this.swPush.messages.subscribe((message: any) => {
+                console.log('📬 Web Push Received (Foreground):', message);
+                this.pushPayload.next(message);
+            });
         }
     }
 

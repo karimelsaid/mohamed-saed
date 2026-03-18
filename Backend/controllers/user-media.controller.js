@@ -7,16 +7,19 @@ const User = require('../models/User.model');
 // Multer Config (Disk Storage instead of Memory to save directly)
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        const profilesDir = path.join(__dirname, '../uploads/profiles');
-        if (!fs.existsSync(profilesDir)) {
-            fs.mkdirSync(profilesDir, { recursive: true });
+        // Use req.user._id (from verifyToken) as first priority, then body
+        const userId = (req.user && req.user._id) ? req.user._id.toString() : (req.body.userId || 'unknown');
+        const userDir = path.join(__dirname, '../uploads/users', userId);
+        if (!fs.existsSync(userDir)) {
+            fs.mkdirSync(userDir, { recursive: true });
         }
-        cb(null, profilesDir);
+        cb(null, userDir);
     },
     filename: (req, file, cb) => {
-        const userId = req.body.userId || req.user?._id || 'unknown';
+        const userId = (req.user && req.user._id) ? req.user._id.toString() : (req.body.userId || 'unknown');
         const ext = path.extname(file.originalname) || '.jpg';
-        cb(null, `profile-${userId}-${Date.now()}${ext}`);
+        const prefix = req.path.includes('cover') ? 'cover' : 'profile';
+        cb(null, `${prefix}-${userId}-${Date.now()}${ext}`);
     }
 });
 
@@ -36,47 +39,62 @@ exports.uploadProfileImage = [
     upload.single('image'),
     async (req, res) => {
         try {
+            console.log('📸 [ProfileUpload] User ID from body:', req.body.userId);
+            console.log('👤 [ProfileUpload] User from Req (Auth):', req.user?._id);
+            console.log('📁 [ProfileUpload] File Info:', req.file ? {
+                filename: req.file.filename,
+                path: req.file.path,
+                size: req.file.size
+            } : 'No file');
+
             if (!req.file) {
                 return res.status(400).json({ message: 'No image uploaded' });
             }
 
-            const userId = req.body.userId || req.user?._id;
+            const userId = req.body.userId || (req.user ? req.user._id.toString() : null);
             if (!userId) {
-                // If no user ID, clean up the uploaded file
+                console.error('❌ [ProfileUpload] No User ID provided!');
                 fs.unlinkSync(req.file.path);
                 return res.status(400).json({ message: 'User ID is required' });
             }
 
             // Construct Public URL
             const filename = req.file.filename;
-            const publicUrl = `/uploads/profiles/${filename}`;
+            const publicUrl = `/uploads/users/${userId}/${filename}`;
 
-            // 1. Find User to clean up old image (optional but good practice)
+            // 1. Find User to clean up old image
             const user = await User.findById(userId).select('profileImage');
             if (!user) {
+                console.error(`❌ [ProfileUpload] User ${userId} not found in DB`);
                 fs.unlinkSync(req.file.path);
                 return res.status(404).json({ message: 'User not found' });
             }
 
-            // Delete old image if it exists and is not a default/external one
-            if (user.profileImage && user.profileImage.includes('uploads/profiles')) {
-                const oldFilename = user.profileImage.split('/').pop();
-                const oldPath = path.join(__dirname, '../uploads/profiles', oldFilename);
-                if (fs.existsSync(oldPath) && oldFilename !== filename) {
-                    try {
+            // Delete old image if it exists in local storage
+            if (user.profileImage && user.profileImage.includes('/uploads/')) {
+                let oldPath;
+                if (user.profileImage.includes('/uploads/profiles/')) {
+                    const oldFilename = user.profileImage.split('/').pop();
+                    oldPath = path.join(__dirname, '../uploads/profiles', oldFilename);
+                } else {
+                    const parts = user.profileImage.split('/');
+                    const uId = parts[parts.length - 2];
+                    const fName = parts[parts.length - 1];
+                    oldPath = path.join(__dirname, '../uploads/users', uId, fName);
+                }
+
+                if (fs.existsSync(oldPath)) {
+                    try { 
                         fs.unlinkSync(oldPath);
-                    } catch (err) {
-                        console.error('Error deleting old profile image:', err);
+                        console.log('🗑️ [ProfileUpload] Old image deleted:', oldPath);
+                    } catch (err) { 
+                        console.error('Error deleting old profile image:', err); 
                     }
                 }
             }
 
-            // 2. Atomic Update (Prevent overwriting Gamification/Reward locks)
-            const updatedUser = await User.findByIdAndUpdate(
-                userId,
-                { profileImage: publicUrl },
-                { new: true }
-            );
+            await User.findByIdAndUpdate(userId, { profileImage: publicUrl });
+            console.log(`✅ [ProfileUpload] User ${userId} updated with: ${publicUrl}`);
 
             res.status(200).json({
                 message: 'Profile image updated successfully',
@@ -84,11 +102,74 @@ exports.uploadProfileImage = [
             });
 
         } catch (error) {
-            console.error('Error uploading profile image:', error);
-            res.status(500).json({
-                message: 'Error processing image',
-                error: error.message
+            console.error('🔥 [ProfileUpload] Error:', error);
+            if (req.file) fs.unlinkSync(req.file.path);
+            res.status(500).json({ message: 'Error processing image', error: error.message });
+        }
+    }
+];
+
+exports.uploadCoverImage = [
+    upload.single('image'),
+    async (req, res) => {
+        try {
+            console.log('📸 [CoverUpload] User ID from body:', req.body.userId);
+            console.log('👤 [CoverUpload] User from Req (Auth):', req.user?._id);
+
+            if (!req.file) {
+                return res.status(400).json({ message: 'No image uploaded' });
+            }
+
+            const userId = req.body.userId || (req.user ? req.user._id.toString() : null);
+            if (!userId) {
+                console.error('❌ [CoverUpload] No User ID provided!');
+                fs.unlinkSync(req.file.path);
+                return res.status(400).json({ message: 'User ID is required' });
+            }
+
+            const filename = req.file.filename;
+            const publicUrl = `/uploads/users/${userId}/${filename}`;
+
+            const user = await User.findById(userId).select('coverPhoto');
+            if (!user) {
+                console.error(`❌ [CoverUpload] User ${userId} not found in DB`);
+                fs.unlinkSync(req.file.path);
+                return res.status(404).json({ message: 'User not found' });
+            }
+
+            if (user.coverPhoto && user.coverPhoto.includes('/uploads/')) {
+                let oldPath;
+                if (user.coverPhoto.includes('/uploads/profiles/')) {
+                    const oldFilename = user.coverPhoto.split('/').pop();
+                    oldPath = path.join(__dirname, '../uploads/profiles', oldFilename);
+                } else {
+                    const parts = user.coverPhoto.split('/');
+                    const uId = parts[parts.length - 2];
+                    const fName = parts[parts.length - 1];
+                    oldPath = path.join(__dirname, '../uploads/users', uId, fName);
+                }
+
+                if (fs.existsSync(oldPath)) {
+                    try { 
+                        fs.unlinkSync(oldPath);
+                        console.log('🗑️ [CoverUpload] Old cover deleted:', oldPath);
+                    } catch (err) { 
+                        console.error('Error deleting old cover photo:', err); 
+                    }
+                }
+            }
+
+            await User.findByIdAndUpdate(userId, { coverPhoto: publicUrl });
+            console.log(`✅ [CoverUpload] User ${userId} updated with: ${publicUrl}`);
+
+            res.status(200).json({
+                message: 'Cover photo updated successfully',
+                imageUrl: publicUrl
             });
+        } catch (error) {
+            console.error('🔥 [CoverUpload] Error:', error);
+            if (req.file) fs.unlinkSync(req.file.path);
+            res.status(500).json({ message: 'Error processing image', error: error.message });
         }
     }
 ];

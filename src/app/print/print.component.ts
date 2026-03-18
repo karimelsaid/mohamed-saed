@@ -82,7 +82,8 @@ export class PrintComponent implements OnInit {
     includedProducts: [],
     includedCategories: [],
     includedGovernorates: [],
-    freeShippingEnabled: true
+    freeShippingEnabled: true,
+    codFee: 10
   };
 
   printingSettings: any = {
@@ -185,6 +186,7 @@ export class PrintComponent implements OnInit {
       copies: null,
       notes: '',
       projectTitle: '',
+      coverPrintingType: 'ديجيتال', // New field
       estimatedPrice: 0, // Add estimatedPrice property
       loadingPages: false // Added to track loading state
     });
@@ -446,11 +448,13 @@ export class PrintComponent implements OnInit {
     // 3. Cover price
     let coverPrice = 0;
     if (project.coverType === 'غلاف ورقي' || project.coverType === 'Soft Cover') {
-      coverPrice = this.printingSettings.coverPrices.soft;
-    } else if (project.coverType === 'غلاف كرتوني' || project.coverType === 'Hard Cover' || project.coverType === 'غلاف مجلد') {
-      coverPrice = this.printingSettings.coverPrices.hard;
-    } else if (project.coverType === 'غلاف جلد فاخر' || project.coverType === 'Luxury Leather') {
-      coverPrice = this.printingSettings.coverPrices.luxuryLeather;
+      coverPrice = this.printingSettings.coverPrices.soft || 25;
+    } else if (project.coverType === 'غلاف مجلد' || project.coverType === 'Hard Cover' || project.coverType === 'غلاف كرتوني') {
+      coverPrice = this.printingSettings.coverPrices.hard || 60;
+    } else if (project.coverType === 'جلد فاخر' || project.coverType === 'Luxury Leather' || project.coverType === 'غلاف جلد فاخر') {
+      coverPrice = this.printingSettings.coverPrices.luxuryLeather || 100;
+    } else if (project.coverType === 'بدون غلاف' || project.coverType === 'none') {
+      coverPrice = 0;
     }
 
     const totalCost = (totalPaperCost + inkCostTotal + coverPrice);

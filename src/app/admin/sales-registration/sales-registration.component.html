@@ -1,102 +1,158 @@
-<div class="registration-container" dir="rtl">
-    <div class="header">
-        <h2><fa-icon [icon]="faCartPlus"></fa-icon> تسجيل مبيعات خارجية</h2>
-        <p>قم بتسجيل المبيعات التي تمت عبر أمازون أو المكتبة لتحديث المخزون بدقة.</p>
-    </div>
+<div class="pos-container" dir="rtl">
+    <!-- Main Content: POS Layout -->
+    <div class="pos-layout no-print">
 
-    <!-- Search Section -->
-    <div class="search-section card">
-        <label for="productSearch">ابحث عن منتج (الاسم أو الباركود):</label>
+        <!-- Left Column: Product Selection & Search -->
+        <div class="pos-sidebar">
+            <div class="pos-card search-card">
+                <div class="card-header">
+                    <h3><fa-icon [icon]="faSearch"></fa-icon> البحث عن المنتجات</h3>
+                </div>
+                <div class="search-wrapper">
+                    <input type="text" [(ngModel)]="searchTerm" (input)="searchProducts()"
+                        placeholder="ابحث بالاسم أو الباركود..." class="pos-input search-input">
+                    <fa-icon [icon]="faSearch" class="search-icon-inside"></fa-icon>
 
-        <div class="search-container">
-            <div class="search-input-wrapper premium">
-                <fa-icon [icon]="faSearch" class="search-icon"></fa-icon>
-                <input type="text" id="productSearch" [(ngModel)]="searchTerm" (input)="searchProducts()"
-                    placeholder="ادخل اسم الكتاب أو الباركود..." autocomplete="off" class="premium-search-input">
-                <button class="btn-clear" *ngIf="searchTerm" (click)="searchTerm=''; searchProducts()">
-                    <fa-icon [icon]="faTimes"></fa-icon>
-                </button>
-
-                <!-- Search Results Dropdown - Now contained inside the relative wrapper -->
-                <div class="search-results-dropdown premium" *ngIf="searchResults.length > 0">
-                    <div class="result-item-premium" *ngFor="let product of searchResults" (click)="addItem(product)">
-                        <div class="result-main">
-                            <img [src]="backendBaseUrl + product.image_path" alt="" class="thumbnail"
-                                *ngIf="product.image_path">
-                            <div class="info">
-                                <span class="name">{{ product.product_name }}</span>
-                                <div class="stock-badge-mini" [class.in-stock]="product.product_quantity > 0"
-                                    [class.out-of-stock]="product.product_quantity <= 0">
+                    <div class="search-results" *ngIf="searchResults.length > 0">
+                        <div class="search-item" *ngFor="let product of searchResults" (click)="addItem(product)">
+                            <img [src]="getImageUrl(product)" alt="" class="item-thumb"
+                                *ngIf="product.image_path || product.products_id">
+                            <div class="item-info">
+                                <span class="item-name">{{ product.product_name }}</span>
+                                <span class="item-price">{{ product.product_price }} ج.م</span>
+                                <span class="item-stock" [class.low-stock]="product.product_quantity <= 5">
                                     المخزون: {{ product.product_quantity }}
-                                </div>
+                                </span>
                             </div>
+                            <button class="add-btn"><fa-icon [icon]="faPlus"></fa-icon></button>
                         </div>
-                        <fa-icon [icon]="faPlus" class="add-icon"></fa-icon>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Customer Info Card -->
+            <div class="pos-card customer-card">
+                <div class="card-header">
+                    <h3>بيانات العميل (اختياري)</h3>
+                </div>
+                <div class="form-group">
+                    <label>اسم العميل</label>
+                    <input type="text" [(ngModel)]="customerName" placeholder="ادخل اسم العميل" class="pos-input">
+                </div>
+                <div class="form-group">
+                    <label>رقم الهاتف</label>
+                    <input type="text" [(ngModel)]="customerPhone" placeholder="ادخل رقم الهاتف" class="pos-input">
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Cart & Checkout -->
+        <div class="pos-main">
+            <div class="pos-card cart-card">
+                <div class="card-header split">
+                    <h3><fa-icon [icon]="faCartPlus"></fa-icon> قائمة المشتريات</h3>
+                    <span class="invoice-num"># {{ invoiceNumber }}</span>
+                </div>
+
+                <div class="cart-items">
+                    <div class="empty-cart" *ngIf="sessionItems.length === 0">
+                        <fa-icon [icon]="faCartPlus" class="empty-icon"></fa-icon>
+                        <p>قائمة المشتريات فارغة. ابحث عن منتجات لإضافتها.</p>
+                    </div>
+
+                    <div class="cart-item" *ngFor="let item of sessionItems; let i = index">
+                        <div class="item-details">
+                            <span class="name">{{ item.product_name }}</span>
+                            <span class="price-unit">{{ item.product_price }} ج.م</span>
+                        </div>
+                        <div class="item-controls">
+                            <div class="qty-stepper">
+                                <button (click)="updateQty(i, -1)" class="step-btn">-</button>
+                                <span class="qty-val">{{ item.quantity }}</span>
+                                <button (click)="updateQty(i, 1)" class="step-btn">+</button>
+                            </div>
+                            <span class="item-total">{{ item.product_price * item.quantity }} ج.م</span>
+                            <button class="remove-btn" (click)="removeItem(i)">
+                                <fa-icon [icon]="faTimes"></fa-icon>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="cart-footer" *ngIf="sessionItems.length > 0">
+                    <div class="summary-row">
+                        <span>الإجمالي الفرعي:</span>
+                        <span>{{ getSubtotal() | number:'1.2-2' }} ج.م</span>
+                    </div>
+                    <div class="summary-row total">
+                        <span>الإجمالي النهائي:</span>
+                        <span>{{ getGrandTotal() | number:'1.2-2' }} ج.م</span>
+                    </div>
+
+                    <div class="pos-actions">
+                        <button class="pos-btn outline" (click)="printInvoice()">
+                            <fa-icon [icon]="faSearch"></fa-icon> طباعة فاتورة
+                        </button>
+                        <button class="pos-btn primary" [disabled]="isSubmitting" (click)="submitSession()">
+                            <fa-icon [icon]="faCheckCircle" *ngIf="!isSubmitting"></fa-icon>
+                            <span *ngIf="isSubmitting">جاري الحفظ...</span>
+                            <span *ngIf="!isSubmitting">تأكيد البيع</span>
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Session Items -->
-    <div class="items-section card" *ngIf="sessionItems.length > 0">
-        <h3>الكتب المختارة</h3>
-        <div class="table-responsive">
-            <table>
-                <thead>
-                    <tr>
-                        <th>المنتج</th>
-                        <th>الكمية المباعة</th>
-                        <th>قناة البيع</th>
-                        <th>إجراء</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr *ngFor="let item of sessionItems; let i = index">
-                        <td>
-                            <div class="product-cell">
-                                <img [src]="backendBaseUrl + item.image_path" alt="" class="thumbnail">
-                                <span>{{ item.product_name }}</span>
-                            </div>
-                        </td>
-                        <td>
-                            <div class="qty-control">
-                                <button (click)="updateQty(i, -1)">-</button>
-                                <input type="number" [(ngModel)]="item.quantity" min="1" [max]="item.product_quantity">
-                                <button (click)="updateQty(i, 1)">+</button>
-                            </div>
-                        </td>
-                        <td>
-                            <select [(ngModel)]="item.channel">
-                                <option value="Amazon">أمازون</option>
-                                <option value="Store">المكتبة</option>
-                            </select>
-                        </td>
-                        <td>
-                            <button class="btn-delete" (click)="removeItem(i)">
-                                <fa-icon [icon]="faTimes"></fa-icon>
-                            </button>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+    <!-- Hidden Printable Invoice -->
+    <div class="print-invoice only-print" dir="rtl">
+        <div class="invoice-header">
+            <div class="shop-brand">
+                <h1>مكتبة كنوز</h1>
+                <p>للثقافة والعلوم</p>
+            </div>
+            <div class="invoice-meta">
+                <h2>فاتورة مبيعات</h2>
+                <p>رقم: {{ invoiceNumber }}</p>
+                <p>التاريخ: {{ invoiceDate }}</p>
+            </div>
         </div>
 
-        <div class="form-actions">
-            <button class="btn-submit" [disabled]="isSubmitting" (click)="submitSession()">
-                <fa-icon [icon]="faCheckCircle" *ngIf="!isSubmitting"></fa-icon>
-                <span *ngIf="isSubmitting">جاري الحفظ...</span>
-                <span *ngIf="!isSubmitting">تأكيد المبيعات وتحديث المخزون</span>
-            </button>
+        <div class="invoice-client-info" *ngIf="customerName || customerPhone">
+            <h3>بيانات العميل:</h3>
+            <p *ngIf="customerName">الاسم: {{ customerName }}</p>
+            <p *ngIf="customerPhone">الهاتف: {{ customerPhone }}</p>
         </div>
-    </div>
 
-    <!-- Alerts Container -->
-    <div class="alerts" *ngIf="sessionItems.length > 0">
-        <div class="alert warning" *ngFor="let item of sessionItems">
-            <fa-icon [icon]="faExclamationTriangle"></fa-icon>
-            <span *ngIf="item.product_quantity <= 5">تنبيه: المخزون منخفض جداً لـ "{{ item.product_name }}" (باقي {{
-                item.product_quantity }} نسخة)</span>
+        <table class="invoice-table">
+            <thead>
+                <tr>
+                    <th>المنتج</th>
+                    <th>السعر</th>
+                    <th>الكمية</th>
+                    <th>الإجمالي</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr *ngFor="let item of sessionItems">
+                    <td>{{ item.product_name }}</td>
+                    <td>{{ item.product_price | number:'1.2-2' }}</td>
+                    <td>{{ item.quantity }}</td>
+                    <td>{{ (item.product_price * item.quantity) | number:'1.2-2' }}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="invoice-summary">
+            <div class="summary-line">
+                <span>الإجمالي:</span>
+                <span>{{ getGrandTotal() | number:'1.2-2' }} ج.م</span>
+            </div>
+        </div>
+
+        <div class="invoice-footer">
+            <p>شكراً لتعاملكم معنا</p>
+            <p>مكتبة كنوز - طريقك نحو المعرفة</p>
         </div>
     </div>
 </div>

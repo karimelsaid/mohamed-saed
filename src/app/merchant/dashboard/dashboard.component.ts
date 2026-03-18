@@ -8,6 +8,9 @@ import { Subscription } from 'rxjs';
 import { ModalDialogComponent } from '../../shared/modal-dialog/modal-dialog.component';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
+import { AnalyticsService } from '../../services/analytics.service';
+import { Chart, registerables } from 'chart.js';
+Chart.register(...registerables);
 
 @Component({
   selector: 'app-merchant-dashboard',
@@ -25,6 +28,11 @@ export class MerchantDashboardComponent implements OnInit {
   loadingProducts = false;
   loadingOrders = false;
   loadingUpdateRequests = false;
+  loadingAnalytics = false;
+
+  activeTab: 'overview' | 'analytics' | 'products' | 'orders' | 'settings' = 'overview';
+  analyticsData: any = null;
+  charts: any = {};
 
   private productsSubscription!: Subscription;
 
@@ -60,9 +68,11 @@ export class MerchantDashboardComponent implements OnInit {
     taxNumber: '',
     bio: '',
     logoFile: null,
+    coverPhotoFile: null,
     preparationTime: 1
   };
   logoPreview: string | null = null;
+  coverPreview: string | null = null;
   updatingProfile = false;
   updateMessage = '';
   updateMessageColor = 'green';
@@ -79,7 +89,9 @@ export class MerchantDashboardComponent implements OnInit {
     this.editForm.bio = this.merchant?.bio || ''; // Ensure bio is loaded correctly
     this.editForm.preparationTime = this.merchant?.preparationTime || 1;
     this.editForm.logoFile = null;
+    this.editForm.coverPhotoFile = null;
     this.logoPreview = null;
+    this.coverPreview = null;
     this.updateMessage = '';
     // Reset validation states
     this.phoneValid = false;
@@ -100,7 +112,8 @@ export class MerchantDashboardComponent implements OnInit {
     private merchantAuthService: MerchantAuthService,
     private router: Router,
     private http: HttpClient,
-    private productStateService: ProductStateService) { }
+    private productStateService: ProductStateService,
+    private analyticsService: AnalyticsService) { }
 
   ngOnInit(): void {
     // Check if merchant is authenticated first
@@ -115,6 +128,7 @@ export class MerchantDashboardComponent implements OnInit {
     this.loadOrders();
     this.loadUpdateRequests();
     this.loadBooksList();
+    this.loadAnalytics();
 
     this.productsSubscription = this.productStateService.products$.subscribe(products => {
       this.loadProducts();
@@ -489,6 +503,11 @@ export class MerchantDashboardComponent implements OnInit {
       formData.append('logo', this.editForm.logoFile);
     }
 
+    // Add cover photo file if selected
+    if (this.editForm.coverPhotoFile) {
+      formData.append('coverPhoto', this.editForm.coverPhotoFile);
+    }
+
     this.merchantAuthService.updateMerchantProfile(formData).subscribe({
       next: (res: any) => {
         this.updatingProfile = false;
@@ -518,6 +537,24 @@ export class MerchantDashboardComponent implements OnInit {
       };
       reader.readAsDataURL(file);
     }
+  }
+
+  onCoverFileSelected(event: any) {
+    const file = event.target.files[0];
+    if (file) {
+      this.editForm.coverPhotoFile = file;
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        this.coverPreview = e.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  getCoverUrl(cover: string): string {
+    if (!cover) return '';
+    return `/uploads/books/${cover}`;
   }
 
   getLogoUrl(logo: string): string {
@@ -727,5 +764,144 @@ export class MerchantDashboardComponent implements OnInit {
   viewOrderDetails(order: any): void {
     // Navigate to order details page or show modal with order details
     this.router.navigate(['/merchant/order-details', order._id]);
+  }
+
+  setTab(tab: any) {
+    this.activeTab = tab;
+    if (tab === 'analytics') {
+      // Small delay to ensure canvas is rendered
+      setTimeout(() => this.initCharts(), 100);
+    }
+  }
+
+  loadAnalytics() {
+    this.loadingAnalytics = true;
+    this.analyticsService.getMerchantStats().subscribe({
+      next: (data) => {
+        this.analyticsData = data;
+        this.loadingAnalytics = false;
+        if (this.activeTab === 'analytics') {
+          this.initCharts();
+        }
+      },
+      error: (err) => {
+        console.error('Error loading analytics:', err);
+        this.loadingAnalytics = false;
+      }
+    });
+  }
+
+  initCharts() {
+    if (!this.analyticsData) return;
+
+    // Destroy existing charts to prevent memory leaks
+    Object.values(this.charts).forEach((chart: any) => chart.destroy());
+
+    const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const textColor = isDarkMode ? '#94a3b8' : '#64748b';
+    const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)';
+    const accentColor = isDarkMode ? '#60a5fa' : '#3b82f6';
+    const isMobile = window.innerWidth < 768;
+
+    // 1. Visitor Trend Chart
+    const trendCtx = document.getElementById('visitorTrendChart') as HTMLCanvasElement;
+    if (trendCtx) {
+      const labels = this.analyticsData.storeViewHistory.map((h: any) => h.date);
+      const data = this.analyticsData.storeViewHistory.map((h: any) => h.count);
+
+      this.charts['trend'] = new Chart(trendCtx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'زوار المتجر',
+            data,
+            borderColor: isDarkMode ? '#60a5fa' : '#2563eb',
+            backgroundColor: isDarkMode ? 'rgba(96, 165, 250, 0.2)' : 'rgba(37, 99, 235, 0.15)',
+            fill: true,
+            tension: 0.4,
+            borderWidth: 4,
+            pointRadius: isMobile ? 2 : 5,
+            pointBackgroundColor: isDarkMode ? '#60a5fa' : '#2563eb',
+            pointBorderColor: isDarkMode ? '#1e293b' : '#ffffff',
+            pointBorderWidth: 2,
+            pointHoverRadius: 7
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { 
+            legend: { display: false },
+            tooltip: {
+              mode: 'index',
+              intersect: false,
+              backgroundColor: isDarkMode ? '#1e293b' : '#ffffff',
+              titleColor: isDarkMode ? '#f8fafc' : '#1e293b',
+              bodyColor: textColor,
+              borderColor: isDarkMode ? '#334155' : '#e2e8f0',
+              borderWidth: 1
+            }
+          },
+          scales: { 
+            y: { 
+              beginAtZero: true,
+              grid: { color: gridColor },
+              ticks: { 
+                color: textColor,
+                font: { size: isMobile ? 10 : 12 }
+              }
+            },
+            x: {
+              grid: { display: false },
+              ticks: { 
+                color: textColor,
+                font: { size: isMobile ? 10 : 12 },
+                maxRotation: 45,
+                autoSkip: true
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // 2. Category Performance Chart
+    const catCtx = document.getElementById('categoryChart') as HTMLCanvasElement;
+    if (catCtx) {
+      const labels = this.analyticsData.categoryPerformance.map((c: any) => c.name);
+      const data = this.analyticsData.categoryPerformance.map((c: any) => c.views);
+
+      this.charts['category'] = new Chart(catCtx, {
+        type: 'doughnut',
+        data: {
+          labels,
+          datasets: [{
+            data,
+            backgroundColor: isDarkMode ? 
+              ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'] :
+              ['#2563eb', '#059669', '#d97706', '#dc2626', '#7c3aed', '#db2777'],
+            borderWidth: isDarkMode ? 2 : 0,
+            borderColor: isDarkMode ? '#1e293b' : 'transparent'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '70%',
+          plugins: { 
+            legend: { 
+              position: 'bottom',
+              labels: {
+                color: textColor,
+                padding: 20,
+                font: { size: isMobile ? 11 : 13 },
+                usePointStyle: true
+              }
+            }
+          }
+        }
+      });
+    }
   }
 }

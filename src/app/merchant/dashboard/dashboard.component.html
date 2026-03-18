@@ -1,786 +1,457 @@
-<!-- Main Container -->
-<div class="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 mt-6 md:mt-32 mb-32 md:mb-20">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+<div class="dashboard-wrapper mt-16 md:mt-32">
+  <!-- Sidebar Navigation -->
+  <aside class="dashboard-sidebar">
+    <div class="sidebar-brand">
+      <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white">
+        <i class="fas fa-store"></i>
+      </div>
+      <span>كنوز للتاجر</span>
+    </div>
 
-    <!-- Pending Approval Warning Section -->
-    <div *ngIf="isMerchantPending()" class="mb-4">
-      <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-6">
-        <div class="flex items-start">
-          <div class="flex-shrink-0">
-            <svg class="w-6 h-6 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
-            </svg>
+    <nav class="flex md:flex-col gap-2 mt-8 justify-center">
+      <a (click)="setTab('overview')" [class.active]="activeTab === 'overview'" class="sidebar-nav-item">
+        <i class="fas fa-home"></i>
+        <span>نظرة عامة</span>
+      </a>
+      <a (click)="setTab('analytics')" [class.active]="activeTab === 'analytics'" class="sidebar-nav-item">
+        <i class="fas fa-chart-line"></i>
+        <span>التحليلات</span>
+      </a>
+      <a (click)="setTab('products')" [class.active]="activeTab === 'products'" class="sidebar-nav-item">
+        <i class="fas fa-box"></i>
+        <span>المنتجات</span>
+      </a>
+      <a (click)="setTab('orders')" [class.active]="activeTab === 'orders'" class="sidebar-nav-item">
+        <i class="fas fa-shopping-bag"></i>
+        <span>الطلبات</span>
+      </a>
+      <a (click)="setTab('settings')" [class.active]="activeTab === 'settings'" class="sidebar-nav-item">
+        <i class="fas fa-cog"></i>
+        <span>الإعدادات</span>
+      </a>
+    </nav>
+  </aside>
+
+  <!-- Main Content Area -->
+  <main class="dashboard-main py-8 px-4 sm:px-6 lg:px-8">
+    
+    <!-- Pending Approval Warning (Persistent above tabs if pending) -->
+    <div *ngIf="isMerchantPending()" class="mb-8 p-6 bg-yellow-50 border border-yellow-200 rounded-2xl flex items-start gap-4">
+      <div class="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-600 shrink-0">
+        <i class="fas fa-exclamation-triangle text-xl"></i>
+      </div>
+      <div>
+        <h3 class="text-lg font-bold text-yellow-800 mb-1">حسابك في انتظار الموافقة</h3>
+        <p class="text-yellow-700 text-sm">تم إنشاء حسابك بنجاح. بمجرد موافقة فريق الإدارة، ستتمكن من إضافة المنتجات واستلام الطلبات.</p>
+      </div>
+    </div>
+
+    <!-- TAB: OVERVIEW -->
+    <div *ngIf="activeTab === 'overview'" class="animate-fade-in">
+      <header class="dashboard-header">
+        <div class="dashboard-title">
+          <h1 class="flex items-center gap-3 justify-center">
+             <span class="text-3xl">👋</span>
+             أهلاً بك، {{ merchant?.merchantName || merchant?.name }}
+          </h1>
+          <p>إليك ملخص سريع لتطور متجرك هذا الأسبوع.</p>
+        </div>
+        <button (click)="addProduct()" [disabled]="isMerchantPending()" 
+          class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition-all flex items-center justify-center disabled:opacity-50">
+          <i class="fas fa-plus ml-2 text-white"></i>
+          إضافة منتج جديد
+        </button>
+      </header>
+
+      <!-- Stats Grid -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon bg-blue-soft">
+            <i class="fas fa-eye"></i>
           </div>
-          <div class="mr-4 flex-1">
-            <h3 class="text-lg font-semibold text-yellow-800 dark:text-yellow-200 mb-2">
-              حسابك في انتظار الموافقة
-            </h3>
-            <p class="text-yellow-700 dark:text-yellow-300 mb-4">
-              تم إنشاء حسابك بنجاح وتسجيل دخولك تلقائياً. ومع ذلك، يجب الموافقة على حسابك من قبل فريق الإدارة قبل أن تتمكن من استخدام جميع وظائف لوحة التحكم.
-            </p>
-            <div class="bg-yellow-100 dark:bg-yellow-900/40 rounded-lg p-4 border border-yellow-300 dark:border-yellow-700">
-              <h4 class="font-medium text-yellow-800 dark:text-yellow-200 mb-2">ما يمكنك فعله الآن:</h4>
-              <ul class="list-disc list-inside text-sm text-yellow-700 dark:text-yellow-300 space-y-1">
-                <li>عرض معلومات حسابك وتعديلها</li>
-                <li>عرض قائمة المنتجات (إن وجدت)</li>
-                <li>الانتظار للموافقة على الحساب</li>
-              </ul>
+          <div class="stat-info">
+            <h3>زيارات المتجر</h3>
+            <div class="stat-value">{{ analyticsData?.storeViews || 0 }}</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon bg-green-soft">
+            <i class="fas fa-shopping-cart"></i>
+          </div>
+          <div class="stat-info">
+            <h3>إجمالي الطلبات</h3>
+            <div class="stat-value">{{ orders.length }}</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon bg-orange-soft">
+            <i class="fas fa-box-open"></i>
+          </div>
+          <div class="stat-info">
+            <h3>المنتجات</h3>
+            <div class="stat-value">{{ products.length }}</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon bg-purple-soft">
+            <i class="fas fa-clock"></i>
+          </div>
+          <div class="stat-info">
+            <h3>منتجات معلقة</h3>
+            <div class="stat-value">{{ pendingProductsCount }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Orders Section -->
+      <section class="chart-card mt-8">
+        <div class="chart-header">
+          <h2>آخر الطلبات</h2>
+          <button (click)="setTab('orders')" class="text-blue-600 font-medium text-sm">عرض الكل</button>
+        </div>
+        <div *ngIf="orders.length === 0" class="text-center py-12">
+          <img src="/assets/no-orders.svg" class="w-32 mx-auto mb-4 opacity-20" alt="">
+          <p class="text-gray-400">لا توجد طلبات بعد.</p>
+        </div>
+        <div *ngIf="orders.length > 0" class="overflow-x-auto">
+          <table class="w-full text-right border-collapse">
+            <thead>
+              <tr class="text-gray-400 text-sm border-b">
+                <th class="pb-4 font-medium">الطلب</th>
+                <th class="pb-4 font-medium">العميل</th>
+                <th class="pb-4 font-medium">المبلغ</th>
+                <th class="pb-4 font-medium">الحالة</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y">
+              <tr *ngFor="let order of orders.slice(0, 5)" class="hover:bg-gray-50 transition-colors">
+                <td class="py-4 font-semibold">#{{ order._id.slice(-6) }}</td>
+                <td class="py-4 text-gray-600">{{ order.customerName }}</td>
+                <td class="py-4 font-bold">{{ order.totalAmount }} ج.م</td>
+                <td class="py-4">
+                  <span class="badge" [ngClass]="{
+                    'badge-pending': order.status === 'قيد الإنتظار',
+                    'badge-approved': order.status === 'تم التسليم'
+                  }">{{ order.status }}</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <!-- TAB: ANALYTICS -->
+    <div *ngIf="activeTab === 'analytics'" class="animate-fade-in">
+      <header class="dashboard-header">
+        <div class="dashboard-title">
+          <h1>تحليلات المتجر</h1>
+          <p>تتبع نمو مبيعاتك وتفاعل العملاء مع منتجاتك.</p>
+        </div>
+      </header>
+
+      <div class="analytics-grid">
+        <!-- Visitor Trend -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <h2>إحصائيات الزوار</h2>
+            <div class="text-sm text-gray-400">آخر 30 يوم</div>
+          </div>
+          <div class="chart-container">
+            <canvas id="visitorTrendChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Category Performance -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <h2>الاهتمام حسب الفئة</h2>
+          </div>
+          <div class="chart-container">
+            <canvas id="categoryChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top Products -->
+      <div class="chart-card mt-6">
+        <div class="chart-header">
+          <h2>المنتجات الأكثر مشاهدة</h2>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div *ngFor="let product of analyticsData?.topProducts" class="top-product-item">
+            <img [src]="getProductImageUrl(product)" class="top-product-img" alt="">
+            <div class="top-product-info">
+              <div class="top-product-name">{{ product.product_name }}</div>
+              <div class="top-product-views">{{ product.views }} مشاهدة</div>
             </div>
-            <div class="bg-yellow-100 dark:bg-yellow-900/40 rounded-lg p-4 border border-yellow-300 dark:border-yellow-700 mt-4">
-              <h4 class="font-medium text-yellow-800 dark:text-yellow-200 mb-2">ما لا يمكنك فعله حتى الموافقة:</h4>
-              <ul class="list-disc list-inside text-sm text-yellow-700 dark:text-yellow-300 space-y-1">
-                <li>إضافة منتجات جديدة</li>
-                <li>تعديل أو حذف المنتجات الموجودة</li>
-                <li>إدارة الطلبات</li>
-                <li>تحديث حالة الطلبات</li>
-              </ul>
-            </div>
-            <p class="text-sm text-yellow-600 dark:text-yellow-400 mt-4">
-              <strong>ملاحظة:</strong> سيتم مراجعة حسابك خلال بضع ساعات. ستتلقى إشعاراً عند الموافقة على حسابك.
-            </p>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Header Section -->
-    <div class="mb-8" *ngIf="!isMerchantPending()">
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            لوحة تحكم التاجر
-          </h1>
-          <p class="text-gray-600 dark:text-gray-400">
-            إدارة منتجاتك وطلباتك بسهولة
-          </p>
+    <!-- TAB: PRODUCTS -->
+    <div *ngIf="activeTab === 'products'" class="animate-fade-in">
+      <header class="dashboard-header">
+        <div class="dashboard-title">
+          <h1>إدارة المنتجات</h1>
+          <p>تحكم في قائمة مشاريعك وتوفرها.</p>
         </div>
-        <div class="mt-4 sm:mt-0">
-          <button
-            (click)="addProduct()"
-            [disabled]="isMerchantPending()"
-            class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200 shadow-sm"
-            [class.opacity-50]="isMerchantPending()"
-            [class.cursor-not-allowed]="isMerchantPending()"
-          >
-            <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-            </svg>
-            إضافة منتج جديد
+          <button (click)="addProduct()" [disabled]="isMerchantPending()" 
+            class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-5 rounded-xl shadow-md transition-all flex items-center justify-center disabled:opacity-50">
+            <i class="fas fa-plus ml-2 text-white"></i>
+            إضافة منتج
+          </button>
+      </header>
+
+      <!-- Bulk Actions & View Toggle -->
+      <div class="flex flex-col md:flex-row justify-between items-center bg-white p-4 rounded-xl shadow-sm mb-6 gap-4">
+        <div class="flex items-center gap-4">
+          <label class="flex items-center cursor-pointer gap-2">
+            <input type="checkbox" [checked]="isAllProductsSelected()" (change)="selectAllProducts()" class="rounded border-gray-300">
+            <span class="text-sm text-gray-600">تحديد الكل</span>
+          </label>
+          <button *ngIf="selectedProducts.size > 0" (click)="bulkDeleteSelectedProductsWithModal()" class="text-red-500 text-sm font-bold">
+            حذف المحدد ({{ selectedProducts.size }})
           </button>
         </div>
+        <div class="flex items-center gap-2 bg-gray-100 p-1 rounded-lg">
+          <button (click)="changeView('grid')" [class.bg-white]="viewMode === 'grid'" class="px-3 py-1 rounded-md text-sm transition-all">شبكة</button>
+          <button (click)="changeView('list')" [class.bg-white]="viewMode === 'list'" class="px-3 py-1 rounded-md text-sm transition-all">قائمة</button>
+        </div>
       </div>
-    </div>
 
-    <!-- Product Update Requests Section -->
-    <div *ngIf="!isMerchantPending()" class="bg-white dark:bg-gray-800 shadow-sm rounded-xl border border-gray-200 dark:border-gray-700 mb-8">
-      <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">طلبات تحديث المنتجات</h2>
+      <div *ngIf="loadingProducts" class="flex justify-center py-20">
+        <div class="animate-spin text-blue-600 text-3xl">
+          <i class="fas fa-circle-notch"></i>
+        </div>
       </div>
-      <div class="p-6">
-        <div *ngIf="loadingUpdateRequests" class="flex items-center justify-center py-8">
-          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <span class="mr-3 text-gray-600 dark:text-gray-400">جاري تحميل طلبات تحديث المنتجات...</span>
-        </div>
-        <div *ngIf="!loadingUpdateRequests && updateRequests.length === 0" class="text-center py-8">
-          <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
-          </svg>
-          <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">لا توجد طلبات تحديث منتجات</h3>
-          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">عندما تقدم طلبات تحديث، ستظهر هنا</p>
-        </div>
-        <div *ngIf="!loadingUpdateRequests && updateRequests.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div *ngFor="let request of updateRequests" class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600 hover:shadow-md transition-shadow duration-200">
-            <div class="flex items-start justify-between mb-3">
-              <h3 class="text-lg font-semibold text-gray-900 dark:text-white truncate">{{ request.productId?.product_name || 'منتج غير معروف' }}</h3>
-              <span
-                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
-                [ngClass]="{
-                  'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300': request.status === 'pending',
-                  'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300': request.status === 'approved',
-                  'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300': request.status === 'rejected'
-                }"
-              >
-                {{ request.status === 'pending' ? 'معلق' : (request.status === 'approved' ? 'معتمد' : 'مرفوض') }}
-              </span>
-            </div>
-            <div class="space-y-2">
-              <p class="text-sm text-gray-600 dark:text-gray-400">
-                <span class="font-medium">السعر الحالي:</span> {{ request.productId?.product_price || 'غير محدد' }} ج.م
-              </p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">
-                <span class="font-medium">السعر المحدث:</span> {{ request.updatedProduct?.product_price || 'غير محدد' }} ج.م
-              </p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">
-                <span class="font-medium">الكمية الحالية:</span> {{ request.productId?.product_quantity || 'غير محدد' }}
-              </p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">
-                <span class="font-medium">الكمية المحدثة:</span> {{ request.updatedProduct?.product_quantity || 'غير محدد' }}
-              </p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">
-                <span class="font-medium">الفئة الحالية:</span> {{ request.productId?.product_category || 'غير محدد' }}
-              </p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">
-                <span class="font-medium">الفئة المحدثة:</span> {{ request.updatedProduct?.product_category || 'غير محدد' }}
-              </p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">
-                <span class="font-medium">تاريخ الطلب:</span> {{ request.createdAt | date:'short' }}
-              </p>
+
+      <!-- Products Display -->
+      <div *ngIf="!loadingProducts" [ngClass]="viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6' : 'space-y-4'">
+        <div *ngFor="let product of paginatedProducts" class="bg-white rounded-2xl p-4 border hover:shadow-xl transition-all group relative">
+          <div class="absolute top-2 right-2 z-10">
+            <input type="checkbox" [checked]="isProductSelected(product._id)" (change)="toggleProductSelection(product._id)" class="rounded border-gray-300">
+          </div>
+          
+          <div class="flex gap-4" [ngClass]="{'flex-col': viewMode === 'grid'}">
+            <img [src]="getProductImageUrl(product)" class="rounded-xl object-cover shrink-0" 
+                 [ngClass]="viewMode === 'grid' ? 'w-full h-48' : 'w-24 h-24'" alt="">
+            
+            <div class="flex-1">
+              <div class="flex justify-between items-start mb-2">
+                <h3 class="font-bold text-gray-900">{{ product.product_name }}</h3>
+                <span class="badge" [ngClass]="{
+                   'badge-pending': product.status === 'pending',
+                   'badge-approved': product.status === 'approved'
+                }">{{ product.status === 'pending' ? 'معلق' : 'معتمد' }}</span>
+              </div>
+              <div class="text-blue-600 font-bold mb-4">{{ product.product_price }} ج.م</div>
+              
+              <div class="flex justify-between items-center text-sm text-gray-500 mb-4">
+                <span>المخزون: {{ product.product_quantity }}</span>
+                <span>المشاهدات: {{ product.views || 0 }}</span>
+              </div>
+
+              <div class="flex gap-2">
+                <button (click)="editProduct(product)" class="flex-1 py-2 bg-blue-50 text-blue-600 rounded-lg font-medium hover:bg-blue-600 hover:text-white transition-all">
+                  تعديل
+                </button>
+                <button (click)="deleteProduct(product)" class="w-10 h-10 flex items-center justify-center text-red-400 hover:text-red-600">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Stats Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8" *ngIf="!isMerchantPending()">
-      <!-- Products Count -->
-      <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm rounded-xl border border-gray-200 dark:border-gray-700">
-        <div class="p-6">
-          <div class="flex items-center">
-            <div class="flex-shrink-0">
-              <div class="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
-                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
-                </svg>
-              </div>
-            </div>
-            <div class="mr-4">
-              <p class="text-sm font-medium text-gray-600 dark:text-gray-400">إجمالي المنتجات</p>
-              <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ products.length }}</p>
-            </div>
-          </div>
+    <!-- TAB: ORDERS -->
+    <div *ngIf="activeTab === 'orders'" class="animate-fade-in">
+      <header class="dashboard-header">
+        <div class="dashboard-title">
+          <h1>إدارة الطلبات</h1>
+          <p>تابع حالات الشحن والتسليم لعملائك.</p>
         </div>
+      </header>
+
+      <div *ngIf="orders.length === 0" class="text-center py-20 bg-white rounded-2xl border">
+        <i class="fas fa-shopping-cart text-5xl text-gray-200 mb-4"></i>
+        <h3 class="text-gray-400">لا توجد طلبات لعرضها حالياً.</h3>
       </div>
 
-      <!-- Orders Count -->
-      <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm rounded-xl border border-gray-200 dark:border-gray-700">
-        <div class="p-6">
-          <div class="flex items-center">
-            <div class="flex-shrink-0">
-              <div class="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
-                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                </svg>
+      <div *ngIf="orders.length > 0" class="space-y-6">
+        <div *ngFor="let order of orders" class="bg-white rounded-2xl p-6 border shadow-sm hover:shadow-md transition-all">
+          <div class="flex flex-col md:flex-row justify-between gap-6">
+            <div class="flex-1">
+              <div class="flex items-center gap-3 mb-4">
+                <span class="bg-gray-100 px-3 py-1 rounded-lg text-sm font-bold">#{{ order._id.slice(-8)}}</span>
+                <span class="text-gray-400 text-sm">{{ order.orderDate | date:'medium' }}</span>
               </div>
-            </div>
-            <div class="mr-4">
-              <p class="text-sm font-medium text-gray-600 dark:text-gray-400">إجمالي الطلبات</p>
-              <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ orders.length }}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Pending Products -->
-      <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm rounded-xl border border-gray-200 dark:border-gray-700">
-        <div class="p-6">
-          <div class="flex items-center">
-            <div class="flex-shrink-0">
-              <div class="w-8 h-8 bg-yellow-500 rounded-lg flex items-center justify-center">
-                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
-              </div>
-            </div>
-            <div class="mr-4">
-              <p class="text-sm font-medium text-gray-600 dark:text-gray-400">منتجات معلقة</p>
-              <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ pendingProductsCount }}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Merchant Info Section -->
-    <div *ngIf="!isMerchantPending()" class="bg-white dark:bg-gray-800 shadow-sm rounded-xl border border-gray-200 dark:border-gray-700 mb-8">
-      <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">معلومات التاجر</h2>
-        <button
-          (click)="toggleEditMode()"
-          class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-blue-600 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900 dark:text-blue-400 dark:hover:bg-blue-800 transition-colors duration-200"
-        >
-          <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-          </svg>
-          {{ isEditMode ? 'إلغاء التعديل' : 'تعديل المعلومات' }}
-        </button>
-      </div>
-      <div class="p-6">
-        <div *ngIf="loadingMerchant" class="flex items-center justify-center py-8">
-          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <span class="mr-3 text-gray-600 dark:text-gray-400">جاري التحميل...</span>
-        </div>
-        <div *ngIf="!loadingMerchant && !isEditMode" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          <div class="flex flex-col">
-            <span class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">الاسم</span>
-            <span class="text-gray-900 dark:text-white font-medium">{{ merchant?.merchantName || merchant?.name || 'غير محدد' }}</span>
-          </div>
-          <div class="flex flex-col">
-            <span class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">البريد الإلكتروني</span>
-            <span class="text-gray-900 dark:text-white">{{ merchant?.email || 'غير محدد' }}</span>
-          </div>
-          <div class="flex flex-col">
-            <span class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">حالة الموافقة</span>
-            <span
-              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-              [ngClass]="{
-                'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300': merchant?.approved && !merchant?.suspended,
-                'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300': merchant?.suspended,
-                'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300': !merchant?.approved && !merchant?.suspended
-              }"
-            >
-              {{ merchant?.suspended ? 'موقوف' : (merchant?.approved ? 'معتمد' : 'قيد المراجعة') }}
-            </span>
-          </div>
-          <div class="flex flex-col">
-            <span class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">تاريخ التسجيل</span>
-            <span class="text-gray-900 dark:text-white">{{ merchant?.createdAt ? (merchant.createdAt | date:'short') : 'غير محدد' }}</span>
-          </div>
-          <div class="flex flex-col">
-            <span class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">مدة تجهيز الطلب</span>
-            <span class="text-gray-900 dark:text-white">{{ merchant?.preparationTime || 1 }} يوم</span>
-          </div>
-        </div>
-        <div *ngIf="!loadingMerchant && isEditMode">
-          <form (ngSubmit)="onSubmitProfileUpdate()" class="space-y-6">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الاسم</label>
-                <input
-                  id="name"
-                  type="text"
-                  [(ngModel)]="editForm.name"
-                  name="name"
-                  required
-                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                />
-              </div>
-              <div>
-                <label for="phone" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">رقم الهاتف</label>
-                <input
-                  id="phone"
-                  type="text"
-                  [(ngModel)]="editForm.phone"
-                  name="phone"
-                  (input)="validatePhone()"
-                  class="w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                  [class.border-red-500]="phoneTouched && !phoneValid && editForm.phone.trim()"
-                  [class.border-gray-300]="!phoneTouched || phoneValid || !editForm.phone.trim()"
-                  [class.dark:border-gray-600]="!phoneTouched || phoneValid || !editForm.phone.trim()"
-                  [class.dark:border-red-500]="phoneTouched && !phoneValid && editForm.phone.trim()"
-                />
-                <div *ngIf="phoneTouched && !phoneValid && editForm.phone.trim()" class="mt-1 text-sm text-red-600 dark:text-red-400">
-                  يرجى إدخال رقم هاتف صحيح (مثال: 01012345678)
+              
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <div class="text-xs text-gray-400 mb-1">العميل</div>
+                  <div class="font-bold">{{ order.customerName }}</div>
                 </div>
-                <div *ngIf="phoneTouched && phoneValid && editForm.phone.trim()" class="mt-1 text-sm text-green-600 dark:text-green-400">
-                  رقم الهاتف صحيح
+                <div>
+                  <div class="text-xs text-gray-400 mb-1">المبلغ</div>
+                  <div class="font-bold text-blue-600">{{ order.totalAmount }} ج.م</div>
+                </div>
+                <div>
+                  <div class="text-xs text-gray-400 mb-1">المنتجات</div>
+                  <div class="font-bold">{{ order.products?.length }} قطع</div>
+                </div>
+                <div>
+                  <div class="text-xs text-gray-400 mb-1">الحالة</div>
+                  <div class="font-bold text-orange-500">{{ order.status }}</div>
                 </div>
               </div>
-              <div>
-                <label for="taxNumber" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الرقم الضريبي</label>
-                <input
-                  id="taxNumber"
-                  type="text"
-                  [(ngModel)]="editForm.taxNumber"
-                  name="taxNumber"
-                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                />
-              </div>
-              <div class="md:col-span-2">
-                <label for="bio" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">السيرة الذاتية</label>
-                <textarea
-                  id="bio"
-                  [(ngModel)]="editForm.bio"
-                  name="bio"
-                  rows="4"
-                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                  placeholder="اكتب وصفًا عن نشاطك التجاري..."
-                ></textarea>
-              </div>
-              <div>
-                <label for="preparationTime" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">مدة تجهيز الطلب</label>
-                <select
-                  id="preparationTime"
-                  [(ngModel)]="editForm.preparationTime"
-                  name="preparationTime"
-                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                >
-                  <option [value]="1">1 يوم</option>
-                  <option [value]="2">2 يوم</option>
-                </select>
+            </div>
+
+            <div class="flex items-center gap-2 px-4 border-r hidden md:flex">
+              <div class="avatar-group flex -space-x-4">
+                <img *ngFor="let p of order.products.slice(0,3)" 
+                     [src]="('/uploads/books/' + p.product_image).replace('.jpg', '.webp')" 
+                     class="w-10 h-10 rounded-full border-2 border-white object-cover" 
+                     [title]="p.book" alt="">
               </div>
             </div>
+
+            <div class="flex flex-row md:flex-col gap-2 shrink-0">
+              <button (click)="viewOrderDetails(order)" class="flex-1 px-4 py-2 border rounded-lg text-sm font-medium hover:bg-gray-50">
+                التفاصيل
+              </button>
+              
+              <!-- Conditional Status Buttons -->
+              <button *ngIf="order.status === 'قيد الإنتظار'" (click)="confirmShipmentWithModal(order, 'قيد المعالجة')" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium">
+                بدء المعالجة
+              </button>
+              <button *ngIf="order.status === 'قيد المعالجة'" (click)="confirmShipmentWithModal(order, 'تم الشحن')" class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium">
+                شحن الطلب
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: SETTINGS -->
+    <div *ngIf="activeTab === 'settings'" class="animate-fade-in">
+      <header class="dashboard-header border-b pb-4 mb-8">
+        <div class="dashboard-title">
+          <h1>إعدادات المتجر</h1>
+          <p>إدارة العلامة التجارية ومعلومات التواصل.</p>
+        </div>
+      </header>
+
+      <div class="max-w-4xl">
+        <!-- Profile View / Edit Toggle -->
+        <div *ngIf="!isEditMode" class="bg-white rounded-2xl border p-8 space-y-8">
+          <div class="flex items-center gap-6">
+            <img [src]="getLogoUrl(merchant?.logo) || '/assets/placeholder-store.jpg'" class="w-24 h-24 rounded-2xl object-cover border" alt="">
             <div>
-              <label for="logo" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">اللوجو</label>
-              <input
-                id="logo"
-                type="file"
-                (change)="onFileSelected($event)"
-                accept="image/png, image/jpeg"
-                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-              />
-              <div *ngIf="logoPreview" class="mt-2">
-                <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">معاينة اللوجو الجديد:</p>
-                <img [src]="logoPreview" alt="Logo Preview" class="w-20 h-20 object-cover rounded-md border border-gray-300 dark:border-gray-600" />
-              </div>
-              <div *ngIf="merchant?.logo && !logoPreview" class="mt-2">
-                <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">اللوجو الحالي:</p>
-                <img [src]="getLogoUrl(merchant.logo)" alt="Current Logo" class="w-20 h-20 object-cover rounded-md border border-gray-300 dark:border-gray-600" />
-              </div>
+              <h2 class="text-2xl font-extrabold">{{ merchant?.merchantName || merchant?.name }}</h2>
+              <p class="text-gray-500">{{ merchant?.email }}</p>
             </div>
-            <div class="flex items-center justify-end gap-4">
-              <button
-                type="button"
-                (click)="isEditMode = false"
-                class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors duration-200"
-              >
-                إلغاء
-              </button>
-              <button
-                type="submit"
-                [disabled]="updatingProfile"
-                class="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-              >
-                <span *ngIf="updatingProfile" class="flex items-center">
-                  <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  جاري التحديث...
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t">
+            <div class="space-y-1">
+              <label class="text-xs text-gray-400">رقم الهاتف</label>
+              <p class="font-bold">{{ merchant?.phone || '--' }}</p>
+            </div>
+            <div class="space-y-1">
+              <label class="text-xs text-gray-400">الرقم الضريبي</label>
+              <p class="font-bold">{{ merchant?.taxNumber || '--' }}</p>
+            </div>
+            <div class="space-y-1">
+              <label class="text-xs text-gray-400">مدة التجهيز</label>
+              <p class="font-bold">{{ merchant?.preparationTime || 1 }} يوم</p>
+            </div>
+            <div class="space-y-1">
+              <label class="text-xs text-gray-400">حالة الحساب</label>
+              <div>
+                <span class="badge" [ngClass]="merchant?.approved ? 'badge-approved' : 'badge-pending'">
+                  {{ merchant?.approved ? 'موثق ومعتمد' : 'تحت المراجعة' }}
                 </span>
-                <span *ngIf="!updatingProfile">حفظ التغييرات</span>
-              </button>
+              </div>
             </div>
-            <div *ngIf="updateMessage" class="mt-4 p-4 rounded-md" [ngClass]="updateMessageColor === 'green' ? 'bg-green-50 text-green-800 dark:bg-green-900 dark:text-green-300' : 'bg-red-50 text-red-800 dark:bg-red-900 dark:text-red-300'">
-              {{ updateMessage }}
-            </div>
+          </div>
+
+          <div class="pt-6 border-t">
+            <label class="text-xs text-gray-400">السيرة الذاتية (Bio)</label>
+            <p class="text-gray-600 mt-2 leading-relaxed">{{ merchant?.bio || 'لم يتم إضافة وصف بعد.' }}</p>
+          </div>
+
+          <button (click)="toggleEditMode()" class="w-full py-3 bg-gray-900 text-white rounded-xl font-bold hover:bg-gray-800 transition-all">
+            تعديل الملف الشخصي
+          </button>
+        </div>
+
+        <!-- Update Form -->
+        <div *ngIf="isEditMode" class="bg-white rounded-2xl border p-8">
+          <form (ngSubmit)="onSubmitProfileUpdate()" class="space-y-6">
+             <div class="grid md:grid-cols-2 gap-6">
+                <!-- Profile Inputs -->
+                <div class="space-y-2">
+                  <label class="text-sm font-bold">اسم المتجر</label>
+                  <input type="text" [(ngModel)]="editForm.name" name="name" class="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:border-blue-600">
+                </div>
+                <div class="space-y-2">
+                  <label class="text-sm font-bold">رقم الهاتف</label>
+                  <input type="text" [(ngModel)]="editForm.phone" name="phone" class="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:border-blue-600">
+                </div>
+                <div class="space-y-2">
+                  <label class="text-sm font-bold">الرقم الضريبي (اختياري)</label>
+                  <input type="text" [(ngModel)]="editForm.taxNumber" name="taxNumber" class="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:border-blue-600">
+                </div>
+                <div class="space-y-2">
+                  <label class="text-sm font-bold">مدة التجهيز</label>
+                  <select [(ngModel)]="editForm.preparationTime" name="preparationTime" class="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:border-blue-600">
+                    <option [value]="1">يوم واحد</option>
+                    <option [value]="2">يومان</option>
+                    <option [value]="3">3 أيام</option>
+                  </select>
+                </div>
+             </div>
+
+             <div class="space-y-2">
+               <label class="text-sm font-bold">وصف المتجر</label>
+               <textarea [(ngModel)]="editForm.bio" name="bio" rows="4" class="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:border-blue-600" placeholder="عبر عن متجرك..."></textarea>
+             </div>
+
+             <div class="grid md:grid-cols-2 gap-6">
+                <div class="space-y-2">
+                  <label class="text-sm font-bold">شعار المتجر (Logo)</label>
+                  <input type="file" (change)="onFileSelected($event)" class="w-full p-2 border border-dashed rounded-xl">
+                  <img *ngIf="logoPreview" [src]="logoPreview" class="w-20 h-20 rounded-lg mt-2 object-cover">
+                </div>
+                <div class="space-y-2">
+                  <label class="text-sm font-bold">صورة الغلاف (Hero Cover)</label>
+                  <input type="file" (change)="onCoverFileSelected($event)" class="w-full p-2 border border-dashed rounded-xl">
+                  <img *ngIf="coverPreview" [src]="coverPreview" class="h-20 w-full rounded-lg mt-2 object-cover">
+                </div>
+             </div>
+
+             <div class="flex gap-4 pt-6 border-t">
+               <button type="submit" [disabled]="updatingProfile" class="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 disabled:opacity-50">
+                 {{ updatingProfile ? 'جاري الحفظ...' : 'حفظ التغييرات' }}
+               </button>
+               <button type="button" (click)="toggleEditMode()" class="px-8 py-3 bg-gray-100 text-gray-600 rounded-xl font-bold hover:bg-gray-200">
+                 إلغاء
+               </button>
+             </div>
           </form>
         </div>
       </div>
     </div>
-
-    <!-- Products Section -->
-    <div *ngIf="!isMerchantPending()" class="bg-white dark:bg-gray-800 shadow-sm rounded-xl border border-gray-200 dark:border-gray-700 mb-8">
-      <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-        <div class="flex items-center gap-4">
-          <h2 class="text-lg font-semibold text-gray-900 dark:text-white">المنتجات</h2>
-          <!-- View Toggle Icons -->
-          <div class="flex items-center gap-2">
-            <button
-              (click)="changeView('grid')"
-              [class.bg-blue-100]="viewMode === 'grid'"
-              class="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200"
-              title="عرض شبكي"
-            >
-              <svg class="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
-              </svg>
-            </button>
-            <button
-              (click)="changeView('list')"
-              [class.bg-blue-100]="viewMode === 'list'"
-              class="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200"
-              title="عرض قائمة"
-            >
-              <svg class="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
-              </svg>
-            </button>
-          </div>
-          <!-- Bulk Delete Button -->
-          <button
-            *ngIf="selectedProducts.size > 0"
-            (click)="bulkDeleteSelectedProductsWithModal()"
-            class="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-200"
-          >
-            <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-            </svg>
-            حذف المحدد ({{ selectedProducts.size }})
-          </button>
-        </div>
-        <div class="flex items-center gap-2">
-          <!-- Select All Checkbox -->
-          <label *ngIf="products.length > 0" class="flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              [checked]="isAllProductsSelected()"
-              [indeterminate]="isSomeProductsSelected()"
-              (change)="selectAllProducts()"
-              class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            >
-            <span class="mr-2 text-sm text-gray-600 dark:text-gray-400">تحديد الكل</span>
-          </label>
-          <button
-            (click)="addProduct()"
-            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-blue-600 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900 dark:text-blue-400 dark:hover:bg-blue-800 transition-colors duration-200"
-          >
-            <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-            </svg>
-            إضافة منتج
-          </button>
-        </div>
-      </div>
-      <div class="p-6">
-        <div *ngIf="loadingProducts" class="flex items-center justify-center py-8">
-          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <span class="mr-3 text-gray-600 dark:text-gray-400">جاري تحميل المنتجات...</span>
-        </div>
-        <div *ngIf="!loadingProducts && products.length === 0" class="text-center py-8">
-          <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
-          </svg>
-          <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">لا توجد منتجات</h3>
-          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">ابدأ بإضافة منتجك الأول</p>
-        </div>
-        <div *ngIf="!loadingProducts && products.length > 0" [ngClass]="viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'space-y-4'">
-          <div *ngFor="let product of paginatedProducts" [ngClass]="viewMode === 'grid' ? 'bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600 hover:shadow-md transition-shadow duration-200' : 'bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600 hover:shadow-md transition-shadow duration-200'">
-            <!-- Grid View Layout -->
-            <div *ngIf="viewMode === 'grid'">
-              <!-- Product Image -->
-              <div class="mb-3">
-                <img
-                  class="w-full h-32 object-cover rounded-lg"
-                  [src]="getProductImageUrl(product)"
-                  alt="صورة المنتج"
-                />
-              </div>
-              <div class="flex items-start justify-between mb-3">
-                <div class="flex items-center gap-2">
-                  <!-- Product Checkbox -->
-                  <input
-                    type="checkbox"
-                    [checked]="isProductSelected(product._id)"
-                    (change)="toggleProductSelection(product._id)"
-                    class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  >
-                  <h3 class="text-lg font-semibold text-gray-900 dark:text-white truncate">{{ product.product_name }}</h3>
-                </div>
-                <div class="flex items-center gap-2">
-                  <button
-                    (click)="editProduct(product)"
-                    class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 p-1 rounded transition-colors duration-200"
-                    title="تعديل المنتج"
-                  >
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                    </svg>
-                  </button>
-                  <button
-                    (click)="deleteProduct(product)"
-                    class="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 p-1 rounded transition-colors duration-200"
-                    title="حذف المنتج"
-                  >
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                  </button>
-                  <span
-                    class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
-                    [ngClass]="{
-                      'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300': product.status === 'pending',
-                      'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300': product.status === 'approved',
-                      'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300': product.status === 'rejected'
-                    }"
-                  >
-                    {{ product.status === 'pending' ? 'معلق' : (product.status === 'approved' ? 'معتمد' : 'مرفوض') }}
-                  </span>
-                </div>
-              </div>
-              <div class="space-y-2">
-                <p class="text-sm text-gray-600 dark:text-gray-400">
-                  <span class="font-medium">السعر:</span> {{ product.product_price }} ج.م
-                </p>
-                <p class="text-sm text-gray-600 dark:text-gray-400">
-                  <span class="font-medium">الكمية:</span> {{ product.product_quantity }}
-                </p>
-                <p class="text-sm text-gray-600 dark:text-gray-400">
-                  <span class="font-medium">الفئة:</span> {{ product.product_category }}
-                </p>
-              </div>
-            </div>
-            <!-- List View Layout -->
-            <div *ngIf="viewMode === 'list'" class="flex items-center justify-between">
-              <div class="flex items-center gap-4">
-                <!-- Product Checkbox -->
-                <input
-                  type="checkbox"
-                  [checked]="isProductSelected(product._id)"
-                  (change)="toggleProductSelection(product._id)"
-                  class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                >
-                <div class="flex items-center gap-3">
-                  <img
-                    class="w-16 h-16 object-cover rounded"
-                    [src]="getProductImageUrl(product)"
-                    alt="صورة المنتج"
-                  />
-                  <div>
-                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ product.product_name }}</h3>
-                    <div class="flex gap-4 text-sm text-gray-600 dark:text-gray-400">
-                      <span><span class="font-medium">السعر:</span> {{ product.product_price }} ج.م</span>
-                      <span><span class="font-medium">الكمية:</span> {{ product.product_quantity }}</span>
-                      <span><span class="font-medium">الفئة:</span> {{ product.product_category }}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="flex items-center gap-2">
-                <span
-                  class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
-                  [ngClass]="{
-                    'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300': product.status === 'pending',
-                    'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300': product.status === 'approved',
-                    'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300': product.status === 'rejected'
-                  }"
-                >
-                  {{ product.status === 'pending' ? 'معلق' : (product.status === 'approved' ? 'معتمد' : 'مرفوض') }}
-                </span>
-                <button
-                  (click)="editProduct(product)"
-                  class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 p-1 rounded transition-colors duration-200"
-                  title="تعديل المنتج"
-                >
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                  </svg>
-                </button>
-                <button
-                  (click)="deleteProduct(product)"
-                  class="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 p-1 rounded transition-colors duration-200"
-                  title="حذف المنتج"
-                >
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Orders Section -->
-    <div *ngIf="!isMerchantPending()" class="bg-white dark:bg-gray-800 shadow-sm rounded-xl border border-gray-200 dark:border-gray-700">
-      <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">الطلبات الأخيرة</h2>
-      </div>
-      <div class="p-6">
-        <div *ngIf="loadingOrders" class="flex items-center justify-center py-8">
-          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <span class="mr-3 text-gray-600 dark:text-gray-400">جاري تحميل الطلبات...</span>
-        </div>
-        <div *ngIf="!loadingOrders && orders.length === 0" class="text-center py-8">
-          <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-          </svg>
-          <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">لا توجد طلبات</h3>
-          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">ستظهر طلباتك هنا عندما يقوم العملاء بشراء منتجاتك</p>
-        </div>
-        <div *ngIf="!loadingOrders && orders.length > 0" class="space-y-4">
-          <div *ngFor="let order of orders.slice(0, 5); let i = index" [ngClass]="i % 2 === 0 ? 'bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600 hover:shadow-md transition-shadow duration-200' : 'bg-blue-50 dark:bg-gray-800 rounded-lg p-4 border border-blue-200 dark:border-blue-700 hover:shadow-md transition-shadow duration-200'">
-            <!-- Order Header -->
-            <div class="flex items-center justify-between mb-4">
-              <div class="flex items-center gap-3">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">طلب #{{ order._id.slice(-8) }}</h3>
-                <span
-                  class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium"
-                  [ngClass]="{
-                    'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300': order.status === 'قيد الإنتظار',
-                    'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300': order.status === 'قيد المعالجة',
-                    'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300': order.status === 'تم الشحن',
-                    'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300': order.status === 'تم الاستلام',
-                    'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300': order.status === 'تم التسليم',
-                    'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300': order.status === 'تم الإلغاء'
-                  }"
-                >
-                  {{ order.status === 'قيد الإنتظار' ? 'معلق' :
-                     order.status === 'قيد المعالجة' ? 'قيد المعالجة' :
-                     order.status === 'تم الشحن' ? 'مندوب الشحن في طريقه إليك لاستلام المنتج' :
-                     order.status === 'تم الاستلام' ? 'المنتج الخاص بك في طريقه إلى المشتري' :
-                     order.status === 'تم التسليم' ? 'تم التسليم' :
-                     order.status === 'تم الإلغاء' ? 'ملغي' : 'غير محدد' }}
-                </span>
-              </div>
-              <div class="flex items-center gap-2">
-                <!-- Status Update Buttons -->
-                <div class="flex items-center gap-1" *ngIf="order.status === 'قيد الإنتظار'">
-                  <button
-                    (click)="confirmShipmentWithModal(order, 'قيد المعالجة')"
-                    class="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
-                    title="بدء المعالجة"
-                  >
-                    <svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                    بدء المعالجة
-                  </button>
-                </div>
-
-                <div class="flex items-center gap-1" *ngIf="order.status === 'قيد المعالجة'">
-                  <button
-                    (click)="confirmShipmentWithModal(order, 'تم الشحن')"
-                    class="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200"
-                    title="شحن الطلب"
-                  >
-                    <svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
-                    </svg>
-                    شحن
-                  </button>
-                </div>
-
-                <div class="flex items-center gap-1" *ngIf="order.status === 'تم الشحن'">
-                  <button
-                    (click)="confirmShipmentWithModal(order, 'تم الاستلام')"
-                    class="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-colors duration-200"
-                    title="تأكيد الاستلام"
-                  >
-                    <svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                    استلام
-                  </button>
-                </div>
-
-                <div class="flex items-center gap-1" *ngIf="order.status === 'تم الاستلام'">
-                  <button
-                    (click)="confirmShipmentWithModal(order, 'تم التسليم')"
-                    class="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200"
-                    title="تأكيد التسليم"
-                  >
-                    <svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                    </svg>
-                    تسليم
-                  </button>
-                </div>
-
-                <!-- Cancel Order Button (only for pending orders) -->
-                <button
-                  *ngIf="order.status === 'قيد الإنتظار' || order.status === 'قيد المعالجة'"
-                  (click)="confirmShipmentWithModal(order, 'تم الإلغاء')"
-                  class="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-200"
-                  title="إلغاء الطلب"
-                >
-                  <svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                  </svg>
-                  إلغاء
-                </button>
-
-                <!-- Delete Order Button (only for cancelled orders) -->
-                <button
-                  *ngIf="order.status === 'تم الإلغاء'"
-                  (click)="deleteOrderWithModal(order)"
-                  class="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-gray-600 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors duration-200"
-                  title="حذف الطلب"
-                >
-                  <svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                  </svg>
-                  حذف
-                </button>
-
-                <!-- View Order Details Button -->
-                <button
-                  (click)="viewOrderDetails(order)"
-                  class="inline-flex items-center px-2 py-1 border border-gray-300 dark:border-gray-600 text-xs font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
-                  title="عرض التفاصيل"
-                >
-                  <svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                  </svg>
-                  عرض
-                </button>
-              </div>
-            </div>
-
-            <!-- Order Details Grid -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-              <div class="bg-white dark:bg-gray-600 rounded-md p-3">
-                <p class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">العميل</p>
-                <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ order.customerName }}</p>
-              </div>
-              <div class="bg-white dark:bg-gray-600 rounded-md p-3">
-                <p class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">المبلغ الإجمالي</p>
-                <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ order.totalAmount }} ج.م</p>
-              </div>
-              <div class="bg-white dark:bg-gray-600 rounded-md p-3">
-                <p class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">تاريخ الطلب</p>
-                <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ order.orderDate | date:'short' }}</p>
-              </div>
-              <div class="bg-white dark:bg-gray-600 rounded-md p-3">
-                <p class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">تاريخ التسليم المتوقع</p>
-                <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ calculateDeliveryDate(order.orderDate, order.preparationTime) | date:'short' }}</p>
-              </div>
-              <div class="bg-white dark:bg-gray-600 rounded-md p-3">
-                <p class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">عدد المنتجات</p>
-                <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ order.products?.length || 0 }}</p>
-              </div>
-            </div>
-
-            <!-- Products Summary -->
-            <div *ngIf="order.products && order.products.length > 0" class="border-t border-gray-200 dark:border-gray-600 pt-3">
-              <p class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">المنتجات المطلوبة:</p>
-              <div class="flex flex-wrap gap-2">
-                <span
-                  *ngFor="let product of order.products.slice(0, 3)"
-                  class="inline-flex items-center px-2 py-1 rounded-md text-xs bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-300"
-                >
-                  <img
-                    class="w-16 h-16 mr-1 rounded object-cover"
-                    [src]="('/uploads/books/' + product.product_image).replace('.jpg', '.webp')"
-                    alt="صورة الكتاب"
-                  />
-                  <a
-                    [routerLink]="['/book', product.book]"
-                    class="hover:text-blue-800 dark:hover:text-blue-200 transition-colors duration-200"
-                    title="عرض تفاصيل المنتج"
-                  >
-                    {{ product.book }}
-                  </a>
-                  <span class="inline-flex items-center px-2 py-1 mx-2 rounded-full text-xs font-medium bg-gray-200 text-gray-800 dark:bg-gray-600 dark:text-gray-200">
-                    الكمية: {{ product.quantity }}
-                  </span>
-                  <a
-                    [routerLink]="['/book', product.book]"
-                    class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 transition-colors duration-200"
-                    title="عرض تفاصيل المنتج"
-                  >
-                    <svg class="w-3 h-3 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
-                    </svg>
-                  </a>
-                </span>
-                <span
-                  *ngIf="order.products.length > 3"
-                  class="inline-flex items-center px-2 py-1 rounded-md text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
-                >
-                  +{{ order.products.length - 3 }} أخرى
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+  </main>
 </div>
 
 <!-- Modal Dialog -->
-<app-modal-dialog
-  [isOpen]="modalOpen"
-  [title]="modalTitle"
-  [message]="modalMessage"
-  [confirmText]="modalConfirmText"
-  [cancelText]="modalCancelText"
-  [showCancel]="modalShowCancel"
-  [type]="modalType"
-  (confirmed)="confirmModal()"
-  (cancelled)="closeModal()"
-  (closed)="closeModal()">
+<app-modal-dialog [isOpen]="modalOpen" [title]="modalTitle" [message]="modalMessage" [confirmText]="modalConfirmText"
+  [cancelText]="modalCancelText" [showCancel]="modalShowCancel" [type]="modalType" (confirmed)="confirmModal()"
+  (cancelled)="closeModal()" (closed)="closeModal()">
 </app-modal-dialog>

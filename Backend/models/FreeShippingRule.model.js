@@ -8,6 +8,7 @@ const FreeShippingRuleSchema = new mongoose.Schema({
   includedCategories: { type: [String], default: [] },
   includedGovernorates: { type: [String], default: [] },
   freeShippingEnabled: { type: Boolean, default: true },
+  codFee: { type: Number, default: 10 },
 }, { timestamps: true });
 
 const FreeShippingRule = mongoose.model('FreeShippingRule', FreeShippingRuleSchema);

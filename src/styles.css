@@ -2,9 +2,26 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+    --knooz-gold: #C5A059;
+    --knooz-gold-dark: #A67C37;
+    --knooz-gold-light: #DFBF8E;
+    --knooz-indigo: #1A237E;
+    --knooz-indigo-light: #283593;
+    --knooz-bg: #FAFAFA;
+    --knooz-dark-bg: #121212;
+    --knooz-text: #2C3E50;
+    --promo-font: 'Almarai', 'Outfit', sans-serif;
+}
+
+
 @layer components {
     h1 {
         @apply p-3 text-center text-lg m-2 font-bold text-blue-600 bg-blue-50 rounded-lg transition duration-300 ease-in-out w-[90%] mx-auto;
+    }
+
+    .dark h1 {
+        @apply bg-gray-800 text-blue-400 border border-white/5;
     }
 
     .active {

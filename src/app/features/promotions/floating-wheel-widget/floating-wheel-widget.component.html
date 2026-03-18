@@ -1,7 +1,21 @@
-<div class="fixed bottom-24 left-4 z-50">
-    <!-- Floating Button -->
+<div class="fixed bottom-24 left-4 z-50 flex flex-col items-center gap-3">
+    <!-- Bundle Creation Button (above wheel) -->
+    <button (click)="navigateToPromotions()"
+        class="relative w-12 h-12 rounded-full shadow-lg flex items-center justify-center text-white hover:scale-110 transition-transform duration-300 group"
+        [style.background]="'linear-gradient(to right, var(--promo-primary), var(--promo-accent))'">
+        <fa-icon [icon]="faBoxOpen" class="text-xl"></fa-icon>
+
+        <!-- Tooltip -->
+        <span
+            class="absolute right-full mr-3 bg-gray-900 text-white text-sm py-1 px-3 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap pointer-events-none">
+            أنشئ عرضك الخاص 📦
+        </span>
+    </button>
+
+    <!-- Floating Wheel Button -->
     <button (click)="toggleWidget()"
-        class="relative w-14 h-14 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 shadow-lg flex items-center justify-center text-white hover:scale-110 transition-transform duration-300 animate-pulse-slow group">
+        class="relative w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-white hover:scale-110 transition-transform duration-300 animate-pulse-slow group"
+        [style.background]="'linear-gradient(to right, var(--promo-primary), var(--promo-accent))'">
         <fa-icon [icon]="isOpen ? faTimes : faGift" class="text-2xl transition-transform duration-300"
             [class.rotate-180]="isOpen"></fa-icon>
 
@@ -14,10 +28,12 @@
 
     <!-- Modal / Popover -->
     <div *ngIf="isOpen" @fadeInOut
-        class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[350px] bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-purple-100 dark:border-gray-700 overflow-hidden z-[100]">
+        class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[350px] bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border overflow-hidden z-[100]"
+        [style.border-color]="'var(--promo-primary-alpha-10)'">
 
         <!-- Header -->
-        <div class="bg-gradient-to-r from-purple-600 to-pink-600 p-4 text-white flex justify-between items-center">
+        <div class="p-4 text-white flex justify-between items-center"
+            [style.background]="'linear-gradient(to right, var(--promo-primary), var(--promo-accent))'">
             <h3 class="font-bold flex items-center gap-2">
                 <fa-icon [icon]="faGift"></fa-icon>
                 عجلة الحظ
@@ -28,7 +44,8 @@
         </div>
 
         <!-- Content -->
-        <div class="p-4 bg-purple-50 dark:bg-gray-900/50 min-h-[400px] flex items-center justify-center relative">
+        <div class="p-4 min-h-[400px] flex items-center justify-center relative"
+            [style.background-color]="'var(--promo-bg)'">
             <div class="absolute inset-0 bg-cover bg-center opacity-10 pointer-events-none"
                 style="background-image: url('assets/pattern-bg.png');"></div>
 
@@ -43,5 +60,5 @@
     </div>
 
     <!-- Standalone Prize Reveal (Separate from the small widget modal) -->
-    <app-prize-reveal [prize]="winningPrize" (onClose)="winningPrize = null"></app-prize-reveal>
+    <app-prize-reveal [prize]="winningPrize" [theme]="activeTheme" (onClose)="winningPrize = null"></app-prize-reveal>
 </div>

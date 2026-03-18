@@ -1,10 +1,11 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { faGift, faTimes } from '@fortawesome/free-solid-svg-icons';
+import { faGift, faTimes, faBoxOpen } from '@fortawesome/free-solid-svg-icons';
 import { LuckyWheelComponent } from '../lucky-wheel/lucky-wheel.component';
 import { PrizeRevealComponent } from '../lucky-wheel/prize-reveal.component';
 import { PromotionService } from '../../../services/promotion.service';
+import { Router } from '@angular/router';
 import { trigger, state, style, transition, animate } from '@angular/animations';
 
 @Component({
@@ -40,8 +41,9 @@ export class FloatingWheelWidgetComponent implements OnInit {
     winningPrize: any = null;
     faGift = faGift;
     faTimes = faTimes;
+    faBoxOpen = faBoxOpen;
 
-    constructor(private promotionService: PromotionService) { }
+    constructor(private promotionService: PromotionService, private router: Router) { }
 
     ngOnInit() {
         this.loadActiveTheme();
@@ -52,6 +54,9 @@ export class FloatingWheelWidgetComponent implements OnInit {
             next: (res: any) => {
                 if (res && res.theme) {
                     this.activeTheme = res.theme;
+                    if (this.activeTheme.themeConfig) {
+                        this.promotionService.applyThemeGlobal(this.activeTheme.themeConfig);
+                    }
                 }
             },
             error: (err) => console.error('Failed to load active promotion theme', err)
@@ -64,5 +69,9 @@ export class FloatingWheelWidgetComponent implements OnInit {
 
     closeWidget() {
         this.isOpen = false;
+    }
+
+    navigateToPromotions() {
+        this.router.navigate(['/promotions']);
     }
 }

@@ -9,7 +9,8 @@ export interface Halaqa {
     description?: string;
     gender: 'male' | 'female';
     leader: any;
-    members: string[];
+    members: any[];
+    currentMembers?: number;
     maxMembers: number;
     inviteCode?: string;
     active: boolean;

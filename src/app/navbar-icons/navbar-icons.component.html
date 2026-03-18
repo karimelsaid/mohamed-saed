@@ -3,7 +3,7 @@
 
   <!-- Favorites -->
   <div class="relative flex items-center justify-center">
-    <div *ngIf="!showOnlyNotification" routerLink="/Favorites" routerLinkActive="active-pill"
+    <div *ngIf="!showOnlyNotification" routerLink="/favorites" routerLinkActive="active-pill"
       [routerLinkActiveOptions]="{exact:true}" class="nav-item-pill group" #favLink="routerLinkActive">
       <fa-icon [icon]="faHeart" class="text-xl transition-colors"></fa-icon>
       <span class="nav-label">المفضلة</span>
@@ -41,10 +41,6 @@
       <fa-icon [icon]="faBookReader" class="text-xl"></fa-icon>
       <span class="nav-label">المكتبة</span>
     </div>
-    <span *ngIf="!showOnlyNotification"
-      class="absolute -top-3 left-1/2 -translate-x-1/2 text-blue-600 dark:text-blue-400 text-[9px] font-extrabold z-50 pointer-events-none tracking-tighter whitespace-nowrap">
-      جديد
-    </span>
   </div>
 
 
@@ -55,10 +51,16 @@
       <fa-icon [icon]="faCoins" class="text-xl text-yellow-500"></fa-icon>
       <span class="nav-label text-yellow-600 dark:text-yellow-400 font-bold">اكسب</span>
     </div>
-    <span *ngIf="!showOnlyNotification"
-      class="absolute -top-3 left-1/2 -translate-x-1/2 text-red-500 text-[9px] font-extrabold z-50 pointer-events-none tracking-tighter whitespace-nowrap animate-pulse">
-      جديد
-    </span>
+  </div>
+
+
+  <!-- Readers Community -->
+  <div class="relative flex items-center justify-center">
+    <div *ngIf="!showOnlyNotification" routerLink="/reader-community" routerLinkActive="active-pill"
+      [routerLinkActiveOptions]="{exact:true}" class="nav-item-pill group" #communityLink="routerLinkActive">
+      <fa-icon [icon]="faUsers" class="text-xl text-blue-500"></fa-icon>
+      <span class="nav-label text-blue-600 dark:text-blue-400 font-bold">المجتمع</span>
+    </div>
   </div>
 
 

@@ -46,7 +46,7 @@ export class LuckyWheelComponent implements OnInit, OnChanges {
     }
 
     ngOnChanges(changes: SimpleChanges): void {
-        if (changes['theme'] && !changes['theme'].firstChange) {
+        if (changes['theme']) {
             this.initializePrizes();
         }
     }
@@ -154,8 +154,8 @@ export class LuckyWheelComponent implements OnInit, OnChanges {
         const n = this.prizes.length;
         if (n === 0) return '#ccc';
         const angle = 360 / n;
-        const primary = this.theme?.primaryColor || '#8b5cf6';
-        const secondary = this.theme?.secondaryColor || '#ede9fe';
+        const primary = this.theme?.themeConfig?.primaryColor || 'var(--promo-primary)';
+        const secondary = this.theme?.themeConfig?.secondaryColor || 'var(--promo-secondary)';
         let stops: string[] = [];
         for (let i = 0; i < n; i++) {
             const color = i % 2 === 0 ? primary : secondary;

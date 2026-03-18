@@ -27,7 +27,18 @@ exports.getAllEbooks = async (req, res) => {
         }
 
         if (search) {
-            query.$text = { $search: search };
+            // Build flexible Arabic regex pattern
+            const flexSearch = search
+                .replace(/[أإآا]/g, '[أإآا]')
+                .replace(/[هة]/g, '[هة]')
+                .replace(/[يى]/g, '[يى]')
+                .replace(/\s+/g, '\\s+');
+            const searchRegex = new RegExp(flexSearch, 'i');
+            query.$or = [
+                { title: searchRegex },
+                { author: searchRegex },
+                { description: searchRegex }
+            ];
         }
 
         // Get total count for pagination metadata
@@ -384,6 +395,19 @@ exports.createEbook = async (req, res) => {
             message: 'تم إضافة الكتاب الإلكتروني بنجاح',
             data: ebook
         });
+
+        // Update ebook-mappings.json if product link exists
+        if (ebook.relatedProductId) {
+            const barcode = String(ebook.relatedProductId).trim();
+            const mappingPath = path.join(__dirname, '..', 'ebook-mappings.json');
+            let mappings = {};
+            if (fs.existsSync(mappingPath)) {
+                try { mappings = JSON.parse(fs.readFileSync(mappingPath, 'utf8')); } catch (e) { }
+            }
+            mappings[barcode] = ebook._id.toString();
+            fs.writeFileSync(mappingPath, JSON.stringify(mappings, null, 2));
+            console.log(`✅ [Internal] Updated mapping for ${barcode} -> ${ebook._id}`);
+        }
     } catch (error) {
         console.error('Error creating ebook:', error);
         res.status(500).json({
@@ -474,6 +498,20 @@ exports.updateEbook = async (req, res) => {
             message: 'تم تحديث الكتاب الإلكتروني بنجاح',
             data: ebook
         });
+
+        // Update ebook-mappings.json if product link changed or exists
+        if (ebook.relatedProductId) {
+            const barcode = String(ebook.relatedProductId).trim();
+            const mappingPath = path.join(__dirname, '..', 'ebook-mappings.json');
+            let mappings = {};
+            if (fs.existsSync(mappingPath)) {
+                try { mappings = JSON.parse(fs.readFileSync(mappingPath, 'utf8')); } catch (e) { }
+            }
+            // Check if this ebook was linked to another barcode before and remove it? 
+            // For now, just ensure the current barcode maps to this ebook.
+            mappings[barcode] = ebook._id.toString();
+            fs.writeFileSync(mappingPath, JSON.stringify(mappings, null, 2));
+        }
     } catch (error) {
         console.error('Error updating ebook:', error);
         res.status(500).json({

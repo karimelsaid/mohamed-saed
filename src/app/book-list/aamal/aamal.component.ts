@@ -159,24 +159,18 @@ export class AamalComponent implements OnInit, OnDestroy {
   }
 
   fetchRatingsForBooks(): void {
-    this.books.forEach(book => {
-      if (book.products_id) {
-        this.http.get<{ bookId: string; averageRating: number; ratingCount: number }>(`${environment.apiBaseUrl}/users/average-rating/${book.products_id}`)
-          .subscribe({
-            next: (res) => {
-              this.ratings[book.products_id] = {
-                averageRating: res.averageRating,
-                ratingCount: res.ratingCount
-              };
-            },
-            error: (err) => {
-              console.error('Error fetching average rating for book', book.products_id, err);
-              this.ratings[book.products_id] = {
-                averageRating: 0,
-                ratingCount: 0
-              };
-            }
-          });
+    const bookIds = this.books.map(b => b.products_id).filter(id => !!id);
+    if (bookIds.length === 0) return;
+
+    this.http.post<Record<string, { averageRating: number; ratingCount: number }>>(
+      `${environment.apiBaseUrl}/users/bulk-average-ratings`,
+      { bookIds }
+    ).subscribe({
+      next: (res) => {
+        this.ratings = { ...this.ratings, ...res };
+      },
+      error: (err) => {
+        console.error('Error fetching bulk ratings:', err);
       }
     });
   }
@@ -383,25 +377,36 @@ export class AamalComponent implements OnInit, OnDestroy {
   getBookImageUrl(book: any): string {
     let imagePath = book.product_image ? String(book.product_image) : '';
     if (!imagePath) {
-      if (book.merchantName) {
-        imagePath = 'merchant_' + book.merchantName + '/' + book.products_id + '/' + book.products_id + '.webp';
+      const isMerchant = book.merchantName && book.merchantName !== 'تاجر كنوز';
+      if (isMerchant) {
+        const sanitizedMerchantName = book.merchantName.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
+        imagePath = 'merchant_' + sanitizedMerchantName + '/' + book.products_id + '/' + book.products_id + '.webp';
       } else {
         imagePath = 'admin__karim_mohamed__/' + book.products_id + '/' + book.products_id + '.webp';
       }
     } else {
       if (imagePath.includes('/')) {
         const parts = imagePath.split('/');
-        if (imagePath.includes('merchant_')) {
-          imagePath = parts.slice(-3).join('/');
-        } else if (imagePath.includes('admin__')) {
-          imagePath = parts.slice(-3).join('/');
+        const isMerchant = (imagePath.includes('merchant_') || book.merchantName) && book.merchantName !== 'تاجر كنوز';
+
+        if (isMerchant) {
+          const filename = parts[parts.length - 1];
+          const id = parts[parts.length - 2];
+          const sanitizedMerchantName = book.merchantName.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
+          imagePath = 'merchant_' + sanitizedMerchantName + '/' + id + '/' + filename;
+        } else if (imagePath.includes('admin__') || book.merchantName === 'تاجر كنوز') {
+          const filename = parts[parts.length - 1];
+          const id = parts[parts.length - 2] || filename.split('.')[0];
+          imagePath = 'admin__karim_mohamed__/' + id + '/' + filename;
         } else {
           imagePath = parts[parts.length - 1];
         }
       } else {
+        const isMerchant = book.merchantName && book.merchantName !== 'تاجر كنوز';
         if (!imagePath.includes('.') && /^\d+$/.test(imagePath)) {
-          if (book.merchantName) {
-            imagePath = 'merchant_' + book.merchantName + '/' + imagePath + '/' + imagePath + '.webp';
+          if (isMerchant) {
+            const sanitizedMerchantName = book.merchantName.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
+            imagePath = 'merchant_' + sanitizedMerchantName + '/' + imagePath + '/' + imagePath + '.webp';
           } else {
             imagePath = 'admin__karim_mohamed__/' + imagePath + '/' + imagePath + '.webp';
           }

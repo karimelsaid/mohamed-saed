@@ -27,6 +27,16 @@
             </div>
         </div>
 
+        <div class="category-selection">
+            <label>تصفية بحسب الفئة (إذا لم يتم اختيار شيء سيظهر الكل):</label>
+            <div class="category-chips">
+                <div *ngFor="let cat of availableCategories" class="category-chip"
+                    [class.active]="settings.categories.includes(cat)" (click)="toggleCategory(cat)">
+                    {{ cat }}
+                </div>
+            </div>
+        </div>
+
         <div class="form-actions">
             <button class="btn-save" (click)="saveSettings()" [disabled]="isSaving">
                 <fa-icon [icon]="faCheckCircle" *ngIf="!isSaving"></fa-icon>
@@ -55,10 +65,16 @@
     <div class="preview-section card">
         <div class="section-header">
             <h3><fa-icon [icon]="faChartBar"></fa-icon> مراجعة محتوى التقرير ({{ shortageItems.length }} منتج)</h3>
-            <button class="btn-save-all" [disabled]="!hasChanges() || isSaving" (click)="saveAllQuantities()">
-                <fa-icon [icon]="faCheckCircle"></fa-icon>
-                <span>حفظ التغييرات</span>
-            </button>
+            <div class="preview-actions">
+                <button class="btn-clear-all" (click)="clearAllManual()" [disabled]="isSaving">
+                    <fa-icon [icon]="faTrash"></fa-icon>
+                    <span>إفراغ القائمة اليدوية</span>
+                </button>
+                <button class="btn-save-all" [disabled]="!hasChanges() || isSaving" (click)="saveAllQuantities()">
+                    <fa-icon [icon]="faCheckCircle"></fa-icon>
+                    <span>حفظ التغييرات</span>
+                </button>
+            </div>
         </div>
         <p class="hint">هذه هي المنتجات التي ستظهر في ملف الإكسل. العناصر الملونه بالأصفر هي التي تم تعديل كميتها ولم
             تُحفظ بعد.</p>
@@ -80,7 +96,13 @@
                         <td>
                             <div class="product-info">
                                 <img [src]="item.image_path" alt="" class="mini-img">
-                                <span>{{ item.product_name }}</span>
+                                <div class="name-status">
+                                    <span>{{ item.product_name }}</span>
+                                    <div class="status-tags">
+                                        <span class="tag threshold" *ngIf="item._isBelowThreshold">نقص مخزون</span>
+                                        <span class="tag manual" *ngIf="item._isManual">إضافة يدوية</span>
+                                    </div>
+                                </div>
                             </div>
                         </td>
                         <td class="text-center">

@@ -1,4 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, Inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 
 @Component({
@@ -20,18 +21,23 @@ import { Router } from '@angular/router';
 })
 export class LandingComponent implements OnInit {
 
-  constructor(private router: Router) { }
+  constructor(
+    private router: Router,
+    @Inject(PLATFORM_ID) private platformId: Object
+  ) { }
 
   ngOnInit(): void {
-    const lastState = localStorage.getItem('last_mushaf_state');
-    const hasNavigated = sessionStorage.getItem('app_has_launched');
+    if (isPlatformBrowser(this.platformId)) {
+      const lastState = localStorage.getItem('last_mushaf_state');
+      const hasNavigated = sessionStorage.getItem('app_has_launched');
 
-    // Simple routing decision
-    if (lastState === 'mushaf') {
-      // Use replaceUrl to prevent back button from returning to landing
-      this.router.navigate(['/mushaf'], { replaceUrl: true });
-    } else {
-      this.router.navigate(['/Home'], { replaceUrl: true });
+      // Simple routing decision
+      if (lastState === 'mushaf') {
+        // Use replaceUrl to prevent back button from returning to landing
+        this.router.navigate(['/mushaf'], { replaceUrl: true });
+      } else {
+        this.router.navigate(['/Home'], { replaceUrl: true });
+      }
     }
   }
 }

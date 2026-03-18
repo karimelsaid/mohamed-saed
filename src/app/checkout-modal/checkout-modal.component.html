@@ -90,73 +90,72 @@
 
     <!-- Step 1: Cart Items -->
     <div *ngIf="currentStep === 1" class="mb-8 max-h-96 overflow-y-auto bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-      <h3 class="text-lg font-bold mb-4 text-gray-900 dark:text-gray-200">السلة</h3>
-      <div *ngFor="let item of cartItems"
+      <h3 class="text-lg font-bold mb-4 text-gray-900 dark:text-gray-200">الأصناف</h3>
+      <div *ngFor="let item of checkOutItems"
         class="flex items-center justify-between py-4 border-b border-gray-200 dark:border-gray-600 last:border-b-0">
-        <div class="flex items-center">
+        <div class="flex items-center w-full">
           <div
-            class="w-20 h-20 rounded-lg mr-4 overflow-hidden flex items-center justify-center bg-gray-100 dark:bg-gray-600 shadow-md">
+            class="w-20 h-20 rounded-lg mr-4 overflow-hidden flex items-center justify-center bg-gray-100 dark:bg-gray-600 shadow-md flex-shrink-0">
             <img [src]="getBookImageUrl(item)" class="max-w-full max-h-full object-contain">
           </div>
           <div class="flex-1">
-            <div class="flex flex-col"
-              *ngIf="calculateDiscountedPrice(item.product_price, item.products_id, item.quantity || 1) as discount">
-              <!-- If discount applies at all -->
+            <div class="flex justify-between items-start">
+              <h4 class="font-bold text-gray-900 dark:text-gray-200">{{ item.product_name }}</h4>
+            </div>
+
+            <div class="flex flex-col mt-1"
+              *ngIf="!customPackage && calculateDiscountedPrice(item.product_price, item.products_id, item.quantity || 1) as discount">
+              <!-- If discount applies at all (Regular items only) -->
               <div *ngIf="discount.discountedQty > 0; else noDiscount">
-                <p class="text-green-600 dark:text-green-400 font-bold text-lg">
+                <p class="text-green-600 dark:text-green-400 font-bold">
                   {{ (discount.discountedPrice * discount.discountedQty + item.product_price * ((item.quantity || 1) -
-                  discount.discountedQty)) | number:'1.0-0' }} EGP
+                  discount.discountedQty)) | number:'1.0-0' }} ج.م
                 </p>
-                <p class="text-gray-400 line-through text-sm">
-                  {{ item.product_price * (item.quantity || 1) }} EGP
-                </p>
-                <p *ngIf="discount.discountedQty < (item.quantity || 1)" class="text-[10px] text-amber-600 font-bold">
-                  (مخصوم لعدد {{ discount.discountedQty }} قطع فقط)
+                <p class="text-gray-400 line-through text-xs">
+                  {{ item.product_price * (item.quantity || 1) }} ج.م
                 </p>
               </div>
               <ng-template #noDiscount>
-                <p class="text-green-600 dark:text-green-400 font-bold text-lg">
-                  {{ item.product_price * (item.quantity || 1) }} EGP
+                <p class="text-green-600 dark:text-green-400 font-bold">
+                  {{ item.product_price * (item.quantity || 1) }} ج.م
                 </p>
               </ng-template>
             </div>
 
+            <!-- If Package/Bundle (Show price per unit or keep it simple) -->
+            <div *ngIf="customPackage" class="text-green-600 dark:text-green-400 font-bold mt-1 text-lg">
+              {{ item.product_price }} ج.م
+            </div>
+
             <div *ngIf="item.product_quantity <= 0" class="relative opacity-50 grayscale">
-              <div class="absolute inset-0 flex items-center pointer-events-none">
-                <div class="w-full border-t-2 border-red-400 border-dashed"></div>
-              </div>
               <div class="mt-2 p-2 bg-red-50 dark:bg-red-900 rounded-lg relative">
-                <p class="text-red-600 dark:text-red-400 text-sm flex items-center">
-                  <i class="fas fa-exclamation-circle mr-2"></i>
-                  <span>
-                    هذا الكتاب غير متوفر حالياً<br>
-                    <span class="text-gray-500 dark:text-gray-400 text-xs">متوقع توافره خلال 3-5 أيام عمل</span>
-                  </span>
-                </p>
+                <p class="text-red-600 dark:text-red-400 text-xs">هذا الكتاب غير متوفر حالياً</p>
               </div>
             </div>
 
-            <div *ngIf="item.product_quantity > 0" class="flex items-center mt-4 space-x-2 sm:space-x-3">
-              <button (click)="decreaseQuantity(item)"
-                class="bg-blue-600 hover:bg-blue-700 text-white w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-full transition-colors duration-200 shadow-md text-sm sm:text-base">
-                -
-              </button>
-              <span
-                class="w-10 sm:w-12 text-center font-bold text-base sm:text-lg text-gray-900 dark:text-gray-200">{{item.quantity
-                || 1}}</span>
-              <button (click)="increaseQuantity(item)"
-                class="bg-blue-600 hover:bg-blue-700 text-white w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-full transition-colors duration-200 shadow-md text-sm sm:text-base">
-                +
-              </button>
-              <span class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 ml-2 sm:ml-3">(المتاح:
-                {{item.product_quantity}})</span>
-            </div>
-            <div *ngIf="item.showMessage"
-              class="mt-1 px-2 py-1 bg-red-50 dark:bg-red-900 text-red-600 dark:text-red-400 text-xs rounded animate-pulse">
-              <i class="fas fa-exclamation-circle mr-1"></i>
-              {{item.message}}
+            <div *ngIf="item.product_quantity > 0" class="flex items-center mt-3 space-x-2 sm:space-x-3">
+              <div
+                class="flex items-center bg-white dark:bg-gray-800 rounded-full shadow-sm border border-gray-100 dark:border-gray-600 overflow-hidden">
+                <button (click)="decreaseQuantity(item)" [disabled]="customPackage"
+                  class="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 w-8 h-8 flex items-center justify-center transition-colors disabled:opacity-50">
+                  -
+                </button>
+                <span class="w-8 text-center font-bold text-sm text-gray-900 dark:text-gray-200">
+                  {{item.quantity || 1}}
+                </span>
+                <button (click)="increaseQuantity(item)" [disabled]="customPackage"
+                  class="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 w-8 h-8 flex items-center justify-center transition-colors disabled:opacity-50">
+                  +
+                </button>
+              </div>
+              <span *ngIf="!customPackage" class="text-xs text-gray-500">(المتاح: {{item.product_quantity}})</span>
             </div>
           </div>
+        </div>
+        <div *ngIf="item.showMessage"
+          class="mt-1 px-2 py-1 bg-red-50 dark:bg-red-900 text-red-600 dark:text-red-400 text-xs rounded animate-pulse">
+          <i class="fas fa-exclamation-circle mr-1"></i>
+          {{item.message}}
         </div>
       </div>
       <div class="flex justify-end mt-4">
@@ -208,7 +207,7 @@
                 </svg>
               </div>
             </label>
-            <label *ngIf="!hasMerchantProducts"
+            <label *ngIf="!hasExternalMerchantProducts"
               class="relative flex items-center p-4 border-2 border-gray-300 dark:border-gray-600 rounded-xl cursor-pointer hover:bg-green-50 dark:hover:bg-green-900/20 hover:border-green-300 dark:hover:border-green-500 transition-all duration-300 ease-in-out transform hover:scale-[1.02] peer-checked:border-green-500 peer-checked:bg-green-50 dark:peer-checked:bg-green-900/30 peer-checked:shadow-lg">
               <input type="radio" [(ngModel)]="deliveryType" value="pickup" (change)="onDeliveryTypeChange()"
                 class="sr-only peer" />
@@ -644,8 +643,54 @@
         </div>
       </div>
     </div>
+
+    <!-- نافذة تأكيد الدفع عند الاستلام (COD Fee) -->
+    <div *ngIf="showCodConfirmation"
+      class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[10000] p-4">
+      <div
+        class="bg-white dark:bg-gray-800 rounded-2xl p-8 max-w-md w-full mx-4 text-center shadow-2xl relative overflow-hidden border-2 border-green-500">
+        <div
+          class="absolute inset-0 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-gray-900 dark:to-gray-800 opacity-50">
+        </div>
+        <div class="relative z-10">
+          <div class="text-6xl mb-4">🚚</div>
+          <h3 class="text-2xl font-bold text-green-600 dark:text-green-400 mb-4">تأكيد الدفع عند الاستلام</h3>
+
+          <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-xl mb-6 text-right">
+            <div class="flex justify-between mb-2">
+              <span class="text-gray-600 dark:text-gray-400">إجمالي الطلب:</span>
+              <span class="font-bold">{{ finalTotal | number:'1.0-0' }} جنيه</span>
+            </div>
+            <div class="flex justify-between mb-2 text-amber-600 dark:text-amber-400">
+              <span>مصاريف الدفع عند الاستلام:</span>
+              <span class="font-bold">+{{ codFee }} جنيه</span>
+            </div>
+            <div class="border-t border-gray-200 dark:border-gray-600 pt-2 flex justify-between text-xl font-black">
+              <span>الإجمالي النهائي:</span>
+              <span class="text-green-600 dark:text-green-400">{{ finalTotal + codFee | number:'1.0-0' }} جنيه</span>
+            </div>
+          </div>
+
+          <p class="text-gray-600 dark:text-gray-400 mb-6 text-sm">
+            نحيطكم علماً بأنه يتم إضافة 10 جنيهات مصاريف إدارية عند اختيار وسيلة الدفع عند الاستلام.
+          </p>
+
+          <div class="flex flex-col gap-3 justify-center">
+            <button (click)="finalConfirmCOD()"
+              class="bg-gradient-to-r from-green-600 to-green-700 text-white py-3 px-6 rounded-lg hover:from-green-700 hover:to-green-800 transition-all shadow-lg font-bold text-lg">
+              تأكيد وإتمام الطلب
+            </button>
+            <button (click)="cancelCodConfirmation()"
+              class="bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-gray-200 py-2 px-4 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-700 transition-colors shadow-md">
+              الرجوع
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <app-payment-modal *ngIf="showPaymentModal" [paymentUrl]="paymentUrl" (close)="onPaymentModalClose()"
     (paymentComplete)="onPaymentComplete($event)">
   </app-payment-modal>
+</div>

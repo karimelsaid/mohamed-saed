@@ -31,7 +31,7 @@
 <div *ngIf="isLoading" class="pt-10 md:pt-10 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 mx-8 gap-4">
   <div *ngFor="let skeleton of [].constructor(10); let i = index"
     class="flex dark:bg-gray-800 rounded-2xl shadow dark:shadow-lg dark:shadow-black/50 p-4 mb-4 fade-in relative"
-    [style.animationDelay]="i * 400 + 'ms'">
+    [style.animationDelay]="i * 50 + 'ms'">
     <div class="absolute top-2 left-2 bg-gray-300 dark:bg-gray-700 rounded w-12 h-6 animate-pulse"></div>
     <div class="w-1/3 pr-4 flex justify-center items-center">
       <ngx-skeleton-loader count="1" appearance="circle"
@@ -59,7 +59,7 @@
 <div *ngIf="!isLoading" class="pt-10 md:pt-10 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 mx-8 gap-4">
   <div *ngFor="let book of paginatedBooks ; let i = index"
     class="flex bg-white dark:bg-gray-800 rounded-2xl shadow dark:shadow-lg dark:shadow-black/50 p-4 mb-4 fade-in relative"
-    [style.animationDelay]="i * 400 + 'ms'">
+    [style.animationDelay]="i * 50 + 'ms'">
     <!-- شريط الخصم -->
     <div *ngIf="book.rival && book.product_discount_percent"
       class="absolute top-2 left-2 bg-red-600 dark:bg-red-700 text-white text-xs font-bold px-2 py-1 rounded shadow-md dark:shadow-lg z-10">
@@ -93,7 +93,7 @@
           <ng-container *ngIf="getMerchantLogoUrl(book) as logoUrl">
             <img [src]="logoUrl" alt="شعار التاجر" class="w-6 h-6 object-cover rounded-full" />
           </ng-container>
-          <span [routerLink]="['/', book.merchantName]"
+          <span [routerLink]="['/', book.merchantName.trim().split(' ').join('-')]"
             class="text-sm text-gray-600 dark:text-gray-400 cursor-pointer hover:underline">بواسطة {{ book.merchantName
             }}</span>
         </div>
@@ -106,14 +106,16 @@
             <p class="text-green-600 dark:text-green-400 font-bold text-lg">
               {{ (discount.discountedQty > 0 ? discount.discountedPrice : book.product_price) | number:'1.0-0' }} EGP
             </p>
-            <!-- Original Price (strikethrough) -->
-            <p class="text-gray-400 dark:text-gray-500 line-through text-sm">
-              {{ (book.rival ? book.product_price_before_discount : (book.product_price * 1.75)) | number:'1.0-0' }} EGP
+            <!-- Original Price (strikethrough - either system or coupon) -->
+            <p class="text-gray-400 dark:text-gray-500 line-through text-sm"
+              *ngIf="(book.product_price_before_discount && book.product_price_before_discount > book.product_price) || (discount.discountedQty > 0 && discount.discountedPrice < book.product_price)">
+              {{ (book.product_price_before_discount && book.product_price_before_discount > book.product_price ?
+              book.product_price_before_discount : book.product_price) | number:'1.0-0' }} EGP
             </p>
           </div>
-
-          <!-- Coupon Savings Label -->
-          <p *ngIf="discount.discountedQty > 0" class="text-xs text-green-600 dark:text-green-400 font-semibold mb-1">
+          <!-- Coupon Savings Label (only show if savings > 0) -->
+          <p *ngIf="discount.discountedQty > 0 && (book.product_price - discount.discountedPrice) > 0"
+            class="text-xs text-green-600 dark:text-green-400 font-semibold mb-1">
             وفرت {{ (book.product_price - discount.discountedPrice) | number:'1.0-0' }} EGP باستخدام الكوبون
           </p>
 

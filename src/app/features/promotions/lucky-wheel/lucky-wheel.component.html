@@ -1,5 +1,5 @@
-<div class="wheel-wrapper" [style.--theme-primary]="theme?.primaryColor || '#8b5cf6'"
-    [style.--theme-secondary]="theme?.secondaryColor || '#ede9fe'">
+<div class="wheel-wrapper" [style.--theme-primary]="theme?.themeConfig?.primaryColor || 'var(--promo-primary)'"
+    [style.--theme-secondary]="theme?.themeConfig?.secondaryColor || 'var(--promo-secondary)'">
     <div class="wheel-container" [class.spinning]="isSpinning" [style.transform]="'rotate(' + currentRotation + 'deg)'"
         [style.background]="getWheelBackground()">
         <!-- Labels positioned individually at each segment's bisector -->
@@ -14,7 +14,8 @@
     <!-- Beautiful Login Modal -->
     <div class="login-prompt-overlay" *ngIf="showLoginModal" (click)="showLoginModal = false">
         <div class="login-prompt-card" (click)="$event.stopPropagation()">
-            <div class="icon-circle bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400">
+            <div class="icon-circle" [style.background-color]="'var(--promo-primary-alpha-10)'"
+                [style.color]="'var(--promo-primary)'">
                 <fa-icon [icon]="faSignInAlt" class="text-3xl"></fa-icon>
             </div>
             <h3 class="text-2xl font-bold mt-4 dark:text-white">سجل دخولك لتلعب!</h3>
@@ -23,7 +24,9 @@
 
             <div class="modal-footer mt-6 flex gap-3">
                 <button (click)="openLogin()"
-                    class="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold py-3 rounded-xl shadow-lg hover:shadow-purple-500/20 active:scale-95 transition-all">
+                    class="flex-1 text-white font-bold py-3 rounded-xl shadow-lg hover:opacity-90 active:scale-95 transition-all"
+                    [style.background]="'linear-gradient(to right, var(--promo-primary), var(--promo-accent))'"
+                    [style.box-shadow]="'0 8px 16px var(--promo-primary-alpha-20)'">
                     تسجيل الدخول
                 </button>
                 <button (click)="showLoginModal = false"

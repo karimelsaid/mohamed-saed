@@ -1,39 +1,48 @@
 <div class="container mx-auto p-4 mb-32 md:mb-0">
   <!-- Header Section -->
   <div class="text-center mb-8 md:mt-40 mt-10">
-    <h1 class="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">قائمة المفضلة</h1>
+    <h1 class="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">قائمة
+      المفضلة</h1>
     <p class="text-gray-600 dark:text-gray-400 mt-2">استعرض كتبك المفضلة وأضفها إلى السلة بسهولة</p>
   </div>
 
   <div *ngIf="isLoading" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-8 items-start">
     <div *ngFor="let skeleton of [].constructor(6); let i = index"
-         class="group bg-white dark:bg-gray-800 rounded-2xl md:rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border border-gray-100 dark:border-gray-700 overflow-hidden fade-in h-full"
-         [style.animationDelay]="i * 400 + 'ms'">
+      class="group bg-white dark:bg-gray-800 rounded-2xl md:rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border border-gray-100 dark:border-gray-700 overflow-hidden fade-in h-full"
+      [style.animationDelay]="i * 400 + 'ms'">
 
       <!-- Book Image Section Skeleton -->
-      <div class="relative w-full h-32 sm:h-40 md:h-48 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center p-3 md:p-4">
-        <ngx-skeleton-loader count="1" appearance="circle" [theme]="{ width: '80px', height: '80px', 'background-color': 'rgba(156, 163, 175, 0.2)' }"></ngx-skeleton-loader>
-        <div class="absolute top-2 right-2 md:top-3 md:right-3 bg-pink-500 text-white text-xs font-bold px-1.5 py-0.5 md:px-2 md:py-1 rounded-full shadow-md opacity-60">
-          <ngx-skeleton-loader count="1" [theme]="{ width: '12px', height: '12px', 'background-color': 'transparent' }"></ngx-skeleton-loader>
+      <div
+        class="relative w-full h-32 sm:h-40 md:h-48 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center p-3 md:p-4">
+        <ngx-skeleton-loader count="1" appearance="circle"
+          [theme]="{ width: '80px', height: '80px', 'background-color': 'rgba(156, 163, 175, 0.2)' }"></ngx-skeleton-loader>
+        <div
+          class="absolute top-2 right-2 md:top-3 md:right-3 bg-pink-500 text-white text-xs font-bold px-1.5 py-0.5 md:px-2 md:py-1 rounded-full shadow-md opacity-60">
+          <ngx-skeleton-loader count="1"
+            [theme]="{ width: '12px', height: '12px', 'background-color': 'transparent' }"></ngx-skeleton-loader>
         </div>
       </div>
 
       <!-- Book Details Section Skeleton -->
       <div class="p-4 md:p-6">
-        <ngx-skeleton-loader count="1" [theme]="{ height: '24px', 'margin-bottom': '12px', width: '80%' }"></ngx-skeleton-loader>
+        <ngx-skeleton-loader count="1"
+          [theme]="{ height: '24px', 'margin-bottom': '12px', width: '80%' }"></ngx-skeleton-loader>
 
         <div class="flex items-center justify-between mb-3 md:mb-4">
           <div class="flex items-center space-x-1 md:space-x-2">
             <ngx-skeleton-loader count="1" [theme]="{ width: '60px', height: '28px' }"></ngx-skeleton-loader>
             <ngx-skeleton-loader count="1" [theme]="{ width: '30px', height: '20px' }"></ngx-skeleton-loader>
           </div>
-          <ngx-skeleton-loader count="1" [theme]="{ width: '50px', height: '24px', 'border-radius': '9999px' }"></ngx-skeleton-loader>
+          <ngx-skeleton-loader count="1"
+            [theme]="{ width: '50px', height: '24px', 'border-radius': '9999px' }"></ngx-skeleton-loader>
         </div>
 
         <!-- Action Buttons Skeleton -->
         <div class="flex gap-1 md:gap-2">
-          <ngx-skeleton-loader count="1" [theme]="{ height: '36px', 'border-radius': '8px', width: '48%' }"></ngx-skeleton-loader>
-          <ngx-skeleton-loader count="1" [theme]="{ height: '36px', 'border-radius': '8px', width: '48%' }"></ngx-skeleton-loader>
+          <ngx-skeleton-loader count="1"
+            [theme]="{ height: '36px', 'border-radius': '8px', width: '48%' }"></ngx-skeleton-loader>
+          <ngx-skeleton-loader count="1"
+            [theme]="{ height: '36px', 'border-radius': '8px', width: '48%' }"></ngx-skeleton-loader>
         </div>
       </div>
     </div>
@@ -42,49 +51,61 @@
   <!-- Empty State -->
   <div *ngIf="!isLoading && favoriteBooks.length === 0" class="text-center py-16">
     <div class="mb-6">
-      <svg class="w-24 h-24 mx-auto text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg class="w-24 h-24 mx-auto text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor"
+        viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M5 13l4 4L19 7"></path>
       </svg>
     </div>
     <h2 class="text-2xl font-semibold text-gray-700 dark:text-gray-300 mb-2">لم تضف أي كتب للمفضلة بعد</h2>
     <p class="text-gray-500 dark:text-gray-400 mb-6">ابدأ في استكشاف الكتب وأضفها إلى قائمتك المفضلة</p>
-    <a routerLink="/" class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-medium rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+    <a routerLink="/"
+      class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-medium rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
       <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
       </svg>
       تصفح الكتب
     </a>
   </div>
 
   <!-- Book Cards -->
-  <div *ngIf="!isLoading && favoriteBooks.length > 0" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-8">
+  <div *ngIf="!isLoading && favoriteBooks.length > 0"
+    class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-8">
     <div *ngFor="let book of favoriteBooks ; let i = index"
-         class="group bg-white dark:bg-gray-800 rounded-2xl md:rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border border-gray-100 dark:border-gray-700 overflow-hidden fade-in"
-         [style.animationDelay]="i * 400 + 'ms'">
+      class="group bg-white dark:bg-gray-800 rounded-2xl md:rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border border-gray-100 dark:border-gray-700 overflow-hidden fade-in"
+      [style.animationDelay]="i * 400 + 'ms'">
 
       <!-- Book Image Section -->
-      <div class="relative w-full h-32 sm:h-40 md:h-48 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center p-3 md:p-4">
-        <img
-          [src]="getBookImageUrl(book)"
-          [alt]="book.product_name"
+      <div
+        class="relative w-full h-32 sm:h-40 md:h-48 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center p-3 md:p-4">
+        <img [src]="getBookImageUrl(book)" [alt]="book.product_name"
           class="max-w-full max-h-full object-contain rounded-lg md:rounded-xl shadow-md group-hover:scale-105 transition-transform duration-300"
-          data-attempt="0"
-        />
-        <div class="absolute top-2 right-2 md:top-3 md:right-3 bg-pink-500 text-white text-xs font-bold px-1.5 py-0.5 md:px-2 md:py-1 rounded-full shadow-md">
+          data-attempt="0" />
+        <div
+          class="absolute top-2 right-2 md:top-3 md:right-3 bg-pink-500 text-white text-xs font-bold px-1.5 py-0.5 md:px-2 md:py-1 rounded-full shadow-md">
           {{ i + 1 }}
         </div>
       </div>
 
       <!-- Book Details Section -->
       <div class="p-4 md:p-6">
-        <h3 class="font-bold text-lg md:text-xl mb-2 md:mb-3 text-gray-800 dark:text-white line-clamp-2 group-hover:text-pink-600 dark:group-hover:text-pink-400 transition-colors">
+        <h3
+          class="font-bold text-lg md:text-xl mb-2 md:mb-3 text-gray-800 dark:text-white line-clamp-2 group-hover:text-pink-600 dark:group-hover:text-pink-400 transition-colors">
           {{book.product_name}}
         </h3>
 
         <div class="flex items-center justify-between mb-3 md:mb-4">
-          <div class="flex items-center space-x-1 md:space-x-2">
-            <span class="text-xl md:text-2xl font-bold text-green-600 dark:text-green-400">{{book.product_price}}</span>
-            <span class="text-base md:text-lg text-gray-500 dark:text-gray-400">ج.م</span>
+          <div class="flex flex-col">
+            <div class="flex items-center space-x-1 md:space-x-2">
+              <span
+                class="text-xl md:text-2xl font-bold text-green-600 dark:text-green-400">{{book.product_price}}</span>
+              <span class="text-base md:text-lg text-gray-500 dark:text-gray-400">ج.م</span>
+            </div>
+            <!-- Original Price -->
+            <span *ngIf="book.product_price_before_discount && book.product_price_before_discount > book.product_price"
+              class="text-xs text-gray-400 line-through">
+              {{book.product_price_before_discount}} ج.م
+            </span>
           </div>
           <div class="bg-green-100 dark:bg-green-900 px-2 py-0.5 md:px-3 md:py-1 rounded-full">
             <span class="text-green-800 dark:text-green-200 text-xs md:text-sm font-medium">متوفر</span>
@@ -93,24 +114,22 @@
 
         <!-- Action Buttons -->
         <div class="flex gap-1 md:gap-2">
-          <button
-            (click)="removeFromFavorites(book.products_id)"
+          <button (click)="removeFromFavorites(book.products_id)"
             class="flex-1 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium py-2 px-2 md:px-4 rounded-lg md:rounded-xl transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 flex items-center justify-center space-x-1 md:space-x-2">
             <svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
             </svg>
             <span class="text-xs md:text-sm">إزالة من المفضلة</span>
           </button>
-          <button *ngIf="!isInCart(book.products_id)"
-            (click)="addToCart(book.products_id)"
+          <button *ngIf="!isInCart(book.products_id)" (click)="addToCart(book.products_id)"
             class="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium py-2 px-2 md:px-4 rounded-lg md:rounded-xl transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 flex items-center justify-center space-x-1 md:space-x-2">
             <svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-1.1 5H19M7 13l-1.1 5M7 13h10"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-1.1 5H19M7 13l-1.1 5M7 13h10"></path>
             </svg>
             <span class="text-xs md:text-sm">أضف إلى السلة</span>
           </button>
-          <button *ngIf="isInCart(book.products_id)"
-            (click)="addToCart(book.products_id)"
+          <button *ngIf="isInCart(book.products_id)" (click)="addToCart(book.products_id)"
             class="flex-1 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium py-2 px-2 md:px-4 rounded-lg md:rounded-xl transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 flex items-center justify-center space-x-1 md:space-x-2">
             <svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>

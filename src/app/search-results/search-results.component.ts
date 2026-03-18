@@ -12,6 +12,7 @@ import { ModalService } from '../services/modal.service';
 import { AccountModalComponent } from '../auth/account-modal/account-modal.component';
 import { GamificationService } from '../services/gamification.service';
 import { PromotionService } from '../services/promotion.service';
+import { AnalyticsService } from '../services/analytics.service';
 @Component({
   selector: 'app-search-results',
   templateUrl: './search-results.component.html',
@@ -47,7 +48,7 @@ export class SearchResultsComponent implements OnInit {
   isRequestSubmitting = false;
   appliedCoupon: any = null;
   expiredCouponMessage: string | null = null;
-  // ratings: { [bookId: string]: any } = {}; // No longer needed since ratings come with books data
+  ratings: Record<string, { averageRating: number; ratingCount: number }> = {};
 
   filterType = 'all';
   showFirst = false; // Flag to show only the first item
@@ -64,7 +65,8 @@ export class SearchResultsComponent implements OnInit {
     private http: HttpClient,
     private modalService: ModalService,
     public gamificationService: GamificationService,
-    private promotionService: PromotionService
+    private promotionService: PromotionService,
+    private analyticsService: AnalyticsService
   ) { }
 
   ngOnInit(): void {
@@ -118,7 +120,9 @@ export class SearchResultsComponent implements OnInit {
   }
 
   getProductRoute(book: Book): any[] {
-    const slug = this.getBookSlug(book.product_name);
+    const slug = this.getBookSlug(book.product_name || '');
+    const category = (book.product_category || '').toLowerCase();
+
     const categoryRoutes: { [key: string]: string } = {
       'أدوات مكتبية': 'office-supplies',
       'إلكترونيات': 'electronics',
@@ -140,8 +144,24 @@ export class SearchResultsComponent implements OnInit {
       'قواميس ومراجع': 'book'
     };
 
-    const category = (book.product_category || '').trim();
+    // 1. Try exact or partial match in categoryRoutes
     let route = categoryRoutes[category];
+    if (!route) {
+      for (const [key, value] of Object.entries(categoryRoutes)) {
+        if (category.includes(key.toLowerCase())) {
+          route = value;
+          break;
+        }
+      }
+    }
+
+    // 2. Broad check for book-related keywords
+    if (!route) {
+      const bookKeywords = ['كتب', 'روايات', 'قصص', 'تطوير الذات', 'دينية', 'تاريخ', 'أطفال', 'أعمال', 'قواميس', 'صحة', 'فنون'];
+      if (bookKeywords.some(key => category.includes(key))) {
+        route = 'book';
+      }
+    }
 
     if (!route) {
       route = 'others';
@@ -194,11 +214,28 @@ export class SearchResultsComponent implements OnInit {
   }
 
   getAverageRating(book: Book): number {
-    return book.averageRating ? Math.round(book.averageRating) : 0;
+    return this.ratings[book.products_id]?.averageRating ? Math.round(this.ratings[book.products_id].averageRating) : 0;
+  }
+
+  fetchRatingsForBooks(): void {
+    const bookIds = this.books.map(b => b.products_id).filter(id => !!id);
+    if (bookIds.length === 0) return;
+
+    this.http.post<Record<string, { averageRating: number; ratingCount: number }>>(
+      `${environment.apiBaseUrl}/users/bulk-average-ratings`,
+      { bookIds }
+    ).subscribe({
+      next: (res) => {
+        this.ratings = { ...this.ratings, ...res };
+      },
+      error: (err) => {
+        console.error('Error fetching bulk ratings:', err);
+      }
+    });
   }
 
   getRatingCount(book: Book): number {
-    return book.ratingCount || 0;
+    return this.ratings[book.products_id]?.ratingCount || 0;
   }
 
   // Method to open the request modal
@@ -423,6 +460,13 @@ export class SearchResultsComponent implements OnInit {
 
     const query = this.searchQuery?.trim() || '';
 
+    // Track search query with analytics backend
+    if (query && query.length >= 2) {
+      if (query.length < 3 || query.length > 15 || !this.isPotentialCoupon(query)) {
+        this.analyticsService.trackSearchTerm(query).subscribe();
+      }
+    }
+
     // Check if query is a coupon
     if (query && query.length >= 3 && query.length <= 15) {
       const userData = JSON.parse(localStorage.getItem('user') || '{}');
@@ -440,6 +484,7 @@ export class SearchResultsComponent implements OnInit {
             this.expiredCouponMessage = 'تم انتهاء مدة صلاحية هذا الكوبون\nانتظر الكوبون التالي في الساعات القادمة\nنسعى دائماً لإرضائك 💜';
             this.isLoading = false;
           } else {
+            console.error('Coupon validation error, falling back to normal search:', err);
             this.executeNormalSearch();
           }
         }
@@ -449,41 +494,66 @@ export class SearchResultsComponent implements OnInit {
     }
   }
 
+  // Helper function to loosely verify if query might be a coupon
+  private isPotentialCoupon(query: string): boolean {
+    const isMainlyEnglishLetters = /^[a-zA-Z0-9\-_]+$/.test(query);
+    return isMainlyEnglishLetters;
+  }
+
   private loadAllBooksForCoupon(): void {
-    this.dataService.getData().subscribe((data) => {
-      // Filter by price range if coupon specifies it
-      const min = this.appliedCoupon.minPrice;
-      const max = this.appliedCoupon.maxPrice;
+    this.dataService.getData().subscribe({
+      next: (data) => {
+        // Filter by price range if coupon specifies it
+        const min = this.appliedCoupon.minPrice;
+        const max = this.appliedCoupon.maxPrice;
 
-      this.books = data.filter((book: Book) => {
-        const price = book.product_price;
-        const matchesMin = min ? price >= min : true;
-        const matchesMax = max ? price <= max : true;
-        return matchesMin && matchesMax;
-      });
+        this.books = data.filter((book: Book) => {
+          const price = book.product_price;
+          const matchesMin = min ? price >= min : true;
+          const matchesMax = max ? price <= max : true;
+          return matchesMin && matchesMax;
+        });
 
-      this.finishSearch();
+        this.finishSearch();
+        this.fetchRatingsForBooks();
+      },
+      error: (err) => {
+        console.error('Error loading books for coupon:', err);
+        this.isLoading = false;
+      }
     });
   }
 
   private executeNormalSearch(): void {
     if (this.filterType === 'recentlyAdded') {
-      this.dataService.getRecentBooks().subscribe((data) => {
-        if (!this.searchQuery || this.searchQuery.trim() === '') {
-          this.books = data;
-        } else {
-          this.filterBooks(data);
+      this.dataService.getRecentBooks().subscribe({
+        next: (data) => {
+          if (!this.searchQuery || this.searchQuery.trim() === '') {
+            this.books = (data as any);
+          } else {
+            this.filterBooks((data as any));
+          }
+          this.finishSearch();
+        },
+        error: (err) => {
+          console.error('Error fetching recent books:', err);
+          this.isLoading = false;
         }
-        this.finishSearch();
       });
     } else {
-      this.dataService.getData().subscribe((data) => {
-        if (!this.searchQuery || this.searchQuery.trim() === '') {
-          this.books = data;
-        } else {
-          this.filterBooks(data);
+      this.dataService.getData().subscribe({
+        next: (data) => {
+          if (!this.searchQuery || this.searchQuery.trim() === '') {
+            this.books = data;
+          } else {
+            this.filterBooks(data);
+          }
+          this.finishSearch();
+        },
+        error: (err) => {
+          console.error('Error fetching search results:', err);
+          this.isLoading = false;
         }
-        this.finishSearch();
       });
     }
   }
@@ -549,6 +619,7 @@ export class SearchResultsComponent implements OnInit {
     this.updatePage();
     console.log('SearchResults: finishSearch completed. PaginatedBooks count:', this.paginatedBooks.length);
     this.isLoading = false;
+    this.fetchRatingsForBooks();
   }
 
   // دالة الانتقال إلى الصفحة التالية

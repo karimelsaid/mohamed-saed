@@ -52,13 +52,15 @@ export class AppUpdateService {
 
             // Get current app info
             const appInfo = await App.getInfo();
-            // info.build corresponds to versionCode in Android (e.g., "7")
             const currentBuild = parseInt(appInfo.build || '0', 10);
 
-            console.log(`Current Build: ${currentBuild}, Min Build: ${minBuild}`);
+            console.log(`[AppUpdate] Current Build: ${currentBuild}, Min Required: ${minBuild}, Force: ${androidConfig.forceUpdate}`);
 
             if (currentBuild < minBuild && androidConfig.forceUpdate) {
+                console.warn('[AppUpdate] Build number too low. Showing mandatory update dialog.');
                 await this.showForceUpdateDialog(storeUrl);
+            } else {
+                console.log('[AppUpdate] App is within required build range.');
             }
 
         } catch (error) {

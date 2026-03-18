@@ -1,0 +1,36 @@
+[
+  {
+    "id": "1772376276986",
+    "invoiceNumber": "INV-20260301-2775",
+    "date": "2026-03-01T14:44:36.986Z",
+    "customerName": "كريم",
+    "customerPhone": "01098636373",
+    "totalAmount": 132,
+    "items": [
+      {
+        "products_id": "34",
+        "name": "منتج غير معروف",
+        "quantity": 1,
+        "price": 132,
+        "total": 132
+      }
+    ]
+  },
+  {
+    "id": "1772452316989",
+    "invoiceNumber": "INV-20260302-6131",
+    "date": "2026-03-02T11:51:56.989Z",
+    "customerName": "زبون نقدي",
+    "customerPhone": "غير مسجل",
+    "totalAmount": 110,
+    "items": [
+      {
+        "products_id": "393",
+        "name": "منتج غير معروف",
+        "quantity": 1,
+        "price": 110,
+        "total": 110
+      }
+    ]
+  }
+]

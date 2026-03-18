@@ -2,11 +2,15 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { faUsers, faPlus, faLink, faUserGraduate, faLock, faCheckCircle, faInfoCircle, faMars, faVenus, faSearch, faArrowRight, faShareAlt } from '@fortawesome/free-solid-svg-icons';
 import { Share } from '@capacitor/share';
 import { HalaqaService, Halaqa } from '../../core/services/halaqa.service';
 import { AuthService } from '../../auth/auth.service';
 import { Router, ActivatedRoute } from '@angular/router';
+import { 
+    faUsers, faPlus, faLink, faUserGraduate, faLock, 
+    faCheckCircle, faInfoCircle, faMars, faVenus, 
+    faSearch, faArrowRight, faShareAlt 
+} from '@fortawesome/free-solid-svg-icons';
 
 @Component({
     selector: 'app-community',
@@ -30,12 +34,12 @@ export class CommunityComponent implements OnInit {
     faShareAlt = faShareAlt;
 
     availableHalaqas: Halaqa[] = [];
-    myHalaqas: Halaqa[] = [];
+    myHalaqas: any[] = [];
     userGender: string = '';
     userId: string = '';
     inviteCode: string = '';
 
-    // Pagination & Search
+    // Search and Pagination
     searchTerm: string = '';
     currentPage: number = 1;
     itemsPerPage: number = 10;
@@ -66,15 +70,10 @@ export class CommunityComponent implements OnInit {
             if (user) {
                 this.userId = (user.id || user._id)?.toString();
                 this.userGender = user.gender || '';
-                if (this.userGender) {
-                    this.loadHalaqas();
-                }
+                this.loadHalaqas();
             } else {
-                // Use relative navigation so it works in both main app and Mushaf
-                this.router.navigate(['../login'], {
-                    relativeTo: this.route,
-                    queryParams: { returnUrl: this.router.url },
-                    replaceUrl: true
+                this.router.navigate(['/login'], {
+                    queryParams: { returnUrl: '/community' }
                 });
             }
         });
@@ -95,7 +94,6 @@ export class CommunityComponent implements OnInit {
     loadHalaqas() {
         this.isLoading = true;
 
-        // Fetch Available Groups (with search and pagination)
         this.halaqaService.getAvailableHalaqas(
             this.userGender,
             this.userId,
@@ -117,7 +115,6 @@ export class CommunityComponent implements OnInit {
             }
         });
 
-        // Fetch My Groups (only on first page or when no search)
         if (this.currentPage === 1 && !this.searchTerm) {
             this.halaqaService.getMyHalaqas(this.userId).subscribe({
                 next: (res) => {
@@ -127,8 +124,6 @@ export class CommunityComponent implements OnInit {
                     console.error('Error loading my halaqas', err);
                 }
             });
-        } else {
-            // Keep existing myHalaqas but don't re-fetch if just paginating suggestions
         }
     }
 
@@ -141,13 +136,6 @@ export class CommunityComponent implements OnInit {
         if (page < 1 || page > this.totalPages) return;
         this.currentPage = page;
         this.loadHalaqas();
-        // Scroll to top of suggestions
-        window.scrollTo({ top: 400, behavior: 'smooth' });
-    }
-
-    private checkLoadingState() {
-        // No longer needed with direct isLoading assignment
-        this.isLoading = false;
     }
 
     async shareInviteCode(event: Event, code?: string) {
@@ -162,7 +150,6 @@ export class CommunityComponent implements OnInit {
                 dialogTitle: 'مشاركة كود الانضمام',
             });
         } catch (err) {
-            // Fallback for browsers
             if (navigator.share) {
                 navigator.share({
                     title: 'انضم لحلقتي في تطبيق كـنـوز',
@@ -181,10 +168,6 @@ export class CommunityComponent implements OnInit {
         });
     }
 
-    isLeader(h: Halaqa): boolean {
-        return (h.leader?._id || h.leader)?.toString() === this.userId;
-    }
-
     joinByCode() {
         if (!this.inviteCode) return;
         this.message = '';
@@ -194,8 +177,6 @@ export class CommunityComponent implements OnInit {
                 this.message = '✅ تم الانضمام للحلقة بنجاح! جاري توجيهك...';
                 this.inviteCode = '';
                 this.loadHalaqas();
-
-                // Redirection
                 setTimeout(() => {
                     if (res.data?._id) {
                         this.openDetails(res.data._id);
@@ -211,12 +192,6 @@ export class CommunityComponent implements OnInit {
 
     createHalaqa() {
         if (!this.newHalaqa.name) return;
-
-        // Check if gender is missing
-        if (!this.userGender && !this.selectedGender) {
-            this.message = '❌ يرجى اختيار جنسك أولاً (ذكر/أنثى)';
-            return;
-        }
 
         this.isLoading = true;
         this.halaqaService.createHalaqa({

@@ -107,7 +107,9 @@ const routes: Routes = [
   { path: 'login', component: LoginComponent },
   { path: 'register', component: RegisterComponent },
   { path: 'forgot-password', component: ForgotPasswordComponent },
+  { path: 'account', redirectTo: '/profile', pathMatch: 'full' },
   { path: 'profile', component: UserProfileComponent },
+  { path: 'profile/:id', component: UserProfileComponent },
   { path: 'reset-password', component: ResetPasswordComponent },
   { path: 'requests', component: UserOrdersComponent },
   { path: 'referrals', component: ReferralsComponent },
@@ -154,6 +156,18 @@ const routes: Routes = [
   // path: 'mushaf', loadChildren: ...
   // path: 'quran-dashboard', loadChildren: ...
   // يجب أن يكون هذا المسار قرب النهاية لتجنب التعارض مع المسارات الثابتة الأخرى
+  { 
+    path: 'community', 
+    children: [
+      { path: '', loadComponent: () => import('./features/community/community.component').then(m => m.CommunityComponent) },
+      { path: 'halaqa/:id', loadComponent: () => import('./features/community/halaqa-details/halaqa-details.component').then(m => m.HalaqaDetailsComponent) },
+      { path: ':id', loadComponent: () => import('./features/community/halaqa-details/halaqa-details.component').then(m => m.HalaqaDetailsComponent) }
+    ]
+  },
+  { 
+    path: 'reader-community', 
+    loadComponent: () => import('./features/reader-community/reader-community.component').then(m => m.ReaderCommunityComponent) 
+  },
   { path: ':username', component: MerchantProfileComponent },
   { path: '**', component: NotFoundComponent }
 ];

@@ -179,25 +179,18 @@ export class TatwerComponent implements OnInit, OnDestroy {
   }
 
   fetchRatingsForBooks(): void {
-    this.books.forEach(book => {
-      if (book.products_id) {
+    const bookIds = this.books.map(b => b.products_id).filter(id => !!id);
+    if (bookIds.length === 0) return;
 
-        this.http.get<{ bookId: string; averageRating: number; ratingCount: number }>(`${environment.apiBaseUrl}/users/average-rating/${book.products_id}`)
-          .subscribe({
-            next: (res) => {
-              this.ratings[book.products_id] = {
-                averageRating: res.averageRating,
-                ratingCount: res.ratingCount
-              };
-            },
-            error: (err) => {
-              console.error('Error fetching average rating for book', book.products_id, err);
-              this.ratings[book.products_id] = {
-                averageRating: 0,
-                ratingCount: 0
-              };
-            }
-          });
+    this.http.post<Record<string, { averageRating: number; ratingCount: number }>>(
+      `${environment.apiBaseUrl}/users/bulk-average-ratings`,
+      { bookIds }
+    ).subscribe({
+      next: (res) => {
+        this.ratings = { ...this.ratings, ...res };
+      },
+      error: (err) => {
+        console.error('Error fetching bulk ratings:', err);
       }
     });
   }

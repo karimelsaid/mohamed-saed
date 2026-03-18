@@ -12,10 +12,18 @@ export interface User {
     referralCode?: string;
     referralBalance?: number;
     profileImage?: string;
+    coverPhoto?: string;
+    bio?: string;
     address?: string;
     favorites: string[];
+    favoriteAuthors?: string[];
+    favoriteCategories?: string[];
+    likesReceived?: number;
     cart: string[];
     role?: 'user' | 'merchant' | 'admin';
+    merchantName?: string;
+    approved?: boolean;
+
     quranProgress?: {
         totalPoints: number;
         [key: string]: any;
@@ -34,4 +42,6 @@ export interface User {
         address: string;
     };
     token?: string;
+    followers?: string[];
+    createdAt?: string | Date;
 }

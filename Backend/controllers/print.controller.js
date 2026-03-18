@@ -81,7 +81,7 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({ storage: storage, fileFilter: fileFilter }).array('files', 10);
 
 // Price calculation function
-function calculatePrice({ pages, copies, coverType, printColor, size, paperColor }) {
+function calculatePrice({ pages, copies, coverType, printColor, size, paperColor, coverPrintingType }) {
   // 1. Printing cost per page
   let printingCostPerPage = 0;
   if (printColor === 'أبيض وأسود') {
@@ -119,11 +119,21 @@ function calculatePrice({ pages, copies, coverType, printColor, size, paperColor
     coverPrice = 100;
   }
 
+  // 3b. Cover printing type surcharge
+  let coverPrintingSurcharge = 0;
+  if (coverPrintingType === 'أوفست') {
+    coverPrintingSurcharge = 15;
+  } else if (coverPrintingType === 'سيلك سكرين') {
+    coverPrintingSurcharge = 30;
+  } else if (coverPrintingType === 'ديجيتال') {
+    coverPrintingSurcharge = 0;
+  }
+
   // 4. Total price calculation
   const numberOfA4Sheets = Math.ceil(pages / pagesPerA4Sheet);
   const totalPaperCost = numberOfA4Sheets * paperCostPerA4Sheet;
   const totalPrintingCost = pages * printingCostPerPage;
-  const price = (totalPaperCost + totalPrintingCost + coverPrice) * copies;
+  const price = (totalPaperCost + totalPrintingCost + coverPrice + coverPrintingSurcharge) * copies;
   return Math.ceil(price); // Round up to the nearest integer
 }
 
@@ -260,6 +270,20 @@ exports.uploadPrintProjects = async (req, res) => {
         totalEstimatedPrice: totalEstimatedPrice,
         projects: printProjects
       });
+
+      // Push Notification to Admins - New Print Order
+      try {
+        const pushService = require('../services/push-notification.service');
+        const projectTitles = printProjects.map(p => p.projectTitle).join('، ');
+        pushService.sendToAdmins({
+          title: 'طلب طباعة جديد 🖨️',
+          body: `${user.username} أرسل طلب طباعة: ${projectTitles} (${totalEstimatedPrice} ج.م)`,
+          url: '/admin/print-orders',
+          data: { type: 'new_print_order' }
+        }, { important: true }).catch(err => console.error('Admin Push Error:', err));
+      } catch (pushErr) {
+        console.error('Push Service Error:', pushErr);
+      }
     } catch (error) {
       console.error('🔥 Error in uploadPrintProjects:', error);
       if (error.name === 'ValidationError') {

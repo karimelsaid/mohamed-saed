@@ -1,5 +1,5 @@
-import { CommonModule, Location } from '@angular/common';
-import { Component, OnInit, AfterViewInit } from '@angular/core';
+import { CommonModule, Location, isPlatformBrowser } from '@angular/common';
+import { Component, OnInit, AfterViewInit, Inject, PLATFORM_ID } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../auth.service';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -92,7 +92,13 @@ export class RegisterComponent implements OnInit, AfterViewInit {
 
   referralCode: string = '';
 
-  constructor(private authService: AuthService, private router: Router, private route: ActivatedRoute, private location: Location) { }
+  constructor(
+    private authService: AuthService,
+    private router: Router,
+    private route: ActivatedRoute,
+    private location: Location,
+    @Inject(PLATFORM_ID) private platformId: Object
+  ) { }
 
   ngOnInit() {
     // اقرأ returnUrl من الرابط
@@ -106,15 +112,15 @@ export class RegisterComponent implements OnInit, AfterViewInit {
       }
 
       // حفظ رمز الإحالة في localStorage إذا كان موجودًا
-      if (params['ref']) {
+      if (params['ref'] && isPlatformBrowser(this.platformId)) {
         localStorage.setItem('referralCode', params['ref']);
         this.referralCode = params['ref']; // Auto-fill from URL
       }
     });
-
-    // Auto-fill from localStorage if not already set from URL
-    if (!this.referralCode) {
-      const storedRef = localStorage.getItem('referralCode');
+ 
+     // Auto-fill from localStorage if not already set from URL
+     if (!this.referralCode && isPlatformBrowser(this.platformId)) {
+       const storedRef = localStorage.getItem('referralCode');
       if (storedRef) {
         this.referralCode = storedRef;
       }
@@ -129,31 +135,35 @@ export class RegisterComponent implements OnInit, AfterViewInit {
   }
 
   ngAfterViewInit() {
-    if (!this.isAndroid) {
+    if (!this.isAndroid && isPlatformBrowser(this.platformId)) {
       this.loadGoogleScript();
     }
   }
 
   loadGoogleScript() {
-    const script = document.createElement('script');
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.defer = true;
-    script.onload = () => this.initializeGoogleSignIn();
-    document.body.appendChild(script);
+    if (isPlatformBrowser(this.platformId)) {
+      const script = document.createElement('script');
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      script.defer = true;
+      script.onload = () => this.initializeGoogleSignIn();
+      document.body.appendChild(script);
+    }
   }
 
   initializeGoogleSignIn() {
-    // @ts-ignore
-    google.accounts.id.initialize({
-      client_id: environment.googleClientId,
-      callback: (response: any) => this.handleGoogleCredentialResponse(response)
-    });
-    // @ts-ignore
-    google.accounts.id.renderButton(
-      document.getElementById('googleSignInDiv'),
-      { theme: 'outline', size: 'large' }
-    );
+    if (isPlatformBrowser(this.platformId)) {
+      // @ts-ignore
+      google.accounts.id.initialize({
+        client_id: environment.googleClientId,
+        callback: (response: any) => this.handleGoogleCredentialResponse(response)
+      });
+      // @ts-ignore
+      google.accounts.id.renderButton(
+        document.getElementById('googleSignInDiv'),
+        { theme: 'outline', size: 'large' }
+      );
+    }
   }
 
   async googleSignIn() {
@@ -162,8 +172,11 @@ export class RegisterComponent implements OnInit, AfterViewInit {
         await GoogleAuth.signOut();
         const result = await GoogleAuth.signIn();
         const idToken = result.authentication.idToken;
-        const referralCode = localStorage.getItem('referralCode');
-        this.authService.googleSignIn(idToken, referralCode || undefined).subscribe({
+        let referralCode = undefined;
+        if (isPlatformBrowser(this.platformId)) {
+          referralCode = localStorage.getItem('referralCode') || undefined;
+        }
+        this.authService.googleSignIn(idToken, referralCode).subscribe({
           next: (user) => {
             this.message = '✅ تم تسجيل الدخول بنجاح! جارِ توجيهك...';
             this.router.navigateByUrl(this.returnUrl);
@@ -188,8 +201,11 @@ export class RegisterComponent implements OnInit, AfterViewInit {
 
   handleGoogleCredentialResponse(response: any) {
     const idToken = response.credential;
-    const referralCode = localStorage.getItem('referralCode');
-    this.authService.googleSignIn(idToken, referralCode || undefined).subscribe({
+    let referralCode = undefined;
+    if (isPlatformBrowser(this.platformId)) {
+      referralCode = localStorage.getItem('referralCode') || undefined;
+    }
+    this.authService.googleSignIn(idToken, referralCode).subscribe({
       next: (user) => {
         this.message = '✅ تم تسجيل الدخول بنجاح! جارِ توجيهك...';
         this.router.navigateByUrl(this.returnUrl);
@@ -336,7 +352,10 @@ export class RegisterComponent implements OnInit, AfterViewInit {
     console.log('تم التسجيل بالبيانات:', this.user);
 
     // Use the referral code from the input field (which defaults to localStorage value)
-    const finalReferralCode = this.referralCode || localStorage.getItem('referralCode');
+    let finalReferralCode = this.referralCode;
+    if (!finalReferralCode && isPlatformBrowser(this.platformId)) {
+      finalReferralCode = localStorage.getItem('referralCode') || '';
+    }
 
     this.authService.createAccount(
       this.user.username,

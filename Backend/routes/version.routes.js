@@ -19,6 +19,11 @@ router.get('/', async (req, res) => {
                     minBuildNumber: 1,
                     storeUrl: '',
                     forceUpdate: false
+                },
+                liveUpdate: {
+                    version: '1.0.0',
+                    zipUrl: 'https://knoozbook.com/bundle.zip',
+                    enabled: false
                 }
             });
             console.log('Initialized MobileVersion config in DB');
@@ -47,6 +52,7 @@ router.put('/', async (req, res) => {
 
         if (android) config.android = { ...config.android, ...android };
         if (ios) config.ios = { ...config.ios, ...ios };
+        if (req.body.liveUpdate) config.liveUpdate = { ...config.liveUpdate, ...req.body.liveUpdate };
 
         await config.save();
         res.json(config);

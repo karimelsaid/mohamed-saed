@@ -17,6 +17,7 @@ import { environment } from '../../environments/environment';
 import { SlugService } from '../services/slug.service';
 import { PromotionService } from '../services/promotion.service';
 import { SeoService } from '../services/seo.service';
+import { AnalyticsService } from '../services/analytics.service';
 
 @Component({
   selector: 'app-book-details',
@@ -58,7 +59,8 @@ export class BookDetailsComponent implements OnInit, OnDestroy {
     private slugService: SlugService,
     public gamificationService: GamificationService,
     private promotionService: PromotionService,
-    private seoService: SeoService
+    private seoService: SeoService,
+    private analyticsService: AnalyticsService
   ) { }
 
   ngOnInit(): void {
@@ -85,6 +87,8 @@ export class BookDetailsComponent implements OnInit, OnDestroy {
               this.fetchAverageRating(this.book.products_id.toString());
               this.loadRelatedProducts();
               this.updateSeoTags(this.book);
+              // Track product view
+              this.analyticsService.trackProductView(this.book.products_id.toString()).subscribe();
               // Check if accessed via /product/ and redirect to category-specific URL
               this.route.url.subscribe(urlSegments => {
                 if (urlSegments.length > 0 && urlSegments[0].path === 'product') {
@@ -141,45 +145,7 @@ export class BookDetailsComponent implements OnInit, OnDestroy {
   }
 
   getBookImageUrl(book: any): string {
-    let imagePath = book.product_image ? String(book.product_image) : '';
-    if (!imagePath) {
-      if (book.merchantName) {
-        const sanitizedMerchantName = book.merchantName.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
-        imagePath = 'merchant_' + sanitizedMerchantName + '/' + book.products_id + '/' + book.products_id + '.webp';
-      } else {
-        imagePath = 'admin__karim_mohamed__/' + book.products_id + '/' + book.products_id + '.webp';
-      }
-    } else {
-      if (imagePath.includes('/')) {
-        const parts = imagePath.split('/');
-        if (imagePath.includes('merchant_')) {
-          const filename = parts[parts.length - 1];
-          const id = parts[parts.length - 2];
-          if (book.merchantName) {
-            const sanitizedMerchantName = book.merchantName.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
-            imagePath = 'merchant_' + sanitizedMerchantName + '/' + id + '/' + filename;
-          } else {
-            imagePath = parts.slice(-3).join('/');
-          }
-        } else if (imagePath.includes('admin__')) {
-          imagePath = parts.slice(-3).join('/');
-        } else {
-          imagePath = parts[parts.length - 1];
-        }
-      } else {
-        if (!imagePath.includes('.') && /^\d+$/.test(imagePath)) {
-          if (book.merchantName) {
-            const sanitizedMerchantName = book.merchantName.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
-            imagePath = 'merchant_' + sanitizedMerchantName + '/' + imagePath + '/' + imagePath + '.webp';
-          } else {
-            imagePath = 'admin__karim_mohamed__/' + imagePath + '/' + imagePath + '.webp';
-          }
-        } else if (!imagePath.includes('.')) {
-          imagePath += '.webp';
-        }
-      }
-    }
-    return this.uploadsBaseUrl + '/' + imagePath;
+    return this.dataService.getBookImageUrl(book);
   }
   // دالة نسخ الرابط
   copyBookLink(): void {

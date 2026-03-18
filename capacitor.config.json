@@ -1,11 +1,15 @@
 {
   "appId": "com.kenouz.bookstore2",
   "appName": "knoozbook",
-  "webDir": "Backend/dist/browser",
+  "webDir": "dist/mobile/browser",
   "bundledWebRuntime": false,
   "plugins": {
     "CapacitorHttp": {
       "enabled": true
+    },
+    "CapacitorUpdater": {
+      "stats": false,
+      "autoUpdate": false
     }
   }
 }

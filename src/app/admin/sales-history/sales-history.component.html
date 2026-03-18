@@ -1,0 +1,111 @@
+<div class="history-container" dir="rtl">
+    <div class="header-section">
+        <h2><fa-icon [icon]="faHistory"></fa-icon> سجل المبيعات والعملاء</h2>
+        <div class="search-box">
+            <input type="text" [(ngModel)]="searchTerm" (input)="filterSales()"
+                placeholder="ابحث باسم العميل، رقم الهاتف، أو رقم الفاتورة...">
+            <fa-icon [icon]="faSearch" class="search-icon"></fa-icon>
+        </div>
+    </div>
+
+    <div class="table-wrapper card">
+        <div class="loading-overlay" *ngIf="isLoading">
+            <div class="spinner"></div>
+            <p>جاري تحميل السجل...</p>
+        </div>
+
+        <table class="history-table" *ngIf="!isLoading">
+            <thead>
+                <tr>
+                    <th>رقم الفاتورة</th>
+                    <th>التاريخ</th>
+                    <th>العميل</th>
+                    <th>رقم الهاتف</th>
+                    <th>الإجمالي</th>
+                    <th>إجراءات</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr *ngFor="let sale of filteredSales">
+                    <td class="inv-cell">{{ sale.invoiceNumber }}</td>
+                    <td>{{ sale.date | date:'short' }}</td>
+                    <td>{{ sale.customerName || 'عميل نقدي' }}</td>
+                    <td>{{ sale.customerPhone || '-' }}</td>
+                    <td class="amount-cell">{{ sale.totalAmount | number:'1.2-2' }} ج.م</td>
+                    <td>
+                        <button class="action-btn view" (click)="viewInvoice(sale)" title="عرض الفاتورة">
+                            <fa-icon [icon]="faEye"></fa-icon>
+                        </button>
+                    </td>
+                </tr>
+                <tr *ngIf="filteredSales.length === 0 && !isLoading">
+                    <td colspan="6" class="no-data">لا توجد سجلات مبيعات تطابق بحثك.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Invoice Modal -->
+    <div class="modal-overlay" *ngIf="showInvoiceModal" (click)="closeModal()">
+        <div class="modal-content" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+                <h3>تفاصيل الفاتورة # {{ selectedSale?.invoiceNumber }}</h3>
+                <button class="close-btn" (click)="closeModal()">
+                    <fa-icon [icon]="faTimes"></fa-icon>
+                </button>
+            </div>
+
+            <div class="modal-body print-section">
+                <!-- Professional Invoice Template inside modal -->
+                <div class="invoice-view">
+                    <div class="inv-header">
+                        <div class="shop-info">
+                            <h1>مكتبة كنوز</h1>
+                            <p>تاريخ البيع: {{ selectedSale?.date | date:'medium' }}</p>
+                        </div>
+                        <div class="inv-meta">
+                            <h2>فاتورة مبيعات</h2>
+                            <p>الرقم: {{ selectedSale?.invoiceNumber }}</p>
+                        </div>
+                    </div>
+
+                    <div class="client-info">
+                        <p><strong>العميل:</strong> {{ selectedSale?.customerName || 'عميل نقدي' }}</p>
+                        <p><strong>الهاتف:</strong> {{ selectedSale?.customerPhone || '-' }}</p>
+                    </div>
+
+                    <table class="inv-items-table">
+                        <thead>
+                            <tr>
+                                <th>المنتج</th>
+                                <th>السعر</th>
+                                <th>الكمية</th>
+                                <th>الإجمالي</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr *ngFor="let item of selectedSale?.items">
+                                <td>{{ item.product_name }}</td>
+                                <td>{{ item.product_price | number:'1.2-2' }}</td>
+                                <td>{{ item.quantity }}</td>
+                                <td>{{ (item.product_price * item.quantity) | number:'1.2-2' }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="inv-total">
+                        <div class="total-line">
+                            <span>الإجمالي النهائي:</span>
+                            <span>{{ selectedSale?.totalAmount | number:'1.2-2' }} ج.م</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer no-print">
+                <button class="btn-print" (click)="printCurrentInvoice()">طباعة</button>
+                <button class="btn-close" (click)="closeModal()">إغلاق</button>
+            </div>
+        </div>
+    </div>
+</div>

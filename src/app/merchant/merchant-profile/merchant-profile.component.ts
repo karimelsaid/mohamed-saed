@@ -3,67 +3,117 @@ import { ActivatedRoute } from '@angular/router';
 import { MerchantAuthService } from '../../services/merchant-auth.service';
 import { environment } from '../../../environments/environment';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router } from '@angular/router';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import { faHeart, faCartPlus, faSignInAlt, faStar, faUser } from '@fortawesome/free-solid-svg-icons';
+import { faStar as faStarRegular } from '@fortawesome/free-regular-svg-icons';
+import { AuthService } from '../../auth/auth.service';
+import { ModalService } from '../../services/modal.service';
+import { AnalyticsService } from '../../services/analytics.service';
 
 @Component({
   selector: 'app-merchant-profile',
   templateUrl: './merchant-profile.component.html',
   styleUrls: ['./merchant-profile.component.css'],
   standalone: true,
-  imports: [CommonModule, RouterModule]
+  imports: [CommonModule, RouterModule, FontAwesomeModule]
 })
 export class MerchantProfileComponent implements OnInit {
   username: string | null = null;
   merchant: any = null;
   products: any[] = [];
-  loading = false;
+  loadingMerchant = false;
+  loadingProducts = false;
   error: string | null = null;
-  uploadsBaseUrl = environment.uploadsBaseUrl; // Use environment variable
+  uploadsBaseUrl = environment.uploadsBaseUrl;
 
-  constructor(private route: ActivatedRoute, private merchantAuthService: MerchantAuthService) { }
+  // Icons
+  faHeart = faHeart;
+  faCartPlus = faCartPlus;
+  faSignInAlt = faSignInAlt;
+  faStar = faStar;
+  faStarRegular = faStarRegular;
+  faUser = faUser;
+
+  showLoginPrompt = false;
+
+  constructor(
+    private route: ActivatedRoute,
+    private merchantAuthService: MerchantAuthService,
+    private authService: AuthService,
+    private modalService: ModalService,
+    private router: Router,
+    private analyticsService: AnalyticsService
+  ) { }
 
   ngOnInit(): void {
     this.route.paramMap.subscribe(params => {
-      this.username = params.get('username');
-      if (this.username) {
+      const usernameParam = params.get('username');
+
+      // Reset state on every navigation attempt
+      this.error = null;
+      this.loadingMerchant = false;
+      this.merchant = null;
+      this.products = [];
+
+      if (usernameParam) {
+        console.log(`[MerchantProfile] Activated for username: ${usernameParam}`);
+        // Guard against reserved routes and invalid values that might fall through
+        const reservedKeywords = ['favorites', 'basket', 'login', 'register', 'Home', 'Home-page', 'profile', 'requests', 'referrals', 'library', 'mushaf', 'search', 'research', 'undefined', 'null'];
+
+        if (reservedKeywords.includes(usernameParam.toLowerCase())) {
+          console.warn(`[MerchantProfile] Skipping reserved route or invalid username: ${usernameParam}`);
+          return;
+        }
+
+        this.username = usernameParam.trim();
+        console.log(`[MerchantProfile] Loading data for: ${this.username}`);
+        // Guard: Check if the username looks like a static asset (file extension)
+        const fileExtensions = /\.(js|css|png|jpg|jpeg|gif|svg|webp|ico|map|ttf|woff|woff2)$/i;
+        if (fileExtensions.test(this.username)) {
+          console.warn(`[MerchantProfile] Skipping static asset request: ${this.username}`);
+          return;
+        }
+
         this.loadMerchantData(this.username);
-      } else {
-        this.error = 'اسم التاجر غير موجود.';
-        this.loading = false;
       }
     });
   }
 
   loadMerchantData(username: string) {
-    this.loading = true;
+    this.loadingMerchant = true;
     this.error = null;
     this.merchantAuthService.getMerchantByUsername(username).subscribe({
-      next: (res: any) => {
-        if (res.success && res.merchant) {
-          this.merchant = res.merchant;
-          this.loadMerchantProducts(this.merchant._id); // Load products using the ID
+      next: (data: any) => {
+        if (data.success && data.merchant) {
+          this.merchant = data.merchant;
+          this.loadingMerchant = false;
+          this.loadMerchantProducts(data.merchant._id);
+          // Track store visit
+          this.analyticsService.trackStoreVisit(data.merchant._id).subscribe();
         } else {
-          this.error = res.message || 'لا يمكن العثور على التاجر.';
-          this.loading = false;
+          this.error = data.message || 'لا يمكن العثور على التاجر.';
+          this.loadingMerchant = false;
         }
       },
       error: (err: any) => {
-        console.error('Error loading merchant data:', err);
-        this.error = 'لا يمكن العثور على التاجر.';
-        this.loading = false;
+        console.error('Error fetching merchant:', err);
+        this.error = 'عذراً، حدث خطأ أثناء تحميل بيانات التاجر.';
+        this.loadingMerchant = false;
       }
     });
   }
 
   loadMerchantProducts(id: string) {
-    this.merchantAuthService.getProductsByMerchantId(id).subscribe({ // This function remains the same
+    this.loadingProducts = true;
+    this.merchantAuthService.getProductsByMerchantId(id).subscribe({
       next: (res: any) => {
         this.products = res.products || res || [];
-        this.loading = false; // Stop loading after products are fetched
+        this.loadingProducts = false;
       },
       error: (err: any) => {
         this.error = 'فشل في تحميل منتجات التاجر.';
-        this.loading = false;
+        this.loadingProducts = false;
       }
     });
   }
@@ -72,12 +122,13 @@ export class MerchantProfileComponent implements OnInit {
     let imagePath = product.image_path || product.product_image || '';
     const merchantName = product.merchantName || (this.merchant ? (this.merchant.merchantName || this.merchant.name) : null);
 
-    // If a full path is already provided in image_path, use it directly.
-    if (imagePath && imagePath.startsWith('/uploads/books/')) {
+    // If it's a merchant product, we want to construct the path specifically
+    // Unless it's already a full path
+    if (imagePath && (imagePath.startsWith('http') || imagePath.startsWith('/uploads/'))) {
       return imagePath;
     }
 
-    // If not, build the path from scratch
+    // Prefer products_id (barcode) if available, fallback to product_image
     const imageId = product.products_id || product.product_image;
     if (!imageId) {
       return '/assets/placeholder-book.jpg';
@@ -85,32 +136,36 @@ export class MerchantProfileComponent implements OnInit {
 
     let finalPath = String(imageId);
 
-    // Check if it's just an ID or has extension
+    // If it's just a barcode/ID (no slashes, no extension)
     if (!finalPath.includes('/') && !finalPath.includes('.')) {
-      // It's just an ID
-      const id = finalPath;
       if (merchantName) {
         const sanitizedMerchantName = merchantName.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
-        finalPath = `merchant_${sanitizedMerchantName}/${id}/${id}.webp`;
+        // Handle admin vs regular merchant
+        if (this.merchant && (this.merchant.role === 'admin' || this.merchant.merchantName === 'Kenouz')) {
+          finalPath = `admin__karim_mohamed__/${finalPath}/${finalPath}.webp`;
+        } else {
+          finalPath = `merchant_${sanitizedMerchantName}/${finalPath}/${finalPath}.webp`;
+        }
       } else {
-        finalPath = `admin__karim_mohamed__/${id}/${id}.webp`;
+        finalPath = `admin__karim_mohamed__/${finalPath}/${finalPath}.webp`;
       }
     } else if (!finalPath.includes('/')) {
-      // It has an extension or suffix (e.g. 123.webp or 123_1.webp)
-      // Try to extract ID
+      // Has extension but no path
       const id = finalPath.split('.')[0].split('_')[0];
+      const filename = finalPath.includes('.') ? finalPath : finalPath + '.webp';
       if (merchantName) {
         const sanitizedMerchantName = merchantName.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
-        finalPath = `merchant_${sanitizedMerchantName}/${id}/${finalPath}`;
+        if (this.merchant && (this.merchant.role === 'admin' || this.merchant.merchantName === 'Kenouz')) {
+          finalPath = `admin__karim_mohamed__/${id}/${filename}`;
+        } else {
+          finalPath = `merchant_${sanitizedMerchantName}/${id}/${filename}`;
+        }
       } else {
-        finalPath = `admin__karim_mohamed__/${id}/${finalPath}`;
+        finalPath = `admin__karim_mohamed__/${id}/${filename}`;
       }
     }
 
-    // Construct the full path
-    // uploadsBaseUrl is likely '/uploads/books' or similar. 
-    // We want to avoid double slashes and ensure correct structure.
-    return `${this.uploadsBaseUrl}/${finalPath}`.replace('/books/books/', '/books/');
+    return `${this.uploadsBaseUrl}/${finalPath}`.replace(/\/\//g, '/').replace('https:/', 'https://');
   }
 
   getBookSlug(bookName: string): string {
@@ -118,7 +173,9 @@ export class MerchantProfileComponent implements OnInit {
   }
 
   getProductRoute(product: any): any[] {
-    const slug = this.getBookSlug(product.product_name);
+    const slug = this.getBookSlug(product.product_name || '');
+    const category = (product.product_category || '').toLowerCase();
+
     const categoryRoutes: { [key: string]: string } = {
       'أدوات مكتبية': 'office-supplies',
       'إلكترونيات': 'electronics',
@@ -140,27 +197,101 @@ export class MerchantProfileComponent implements OnInit {
       'قواميس ومراجع': 'book'
     };
 
-    const category = (product.product_category || '').trim();
+    // 1. Try exact or partial match in categoryRoutes
     let route = categoryRoutes[category];
+    if (!route) {
+      for (const [key, value] of Object.entries(categoryRoutes)) {
+        if (category.includes(key.toLowerCase())) {
+          route = value;
+          break;
+        }
+      }
+    }
+
+    // 2. Broad check for book-related keywords
+    if (!route) {
+      const bookKeywords = ['كتب', 'روايات', 'قصص', 'تطوير الذات', 'دينية', 'تاريخ', 'أطفال', 'أعمال', 'قواميس', 'صحة', 'فنون'];
+      if (bookKeywords.some(key => category.includes(key))) {
+        route = 'book';
+      }
+    }
 
     if (!route) {
       route = 'others';
     }
 
-    let productId = product.products_id;
-
-    if (!productId && product.product_image) {
-      const imagePath = String(product.product_image);
-      // If it's a simple filename or ID, try to extract the ID
-      if (!imagePath.includes('/')) {
-        productId = imagePath.split('.')[0].split('_')[0];
-      }
-    }
-
-    if (!productId) {
-      productId = product._id || product.id;
-    }
+    // Prioritize products_id (barcode)
+    const productId = product.products_id || product.product_image || product._id || product.id;
 
     return ['/' + route, productId, slug];
+  }
+
+  // Shopping Actions
+  addToFavorites(bookId: string): void {
+    const userData = JSON.parse(localStorage.getItem('user') || '{}');
+    const userId = userData.id || userData._id;
+
+    if (userId) {
+      if (this.isFavorite(bookId)) {
+        this.authService.removeFromFavorites(userId, bookId).subscribe({
+          next: res => this.loadUserData(userId),
+          error: err => this.showErrorModal('حدث خطأ أثناء إزالة المادة من المفضلة')
+        });
+      } else {
+        this.authService.addToFavorites(userId, bookId).subscribe({
+          next: res => this.loadUserData(userId),
+          error: err => this.showErrorModal('حدث خطأ أثناء إضافة المادة إلى المفضلة')
+        });
+      }
+    } else {
+      this.showLoginPrompt = true;
+    }
+  }
+
+  addToCart(bookId: string): void {
+    const userData = JSON.parse(localStorage.getItem('user') || '{}');
+    const userId = userData.id || userData._id;
+
+    if (userId) {
+      if (this.isInCart(bookId)) {
+        this.authService.removeFromCart(userId, bookId).subscribe({
+          next: res => this.loadUserData(userId),
+          error: err => this.showErrorModal('حدث خطأ أثناء إزالة المادة من السلة')
+        });
+      } else {
+        this.authService.addToCart(userId, bookId).subscribe({
+          next: res => this.loadUserData(userId),
+          error: err => this.showErrorModal('حدث خطأ أثناء إضافة المادة إلى السلة')
+        });
+      }
+    } else {
+      this.showLoginPrompt = true;
+    }
+  }
+
+  isFavorite(bookId: string): boolean {
+    return this.authService.isFavorite(bookId);
+  }
+
+  isInCart(bookId: string): boolean {
+    return this.authService.isInCart(bookId);
+  }
+
+  loadUserData(userId: string) {
+    this.authService.loadUserData(userId);
+  }
+
+  showErrorModal(message: string): void {
+    this.modalService.openModal({
+      title: 'خطأ',
+      message: message,
+      type: 'error',
+      confirmText: 'موافق',
+      showCancel: false
+    });
+  }
+
+  closeLoginPrompt(): void {
+    this.showLoginPrompt = false;
   }
 }

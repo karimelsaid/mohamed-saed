@@ -13,6 +13,7 @@ interface SaleItem {
     product_name: string;
     product_quantity: number;
     image_path?: string;
+    product_price: number;
     quantity: number;
     channel: 'Amazon' | 'Store';
 }
@@ -32,6 +33,12 @@ export class SalesRegistrationComponent implements OnInit {
     isSubmitting: boolean = false;
     backendBaseUrl: string = environment.apiBaseUrl;
 
+    // Customer Information
+    customerName: string = '';
+    customerPhone: string = '';
+    invoiceDate: string = new Date().toLocaleDateString('ar-EG');
+    invoiceNumber: string = '';
+
     // Icons
     faCartPlus = faCartPlus;
     faSearch = faSearch;
@@ -48,6 +55,13 @@ export class SalesRegistrationComponent implements OnInit {
 
     ngOnInit(): void {
         this.loadProducts();
+        this.generateInvoiceNumber();
+    }
+
+    generateInvoiceNumber(): void {
+        const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+        const randomPart = Math.floor(1000 + Math.random() * 9000);
+        this.invoiceNumber = `INV-${datePart}-${randomPart}`;
     }
 
     loadProducts(): void {
@@ -57,16 +71,21 @@ export class SalesRegistrationComponent implements OnInit {
     }
 
     searchProducts(): void {
-        if (!this.searchTerm.trim()) {
+        if (!this.searchTerm || !this.searchTerm.trim()) {
             this.searchResults = [];
             return;
         }
 
-        const term = this.searchTerm.toLowerCase();
-        this.searchResults = this.allProducts.filter(p =>
-            p.product_name.toLowerCase().includes(term) ||
-            String(p.products_id).includes(term)
-        ).slice(0, 10);
+        const term = this.searchTerm.toLowerCase().trim();
+        this.searchResults = this.allProducts.filter(p => {
+            if (!p) return false;
+
+            const name = (p.product_name || '').toLowerCase();
+            const id = String(p.products_id || '').toLowerCase();
+            const barcode = String(p.barcode || '').toLowerCase();
+
+            return name.includes(term) || id.includes(term) || barcode.includes(term);
+        }).slice(0, 15); // Increased limit slightly
     }
 
     addItem(product: any): void {
@@ -74,6 +93,8 @@ export class SalesRegistrationComponent implements OnInit {
         if (existing) {
             if (existing.quantity < product.product_quantity) {
                 existing.quantity++;
+            } else {
+                this.modal.showError('الكمية المطلوبة تتجاوز المخزون المتاح');
             }
         } else {
             this.sessionItems.push({
@@ -81,8 +102,9 @@ export class SalesRegistrationComponent implements OnInit {
                 product_name: product.product_name,
                 product_quantity: product.product_quantity,
                 image_path: product.image_path,
+                product_price: product.product_price || 0,
                 quantity: 1,
-                channel: 'Amazon'
+                channel: 'Store'
             });
         }
         this.searchTerm = '';
@@ -101,19 +123,70 @@ export class SalesRegistrationComponent implements OnInit {
         this.sessionItems.splice(index, 1);
     }
 
+    getSubtotal(): number {
+        return this.sessionItems.reduce((sum, item) => sum + (item.product_price * item.quantity), 0);
+    }
+
+    getGrandTotal(): number {
+        return this.getSubtotal(); // Add shipping or tax if needed here
+    }
+
+    printInvoice(): void {
+        if (this.sessionItems.length === 0) return;
+
+        // Update date for the print
+        this.invoiceDate = new Date().toLocaleString('ar-EG');
+
+        setTimeout(() => {
+            window.print();
+        }, 300);
+    }
+
+    getImageUrl(product: any): string {
+        if (!product) return '';
+        const baseUrl = this.backendBaseUrl.replace('/api', '');
+
+        if (product.image_path) {
+            // Ensure no double slashes when joining
+            const path = product.image_path.startsWith('/') ? product.image_path : '/' + product.image_path;
+            return baseUrl + path;
+        }
+
+        // Fallback for books following the standard pattern if image_path is missing
+        if (product.products_id) {
+            return `${baseUrl}/uploads/books/admin__karim_mohamed__/${product.products_id}/${product.products_id}.webp`;
+        }
+
+        return '';
+    }
+
     submitSession(): void {
         if (this.sessionItems.length === 0) return;
 
         this.isSubmitting = true;
         const soldItems = this.sessionItems.map(item => ({
             products_id: item.products_id,
-            quantity: item.quantity
+            quantity: item.quantity,
+            price: item.product_price,
+            total: item.product_price * item.quantity
         }));
 
-        this.adminApi.registerSale(soldItems).subscribe({
+        const saleData = {
+            soldItems,
+            customerName: this.customerName,
+            customerPhone: this.customerPhone,
+            totalAmount: this.getGrandTotal(),
+            invoiceNumber: this.invoiceNumber
+        };
+
+        this.adminApi.registerSale(saleData).subscribe({
             next: (res) => {
                 this.modal.showSuccess('تم تسجيل المبيعات وتحديث المخزون بنجاح');
+                // Trigger print if needed or just clear
                 this.sessionItems = [];
+                this.customerName = '';
+                this.customerPhone = '';
+                this.generateInvoiceNumber();
                 this.loadProducts(); // Reload stock levels
                 this.isSubmitting = false;
             },

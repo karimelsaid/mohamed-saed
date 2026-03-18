@@ -11,11 +11,14 @@ router.post('/logout', merchantAuthController.logoutMerchant);
 
 // Protected routes (must come before parameterized routes)
 router.get('/current', authenticateMerchant, merchantController.getCurrentMerchant);
-router.put('/profile', authenticateMerchant, merchantController.upload.single('logo'), merchantController.updateMerchantProfile);
+router.put('/profile', authenticateMerchant, merchantController.upload.fields([
+    { name: 'logo', maxCount: 1 },
+    { name: 'coverPhoto', maxCount: 1 }
+]), merchantController.updateMerchantProfile);
 router.get('/products', authenticateMerchant, merchantController.getMerchantProducts);
 router.get('/orders', authenticateMerchant, merchantController.getMerchantOrders);
 router.delete('/orders/:orderId', authenticateMerchant, merchantController.deleteMerchantOrder);
-router.post('/products', authenticateMerchant, merchantController.productUpload.single('image'), merchantController.addProduct);
+router.post('/products', authenticateMerchant, merchantController.productUpload.array('images', 3), merchantController.addProduct);
 router.delete('/products/:productId', authenticateMerchant, merchantController.deleteProduct);
 router.post('/products/:productId/update-request', authenticateMerchant, merchantController.submitProductUpdateRequest);
 router.get('/update-requests', authenticateMerchant, merchantController.getMerchantUpdateRequests);

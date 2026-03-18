@@ -13,6 +13,7 @@ export interface FreeShippingRules {
   includedCategories: string[];
   includedGovernorates: string[];
   freeShippingEnabled: boolean;
+  codFee: number;
 }
 
 @Injectable({
@@ -26,7 +27,8 @@ export class FreeShippingService {
     includedProducts: [],
     includedCategories: [],
     includedGovernorates: [],
-    freeShippingEnabled: true
+    freeShippingEnabled: true,
+    codFee: 10
   };
 
   private apiUrl = `${environment.apiBaseUrl}/admin/settings/free-shipping-rules`;

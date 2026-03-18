@@ -137,33 +137,61 @@
         </div>
 
         <!-- Book Category (shown only if category is كتب) -->
-        <div *ngIf="productForm.get('category')?.value === 'كتب'">
-          <label for="book_category" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            فئة الكتاب <span class="text-red-500">*</span>
-          </label>
-          <div class="relative">
-            <select id="book_category" formControlName="book_category"
-              class="block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors duration-200"
-              [class.border-red-500]="productForm.get('book_category')?.invalid && productForm.get('book_category')?.touched">
-              <option value="">اختر فئة الكتاب</option>
-              <option *ngFor="let cat of bookCategories" [value]="cat">{{ cat }}</option>
-            </select>
-            <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-              <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253">
-                </path>
+        <div *ngIf="productForm.get('category')?.value === 'كتب'" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label for="book_category" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              فئة الكتاب <span class="text-red-500">*</span>
+            </label>
+            <div class="relative">
+              <select id="book_category" formControlName="book_category"
+                class="block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors duration-200"
+                [class.border-red-500]="productForm.get('book_category')?.invalid && productForm.get('book_category')?.touched">
+                <option value="">اختر فئة الكتاب</option>
+                <option *ngFor="let cat of bookCategories" [value]="cat">{{ cat }}</option>
+              </select>
+              <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253">
+                  </path>
+                </svg>
+              </div>
+            </div>
+            <div *ngIf="productForm.get('book_category')?.invalid && productForm.get('book_category')?.touched"
+              class="mt-2 text-sm text-red-600 dark:text-red-400 flex items-center">
+              <svg class="w-4 h-4 ml-1" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd"
+                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                  clip-rule="evenodd"></path>
               </svg>
+              فئة الكتاب مطلوبة
             </div>
           </div>
-          <div *ngIf="productForm.get('book_category')?.invalid && productForm.get('book_category')?.touched"
-            class="mt-2 text-sm text-red-600 dark:text-red-400 flex items-center">
-            <svg class="w-4 h-4 ml-1" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd"
-                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                clip-rule="evenodd"></path>
-            </svg>
-            فئة الكتاب مطلوبة
+
+          <!-- New Fields: Copy Type & Condition -->
+          <div class="space-y-4">
+            <div>
+              <label for="copyType" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                نوع النسخة
+              </label>
+              <select id="copyType" formControlName="copyType"
+                class="block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors duration-200">
+                <option value="">اختر النوع</option>
+                <option value="أصلي">أصلي</option>
+                <option value="هاي كوبي">هاي كوبي</option>
+              </select>
+            </div>
+            <div>
+              <label for="condition" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                حالة الكتاب
+              </label>
+              <select id="condition" formControlName="condition"
+                class="block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors duration-200">
+                <option value="">اختر الحالة</option>
+                <option value="جديد">جديد</option>
+                <option value="مستعمل بحالة جيدة">مستعمل بحالة جيدة</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -182,21 +210,43 @@
           </div>
         </div>
 
-        <!-- Product Image -->
+        <!-- Product Images -->
         <div>
-          <label for="product_image" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            صورة المنتج <span class="text-red-500">*</span>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            صور المنتج (بحد أقصى 3) <span class="text-red-500">*</span>
           </label>
-          <div
+
+          <!-- Image Previews -->
+          <div *ngIf="imagePreviews.length > 0" class="grid grid-cols-3 gap-4 mb-4">
+            <div *ngFor="let preview of imagePreviews; let i = index" class="relative group">
+              <img [src]="preview" alt="Product preview"
+                class="w-full h-32 object-cover rounded-lg border dark:border-gray-700">
+              <button type="button" (click)="removeImage(i)"
+                class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-sm">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+
+            <!-- Add More Button (if < 3) -->
+            <div *ngIf="imagePreviews.length < 3"
+              class="flex items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:border-blue-500 transition-colors cursor-pointer h-32"
+              (click)="imageInput.click()">
+              <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+              </svg>
+            </div>
+          </div>
+
+          <div *ngIf="imagePreviews.length === 0"
             class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 dark:border-gray-600 border-dashed rounded-lg hover:border-gray-400 dark:hover:border-gray-500 transition-colors duration-200">
             <div class="space-y-1 text-center">
-              <div *ngIf="!imagePreview"
+              <div
                 class="flex flex-col sm:flex-row items-center justify-center gap-4 text-sm text-gray-600 dark:text-gray-400">
                 <label for="product_image"
                   class="relative cursor-pointer bg-white dark:bg-gray-800 rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500">
-                  <span>اختر صورة من الجهاز</span>
-                  <input id="product_image" name="product_image" type="file" accept="image/*"
-                    (change)="onFileSelected($event)" class="sr-only">
+                  <span>اختر صور من الجهاز</span>
                 </label>
 
                 <span class="text-gray-400">أو</span>
@@ -213,16 +263,14 @@
                   التقاط صورة
                 </button>
               </div>
-              <div *ngIf="imagePreview" class="flex flex-col items-center">
-                <img [src]="imagePreview" alt="Product preview" class="w-32 h-32 object-cover rounded-lg mb-2">
-                <button type="button" (click)="selectedFile = null; imagePreview = null"
-                  class="text-red-600 hover:text-red-800 text-sm">إزالة الصورة</button>
-              </div>
               <p class="text-xs text-gray-500 dark:text-gray-400">
-                PNG, JPG, GIF حتى 1 ميجابايت
+                PNG, JPG, WEBP حتى 3 صور (بحد أقصى 1 ميجابايت لكل منها)
               </p>
             </div>
           </div>
+          <!-- Hidden input for adding more images if previews exist -->
+          <input #imageInput id="product_image" type="file" accept="image/*" multiple (change)="onFileSelected($event)"
+            class="sr-only">
         </div>
 
         <!-- Product Description -->

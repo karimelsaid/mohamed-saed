@@ -12,11 +12,12 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MerchantManagementComponent } from '../merchant-management/merchant-management.component';
 import { ProductApprovalComponent } from '../product-approval/product-approval.component';
+import Chart from 'chart.js/auto';
 import * as XLSX from 'xlsx';
 import { FreeShippingRulesComponent } from './free-shipping/free-shipping-rules.component';
 import { Subscription } from 'rxjs';
 import { FaIconLibrary, FontAwesomeModule, FaIconComponent } from '@fortawesome/angular-fontawesome';
-import { faShoppingCart, faStore, faBook, faPrint, faPlus, faEdit, faTruck, faUsers, faCheckCircle, faMoneyBillWave, faSitemap, faPlusCircle, faImage, faTag, faHashtag, faList, faDollarSign, faAlignLeft, faExclamationTriangle, faCartPlus, faHeart, faMobileAlt, faCamera, faTimes, faHome, faChartLine, faCog, faBars, faUserClock, faCoins, faUserPlus, faChartBar, faBell, faSearch, faSlidersH, faGift } from '@fortawesome/free-solid-svg-icons';
+import { faShoppingCart, faStore, faBook, faPrint, faPlus, faEdit, faTruck, faUsers, faCheckCircle, faMoneyBillWave, faSitemap, faPlusCircle, faImage, faTag, faHashtag, faList, faDollarSign, faAlignLeft, faExclamationTriangle, faCartPlus, faHeart, faMobileAlt, faCamera, faTimes, faHome, faChartLine, faCog, faBars, faUserClock, faCoins, faUserPlus, faChartBar, faBell, faSearch, faSlidersH, faGift, faSyncAlt, faSpinner, faCloudUploadAlt } from '@fortawesome/free-solid-svg-icons';
 import { PaymentRequestsComponent } from '../payment-requests/payment-requests.component';
 import { UserHierarchyComponent } from '../user-hierarchy/user-hierarchy.component';
 import { AmazonPriceCalculatorComponent } from '../amazon-price-calculator/amazon-price-calculator.component';
@@ -27,6 +28,7 @@ import { PromotionsManagerComponent } from '../promotions-manager/promotions-man
 import { AdminPrintingComponent } from '../admin-printing/admin-printing.component';
 import { SalesRegistrationComponent } from '../sales-registration/sales-registration.component';
 import { ShortagesReportComponent } from '../shortages-report/shortages-report.component';
+import { SalesHistoryComponent } from '../sales-history/sales-history.component';
 import { PromotionDatesComponent } from '../promotion-dates/promotion-dates.component';
 import { AdminApiService } from '../../services/admin-api.service';
 
@@ -65,6 +67,8 @@ interface Product {
   price_cost: number;
   product_image?: string;
   image_path?: string;
+  copyType?: string;
+  condition?: string;
   promotionEndDate?: string;
   product_price_before_discount?: number;
   product_discount_percent?: number;
@@ -74,6 +78,7 @@ interface Product {
   isSaving?: boolean; // To show saving progress
   fileOrder?: number; // Added to track order in file for sorting
   merchantName?: string; // Added for merchant products
+  lastStockUpdate?: string; // Last time stock/quantity was changed
   [key: string]: any; // Allow any string as a key
 }
 
@@ -193,6 +198,8 @@ interface SystemSettings {
   maintenanceMode: boolean;
 }
 
+export type AdminView = 'dashboard' | 'userIntelligence' | 'orders' | 'requestedBooks' | 'printOrders' | 'printingSettings' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' | 'gamificationControl' | 'notifications' | 'subscriptionControl' | 'readerFeedback' | 'promotions' | 'salesRegistration' | 'shortagesReport' | 'promotionDates' | 'salesHistory';
+
 @Component({
   selector: 'app-admin-dashboard',
   standalone: true,
@@ -215,7 +222,8 @@ interface SystemSettings {
     AdminPrintingComponent,
     SalesRegistrationComponent,
     ShortagesReportComponent,
-    PromotionDatesComponent
+    PromotionDatesComponent,
+    SalesHistoryComponent
   ],
   templateUrl: './admin-dashboard.component.html',
   styleUrls: ['./admin-dashboard.component.css']
@@ -228,7 +236,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   feedbacks: ReaderFeedback[] = [];
   isAdmin: boolean = false; // Add paymentRequests to the type union
   showSidebar: boolean = true;
-  currentView: 'dashboard' | 'userIntelligence' | 'orders' | 'requestedBooks' | 'printOrders' | 'printingSettings' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' | 'gamificationControl' | 'notifications' | 'subscriptionControl' | 'readerFeedback' | 'promotions' | 'salesRegistration' | 'shortagesReport' | 'promotionDates' = 'dashboard';
+  currentView: AdminView = 'userIntelligence'; // Defaulting to the new view to test it
 
   // Gamification Control Properties
   systemSettings: SystemSettings = {
@@ -290,13 +298,184 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   productsPageSize: number = 50;
   searchTerm: string = '';
 
+  // --- User Intelligence Analytics State ---
+  analyticsData: any = null;
+  isLoadingAnalytics: boolean = false;
+  analyticsError: string = '';
+  usersChart: Chart | null = null;
+  segmentsChart: Chart | null = null;
+  ordersChart: Chart | null = null;
+  viewsChart: Chart | null = null;
+  
+  fetchUserIntelligenceData(): void {
+    this.isLoadingAnalytics = true;
+    this.analyticsError = '';
+    this.http.get<{ success: boolean; analytics: any }>(`${this.backendBaseUrl}/admin/analytics`)
+      .subscribe({
+        next: (response) => {
+          if (response.success) {
+            this.analyticsData = response.analytics;
+            // Delay chart initialization slightly to ensure DOM is ready
+            setTimeout(() => this.initIntelligenceCharts(), 100);
+          } else {
+            this.analyticsError = 'فشل في تحميل التحليلات المتقدمة';
+          }
+          this.isLoadingAnalytics = false;
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          console.error('Error fetching admin analytics:', err);
+          this.analyticsError = 'حدث خطأ أثناء تحميل البيانات';
+          this.isLoadingAnalytics = false;
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
+  initIntelligenceCharts(): void {
+    if (!this.analyticsData) return;
+
+    // Destroy existing charts to prevent memory leaks and overlapping
+    if (this.usersChart) this.usersChart.destroy();
+    if (this.segmentsChart) this.segmentsChart.destroy();
+    if (this.ordersChart) this.ordersChart.destroy();
+    if (this.viewsChart) this.viewsChart.destroy();
+
+    // Common styling
+    const isDarkMode = document.documentElement.classList.contains('dark');
+    const textColor = isDarkMode ? '#cbd5e1' : '#475569';
+    const gridColor = isDarkMode ? '#334155' : '#e2e8f0';
+
+    // 1. User Growth Chart
+    const growthCtx = document.getElementById('usersGrowthChart') as HTMLCanvasElement;
+    if (growthCtx) {
+      const labels = this.analyticsData.registrationsTrend.map((t: any) => t.date);
+      const data = this.analyticsData.registrationsTrend.map((t: any) => t.count);
+
+      this.usersChart = new Chart(growthCtx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'مستخدمين جدد',
+            data: data,
+            borderColor: '#3b82f6',
+            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+            tension: 0.4,
+            fill: true,
+            borderWidth: 2,
+            pointBackgroundColor: '#3b82f6'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor } },
+            x: { grid: { display: false }, ticks: { color: textColor } }
+          }
+        }
+      });
+    }
+
+    // 2. Platform Segments Chart (Doughnut)
+    const segmentsCtx = document.getElementById('userSegmentsChart') as HTMLCanvasElement;
+    if (segmentsCtx) {
+      const { users, merchants, admins } = this.analyticsData.demographics;
+      this.segmentsChart = new Chart(segmentsCtx, {
+        type: 'doughnut',
+        data: {
+          labels: ['مستخدمين', 'تجار', 'مدراء'],
+          datasets: [{
+            data: [users, merchants, admins],
+            backgroundColor: ['#3b82f6', '#10b981', '#f59e0b'],
+            borderWidth: 0,
+            hoverOffset: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '75%',
+          plugins: {
+            legend: { position: 'bottom', labels: { color: textColor, padding: 20 } }
+          }
+        }
+      });
+    }
+
+    // 3. Order Trends Chart
+    const ordersCtx = document.getElementById('adminOrdersChart') as HTMLCanvasElement;
+    if (ordersCtx) {
+      const labels = this.analyticsData.orderTrends.map((t: any) => t.date);
+      const data = this.analyticsData.orderTrends.map((t: any) => t.count);
+
+      this.ordersChart = new Chart(ordersCtx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'عدد الطلبات',
+            data: data,
+            backgroundColor: '#8b5cf6',
+            borderRadius: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor } },
+            x: { grid: { display: false }, ticks: { color: textColor } }
+          }
+        }
+      });
+    }
+
+    // 4. Platform Views Chart (30 Days)
+    const viewsCtx = document.getElementById('adminViewsChart') as HTMLCanvasElement;
+    if (viewsCtx && this.analyticsData.viewsTrend) {
+      const labels = this.analyticsData.viewsTrend.map((t: any) => t.date);
+      const data = this.analyticsData.viewsTrend.map((t: any) => t.count);
+
+      this.viewsChart = new Chart(viewsCtx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'حركة الزيارات',
+            data: data,
+            borderColor: '#10b981',
+            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+            tension: 0.4,
+            fill: true,
+            borderWidth: 2,
+            pointBackgroundColor: '#10b981'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor } },
+            x: { grid: { display: false }, ticks: { color: textColor } }
+          }
+        }
+      });
+    }
+  }
+  // ----------------------------------------
+
   // Bulk Adjustment Properties
   showBulkAdjustModal: boolean = false;
   bulkAdjustData = {
     category: ['جميع الفئات'] as string[],
     minPrice: 0,
     maxPrice: 100000,
-    adjustmentType: 'percentage' as 'percentage' | 'fixed',
+    adjustmentType: 'percentage' as 'percentage' | 'fixed' | 'sync_cost',
     adjustmentValue: 0,
     direction: 'increase' as 'increase' | 'decrease'
   };
@@ -398,6 +577,9 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   faSearch = faSearch; // Ensure faSearch is imported or added to library
   faSlidersH = faSlidersH;
   faGift = faGift;
+  faSyncAlt = faSyncAlt;
+  faSpinner = faSpinner;
+  faCloudUploadAlt = faCloudUploadAlt;
 
   // Navigation Titles Mapping
   viewTitles: Record<string, string> = {
@@ -426,6 +608,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     'readerFeedback': 'ملاحظات القراء',
     'promotions': 'إدارة العروض والخصومات',
     'salesRegistration': 'تسجيل مبيعات خارجية',
+    'salesHistory': 'سجل المبيعات والعملاء',
     'shortagesReport': 'تقرير النواقص'
   };
 
@@ -475,6 +658,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     product_description: '',
     product_price: 0,
     price_cost: 0,
+    copyType: '',
+    condition: '',
     author: '',
     publisher: '',
     pages: '',
@@ -975,7 +1160,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     }
   }
 
-  switchView(view: 'dashboard' | 'userIntelligence' | 'orders' | 'requestedBooks' | 'printOrders' | 'printingSettings' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' | 'gamificationControl' | 'notifications' | 'subscriptionControl' | 'readerFeedback' | 'promotions' | 'salesRegistration' | 'shortagesReport' | 'promotionDates'): void {
+  switchView(view: AdminView): void {
     this.currentView = view;
 
     if (view === 'dashboard') {
@@ -1029,6 +1214,13 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     this.http.get(`${this.backendBaseUrl}/mobile-version`).subscribe({
       next: (config: any) => {
         this.mobileVersionConfig = config;
+        if (!this.mobileVersionConfig.liveUpdate) {
+          this.mobileVersionConfig.liveUpdate = {
+            version: '1.0.0',
+            enabled: false,
+            zipUrl: 'https://knoozbook.com/bundle.zip'
+          };
+        }
       },
       error: (err) => {
         this.showErrorModal('فشل تحميل إعدادات التطبيق');
@@ -1046,6 +1238,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       }
     });
   }
+
 
   loadStats(): void {
     this.http.get<{ success: boolean; stats: { totalUsers: number; totalProducts: number; totalOrders: number; totalLikes: number; totalCartItems: number; totalMerchantOrders: number; totalCoins: number; totalReferrals: number } }>(`${this.backendBaseUrl}/admin/stats`).subscribe({
@@ -1349,27 +1542,28 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     this.showBulkAdjustModal = false;
   }
 
-  onBulkAdjust(): void {
-    if (this.bulkAdjustData.adjustmentValue <= 0) {
-      this.showErrorModal('يرجى إدخال قيمة صحيحة للتعديل');
+  onBulkAdjust() {
+    console.log('--- Starting Bulk Adjustment ---');
+    console.log('Adjustment Data:', this.bulkAdjustData);
+
+    if (this.bulkAdjustData.adjustmentType !== 'sync_cost' && !this.bulkAdjustData.adjustmentValue) {
+      this.showErrorModal('يرجى إدخال قيمة التعديل');
       return;
     }
 
     this.isBulkAdjusting = true;
-    this.http.post<any>(`${this.backendBaseUrl}/admin/products/bulk-adjust`, this.bulkAdjustData).subscribe({
-      next: (response) => {
+    this.http.post(`${this.backendBaseUrl}/admin/products/bulk-adjust`, this.bulkAdjustData).subscribe({
+      next: (res: any) => {
+        console.log('Bulk adjustment response:', res);
+        this.showSuccessModal('تم تطبيق التعديلات بنجاح');
+        this.showBulkAdjustModal = false;
         this.isBulkAdjusting = false;
-        if (response.success) {
-          this.showSuccessModal(response.message);
-          this.closeBulkAdjustModal();
-          this.loadProducts(); // Reload all products to reflect changes
-        } else {
-          this.showErrorModal(response.message || 'فشل التعديل الجماعي للأسعار');
-        }
+        this.loadProducts();
       },
       error: (err) => {
+        console.error('Bulk adjustment failed:', err);
+        this.showErrorModal('فشل تطبيق التعديلات');
         this.isBulkAdjusting = false;
-        this.showErrorModal('حدث خطأ أثناء التعديل الجماعي للأسعار');
       }
     });
   }
@@ -1473,6 +1667,18 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
     if (this.sortField !== '') {
       filtered = filtered.slice().sort((a, b) => {
+        if (this.sortField === 'purchaseValue') {
+          const aTotal = (a.product_quantity || 0) * (a.price_cost || 0);
+          const bTotal = (b.product_quantity || 0) * (b.price_cost || 0);
+          return this.sortDirection === 'asc' ? aTotal - bTotal : bTotal - aTotal;
+        }
+
+        if (this.sortField === 'lastStockUpdate') {
+          const aDate = a.lastStockUpdate ? new Date(a.lastStockUpdate).getTime() : 0;
+          const bDate = b.lastStockUpdate ? new Date(b.lastStockUpdate).getTime() : 0;
+          return this.sortDirection === 'asc' ? aDate - bDate : bDate - aDate;
+        }
+
         if (this.sortField === 'createdAt' || this.sortField === 'fileOrder') {
           const aOrder = a.fileOrder ?? 0;
           const bOrder = b.fileOrder ?? 0;
@@ -1586,6 +1792,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       product_quantity: product.product_quantity,
       product_category: product.product_category,
       product_description: product.product_description,
+      copyType: product.copyType || '',
+      condition: product.condition || '',
       product_price: product.product_price,
       price_cost: product.price_cost,
       ...this.getCategorySpecificData(product) // Include category-specific fields
@@ -1617,13 +1825,16 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   }
 
   saveAllProducts(): void {
-    this.showProgressModal('جاري حفظ جميع التغييرات...');
+    console.log('--- Starting Save All Products ---');
     const changedProducts = this.allProducts.filter(p => this.hasProductChanged(p));
+    console.log(`Found ${changedProducts.length} changed products out of ${this.allProducts.length}`);
+
     if (changedProducts.length === 0) {
-      this.showErrorModal('لا توجد تغييرات لحفظها.');
+      this.showErrorModal('لم يتم اكتشاف أي تغييرات لحفظها');
       return;
     }
-    const updatePayload = {
+
+    const payload = {
       products: changedProducts.map(p => ({
         products_id: p.products_id,
         product_name: p.product_name,
@@ -1635,25 +1846,26 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       }))
     };
 
-    this.http.post(`${this.backendBaseUrl}/admin/products/batch-update`, updatePayload).subscribe({
-      next: () => {
-        this.closeProgressModal();
+    console.log('Sending payload to batch-update:', payload);
+
+    this.http.post(`${this.backendBaseUrl}/admin/products/batch-update`, payload).subscribe({
+      next: (res: any) => {
+        console.log('Batch update response:', res);
         this.showSuccessModal('تم حفظ جميع التغييرات بنجاح');
+
+        // Refresh products to reset originalProducts and update UI
         this.loadProducts();
-        // Call sync-json-to-excel to update Excel file after batch update
-        this.http.post(`${this.backendBaseUrl}/admin/sync-json-to-excel`, {}).subscribe({
-          next: () => {
-            // Excel file updated after batch update
-          },
-          error: (err) => {
-            // Error updating Excel file after batch update
-          }
+
+        // Trigger background sync to Excel just in case
+        this.http.post(`${this.backendBaseUrl}/admin/sync-to-excel`, {}).subscribe({
+          next: () => console.log('Background Excel sync triggered'),
+          error: (err) => console.warn('Background Excel sync failed:', err)
         });
       },
       error: (err) => {
         this.closeProgressModal();
-        // Error batch updating products
-        this.showErrorModal('حدث خطأ أثناء حفظ التغييرات');
+        console.error('Batch update failed:', err);
+        this.showErrorModal('فشل حفظ التغييرات');
       }
     });
   }
@@ -1666,6 +1878,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       product.product_quantity !== original.product_quantity ||
       product.product_category !== original.product_category ||
       product.product_description !== original.product_description ||
+      product.copyType !== original.copyType ||
+      product.condition !== original.condition ||
       product.product_price !== original.product_price ||
       product.price_cost !== original.price_cost
     );
@@ -2545,6 +2759,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       product_quantity: 1,
       product_category: '',
       product_description: '',
+      copyType: '',
+      condition: '',
       product_image: '',
       promotionEndDate: '',
       product_price_before_discount: 0,

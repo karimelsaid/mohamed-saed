@@ -84,7 +84,9 @@ exports.submitOrder = async (req, res) => {
       shippingAddress: isPickup ? null : shippingAddress,
       postOffice: isPostOffice ? postOffice : null,
       address: address ? address + ' - ' + user.phone : null,
-      status: 'قيد الإنتظار'
+      status: 'قيد الإنتظار',
+      paymentMethod: req.body.paymentMethod || 'online',
+      codFee: req.body.codFee || 0
     };
 
     user.orders.push(newOrder);
@@ -169,6 +171,53 @@ exports.submitOrder = async (req, res) => {
       message: 'Order submitted successfully',
       orderId: addedOrder._id
     });
+
+    // --- PUSH NOTIFICATIONS ---
+    try {
+      const pushService = require('../services/push-notification.service');
+
+      // 1. Notify User (Confirmation)
+      const userPayload = {
+        title: 'تم تأكيد طلبك! 🎉',
+        body: `شكراً لتسوقك معنا. طلبك رقم ${addedOrder._id} قيد المراجعة الآن.`,
+        url: '/my-orders',
+        data: { orderId: addedOrder._id.toString(), type: 'order_received' }
+      };
+      pushService.sendToUser(userId, userPayload, { important: true }).catch(err => console.error('User Push Error:', err));
+
+      // 2. Notify Admins (New Order Alert)
+      const adminPayload = {
+        title: 'طلب جديد وصل! 🚀',
+        body: `طلب جديد بقيمة ${finalTotalAmount} ج.م من ${user.username}.`,
+        url: '/admin/orders',
+        data: { orderId: addedOrder._id.toString(), type: 'admin_new_order' }
+      };
+      pushService.sendToAdmins(adminPayload, { important: true }).catch(err => console.error('Admin Push Error:', err));
+
+      // 3. Notify Merchants (if order contains merchant products)
+      const bookIds = validatedProducts.map(p => p.bookId);
+      const merchantProducts = await Product.find({ 
+        $or: [
+          { _id: { $in: bookIds.filter(id => mongoose.Types.ObjectId.isValid(id)) } },
+          { products_id: { $in: bookIds } }
+        ],
+        merchantId: { $exists: true, $ne: null }
+      }).select('merchantId');
+
+      const merchantIds = [...new Set(merchantProducts.map(p => p.merchantId.toString()))];
+
+      for (const mId of merchantIds) {
+        pushService.sendToUser(mId, {
+          title: 'طلب جديد لمتجرك! 🏪',
+          body: `وصلك طلب جديد يحتوي على منتجات من متجرك. رقم الطلب: ${addedOrder._id}`,
+          url: '/merchant/orders',
+          data: { orderId: addedOrder._id.toString(), type: 'merchant_new_order' }
+        }).catch(err => console.error('Merchant Push Error:', err));
+      }
+
+    } catch (pushErr) {
+      console.error('Error in order submission push:', pushErr);
+    }
   } catch (error) {
     console.error('Error submitting order:', error);
     res.status(500).json({
@@ -361,19 +410,19 @@ exports.updateOrderStatus = async (req, res) => {
 
     switch (status) {
       case 'تم الشحن':
-        notificationMessage = `تم شحن ${productSummary} (طلب رقم ${orderId})`;
+        notificationMessage = `خبر سعيد! 🚚 تم شحن ${productSummary}. سيصلك قريباً.`;
         break;
       case 'تم الاستلام':
-        notificationMessage = `تم استلام ${productSummary} من التاجر`;
+        notificationMessage = `خطوة جديدة! 📦 تم استلام ${productSummary} وهي الآن في طريقها إليك.`;
         break;
       case 'تم التسليم':
-        notificationMessage = `تم تسليم ${productSummary} بنجاح`;
+        notificationMessage = `مبروك! 🎉 تم تسليم ${productSummary} بنجاح. نتمنى لك قراءة ممتعة!`;
         break;
       case 'تم الإلغاء':
-        notificationMessage = `تم إلغاء طلب ${productSummary}`;
+        notificationMessage = `للأسف، تم إلغاء طلبك لـ ${productSummary}. 😔`;
         break;
       default:
-        notificationMessage = `تحديث حالة طلب ${productSummary}: ${status}`;
+        notificationMessage = `تحديث في طلبك: ${productSummary} أصبح الآن في حالة: ${status}`;
     }
 
     // Add notification to user
@@ -392,10 +441,10 @@ exports.updateOrderStatus = async (req, res) => {
     // Send Push Notification
     const pushService = require('../services/push-notification.service');
     const pushPayload = {
-      title: 'تحديث الطلب',
+      title: 'تحديث في طلبك 🔔',
       body: notificationMessage,
       url: '/my-orders',
-      data: { orderId: orderId, type: 'order' }
+      data: { orderId: orderId, type: 'order_status_update' }
     };
     pushService.sendToUser(user._id, pushPayload, { important: true }).catch(err => console.error('Push Error:', err));
   } catch (error) {

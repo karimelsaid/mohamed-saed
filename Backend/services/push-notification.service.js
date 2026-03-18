@@ -140,3 +140,39 @@ exports.broadcastNotification = async (payload, options = { important: false }) 
     console.log(`Broadcast complete. Success: ${successCount}, Failed: ${failureCount}, Time: ${Date.now() - start}ms`);
     return { successCount, failureCount };
 };
+exports.sendToAdmins = async (payload, options = { important: true }) => {
+    try {
+        const User = require('../models/User.model');
+        const admins = await User.find({ role: 'admin' });
+        
+        console.log(`📡 Sending broadcast & DB notification to ${admins.length} admins...`);
+
+        let successCount = 0;
+        const notificationData = {
+            message: payload.body || payload.notification?.body || 'تنبيه جديد',
+            type: payload.data?.type || 'admin_alert',
+            relatedId: payload.data?.productId || payload.data?.orderId || payload.data?.id || null,
+            read: false,
+            createdAt: new Date()
+        };
+
+        for (const adminUser of admins) {
+            try {
+                // 1. Save to DB
+                adminUser.notifications.push(notificationData);
+                await adminUser.save({ validateBeforeSave: false });
+
+                // 2. Send Push
+                const results = await exports.sendToUser(adminUser._id, payload, options);
+                if (results.some(r => r)) successCount++;
+            } catch (adminErr) {
+                console.error(`❌ Error notifying admin ${adminUser._id}:`, adminErr.message);
+            }
+        }
+
+        return successCount;
+    } catch (error) {
+        console.error('❌ Error sending push to admins:', error.message);
+        return 0;
+    }
+};

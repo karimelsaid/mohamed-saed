@@ -24,6 +24,7 @@ export class ShortagesReportComponent implements OnInit {
 
     manualQuantities: { [key: string]: number } = {};
     originalQuantities: { [key: string]: number } = {}; // To track changes
+    availableCategories: string[] = [];
     isSaving: boolean = false;
     isDownloading: boolean = false;
 
@@ -59,7 +60,8 @@ export class ShortagesReportComponent implements OnInit {
                 if (res.success && res.settings) {
                     this.settings = {
                         ...res.settings,
-                        defaultOrderQuantity: res.settings.defaultOrderQuantity || 1
+                        defaultOrderQuantity: res.settings.defaultOrderQuantity || 1,
+                        categories: res.settings.categories || []
                     };
                     this.manualQuantities = res.settings.orderQuantities ? { ...res.settings.orderQuantities } : {};
                     this.originalQuantities = { ...this.manualQuantities };
@@ -72,16 +74,30 @@ export class ShortagesReportComponent implements OnInit {
     loadProducts(): void {
         this.dataService.getData().subscribe(data => {
             this.allProducts = data;
+
+            // Extract unique categories
+            const cats = new Set<string>();
+            data.forEach((p: any) => {
+                if (p.product_category) cats.add(p.product_category);
+            });
+            this.availableCategories = Array.from(cats).sort();
+
             this.updateShortageItems();
         });
     }
 
+    toggleCategory(category: string): void {
+        const idx = this.settings.categories.indexOf(category);
+        if (idx >= 0) {
+            this.settings.categories.splice(idx, 1);
+        } else {
+            this.settings.categories.push(category);
+        }
+        this.updateShortageItems();
+    }
+
     updateShortageItems(): void {
         if (!this.allProducts.length) return;
-
-        // An item is in the report if:
-        // 1. It's below the threshold AND category matches
-        // 2. OR it has a manual quantity override
 
         const manualIds = Object.keys(this.manualQuantities);
         const categories = this.settings.categories as string[];
@@ -90,10 +106,19 @@ export class ShortagesReportComponent implements OnInit {
             const products_id = String(p.products_id).trim();
             const qty = parseInt(p.product_quantity, 10) || 0;
             const matchesThreshold = qty < this.settings.threshold;
-            const matchesCategory = categories.length === 0 || categories.includes(p.product_category);
+
+            // Case-insensitive category match
+            const pCat = (p.product_category || '').trim().toLowerCase();
+            const matchesCategory = categories.length === 0 ||
+                categories.some(c => c.trim().toLowerCase() === pCat);
+
             const isManual = manualIds.includes(products_id);
 
-            return (matchesThreshold && matchesCategory) || isManual;
+            // Attach source for UI labels
+            p._isManual = isManual;
+            p._isBelowThreshold = matchesThreshold && matchesCategory;
+
+            return p._isBelowThreshold || isManual;
         });
     }
 
@@ -106,7 +131,7 @@ export class ShortagesReportComponent implements OnInit {
         this.bookSearchResults = this.allProducts.filter(p =>
             p.product_name.toLowerCase().includes(term) ||
             String(p.products_id).includes(term)
-        ).slice(0, 20); // More results per user request
+        ).slice(0, 20);
     }
 
     addToReport(product: any): void {
@@ -121,11 +146,15 @@ export class ShortagesReportComponent implements OnInit {
 
     removeProductFromReport(productId: string): void {
         const id = String(productId).trim();
-        // If it's a manual quantity, delete it
         delete this.manualQuantities[id];
-        // Note: If it's still below threshold, it might re-appear in updateShortageItems
-        // unless we add an exclusion list. For now, let's just clear the manual entry.
         this.updateShortageItems();
+    }
+
+    clearAllManual(): void {
+        if (confirm('هل أنت متأكد من رغبتك في إفراغ القائمة اليدوية بالكامل؟')) {
+            this.manualQuantities = {};
+            this.updateShortageItems();
+        }
     }
 
     hasChanges(): boolean {

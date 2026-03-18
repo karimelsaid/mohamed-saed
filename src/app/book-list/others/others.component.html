@@ -77,7 +77,8 @@
         <div *ngIf="product.rival" class="flex flex-col mb-2">
           <div class="flex items-center space-x-2">
             <p class="text-green-600 dark:text-green-400 font-bold text-lg">{{ product.product_price }} EGP</p>
-            <p class="text-gray-400 dark:text-gray-500 line-through text-sm">
+            <p *ngIf="product.product_price_before_discount && product.product_price_before_discount > product.product_price"
+              class="text-gray-400 dark:text-gray-500 line-through text-sm">
               {{ (product.product_price_before_discount) | number:'1.0-0' }} EGP
             </p>
           </div>
@@ -91,24 +92,25 @@
         <!-- السعر -->
         <div *ngIf="!product.rival" class="flex flex-col mb-2">
           <div class="flex items-center space-x-2">
-            <p class="text-green-600 dark:text-green-400 font-bold text-lg">{{ product.product_price_before_discount}}
+            <p class="text-green-600 dark:text-green-400 font-bold text-lg">{{ product.product_price }}
               EGP</p>
-            <p class="text-gray-400 dark:text-gray-500 line-through text-sm">
-              {{ (product.product_price_before_discount * 1.75) | number:'1.0-0' }} EGP
+            <p *ngIf="product.product_price_before_discount && product.product_price_before_discount > product.product_price"
+              class="text-gray-400 dark:text-gray-500 line-through text-sm">
+              {{ product.product_price_before_discount | number:'1.0-0' }} EGP
             </p>
           </div>
           <!-- Digital Price -->
           <span
             class="text-xs text-yellow-600 dark:text-yellow-400 font-bold flex items-center gap-1 mt-1 bg-yellow-50 dark:bg-yellow-900/20 px-2 py-0.5 rounded-md w-fit">
             <fa-icon [icon]="faCoins" class="text-yellow-500"></fa-icon>
-            {{ (product.product_price_before_discount * gamificationService.poundValue) | number:'1.0-0' }} عملة
+            {{ (product.product_price * gamificationService.poundValue) | number:'1.0-0' }} عملة
           </span>
         </div>
         <!-- اسم التاجر -->
         <div *ngIf="product.merchantName" class="mb-2 flex gap-2">
           <img [src]="this.uploadsBaseUrl + '/' + product.merchantLogo" alt="شعار التاجر"
             class="w-6 h-6 object-cover rounded-full" />
-          <a [routerLink]="['/', product.merchantName]"
+          <a [routerLink]="['/', product.merchantName.trim().split(' ').join('-')]"
             class="text-sm text-gray-600 dark:text-gray-400 hover:underline cursor-pointer">بواسطة {{
             product.merchantName }}</a>
         </div>

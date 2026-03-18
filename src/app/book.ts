@@ -11,7 +11,7 @@ export interface Book {
   product_price_before_discount: number;
   rival?: boolean; // خاصية اختيارية لتحديد حالة العرض
   promotionEndDate?: string; // خاصية اختيارية لتاريخ نهاية العرض
-  price_ratio:number;
+  price_ratio: number;
   remainingTime?: string; // خاصية اختيارية لعرض الوقت المتبقي للعرض
   product_discount_percent?: number; // خاصية اختيارية لنسبة الخصم
   product_description?: string; // إضافة وصف المنتج كخاصية اختيارية
@@ -55,4 +55,6 @@ export interface Book {
   width?: number;
   length?: number;
   usage?: string;
+  copyType?: string;
+  condition?: string;
 }

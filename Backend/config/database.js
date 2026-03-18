@@ -5,14 +5,16 @@ const uri = process.env.MONGO_URI || "mongodb+srv://karimmohamed2729:joufTO0k8Vc
 
 async function connectDB() {
   try {
+    console.log('⏳ جاري الاتصال بـ MongoDB...');
     await mongoose.connect(uri, {
-      serverSelectionTimeoutMS: 5000, // Increased timeout to 15s
+      serverSelectionTimeoutMS: 20000, // Increased timeout to 15s
       socketTimeoutMS: 45000, // Close sockets after 45s of inactivity
       maxPoolSize: 10, // Maintain up to 10 socket connections
       family: 4 // Use IPv4, skip trying IPv6
     });
-    console.log('تم الاتصال بنجاح بـ MongoDB!');
-    console.log('URI المستخدم:', uri.replace(/\/\/.*@/, '//***:***@')); // Log URI with credentials masked
+    console.log('✅ تم الاتصال بنجاح بـ MongoDB!');
+    const connectionInfo = mongoose.connection.host;
+    console.log(`🌐 متصل بـ: ${connectionInfo}`);
   } catch (err) {
     console.error('حدث خطأ في الاتصال بـ MongoDB:', err.message);
     console.error('تفاصيل الخطأ:', err);

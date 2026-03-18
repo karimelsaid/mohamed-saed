@@ -1,6 +1,6 @@
 .wheel-wrapper {
-  --theme-primary: #8b5cf6;
-  --theme-secondary: #ede9fe;
+  --theme-primary: var(--promo-primary);
+  --theme-secondary: var(--promo-secondary);
   position: relative;
   width: 300px;
   height: 300px;
@@ -98,7 +98,7 @@
 
 .spin-btn:hover:not(:disabled) {
   transform: translate(-50%, -50%) scale(1.15);
-  box-shadow: 0 0 30px var(--theme-primary);
+  box-shadow: 0 0 30px rgba(var(--promo-primary-rgb), 0.5);
 }
 
 /* --- Prize Reveal Styles --- */
@@ -133,9 +133,8 @@
 }
 
 .prize-card.is-book {
-  background: linear-gradient(to bottom, #fff, #f5f3ff);
+  background: linear-gradient(to bottom, #fff, var(--promo-secondary-alpha-10));
   max-width: 800px;
-  /* Much wider for books */
 }
 
 :host-context(.dark) .prize-card {
@@ -145,7 +144,7 @@
 }
 
 :host-context(.dark) .prize-card.is-book {
-  background: linear-gradient(to bottom, #111827, #1e1b4b);
+  background: linear-gradient(to bottom, #111827, var(--promo-primary-alpha-10));
 }
 
 .close-card-btn {

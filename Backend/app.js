@@ -51,9 +51,18 @@ const gamificationRoutes = require('./routes/gamification.routes');
 const adminSettingsRoutes = require('./routes/admin-settings');
 const notificationRoutes = require('./routes/notification');
 const quranProgressRoutes = require('./routes/quran-progress.routes');
+const { detectAndUpdateLiveVersion } = require('./utils/live-update-detector');
+const communityRoutes = require('./routes/community.routes');
+const analyticsRoutes = require('./routes/analytics.routes');
 const express = require('express');
 const bodyParser = require('body-parser');
 const app = express();
+
+// --- Smart Path Detection ---
+// On server, files are in root. Locally, they are in /Backend.
+const isInsideBackend = __dirname.endsWith('Backend') || fs.existsSync(path.join(__dirname, '..', 'package.json'));
+const projectRoot = isInsideBackend ? path.join(__dirname, '..') : __dirname;
+
 const http = require('http');
 const server = http.createServer(app);
 const { Server } = require('socket.io');
@@ -525,7 +534,7 @@ app.get('/api/extract-book', async (req, res) => {
 });
 
 
-const uploadsAbsolutePath = path.resolve(__dirname, 'uploads');
+const uploadsAbsolutePath = path.join(__dirname, 'uploads');
 app.use('/uploads', express.static(uploadsAbsolutePath));
 
 const promotionRoutes = require('./routes/promotion.routes');
@@ -564,6 +573,7 @@ app.get('/uploads/:filename', (req, res) => {
 
 // تسجيل المسارات
 app.use('/api/users', usersRoutes);
+app.use('/api/community', communityRoutes);
 app.use('/api/books', booksRoutes);
 app.use('/api/products', productsRoutes);
 app.use('/api/orders', ordersRoutes);
@@ -573,6 +583,7 @@ app.use('/api/chat-ai', chatAiRoutes);
 app.use('/api/admin/settings', adminSettingsRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/merchant', merchantRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 // Delete print order and associated file
 const mongoose = require('mongoose');
@@ -589,6 +600,14 @@ app.use('/api/gamification', gamificationRoutes);
 app.use('/api/notifications', notificationRoutes); // Notification Routes
 app.use('/api/quran-progress', quranProgressRoutes); // Quran Progress Routes
 app.use('/api/mutabaa', require('./routes/mutabaa.routes')); // Smart Mutaba'a Routes
+
+// JSON 404 handler for API routes
+app.use('/api/*', (req, res) => {
+  res.status(404).json({
+    success: false,
+    message: `API Route not found: ${req.method} ${req.originalUrl}`
+  });
+});
 app.use('/api/hifz-plan', require('./routes/hifzPlan.routes')); // Dynamic Hifz Plan Routes
 app.use('/api/halaqa', require('./routes/halaqa.routes')); // Community Halaqa Routes
 
@@ -596,7 +615,17 @@ app.use('/api/halaqa', require('./routes/halaqa.routes')); // Community Halaqa R
 app.use('/api/users/login', authLimiter);
 app.use('/api/halaqa/upload-voice', uploadLimiter);
 app.use('/api/halaqa/upload-file', uploadLimiter);
-app.use('/api/feedback', feedbackRoutes); // Feedback Routes
+app.get('/api/feedback', feedbackRoutes); // Feedback Routes
+
+// Global Error Handler for API
+app.use('/api', (err, req, res, next) => {
+  console.error('🔥 API ERROR:', err);
+  res.status(err.status || 500).json({
+    success: false,
+    message: err.message || 'Internal Server Error',
+    error: isProduction ? {} : err
+  });
+});
 
 
 // Direct route definition for deleting print order
@@ -641,7 +670,7 @@ function generateRobotsTxt() {
 
     content += '\nSitemap: https://knoozbook.com/sitemap.xml\n';
 
-    const robotsPath = path.join(__dirname, 'dist/browser/robots.txt');
+    const robotsPath = path.join(projectRoot, 'dist', 'browser', 'robots.txt');
     const dir = path.dirname(robotsPath);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
@@ -657,11 +686,12 @@ let angularAppPromise = null;
 
 if (isProduction) {
   // Use dynamic import for ESM module in CommonJS
-  angularAppPromise = import('./dist/server/server.mjs').then(m => m.app());
+  const serverPath = path.join(projectRoot, 'dist', 'server', 'server.mjs');
+  angularAppPromise = import('file://' + serverPath).then(m => m.app());
 }
 
 // Serve static files from /browser
-app.use(express.static(path.join(__dirname, 'dist/browser'), {
+app.use(express.static(path.join(projectRoot, 'dist', 'browser'), {
   maxAge: '1y',
   index: false // Don't serve index.html directly from static middleware
 }));
@@ -685,12 +715,12 @@ app.get('*', async (req, res, next) => {
     } catch (err) {
       console.error('🔥 Angular SSR Error:', err);
       // Fallback to CSR if SSR fails
-      return res.sendFile(path.join(__dirname, 'dist/browser/index.csr.html'));
+      return res.sendFile(path.join(projectRoot, 'dist', 'browser', 'index.csr.html'));
     }
   }
 
   // Development or if SSR is disabled: Fallback to CSR
-  res.sendFile(path.join(__dirname, 'dist/browser/index.csr.html'));
+  res.sendFile(path.join(projectRoot, 'dist', 'browser', 'index.csr.html'));
 });
 
 // Endpoint to provide dynamic ICE servers with TURN credentials
@@ -990,9 +1020,12 @@ app.use((err, req, res, next) => {
 async function startServer() {
   try {
     await connectDB();
+    
+    // Check for live updates on startup
+    await detectAndUpdateLiveVersion();
 
     server.listen(port, '0.0.0.0', () => {
-      logger.info(`🚀 الخادم يعمل على http://0.0.0.0:${port}`);
+      logger.info(`🚀 [VERSION-ANTIGRAVITY-1.1] الخادم يعمل على http://0.0.0.0:${port}`);
       // Initialize Cron Jobs
       cronJobs.initCronJobs();
     });

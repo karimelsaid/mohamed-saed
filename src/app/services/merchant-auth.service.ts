@@ -22,6 +22,7 @@ interface MerchantAuthResponse {
     approved?: boolean;
     suspended?: boolean;
     bio?: string;
+    coverPhoto?: string;
     preparationTime?: number;
     createdAt?: string;
   };
@@ -42,6 +43,7 @@ interface MerchantCurrentResponse {
     approved?: boolean;
     suspended?: boolean;
     bio?: string;
+    coverPhoto?: string;
     preparationTime?: number;
     createdAt?: string;
   };
@@ -80,7 +82,11 @@ export class MerchantAuthService {
       // Add small delay to ensure navbar is ready to listen for changes
       setTimeout(() => {
         this.isLoggedInSubject.next(true);
-        this.merchantSubject.next(JSON.parse(merchantData));
+        const parsedMerchant = JSON.parse(merchantData);
+        if (!parsedMerchant.id && parsedMerchant._id) {
+          parsedMerchant.id = parsedMerchant._id;
+        }
+        this.merchantSubject.next(parsedMerchant);
       }, 50);
     }
   }
@@ -102,8 +108,8 @@ export class MerchantAuthService {
     // Try to notify backend about logout (optional)
     return this.http.post(`${this.apiUrl}/merchant/logout`, {}).pipe(
       tap({
-        next: () => console.log('Backend logout successful'),
-        error: (error) => console.log('Backend logout failed, but local logout completed', error)
+        next: () => { },
+        error: (error) => { }
       })
     );
   }
@@ -122,11 +128,16 @@ export class MerchantAuthService {
   }
 
   private setMerchantAuth(token: string, merchant: any) {
+    const normalizedMerchant = { ...merchant };
+    if (!normalizedMerchant.id && normalizedMerchant._id) {
+      normalizedMerchant.id = normalizedMerchant._id;
+    }
+
     if (isPlatformBrowser(this.platformId)) {
       localStorage.setItem(this.merchantTokenKey, token);
-      localStorage.setItem(this.merchantDataKey, JSON.stringify(merchant));
+      localStorage.setItem(this.merchantDataKey, JSON.stringify(normalizedMerchant));
     }
-    this.merchantSubject.next(merchant);
+    this.merchantSubject.next(normalizedMerchant);
     this.isLoggedInSubject.next(true);
   }
 

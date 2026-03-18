@@ -44,12 +44,27 @@ function getCategoryRoute(category) {
 class SitemapService extends EventEmitter {
   constructor() {
     super();
-    this.outputJsonPath = path.join(__dirname, '..', 'output.json');
-    this.sitemapPath = path.join(__dirname, '..', 'dist', 'browser', 'sitemap.xml');
+    // Find project root by looking for package.json upwards
+    let root = __dirname;
+    while (root !== path.parse(root).root) {
+      if (fs.existsSync(path.join(root, 'package.json'))) break;
+      root = path.join(root, '..');
+    }
+    
+    this.outputJsonPath = path.join(root, 'output.json');
+    this.sitemapPath = path.join(root, 'dist', 'browser', 'sitemap.xml');
     this.watch();
   }
 
   watch() {
+    // Initial generation
+    this.generateSitemap();
+
+    if (!fs.existsSync(this.outputJsonPath)) {
+      console.warn(`⚠️ [SitemapService] output.json not found at ${this.outputJsonPath}. Skipping watch.`);
+      return;
+    }
+
     // Watch output.json for changes with debounce
     let timeout = null;
     fs.watch(this.outputJsonPath, (eventType) => {
@@ -61,8 +76,6 @@ class SitemapService extends EventEmitter {
         }, 500); // 500ms debounce delay
       }
     });
-    // Initial generation
-    this.generateSitemap();
   }
 
   /**
@@ -97,8 +110,12 @@ class SitemapService extends EventEmitter {
 
         let books;
         try {
+          if (!data || data.trim().length === 0) {
+            throw new Error('File is empty or currently being written');
+          }
           books = JSON.parse(data);
         } catch (parseErr) {
+          // If JSON is incomplete, we should wait and retry (already handled by the outer loop)
           throw new Error(`JSON parse error: ${parseErr.message}`);
         }
 

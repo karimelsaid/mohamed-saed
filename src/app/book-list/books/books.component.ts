@@ -142,23 +142,7 @@ export class BooksComponent implements OnInit, OnDestroy {
     }
 
     getBookImageUrl(book: any): string {
-        // Simplified image logic similar to home page
-        let imagePath = book.product_image ? String(book.product_image) : '';
-        if (!imagePath) return this.uploadsBaseUrl + '/placeholder.webp';
-
-        if (imagePath.includes('/')) {
-            if (!imagePath.startsWith('http')) {
-                return this.uploadsBaseUrl + '/' + imagePath;
-            }
-            return imagePath;
-        }
-
-        if (book.merchantName) {
-            imagePath = 'merchant_' + book.merchantName.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_') + '/' + book.products_id + '/' + (imagePath.includes('.') ? imagePath : imagePath + '.webp');
-        } else {
-            imagePath = 'admin__karim_mohamed__/' + book.products_id + '/' + (imagePath.includes('.') ? imagePath : imagePath + '.webp');
-        }
-        return this.uploadsBaseUrl + '/' + imagePath;
+        return this.dataService.getBookImageUrl(book);
     }
 
     // Auth & Cart methods
@@ -221,17 +205,21 @@ export class BooksComponent implements OnInit, OnDestroy {
 
     // Ratings & Countdown
     fetchRatingsForBooks(): void {
-        this.books.forEach(book => {
-            if (book.products_id) {
-                this.http.get<{ bookId: string; averageRating: number; ratingCount: number }>(`${environment.apiBaseUrl}/users/average-rating/${book.products_id}`)
-                    .subscribe({
-                        next: (res) => {
-                            this.ratings[book.products_id] = { averageRating: res.averageRating, ratingCount: res.ratingCount };
-                        },
-                        error: () => {
-                            this.ratings[book.products_id] = { averageRating: 0, ratingCount: 0 };
-                        }
-                    });
+        const bookIds = this.books
+            .map(b => b.products_id)
+            .filter(id => !!id);
+
+        if (bookIds.length === 0) return;
+
+        this.http.post<Record<string, { averageRating: number; ratingCount: number }>>(
+            `${environment.apiBaseUrl}/users/bulk-average-ratings`,
+            { bookIds }
+        ).subscribe({
+            next: (res) => {
+                this.ratings = { ...this.ratings, ...res };
+            },
+            error: (err) => {
+                console.error('Error fetching bulk ratings:', err);
             }
         });
     }

@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const User = require('../models/User.model'); // Adjust path as needed
 const pushNotificationService = require('./push-notification.service');
+const { detectAndUpdateLiveVersion } = require('../utils/live-update-detector');
 
 /**
  * Initialize all cron jobs
@@ -83,6 +84,13 @@ exports.initCronJobs = async () => {
         processCustomReminders();
     });
     scheduledTasks.push(customRemindersTask);
+
+    // 5. Automated Live Update Detection (Every 5 minutes)
+    const liveUpdateTask = cron.schedule('*/5 * * * *', async () => {
+        console.log('🔄 Running Automated Live Update Detection...');
+        await detectAndUpdateLiveVersion();
+    });
+    scheduledTasks.push(liveUpdateTask);
 };
 
 /**

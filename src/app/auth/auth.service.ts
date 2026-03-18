@@ -24,6 +24,10 @@ export class AuthService {
   private userSubject = new BehaviorSubject<User | null>(null);
   user$ = this.userSubject.asObservable();
 
+  get userValue(): User | null {
+    return this.userSubject.value;
+  }
+
   constructor(
     private http: HttpClient,
     private merchantAuthService: MerchantAuthService,
@@ -229,7 +233,7 @@ export class AuthService {
           this.merchantAuthService.setMerchantAuthFromExternal(response.token, response.merchant);
 
           // CRITICAL FIX: Merge token into merchant object for AuthInterceptor
-          const merchantWithToken = { ...response.merchant, token: response.token };
+          const merchantWithToken = { ...response.merchant, id: response.merchant._id, token: response.token };
           this.setUser(merchantWithToken);
           this.loadUserData(response.merchant._id);
         }
@@ -265,8 +269,14 @@ export class AuthService {
     }
     this.http.get<any>(`${this.apiUrl}/users/${userId}`).subscribe({
       next: data => {
-        this.favoriteBookIds.next(data.favorites || []);
-        this.cartBookIds.next(data.cart || []);
+        // Normalize all IDs to strings to ensure consistent matching in filter/find
+        const favorites = (data.favorites || []).map((id: any) => String(id));
+        const cart = (data.cart || []).map((id: any) => String(id));
+
+        console.log(`[AuthService] Normalized user data: ${favorites.length} favorites, ${cart.length} cart items.`);
+
+        this.favoriteBookIds.next(favorites);
+        this.cartBookIds.next(cart);
         if (data.user) {
           const currentUser = this.currentUserValue;
 

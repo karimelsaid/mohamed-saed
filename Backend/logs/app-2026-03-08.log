@@ -1,0 +1,110 @@
+{"error":"Could not connect to any servers in your MongoDB Atlas cluster. One common reason is that you're trying to access the database from an IP that isn't whitelisted. Make sure your current IP address is on your Atlas cluster's IP whitelist: https://www.mongodb.com/docs/atlas/security-whitelist/","level":"error","message":"❌ فشل بدء الخادم بسبب خطأ في قاعدة البيانات:","service":"kenouz-backend","timestamp":"2026-03-08 00:01:24"}
+{"level":"info","message":"🚀 الخادم يعمل على http://0.0.0.0:3000","service":"kenouz-backend","timestamp":"2026-03-08 12:40:11"}
+{"level":"info","message":"🚀 الخادم يعمل على http://0.0.0.0:3000","service":"kenouz-backend","timestamp":"2026-03-08 13:23:01"}
+{"level":"info","message":"📞 New signaling connection: j--hb5ec3zs46euzAAAB","service":"kenouz-backend","timestamp":"2026-03-08 13:54:04"}
+{"level":"info","message":"📞 New signaling connection: GmqLUE5BojZWKBcYAAAD","service":"kenouz-backend","timestamp":"2026-03-08 13:54:46"}
+{"level":"info","message":"🚀 الخادم يعمل على http://0.0.0.0:3000","service":"kenouz-backend","timestamp":"2026-03-08 14:04:36"}
+{"level":"info","message":"📞 New signaling connection: WDm30LYW8y10phXQAAAB","service":"kenouz-backend","timestamp":"2026-03-08 14:04:54"}
+{"level":"info","message":"📞 New signaling connection: SxYVFTbdKeZLUGqKAAAD","service":"kenouz-backend","timestamp":"2026-03-08 14:05:15"}
+{"level":"info","message":"📞 New signaling connection: mQxrv4VodsJwepx3AAAF","service":"kenouz-backend","timestamp":"2026-03-08 14:05:19"}
+{"level":"info","message":"📞 New signaling connection: XvLk7k7nry5wD1dNAAAH","service":"kenouz-backend","timestamp":"2026-03-08 14:06:01"}
+{"level":"info","message":"📞 New signaling connection: cw-8JFGgRMG5MG5jAAAJ","service":"kenouz-backend","timestamp":"2026-03-08 14:10:42"}
+{"level":"info","message":"📞 New signaling connection: oUktWL1nSdAeehxGAAAL","service":"kenouz-backend","timestamp":"2026-03-08 14:11:14"}
+{"level":"info","message":"🚀 الخادم يعمل على http://0.0.0.0:3000","service":"kenouz-backend","timestamp":"2026-03-08 14:20:44"}
+{"level":"info","message":"📞 New signaling connection: j6ADJEl0-Qyi9WcfAAAB","service":"kenouz-backend","timestamp":"2026-03-08 14:20:46"}
+{"level":"info","message":"📞 New signaling connection: taOWCoIdls-S18whAAAD","service":"kenouz-backend","timestamp":"2026-03-08 14:21:52"}
+{"level":"info","message":"📞 New signaling connection: 5goKFrSpFr6oI1RRAAAF","service":"kenouz-backend","timestamp":"2026-03-08 14:24:10"}
+{"level":"info","message":"📞 New signaling connection: GNm1q-doebnVKn_EAAAH","service":"kenouz-backend","timestamp":"2026-03-08 14:24:46"}
+{"level":"info","message":"🚀 الخادم يعمل على http://0.0.0.0:3000","service":"kenouz-backend","timestamp":"2026-03-08 14:30:46"}
+{"level":"info","message":"📞 New signaling connection: W06lnGIZDhAhmtjoAAAB","service":"kenouz-backend","timestamp":"2026-03-08 14:30:48"}
+{"level":"info","message":"🚀 الخادم يعمل على http://0.0.0.0:3000","service":"kenouz-backend","timestamp":"2026-03-08 14:35:08"}
+{"level":"info","message":"📞 New signaling connection: Fqv9DrqIzgMhh9tsAAAB","service":"kenouz-backend","timestamp":"2026-03-08 14:35:14"}
+{"level":"info","message":"📞 New signaling connection: iCA278fyqyoPc2qQAAAD","service":"kenouz-backend","timestamp":"2026-03-08 14:50:24"}
+{"level":"info","message":"📞 New signaling connection: jZ4G-MHrp88oac2tAAAF","service":"kenouz-backend","timestamp":"2026-03-08 14:51:24"}
+{"level":"info","message":"📞 New signaling connection: eOqUMx56GdmvEINIAAAH","service":"kenouz-backend","timestamp":"2026-03-08 14:51:37"}
+{"level":"info","message":"📞 New signaling connection: p0gRJiGW6_olm9qPAAAJ","service":"kenouz-backend","timestamp":"2026-03-08 14:52:16"}
+{"level":"info","message":"🚀 الخادم يعمل على http://0.0.0.0:3000","service":"kenouz-backend","timestamp":"2026-03-08 14:53:39"}
+{"level":"info","message":"📞 New signaling connection: YQuq_ZE_MAzTMrvJAAAB","service":"kenouz-backend","timestamp":"2026-03-08 14:53:42"}
+{"level":"info","message":"📞 New signaling connection: zR_YRYf9DiwqnWQQAAAD","service":"kenouz-backend","timestamp":"2026-03-08 14:56:18"}
+{"level":"info","message":"🚀 الخادم يعمل على http://0.0.0.0:3000","service":"kenouz-backend","timestamp":"2026-03-08 14:57:52"}
+{"level":"info","message":"📞 New signaling connection: 8kUrtmGibgOasXFbAAAB","service":"kenouz-backend","timestamp":"2026-03-08 14:57:52"}
+{"level":"info","message":"🚀 الخادم يعمل على http://0.0.0.0:3000","service":"kenouz-backend","timestamp":"2026-03-08 15:01:20"}
+{"level":"info","message":"📞 New signaling connection: Xd94fwvr6gQeRFq4AAAB","service":"kenouz-backend","timestamp":"2026-03-08 15:01:28"}
+{"level":"info","message":"📞 New signaling connection: 82ppzqBJ5FM7P3VgAAAD","service":"kenouz-backend","timestamp":"2026-03-08 15:01:48"}
+{"level":"info","message":"📞 New signaling connection: F_tYs0IRdk7fvXzFAAAF","service":"kenouz-backend","timestamp":"2026-03-08 15:07:50"}
+{"level":"info","message":"🚀 الخادم يعمل على http://0.0.0.0:3000","service":"kenouz-backend","timestamp":"2026-03-08 15:11:35"}
+{"level":"info","message":"📞 New signaling connection: b_zZQC9bDnnmhb_9AAAB","service":"kenouz-backend","timestamp":"2026-03-08 15:11:41"}
+{"level":"info","message":"🚀 الخادم يعمل على http://0.0.0.0:3000","service":"kenouz-backend","timestamp":"2026-03-08 15:15:36"}
+{"level":"info","message":"📞 New signaling connection: XwsWQgNrQ8OrHRRsAAAB","service":"kenouz-backend","timestamp":"2026-03-08 15:15:43"}
+{"level":"info","message":"📞 New signaling connection: -bLG4-SZg5DPhcYuAAAD","service":"kenouz-backend","timestamp":"2026-03-08 15:16:04"}
+{"level":"info","message":"📞 New signaling connection: ousUkz7xyevwKKvsAAAF","service":"kenouz-backend","timestamp":"2026-03-08 15:18:06"}
+{"level":"info","message":"🚀 الخادم يعمل على http://0.0.0.0:3000","service":"kenouz-backend","timestamp":"2026-03-08 15:20:26"}
+{"level":"info","message":"📞 New signaling connection: vVIXRQiDEpPvr3bbAAAB","service":"kenouz-backend","timestamp":"2026-03-08 15:20:29"}
+{"level":"info","message":"📞 New signaling connection: 5v4f_MWt9ts5Fkc1AAAD","service":"kenouz-backend","timestamp":"2026-03-08 15:21:19"}
+{"level":"info","message":"🚀 الخادم يعمل على http://0.0.0.0:3000","service":"kenouz-backend","timestamp":"2026-03-08 15:23:33"}
+{"level":"info","message":"📞 New signaling connection: tZ3wCj4ZShoGJtTGAAAB","service":"kenouz-backend","timestamp":"2026-03-08 15:23:50"}
+{"level":"info","message":"📞 New signaling connection: bBxfLt_XP6Xej_BVAAAD","service":"kenouz-backend","timestamp":"2026-03-08 15:24:11"}
+{"level":"info","message":"📞 New signaling connection: nTk73WJyyxph2WxMAAAF","service":"kenouz-backend","timestamp":"2026-03-08 15:24:48"}
+{"level":"info","message":"📞 New signaling connection: L15QpXtV4t3jM-y3AAAH","service":"kenouz-backend","timestamp":"2026-03-08 15:25:06"}
+{"level":"info","message":"📞 New signaling connection: JClLCb644pFpQ1gIAAAJ","service":"kenouz-backend","timestamp":"2026-03-08 15:30:23"}
+{"level":"info","message":"🚀 الخادم يعمل على http://0.0.0.0:3000","service":"kenouz-backend","timestamp":"2026-03-08 15:32:14"}
+{"level":"info","message":"📞 New signaling connection: FFr2vXl62twbPokYAAAB","service":"kenouz-backend","timestamp":"2026-03-08 15:32:14"}
+{"level":"info","message":"📞 New signaling connection: t6aL1_bF4MoxptVaAAAD","service":"kenouz-backend","timestamp":"2026-03-08 15:32:26"}
+{"level":"info","message":"🚀 الخادم يعمل على http://0.0.0.0:3000","service":"kenouz-backend","timestamp":"2026-03-08 16:01:11"}
+{"level":"info","message":"📞 New signaling connection: MGgZKm1KJfNQ_YOWAAAB","service":"kenouz-backend","timestamp":"2026-03-08 16:01:16"}
+{"level":"info","message":"📞 New signaling connection: 8UzhF7sqSd5gxXODAAAD","service":"kenouz-backend","timestamp":"2026-03-08 16:04:41"}
+{"level":"info","message":"📞 New signaling connection: BrIF2n6VCiY6z9ZRAAAF","service":"kenouz-backend","timestamp":"2026-03-08 16:06:51"}
+{"level":"info","message":"📞 New signaling connection: H3PkPsg8M6ozfbINAAAH","service":"kenouz-backend","timestamp":"2026-03-08 16:07:43"}
+{"level":"info","message":"📞 New signaling connection: OEB2IL1NyMTNx6epAAAJ","service":"kenouz-backend","timestamp":"2026-03-08 16:08:10"}
+{"level":"info","message":"🚀 الخادم يعمل على http://0.0.0.0:3000","service":"kenouz-backend","timestamp":"2026-03-08 16:09:21"}
+{"level":"info","message":"📞 New signaling connection: 0Yf4yR52Y5qRX-lWAAAB","service":"kenouz-backend","timestamp":"2026-03-08 16:09:21"}
+{"level":"info","message":"📞 New signaling connection: s6bcwYT66cTJ-FFtAAAD","service":"kenouz-backend","timestamp":"2026-03-08 16:13:40"}
+{"level":"info","message":"🚀 الخادم يعمل على http://0.0.0.0:3000","service":"kenouz-backend","timestamp":"2026-03-08 16:18:56"}
+{"level":"info","message":"📞 New signaling connection: TEGc_Wi_XkmWq_d8AAAB","service":"kenouz-backend","timestamp":"2026-03-08 16:19:00"}
+{"level":"info","message":"📞 New signaling connection: 1hlsf04HFOBGgJgYAAAD","service":"kenouz-backend","timestamp":"2026-03-08 16:19:09"}
+{"level":"info","message":"📞 New signaling connection: 1A0a96fCHlLxPPLlAAAF","service":"kenouz-backend","timestamp":"2026-03-08 16:19:30"}
+{"level":"info","message":"📞 New signaling connection: hzipHmIhq39c1kQBAAAH","service":"kenouz-backend","timestamp":"2026-03-08 16:22:09"}
+{"level":"info","message":"📞 New signaling connection: 4XpZpgoYznrIamRSAAAJ","service":"kenouz-backend","timestamp":"2026-03-08 16:34:55"}
+{"level":"info","message":"📞 New signaling connection: tqLcTu3h2-aWb49jAAAL","service":"kenouz-backend","timestamp":"2026-03-08 16:36:04"}
+{"level":"info","message":"📞 New signaling connection: a4Z3sWXrmBpDs_GRAAAN","service":"kenouz-backend","timestamp":"2026-03-08 16:39:48"}
+{"level":"info","message":"📞 New signaling connection: wFIzuUlKC4niEuK5AAAP","service":"kenouz-backend","timestamp":"2026-03-08 16:42:43"}
+{"level":"info","message":"📞 New signaling connection: Hn2cgHZm_a1sGYSkAAAR","service":"kenouz-backend","timestamp":"2026-03-08 16:44:34"}
+{"level":"info","message":"📞 New signaling connection: 5vS2RJAbjyhmgaE6AAAT","service":"kenouz-backend","timestamp":"2026-03-08 17:05:26"}
+{"level":"info","message":"📞 New signaling connection: zAv0bovcn8eR4mDqAAAV","service":"kenouz-backend","timestamp":"2026-03-08 17:08:45"}
+{"level":"info","message":"📞 New signaling connection: liLIzt00ydjIpm2SAAAX","service":"kenouz-backend","timestamp":"2026-03-08 17:24:34"}
+{"level":"info","message":"📞 New signaling connection: AaoFb_fqcVY4-la-AAAZ","service":"kenouz-backend","timestamp":"2026-03-08 17:25:24"}
+{"level":"info","message":"📞 New signaling connection: 6_X_xgHNIY8uRI9bAAAb","service":"kenouz-backend","timestamp":"2026-03-08 17:26:56"}
+{"level":"info","message":"📞 New signaling connection: bQTf0R3Edk3CgXN5AAAd","service":"kenouz-backend","timestamp":"2026-03-08 17:45:59"}
+{"level":"info","message":"📞 New signaling connection: V60IuFJiVQwCork9AAAf","service":"kenouz-backend","timestamp":"2026-03-08 17:46:04"}
+{"level":"info","message":"📞 New signaling connection: Cms1i-v0yL-nuOPJAAAh","service":"kenouz-backend","timestamp":"2026-03-08 17:54:34"}
+{"level":"info","message":"📞 New signaling connection: wu2sAOwidwaba-A1AAAj","service":"kenouz-backend","timestamp":"2026-03-08 17:57:34"}
+{"level":"info","message":"🚀 الخادم يعمل على http://0.0.0.0:3000","service":"kenouz-backend","timestamp":"2026-03-08 19:51:44"}
+{"level":"info","message":"📞 New signaling connection: WLDhVpVO47UDYKGUAAAB","service":"kenouz-backend","timestamp":"2026-03-08 20:06:49"}
+{"level":"info","message":"📞 New signaling connection: zy9yQ1xNq1h0JMkHAAAD","service":"kenouz-backend","timestamp":"2026-03-08 20:12:03"}
+{"level":"info","message":"📞 New signaling connection: pgSHqoWDIVlGzUOuAAAF","service":"kenouz-backend","timestamp":"2026-03-08 20:22:07"}
+{"level":"info","message":"📞 New signaling connection: vZstqQTKy301spvkAAAH","service":"kenouz-backend","timestamp":"2026-03-08 20:31:37"}
+{"level":"info","message":"📞 New signaling connection: MBEaPwCW1BOSGiKCAAAJ","service":"kenouz-backend","timestamp":"2026-03-08 20:33:40"}
+{"level":"info","message":"🚀 الخادم يعمل على http://0.0.0.0:3000","service":"kenouz-backend","timestamp":"2026-03-08 20:51:23"}
+{"level":"info","message":"📞 New signaling connection: RAkcDbZXPDYzt5zFAAAB","service":"kenouz-backend","timestamp":"2026-03-08 20:51:27"}
+{"level":"info","message":"📞 New signaling connection: 7sCVlXwt5uPEKj3OAAAD","service":"kenouz-backend","timestamp":"2026-03-08 20:55:26"}
+{"level":"info","message":"📞 New signaling connection: iVqjO1CcXQRtZK8mAAAF","service":"kenouz-backend","timestamp":"2026-03-08 21:21:20"}
+{"level":"info","message":"📞 New signaling connection: LMbxINQ97DUAa8gfAAAH","service":"kenouz-backend","timestamp":"2026-03-08 21:26:36"}
+{"level":"info","message":"📞 New signaling connection: EB2i-R9u9voqQPgSAAAJ","service":"kenouz-backend","timestamp":"2026-03-08 21:41:43"}
+{"error":"Socket 'secureConnect' timed out after 31169ms (connectTimeoutMS: 30000)","level":"error","message":"❌ فشل بدء الخادم بسبب خطأ في قاعدة البيانات:","service":"kenouz-backend","timestamp":"2026-03-08 23:02:45"}
+{"level":"info","message":"🚀 الخادم يعمل على http://0.0.0.0:3000","service":"kenouz-backend","timestamp":"2026-03-08 23:02:59"}
+{"level":"info","message":"📞 New signaling connection: nk8_5v_Pu0XrA6ZDAAAB","service":"kenouz-backend","timestamp":"2026-03-08 23:11:05"}
+{"error":"Socket 'secureConnect' timed out after 33140ms (connectTimeoutMS: 30000)","level":"error","message":"❌ فشل بدء الخادم بسبب خطأ في قاعدة البيانات:","service":"kenouz-backend","timestamp":"2026-03-08 23:13:37"}
+{"error":"Could not connect to any servers in your MongoDB Atlas cluster. One common reason is that you're trying to access the database from an IP that isn't whitelisted. Make sure your current IP address is on your Atlas cluster's IP whitelist: https://www.mongodb.com/docs/atlas/security-whitelist/","level":"error","message":"❌ فشل بدء الخادم بسبب خطأ في قاعدة البيانات:","service":"kenouz-backend","timestamp":"2026-03-08 23:14:03"}
+{"error":"connection 1 to 159.41.64.227:27017 timed out","level":"error","message":"❌ فشل بدء الخادم بسبب خطأ في قاعدة البيانات:","service":"kenouz-backend","timestamp":"2026-03-08 23:15:10"}
+{"error":"Server selection timed out after 20000 ms","level":"error","message":"❌ فشل بدء الخادم بسبب خطأ في قاعدة البيانات:","service":"kenouz-backend","timestamp":"2026-03-08 23:16:05"}
+{"error":"Could not connect to any servers in your MongoDB Atlas cluster. One common reason is that you're trying to access the database from an IP that isn't whitelisted. Make sure your current IP address is on your Atlas cluster's IP whitelist: https://www.mongodb.com/docs/atlas/security-whitelist/","level":"error","message":"❌ فشل بدء الخادم بسبب خطأ في قاعدة البيانات:","service":"kenouz-backend","timestamp":"2026-03-08 23:16:31"}
+{"error":"Server selection timed out after 20000 ms","level":"error","message":"❌ فشل بدء الخادم بسبب خطأ في قاعدة البيانات:","service":"kenouz-backend","timestamp":"2026-03-08 23:16:59"}
+{"error":"Socket 'secureConnect' timed out after 33200ms (connectTimeoutMS: 30000)","level":"error","message":"❌ فشل بدء الخادم بسبب خطأ في قاعدة البيانات:","service":"kenouz-backend","timestamp":"2026-03-08 23:17:49"}
+{"error":"Server selection timed out after 20000 ms","level":"error","message":"❌ فشل بدء الخادم بسبب خطأ في قاعدة البيانات:","service":"kenouz-backend","timestamp":"2026-03-08 23:18:27"}
+{"level":"info","message":"🚀 الخادم يعمل على http://0.0.0.0:3000","service":"kenouz-backend","timestamp":"2026-03-08 23:19:52"}
+{"error":"Could not connect to any servers in your MongoDB Atlas cluster. One common reason is that you're trying to access the database from an IP that isn't whitelisted. Make sure your current IP address is on your Atlas cluster's IP whitelist: https://www.mongodb.com/docs/atlas/security-whitelist/","level":"error","message":"❌ فشل بدء الخادم بسبب خطأ في قاعدة البيانات:","service":"kenouz-backend","timestamp":"2026-03-08 23:42:02"}
+{"error":"querySrv ETIMEOUT _mongodb._tcp.kenouz.oup4o7v.mongodb.net","level":"error","message":"❌ فشل بدء الخادم بسبب خطأ في قاعدة البيانات:","service":"kenouz-backend","timestamp":"2026-03-08 23:43:27"}
+{"error":"querySrv ETIMEOUT _mongodb._tcp.kenouz.oup4o7v.mongodb.net","level":"error","message":"❌ فشل بدء الخادم بسبب خطأ في قاعدة البيانات:","service":"kenouz-backend","timestamp":"2026-03-08 23:44:24"}
+{"level":"info","message":"🚀 الخادم يعمل على http://0.0.0.0:3000","service":"kenouz-backend","timestamp":"2026-03-08 23:48:26"}
+{"level":"info","message":"🚀 الخادم يعمل على http://0.0.0.0:3000","service":"kenouz-backend","timestamp":"2026-03-08 23:53:39"}
+{"level":"info","message":"📞 New signaling connection: WSuHt1_t4XNTvSj8AAAB","service":"kenouz-backend","timestamp":"2026-03-08 23:54:03"}

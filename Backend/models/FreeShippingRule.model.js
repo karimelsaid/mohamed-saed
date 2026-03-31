@@ -9,6 +9,13 @@ const FreeShippingRuleSchema = new mongoose.Schema({
   includedGovernorates: { type: [String], default: [] },
   freeShippingEnabled: { type: Boolean, default: true },
   codFee: { type: Number, default: 10 },
+  swapShippingCost: { type: Number, default: 70 },
+  auctionShippingCost: { type: Number, default: 70 },
+  regionCosts: {
+    type: Map,
+    of: Number,
+    default: {}
+  }
 }, { timestamps: true });
 
 const FreeShippingRule = mongoose.model('FreeShippingRule', FreeShippingRuleSchema);

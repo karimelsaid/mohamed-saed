@@ -90,20 +90,21 @@ async function addProduct(req, res) {
       product_description,
       product_price,
       price_cost,
+      weight, length, width, height, // Physical dimensions
       author, publisher, pages, coverType, language, publishYear, // Book fields
       stationeryType, material, color, size, brand, // Stationery fields
       electronicsType, model, specs, warranty, // Electronics fields
       clothingType, season, originCountry, // Clothing fields
       cosmeticsType, sizeWeight, ingredients, suitableFor, // Cosmetics fields
       shoeType, // Shoe fields
-      furnitureType, height, deliveryMethod, // Furniture fields
+      furnitureType, deliveryMethod, // Furniture fields
       toyType, ageGroup, safety, // Toy fields
-      fabricType, width, length, usage, // Fabric fields
+      fabricType, usage, // Fabric fields
       suggestedCategory // Unclassified fields
     } = req.body;
 
-    if (!product_name || !product_quantity || !product_category) {
-      return res.status(400).json({ success: false, message: 'Missing required fields' });
+    if (!product_name || !product_quantity || !product_category || weight === undefined || weight === null || weight === '') {
+      return res.status(400).json({ success: false, message: 'Missing required fields (including weight)' });
     }
 
     if (!req.files || req.files.length === 0) {
@@ -242,15 +243,16 @@ async function addProduct(req, res) {
       suitableFor: suitableFor || '',
       shoeType: shoeType || '',
       furnitureType: furnitureType || '',
-      height: height || '',
       deliveryMethod: deliveryMethod || '',
       toyType: toyType || '',
       ageGroup: ageGroup || '',
       safety: safety || '',
       fabricType: fabricType || '',
-      width: width || '',
-      length: length || '',
       usage: usage || '',
+      weight: parseFloat(weight) || 0,
+      width: parseFloat(width) || '',
+      length: parseFloat(length) || '',
+      height: parseFloat(height) || '',
       suggestedCategory: suggestedCategory || '',
       linkedEbookId: linkedEbookId ? linkedEbookId.toString() : '',
       createdAt: new Date().toISOString()
@@ -349,7 +351,7 @@ async function listProducts(req, res) {
 async function updateProduct(req, res) {
   try {
     const { barcode } = req.params;
-    const { product_name, product_quantity, product_category, product_description, product_price, price_cost } = req.body;
+    const { product_name, product_quantity, product_category, product_description, product_price, price_cost, weight, length, width, height } = req.body;
 
     if (!barcode) {
       return res.status(400).json({ success: false, message: 'Missing product barcode' });
@@ -440,6 +442,10 @@ async function updateProduct(req, res) {
         if (product_description !== undefined) updateFields.product_description = product_description;
         if (product_price !== undefined) updateFields.product_price = product_price;
         if (price_cost !== undefined) updateFields.price_cost = price_cost;
+        if (weight !== undefined) updateFields.weight = parseFloat(weight) || 0;
+        if (length !== undefined) updateFields.length = parseFloat(length) || 0;
+        if (width !== undefined) updateFields.width = parseFloat(width) || 0;
+        if (height !== undefined) updateFields.height = parseFloat(height) || 0;
         if (quantityChanged) updateFields.lastStockUpdate = now;
 
         await Product.findOneAndUpdate(
@@ -1300,7 +1306,11 @@ async function getFreeShippingRules(req, res) {
         includedCategories: [],
         includedGovernorates: [],
         freeShippingEnabled: true,
-        codFee: 10
+        codFee: 10,
+        communityShippingCost: 70,
+        swapShippingCost: 70,
+        auctionShippingCost: 70,
+        regionCosts: {}
       };
     }
     res.json({ success: true, rules });
@@ -1320,7 +1330,11 @@ async function saveFreeShippingRules(req, res) {
       includedCategories,
       includedGovernorates,
       freeShippingEnabled,
-      codFee
+      codFee,
+      communityShippingCost,
+      swapShippingCost,
+      auctionShippingCost,
+      regionCosts
     } = req.body;
 
     const updatedRules = await FreeShippingRule.findOneAndUpdate(
@@ -1333,7 +1347,11 @@ async function saveFreeShippingRules(req, res) {
         includedCategories,
         includedGovernorates,
         freeShippingEnabled,
-        codFee
+        codFee,
+        communityShippingCost,
+        swapShippingCost,
+        auctionShippingCost,
+        regionCosts
       },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
@@ -1349,15 +1367,22 @@ async function saveFreeShippingRules(req, res) {
 async function listMerchants(req, res) {
   try {
     const merchants = await User.find({ role: 'merchant' }).sort({ createdAt: -1 });
-    // Map to match frontend interface
-    const mappedMerchants = merchants.map(merchant => ({
-      _id: merchant._id,
-      name: merchant.merchantName || merchant.username,
-      email: merchant.email,
-      logo: merchant.logo,
-      approved: merchant.approved,
-      suspended: merchant.suspended || false,
-      createdAt: merchant.createdAt
+    // Map to match frontend interface and add stats
+    const mappedMerchants = await Promise.all(merchants.map(async merchant => {
+      const productCount = await Product.countDocuments({ merchantId: merchant._id });
+      return {
+        _id: merchant._id,
+        name: merchant.merchantName || merchant.username,
+        email: merchant.email,
+        logo: merchant.logo,
+        approved: merchant.approved,
+        suspended: merchant.suspended || false,
+        createdAt: merchant.createdAt,
+        productCount,
+        averageRating: merchant.averageRating || 0,
+        ratingCount: merchant.ratingCount || 0,
+        totalSales: merchant.totalSales || 0
+      };
     }));
     res.json({ success: true, merchants: mappedMerchants });
   } catch (error) {
@@ -2517,7 +2542,7 @@ async function updateProductQuantity(req, res) {
 }
 async function registerSale(req, res) {
   try {
-    const { soldItems, customerName, customerPhone, totalAmount, invoiceNumber } = req.body;
+    const { soldItems, customerName, customerPhone, totalAmount, invoiceNumber, discountType, discountValue, discountAmount } = req.body;
 
     if (!soldItems || !Array.isArray(soldItems) || soldItems.length === 0) {
       return res.status(400).json({ success: false, message: 'Missing sold items' });
@@ -2595,6 +2620,10 @@ async function registerSale(req, res) {
       date: new Date().toISOString(),
       customerName: customerName || 'زبون نقدي',
       customerPhone: customerPhone || 'غير مسجل',
+      subtotal: soldItems.reduce((sum, item) => sum + (parseFloat(item.total) || 0), 0),
+      discountType: discountType || null,
+      discountValue: parseFloat(discountValue) || 0,
+      discountAmount: parseFloat(discountAmount) || 0,
       totalAmount: parseFloat(totalAmount) || 0,
       items: soldItems.map(item => ({
         products_id: item.products_id,
@@ -2781,6 +2810,29 @@ async function getSalesHistory(req, res) {
   }
 }
 
+async function deleteSale(req, res) {
+  try {
+    const { saleId } = req.params;
+    const fs = require('fs');
+    const path = require('path');
+    const salesHistoryPath = path.join(__dirname, '..', 'sales_history.json');
+    if (!fs.existsSync(salesHistoryPath)) {
+      return res.status(404).json({ success: false, message: 'Sales history not found' });
+    }
+    let salesHistory = JSON.parse(fs.readFileSync(salesHistoryPath, 'utf-8'));
+    const initialLength = salesHistory.length;
+    salesHistory = salesHistory.filter(sale => sale.id !== saleId);
+    if (salesHistory.length === initialLength) {
+      return res.status(404).json({ success: false, message: 'Sale not found' });
+    }
+    fs.writeFileSync(salesHistoryPath, JSON.stringify(salesHistory, null, 2));
+    res.json({ success: true, message: 'Sale deleted successfully' });
+  } catch (error) {
+    console.error('Error in deleteSale:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+}
+
 /**
  * 📊 Global Platform Analytics & User Intelligence
  */
@@ -2946,6 +2998,7 @@ module.exports = {
   getDonationStats,
   registerSale,
   getSalesHistory,
+  deleteSale,
   getShortageSettings,
   updateShortageSettings,
   getShortagesReport,

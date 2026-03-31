@@ -85,8 +85,8 @@ export class HomePageComponent implements OnInit {
     // Set SEO meta tags for the homepage
     this.seoService.updateMetaTags({
       title: 'الصفحة الرئيسية',
-      description: 'مكتبة كنوز - مكتبة عربية إلكترونية تقدم مجموعة متنوعة من الكتب والمنتجات. اكتشف أفضل الكتب بأسعار مميزة وخدمة توصيل لجميع المحافظات.',
-      keywords: 'مكتبة كنوز, كتب عربية, كتب أونلاين, شراء كتب, مكتبة إلكترونية, توصيل كتب',
+      description: 'knoozbook - مكتبة عربية إلكترونية تقدم مجموعة متنوعة من الكتب والمنتجات. اكتشف أفضل الكتب بأسعار مميزة وخدمة توصيل لجميع المحافظات.',
+      keywords: 'knoozbook, كتب عربية, كتب أونلاين, شراء كتب, مكتبة إلكترونية, توصيل كتب',
       url: 'https://knoozbook.com/Home'
     });
 

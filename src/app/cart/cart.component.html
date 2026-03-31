@@ -15,6 +15,46 @@
     <p class="text-gray-600 dark:text-gray-400 mt-2">استمتع بتسوقك وأضف المزيد من الكتب المفضلة</p>
   </div>
 
+  <!-- Free Gift Progress Bar -->
+  <div *ngIf="!isLoading && cartBooks.length > 0 && freeGiftThreshold > 0 && activeBourseOffer" class="mb-8">
+     <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+        <h3 class="font-bold text-gray-800 dark:text-white mb-2 flex items-center gap-2">
+           <fa-icon [icon]="['fas', 'gift']" class="text-green-500"></fa-icon>
+           احصل على هدية مجانية!
+        </h3>
+        <p *ngIf="totalPrice < freeGiftThreshold" class="text-sm text-gray-500 mb-3">
+           أضف مشتريات بقيمة {{ (freeGiftThreshold - totalPrice) | number:'1.0-0' }} ج.م إضافية للحصول على كتاب هدية مجاني!
+        </p>
+        <p *ngIf="totalPrice >= freeGiftThreshold" class="text-sm text-green-600 font-bold mb-3">
+           تهانينا! لقد تجاوزت الحد المطلوب وستحصل على هدية مجانية مع طلبك! 🎉
+        </p>
+        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+           <div class="bg-green-500 h-2.5 rounded-full transition-all duration-500" [style.width]="(totalPrice / freeGiftThreshold * 100) > 100 ? '100%' : (totalPrice / freeGiftThreshold * 100) + '%'"></div>
+        </div>
+     </div>
+  </div>
+
+  <!-- Bourse Policy Warnings -->
+  <div *ngIf="!isLoading && hasExpiredBourseItems" class="bg-red-50 dark:bg-red-900/20 border-r-4 border-red-500 p-4 mb-6 rounded-l-xl shadow-sm">
+     <div class="flex items-center text-red-800 dark:text-red-200">
+        <fa-icon [icon]="['fas', 'exclamation-circle']" class="ml-3 text-xl"></fa-icon>
+        <div>
+           <h4 class="font-bold text-sm">تنبيه هام!</h4>
+           <p class="text-xs">يوجد في سلتك كتب من عرض بورصة انتهى وقته. يرجى إزالة هذه الكتب لتتمكن من إتمام الطلب.</p>
+        </div>
+     </div>
+  </div>
+
+  <div *ngIf="!isLoading && hasNormalItems && hasActiveBourseItems" class="bg-orange-50 dark:bg-orange-900/20 border-r-4 border-orange-500 p-4 mb-6 rounded-l-xl shadow-sm">
+     <div class="flex items-center text-orange-800 dark:text-orange-200">
+        <fa-icon [icon]="['fas', 'exclamation-triangle']" class="ml-3 text-xl"></fa-icon>
+        <div>
+           <h4 class="font-bold text-sm">لا يمكن الجمع بين العروض!</h4>
+           <p class="text-xs">السلة تحتوي على كتب عادية وكتب من البورصة. يرجى إتمام طلب كتب البورصة منفصلاً عن الكتب العادية لتتمكن من المتابعة.</p>
+        </div>
+     </div>
+  </div>
+
   <div *ngIf="isLoading" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-8 items-start">
     <div *ngFor="let skeleton of [].constructor(6); let i = index"
       class="group bg-white dark:bg-gray-800 rounded-2xl md:rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border border-gray-100 dark:border-gray-700 overflow-hidden fade-in h-full"
@@ -89,6 +129,16 @@
         <div
           class="absolute top-2 right-2 md:top-3 md:right-3 bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 md:px-2 md:py-1 rounded-full shadow-md">
           {{ i + 1 }}
+        </div>
+        
+        <!-- Bourse Badges -->
+        <div *ngIf="book.isBourse && !book.isExpiredBourse" class="absolute top-2 left-2 bg-yellow-400 text-yellow-900 shadow-md text-xs font-black px-2 py-1 rounded shadow-md z-10 flex items-center gap-1">
+           <fa-icon [icon]="['fas', 'bolt']"></fa-icon> حصري بالبورصة
+        </div>
+        <div *ngIf="book.isExpiredBourse" class="absolute inset-0 bg-red-900/60 backdrop-blur-[2px] z-10 flex items-center justify-center">
+           <div class="bg-red-600 text-white font-bold px-4 py-2 rounded-lg transform -rotate-12 shadow-2xl border-2 border-white">
+              انتهى العرض!
+           </div>
         </div>
       </div>
 
@@ -203,8 +253,8 @@
 
         <!-- Checkout Button -->
         <div class="flex justify-center md:justify-end">
-          <button (click)="showCheckoutModal = true"
-            class="group bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold py-4 px-8 md:px-10 rounded-2xl transition-all duration-300 shadow-lg hover:shadow-2xl transform hover:scale-105 hover:-translate-y-1 flex items-center space-x-3">
+          <button (click)="showCheckoutModal = true" [disabled]="hasExpiredBourseItems || (hasNormalItems && hasActiveBourseItems)"
+            class="group bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed text-white font-bold py-4 px-8 md:px-10 rounded-2xl transition-all duration-300 shadow-lg hover:shadow-2xl transform hover:scale-105 hover:-translate-y-1 flex items-center space-x-3">
             <svg class="w-6 h-6 group-hover:animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-1.1 5H19M7 13l-1.1 5M7 13h10m0 0v5a2 2 0 01-2 2H9a2 2 0 01-2-2v-5">

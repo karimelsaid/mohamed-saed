@@ -65,6 +65,14 @@ const systemSettingsSchema = mongoose.Schema({
         }
     },
     maintenanceMode: { type: Boolean, default: false },
+    bourseConfig: {
+        isActive: { type: Boolean, default: false },
+        netProfitMargin: { type: Number, default: 10 },
+        freeGiftThreshold: { type: Number, default: 1000 },
+        allowedCategories: [{ type: String }],
+        booksPerSlot: { type: Number, default: 8 },
+        includeMerchantProducts: { type: Boolean, default: false }
+    },
     shortageSettings: {
         threshold: { type: Number, default: 10 },
         categories: [{ type: String }],

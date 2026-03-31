@@ -8,6 +8,8 @@ import { FormsModule } from '@angular/forms';
 import { AdminService } from '../../services/admin.service';
 import { OnInit } from '@angular/core';
 import { HeroManagerComponent } from './hero-manager.component';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-promotions-manager',
@@ -100,6 +102,20 @@ import { HeroManagerComponent } from './hero-manager.component';
               <p class="mt-3 text-xs text-gray-500 dark:text-gray-400">
                 هذه النسبة ستستخدم كحد أدنى للربح عند توليد عرض ذكي للمستخدمين. (مثال: 50 تعني أن السعر سيكون ضعف التكلفة).
               </p>
+
+              <hr class="my-6 border-gray-200 dark:border-gray-600">
+
+              <div class="flex items-center justify-between">
+                <div>
+                  <h3 class="text-lg font-bold text-gray-800 dark:text-white">ضم منتجات التجار في العروض</h3>
+                  <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">عند التفعيل، ستشمل العروض الذكية والباقات منتجات التجار بالإضافة لمنتجات المنصة.</p>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" class="sr-only peer" [(ngModel)]="includeMerchantProducts" (change)="saveMerchantProductsSetting()">
+                  <div class="w-14 h-7 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all dark:border-gray-500 peer-checked:bg-orange-500"></div>
+                </label>
+              </div>
+              <p *ngIf="merchantSettingMsg" class="mt-3 text-xs font-bold" [class.text-green-600]="merchantSettingMsg === 'saved'" [class.text-red-500]="merchantSettingMsg === 'error'">{{ merchantSettingMsg === 'saved' ? '✅ تم الحفظ' : '❌ حدث خطأ' }}</p>
             </div>
             
             <div *ngIf="message" [class]="message.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"
@@ -118,11 +134,35 @@ export class PromotionsManagerComponent implements OnInit {
   economySettings = { dynamicOfferProfitMargin: 50 };
   isSaving = false;
   message: { type: 'success' | 'error', text: string } | null = null;
+  includeMerchantProducts = false;
+  merchantSettingMsg = '';
 
-  constructor(private adminService: AdminService) { }
+  constructor(private adminService: AdminService, private http: HttpClient) { }
 
   ngOnInit() {
     this.loadEconomySettings();
+    this.loadMerchantProductsSetting();
+  }
+
+  loadMerchantProductsSetting() {
+    this.http.get<any>(`${environment.apiBaseUrl}/bourse/settings`).subscribe({
+      next: (data) => {
+        this.includeMerchantProducts = data?.includeMerchantProducts || false;
+      }
+    });
+  }
+
+  saveMerchantProductsSetting() {
+    this.merchantSettingMsg = '';
+    this.http.post(`${environment.apiBaseUrl}/bourse/settings`, { includeMerchantProducts: this.includeMerchantProducts }).subscribe({
+      next: () => {
+        this.merchantSettingMsg = 'saved';
+        setTimeout(() => this.merchantSettingMsg = '', 2500);
+      },
+      error: () => {
+        this.merchantSettingMsg = 'error';
+      }
+    });
   }
 
   loadEconomySettings() {

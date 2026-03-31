@@ -4,18 +4,51 @@ import { CommonModule } from '@angular/common';
 import { ModalService } from '../../services/modal.service';
 import { environment } from '../../../environments/environment';
 import { FormsModule } from '@angular/forms';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import { 
+  faStar, faStarHalfAlt, faStore, faBox, faShoppingBag, 
+  faChartLine, faCheckCircle, faTimesCircle, faExclamationTriangle,
+  faEye, faEdit, faTrash, faUser, faEnvelope, faPhone, faClock
+} from '@fortawesome/free-solid-svg-icons';
 
 @Component({
   selector: 'app-merchant-management',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, FontAwesomeModule],
   templateUrl: './merchant-management.component.html',
   styleUrls: ['./merchant-management.component.css']
 })
 export class MerchantManagementComponent implements OnInit {
+  // Icons
+  faStar = faStar;
+  faStarHalfAlt = faStarHalfAlt;
+  faStore = faStore;
+  faBox = faBox;
+  faShoppingBag = faShoppingBag;
+  faChartLine = faChartLine;
+  faCheckCircle = faCheckCircle;
+  faTimesCircle = faTimesCircle;
+  faExclamationTriangle = faExclamationTriangle;
+  faEye = faEye;
+  faEdit = faEdit;
+  faTrash = faTrash;
+  faUser = faUser;
+  faEnvelope = faEnvelope;
+  faPhone = faPhone;
+  faClock = faClock;
+
   merchants: any[] = [];
   loading = false;
   selectedMerchant: any = null;
+
+  get stats() {
+    return {
+      total: this.merchants.length,
+      approved: this.merchants.filter(m => m.approved).length,
+      pending: this.merchants.filter(m => !m.approved).length,
+      suspended: this.merchants.filter(m => m.suspended).length
+    };
+  }
   merchantProducts: any[] = [];
   showProductsModal = false;
   loadingProducts = false;
@@ -293,6 +326,30 @@ export class MerchantManagementComponent implements OnInit {
       confirmText: 'موافق',
       showCancel: false
     });
+  }
+
+  getActivityLevel(merchant: any): { label: string, color: string } {
+    const score = (merchant.productCount || 0) * 1 + (merchant.totalSales || 0) / 100;
+    if (score >= 50) return { label: 'مرتفع', color: 'text-green-600 bg-green-50 border-green-200' };
+    if (score >= 10) return { label: 'متوسط', color: 'text-blue-600 bg-blue-50 border-blue-200' };
+    return { label: 'مبتدئ', color: 'text-gray-600 bg-gray-50 border-gray-200' };
+  }
+
+  getStars(rating: number): any[] {
+    const stars = [];
+    const fullStars = Math.floor(rating || 0);
+    const hasHalfStar = (rating || 0) % 1 >= 0.5;
+    
+    for (let i = 1; i <= 5; i++) {
+        if (i <= fullStars) {
+            stars.push({ type: 'full', icon: this.faStar });
+        } else if (i === fullStars + 1 && hasHalfStar) {
+            stars.push({ type: 'half', icon: this.faStarHalfAlt });
+        } else {
+            stars.push({ type: 'empty', icon: this.faStar });
+        }
+    }
+    return stars;
   }
 
   getProductImageUrl(product: any): string {

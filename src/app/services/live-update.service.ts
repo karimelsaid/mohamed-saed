@@ -87,16 +87,10 @@ export class LiveUpdateService {
         this.statusSubject.next('idle');
       }
     } catch (error: any) {
-      // OFFLINE HANDLING: Don't show error modal if it's a connection error (status 0)
-      if (error.status === 0 || !navigator.onLine) {
-        console.log('[LiveUpdate] Offline or connection error. Skipping check.');
-        this.statusSubject.next('idle');
-        return;
-      }
-
-      console.error('❌ [LiveUpdate] Error during update check:', error);
-      this.errorSubject.next(error.message || 'فشل التحقق من التحديثات');
-      this.statusSubject.next('error');
+      // SILENT FAIL: Version check is a background operation.
+      // Never show an error modal here — only startUpdate() should surface errors.
+      console.warn('[LiveUpdate] Version check failed (offline or backend unreachable). Staying idle.', error?.status || error?.message || '');
+      this.statusSubject.next('idle');
     }
   }
 

@@ -13,9 +13,9 @@ const BOOKS_JSON_PATH = path.resolve(__dirname, '../output.json');
 
 let cachedBooks = null;
 
-// معلومات مكتبة كنوز
+// معلومات knoozbook
 const KENOUZ_LIBRARY_INFO = `
-مكتبة كنوز
+knoozbook
 العنوان: محافظة الدقهلية - مركز منية النصر - الرياض
 رقم الهاتف: 01094612729
 رابط الويب سايت: www.knoozbook.com
@@ -62,16 +62,16 @@ async function loadBooksData() {
 }
 
 /**
- * تحقق إذا كان الاستعلام متعلق بمكتبة كنوز بدقة أكبر
+ * تحقق إذا كان الاستعلام متعلق بknoozbook بدقة أكبر
  */
 function isKenouzLibraryQuery(query) {
   const keywords = [
-    'مكتبة كنوز',
-    'معلومات مكتبة كنوز',
-    'عنوان مكتبة كنوز',
-    'رقم هاتف مكتبة كنوز',
-    'أوقات عمل مكتبة كنوز',
-    'مواعيد عمل مكتبة كنوز',
+    'knoozbook',
+    'معلومات knoozbook',
+    'عنوان knoozbook',
+    'رقم هاتف knoozbook',
+    'أوقات عمل knoozbook',
+    'مواعيد عمل knoozbook',
     'كنوز',
     'kenouz'
   ];
@@ -152,9 +152,9 @@ exports.sendMessage = async (req, res) => {
     const lastUserMessage = [...messages].reverse().find(m => m.role === 'user');
     const lastUserContent = lastUserMessage ? lastUserMessage.content.toLowerCase() : '';
 
-    // تحقق إذا كان الاستعلام متعلق بمكتبة كنوز بناءً على آخر رسالة فقط
+    // تحقق إذا كان الاستعلام متعلق بknoozbook بناءً على آخر رسالة فقط
     if (isKenouzLibraryQuery(lastUserContent)) {
-      // الرد مباشرة بمعلومات مكتبة كنوز دون استدعاء الذكاء الاصطناعي
+      // الرد مباشرة بمعلومات knoozbook دون استدعاء الذكاء الاصطناعي
       return res.status(200).json({
         success: true,
         data: {

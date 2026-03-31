@@ -7,7 +7,7 @@ import { Component } from '@angular/core';
       <h1 class="text-3xl font-bold mb-4">سياسة الخصوصية</h1>
       <dir class="space-y-4 rtl">
         <p>
-          نحن في مكتبة كنوز نلتزم بحماية خصوصيتك واحترام بياناتك الشخصية. يتم جمع المعلومات فقط لأغراض تحسين تجربتك وتقديم خدماتنا بشكل أفضل.
+          نحن في knoozbook نلتزم بحماية خصوصيتك واحترام بياناتك الشخصية. يتم جمع المعلومات فقط لأغراض تحسين تجربتك وتقديم خدماتنا بشكل أفضل.
         </p>
         <p>
           لا نشارك معلوماتك مع أطراف ثالثة بدون موافقتك، ونستخدم أحدث التقنيات لضمان أمان بياناتك.
@@ -22,4 +22,4 @@ import { Component } from '@angular/core';
     </div>
   `,
 })
-export class PrivacyPolicyComponent {}
+export class PrivacyPolicyComponent { }

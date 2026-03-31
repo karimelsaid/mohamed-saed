@@ -4,6 +4,7 @@ import { Observable, of } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ReaderPost, Comment } from '../models/post.model';
 import { BookSwap } from '../models/book-swap.model';
+import { Auction } from '../models/auction.model';
 
 @Injectable({
   providedIn: 'root'
@@ -56,12 +57,55 @@ export class CommunitySocialService {
     return this.http.get<BookSwap[]>(`${this.apiUrl}/community/book-swaps`);
   }
 
-  offerBookForSwap(swap: Partial<BookSwap>): Observable<BookSwap> {
+  offerBookForSwap(swap: any): Observable<BookSwap> {
     return this.http.post<BookSwap>(`${this.apiUrl}/community/book-swaps`, swap);
   }
 
-  requestSwap(swapId: string, requesterId: string): Observable<any> {
-    return this.http.post(`${this.apiUrl}/community/book-swaps/${swapId}/request`, { requesterId });
+  deleteSwap(swapId: string, userId: string): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/community/book-swaps/${swapId}`, { body: { userId } });
+  }
+
+  requestSwap(swapId: string, requesterId: string, offeredBookTitle: string, offeredBookCondition: string, offeredBookNotes?: string, offeredBookImage?: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/community/book-swaps/${swapId}/request`, { 
+      requesterId, 
+      offeredBookTitle, 
+      offeredBookCondition,
+      offeredBookNotes,
+      offeredBookImage
+    });
+  }
+
+  rejectSwapRequest(swapId: string, requestId: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/community/book-swaps/${swapId}/reject/${requestId}`, {});
+  }
+
+  // Auctions
+  getAuctions(): Observable<Auction[]> {
+    return this.http.get<Auction[]>(`${this.apiUrl}/community/auctions`);
+  }
+
+  createAuction(auction: any): Observable<Auction> {
+    return this.http.post<Auction>(`${this.apiUrl}/community/auctions`, auction);
+  }
+
+  placeBid(auctionId: string, userId: string, amount: number): Observable<Auction> {
+    return this.http.post<Auction>(`${this.apiUrl}/community/auctions/${auctionId}/bid`, { userId, amount });
+  }
+
+  deleteAuction(auctionId: string, userId: string): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/community/auctions/${auctionId}`, { body: { userId } });
+  }
+
+  acceptSwapRequest(swapId: string, requestId: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/community/book-swaps/${swapId}/accept/${requestId}`, {});
+  }
+
+  finalizeAuction(auctionId: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/community/auctions/${auctionId}/finalize`, {});
+  }
+
+  getAdminStats(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/community/admin/stats`);
   }
   
   // User Stats
@@ -79,5 +123,9 @@ export class CommunitySocialService {
 
   search(query: string): Observable<{ posts: ReaderPost[], users: any[] }> {
     return this.http.get<{ posts: ReaderPost[], users: any[] }>(`${this.apiUrl}/community/search?q=${query}`);
+  }
+
+  updateCommunityStatus(id: string, type: 'swap' | 'auction', field: string, value: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/community/community/update-status`, { id, type, field, value });
   }
 }

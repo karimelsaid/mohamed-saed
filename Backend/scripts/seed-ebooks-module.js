@@ -63,7 +63,7 @@ async function seedEbooks() {
                     fileSize: stats.size,
                     category: 'Novels-stories', // Default category
                     language: 'العربية',
-                    publisher: 'مكتبة كنوز',
+                    publisher: 'knoozbook',
                     publishYear: new Date().getFullYear(),
                     pages: 0,
                     price: 0, // Free by default or set a price

@@ -372,20 +372,109 @@
     display: none;
 }
 
+/* Discount Section */
+.discount-section {
+    background: #fef9e7;
+    border: 1px solid #f9e79f;
+    border-radius: 12px;
+    padding: 12px 15px;
+    margin: 12px 0;
+}
+
+.discount-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    color: #d68910;
+    font-size: 0.9em;
+    margin-bottom: 10px;
+}
+
+.discount-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.discount-type-toggle {
+    display: flex;
+    background: white;
+    border: 1px solid #e5e5e5;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.toggle-btn {
+    padding: 6px 14px;
+    border: none;
+    background: white;
+    cursor: pointer;
+    font-size: 0.85em;
+    font-weight: 600;
+    color: #7f8c8d;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.toggle-btn.active {
+    background: #d68910;
+    color: white;
+}
+
+.discount-input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #e5e5e5;
+    border-radius: 8px;
+    font-size: 0.9em;
+    text-align: center;
+    font-weight: bold;
+    max-width: 150px;
+}
+
+.discount-input:focus {
+    outline: none;
+    border-color: #d68910;
+    box-shadow: 0 0 0 2px rgba(214, 137, 16, 0.15);
+}
+
+.discount-result {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px dashed #e5b15c;
+    font-size: 0.9em;
+    color: #b7791f;
+}
+
+.discount-amount {
+    font-weight: bold;
+    color: #e74c3c;
+}
+
 @media print {
-    body * {
-        visibility: hidden !important;
+    :host {
+        display: block;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 99999;
+        background: white;
     }
 
     .print-invoice,
-    .print-invoice *,
-    .print-section,
-    .print-section * {
+    .print-invoice * {
         visibility: visible !important;
     }
 
-    .print-invoice,
-    .print-section {
+    .print-invoice {
         position: absolute !important;
         left: 0;
         right: 0;
@@ -453,19 +542,37 @@
 
     .invoice-summary {
         margin-top: 20px;
-        text-align: left;
         display: flex;
         justify-content: flex-end;
     }
 
-    .summary-line {
-        font-size: 16pt;
-        font-weight: bold;
+    .summary-block {
+        min-width: 250px;
         border-top: 2px solid #333;
         padding-top: 10px;
-        min-width: 200px;
+    }
+
+    .summary-line {
         display: flex;
         justify-content: space-between;
+        padding: 5px 0;
+        font-size: 12pt;
+    }
+
+    .summary-line:last-child {
+        font-size: 16pt;
+        font-weight: bold;
+        border-top: 1px solid #999;
+        padding-top: 10px;
+        margin-top: 5px;
+    }
+
+    .summary-line.sub {
+        color: #555;
+    }
+
+    .summary-line.discount {
+        color: #c0392b;
     }
 
     .invoice-footer {

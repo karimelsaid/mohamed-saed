@@ -517,6 +517,11 @@
         <span class="text-gray-700 dark:text-gray-300 font-medium">تكلفة الشحن:</span>
         <span class="text-gray-900 dark:text-gray-200 font-semibold">{{shippingCost}} EGP</span>
       </div>
+      <div *ngIf="merchantShippers.length > 0" 
+           class="text-xs text-amber-600 dark:text-amber-400 mb-3 bg-amber-50 dark:bg-amber-900/30 p-2 rounded-lg border border-amber-200 dark:border-amber-800 leading-relaxed">
+        <i class="fas fa-info-circle ml-1"></i>
+        <span>تنبيه: يتضمن هذا الطلب منتجات تشحن من قبل ({{ merchantShippers.join('، ') }})، لذا تم إضافة مصاريف شحن إضافية لتغطية تكاليف الشحن من مخازنهم.</span>
+      </div>
       <div *ngIf="freeShippingRules.freeShippingEnabled"
         class="text-sm text-green-600 dark:text-green-400 mb-3 flex items-center space-x-2 rtl:space-x-reverse bg-green-50 dark:bg-green-900 p-2 rounded-lg">
         <fa-icon [icon]="faCheck" class="text-green-600 dark:text-green-400"></fa-icon>

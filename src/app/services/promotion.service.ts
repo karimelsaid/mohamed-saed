@@ -181,4 +181,8 @@ export class PromotionService {
     getHeroBooks(): Observable<any> {
         return this.http.get(`${this.apiUrl}/hero-books`);
     }
+
+    getBourseSettings(): Observable<any> {
+        return this.http.get(`${environment.apiBaseUrl}/bourse/settings`);
+    }
 }

@@ -10,12 +10,24 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { AnalyticsService } from '../../services/analytics.service';
 import { Chart, registerables } from 'chart.js';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import { faPhone, faFileInvoice, faTruck, faClock, faStore, faEnvelope, faCheckCircle, faHourglassHalf, faPen, faCamera } from '@fortawesome/free-solid-svg-icons';
 Chart.register(...registerables);
+
+interface ShippingRate {
+  governorate: string;
+  rate: number;
+}
+
+interface RegionRate {
+  region: string;
+  rate: number;
+}
 
 @Component({
   selector: 'app-merchant-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, ModalDialogComponent,],
+  imports: [CommonModule, FormsModule, RouterModule, ModalDialogComponent, FontAwesomeModule],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.css']
 })
@@ -24,13 +36,39 @@ export class MerchantDashboardComponent implements OnInit {
   products: any[] = [];
   orders: any[] = [];
   updateRequests: any[] = [];
+  
+  // Icons
+  faPhone = faPhone;
+  faFileInvoice = faFileInvoice;
+  faTruck = faTruck;
+  faClock = faClock;
+  faStore = faStore;
+  faEnvelope = faEnvelope;
+  faCheckCircle = faCheckCircle;
+  faHourglassHalf = faHourglassHalf;
+  faPen = faPen;
+  faCamera = faCamera;
   loadingMerchant = false;
   loadingProducts = false;
   loadingOrders = false;
   loadingUpdateRequests = false;
   loadingAnalytics = false;
+  loadingShippingRates = false;
 
-  activeTab: 'overview' | 'analytics' | 'products' | 'orders' | 'settings' = 'overview';
+  regionCosts: RegionRate[] = [];
+
+  regionMapping: { [key: string]: string[] } = {
+    'القاهرة والجيزة والقليوبية': ['القاهرة', 'الجيزة', 'القليوبية'],
+    'الإسكندرية والدلتا': ['الأسكندرية', 'الدقهلية', 'البحيرة', 'الغربية', 'المنوفية', 'الشرقية', 'كفر الشيخ', 'دمياط'],
+    'مدن القناة': ['الإسماعلية', 'السويس', 'بورسعيد'],
+    'شمال الصعيد': ['الفيوم', 'بني سويف', 'المنيا'],
+    'جنوب الصعيد': ['اسيوط', 'سوهاج', 'قنا', 'الأقصر', 'اسوان'],
+    'المناطق النائية': ['البحر الأحمر', 'الوادي الجديد', 'مطروح', 'شمال سيناء', 'جنوب سيناء']
+  };
+
+  regionKeys: string[] = Object.keys(this.regionMapping);
+
+  activeTab: 'overview' | 'analytics' | 'products' | 'orders' | 'settings' | 'shippingSettings' = 'overview';
   analyticsData: any = null;
   charts: any = {};
 
@@ -69,7 +107,8 @@ export class MerchantDashboardComponent implements OnInit {
     bio: '',
     logoFile: null,
     coverPhotoFile: null,
-    preparationTime: 1
+    preparationTime: 1,
+    merchantShippingMethod: 'knoozbook'
   };
   logoPreview: string | null = null;
   coverPreview: string | null = null;
@@ -81,6 +120,10 @@ export class MerchantDashboardComponent implements OnInit {
   phoneValid: boolean = false;
   phoneTouched: boolean = false;
 
+  // Order Details Modal
+  selectedOrder: any = null;
+  isOrderModalOpen: boolean = false;
+
   // Initialize edit form with current merchant data
   private initializeEditForm() {
     this.editForm.name = this.merchant?.merchantName || this.merchant?.name || '';
@@ -88,6 +131,7 @@ export class MerchantDashboardComponent implements OnInit {
     this.editForm.taxNumber = this.merchant?.taxNumber || '';
     this.editForm.bio = this.merchant?.bio || ''; // Ensure bio is loaded correctly
     this.editForm.preparationTime = this.merchant?.preparationTime || 1;
+    this.editForm.merchantShippingMethod = this.merchant?.merchantShippingMethod || 'knoozbook';
     this.editForm.logoFile = null;
     this.editForm.coverPhotoFile = null;
     this.logoPreview = null;
@@ -114,6 +158,71 @@ export class MerchantDashboardComponent implements OnInit {
     private http: HttpClient,
     private productStateService: ProductStateService,
     private analyticsService: AnalyticsService) { }
+
+  loadShippingRates() {
+    const existingRates = this.merchant.shippingRates || [];
+    
+    // Ensure the edit form is synced with the latest merchant data
+    if (this.merchant?.merchantShippingMethod) {
+      this.editForm.merchantShippingMethod = this.merchant.merchantShippingMethod;
+    }
+
+    // Convert governorate rates to regional rates for the UI
+    this.regionCosts = this.regionKeys.map(regionName => {
+      const govNames = this.regionMapping[regionName];
+      // Find the first matching governorate rate, or default to 50
+      const matchingRate = existingRates.find((r: any) => govNames.includes(r.governorate));
+      return {
+        region: regionName,
+        rate: matchingRate ? matchingRate.rate : 50
+      };
+    });
+  }
+
+  saveShippingSettings() {
+    this.loadingShippingRates = true;
+    
+    const expandedRates: ShippingRate[] = [];
+    this.regionCosts.forEach(rCost => {
+      const govs = this.regionMapping[rCost.region];
+      govs.forEach(gName => {
+        expandedRates.push({ governorate: gName, rate: rCost.rate });
+      });
+    });
+
+    console.log(`[MERCHANT-SHIPPING] Attempting to save shipping settings. Method: ${this.editForm.merchantShippingMethod}, Rates count: ${expandedRates.length}`);
+
+    this.http.patch(`${environment.apiBaseUrl}/merchant/update-shipping-rates`, {
+      merchantId: this.merchant._id,
+      shippingRates: expandedRates,
+      merchantShippingMethod: this.editForm.merchantShippingMethod
+    }).subscribe({
+      next: (res: any) => {
+        this.loadingShippingRates = false;
+        console.log(`[MERCHANT-SHIPPING] Save successful. Server response:`, res);
+        alert('تم حفظ إعدادات الشحن بنجاح');
+        
+        // Update local data with fresh data from server
+        if (res.merchant) {
+          console.log(`[MERCHANT-SHIPPING] Updating local merchant state. Method from server: ${res.merchant.merchantShippingMethod}`);
+          this.merchant = { ...res.merchant };
+          // Sync with auth service and localStorage
+          const token = this.merchantAuthService.getToken();
+          if (token) {
+            this.merchantAuthService.setMerchantAuthFromExternal(token, this.merchant);
+          }
+        } else {
+          this.merchant.shippingRates = [...expandedRates];
+          this.merchant.merchantShippingMethod = this.editForm.merchantShippingMethod;
+        }
+      },
+      error: (err) => {
+        this.loadingShippingRates = false;
+        console.error('Error saving shipping settings:', err);
+        alert('حدث خطأ أثناء حفظ إعدادات الشحن');
+      }
+    });
+  }
 
   ngOnInit(): void {
     // Check if merchant is authenticated first
@@ -220,6 +329,9 @@ export class MerchantDashboardComponent implements OnInit {
           }, 100);
           return;
         }
+
+        // Initialize shipping rates after loading merchant data
+        this.loadShippingRates();
       },
       error: (error: any) => {
         this.loadingMerchant = false;
@@ -497,6 +609,7 @@ export class MerchantDashboardComponent implements OnInit {
     if (this.editForm.taxNumber) formData.append('taxNumber', this.editForm.taxNumber);
     formData.append('bio', this.editForm.bio || ''); // Always send bio field
     formData.append('preparationTime', this.editForm.preparationTime.toString()); // Always send preparationTime
+    formData.append('merchantShippingMethod', this.editForm.merchantShippingMethod); 
 
     // Add logo file if selected
     if (this.editForm.logoFile) {
@@ -762,8 +875,13 @@ export class MerchantDashboardComponent implements OnInit {
   }
 
   viewOrderDetails(order: any): void {
-    // Navigate to order details page or show modal with order details
-    this.router.navigate(['/merchant/order-details', order._id]);
+    this.selectedOrder = order;
+    this.isOrderModalOpen = true;
+  }
+
+  closeOrderModal(): void {
+    this.isOrderModalOpen = false;
+    this.selectedOrder = null;
   }
 
   setTab(tab: any) {
@@ -771,6 +889,8 @@ export class MerchantDashboardComponent implements OnInit {
     if (tab === 'analytics') {
       // Small delay to ensure canvas is rendered
       setTimeout(() => this.initCharts(), 100);
+    } else if (tab === 'shippingSettings') {
+      this.loadShippingRates();
     }
   }
 

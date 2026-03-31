@@ -3,6 +3,7 @@ import { AuthService } from '../auth/auth.service';
 import { DataService } from '../services/data.service';
 import { PaymentService } from '../services/payment.service';
 import { map, take } from 'rxjs/operators';
+import { forkJoin, of } from 'rxjs';
 import { User } from '../auth/user.model';
 import governoratesData from '../../../public/json/egypt-governorates.json';
 import { faCheck, faHandPointRight } from '@fortawesome/free-solid-svg-icons';
@@ -13,6 +14,7 @@ import { environment } from '../../environments/environment';
 import { FreeShippingService, FreeShippingRules } from '../services/free-shipping.service';
 import { PaymentModalComponent } from '../payment-modal/payment-modal.component';
 import { PromotionService } from '../services/promotion.service';
+import { HttpClient } from '@angular/common/http';
 
 @Component({
   selector: 'app-checkout-modal',
@@ -33,43 +35,43 @@ export class CheckoutModalComponent implements OnInit {
   isLoading = true;
   showSuccessMessage: boolean = false;
   showPurchaseConfirmation: boolean = false;
+  activeBourseOffer: any = null;
+
+  isInternalItem(item: any): boolean {
+    // 1. If explicitly marked as 'knoozbook' shipping, it's ALWAYS internal for shipping rules
+    if (item.shippingMethod === 'knoozbook') return true;
+    
+    // 2. If explicitly marked as 'merchant' shipping, it's ALWAYS external/independent
+    if (item.shippingMethod === 'merchant') return false;
+
+    // 3. Fallback logic for platform/admin identification
+    const merchantId = item.merchantId;
+    const name = (item.merchantName || item.name || '').toLowerCase();
+    const role = (item.merchantRole || item.role || '').toLowerCase();
+
+    if (!merchantId) return true;
+    if (name === 'تاجر كنوز' || name === 'kenouz' || role === 'admin') return true;
+
+    const internalIds = ['Kenouz', 'admin', 'admin__karim_mohamed__'];
+    if (typeof merchantId === 'string') {
+      const lowerId = merchantId.toLowerCase();
+      if (internalIds.some(id => id.toLowerCase() === lowerId)) return true;
+    }
+
+    if (typeof merchantId === 'object') {
+      const id = (merchantId._id || merchantId.id || '').toString().toLowerCase();
+      const objRole = (merchantId.role || '').toLowerCase();
+      if (role === 'admin' || objRole === 'admin' || internalIds.some(iid => iid.toLowerCase() === id)) return true;
+    }
+
+    return false;
+  }
 
   get hasExternalMerchantProducts(): boolean {
-    const internalIds = ['Kenouz', 'admin', 'admin__karim_mohamed__'];
-
-    const isInternal = (item: any): boolean => {
-      const merchantId = item.merchantId;
-      const merchantName = item.merchantName;
-      const merchantRole = item.merchantRole;
-
-      if (!merchantId) return true; // Default to Kenouz (Internal)
-      if (merchantName === 'تاجر كنوز' || merchantRole === 'admin') return true;
-
-      const internalIds = ['Kenouz', 'admin', 'admin__karim_mohamed__'];
-
-      // If it's a string, check if it's in the internal list (case-insensitive)
-      if (typeof merchantId === 'string') {
-        const lowerId = merchantId.toLowerCase();
-        return internalIds.some(id => id.toLowerCase() === lowerId);
-      }
-
-      // If it's an object (populated), check common ID fields
-      if (typeof merchantId === 'object') {
-        const id = (merchantId._id || merchantId.id || '').toString();
-        const role = merchantId.role || merchantRole || '';
-        const lowerId = id.toLowerCase();
-
-        if (role === 'admin' || internalIds.some(id => id.toLowerCase() === lowerId)) {
-          return true;
-        }
-      }
-      return false;
-    };
-
     // Case 1: Custom Package
     if (this.customPackage) {
       if (this.customPackage.products && this.customPackage.products.length > 0) {
-        return this.customPackage.products.some(p => !isInternal(p));
+        return this.customPackage.products.some(p => !this.isInternalItem(p));
       }
       return false;
     }
@@ -77,7 +79,7 @@ export class CheckoutModalComponent implements OnInit {
     // Case 2: Regular Cart Items
     if (!this.cartItems || this.cartItems.length === 0) return false;
 
-    return this.cartItems.some(item => !isInternal(item));
+    return this.cartItems.some(item => !this.isInternalItem(item));
   }
 
   get checkOutItems(): any[] {
@@ -118,6 +120,7 @@ export class CheckoutModalComponent implements OnInit {
   // Cash on Delivery Fee
   codFee: number = 10;
   showCodConfirmation: boolean = false;
+  merchantShippers: string[] = [];
 
   private cartItemsLoaded: boolean = false;
   private freeShippingRulesLoaded: boolean = false;
@@ -145,7 +148,11 @@ export class CheckoutModalComponent implements OnInit {
     includedCategories: [],
     includedGovernorates: [],
     freeShippingEnabled: true,
-    codFee: 10
+    codFee: 10,
+    communityShippingCost: 70,
+    swapShippingCost: 70,
+    auctionShippingCost: 70,
+    regionCosts: {}
   };
 
   constructor(
@@ -153,7 +160,8 @@ export class CheckoutModalComponent implements OnInit {
     private dataService: DataService,
     private paymentService: PaymentService,
     private freeShippingService: FreeShippingService,
-    private promotionService: PromotionService
+    private promotionService: PromotionService,
+    private http: HttpClient
   ) { }
 
   calculateDiscountedPrice(price: number, bookId?: string, quantity: number = 1): { discountedPrice: number, discountedQty: number } {
@@ -249,9 +257,23 @@ export class CheckoutModalComponent implements OnInit {
       this.appliedCoupon = coupon;
       this.calculateTotalPrice();
     });
-    this.loadCartItems();
     this.loadUserProfile();
     this.loadFreeShippingRules();
+    this.loadBourseOffer();
+  }
+
+  loadBourseOffer() {
+    this.http.get<{active: boolean, offer?: any}>(`${environment.apiBaseUrl}/bourse/active`).subscribe({
+      next: (res) => {
+        if (res.active && res.offer) {
+          this.activeBourseOffer = res.offer;
+        }
+        this.loadCartItems(); // Load cart AFTER bourse data is ready
+      },
+      error: () => {
+        this.loadCartItems(); // Still load cart even if bourse fails
+      }
+    });
   }
 
   loadUserProfile() {
@@ -322,15 +344,30 @@ export class CheckoutModalComponent implements OnInit {
             map((books: any[]) => {
               return bookIds.map(idInCart => {
                 const isFree = idInCart.endsWith(':free');
-                const realId = isFree ? idInCart.split(':')[0] : idInCart;
+                const isBourse = idInCart.includes(':bourse:');
+                const realId = idInCart.split(':')[0];
+                const bourseOfferId = isBourse ? idInCart.split(':bourse:')[1] : null;
 
                 const bookMatch = books.find(b => b.products_id === realId);
                 if (bookMatch) {
+                  let finalPrice = bookMatch.product_price;
+                  
+                  if (isFree) {
+                    finalPrice = 0;
+                  } else if (isBourse && this.activeBourseOffer && this.activeBourseOffer._id === bourseOfferId) {
+                    const bourseBookInfo = this.activeBourseOffer.books.find((b: any) => b.bookId === realId);
+                    if (bourseBookInfo) {
+                      finalPrice = bourseBookInfo.boursePrice;
+                    }
+                  }
+
                   return {
                     ...bookMatch,
                     products_id: idInCart,
-                    product_price: isFree ? 0 : bookMatch.product_price,
+                    product_price: finalPrice,
                     isFree: isFree,
+                    isBourse: isBourse,
+                    bourseOfferId: bourseOfferId,
                     quantity: bookMatch.quantity ?? 1
                   };
                 }
@@ -344,8 +381,10 @@ export class CheckoutModalComponent implements OnInit {
                 if (a.product_quantity <= 0 && b.product_quantity > 0) return 1;
                 return b.product_quantity - a.product_quantity;
               });
-              this.calculateTotalPrice();
               this.isLoading = false;
+              this.cartItemsLoaded = true;
+              this.calculateShippingCost();
+              this.calculateTotalPrice();
             },
             error: (err) => {
               console.error('Error loading cart items:', err);
@@ -381,56 +420,154 @@ export class CheckoutModalComponent implements OnInit {
       this.calculateTotalPrice();
       return;
     }
-    console.log('calculateShippingCost called');
-    if (!this.freeShippingRules.freeShippingEnabled) {
-      this.calculateShippingCostNormal();
-      return;
-    }
+    
 
     const items = this.checkOutItems;
-    const totalQuantity = items.reduce((sum, item) => sum + (item.quantity || 1), 0);
-    const totalPrice = this.customPackage ? this.customPackage.totalPrice : items.reduce((total, book) => {
-      if (book.product_quantity > 0 || this.customPackage) {
-        return total + (parseFloat(book.product_price) * (book.quantity || 1));
-      }
-      return total;
+    console.log('[DEBUG-SHIPPING] Total items in checkout:', items.length);
+    
+    // Split items for free shipping check: only platform-shipped items (internal or knoozbook)
+    const platformItems = items.filter(item => {
+      // Platform items are:
+      // 1. Items with 'knoozbook' method (even if from a merchant)
+      // 2. Items with no method specified (defaults to platform)
+      // 3. Internal items that ARE NOT explicitly marked as 'merchant' method
+      const isExplicitMerchant = item.shippingMethod === 'merchant';
+      const isKnoozMethod = item.shippingMethod === 'knoozbook' || !item.shippingMethod;
+      const internal = this.isInternalItem(item);
+      
+      const isPlatform = isKnoozMethod || (internal && !isExplicitMerchant);
+      
+      console.log(`[DEBUG-SHIPPING] Item: ${item.product_name}, Internal: ${internal}, Method: ${item.shippingMethod}, IsPlatform: ${isPlatform}`);
+      return isPlatform;
+    });
+
+    const platformQuantity = platformItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
+    const platformPrice = platformItems.reduce((total, book) => {
+      return total + (parseFloat(book.product_price) * (book.quantity || 1));
     }, 0);
 
-    if (totalQuantity >= this.freeShippingRules.minQuantity && totalPrice >= this.freeShippingRules.minOrderValue) {
+    const isPlatformShippingFree = (platformQuantity >= this.freeShippingRules.minQuantity && platformPrice >= this.freeShippingRules.minOrderValue);
+    
+    const governorateName = this.editedUserProfile?.governorate || this.userProfile?.governorate;
+    if (!governorateName) {
+      console.warn('Shipping calculation failed: governorateName is missing');
       this.shippingCost = 0;
-      console.log('Free shipping applied, shippingCost set to 0');
       this.calculateTotalPrice();
       return;
     }
 
-    const governorateName = this.editedUserProfile?.governorate || this.userProfile?.governorate;
-    if (!governorateName) {
-      this.shippingCost = 0;
-      this.calculateTotalPrice();
-      return;
+    // Calculate Platform Base Cost
+    let platformShippingCost = 0;
+    if (platformItems.length > 0) {
+      platformShippingCost = isPlatformShippingFree ? 0 : this._getPlatformShippingRate(governorateName);
+      console.log(`[DEBUG-SHIPPING] Platform base cost: ${platformShippingCost} (Free: ${isPlatformShippingFree})`);
     }
-    const governorate = this.governorates.find(g => g.governorate_name === governorateName);
-    if (governorate && governorate.shipping_cost) {
-      this.shippingCost = parseFloat(governorate.shipping_cost);
-    } else {
-      this.shippingCost = 0;
-    }
-    this.calculateTotalPrice();
+
+    // Handle Independent Merchants (Cumulative)
+    this.handleMerchantShippingCumulative(items, governorateName, platformShippingCost);
   }
 
-  private calculateShippingCostNormal(): void {
-    const governorateName = this.editedUserProfile?.governorate || this.userProfile?.governorate;
-    if (!governorateName) {
-      this.shippingCost = 0;
-      this.calculateTotalPrice();
-      return;
-    }
-    const governorate = this.governorates.find(g => g.governorate_name === governorateName);
-    if (governorate && governorate.shipping_cost) {
-      this.shippingCost = parseFloat(governorate.shipping_cost);
+  private handleMerchantShippingCumulative(items: any[], governorateName: string, platformBaseCost: number): void {
+    const uniqueMerchants = new Map<string, any>();
+    this.merchantShippers = [];
+
+    items.forEach(item => {
+      const mid = item.merchantId;
+      const id = typeof mid === 'object' ? (mid._id || mid.id || '').toString() : (mid || '').toString();
+      const isInternal = this.isInternalItem(item);
+      
+      // An item ONLY triggers independent merchant shipping if:
+      // 1. It is explicitly marked as 'merchant' shipping method
+      // 2. AND it is NOT considered internal (isInternalItem handles 'knoozbook' method check)
+      if (item.shippingMethod === 'merchant' && !isInternal) {
+        const mName = item.merchantName || item.name || 'تاجر مستقل';
+        
+        // If it's internal (Kenouz/Admin) and they chose 'merchant' shipping,
+        // we might want to skip the alert name per previous feedback, 
+        // but for calculation it MUST be here.
+        
+        console.log(`[DEBUG-SHIPPING] Found merchant item: ${item.product_name}, Merchant: ${mName}, ID: ${id}`);
+        if (!uniqueMerchants.has(id)) {
+          uniqueMerchants.set(id, mid);
+          // Only add to display list if it's NOT the platform/internal merchant
+          // to avoid "Shipped by Kenouz" warning if they are just the admin.
+          if (!isInternal && !this.merchantShippers.includes(mName)) {
+            this.merchantShippers.push(mName);
+          }
+        }
+      }
+    });
+
+    let totalShipping = platformBaseCost;
+    console.log('[DEBUG-SHIPPING] Unique independent merchants found:', uniqueMerchants.size);
+
+    if (uniqueMerchants.size > 0) {
+      const profileRequests = Array.from(uniqueMerchants.values()).map(mid => this.authService.getUserProfile(mid));
+      
+      forkJoin(profileRequests).subscribe({
+        next: (profiles: any[]) => {
+          profiles.forEach((profile, index) => {
+            const mName = this.merchantShippers[index] || 'Unknown Merchant';
+            console.log(`[DEBUG-SHIPPING] Checking rates for ${mName}:`, profile?.shippingRates);
+            console.log(`[DEBUG-SHIPPING] Looking for governorate: "${governorateName}"`);
+            
+            if (profile?.shippingRates?.length > 0) {
+              const mRate = profile.shippingRates.find((r: any) => {
+                const match = r.governorate === governorateName;
+                console.log(`[DEBUG-SHIPPING] Comparing "${r.governorate}" vs "${governorateName}" -> ${match}`);
+                return match;
+              });
+              
+              if (mRate) {
+                const rateVal = parseFloat(mRate.rate);
+                console.log(`[DEBUG-SHIPPING] Found custom rate for ${mName}: ${rateVal}`);
+                totalShipping += rateVal;
+              } else {
+                const fallback = this._getPlatformShippingRate(governorateName);
+                console.log(`[DEBUG-SHIPPING] Merchant ${mName} has no rate for "${governorateName}", using fallback: ${fallback}`);
+                totalShipping += fallback;
+              }
+            } else {
+              const fallback = this._getPlatformShippingRate(governorateName);
+              console.log(`[DEBUG-SHIPPING] Merchant ${mName} has no shipping rates defined, using fallback: ${fallback}`);
+              totalShipping += fallback;
+            }
+          });
+          console.log('[DEBUG-SHIPPING] Final calculated cumulative shippingCost:', totalShipping);
+          this.shippingCost = totalShipping;
+          this.calculateTotalPrice();
+        },
+        error: (err) => {
+          console.error('[DEBUG-SHIPPING] Error fetching merchant profiles:', err);
+          const fallbackTotal = totalShipping + (uniqueMerchants.size * this._getPlatformShippingRate(governorateName));
+          this.shippingCost = fallbackTotal;
+          this.calculateTotalPrice();
+        }
+      });
     } else {
-      this.shippingCost = 0;
+      console.log('[DEBUG-SHIPPING] No independent merchants, using base cost:', totalShipping);
+      this.shippingCost = totalShipping;
+      this.calculateTotalPrice();
     }
+  }
+
+
+
+  private _getPlatformShippingRate(governorateName: string): number {
+    const governorate = this.governorates.find(g => g.governorate_name === governorateName);
+    if (governorate) {
+      const region = governorate.region;
+      if (region && this.freeShippingRules.regionCosts && this.freeShippingRules.regionCosts[region]) {
+        return this.freeShippingRules.regionCosts[region];
+      } else if (governorate.shipping_cost) {
+        return parseFloat(governorate.shipping_cost);
+      }
+    }
+    return 0;
+  }
+
+  private _applyDefaultShipping(governorateName: string): void {
+    this.shippingCost = this._getPlatformShippingRate(governorateName);
     this.calculateTotalPrice();
   }
 
@@ -439,13 +576,20 @@ export class CheckoutModalComponent implements OnInit {
     const maxProducts = this.appliedCoupon?.maxProducts || 0;
 
     const itemsTotal = this.customPackage ? this.customPackage.totalPrice : this.cartItems.reduce((total, book) => {
+      if (book.isFree) {
+        return total + 0;
+      }
+
+      // Bourse items: use bourse price directly, no coupon discount
+      if (book.isBourse) {
+        const price = parseFloat(book.product_price);
+        const qty = book.quantity || 1;
+        return total + (price * qty);
+      }
+
       if (book.product_quantity > 0) {
         const price = parseFloat(book.product_price);
         const qty = book.quantity || 1;
-
-        if (book.isFree) {
-          return total + 0;
-        }
 
         // If maxProducts limit reached, don't apply discount to this item
         if (this.appliedCoupon && maxProducts > 0 && discountedProductCount >= maxProducts) {
@@ -789,7 +933,8 @@ export class CheckoutModalComponent implements OnInit {
           referralCode: referralCode,
           couponCode: this.appliedCoupon?.code,
           bookId: bookId,
-          useWallet: this.useWallet
+          useWallet: this.useWallet,
+          shippingMethod: purchasedItems[0]?.shippingMethod || 'knoozbook'
         };
 
         console.log('[Checkout] Submitting order with data:', orderData);
@@ -925,7 +1070,8 @@ export class CheckoutModalComponent implements OnInit {
           useWallet: this.useWallet,
           paymentMethod: 'cod',
           codFee: this.codFee,
-          totalAmount: this.totalPrice + this.codFee
+          totalAmount: this.totalPrice + this.codFee,
+          shippingMethod: purchasedItems[0]?.shippingMethod || 'knoozbook'
         };
 
         console.log('[Checkout] Submitting COD order with data:', orderData);

@@ -83,7 +83,10 @@ export class PrintComponent implements OnInit {
     includedCategories: [],
     includedGovernorates: [],
     freeShippingEnabled: true,
-    codFee: 10
+    codFee: 10,
+    communityShippingCost: 70,
+    swapShippingCost: 70,
+    auctionShippingCost: 70
   };
 
   printingSettings: any = {

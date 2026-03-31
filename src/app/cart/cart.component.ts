@@ -8,11 +8,13 @@ import { environment } from '../../environments/environment';
 import { Router } from '@angular/router';
 import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
 import { PromotionService } from '../services/promotion.service';
+import { HttpClient } from '@angular/common/http';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 
 @Component({
   selector: 'app-cart',
   standalone: true,
-  imports: [CommonModule, NgIf, CheckoutModalComponent, NgxSkeletonLoaderModule],
+  imports: [CommonModule, NgIf, CheckoutModalComponent, NgxSkeletonLoaderModule, FontAwesomeModule],
   templateUrl: './cart.component.html',
   styleUrls: ['./cart.component.css']
 })
@@ -24,11 +26,19 @@ export class CartComponent implements OnInit {
   appliedCoupon: any = null;
   showCheckoutModal = false;
 
+  // Bourse Config
+  freeGiftThreshold = 1000;
+  activeBourseOffer: any = null;
+  hasExpiredBourseItems = false;
+  hasActiveBourseItems = false;
+  hasNormalItems = false;
+
   constructor(
     private authService: AuthService,
     private dataService: DataService,
     private router: Router,
-    private promotionService: PromotionService
+    private promotionService: PromotionService,
+    private http: HttpClient
   ) { }
 
   ngOnInit(): void {
@@ -36,7 +46,7 @@ export class CartComponent implements OnInit {
       this.appliedCoupon = coupon;
       this.calculateTotal();
     });
-    this.loadCartBooks();
+    this.loadBourseConfig();
   }
 
   calculateDiscountedPrice(price: number, bookId?: string, quantity: number = 1): { discountedPrice: number, discountedQty: number } {
@@ -68,6 +78,24 @@ export class CartComponent implements OnInit {
     this.router.navigate(['/']);
   }
 
+  loadBourseConfig() {
+     this.http.get<{active: boolean, offer?: any, freeGiftThreshold: number}>(`${environment.apiBaseUrl}/bourse/active`).subscribe({
+        next: (res) => {
+           this.freeGiftThreshold = res.freeGiftThreshold || 1000;
+           if (res.active && res.offer) {
+              this.activeBourseOffer = res.offer;
+           } else {
+              this.activeBourseOffer = null;
+           }
+           this.loadCartBooks(); // Load books after getting Bourse config
+        },
+        error: (err) => {
+           console.error('Error fetching bourse config', err);
+           this.loadCartBooks();
+        }
+     });
+  }
+
   loadCartBooks() {
     this.authService.cartBookIds.subscribe(bookIds => {
       if (bookIds.length > 0) {
@@ -76,16 +104,39 @@ export class CartComponent implements OnInit {
             // Map books and check if their ID exists in cart with or without :free suffix
             return bookIds.map(idInCart => {
               const isFree = idInCart.endsWith(':free');
-              const realId = isFree ? idInCart.split(':')[0] : idInCart;
+              const isBourse = idInCart.includes(':bourse:');
+              const realId = idInCart.split(':')[0];
+              const bourseOfferId = isBourse ? idInCart.split(':bourse:')[1] : null;
 
               const bookMatch = books.find(b => b.products_id === realId);
               if (bookMatch) {
-                // Return a copy with overrides if free
+                let finalPrice = bookMatch.product_price;
+                let isExpiredBourse = false;
+                
+                if (isFree) {
+                  finalPrice = 0;
+                } else if (isBourse) {
+                   // Check against active offer
+                   if (this.activeBourseOffer && this.activeBourseOffer._id === bourseOfferId) {
+                      const bourseBookInfo = this.activeBourseOffer.books.find((b: any) => b.bookId === realId);
+                      if (bourseBookInfo) {
+                         finalPrice = bourseBookInfo.boursePrice;
+                      } else {
+                         isExpiredBourse = true;
+                      }
+                   } else {
+                      isExpiredBourse = true; // offer no longer active
+                   }
+                }
+
                 return {
                   ...bookMatch,
-                  products_id: idInCart, // Keep the suffix for removal logic
-                  product_price: isFree ? 0 : bookMatch.product_price,
-                  isFree: isFree
+                  products_id: idInCart, // Keep the suffix
+                  product_price: finalPrice,
+                  isFree: isFree,
+                  isBourse: isBourse,
+                  bourseOfferId: bourseOfferId,
+                  isExpiredBourse: isExpiredBourse
                 };
               }
               return null;
@@ -94,12 +145,13 @@ export class CartComponent implements OnInit {
         ).subscribe({
           next: (books) => {
             console.log(`[Cart] Loaded ${books.length} matching books out of ${bookIds.length} IDs in cart`);
-            if (books.length < bookIds.length) {
-              const matchingIds = books.map(b => b.products_id);
-              const missingIds = bookIds.filter(id => !matchingIds.includes(id));
-              console.warn(`[Cart] Missing IDs:`, missingIds);
-            }
             this.cartBooks = books;
+            
+            // Check flags
+            this.hasExpiredBourseItems = books.some(b => b.isExpiredBourse);
+            this.hasActiveBourseItems = books.some(b => b.isBourse && !b.isExpiredBourse);
+            this.hasNormalItems = books.some(b => !b.isBourse && !b.isFree);
+
             this.calculateTotal();
             this.isLoading = false;
           },

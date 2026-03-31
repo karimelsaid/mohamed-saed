@@ -111,11 +111,51 @@
     </div>
   </div>
 
+  <!-- 📈 Book Bourse Banner -->
+  <div class="container mx-auto px-4 py-8">
+    <a routerLink="/bourse"
+      class="block relative overflow-hidden rounded-3xl bg-gradient-to-r from-red-600 via-red-700 to-red-800 shadow-2xl group hover:shadow-[0_20px_60px_rgba(220,38,38,0.4)] transition-all duration-500 hover:-translate-y-1">
+      
+      <!-- Animated Background Pattern -->
+      <div class="absolute inset-0 opacity-10" style="background-image: url('data:image/svg+xml,%3Csvg width=\'40\' height=\'40\' viewBox=\'0 0 40 40\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'1\' fill-rule=\'evenodd\'%3E%3Cpath d=\'M0 38.59l2.83-2.83 1.41 1.41L1.41 40H0v-1.41zm0-2.83l2.83-2.83 1.41 1.41L1.41 37.17H0v-1.41zm0-2.83l2.83-2.83 1.41 1.41L1.41 34.34H0v-1.41z\'/%3E%3C/g%3E%3C/svg%3E');"></div>
+      
+      <!-- Glowing Orbs -->
+      <div class="absolute -top-16 -right-16 w-48 h-48 bg-yellow-400/20 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700"></div>
+      <div class="absolute -bottom-16 -left-16 w-48 h-48 bg-red-400/20 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700"></div>
+
+      <div class="relative z-10 flex flex-col md:flex-row items-center justify-between p-8 md:p-12 gap-6">
+        <!-- Text Content -->
+        <div class="flex-1 text-center md:text-right">
+          <div class="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-1.5 rounded-full mb-4 border border-white/20">
+            <span class="w-2 h-2 bg-yellow-400 rounded-full animate-pulse shadow-[0_0_8px_rgba(250,204,21,0.8)]"></span>
+            <span class="text-white text-xs font-bold tracking-wider">عروض حصرية كل 45 دقيقة</span>
+          </div>
+          <h2 class="text-3xl md:text-4xl font-black text-white mb-3">
+            📈 بورصة <span class="text-yellow-400">الكتب</span>
+          </h2>
+          <p class="text-red-100 text-base md:text-lg max-w-lg font-medium">
+            أسعار مخفضة جداً تتغير كل 45 دقيقة! اغتنم الفرصة قبل أن تنتهي.
+          </p>
+        </div>
+
+        <!-- CTA Button -->
+        <div class="flex-shrink-0">
+          <div class="bg-yellow-400 hover:bg-yellow-300 text-red-900 font-black px-10 py-4 rounded-2xl shadow-[0_8px_30px_rgba(250,204,21,0.4)] group-hover:shadow-[0_12px_40px_rgba(250,204,21,0.6)] transition-all duration-300 text-lg flex items-center gap-3 group-hover:scale-105">
+            <span>ادخل البورصة الآن</span>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 transition-transform group-hover:translate-x-[-4px]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" />
+            </svg>
+          </div>
+        </div>
+      </div>
+    </a>
+  </div>
+
   <!-- New Arrivals Section (Luxury Book Gallery) -->
   <div class="container mx-auto px-4 py-8">
     <div class="flex flex-col items-center mb-10">
       <h2 class="text-3xl font-bold text-[var(--knooz-indigo)] dark:text-white mb-2">جديد الكتب والمؤلفات</h2>
-      <p class="text-gray-500 dark:text-gray-400 mb-6">أحدث الإضافات إلى مكتبة كنوز</p>
+      <p class="text-gray-500 dark:text-gray-400 mb-6">أحدث الإضافات إلى knoozbook</p>
       <div class="w-20 h-1 bg-[var(--knooz-gold)] rounded-full"></div>
     </div>
 

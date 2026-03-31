@@ -287,14 +287,15 @@
       <div class="mt-8 pt-6 border-t border-white/5 text-center">
         <p class="text-xs text-gray-500 mb-4 max-w-2xl mx-auto">الكتب المعروضة يتم توفيرها من خلال موردين متنوعين. نحن
           منصة للبيع فقط، وفي حال وجود أي ملاحظات حول حقوق الملكية يرجى التواصل معنا.</p>
-        <p class="text-sm text-gray-400">© {{ currentYear }} مكتبة كنوز. جميع الحقوق محفوظة.</p>
+        <p class="text-sm text-gray-400">© {{ currentYear }} knoozbook. جميع الحقوق محفوظة.</p>
       </div>
     </div>
   </footer>
 </div>
 
 <app-navbar-icons (accountClick)="openAccountModal()" [isBottomNav]="true" *ngIf="!isMushafPage && !isAdminPage"
-  class="fixed bottom-0 left-0 right-0 block md:hidden bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-t border-gray-100 dark:border-gray-800 p-4 shadow-lg z-50"></app-navbar-icons>
+  class="fixed bottom-0 left-0 right-0 block md:hidden bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-t border-gray-100 dark:border-gray-800 pt-2 pb-[env(safe-area-inset-bottom,10px)] shadow-lg z-50"
+  style="padding-bottom: max(env(safe-area-inset-bottom, 10px), 10px);"></app-navbar-icons>
 <app-account-modal #accountModal></app-account-modal>
 <app-modal-dialog *ngIf="modalConfig" [isOpen]="!!modalConfig" [title]="modalConfig.title || ''"
   [message]="modalConfig.message || ''" [confirmText]="modalConfig.confirmText || 'موافق'"
@@ -307,11 +308,8 @@
 <app-network-status></app-network-status>
 
 <!-- Live Update Service Modal -->
-<app-live-update-modal
-  *ngIf="liveUpdateService.status$ | async as status"
-  [version]="(liveUpdateService.version$ | async) || ''"
-  [progress]="(liveUpdateService.progress$ | async) || 0"
-  [status]="status"
-  [errorMessage]="(liveUpdateService.error$ | async) || ''"
+<app-live-update-modal *ngIf="liveUpdateService.status$ | async as status"
+  [version]="(liveUpdateService.version$ | async) || ''" [progress]="(liveUpdateService.progress$ | async) || 0"
+  [status]="status" [errorMessage]="(liveUpdateService.error$ | async) || ''"
   (onUpdate)="liveUpdateService.startUpdate()">
 </app-live-update-modal>

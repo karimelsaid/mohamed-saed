@@ -210,6 +210,56 @@
           </div>
         </div>
 
+        <!-- Physical Dimensions (Shipping) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <!-- Weight -->
+          <div>
+            <label for="weight" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              وزن المنتج (جم) <span class="text-red-500">*</span>
+            </label>
+            <div class="relative">
+              <input type="number" id="weight" formControlName="weight"
+                class="block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors duration-200"
+                placeholder="500" min="1" step="1"
+                [class.border-red-500]="productForm.get('weight')?.invalid && productForm.get('weight')?.touched" />
+            </div>
+            <div *ngIf="productForm.get('weight')?.invalid && productForm.get('weight')?.touched"
+              class="mt-2 text-sm text-red-600 dark:text-red-400 flex items-center">
+              الوزن مطلوب
+            </div>
+          </div>
+
+          <!-- Length -->
+          <div>
+            <label for="length" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              الطول (سم)
+            </label>
+            <input type="number" id="length" formControlName="length"
+              class="block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors duration-200"
+              placeholder="اختياري" min="0" step="0.1" />
+          </div>
+
+          <!-- Width -->
+          <div>
+            <label for="width" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              العرض (سم)
+            </label>
+            <input type="number" id="width" formControlName="width"
+              class="block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors duration-200"
+              placeholder="اختياري" min="0" step="0.1" />
+          </div>
+
+          <!-- Height -->
+          <div>
+            <label for="height" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              الارتفاع (سم)
+            </label>
+            <input type="number" id="height" formControlName="height"
+              class="block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors duration-200"
+              placeholder="اختياري" min="0" step="0.1" />
+          </div>
+        </div>
+
         <!-- Product Images -->
         <div>
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">

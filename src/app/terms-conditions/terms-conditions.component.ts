@@ -7,7 +7,7 @@ import { Component } from '@angular/core';
       <h1 class="text-3xl font-bold mb-4">الشروط والأحكام</h1>
       <div class="space-y-4 rtl">
         <p>
-          مرحبًا بكم في مكتبة كنوز. باستخدامك لهذا الموقع، فإنك توافق على الالتزام بالشروط والأحكام التالية:
+          مرحبًا بكم في knoozbook. باستخدامك لهذا الموقع، فإنك توافق على الالتزام بالشروط والأحكام التالية:
         </p>
         <ul class="list-disc list-inside mb-4 space-y-2 text-gray-700 dark:text-gray-300">
           <li>جميع المحتويات المعروضة هي ملك لأصحابها ولا تتحمل المكتبة مسؤولية أي انتهاك لحقوق الملكية الفكرية.</li>
@@ -23,4 +23,4 @@ import { Component } from '@angular/core';
     </div>
   `,
 })
-export class TermsConditionsComponent {}
+export class TermsConditionsComponent { }

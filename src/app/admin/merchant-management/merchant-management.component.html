@@ -1,4 +1,4 @@
-<div class="min-h-screen bg-gray-50">
+<div class="min-h-screen bg-gray-50 pb-20">
   <!-- Header Section -->
   <div class="bg-white shadow-sm border-b">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -20,103 +20,155 @@
     </div>
   </div>
 
+  <!-- Quick Stats Overview -->
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4">
+        <div class="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600">
+          <fa-icon [icon]="faStore"></fa-icon>
+        </div>
+        <div>
+          <p class="text-sm text-gray-500">إجمالي التجار</p>
+          <p class="text-xl font-bold text-gray-900">{{ stats.total }}</p>
+        </div>
+      </div>
+      <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4">
+        <div class="w-12 h-12 rounded-lg bg-green-100 flex items-center justify-center text-green-600">
+          <fa-icon [icon]="faCheckCircle"></fa-icon>
+        </div>
+        <div>
+          <p class="text-sm text-gray-500">نشط</p>
+          <p class="text-xl font-bold text-gray-900">{{ stats.approved }}</p>
+        </div>
+      </div>
+      <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4">
+        <div class="w-12 h-12 rounded-lg bg-yellow-100 flex items-center justify-center text-yellow-600">
+          <fa-icon [icon]="faExclamationTriangle"></fa-icon>
+        </div>
+        <div>
+          <p class="text-sm text-gray-500">بانتظار الموافقة</p>
+          <p class="text-xl font-bold text-gray-900">{{ stats.pending }}</p>
+        </div>
+      </div>
+      <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4">
+        <div class="w-12 h-12 rounded-lg bg-red-100 flex items-center justify-center text-red-600">
+          <fa-icon [icon]="faTimesCircle"></fa-icon>
+        </div>
+        <div>
+          <p class="text-sm text-gray-500">موقوف</p>
+          <p class="text-xl font-bold text-gray-900">{{ stats.suspended }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Main Content -->
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <!-- Loading State -->
-    <div *ngIf="loading" class="flex items-center justify-center py-12">
+    <div *ngIf="loading" class="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border border-dashed border-gray-300">
       <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      <span class="ml-3 text-lg text-gray-600">جاري تحميل التجار...</span>
+      <span class="mt-4 text-lg text-gray-600">جاري تحميل التجار...</span>
     </div>
 
     <!-- Empty State -->
-    <div *ngIf="!loading && merchants.length === 0" class="text-center py-12">
-      <svg class="mx-auto h-24 w-24 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1"
-          d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z">
-        </path>
-      </svg>
-      <h3 class="mt-4 text-lg font-medium text-gray-900">لا يوجد تجار</h3>
-      <p class="mt-2 text-gray-500">لم يتم العثور على أي تجار في النظام حالياً.</p>
+    <div *ngIf="!loading && merchants.length === 0" class="text-center py-20 bg-white rounded-2xl border border-dashed border-gray-300">
+      <div class="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+        <fa-icon [icon]="faStore" class="text-3xl text-gray-300"></fa-icon>
+      </div>
+      <h3 class="text-xl font-bold text-gray-900">لا يوجد تجار حالياً</h3>
+      <p class="mt-2 text-gray-500">سيظهر التجار هنا فور انضمامهم للنظام.</p>
     </div>
 
     <!-- Merchants Grid -->
-    <div *ngIf="!loading && merchants.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div *ngIf="!loading && merchants.length > 0" class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
       <div *ngFor="let merchant of merchants"
-        class="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200 overflow-hidden">
-        <!-- Merchant Header -->
-        <div class="px-6 py-4 border-b border-gray-200">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center">
-              <div class="flex-shrink-0">
-                <img [src]="getMerchantLogoUrl(merchant)" alt="{{ merchant.name }}"
-                  class="w-12 h-12 object-cover rounded-full border border-gray-200">
-              </div>
-              <div class="ml-4">
-                <h3 class="text-lg font-semibold text-gray-900">{{ merchant.name }}</h3>
-                <p class="text-sm text-gray-600">{{ merchant.email }}</p>
-              </div>
+        class="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl transition-all duration-300 group">
+        
+        <!-- Badge Section (Z-index overlap) -->
+        <div class="px-6 pt-6 pb-2">
+            <div class="flex items-center justify-between mb-4">
+                <div [ngClass]="getActivityLevel(merchant).color" class="px-3 py-1 rounded-full text-xs font-bold border">
+                    مستوى النشاط: {{ getActivityLevel(merchant).label }}
+                </div>
+                <div class="flex gap-2">
+                   <span *ngIf="merchant.approved" class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                   <span *ngIf="!merchant.approved" class="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span>
+                </div>
             </div>
-            <div class="flex items-center space-x-2 rtl:space-x-reverse">
-              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" [ngClass]="{
-                  'bg-green-100 text-green-800': merchant.approved,
-                  'bg-yellow-100 text-yellow-800': !merchant.approved
-                }">
-                {{ merchant.approved ? 'معتمد' : 'غير معتمد' }}
-              </span>
-              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" [ngClass]="{
-                  'bg-green-100 text-green-800': !merchant.suspended,
-                  'bg-red-100 text-red-800': merchant.suspended
-                }">
-                {{ merchant.suspended ? 'موقوف' : 'نشط' }}
-              </span>
+
+            <!-- Merchant Profile Header -->
+            <div class="flex items-start gap-4">
+                <div class="relative">
+                    <img [src]="getMerchantLogoUrl(merchant)" alt="{{ merchant.name }}"
+                        class="w-16 h-16 object-cover rounded-2xl border-2 border-white shadow-md group-hover:scale-105 transition-transform duration-300">
+                    <div *ngIf="merchant.approved" class="absolute -bottom-1 -right-1 bg-blue-600 text-white p-1 rounded-lg text-[10px] border-2 border-white">
+                        <fa-icon [icon]="faCheckCircle"></fa-icon>
+                    </div>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <h3 class="text-lg font-bold text-gray-900 truncate">{{ merchant.name }}</h3>
+                    <div class="flex items-center gap-1 text-yellow-400 my-1">
+                        <fa-icon *ngFor="let star of getStars(merchant.averageRating)" 
+                                [icon]="star.icon" 
+                                [class.text-gray-200]="star.type === 'empty'"
+                                [class.text-yellow-400]="star.type !== 'empty'"
+                                class="text-xs"></fa-icon>
+                        <span class="text-xs text-gray-500 ml-1">({{ merchant.ratingCount || 0 }})</span>
+                    </div>
+                    <p class="text-xs text-gray-500 flex items-center gap-1">
+                        <fa-icon [icon]="faEnvelope" class="text-[10px]"></fa-icon>
+                        {{ merchant.email }}
+                    </p>
+                </div>
             </div>
-          </div>
         </div>
 
-        <!-- Merchant Actions -->
-        <div class="px-6 py-4">
-          <div class="flex flex-wrap gap-2">
-            <button *ngIf="!merchant.approved" (click)="approveMerchant(merchant)"
-              class="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200">
-              <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-              </svg>
-              موافقة
+        <!-- Stats Grid -->
+        <div class="px-6 py-4 grid grid-cols-3 gap-2 border-t border-b border-gray-50 bg-gray-50/30 mt-4">
+            <div class="text-center">
+                <p class="text-[10px] text-gray-400 uppercase font-bold">المنتجات</p>
+                <p class="text-sm font-bold text-gray-900">{{ merchant.productCount || 0 }}</p>
+            </div>
+            <div class="text-center border-x border-gray-100 px-2">
+                <p class="text-[10px] text-gray-400 uppercase font-bold">المبيعات</p>
+                <p class="text-sm font-bold text-gray-900">{{ merchant.totalSales || 0 }} <span class="text-[8px]">ج.م</span></p>
+            </div>
+            <div class="text-center">
+                <p class="text-[10px] text-gray-400 uppercase font-bold">تاريخ الانضمام</p>
+                <p class="text-[10px] font-medium text-gray-600">{{ merchant.createdAt | date:'shortDate' }}</p>
+            </div>
+        </div>
+
+        <!-- Footer Actions -->
+        <div class="px-6 py-4 flex items-center justify-between gap-3">
+          <div class="flex gap-2">
+            <button (click)="viewMerchantProducts(merchant)" 
+                    class="p-2.5 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-all duration-300 group-hover:shadow-lg shadow-blue-200/50"
+                    title="عرض وإدارة المنتجات">
+                <fa-icon [icon]="faBox"></fa-icon>
             </button>
-            <button *ngIf="!merchant.approved" (click)="rejectMerchant(merchant)"
-              class="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-200">
-              <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-              </svg>
-              رفض
+            <button *ngIf="merchant.suspended" (click)="activateMerchant(merchant)" 
+                    class="p-2.5 rounded-xl bg-green-50 text-green-600 hover:bg-green-600 hover:text-white transition-all duration-300"
+                    title="تفعيل الحساب">
+                <fa-icon [icon]="faCheckCircle"></fa-icon>
             </button>
-            <button *ngIf="!merchant.suspended" (click)="suspendMerchant(merchant)"
-              class="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition-colors duration-200">
-              <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z">
-                </path>
-              </svg>
-              إيقاف
-            </button>
-            <button *ngIf="merchant.suspended" (click)="activateMerchant(merchant)"
-              class="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200">
-              <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-              </svg>
-              تفعيل
+            <button *ngIf="!merchant.suspended && merchant.approved" (click)="suspendMerchant(merchant)" 
+                    class="p-2.5 rounded-xl bg-orange-50 text-orange-600 hover:bg-orange-600 hover:text-white transition-all duration-300"
+                    title="إيقاف مؤقت">
+                <fa-icon [icon]="faExclamationTriangle"></fa-icon>
             </button>
           </div>
-          <button (click)="viewMerchantProducts(merchant)"
-            class="mt-3 w-full inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200">
-            <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10">
-              </path>
-            </svg>
-            عرض المنتجات
-          </button>
+
+          <div class="flex gap-2">
+             <button *ngIf="!merchant.approved" (click)="approveMerchant(merchant)"
+               class="px-4 py-2 bg-green-600 text-white text-xs font-bold rounded-xl hover:bg-green-700 transition-colors shadow-lg shadow-green-200">
+               موافقة
+             </button>
+             <button *ngIf="!merchant.approved" (click)="rejectMerchant(merchant)"
+               class="px-4 py-2 bg-red-50 text-red-600 text-xs font-bold rounded-xl hover:bg-red-600 hover:text-white transition-colors">
+               رفض
+             </button>
+          </div>
         </div>
       </div>
     </div>

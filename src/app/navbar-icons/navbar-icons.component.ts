@@ -71,6 +71,8 @@ export class NavbarIconsComponent implements OnInit {
   // Add these properties to track active states
   isOrdersActive: boolean = false;
   isAccountActive: boolean = false;
+  showRightFade: boolean = false;
+  showLeftFade: boolean = true;
 
   isDarkMode: boolean = false; // Track dark mode state
   isFullScreen: boolean = false; // Track full screen state
@@ -446,6 +448,39 @@ export class NavbarIconsComponent implements OnInit {
     } else {
       notification.swipeOffset = -15; // Reset to hint state
     }
+  }
+
+  onScroll(event: any) {
+    if (!this.isBottomNav) return;
+    const element = event.target;
+    const sl = element.scrollLeft;
+    const sw = element.scrollWidth;
+    const cw = element.clientWidth;
+    const max = sw - cw;
+
+    let distFromRight = 0;
+    let distFromLeft = 0;
+
+    // Browser-agnostic RTL scroll detection
+    if (sl < 0) {
+      // Chrome/Firefox RTL: 0 is Right, negative is Left
+      distFromRight = Math.abs(sl);
+      distFromLeft = max - distFromRight;
+    } else if (sl > 0) {
+      // Safari/Edge Positive RTL: Based on user feedback, 0 is Right, Max is Left
+      distFromLeft = max - sl;
+      distFromRight = sl;
+    } else {
+      // sl is 0. In RTL this is the Right Start edge.
+      distFromRight = 0;
+      distFromLeft = max;
+    }
+
+    // Show shadows only when there is content to reveal
+    this.showRightFade = distFromRight > 15;
+    this.showLeftFade = distFromLeft > 15;
+
+    this.cdr.markForCheck();
   }
 
   getNotificationIcon(type: string): any {

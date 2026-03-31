@@ -54,6 +54,7 @@ const quranProgressRoutes = require('./routes/quran-progress.routes');
 const { detectAndUpdateLiveVersion } = require('./utils/live-update-detector');
 const communityRoutes = require('./routes/community.routes');
 const analyticsRoutes = require('./routes/analytics.routes');
+const bourseRoutes = require('./routes/bourse.routes');
 const express = require('express');
 const bodyParser = require('body-parser');
 const app = express();
@@ -584,6 +585,7 @@ app.use('/api/admin/settings', adminSettingsRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/merchant', merchantRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/bourse', bourseRoutes);
 
 // Delete print order and associated file
 const mongoose = require('mongoose');

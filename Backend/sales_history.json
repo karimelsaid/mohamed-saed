@@ -32,5 +32,50 @@
         "total": 110
       }
     ]
+  },
+  {
+    "id": "1774694931222",
+    "invoiceNumber": "INV-20260328-9390",
+    "date": "2026-03-28T10:48:51.222Z",
+    "customerName": "زبون نقدي",
+    "customerPhone": "غير مسجل",
+    "totalAmount": 255,
+    "items": [
+      {
+        "products_id": "535",
+        "name": "منتج غير معروف",
+        "quantity": 1,
+        "price": 100,
+        "total": 100
+      },
+      {
+        "products_id": "714426889888",
+        "name": "منتج غير معروف",
+        "quantity": 1,
+        "price": 155,
+        "total": 155
+      }
+    ]
+  },
+  {
+    "id": "1774699380000",
+    "invoiceNumber": "INV-20260328-8346",
+    "date": "2026-03-28T12:03:00.000Z",
+    "customerName": "زبون نقدي",
+    "customerPhone": "غير مسجل",
+    "subtotal": 706,
+    "discountType": "fixed",
+    "discountValue": 10,
+    "discountAmount": 10,
+    "totalAmount": 696,
+    "items": [
+      {
+        "products_id": "066071437295",
+        "name": "اباجوره LED المحموله",
+        "quantity": 1,
+        "price": 706,
+        "total": 706
+      }
+    ]
   }
 ]

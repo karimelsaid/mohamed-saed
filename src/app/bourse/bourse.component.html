@@ -1,0 +1,127 @@
+<div class="min-h-screen bg-[var(--knooz-bg)] dark:bg-[var(--knooz-dark-bg)] pb-20 pt-24 font-['Almarai'] transition-colors duration-300">
+  
+  <!-- Header / Hero Section -->
+  <div class="container mx-auto px-4 mb-12">
+    <div class="bg-gradient-to-r from-red-600 to-red-800 rounded-3xl p-8 md:p-12 text-center shadow-2xl relative overflow-hidden">
+      <!-- Decorative BG elements -->
+      <div class="absolute inset-0 opacity-10" style="background-image: url('data:image/svg+xml,%3Csvg width=\'20\' height=\'20\' viewBox=\'0 0 20 20\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'1\' fill-rule=\'evenodd\'%3E%3Ccircle cx=\'3\' cy=\'3\' r=\'3\'/%3E%3Ccircle cx=\'13\' cy=\'13\' r=\'3\'/%3E%3C/g%3E%3C/svg%3E');"></div>
+      
+      <div class="relative z-10 flex flex-col items-center">
+        <div class="inline-flex items-center justify-center gap-3 bg-white/20 backdrop-blur-md px-6 py-2 rounded-full mb-6 border border-white/30 text-white font-bold tracking-widest text-sm uppercase">
+          <span class="w-3 h-3 bg-red-400 rounded-full animate-ping"></span>
+          عرض حصري ومحدود
+        </div>
+        
+        <h1 class="text-4xl md:text-6xl font-black text-white mb-4 drop-shadow-md">
+           بورصة  <span class="text-yellow-400">الكتب</span>
+        </h1>
+        <p class="text-red-100 text-lg md:text-xl max-w-2xl mx-auto mb-8 font-medium">
+          عروض خاصة وحصرية لمدة 45 دقيقة فقط! اغتنم الفرصة الآن قبل تغير السعر وانتهاء العرض. لا يمكن الجمع بين عروض مختلفة.
+        </p>
+
+        <!-- Countdown Timer -->
+        <div *ngIf="activeOffer" class="flex flex-col items-center">
+          <div class="text-white text-sm font-bold mb-2 opacity-80 uppercase tracking-widest">ينتهي العرض خلال</div>
+          <div class="bg-black/40 backdrop-blur-md border border-white/10 px-8 py-4 rounded-2xl text-5xl md:text-7xl font-mono font-black text-yellow-400 bourse-countdown-glow">
+            {{ countdownStr }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container mx-auto px-4">
+    
+    <!-- Loading State -->
+    <div *ngIf="isLoading" class="flex flex-col items-center justify-center py-20">
+      <fa-icon [icon]="['fas', 'spinner']" class="text-5xl text-red-600 animate-spin mb-6"></fa-icon>
+      <h3 class="text-xl font-bold text-gray-700 dark:text-gray-300">جاري تحميل عروض البورصة...</h3>
+    </div>
+
+    <!-- Error/Empty State -->
+    <div *ngIf="!isLoading && (!activeOffer || errorMessage)" class="flex flex-col items-center justify-center py-20 bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700">
+      <div class="w-32 h-32 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-6">
+        <fa-icon [icon]="['fas', 'clock']" class="text-6xl text-gray-400"></fa-icon>
+      </div>
+      <h3 class="text-2xl font-bold text-gray-800 dark:text-white mb-2">{{ errorMessage || 'انتهى العرض الحالي!' }}</h3>
+      <p class="text-gray-500 max-w-md text-center mb-8">ترقب العرض القادم الذي سيبدأ قريباً. عروض بورصة الكتب تتجدد كل 45 دقيقة طوال اليوم.</p>
+      <a routerLink="/" class="px-8 py-3 bg-[var(--knooz-indigo)] text-white font-bold rounded-xl hover:bg-opacity-90 transition-all shadow-lg hover:shadow-xl">العودة للرئيسية</a>
+    </div>
+
+    <!-- Active Offer Grid -->
+    <div *ngIf="!isLoading && activeOffer && enrichedBooks.length > 0">
+      <div class="flex items-center justify-between mb-8">
+        <h2 class="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-3">
+           <fa-icon [icon]="['fas', 'bolt']" class="text-yellow-500"></fa-icon>
+           الكتب المعروضة حالياً
+        </h2>
+        <div class="text-sm text-gray-500 bg-white dark:bg-gray-800 px-4 py-2 rounded-full border border-gray-200 dark:border-gray-700 font-bold">
+           الكميات محدودة جداً
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+         <div *ngFor="let book of enrichedBooks" class="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-red-500 group flex flex-col h-full relative">
+            
+            <!-- Stock Badge -->
+            <div class="absolute top-3 right-3 z-10 bg-black/70 backdrop-blur-sm text-white text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-2">
+               <fa-icon [icon]="['fas', 'boxes']" class="text-gray-300"></fa-icon>
+               متبقي {{ (book.quantityAvailable - book.quantitySold) }} فقط
+            </div>
+
+            <!-- Image -->
+            <div class="relative aspect-[2/3] overflow-hidden bg-gray-100 dark:bg-gray-900 w-full group-hover:opacity-90 transition-opacity">
+               <img *ngIf="book.product_image" [src]="dataService.getBookImageUrl(book)" [alt]="book.bookName" loading="lazy" class="w-full h-full object-cover">
+               
+               <div *ngIf="!book.product_image" class="w-full h-full flex flex-col items-center justify-center text-gray-300">
+                  <fa-icon [icon]="['fas', 'book']" class="text-5xl mb-2"></fa-icon>
+                  <span class="text-sm font-bold opacity-50">لا توجد صورة</span>
+               </div>
+               
+               <!-- Discount Badge Overlay -->
+               <div class="absolute bottom-0 left-0 w-full bg-gradient-to-t from-red-600 to-transparent pt-12 pb-3 px-4 text-center transform translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+                  <span class="text-white font-bold drop-shadow-md text-sm">وفر {{ (book.originalPrice - book.boursePrice) | number:'1.0-0' }} جنيه!</span>
+               </div>
+            </div>
+
+            <!-- Content -->
+            <div class="p-5 flex-1 flex flex-col">
+               <h3 class="font-bold text-gray-800 dark:text-white text-base mb-1 line-clamp-2 min-h-[3rem]" [title]="book.bookName">
+                  {{ book.bookName }}
+               </h3>
+               
+               <div class="mt-auto pt-4 flex flex-col border-t border-gray-100 dark:border-gray-700">
+                  <div class="flex items-center gap-2 mb-1">
+                     <span class="text-gray-400 line-through text-sm font-medium">{{ book.originalPrice | number:'1.0-2' }} ج.م</span>
+                  </div>
+                  <div class="text-red-600 dark:text-red-400 font-black text-2xl mb-4">
+                     {{ book.boursePrice | number:'1.0-2' }} <span class="text-sm font-normal">ج.م</span>
+                  </div>
+                  
+                  <button (click)="addToCart(book)" [disabled]="(book.quantityAvailable - book.quantitySold) <= 0"
+                     class="w-full bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white font-bold py-2 sm:py-3 text-sm sm:text-base rounded-xl transition-colors shadow-[0_4px_14px_0_rgba(220,38,38,0.39)] flex items-center justify-center gap-1 sm:gap-2">
+                     <fa-icon [icon]="['fas', 'cart-plus']"></fa-icon>
+                     {{ (book.quantityAvailable - book.quantitySold) > 0 ? 'إضافة للبورصة' : 'نفذت الكمية' }}
+                  </button>
+               </div>
+            </div>
+         </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Floating Toast Notification -->
+<div *ngIf="showToastFlag"
+  class="fixed bottom-24 left-1/2 -translate-x-1/2 z-[9999] px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 min-w-[300px] max-w-[90vw] animate-slideUp backdrop-blur-md border"
+  [ngClass]="{
+    'bg-green-600/95 border-green-400/30 text-white': toastType === 'success',
+    'bg-red-600/95 border-red-400/30 text-white': toastType === 'error',
+    'bg-amber-500/95 border-amber-400/30 text-white': toastType === 'warning'
+  }">
+  <div class="text-2xl">
+    {{ toastType === 'success' ? '✅' : toastType === 'error' ? '❌' : '⚠️' }}
+  </div>
+  <p class="font-bold text-sm flex-1">{{ toastMessage }}</p>
+  <button (click)="showToastFlag = false" class="opacity-70 hover:opacity-100 transition-opacity text-lg font-bold">✕</button>
+</div>

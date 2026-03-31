@@ -201,13 +201,13 @@ async function addProduct(req, res) {
 
     // Generate barcode if not present
     const barcode = generateRandomBarcode();
-    let { product_name, product_quantity, product_category, product_description, product_price, price_cost, copyType, condition } = req.body;
+    let { product_name, product_quantity, product_category, product_description, product_price, price_cost, copyType, condition, weight, length, width, height } = req.body;
 
     // Map merchant category to standard category
     product_category = merchantCategoryMap[product_category] || product_category;
 
-    if (!product_name || !product_quantity || !product_category || !product_description || product_description.trim() === '') {
-      return res.status(400).json({ success: false, message: 'Missing required fields or product description is empty' });
+    if (!product_name || !product_quantity || !product_category || !product_description || product_description.trim() === '' || weight === undefined || weight === null || weight === '') {
+      return res.status(400).json({ success: false, message: 'Missing required fields or product description is empty (including weight)' });
     }
 
     const files = req.files || (req.file ? [req.file] : []);
@@ -266,6 +266,10 @@ async function addProduct(req, res) {
       product_description,
       product_price: parseFloat(product_price) || 0,
       price_cost: parseFloat(price_cost) || 0,
+      weight: parseFloat(weight) || 0,
+      length: parseFloat(length) || '',
+      width: parseFloat(width) || '',
+      height: parseFloat(height) || '',
       products_id: barcode, // حفظ الباركود الرقمي فقط
       product_image: barcode, // حفظ الباركود الرقمي فقط
       images: savedImages,
@@ -328,6 +332,8 @@ async function getCurrentMerchant(req, res) {
         coverPhoto: merchant.coverPhoto,
         bio: merchant.bio,
         preparationTime: merchant.preparationTime,
+        merchantShippingMethod: merchant.merchantShippingMethod || 'knoozbook',
+        shippingRates: merchant.shippingRates || [],
         approved: merchant.approved,
         isApproved: merchant.approved,
         suspended: merchant.suspended || false,
@@ -353,7 +359,8 @@ async function getMerchantProducts(req, res) {
     // Ensure products_id is present for each product
     const enrichedProducts = products.map(p => ({
       ...p,
-      products_id: p.products_id || p._id.toString()
+      products_id: p.products_id || p._id.toString(),
+      shippingMethod: req.merchant.merchantShippingMethod || 'knoozbook'
     }));
 
     res.json({ success: true, products: enrichedProducts });
@@ -412,16 +419,29 @@ async function getMerchantOrders(req, res) {
           // Calculate total amount for merchant's products only
           const merchantTotalAmount = transformedProducts.reduce((sum, product) => sum + (product.price * product.quantity), 0);
 
+          // Construct robust address
+          let orderAddress = order.address || '';
+          if (order.shippingAddress) {
+            const parts = [
+              order.shippingAddress.governorate,
+              order.shippingAddress.city,
+              order.shippingAddress.village,
+              order.shippingAddress.address
+            ].filter(Boolean);
+            if (parts.length > 0) orderAddress = parts.join(', ');
+          }
+
           // Transform the order to match the expected format
           merchantOrders.push({
             _id: order._id,
             customerName: user.username,
             email: user.email,
-            phone: user.phone,
-            address: `${order.shippingAddress.governorate}, ${order.shippingAddress.city}, ${order.shippingAddress.village}`,
+            phone: order.shippingAddress?.phone || user.phone,
+            address: orderAddress,
             products: transformedProducts,
             status: order.status,
             totalAmount: merchantTotalAmount,
+            shippingMethod: order.shippingMethod || 'knoozbook', // Include order specific shipping method
             orderDate: order.date,
             preparationTime: order.preparationTime || 1, // Use saved preparation time
             createdAt: order.date
@@ -528,6 +548,10 @@ async function submitProductUpdateRequest(req, res) {
         price_cost: product.price_cost,
         copyType: product.copyType || '',
         condition: product.condition || '',
+        weight: product.weight || 0,
+        length: product.length || '',
+        width: product.width || '',
+        height: product.height || '',
         images: product.images || []
       },
       updatedProduct: {
@@ -539,6 +563,10 @@ async function submitProductUpdateRequest(req, res) {
         price_cost: parseFloat(updateData.price_cost) || 0,
         copyType: updateData.copyType || '',
         condition: updateData.condition || '',
+        weight: parseFloat(updateData.weight) || 0,
+        length: parseFloat(updateData.length) || '',
+        width: parseFloat(updateData.width) || '',
+        height: parseFloat(updateData.height) || '',
         images: updateData.images || []
       },
       status: 'pending'
@@ -808,6 +836,9 @@ async function getMerchantById(req, res) {
         logo: merchant.logo,
         coverPhoto: merchant.coverPhoto,
         bio: merchant.bio,
+        shippingRates: merchant.shippingRates || [],
+        preparationTime: merchant.preparationTime,
+        merchantShippingMethod: merchant.merchantShippingMethod || 'knoozbook',
         createdAt: merchant.createdAt
       }
     });
@@ -936,7 +967,8 @@ async function getProductsByMerchantId(req, res) {
     // Ensure products_id is present — use product_image (barcode) as fallback, NOT _id
     const enrichedProducts = products.map(p => ({
       ...p,
-      products_id: p.products_id || p.product_image || p._id.toString()
+      products_id: p.products_id || p.product_image || p._id.toString(),
+      shippingMethod: merchant.merchantShippingMethod || 'knoozbook'
     }));
 
     res.json({ success: true, products: enrichedProducts });
@@ -949,7 +981,7 @@ async function getProductsByMerchantId(req, res) {
 async function updateMerchantProfile(req, res) {
   try {
     const merchantId = req.merchant._id;
-    const { name, phone, taxNumber, bio, preparationTime } = req.body;
+    const { name, phone, taxNumber, bio, preparationTime, merchantShippingMethod } = req.body;
 
     // Find the merchant
     const merchant = await User.findById(merchantId);
@@ -1025,6 +1057,9 @@ async function updateMerchantProfile(req, res) {
       merchant.coverPhoto = coverPhotoPath;
     }
     merchant.preparationTime = preparationTime || merchant.preparationTime || 1;
+    if (merchantShippingMethod) {
+      merchant.merchantShippingMethod = merchantShippingMethod;
+    }
 
     await merchant.save();
     res.json({
@@ -1041,6 +1076,7 @@ async function updateMerchantProfile(req, res) {
         coverPhoto: merchant.coverPhoto,
         bio: merchant.bio,
         preparationTime: merchant.preparationTime,
+        merchantShippingMethod: merchant.merchantShippingMethod,
         approved: merchant.approved,
         suspended: merchant.suspended || false,
         createdAt: merchant.createdAt
@@ -1092,6 +1128,59 @@ async function getRecentOrdersForMerchant(req, res) {
   }
 }
 
+async function updateShippingRates(req, res) {
+    const booksController = require('./books.controller');
+    try {
+        const { shippingRates, merchantShippingMethod } = req.body;
+        const merchantId = req.merchant._id;
+        
+        console.log(`[MERCHANT-SHIPPING] Updating settings for merchant ${merchantId}. Method: ${merchantShippingMethod}, First rate:`, shippingRates ? shippingRates[0] : 'N/A');
+        const merchant = await User.findById(merchantId);
+        if (!merchant) {
+            return res.status(404).json({ message: 'Merchant not found' });
+        }
+
+        if (shippingRates) {
+            merchant.shippingRates = shippingRates;
+        }
+        
+        if (merchantShippingMethod) {
+            merchant.merchantShippingMethod = merchantShippingMethod;
+        }
+
+        await merchant.save();
+        console.log(`[MERCHANT-SHIPPING] Successfully saved settings for ${merchantId}. Method is now: ${merchant.merchantShippingMethod}`);
+        
+        // Clear books cache so changes reflect in checkout immediately
+        booksController.clearBooksCache();
+
+        res.status(200).json({
+            message: 'Shipping rates updated successfully',
+            shippingRates: merchant.shippingRates,
+            merchant: {
+                _id: merchant._id,
+                merchantName: merchant.merchantName || merchant.username,
+                name: merchant.username,
+                email: merchant.email,
+                phone: merchant.phone,
+                taxNumber: merchant.taxNumber,
+                logo: merchant.logo,
+                coverPhoto: merchant.coverPhoto,
+                bio: merchant.bio,
+                preparationTime: merchant.preparationTime,
+                merchantShippingMethod: merchant.merchantShippingMethod,
+                shippingRates: merchant.shippingRates,
+                approved: merchant.approved,
+                suspended: merchant.suspended || false,
+                createdAt: merchant.createdAt
+            }
+        });
+    } catch (error) {
+        console.error('Error updating shipping rates:', error);
+        res.status(500).json({ message: 'Error updating shipping rates', error: error.message });
+    }
+}
+
 module.exports = {
   upload,
   registerMerchant,
@@ -1109,5 +1198,6 @@ module.exports = {
   getMerchantById,
   getMerchantByUsername,
   getProductsByMerchantId,
-  updateMerchantProfile
+  updateMerchantProfile,
+  updateShippingRates
 };

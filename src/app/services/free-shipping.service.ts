@@ -14,6 +14,10 @@ export interface FreeShippingRules {
   includedGovernorates: string[];
   freeShippingEnabled: boolean;
   codFee: number;
+  communityShippingCost: number;
+  swapShippingCost: number;
+  auctionShippingCost: number;
+  regionCosts?: { [key: string]: number };
 }
 
 @Injectable({
@@ -28,7 +32,18 @@ export class FreeShippingService {
     includedCategories: [],
     includedGovernorates: [],
     freeShippingEnabled: true,
-    codFee: 10
+    codFee: 10,
+    communityShippingCost: 70,
+    swapShippingCost: 70,
+    auctionShippingCost: 70,
+    regionCosts: {
+      'القاهرة والجيزة والقليوبية': 55,
+      'الإسكندرية والدلتا': 65,
+      'مدن القناة': 70,
+      'شمال الصعيد': 75,
+      'جنوب الصعيد': 100,
+      'المناطق النائية': 110
+    }
   };
 
   private apiUrl = `${environment.apiBaseUrl}/admin/settings/free-shipping-rules`;

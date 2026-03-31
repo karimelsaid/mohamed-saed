@@ -374,11 +374,11 @@
             <div
                class="grid grid-cols-3 gap-2 text-center divide-x divide-x-reverse divide-gray-100 dark:divide-gray-700">
                <div class="flex flex-col items-center justify-center">
-                  <p class="font-bold text-xl text-gray-900 dark:text-white">{{ socialStats?.followersCount || 0 }}</p>
+                  <p class="font-bold text-xl text-gray-900 dark:text-white">{{ socialStats.followersCount || 0 }}</p>
                   <p class="text-[11px] text-gray-500 mt-1 font-medium">متابِع</p>
                </div>
                <div class="flex flex-col items-center justify-center">
-                  <p class="font-bold text-xl text-gray-900 dark:text-white">{{ socialStats?.followingCount || 0 }}</p>
+                  <p class="font-bold text-xl text-gray-900 dark:text-white">{{ socialStats.followingCount || 0 }}</p>
                   <p class="text-[11px] text-gray-500 mt-1 font-medium">يتابع</p>
                </div>
                <div class="flex flex-col items-center justify-center">
@@ -543,7 +543,7 @@
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">رقم
                            الهاتف</label>
                         <input type="tel" formControlName="phone" (input)="validatePhone()"
-                           [ngClass]="{'border-red-500': !phoneValid && phoneTouched && isEditingAddress, 'bg-gray-50': !isEditingAddress}"
+                           [ngClass]="{'border-red-500': !phoneValid && phoneTouched && isEditingAddress, 'bg-gray-50 dark:bg-gray-900/50': !isEditingAddress}"
                            class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 transition-all">
                      </div>
                   </div>
@@ -560,7 +560,7 @@
                                  {{gov.governorate_name}}</option>
                            </select>
                            <input *ngIf="!isEditingAddress" type="text" formControlName="governorate"
-                              class="w-full px-4 py-3 rounded-xl border bg-gray-50" readonly>
+                              class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50" readonly>
                         </div>
                         <div>
                            <label class="block text-sm font-medium mb-2">المدينة</label>
@@ -569,12 +569,12 @@
                               <option *ngFor="let city of cities" [value]="city">{{city}}</option>
                            </select>
                            <input *ngIf="!isEditingAddress" type="text" formControlName="city"
-                              class="w-full px-4 py-3 rounded-xl border bg-gray-50" readonly>
+                              class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50" readonly>
                         </div>
                         <div>
                            <label class="block text-sm font-medium mb-2">القرية / الشارع</label>
                            <input type="text" formControlName="village" [readonly]="!isEditingAddress"
-                              class="w-full px-4 py-3 rounded-xl border" [ngClass]="{'bg-gray-50': !isEditingAddress}">
+                              class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700" [ngClass]="{'bg-gray-50 dark:bg-gray-900/50': !isEditingAddress}">
                         </div>
                      </div>
                   </div>
@@ -583,12 +583,12 @@
                      <fa-icon [icon]="faTimes"></fa-icon> {{ errorMessage }}</div>
                   <div *ngIf="successMessage" class="bg-green-50 p-4 rounded-xl text-green-600 flex items-center gap-2">
                      <fa-icon [icon]="faCheckCircle"></fa-icon> {{ successMessage }}</div>
-
-                  <div *ngIf="isEditingAddress" class="flex gap-4 pt-4 border-t">
+ 
+                  <div *ngIf="isEditingAddress" class="flex gap-4 pt-4 border-t dark:border-gray-700">
                      <button type="submit" [disabled]="profileForm.invalid || isSubmitting"
                         class="flex-1 bg-blue-600 text-white font-bold py-3 rounded-xl shadow-lg">حفظ التغييرات</button>
                      <button type="button" (click)="toggleEdit(false)"
-                        class="px-6 py-3 bg-gray-100 rounded-xl">إلغاء</button>
+                        class="px-6 py-3 bg-gray-100 dark:bg-gray-700 dark:text-gray-200 rounded-xl">إلغاء</button>
                   </div>
                </form>
             </div>

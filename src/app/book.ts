@@ -57,4 +57,6 @@ export interface Book {
   usage?: string;
   copyType?: string;
   condition?: string;
+  weight?: number;
+  height?: number;
 }

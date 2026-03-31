@@ -18,10 +18,20 @@ const User = require('../models/User.model'); // Added this import
 let cachedRecentBooks = null;
 let lastRecentUpdate = 0;
 
-// Cache only for Excel data (output.json)
+// Cache for Excel data (output.json)
 let cachedExcelData = null;
 let lastExcelUpdate = 0;
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+// Cache for unified result (Excel + DB)
+let cachedUnifiedData = null;
+let lastUnifiedUpdate = 0;
+const CACHE_TTL = 2 * 60 * 1000; // 2 minutes (reduced from 5 to stay fresher)
+
+function clearBooksCache() {
+  console.log('🧹 [BooksController] Clearing unified data cache');
+  cachedUnifiedData = null;
+  lastUnifiedUpdate = 0;
+}
 
 // Helper to get a consistent key for matching (prefer numeric barcode)
 const getMatchKey = (item) => {
@@ -163,6 +173,7 @@ function unifyAndEnrichData(excelProducts, dbProducts, promoDoc, merchantMap, ra
         book.merchantName = mInfo.name;
         book.merchantLogo = mInfo.logo;
         book.merchantRole = mInfo.role;
+        book.shippingMethod = mInfo.shippingMethod;
       }
     }
 
@@ -227,10 +238,16 @@ function unifyAndEnrichData(excelProducts, dbProducts, promoDoc, merchantMap, ra
 async function getExcelData(req, res) {
   try {
     const now = Date.now();
-    let excelProducts = [];
+    
+    // Check full unified cache first
+    if (cachedUnifiedData && (now - lastUnifiedUpdate < CACHE_TTL)) {
+      // console.log('⚡ [BooksController] Returning cached unified result');
+      return res.json(cachedUnifiedData);
+    }
 
+    let excelProducts = [];
     const filePath = path.join(__dirname, '..', 'output.json');
-    if (cachedExcelData && (now - lastExcelUpdate < CACHE_TTL)) {
+    if (cachedExcelData && (now - lastExcelUpdate < (CACHE_TTL * 2.5))) { // Excel cache can be older
       excelProducts = cachedExcelData;
     } else if (fs.existsSync(filePath)) {
       excelProducts = JSON.parse(fs.readFileSync(filePath, 'utf8'));
@@ -241,12 +258,13 @@ async function getExcelData(req, res) {
     const dbProducts = await Product.find({ status: 'approved' }).lean();
 
     // Get Merchants & Admins to properly identify "Kenouz" products
-    const merchants = await User.find({ role: { $in: ['merchant', 'admin'] } }).select('_id name merchantName logo role').lean();
+    const merchants = await User.find({ role: { $in: ['merchant', 'admin'] } }).select('_id name merchantName logo role merchantShippingMethod').lean();
     const merchantMap = new Map();
     merchants.forEach(m => merchantMap.set(m._id.toString(), {
       name: m.role === 'admin' ? 'تاجر كنوز' : (m.merchantName || m.name),
       logo: m.logo,
-      role: m.role
+      role: m.role,
+      shippingMethod: m.merchantShippingMethod || 'knoozbook'
     }));
 
     // Get Promotion
@@ -254,6 +272,10 @@ async function getExcelData(req, res) {
     const promoDoc = await PromotionDate.findOne().sort({ createdAt: -1 }).lean();
 
     const result = unifyAndEnrichData(excelProducts, dbProducts, promoDoc, merchantMap, null);
+
+    // Update unified cache
+    cachedUnifiedData = result;
+    lastUnifiedUpdate = now;
 
     console.log(`✅ [BooksController] Unified ${result.length} items (${dbProducts.length} from DB)`);
     res.json(result);
@@ -279,11 +301,12 @@ async function getRecentBooks(req, res) {
     const dbProducts = await Product.find({ status: 'approved' }).lean();
 
     // 3. Get Merchants
-    const merchants = await User.find({ role: 'merchant' }).select('_id name merchantName logo').lean();
+    const merchants = await User.find({ role: 'merchant' }).select('_id name merchantName logo merchantShippingMethod').lean();
     const merchantMap = new Map();
     merchants.forEach(m => merchantMap.set(m._id.toString(), {
       name: m.merchantName || m.name,
-      logo: m.logo
+      logo: m.logo,
+      shippingMethod: m.merchantShippingMethod || 'knoozbook'
     }));
 
     // 4. Get Ratings (Aggregate)
@@ -332,5 +355,6 @@ async function updateBooksData() {
 module.exports = {
   getExcelData,
   getRecentBooks,
-  updateBooksData
+  updateBooksData,
+  clearBooksCache
 };

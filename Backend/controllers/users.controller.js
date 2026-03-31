@@ -39,7 +39,7 @@ const filterActiveCoupons = (coupons) => {
 // Function to update user profile and sync orders' shippingAddress
 async function updateUserProfile(req, res) {
   const { userId } = req.params;
-  const { username, email, phone, governorate, city, village, gender, postOffice, bio } = req.body;
+  const { username, email, phone, governorate, city, village, gender, postOffice, bio, preparationTime, merchantShippingMethod, merchantName, taxNumber, logo, coverPhoto, shippingRates } = req.body;
 
   try {
     const user = await User.findById(userId);
@@ -59,6 +59,13 @@ async function updateUserProfile(req, res) {
       user.postOffice = postOffice;
     }
     if (bio !== undefined) user.bio = bio;
+    if (preparationTime !== undefined) user.preparationTime = preparationTime;
+    if (merchantShippingMethod !== undefined) user.merchantShippingMethod = merchantShippingMethod;
+    if (merchantName !== undefined) user.merchantName = merchantName;
+    if (taxNumber !== undefined) user.taxNumber = taxNumber;
+    if (logo !== undefined) user.logo = logo;
+    if (coverPhoto !== undefined) user.coverPhoto = coverPhoto;
+    if (shippingRates !== undefined) user.shippingRates = shippingRates;
 
     // Update all orders' shippingAddress fields to keep in sync
     user.orders.forEach(order => {
@@ -333,6 +340,12 @@ async function getUserData(req, res) {
         city: user.city,
         village: user.village,
         referralCode: user.referralCode,
+        merchantShippingMethod: user.merchantShippingMethod || 'knoozbook',
+        preparationTime: user.preparationTime || 1,
+        merchantName: user.merchantName,
+        taxNumber: user.taxNumber,
+        logo: user.logo,
+        shippingRates: user.shippingRates || [],
         profileImage: user.profileImage,
         coverPhoto: user.coverPhoto,
         quranProgress: user.quranProgress,
@@ -362,6 +375,12 @@ async function getUserProfile(req, res) {
       role: user.role,
       postOffice: user.postOffice,
       referralBalance: user.referralBalance || 0,
+      merchantShippingMethod: user.merchantShippingMethod || 'knoozbook',
+      preparationTime: user.preparationTime || 1,
+      merchantName: user.merchantName,
+      taxNumber: user.taxNumber,
+      logo: user.logo,
+      shippingRates: user.shippingRates || [],
       profileImage: user.profileImage,
       coverPhoto: user.coverPhoto,
       quranProgress: user.quranProgress,

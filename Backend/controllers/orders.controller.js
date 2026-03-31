@@ -5,10 +5,12 @@ const path = require('path');
 const Product = require('../models/Product.model');
 const Referral = require('../models/Referral.model');
 const Coupon = require('../models/Coupon.model');
+const Auction = require('../models/Auction.model');
+const BookSwap = require('../models/BookSwap.model');
 
 exports.submitOrder = async (req, res) => {
   try {
-    const { userId, products, totalAmount, shippingCost, preparationTime: reqPreparationTime, merchantId, isPickup, pickupLocation, isPostOffice, referralCode, bookId, address } = req.body;
+    const { userId, products, totalAmount, shippingCost, preparationTime: reqPreparationTime, merchantId, isPickup, pickupLocation, isPostOffice, referralCode, bookId, address, bourseOfferId } = req.body;
 
     if (!userId || !products || (totalAmount === undefined || totalAmount === null)) {
       return res.status(400).json({ message: 'Missing required fields: userId, products, totalAmount' });
@@ -38,16 +40,22 @@ exports.submitOrder = async (req, res) => {
       name: req.body.postOfficeName
     } : null;
 
-    // Get preparationTime from request, or from merchant if merchantId provided
+    // Get preparationTime and shippingMethod from merchant if merchantId provided
     let preparationTime = reqPreparationTime || 1;
-    if (!reqPreparationTime && merchantId) {
+    let shippingMethod = 'knoozbook';
+    if (merchantId) {
       try {
         const merchant = await User.findById(merchantId);
-        if (merchant && merchant.preparationTime) {
-          preparationTime = merchant.preparationTime;
+        if (merchant) {
+          if (!reqPreparationTime && merchant.preparationTime) {
+            preparationTime = merchant.preparationTime;
+          }
+          if (merchant.merchantShippingMethod) {
+            shippingMethod = merchant.merchantShippingMethod;
+          }
         }
       } catch (err) {
-        console.warn('Error fetching merchant preparation time:', err.message);
+        console.warn('Error fetching merchant settings:', err.message);
       }
     }
 
@@ -56,8 +64,44 @@ exports.submitOrder = async (req, res) => {
       bookId: product.bookId || product.book || '',
       bookName: product.bookName || product.book || '',
       quantity: product.quantity || 1,
-      price: product.price || 0
+      price: product.price || 0,
+      isBourseItem: product.isBourseItem || false
     }));
+
+    // Bourse Offer Validation
+    if (bourseOfferId) {
+      const BourseOffer = require('../models/BourseOffer.model');
+      const offer = await BourseOffer.findById(bourseOfferId);
+      if (!offer) {
+        return res.status(400).json({ message: 'عرض البورصة غير موجود.' });
+      }
+      
+      const now = new Date();
+      if (now < offer.startTime || now > offer.endTime) {
+        return res.status(400).json({ message: 'لقد انتهى وقت العرض الخاص بالبورصة. يرجى مسح السلة والمحاولة مرة أخرى.' });
+      }
+
+      // Check quantities
+      for (let p of validatedProducts) {
+        if (p.isBourseItem) {
+          const offerBook = offer.books.find(b => b.bookId === p.bookId);
+          if (!offerBook || (offerBook.quantityAvailable - offerBook.quantitySold) < p.quantity) {
+             return res.status(400).json({ message: `الكمية المتاحة من كتاب ${p.bookName} في عرض البورصة قد نفدت.` });
+          }
+        }
+      }
+
+      // Update sold quantities
+      for (let p of validatedProducts) {
+        if (p.isBourseItem) {
+          const offerBook = offer.books.find(b => b.bookId === p.bookId);
+          if (offerBook) {
+            offerBook.quantitySold += p.quantity;
+          }
+        }
+      }
+      await offer.save();
+    }
 
     // Wallet Discount Logic
     let walletDiscount = 0;
@@ -85,8 +129,15 @@ exports.submitOrder = async (req, res) => {
       postOffice: isPostOffice ? postOffice : null,
       address: address ? address + ' - ' + user.phone : null,
       status: 'قيد الإنتظار',
+      shippingMethod: shippingMethod, // Save the merchant's preference
       paymentMethod: req.body.paymentMethod || 'online',
-      codFee: req.body.codFee || 0
+      codFee: req.body.codFee || 0,
+      statusLog: [{
+        status: 'قيد الإنتظار',
+        updatedAt: new Date(),
+        updatedBy: 'النظام (إنشاء الطلب)',
+        role: 'system'
+      }]
     };
 
     user.orders.push(newOrder);
@@ -254,6 +305,12 @@ exports.getUserOrders = async (req, res) => {
           orderDate: order.date,
           totalAmount: order.totalAmount,  // Added totalAmount here
           paymentStatus: order.paymentStatus, // Added paymentStatus
+          isCommunityItem: order.isCommunityItem || false,
+          communityItemId: order.communityItemId || null,
+          address: order.address || '',
+          shippingAddress: order.shippingAddress || null,
+          isPickup: order.isPickup || false,
+          pickupLocation: order.pickupLocation || null
         };
       });
 
@@ -270,49 +327,91 @@ exports.getUserOrders = async (req, res) => {
 exports.getAllOrders = async (req, res) => {
   try {
     const { merchantId, includeArchived } = req.query;
-    const users = await User.find().select('orders username email phone');
+    const users = await User.find().select('orders username email phone governorate city village');
     let allOrders = [];
-    users.forEach(user => {
-      user.orders.forEach(order => {
+    
+    for (const user of users) {
+      for (const order of user.orders) {
         // Filter out archived orders unless explicitly requested
         if (includeArchived !== 'true' && order.status === 'مؤرشف') {
-          return;
+          continue;
         }
         // Handle book products
         if (order.products && order.products.length > 0) {
-          order.products.forEach(product => {
+          for (const product of order.products) {
+            let baseAddress = '';
+            if (order.isPickup) {
+              baseAddress = `استلام من المكتبة: ${order.pickupLocation}`;
+            } else if (order.postOffice && order.postOffice.governorate) {
+              baseAddress = `شحن عبر مكاتب البريد: ${order.postOffice.governorate}, ${order.postOffice.city}, ${order.postOffice.address || ''}${order.postOffice.name ? ' - اسم المكتب: ' + order.postOffice.name : ''}`;
+            } else { // delivery
+              const parts = [
+                order.shippingAddress?.governorate,
+                order.shippingAddress?.city,
+                order.shippingAddress?.village
+              ].filter(Boolean);
+              baseAddress = parts.length > 0 ? parts.join(', ') : '';
+            }
+            const finalAddress = baseAddress + (user.phone ? ' - ' + user.phone : '');
+
             allOrders.push({
               _id: order._id,
               book: product.bookName ? product.bookName : product.bookId,
               customerName: user.username,
               email: user.email,
               quantity: product.quantity,
-              address: order.address || (() => {
-                let baseAddress = '';
-                if (order.isPickup) {
-                  baseAddress = `استلام من المكتبة: ${order.pickupLocation}`;
-                } else if (order.postOffice && order.postOffice.governorate) {
-                  baseAddress = `شحن عبر مكاتب البريد: ${order.postOffice.governorate}, ${order.postOffice.city}, ${order.postOffice.address || ''}${order.postOffice.name ? ' - اسم المكتب: ' + order.postOffice.name : ''}`;
-                } else { // delivery
-                  const parts = [
-                    order.shippingAddress?.governorate,
-                    order.shippingAddress?.city,
-                    order.shippingAddress?.village
-                  ].filter(Boolean);
-                  baseAddress = parts.length > 0 ? parts.join(', ') : '';
-                }
-                return baseAddress + (user.phone ? ' - ' + user.phone : '');
-              })(),
+              address: order.address || finalAddress,
               status: order.status,
               orderDate: order.date,
               totalAmount: order.totalAmount,
               paymentStatus: order.paymentStatus, // Added paymentStatus
-              isMerchantOrder: false // default
+              isMerchantOrder: false, // default
+              isCommunityItem: order.isCommunityItem || !!order.communityItemId || false,
+              communityItemId: order.communityItemId || null,
+              communityOwnerId: order.communityOwnerId || null,
+              communityOwnerName: order.communityOwnerName || null,
+              communityOwnerPhone: order.communityOwnerPhone || null,
+              communityOwnerAddress: order.communityOwnerAddress || null,
+              shippingAddress: order.shippingAddress || null,
+              shippingMethod: order.shippingMethod || 'knoozbook'
             });
-          });
+          }
         }
-      });
-    });
+      }
+    }
+    
+    // SMART-LOOKUP: Populate missing owner details for community orders
+    for (let order of allOrders) {
+      if (order.isCommunityItem && (!order.communityOwnerName || !order.communityOwnerAddress) && order.communityItemId) {
+        try {
+          // Try fetching from Auction
+          let auction = await Auction.findById(order.communityItemId).populate('userId');
+          if (auction && auction.userId) {
+            order.communityOwnerId = auction.userId._id.toString();
+            order.communityOwnerName = auction.userId.username || auction.userId.email;
+            order.communityOwnerPhone = auction.userId.phone || '';
+            order.communityOwnerAddress = [
+              auction.userId.governorate,
+              auction.userId.city,
+              auction.userId.village
+            ].filter(Boolean).join(', ');
+          } else {
+            // Try fetching from BookSwap
+            let swap = await BookSwap.findById(order.communityItemId).populate('userId');
+            if (swap && swap.userId) {
+              order.communityOwnerId = swap.userId._id.toString();
+              order.communityOwnerName = swap.userId.username || swap.userId.email;
+              order.communityOwnerPhone = swap.userId.phone || '';
+              order.communityOwnerAddress = [
+                swap.userId.governorate,
+                swap.userId.city,
+                swap.userId.village
+              ].filter(Boolean).join(', ');
+            }
+          }
+        } catch (e) { /* silent fail for individual order */ }
+      }
+    }
 
     // Always fetch products with merchantId to set isMerchantOrder
     const productsWithMerchant = await Product.find({ merchantId: { $exists: true, $ne: null } }).select('product_name product_image merchantId');
@@ -353,13 +452,25 @@ exports.updateOrderStatus = async (req, res) => {
     }
 
     // Validate status value
-    const validStatuses = ['قيد الإنتظار', 'تم الإلغاء', 'تم الشحن', 'تم الاستلام', 'تم التسليم', 'مؤرشف'];
+    const validStatuses = ['قيد الإنتظار', 'قيد المعالجة', 'تم الإلغاء', 'تم الشحن', 'تم الاستلام', 'تم التسليم', 'مؤرشف', 'ارسال الاستلام'];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ message: 'Invalid status value' });
     }
 
     const oldStatus = order.status;
     order.status = status;
+
+    // Push to status log
+    const updatedBy = req.body.updatedBy || (req.user ? req.user.username || req.user.email : 'مستخدم');
+    const updatedRole = req.body.role || (req.user ? req.user.role : 'user');
+    
+    order.statusLog.push({
+      status: status,
+      updatedAt: new Date(),
+      updatedBy: updatedBy,
+      role: updatedRole,
+      note: req.body.note || ''
+    });
 
     // Clear paymentSessionUrl if order is cancelled or completed
     if (status === 'تم الإلغاء' || status === 'تم التسليم') {
@@ -420,6 +531,9 @@ exports.updateOrderStatus = async (req, res) => {
         break;
       case 'تم الإلغاء':
         notificationMessage = `للأسف، تم إلغاء طلبك لـ ${productSummary}. 😔`;
+        break;
+      case 'ارسال الاستلام':
+        notificationMessage = `جاري التنسيق! 🤝 تم البدء في إجراءات استلام ${productSummary} من صاحبها. سنقوم بشحنها إليك فور استلامنا لها.`;
         break;
       default:
         notificationMessage = `تحديث في طلبك: ${productSummary} أصبح الآن في حالة: ${status}`;

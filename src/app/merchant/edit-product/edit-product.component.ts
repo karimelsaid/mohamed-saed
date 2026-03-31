@@ -15,7 +15,11 @@ import { environment } from '../../../environments/environment';
 export class EditProductComponent implements OnInit {
   product: any = {
     copyType: '',
-    condition: ''
+    condition: '',
+    weight: 0,
+    length: 0,
+    width: 0,
+    height: 0
   };
   loading = false;
   saving = false;
@@ -232,6 +236,10 @@ export class EditProductComponent implements OnInit {
         price_cost: parseFloat(this.product.price_cost) || 0,
         copyType: this.product.copyType || '',
         condition: this.product.condition || '',
+        weight: parseFloat(this.product.weight) || 0,
+        length: parseFloat(this.product.length) || 0,
+        width: parseFloat(this.product.width) || 0,
+        height: parseFloat(this.product.height) || 0,
         images: this.imageUrls // Send existing images (reordered/partially removed)
       };
 

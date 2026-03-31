@@ -103,6 +103,7 @@ const routes: Routes = [
   { path: 'research', component: SearchResultsComponent }, // المسار الذي نوجه إليه المستخدم عند البحث
   { path: 'basket', component: CartComponent },
   { path: 'promotions', loadChildren: () => import('./features/promotions/promotions.module').then(m => m.PromotionsModule) },
+  { path: 'bourse', loadComponent: () => import('./bourse/bourse.component').then(m => m.BourseComponent) },
   { path: 'favorites', component: FavoritesComponent },
   { path: 'login', component: LoginComponent },
   { path: 'register', component: RegisterComponent },

@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { faCartPlus, faSearch, faPlus, faTimes, faCheckCircle, faExclamationTriangle } from '@fortawesome/free-solid-svg-icons';
+import { faCartPlus, faSearch, faPlus, faTimes, faCheckCircle, faExclamationTriangle, faPercent, faTag } from '@fortawesome/free-solid-svg-icons';
 import { DataService } from '../../services/data.service';
 import { AdminApiService } from '../../services/admin-api.service';
 import { ModalService } from '../../services/modal.service';
@@ -39,6 +39,10 @@ export class SalesRegistrationComponent implements OnInit {
     invoiceDate: string = new Date().toLocaleDateString('ar-EG');
     invoiceNumber: string = '';
 
+    // Discount
+    discountType: 'percentage' | 'fixed' = 'percentage';
+    discountValue: number = 0;
+
     // Icons
     faCartPlus = faCartPlus;
     faSearch = faSearch;
@@ -46,6 +50,8 @@ export class SalesRegistrationComponent implements OnInit {
     faTimes = faTimes;
     faCheckCircle = faCheckCircle;
     faExclamationTriangle = faExclamationTriangle;
+    faPercent = faPercent;
+    faTag = faTag;
 
     constructor(
         private dataService: DataService,
@@ -127,8 +133,17 @@ export class SalesRegistrationComponent implements OnInit {
         return this.sessionItems.reduce((sum, item) => sum + (item.product_price * item.quantity), 0);
     }
 
+    getDiscountAmount(): number {
+        const subtotal = this.getSubtotal();
+        if (!this.discountValue || this.discountValue <= 0) return 0;
+        if (this.discountType === 'percentage') {
+            return Math.min(subtotal, subtotal * (this.discountValue / 100));
+        }
+        return Math.min(subtotal, this.discountValue);
+    }
+
     getGrandTotal(): number {
-        return this.getSubtotal(); // Add shipping or tax if needed here
+        return Math.max(0, this.getSubtotal() - this.getDiscountAmount());
     }
 
     printInvoice(): void {
@@ -166,6 +181,7 @@ export class SalesRegistrationComponent implements OnInit {
         this.isSubmitting = true;
         const soldItems = this.sessionItems.map(item => ({
             products_id: item.products_id,
+            product_name: item.product_name,
             quantity: item.quantity,
             price: item.product_price,
             total: item.product_price * item.quantity
@@ -176,7 +192,10 @@ export class SalesRegistrationComponent implements OnInit {
             customerName: this.customerName,
             customerPhone: this.customerPhone,
             totalAmount: this.getGrandTotal(),
-            invoiceNumber: this.invoiceNumber
+            invoiceNumber: this.invoiceNumber,
+            discountType: this.discountValue > 0 ? this.discountType : null,
+            discountValue: this.discountValue,
+            discountAmount: this.getDiscountAmount()
         };
 
         this.adminApi.registerSale(saleData).subscribe({
@@ -186,6 +205,8 @@ export class SalesRegistrationComponent implements OnInit {
                 this.sessionItems = [];
                 this.customerName = '';
                 this.customerPhone = '';
+                this.discountType = 'percentage';
+                this.discountValue = 0;
                 this.generateInvoiceNumber();
                 this.loadProducts(); // Reload stock levels
                 this.isSubmitting = false;

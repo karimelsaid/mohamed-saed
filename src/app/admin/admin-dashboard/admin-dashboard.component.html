@@ -71,6 +71,13 @@
         <span>إدارة تواريخ العروض</span>
       </button>
 
+      <button (click)="switchView('bourseSettings'); showSidebar = false"
+        [class]="currentView === 'bourseSettings' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
+        class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
+        <fa-icon [icon]="['fas', 'chart-line']"></fa-icon>
+        <span>إعدادات البورصة 📈</span>
+      </button>
+
 
       <div class="sidebar-nav-category pt-4 pb-2 px-4 text-xs font-bold text-gray-400 uppercase tracking-wider">التجار & المستخدمين</div>
 
@@ -178,7 +185,7 @@
         [class]="currentView === 'freeShippingRules' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
         class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
         <fa-icon [icon]="['fas', 'truck']"></fa-icon>
-        <span>الشحن المجاني</span>
+        <span>مصاريف الشحن</span>
       </button>
 
       <button (click)="switchView('amazonCalculator'); showSidebar = false"
@@ -215,6 +222,9 @@
         <fa-icon [icon]="['fas', 'comment-dots']"></fa-icon>
         <span>ملاحظات القراء</span>
       </button>
+
+      <!-- Community Management Removed as it is now integrated into Orders -->
+
 
     </nav>
   </aside>
@@ -791,6 +801,10 @@
         <app-subscription-settings></app-subscription-settings>
       </div>
 
+      <div *ngIf="currentView === 'bourseSettings'" class="mb-28 md:mb-0 px-4">
+        <app-admin-bourse-settings></app-admin-bourse-settings>
+      </div>
+
       <div *ngIf="currentView === 'paymentRequests'" class="mb-28 md:mb-0 px-4">
         <app-payment-requests></app-payment-requests>
       </div>
@@ -810,6 +824,9 @@
       <div *ngIf="currentView === 'shortagesReport'" class="mb-28 md:mb-0 px-4">
         <app-shortages-report></app-shortages-report>
       </div>
+
+      <!-- COMMUNITY MANAGEMENT VIEW REMOVED - INTEGRATED INTO ORDERS -->
+
 
       <div *ngIf="currentView === 'promotionDates'" class="mb-28 md:mb-0 px-4">
         <app-promotion-dates></app-promotion-dates>
@@ -1638,6 +1655,47 @@
                     placeholder="أدخل سعر الشراء" />
                 </div>
               </div>
+
+              <!-- Physical Dimensions (Shipping) -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <!-- Weight -->
+                <div>
+                  <label for="weight" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center">
+                    <fa-icon [icon]="['fas', 'balance-scale']" class="text-indigo-500 ml-2"></fa-icon>
+                    وزن المنتج (جم) *
+                  </label>
+                  <input type="number" id="weight" [(ngModel)]="product.weight" name="weight" required min="1" step="1" #productWeight="ngModel"
+                    [ngClass]="{
+                      'border-red-500': productWeight.invalid && productWeight.touched, 'border-gray-300': !productWeight.touched
+                    }" class="w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:border-transparent dark:bg-gray-700 dark:text-gray-200 transition duration-200" placeholder="مثال: 500" />
+                  <p *ngIf="productWeight.invalid && productWeight.touched" class="text-xs text-red-500 mt-1">الوزن مطلوب</p>
+                </div>
+                <!-- Length -->
+                <div>
+                  <label for="length" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center">
+                    <fa-icon [icon]="['fas', 'arrows-alt-h']" class="text-teal-500 ml-2"></fa-icon> الطول (سم)
+                  </label>
+                  <input type="number" id="length" [(ngModel)]="product.length" name="length" min="0" step="0.1"
+                    class="w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:border-transparent dark:bg-gray-700 dark:text-gray-200 transition duration-200" placeholder="اختياري" />
+                </div>
+                <!-- Width -->
+                <div>
+                  <label for="width" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center">
+                    <fa-icon [icon]="['fas', 'arrows-alt-h']" class="text-teal-500 ml-2" style="transform: rotate(90deg);"></fa-icon> العرض (سم)
+                  </label>
+                  <input type="number" id="width" [(ngModel)]="product.width" name="width" min="0" step="0.1"
+                    class="w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:border-transparent dark:bg-gray-700 dark:text-gray-200 transition duration-200" placeholder="اختياري" />
+                </div>
+                <!-- Height -->
+                <div>
+                  <label for="height" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center">
+                    <fa-icon [icon]="['fas', 'arrows-alt-v']" class="text-teal-500 ml-2"></fa-icon> الارتفاع (سم)
+                  </label>
+                  <input type="number" id="height" [(ngModel)]="product.height" name="height" min="0" step="0.1"
+                    class="w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:border-transparent dark:bg-gray-700 dark:text-gray-200 transition duration-200" placeholder="اختياري" />
+                </div>
+              </div>
+
               <!-- Description -->
               <div>
                 <label for="product_description"
@@ -1919,6 +1977,37 @@
                           product.product_description }}</p>
                         <textarea *ngIf="product.editMode" [(ngModel)]="product.product_description" rows="3"
                           class="mt-1 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-1 w-full"></textarea>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Shipping Dimensions Section -->
+                  <div class="col-span-1 md:col-span-2 lg:col-span-3 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
+                    <h4 class="font-bold text-lg mb-2 text-gray-700 dark:text-gray-200">أبعاد الشحن (اختياري ماعدا الوزن)</h4>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+                      <div>
+                        <label class="font-semibold text-gray-600 dark:text-gray-300 line-clamp-1">الوزن (جم):</label>
+                        <p *ngIf="!product.editMode" class="text-gray-800 dark:text-gray-100">{{ product.weight || '-' }}</p>
+                        <input *ngIf="product.editMode" type="number" min="0" step="1" [(ngModel)]="product.weight"
+                          class="mt-1 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-1 w-full" required>
+                      </div>
+                      <div>
+                        <label class="font-semibold text-gray-600 dark:text-gray-300 line-clamp-1">الطول (سم):</label>
+                        <p *ngIf="!product.editMode" class="text-gray-800 dark:text-gray-100">{{ product.length || '-' }}</p>
+                        <input *ngIf="product.editMode" type="number" min="0" step="0.1" [(ngModel)]="product.length"
+                          class="mt-1 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-1 w-full">
+                      </div>
+                      <div>
+                        <label class="font-semibold text-gray-600 dark:text-gray-300 line-clamp-1">العرض (سم):</label>
+                        <p *ngIf="!product.editMode" class="text-gray-800 dark:text-gray-100">{{ product.width || '-' }}</p>
+                        <input *ngIf="product.editMode" type="number" min="0" step="0.1" [(ngModel)]="product.width"
+                          class="mt-1 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-1 w-full">
+                      </div>
+                      <div>
+                        <label class="font-semibold text-gray-600 dark:text-gray-300 line-clamp-1">الارتفاع (سم):</label>
+                        <p *ngIf="!product.editMode" class="text-gray-800 dark:text-gray-100">{{ product.height || '-' }}</p>
+                        <input *ngIf="product.editMode" type="number" min="0" step="0.1" [(ngModel)]="product.height"
+                          class="mt-1 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-1 w-full">
                       </div>
                     </div>
                   </div>
@@ -2211,13 +2300,30 @@
                 }">
                   {{ order.status }}
                 </span>
+
+                <!-- سجل تتبع الطلب (موبايل) -->
+                <div *ngIf="order.statusLog && order.statusLog.length > 0" 
+                     class="mt-2 text-[10px] bg-gray-50 dark:bg-gray-900/40 p-2 rounded border border-gray-100 dark:border-gray-800">
+                  <div class="font-bold text-gray-500 mb-1 border-b pb-1">سجل التغييرات:</div>
+                  <div *ngFor="let log of order.statusLog" class="flex justify-between items-start gap-2 mb-1 last:mb-0">
+                    <span class="text-gray-700 dark:text-gray-300">
+                      {{ log.status }} 
+                      <span class="text-[8px] text-gray-400">(بواسطة: {{ log.actor }})</span>
+                    </span>
+                    <span class="text-right whitespace-nowrap text-gray-400">{{ formatOrderShortDate(log.timestamp) }}</span>
+                  </div>
+                </div>
               </div>
 
               <div>
                 <strong>الكتب:</strong>
-                <ul class="list-disc pr-5">
-                  <li *ngFor="let product of order.products">
-                    {{ product.product_name }} ({{ product.product_quantity }})
+                <ul class="list-disc pr-5 space-y-1">
+                  <li *ngFor="let product of order.products" class="flex items-start gap-1">
+                    <span class="flex-1">{{ product.product_name }} ({{ product.product_quantity }})</span>
+                    <span class="inline-block px-1.5 py-0.5 rounded text-[10px] whitespace-nowrap" 
+                          [ngClass]="product.isMerchantOrder ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'">
+                      {{ product.isMerchantOrder ? 'تاجر' : 'المنصة' }}
+                    </span>
                   </li>
                 </ul>
               </div>
@@ -2228,6 +2334,14 @@
                   'text-orange-500 dark:text-orange-400': order.paymentStatus !== 'completed'
                 }">
                   {{ order.paymentStatus === 'completed' ? 'تم الدفع إلكترونياً' : 'الدفع عند الاستلام' }}
+                </span>
+              </div>
+              <div><strong>طريقة الشحن:</strong>
+                <span class="inline-block px-2 py-1 rounded-full text-xs font-semibold" [ngClass]="{
+                  'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20': order.shippingMethod === 'merchant',
+                  'text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20': order.shippingMethod !== 'merchant'
+                }">
+                  {{ order.shippingMethod === 'merchant' ? 'التاجر يشحن' : 'مندوب النظام' }}
                 </span>
               </div>
               <div class="flex gap-2 mt-2">
@@ -2280,7 +2394,8 @@
                 <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">السعر الإجمالي</th>
                 <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">الحالة</th>
                 <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">الدفع</th>
-                <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">تاريخ الطلب</th>
+                <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">طريقة الشحن</th>
+                <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700 text-[10px]">تاريخ الطلب</th>
                 <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">إجراءات</th>
               </tr>
             </thead>
@@ -2299,9 +2414,24 @@
                     <div><strong>البريد الإلكتروني:</strong> {{ order.email }}</div>
                     <div><strong>العنوان:</strong> {{ order.address }}</div>
                     <div><strong>رقم الطلب:</strong> {{ order._id }}</div>
+                    
+                    <!-- Community Owner Details -->
+                    <div *ngIf="order.isCommunityItem && order.communityOwnerName" class="mt-2 p-2 bg-purple-50 dark:bg-purple-900/10 rounded-lg border border-purple-100 dark:border-purple-800/30 text-[11px]">
+                      <div class="font-bold text-purple-700 dark:text-purple-400 mb-1">👤 الطرف الآخر (المالك):</div>
+                      <div><strong>الاسم:</strong> {{ order.communityOwnerName }}</div>
+                      <div *ngIf="order.communityOwnerPhone"><strong>الهاتف:</strong> {{ order.communityOwnerPhone }}</div>
+                      <div *ngIf="order.communityOwnerAddress"><strong>العنوان:</strong> {{ order.communityOwnerAddress }}</div>
+                    </div>
                   </td>
-                  <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700">{{
-                    order.products[0].product_name }}</td>
+                  <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700">
+                    <div class="flex items-center justify-center flex-wrap gap-1">
+                      <span>{{ order.products[0].product_name }}</span>
+                      <span class="inline-block px-1.5 py-0.5 rounded text-[10px]" 
+                            [ngClass]="order.products[0].isMerchantOrder ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'">
+                        {{ order.products[0].isMerchantOrder ? 'تاجر' : 'المنصة' }}
+                      </span>
+                    </div>
+                  </td>
                   <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700">{{
                     order.products[0].product_quantity }}</td>
                   <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700 rtl"
@@ -2316,14 +2446,28 @@
                   'text-blue-500': order.status === 'تم الاستلام',
                   'text-green-500': order.status === 'تم التسليم',
                   'text-red-500': order.status === 'تم الإلغاء',
+                  'text-purple-600': order.status === 'ارسال الاستلام',
                   'dark:text-yellow-400': order.status === 'قيد الإنتظار',
                   'dark:text-orange-400': order.status === 'تم الشحن',
                   'dark:text-blue-400': order.status === 'تم الاستلام',
                   'dark:text-green-400': order.status === 'تم التسليم',
-                  'dark:text-red-400': order.status === 'تم الإلغاء'
+                  'dark:text-red-400': order.status === 'تم الإلغاء',
+                  'dark:text-purple-400': order.status === 'ارسال الاستلام'
                 }">
                       {{ order.status }}
                     </span>
+
+                    <!-- سجل تتبع الطلب (ديسك توب) -->
+                    <div *ngIf="order.statusLog && order.statusLog.length > 0" 
+                         class="mt-2 text-[9px] bg-gray-50 dark:bg-gray-900/40 p-2 rounded border border-gray-100 dark:border-gray-800 max-w-[140px] mx-auto overflow-hidden text-right rtl">
+                      <div class="font-bold text-gray-400 mb-1 border-b dark:border-gray-700 pb-1 text-center">تتبع الحالة</div>
+                      <div *ngFor="let log of order.statusLog" class="mb-1.5 last:mb-0">
+                        <div class="font-bold text-gray-600 dark:text-gray-300">{{ log.status }}</div>
+                        <div class="text-[8px] text-gray-400 leading-none mt-0.5">
+                          {{ log.actor }} • {{ formatOrderShortDate(log.timestamp) }}
+                        </div>
+                      </div>
+                    </div>
                   </td>
                   <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700"
                     [attr.rowspan]="order.products.length">
@@ -2334,29 +2478,68 @@
                       {{ order.paymentStatus === 'completed' ? 'تم الدفع إلكترونياً' : 'الدفع عند الاستلام' }}
                     </span>
                   </td>
+                   <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700"
+                    [attr.rowspan]="order.products.length">
+                    <span class="inline-block px-2 py-1 rounded-full text-[10px] font-semibold" [ngClass]="{
+                      'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20': order.shippingMethod === 'merchant',
+                      'text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20': order.shippingMethod !== 'merchant'
+                    }">
+                      {{ order.shippingMethod === 'merchant' ? 'التاجر يشحن' : 'مندوب النظام' }}
+                    </span>
+                  </td>
                   <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700"
                     [attr.rowspan]="order.products.length">
                     {{ formatOrderDate(order.orderDate) }}
                   </td>
                   <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700"
                     [attr.rowspan]="order.products.length">
-                    <div class="flex gap-2 mt-2">
-                      <button *ngIf="order.status === 'قيد الإنتظار'" (click)="confirmShipment(order._id, 'تم الشحن')"
-                        class="w-full bg-orange-500 hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700 text-white font-semibold py-1 px-3 rounded">
-                        اشحن
+                    <div class="flex flex-col gap-2 mt-2">
+                      <!-- Merchant Handling Indicator -->
+                      <div *ngIf="order.shippingMethod === 'merchant' && order.status !== 'تم التسليم' && order.status !== 'تم الإلغاء'" 
+                           class="bg-blue-50 dark:bg-blue-900/20 p-2 rounded border border-blue-100 dark:border-blue-800 mb-2">
+                        <div class="text-[10px] text-blue-700 dark:text-blue-300 font-bold text-center">
+                          <i class="fas fa-store-alt ml-1"></i>
+                          بإنتظار التاجر
+                        </div>
+                        <div class="text-[9px] text-blue-500 dark:text-blue-400 text-center mt-1">
+                          (شحن عن طريق التاجر)
+                        </div>
+                      </div>
+
+                      <!-- Status: Waiting (قيد الإنتظار) -->
+                      <ng-container *ngIf="order.status === 'قيد الإنتظار'">
+                        <button *ngIf="!order.isCommunityItem && order.shippingMethod !== 'merchant'" (click)="confirmShipment(order._id, 'تم الشحن')"
+                          class="w-full bg-orange-500 hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700 text-white font-semibold py-1 px-3 rounded text-xs">
+                          اشحن
+                        </button>
+                        <button *ngIf="order.isCommunityItem" (click)="confirmShipment(order._id, 'ارسال الاستلام')"
+                          class="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-1 px-3 rounded text-xs">
+                          طلب استلام
+                        </button>
+                      </ng-container>
+
+                      <!-- Status: Sent for Pickup (ارسال الاستلام) -->
+                      <button *ngIf="order.status === 'ارسال الاستلام'" (click)="confirmShipment(order._id, 'تم الاستلام')"
+                        class="w-full bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-semibold py-1 px-3 rounded text-xs">
+                        تم الاستلام من المالك
                       </button>
 
-                      <button *ngIf="order.status === 'تم الشحن' && order.isMerchantOrder"
-                        (click)="confirmShipment(order._id, 'تم الاستلام')"
-                        class="w-full bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-semibold py-1 px-3 rounded">
-                        الاستلام
-                      </button>
+                      <!-- Status: Received (تم الاستلام) -->
+                      <ng-container *ngIf="order.status === 'تم الاستلام'">
+                        <button *ngIf="order.isMerchantOrder" (click)="confirmShipment(order._id, 'تم التسليم')"
+                          class="w-full bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700 text-white font-semibold py-1 px-3 rounded text-xs">
+                          تمت (تسليم للعميل)
+                        </button>
+                        <button *ngIf="order.isCommunityItem" (click)="confirmShipment(order._id, 'تم الشحن')"
+                          class="w-full bg-orange-500 hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700 text-white font-semibold py-1 px-3 rounded text-xs">
+                          اشحن للفائز
+                        </button>
+                      </ng-container>
 
-                      <button
-                        *ngIf="(order.status === 'تم الاستلام' && order.isMerchantOrder) || (order.status === 'تم الشحن' && !order.isMerchantOrder)"
-                        (click)="confirmShipment(order._id, 'تم التسليم')"
-                        class="w-full bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700 text-white font-semibold py-1 px-3 rounded">
-                        تمت
+                      <!-- Status: Shipped (تم الشحن) -->
+                      <button *ngIf="order.status === 'تم الشحن'" (click)="confirmShipment(order._id, 'تم التسليم')"
+                        class="w-full bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700 text-white font-semibold py-1 px-3 rounded text-xs">
+                        تمت (تأكيد الوصول)
                       </button>
 
                       <button *ngIf="order.status !== 'تم الإلغاء' && order.status !== 'تم التسليم'"
@@ -2380,8 +2563,14 @@
                 </tr>
                 <tr *ngFor="let product of order.products; let i = index" [hidden]="i === 0"
                   [ngClass]="{'bg-blue-50 dark:bg-[#0a1325]': orderIndex % 2 === 0, 'bg-white dark:bg-gray-800': orderIndex % 2 !== 0}">
-                  <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700">{{
-                    product.product_name }}
+                  <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700">
+                    <div class="flex items-center justify-center flex-wrap gap-1">
+                      <span>{{ product.product_name }}</span>
+                      <span class="inline-block px-1.5 py-0.5 rounded text-[10px]" 
+                            [ngClass]="product.isMerchantOrder ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'">
+                        {{ product.isMerchantOrder ? 'تاجر' : 'المنصة' }}
+                      </span>
+                    </div>
                   </td>
                   <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700">{{
                     product.product_quantity

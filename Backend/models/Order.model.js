@@ -54,6 +54,11 @@ const orderSchema = new mongoose.Schema({
     default: 1,
     min: 1,
     max: 30
+  },
+  shippingMethod: {
+    type: String,
+    enum: ['merchant', 'knoozbook'],
+    default: 'knoozbook'
   }
 }, {
   timestamps: true

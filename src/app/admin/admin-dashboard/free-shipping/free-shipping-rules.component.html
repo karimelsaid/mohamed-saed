@@ -1,4 +1,4 @@
-<h2 class="dark:text-gray-300 font-bold text-center">إدارة قواعد الشحن المجاني</h2>
+<h2 class="dark:text-gray-300 font-bold text-center">إدارة مصاريف الشحن</h2>
 
 <form (ngSubmit)="saveRules()"
   class="max-w-xl mx-auto flex flex-col space-y-4 dark:bg-gray-800 dark:text-gray-300 p-6 rounded-lg shadow-md">
@@ -45,6 +45,20 @@
         class="w-full p-2 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200" />
       <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">ملاحظة: لا تُضاف رسوم COD عند اختيار "استلام من المكتبة"
       </p>
+      <!-- مصاريف شحن المجتمع -->
+      <!-- مصاريف الشحن حسب النطاقات الجغرافية -->
+      <div class="border-t border-gray-100 dark:border-gray-700 pt-6 mt-6">
+        <h3 class="text-lg font-bold text-purple-600 dark:text-purple-400 mb-4">مصاريف الشحن حسب المناطق (نطاقات)</h3>
+        <p class="text-xs text-gray-500 mb-4">هذه القيم تعدل السعر الافتراضي لكل منطقة للمنتجات العادية</p>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div *ngFor="let region of regionKeys" class="form-group bg-gray-50 dark:bg-gray-700/30 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
+            <label class="block text-xs font-semibold mb-2 text-gray-600 dark:text-gray-400">{{ region }} (ج.م)</label>
+            <input type="number" [(ngModel)]="regionCosts[region]" [name]="'region_' + region"
+              class="w-full p-2 border border-gray-200 dark:border-gray-600 rounded dark:bg-gray-800 text-sm focus:ring-1 focus:ring-purple-500">
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 

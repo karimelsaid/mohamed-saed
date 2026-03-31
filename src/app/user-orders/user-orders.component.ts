@@ -46,7 +46,9 @@ interface Order {
   orderDate: string;
   address: string;
   totalAmount: number;
-  paymentStatus?: string; // Add optional paymentStatus
+  paymentStatus?: string;
+  isCommunityItem?: boolean;
+  communityItemId?: string;
 }
 
 @Component({

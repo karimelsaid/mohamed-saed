@@ -29,6 +29,10 @@
         <i class="fas fa-cog"></i>
         <span>الإعدادات</span>
       </a>
+      <a (click)="setTab('shippingSettings')" [class.active]="activeTab === 'shippingSettings'" class="sidebar-nav-item">
+        <i class="fas fa-truck text-lg"></i>
+        <span>إعدادات الشحن</span>
+      </a>
     </nav>
   </aside>
 
@@ -107,31 +111,34 @@
       <section class="chart-card mt-8">
         <div class="chart-header">
           <h2>آخر الطلبات</h2>
-          <button (click)="setTab('orders')" class="text-blue-600 font-medium text-sm">عرض الكل</button>
+          <button (click)="setTab('orders')" class="text-blue-600 dark:text-blue-400 font-medium text-sm hover:underline transition-all">عرض الكل</button>
         </div>
         <div *ngIf="orders.length === 0" class="text-center py-12">
-          <img src="/assets/no-orders.svg" class="w-32 mx-auto mb-4 opacity-20" alt="">
-          <p class="text-gray-400">لا توجد طلبات بعد.</p>
+          <div class="w-20 h-20 mx-auto mb-4 bg-gray-50 dark:bg-gray-800 rounded-full flex items-center justify-center">
+            <i class="fas fa-shopping-bag text-3xl text-gray-200 dark:text-gray-700"></i>
+          </div>
+          <p class="text-gray-400 dark:text-gray-500 font-black">لا توجد طلبات بعد.</p>
         </div>
         <div *ngIf="orders.length > 0" class="overflow-x-auto">
           <table class="w-full text-right border-collapse">
             <thead>
-              <tr class="text-gray-400 text-sm border-b">
-                <th class="pb-4 font-medium">الطلب</th>
-                <th class="pb-4 font-medium">العميل</th>
-                <th class="pb-4 font-medium">المبلغ</th>
-                <th class="pb-4 font-medium">الحالة</th>
+              <tr class="text-gray-400 dark:text-gray-500 text-sm border-b dark:border-gray-700">
+                <th class="pb-4 font-black">الطلب</th>
+                <th class="pb-4 font-black">العميل</th>
+                <th class="pb-4 font-black">المبلغ</th>
+                <th class="pb-4 font-black">الحالة</th>
               </tr>
             </thead>
-            <tbody class="divide-y">
-              <tr *ngFor="let order of orders.slice(0, 5)" class="hover:bg-gray-50 transition-colors">
-                <td class="py-4 font-semibold">#{{ order._id.slice(-6) }}</td>
-                <td class="py-4 text-gray-600">{{ order.customerName }}</td>
-                <td class="py-4 font-bold">{{ order.totalAmount }} ج.م</td>
+            <tbody class="divide-y dark:divide-gray-700/50">
+              <tr *ngFor="let order of orders.slice(0, 5)" class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                <td class="py-4 font-black text-gray-800 dark:text-gray-200">#{{ order._id.slice(-6) }}</td>
+                <td class="py-4 text-gray-600 dark:text-gray-400 font-medium">{{ order.customerName }}</td>
+                <td class="py-4 font-black text-blue-600 dark:text-blue-400">{{ order.totalAmount }} ج.م</td>
                 <td class="py-4">
-                  <span class="badge" [ngClass]="{
-                    'badge-pending': order.status === 'قيد الإنتظار',
-                    'badge-approved': order.status === 'تم التسليم'
+                  <span class="px-3 py-1 text-[10px] font-black rounded-full uppercase tracking-tighter" [ngClass]="{
+                    'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400 border border-yellow-100 dark:border-yellow-900/30': order.status === 'قيد الإنتظار',
+                    'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border border-green-100 dark:border-green-900/30': order.status === 'تم التسليم',
+                    'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900/30': order.status !== 'قيد الإنتظار' && order.status !== 'تم التسليم'
                   }">{{ order.status }}</span>
                 </td>
               </tr>
@@ -191,75 +198,113 @@
     </div>
 
     <!-- TAB: PRODUCTS -->
-    <div *ngIf="activeTab === 'products'" class="animate-fade-in">
-      <header class="dashboard-header">
-        <div class="dashboard-title">
-          <h1>إدارة المنتجات</h1>
-          <p>تحكم في قائمة مشاريعك وتوفرها.</p>
-        </div>
-          <button (click)="addProduct()" [disabled]="isMerchantPending()" 
-            class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-5 rounded-xl shadow-md transition-all flex items-center justify-center disabled:opacity-50">
-            <i class="fas fa-plus ml-2 text-white"></i>
-            إضافة منتج
-          </button>
-      </header>
-
-      <!-- Bulk Actions & View Toggle -->
-      <div class="flex flex-col md:flex-row justify-between items-center bg-white p-4 rounded-xl shadow-sm mb-6 gap-4">
-        <div class="flex items-center gap-4">
-          <label class="flex items-center cursor-pointer gap-2">
-            <input type="checkbox" [checked]="isAllProductsSelected()" (change)="selectAllProducts()" class="rounded border-gray-300">
-            <span class="text-sm text-gray-600">تحديد الكل</span>
-          </label>
-          <button *ngIf="selectedProducts.size > 0" (click)="bulkDeleteSelectedProductsWithModal()" class="text-red-500 text-sm font-bold">
-            حذف المحدد ({{ selectedProducts.size }})
-          </button>
-        </div>
-        <div class="flex items-center gap-2 bg-gray-100 p-1 rounded-lg">
-          <button (click)="changeView('grid')" [class.bg-white]="viewMode === 'grid'" class="px-3 py-1 rounded-md text-sm transition-all">شبكة</button>
-          <button (click)="changeView('list')" [class.bg-white]="viewMode === 'list'" class="px-3 py-1 rounded-md text-sm transition-all">قائمة</button>
-        </div>
-      </div>
-
-      <div *ngIf="loadingProducts" class="flex justify-center py-20">
-        <div class="animate-spin text-blue-600 text-3xl">
-          <i class="fas fa-circle-notch"></i>
-        </div>
-      </div>
-
-      <!-- Products Display -->
-      <div *ngIf="!loadingProducts" [ngClass]="viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6' : 'space-y-4'">
-        <div *ngFor="let product of paginatedProducts" class="bg-white rounded-2xl p-4 border hover:shadow-xl transition-all group relative">
-          <div class="absolute top-2 right-2 z-10">
-            <input type="checkbox" [checked]="isProductSelected(product._id)" (change)="toggleProductSelection(product._id)" class="rounded border-gray-300">
+    <div *ngIf="activeTab === 'products'" class="animate-fade-in space-y-8">
+      <div class="bg-white dark:bg-gray-900 rounded-3xl p-8 border border-gray-100 dark:border-gray-800 shadow-xl shadow-gray-200/50 dark:shadow-none transition-all duration-500">
+        <div class="flex flex-col md:flex-row justify-between items-center gap-6 mb-10">
+          <div>
+            <h2 class="text-2xl font-black text-gray-900 dark:text-white flex items-center gap-3">
+              <span class="w-2 h-8 bg-blue-600 rounded-full"></span>
+              إدارة المنتجات
+            </h2>
+            <p class="text-gray-500 dark:text-gray-400 mt-2 font-medium">تحكم في قائمة مشاريعك وتوفرها.</p>
           </div>
-          
-          <div class="flex gap-4" [ngClass]="{'flex-col': viewMode === 'grid'}">
-            <img [src]="getProductImageUrl(product)" class="rounded-xl object-cover shrink-0" 
-                 [ngClass]="viewMode === 'grid' ? 'w-full h-48' : 'w-24 h-24'" alt="">
-            
-            <div class="flex-1">
-              <div class="flex justify-between items-start mb-2">
-                <h3 class="font-bold text-gray-900">{{ product.product_name }}</h3>
-                <span class="badge" [ngClass]="{
-                   'badge-pending': product.status === 'pending',
-                   'badge-approved': product.status === 'approved'
-                }">{{ product.status === 'pending' ? 'معلق' : 'معتمد' }}</span>
-              </div>
-              <div class="text-blue-600 font-bold mb-4">{{ product.product_price }} ج.م</div>
-              
-              <div class="flex justify-between items-center text-sm text-gray-500 mb-4">
-                <span>المخزون: {{ product.product_quantity }}</span>
-                <span>المشاهدات: {{ product.views || 0 }}</span>
-              </div>
+          <button (click)="addProduct()" [disabled]="isMerchantPending()" 
+            class="w-full md:w-auto px-10 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black hover:scale-105 active:scale-95 transition-all shadow-lg shadow-blue-500/25 flex items-center justify-center gap-3 disabled:opacity-50 disabled:grayscale">
+            <i class="fas fa-plus"></i>
+            إضافة منتج جديد
+          </button>
+        </div>
 
-              <div class="flex gap-2">
-                <button (click)="editProduct(product)" class="flex-1 py-2 bg-blue-50 text-blue-600 rounded-lg font-medium hover:bg-blue-600 hover:text-white transition-all">
-                  تعديل
-                </button>
-                <button (click)="deleteProduct(product)" class="w-10 h-10 flex items-center justify-center text-red-400 hover:text-red-600">
-                  <i class="fas fa-trash"></i>
-                </button>
+        <!-- Bulk Actions & View Toggle -->
+        <div class="flex flex-col md:flex-row justify-between items-center bg-gray-50/50 dark:bg-gray-800/30 p-5 rounded-3xl border border-gray-100 dark:border-gray-700/50 backdrop-blur-sm mb-8 gap-6 shadow-inner">
+          <div class="flex items-center gap-6">
+            <label class="group flex items-center cursor-pointer gap-3 p-3 px-5 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 hover:border-blue-400 transition-all">
+              <input type="checkbox" [checked]="isAllProductsSelected()" (change)="selectAllProducts()" class="w-5 h-5 rounded-lg border-gray-300 text-blue-600 focus:ring-blue-500">
+              <span class="text-sm font-black text-gray-700 dark:text-gray-200">تحديد الكل</span>
+            </label>
+            <button *ngIf="selectedProducts.size > 0" (click)="bulkDeleteSelectedProductsWithModal()" class="flex items-center gap-2 px-5 py-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-2xl text-sm font-black hover:bg-red-100 transition-all animate-bounce-in">
+              <i class="fas fa-trash-alt"></i>
+              حذف المحدد ({{ selectedProducts.size }})
+            </button>
+          </div>
+          <div class="flex items-center gap-3 bg-white dark:bg-gray-800 p-2 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
+            <button (click)="changeView('grid')" 
+                    [class.bg-blue-600]="viewMode === 'grid'" 
+                    [class.text-white]="viewMode === 'grid'"
+                    class="p-3 rounded-xl transition-all duration-300 flex items-center gap-2"
+                    [ngClass]="viewMode !== 'grid' ? 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400' : 'shadow-lg shadow-blue-500/25'">
+              <i class="fas fa-th-large"></i>
+            </button>
+            <button (click)="changeView('list')" 
+                    [class.bg-blue-600]="viewMode === 'list'"
+                    [class.text-white]="viewMode === 'list'"
+                    class="p-3 rounded-xl transition-all duration-300 flex items-center gap-2"
+                    [ngClass]="viewMode !== 'list' ? 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400' : 'shadow-lg shadow-blue-500/25'">
+              <i class="fas fa-list"></i>
+            </button>
+          </div>
+        </div>
+
+        <div *ngIf="loadingProducts" class="flex flex-col items-center justify-center py-32 space-y-4">
+          <div class="relative">
+            <div class="w-16 h-16 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin"></div>
+            <div class="absolute inset-0 flex items-center justify-center text-blue-600">
+              <i class="fas fa-box text-xl opacity-50"></i>
+            </div>
+          </div>
+          <p class="text-gray-400 dark:text-gray-500 font-black animate-pulse">جاري تحميل كنوزك...</p>
+        </div>
+
+        <!-- Products Display -->
+        <div *ngIf="!loadingProducts" [ngClass]="viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8' : 'space-y-6'">
+          <div *ngFor="let product of paginatedProducts" class="bg-white dark:bg-gray-800 rounded-3xl p-5 border border-gray-100 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-900 transition-all duration-500 group relative shadow-sm hover:shadow-2xl hover:shadow-blue-500/10 hover:-translate-y-2">
+            <div class="absolute top-4 right-4 z-10 transition-transform group-hover:scale-125">
+              <input type="checkbox" [checked]="isProductSelected(product._id)" (change)="toggleProductSelection(product._id)" class="w-5 h-5 rounded-lg border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 shadow-sm cursor-pointer">
+            </div>
+            
+            <div class="flex gap-6" [ngClass]="{'flex-col': viewMode === 'grid'}">
+              <div class="relative overflow-hidden rounded-2xl group-hover:shadow-lg transition-all duration-500" 
+                   [ngClass]="viewMode === 'grid' ? 'w-full h-56' : 'w-32 h-32'">
+                <img [src]="getProductImageUrl(product)" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt="">
+                <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
+                  <span class="text-white text-xs font-black truncate">{{ product.product_name }}</span>
+                </div>
+              </div>
+              
+              <div class="flex-1 flex flex-col">
+                <div class="flex justify-between items-start mb-4">
+                  <h3 class="font-black text-gray-900 dark:text-gray-100 text-lg group-hover:text-blue-600 transition-colors uppercase">{{ product.product_name }}</h3>
+                  <span class="px-3 py-1 text-[10px] font-black rounded-full uppercase tracking-tighter" [ngClass]="{
+                     'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400 border border-yellow-100 dark:border-yellow-900/30': product.status === 'pending',
+                     'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border border-green-100 dark:border-green-900/30': product.status === 'approved'
+                  }">{{ product.status === 'pending' ? 'معلق' : 'معتمد' }}</span>
+                </div>
+
+                <div class="flex items-center gap-2 mb-6 text-blue-600 dark:text-blue-400">
+                  <span class="text-2xl font-black">{{ product.product_price }}</span>
+                  <span class="text-xs font-black opacity-50 uppercase">ج.م</span>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4 mb-6 bg-gray-50/50 dark:bg-gray-900/50 p-3 rounded-2xl border border-gray-100/50 dark:border-gray-800/50">
+                  <div class="flex flex-col">
+                    <span class="text-[10px] font-black text-gray-400 uppercase tracking-tighter">المخزون</span>
+                    <span class="font-black text-gray-700 dark:text-gray-300">{{ product.product_quantity }}</span>
+                  </div>
+                  <div class="flex flex-col items-end">
+                    <span class="text-[10px] font-black text-gray-400 uppercase tracking-tighter">المشاهدات</span>
+                    <span class="font-black text-gray-700 dark:text-gray-300">{{ product.views || 0 }}</span>
+                  </div>
+                </div>
+
+                <div class="flex gap-3 mt-auto">
+                  <button (click)="editProduct(product)" class="flex-1 py-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-2xl font-black hover:bg-blue-600 hover:text-white transition-all shadow-sm hover:shadow-lg hover:shadow-blue-500/25 flex items-center justify-center gap-2">
+                    <i class="fas fa-edit"></i>
+                    تعديل
+                  </button>
+                  <button (click)="deleteProduct(product)" class="w-12 h-12 flex items-center justify-center text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-2xl transition-all border border-transparent hover:border-red-100 dark:hover:border-red-900/30">
+                    <i class="fas fa-trash-alt"></i>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -268,69 +313,112 @@
     </div>
 
     <!-- TAB: ORDERS -->
-    <div *ngIf="activeTab === 'orders'" class="animate-fade-in">
-      <header class="dashboard-header">
-        <div class="dashboard-title">
-          <h1>إدارة الطلبات</h1>
-          <p>تابع حالات الشحن والتسليم لعملائك.</p>
+    <div *ngIf="activeTab === 'orders'" class="animate-fade-in space-y-8">
+      <div class="bg-white dark:bg-gray-900 rounded-3xl p-8 border border-gray-100 dark:border-gray-800 shadow-xl shadow-gray-200/50 dark:shadow-none transition-all duration-500">
+        <div class="flex flex-col md:flex-row justify-between items-center gap-6 mb-10">
+          <div>
+            <h2 class="text-2xl font-black text-gray-900 dark:text-white flex items-center gap-3">
+              <span class="w-2 h-8 bg-orange-500 rounded-full"></span>
+              إدارة الطلبات
+            </h2>
+            <p class="text-gray-500 dark:text-gray-400 mt-2 font-medium">تابع حالات الشحن والتسليم لعملائك.</p>
+          </div>
         </div>
-      </header>
 
-      <div *ngIf="orders.length === 0" class="text-center py-20 bg-white rounded-2xl border">
-        <i class="fas fa-shopping-cart text-5xl text-gray-200 mb-4"></i>
-        <h3 class="text-gray-400">لا توجد طلبات لعرضها حالياً.</h3>
-      </div>
+        <div *ngIf="orders.length === 0" class="flex flex-col items-center justify-center py-32 space-y-4">
+          <div class="w-24 h-24 bg-gray-50 dark:bg-gray-800 rounded-full flex items-center justify-center">
+            <i class="fas fa-shopping-bag text-4xl text-gray-200 dark:text-gray-700"></i>
+          </div>
+          <h3 class="text-gray-400 dark:text-gray-500 font-black text-lg">لا توجد طلبات لعرضها حالياً.</h3>
+          <p class="text-gray-300 dark:text-gray-600 text-sm">ستظهر الطلبات هنا فور وصولها 🚀</p>
+        </div>
 
-      <div *ngIf="orders.length > 0" class="space-y-6">
-        <div *ngFor="let order of orders" class="bg-white rounded-2xl p-6 border shadow-sm hover:shadow-md transition-all">
-          <div class="flex flex-col md:flex-row justify-between gap-6">
-            <div class="flex-1">
-              <div class="flex items-center gap-3 mb-4">
-                <span class="bg-gray-100 px-3 py-1 rounded-lg text-sm font-bold">#{{ order._id.slice(-8)}}</span>
-                <span class="text-gray-400 text-sm">{{ order.orderDate | date:'medium' }}</span>
+        <div *ngIf="orders.length > 0" class="space-y-6">
+          <div *ngFor="let order of orders" class="bg-white dark:bg-gray-800 rounded-3xl p-6 border border-gray-100 dark:border-gray-700 hover:border-blue-200 dark:hover:border-blue-900 shadow-sm hover:shadow-2xl hover:shadow-blue-500/10 hover:-translate-y-1 transition-all duration-500">
+            <div class="flex flex-col md:flex-row justify-between gap-6">
+              <div class="flex-1">
+                <div class="flex items-center gap-3 mb-5">
+                  <span class="bg-gray-100 dark:bg-gray-700 px-4 py-1.5 rounded-xl text-sm font-black text-gray-700 dark:text-gray-300">#{{ order._id.slice(-8)}}</span>
+                  <span class="text-gray-400 dark:text-gray-500 text-sm font-medium">{{ order.orderDate | date:'medium' }}</span>
+                </div>
+                
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div class="p-3 bg-gray-50/50 dark:bg-gray-900/50 rounded-2xl">
+                    <div class="text-[10px] font-black text-gray-400 uppercase tracking-tighter mb-1">العميل</div>
+                    <div class="font-black text-gray-800 dark:text-gray-200">{{ order.customerName }}</div>
+                  </div>
+                  <div class="p-3 bg-gray-50/50 dark:bg-gray-900/50 rounded-2xl">
+                    <div class="text-[10px] font-black text-gray-400 uppercase tracking-tighter mb-1">المبلغ</div>
+                    <div class="font-black text-blue-600 dark:text-blue-400">{{ order.totalAmount }} ج.م</div>
+                  </div>
+                  <!-- Customer info for merchant-shipped orders -->
+                  <ng-container *ngIf="order.shippingMethod === 'merchant'">
+                    <div class="p-3 bg-gray-50/50 dark:bg-gray-900/50 rounded-2xl">
+                      <div class="text-[10px] font-black text-gray-400 uppercase tracking-tighter mb-1">الهاتف</div>
+                      <div class="font-black text-gray-800 dark:text-gray-200">{{ order.phone || '--' }}</div>
+                    </div>
+                    <div class="col-span-2 md:col-span-1 p-3 bg-gray-50/50 dark:bg-gray-900/50 rounded-2xl">
+                      <div class="text-[10px] font-black text-gray-400 uppercase tracking-tighter mb-1">العنوان</div>
+                      <div class="font-black text-gray-800 dark:text-gray-200 text-xs">{{ order.address }}</div>
+                    </div>
+                  </ng-container>
+                  <div *ngIf="order.shippingMethod !== 'merchant'" class="p-3 bg-gray-50/50 dark:bg-gray-900/50 rounded-2xl">
+                    <div class="text-[10px] font-black text-gray-400 uppercase tracking-tighter mb-1">المنتجات</div>
+                    <div class="font-black text-gray-800 dark:text-gray-200">{{ order.products?.length }} قطع</div>
+                  </div>
+                  <div class="p-3 bg-gray-50/50 dark:bg-gray-900/50 rounded-2xl">
+                    <div class="text-[10px] font-black text-gray-400 uppercase tracking-tighter mb-1">الحالة</div>
+                    <div class="font-black text-orange-500 dark:text-orange-400">{{ order.status }}</div>
+                  </div>
+                </div>
+
+                <!-- Product Details List -->
+                <div class="mt-5 pt-5 border-t border-gray-100 dark:border-gray-700">
+                  <div class="text-[10px] font-black text-gray-400 uppercase tracking-tighter mb-3">المنتجات المطلوبة:</div>
+                  <div class="space-y-2">
+                    <div *ngFor="let p of order.products" class="flex items-center justify-between bg-gray-50/50 dark:bg-gray-900/30 p-3 rounded-2xl border border-gray-100/50 dark:border-gray-700/30 hover:border-blue-200 dark:hover:border-blue-900 transition-all">
+                      <div class="flex items-center gap-3">
+                        <img [src]="('/uploads/books/' + p.product_image).replace('.jpg', '.webp')" 
+                             class="w-10 h-10 rounded-xl object-cover shadow-sm" alt="">
+                        <span class="text-sm font-black text-gray-700 dark:text-gray-300">{{ p.bookName || p.book }}</span>
+                      </div>
+                      <div class="text-xs font-black bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 px-3 py-1.5 rounded-xl border border-blue-100 dark:border-blue-900/30">
+                        {{ p.quantity }} ×
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
-              
-              <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div>
-                  <div class="text-xs text-gray-400 mb-1">العميل</div>
-                  <div class="font-bold">{{ order.customerName }}</div>
-                </div>
-                <div>
-                  <div class="text-xs text-gray-400 mb-1">المبلغ</div>
-                  <div class="font-bold text-blue-600">{{ order.totalAmount }} ج.م</div>
-                </div>
-                <div>
-                  <div class="text-xs text-gray-400 mb-1">المنتجات</div>
-                  <div class="font-bold">{{ order.products?.length }} قطع</div>
-                </div>
-                <div>
-                  <div class="text-xs text-gray-400 mb-1">الحالة</div>
-                  <div class="font-bold text-orange-500">{{ order.status }}</div>
+
+              <div class="flex items-center gap-2 px-4 border-r dark:border-gray-700 hidden md:flex">
+                <div class="avatar-group flex -space-x-4">
+                  <img *ngFor="let p of order.products.slice(0,3)" 
+                       [src]="('/uploads/books/' + p.product_image).replace('.jpg', '.webp')" 
+                       class="w-12 h-12 rounded-full border-3 border-white dark:border-gray-800 object-cover shadow-md" 
+                       [title]="p.book" alt="">
                 </div>
               </div>
-            </div>
 
-            <div class="flex items-center gap-2 px-4 border-r hidden md:flex">
-              <div class="avatar-group flex -space-x-4">
-                <img *ngFor="let p of order.products.slice(0,3)" 
-                     [src]="('/uploads/books/' + p.product_image).replace('.jpg', '.webp')" 
-                     class="w-10 h-10 rounded-full border-2 border-white object-cover" 
-                     [title]="p.book" alt="">
+              <div class="flex flex-row md:flex-col gap-3 shrink-0">
+                <button (click)="viewOrderDetails(order)" class="flex-1 px-5 py-3 border border-gray-200 dark:border-gray-600 rounded-2xl text-sm font-black text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all flex items-center justify-center gap-2">
+                  <i class="fas fa-eye"></i>
+                  التفاصيل
+                </button>
+                
+                <!-- Conditional Status Buttons -->
+                <button *ngIf="order.status === 'قيد الإنتظار'" (click)="confirmShipmentWithModal(order, 'قيد المعالجة')" class="px-5 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl text-sm font-black shadow-lg shadow-blue-500/25 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2">
+                  <i class="fas fa-play"></i>
+                  بدء المعالجة
+                </button>
+                <button *ngIf="order.status === 'قيد المعالجة'" (click)="confirmShipmentWithModal(order, 'تم الشحن')" class="px-5 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-2xl text-sm font-black shadow-lg shadow-green-500/25 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2">
+                  <i class="fas fa-truck"></i>
+                  شحن الطلب
+                </button>
+                <button *ngIf="order.status === 'تم الشحن' && order.shippingMethod === 'merchant'" (click)="confirmShipmentWithModal(order, 'تم التسليم')" class="px-5 py-3 bg-gradient-to-r from-purple-500 to-violet-600 text-white rounded-2xl text-sm font-black shadow-lg shadow-purple-500/25 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2">
+                  <i class="fas fa-check-double"></i>
+                  تأكيد التسليم للعميل
+                </button>
               </div>
-            </div>
-
-            <div class="flex flex-row md:flex-col gap-2 shrink-0">
-              <button (click)="viewOrderDetails(order)" class="flex-1 px-4 py-2 border rounded-lg text-sm font-medium hover:bg-gray-50">
-                التفاصيل
-              </button>
-              
-              <!-- Conditional Status Buttons -->
-              <button *ngIf="order.status === 'قيد الإنتظار'" (click)="confirmShipmentWithModal(order, 'قيد المعالجة')" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium">
-                بدء المعالجة
-              </button>
-              <button *ngIf="order.status === 'قيد المعالجة'" (click)="confirmShipmentWithModal(order, 'تم الشحن')" class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium">
-                شحن الطلب
-              </button>
             </div>
           </div>
         </div>
@@ -339,118 +427,423 @@
 
     <!-- TAB: SETTINGS -->
     <div *ngIf="activeTab === 'settings'" class="animate-fade-in">
-      <header class="dashboard-header border-b pb-4 mb-8">
+      <header class="dashboard-header border-b dark:border-gray-700 pb-4 mb-8">
         <div class="dashboard-title">
-          <h1>إعدادات المتجر</h1>
-          <p>إدارة العلامة التجارية ومعلومات التواصل.</p>
+          <h1 class="dark:text-white">إعدادات المتجر</h1>
+          <p class="dark:text-gray-400">إدارة العلامة التجارية ومعلومات التواصل.</p>
         </div>
       </header>
 
       <div class="max-w-4xl">
         <!-- Profile View / Edit Toggle -->
-        <div *ngIf="!isEditMode" class="bg-white rounded-2xl border p-8 space-y-8">
-          <div class="flex items-center gap-6">
-            <img [src]="getLogoUrl(merchant?.logo) || '/assets/placeholder-store.jpg'" class="w-24 h-24 rounded-2xl object-cover border" alt="">
-            <div>
-              <h2 class="text-2xl font-extrabold">{{ merchant?.merchantName || merchant?.name }}</h2>
-              <p class="text-gray-500">{{ merchant?.email }}</p>
+        <div *ngIf="!isEditMode" class="bg-white dark:bg-gray-800 rounded-2xl border dark:border-gray-700 p-8 space-y-8 shadow-sm">
+          <div class="flex flex-col md:flex-row items-center gap-6">
+            <div class="relative group">
+              <img [src]="getLogoUrl(merchant?.logo) || '/assets/placeholder-store.jpg'" 
+                class="w-32 h-32 rounded-2xl object-cover border-4 border-gray-50 dark:border-gray-700 shadow-md" alt="">
+              <div class="absolute -bottom-2 -right-2 bg-blue-600 text-white p-2 rounded-lg shadow-lg">
+                <fa-icon [icon]="faStore"></fa-icon>
+              </div>
             </div>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t">
-            <div class="space-y-1">
-              <label class="text-xs text-gray-400">رقم الهاتف</label>
-              <p class="font-bold">{{ merchant?.phone || '--' }}</p>
-            </div>
-            <div class="space-y-1">
-              <label class="text-xs text-gray-400">الرقم الضريبي</label>
-              <p class="font-bold">{{ merchant?.taxNumber || '--' }}</p>
-            </div>
-            <div class="space-y-1">
-              <label class="text-xs text-gray-400">مدة التجهيز</label>
-              <p class="font-bold">{{ merchant?.preparationTime || 1 }} يوم</p>
-            </div>
-            <div class="space-y-1">
-              <label class="text-xs text-gray-400">حالة الحساب</label>
-              <div>
-                <span class="badge" [ngClass]="merchant?.approved ? 'badge-approved' : 'badge-pending'">
-                  {{ merchant?.approved ? 'موثق ومعتمد' : 'تحت المراجعة' }}
-                </span>
+            <div class="text-center md:text-right">
+              <h2 class="text-3xl font-extrabold dark:text-white">{{ merchant?.merchantName || merchant?.name || 'اسم المتجر' }}</h2>
+              <div class="flex items-center justify-center md:justify-start gap-2 mt-2 text-gray-500 dark:text-gray-400">
+                <fa-icon [icon]="faEnvelope" class="text-sm"></fa-icon>
+                <span>{{ merchant?.email }}</span>
               </div>
             </div>
           </div>
 
-          <div class="pt-6 border-t">
-            <label class="text-xs text-gray-400">السيرة الذاتية (Bio)</label>
-            <p class="text-gray-600 mt-2 leading-relaxed">{{ merchant?.bio || 'لم يتم إضافة وصف بعد.' }}</p>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-8 border-t dark:border-gray-700">
+            <div class="flex items-start gap-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-900/50">
+              <div class="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                <fa-icon [icon]="faPhone"></fa-icon>
+              </div>
+              <div class="space-y-1">
+                <label class="text-xs text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wider">رقم الهاتف</label>
+                <p class="font-bold dark:text-gray-200">{{ merchant?.phone || '--' }}</p>
+              </div>
+            </div>
+
+            <div class="flex items-start gap-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-900/50">
+              <div class="w-10 h-10 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-orange-600 dark:text-orange-400">
+                <fa-icon [icon]="faFileInvoice"></fa-icon>
+              </div>
+              <div class="space-y-1">
+                <label class="text-xs text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wider">الرقم الضريبي</label>
+                <p class="font-bold dark:text-gray-200">{{ merchant?.taxNumber || '--' }}</p>
+              </div>
+            </div>
+
+            <div class="flex items-start gap-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-900/50">
+              <div class="w-10 h-10 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-400">
+                <fa-icon [icon]="faClock"></fa-icon>
+              </div>
+              <div class="space-y-1">
+                <label class="text-xs text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wider">مدة التجهيز</label>
+                <p class="font-bold dark:text-gray-200">{{ merchant?.preparationTime || 1 }} يوم</p>
+              </div>
+            </div>
+
+            <div class="flex items-start gap-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-900/50">
+              <div class="w-10 h-10 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-600 dark:text-purple-400">
+                <fa-icon [icon]="faTruck"></fa-icon>
+              </div>
+              <div class="space-y-1">
+                <label class="text-xs text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wider">نموذج الشحن</label>
+                <p class="font-bold dark:text-gray-200">
+                  {{ merchant?.merchantShippingMethod === 'merchant' ? 'عن طريق التاجر' : 'عن طريق كنوز بوك' }}
+                </p>
+              </div>
+            </div>
+
+            <div class="flex items-start gap-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-900/50 col-span-1 md:col-span-2">
+              <div class="w-10 h-10 rounded-lg flex items-center justify-center" 
+                [ngClass]="merchant?.approved ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400'">
+                <fa-icon [icon]="merchant?.approved ? faCheckCircle : faHourglassHalf"></fa-icon>
+              </div>
+              <div class="space-y-1">
+                <label class="text-xs text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wider">حالة الحساب</label>
+                <p class="font-bold" [ngClass]="merchant?.approved ? 'text-green-600 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400'">
+                  {{ merchant?.approved ? 'موثق ومعتمد' : 'تحت المراجعة' }}
+                </p>
+              </div>
+            </div>
           </div>
 
-          <button (click)="toggleEditMode()" class="w-full py-3 bg-gray-900 text-white rounded-xl font-bold hover:bg-gray-800 transition-all">
+          <div class="pt-8 border-t dark:border-gray-700">
+            <div class="flex items-center gap-2 mb-3 text-gray-400 dark:text-gray-500">
+              <fa-icon [icon]="faPen" class="text-xs"></fa-icon>
+              <label class="text-xs font-bold uppercase tracking-wider">السيرة الذاتية (Bio)</label>
+            </div>
+            <p class="text-gray-600 dark:text-gray-300 leading-relaxed text-lg italic">
+              "{{ merchant?.bio || 'لا يوجد وصف للمتجر حالياً.' }}"
+            </p>
+          </div>
+
+          <button (click)="toggleEditMode()" 
+            class="w-full py-4 bg-gray-900 dark:bg-blue-600 text-white rounded-2xl font-bold hover:bg-black dark:hover:bg-blue-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-gray-200 dark:shadow-none">
+            <fa-icon [icon]="faPen"></fa-icon>
             تعديل الملف الشخصي
           </button>
         </div>
 
         <!-- Update Form -->
-        <div *ngIf="isEditMode" class="bg-white rounded-2xl border p-8">
-          <form (ngSubmit)="onSubmitProfileUpdate()" class="space-y-6">
-             <div class="grid md:grid-cols-2 gap-6">
+        <div *ngIf="isEditMode" class="bg-white dark:bg-gray-800 rounded-2xl border dark:border-gray-700 p-8 shadow-xl animate-in slide-in-from-top-4 duration-300">
+          <form (ngSubmit)="onSubmitProfileUpdate()" class="space-y-8">
+             <div class="grid md:grid-cols-2 gap-8">
                 <!-- Profile Inputs -->
                 <div class="space-y-2">
-                  <label class="text-sm font-bold">اسم المتجر</label>
-                  <input type="text" [(ngModel)]="editForm.name" name="name" class="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:border-blue-600">
+                  <label class="text-sm font-bold dark:text-gray-300 flex items-center gap-2">
+                    <fa-icon [icon]="faStore" class="text-blue-500"></fa-icon>
+                    اسم المتجر
+                  </label>
+                  <input type="text" [(ngModel)]="editForm.name" name="name" 
+                    class="w-full p-4 bg-gray-50 dark:bg-gray-900 border dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 dark:text-white transition-all">
                 </div>
                 <div class="space-y-2">
-                  <label class="text-sm font-bold">رقم الهاتف</label>
-                  <input type="text" [(ngModel)]="editForm.phone" name="phone" class="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:border-blue-600">
+                  <label class="text-sm font-bold dark:text-gray-300 flex items-center gap-2">
+                    <fa-icon [icon]="faPhone" class="text-green-500"></fa-icon>
+                    رقم الهاتف
+                  </label>
+                  <input type="text" [(ngModel)]="editForm.phone" name="phone" (input)="validatePhone()"
+                    class="w-full p-4 bg-gray-50 dark:bg-gray-900 border dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 dark:text-white transition-all"
+                    [class.border-red-500]="phoneTouched && !phoneValid">
+                  <p *ngIf="phoneTouched && !phoneValid" class="text-xs text-red-500 mt-1">يرجى إدخال رقم هاتف صحيح</p>
                 </div>
                 <div class="space-y-2">
-                  <label class="text-sm font-bold">الرقم الضريبي (اختياري)</label>
-                  <input type="text" [(ngModel)]="editForm.taxNumber" name="taxNumber" class="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:border-blue-600">
+                  <label class="text-sm font-bold dark:text-gray-300 flex items-center gap-2">
+                    <fa-icon [icon]="faFileInvoice" class="text-orange-500"></fa-icon>
+                    الرقم الضريبي (اختياري)
+                  </label>
+                  <input type="text" [(ngModel)]="editForm.taxNumber" name="taxNumber" 
+                    class="w-full p-4 bg-gray-50 dark:bg-gray-900 border dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 dark:text-white transition-all">
                 </div>
                 <div class="space-y-2">
-                  <label class="text-sm font-bold">مدة التجهيز</label>
-                  <select [(ngModel)]="editForm.preparationTime" name="preparationTime" class="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:border-blue-600">
-                    <option [value]="1">يوم واحد</option>
-                    <option [value]="2">يومان</option>
-                    <option [value]="3">3 أيام</option>
+                  <label class="text-sm font-bold dark:text-gray-300 flex items-center gap-2">
+                    <fa-icon [icon]="faClock" class="text-purple-500"></fa-icon>
+                    مدة التجهيز المتوقعة
+                  </label>
+                  <select [(ngModel)]="editForm.preparationTime" name="preparationTime" 
+                    class="w-full p-4 bg-gray-50 dark:bg-gray-900 border dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 dark:text-white transition-all appearance-none cursor-pointer">
+                    <option [value]="1">شحن خلال يوم واحد</option>
+                    <option [value]="2">شحن خلال يومين</option>
+                    <option [value]="3">شحن خلال 3 أيام</option>
+                    <option [value]="5">شحن خلال 5 أيام</option>
+                    <option [value]="7">شحن خلال أسبوع</option>
                   </select>
                 </div>
-             </div>
 
-             <div class="space-y-2">
-               <label class="text-sm font-bold">وصف المتجر</label>
-               <textarea [(ngModel)]="editForm.bio" name="bio" rows="4" class="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:border-blue-600" placeholder="عبر عن متجرك..."></textarea>
-             </div>
 
-             <div class="grid md:grid-cols-2 gap-6">
-                <div class="space-y-2">
-                  <label class="text-sm font-bold">شعار المتجر (Logo)</label>
-                  <input type="file" (change)="onFileSelected($event)" class="w-full p-2 border border-dashed rounded-xl">
-                  <img *ngIf="logoPreview" [src]="logoPreview" class="w-20 h-20 rounded-lg mt-2 object-cover">
+                <div class="space-y-2 col-span-1 md:col-span-2">
+                  <label class="text-sm font-bold dark:text-gray-300 flex items-center gap-2">
+                    <fa-icon [icon]="faPen" class="text-gray-400"></fa-icon>
+                    وصف المتجر (Bio)
+                  </label>
+                  <textarea [(ngModel)]="editForm.bio" name="bio" rows="4" 
+                    class="w-full p-4 bg-gray-50 dark:bg-gray-900/50 border dark:border-gray-700 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 dark:text-gray-100 dark:placeholder-gray-600 transition-all resize-none hover:border-gray-300 dark:hover:border-gray-600 shadow-sm" 
+                    placeholder="عبر عن متجرك وما تقدمه للعملاء..."></textarea>
                 </div>
-                <div class="space-y-2">
-                  <label class="text-sm font-bold">صورة الغلاف (Hero Cover)</label>
-                  <input type="file" (change)="onCoverFileSelected($event)" class="w-full p-2 border border-dashed rounded-xl">
-                  <img *ngIf="coverPreview" [src]="coverPreview" class="h-20 w-full rounded-lg mt-2 object-cover">
+
+                <div class="space-y-4 pt-4 border-t dark:border-gray-700">
+                  <label class="text-sm font-bold dark:text-gray-300 flex items-center gap-2">
+                    <fa-icon [icon]="faCamera" class="text-blue-500"></fa-icon>
+                    شعار المتجر (Logo)
+                  </label>
+                  <div class="flex items-center gap-4">
+                    <div class="w-20 h-20 rounded-xl border-2 border-dashed dark:border-gray-700 flex items-center justify-center overflow-hidden bg-gray-50 dark:bg-gray-900">
+                      <img *ngIf="logoPreview" [src]="logoPreview" class="w-full h-full object-cover">
+                      <fa-icon *ngIf="!logoPreview" [icon]="faStore" class="text-gray-300 text-2xl"></fa-icon>
+                    </div>
+                    <input type="file" (change)="onFileSelected($event)" 
+                      class="flex-1 text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-gray-700 dark:file:text-gray-200">
+                  </div>
+                </div>
+
+                <div class="space-y-4 pt-4 border-t dark:border-gray-700">
+                  <label class="text-sm font-bold dark:text-gray-300 flex items-center gap-2">
+                    <fa-icon [icon]="faCamera" class="text-purple-500"></fa-icon>
+                    صورة الغلاف (Cover)
+                  </label>
+                  <div class="flex flex-col gap-4">
+                    <div class="w-full h-24 rounded-xl border-2 border-dashed dark:border-gray-700 flex items-center justify-center overflow-hidden bg-gray-50 dark:bg-gray-900">
+                      <img *ngIf="coverPreview" [src]="coverPreview" class="w-full h-full object-cover">
+                      <fa-icon *ngIf="!coverPreview" [icon]="faCamera" class="text-gray-300 text-2xl"></fa-icon>
+                    </div>
+                    <input type="file" (change)="onCoverFileSelected($event)" 
+                      class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100 dark:file:bg-gray-700 dark:file:text-gray-200">
+                  </div>
                 </div>
              </div>
 
-             <div class="flex gap-4 pt-6 border-t">
-               <button type="submit" [disabled]="updatingProfile" class="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 disabled:opacity-50">
-                 {{ updatingProfile ? 'جاري الحفظ...' : 'حفظ التغييرات' }}
-               </button>
-               <button type="button" (click)="toggleEditMode()" class="px-8 py-3 bg-gray-100 text-gray-600 rounded-xl font-bold hover:bg-gray-200">
-                 إلغاء
-               </button>
-             </div>
+             <!-- Messages -->
+             <div *ngIf="updateMessage" class="p-4 rounded-xl animate-bounce-in" 
+                  [ngClass]="updateMessageColor === 'green' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'">
+               <div class="flex items-center gap-2">
+                <fa-icon [icon]="updateMessageColor === 'green' ? faCheckCircle : faHourglassHalf"></fa-icon>
+                <span class="font-bold">{{ updateMessage }}</span>
+              </div>
+            </div>
+
+            <div class="flex gap-4 pt-8 border-t dark:border-gray-700">
+              <button type="submit" [disabled]="updatingProfile" 
+                class="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-extrabold hover:bg-blue-700 disabled:opacity-50 shadow-lg shadow-blue-200 dark:shadow-none transition-all flex items-center justify-center gap-2">
+                <fa-icon *ngIf="updatingProfile" [icon]="faHourglassHalf" class="animate-spin"></fa-icon>
+                {{ updatingProfile ? 'جاري الحفظ...' : 'حفظ التغييرات' }}
+              </button>
+              <button type="button" (click)="toggleEditMode()" 
+                class="px-10 py-4 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-200 rounded-2xl font-bold hover:bg-gray-200 dark:hover:bg-gray-600 transition-all border dark:border-gray-600 text-center">
+                إلغاء
+              </button>
+            </div>
           </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Shipping Rates Tab Content -->
+    <div *ngIf="activeTab === 'shippingSettings'" class="animate-fade-in space-y-6">
+      <div class="bg-white dark:bg-gray-900 rounded-3xl p-8 border border-gray-100 dark:border-gray-800 shadow-xl shadow-gray-200/50 dark:shadow-none transition-all duration-500">
+        <div class="flex flex-col md:flex-row justify-between items-center gap-6 mb-10">
+          <div>
+            <h2 class="text-2xl font-black text-gray-900 dark:text-white flex items-center gap-3">
+              <span class="w-2 h-8 bg-blue-600 rounded-full"></span>
+              إعدادات الشحن
+            </h2>
+            <p class="text-gray-500 dark:text-gray-400 mt-2 font-medium">حدد طريقة الشحن وتكلفة الشحن لكل محافظة لمنتجاتك</p>
+          </div>
+          <button (click)="saveShippingSettings()" 
+                  [disabled]="loadingShippingRates"
+                  class="w-full md:w-auto px-10 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black hover:scale-105 active:scale-95 transition-all shadow-lg shadow-blue-500/25 flex items-center justify-center gap-3 disabled:opacity-50 disabled:grayscale">
+            <i *ngIf="loadingShippingRates" class="fas fa-spinner fa-spin"></i>
+            {{ loadingShippingRates ? 'جاري الحفظ...' : 'حفظ التغييرات' }}
+          </button>
+        </div>
+
+        <!-- Shipping Method Selection -->
+        <div class="space-y-6 mb-12 p-8 bg-gray-50/50 dark:bg-gray-800/30 rounded-3xl border border-gray-100 dark:border-gray-700/50 backdrop-blur-sm">
+          <label class="text-sm font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 flex items-center gap-2">
+            <i class="fas fa-layer-group"></i>
+            نموذج الشحن المفضل
+          </label>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <label class="group flex items-center gap-5 p-6 border-2 rounded-2xl cursor-pointer transition-all duration-300 bg-white dark:bg-gray-800" 
+                   [ngClass]="{
+                     'border-blue-600 bg-blue-50/50 dark:bg-blue-900/20 shadow-inner': editForm.merchantShippingMethod === 'knoozbook',
+                     'border-gray-100 dark:border-gray-700 hover:border-blue-200 dark:hover:border-blue-800': editForm.merchantShippingMethod !== 'knoozbook'
+                   }">
+              <div class="relative flex items-center justify-center">
+                <input type="radio" [(ngModel)]="editForm.merchantShippingMethod" name="shippingMethod" value="knoozbook" class="peer hidden">
+                <div class="w-6 h-6 border-2 border-gray-300 dark:border-gray-600 rounded-full peer-checked:border-blue-600 peer-checked:bg-blue-600 transition-all"></div>
+                <i class="fas fa-check text-[10px] text-white absolute scale-0 peer-checked:scale-100 transition-transform"></i>
+              </div>
+              <div class="text-right">
+                <div class="font-black text-gray-900 dark:text-gray-100 text-lg">عن طريق مندوب كنوز بوك</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400 mt-1 font-medium italic opacity-80">نحن نصل إليك لاستلام الطلب وتوصيله للعميل</div>
+              </div>
+            </label>
+            
+            <label class="group flex items-center gap-5 p-6 border-2 rounded-2xl cursor-pointer transition-all duration-300 bg-white dark:bg-gray-800"
+                   [ngClass]="{
+                     'border-blue-600 bg-blue-50/50 dark:bg-blue-900/20 shadow-inner': editForm.merchantShippingMethod === 'merchant',
+                     'border-gray-100 dark:border-gray-700 hover:border-blue-200 dark:hover:border-blue-800': editForm.merchantShippingMethod !== 'merchant'
+                   }">
+              <div class="relative flex items-center justify-center">
+                <input type="radio" [(ngModel)]="editForm.merchantShippingMethod" name="shippingMethod" value="merchant" class="peer hidden">
+                <div class="w-6 h-6 border-2 border-gray-300 dark:border-gray-600 rounded-full peer-checked:border-blue-600 peer-checked:bg-blue-600 transition-all"></div>
+                <i class="fas fa-check text-[10px] text-white absolute scale-0 peer-checked:scale-100 transition-transform"></i>
+              </div>
+              <div class="text-right">
+                <div class="font-black text-gray-900 dark:text-gray-100 text-lg">عن طريق التاجر مباشرة</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400 mt-1 font-medium italic opacity-80">أنت المسؤول عن إيصال الطلب للعميل</div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div *ngFor="let rate of regionCosts" class="group flex items-center justify-between p-6 bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 hover:border-blue-200 dark:hover:border-blue-900 hover:shadow-2xl hover:shadow-blue-500/10 hover:-translate-y-2 transition-all duration-500">
+            <div class="flex flex-col">
+              <span class="text-[10px] font-black text-blue-500 dark:text-blue-400 uppercase tracking-tighter mb-1">نطاق التوصيل</span>
+              <span class="font-black text-gray-800 dark:text-gray-100 text-lg">{{ rate.region }}</span>
+            </div>
+            <div class="flex items-center gap-3 bg-gray-50 dark:bg-gray-700/50 p-4 rounded-2xl border border-transparent group-hover:bg-blue-50 dark:group-hover:bg-blue-900/30 transition-all">
+              <input type="number" [(ngModel)]="rate.rate" 
+                     class="w-16 bg-transparent text-center font-black text-blue-600 dark:text-blue-400 outline-none text-xl">
+              <span class="text-xs font-black text-gray-400 dark:text-gray-500 border-r dark:border-gray-600 pr-3">ج.م</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-12 p-8 bg-gradient-to-br from-blue-50/50 to-indigo-50/50 dark:from-blue-900/10 dark:to-indigo-900/10 rounded-3xl border border-blue-100/50 dark:border-blue-900/30 relative overflow-hidden backdrop-blur-md">
+          <div class="relative z-10 flex gap-6">
+            <div class="w-14 h-14 bg-white dark:bg-gray-800 rounded-2xl shadow-lg flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0 text-xl">
+               <i class="fas fa-lightbulb"></i>
+            </div>
+            <div class="text-sm">
+              <h4 class="font-black text-blue-900 dark:text-blue-200 text-lg mb-2">كيف تعمل أسعار الشحن؟</h4>
+              <p class="text-blue-700/80 dark:text-blue-300/80 leading-relaxed font-medium">
+                ستظهر هذه الأسعار للعملاء عند شراء منتجاتك إذا كنت قد اخترت <span class="text-blue-900 dark:text-white font-black underline decoration-blue-500/30">"الشحن عن طريق التاجر"</span>. 
+                في حال كون المنتج يتبع شحن منصة كنوز، سيتم تجاهل هذه القيم واستخدام أسعار المنصة تلقائياً. تطبق هذه الأسعار على المنتجات الخاصة بك فقط لضمان دقة الحسابات.
+              </p>
+            </div>
+          </div>
+          <div class="absolute -right-12 -bottom-12 w-48 h-48 bg-blue-400/10 dark:bg-blue-400/5 rounded-full blur-3xl"></div>
         </div>
       </div>
     </div>
   </main>
 </div>
 
-<!-- Modal Dialog -->
+<!-- Order Details Modal -->
+<div *ngIf="isOrderModalOpen" class="fixed inset-0 z-[100] overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+  <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+    <div (click)="closeOrderModal()" class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+
+    <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+    <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-2xl text-right overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full border dark:border-gray-700">
+      <div class="px-6 py-4 border-b dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-900/50">
+        <h3 class="text-xl font-bold text-gray-900 dark:text-white" id="modal-title">تفاصيل الطلب #{{ selectedOrder?._id.slice(-8) }}</h3>
+        <button (click)="closeOrderModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+          <i class="fas fa-times text-xl"></i>
+        </button>
+      </div>
+
+      <div class="px-6 py-6 space-y-8 max-h-[70vh] overflow-y-auto rtl text-right">
+        <!-- Status & Date -->
+        <div class="flex justify-between items-center p-4 bg-blue-50 dark:bg-blue-900/10 rounded-xl">
+          <div>
+            <div class="text-xs text-blue-600 dark:text-blue-400 font-bold mb-1">حالة الطلب</div>
+            <div class="text-lg font-bold text-blue-900 dark:text-blue-300">{{ selectedOrder?.status }}</div>
+          </div>
+          <div class="text-left">
+            <div class="text-xs text-gray-400 mb-1">تاريخ الطلب</div>
+            <div class="font-medium dark:text-gray-300">{{ selectedOrder?.orderDate | date:'medium' }}</div>
+          </div>
+        </div>
+
+        <!-- Customer Details -->
+        <div class="space-y-4">
+          <h4 class="font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
+            <i class="fas fa-user-circle text-blue-500"></i>
+            بيانات العميل
+          </h4>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="p-4 border dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 shadow-sm">
+              <div class="text-xs text-gray-400 mb-1">الاسم</div>
+              <div class="font-bold dark:text-gray-200 text-lg">{{ selectedOrder?.customerName }}</div>
+            </div>
+            <div class="p-4 border dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 shadow-sm">
+              <div class="text-xs text-gray-400 mb-1">رقم الهاتف</div>
+              <div class="font-bold text-green-600 dark:text-green-400 text-lg" dir="ltr">{{ selectedOrder?.phone || '--' }}</div>
+            </div>
+            <div class="p-4 border dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 shadow-sm md:col-span-2">
+              <div class="text-xs text-gray-400 mb-1">العنوان الكامل</div>
+              <div class="font-bold dark:text-gray-200">{{ selectedOrder?.address }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Products -->
+        <div class="space-y-4">
+          <h4 class="font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
+            <i class="fas fa-shopping-basket text-orange-500"></i>
+            المنتجات المطلوبة
+          </h4>
+          <div class="border dark:border-gray-700 rounded-xl overflow-hidden shadow-sm">
+            <table class="w-full">
+              <thead class="bg-gray-50 dark:bg-gray-900/50">
+                <tr class="text-right text-xs text-gray-500 dark:text-gray-400 font-bold">
+                  <th class="px-4 py-3">المنتج</th>
+                  <th class="px-4 py-3 text-center">الكمية</th>
+                  <th class="px-4 py-3 text-left">السعر</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y dark:divide-gray-700">
+                <tr *ngFor="let item of selectedOrder?.products" class="bg-white dark:bg-gray-800">
+                  <td class="px-4 py-4">
+                    <div class="flex items-center gap-3">
+                      <img [src]="('/uploads/books/' + item.product_image).replace('.jpg', '.webp')" class="w-10 h-10 rounded-lg object-cover" alt="">
+                      <span class="font-medium dark:text-gray-200">{{ item.book }}</span>
+                    </div>
+                  </td>
+                  <td class="px-4 py-4 text-center font-bold dark:text-gray-300">{{ item.quantity }}</td>
+                  <td class="px-4 py-4 text-left font-bold text-blue-600 dark:text-blue-400">{{ item.price }} ج.م</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Shipping Logic -->
+        <div class="p-4 bg-purple-50 dark:bg-purple-900/10 rounded-xl border border-purple-100 dark:border-purple-800/30">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-purple-100 dark:bg-purple-900/50 rounded-lg flex items-center justify-center text-purple-600 dark:text-purple-400 shrink-0">
+              <i class="fas fa-truck"></i>
+            </div>
+            <div>
+              <div class="text-sm font-bold text-purple-900 dark:text-gray-200">طريقة الشحن</div>
+              <div class="text-xs text-purple-700 dark:text-purple-400">
+                {{ selectedOrder?.shippingMethod === 'merchant' ? 'أنت المسؤول عن إيصال هذا الطلب للعميل' : 'سيقوم مندوب كنوز بوك باستلام الطلب منك' }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-gray-50 dark:bg-gray-900/50 px-6 py-4 flex justify-between items-center border-t dark:border-gray-700">
+        <div class="text-lg font-extrabold text-gray-900 dark:text-white">
+          <span class="text-sm text-gray-400 font-normal">الإجمالي: </span>
+          {{ selectedOrder?.totalAmount }} ج.م
+        </div>
+        <button (click)="closeOrderModal()" class="px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-bold rounded-xl hover:bg-gray-300 dark:hover:bg-gray-600 transition-all">
+          إغلاق
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 <app-modal-dialog [isOpen]="modalOpen" [title]="modalTitle" [message]="modalMessage" [confirmText]="modalConfirmText"
   [cancelText]="modalCancelText" [showCancel]="modalShowCancel" [type]="modalType" (confirmed)="confirmModal()"
   (cancelled)="closeModal()" (closed)="closeModal()">

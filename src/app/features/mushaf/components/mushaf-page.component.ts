@@ -7279,7 +7279,7 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
             (window as any).Android.share(text);
         } else if (navigator.share) {
             navigator.share({
-                title: 'مكتبة كنوز - المصحف الشريف',
+                title: 'knoozbook - المصحف الشريف',
                 text: text,
                 url: pageLink
             }).catch(err => { });

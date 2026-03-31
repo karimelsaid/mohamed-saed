@@ -18,9 +18,9 @@ export interface SeoConfig {
     providedIn: 'root'
 })
 export class SeoService {
-    private readonly defaultTitle = 'knoozbook - مكتبة كنوز';
-    private readonly defaultDescription = 'مكتبة كنوز هي مكتبة عربية إلكترونية تقدم مجموعة متنوعة من الكتب في التنمية الذاتية، الروايات، الكتب الدينية، كتب الأطفال، التاريخ، الفنون، والمزيد. اكتشف أفضل الكتب بأسعار مميزة وخدمة توصيل لجميع المحافظات.';
-    private readonly defaultKeywords = 'مكتبة كنوز, كتب عربية, كتب تنمية بشرية, روايات عربية, كتب دينية, كتب أطفال, شراء كتب أونلاين, مكتبة إلكترونية';
+    private readonly defaultTitle = 'knoozbook - knoozbook';
+    private readonly defaultDescription = 'knoozbook هي مكتبة عربية إلكترونية تقدم مجموعة متنوعة من الكتب في التنمية الذاتية، الروايات، الكتب الدينية، كتب الأطفال، التاريخ، الفنون، والمزيد. اكتشف أفضل الكتب بأسعار مميزة وخدمة توصيل لجميع المحافظات.';
+    private readonly defaultKeywords = 'knoozbook, كتب عربية, كتب تنمية بشرية, روايات عربية, كتب دينية, كتب أطفال, شراء كتب أونلاين, مكتبة إلكترونية';
     private readonly siteUrl = 'https://knoozbook.com';
     private jsonLdElement: HTMLScriptElement | null = null;
 
@@ -34,7 +34,7 @@ export class SeoService {
      * Update all SEO tags at once for a given page.
      */
     updateMetaTags(config: SeoConfig): void {
-        const title = config.title ? `${config.title} | مكتبة كنوز` : this.defaultTitle;
+        const title = config.title ? `${config.title} | knoozbook` : this.defaultTitle;
         const description = config.description || this.defaultDescription;
         const keywords = config.keywords || this.defaultKeywords;
         const image = config.image || `${this.siteUrl}/logoname2.jpg`;
@@ -52,7 +52,7 @@ export class SeoService {
         this.meta.updateTag({ property: 'og:image', content: image });
         this.meta.updateTag({ property: 'og:url', content: url });
         this.meta.updateTag({ property: 'og:type', content: type });
-        this.meta.updateTag({ property: 'og:site_name', content: 'مكتبة كنوز - knoozbook' });
+        this.meta.updateTag({ property: 'og:site_name', content: 'knoozbook - knoozbook' });
         this.meta.updateTag({ property: 'og:locale', content: 'ar_EG' });
 
         // --- Twitter Card Tags ---
@@ -95,12 +95,12 @@ export class SeoService {
             '@context': 'https://schema.org',
             '@type': 'Product',
             'name': product.name,
-            'description': product.description || `${product.name} - متوفر الآن في مكتبة كنوز`,
+            'description': product.description || `${product.name} - متوفر الآن في knoozbook`,
             'image': product.image,
             'url': product.url,
             'brand': {
                 '@type': 'Brand',
-                'name': product.brand || 'مكتبة كنوز'
+                'name': product.brand || 'knoozbook'
             },
             'category': product.category || 'كتب',
             'offers': {
@@ -112,7 +112,7 @@ export class SeoService {
                     : 'https://schema.org/OutOfStock',
                 'seller': {
                     '@type': 'Organization',
-                    'name': 'مكتبة كنوز'
+                    'name': 'knoozbook'
                 },
                 'url': product.url
             }

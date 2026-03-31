@@ -64,7 +64,11 @@ export class AddProductComponent implements OnInit, OnDestroy {
       stock_quantity: [0, Validators.min(0)],
       price_cost: [''],
       copyType: [''],
-      condition: ['']
+      condition: [''],
+      weight: ['', [Validators.required, Validators.min(0.01)]],
+      length: [''],
+      width: [''],
+      height: ['']
     });
   }
 
@@ -281,6 +285,10 @@ export class AddProductComponent implements OnInit, OnDestroy {
       formData.append('product_category', this.productForm.value.category === 'كتب' ? this.productForm.value.book_category : this.productForm.value.category);
       formData.append('copyType', this.productForm.value.copyType || '');
       formData.append('condition', this.productForm.value.condition || '');
+      formData.append('weight', this.productForm.value.weight);
+      formData.append('length', this.productForm.value.length || '');
+      formData.append('width', this.productForm.value.width || '');
+      formData.append('height', this.productForm.value.height || '');
 
       this.selectedFiles.forEach((file, index) => {
         formData.append('images', file);

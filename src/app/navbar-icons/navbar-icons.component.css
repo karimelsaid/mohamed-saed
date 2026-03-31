@@ -1,14 +1,20 @@
 /* Base Nav Item Pill Style */
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}
+.scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    scroll-behavior: smooth;
+}
+
 .nav-item-pill {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 8px;
-    /* Initial circle/square padding */
+    padding: 6px;
     border-radius: 9999px;
-    /* Fully rounded pill */
     color: #4b5563;
-    /* Gray-600 */
     background: transparent;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     overflow: hidden;
@@ -16,10 +22,35 @@
     text-decoration: none;
     cursor: pointer;
     border: 1px solid transparent;
-    /* Prevent layout shift */
-    min-width: 40px;
-    /* Ensure click target size */
-    min-height: 40px;
+    min-width: 38px;
+    min-height: 38px;
+}
+
+/* Specific sizing when in top nav (Desktop) */
+.top-nav-mode .nav-item-pill {
+    min-width: 38px;
+    min-height: 38px;
+    padding: 6px;
+    border: 1px solid transparent;
+}
+
+.top-nav-mode .nav-item-pill:hover {
+    background-color: rgba(99, 102, 241, 0.05);
+    border-color: rgba(99, 102, 241, 0.1);
+}
+
+.top-nav-mode .nav-item-pill fa-icon {
+    font-size: 1.125rem !important; /* text-lg equivalent */
+}
+
+.top-nav-mode .nav-item-pill .nav-label {
+    font-size: 0.7rem;
+}
+
+/* Specific sizing when in bottom nav (Mobile) */
+.bottom-nav-mode .nav-item-pill {
+    min-width: 44px;
+    min-height: 44px;
 }
 
 /* Dark mode text color */
@@ -33,23 +64,18 @@
     max-width: 0;
     opacity: 0;
     white-space: nowrap;
-    font-size: 0.875rem;
-    /* text-sm */
+    font-size: 0.7rem;
     font-weight: 600;
-    /* font-bold */
     margin-left: 0;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     transform: translateX(-10px);
-    /* Slide effect */
 }
 
 /* Active State */
 .nav-item-pill.active-pill {
-    background-color: #6366f1;
-    /* Indigo-500 */
-    color: white;
-    padding: 8px 16px;
-    /* Expand padding */
+    background-color: #6366f1 !important;
+    color: white !important;
+    padding: 6px 12px;
     box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
 }
 
@@ -88,15 +114,29 @@
 }
 
 /* Mobile responsive - smaller icons and text */
-@media (max-width: 400px) {
+@media (max-width: 640px) {
     .nav-item-pill {
         padding: 6px;
-        min-width: 32px;
-        min-height: 32px;
+        min-width: 48px;
+        min-height: 48px;
     }
 
-    .nav-item-pill fa-icon {
-        font-size: 0.9rem;
+    .nav-item-pill fa-icon, 
+    .nav-item-pill fa-icon svg,
+    .nav-item-pill i,
+    .bourse-icon-emoji {
+        font-size: 1.35rem !important;
+        width: 1.35rem !important;
+        height: 1.35rem !important;
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+        line-height: 1 !important;
+    }
+
+    .bourse-icon-emoji {
+        margin: 0 !important;
+        transform: translateY(-1px); /* micro-adjustment for emoji baseline */
     }
 
     .nav-item-pill .nav-label {
@@ -104,7 +144,45 @@
     }
 
     .nav-item-pill.active-pill {
-        padding: 6px 10px;
+        padding: 6px 12px;
+    }
+
+    .nav-item-pill.active-pill .nav-label {
+        margin-left: 5px;
+    }
+}
+
+@media (max-width: 400px) {
+    .nav-item-pill {
+        padding: 5px;
+        min-width: 46px;
+        min-height: 46px;
+    }
+
+    .nav-item-pill fa-icon,
+    .nav-item-pill fa-icon svg,
+    .nav-item-pill i,
+    .bourse-icon-emoji {
+        font-size: 1.25rem !important;
+        width: 1.25rem !important;
+        height: 1.25rem !important;
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+        line-height: 1 !important;
+    }
+
+    .bourse-icon-emoji {
+        margin: 0 !important;
+        transform: translateY(-1px);
+    }
+
+    .nav-item-pill .nav-label {
+        font-size: 0.65rem;
+    }
+
+    .nav-item-pill.active-pill {
+        padding: 5px 10px;
     }
 
     .nav-item-pill.active-pill .nav-label {

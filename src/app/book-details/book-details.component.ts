@@ -451,13 +451,13 @@ export class BookDetailsComponent implements OnInit, OnDestroy {
     const imageUrl = this.getBookImageUrl(book);
     const description = book.product_description
       ? book.product_description.substring(0, 160)
-      : `${book.product_name} - متوفر الآن في مكتبة كنوز بسعر ${book.product_price} جنيه. ${book.product_category}. اطلب الآن مع خدمة توصيل لجميع المحافظات.`;
+      : `${book.product_name} - متوفر الآن في knoozbook بسعر ${book.product_price} جنيه. ${book.product_category}. اطلب الآن مع خدمة توصيل لجميع المحافظات.`;
 
     // Update meta tags
     this.seoService.updateMetaTags({
       title: book.product_name,
       description: description,
-      keywords: `${book.product_name}, ${book.product_category}, مكتبة كنوز, شراء ${book.product_name}${book.author ? ', ' + book.author : ''}`,
+      keywords: `${book.product_name}, ${book.product_category}, knoozbook, شراء ${book.product_name}${book.author ? ', ' + book.author : ''}`,
       image: imageUrl,
       url: productUrl,
       type: 'product',
@@ -476,7 +476,7 @@ export class BookDetailsComponent implements OnInit, OnDestroy {
       currency: 'EGP',
       availability: (book.product_quantity > 0) ? 'in_stock' : 'out_of_stock',
       category: book.product_category,
-      brand: book.author || book.publisher || book.brand || 'مكتبة كنوز',
+      brand: book.author || book.publisher || book.brand || 'knoozbook',
       url: productUrl,
       rating: this.averageRating,
       ratingCount: this.ratingCount

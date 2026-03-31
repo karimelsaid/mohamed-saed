@@ -1,4 +1,244 @@
 <div class="community-container bg-slate-50 dark:bg-gray-950 min-h-screen pb-20 pt-32 rtl" dir="rtl">
+
+    <!-- MODALS SECTION -->
+    
+    <!-- Create Post Modal -->
+    <div *ngIf="showCreatePost"
+        class="fixed inset-0 z-[2000] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in duration-300">
+        <div
+            class="bg-white dark:bg-gray-900 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-white/20">
+            <!-- Header -->
+            <div class="bg-gradient-to-l from-blue-600 to-indigo-700 p-6 text-white flex justify-between items-start">
+                <div>
+                    <h3 class="text-xl font-bold">إنشاء منشور جديد</h3>
+                    <p class="text-blue-100/80 text-sm mt-1">شارك أفكارك مع باقي القراء</p>
+                </div>
+                <button (click)="showCreatePost = false" class="text-white/50 hover:text-white transition-colors p-1">
+                    <fa-icon [icon]="faTimes" size="lg"></fa-icon>
+                </button>
+            </div>
+
+            <div class="p-6 space-y-5">
+                <!-- Type Tabs -->
+                <div class="flex bg-gray-100 dark:bg-gray-800 p-1.5 rounded-2xl mb-4">
+                    <button (click)="newPost.type = 'thought'" [class.bg-white]="newPost.type === 'thought'"
+                        [class.shadow-sm]="newPost.type === 'thought'"
+                        [class.text-blue-600]="newPost.type === 'thought'"
+                        [class.dark:bg-gray-700]="newPost.type === 'thought'"
+                        class="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2">
+                        <fa-icon [icon]="faQuoteRight" class="text-xs"></fa-icon>
+                        خاطرة
+                    </button>
+                    <button (click)="newPost.type = 'review'" [class.bg-white]="newPost.type === 'review'"
+                        [class.shadow-sm]="newPost.type === 'review'" [class.text-blue-600]="newPost.type === 'review'"
+                        [class.dark:bg-gray-700]="newPost.type === 'review'"
+                        class="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2">
+                        <fa-icon [icon]="faBook" class="text-xs"></fa-icon>
+                        مراجعة كتاب
+                    </button>
+                </div>
+
+                <!-- Review Specific Fields -->
+                <div *ngIf="newPost.type === 'review'" class="space-y-4 animate-in slide-in-from-top-2">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 mb-2 pr-1">اسم الكتاب</label>
+                        <input type="text" [(ngModel)]="newPost.bookTitle" placeholder="ما هو الكتاب الذي تراجعه؟"
+                            class="w-full bg-gray-50 dark:bg-gray-800 border-2 border-transparent focus:border-blue-500/30 rounded-2xl px-4 py-3 text-sm outline-none transition-all dark:text-white">
+                    </div>
+                    <div>
+                        <label
+                            class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 pr-1">تقييمك</label>
+                        <div class="flex gap-2 justify-center py-2">
+                            <button *ngFor="let star of [1,2,3,4,5]" (click)="newPost.rating = star"
+                                class="transition-transform active:scale-90">
+                                <fa-icon [icon]="faStar" [class.text-yellow-400]="newPost.rating >= star"
+                                    [class.text-gray-300]="newPost.rating < star" class="text-2xl"></fa-icon>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Content -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 mb-2 pr-1">المحتوى</label>
+                    <textarea [(ngModel)]="newPost.content" rows="5"
+                        [placeholder]="newPost.type === 'review' ? 'ما رأيك في هذا الكتاب؟' : 'اكتب ما يدور في خاطرك...'"
+                        class="w-full bg-gray-50 dark:bg-gray-800 border-2 border-transparent focus:border-blue-500/30 rounded-2xl px-4 py-3 text-sm outline-none transition-all dark:text-white resize-none"></textarea>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex gap-3 justify-end pt-2">
+                    <button (click)="showCreatePost = false"
+                        class="px-6 py-2.5 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors">إلغاء</button>
+                    <button (click)="createPost()" [disabled]="!newPost.content.trim() || isLoading"
+                        class="px-8 py-2.5 rounded-xl text-sm font-bold bg-blue-600 text-white hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50">
+                        <fa-icon *ngIf="isLoading" [icon]="faSync" [class.animate-spin]="isLoading"
+                            class="ml-2"></fa-icon>
+                        {{ isLoading ? 'جاري النشر...' : 'نشر' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Swap Modal -->
+    <div *ngIf="showCreateSwap"
+        class="fixed inset-0 z-[2000] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in duration-300">
+        <div class="bg-white dark:bg-gray-900 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 border border-white/20">
+            <div class="bg-gradient-to-l from-indigo-600 to-blue-700 p-6 text-white flex justify-between items-start">
+                <div>
+                    <h3 class="text-xl font-bold">عرض كتاب للتبادل</h3>
+                    <p class="text-indigo-100/80 text-sm mt-1">امنح كتابك حياة جديدة مع قارئ آخر</p>
+                </div>
+                <button (click)="showCreateSwap = false" class="text-white/50 hover:text-white transition-colors p-1">
+                    <fa-icon [icon]="faTimes" size="lg"></fa-icon>
+                </button>
+            </div>
+
+            <div class="p-6 space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-500 mb-1 pr-1">اسم الكتاب</label>
+                        <input type="text" [(ngModel)]="newSwap.bookTitle" placeholder="مثلاً: رواية 1984"
+                            class="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-xl px-4 py-2.5 text-xs outline-none focus:ring-2 focus:ring-blue-500/20 dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-500 mb-1 pr-1">المؤلف</label>
+                        <input type="text" [(ngModel)]="newSwap.author" placeholder="اسم الكاتب"
+                            class="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-xl px-4 py-2.5 text-xs outline-none focus:ring-2 focus:ring-blue-500/20 dark:text-white">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-500 mb-1 pr-1">الحالة</label>
+                        <select [(ngModel)]="newSwap.condition"
+                            class="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-xl px-4 py-2.5 text-xs outline-none focus:ring-2 focus:ring-blue-500/20 dark:text-white">
+                            <option value="new">جديد</option>
+                            <option value="used-good">مستعمل - حالة جيدة</option>
+                            <option value="used-fair">مستعمل - حالة متوسطة</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-500 mb-1 pr-1">الموقع (المدينة)</label>
+                        <input type="text" [(ngModel)]="newSwap.location" placeholder="مدينة التواجد"
+                            class="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-xl px-4 py-2.5 text-xs outline-none focus:ring-2 focus:ring-blue-500/20 dark:text-white">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-500 mb-1 pr-1">ماذا تطلب في المقابل؟</label>
+                    <input type="text" [(ngModel)]="newSwap.lookingFor" placeholder="مثلاً: أي كتاب تاريخي"
+                        class="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-xl px-4 py-2.5 text-xs outline-none focus:ring-2 focus:ring-blue-500/20 dark:text-white">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-500 mb-1 pr-1">ملاحظات حول الكتاب</label>
+                        <textarea [(ngModel)]="newSwap.notes" rows="3" placeholder="اكتب ملاحظات حول الطبعة أو جودة الورق..."
+                            class="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-xl px-4 py-2.5 text-xs outline-none focus:ring-2 focus:ring-blue-500/20 dark:text-white resize-none"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-500 mb-1 pr-1">صور الكتاب</label>
+                        <div class="flex flex-wrap gap-2">
+                            <div *ngFor="let img of newSwap.images; let i = index" class="relative w-12 h-12 rounded-lg overflow-hidden border">
+                                <img [src]="img" class="w-full h-full object-cover">
+                                <button (click)="removeImage(i, 'swap')" class="absolute top-0 right-0 bg-red-500 text-white p-0.5 rounded-bl">
+                                    <fa-icon [icon]="faTrash" class="text-[8px]"></fa-icon>
+                                </button>
+                            </div>
+                            <label class="w-12 h-12 flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 text-gray-400">
+                                <fa-icon [icon]="faPlus"></fa-icon>
+                                <input type="file" (change)="onImageSelected($event, 'swap')" class="hidden" accept="image/*" multiple>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex gap-3 justify-end pt-2">
+                    <button (click)="showCreateSwap = false" class="px-6 py-2.5 rounded-xl text-xs font-bold text-gray-500 hover:bg-gray-100 transition-colors">إلغاء</button>
+                    <button (click)="createSwap()" [disabled]="!newSwap.bookTitle.trim() || isLoading"
+                        class="px-8 py-2.5 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20 disabled:opacity-50">
+                        {{ isLoading ? 'جاري الإضافة...' : 'إضافة العرض' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Auction Modal -->
+    <div *ngIf="showCreateAuction"
+        class="fixed inset-0 z-[2000] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in duration-300">
+        <div class="bg-white dark:bg-gray-900 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 border border-white/20">
+            <div class="bg-gradient-to-l from-orange-500 to-amber-600 p-6 text-white flex justify-between items-start">
+                <div>
+                    <h3 class="text-xl font-bold">بدء مزاد جديد</h3>
+                    <p class="text-orange-100/80 text-sm mt-1">اعرض كتبك النادرة والمميزة لأعلى سعر</p>
+                </div>
+                <button (click)="showCreateAuction = false" class="text-white/50 hover:text-white transition-colors p-1">
+                    <fa-icon [icon]="faTimes" size="lg"></fa-icon>
+                </button>
+            </div>
+
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-500 mb-1 pr-1">اسم الكتاب / المجموعة</label>
+                    <input type="text" [(ngModel)]="newAuction.bookTitle" placeholder="مثلاً: مجموعة روايات نجيب محفوظ كاملة"
+                        class="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-xl px-4 py-2.5 text-xs outline-none focus:ring-2 focus:ring-orange-500/20 dark:text-white">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-500 mb-1 pr-1">سعر البداية (ج.م)</label>
+                        <input type="number" [(ngModel)]="newAuction.startingPrice"
+                            class="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-xl px-4 py-2.5 text-xs outline-none focus:ring-2 focus:ring-orange-500/20 dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-500 mb-1 pr-1">المدة (بالساعات)</label>
+                        <select [(ngModel)]="newAuction.durationHours"
+                            class="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-xl px-4 py-2.5 text-xs outline-none focus:ring-2 focus:ring-orange-500/20 dark:text-white">
+                            <option [ngValue]="12">12 ساعة</option>
+                            <option [ngValue]="24">يوم كامل</option>
+                            <option [ngValue]="48">يومين</option>
+                            <option [ngValue]="72">3 أيام</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-500 mb-1 pr-1">وصف الكتاب وحالته</label>
+                        <textarea [(ngModel)]="newAuction.description" rows="4" placeholder="اكتب تفاصيل عن حالة الكتب وإصداراتها..."
+                            class="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-xl px-4 py-2.5 text-xs outline-none focus:ring-2 focus:ring-orange-500/20 dark:text-white resize-none"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-500 mb-1 pr-1">صور المزاد</label>
+                        <div class="flex flex-wrap gap-2">
+                            <div *ngFor="let img of newAuction.images; let i = index" class="relative w-16 h-16 rounded-xl overflow-hidden border shadow-sm">
+                                <img [src]="img" class="w-full h-full object-cover">
+                                <button (click)="removeImage(i, 'auction')" class="absolute top-0 right-0 bg-red-500 text-white p-1 rounded-bl">
+                                    <fa-icon [icon]="faTrash" class="text-[10px]"></fa-icon>
+                                </button>
+                            </div>
+                            <label class="w-16 h-16 flex items-center justify-center border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-orange-500 text-gray-400">
+                                <fa-icon [icon]="faPlus" size="lg"></fa-icon>
+                                <input type="file" (change)="onImageSelected($event, 'auction')" class="hidden" accept="image/*" multiple>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex gap-3 justify-end pt-2">
+                    <button (click)="showCreateAuction = false" class="px-6 py-2.5 rounded-xl text-xs font-bold text-gray-500 hover:bg-gray-100 transition-colors">إلغاء</button>
+                    <button (click)="createAuction()" [disabled]="!newAuction.bookTitle.trim() || isLoading"
+                        class="px-8 py-2.5 rounded-xl text-xs font-bold bg-orange-600 text-white hover:bg-orange-700 transition-all shadow-lg shadow-orange-500/20 disabled:opacity-50">
+                        {{ isLoading ? 'جاري البدء...' : 'بدء المزاد' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+<div class="community-container bg-slate-50 dark:bg-gray-950 min-h-screen pb-20 pt-32 rtl" dir="rtl">
     <!-- Main Top Navigation -->
     <header [class.header-hidden]="!isHeaderVisible"
         class="fixed-header fixed top-[100px] left-0 right-0 z-20 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800">
@@ -37,6 +277,14 @@
                     <fa-icon [icon]="faExchangeAlt" class="text-[8px] sm:text-xs"></fa-icon>
                     <span class="hidden sm:inline">التبادل</span>
                     <span class="sm:hidden">تبادل</span>
+                </button>
+                <button (click)="switchSection('auctions')" [class.bg-white]="activeSection === 'auctions'"
+                    [class.shadow-sm]="activeSection === 'auctions'"
+                    [class.dark:bg-gray-700]="activeSection === 'auctions'"
+                    class="px-2 sm:px-4 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold transition-all flex items-center gap-1 sm:gap-2">
+                    <fa-icon [icon]="faStar" class="text-[8px] sm:text-xs"></fa-icon>
+                    <span class="hidden sm:inline">المزادات</span>
+                    <span class="sm:hidden">مزادات</span>
                 </button>
             </div>
         </div>
@@ -377,138 +625,276 @@
             <div class="bg-indigo-600 rounded-[2.5rem] p-8 text-white relative overflow-hidden mb-8">
                 <div class="relative z-10">
                     <h2 class="text-2xl font-black mb-2">ركن تبادل الكتب</h2>
-                    <p class="text-indigo-100 text-sm opacity-90 max-w-xs mb-6">شارك كتبك التي انتهيت منها مع قراء آخرين
-                        واحصل على كتب جديدة مجاناً!</p>
-                    <button
+                    <p class="text-indigo-100 text-sm opacity-90 max-w-xs mb-6">شارك كتبك التي انتهيت منها مع قراء آخرين واحصل على كتب جديدة مجاناً!</p>
+                    <button (click)="openCreateSwap()"
                         class="bg-white text-indigo-600 px-6 py-3 rounded-2xl font-black text-sm shadow-xl hover:scale-105 transition-transform">
-                        قريبا ...
+                        اعرض كتابك للتبادل
                     </button>
                 </div>
-                <fa-icon [icon]="faBook"
-                    class="absolute -bottom-10 -left-10 text-[10rem] text-white/10 rotate-12"></fa-icon>
+                <fa-icon [icon]="faBook" class="absolute -bottom-10 -left-10 text-[10rem] text-white/10 rotate-12"></fa-icon>
             </div>
 
             <div *ngIf="isSwapsLoading" class="py-20 text-center">
                 <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600 mx-auto"></div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Incoming Requests for Owner -->
+            <div *ngIf="userId && !isSwapsLoading" class="mb-8 space-y-4">
+                <ng-container *ngFor="let swap of availableSwaps">
+                    <div *ngIf="swap.userId === userId && swap.requests?.length && swap.status === 'available'" 
+                        class="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-3xl p-6 shadow-sm">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-bold text-blue-800 dark:text-blue-300 flex items-center gap-2">
+                                <fa-icon [icon]="faBell"></fa-icon>
+                                طلبات تبادل لكتابك: {{swap.bookTitle}}
+                            </h3>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div *ngFor="let req of swap.requests" class="bg-white dark:bg-gray-800 p-4 rounded-2xl flex justify-between items-center shadow-sm border border-blue-100/50 dark:border-blue-800/30">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center overflow-hidden">
+                                        <fa-icon [icon]="faUserCircle" size="lg" class="text-blue-600"></fa-icon>
+                                    </div>
+                                    <div>
+                                        <div class="text-sm font-bold dark:text-white">{{req.requesterName}}</div>
+                                        <div class="text-[10px] text-gray-500 font-medium">يعرض: {{req.offeredBookTitle}} ({{req.offeredBookCondition === 'new' ? 'جديد' : (req.offeredBookCondition === 'used-good' ? 'جيد جداً' : 'مستعمل')}})</div>
+                                        <div *ngIf="req.offeredBookNotes" class="text-[10px] text-gray-400 bg-gray-50 dark:bg-gray-800/50 p-1.5 rounded-lg mt-1 border border-gray-100 dark:border-gray-700/30">
+                                            <b>ملاحظات:</b> {{req.offeredBookNotes}}
+                                        </div>
+                                        <div *ngIf="req.offeredBookImage" class="mt-2">
+                                            <img [src]="req.offeredBookImage" class="w-20 h-28 object-cover rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                                        </div>
+                                        <div class="text-[10px] text-gray-500 mt-1">{{req.createdAt | date:'shortTime'}}</div>
+                                    </div>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button (click)="rejectRequest(swap._id, req._id!)" 
+                                        class="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-3 py-2 rounded-xl text-xs font-bold hover:bg-gray-200 transition-all active:scale-95">
+                                        رفض
+                                    </button>
+                                    <button (click)="acceptRequest(swap._id, req._id!)" 
+                                        class="bg-green-600 text-white px-5 py-2 rounded-xl text-xs font-bold hover:bg-green-700 transition-all shadow-md active:scale-95">
+                                        قبول التبادل
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </ng-container>
+            </div>
+
+            <div *ngIf="!isSwapsLoading" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div *ngFor="let swap of availableSwaps"
                     class="bg-white dark:bg-gray-900 rounded-3xl p-5 shadow-sm border border-gray-100 dark:border-gray-800 flex gap-4 hover:shadow-lg transition-all">
-                    <div class="relative shrink-0">
-                        <img [src]="swap.bookCover || 'assets/default-book.png'"
-                            class="w-24 h-36 object-cover rounded-2xl shadow-md">
-                        <span
-                            class="absolute -top-2 -right-2 px-2 py-1 bg-green-500 text-white text-[8px] font-bold rounded-lg shadow-sm">
-                            {{ swap.condition }}
+                    <div class="relative shrink-0 w-24 h-36">
+                        <div class="w-full h-full bg-gray-100 dark:bg-gray-800 rounded-2xl flex items-center justify-center overflow-hidden border border-gray-200 dark:border-gray-700">
+                             <img *ngIf="swap.images && swap.images.length" [src]="swap.images[0]" class="w-full h-full object-cover">
+                             <fa-icon *ngIf="!swap.images || !swap.images.length" [icon]="faBook" class="text-3xl text-gray-300"></fa-icon>
+                        </div>
+                        <span [class]="swap.status === 'available' ? 'bg-green-500' : 'bg-gray-500'" 
+                              class="absolute -top-2 -right-2 px-2 py-1 text-white text-[8px] font-bold rounded-lg shadow-sm">
+                            {{ swap.status === 'available' ? (swap.condition === 'new' ? 'جديد' : (swap.condition === 'used-good' ? 'جيد جداً' : 'مستعمل')) : 'تم التبادل' }}
                         </span>
+                        <div *ngIf="swap.status === 'swapped' && swap.shippingStatus !== 'pending'" 
+                             class="absolute -bottom-2 -left-2 bg-blue-600 text-white text-[7px] font-black px-2 py-1 rounded-lg shadow-lg animate-pulse uppercase">
+                            {{ swap.shippingStatus === 'collecting_from_both' ? 'جاري التحصيل' : 
+                               swap.shippingStatus === 'received_by_admin' ? 'في المخزن' :
+                               swap.shippingStatus === 'delivering_to_both' ? 'جاري التوصيل' : 'تم التسليم' }}
+                        </div>
                     </div>
                     <div class="flex-1 flex flex-col justify-between py-1">
                         <div>
                             <h4 class="font-bold text-base mb-1 dark:text-white line-clamp-1">{{ swap.bookTitle }}</h4>
-                            <p class="text-xs text-gray-500 mb-3">{{ swap.author }}</p>
-                            <div
-                                class="flex items-center gap-2 text-[10px] text-gray-400 bg-gray-50 dark:bg-gray-800 px-3 py-1.5 rounded-xl w-fit">
-                                <span class="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
-                                مدينة {{ swap.location || 'غير محددة' }}
+                            <p class="text-xs text-gray-500 mb-2">{{ swap.author }}</p>
+                            <div *ngIf="swap.notes" class="text-[10px] text-gray-600 dark:text-gray-400 bg-blue-50/50 dark:bg-blue-900/10 p-2 rounded-lg mb-2 line-clamp-2">
+                                <b>ملاحظات:</b> {{ swap.notes }}
+                            </div>
+                            <div class="flex flex-wrap gap-2 text-[10px] text-gray-400">
+                                <span class="bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded-lg">📍 {{ swap.location || 'غير مبين' }}</span>
+                                <span class="bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded-lg">🔍 يطلب: {{ swap.lookingFor || 'أي شيء' }}</span>
                             </div>
                         </div>
 
                         <div class="flex items-center justify-between gap-3 pt-3">
                             <div class="flex items-center gap-2">
-                                <img [src]="getProfileImageUrl(swap.ownerAvatar)" class="w-6 h-6 rounded-lg">
-                                <span class="text-[10px] font-bold dark:text-gray-400">{{ swap.ownerName }}</span>
+                                <img *ngIf="swap.ownerAvatar" [src]="getProfileImageUrl(swap.ownerAvatar)" class="w-6 h-6 rounded-lg object-cover">
+                                <span class="text-[10px] font-bold dark:text-gray-400">{{ swap.ownerName || 'قارئ' }}</span>
                             </div>
-                            <button (click)="sendSwapRequest(swap.id)" [disabled]="swap.ownerId === userId"
-                                class="bg-indigo-600 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-indigo-700 transition-all disabled:opacity-30">
-                                طلب تبديل
+                            <div class="flex gap-2">
+                                <button *ngIf="swap.userId === userId" (click)="deleteSwap(swap._id)"
+                                    class="bg-red-50 dark:bg-red-900/20 text-red-600 p-2 rounded-xl border border-red-100 dark:border-red-800/30 hover:bg-red-100 transition-all">
+                                    <fa-icon [icon]="faTrash"></fa-icon>
+                                </button>
+                                <button (click)="openRequestSwapModal(swap._id)" [disabled]="swap.userId === userId || swap.status !== 'available'"
+                                    class="bg-indigo-600 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-indigo-700 transition-all disabled:opacity-30">
+                                    {{ swap.status === 'available' ? 'طلب تبديل' : 'تم التبادل' }}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div *ngIf="!isSwapsLoading && availableSwaps.length === 0" class="text-center py-20 text-gray-400">
+                <fa-icon [icon]="faExchangeAlt" class="text-5xl mb-4 opacity-20"></fa-icon>
+                <p>لا توجد كتب معروضة للتبادل حالياً.</p>
+            </div>
+        </div>
+
+        <!-- BOOK AUCTIONS SECTION -->
+        <div *ngIf="activeSection === 'auctions'" class="space-y-6">
+            <div class="bg-gradient-to-r from-amber-500 to-orange-600 rounded-[2.5rem] p-8 text-white relative overflow-hidden mb-8">
+                <div class="relative z-10">
+                    <h2 class="text-2xl font-black mb-2">مزادات الكتب</h2>
+                    <p class="text-amber-100 text-sm opacity-90 max-w-xs mb-6">زايد على كتب نادرة أو مجموعات كاملة بأفضل الأسعار!</p>
+                    <button (click)="openCreateAuction()"
+                        class="bg-white text-orange-600 px-6 py-3 rounded-2xl font-black text-sm shadow-xl hover:scale-105 transition-transform">
+                        ابدأ مزاداً جديداً
+                    </button>
+                </div>
+                <fa-icon [icon]="faStar" class="absolute -bottom-10 -right-10 text-[10rem] text-white/10 rotate-12"></fa-icon>
+            </div>
+
+            <div *ngIf="isAuctionsLoading" class="py-20 text-center">
+                <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-orange-600 mx-auto"></div>
+            </div>
+
+            <div *ngIf="!isAuctionsLoading" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div *ngFor="let auction of activeAuctions"
+                    class="bg-white dark:bg-gray-900 rounded-3xl p-5 shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col hover:shadow-lg transition-all">
+                    <div class="flex gap-4 mb-4">
+                        <div class="relative shrink-0 w-24 h-36">
+                            <div class="w-full h-full bg-gray-100 dark:bg-gray-800 rounded-2xl flex items-center justify-center overflow-hidden border border-gray-200 dark:border-gray-700">
+                                 <img *ngIf="auction.images && auction.images.length" [src]="auction.images[0]" class="w-full h-full object-cover">
+                                 <fa-icon *ngIf="!auction.images || !auction.images.length" [icon]="faBook" class="text-3xl text-gray-300"></fa-icon>
+                            </div>
+                            <div [class]="auction.status === 'active' ? 'bg-orange-600' : 'bg-gray-600'" 
+                                 class="absolute -bottom-2 -left-2 text-white text-[10px] font-bold px-2 py-1 rounded-lg shadow-md">
+                                {{ auction.status === 'active' ? getRemainingTime(auction.endTime) : 'منتهي' }}
+                            </div>
+                            <div *ngIf="$any(auction).status === 'ended' && $any(auction).shippingStatus !== 'pending'" 
+                                 class="absolute -top-2 -left-2 bg-blue-600 text-white text-[7px] font-black px-2 py-1 rounded-lg shadow-lg animate-pulse uppercase">
+                                {{ $any(auction).shippingStatus === 'collecting_from_owner' ? 'جاري التحصيل' : 
+                                   $any(auction).shippingStatus === 'received_by_admin' ? 'في المخزن' :
+                                   $any(auction).shippingStatus === 'delivering_to_winner' ? 'جاري التوصيل' : 'تم التسليم' }}
+                            </div>
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="font-bold text-base mb-1 dark:text-white">{{ auction.bookTitle }}</h4>
+                            <p class="text-xs text-gray-500 mb-2">{{ auction.author }}</p>
+                            <p class="text-[10px] text-gray-600 dark:text-gray-400 line-clamp-3 mb-2">{{ auction.description }}</p>
+                            
+                            <div class="flex items-center gap-2 mb-2">
+                                <div class="bg-orange-50 dark:bg-orange-900/10 px-3 py-1.5 rounded-xl">
+                                    <span class="text-[10px] text-orange-600 font-bold">السعر الحالي: {{ auction.currentPrice }} ج.م</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-4 border-t border-gray-50 dark:border-gray-800 flex items-center justify-between">
+                        <div class="flex -space-x-2 rtl:space-x-reverse items-center">
+                            <ng-container *ngFor="let bid of auction.bids | slice:0:3">
+                                <div class="w-6 h-6 rounded-full border-2 border-white dark:border-gray-900 bg-gray-200 overflow-hidden" [title]="bid.userName">
+                                    <img *ngIf="bid.userAvatar" [src]="getProfileImageUrl(bid.userAvatar)" class="w-full h-full object-cover">
+                                </div>
+                            </ng-container>
+                            <span *ngIf="auction.bids && auction.bids.length > 3" class="text-[10px] text-gray-400 mr-4">+{{ auction.bids.length - 3 }} مزايدين</span>
+                            <span *ngIf="!auction.bids || !auction.bids.length" class="text-[10px] text-gray-400">لا توجد مزايدات</span>
+                        </div>
+                        
+                        <div class="flex items-center gap-2">
+                            <button *ngIf="auction.userId === userId" (click)="deleteAuction(auction._id)"
+                                class="bg-red-50 dark:bg-red-900/20 text-red-600 px-3 py-2 rounded-xl border border-red-100 dark:border-red-800/30 hover:bg-red-100 transition-all" title="حذف المزاد">
+                                <fa-icon [icon]="faTrash"></fa-icon>
+                            </button>
+                            <button *ngIf="auction.userId === userId && auction.status === 'active'" (click)="finalizeAuction(auction)"
+                                class="bg-green-50 dark:bg-green-900/20 text-green-600 px-3 py-2 rounded-xl border border-green-100 dark:border-green-800/30 hover:bg-green-100 transition-all" title="إنهاء المزاد وقبول السعر الحالي">
+                                <fa-icon [icon]="faCheckCircle"></fa-icon>
+                            </button>
+                            <input #bidAmount [class.hidden]="auction.status !== 'active'" type="number" [value]="auction.currentPrice + 10" 
+                                class="w-16 bg-gray-50 dark:bg-gray-800 border-none rounded-lg px-2 py-1.5 text-xs text-center outline-none focus:ring-1 focus:ring-orange-500/30 dark:text-white">
+                            <button (click)="placeBid(auction, bidAmount.value)" [disabled]="auction.userId === userId || auction.status !== 'active'"
+                                class="bg-orange-600 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-orange-700 transition-all disabled:opacity-30">
+                                {{ auction.status === 'active' ? 'زايد الآن' : 'منتهي' }}
                             </button>
                         </div>
                     </div>
                 </div>
+            </div>
+
+            <div *ngIf="!isAuctionsLoading && activeAuctions.length === 0" class="text-center py-20 text-gray-400">
+                <fa-icon [icon]="faStar" class="text-5xl mb-4 opacity-20"></fa-icon>
+                <p>لا توجد مزادات نشطة حالياً.</p>
             </div>
         </div>
     </main>
 
-    <!-- Create Post Modal -->
-    <div *ngIf="showCreatePost"
-        class="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in duration-300">
-        <div
-            class="bg-white dark:bg-gray-900 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-white/20">
-            <!-- Header -->
-            <div class="bg-gradient-to-l from-blue-600 to-indigo-700 p-6 text-white flex justify-between items-start">
-                <div>
-                    <h3 class="text-xl font-bold">إنشاء منشور جديد</h3>
-                    <p class="text-blue-100/80 text-sm mt-1">شارك أفكارك مع باقي القراء</p>
-                </div>
-                <button (click)="showCreatePost = false" class="text-white/50 hover:text-white transition-colors p-1">
-                    <fa-icon [icon]="faTimes" size="lg"></fa-icon>
-                </button>
-            </div>
-
-            <div class="p-6 space-y-5">
-                <!-- Type Tabs -->
-                <div class="flex bg-gray-100 dark:bg-gray-800 p-1.5 rounded-2xl mb-4">
-                    <button (click)="newPost.type = 'thought'" [class.bg-white]="newPost.type === 'thought'"
-                        [class.shadow-sm]="newPost.type === 'thought'"
-                        [class.text-blue-600]="newPost.type === 'thought'"
-                        [class.dark:bg-gray-700]="newPost.type === 'thought'"
-                        class="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2">
-                        <fa-icon [icon]="faQuoteRight" class="text-xs"></fa-icon>
-                        خاطرة
-                    </button>
-                    <button (click)="newPost.type = 'review'" [class.bg-white]="newPost.type === 'review'"
-                        [class.shadow-sm]="newPost.type === 'review'" [class.text-blue-600]="newPost.type === 'review'"
-                        [class.dark:bg-gray-700]="newPost.type === 'review'"
-                        class="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2">
-                        <fa-icon [icon]="faBook" class="text-xs"></fa-icon>
-                        مراجعة كتاب
+    <!-- Account Modal -->
+    <app-account-modal #accountModal></app-account-modal>
+     <!-- Modal for Sending Swap Request Details -->
+     <div *ngIf="showRequestSwapModal" class="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div class="bg-white dark:bg-gray-900 rounded-[2.5rem] w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl animate-in zoom-in duration-300 scrollbar-hide">
+            <div class="p-8">
+                <div class="flex items-center justify-between mb-8">
+                    <h3 class="text-2xl font-black text-gray-900 dark:text-white">إرسال طلب تبادل</h3>
+                    <button (click)="showRequestSwapModal = false" class="w-12 h-12 flex items-center justify-center rounded-full bg-gray-50 dark:bg-gray-800 text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors">
+                        <fa-icon [icon]="faTimes" size="xl"></fa-icon>
                     </button>
                 </div>
 
-                <!-- Review Specific Fields -->
-                <div *ngIf="newPost.type === 'review'" class="space-y-4 animate-in slide-in-from-top-2">
+                <div class="space-y-6">
                     <div>
-                        <label class="block text-xs font-bold text-gray-500 mb-2 pr-1">اسم الكتاب</label>
-                        <input type="text" [(ngModel)]="newPost.bookTitle" placeholder="ما هو الكتاب الذي تراجعه؟"
-                            class="w-full bg-gray-50 dark:bg-gray-800 border-2 border-transparent focus:border-blue-500/30 rounded-2xl px-4 py-3 text-sm outline-none transition-all dark:text-white">
+                        <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 mr-1">ما الكتاب الذي ستعرضه بدلاً؟</label>
+                        <input [(ngModel)]="requestSwapData.offeredBookTitle" type="text" 
+                            class="w-full bg-gray-50 dark:bg-gray-800 border-0 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-indigo-500 transition-all dark:text-white"
+                            placeholder="اسم الكتاب الخاص بك...">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 mr-1">حالة كتابك</label>
+                        <select [(ngModel)]="requestSwapData.offeredBookCondition" 
+                            class="w-full bg-gray-50 dark:bg-gray-800 border-0 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-indigo-500 transition-all dark:text-white">
+                            <option value="new">جديد</option>
+                            <option value="used-good">جيد جداً</option>
+                            <option value="used-fair">مستعمل</option>
+                        </select>
                     </div>
                     <div>
-                        <label
-                            class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 pr-1">تقييمك</label>
-                        <div class="flex gap-2 justify-center py-2">
-                            <button *ngFor="let star of [1,2,3,4,5]" (click)="newPost.rating = star"
-                                class="transition-transform active:scale-90">
-                                <fa-icon [icon]="faStar" [class.text-yellow-400]="newPost.rating >= star"
-                                    [class.text-gray-300]="newPost.rating < star" class="text-2xl"></fa-icon>
+                        <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 mr-1">ملاحظات إضافية</label>
+                        <textarea [(ngModel)]="requestSwapData.offeredBookNotes" rows="3"
+                            class="w-full bg-gray-50 dark:bg-gray-800 border-0 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-indigo-500 transition-all dark:text-white resize-none"
+                            placeholder="اكتب أي معلومات إضافية عن الكتاب أو حالته..."></textarea>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 mr-1">صورة الكتاب (اختياري)</label>
+                        <div class="relative group">
+                            <input type="file" (change)="onSwapFileSelected($event)" accept="image/*" class="hidden" #swapFileInput>
+                            <button (click)="swapFileInput.click()" 
+                                class="w-full bg-gray-50 dark:bg-gray-800 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-2xl p-6 text-center hover:border-indigo-400 transition-all">
+                                <div *ngIf="!requestSwapData.offeredBookImage" class="space-y-2">
+                                    <fa-icon [icon]="faPlus" class="text-2xl text-gray-300 group-hover:text-indigo-400"></fa-icon>
+                                    <p class="text-xs text-gray-400">اضغط لرفع صورة الكتاب المعروض</p>
+                                </div>
+                                <div *ngIf="requestSwapData.offeredBookImage" class="flex flex-col items-center gap-2">
+                                    <img [src]="requestSwapData.offeredBookImage" class="w-20 h-28 object-cover rounded-xl shadow-lg">
+                                    <span class="text-[10px] text-indigo-500 font-bold">تغيير الصورة</span>
+                                </div>
                             </button>
                         </div>
                     </div>
-                </div>
-
-                <!-- Content -->
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 mb-2 pr-1">المحتوى</label>
-                    <textarea [(ngModel)]="newPost.content" rows="5"
-                        [placeholder]="newPost.type === 'review' ? 'ما رأيك في هذا الكتاب؟' : 'اكتب ما يدور في خاطرك...'"
-                        class="w-full bg-gray-50 dark:bg-gray-800 border-2 border-transparent focus:border-blue-500/30 rounded-2xl px-4 py-3 text-sm outline-none transition-all dark:text-white resize-none"></textarea>
-                </div>
-
-                <!-- Actions -->
-                <div class="flex gap-3 justify-end pt-2">
-                    <button (click)="showCreatePost = false"
-                        class="px-6 py-2.5 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors">إلغاء</button>
-                    <button (click)="createPost()" [disabled]="!newPost.content.trim() || isLoading"
-                        class="px-8 py-2.5 rounded-xl text-sm font-bold bg-blue-600 text-white hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50">
-                        <fa-icon *ngIf="isLoading" [icon]="faRefresh" [class.animate-spin]="isLoading"
-                            class="ml-2"></fa-icon>
-                        {{ isLoading ? 'جاري النشر...' : 'نشر' }}
-                    </button>
+                    <div class="pt-4 flex gap-4">
+                        <button (click)="sendSwapRequest()" [disabled]="isLoading || !requestSwapData.offeredBookTitle.trim()"
+                            class="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-black text-lg shadow-xl shadow-indigo-200 dark:shadow-none hover:bg-indigo-700 active:scale-95 transition-all disabled:opacity-50 disabled:grayscale">
+                            <span *ngIf="!isLoading">إرسال الطلب</span>
+                            <fa-icon *ngIf="isLoading" [icon]="faSync" [class.animate-spin]="isLoading"></fa-icon>
+                        </button>
+                    </div>
+                    
+                    <p class="text-[10px] text-gray-400 text-center">بإرسالك الطلب، أنت توافق على شروط المجتمع للتبادل الآمن.</p>
                 </div>
             </div>
         </div>
-    </div>
-
-    <!-- Account Modal -->
-    <app-account-modal #accountModal></app-account-modal>
+     </div>
 </div>

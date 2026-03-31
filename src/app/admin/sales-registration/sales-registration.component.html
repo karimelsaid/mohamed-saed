@@ -84,6 +84,31 @@
                         <span>الإجمالي الفرعي:</span>
                         <span>{{ getSubtotal() | number:'1.2-2' }} ج.م</span>
                     </div>
+
+                    <!-- Discount Section -->
+                    <div class="discount-section">
+                        <div class="discount-header">
+                            <fa-icon [icon]="faTag"></fa-icon>
+                            <span>خصم</span>
+                        </div>
+                        <div class="discount-controls">
+                            <div class="discount-type-toggle">
+                                <button [class.active]="discountType === 'percentage'" (click)="discountType = 'percentage'" class="toggle-btn">
+                                    <fa-icon [icon]="faPercent"></fa-icon> %
+                                </button>
+                                <button [class.active]="discountType === 'fixed'" (click)="discountType = 'fixed'" class="toggle-btn">
+                                    ج.م
+                                </button>
+                            </div>
+                            <input type="number" [(ngModel)]="discountValue" min="0" [max]="discountType === 'percentage' ? 100 : getSubtotal()"
+                                [placeholder]="discountType === 'percentage' ? 'نسبة الخصم %' : 'قيمة الخصم بالجنيه'" class="discount-input">
+                        </div>
+                        <div class="discount-result" *ngIf="getDiscountAmount() > 0">
+                            <span>قيمة الخصم:</span>
+                            <span class="discount-amount">- {{ getDiscountAmount() | number:'1.2-2' }} ج.م</span>
+                        </div>
+                    </div>
+
                     <div class="summary-row total">
                         <span>الإجمالي النهائي:</span>
                         <span>{{ getGrandTotal() | number:'1.2-2' }} ج.م</span>
@@ -108,7 +133,7 @@
     <div class="print-invoice only-print" dir="rtl">
         <div class="invoice-header">
             <div class="shop-brand">
-                <h1>مكتبة كنوز</h1>
+                <h1>knoozbook</h1>
                 <p>للثقافة والعلوم</p>
             </div>
             <div class="invoice-meta">
@@ -144,15 +169,25 @@
         </table>
 
         <div class="invoice-summary">
-            <div class="summary-line">
-                <span>الإجمالي:</span>
-                <span>{{ getGrandTotal() | number:'1.2-2' }} ج.م</span>
+            <div class="summary-block">
+                <div class="summary-line sub">
+                    <span>الإجمالي الفرعي:</span>
+                    <span>{{ getSubtotal() | number:'1.2-2' }} ج.م</span>
+                </div>
+                <div class="summary-line discount" *ngIf="getDiscountAmount() > 0">
+                    <span>الخصم ({{ discountType === 'percentage' ? discountValue + '%' : 'ج.م' }}):</span>
+                    <span>- {{ getDiscountAmount() | number:'1.2-2' }} ج.م</span>
+                </div>
+                <div class="summary-line">
+                    <span>الإجمالي النهائي:</span>
+                    <span>{{ getGrandTotal() | number:'1.2-2' }} ج.م</span>
+                </div>
             </div>
         </div>
 
         <div class="invoice-footer">
             <p>شكراً لتعاملكم معنا</p>
-            <p>مكتبة كنوز - طريقك نحو المعرفة</p>
+            <p>knoozbook - طريقك نحو المعرفة</p>
         </div>
     </div>
 </div>

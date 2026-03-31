@@ -32,9 +32,12 @@
                     <td>{{ sale.customerName || 'عميل نقدي' }}</td>
                     <td>{{ sale.customerPhone || '-' }}</td>
                     <td class="amount-cell">{{ sale.totalAmount | number:'1.2-2' }} ج.م</td>
-                    <td>
+                    <td class="action-cell">
                         <button class="action-btn view" (click)="viewInvoice(sale)" title="عرض الفاتورة">
                             <fa-icon [icon]="faEye"></fa-icon>
+                        </button>
+                        <button class="action-btn delete" (click)="deleteSale(sale)" [disabled]="isDeleting" title="حذف الفاتورة">
+                            <fa-icon [icon]="faTrash"></fa-icon>
                         </button>
                     </td>
                 </tr>
@@ -60,7 +63,7 @@
                 <div class="invoice-view">
                     <div class="inv-header">
                         <div class="shop-info">
-                            <h1>مكتبة كنوز</h1>
+                            <h1>knoozbook</h1>
                             <p>تاريخ البيع: {{ selectedSale?.date | date:'medium' }}</p>
                         </div>
                         <div class="inv-meta">
@@ -85,18 +88,28 @@
                         </thead>
                         <tbody>
                             <tr *ngFor="let item of selectedSale?.items">
-                                <td>{{ item.product_name }}</td>
-                                <td>{{ item.product_price | number:'1.2-2' }}</td>
+                                <td>{{ item.name }}</td>
+                                <td>{{ item.price | number:'1.2-2' }}</td>
                                 <td>{{ item.quantity }}</td>
-                                <td>{{ (item.product_price * item.quantity) | number:'1.2-2' }}</td>
+                                <td>{{ item.total | number:'1.2-2' }}</td>
                             </tr>
                         </tbody>
                     </table>
 
                     <div class="inv-total">
-                        <div class="total-line">
-                            <span>الإجمالي النهائي:</span>
-                            <span>{{ selectedSale?.totalAmount | number:'1.2-2' }} ج.م</span>
+                        <div class="total-block">
+                            <div class="total-line sub" *ngIf="selectedSale?.discountAmount > 0">
+                                <span>الإجمالي الفرعي:</span>
+                                <span>{{ selectedSale?.subtotal | number:'1.2-2' }} ج.م</span>
+                            </div>
+                            <div class="total-line discount" *ngIf="selectedSale?.discountAmount > 0">
+                                <span>الخصم ({{ selectedSale?.discountType === 'percentage' ? selectedSale?.discountValue + '%' : 'ج.م' }}):</span>
+                                <span>- {{ selectedSale?.discountAmount | number:'1.2-2' }} ج.م</span>
+                            </div>
+                            <div class="total-line">
+                                <span>الإجمالي النهائي:</span>
+                                <span>{{ selectedSale?.totalAmount | number:'1.2-2' }} ج.م</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -104,6 +117,9 @@
 
             <div class="modal-footer no-print">
                 <button class="btn-print" (click)="printCurrentInvoice()">طباعة</button>
+                <button class="btn-delete" (click)="deleteSale(selectedSale)" [disabled]="isDeleting">
+                    <fa-icon [icon]="faTrash"></fa-icon> حذف الفاتورة
+                </button>
                 <button class="btn-close" (click)="closeModal()">إغلاق</button>
             </div>
         </div>

@@ -7,11 +7,13 @@ import { AuthService } from '../../auth/auth.service';
 import { Router, ActivatedRoute } from '@angular/router';
 import { ReaderPost } from '../../core/models/post.model';
 import { BookSwap } from '../../core/models/book-swap.model';
+import { Auction } from '../../core/models/auction.model';
 import { 
     faArrowRight, faRss, faExchangeAlt, faHeart, 
     faComment, faBook, faStar, faQuoteRight, faPlus, 
     faSearch, faInfoCircle, faShareAlt, faSignInAlt, faTimes, faSyncAlt,
-    faEllipsisV, faThumbtack, faTrash, faCheckCircle
+    faEllipsisV, faThumbtack, faTrash, faCheckCircle,
+    faBell, faUserCircle
 } from '@fortawesome/free-solid-svg-icons';
 import { AccountModalComponent } from '../../auth/account-modal/account-modal.component';
 import { environment } from '../../../environments/environment';
@@ -38,17 +40,19 @@ export class ReaderCommunityComponent implements OnInit {
     faShareAlt = faShareAlt;
     faSignInAlt = faSignInAlt;
     faTimes = faTimes;
-    faRefresh = faSyncAlt;
+    faSync = faSyncAlt;
     faEllipsisV = faEllipsisV;
     faThumbtack = faThumbtack;
     faTrash = faTrash;
     faCheckCircle = faCheckCircle;
+    faBell = faBell;
+    faUserCircle = faUserCircle;
 
     activeMenuId: string | null = null;
     isHeaderVisible = true;
     private lastScrollTop = 0;
 
-    activeSection: 'feed' | 'exchange' = 'feed';
+    activeSection: 'feed' | 'exchange' | 'auctions' = 'feed';
     userId = '';
     userName = '';
     message = '';
@@ -68,6 +72,26 @@ export class ReaderCommunityComponent implements OnInit {
     // Book Exchange
     availableSwaps: BookSwap[] = [];
     isSwapsLoading = false;
+    showCreateSwap = false;
+    showRequestSwapModal = false;
+    targetSwapId = '';
+    requestSwapData = {
+        offeredBookTitle: '',
+        offeredBookCondition: 'used-good',
+        offeredBookNotes: '',
+        offeredBookImage: ''
+    };
+    newSwap: { bookTitle: string, author: string, condition: any, notes: string, lookingFor: string, location: string, images: string[] } = { 
+        bookTitle: '', author: '', condition: 'used-good' as any, notes: '', lookingFor: '', location: '', images: [] 
+    };
+
+    // Book Auctions
+    activeAuctions: Auction[] = [];
+    isAuctionsLoading = false;
+    showCreateAuction = false;
+    newAuction: { bookTitle: string, author: string, description: string, condition: string, startingPrice: number, durationHours: number, images: string[] } = { 
+        bookTitle: '', author: '', description: '', condition: '', startingPrice: 0, durationHours: 24, images: [] 
+    };
 
     // Search State
     searchQuery = '';
@@ -112,7 +136,7 @@ export class ReaderCommunityComponent implements OnInit {
         });
     }
 
-    switchSection(section: 'feed' | 'exchange') {
+    switchSection(section: 'feed' | 'exchange' | 'auctions') {
         this.activeSection = section;
         this.loadActiveSection();
     }
@@ -122,7 +146,27 @@ export class ReaderCommunityComponent implements OnInit {
             this.loadFeed();
         } else if (this.activeSection === 'exchange') {
             this.loadSwaps();
+        } else if (this.activeSection === 'auctions') {
+            this.loadAuctions();
         }
+    }
+
+    private checkUserProfile(): boolean {
+        const user = this.authService.currentUserValue;
+        if (!user) {
+            this.showLoginPrompt = true;
+            return false;
+        }
+
+        const hasPhone = !!user.phone;
+        const hasAddress = !!(user.governorate && user.city);
+
+        if (!hasPhone || !hasAddress) {
+            alert('⚠️ يرجى إكمال بياناتك الشخصية (رقم الهاتف والعنوان) من صفحتك الشخصية أولاً لتتمكن من التبادل أو المزايدة.');
+            this.router.navigate(['/profile', user.id]);
+            return false;
+        }
+        return true;
     }
 
     loadFeed() {
@@ -172,12 +216,22 @@ export class ReaderCommunityComponent implements OnInit {
                 this.isSwapsLoading = false;
             },
             error: (err) => {
-                console.error('Error loading swaps, using sample data', err);
-                this.availableSwaps = [
-                    { _id: '1', ownerId: 'user1', ownerName: 'أحمد محمد', bookTitle: 'كتاب الأمير الصغير', bookAuthor: 'أنطوان دو سانت', condition: 'ممتاز', lookingFor: 'أي كتاب في تطوير الذات', status: 'available', createdAt: new Date().toISOString() },
-                    { _id: '2', ownerId: 'user2', ownerName: 'فاطمة أحمد', bookTitle: 'ألف ليلة وليلة', bookAuthor: 'مجهول', condition: 'جيد', lookingFor: 'روايات عربية', status: 'available', createdAt: new Date().toISOString() }
-                ] as any;
+                console.error('Error loading swaps', err);
                 this.isSwapsLoading = false;
+            }
+        });
+    }
+
+    loadAuctions() {
+        this.isAuctionsLoading = true;
+        this.communityService.getAuctions().subscribe({
+            next: (auctions) => {
+                this.activeAuctions = auctions;
+                this.isAuctionsLoading = false;
+            },
+            error: (err) => {
+                console.error('Error loading auctions', err);
+                this.isAuctionsLoading = false;
             }
         });
     }
@@ -383,26 +437,58 @@ export class ReaderCommunityComponent implements OnInit {
         });
     }
 
-    sendSwapRequest(swapId: string) {
-        this.isLoading = true;
-        this.communityService.requestSwap(swapId, this.userId).subscribe({
-            next: () => {
-                this.message = '✅ تم إرسال طلب التبديل بنجاح!';
-                this.isLoading = false;
-                setTimeout(() => this.message = '', 3000);
-            },
-            error: (err) => {
-                this.message = `❌ ${err.error.message || 'فشل إرسال الطلب'}`;
-                this.isLoading = false;
-            }
-        });
-    }
-
     handleCreatePostClick() {
         if (!this.userId) {
             this.openAccountModal();
         } else {
             this.showCreatePost = true;
+        }
+    }
+
+    openCreateSwap() {
+        if (!this.userId) {
+            this.openAccountModal();
+        } else {
+            this.showCreateSwap = true;
+            this.cdr.detectChanges();
+        }
+    }
+
+    openCreateAuction() {
+        if (!this.userId) {
+            this.openAccountModal();
+        } else {
+            this.showCreateAuction = true;
+            this.cdr.detectChanges();
+        }
+    }
+
+    onImageSelected(event: any, target: 'swap' | 'auction') {
+        const files = event.target.files;
+        if (!files || files.length === 0) return;
+
+        for (let i = 0; i < files.length; i++) {
+            const reader = new FileReader();
+            reader.onload = (e: any) => {
+                const base64 = e.target.result;
+                if (target === 'swap') {
+                    if (!this.newSwap['images']) (this.newSwap as any)['images'] = [];
+                    (this.newSwap as any)['images'].push(base64);
+                } else {
+                    if (!this.newAuction['images']) (this.newAuction as any)['images'] = [];
+                    (this.newAuction as any)['images'].push(base64);
+                }
+                this.cdr.detectChanges();
+            };
+            reader.readAsDataURL(files[i]);
+        }
+    }
+
+    removeImage(index: number, target: 'swap' | 'auction') {
+        if (target === 'swap') {
+            (this.newSwap as any)['images'].splice(index, 1);
+        } else {
+            (this.newAuction as any)['images'].splice(index, 1);
         }
     }
 
@@ -439,6 +525,230 @@ export class ReaderCommunityComponent implements OnInit {
                 this.isLoading = false;
                 setTimeout(() => this.message = '', 5000);
             }
+        });
+    }
+
+    createSwap() {
+        if (!this.checkUserProfile()) return;
+
+        if (!this.newSwap.bookTitle.trim()) return;
+        if (!this.userId) {
+            this.openAccountModal();
+            return;
+        }
+
+        this.isLoading = true;
+        this.communityService.offerBookForSwap({
+            userId: this.userId,
+            ...this.newSwap
+        }).subscribe({
+            next: () => {
+                this.message = '✅ تم عرض الكتاب للتبادل بنجاح!';
+                this.showCreateSwap = false;
+                this.newSwap = { bookTitle: '', author: '', condition: 'used-good' as any, notes: '', lookingFor: '', location: '', images: [] };
+                this.isLoading = false;
+                this.loadSwaps();
+                setTimeout(() => this.message = '', 3000);
+            },
+            error: (err) => {
+                console.error('Create Swap Error:', err);
+                this.message = '❌ فشل إرسال العرض.';
+                this.isLoading = false;
+            }
+        });
+    }
+
+    createAuction() {
+        if (!this.checkUserProfile()) return;
+
+        if (!this.newAuction.bookTitle.trim()) return;
+        if (!this.userId) {
+            this.openAccountModal();
+            return;
+        }
+
+        this.isLoading = true;
+        this.communityService.createAuction({
+            userId: this.userId,
+            ...this.newAuction
+        }).subscribe({
+            next: () => {
+                this.message = '✅ تم بدء المزاد بنجاح!';
+                this.showCreateAuction = false;
+                this.newAuction = { bookTitle: '', author: '', description: '', condition: '', startingPrice: 0, durationHours: 24, images: [] };
+                this.isLoading = false;
+                this.loadAuctions();
+                setTimeout(() => this.message = '', 3000);
+            },
+            error: (err) => {
+                console.error('Create Auction Error:', err);
+                this.message = '❌ فشل بدء المزاد.';
+                this.isLoading = false;
+            }
+        });
+    }
+
+    placeBid(auction: Auction, amountInput: string) {
+        if (!this.checkUserProfile()) return;
+
+        const amount = parseFloat(amountInput);
+        if (isNaN(amount) || amount <= auction.currentPrice) {
+          alert('يجب أن يكون العرض أعلى من السعر الحالي');
+          return;
+        }
+
+        if (!this.userId) {
+          this.openAccountModal();
+          return;
+        }
+
+        this.communityService.placeBid(auction._id, this.userId, amount).subscribe({
+          next: (updatedAuction) => {
+            const index = this.activeAuctions.findIndex(a => a._id === (auction._id));
+            if (index !== -1) {
+              this.activeAuctions[index] = updatedAuction;
+            }
+            this.message = '✅ تم تقديم المزايدة بنجاح!';
+            setTimeout(() => this.message = '', 3000);
+          },
+          error: (err) => {
+            alert(err.error?.message || 'فشل تقديم المزايدة');
+          }
+        });
+    }
+
+    getRemainingTime(endTime: any): string {
+        const now = new Date().getTime();
+        const end = new Date(endTime).getTime();
+        const diff = end - now;
+
+        if (diff <= 0) return 'منتهي';
+
+        const hours = Math.floor(diff / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+        return `${hours} ساعة و ${minutes} دقيقة`;
+    }
+
+    openRequestSwapModal(swapId: string) {
+        if (!this.checkUserProfile()) return;
+
+        if (!this.userId) {
+            this.openAccountModal();
+            return;
+        }
+        this.targetSwapId = swapId;
+        this.requestSwapData = { offeredBookTitle: '', offeredBookCondition: 'used-good', offeredBookNotes: '', offeredBookImage: '' };
+        this.showRequestSwapModal = true;
+    }
+
+    onSwapFileSelected(event: any): void {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = () => {
+                this.requestSwapData.offeredBookImage = reader.result as string;
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    sendSwapRequest(): void {
+        if (!this.checkUserProfile()) return;
+
+        if (!this.targetSwapId || !this.requestSwapData.offeredBookTitle.trim()) return;
+        
+        this.isLoading = true;
+        this.communityService.requestSwap(
+            this.targetSwapId, 
+            this.userId, 
+            this.requestSwapData.offeredBookTitle, 
+            this.requestSwapData.offeredBookCondition,
+            this.requestSwapData.offeredBookNotes,
+            this.requestSwapData.offeredBookImage
+        ).subscribe({
+            next: (res) => {
+                this.message = '✅ ' + (res.message || 'تم إرسال طلب التبديل!');
+                this.showRequestSwapModal = false;
+                this.isLoading = false;
+                this.requestSwapData = { offeredBookTitle: '', offeredBookCondition: 'used-good', offeredBookNotes: '', offeredBookImage: '' };
+                setTimeout(() => this.message = '', 3000);
+            },
+            error: (err) => {
+                alert(err.error?.message || 'فشل إرسال الطلب');
+                this.isLoading = false;
+            }
+        });
+    }
+
+    finalizeAuction(auction: any): void {
+        if (!auction.bids || auction.bids.length === 0) {
+            this.message = '❌ لا يمكن إنهاء المزاد قبل وجود مزايدة واحدة على الأقل';
+            setTimeout(() => this.message = '', 3000);
+            return;
+        }
+        
+        if (!confirm('هل أنت متأكد من إنهاء المزاد الآن وقبول السعر الحالي؟')) return;
+        
+        this.communityService.finalizeAuction(auction._id).subscribe({
+            next: () => {
+                this.message = '✅ تم إنهاء المزاد بنجاح';
+                this.loadAuctions();
+            },
+            error: () => this.message = '❌ فشل إنهاء المزاد'
+        });
+    }
+
+    deleteSwap(swapId: string): void {
+        if (!confirm('هل أنت متأكد من حذف هذا العرض نهائياً؟')) return;
+        
+        this.communityService.deleteSwap(swapId, this.userId).subscribe({
+            next: () => {
+                this.message = 'تم حذف العرض بنجاح';
+                this.loadSwaps();
+            },
+            error: (err) => {
+                console.error('Delete swap error:', err);
+                this.message = 'فشل في حذف العرض';
+            }
+        });
+    }
+
+    deleteAuction(auctionId: string): void {
+        if (!confirm('هل أنت متأكد من حذف هذا المزاد نهائياً؟')) return;
+        
+        this.communityService.deleteAuction(auctionId, this.userId).subscribe({
+            next: () => {
+                this.message = 'تم حذف المزاد بنجاح';
+                this.loadAuctions();
+            },
+            error: (err) => {
+                console.error('Delete auction error:', err);
+                this.message = 'فشل في حذف المزاد';
+            }
+        });
+    }
+
+    acceptRequest(swapId: string, requestId: string) {
+        this.communityService.acceptSwapRequest(swapId, requestId).subscribe({
+            next: (res) => {
+                this.message = '✅ ' + (res.message || 'تم قبول الطلب!');
+                this.loadSwaps();
+                setTimeout(() => this.message = '', 3000);
+            },
+            error: (err) => alert(err.error?.message || 'فشل قبول الطلب')
+        });
+    }
+
+    rejectRequest(swapId: string, requestId: string) {
+        if (!confirm('هل أنت متأكد من رفض هذا الطلب؟')) return;
+        this.communityService.rejectSwapRequest(swapId, requestId).subscribe({
+            next: (res) => {
+                this.message = '✅ تم رفض طلب التبادل';
+                this.loadSwaps();
+                setTimeout(() => this.message = '', 3000);
+            },
+            error: (err) => alert(err.error?.message || 'فشل رفض الطلب')
         });
     }
 }

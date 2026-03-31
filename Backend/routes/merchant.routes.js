@@ -22,6 +22,7 @@ router.post('/products', authenticateMerchant, merchantController.productUpload.
 router.delete('/products/:productId', authenticateMerchant, merchantController.deleteProduct);
 router.post('/products/:productId/update-request', authenticateMerchant, merchantController.submitProductUpdateRequest);
 router.get('/update-requests', authenticateMerchant, merchantController.getMerchantUpdateRequests);
+router.patch('/update-shipping-rates', authenticateMerchant, merchantController.updateShippingRates);
 
 // Parameterized routes (must come last)
 router.get('/by-name/:username', merchantController.getMerchantByUsername);

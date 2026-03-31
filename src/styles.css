@@ -112,3 +112,31 @@ html {
 ::-webkit-scrollbar-thumb:hover {
     @apply bg-gray-400 dark:bg-gray-500;
 }
+
+/* Global Print Styles */
+@media print {
+    app-navbar,
+    app-navbar-icons,
+    .no-print {
+        display: none !important;
+    }
+
+    body {
+        padding-top: 0 !important;
+        margin: 0 !important;
+        background: white !important;
+    }
+
+    /* Hide admin sidebar and header during print */
+    app-admin-dashboard aside,
+    app-admin-dashboard header,
+    app-admin-dashboard .fixed.inset-0 {
+        display: none !important;
+    }
+
+    app-admin-dashboard main {
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: visible !important;
+    }
+}

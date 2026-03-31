@@ -18,6 +18,11 @@ const productSchema = new mongoose.Schema({
   updatedData: { type: Object },
   merchantId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   createdAt: { type: Date, default: Date.now },
+  // Physical Dimensions
+  weight: { type: Number, required: true, default: 0 },
+  length: { type: Number },
+  width: { type: Number },
+  height: { type: Number },
   // E-book related fields
   productType: { type: String, enum: ['physical', 'digital', 'bundle'], default: 'physical' },
   linkedEbookId: { type: mongoose.Schema.Types.ObjectId, ref: 'Ebook' },

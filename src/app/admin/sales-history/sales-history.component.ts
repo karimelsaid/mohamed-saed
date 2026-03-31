@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { AdminApiService } from '../../services/admin-api.service';
-import { faSearch, faHistory, faUser, faPhone, faCalendarAlt, faFileInvoice, faEye, faTimes } from '@fortawesome/free-solid-svg-icons';
+import { faSearch, faHistory, faUser, faPhone, faCalendarAlt, faFileInvoice, faEye, faTimes, faTrash } from '@fortawesome/free-solid-svg-icons';
 
 @Component({
     selector: 'app-sales-history',
@@ -21,6 +21,7 @@ export class SalesHistoryComponent implements OnInit {
     faFileInvoice = faFileInvoice;
     faEye = faEye;
     faTimes = faTimes;
+    faTrash = faTrash;
 
     sales: any[] = [];
     filteredSales: any[] = [];
@@ -28,6 +29,7 @@ export class SalesHistoryComponent implements OnInit {
     isLoading: boolean = false;
     selectedSale: any = null;
     showInvoiceModal: boolean = false;
+    isDeleting: boolean = false;
 
     constructor(private adminApi: AdminApiService) { }
 
@@ -76,5 +78,26 @@ export class SalesHistoryComponent implements OnInit {
 
     printCurrentInvoice(): void {
         window.print();
+    }
+
+    deleteSale(sale: any): void {
+        if (!confirm(`هل أنت متأكد من حذف الفاتورة رقم ${sale.invoiceNumber}؟ لا يمكن التراجع عن هذا الإجراء.`)) {
+            return;
+        }
+        this.isDeleting = true;
+        this.adminApi.deleteSale(sale.id).subscribe({
+            next: () => {
+                this.sales = this.sales.filter(s => s.id !== sale.id);
+                this.filterSales();
+                if (this.selectedSale?.id === sale.id) {
+                    this.closeModal();
+                }
+                this.isDeleting = false;
+            },
+            error: (err) => {
+                console.error('Error deleting sale:', err);
+                this.isDeleting = false;
+            }
+        });
     }
 }

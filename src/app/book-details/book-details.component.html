@@ -154,6 +154,29 @@
                 {{ book.condition }}
               </span>
             </div>
+
+            <!-- Physical Dimensions -->
+            <div *ngIf="book.weight" class="col-span-1 sm:col-span-2 mt-2 pt-4 border-t border-gray-200 dark:border-gray-700/50">
+              <h4 class="text-sm font-bold text-gray-800 dark:text-gray-200 mb-3">معلومات الشحن و الأبعاد</h4>
+              <div class="flex flex-wrap gap-3 text-sm text-gray-700 dark:text-gray-300">
+                <div class="flex items-center gap-2 bg-white dark:bg-gray-800 shadow-sm px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 flex-1 min-w-[120px] justify-center">
+                  <i class="fas fa-balance-scale text-indigo-500 text-lg"></i>
+                  <div><span class="block text-xs text-gray-500 dark:text-gray-400">الوزن</span><strong dir="ltr">{{ book.weight }} g</strong></div>
+                </div>
+                <div *ngIf="book.length" class="flex items-center gap-2 bg-white dark:bg-gray-800 shadow-sm px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 flex-1 min-w-[120px] justify-center">
+                  <i class="fas fa-arrows-alt-h text-teal-500 text-lg"></i>
+                  <div><span class="block text-xs text-gray-500 dark:text-gray-400">الطول</span><strong dir="ltr">{{ book.length }} cm</strong></div>
+                </div>
+                <div *ngIf="book.width" class="flex items-center gap-2 bg-white dark:bg-gray-800 shadow-sm px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 flex-1 min-w-[120px] justify-center">
+                  <i class="fas fa-arrows-alt-h text-teal-500 text-lg" style="transform: rotate(90deg);"></i>
+                  <div><span class="block text-xs text-gray-500 dark:text-gray-400">العرض</span><strong dir="ltr">{{ book.width }} cm</strong></div>
+                </div>
+                <div *ngIf="book.height" class="flex items-center gap-2 bg-white dark:bg-gray-800 shadow-sm px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 flex-1 min-w-[120px] justify-center">
+                  <i class="fas fa-arrows-alt-v text-teal-500 text-lg"></i>
+                  <div><span class="block text-xs text-gray-500 dark:text-gray-400">الارتفاع</span><strong dir="ltr">{{ book.height }} cm</strong></div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- New product description section -->

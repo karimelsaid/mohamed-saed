@@ -91,6 +91,28 @@ exports.initCronJobs = async () => {
         await detectAndUpdateLiveVersion();
     });
     scheduledTasks.push(liveUpdateTask);
+
+    // 6. Bourse Offers Daily Generation (00:01 AM)
+    const bourseTask = cron.schedule('1 0 * * *', async () => {
+        console.log('🔄 Running Daily Bourse Generation...');
+        try {
+            const SystemSettingsLocal = require('../models/SystemSettings');
+            const BourseOffer = require('../models/BourseOffer.model');
+            const BourseController = require('../controllers/bourse.controller');
+            const localSettings = await SystemSettingsLocal.getInstance();
+            if (localSettings.bourseConfig && localSettings.bourseConfig.isActive) {
+               const now = new Date();
+               const dateStr = new Date(now.getTime() - (now.getTimezoneOffset() * 60 * 1000)).toISOString().split('T')[0];
+               const offersCount = await BourseOffer.countDocuments({ date: dateStr });
+               if (offersCount === 0) {
+                 await BourseController.generateDailyBourseOffers(dateStr, localSettings.bourseConfig);
+               }
+            }
+        } catch(err) {
+            console.error('Error in daily bourse generation:', err);
+        }
+    });
+    scheduledTasks.push(bourseTask);
 };
 
 /**

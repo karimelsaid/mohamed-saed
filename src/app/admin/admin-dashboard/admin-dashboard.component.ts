@@ -17,7 +17,7 @@ import * as XLSX from 'xlsx';
 import { FreeShippingRulesComponent } from './free-shipping/free-shipping-rules.component';
 import { Subscription } from 'rxjs';
 import { FaIconLibrary, FontAwesomeModule, FaIconComponent } from '@fortawesome/angular-fontawesome';
-import { faShoppingCart, faStore, faBook, faPrint, faPlus, faEdit, faTruck, faUsers, faCheckCircle, faMoneyBillWave, faSitemap, faPlusCircle, faImage, faTag, faHashtag, faList, faDollarSign, faAlignLeft, faExclamationTriangle, faCartPlus, faHeart, faMobileAlt, faCamera, faTimes, faHome, faChartLine, faCog, faBars, faUserClock, faCoins, faUserPlus, faChartBar, faBell, faSearch, faSlidersH, faGift, faSyncAlt, faSpinner, faCloudUploadAlt } from '@fortawesome/free-solid-svg-icons';
+import { faShoppingCart, faStore, faBook, faPrint, faPlus, faEdit, faTrash, faTruck, faUsers, faCheckCircle, faMoneyBillWave, faSitemap, faPlusCircle, faImage, faTag, faHashtag, faList, faDollarSign, faAlignLeft, faExclamationTriangle, faCartPlus, faHeart, faMobileAlt, faCamera, faTimes, faHome, faChartLine, faCog, faBars, faUserClock, faCoins, faUserPlus, faChartBar, faBell, faSearch, faSlidersH, faGift, faSyncAlt, faSpinner, faCloudUploadAlt, faGavel } from '@fortawesome/free-solid-svg-icons';
 import { PaymentRequestsComponent } from '../payment-requests/payment-requests.component';
 import { UserHierarchyComponent } from '../user-hierarchy/user-hierarchy.component';
 import { AmazonPriceCalculatorComponent } from '../amazon-price-calculator/amazon-price-calculator.component';
@@ -31,6 +31,7 @@ import { ShortagesReportComponent } from '../shortages-report/shortages-report.c
 import { SalesHistoryComponent } from '../sales-history/sales-history.component';
 import { PromotionDatesComponent } from '../promotion-dates/promotion-dates.component';
 import { AdminApiService } from '../../services/admin-api.service';
+import { AdminBourseSettingsComponent } from '../admin-bourse-settings/admin-bourse-settings.component';
 
 interface Order {
   _id: string;
@@ -44,7 +45,21 @@ interface Order {
   orderDate: string;
   totalAmount: number;
   isMerchantOrder?: boolean;
-  paymentStatus?: string; // Added paymentStatus
+  paymentStatus?: string;
+  isCommunityItem?: boolean;
+  communityItemId?: string;
+  communityOwnerId?: string;
+  communityOwnerName?: string;
+  communityOwnerPhone?: string;
+  communityOwnerAddress?: string;
+  shippingMethod?: string;
+  statusLog?: {
+    status: string;
+    timestamp: string;
+    actor: string;
+    role: string;
+    note?: string;
+  }[];
 }
 
 interface RequestedBook {
@@ -65,6 +80,10 @@ interface Product {
   product_description: string;
   product_price: number;
   price_cost: number;
+  weight?: number;
+  length?: number;
+  width?: number;
+  height?: number;
   product_image?: string;
   image_path?: string;
   copyType?: string;
@@ -85,6 +104,12 @@ interface Product {
 interface OrderProduct {
   product_name: string;
   product_quantity: number;
+  isMerchantOrder?: boolean;
+  isCommunityItem?: boolean;
+  communityItemId?: string;
+  communityOwnerId?: string;
+  communityOwnerName?: string;
+  communityOwnerPhone?: string;
 }
 
 interface GroupedOrder {
@@ -98,7 +123,21 @@ interface GroupedOrder {
   orderDate: string;
   totalAmount: number;
   isMerchantOrder?: boolean;
-  paymentStatus?: string; // Added paymentStatus
+  paymentStatus?: string;
+  isCommunityItem?: boolean;
+  communityItemId?: string;
+  communityOwnerId?: string;
+  communityOwnerName?: string;
+  communityOwnerPhone?: string;
+  communityOwnerAddress?: string;
+  shippingMethod?: string;
+  statusLog?: {
+    status: string;
+    timestamp: string;
+    actor: string;
+    role: string;
+    note?: string;
+  }[];
 }
 
 interface PrintOrder {
@@ -198,7 +237,7 @@ interface SystemSettings {
   maintenanceMode: boolean;
 }
 
-export type AdminView = 'dashboard' | 'userIntelligence' | 'orders' | 'requestedBooks' | 'printOrders' | 'printingSettings' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' | 'gamificationControl' | 'notifications' | 'subscriptionControl' | 'readerFeedback' | 'promotions' | 'salesRegistration' | 'shortagesReport' | 'promotionDates' | 'salesHistory';
+export type AdminView = 'dashboard' | 'userIntelligence' | 'orders' | 'requestedBooks' | 'printOrders' | 'printingSettings' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' | 'gamificationControl' | 'notifications' | 'subscriptionControl' | 'readerFeedback' | 'promotions' | 'salesRegistration' | 'shortagesReport' | 'promotionDates' | 'salesHistory' | 'community' | 'bourseSettings';
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -223,7 +262,8 @@ export type AdminView = 'dashboard' | 'userIntelligence' | 'orders' | 'requested
     SalesRegistrationComponent,
     ShortagesReportComponent,
     PromotionDatesComponent,
-    SalesHistoryComponent
+    SalesHistoryComponent,
+    AdminBourseSettingsComponent
   ],
   templateUrl: './admin-dashboard.component.html',
   styleUrls: ['./admin-dashboard.component.css']
@@ -297,6 +337,67 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   productsPage: number = 1;
   productsPageSize: number = 50;
   searchTerm: string = '';
+
+  // --- Community Management State ---
+  communityStats: { swaps: any[], auctions: any[] } = { swaps: [], auctions: [] };
+  isLoadingCommunity: boolean = false;
+
+  fetchCommunityStats(): void {
+    this.isLoadingCommunity = true;
+    this.http.get<{ success: boolean; stats: any }>(`${this.backendBaseUrl}/community/admin/stats`)
+      .subscribe({
+        next: (response) => {
+          if (response.success) {
+            this.communityStats = response.stats;
+          }
+          this.isLoadingCommunity = false;
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          console.error('Error fetching community stats:', err);
+          this.isLoadingCommunity = false;
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
+  deleteSwap(id: string): void {
+    const currentUserId = this.authService.currentUserValue?.id;
+    if (confirm('هل أنت متأكد من حذف هذا العرض؟')) {
+      this.http.delete(`${this.backendBaseUrl}/community/posts/${id}`, { body: { userId: currentUserId } })
+        .subscribe({
+          next: () => {
+            this.fetchCommunityStats();
+          },
+          error: (err) => console.error('Error deleting swap:', err)
+        });
+    }
+  }
+
+  finalizeAuction(id: string): void {
+    if (confirm('هل أنت متأكد من إنهاء هذا المزاد الآن؟')) {
+      this.http.post(`${this.backendBaseUrl}/community/auctions/${id}/finalize`, {})
+        .subscribe({
+          next: () => {
+             this.fetchCommunityStats();
+          },
+          error: (err) => console.error('Error finalizing auction:', err)
+        });
+    }
+  }
+
+  updateCommunityStatus(id: string, type: 'swap' | 'auction', field: string, value: string): void {
+    const confirmMsg = 'هل أنت متأكد من تحديث الحالة؟';
+    if (confirm(confirmMsg)) {
+        this.http.post(`${this.backendBaseUrl}/community/community/update-status`, { id, type, field, value })
+            .subscribe({
+                next: () => {
+                    this.fetchCommunityStats();
+                },
+                error: (err) => console.error('Error updating status:', err)
+            });
+    }
+  }
 
   // --- User Intelligence Analytics State ---
   analyticsData: any = null;
@@ -562,6 +663,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   faPrint = faPrint;
   faPlus = faPlus;
   faEdit = faEdit;
+  faTrash = faTrash;
   faTruck = faTruck;
   faUsers = faUsers;
   faCheckCircle = faCheckCircle;
@@ -580,6 +682,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   faSyncAlt = faSyncAlt;
   faSpinner = faSpinner;
   faCloudUploadAlt = faCloudUploadAlt;
+  faGavel = faGavel;
 
   // Navigation Titles Mapping
   viewTitles: Record<string, string> = {
@@ -593,7 +696,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     'addProduct': 'إضافة منتج جديد',
     'products': 'إدارة المنتجات',
     'newPage': 'إنشاء صفحة مقالية',
-    'freeShippingRules': 'قواعد الشحن المجاني',
+    'freeShippingRules': 'مصاريف الشحن',
     'merchants': 'إدارة التجار',
     'productApproval': 'اعتماد المنتجات',
     'paymentRequests': 'سحب الأرباح',
@@ -609,7 +712,9 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     'promotions': 'إدارة العروض والخصومات',
     'salesRegistration': 'تسجيل مبيعات خارجية',
     'salesHistory': 'سجل المبيعات والعملاء',
-    'shortagesReport': 'تقرير النواقص'
+    'shortagesReport': 'تقرير النواقص',
+    'community': 'إدارة التبادلات والمزادات',
+    'bourseSettings': 'إعدادات بورصة الكتب'
   };
 
   // Global Navigation Search
@@ -684,15 +789,16 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     suitableFor: '',
     shoeType: '',
     furnitureType: '',
-    height: '',
     deliveryMethod: '',
     toyType: '',
     ageGroup: '',
     safety: '',
     fabricType: '',
-    width: '',
-    length: '',
     usage: '',
+    weight: '',
+    length: '',
+    width: '',
+    height: '',
     suggestedCategory: ''
   };
   selectedFiles: File[] = [];
@@ -1105,7 +1211,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     library: FaIconLibrary
   ) {
     library.addIcons(
-      faShoppingCart, faStore, faBook, faPrint, faPlus, faEdit, faTruck, faUsers, faCheckCircle, faMoneyBillWave, faSitemap, faPlusCircle, faImage, faTag, faHashtag, faList, faDollarSign, faAlignLeft, faExclamationTriangle, faCartPlus, faHeart, faMobileAlt, faCamera, faTimes, faHome, faChartLine, faCog, faBars, faUserClock, faCoins, faUserPlus, faChartBar, faBell, faSearch, faSlidersH
+      faShoppingCart, faStore, faBook, faPrint, faPlus, faEdit, faTrash, faTruck, faUsers, faCheckCircle, faMoneyBillWave, faSitemap, faPlusCircle, faImage, faTag, faHashtag, faList, faDollarSign, faAlignLeft, faExclamationTriangle, faCartPlus, faHeart, faMobileAlt, faCamera, faTimes, faHome, faChartLine, faCog, faBars, faUserClock, faCoins, faUserPlus, faChartBar, faBell, faSearch, faSlidersH
     );
   }
 
@@ -1204,6 +1310,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       this.loadFeedbacks();
     } else if (view === 'promotionDates') {
       // PromotionDatesComponent handles its own loading
+    } else if (view === 'community') {
+      this.fetchCommunityStats();
     }
   }
 
@@ -2153,6 +2261,16 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     return new Intl.DateTimeFormat('ar-EG', options).format(date);
   }
 
+  formatOrderShortDate(dateString: string): string {
+    const date = new Date(dateString || new Date());
+    return new Intl.DateTimeFormat('ar-EG', { 
+      month: 'numeric', 
+      day: 'numeric',
+      hour: 'numeric',
+      minute: 'numeric'
+    }).format(date);
+  }
+
   loadNotifications(): void {
     this.authService.user$.pipe(take(1)).subscribe(user => {
       if (user && user.id) {
@@ -2185,12 +2303,21 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
                 orderDate: order.orderDate,
                 totalAmount: order.totalAmount,
                 isMerchantOrder: order.isMerchantOrder || false,
-                paymentStatus: order.paymentStatus // Map paymentStatus
+                paymentStatus: order.paymentStatus, // Map paymentStatus
+                isCommunityItem: order.isCommunityItem,
+                communityItemId: order.communityItemId,
+                communityOwnerId: order.communityOwnerId,
+                communityOwnerName: order.communityOwnerName,
+                communityOwnerPhone: order.communityOwnerPhone,
+                communityOwnerAddress: order.communityOwnerAddress,
+                statusLog: order.statusLog,
+                shippingMethod: order.shippingMethod
               };
             }
             groupedOrdersMap[order._id].products.push({
               product_name: order.book,
-              product_quantity: order.quantity
+              product_quantity: order.quantity,
+              isMerchantOrder: order.isMerchantOrder || false
             });
           });
 
@@ -2461,6 +2588,10 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
         confirmMessage = 'هل أنت متأكد من إلغاء الطلب؟ سيتم تحديث حالة الطلب.';
         successMessage = 'تم إلغاء الطلب.';
         break;
+      case 'ارسال الاستلام':
+        confirmMessage = 'هل أنت متأكد من البدء في استلام المنتج من صاحبه؟ سيتم إرسال تنبيه للطرفين.';
+        successMessage = 'تم تحديث حالة الطلب إلى ارسال الاستلام.';
+        break;
       default:
         confirmMessage = 'هل أنت متأكد من تحديث حالة الطلب؟';
         successMessage = 'تم تحديث حالة الطلب.';
@@ -2481,7 +2612,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
             'تم الشحن': 'شحن',
             'تم الاستلام': 'استلام',
             'تم التسليم': 'تسليم',
-            'تم الإلغاء': 'إلغاء'
+            'تم الإلغاء': 'إلغاء',
+            'ارسال الاستلام': 'طلب استلام'
           };
           const verb = statusVerbMap[newStatus] || 'تحديث';
         },

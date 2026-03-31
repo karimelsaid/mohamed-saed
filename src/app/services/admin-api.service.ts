@@ -19,6 +19,10 @@ export class AdminApiService {
         return this.http.get<any[]>(`${this.baseUrl}/sales-history`);
     }
 
+    deleteSale(saleId: string): Observable<any> {
+        return this.http.delete(`${this.baseUrl}/sales-history/${saleId}`);
+    }
+
     getShortageSettings(): Observable<any> {
         return this.http.get(`${this.baseUrl}/shortage-settings`);
     }

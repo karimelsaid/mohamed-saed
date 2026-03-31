@@ -38,6 +38,10 @@ const userSchema = new mongoose.Schema({
   merchantName: { type: String },
   coverPhoto: { type: String }, // صورة غلاف المتجر
   preparationTime: { type: Number, default: 1 }, // مدة تجهيز الطلب (1 أو 2 يوم)
+  merchantShippingMethod: { type: String, enum: ['merchant', 'knoozbook'], default: 'knoozbook' }, // تفضيل الشحن للتاجر
+  averageRating: { type: Number, default: 0 },
+  ratingCount: { type: Number, default: 0 },
+  totalSales: { type: Number, default: 0 },
 
   // حقول الاشتراك في الكتب الإلكترونية
   activeSubscription: { type: Boolean, default: false },
@@ -78,6 +82,13 @@ const userSchema = new mongoose.Schema({
     paymentSessionUrl: { type: String, default: null },
     paymentStatus: { type: String, enum: ['pending', 'completed', 'failed'], default: 'pending' },
     status: { type: String, default: 'قيد الإنتظار' }, // pending, shipped, completed,cancelled
+    statusLog: [{
+      status: String,
+      updatedAt: { type: Date, default: Date.now },
+      updatedBy: String,
+      role: String,
+      note: String
+    }],
     isPickup: { type: Boolean, default: false },
     pickupLocation: { type: String },
     shippingAddress: {
@@ -104,7 +115,14 @@ const userSchema = new mongoose.Schema({
     },
     address: String,
     paymentMethod: { type: String, enum: ['online', 'cod', 'wallet'], default: 'online' },
-    codFee: { type: Number, default: 0 }
+    codFee: { type: Number, default: 0 },
+    isCommunityItem: { type: Boolean, default: false },
+    communityItemId: { type: String },
+    communityOwnerId: { type: String },
+    communityOwnerName: { type: String },
+    communityOwnerPhone: { type: String },
+    communityOwnerAddress: { type: String },
+    shippingMethod: { type: String, enum: ['merchant', 'knoozbook'], default: 'knoozbook' } // طريقة الشحن لهذا الطلب
   }],
   requestedBooks: [{
     bookName: { type: String, required: true },
@@ -262,6 +280,10 @@ const userSchema = new mongoose.Schema({
   storeViewHistory: [{
     date: { type: String }, // YYYY-MM-DD
     count: { type: Number, default: 0 }
+  }],
+  shippingRates: [{
+    governorate: String,
+    rate: { type: Number, default: 50 }
   }]
 }, { timestamps: true });
 

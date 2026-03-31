@@ -248,17 +248,37 @@ export class PromotionsComponent implements OnInit, OnDestroy, AfterViewInit {
     // Smart Bundle Builder
     loadProductsForBuilder() {
         this.dataService.getData().subscribe(res => {
-            const internalIds = ['Kenouz', 'admin', 'admin__karim_mohamed__'];
             const all = res || [];
 
-            this.allProducts = all.filter((p: any) => {
-                if (!p.merchantId) return true;
-                const mId = typeof p.merchantId === 'string' ? p.merchantId : (p.merchantId._id || p.merchantId.id || '').toString();
-                const role = typeof p.merchantId === 'object' ? p.merchantId.role : '';
-
-                return role === 'admin' || internalIds.some(id => id.toLowerCase() === mId.toLowerCase());
+            // Fetch bourse settings to check if merchant products are allowed
+            this.promotionService.getBourseSettings().subscribe({
+                next: (config: any) => {
+                    if (config && config.includeMerchantProducts) {
+                        // Include all products
+                        this.allProducts = all.filter((p: any) => parseFloat(p.product_price) > 0);
+                    } else {
+                        // Only internal/admin products
+                        const internalIds = ['Kenouz', 'admin', 'admin__karim_mohamed__'];
+                        this.allProducts = all.filter((p: any) => {
+                            if (!p.merchantId) return true;
+                            const mId = typeof p.merchantId === 'string' ? p.merchantId : (p.merchantId._id || p.merchantId.id || '').toString();
+                            const role = typeof p.merchantId === 'object' ? p.merchantId.role : '';
+                            return role === 'admin' || internalIds.some(id => id.toLowerCase() === mId.toLowerCase());
+                        });
+                    }
+                    console.log(`[SmartOffer] Loaded ${this.allProducts.length} products for builder`);
+                },
+                error: () => {
+                    // Fallback: internal only
+                    const internalIds = ['Kenouz', 'admin', 'admin__karim_mohamed__'];
+                    this.allProducts = all.filter((p: any) => {
+                        if (!p.merchantId) return true;
+                        const mId = typeof p.merchantId === 'string' ? p.merchantId : (p.merchantId._id || p.merchantId.id || '').toString();
+                        const role = typeof p.merchantId === 'object' ? p.merchantId.role : '';
+                        return role === 'admin' || internalIds.some(id => id.toLowerCase() === mId.toLowerCase());
+                    });
+                }
             });
-            console.log(`[SmartOffer] Loaded ${this.allProducts.length} internal products for builder`);
         });
     }
 

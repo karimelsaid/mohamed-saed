@@ -57,7 +57,10 @@
           [ngClass]="{'bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors': orderIndex % 2 === 0, 'bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors': orderIndex % 2 !== 0}"
           class="border-b border-gray-200 dark:border-gray-600">
           <td class="py-4 px-6 text-center">
-            {{ product.book }}
+            <div class="flex flex-col items-center">
+              <span *ngIf="order.isCommunityItem" class="bg-purple-100 text-purple-700 text-[10px] font-bold px-2 py-0.5 rounded-full mb-1 border border-purple-200">مجتمعي</span>
+              {{ product.book }}
+            </div>
             <div *ngIf="order.status === 'تم التسليم'" class="mt-2">
               <label for="rating-{{order._id}}-{{i}}" class="text-xs mr-2 dark:text-gray-300">تقييم:</label>
               <select id="rating-{{order._id}}-{{i}}" [(ngModel)]="product.selectedRating"
@@ -288,6 +291,7 @@
       <div *ngFor="let product of order.products" class="mb-3 p-3 bg-gray-100 dark:bg-gray-600 rounded-lg">
         <div class="flex items-center justify-between">
           <div class="flex-1">
+            <span *ngIf="order.isCommunityItem" class="inline-block bg-purple-100 text-purple-700 text-[9px] font-bold px-2 py-0.5 rounded-full mb-1 border border-purple-200">مجتمعي</span>
             <div class="font-medium text-gray-800 dark:text-gray-100">{{ product.book }}</div>
             <div class="text-xs text-gray-500 dark:text-gray-400">كمية: {{ product.quantity }}</div>
           </div>

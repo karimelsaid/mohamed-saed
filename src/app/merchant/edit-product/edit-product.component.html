@@ -95,6 +95,53 @@
               placeholder="أدخل الكمية">
           </div>
 
+          <!-- Physical Dimensions (Shipping) -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <!-- Weight -->
+            <div>
+              <label for="weight" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 line-clamp-1">
+                الوزن (جم) <span class="text-red-500">*</span>
+              </label>
+              <input type="number" id="weight" [(ngModel)]="product.weight" name="weight"
+                required min="1" step="1"
+                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                placeholder="مثال: 500">
+            </div>
+
+            <!-- Length -->
+            <div>
+              <label for="length" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 line-clamp-1">
+                الطول (سم)
+              </label>
+              <input type="number" id="length" [(ngModel)]="product.length" name="length"
+                min="0" step="0.1"
+                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                placeholder="اختياري">
+            </div>
+
+            <!-- Width -->
+            <div>
+              <label for="width" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 line-clamp-1">
+                العرض (سم)
+              </label>
+              <input type="number" id="width" [(ngModel)]="product.width" name="width"
+                min="0" step="0.1"
+                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                placeholder="اختياري">
+            </div>
+
+            <!-- Height -->
+            <div>
+              <label for="height" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 line-clamp-1">
+                الارتفاع (سم)
+              </label>
+              <input type="number" id="height" [(ngModel)]="product.height" name="height"
+                min="0" step="0.1"
+                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                placeholder="اختياري">
+            </div>
+          </div>
+
           <!-- Copy Type & Condition -->
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>

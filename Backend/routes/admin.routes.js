@@ -93,6 +93,7 @@ router.get('/user-hierarchy', adminController.userHierarchy);
 // 🛒 Manual Sales & Inventory Recording
 router.post('/register-sale', adminController.registerSale);
 router.get('/sales-history', adminController.getSalesHistory);
+router.delete('/sales-history/:saleId', adminController.deleteSale);
 
 // 📊 Shortages & Reports
 router.get('/shortage-settings', adminController.getShortageSettings);

@@ -667,6 +667,7 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
 
             // Re-bind touch handlers to the IFRAME document directly with passive: false to allow preventDefault
             doc.addEventListener('touchstart', (e: TouchEvent) => {
+                if (this.isNavigating) return;
                 this.touchStartX = e.changedTouches[0].clientX;
                 this.touchStartY = e.changedTouches[0].clientY;
                 this.isDragging = true;
@@ -674,7 +675,7 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
             }, { passive: false });
 
             doc.addEventListener('touchmove', (e: TouchEvent) => {
-                if (!this.isDragging) return;
+                if (!this.isDragging || this.isNavigating) return;
                 const currentX = e.changedTouches[0].clientX;
                 const currentY = e.changedTouches[0].clientY;
                 const diffX = currentX - this.touchStartX;
@@ -695,6 +696,11 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
             }, { passive: false });
 
             doc.addEventListener('touchend', (e: TouchEvent) => {
+                if (this.isNavigating) {
+                    this.isDragging = false;
+                    this.dragOffset = 0;
+                    return;
+                }
                 const touchEndX = e.changedTouches[0].clientX;
                 const touchEndY = e.changedTouches[0].clientY;
 
@@ -1541,15 +1547,37 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
     private resizeRendition() {
         // Optimized resize prevents jarring jumps
         if (this.rendition) {
+            this.isNavigating = true;
             const availableHeight = window.innerHeight - 74 - 80;
+            
+            // Capture current location to re-sync after resize
             const currentLocation: any = this.rendition.currentLocation();
+            const cfi = currentLocation?.start?.cfi;
 
-            this.rendition.resize(this.contentWidth, availableHeight);
-
-            // Only re-display if strictly necessary, but often resize handles it.
-            // If we force display here, it might fix the "misalignment" but trigger a flash.
-            // Let's try NOT forcing display, assuming resize works, 
-            // OR if alignment is the issue, we might need to wait for resize to settle.
+            const resizePromise = this.rendition.resize(this.contentWidth, availableHeight) as any;
+            
+            if (resizePromise && typeof resizePromise.then === 'function') {
+                resizePromise.then(() => {
+                    if (cfi) {
+                        return this.rendition?.display(cfi);
+                    }
+                    return Promise.resolve();
+                }).then(() => {
+                    this.isNavigating = false;
+                    this.cdr.detectChanges();
+                });
+            } else {
+                // Fallback for sync resize
+                if (cfi) {
+                    this.rendition.display(cfi).then(() => {
+                        this.isNavigating = false;
+                        this.cdr.detectChanges();
+                    });
+                } else {
+                    this.isNavigating = false;
+                    this.cdr.detectChanges();
+                }
+            }
         }
     }
 

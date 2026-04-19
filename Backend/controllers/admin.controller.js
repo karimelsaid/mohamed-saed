@@ -30,6 +30,8 @@ const Product = require('../models/Product.model');
 const Order = require('../models/Order.model');
 const User = require('../models/User.model');
 const SystemSettings = require('../models/SystemSettings.js');
+const automationService = require('../services/automation.service');
+const googleSheetsService = require('../services/google-sheets.service');
 const { createMiniEpub } = require('../services/epub.service');
 const xlsx = require('xlsx');
 const { google } = require('googleapis');
@@ -260,11 +262,19 @@ async function addProduct(req, res) {
 
     await addProductToExcel(productData);
 
+    // SYNC TO GOOGLE SHEETS
+    googleSheetsService.syncProduct(productData).catch(err => console.error('Google Sheets Sync Error:', err));
+
     try {
       sitemapService.generateSitemap();
     } catch (sitemapError) {
       console.warn('⚠️ Failed to generate sitemap:', sitemapError.message);
     }
+
+    // Trigger n8n Auto-Post
+    // Note: productData contains most fields needed. We search for the saved doc for the full object if needed,
+    // but triggerAutoPost handles barcodes/Excel items too.
+    automationService.triggerAutoPost(productData).catch(err => console.error('AutoPost Trigger Error:', err));
 
     res.json({ success: true, message: 'Product added successfully', barcode });
   } catch (error) {
@@ -510,6 +520,12 @@ async function updateProduct(req, res) {
       }
     }
 
+    // SYNC TO GOOGLE SHEETS
+    const updatedProduct = await Product.findOne({ product_image: { $regex: new RegExp(`^${barcode.trim()}(\\.webp)?$`, 'i') } });
+    if (updatedProduct) {
+      googleSheetsService.syncProduct(updatedProduct.toObject()).catch(err => console.error('Google Sheets Sync Error:', err));
+    }
+
     res.json({ success: true, message: 'Product updated successfully' });
   } catch (error) {
     console.error('Error in updateProduct:', error);
@@ -611,6 +627,12 @@ async function batchUpdateProducts(req, res) {
           );
         } catch (mongoError) {
           console.error(`Failed to sync product ${update.products_id} to MongoDB:`, mongoError.message);
+        }
+
+        // SYNC TO GOOGLE SHEETS
+        const syncedProd = await Product.findOne({ product_image: { $regex: new RegExp(`^${String(update.products_id).trim()}(\\.webp)?$`, 'i') } });
+        if (syncedProd) {
+          googleSheetsService.syncProduct(syncedProd.toObject()).catch(err => console.error('Google Sheets Batch Sync Error:', err));
         }
       }
     }
@@ -959,9 +981,18 @@ async function deleteProduct(req, res) {
           deletedFromExcel = true;
           console.log('✅ Product deleted from Excel');
 
+          // SYNC TO GOOGLE SHEETS (REMOVE)
+          googleSheetsService.removeProduct(barcode).catch(err => console.error('Google Sheets Remove Error:', err));
+
           // Refresh local output.json
           await require('../services/excel.service').downloadAndConvertExcel(fileId);
         }
+
+        // SYNC TO GOOGLE SHEETS (REMOVE)
+        for (const barcode of barcodes) {
+          googleSheetsService.removeProduct(barcode).catch(err => console.error('Google Sheets Remove Error:', err));
+        }
+
       } catch (err) {
         console.warn('⚠️ Google Drive Sync Warning:', err.message);
       }
@@ -1071,6 +1102,12 @@ async function bulkDeleteProducts(req, res) {
           // Refresh local output.json
           await require('../services/excel.service').downloadAndConvertExcel(fileId);
         }
+
+        // SYNC TO GOOGLE SHEETS (REMOVE)
+        for (const barcode of barcodes) {
+          googleSheetsService.removeProduct(barcode).catch(err => console.error('Google Sheets Remove Error:', err));
+        }
+
       } catch (err) {
         console.warn('⚠️ Bulk Google Drive Sync Warning:', err.message);
       }
@@ -1529,6 +1566,9 @@ async function updateProductApproval(req, res) {
 
         // Add product to Excel (service function handles local-first persistence)
         await addProductToExcel(productData, product.merchantId);
+
+        // SYNC TO GOOGLE SHEETS
+        googleSheetsService.syncProduct({ ...product.toObject(), ...productData }).catch(err => console.error('Google Sheets Sync Error:', err));
       } catch (syncError) {
         console.warn('⚠️ Failed to sync product approval (handled locally):', syncError.message);
       }
@@ -1537,8 +1577,12 @@ async function updateProductApproval(req, res) {
     // If product is approved, update the product status in the Product collection
     // This is crucial for the enrichment process later.
     if (status === 'approved') {
-      product.status = 'approved';
+      product.lastStockUpdate = new Date().toISOString();
       await product.save();
+
+      // SYNC TO GOOGLE SHEETS
+      const barcode = product.product_image ? product.product_image.replace('.webp', '') : product._id.toString();
+      googleSheetsService.syncProduct({ ...product.toObject(), barcode }).catch(err => console.error('Google Sheets Sync Error:', err));
     }
 
     // Update sitemap after approval/rejection
@@ -1555,6 +1599,11 @@ async function updateProductApproval(req, res) {
     }
 
     res.json({ success: true, message: `Product ${status} successfully` });
+
+    // Trigger n8n Auto-Post if approved
+    if (status === 'approved') {
+      automationService.triggerAutoPost(product).catch(err => console.error('AutoPost Trigger Error:', err));
+    }
 
     // Push Notification to Merchant
     if (product.merchantId) {
@@ -1713,6 +1762,14 @@ async function updateProductUpdateRequest(req, res) {
           // Update output.json
           await downloadAndConvertExcel(fileId);
           await updateExcelFromJson(process.env.GOOGLE_DRIVE_FILE_update);
+    // SYNC TO GOOGLE SHEETS (Quantity Update)
+    const productForSync = await Product.findOne({ product_image: { $regex: new RegExp(`^${barcode.trim()}(\\.webp)?$`, 'i') } });
+    if (productForSync) {
+      googleSheetsService.syncProduct(productForSync.toObject()).catch(err => console.error('Google Sheets Sync Error:', err));
+    }
+
+          // SYNC TO GOOGLE SHEETS
+          googleSheetsService.syncProduct(product.toObject()).catch(err => console.error('Google Sheets Sync Error:', err));
         }
       }
 
@@ -2096,6 +2153,11 @@ async function updateUrgencyRequestStatus(req, res) {
 
           // Update the update file to keep in sync
           await updateExcelFromJson(process.env.GOOGLE_DRIVE_FILE_update);
+    // SYNC TO GOOGLE SHEETS (Quantity Update)
+    const productForSync = await Product.findOne({ product_image: { $regex: new RegExp(`^${barcode.trim()}(\\.webp)?$`, 'i') } });
+    if (productForSync) {
+      googleSheetsService.syncProduct(productForSync.toObject()).catch(err => console.error('Google Sheets Sync Error:', err));
+    }
         }
       }
 
@@ -2231,6 +2293,11 @@ async function updateProductQuantity(req, res) {
 
     // Update the update file to keep in sync
     await updateExcelFromJson(process.env.GOOGLE_DRIVE_FILE_update);
+    // SYNC TO GOOGLE SHEETS (Quantity Update)
+    const productForSync = await Product.findOne({ product_image: { $regex: new RegExp(`^${barcode.trim()}(\\.webp)?$`, 'i') } });
+    if (productForSync) {
+      googleSheetsService.syncProduct(productForSync.toObject()).catch(err => console.error('Google Sheets Sync Error:', err));
+    }
 
     res.json({ success: true, message: 'Product quantity updated successfully' });
   } catch (error) {
@@ -2313,6 +2380,11 @@ async function updateUrgencyRequestStatus(req, res) {
 
           // Update the update file to keep in sync
           await updateExcelFromJson(process.env.GOOGLE_DRIVE_FILE_update);
+    // SYNC TO GOOGLE SHEETS (Quantity Update)
+    const productForSync = await Product.findOne({ product_image: { $regex: new RegExp(`^${barcode.trim()}(\\.webp)?$`, 'i') } });
+    if (productForSync) {
+      googleSheetsService.syncProduct(productForSync.toObject()).catch(err => console.error('Google Sheets Sync Error:', err));
+    }
         }
       }
 
@@ -2368,45 +2440,65 @@ async function bulkAdjustPrices(req, res) {
     const { category, minPrice, maxPrice, adjustmentType, adjustmentValue, direction } = req.body;
     console.log('Bulk Adjustment Payload:', { category, adjustmentType, adjustmentValue, direction });
 
-    // Download current Excel file
+    // 1. Load data (Drive-first with local fallback)
     const fileId = process.env.GOOGLE_DRIVE_FILE_ID;
-    if (!fileId) {
-      return res.status(500).json({ success: false, message: 'Missing Google Drive file ID' });
+    let json;
+    let drive;
+    let workbook;
+    let sheetName;
+
+    try {
+      if (!fileId) throw new Error('Missing GOOGLE_DRIVE_FILE_ID');
+      const client = await require('../config/drive').auth.getClient();
+      drive = google.drive({ version: 'v3', auth: client });
+
+      const resDrive = await drive.files.get({
+        fileId,
+        alt: 'media',
+      }, { responseType: 'arraybuffer' });
+
+      const buffer = Buffer.from(resDrive.data);
+      workbook = xlsx.read(buffer, { type: 'buffer' });
+      sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      json = xlsx.utils.sheet_to_json(sheet);
+      console.log('✅ Successfully downloaded data from Google Drive');
+    } catch (driveError) {
+      console.warn('⚠️ Failed to download Excel from Drive for bulk adjustment, falling back to local files:', driveError.message);
+      const rawDataPath = path.join(__dirname, '..', 'output_raw.json');
+      const outputPath = path.join(__dirname, '..', 'output.json');
+      
+      if (fs.existsSync(rawDataPath)) {
+        json = JSON.parse(fs.readFileSync(rawDataPath, 'utf-8'));
+        console.log('📁 Using local output_raw.json as fallback source');
+      } else if (fs.existsSync(outputPath)) {
+        json = JSON.parse(fs.readFileSync(outputPath, 'utf-8'));
+        console.log('📁 Using local output.json as secondary fallback source');
+      } else {
+        return res.status(500).json({ success: false, message: 'فشل التحديث: لا توجد بيانات محلية ولا يمكن الوصول لجوجل درايف' });
+      }
     }
 
-    const client = await require('../config/drive').auth.getClient();
-    const drive = google.drive({ version: 'v3', auth: client });
-
-    const resDrive = await drive.files.get({
-      fileId,
-      alt: 'media',
-    }, { responseType: 'arraybuffer' });
-
-    const buffer = Buffer.from(resDrive.data);
-    const workbook = xlsx.read(buffer, { type: 'buffer' });
-    const sheetName = workbook.SheetNames[0];
-    const sheet = workbook.Sheets[sheetName];
-    let json = xlsx.utils.sheet_to_json(sheet);
-
     let updatedCount = 0;
+    const mongoOps = [];
 
-    // Apply adjustments
+    // 2. Apply adjustments to JSON array
     json.forEach(product => {
-      // 1. Filter: Skip merchant products (only admin-added products are affected)
+      // Filter: Skip merchant products
       if (product.merchantId && String(product.merchantId).trim() !== '') return;
 
-      // 2. Filter by category
+      // Filter by category
       if (category && category.length > 0 && !category.includes('جميع الفئات')) {
         const productCategory = product.product_category || '';
         if (!category.includes(productCategory)) return;
       }
 
-      // 3. Filter by price range
+      // Filter by price range
       const currentPrice = parseFloat(product.product_price) || 0;
       if (minPrice !== undefined && currentPrice < minPrice) return;
       if (maxPrice !== undefined && currentPrice > maxPrice) return;
 
-      // 4. Calculate new price
+      // Calculate new price
       let newPrice = currentPrice;
       const type = (adjustmentType || '').toString().trim().toLowerCase();
 
@@ -2418,46 +2510,93 @@ async function bulkAdjustPrices(req, res) {
           const delta = (currentPrice * value) / 100;
           newPrice = direction === 'increase' ? currentPrice + delta : currentPrice - delta;
         } else {
-          // fixed value
           newPrice = direction === 'increase' ? currentPrice + value : currentPrice - value;
         }
       }
 
-      // Ensure price is not negative
+      newPrice = Math.round(newPrice);
       if (newPrice < 0) newPrice = 0;
 
-      // Rounding
-      newPrice = Math.round(newPrice);
+      if (product.product_price !== newPrice) {
+        product.product_price = newPrice;
+        updatedCount++;
 
-      product.product_price = newPrice;
-      updatedCount++;
-    });
-
-    if (updatedCount === 0) {
-      return res.json({ success: true, message: 'لم يتم العثور على منتجات مطابقة للفلاتر لتحديثها', updatedCount: 0 });
-    }
-
-    // Convert JSON back to sheet
-    const newSheet = xlsx.utils.json_to_sheet(json);
-    workbook.Sheets[sheetName] = newSheet;
-
-    // Write workbook to buffer
-    const wbout = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
-
-    // Upload updated Excel file back to Google Drive
-    await drive.files.update({
-      fileId,
-      media: {
-        mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        body: wbout
+        const barcode = String(product.products_id).trim();
+        mongoOps.push({
+          updateOne: {
+            filter: { product_image: { $regex: new RegExp(`^${barcode}(\\.webp)?$`, 'i') } },
+            update: { $set: { product_price: newPrice } }
+          }
+        });
       }
     });
 
-    // Update output.json by re-running downloadAndConvertExcel
-    await downloadAndConvertExcel(fileId);
+    if (updatedCount === 0) {
+      return res.json({ success: true, message: 'لم يتم العثور على منتجات مطابقة للفلاتر لتحديثها أو الأسعار مطابقة بالفعل', updatedCount: 0 });
+    }
 
-    // Update the update file to keep in sync
-    await updateExcelFromJson(process.env.GOOGLE_DRIVE_FILE_update);
+    // 3. Sync to MongoDB (Bulk)
+    try {
+      if (mongoOps.length > 0) {
+        await Product.bulkWrite(mongoOps);
+        console.log(`✅ ${mongoOps.length} products synced to MongoDB`);
+      }
+    } catch (mongoError) {
+      console.error('❌ Failed to sync bulk adjustments to MongoDB:', mongoError.message);
+    }
+
+    // 4. Update Local Files (Save state immediately)
+    const rawDataPath = path.join(__dirname, '..', 'output_raw.json');
+    try {
+      fs.writeFileSync(rawDataPath, JSON.stringify(json, null, 2));
+      const promoDoc = await PromotionDate.findOne().sort({ createdAt: -1 }).exec();
+      const pStart = promoDoc ? promoDoc.startDate : new Date();
+      const pEnd = promoDoc ? promoDoc.endDate : new Date();
+      const { processAndSaveData } = require('../services/excel.service');
+      await processAndSaveData(json, pStart, pEnd);
+      console.log('✅ Local data files (output_raw.json & output.json) updated');
+    } catch (fsErr) {
+      console.error('❌ Failed to save local data:', fsErr.message);
+    }
+
+    // 5. Attempt Google Drive Sync (Optional fallback)
+    if (drive && fileId) {
+      try {
+        if (!workbook) {
+          workbook = xlsx.utils.book_new();
+          sheetName = 'Sheet1';
+          const newSheet = xlsx.utils.json_to_sheet(json);
+          xlsx.utils.book_append_sheet(workbook, newSheet, sheetName);
+        } else {
+          const newSheet = xlsx.utils.json_to_sheet(json);
+          workbook.Sheets[sheetName] = newSheet;
+        }
+        const wbout = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+
+        await drive.files.update({
+          fileId,
+          media: {
+            mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            body: wbout
+          }
+        });
+        console.log('✅ Google Drive Main Excel updated');
+
+        const updateFileId = process.env.GOOGLE_DRIVE_FILE_update;
+        if (updateFileId && updateFileId !== fileId) {
+           await drive.files.update({
+              fileId: updateFileId,
+              media: {
+                mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                body: wbout
+              }
+            });
+            console.log('✅ Google Drive Update Excel updated');
+        }
+      } catch (syncError) {
+        console.warn('⚠️ Google Drive Sync failed (locally saved):', syncError.message);
+      }
+    }
 
     res.json({ success: true, message: `تم تحديث أسعار ${updatedCount} من المنتجات بنجاح`, updatedCount });
   } catch (error) {
@@ -2533,6 +2672,11 @@ async function updateProductQuantity(req, res) {
 
     // Update the update file to keep in sync
     await updateExcelFromJson(process.env.GOOGLE_DRIVE_FILE_update);
+    // SYNC TO GOOGLE SHEETS (Quantity Update)
+    const productForSync = await Product.findOne({ product_image: { $regex: new RegExp(`^${barcode.trim()}(\\.webp)?$`, 'i') } });
+    if (productForSync) {
+      googleSheetsService.syncProduct(productForSync.toObject()).catch(err => console.error('Google Sheets Sync Error:', err));
+    }
 
     res.json({ success: true, message: 'Product quantity updated successfully' });
   } catch (error) {
@@ -2961,6 +3105,117 @@ async function getAdminGlobalAnalytics(req, res) {
     }
 }
 
+// New API to import all products from Google Sheets to MongoDB
+async function importProductsFromSheets(req, res) {
+  try {
+    console.log('🚀 [AdminController] Starting data import from Google Sheets...');
+    const products = await googleSheetsService.getAllProducts();
+
+    if (!products || products.length === 0) {
+      return res.status(404).json({ success: false, message: 'No products found in Google Sheets.' });
+    }
+
+    const fs = require('fs');
+    const path = require('path');
+    const uploadBaseDir = path.join(__dirname, '..', 'uploads', 'books');
+    const defaultAdminId = '69d11b07df78621a8d7b1559';
+
+    // ⚠️ SAFETY: Wipe existing products for this Admin before re-importing
+    console.log(`[AdminController] Wiping existing products for Admin: ${defaultAdminId}`);
+    await Product.deleteMany({ merchantId: defaultAdminId });
+
+    console.log(`[AdminController] Preparing bulk operations for ${products.length} products...`);
+    const bulkOps = [];
+
+    for (const productData of products) {
+      const barcode = String(productData.barcode || '').trim();
+      const products_id = String(productData.products_id || '').trim();
+      if (!barcode && !products_id) continue;
+
+      const finalBarcode = barcode || products_id;
+      const finalProductsId = products_id || barcode;
+
+      // --- SMART IMAGE RECOVERY ---
+      let image_path = '';
+      const adminFolder = 'admin__karim_mohamed__';
+      const potentialAdminPath = path.join(adminFolder, finalBarcode, `${finalBarcode}.webp`);
+      const fullAdminPath = path.join(uploadBaseDir, potentialAdminPath);
+      
+      if (fs.existsSync(fullAdminPath)) {
+        image_path = `/uploads/books/${adminFolder}/${finalBarcode}/${finalBarcode}.webp`.replace(/\\/g, '/');
+      } else {
+        const folders = fs.readdirSync(uploadBaseDir);
+        for (const folder of folders) {
+          const potentialMerchantPath = path.join(folder, finalBarcode, `${finalBarcode}.webp`);
+          const fullMerchantPath = path.join(uploadBaseDir, potentialMerchantPath);
+          if (fs.existsSync(fullMerchantPath)) {
+            image_path = `/uploads/books/${folder}/${finalBarcode}/${finalBarcode}.webp`.replace(/\\/g, '/');
+            break;
+          }
+        }
+      }
+
+      if (!image_path && productData.product_image && productData.product_image.includes('/')) {
+        image_path = productData.product_image; 
+      }
+
+      bulkOps.push({
+        updateOne: {
+          filter: { products_id: finalProductsId },
+          update: { 
+            $set: {
+              ...productData,
+              image_path,
+              merchantId: defaultAdminId,
+              product_image: finalBarcode,
+              barcode: finalBarcode,
+              status: 'approved',
+              productType: 'physical',
+              updatedAt: new Date()
+            }
+          },
+          upsert: true
+        }
+      });
+    }
+
+    if (bulkOps.length > 0) {
+      console.log(`🚀 [AdminController] Executing bulkWrite for ${bulkOps.length} products...`);
+      await Product.bulkWrite(bulkOps, { ordered: false });
+    }
+
+    console.log(`✅ [AdminController] Clean-imported ${bulkOps.length} products successfully.`);
+    res.json({ success: true, message: `Successfully re-imported ${bulkOps.length} products with bulk optimization and images restored.` });
+  } catch (error) {
+    console.error('Error in importProductsFromSheets:', error);
+    res.status(500).json({ success: false, message: 'Server error during import.' });
+  }
+}
+
+/**
+ * Export all users to Google Sheets for backup.
+ */
+async function exportUsersToSheets(req, res) {
+  try {
+    console.log('🚀 [AdminController] Starting user export to Google Sheets...');
+    const users = await User.find({}).lean();
+    
+    if (!users || users.length === 0) {
+      return res.status(404).json({ success: false, message: 'No users found to export.' });
+    }
+
+    const success = await googleSheetsService.syncUsers(users);
+    
+    if (success) {
+      res.json({ success: true, message: `Successfully exported ${users.length} users to Google Sheets.` });
+    } else {
+      res.status(500).json({ success: false, message: 'Failed to sync users to Google Sheets. Check logs.' });
+    }
+  } catch (error) {
+    console.error('Error in exportUsersToSheets:', error);
+    res.status(500).json({ success: false, message: 'Server error during user export.' });
+  }
+}
 
 module.exports = {
   upload,
@@ -2969,6 +3224,7 @@ module.exports = {
   updateProduct,
   replaceProductImage,
   replaceProductEpub,
+  importProductsFromSheets,
   deleteProduct,
   bulkDeleteProducts,
   syncJsonToExcel,
@@ -3006,5 +3262,6 @@ module.exports = {
   updateEconomySettings,
   bulkAdjustPrices,
   getAdminGlobalAnalytics,
+  exportUsersToSheets,
   updateGoogleSheetFromJson: async () => { console.log('Mock updateGoogleSheetFromJson'); } // Placeholder if actually missing
 };

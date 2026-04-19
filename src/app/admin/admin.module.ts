@@ -15,6 +15,7 @@ import { AdminEbooksComponent } from './admin-ebooks/admin-ebooks.component';
 import { SubscriptionSettingsComponent } from './subscription-settings/subscription-settings.component';
 import { SalesHistoryComponent } from './sales-history/sales-history.component';
 import { AdminBourseSettingsComponent } from './admin-bourse-settings/admin-bourse-settings.component';
+import { AdminAutomationComponent } from './admin-automation/admin-automation.component';
 
 import { AdminRoutingModule } from './admin-routing.module';
 
@@ -38,7 +39,8 @@ import { AdminRoutingModule } from './admin-routing.module';
     AdminEbooksComponent,
     SubscriptionSettingsComponent,
     SalesHistoryComponent,
-    AdminBourseSettingsComponent
+    AdminBourseSettingsComponent,
+    AdminAutomationComponent
   ],
   exports: [
     MerchantManagementComponent,

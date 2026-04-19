@@ -89,7 +89,7 @@
         </div>
 
         <!-- اسم التاجر -->
-        <div *ngIf="book.merchantName" class="mb-2 flex items-center gap-2">
+        <div *ngIf="book.merchantName && book['merchantRole'] !== 'admin'" class="mb-2 flex items-center gap-2">
           <ng-container *ngIf="getMerchantLogoUrl(book) as logoUrl">
             <img [src]="logoUrl" alt="شعار التاجر" class="w-6 h-6 object-cover rounded-full" />
           </ng-container>

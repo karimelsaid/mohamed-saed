@@ -1,11 +1,11 @@
-<div class="min-h-screen bg-gray-50">
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900 text-right" dir="rtl">
   <!-- Header Section -->
-  <div class="bg-white shadow-sm border-b">
+  <div class="bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
       <div class="flex items-center justify-between">
         <div>
-          <h1 class="text-3xl font-bold text-gray-900">إدارة منتجات التجار</h1>
-          <p class="mt-1 text-sm text-gray-600">مراجعة وإدارة منتجات التجار المعلقة للموافقة</p>
+          <h1 class="text-3xl font-bold text-gray-900 dark:text-white">إدارة منتجات التجار</h1>
+          <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">مراجعة وإدارة منتجات التجار المعلقة للموافقة</p>
         </div>
       </div>
     </div>
@@ -16,11 +16,11 @@
     <!-- Loading State -->
     <div *ngIf="loading" class="flex items-center justify-center py-12">
       <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      <span class="ml-3 text-lg text-gray-600">جاري تحميل المنتجات...</span>
+      <span class="ml-3 text-lg text-gray-600 dark:text-gray-400">جاري تحميل المنتجات...</span>
     </div>
 
     <!-- Error State -->
-    <div *ngIf="error" class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+    <div *ngIf="error" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/30 rounded-lg p-4 mb-6">
       <div class="flex">
         <div class="flex-shrink-0">
           <svg class="h-5 w-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -28,8 +28,8 @@
           </svg>
         </div>
         <div class="mr-3">
-          <h3 class="text-sm font-medium text-red-800">خطأ في تحميل المنتجات</h3>
-          <div class="mt-2 text-sm text-red-700">{{ error }}</div>
+          <h3 class="text-sm font-medium text-red-800 dark:text-red-400">خطأ في تحميل المنتجات</h3>
+          <div class="mt-2 text-sm text-red-700 dark:text-red-300">{{ error }}</div>
         </div>
       </div>
     </div>
@@ -44,18 +44,18 @@
 
     <!-- Empty State -->
     <div *ngIf="!loading && !error && products.length === 0" class="text-center py-12">
-      <svg class="mx-auto h-24 w-24 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg class="mx-auto h-24 w-24 text-gray-400 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
       </svg>
-      <h3 class="mt-4 text-lg font-medium text-gray-900">لا توجد منتجات معلقة</h3>
-      <p class="mt-2 text-gray-500">لم يتم العثور على أي منتجات معلقة للموافقة حالياً.</p>
+      <h3 class="mt-4 text-lg font-medium text-gray-900 dark:text-white">لا توجد منتجات معلقة</h3>
+      <p class="mt-2 text-gray-500 dark:text-gray-400">لم يتم العثور على أي منتجات معلقة للموافقة حالياً.</p>
     </div>
 
     <!-- Products Grid -->
     <div *ngIf="!loading && !error && products.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <div *ngFor="let product of products" class="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200 overflow-hidden">
+      <div *ngFor="let product of products" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow duration-200 overflow-hidden">
         <!-- Product Image -->
-        <div class="aspect-w-16 aspect-h-9 bg-gray-100">
+        <div class="aspect-w-16 aspect-h-9 bg-gray-100 dark:bg-gray-700">
           <img
             [src]="getProductImageUrl(product)"
             alt="{{ product.product_name }}"
@@ -67,11 +67,11 @@
         <!-- Product Details -->
         <div class="p-6">
           <div class="flex items-start justify-between mb-4">
-            <div class="flex-1">
-              <h3 class="text-lg font-semibold text-gray-900 mb-1">{{ product.product_name }}</h3>
-              <p class="text-sm text-gray-600 mb-2">التاجر: {{ product.merchantId?.username || 'غير محدد' }}</p>
+            <div class="flex-1 text-right">
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">{{ product.product_name }}</h3>
+              <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">التاجر: {{ product.merchantId?.username || 'غير محدد' }}</p>
               <div class="flex items-center gap-2">
-                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
                   معلق
                 </span>
               </div>
@@ -81,14 +81,14 @@
           <!-- Product Info -->
           <div class="space-y-3 mb-4">
             <div class="flex justify-between items-center">
-              <span class="text-sm font-medium text-gray-600">السعر:</span>
-              <span class="text-sm text-gray-900">{{ product.product_price }} ج.م</span>
+              <span class="text-sm font-medium text-gray-600 dark:text-gray-400">السعر:</span>
+              <span class="text-sm text-gray-900 dark:text-white">{{ product.product_price }} ج.م</span>
             </div>
           </div>
 
-          <div class="bg-gray-50 p-3 rounded-lg mb-4">
-            <span class="text-sm font-medium text-gray-600">الوصف:</span>
-            <p class="mt-1 text-sm text-gray-900 line-clamp-2">{{ product.product_description }}</p>
+          <div class="bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg mb-4">
+            <span class="text-sm font-medium text-gray-600 dark:text-gray-400">الوصف:</span>
+            <p class="mt-1 text-sm text-gray-900 dark:text-white line-clamp-2">{{ product.product_description }}</p>
           </div>
 
           <!-- Action Buttons -->

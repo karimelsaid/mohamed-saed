@@ -22,57 +22,54 @@ export class DataService {
   constructor(private http: HttpClient) { }
 
   getBookImageUrl(book: any): string {
-    let imagePath = book.product_image ? String(book.product_image) : '';
+    if (!book) return 'assets/images/book-placeholder.jpg';
+
+    // 1. If we have a full image_path that isn't just an ID, use it (but sanitize prefix)
+    let imagePath = book.image_path || book.product_image || '';
+    if (typeof imagePath !== 'string') imagePath = String(imagePath);
+
+    // 2. Resolve the products_id
     const products_id = book.products_id || (book as any)._id;
 
-    if (!imagePath) {
-      const isMerchant = book.merchantName && book.merchantName !== 'تاجر كنوز';
-      if (isMerchant) {
-        const sanitizedMerchantName = book.merchantName.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
-        imagePath = 'merchant_' + sanitizedMerchantName + '/' + products_id + '/' + products_id + '.webp';
+    // 3. If it's a raw barcode/numeric ID, build the full subfolder path
+    if (imagePath && !imagePath.includes('/') && /^\d+$/.test(imagePath)) {
+      const isAdmin = book.merchantRole === 'admin' || (!book.merchantId && !book.merchantName) || book.merchantName === 'تاجر كنوز' || book.merchantName === 'كنوز';
+      if (!isAdmin) {
+        const sanitizedMerchantName = (book.merchantName || 'merchant').replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
+        imagePath = `merchant_${sanitizedMerchantName}/${imagePath}/${imagePath}.webp`;
       } else {
-        imagePath = 'admin__karim_mohamed__/' + products_id + '/' + products_id + '.webp';
+        imagePath = `admin__karim_mohamed__/${imagePath}/${imagePath}.webp`;
       }
-    } else {
-      if (imagePath.includes('/')) {
-        const parts = imagePath.split('/');
-        const isMerchant = (imagePath.includes('merchant_') || book.merchantName) && book.merchantName !== 'تاجر كنوز';
-
-        if (isMerchant) {
-          const filename = parts[parts.length - 1];
-          const id = parts[parts.length - 2];
-          const sanitizedMerchantName = book.merchantName.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
-          imagePath = 'merchant_' + sanitizedMerchantName + '/' + id + '/' + filename;
-        } else if (imagePath.includes('admin__') || book.merchantName === 'تاجر كنوز') {
-          const filename = parts[parts.length - 1];
-          const id = parts[parts.length - 2] || filename.split('.')[0];
-          imagePath = 'admin__karim_mohamed__/' + id + '/' + filename;
-        } else {
-          imagePath = parts[parts.length - 1];
-        }
+    } 
+    // 4. Handle paths that might be already partially constructed but missing subfolder context
+    else if (imagePath && imagePath.includes('/') && !imagePath.includes('admin__') && !imagePath.includes('merchant_')) {
+      // This is a legacy path format, try to reconstruct it correctly
+      const parts = imagePath.split('/');
+      const filename = parts[parts.length - 1];
+      const isAdmin = book.merchantRole === 'admin' || (!book.merchantId && !book.merchantName) || book.merchantName === 'تاجر كنوز' || book.merchantName === 'كنوز';
+      
+      if (!isAdmin) {
+          const sanitizedMerchantName = (book.merchantName || 'merchant').replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
+          imagePath = `merchant_${sanitizedMerchantName}/${products_id}/${filename}`;
       } else {
-        const isMerchant = book.merchantName && book.merchantName !== 'تاجر كنوز';
-        if (!imagePath.includes('.') && /^\d+$/.test(imagePath)) {
-          if (isMerchant) {
-            const sanitizedMerchantName = book.merchantName.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
-            imagePath = 'merchant_' + sanitizedMerchantName + '/' + imagePath + '/' + imagePath + '.webp';
-          } else {
-            imagePath = 'admin__karim_mohamed__/' + imagePath + '/' + imagePath + '.webp';
-          }
-        } else if (imagePath.includes('.') && /^\d+_\d+\.webp$/.test(imagePath)) {
-          const id = imagePath.split('_')[0];
-          if (isMerchant) {
-            const sanitizedMerchantName = book.merchantName.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
-            imagePath = 'merchant_' + sanitizedMerchantName + '/' + id + '/' + imagePath;
-          } else {
-            imagePath = 'admin__karim_mohamed__/' + id + '/' + imagePath;
-          }
-        } else if (!imagePath.includes('.')) {
-          imagePath += '.webp';
-        }
+          imagePath = `admin__karim_mohamed__/${products_id}/${filename}`;
       }
     }
-    return this.uploadsBaseUrl + '/' + imagePath;
+
+    // 5. Clean up the final result to prevent double-slashing or redundant uploadsBaseUrl
+    const cleanBase = this.uploadsBaseUrl.replace(/\/$/, '');
+    
+    // If the path already has the base, don't prepend it again
+    if (imagePath.includes(cleanBase)) {
+        return imagePath.startsWith('/') ? imagePath : '/' + imagePath;
+    }
+
+    // Ensure imagePath doesn't start with a slash if we're prepending the base
+    const finalPath = imagePath.startsWith('/') ? imagePath.substring(1) : imagePath;
+    
+    // Ensure we are pointing at the books subfolder specifically if not already there
+    // But since cleanBase IS /uploads/books, we just append
+    return `${cleanBase}/${finalPath}`;
   }
 
   getData(): Observable<any[]> { // Changed return type to any[]

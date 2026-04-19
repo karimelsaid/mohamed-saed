@@ -305,38 +305,7 @@ export class QamosComponent implements OnInit, OnDestroy {
 
 
 
-  getBookImageUrl(book: any): string {
-    let imagePath = book.product_image ? String(book.product_image) : '';
-    if (!imagePath) {
-      if (book.merchantName) {
-        imagePath = 'merchant_' + book.merchantName + '/' + book.products_id + '/' + book.products_id + '.webp';
-      } else {
-        imagePath = 'admin__karim_mohamed__/' + book.products_id + '/' + book.products_id + '.webp';
-      }
-    } else {
-      if (imagePath.includes('/')) {
-        const parts = imagePath.split('/');
-        if (imagePath.includes('merchant_')) {
-          imagePath = parts.slice(-3).join('/');
-        } else if (imagePath.includes('admin__')) {
-          imagePath = parts.slice(-3).join('/');
-        } else {
-          imagePath = parts[parts.length - 1];
-        }
-      } else {
-        if (!imagePath.includes('.') && /^\d+$/.test(imagePath)) {
-          if (book.merchantName) {
-            imagePath = 'merchant_' + book.merchantName + '/' + imagePath + '/' + imagePath + '.webp';
-          } else {
-            imagePath = 'admin__karim_mohamed__/' + imagePath + '/' + imagePath + '.webp';
-          }
-        } else if (!imagePath.includes('.')) {
-          imagePath += '.webp';
-        }
-      }
-    }
-    return this.uploadsBaseUrl + '/' + imagePath;
-  }
+  getBookImageUrl(book: any): string {    return this.dataService.getBookImageUrl(book);  }
 
   startCountdown() {
     if (this.books.length === 0) {
@@ -374,3 +343,4 @@ export class QamosComponent implements OnInit, OnDestroy {
     }, 1000);
   }
 }
+

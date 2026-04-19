@@ -12,6 +12,7 @@ import { environment } from '../../../environments/environment';
 import { GamificationService } from '../../services/gamification.service';
 
 @Component({
+  // Force build trigger 1
   selector: 'app-aamal',
   standalone: false,
   templateUrl: './aamal.component.html',
@@ -374,47 +375,6 @@ export class AamalComponent implements OnInit, OnDestroy {
     }, 1000);
   }
 
-  getBookImageUrl(book: any): string {
-    let imagePath = book.product_image ? String(book.product_image) : '';
-    if (!imagePath) {
-      const isMerchant = book.merchantName && book.merchantName !== 'تاجر كنوز';
-      if (isMerchant) {
-        const sanitizedMerchantName = book.merchantName.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
-        imagePath = 'merchant_' + sanitizedMerchantName + '/' + book.products_id + '/' + book.products_id + '.webp';
-      } else {
-        imagePath = 'admin__karim_mohamed__/' + book.products_id + '/' + book.products_id + '.webp';
-      }
-    } else {
-      if (imagePath.includes('/')) {
-        const parts = imagePath.split('/');
-        const isMerchant = (imagePath.includes('merchant_') || book.merchantName) && book.merchantName !== 'تاجر كنوز';
-
-        if (isMerchant) {
-          const filename = parts[parts.length - 1];
-          const id = parts[parts.length - 2];
-          const sanitizedMerchantName = book.merchantName.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
-          imagePath = 'merchant_' + sanitizedMerchantName + '/' + id + '/' + filename;
-        } else if (imagePath.includes('admin__') || book.merchantName === 'تاجر كنوز') {
-          const filename = parts[parts.length - 1];
-          const id = parts[parts.length - 2] || filename.split('.')[0];
-          imagePath = 'admin__karim_mohamed__/' + id + '/' + filename;
-        } else {
-          imagePath = parts[parts.length - 1];
-        }
-      } else {
-        const isMerchant = book.merchantName && book.merchantName !== 'تاجر كنوز';
-        if (!imagePath.includes('.') && /^\d+$/.test(imagePath)) {
-          if (isMerchant) {
-            const sanitizedMerchantName = book.merchantName.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
-            imagePath = 'merchant_' + sanitizedMerchantName + '/' + imagePath + '/' + imagePath + '.webp';
-          } else {
-            imagePath = 'admin__karim_mohamed__/' + imagePath + '/' + imagePath + '.webp';
-          }
-        } else if (!imagePath.includes('.')) {
-          imagePath += '.webp';
-        }
-      }
-    }
-    return this.uploadsBaseUrl + '/' + imagePath;
-  }
+  getBookImageUrl(book: any): string {    return this.dataService.getBookImageUrl(book);  }
 }
+

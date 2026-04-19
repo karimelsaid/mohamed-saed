@@ -286,48 +286,9 @@ export class BookDetailsComponent implements OnInit, OnDestroy {
 
   // Helper to get URL for a specific image path
   private getImageUrl(imagePath: string, book: Book): string {
-    let path = imagePath;
-    if (path.includes('/')) {
-      const parts = path.split('/');
-      if (path.includes('merchant_')) {
-        const filename = parts[parts.length - 1];
-        const id = parts[parts.length - 2];
-        if (book.merchantName) {
-          const sanitizedMerchantName = book.merchantName.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
-          path = 'merchant_' + sanitizedMerchantName + '/' + id + '/' + filename;
-        } else {
-          path = parts.slice(-3).join('/');
-        }
-      } else if (path.includes('admin__')) {
-        path = parts.slice(-3).join('/');
-      } else {
-        path = parts[parts.length - 1];
-      }
-    } else {
-      if (!path.includes('.') && /^\d+$/.test(path)) {
-        // Extract id for folder, handle suffixes like _2
-        const id = path.split('_')[0];
-        const filename = path + '.webp';
-        if (book.merchantName) {
-          const sanitizedMerchantName = book.merchantName.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
-          path = 'merchant_' + sanitizedMerchantName + '/' + id + '/' + filename;
-        } else {
-          path = 'admin__karim_mohamed__/' + id + '/' + filename;
-        }
-      } else if (path.includes('.') && /^\d+_\d+\.webp$/.test(path)) {
-        // Handle additional images like 768078245796_1.webp
-        const id = path.split('_')[0];
-        if (book.merchantName) {
-          const sanitizedMerchantName = book.merchantName.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
-          path = 'merchant_' + sanitizedMerchantName + '/' + id + '/' + path;
-        } else {
-          path = 'admin__karim_mohamed__/' + id + '/' + path;
-        }
-      } else if (!path.includes('.')) {
-        path += '.webp';
-      }
-    }
-    return this.uploadsBaseUrl + '/' + path;
+    // Create a temporary book object with the variation image path to reuse DataService logic
+    const tempBook = { ...book, product_image: imagePath };
+    return this.dataService.getBookImageUrl(tempBook);
   }
 
   // Load related products based on category and merchant

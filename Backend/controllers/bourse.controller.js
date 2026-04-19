@@ -31,6 +31,8 @@ exports.getCurrentOffer = async (req, res) => {
     const now = new Date();
     const dateStr = getLocalDateString(now);
     
+    console.log(`[Bourse] Checking for active offer. DateStr: ${dateStr}, Now (UTC): ${now.toISOString()}`);
+
     const activeOffer = await BourseOffer.findOne({
       date: dateStr,
       startTime: { $lte: now },
@@ -81,14 +83,15 @@ async function generateDailyBourseOffers(dateStr, config) {
 
   // Filter merchant products based on config
   if (!config.includeMerchantProducts) {
-    const internalIds = ['kenouz', 'admin', 'admin__karim_mohamed__'];
+    const internalIds = ['kenouz', 'admin', 'admin__karim_mohamed__', '69d11b07df78621a8d7b1559'];
     allBooks = allBooks.filter(b => {
-      // 1. Check if it's explicitly an admin product by ID or Role
       let isAdmin = false;
       if (b.merchantId) {
         const mId = (typeof b.merchantId === 'object' ? (b.merchantId._id || b.merchantId.id || '') : b.merchantId).toString().toLowerCase();
         const role = (typeof b.merchantId === 'object' ? (b.merchantId.role || '') : '').toLowerCase();
-        if (role === 'admin' || internalIds.includes(mId)) {
+        const username = (typeof b.merchantId === 'object' ? (b.merchantId.username || '') : '').toLowerCase();
+        
+        if (role === 'admin' || username === 'admin' || internalIds.includes(mId)) {
           isAdmin = true;
         }
       }
@@ -112,7 +115,7 @@ async function generateDailyBourseOffers(dateStr, config) {
   }
 
   // Filter only books that have a valid price and available quantity
-  allBooks = allBooks.filter(b => parseFloat(b.product_price) > 0 && parseInt(b.product_quantity || 0) > 0);
+  allBooks = allBooks.filter(b => (parseFloat(b.product_price) || parseFloat(b.price)) > 0 && parseInt(b.product_quantity || 0) > 0);
 
   if (allBooks.length === 0) {
     console.warn('No books available to generate bourse offers');
@@ -138,8 +141,13 @@ async function generateDailyBourseOffers(dateStr, config) {
     const selectedBooks = shuffled.slice(0, Math.min(booksPerSlot, shuffled.length));
 
     const slotBooks = selectedBooks.map(book => {
-      const originalPrice = parseFloat(book.product_price || 0);
-      const cost = parseFloat(book.price_cost || 0);
+      const originalPrice = parseFloat(book.product_price || book.price || 0);
+      let cost = parseFloat(book.price_cost || 0);
+      
+      // APPLY FALLBACK: If cost is missing, assume 70% of original price
+      if (cost === 0) {
+        cost = originalPrice * 0.7;
+      }
       
       let parsedBoursePrice = cost > 0 ? cost + netProfit : originalPrice * 0.8;
       

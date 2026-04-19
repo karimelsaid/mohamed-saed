@@ -105,6 +105,11 @@
 }
 
 /* Badge Positioning Update - Ensure it stays visible */
+.notifications-wrapper {
+    z-index: 99999;
+    position: relative;
+}
+
 .nav-item-pill .badge-count {
     position: absolute;
     top: -2px;

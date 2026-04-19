@@ -60,6 +60,13 @@ router.post('/sync-json-to-google-sheets', async (req, res) => {
 // New route for batch update products
 router.post('/products/batch-update', adminController.batchUpdateProducts);
 
+// New route to import products from Google Sheets to MongoDB
+router.post('/import-products-from-sheets', adminController.importProductsFromSheets);
+
+// New route to export existing customers to Google Sheets
+router.post('/export-users-to-sheets', adminController.exportUsersToSheets);
+
+
 
 // New route for bulk price adjustment
 router.post('/products/bulk-adjust', adminController.bulkAdjustPrices);

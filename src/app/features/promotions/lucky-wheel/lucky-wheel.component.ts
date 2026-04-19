@@ -52,9 +52,15 @@ export class LuckyWheelComponent implements OnInit, OnChanges {
     }
 
     private initializePrizes(): void {
+        console.log('[LuckyWheel] Initializing prizes. Theme:', this.theme?.name);
+        
         if (this.theme?.luckyWheel?.prizes && this.theme.luckyWheel.prizes.length > 0) {
+            console.log(`[LuckyWheel] Loading ${this.theme.luckyWheel.prizes.length} real prizes from theme`);
             // Clone to avoid mutating original
             let basePrizes = [...this.theme.luckyWheel.prizes];
+            
+            // Filter out invalid prizes just in case
+            basePrizes = basePrizes.filter(p => p.label && p.type);
 
             // CRITICAL: Ensure even count for perfect light/dark color alternation
             if (basePrizes.length % 2 !== 0) {

@@ -1,3 +1,6 @@
+/**
+ * Build Trigger: 2026-04-19T22:31:00Z - Forced Re-compilation for merchantRole
+ */
 export interface Book {
   products_id: string;
   product_name: string;
@@ -18,6 +21,8 @@ export interface Book {
   merchantId?: string; // معرف التاجر
   merchantName?: string; // اسم التاجر
   merchantLogo?: string; // شعار التاجر
+  merchantRole?: string; // دور التاجر (admin, merchant)
+  merchantShippingMethod?: string; // طريقة الشحن الخاصه بالتاجر
   averageRating?: number; // متوسط التقييم
   ratingCount?: number; // عدد التقييمات
   // Additional fields for different categories

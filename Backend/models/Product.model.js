@@ -17,6 +17,7 @@ const productSchema = new mongoose.Schema({
   updateRequest: { type: Boolean, default: false },
   updatedData: { type: Object },
   merchantId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  barcode: { type: String, index: true },
   createdAt: { type: Date, default: Date.now },
   // Physical Dimensions
   weight: { type: Number, required: true, default: 0 },

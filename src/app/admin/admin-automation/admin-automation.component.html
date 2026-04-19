@@ -1,0 +1,213 @@
+<div class="automation-container">
+  <header class="dashboard-header">
+    <div class="title-section">
+      <h1><i class="fas fa-robot"></i> أتمتة التسويق الذكي (n8n)</h1>
+      <p>إدارة النشر التلقائي، الردود الذكية، وتحليل أداء السوشيال ميديا</p>
+    </div>
+    <div class="actions">
+      <button class="btn btn-primary" (click)="loadData()" [disabled]="loading">
+        <i class="fas fa-sync" [class.fa-spin]="loading"></i> تحديث البيانات
+      </button>
+    </div>
+  </header>
+
+  <!-- Stats Grid -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon social-posts"><i class="fas fa-paper-plane"></i></div>
+      <div class="stat-content">
+        <h3>المنشورات</h3>
+        <p class="stat-value">24</p>
+        <span class="stat-change">+12% هذا الشهر</span>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon auto-replies"><i class="fas fa-comment-dots"></i></div>
+      <div class="stat-content">
+        <h3>الردود التلقائية</h3>
+        <p class="stat-value">158</p>
+        <span class="stat-change">+45% هذا الشهر</span>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon engagement"><i class="fas fa-heart"></i></div>
+      <div class="stat-content">
+        <h3>تفاعل العملاء</h3>
+        <p class="stat-value">1.2k</p>
+        <span class="stat-change">+8% هذا الشهر</span>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon savings"><i class="fas fa-clock"></i></div>
+      <div class="stat-content">
+        <h3>وقت تم توفيره</h3>
+        <p class="stat-value">12h</p>
+        <span class="stat-change">هذا الأسبوع</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <!-- Left Column: Settings -->
+    <div class="settings-column">
+      <section class="card settings-card">
+        <div class="card-header">
+          <h2><i class="fas fa-cog"></i> إعدادات الأتمتة</h2>
+          <div class="save-status" *ngIf="saving">
+            <i class="fas fa-spinner fa-spin"></i> جاري الحفظ...
+          </div>
+        </div>
+        
+        <div class="card-body">
+          <div class="setting-group">
+            <div class="setting-info">
+              <h4>نشر المنتجات تلقائياً</h4>
+              <p>نشر منشور على فيسبوك وإنستجرام فور إضافة منتج جديد</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" [(ngModel)]="settings.autoPostEnabled" (change)="onSettingsChange()">
+              <span class="slider round"></span>
+            </label>
+          </div>
+
+          <div class="setting-group">
+            <div class="setting-info">
+              <h4>النشر العشوائي (الجدولة)</h4>
+              <p>اختيار منتجات عشوائية ونشرها كل فترة زمنية</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" [(ngModel)]="settings.randomPostEnabled" (change)="onSettingsChange()">
+              <span class="slider round"></span>
+            </label>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>أقصى عدد منشورات يومياً</label>
+              <input type="number" class="form-control" [(ngModel)]="settings.dailyPostLimit" (change)="onSettingsChange()">
+            </div>
+            <div class="form-group">
+              <label>نموذج الذكاء الاصطناعي</label>
+              <select class="form-control" [(ngModel)]="settings.aiModel" (change)="onSettingsChange()">
+                <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                <option value="gpt-4">GPT-4 (أكثر ذكاءً)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card connectivity-card">
+        <div class="card-header">
+          <h2><i class="fas fa-link"></i> روابط الربط (n8n Webhooks)</h2>
+        </div>
+        <div class="card-body">
+          <div class="form-group">
+            <label>رابط الـ Webhook للنشر التلقائي</label>
+            <div class="input-with-icon">
+              <i class="fas fa-globe"></i>
+              <input type="text" class="form-control" [(ngModel)]="settings.n8nWebhookUrls.autoPost" (change)="onSettingsChange()" placeholder="https://n8n.yourserver.com/webhook/...">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>رابط الـ Webhook للرد على التعليقات</label>
+            <div class="input-with-icon">
+              <i class="fas fa-globe"></i>
+              <input type="text" class="form-control" [(ngModel)]="settings.n8nWebhookUrls.commentReply" (change)="onSettingsChange()" placeholder="https://n8n.yourserver.com/webhook/...">
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card google-sheets-card">
+        <div class="card-header">
+          <h2><i class="fas fa-file-excel"></i> ربط جداول بيانات جوجل (Google Sheets Sync)</h2>
+        </div>
+        <div class="card-body">
+          <div class="setting-group">
+            <div class="setting-info">
+              <h4>تفعيل المزامنة اللحظية</h4>
+              <p>تحديث سجل المنتجات في Google Sheets فوراً عند أي تغيير</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" [(ngModel)]="settings.googleSheetEnabled" (change)="onSettingsChange()">
+              <span class="slider round"></span>
+            </label>
+          </div>
+
+          <div class="form-group" style="margin-top: 1.5rem;">
+            <label>معرف الجدول (Google Sheet ID)</label>
+            <div class="input-with-icon">
+              <i class="fas fa-id-card"></i>
+              <input type="text" class="form-control" [(ngModel)]="settings.googleSheetId" (change)="onSettingsChange()" placeholder="أدخل ID الموجود في رابط الملف...">
+            </div>
+            <p class="setting-info" style="margin-top: 0.5rem; font-size: 0.75rem; color: #64748b;">
+              <i class="fas fa-info-circle"></i>
+              تأكد من مشاركة الملف مع البريد الخاص بـ <strong>Service Account</strong> ليتمكن النظام من التحديث.
+            </p>
+          </div>
+
+          <!-- New Sync Button -->
+          <div class="sync-action" style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e2e8f0;">
+            <button class="btn btn-success btn-block" (click)="syncAllProducts()" [disabled]="loading">
+              <i class="fas" [ngClass]="loading ? 'fa-spinner fa-spin' : 'fa-cloud-download-alt'"></i>
+              إستيراد كافة المنتجات من Google Sheets (الـ 909 منتج)
+            </button>
+            <p class="setting-info" style="margin-top: 0.75rem; text-align: center; color: #059669; font-weight: 500;">
+              <i class="fas fa-magic"></i> سيقوم النظام بسحب كافة البيانات وربط الصور تلقائياً.
+            </p>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Right Column: Recent Activity -->
+    <div class="activity-column">
+      <section class="card log-card">
+        <div class="card-header">
+          <h2><i class="fas fa-list-ul"></i> السجلات الأخيرة (Automation Logs)</h2>
+          <a routerLink="/admin/automation/logs" class="view-all">عرض الكل</a>
+        </div>
+        <div class="card-body no-padding">
+          <div class="log-table-wrapper">
+            <table class="log-table">
+              <thead>
+                <tr>
+                  <th>النوع</th>
+                  <th>الحالة</th>
+                  <th>التفاصيل</th>
+                  <th>الوقت</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let log of recentLogs">
+                  <td>
+                    <div class="log-type">
+                      <i [class]="getPlatformIcon(log.platform)"></i>
+                      {{ log.type }}
+                    </div>
+                  </td>
+                  <td>
+                    <span class="badge" [ngClass]="getStatusClass(log.status)">
+                      {{ log.status }}
+                    </span>
+                  </td>
+                  <td>
+                    <div class="log-details">
+                      <strong>{{ log.title }}</strong>
+                      <span class="log-error" *ngIf="log.error">{{ log.error }}</span>
+                    </div>
+                  </td>
+                  <td>{{ log.createdAt | date:'shortTime' }}</td>
+                </tr>
+                <tr *ngIf="recentLogs.length === 0">
+                  <td colspan="4" class="empty-state">لا توجد سجلات حالياً</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>

@@ -219,16 +219,6 @@ export class HomePageComponent implements OnInit {
       next: (config) => {
         if (config) this.heroConfig = { ...this.heroConfig, ...config };
 
-        // Adaptive Loading: Fallback to slider if network is slow
-        if (isPlatformBrowser(this.platformId) && (navigator as any).connection) {
-          const connection = (navigator as any).connection;
-          const speed = connection.effectiveType;
-          if (speed === 'slow-2g' || speed === '2g' || speed === '3g') {
-            console.warn(`🚀 Network speed (${speed}) is slow. Falling back to slider mode for better performance.`);
-            this.heroConfig.mode = 'slider';
-          }
-        }
-
         if (this.heroConfig.mode === 'scrolling') {
           this.loadHeroBooks();
         } else {

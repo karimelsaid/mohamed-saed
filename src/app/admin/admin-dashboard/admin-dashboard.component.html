@@ -223,6 +223,13 @@
         <span>ملاحظات القراء</span>
       </button>
 
+      <button (click)="switchView('automation'); showSidebar = false"
+        [class]="currentView === 'automation' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
+        class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
+        <fa-icon [icon]="['fas', 'robot']" class="text-lg"></fa-icon>
+        <span>نظام الأتمتة والذكاء 🤖</span>
+      </button>
+
       <!-- Community Management Removed as it is now integrated into Orders -->
 
 
@@ -799,6 +806,10 @@
 
       <div *ngIf="currentView === 'subscriptionControl'" class="mb-28 md:mb-0 px-4">
         <app-subscription-settings></app-subscription-settings>
+      </div>
+
+      <div *ngIf="currentView === 'automation'" class="mb-28 md:mb-0 px-4">
+        <app-admin-automation></app-admin-automation>
       </div>
 
       <div *ngIf="currentView === 'bourseSettings'" class="mb-28 md:mb-0 px-4">

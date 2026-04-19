@@ -56,13 +56,16 @@ exports.uploadHeroImage = (req, res) => {
     });
 };
 
-// Helper to calculate cost with fallback
-const getEffectiveCost = (product) => {
+const getEffectiveCost = (product, excelMatch = null) => {
+    const docCost = excelMatch ? parseFloat(excelMatch.price_cost) : 0;
+    if (docCost && docCost > 0) return docCost;
+
     if (product.price_cost && product.price_cost > 0) {
         return product.price_cost;
     }
-    // Fallback: 60% of selling price
-    return product.product_price * 0.6;
+    const livePrice = excelMatch ? (parseFloat(excelMatch.price) || parseFloat(excelMatch.product_price) || 0) : (product.product_price || 0);
+    // Fallback: 70% of selling price as cost to insure a reasonable profit calculation
+    return livePrice * 0.7;
 };
 
 exports.getActivePromotion = async (req, res) => {
@@ -91,7 +94,14 @@ exports.getHeroBooks = async (req, res) => {
         // Fetch ~50 random products that have images
         // Using $sample for randomness
         const products = await Product.aggregate([
-            { $match: { product_image: { $exists: true, $ne: '' } } },
+            { 
+                $match: { 
+                    $or: [
+                        { product_image: { $exists: true, $ne: '' } },
+                        { image_path: { $exists: true, $ne: '' } }
+                    ]
+                } 
+            },
             { $sample: { size: 32 } },
             {
                 $lookup: {
@@ -417,9 +427,13 @@ exports.getDynamicOffer = async (req, res) => {
 
         products.forEach(p => {
             const count = idCounts[p._originalRequestedId] || idCounts[p._id.toString()] || 0;
-            const costPerUnit = getEffectiveCost(p);
+            const excelMatch = outputData.find(e => String(e.products_id) === String(p.products_id) || String(e.products_id) === String(p.product_image));
+            
+            const livePrice = excelMatch ? (parseFloat(excelMatch.price) || parseFloat(excelMatch.product_price) || 0) : (p.product_price || 0);
+            
+            const costPerUnit = getEffectiveCost(p, excelMatch);
             totalCost += (costPerUnit * count);
-            totalSellingPrice += (p.product_price * count);
+            totalSellingPrice += (livePrice * count);
         });
 
         // Rule: FinalPrice should yield targetMargin

@@ -1096,19 +1096,7 @@ export class CheckoutModalComponent implements OnInit {
   }
 
   getBookImageUrl(book: any): string {
-    const imageId = book.product_image || book.products_id;
-    if (!imageId) {
-      return '/assets/placeholder-book.jpg';
-    }
-
-    let imagePath;
-    if (book.merchantName) {
-      const sanitizedMerchantName = book.merchantName.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
-      imagePath = `merchant_${sanitizedMerchantName}/${imageId}/${imageId}.webp`;
-    } else {
-      imagePath = `admin__karim_mohamed__/${imageId}/${imageId}.webp`;
-    }
-    return `${this.uploadsBaseUrl}/${imagePath}`;
+    return this.dataService.getBookImageUrl(book);
   }
 
   onPaymentModalClose(): void {

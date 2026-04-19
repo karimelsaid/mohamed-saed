@@ -378,7 +378,7 @@
                   <div class="space-y-2">
                     <div *ngFor="let p of order.products" class="flex items-center justify-between bg-gray-50/50 dark:bg-gray-900/30 p-3 rounded-2xl border border-gray-100/50 dark:border-gray-700/30 hover:border-blue-200 dark:hover:border-blue-900 transition-all">
                       <div class="flex items-center gap-3">
-                        <img [src]="('/uploads/books/' + p.product_image).replace('.jpg', '.webp')" 
+                        <img [src]="getProductImageUrl(p)" 
                              class="w-10 h-10 rounded-xl object-cover shadow-sm" alt="">
                         <span class="text-sm font-black text-gray-700 dark:text-gray-300">{{ p.bookName || p.book }}</span>
                       </div>
@@ -392,10 +392,10 @@
 
               <div class="flex items-center gap-2 px-4 border-r dark:border-gray-700 hidden md:flex">
                 <div class="avatar-group flex -space-x-4">
-                  <img *ngFor="let p of order.products.slice(0,3)" 
-                       [src]="('/uploads/books/' + p.product_image).replace('.jpg', '.webp')" 
-                       class="w-12 h-12 rounded-full border-3 border-white dark:border-gray-800 object-cover shadow-md" 
-                       [title]="p.book" alt="">
+                   <img *ngFor="let p of order.products.slice(0,3)" 
+                        [src]="getProductImageUrl(p)" 
+                        class="w-12 h-12 rounded-full border-3 border-white dark:border-gray-800 object-cover shadow-md" 
+                        [title]="p.book" alt="">
                 </div>
               </div>
 
@@ -804,7 +804,7 @@
                 <tr *ngFor="let item of selectedOrder?.products" class="bg-white dark:bg-gray-800">
                   <td class="px-4 py-4">
                     <div class="flex items-center gap-3">
-                      <img [src]="('/uploads/books/' + item.product_image).replace('.jpg', '.webp')" class="w-10 h-10 rounded-lg object-cover" alt="">
+                      <img [src]="getProductImageUrl(item)" class="w-10 h-10 rounded-lg object-cover" alt="">
                       <span class="font-medium dark:text-gray-200">{{ item.book }}</span>
                     </div>
                   </td>

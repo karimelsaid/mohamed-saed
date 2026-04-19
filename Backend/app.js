@@ -55,6 +55,7 @@ const { detectAndUpdateLiveVersion } = require('./utils/live-update-detector');
 const communityRoutes = require('./routes/community.routes');
 const analyticsRoutes = require('./routes/analytics.routes');
 const bourseRoutes = require('./routes/bourse.routes');
+const automationRoutes = require('./routes/automation.routes');
 const express = require('express');
 const bodyParser = require('body-parser');
 const app = express();
@@ -586,6 +587,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/merchant', merchantRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/bourse', bourseRoutes);
+app.use('/api/automation', automationRoutes);
 
 // Delete print order and associated file
 const mongoose = require('mongoose');
@@ -716,13 +718,28 @@ app.get('*', async (req, res, next) => {
       return angularApp(req, res, next);
     } catch (err) {
       console.error('🔥 Angular SSR Error:', err);
-      // Fallback to CSR if SSR fails
-      return res.sendFile(path.join(projectRoot, 'dist', 'browser', 'index.csr.html'));
+      // Fallback to CSR if SSR fails - but check if file exists first!
+      const csrPath = path.join(projectRoot, 'dist', 'browser', 'index.csr.html');
+      if (fs.existsSync(csrPath)) {
+        return res.sendFile(csrPath);
+      } else {
+        return res.status(404).send('Frontend not built. Please run npm run build.');
+      }
     }
   }
 
   // Development or if SSR is disabled: Fallback to CSR
-  res.sendFile(path.join(projectRoot, 'dist', 'browser', 'index.csr.html'));
+  const csrPathDefault = path.join(projectRoot, 'dist', 'browser', 'index.csr.html');
+  if (fs.existsSync(csrPathDefault)) {
+    res.sendFile(csrPathDefault);
+  } else {
+    // If we're in ng serve mode, this is expected to be handled by the dev server proxy
+    // but the backend shouldn't crash if it hits this endpoint.
+    res.status(404).json({
+      success: false,
+      message: 'Frontend entry point not found in dist/browser. If using ng serve, access via port 4200.'
+    });
+  }
 });
 
 // Endpoint to provide dynamic ICE servers with TURN credentials

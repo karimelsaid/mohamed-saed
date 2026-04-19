@@ -7,6 +7,7 @@ const path = require('path');
 const { OAuth2Client } = require('google-auth-library');
 const client = new OAuth2Client('933338292435-c9bk3oo6i1oe3qkhkvp8crflmthhg0kc.apps.googleusercontent.com');
 const SystemSettings = require('../models/SystemSettings');
+const googleSheetsService = require('../services/google-sheets.service');
 
 // Helper to filter active/unexpired coupons
 const filterActiveCoupons = (coupons) => {
@@ -117,6 +118,9 @@ async function createAccount(req, res) {
       gender
     });
     await newUser.save();
+
+    // Real-time Sync to Google Sheets
+    googleSheetsService.syncSingleUser(newUser).catch(err => console.error('Sheet Sync Error:', err));
 
     // Generate referral code if not present
     if (!newUser.referralCode) {
@@ -717,6 +721,9 @@ async function googleSignIn(req, res) {
         googleId
       });
       await user.save();
+
+      // Real-time Sync to Google Sheets (for new Google users)
+      googleSheetsService.syncSingleUser(user).catch(err => console.error('Google Sheet Sync Error:', err));
 
       // Push Notification to Admins - New Google Sign-In User
       try {

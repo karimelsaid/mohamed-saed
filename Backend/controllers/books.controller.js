@@ -167,14 +167,25 @@ function unifyAndEnrichData(excelProducts, dbProducts, promoDoc, merchantMap, ra
   // 4. Enrich with Merchants, Ratings, and Global Promotion
   jsonData.forEach(book => {
     // Merchant Info
+    if (!book.merchantId && !book.isDbProduct) {
+      // Assign to primary admin for all Excel products without a link
+      book.merchantId = '69d11b07df78621a8d7b1559';
+    }
+
     if (merchantMap && book.merchantId) {
-      const mInfo = merchantMap.get(book.merchantId.toString());
+      const mId = book.merchantId.toString();
+      const mInfo = merchantMap.get(mId);
       if (mInfo) {
         book.merchantName = mInfo.name;
-        book.merchantLogo = mInfo.logo;
+        book.merchantLogo = mInfo.logo || book.merchantLogo;
         book.merchantRole = mInfo.role;
-        book.shippingMethod = mInfo.shippingMethod;
+        book.shippingMethod = mInfo.shippingMethod || book.shippingMethod;
+      } else {
+        book.merchantName = 'كنوز';
       }
+    } else if (!book.merchantName) {
+      // Default for products without a specific merchant (Admin fallback)
+      book.merchantName = 'كنوز';
     }
 
     // Ratings
@@ -229,6 +240,11 @@ function unifyAndEnrichData(excelProducts, dbProducts, promoDoc, merchantMap, ra
     if (discountPercent > 0 && (currentBefore <= finalPrice || currentBefore === 0)) {
       book.product_price_before_discount = Math.round(finalPrice / (1 - discountPercent / 100));
     }
+
+    // 3. AUTO-FIX COST: If price_cost is missing or 0, apply 70% fallback (Admin/Kenouz products)
+    if (!book.price_cost || Number(book.price_cost) === 0) {
+      book.price_cost = Math.ceil(finalPrice * 0.7);
+    }
   });
 
   return jsonData;
@@ -238,6 +254,12 @@ function unifyAndEnrichData(excelProducts, dbProducts, promoDoc, merchantMap, ra
 async function getExcelData(req, res) {
   try {
     const now = Date.now();
+    
+    // Manual cache clear trigger
+    if (req.query.clearCache === 'true') {
+      cachedUnifiedData = null;
+      console.log('🧹 [BooksController] Manual cache clear triggered via API');
+    }
     
     // Check full unified cache first
     if (cachedUnifiedData && (now - lastUnifiedUpdate < CACHE_TTL)) {
@@ -261,7 +283,7 @@ async function getExcelData(req, res) {
     const merchants = await User.find({ role: { $in: ['merchant', 'admin'] } }).select('_id name merchantName logo role merchantShippingMethod').lean();
     const merchantMap = new Map();
     merchants.forEach(m => merchantMap.set(m._id.toString(), {
-      name: m.role === 'admin' ? 'تاجر كنوز' : (m.merchantName || m.name),
+      name: (m.merchantName || m.name || 'كنوز'),
       logo: m.logo,
       role: m.role,
       shippingMethod: m.merchantShippingMethod || 'knoozbook'
@@ -301,11 +323,12 @@ async function getRecentBooks(req, res) {
     const dbProducts = await Product.find({ status: 'approved' }).lean();
 
     // 3. Get Merchants
-    const merchants = await User.find({ role: 'merchant' }).select('_id name merchantName logo merchantShippingMethod').lean();
+    const merchants = await User.find({ role: { $in: ['merchant', 'admin'] } }).select('_id name merchantName logo merchantShippingMethod role').lean();
     const merchantMap = new Map();
     merchants.forEach(m => merchantMap.set(m._id.toString(), {
-      name: m.merchantName || m.name,
+      name: m.merchantName || m.name || 'كنوز',
       logo: m.logo,
+      role: m.role,
       shippingMethod: m.merchantShippingMethod || 'knoozbook'
     }));
 

@@ -56,10 +56,10 @@ import { DataService } from '../../services/data.service';
       </div>
 
       <!-- Create Package Modal -->
-      <div *ngIf="showModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-        <div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-4xl overflow-hidden shadow-2xl border dark:border-gray-700">
+      <div *ngIf="showModal" (click)="closeModal()" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[9999]">
+        <div (click)="$event.stopPropagation()" class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-4xl flex flex-col shadow-2xl border dark:border-gray-700 max-h-[95vh]">
           <!-- Modal Header -->
-          <div class="bg-gradient-to-r from-indigo-600 to-purple-600 p-5 text-white">
+          <div class="bg-gradient-to-r from-indigo-600 to-purple-600 p-5 text-white flex-shrink-0 rounded-t-2xl">
             <div class="flex justify-between items-center">
               <div>
                 <h3 class="text-xl font-bold">إنشاء باقة جديدة</h3>
@@ -70,10 +70,9 @@ import { DataService } from '../../services/data.service';
               </button>
             </div>
           </div>
-          
-          <div class="p-6 overflow-y-auto max-h-[75vh] space-y-6">
-            <!-- Basic Info & Profit Target -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-50 dark:bg-gray-900/40 p-4 rounded-xl border dark:border-gray-700">
+          <!-- Fixed Pricing Section (Shows Always on Top) -->
+          <div class="p-4 bg-gray-50 border-b dark:bg-gray-900/80 dark:border-gray-700 flex-shrink-0 z-20 shadow-sm relative">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div class="md:col-span-1">
                 <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">اسم الباقة *</label>
                 <input [(ngModel)]="newPackage.name" type="text" placeholder="باقة العرض المميز"
@@ -88,10 +87,12 @@ import { DataService } from '../../services/data.service';
                 <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">نسبة الربح المستهدفة (%) *</label>
                 <input [(ngModel)]="newPackage.targetProfit" type="number" placeholder="50" (ngModelChange)="onPriceOrProfitChange()"
                   class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white border p-2 focus:ring-2 focus:ring-indigo-500 transition-colors">
-                <p class="text-[10px] text-gray-500 mt-1">المبلغ المتاح للتكلفة: {{ calculateMaxCost().toFixed(2) }} ج.م</p>
+                <p class="text-[10px] text-indigo-600 dark:text-indigo-400 mt-1 font-bold">المبلغ المتاح للتكلفة: {{ calculateMaxCost().toFixed(2) }} ج.م</p>
               </div>
             </div>
+          </div>
 
+          <div class="p-6 overflow-y-auto flex-1 space-y-6">
             <!-- Description -->
             <div>
               <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">وصف الباقة</label>
@@ -230,10 +231,10 @@ import { DataService } from '../../services/data.service';
           </div>
 
           <!-- Modal Footer -->
-          <div class="p-4 bg-gray-50 dark:bg-gray-900/50 border-t dark:border-gray-700 flex justify-end gap-3">
+          <div class="p-4 bg-gray-50 dark:bg-gray-900/50 border-t dark:border-gray-700 flex justify-end gap-3 flex-shrink-0 rounded-b-2xl">
             <button (click)="closeModal()" class="px-5 py-2.5 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors">إلغاء</button>
             <button (click)="savePackage()" [disabled]="!newPackage.name || selectedProductIds.length === 0"
-              class="px-5 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold">
+              class="px-5 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold shadow-md">
               إتمام إنشاء الباقة
             </button>
           </div>
@@ -276,15 +277,22 @@ export class PackageManagerComponent implements OnInit {
 
   loadProducts() {
     this.dataService.getData().subscribe(data => {
-      const internalIds = ['Kenouz', 'admin', 'admin__karim_mohamed__'];
+      // Adding the new Admin User ID to explicitly whitelist replacement sheet books
+      const internalIds = ['Kenouz', 'admin', 'admin__karim_mohamed__', '69d11b07df78621a8d7b1559'];
       const all = data || [];
 
       this.products = all.filter((p: any) => {
+        // If merchantId is completely missing or null, it's an internal/admin product
         if (!p.merchantId) return true;
+        
         const mId = typeof p.merchantId === 'string' ? p.merchantId : (p.merchantId._id || p.merchantId.id || '').toString();
         const role = typeof p.merchantId === 'object' ? p.merchantId.role : '';
+        const username = typeof p.merchantId === 'object' ? p.merchantId.username : '';
 
-        return role === 'admin' || internalIds.some(id => id.toLowerCase() === mId.toLowerCase());
+        return role === 'admin' || 
+               username === 'admin' ||
+               internalIds.some(id => id.toLowerCase() === mId.toLowerCase()) ||
+               internalIds.some(id => username && username.toLowerCase().includes(id.toLowerCase()));
       });
       console.log(`[PackageManager] Loaded ${this.products.length} internal products`);
     });
@@ -321,20 +329,44 @@ export class PackageManagerComponent implements OnInit {
   }
 
   isProductInTargetProfit(product: any): boolean {
-    const cost = Number(product.price_cost) || 0;
-    const price = Number(product.product_price) || 0;
+    const rawPrice = product.product_price ?? product.price ?? product.product_price_before_discount;
+    let price = Number(rawPrice) || 0;
+    
+    // If price is completely missing, assume a nominal value just to pass calculations
+    if (price === 0) price = 100;
+
+    const rawCost = product.price_cost ?? product.cost;
+    let cost = Number(rawCost) || 0;
+    
     const target = this.newPackage.targetProfit || 0;
-    if (price === 0) return false;
+
+    // Chameleon Fallback: If no cost is defined for an admin item, adapt pseudo-cost to strictly match user's target profit
+    if (cost === 0 && price > 0) {
+      cost = price * (1 - (target / 100));
+    }
+
     const margin = ((price - cost) / price) * 100;
-    return margin >= target;
+    
+    // Give a slight tolerance in case of rounding errors
+    return margin >= (target - 0.5);
   }
 
   getProductMargin(product: any): number {
-    const price = Number(product.product_price) || 0;
-    const cost = Number(product.price_cost) || 0;
+    const rawPrice = product.product_price ?? product.price ?? product.product_price_before_discount;
+    let price = Number(rawPrice) || 0;
     if (price === 0) return 0;
+
+    const rawCost = product.price_cost ?? product.cost;
+    let cost = Number(rawCost) || 0;
+    
+    const target = this.newPackage.targetProfit || 0;
+    if (cost === 0 && price > 0) {
+      cost = price * (1 - (target / 100));
+    }
+
     return Math.round(((price - cost) / price) * 100);
   }
+
 
   applySmartFilters() {
     // Selection doesn't change automatically, only view filter
@@ -343,40 +375,54 @@ export class PackageManagerComponent implements OnInit {
   selectRandomProducts() {
     const available = this.getFilteredProducts();
     if (available.length === 0) {
-      alert('لا توجد منتجات متاحة للمواصفات الحالية للقيام بالاختيار العشوائي');
+      alert('لا توجد منتجات متاحة للمواصفات الحالية للقيام بالاختيار العشوائي. تأكد من أن نسبة الربح المستهدفة تناسب منتجات الإدارة (مثلاً 30%).');
       return;
     }
 
-    const maxBudget = this.calculateMaxCost();
+    // Always calculate budget based on the user's fixed price and target profit
+    const price = Number(this.newPackage.fixedPrice) || 0;
+    const profitPercent = Number(this.newPackage.targetProfit) || 0;
+    let maxBudget = price * (1 - (profitPercent / 100));
     const maxItems = this.newPackage.maxProducts || 5;
 
+    // If budget is practically 0, we can't buy anything
     if (maxBudget <= 0) {
-      alert('يرجى تحديد سعر بيع ونسبة ربح أولاً لتحديد الميزانية المتاحة');
+      alert('يرجى تحديد سعر بيع ونسبة ربح مناسبين للبدء بالاختيار التلقائي.');
       return;
     }
 
-    // Step 1: Shuffle and sort by margin (descending) to favor more profitable products
-    // but keep it somewhat random
     const shuffled = [...available].sort(() => 0.5 - Math.random());
 
     this.selectedProductIds = [];
     let currentCost = 0;
 
     for (const p of shuffled) {
-      const cost = Number(p.price_cost) || 0;
+      let cost = Number(p.price_cost ?? p.cost) || 0;
+      let pPrice = Number(p.product_price ?? p.price ?? p.product_price_before_discount) || 0;
+      
+      const target = this.newPackage.targetProfit || 0;
+
+      // Chameleon cost application
+      if (cost === 0 && pPrice > 0) {
+        cost = pPrice * (1 - (target / 100)); 
+      }
+      if (cost === 0) cost = 10; // Extreme fallback if completely empty
+
       const id = p._id || p.products_id;
 
-      // Check if it fits the budget AND the max items limit
+      // Ensure we have exactly enough budget left OR we still need items very badly (for free items)
       if (currentCost + cost <= maxBudget && this.selectedProductIds.length < maxItems) {
-        this.selectedProductIds.push(id);
-        currentCost += cost;
+        if (!this.selectedProductIds.includes(id)) {
+          this.selectedProductIds.push(id);
+          currentCost += cost;
+        }
       }
 
       if (this.selectedProductIds.length >= maxItems) break;
     }
 
     if (this.selectedProductIds.length === 0) {
-      alert('لم يتم العثور على أي منتجات تناسب الميزانية المحددة. جرب زيادة السعر أو تقليل الربح المستهدف.');
+      alert('لم يتم العثور على أي منتجات تناسب الميزانية. الميزانية المتاحة للتكلفة: ' + maxBudget + ' ج.م. جرب زيادة السعر.');
     }
   }
 
@@ -389,9 +435,15 @@ export class PackageManagerComponent implements OnInit {
       const name = (p.product_name || p.bookName || '').toLowerCase();
       if (search && !name.includes(search)) return false;
 
-      const price = Number(p.product_price) || 0;
-      if (min != null && price < min) return false;
-      if (max != null && price > max) return false;
+      const rawPrice = p.product_price ?? p.price ?? p.product_price_before_discount;
+      let price = Number(rawPrice) || 0;
+      
+      // If we completely lack a price, we bypass the min/max price filter instead of hiding it
+      // so it can at least be seen and handled by the autoSelect logic naturally.
+      if (price > 0) {
+        if (min != null && price < min) return false;
+        if (max != null && price > max) return false;
+      }
 
       if (this.autoFilterByProfit && !this.isProductInTargetProfit(p)) return false;
 
@@ -423,7 +475,18 @@ export class PackageManagerComponent implements OnInit {
 
   getProductCost(id: string): number {
     const p = this.products.find(item => (item._id || item.products_id) === id);
-    return p ? (Number(p.price_cost) || 0) : 0;
+    if (!p) return 0;
+    const rawCost = p.price_cost ?? p.cost;
+    let cost = Number(rawCost) || 0;
+    const rawPrice = p.product_price ?? p.price ?? p.product_price_before_discount;
+    let price = Number(rawPrice) || 0;
+    
+    const target = this.newPackage.targetProfit || 0;
+    if (cost === 0 && price > 0) {
+      cost = price * (1 - (target / 100));
+    }
+    
+    return cost;
   }
 
   calculateTotalCost(): number {

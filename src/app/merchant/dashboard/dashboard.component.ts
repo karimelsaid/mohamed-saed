@@ -12,6 +12,7 @@ import { AnalyticsService } from '../../services/analytics.service';
 import { Chart, registerables } from 'chart.js';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { faPhone, faFileInvoice, faTruck, faClock, faStore, faEnvelope, faCheckCircle, faHourglassHalf, faPen, faCamera } from '@fortawesome/free-solid-svg-icons';
+import { DataService } from '../../services/data.service';
 Chart.register(...registerables);
 
 interface ShippingRate {
@@ -157,7 +158,8 @@ export class MerchantDashboardComponent implements OnInit {
     private router: Router,
     private http: HttpClient,
     private productStateService: ProductStateService,
-    private analyticsService: AnalyticsService) { }
+    private analyticsService: AnalyticsService,
+    public dataService: DataService) { }
 
   loadShippingRates() {
     const existingRates = this.merchant.shippingRates || [];
@@ -720,36 +722,7 @@ export class MerchantDashboardComponent implements OnInit {
   }
 
   getProductImageUrl(product: any): string {
-    // This logic is now consistent with other working components like search-results.
-    let imagePath = product.image_path || product.product_image || '';
-    const merchantName = product.merchantName || (this.merchant ? (this.merchant.merchantName || this.merchant.name) : null);
-
-    // If a full path is already provided in image_path, use it directly.
-    if (imagePath && imagePath.startsWith('/uploads/books/')) {
-      // The path is already correct, just return it.
-      return imagePath;
-    }
-
-    // If not, build the path from scratch
-    const imageId = product.products_id || product.product_image;
-    if (!imageId) {
-      return '/assets/placeholder-book.jpg';
-    }
-
-    let finalPath;
-    if (merchantName) {
-      const sanitizedMerchantName = merchantName.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
-      finalPath = `merchant_${sanitizedMerchantName}/${imageId}/${imageId}.webp`;
-    } else {
-      // Fallback to admin path if no merchant name is found
-      finalPath = `admin__karim_mohamed__/${imageId}/${imageId}.webp`;
-    }
-
-    // Construct the full path, ensuring not to duplicate '/books/'
-    // uploadsBaseUrl is likely '/uploads' or '/uploads/books'
-    // The final path should be /uploads/books/merchant_...
-    const fullPath = `${this.uploadsBaseUrl}/${finalPath}`.replace('/books/books/', '/books/');
-    return fullPath;
+    return this.dataService.getBookImageUrl(product);
   }
 
   confirmShipment(order: any, newStatus: string): void {

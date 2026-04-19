@@ -128,12 +128,26 @@ export class PromotionsComponent implements OnInit, OnDestroy, AfterViewInit {
         this.promotionService.getAllPackages().subscribe({
             next: (res: any) => {
                 this.packages = Array.isArray(res) ? res : (res.packages || []);
-                // Pre-compute image URLs to avoid recalculation on every change detection
+                // Pre-compute image URLs and dynamically fix original/promo prices for fixed-price bundles
                 this.packages.forEach(pkg => {
+                    let calcOrigPrice = 0;
                     if (pkg.products) {
                         pkg.products.forEach((p: any) => {
                             p._imageUrl = this.getProductImageUrl(p);
+                            calcOrigPrice += Number(p.product_price || p.price || p.product_price_before_discount) || 0;
                         });
+                    }
+                    if (!pkg.totalOriginalPrice || pkg.totalOriginalPrice <= 0) {
+                        pkg.totalOriginalPrice = calcOrigPrice;
+                    }
+                    if (!pkg.promoPrice || pkg.promoPrice <= 0) {
+                        pkg.promoPrice = pkg.fixedPrice || pkg.price || 0;
+                    }
+
+                    // CRITICAL MARKETING LOGIC: Ensure Original Price is ALWAYS higher than Promo Price to avoid "-5%" badges
+                    // If the sum is smaller than the promo price, we set a 35% markup as the 'Original' reference.
+                    if (pkg.totalOriginalPrice <= pkg.promoPrice) {
+                        pkg.totalOriginalPrice = Math.round(pkg.promoPrice * 1.35);
                     }
                 });
                 this.loading = false;
@@ -249,33 +263,54 @@ export class PromotionsComponent implements OnInit, OnDestroy, AfterViewInit {
     loadProductsForBuilder() {
         this.dataService.getData().subscribe(res => {
             const all = res || [];
+            // Dynamically injecting your new admin sheet owner ID inside internalIds
+            const internalIds = ['Kenouz', 'admin', 'admin__karim_mohamed__', '69d11b07df78621a8d7b1559'];
 
             // Fetch bourse settings to check if merchant products are allowed
             this.promotionService.getBourseSettings().subscribe({
                 next: (config: any) => {
                     if (config && config.includeMerchantProducts) {
-                        // Include all products
-                        this.allProducts = all.filter((p: any) => parseFloat(p.product_price) > 0);
-                    } else {
-                        // Only internal/admin products
-                        const internalIds = ['Kenouz', 'admin', 'admin__karim_mohamed__'];
+                        // Include all products resiliently checking prices
                         this.allProducts = all.filter((p: any) => {
+                            const price = parseFloat(p.product_price) || parseFloat(p.price) || 0;
+                            return price > 0;
+                        });
+                    } else {
+                        // Include internal/admin products and also handle case where merchantId is just a string 'admin'
+                        this.allProducts = all.filter((p: any) => {
+                            // If it has absolutely no idea who owns it, it belongs to the admin
                             if (!p.merchantId) return true;
+                            
+                            const price = parseFloat(p.product_price) || parseFloat(p.price) || 0;
+                            if (price <= 0) return false;
+
                             const mId = typeof p.merchantId === 'string' ? p.merchantId : (p.merchantId._id || p.merchantId.id || '').toString();
                             const role = typeof p.merchantId === 'object' ? p.merchantId.role : '';
-                            return role === 'admin' || internalIds.some(id => id.toLowerCase() === mId.toLowerCase());
+                            const username = typeof p.merchantId === 'object' ? p.merchantId.username : '';
+                            
+                            return role === 'admin' || 
+                                   username === 'admin' ||
+                                   internalIds.some(id => id.toLowerCase() === mId.toLowerCase()) ||
+                                   internalIds.some(id => username && username.toLowerCase().includes(id.toLowerCase()));
                         });
                     }
                     console.log(`[SmartOffer] Loaded ${this.allProducts.length} products for builder`);
                 },
                 error: () => {
                     // Fallback: internal only
-                    const internalIds = ['Kenouz', 'admin', 'admin__karim_mohamed__'];
                     this.allProducts = all.filter((p: any) => {
                         if (!p.merchantId) return true;
+
+                        const price = parseFloat(p.product_price) || parseFloat(p.price) || 0;
+                        if (price <= 0) return false;
+
                         const mId = typeof p.merchantId === 'string' ? p.merchantId : (p.merchantId._id || p.merchantId.id || '').toString();
-                        const role = typeof p.merchantId === 'object' ? p.merchantId.role : '';
-                        return role === 'admin' || internalIds.some(id => id.toLowerCase() === mId.toLowerCase());
+                        const role = (p.merchantId && typeof p.merchantId === 'object') ? p.merchantId.role : '';
+                        const username = (p.merchantId && typeof p.merchantId === 'object') ? p.merchantId.username : '';
+                        
+                        return role === 'admin' || 
+                               username === 'admin' ||
+                               internalIds.some(id => id.toLowerCase() === mId.toLowerCase());
                     });
                 }
             });

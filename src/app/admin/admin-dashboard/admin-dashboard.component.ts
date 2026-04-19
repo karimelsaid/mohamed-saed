@@ -32,6 +32,7 @@ import { SalesHistoryComponent } from '../sales-history/sales-history.component'
 import { PromotionDatesComponent } from '../promotion-dates/promotion-dates.component';
 import { AdminApiService } from '../../services/admin-api.service';
 import { AdminBourseSettingsComponent } from '../admin-bourse-settings/admin-bourse-settings.component';
+import { AdminAutomationComponent } from '../admin-automation/admin-automation.component';
 
 interface Order {
   _id: string;
@@ -237,7 +238,7 @@ interface SystemSettings {
   maintenanceMode: boolean;
 }
 
-export type AdminView = 'dashboard' | 'userIntelligence' | 'orders' | 'requestedBooks' | 'printOrders' | 'printingSettings' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' | 'gamificationControl' | 'notifications' | 'subscriptionControl' | 'readerFeedback' | 'promotions' | 'salesRegistration' | 'shortagesReport' | 'promotionDates' | 'salesHistory' | 'community' | 'bourseSettings';
+export type AdminView = 'dashboard' | 'userIntelligence' | 'orders' | 'requestedBooks' | 'printOrders' | 'printingSettings' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' | 'gamificationControl' | 'notifications' | 'subscriptionControl' | 'readerFeedback' | 'promotions' | 'salesRegistration' | 'shortagesReport' | 'promotionDates' | 'salesHistory' | 'community' | 'bourseSettings' | 'automation';
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -263,7 +264,8 @@ export type AdminView = 'dashboard' | 'userIntelligence' | 'orders' | 'requested
     ShortagesReportComponent,
     PromotionDatesComponent,
     SalesHistoryComponent,
-    AdminBourseSettingsComponent
+    AdminBourseSettingsComponent,
+    AdminAutomationComponent
   ],
   templateUrl: './admin-dashboard.component.html',
   styleUrls: ['./admin-dashboard.component.css']
@@ -714,7 +716,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     'salesHistory': 'سجل المبيعات والعملاء',
     'shortagesReport': 'تقرير النواقص',
     'community': 'إدارة التبادلات والمزادات',
-    'bourseSettings': 'إعدادات بورصة الكتب'
+    'bourseSettings': 'إعدادات بورصة الكتب',
+    'automation': 'نظام الأتمتة والذكاء'
   };
 
   // Global Navigation Search

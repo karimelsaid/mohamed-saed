@@ -1,11 +1,11 @@
-<div class="min-h-screen bg-gray-50 pb-20">
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900 pb-20">
   <!-- Header Section -->
-  <div class="bg-white shadow-sm border-b">
+  <div class="bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
       <div class="flex items-center justify-between">
         <div>
-          <h1 class="text-3xl font-bold text-gray-900">إدارة التجار</h1>
-          <p class="mt-1 text-sm text-gray-600">إدارة التجار ومنتجاتهم في النظام</p>
+          <h1 class="text-3xl font-bold text-gray-900 dark:text-white">إدارة التجار</h1>
+          <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">إدارة التجار ومنتجاتهم في النظام</p>
         </div>
         <button (click)="viewProductUpdateRequests()"
           class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200">
@@ -23,40 +23,40 @@
   <!-- Quick Stats Overview -->
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4">
-        <div class="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600">
+      <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-4">
+        <div class="w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
           <fa-icon [icon]="faStore"></fa-icon>
         </div>
         <div>
-          <p class="text-sm text-gray-500">إجمالي التجار</p>
-          <p class="text-xl font-bold text-gray-900">{{ stats.total }}</p>
+          <p class="text-sm text-gray-500 dark:text-gray-400">إجمالي التجار</p>
+          <p class="text-xl font-bold text-gray-900 dark:text-white">{{ stats.total }}</p>
         </div>
       </div>
-      <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4">
-        <div class="w-12 h-12 rounded-lg bg-green-100 flex items-center justify-center text-green-600">
+      <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-4">
+        <div class="w-12 h-12 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-400">
           <fa-icon [icon]="faCheckCircle"></fa-icon>
         </div>
         <div>
-          <p class="text-sm text-gray-500">نشط</p>
-          <p class="text-xl font-bold text-gray-900">{{ stats.approved }}</p>
+          <p class="text-sm text-gray-500 dark:text-gray-400">نشط</p>
+          <p class="text-xl font-bold text-gray-900 dark:text-white">{{ stats.approved }}</p>
         </div>
       </div>
-      <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4">
-        <div class="w-12 h-12 rounded-lg bg-yellow-100 flex items-center justify-center text-yellow-600">
+      <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-4">
+        <div class="w-12 h-12 rounded-lg bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center text-yellow-600 dark:text-yellow-400">
           <fa-icon [icon]="faExclamationTriangle"></fa-icon>
         </div>
         <div>
-          <p class="text-sm text-gray-500">بانتظار الموافقة</p>
-          <p class="text-xl font-bold text-gray-900">{{ stats.pending }}</p>
+          <p class="text-sm text-gray-500 dark:text-gray-400">بانتظار الموافقة</p>
+          <p class="text-xl font-bold text-gray-900 dark:text-white">{{ stats.pending }}</p>
         </div>
       </div>
-      <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4">
-        <div class="w-12 h-12 rounded-lg bg-red-100 flex items-center justify-center text-red-600">
+      <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-4">
+        <div class="w-12 h-12 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400">
           <fa-icon [icon]="faTimesCircle"></fa-icon>
         </div>
         <div>
-          <p class="text-sm text-gray-500">موقوف</p>
-          <p class="text-xl font-bold text-gray-900">{{ stats.suspended }}</p>
+          <p class="text-sm text-gray-500 dark:text-gray-400">موقوف</p>
+          <p class="text-xl font-bold text-gray-900 dark:text-white">{{ stats.suspended }}</p>
         </div>
       </div>
     </div>
@@ -82,12 +82,12 @@
     <!-- Merchants Grid -->
     <div *ngIf="!loading && merchants.length > 0" class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
       <div *ngFor="let merchant of merchants"
-        class="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl transition-all duration-300 group">
+        class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-xl transition-all duration-300 group">
         
         <!-- Badge Section (Z-index overlap) -->
         <div class="px-6 pt-6 pb-2">
             <div class="flex items-center justify-between mb-4">
-                <div [ngClass]="getActivityLevel(merchant).color" class="px-3 py-1 rounded-full text-xs font-bold border">
+                <div [ngClass]="getActivityLevel(merchant).color" class="px-3 py-1 rounded-full text-xs font-bold border dark:border-gray-600">
                     مستوى النشاط: {{ getActivityLevel(merchant).label }}
                 </div>
                 <div class="flex gap-2">
@@ -100,22 +100,21 @@
             <div class="flex items-start gap-4">
                 <div class="relative">
                     <img [src]="getMerchantLogoUrl(merchant)" alt="{{ merchant.name }}"
-                        class="w-16 h-16 object-cover rounded-2xl border-2 border-white shadow-md group-hover:scale-105 transition-transform duration-300">
-                    <div *ngIf="merchant.approved" class="absolute -bottom-1 -right-1 bg-blue-600 text-white p-1 rounded-lg text-[10px] border-2 border-white">
+                        class="w-16 h-16 object-cover rounded-2xl border-2 border-white dark:border-gray-700 shadow-md group-hover:scale-105 transition-transform duration-300">
+                    <div *ngIf="merchant.approved" class="absolute -bottom-1 -right-1 bg-blue-600 text-white p-1 rounded-lg text-[10px] border-2 border-white dark:border-gray-700">
                         <fa-icon [icon]="faCheckCircle"></fa-icon>
                     </div>
                 </div>
                 <div class="flex-1 min-w-0">
-                    <h3 class="text-lg font-bold text-gray-900 truncate">{{ merchant.name }}</h3>
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white truncate">{{ merchant.name }}</h3>
                     <div class="flex items-center gap-1 text-yellow-400 my-1">
                         <fa-icon *ngFor="let star of getStars(merchant.averageRating)" 
                                 [icon]="star.icon" 
                                 [class.text-gray-200]="star.type === 'empty'"
-                                [class.text-yellow-400]="star.type !== 'empty'"
-                                class="text-xs"></fa-icon>
-                        <span class="text-xs text-gray-500 ml-1">({{ merchant.ratingCount || 0 }})</span>
+                                class="text-xs dark:text-gray-600"></fa-icon>
+                        <span class="text-xs text-gray-500 dark:text-gray-400 ml-1">({{ merchant.ratingCount || 0 }})</span>
                     </div>
-                    <p class="text-xs text-gray-500 flex items-center gap-1">
+                    <p class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
                         <fa-icon [icon]="faEnvelope" class="text-[10px]"></fa-icon>
                         {{ merchant.email }}
                     </p>
@@ -124,18 +123,18 @@
         </div>
 
         <!-- Stats Grid -->
-        <div class="px-6 py-4 grid grid-cols-3 gap-2 border-t border-b border-gray-50 bg-gray-50/30 mt-4">
+        <div class="px-6 py-4 grid grid-cols-3 gap-2 border-t border-b border-gray-50 dark:border-gray-700 bg-gray-50/30 dark:bg-gray-900/50 mt-4">
             <div class="text-center">
-                <p class="text-[10px] text-gray-400 uppercase font-bold">المنتجات</p>
-                <p class="text-sm font-bold text-gray-900">{{ merchant.productCount || 0 }}</p>
+                <p class="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-bold">المنتجات</p>
+                <p class="text-sm font-bold text-gray-900 dark:text-white">{{ merchant.productCount || 0 }}</p>
             </div>
-            <div class="text-center border-x border-gray-100 px-2">
-                <p class="text-[10px] text-gray-400 uppercase font-bold">المبيعات</p>
-                <p class="text-sm font-bold text-gray-900">{{ merchant.totalSales || 0 }} <span class="text-[8px]">ج.م</span></p>
+            <div class="text-center border-x border-gray-100 dark:border-gray-700 px-2">
+                <p class="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-bold">المبيعات</p>
+                <p class="text-sm font-bold text-gray-900 dark:text-white">{{ merchant.totalSales || 0 }} <span class="text-[8px]">ج.م</span></p>
             </div>
             <div class="text-center">
-                <p class="text-[10px] text-gray-400 uppercase font-bold">تاريخ الانضمام</p>
-                <p class="text-[10px] font-medium text-gray-600">{{ merchant.createdAt | date:'shortDate' }}</p>
+                <p class="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-bold">تاريخ الانضمام</p>
+                <p class="text-[10px] font-medium text-gray-600 dark:text-gray-400">{{ merchant.createdAt | date:'shortDate' }}</p>
             </div>
         </div>
 
@@ -143,17 +142,17 @@
         <div class="px-6 py-4 flex items-center justify-between gap-3">
           <div class="flex gap-2">
             <button (click)="viewMerchantProducts(merchant)" 
-                    class="p-2.5 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-all duration-300 group-hover:shadow-lg shadow-blue-200/50"
+                    class="p-2.5 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-600 hover:text-white transition-all duration-300 group-hover:shadow-lg shadow-blue-200/50"
                     title="عرض وإدارة المنتجات">
                 <fa-icon [icon]="faBox"></fa-icon>
             </button>
             <button *ngIf="merchant.suspended" (click)="activateMerchant(merchant)" 
-                    class="p-2.5 rounded-xl bg-green-50 text-green-600 hover:bg-green-600 hover:text-white transition-all duration-300"
+                    class="p-2.5 rounded-xl bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-600 hover:text-white transition-all duration-300"
                     title="تفعيل الحساب">
                 <fa-icon [icon]="faCheckCircle"></fa-icon>
             </button>
             <button *ngIf="!merchant.suspended && merchant.approved" (click)="suspendMerchant(merchant)" 
-                    class="p-2.5 rounded-xl bg-orange-50 text-orange-600 hover:bg-orange-600 hover:text-white transition-all duration-300"
+                    class="p-2.5 rounded-xl bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 hover:bg-orange-600 hover:text-white transition-all duration-300"
                     title="إيقاف مؤقت">
                 <fa-icon [icon]="faExclamationTriangle"></fa-icon>
             </button>
@@ -182,8 +181,8 @@
         aria-hidden="true"></div>
 
       <div
-        class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
-        <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+        class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
+        <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
           <div class="flex items-center justify-between mb-6">
             <div class="flex items-center">
               <div class="flex-shrink-0">
@@ -197,14 +196,14 @@
                 </div>
               </div>
               <div class="ml-4">
-                <h3 class="text-lg font-semibold text-gray-900" id="modal-title">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white" id="modal-title">
                   منتجات {{ selectedMerchant?.name }}
                 </h3>
-                <p class="text-sm text-gray-600">إدارة منتجات التاجر</p>
+                <p class="text-sm text-gray-600 dark:text-gray-400">إدارة منتجات التاجر</p>
               </div>
             </div>
             <button (click)="closeProductsModal()"
-              class="bg-white rounded-md text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 p-2">
+              class="bg-white dark:bg-gray-800 rounded-md text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 p-2">
               <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
               </svg>
@@ -231,27 +230,27 @@
           <!-- Products List -->
           <div *ngIf="!loadingProducts && merchantProducts.length > 0" class="space-y-4 max-h-96 overflow-y-auto">
             <div *ngFor="let product of merchantProducts"
-              class="bg-gray-50 rounded-lg border border-gray-200 p-4 hover:shadow-sm transition-shadow duration-200">
+              class="bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-700 p-4 hover:shadow-sm transition-shadow duration-200">
               <div class="flex items-start gap-4">
                 <div class="flex-shrink-0">
                   <img [src]="getProductImageUrl(product)" alt="{{ product.product_name }}"
-                    class="w-20 h-20 object-cover rounded-lg border border-gray-200"
+                    class="w-20 h-20 object-cover rounded-lg border border-gray-200 dark:border-gray-700"
                     onerror="this.src='/assets/placeholder-book.jpg'">
                 </div>
                 <div class="flex-1 min-w-0">
                   <div class="flex items-start justify-between">
                     <div class="flex-1">
-                      <h4 class="text-lg font-semibold text-gray-900 mb-1">{{ product.product_name }}</h4>
+                      <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">{{ product.product_name }}</h4>
                       <div class="flex items-center gap-2 mb-3">
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" [ngClass]="{
-                            'bg-yellow-100 text-yellow-800': product.status === 'pending',
-                            'bg-green-100 text-green-800': product.status === 'approved',
-                            'bg-red-100 text-red-800': product.status === 'rejected'
+                            'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400': product.status === 'pending',
+                            'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400': product.status === 'approved',
+                            'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400': product.status === 'rejected'
                           }">
                           {{ product.status === 'pending' ? 'معلق' : (product.status === 'approved' ? 'معتمد' : 'مرفوض')
                           }}
                         </span>
-                        <span class="text-sm text-gray-500">{{ product.createdAt | date:'short' }}</span>
+                        <span class="text-sm text-gray-500 dark:text-gray-400">{{ product.createdAt | date:'short' }}</span>
                       </div>
                     </div>
                     <div class="flex flex-col sm:flex-row items-start sm:items-center gap-2 ml-4">
@@ -272,7 +271,7 @@
                         رفض
                       </button>
                       <button (click)="editProduct(product)"
-                        class="inline-flex items-center p-2 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+                        class="inline-flex items-center p-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
                         title="تعديل المنتج">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -284,27 +283,27 @@
                   </div>
 
                   <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                    <div class="bg-white p-2 rounded border">
-                      <span class="font-medium text-gray-600">السعر:</span>
-                      <span class="block text-gray-900">{{ product.product_price }} ج.م</span>
+                    <div class="bg-white dark:bg-gray-800 p-2 rounded border dark:border-gray-700">
+                      <span class="font-medium text-gray-600 dark:text-gray-400">السعر:</span>
+                      <span class="block text-gray-900 dark:text-white">{{ product.product_price }} ج.م</span>
                     </div>
-                    <div class="bg-white p-2 rounded border">
-                      <span class="font-medium text-gray-600">الكمية:</span>
-                      <span class="block text-gray-900">{{ product.product_quantity }}</span>
+                    <div class="bg-white dark:bg-gray-800 p-2 rounded border dark:border-gray-700">
+                      <span class="font-medium text-gray-600 dark:text-gray-400">الكمية:</span>
+                      <span class="block text-gray-900 dark:text-white">{{ product.product_quantity }}</span>
                     </div>
-                    <div class="bg-white p-2 rounded border">
-                      <span class="font-medium text-gray-600">الفئة:</span>
-                      <span class="block text-gray-900">{{ product.product_category }}</span>
+                    <div class="bg-white dark:bg-gray-800 p-2 rounded border dark:border-gray-700">
+                      <span class="font-medium text-gray-600 dark:text-gray-400">الفئة:</span>
+                      <span class="block text-gray-900 dark:text-white">{{ product.product_category }}</span>
                     </div>
-                    <div class="bg-white p-2 rounded border col-span-2 md:col-span-1">
-                      <span class="font-medium text-gray-600">تاريخ الإضافة:</span>
-                      <span class="block text-gray-900">{{ product.createdAt | date:'short' }}</span>
+                    <div class="bg-white dark:bg-gray-800 p-2 rounded border dark:border-gray-700 col-span-2 md:col-span-1">
+                      <span class="font-medium text-gray-600 dark:text-gray-400">تاريخ الإضافة:</span>
+                      <span class="block text-gray-900 dark:text-white">{{ product.createdAt | date:'short' }}</span>
                     </div>
                   </div>
 
-                  <div class="mt-3 bg-white p-3 rounded border">
-                    <span class="font-medium text-gray-600">الوصف:</span>
-                    <p class="mt-1 text-gray-900 text-sm">{{ product.product_description }}</p>
+                  <div class="mt-3 bg-white dark:bg-gray-800 p-3 rounded border dark:border-gray-700">
+                    <span class="font-medium text-gray-600 dark:text-gray-400">الوصف:</span>
+                    <p class="mt-1 text-gray-900 dark:text-white text-sm">{{ product.product_description }}</p>
                   </div>
                 </div>
               </div>

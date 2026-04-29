@@ -163,15 +163,7 @@ export class ClothingComponent implements OnInit, OnDestroy {
 
   // Legacy method name for compatibility
   getBookImageUrl(book: any): string {
-    let imagePath = book.product_image ? String(book.product_image) : '';
-    if (!imagePath) {
-      if (book.merchantName) {
-        imagePath = 'merchant_' + book.merchantName + '/' + book.products_id + '/' + book.products_id + '.webp';
-      } else {
-        imagePath = 'admin__karim_mohamed__/' + book.products_id + '/' + book.products_id + '.webp';
-      }
-    }
-    return environment.uploadsBaseUrl + '/' + imagePath;
+    return this.dataService.getBookImageUrl(book);
   }
 
   ngOnDestroy(): void {

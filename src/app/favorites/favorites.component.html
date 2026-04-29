@@ -76,10 +76,9 @@
       [style.animationDelay]="i * 400 + 'ms'">
 
       <!-- Book Image Section -->
-      <div
-        class="relative w-full h-32 sm:h-40 md:h-48 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center p-3 md:p-4">
+      <div class="relative w-full h-32 sm:h-40 md:h-48 overflow-hidden bg-gray-100 dark:bg-gray-900 flex items-center justify-center p-0">
         <img [src]="getBookImageUrl(book)" [alt]="book.product_name"
-          class="max-w-full max-h-full object-contain rounded-lg md:rounded-xl shadow-md group-hover:scale-105 transition-transform duration-300"
+          class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           data-attempt="0" />
         <div
           class="absolute top-2 right-2 md:top-3 md:right-3 bg-pink-500 text-white text-xs font-bold px-1.5 py-0.5 md:px-2 md:py-1 rounded-full shadow-md">

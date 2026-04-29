@@ -380,36 +380,7 @@ export class OthersComponent implements OnInit, OnDestroy {
   }
 
   getBookImageUrl(product: any): string {
-    let imagePath = product.product_image ? String(product.product_image) : '';
-    if (!imagePath) {
-      if (product.merchantName) {
-        imagePath = 'merchant_' + product.merchantName + '/' + product.products_id + '/' + product.products_id + '.webp';
-      } else {
-        imagePath = 'admin__karim_mohamed__/' + product.products_id + '/' + product.products_id + '.webp';
-      }
-    } else {
-      if (imagePath.includes('/')) {
-        const parts = imagePath.split('/');
-        if (imagePath.includes('merchant_')) {
-          imagePath = parts.slice(-3).join('/');
-        } else if (imagePath.includes('admin__')) {
-          imagePath = parts.slice(-3).join('/');
-        } else {
-          imagePath = parts[parts.length - 1];
-        }
-      } else {
-        if (!imagePath.includes('.') && /^\d+$/.test(imagePath)) {
-          if (product.merchantName) {
-            imagePath = 'merchant_' + product.merchantName + '/' + imagePath + '/' + imagePath + '.webp';
-          } else {
-            imagePath = 'admin__karim_mohamed__/' + imagePath + '/' + imagePath + '.webp';
-          }
-        } else if (!imagePath.includes('.')) {
-          imagePath += '.webp';
-        }
-      }
-    }
-    return this.uploadsBaseUrl + '/' + imagePath;
+    return this.dataService.getBookImageUrl(product);
   }
 
   startCountdown() {

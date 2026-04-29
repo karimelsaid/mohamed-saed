@@ -639,14 +639,15 @@ app.delete('/api/print/orders/:userId/:orderId', printController.deletePrintOrde
 app.delete('/api/print/delete-print-order/:userId/:orderId', printController.deletePrintOrder);
 
 // جدولة تحديث بيانات الكتب كل يوم
-cron.schedule('0 */2 * * *', () => {
-  console.log('🔄 جاري تحديث بيانات الكتب...');
-  updateBooksData()
-    .then(() => {
-      generateRobotsTxt();
-    })
-    .catch(console.error);
-});
+// جدولة تحديث بيانات الكتب كل يوم (تم إيقافها لأن قاعدة البيانات والشيت الجديد أصبحا الأساس)
+// cron.schedule('0 */2 * * *', () => {
+//   console.log('🔄 جاري تحديث بيانات الكتب...');
+//   updateBooksData()
+//     .then(() => {
+//       generateRobotsTxt();
+//     })
+//     .catch(console.error);
+// });
 
 // تحديث عند بدء التشغيل
 // updateBooksData().catch(console.error);

@@ -158,20 +158,37 @@ async function processAndSaveData(filteredJson, promotionStartDate, promoEndDate
     // Check if the product has a merchantId directly from the Excel data
     const merchantId = product.merchantId ? product.merchantId.toString() : null;
 
-    if (merchantId) {
-      const merchantData = merchantMap.get(merchantId);
-      if (merchantData) {
-        const sanitizedUsername = merchantData.username.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
-        product.image_path = `/uploads/books/merchant_${sanitizedUsername}/${product_id}/${product_id}.webp`;
-        product.merchantName = merchantData.username; // Add merchant name to the product data
-        product.merchantLogo = merchantData.logo; // Add merchant logo to the product data
+    // PRESERVE existing image_path if it was manually updated (contains ?v= cache buster)
+    // Only rebuild image_path if it doesn't exist or doesn't start with /uploads/
+    const existingImagePath = product.image_path || '';
+    const hasCustomImagePath = existingImagePath.includes('?v=') || 
+                                (existingImagePath.startsWith('/uploads/books/') && existingImagePath !== `/uploads/books/admin__karim_mohamed__/${product_id}/${product_id}.webp`);
+
+    if (!hasCustomImagePath) {
+      if (merchantId) {
+        const merchantData = merchantMap.get(merchantId);
+        if (merchantData) {
+          const sanitizedUsername = merchantData.username.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
+          product.image_path = `/uploads/books/merchant_${sanitizedUsername}/${product_id}/${product_id}.webp`;
+          product.merchantName = merchantData.username; // Add merchant name to the product data
+          product.merchantLogo = merchantData.logo; // Add merchant logo to the product data
+        } else {
+          // Merchant not found, fallback to admin path
+          product.image_path = `/uploads/books/admin__karim_mohamed__/${product_id}/${product_id}.webp`;
+        }
       } else {
-        // Merchant not found, fallback to admin path
+        // This is an admin product
         product.image_path = `/uploads/books/admin__karim_mohamed__/${product_id}/${product_id}.webp`;
       }
     } else {
-      // This is an admin product
-      product.image_path = `/uploads/books/admin__karim_mohamed__/${product_id}/${product_id}.webp`;
+      // Preserve the existing image_path but still set merchant info if needed
+      if (merchantId) {
+        const merchantData = merchantMap.get(merchantId);
+        if (merchantData) {
+          product.merchantName = merchantData.username;
+          product.merchantLogo = merchantData.logo;
+        }
+      }
     }
 
     // Add promotionEndDate property for frontend countdown

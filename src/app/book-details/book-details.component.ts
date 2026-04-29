@@ -261,27 +261,63 @@ export class BookDetailsComponent implements OnInit, OnDestroy {
 
   private async loadAvailableImages(): Promise<void> {
     if (!this.book) return;
-    const potentialImages = [
-      this.getImageUrl(this.book.product_image, this.book),
-      this.getImageUrl(this.book.product_image + '_1.webp', this.book),
-      this.getImageUrl(this.book.product_image + '_2.webp', this.book)
-    ];
-    this.availableImages = [];
-    for (const url of potentialImages) {
-      if (await this.checkImageExists(url)) {
-        this.availableImages.push(url);
+
+    const productId = String(this.book.products_id);
+    // Use the product_image filename as base, or fall back to productId
+    let baseFilename = '';
+    const rawImage = this.book.product_image || this.book.image_path || '';
+    
+    if (rawImage && typeof rawImage === 'string') {
+      const parts = rawImage.split('/');
+      baseFilename = parts[parts.length - 1];
+      // Strip extension
+      if (baseFilename.includes('.')) {
+        baseFilename = baseFilename.substring(0, baseFilename.lastIndexOf('.'));
       }
+      // Strip variation suffixes (_1, _2, etc) if they already exist
+      baseFilename = baseFilename.replace(/_\d+$/, '');
     }
+
+    if (!baseFilename || baseFilename === 'undefined' || baseFilename === 'null') {
+      baseFilename = productId;
+    }
+
+    const potentialImages = [
+      this.getImageUrl(baseFilename + '.webp', this.book),
+      this.getImageUrl(baseFilename + '_1.webp', this.book),
+      this.getImageUrl(baseFilename + '_2.webp', this.book),
+      this.getImageUrl(baseFilename + '_3.webp', this.book),
+      this.getImageUrl(baseFilename + '_4.webp', this.book),
+      this.getImageUrl(baseFilename + '_5.webp', this.book)
+    ];
+
+    console.log(`🔍 Checking available images for baseFilename: ${baseFilename}`);
+    
+    const results = await Promise.all(potentialImages.map(async (url) => {
+      const exists = await this.checkImageExists(url);
+      console.log(`📸 Image ${url} exists: ${exists}`);
+      return exists ? url : null;
+    }));
+
+    // Filter out nulls and duplicates
+    this.availableImages = [...new Set(results.filter((url): url is string => url !== null))];
     this.selectedImageIndex = 0;
+    
+    console.log(`✅ Final availableImages array:`, this.availableImages);
   }
 
   private checkImageExists(url: string): Promise<boolean> {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => resolve(true);
-      img.onerror = () => resolve(false);
-      img.src = url;
-    });
+    return fetch(url, { method: 'GET' })
+      .then(res => res.ok)
+      .catch(() => {
+        // Fallback to Image object if fetch fails (e.g. CORS)
+        return new Promise((resolve) => {
+          const img = new Image();
+          img.onload = () => resolve(true);
+          img.onerror = () => resolve(false);
+          img.src = url;
+        });
+      });
   }
 
   // Helper to get URL for a specific image path

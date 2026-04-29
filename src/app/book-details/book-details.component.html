@@ -42,7 +42,7 @@
             <!-- Default Image Display (for other categories) -->
             <ng-template #defaultImage>
               <img [src]="availableImages[selectedImageIndex] || ''" alt="{{ book.product_name }}"
-                class="w-full max-w-md h-96 object-contain rounded-xl shadow-xl dark:shadow-2xl transform hover:scale-105 transition-transform duration-300 border-4 border-white dark:border-gray-700" />
+                class="w-full max-w-md h-96 object-contain rounded-xl shadow-xl dark:shadow-2xl border-4 border-white dark:border-gray-700" />
             </ng-template>
 
             <!-- شريط الخصم -->
@@ -488,7 +488,7 @@
             <div class="absolute top-2 left-2 z-20">
               <div *ngIf="(product.product_discount_percent || 0) > 0"
                 class="bg-gradient-to-br from-red-500 to-red-600 text-white px-2 py-1 rounded-full text-xs font-bold shadow-lg mb-2">
-                -{{ product.product_discount_percent }}%
+                {{ product.product_discount_percent }}%
               </div>
             </div>
             <div class="absolute top-2 right-2 z-20">
@@ -532,7 +532,7 @@
                 class="w-full h-full object-cover group-hover:scale-125 transition-transform duration-500 ease-out">
               <div *ngIf="(product.product_discount_percent || 0) > 0"
                 class="absolute top-3 left-3 bg-gradient-to-br from-red-500 to-red-600 text-white px-3 py-1.5 rounded-full text-sm font-black shadow-lg transform group-hover:scale-125 transition-transform duration-300">
-                -{{ product.product_discount_percent }}%
+                {{ product.product_discount_percent }}%
               </div>
               <div
                 class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -625,24 +625,18 @@
     width: 100%;
     height: 100%;
     position: relative;
-    transform-style: preserve-3d;
-    transform: rotateY(-25deg);
-    transition: transform 0.8s ease;
     cursor: pointer;
   }
 
   .book:hover {
-    transform: rotateY(0deg);
     box-shadow: 0 35px 60px -15px rgba(0, 0, 0, 0.3);
   }
 
   /* RTL Book Styling */
   .book.book-rtl {
-    transform: rotateY(25deg);
   }
 
   .book.book-rtl:hover {
-    transform: rotateY(0deg);
   }
 
   .book.book-rtl img {
@@ -661,34 +655,7 @@
     box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
   }
 
-  .book.book-rtl::before {
-    /* RTL Spine */
-    right: 0;
-    left: auto;
-    background: linear-gradient(-90deg, #2d3748, #4a5568);
-    transform: translateX(100%) rotateY(-90deg);
-    transform-origin: right;
-  }
-
-  .book::after {
-    /* Pages */
-    content: '';
-    position: absolute;
-    top: 0;
-    top: 2px;
-    right: 0;
-    width: 100%;
-    height: 98%;
-    background: #edf2f7;
-    /* dark:bg-gray-200 */
-    transform: translateZ(-25px);
-    /* Same as spine width */
-    border-radius: 2px 5px 5px 2px;
-    box-shadow: -5px 5px 15px rgba(0, 0, 0, 0.15);
-    background: linear-gradient(to right, #d1d5db, #e5e7eb, #d1d5db);
-    transform: translateZ(-30px);
-    box-shadow: -10px 0 20px 5px rgba(0, 0, 0, 0.2);
-  }
+  /* 3D pseudo elements removed */
 
   .book-info {
     position: absolute;

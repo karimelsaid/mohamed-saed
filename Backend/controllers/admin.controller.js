@@ -49,7 +49,7 @@ function generateRandomBarcode(length = 12) {
 // Helper function to get admin upload directory
 function getAdminUploadDir(adminUsername, barcode) {
   const sanitizedUsername = adminUsername.replace(/[^a-zA-Z0-9-_]/g, '_');
-  return path.join(__dirname, '../uploads/books', 'admin_' + sanitizedUsername, barcode);
+  return path.join(__dirname, '../uploads/books', 'admin__' + sanitizedUsername + '__', barcode);
 }
 
 const upload = multer({
@@ -209,7 +209,7 @@ async function addProduct(req, res) {
 
     // Prepare product data
     const adminName = req.admin.username.replace(/[^a-zA-Z0-9-_]/g, '_');
-    const image_path = '/uploads/books/admin_' + adminName + '/' + barcode + '/' + filename;
+    const image_path = '/uploads/books/admin__' + adminName + '__/' + barcode + '/' + filename;
     const productData = {
       barcode,
       product_name,
@@ -712,7 +712,38 @@ async function replaceProductImage(req, res) {
       return res.status(400).json({ success: false, message: 'Image file is required' });
     }
 
-    const uploadDir = getAdminUploadDir(req.admin.username, barcode);
+    const outputPath = path.join(__dirname, '..', 'output.json');
+    let products = [];
+    let productInfo = null;
+    let productIndex = -1;
+    if (fs.existsSync(outputPath)) {
+      products = JSON.parse(fs.readFileSync(outputPath, 'utf-8'));
+      productIndex = products.findIndex(p => String(p.products_id).trim() === String(barcode).trim());
+      if (productIndex !== -1) {
+        productInfo = products[productIndex];
+      }
+    }
+
+    let uploadDir;
+    let newImagePath = '';
+    const adminUsername = req.admin ? req.admin.username : 'karim_mohamed';
+    const sanitizedAdmin = adminUsername.replace(/[^a-zA-Z0-9-_]/g, '_');
+
+    if (productInfo && productInfo.merchantId) {
+      const merchantUser = await User.findById(productInfo.merchantId);
+      if (merchantUser && merchantUser.username) {
+        const sanitizedMerchant = merchantUser.username.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
+        uploadDir = path.join(__dirname, '../uploads/books', 'merchant_' + sanitizedMerchant, barcode);
+        newImagePath = `/uploads/books/merchant_${sanitizedMerchant}/${barcode}/${barcode}.webp`;
+      } else {
+        uploadDir = getAdminUploadDir(adminUsername, barcode);
+        newImagePath = `/uploads/books/admin__${sanitizedAdmin}__/${barcode}/${barcode}.webp`;
+      }
+    } else {
+      uploadDir = getAdminUploadDir(adminUsername, barcode);
+      newImagePath = `/uploads/books/admin__${sanitizedAdmin}__/${barcode}/${barcode}.webp`;
+    }
+
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
@@ -725,7 +756,41 @@ async function replaceProductImage(req, res) {
       .webp({ quality: 80 }) // Convert to webp with quality 80
       .toFile(filepath);
 
-    res.json({ success: true, message: 'Product image replaced successfully' });
+    // Add cache-busting version to the path so all pages show updated image immediately
+    const versionedImagePath = `${newImagePath}?v=${Date.now()}`;
+
+    // Update MongoDB
+    try {
+      await Product.findOneAndUpdate(
+        { product_image: { $regex: new RegExp(`^${String(barcode).trim()}(\\.webp)?$`, 'i') } },
+        { $set: { image_path: versionedImagePath } }
+      );
+    } catch (err) {
+      console.warn('Failed to update image_path in MongoDB', err.message);
+    }
+
+    // Update output.json
+    if (productIndex !== -1) {
+      products[productIndex].image_path = versionedImagePath;
+      fs.writeFileSync(outputPath, JSON.stringify(products, null, 2));
+    }
+
+    // Update output_raw.json too
+    const rawDataPath = path.join(__dirname, '..', 'output_raw.json');
+    if (fs.existsSync(rawDataPath)) {
+      try {
+        const rawProducts = JSON.parse(fs.readFileSync(rawDataPath, 'utf-8'));
+        const rawIndex = rawProducts.findIndex(p => String(p.products_id).trim() === String(barcode).trim());
+        if (rawIndex !== -1) {
+          rawProducts[rawIndex].image_path = versionedImagePath;
+          fs.writeFileSync(rawDataPath, JSON.stringify(rawProducts, null, 2));
+        }
+      } catch (e) {
+        console.warn('Failed to update output_raw.json image_path', e.message);
+      }
+    }
+
+    res.json({ success: true, message: 'Product image replaced successfully', image_path: versionedImagePath, product_image: barcode });
   } catch (error) {
     console.error('Error in replaceProductImage:', error);
     res.status(500).json({ success: false, message: 'Server error' });

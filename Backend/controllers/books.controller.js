@@ -95,49 +95,33 @@ function unifyAndEnrichData(excelProducts, dbProducts, promoDoc, merchantMap, ra
       isDbProduct: true
     };
 
-    // For products with a matching Excel entry, Excel is the source of truth for pricing.
-    // DB may have stale prices that differ from the current Excel/output.json data.
+    // For products with a matching Excel entry, DB IS NOW THE SOURCE OF TRUTH for pricing and images.
+    // We only take data from Excel if it's missing in the DB.
     if (excelMatch) {
-      if (excelMatch.product_price !== undefined) {
+      if (product.product_price === undefined && excelMatch.product_price !== undefined) {
         mergedProduct.product_price = excelMatch.product_price;
       }
-      if (excelMatch.product_price_before_discount !== undefined) {
+      if (product.product_price_before_discount === undefined && excelMatch.product_price_before_discount !== undefined) {
         mergedProduct.product_price_before_discount = excelMatch.product_price_before_discount;
       }
-      if (excelMatch.product_discount_percent !== undefined) {
+      if (product.product_discount_percent === undefined && excelMatch.product_discount_percent !== undefined) {
         mergedProduct.product_discount_percent = excelMatch.product_discount_percent;
       }
-      if (excelMatch.price_cost !== undefined) {
+      if (product.price_cost === undefined && excelMatch.price_cost !== undefined) {
         mergedProduct.price_cost = excelMatch.price_cost;
       }
     }
 
-    // Apply Price/Promo Restoration Logic
+    // Apply Price/Promo Restoration Logic (Only if DB hasn't overridden it and we need to fix it)
     if (excelMatch) {
-      const excelPriceBefore = Number(excelMatch.product_price_before_discount) || 0;
-      const excelPriceDiscounted = Number(excelMatch.product_price) || 0;
       const dbPrice = Number(product.product_price) || 0;
-
-      // Restore 'price before discount' if Excel has a better (higher) one
-      const currentBefore = Number(mergedProduct.product_price_before_discount) || 0;
-      if (excelPriceBefore > currentBefore || currentBefore === 0) {
-        mergedProduct.product_price_before_discount = excelPriceBefore;
-      }
-
-      // Restore Excel discounted price if it's lower than DB and we have a valid 'before' price
-      const finalBefore = Number(mergedProduct.product_price_before_discount) || 0;
-      if (excelPriceDiscounted > 0 && excelPriceDiscounted < dbPrice && finalBefore > excelPriceDiscounted) {
-        mergedProduct.product_price = excelPriceDiscounted;
-      }
-
-      if (!product.product_discount_percent && excelMatch.product_discount_percent) {
-        mergedProduct.product_discount_percent = excelMatch.product_discount_percent;
-      }
-
-      // Force 'rival' status to true if a valid discount exists (ensures badges show in listing pages)
-      if (excelMatch.rival === true || finalBefore > Number(mergedProduct.product_price)) {
-        mergedProduct.rival = true;
-      } else if (product.rival === undefined && excelMatch.rival !== undefined) {
+      const dbPriceBefore = Number(product.product_price_before_discount) || 0;
+      
+      // If DB has a discount percent but no before price, we let the AUTO-FIX handle it later.
+      // We no longer blindly force Excel prices over DB prices.
+      
+      // Keep rival status if DB doesn't have it defined
+      if (product.rival === undefined && excelMatch.rival !== undefined) {
         mergedProduct.rival = excelMatch.rival;
       }
     }
@@ -230,10 +214,13 @@ function unifyAndEnrichData(excelProducts, dbProducts, promoDoc, merchantMap, ra
       book.product_discount_percent = discountPercent;
     }
 
-    // 1. If we have a valid 'before' price higher than current, calculate percent if missing
-    if (currentBefore > finalPrice && (discountPercent === 0)) {
+    // 1. Always recalculate accurate percentage if there's a valid before price
+    if (currentBefore > finalPrice) {
       book.product_discount_percent = Math.round(((currentBefore - finalPrice) / currentBefore) * 100);
       discountPercent = book.product_discount_percent;
+    } else {
+      book.product_discount_percent = 0;
+      discountPercent = 0;
     }
 
     // 2. If we have percent but 'before' is missing or same as current, calculate 'before'

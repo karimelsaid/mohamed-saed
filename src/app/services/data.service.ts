@@ -24,51 +24,72 @@ export class DataService {
   getBookImageUrl(book: any): string {
     if (!book) return 'assets/images/book-placeholder.jpg';
 
-    // 1. If we have a full image_path that isn't just an ID, use it (but sanitize prefix)
+    // 1. Get the base image source (prioritize image_path as it contains the ?v= timestamp)
     let imagePath = book.image_path || book.product_image || '';
     if (typeof imagePath !== 'string') imagePath = String(imagePath);
 
-    // 2. Resolve the products_id
-    const products_id = book.products_id || (book as any)._id;
+    // 2. Resolve the products_id (used for folder naming)
+    let products_id = book.products_id || (book as any)._id;
+    if (products_id) products_id = String(products_id).trim();
 
-    // 3. If it's a raw barcode/numeric ID, build the full subfolder path
-    if (imagePath && !imagePath.includes('/') && /^\d+$/.test(imagePath)) {
-      const isAdmin = book.merchantRole === 'admin' || (!book.merchantId && !book.merchantName) || book.merchantName === 'تاجر كنوز' || book.merchantName === 'كنوز';
-      if (!isAdmin) {
-        const sanitizedMerchantName = (book.merchantName || 'merchant').replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
-        imagePath = `merchant_${sanitizedMerchantName}/${imagePath}/${imagePath}.webp`;
-      } else {
-        imagePath = `admin__karim_mohamed__/${imagePath}/${imagePath}.webp`;
-      }
-    } 
-    // 4. Handle paths that might be already partially constructed but missing subfolder context
-    else if (imagePath && imagePath.includes('/') && !imagePath.includes('admin__') && !imagePath.includes('merchant_')) {
-      // This is a legacy path format, try to reconstruct it correctly
+    // 3. Determine if it's admin or merchant
+    const merchantName = book.merchantName;
+    const isAdmin = book.merchantRole === 'admin' || !merchantName || merchantName === 'كنوز' || merchantName === 'تاجر كنوز' || merchantName === 'Kenouz';
+
+    // 4. Handle paths with slashes (Extract filename or validate structured path)
+    if (imagePath && imagePath.includes('/')) {
       const parts = imagePath.split('/');
       const filename = parts[parts.length - 1];
-      const isAdmin = book.merchantRole === 'admin' || (!book.merchantId && !book.merchantName) || book.merchantName === 'تاجر كنوز' || book.merchantName === 'كنوز';
       
-      if (!isAdmin) {
-          const sanitizedMerchantName = (book.merchantName || 'merchant').replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
-          imagePath = `merchant_${sanitizedMerchantName}/${products_id}/${filename}`;
+      // Check if the path's ownership matches the book's ownership
+      const pathIsAdmin = imagePath.includes('admin');
+      const ownershipMatches = (isAdmin && pathIsAdmin) || (!isAdmin && imagePath.includes('merchant'));
+
+      if (ownershipMatches && parts.length >= 3) {
+        // Ownership matches and we have a full structured path, use it
+        imagePath = parts.slice(-3).join('/');
       } else {
-          imagePath = `admin__karim_mohamed__/${products_id}/${filename}`;
+        // Ownership mismatch or incomplete path, just take the filename and rebuild later
+        imagePath = filename;
       }
     }
 
-    // 5. Clean up the final result to prevent double-slashing or redundant uploadsBaseUrl
-    const cleanBase = this.uploadsBaseUrl.replace(/\/$/, '');
-    
-    // If the path already has the base, don't prepend it again
-    if (imagePath.includes(cleanBase)) {
-        return imagePath.startsWith('/') ? imagePath : '/' + imagePath;
+    // 5. If it's just a filename (no slashes), wrap it in the structured path
+    if (imagePath && !imagePath.includes('/')) {
+      let filename = imagePath;
+      if (!filename.includes('.')) {
+        filename += '.webp';
+      }
+
+      const folderName = products_id || (filename.match(/^\d+/) ? filename.match(/^\d+/)![0] : 'unknown');
+      
+      if (isAdmin) {
+        imagePath = `admin__karim_mohamed__/${folderName}/${filename}`;
+      } else {
+        const sanitizedMerchantName = String(merchantName || 'merchant').replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
+        imagePath = `merchant_${sanitizedMerchantName}/${folderName}/${filename}`;
+      }
+    } 
+    // 6. Handle empty path fallback
+    else if (!imagePath) {
+      const folderName = products_id || 'unknown';
+      if (isAdmin) {
+        imagePath = `admin__karim_mohamed__/${folderName}/${folderName}.webp`;
+      } else {
+        const sanitizedMerchantName = String(merchantName || 'merchant').replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
+        imagePath = `merchant_${sanitizedMerchantName}/${folderName}/${folderName}.webp`;
+      }
     }
 
-    // Ensure imagePath doesn't start with a slash if we're prepending the base
-    const finalPath = imagePath.startsWith('/') ? imagePath.substring(1) : imagePath;
+    // 7. Return the final URL with uploadsBaseUrl
+    const cleanBase = this.uploadsBaseUrl.replace(/\/$/, '');
     
-    // Ensure we are pointing at the books subfolder specifically if not already there
-    // But since cleanBase IS /uploads/books, we just append
+    // Check if the path already contains the base (to avoid double prefixing)
+    if (imagePath.includes(cleanBase)) {
+      return imagePath.startsWith('/') ? imagePath : '/' + imagePath;
+    }
+
+    const finalPath = imagePath.startsWith('/') ? imagePath.substring(1) : imagePath;
     return `${cleanBase}/${finalPath}`;
   }
 
@@ -84,9 +105,21 @@ export class DataService {
           let id = book.products_id || (book as any)._id;
           if (id) {
             id = id.toString();
-            // Keep the first occurrence — backend already handles dedup and pricing
+            
+            // Standardize merchant detection (Treat Kenouz/Empty as Admin)
+            const rawMerchantName = book.merchantName || '';
+            const isKenouz = !rawMerchantName || rawMerchantName === 'كنوز' || rawMerchantName === 'تاجر كنوز' || rawMerchantName === 'Kenouz' || book.merchantRole === 'admin';
+            
+            const enrichedBook = { 
+              ...book, 
+              products_id: id,
+              merchantRole: isKenouz ? 'admin' : (book.merchantRole || 'merchant'),
+              // Ensure merchantName is removed if it's Kenouz to hide "By Kenouz"
+              merchantName: isKenouz ? null : rawMerchantName
+            };
+
             if (!uniqueItems.has(id)) {
-              uniqueItems.set(id, { ...book, products_id: id });
+              uniqueItems.set(id, enrichedBook);
             }
           }
         });

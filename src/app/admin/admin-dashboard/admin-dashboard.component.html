@@ -1891,8 +1891,27 @@
 
               <!-- Card Header: Image, Name, Price, Main Actions -->
               <div class="p-4 flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                <img [src]="getProductImageUrl(product)" [alt]="product.product_name"
-                  class="w-24 h-24 object-cover rounded-md border dark:border-gray-600">
+                <div class="relative group shrink-0"
+                     (dragover)="onUpdateImageDragOver($event, product)"
+                     (dragleave)="onUpdateImageDragLeave($event, product)"
+                     (drop)="onUpdateImageDrop($event, product)">
+                  <img [src]="getProductImageUrl(product)" [alt]="product.product_name"
+                    class="w-24 h-24 object-cover rounded-md border transition-all duration-200"
+                    [ngClass]="product['isDragOver'] ? 'border-blue-500 ring-4 ring-blue-500/50 scale-105' : 'dark:border-gray-600'">
+                  <div *ngIf="product.editMode"
+                    class="absolute inset-0 bg-black flex flex-col items-center justify-center transition-opacity rounded-md cursor-pointer border-2 border-dashed border-transparent"
+                    [ngClass]="product['isDragOver'] ? 'opacity-100 border-blue-400 bg-opacity-80 backdrop-blur-sm' : 'bg-opacity-60 opacity-0 group-hover:opacity-100'">
+                    <label class="text-white text-xs text-center cursor-pointer w-full h-full flex flex-col items-center justify-center p-1 m-0">
+                      <fa-icon [icon]="product['isDragOver'] ? ['fas', 'cloud-upload-alt'] : ['fas', 'camera']" 
+                               [class.text-blue-300]="product['isDragOver']"
+                               class="text-xl block mb-1 transition-transform"
+                               [class.scale-125]="product['isDragOver']"></fa-icon>
+                      <span *ngIf="!product['isDragOver']">تغيير</span>
+                      <span *ngIf="product['isDragOver']" class="text-blue-200 font-bold">أفلت الصورة هنا</span>
+                      <input type="file" (change)="onImageSelectedForUpdate($event, product)" accept="image/*" class="hidden">
+                    </label>
+                  </div>
+                </div>
 
                 <div class="flex-grow">
                   <div class="flex items-center gap-2">

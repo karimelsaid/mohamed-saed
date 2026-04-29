@@ -2715,6 +2715,72 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     }
   }
 
+  onUpdateImageDragOver(event: DragEvent, product: Product): void {
+    event.preventDefault();
+    event.stopPropagation();
+    product['isDragOver'] = true;
+  }
+
+  onUpdateImageDragLeave(event: DragEvent, product: Product): void {
+    event.preventDefault();
+    event.stopPropagation();
+    product['isDragOver'] = false;
+  }
+
+  onUpdateImageDrop(event: DragEvent, product: Product): void {
+    event.preventDefault();
+    event.stopPropagation();
+    product['isDragOver'] = false;
+
+    if (event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files.length > 0) {
+      const file = event.dataTransfer.files[0];
+      this.processImageUpdate(file, product);
+    }
+  }
+
+  onImageSelectedForUpdate(event: Event, product: Product): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      const file = input.files[0];
+      this.processImageUpdate(file, product);
+      input.value = '';
+    }
+  }
+
+  processImageUpdate(file: File, product: Product): void {
+    const validImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/svg+xml'];
+    
+    if (!validImageTypes.includes(file.type)) {
+      this.showErrorModal('يرجى تحميل ملف صورة صالح (JPEG, PNG, GIF, WEBP, BMP, SVG).');
+      return;
+    }
+    // @ts-ignore
+    if (this.MAX_IMAGE_SIZE_BYTES && file.size > this.MAX_IMAGE_SIZE_BYTES) {
+      this.showErrorModal('حجم الصورة أكبر من 3 ميجابايت. يرجى تحميل صورة أصغر.');
+      return;
+    }
+
+    this.showProgressModal('جاري تحديث صورة المنتج...');
+    const formData = new FormData();
+    formData.append('image', file);
+
+    this.http.post(`${this.backendBaseUrl}/admin/products/${product.products_id}/image`, formData).subscribe({
+      next: (res: any) => {
+        this.closeProgressModal();
+        this.showSuccessModal('تم تحديث صورة المنتج بنجاح');
+        product['imageUpdateTimestamp'] = new Date().getTime(); // Force image reload
+        
+        if (res.image_path) {
+          product.image_path = res.image_path;
+          product.product_image = res.product_image;
+        }
+      },
+      error: (err) => {
+        this.closeProgressModal();
+        this.showErrorModal('حدث خطأ أثناء تحديث صورة المنتج');
+      }
+    });
+  }
 
   onEpubSelectedForUpdate(event: Event, product: Product): void {
     const input = event.target as HTMLInputElement;
@@ -3308,10 +3374,16 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     // This logic is now consistent with other working components like search-results.
     let imagePath = product.image_path || product.product_image || '';
     const merchantName = product.merchantName;
+    const cacheBuster = product['imageUpdateTimestamp'] ? `?t=${product['imageUpdateTimestamp']}` : '';
 
     // If a full path is already provided in image_path, use it directly.
     if (imagePath && imagePath.startsWith('/uploads/books/')) {
-      // The path is already correct, just return it.
+      // The path is already correct. If it already has a cache buster from the server, keep it.
+      // If we have a local cacheBuster, we can append it, otherwise return as is.
+      if (cacheBuster) {
+        const separator = imagePath.includes('?') ? '&' : '?';
+        return imagePath + separator + cacheBuster.replace('?', '');
+      }
       return imagePath;
     }
 
@@ -3334,7 +3406,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     // uploadsBaseUrl is likely '/uploads' or '/uploads/books'
     // The final path should be /uploads/books/merchant_...
     const fullPath = `${this.uploadsBaseUrl}/${finalPath}`.replace('/books/books/', '/books/');
-    return fullPath;
+    return fullPath + cacheBuster;
   }
 
   showProductAddedModal(productData: any, files: File[]): void {

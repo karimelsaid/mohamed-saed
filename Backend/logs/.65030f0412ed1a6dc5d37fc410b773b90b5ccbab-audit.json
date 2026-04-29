@@ -6,21 +6,6 @@
     "auditLog": "D:\\My projects\\Kenouz\\Backend\\logs\\.65030f0412ed1a6dc5d37fc410b773b90b5ccbab-audit.json",
     "files": [
         {
-            "date": 1775471408484,
-            "name": "D:\\My projects\\Kenouz\\Backend\\logs\\app-2026-04-06.log",
-            "hash": "e819d844091579676c7dc1ec377ae14a0a659b2240804c428dfc176c4d7c17d2"
-        },
-        {
-            "date": 1775548398378,
-            "name": "D:\\My projects\\Kenouz\\Backend\\logs\\app-2026-04-07.log",
-            "hash": "cf4b40a6ee2b5be4ad9eaa0fbe4da9cdc6e705dd64a07bf24fce61ea1036fe25"
-        },
-        {
-            "date": 1775621822466,
-            "name": "D:\\My projects\\Kenouz\\Backend\\logs\\app-2026-04-08.log",
-            "hash": "01dd70f2e48e1f022d2af5bb4f0b84baeab963d4c4fd124e0f468e5dbb7f3af2"
-        },
-        {
             "date": 1776184419277,
             "name": "D:\\My projects\\Kenouz\\Backend\\logs\\app-2026-04-14.log",
             "hash": "5cc4a6959f7f28bd0b5a60ba05e576d304498a2a63358e0f331af4aee468764c"
@@ -34,6 +19,16 @@
             "date": 1776636067124,
             "name": "D:\\My projects\\Kenouz\\Backend\\logs\\app-2026-04-20.log",
             "hash": "67a5e7ff076aed444288122b42534cd3ae0219ce6e479f67e52c42badec03f55"
+        },
+        {
+            "date": 1776947217767,
+            "name": "D:\\My projects\\Kenouz\\Backend\\logs\\app-2026-04-23.log",
+            "hash": "f08077806ecc030d5c6101cb34e78eff57b941071a228ca5695b6764c8b16019"
+        },
+        {
+            "date": 1777116235375,
+            "name": "D:\\My projects\\Kenouz\\Backend\\logs\\app-2026-04-25.log",
+            "hash": "9c9733ffc99b679c23e5633985a04e786e0288e2072899c01440ed3ceaeb41a0"
         }
     ],
     "hashType": "sha256"

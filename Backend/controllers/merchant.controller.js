@@ -9,6 +9,19 @@ const bcrypt = require('bcrypt');
 const { addProductToExcel, categoryMap, downloadAndConvertExcel, updateExcelFromJson } = require('../services/excel.service');
 const sitemapService = require('../services/sitemap.service');
 
+const normalizeArabic = (str) => {
+  if (!str) return '';
+  return str
+    .replace(/[أإآا]/g, 'ا')
+    .replace(/[ةه]/g, 'ه')
+    .replace(/[ىي]/g, 'ي')
+    .replace(/ؤ/g, 'و')
+    .replace(/ئ/g, 'ي')
+    .replace(/[\u064B-\u065F]/g, '') // Remove diacritics
+    .trim()
+    .toLowerCase();
+};
+
 // Mapping for merchant categories to standard categories
 const merchantCategoryMap = {
   'أعمال وإدارة': 'أعمال وتسويق ومالية',
@@ -16,8 +29,6 @@ const merchantCategoryMap = {
   'فنون وثقافة': 'فنون وحرف',
   'تربية وتعليم': 'تربية وأطفال',
   'أدوات مكتبية': 'أدوات مكتبية',
-  'إلكترونيات': 'إلكترونيات',
-  'ملابس': 'ملابس',
   'أخرى': 'غير مصنف',
   'رواية': 'روايات وقصص',
   'ديني': 'كتب دينية',
@@ -28,14 +39,6 @@ const merchantCategoryMap = {
   'تاريخ': 'تاريخ وسير ذاتية',
   'تربية': 'تربية وأطفال',
   'ادوات': 'أدوات مكتبية',
-  'تجميل': 'التجميل والعناية الشخصية',
-  'احذية': 'الأحذية',
-  'اثاث': 'أثاث وديكور المنزل',
-  'العاب': 'هداية وألعاب',
-  'أقمشة': 'أقمشة',
-  'أثاث': 'أثاث وديكور المنزل',
-  'ألعاب': 'هدية وألعاب',
-  'أقمشة': 'أقمشة',
 };
 
 // Reverse categoryMap for mapping full names to short keys
@@ -199,6 +202,16 @@ async function addProduct(req, res) {
       return res.status(403).json({ success: false, message: 'حسابك موقوف مؤقتاً. لا يمكنك إضافة منتجات جديدة.' });
     }
 
+    // Check if publisher upload is allowed globally
+    const SystemSettings = require('../models/SystemSettings');
+    const settings = await SystemSettings.getInstance();
+    if (settings.bourseConfig && settings.bourseConfig.allowPublisherUpload === false) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'عذراً، إضافة الكتب من قبل دور النشر معطلة حالياً من قبل الإدارة.' 
+      });
+    }
+
     // Generate barcode if not present
     const barcode = generateRandomBarcode();
     let { product_name, product_quantity, product_category, product_description, product_price, price_cost, copyType, condition, weight, length, width, height } = req.body;
@@ -346,6 +359,82 @@ async function getCurrentMerchant(req, res) {
       success: false,
       message: 'Error loading merchant data'
     });
+  }
+}
+
+async function getPublicMerchants(req, res) {
+  try {
+    const merchants = await User.find({ 
+      role: 'merchant', 
+      approved: true, 
+      suspended: { $ne: true } 
+    })
+    .select('username merchantName logo bio coverPhoto _id')
+    .sort({ createdAt: -1 });
+
+    // 1. Get all unique publishers that have products in the system (from DB)
+    const activePublishersRaw = await Product.distinct('publisher');
+    const normalizedActivePublishers = activePublishersRaw
+      .filter(p => p && p.trim())
+      .map(p => normalizeArabic(p));
+
+    // 2. Format Merchants (User model)
+    const formattedMerchants = merchants
+      .map(m => {
+        const name = m.merchantName || m.username;
+        return {
+          _id: m._id,
+          name: name,
+          logo: m.logo,
+          bio: m.bio,
+          coverPhoto: m.coverPhoto,
+          normalizedName: normalizeArabic(name)
+        };
+      })
+      // ONLY show merchants that are in the active publisher list
+      .filter(m => normalizedActivePublishers.includes(m.normalizedName));
+
+    // 3. Add Virtual Publishers (those who have an uploaded logo in the publishers folder)
+    const fs = require('fs');
+    const path = require('path');
+    const publishersDir = path.join(__dirname, '..', 'uploads', 'books', 'publishers');
+    
+    if (fs.existsSync(publishersDir)) {
+      const files = fs.readdirSync(publishersDir);
+      files.forEach(file => {
+        if (file.endsWith('.webp') || file.endsWith('.png') || file.endsWith('.jpg')) {
+          const rawPublisherName = file.replace(/\.(webp|png|jpg)$/, '').replace(/[_-]/g, ' ').trim();
+          const normalizedFileName = normalizeArabic(rawPublisherName);
+          
+          // Check if this publisher actually has products
+          const hasProducts = normalizedActivePublishers.includes(normalizedFileName);
+          
+          if (hasProducts) {
+            // Avoid duplicates if a merchant already exists with this name
+            const isDuplicate = formattedMerchants.some(m => m.normalizedName === normalizedFileName);
+            
+            if (!isDuplicate) {
+              formattedMerchants.push({
+                _id: rawPublisherName,
+                name: rawPublisherName,
+                logo: `publishers/${file}`,
+                bio: `إصدارات ${rawPublisherName}`,
+                isPublisher: true,
+                normalizedName: normalizedFileName
+              });
+            }
+          }
+        }
+      });
+    }
+
+    // Remove the temporary normalizedName field before sending to client
+    const finalMerchants = formattedMerchants.map(({ normalizedName, ...rest }) => rest);
+
+    res.json({ success: true, merchants: finalMerchants });
+  } catch (error) {
+    console.error('Error in getPublicMerchants:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 }
 
@@ -532,6 +621,16 @@ async function submitProductUpdateRequest(req, res) {
 
     if (product.status !== 'approved') {
       return res.status(400).json({ success: false, message: 'Only approved products can be updated' });
+    }
+
+    // Check if publisher upload/update is allowed globally
+    const SystemSettings = require('../models/SystemSettings');
+    const settings = await SystemSettings.getInstance();
+    if (settings.bourseConfig && settings.bourseConfig.allowPublisherUpload === false) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'عذراً، تحديث الكتب من قبل دور النشر معطل حالياً من قبل الإدارة.' 
+      });
     }
 
     // Create a new ProductUpdateRequest
@@ -851,17 +950,10 @@ async function getMerchantById(req, res) {
   }
 }
 
+
 async function getMerchantByUsername(req, res) {
   try {
-    const rawUsername = req.params.username ? req.params.username.trim() : '';
-
-    // Guard: ignore lookups that appear to be static assets (ending in common extensions)
-    const fileExtensions = /\.(js|css|png|jpg|jpeg|gif|svg|webp|ico|map|ttf|woff|woff2)$/i;
-    if (fileExtensions.test(rawUsername)) {
-      return res.status(404).json({ success: false, message: 'Invalid merchant name' });
-    }
-
-    // Support slugged URLs: convert dashes to spaces for lookup
+    const rawUsername = req.params.username;
     const usernameWithSpaces = rawUsername.replace(/-/g, ' ');
 
     // Use regex for flexible matching (case-insensitive, ignore surrounding spaces, handle Arabic variations)
@@ -871,7 +963,9 @@ async function getMerchantByUsername(req, res) {
       pattern = pattern
         .replace(/[أإآا]/g, '[أإآا]')
         .replace(/[ةه]/g, '[ةه]')
-        .replace(/[ىي]/g, '[ىي]');
+        .replace(/[ىي]/g, '[ىي]')
+        .replace(/ؤ/g, '[ؤو]')
+        .replace(/ئ/g, '[ئىي]');
       return { $regex: new RegExp('^\\s*' + pattern + '\\s*$', 'i') };
     };
 
@@ -885,38 +979,66 @@ async function getMerchantByUsername(req, res) {
       ]
     };
 
-    // Reduced noise: only log if we actually perform a real lookup (not an obvious asset request)
-    // console.log('🔍 [DEBUG] Merchant Lookup Request for:', rawUsername);
-
     const merchant = await User.findOne(searchQuery);
 
     if (!merchant) {
-      // Silenced: console.log('❌ [DEBUG] No merchant document matched the query.');
-      // Let's also check if the user exists but has a different role
-      const anyUser = await User.findOne({
-        $or: [
-          { username: rawUsername },
-          { username: usernameWithSpaces },
-          { merchantName: rawUsername },
-          { merchantName: usernameWithSpaces }
-        ]
-      });
-      if (anyUser) {
-        // Silenced: console.log('⚠️ [DEBUG] Found a user but role is:', anyUser.role, 'Approved:', anyUser.approved);
-      } else {
-        // Silenced: console.log('❌ [DEBUG] Absolutely no user found with these names.');
+      // FALLBACK: Check if this name exists as a 'publisher' in output.json
+      const fs = require('fs');
+      const path = require('path');
+      const outputPath = path.join(__dirname, '..', 'output.json');
+      
+      if (fs.existsSync(outputPath)) {
+        const products = JSON.parse(fs.readFileSync(outputPath, 'utf-8'));
+        const normalizedTarget = normalizeArabic(usernameWithSpaces);
+        
+        const existsAsPublisher = products.some(p => 
+          normalizeArabic(p.publisher) === normalizedTarget
+        );
+
+        if (existsAsPublisher) {
+          // Return a "virtual" merchant
+          const publisherName = usernameWithSpaces;
+          const publishersDir = path.join(__dirname, '../uploads/books/publishers');
+          
+          // Find the actual logo file (handle spaces vs underscores)
+          let logoFile = '';
+          if (fs.existsSync(publishersDir)) {
+            const files = fs.readdirSync(publishersDir);
+            const foundFile = files.find(f => {
+              const namePart = f.replace('.webp', '').replace(/[_-]/g, ' ').trim().toLowerCase();
+              const normalizedName = normalizeArabic(publisherName);
+              const normalizedFile = normalizeArabic(namePart);
+              return normalizedFile === normalizedName || namePart === publisherName.toLowerCase();
+            });
+            if (foundFile) logoFile = `publishers/${foundFile}`;
+          }
+
+          return res.json({
+            success: true,
+            merchant: {
+              _id: publisherName,
+              merchantName: publisherName,
+              name: publisherName,
+              logo: logoFile || `publishers/${publisherName.replace(/\s+/g, '_')}.webp`,
+              bio: `إصدارات ${publisherName}`,
+              approved: true,
+              isVirtual: true,
+              isPublisher: true // Hide profile button in frontend
+            }
+          });
+        }
       }
+
       return res.status(404).json({
         success: false,
         message: 'Merchant not found'
       });
     }
 
-    // Only return approved merchants and basic public information
     if (!merchant.approved) {
       return res.status(404).json({
         success: false,
-        message: 'Merchant not found or not approved'
+        message: 'Merchant not yet approved'
       });
     }
 
@@ -924,59 +1046,93 @@ async function getMerchantByUsername(req, res) {
       success: true,
       merchant: {
         _id: merchant._id,
-        merchantName: merchant.merchantName || merchant.username,
-        name: merchant.merchantName || merchant.username,
+        merchantName: merchant.merchantName,
+        name: merchant.merchantName,
         email: merchant.email,
         phone: merchant.phone,
-        governorate: merchant.governorate,
-        city: merchant.city,
-        village: merchant.village,
         logo: merchant.logo,
         coverPhoto: merchant.coverPhoto,
         bio: merchant.bio,
-        role: merchant.role,
+        governorate: merchant.governorate,
+        isPublisher: false
       }
     });
   } catch (error) {
-    console.error('Error in getMerchantByUsername:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error loading merchant data'
-    });
+    console.error('Error fetching merchant:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 }
 
 async function getProductsByMerchantId(req, res) {
   try {
     const { id } = req.params;
-
-    // Check if merchant exists and is approved
-    const merchant = await User.findById(id);
-    if (!merchant || !merchant.approved) {
-      return res.status(404).json({ success: false, message: 'Merchant not found' });
+    const isObjectId = /^[0-9a-fA-F]{24}$/.test(id);
+    const normalizedTargetName = normalizeArabic(id.replace(/-/g, ' '));
+    const Product = require('../models/Product.model');
+    
+    let dbProductsById = [];
+    if (isObjectId) {
+      dbProductsById = await Product.find({ merchantId: id, status: 'approved' }).lean();
     }
 
-    const Product = require('../models/Product.model');
+    // Also find DB products where the 'publisher' field matches this name (for virtual or reassigned publishers)
+    const dbProductsByPublisher = await Product.find({
+      status: 'approved',
+      publisher: { $exists: true, $ne: '' }
+    }).lean();
 
-    // Only return approved products for public viewing
-    const products = await Product.find({
-      merchantId: id,
-      status: 'approved'
-    }).sort({ createdAt: -1 }).lean();
+    const matchedDbProductsByPublisher = dbProductsByPublisher.filter(p => 
+      normalizeArabic(p.publisher) === normalizedTargetName
+    );
 
-    // Ensure products_id is present — use product_image (barcode) as fallback, NOT _id
-    const enrichedProducts = products.map(p => ({
-      ...p,
-      products_id: p.products_id || p.product_image || p._id.toString(),
-      shippingMethod: merchant.merchantShippingMethod || 'knoozbook'
-    }));
+    const fs = require('fs');
+    const path = require('path');
+    const outputPath = path.join(__dirname, '..', 'output.json');
+    
+    let catalogProducts = [];
+    if (fs.existsSync(outputPath)) {
+      const allCatalog = JSON.parse(fs.readFileSync(outputPath, 'utf-8'));
+      catalogProducts = allCatalog.filter(p => 
+        normalizeArabic(p.publisher) === normalizedTargetName
+      );
+    }
 
-    res.json({ success: true, products: enrichedProducts });
+    const productMap = new Map();
+    
+    // 1. Add DB products by ID
+    dbProductsById.forEach(p => {
+       const key = (p.products_id || p._id).toString();
+       productMap.set(key, p);
+    });
+
+    // 2. Add DB products by Publisher Name (may overlap or be new)
+    matchedDbProductsByPublisher.forEach(p => {
+       const key = (p.products_id || p._id).toString();
+       if (!productMap.has(key)) {
+         productMap.set(key, p);
+       }
+    });
+    
+    // 3. Add catalog products
+    catalogProducts.forEach(p => {
+      const key = (p.products_id || p.barcode).toString();
+      if (!productMap.has(key)) {
+        productMap.set(key, p);
+      }
+    });
+
+    const finalProducts = Array.from(productMap.values());
+
+    res.status(200).json({
+      success: true,
+      products: finalProducts
+    });
   } catch (error) {
     console.error('Error in getProductsByMerchantId:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
+    res.status(500).json({ success: false, message: 'Internal server error' });
   }
 }
+
 
 async function updateMerchantProfile(req, res) {
   try {
@@ -1198,6 +1354,7 @@ module.exports = {
   getMerchantById,
   getMerchantByUsername,
   getProductsByMerchantId,
+  getPublicMerchants,
   updateMerchantProfile,
   updateShippingRates
 };

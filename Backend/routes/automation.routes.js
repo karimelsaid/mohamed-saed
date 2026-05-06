@@ -19,4 +19,9 @@ router.post('/log', automationController.receiveLog);
 // n8n fetches random product
 router.get('/random-product', automationController.getRandomProduct);
 
+// Claude and n8n advanced integration
+router.post('/claude/execute', automationController.executeClaudeCommand);
+router.get('/n8n/stats', automationController.getN8nStats);
+router.post('/deploy', automationController.deployToProduction);
+
 module.exports = router;

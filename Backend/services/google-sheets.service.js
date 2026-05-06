@@ -2,6 +2,23 @@ const { google } = require('googleapis');
 const { auth } = require('../config/drive');
 const AutomationSetting = require('../models/AutomationSetting.model');
 
+function cleanPrice(val) {
+    if (val === undefined || val === null) return 0;
+    if (typeof val === 'number') {
+        const s = val.toString();
+        if (val < 10 && s.includes('.') && s.split('.')[1].length === 3) {
+            return val * 1000;
+        }
+        return val;
+    }
+    let s = String(val).trim();
+    s = s.replace(/[^\d.,]/g, '');
+    if (s.includes('.') && s.split('.')[1].length === 3 && !s.includes(',')) {
+        return parseFloat(s.replace('.', ''));
+    }
+    return parseFloat(s.replace(/,/g, '')) || 0;
+}
+
 class GoogleSheetsService {
     constructor() {
         this.sheets = google.sheets({ version: 'v4', auth });
@@ -78,6 +95,8 @@ class GoogleSheetsService {
             p.product_price || 0,
             p.price_cost || 0,
             p.merchantId ? p.merchantId.toString() : '',
+            p.image_path || '',
+            p.weight || 0,
             p.author || '',
             p.publisher || '',
             p.pages || '',
@@ -192,8 +211,7 @@ class GoogleSheetsService {
         const categoryKeywords = [
             'كتب دينية', 'روايات وقصص', 'تطوير الذات', 'علم النفس', 'تاريخ', 'سير ذاتية', 
             'تربية وأطفال', 'سياسة', 'اقتصاد', 'أعمال وتسويق ومالية', 'قواميس ومراجع', 
-            'صحة وطب وعلوم', 'فنون وحرف', 'مستندات', 'طباعة', 'إلكترونيات', 'أدوات مكتبية', 
-            'تجميل', 'ملابس', 'أثاث', 'العاب', 'هدايا'
+            'صحة وطب وعلوم', 'فنون وحرف', 'مستندات', 'طباعة', 'أدوات مكتبية'
         ];
 
         let numericFound = 0;
@@ -221,12 +239,12 @@ class GoogleSheetsService {
                 continue;
             }
 
-            if (/^\d+(\.\d+)?$/.test(val)) {
+            if (/^\d+(\.\d+)?$/.test(val) || val.includes('.')) {
                 const num = parseFloat(val);
                 numericFound++;
                 
                 if (numericFound === 1) result.product_quantity = num;
-                else if (numericFound === 2) result.product_price = num;
+                else if (numericFound === 2) result.product_price = cleanPrice(val);
                 else if (numericFound === 3 && num < 100) result.product_discount_percent = num;
                 else if (numericFound > 3 && !result.barcode) result.barcode = val;
             } else if (val.length > 5 && val.length < 55 && !result.product_category) {
@@ -386,6 +404,44 @@ class GoogleSheetsService {
         } catch (error) {
             console.error('❌ [GoogleSheetsService] Fetch Error:', error.message);
             return [];
+        }
+    }
+
+    /**
+     * Sync all products (Clear & Overwrite) to Google Sheets.
+     */
+    async syncAllProducts(products) {
+        try {
+            const spreadsheetId = await this.getSheetId();
+            if (!spreadsheetId) return null;
+
+            const spreadsheet = await this.sheets.spreadsheets.get({ spreadsheetId });
+            const sheetName = spreadsheet.data.sheets[0].properties.title;
+            
+            // 1. Prepare all rows
+            const rows = products.map(p => this.mapProductToRow(p));
+            
+            // 2. Clear current data (A2:AZ) to keep headers
+            await this.sheets.spreadsheets.values.clear({
+                spreadsheetId,
+                range: `${sheetName}!A2:AZ`,
+            });
+
+            // 3. Update with new data
+            if (rows.length > 0) {
+                await this.sheets.spreadsheets.values.update({
+                    spreadsheetId,
+                    range: `${sheetName}!A2`,
+                    valueInputOption: 'USER_ENTERED',
+                    requestBody: { values: rows }
+                });
+            }
+
+            console.log(`✅ [GoogleSheetsService] Full sync completed: ${products.length} products`);
+            return true;
+        } catch (error) {
+            console.error('❌ [GoogleSheetsService] Full Sync Error:', error.message);
+            return false;
         }
     }
 }

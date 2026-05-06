@@ -349,7 +349,7 @@ export class RewayatComponent implements OnInit, OnDestroy {
         const distance = promoEndDate - now;
 
         if (distance < 0) {
-          book.remainingTime = book.rival ? '' : 'انتهى العرض';
+          book.remainingTime = book.rival ? '' : '';
           return;
         }
 

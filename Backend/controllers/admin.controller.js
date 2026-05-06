@@ -2,7 +2,7 @@ const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
 const sharp = require('sharp');
-const { addProductToExcel, categoryMap, reverseCategoryMap, downloadAndConvertExcel, updateExcelFromJson } = require('../services/excel.service');
+const { addProductToExcel, bulkAddProductsToExcel, categoryMap, reverseCategoryMap, downloadAndConvertExcel, updateExcelFromJson } = require('../services/excel.service');
 
 // Mapping from Arabic short keys to English enum values used in Ebook model
 const englishCategoryMap = {
@@ -15,9 +15,26 @@ const englishCategoryMap = {
   'تاريخ': 'History-Biographies',
   'تربية': 'Education-children',
   'قاموس': 'Dictionaries-References',
-  // add other mappings as needed
+  'أدوات مكتبية': 'office-supplies'
 };
 const sitemapService = require('../services/sitemap.service');
+
+function cleanPrice(val) {
+  if (val === undefined || val === null) return 0;
+  if (typeof val === 'number') {
+    const s = val.toString();
+    if (val < 10 && s.includes('.') && s.split('.')[1].length === 3) {
+      return val * 1000;
+    }
+    return val;
+  }
+  let s = String(val).trim();
+  s = s.replace(/[^\d.,]/g, '');
+  if (s.includes('.') && s.split('.')[1].length === 3 && !s.includes(',')) {
+    return parseFloat(s.replace('.', ''));
+  }
+  return parseFloat(s.replace(/,/g, '')) || 0;
+}
 
 const PromotionDate = require('../models/PromotionDate.model');
 const PaymentRequest = require('../models/PaymentRequest.model');
@@ -102,8 +119,11 @@ async function addProduct(req, res) {
       furnitureType, deliveryMethod, // Furniture fields
       toyType, ageGroup, safety, // Toy fields
       fabricType, usage, // Fabric fields
-      suggestedCategory // Unclassified fields
     } = req.body;
+
+    const { categoryMap, reverseCategoryMap } = require('../services/excel.service');
+    const fullCategory = categoryMap[product_category] || product_category;
+    const shortCategoryKey = reverseCategoryMap[fullCategory] || product_category;
 
     if (!product_name || !product_quantity || !product_category || weight === undefined || weight === null || weight === '') {
       return res.status(400).json({ success: false, message: 'Missing required fields (including weight)' });
@@ -168,7 +188,7 @@ async function addProduct(req, res) {
         coverImage: filename,
         epubFilePath: epubFilePath,
         fileSize: epubFile.size,
-        category: product_category,
+        category: fullCategory,
         pages: pages || 0,
         price: parseFloat(product_price) || 0,
         availableForSubscription: true
@@ -191,9 +211,6 @@ async function addProduct(req, res) {
       console.log('✅ linkedEbookId saved to ebook-mappings.json in addProduct');
     }
 
-    // Convert full category name to short key if necessary
-    const shortCategoryKey = reverseCategoryMap[product_category] || product_category;
-
     // Determine category prefix
     let categoryPrefix = '';
     if (categoryMap.hasOwnProperty(shortCategoryKey)) {
@@ -214,7 +231,7 @@ async function addProduct(req, res) {
       barcode,
       product_name,
       product_quantity: parseInt(product_quantity, 10),
-      product_category: shortCategoryKey,
+      product_category: fullCategory,
       product_description,
       categoryPrefix,
       product_price: parseFloat(product_price) || 0,
@@ -288,6 +305,144 @@ async function addProduct(req, res) {
 
 
 // New API to list all products
+
+// New API to bulk add products
+async function bulkAddProducts(req, res) {
+  try {
+    let { products, merchantId, publisher } = req.body;
+
+    // Handle multipart/form-data parsing
+    if (typeof products === 'string') {
+      try {
+        products = JSON.parse(products);
+      } catch (e) {
+        return res.status(400).json({ success: false, message: 'Invalid products JSON format' });
+      }
+    }
+
+    if (!products || !Array.isArray(products) || products.length === 0) {
+      return res.status(400).json({ success: false, message: 'No products provided' });
+    }
+
+    // Handle Publisher Image Upload
+    if (req.file && publisher) {
+      const fs = require('fs');
+      const path = require('path');
+      const sharp = require('sharp');
+      
+      const publishersDir = path.join(__dirname, '..', 'uploads', 'books', 'publishers');
+      if (!fs.existsSync(publishersDir)) {
+        fs.mkdirSync(publishersDir, { recursive: true });
+      }
+
+      const sanitizedName = publisher.trim().replace(/\s+/g, '_');
+      const targetPath = path.join(publishersDir, `${sanitizedName}.webp`);
+
+      await sharp(req.file.buffer)
+        .webp({ quality: 80 })
+        .toFile(targetPath);
+        
+      console.log(`✅ Saved publisher logo for: ${publisher} at ${targetPath}`);
+    }
+
+    const bulkOps = [];
+    const productsToExcel = [];
+    const now = new Date().toISOString();
+
+    for (const productData of products) {
+      // 1. Duplicate check (Name + Image Path match)
+      if (productData.product_name && productData.image_path) {
+        const existing = await Product.findOne({ 
+          product_name: productData.product_name,
+          image_path: productData.image_path 
+        });
+        if (existing) {
+          console.log(`⏩ Skipping duplicate product: ${productData.product_name}`);
+          continue;
+        }
+      }
+
+      // Generate barcode if not present
+      const barcode = productData.barcode || productData.products_id || generateRandomBarcode();
+      const products_id = productData.products_id || barcode;
+
+      // Map categories
+      let inputCategory = productData.product_category || '';
+      // If it's a short key, get the full name. If it's a full name, get the short key for prefixing.
+      let fullCategory = categoryMap[inputCategory] || inputCategory;
+      let shortCategoryKey = reverseCategoryMap[inputCategory] ? reverseCategoryMap[inputCategory] : (categoryMap[inputCategory] ? inputCategory : inputCategory);
+
+      // Determine category prefix
+      let categoryPrefix = '';
+      if (categoryMap.hasOwnProperty(shortCategoryKey)) {
+        const prefixes = {
+          'رواية': 'رواية-', 'تنمية': 'تنمية-', 'ديني': 'ديني-', 'قاموس': 'قاموس-',
+          'صحة': 'صحة-', 'اعمال': 'اعمال-', 'فن': 'فن-', 'تاريخ': 'تاريخ-',
+          'تربية': 'تربية-', 'ادوات': 'ادوات-', 'الكترونيات': 'الكترونيات-',
+          'ملابس': 'ملابس-', 'تجميل': 'تجميل-', 'احذية': 'احذية-',
+          'اثاث': 'اثاث-', 'العاب': 'العاب-', 'أقمشة': 'أقمشة-', 'اخرى': 'اخرى-'
+        };
+        categoryPrefix = prefixes[shortCategoryKey] || '';
+      }
+
+      const adminName = req.admin ? req.admin.username.replace(/[^a-zA-Z0-9-_]/g, '_') : 'admin';
+      
+      // PRESERVE external URLs if provided
+      let image_path = productData.image_path || '';
+      if (!image_path || (!image_path.startsWith('http') && !image_path.startsWith('/uploads'))) {
+        image_path = `/uploads/books/admin__${adminName}__/${barcode}/${barcode}.webp`;
+      }
+
+      const finalProduct = {
+        ...productData,
+        barcode,
+        products_id,
+        product_category: fullCategory,
+        categoryPrefix,
+        image_path,
+        product_image: productData.product_image || barcode,
+        merchantId: merchantId || productData.merchantId || '67683937397e5b22b07b1406', // Fixed default admin ID
+        publisher: publisher || productData.publisher || '',
+        weight: parseFloat(productData.weight) || 0,
+        product_price: cleanPrice(productData.product_price),
+        price_cost: cleanPrice(productData.price_cost),
+        product_quantity: parseInt(productData.product_quantity) || 2, // Use 2 as default if 0
+        createdAt: now,
+        updatedAt: now,
+        status: 'approved'
+      };
+
+      productsToExcel.push(finalProduct);
+
+      bulkOps.push({
+        updateOne: {
+          filter: { barcode: barcode },
+          update: { $set: finalProduct },
+          upsert: true
+        }
+      });
+    }
+
+    // Save to MongoDB
+    if (bulkOps.length > 0) {
+      await Product.bulkWrite(bulkOps);
+    }
+
+    // Save to Excel
+    await bulkAddProductsToExcel(productsToExcel);
+
+    // Sync to Google Sheets
+    for (const p of productsToExcel) {
+      googleSheetsService.syncProduct(p).catch(err => console.error('Google Sheets Sync Error (Bulk):', err));
+    }
+
+    res.json({ success: true, message: `Successfully added ${productsToExcel.length} products.` });
+  } catch (error) {
+    console.error('Error in bulkAddProducts:', error);
+    res.status(500).json({ success: false, message: 'Server error during bulk add' });
+  }
+}
+
 async function listProducts(req, res) {
   try {
     const fs = require('fs');
@@ -361,7 +516,14 @@ async function listProducts(req, res) {
 async function updateProduct(req, res) {
   try {
     const { barcode } = req.params;
-    const { product_name, product_quantity, product_category, product_description, product_price, price_cost, weight, length, width, height } = req.body;
+    console.log(`📦 [AdminController] updateProduct called for barcode: ${barcode}`);
+    console.log('📝 [AdminController] Update body:', JSON.stringify(req.body, null, 2));
+    
+    const { 
+      product_name, product_quantity, product_category, product_description, 
+      product_price, price_cost, weight, length, width, height,
+      publisher, author, publishYear, pages, coverType, language
+    } = req.body;
 
     if (!barcode) {
       return res.status(400).json({ success: false, message: 'Missing product barcode' });
@@ -421,6 +583,18 @@ async function updateProduct(req, res) {
     const now = new Date().toISOString();
     let quantityChanged = false;
 
+    // Helper to update field in a case-insensitive way (handling both publisher and Publisher, etc.)
+    const updateFieldCaseInsensitive = (obj, key, val) => {
+      if (val === undefined) return;
+      const lowerKey = key.toLowerCase();
+      const existingKey = Object.keys(obj).find(k => k.toLowerCase() === lowerKey);
+      if (existingKey) {
+        obj[existingKey] = val;
+      } else {
+        obj[key] = val;
+      }
+    };
+
     if (product_name !== undefined) json[productIndex].product_name = product_name;
     if (product_quantity !== undefined) {
       if (Number(json[productIndex].product_quantity) !== Number(product_quantity)) {
@@ -432,6 +606,14 @@ async function updateProduct(req, res) {
     if (product_description !== undefined) json[productIndex].product_description = product_description;
     if (product_price !== undefined) json[productIndex].product_price = product_price;
     if (price_cost !== undefined) json[productIndex].price_cost = price_cost;
+    
+    // Use the helper for book-specific fields to avoid duplicate columns in Excel
+    updateFieldCaseInsensitive(json[productIndex], 'publisher', publisher);
+    updateFieldCaseInsensitive(json[productIndex], 'author', author);
+    updateFieldCaseInsensitive(json[productIndex], 'publishYear', publishYear);
+    updateFieldCaseInsensitive(json[productIndex], 'pages', pages);
+    updateFieldCaseInsensitive(json[productIndex], 'coverType', coverType);
+    updateFieldCaseInsensitive(json[productIndex], 'language', language);
 
     if (quantityChanged) {
       json[productIndex].lastStockUpdate = now;
@@ -457,6 +639,14 @@ async function updateProduct(req, res) {
         if (width !== undefined) updateFields.width = parseFloat(width) || 0;
         if (height !== undefined) updateFields.height = parseFloat(height) || 0;
         if (quantityChanged) updateFields.lastStockUpdate = now;
+        
+        // Sync book-specific fields to MongoDB
+        if (publisher !== undefined) updateFields.publisher = publisher;
+        if (author !== undefined) updateFields.author = author;
+        if (publishYear !== undefined) updateFields.publishYear = publishYear;
+        if (pages !== undefined) updateFields.pages = parseInt(pages) || 0;
+        if (coverType !== undefined) updateFields.coverType = coverType;
+        if (language !== undefined) updateFields.language = language;
 
         await Product.findOneAndUpdate(
           { product_image: { $regex: new RegExp(`^${barcodeToMatch}(\\.webp)?$`, 'i') } },
@@ -482,7 +672,6 @@ async function updateProduct(req, res) {
     // Attempt to sync back to Google Drive (resilient to missing workbook)
     if (drive) {
       try {
-
         if (!workbook) {
           workbook = xlsx.utils.book_new();
           sheetName = 'Sheet1';
@@ -494,6 +683,7 @@ async function updateProduct(req, res) {
         }
         const wbout = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
 
+        // Update main file
         await drive.files.update({
           fileId,
           media: {
@@ -503,24 +693,28 @@ async function updateProduct(req, res) {
         });
         console.log('✅ Product updated in Excel on Google Drive');
 
-        // Sync to update-file as well
+        // Also update the second file if it exists
         const updateFileId = process.env.GOOGLE_DRIVE_FILE_update;
         if (updateFileId && updateFileId !== fileId) {
-          await drive.files.update({
-            fileId: updateFileId,
-            media: {
-              mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-              body: wbout
-            }
-          });
-          console.log('✅ Product updated in update-Excel file on Google Drive');
+          try {
+            await drive.files.update({
+              fileId: updateFileId,
+              media: {
+                mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                body: wbout
+              }
+            });
+            console.log('✅ Product updated in update-Excel file on Google Drive');
+          } catch (updateErr) {
+            console.warn('⚠️ Failed to sync update-file:', updateErr.message);
+          }
         }
-      } catch (syncError) {
-        console.warn('⚠️ Failed to sync product update to Google Drive:', syncError.message);
+      } catch (uploadError) {
+        console.error('❌ Failed to sync update back to Google Drive:', uploadError.message);
       }
     }
 
-    // SYNC TO GOOGLE SHEETS
+    // After Drive sync, trigger other background syncs
     const updatedProduct = await Product.findOne({ product_image: { $regex: new RegExp(`^${barcode.trim()}(\\.webp)?$`, 'i') } });
     if (updatedProduct) {
       googleSheetsService.syncProduct(updatedProduct.toObject()).catch(err => console.error('Google Sheets Sync Error:', err));
@@ -538,6 +732,7 @@ async function updateProduct(req, res) {
 async function batchUpdateProducts(req, res) {
   try {
     const products = req.body.products;
+    console.log(`📦 [AdminController] batchUpdateProducts called for ${products?.length || 0} products`);
     if (!Array.isArray(products) || products.length === 0) {
       return res.status(400).json({ success: false, message: 'No products provided for batch update' });
     }
@@ -598,12 +793,34 @@ async function batchUpdateProducts(req, res) {
           quantityChanged = true;
         }
 
+        // Helper to update field in a case-insensitive way
+        const updateFieldCaseInsensitive = (obj, key, val) => {
+          if (val === undefined) return;
+          const lowerKey = key.toLowerCase();
+          const existingKey = Object.keys(obj).find(k => k.toLowerCase() === lowerKey);
+          if (existingKey) {
+            obj[existingKey] = val;
+          } else {
+            obj[key] = val;
+          }
+        };
+
         if (update.product_name !== undefined) json[productIndex].product_name = update.product_name;
         if (update.product_quantity !== undefined) json[productIndex].product_quantity = update.product_quantity;
         if (update.product_category !== undefined) json[productIndex].product_category = update.product_category;
         if (update.product_description !== undefined) json[productIndex].product_description = update.product_description;
         if (update.product_price !== undefined) json[productIndex].product_price = update.product_price;
         if (update.price_cost !== undefined) json[productIndex].price_cost = update.price_cost;
+        
+        console.log(`🔍 [AdminController] Updating product ${update.products_id} in JSON. Publisher: ${update.publisher}`);
+        
+        // Add book-specific fields for batch update using case-insensitive helper
+        updateFieldCaseInsensitive(json[productIndex], 'publisher', update.publisher);
+        updateFieldCaseInsensitive(json[productIndex], 'author', update.author);
+        updateFieldCaseInsensitive(json[productIndex], 'publishYear', update.publishYear);
+        updateFieldCaseInsensitive(json[productIndex], 'pages', update.pages);
+        updateFieldCaseInsensitive(json[productIndex], 'coverType', update.coverType);
+        updateFieldCaseInsensitive(json[productIndex], 'language', update.language);
 
         if (quantityChanged) {
           json[productIndex].lastStockUpdate = now;
@@ -620,6 +837,14 @@ async function batchUpdateProducts(req, res) {
           if (update.product_price !== undefined) updateFields.product_price = update.product_price;
           if (update.price_cost !== undefined) updateFields.price_cost = update.price_cost;
           if (quantityChanged) updateFields.lastStockUpdate = now;
+          
+          // Sync book-specific fields for batch update to MongoDB
+          if (update.publisher !== undefined) updateFields.publisher = update.publisher;
+          if (update.author !== undefined) updateFields.author = update.author;
+          if (update.publishYear !== undefined) updateFields.publishYear = update.publishYear;
+          if (update.pages !== undefined) updateFields.pages = parseInt(update.pages) || 0;
+          if (update.coverType !== undefined) updateFields.coverType = update.coverType;
+          if (update.language !== undefined) updateFields.language = update.language;
 
           await Product.findOneAndUpdate(
             { product_image: { $regex: new RegExp(`^${barcodeToMatch}(\\.webp)?$`, 'i') } },
@@ -849,7 +1074,7 @@ async function replaceProductEpub(req, res) {
         category: englishCategory,
         language: detectedLanguage,
         pages: product.pages || 0,
-        price: parseFloat(product.product_price) || 0,
+        price: cleanPrice(product.product_price),
         relatedProductId: product.products_id || product.barcode, // Store product ID (or barcode) for linking
         availableForSubscription: true
       });
@@ -2502,10 +2727,14 @@ async function deleteUrgencyRequest(req, res) {
 
 async function bulkAdjustPrices(req, res) {
   try {
-    const { category, minPrice, maxPrice, adjustmentType, adjustmentValue, direction } = req.body;
-    console.log('Bulk Adjustment Payload:', { category, adjustmentType, adjustmentValue, direction });
+    const { category, combinedFilter, sortBy, minPrice, maxPrice, adjustmentType, adjustmentValue, direction } = req.body;
+    console.log('Bulk Adjustment Payload:', { category, combinedFilter, sortBy, adjustmentType, adjustmentValue, direction });
 
     // 1. Load data (Drive-first with local fallback)
+    // ... (Drive logic omitted for brevity, keeping existing logic)
+    // ...
+    // [Assuming Drive logic is same as before, I will keep the surrounding code intact]
+    // ...
     const fileId = process.env.GOOGLE_DRIVE_FILE_ID;
     let json;
     let drive;
@@ -2547,10 +2776,33 @@ async function bulkAdjustPrices(req, res) {
     let updatedCount = 0;
     const mongoOps = [];
 
-    // 2. Apply adjustments to JSON array
+    // 2. Sort data if requested
+    if (sortBy && sortBy !== 'none') {
+      json.sort((a, b) => {
+        if (sortBy === 'price_asc') return (parseFloat(a.product_price) || 0) - (parseFloat(b.product_price) || 0);
+        if (sortBy === 'price_desc') return (parseFloat(b.product_price) || 0) - (parseFloat(a.product_price) || 0);
+        if (sortBy === 'newest') return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+        return 0;
+      });
+    }
+
+    // 3. Apply adjustments to JSON array
     json.forEach(product => {
-      // Filter: Skip merchant products
-      if (product.merchantId && String(product.merchantId).trim() !== '') return;
+      // Filter by Combined Source (Admin, Merchant, or Publisher)
+      if (combinedFilter && combinedFilter !== 'all') {
+        if (combinedFilter === 'admin') {
+          // Admin only
+          if (product.merchantId && String(product.merchantId).trim() !== '') return;
+        } else if (combinedFilter.startsWith('merch:')) {
+          // Specific merchant
+          const merchantName = combinedFilter.replace('merch:', '');
+          if (product.merchantName !== merchantName) return;
+        } else if (combinedFilter.startsWith('pub:')) {
+          // Specific publisher
+          const publisherName = combinedFilter.replace('pub:', '');
+          if (product.publisher !== publisherName) return;
+        }
+      }
 
       // Filter by category
       if (category && category.length > 0 && !category.includes('جميع الفئات')) {
@@ -2559,7 +2811,7 @@ async function bulkAdjustPrices(req, res) {
       }
 
       // Filter by price range
-      const currentPrice = parseFloat(product.product_price) || 0;
+      const currentPrice = cleanPrice(product.product_price);
       if (minPrice !== undefined && currentPrice < minPrice) return;
       if (maxPrice !== undefined && currentPrice > maxPrice) return;
 
@@ -3203,25 +3455,31 @@ async function importProductsFromSheets(req, res) {
       // --- SMART IMAGE RECOVERY ---
       let image_path = '';
       const adminFolder = 'admin__karim_mohamed__';
-      const potentialAdminPath = path.join(adminFolder, finalBarcode, `${finalBarcode}.webp`);
-      const fullAdminPath = path.join(uploadBaseDir, potentialAdminPath);
-      
-      if (fs.existsSync(fullAdminPath)) {
-        image_path = `/uploads/books/${adminFolder}/${finalBarcode}/${finalBarcode}.webp`.replace(/\\/g, '/');
+
+      // 1. Check if the sheet already provides a full URL/path
+      const sheetImage = productData.product_image || '';
+      const isExternalLink = typeof sheetImage === 'string' && (sheetImage.startsWith('http') || sheetImage.includes('/uploads/'));
+
+      if (isExternalLink) {
+        image_path = sheetImage;
       } else {
-        const folders = fs.readdirSync(uploadBaseDir);
-        for (const folder of folders) {
-          const potentialMerchantPath = path.join(folder, finalBarcode, `${finalBarcode}.webp`);
-          const fullMerchantPath = path.join(uploadBaseDir, potentialMerchantPath);
-          if (fs.existsSync(fullMerchantPath)) {
-            image_path = `/uploads/books/${folder}/${finalBarcode}/${finalBarcode}.webp`.replace(/\\/g, '/');
-            break;
+        // 2. Fallback to local filesystem search
+        const potentialAdminPath = path.join(adminFolder, finalBarcode, `${finalBarcode}.webp`);
+        const fullAdminPath = path.join(uploadBaseDir, potentialAdminPath);
+        
+        if (fs.existsSync(fullAdminPath)) {
+          image_path = `/uploads/books/${adminFolder}/${finalBarcode}/${finalBarcode}.webp`.replace(/\\/g, '/');
+        } else {
+          const folders = fs.readdirSync(uploadBaseDir);
+          for (const folder of folders) {
+            const potentialMerchantPath = path.join(folder, finalBarcode, `${finalBarcode}.webp`);
+            const fullMerchantPath = path.join(uploadBaseDir, potentialMerchantPath);
+            if (fs.existsSync(fullMerchantPath)) {
+              image_path = `/uploads/books/${folder}/${finalBarcode}/${finalBarcode}.webp`.replace(/\\/g, '/');
+              break;
+            }
           }
         }
-      }
-
-      if (!image_path && productData.product_image && productData.product_image.includes('/')) {
-        image_path = productData.product_image; 
       }
 
       bulkOps.push({
@@ -3290,6 +3548,7 @@ module.exports = {
   replaceProductImage,
   replaceProductEpub,
   importProductsFromSheets,
+  bulkAddProducts,
   deleteProduct,
   bulkDeleteProducts,
   syncJsonToExcel,
@@ -3328,5 +3587,26 @@ module.exports = {
   bulkAdjustPrices,
   getAdminGlobalAnalytics,
   exportUsersToSheets,
-  updateGoogleSheetFromJson: async () => { console.log('Mock updateGoogleSheetFromJson'); } // Placeholder if actually missing
+  updateGoogleSheetFromJson: async (req, res) => {
+    try {
+      const outputPath = path.join(__dirname, '..', 'output.json');
+      if (!fs.existsSync(outputPath)) {
+        if (res) return res.status(404).json({ success: false, message: 'output.json not found' });
+        return false;
+      }
+      
+      const products = JSON.parse(fs.readFileSync(outputPath, 'utf-8'));
+      const success = await googleSheetsService.syncAllProducts(products);
+      
+      if (res) {
+        if (success) res.json({ success: true, message: `Successfully synced ${products.length} products to Google Sheets.` });
+        else res.status(500).json({ success: false, message: 'Failed to sync to Google Sheets.' });
+      }
+      return success;
+    } catch (error) {
+      console.error('Error in updateGoogleSheetFromJson:', error);
+      if (res) res.status(500).json({ success: false, message: 'Server error' });
+      return false;
+    }
+  }
 };

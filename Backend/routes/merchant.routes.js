@@ -8,6 +8,7 @@ const authenticateMerchant = require('../middleware/merchant.auth');
 router.post('/register', merchantController.upload.single('logo'), merchantController.registerMerchant);
 router.post('/login', merchantAuthController.loginMerchant);
 router.post('/logout', merchantAuthController.logoutMerchant);
+router.get('/public/list', merchantController.getPublicMerchants);
 
 // Protected routes (must come before parameterized routes)
 router.get('/current', authenticateMerchant, merchantController.getCurrentMerchant);

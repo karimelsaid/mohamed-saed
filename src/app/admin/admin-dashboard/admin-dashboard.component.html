@@ -79,20 +79,20 @@
       </button>
 
 
-      <div class="sidebar-nav-category pt-4 pb-2 px-4 text-xs font-bold text-gray-400 uppercase tracking-wider">التجار & المستخدمين</div>
+      <div class="sidebar-nav-category pt-4 pb-2 px-4 text-xs font-bold text-gray-400 uppercase tracking-wider">دور النشر & المستخدمين</div>
 
       <button (click)="switchView('merchants'); showSidebar = false"
         [class]="currentView === 'merchants' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
         class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
         <fa-icon [icon]="['fas', 'users']"></fa-icon>
-        <span>إدارة التجار</span>
+        <span>إدارة دور النشر</span>
       </button>
 
       <button (click)="switchView('merchantOrders'); showSidebar = false"
         [class]="currentView === 'merchantOrders' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
         class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
         <fa-icon [icon]="['fas', 'store']"></fa-icon>
-        <span>طلبات التجار</span>
+        <span>طلبات دور النشر</span>
       </button>
 
       <button (click)="switchView('productApproval'); showSidebar = false"
@@ -228,6 +228,13 @@
         class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
         <fa-icon [icon]="['fas', 'robot']" class="text-lg"></fa-icon>
         <span>نظام الأتمتة والذكاء 🤖</span>
+      </button>
+
+      <button (click)="switchView('newsletter'); showSidebar = false"
+        [class]="currentView === 'newsletter' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
+        class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
+        <fa-icon [icon]="['fas', 'paper-plane']"></fa-icon>
+        <span>القائمة البريدية</span>
       </button>
 
       <!-- Community Management Removed as it is now integrated into Orders -->
@@ -800,6 +807,74 @@
         <app-admin-ebooks></app-admin-ebooks>
       </div>
 
+      <!-- NEWSLETTER VIEW -->
+      <div *ngIf="currentView === 'newsletter'" class="space-y-6 animate-in fade-in duration-300">
+        <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+          <div>
+            <h2 class="text-3xl font-bold text-gray-800 dark:text-white">إدارة القائمة البريدية</h2>
+            <p class="text-gray-500 dark:text-gray-400">قائمة بجميع المشتركين في نشرة "نخبة القراء"</p>
+          </div>
+          <div class="flex gap-3">
+            <button (click)="exportNewsletterToExcel()" 
+              class="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-xl hover:bg-green-700 transition shadow-sm">
+              <fa-icon [icon]="['fas', 'file-excel']"></fa-icon>
+              تصدير إكسل
+            </button>
+            <button (click)="fetchNewsletterSubscribers()" [disabled]="isLoadingNewsletter"
+              class="flex items-center gap-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-4 py-2 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition shadow-sm">
+              <fa-icon [icon]="['fas', 'sync-alt']" [class.animate-spin]="isLoadingNewsletter"></fa-icon>
+              تحديث
+            </button>
+          </div>
+        </div>
+
+        <div *ngIf="isLoadingNewsletter" class="flex flex-col items-center justify-center py-20">
+          <fa-icon [icon]="['fas', 'spinner']" class="text-4xl text-blue-600 animate-spin mb-4"></fa-icon>
+          <p class="text-gray-500 dark:text-gray-400">جاري تحميل المشتركين...</p>
+        </div>
+
+        <div *ngIf="!isLoadingNewsletter && newsletterSubscribers.length === 0" class="text-center py-20 bg-white dark:bg-gray-800 rounded-3xl border-2 border-dashed border-gray-200 dark:border-gray-700">
+           <fa-icon [icon]="['fas', 'paper-plane']" class="text-6xl text-gray-200 dark:text-gray-700 mb-6"></fa-icon>
+           <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-2">لا يوجد مشتركين حالياً</h3>
+           <p class="text-gray-500 dark:text-gray-400">بمجرد اشتراك المستخدمين، ستظهر بريدهم الإلكتروني هنا.</p>
+        </div>
+
+        <div *ngIf="!isLoadingNewsletter && newsletterSubscribers.length > 0" class="bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-right">
+              <thead class="bg-gray-50 dark:bg-gray-900/50 text-gray-500 dark:text-gray-400 text-sm font-bold uppercase tracking-wider">
+                <tr>
+                  <th class="px-6 py-4">البريد الإلكتروني</th>
+                  <th class="px-6 py-4">تاريخ الاشتراك</th>
+                  <th class="px-6 py-4">الحالة</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                <tr *ngFor="let subscriber of newsletterSubscribers" class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                  <td class="px-6 py-4">
+                    <div class="flex items-center gap-3">
+                      <div class="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold">
+                        {{ subscriber.email.charAt(0).toUpperCase() }}
+                      </div>
+                      <span class="font-medium text-gray-900 dark:text-white">{{ subscriber.email }}</span>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4 text-gray-500 dark:text-gray-400 text-sm">
+                    {{ subscriber.subscribedAt | date:'medium' }}
+                  </td>
+                  <td class="px-6 py-4">
+                    <span class="px-3 py-1 rounded-full text-xs font-bold"
+                      [ngClass]="subscriber.status === 'active' ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'">
+                      {{ subscriber.status === 'active' ? 'نشط' : 'ملغى' }}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       <div *ngIf="currentView === 'notifications'" class="mb-28 md:mb-0 px-4">
         <app-admin-notifications></app-admin-notifications>
       </div>
@@ -1154,9 +1229,33 @@
           <h3
             class="text-3xl font-extrabold text-center mb-8 text-gray-800 dark:text-gray-200 flex items-center justify-center">
             <fa-icon [icon]="['fas', 'plus-circle']" class="text-blue-500 mr-3"></fa-icon>
-            إضافة منتج جديد
+            {{ isBulkImportMode ? 'استيراد منتجات بالجملة' : 'إضافة منتج جديد' }}
           </h3>
-          <form (ngSubmit)="submitAddProduct()" #addProductForm="ngForm" class="space-y-6">
+
+          <!-- Import Mode Toggle -->
+          <div class="flex justify-center flex-wrap gap-4 mb-8">
+            <div class="inline-flex rounded-md shadow-sm" role="group">
+              <button type="button" (click)="isBulkImportMode = false"
+                [class]="!isBulkImportMode ? 'bg-blue-600 text-white' : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600'"
+                class="px-4 py-2 text-sm font-medium border border-gray-200 dark:border-gray-600 rounded-r-lg transition-colors">
+                منتج فردي
+              </button>
+              <button type="button" (click)="toggleBulkImportMode()"
+                [class]="isBulkImportMode ? 'bg-blue-600 text-white' : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600'"
+                class="px-4 py-2 text-sm font-medium border border-gray-200 dark:border-gray-600 rounded-l-lg transition-colors">
+                استيراد جماعي (Excel)
+              </button>
+            </div>
+
+            <button type="button" (click)="syncToGoogleSheets()"
+              class="px-6 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold shadow-md hover:shadow-lg transition-all flex items-center gap-2">
+              <fa-icon [icon]="['fas', 'sync-alt']"></fa-icon>
+              مزامنة مع Google Sheets
+            </button>
+          </div>
+
+          <!-- Individual Product Form -->
+          <form *ngIf="!isBulkImportMode" (ngSubmit)="submitAddProduct()" #addProductForm="ngForm" class="space-y-6">
             <!-- Category Selection First -->
             <div>
               <label for="product_category"
@@ -1359,255 +1458,6 @@
                 </div>
 
                 <!-- ⚡ إلكترونيات -->
-                <div *ngSwitchCase="'إلكترونيات'" class="space-y-6">
-                  <div><label for="product_name"
-                      class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الاسم</label><input
-                      type="text" id="product_name" [(ngModel)]="product.product_name" name="product_name" required
-                      class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="اسم الجهاز" /></div>
-                  <div><label for="brand"
-                      class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الماركة</label><input
-                      type="text" id="brand" [(ngModel)]="product.brand" name="brand"
-                      class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="الماركة" /></div>
-                  <div><label for="electronicsType"
-                      class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">النوع</label><input
-                      type="text" id="electronicsType" [(ngModel)]="product.electronicsType" name="electronicsType"
-                      class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="موبايل, لابتوب..." />
-                  </div>
-                  <div><label for="model"
-                      class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الموديل</label><input
-                      type="text" id="model" [(ngModel)]="product.model" name="model"
-                      class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="الموديل" /></div>
-                  <div><label for="specs"
-                      class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">المواصفات
-                      الأساسية</label><textarea id="specs" [(ngModel)]="product.specs" name="specs" rows="3"
-                      class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700"
-                      placeholder="رام – ذاكرة – بطارية..."></textarea></div>
-                  <div><label for="warranty"
-                      class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الضمان</label><input
-                      type="text" id="warranty" [(ngModel)]="product.warranty" name="warranty"
-                      class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="مدة الضمان" /></div>
-                </div>
-
-                <!-- 👕 ملابس -->
-                <div *ngSwitchCase="'ملابس'" class="space-y-6">
-                  <div><label for="product_name"
-                      class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الاسم</label><input
-                      type="text" id="product_name" [(ngModel)]="product.product_name" name="product_name" required
-                      class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="اسم القطعة" /></div>
-                  <div><label for="clothingType"
-                      class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">النوع</label><select
-                      id="clothingType" [(ngModel)]="product.clothingType" name="clothingType"
-                      class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700">
-                      <option>رجالي</option>
-                      <option>حريمي</option>
-                      <option>أطفال</option>
-                    </select></div>
-                  <div><label for="size"
-                      class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">المقاس</label><select
-                      id="size" [(ngModel)]="product.size" name="size"
-                      class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700">
-                      <option>S</option>
-                      <option>M</option>
-                      <option>L</option>
-                      <option>XL</option>
-                      <option>XXL</option>
-                    </select></div>
-                  <div><label for="color"
-                      class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">اللون</label><input
-                      type="text" id="color" [(ngModel)]="product.color" name="color"
-                      class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="اللون" /></div>
-                  <div><label for="material"
-                      class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الخامة</label><input
-                      type="text" id="material" [(ngModel)]="product.material" name="material"
-                      class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="قطن, بوليستر..." />
-                  </div>
-                  <div><label for="season"
-                      class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الموسم</label><select
-                      id="season" [(ngModel)]="product.season" name="season"
-                      class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700">
-                      <option>صيفي</option>
-                      <option>شتوي</option>
-                      <option>كليهما</option>
-                    </select></div>
-                  <div><label for="originCountry"
-                      class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">بلد
-                      المنشأ</label><input type="text" id="originCountry" [(ngModel)]="product.originCountry"
-                      name="originCountry" class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700"
-                      placeholder="بلد المنشأ" /></div>
-                </div> <!-- 💄 تجميل -->
-                <div *ngSwitchCase="'التجميل والعناية الشخصية'" class="space-y-6">
-                  <div><label for="product_name"
-                      class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الاسم</label><input
-                      type="text" id="product_name" [(ngModel)]="product.product_name" name="product_name" required
-                      class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="اسم المنتج" /></div>
-                  <div><label for="cosmeticsType"
-                      class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">النوع</label><input
-                      type="text" id="cosmeticsType" [(ngModel)]="product['cosmeticsType']" name="cosmeticsType"
-                      class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700"
-                      placeholder="مكياج, عناية بالبشرة..." />
-                  </div>
-                  <div><label for="brand"
-                      class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الماركة</label><input
-                      type="text" id="brand" [(ngModel)]="product.brand" name="brand"
-                      class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="الماركة" /></div>
-                  <div><label for="sizeWeight"
-                      class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الحجم
-                      أو الوزن</label><input type="text" id="sizeWeight" [(ngModel)]="product['sizeWeight']"
-                      name="sizeWeight" class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700"
-                      placeholder="الحجم أو الوزن" /></div>
-                  <div><label for="ingredients"
-                      class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">المكونات
-                      (اختياري)</label><textarea id="ingredients" [(ngModel)]="product['ingredients']"
-                      name="ingredients" rows="2"
-                      class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700"></textarea></div>
-                  <div><label for="suitableFor"
-                      class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">مناسب
-                      لـ</label><select id="suitableFor" [(ngModel)]="product['suitableFor']" name="suitableFor"
-                      class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700">
-                      <option>النساء</option>
-                      <option>الرجال</option>
-                      <option>الأطفال</option>
-                      <option>الجميع</option>
-                    </select></div>
-                </div>
-
-                <!-- 👟 أحذية -->
-                <div *ngSwitchCase="'الأحذية'" class="space-y-6">
-                  <div><label for="product_name"
-                      class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الاسم</label><input
-                      type="text" id="product_name" [(ngModel)]="product.product_name" name="product_name" required
-                      class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="اسم الحذاء" /></div>
-                  <div><label for="shoeType"
-                      class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">النوع</label><select
-                      id="shoeType" [(ngModel)]="product['shoeType']" name="shoeType"
-                      class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700">
-                      <option>رجالي</option>
-                      <option>حريمي</option>
-                      <option>أطفال</option>
-                    </select></div>
-                  <div><label for="size"
-                      class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">المقاس</label><select
-                      id="size" [(ngModel)]="product.size" name="size"
-                      class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700">
-                      <option>36</option>
-                      <option>37</option>
-                      <option>38</option>
-                      <option>39</option>
-                      <option>40</option>
-                      <option>41</option>
-                      <option>42</option>
-                      <option>43</option>
-                      <option>44</option>
-                      <option>45</option>
-                    </select></div>
-                </div>
-
-                <!-- 🛋️ أثاث -->
-                <div *ngSwitchCase="'أثاث وديكور المنزل'" class="space-y-6">
-                  <div><label for="product_name"
-                      class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الاسم</label><input
-                      type="text" id="product_name" [(ngModel)]="product.product_name" name="product_name" required
-                      class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="اسم قطعة الأثاث" />
-                  </div>
-                  <div><label for="furnitureType"
-                      class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">النوع</label><input
-                      type="text" id="furnitureType" [(ngModel)]="product['furnitureType']" name="furnitureType"
-                      class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="كرسي, طاولة..." />
-                  </div>
-                  <div><label for="dimensions"
-                      class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الأبعاد
-                      (سم)</label><input type="text" id="dimensions" [(ngModel)]="product.dimensions" name="dimensions"
-                      class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="مثال: 120x60x75" />
-                  </div>
-                  <div><label for="material"
-                      class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الخامة</label><input
-                      type="text" id="material" [(ngModel)]="product.material" name="material"
-                      class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="خشب, معدن..." /></div>
-                  <div><label for="color"
-                      class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">اللون</label><input
-                      type="text" id="color" [(ngModel)]="product.color" name="color"
-                      class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="اللون" /></div>
-                  <div><label for="deliveryMethod"
-                      class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">طريقة
-                      التوصيل</label><select id="deliveryMethod" [(ngModel)]="product['deliveryMethod']"
-                      name="deliveryMethod" class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700">
-                      <option>مجمع</option>
-                      <option>يحتاج تجميع</option>
-                    </select></div>
-                  <div><label for="warranty"
-                      class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الضمان</label><input
-                      type="text" id="warranty" [(ngModel)]="product.warranty" name="warranty"
-                      class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="مدة الضمان" /></div>
-                </div>
-
-                <!-- 🧸 ألعاب -->
-                <div *ngSwitchCase="'هدية وألعاب'" class="space-y-6">
-                  <div><label for="product_name"
-                      class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الاسم</label><input
-                      type="text" id="product_name" [(ngModel)]="product.product_name" name="product_name" required
-                      class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="اسم اللعبة" /></div>
-                  <div><label for="ageGroup"
-                      class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الفئة
-                      العمرية</label><input type="text" id="ageGroup" [(ngModel)]="product['ageGroup']" name="ageGroup"
-                      class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700"
-                      placeholder="الفئة العمرية المناسبة" />
-                  </div>
-                  <div><label for="toyType"
-                      class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">النوع</label><input
-                      type="text" id="toyType" [(ngModel)]="product['toyType']" name="toyType"
-                      class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="ذكاء, تعليمية..." />
-                  </div>
-                  <div><label for="material"
-                      class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الخامة</label><input
-                      type="text" id="material" [(ngModel)]="product.material" name="material"
-                      class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="بلاستيك, قماش..." />
-                  </div>
-                  <div><label for="safety"
-                      class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الأمان</label><input
-                      type="text" id="safety" [(ngModel)]="product['safety']" name="safety"
-                      class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700"
-                      placeholder="معتمد, آمن للأطفال..." />
-                  </div>
-                </div>
-
-                <!-- 🧵 أقمشة -->
-                <div *ngSwitchCase="'أقمشة'" class="space-y-6">
-                  <div><label for="product_name"
-                      class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الاسم</label><input
-                      type="text" id="product_name" [(ngModel)]="product.product_name" name="product_name" required
-                      class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="اسم القماش" /></div>
-                  <div><label for="fabricType"
-                      class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">النوع</label><input
-                      type="text" id="fabricType" [(ngModel)]="product['fabricType']" name="fabricType"
-                      class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="مشجر, سادة..." /></div>
-                  <div><label for="material"
-                      class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الخامة</label><input
-                      type="text" id="material" [(ngModel)]="product.material" name="material"
-                      class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="قطن, حرير..." /></div>
-                  <div><label for="season"
-                      class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الموسم</label><select
-                      id="season" [(ngModel)]="product.season" name="season"
-                      class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700">
-                      <option>صيفي</option>
-                      <option>شتوي</option>
-                      <option>كليهما</option>
-                    </select></div>
-                  <div><label for="width" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">العرض
-                      (بالمتر)</label><input type="number" id="width" [(ngModel)]="product['width']" name="width"
-                      class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="العرض" /></div>
-                  <div><label for="originCountry"
-                      class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">بلد
-                      المنشأ</label><input type="text" id="originCountry" [(ngModel)]="product.originCountry"
-                      name="originCountry" class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700"
-                      placeholder="بلد المنشأ" /></div>
-                  <div><label for="usage"
-                      class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الاستخدام
-                      المناسب</label><input type="text" id="usage" [(ngModel)]="product['usage']" name="usage"
-                      class="w-full px-4 py-3 border-2 rounded-lg dark:bg-gray-700" placeholder="فساتين, عبايات..." />
-                  </div>
-                </div>
-
-                <!-- 🧩 أخرى -->
                 <div *ngSwitchCase="'غير مصنف'" class="space-y-6">
                   <div><label for="product_name"
                       class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">الاسم</label><input
@@ -1643,14 +1493,13 @@
                 <div>
                   <label for="product_price"
                     class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center">
-                    <fa-icon [icon]="['fas', 'dollar-sign']" class="text-green-500 ml-2"></fa-icon> {{
-                    product.product_category === 'أقمشة' ? 'السعر بالمتر' : 'سعر البيع' }}
+                    <fa-icon [icon]="['fas', 'dollar-sign']" class="text-green-500 ml-2"></fa-icon> سعر البيع
                   </label>
                   <input type="number" id="product_price" [(ngModel)]="product.product_price" name="product_price"
                     required min="0" step="0.01" #productPrice="ngModel" [ngClass]="{
               'border-red-500': productPrice.invalid && productPrice.touched, 'border-gray-300': !productPrice.touched
             }" class="w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:border-transparent dark:bg-gray-700 dark:text-gray-200 transition duration-200"
-                    [placeholder]="product.product_category === 'أقمشة' ? 'أدخل السعر بالمتر' : 'أدخل سعر البيع'" />
+                    placeholder="أدخل سعر البيع" />
                 </div>
                 <!-- Cost Price -->
                 <div>
@@ -1728,6 +1577,177 @@
               </button>
             </div>
           </form>
+
+          <!-- Bulk Import Section -->
+          <div *ngIf="isBulkImportMode" class="space-y-8 animate-fadeIn">
+            <!-- Step 1: Metadata Selection -->
+            <div class="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-2xl border border-blue-100 dark:border-blue-800">
+              <h4 class="text-xl font-bold mb-4 text-blue-800 dark:text-blue-300 flex items-center">
+                <fa-icon [icon]="['fas', 'tag']" class="ml-2"></fa-icon>
+                1. تحديد المالك / الجهة
+              </h4>
+              
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <button (click)="bulkImportType = 'admin'" 
+                  [class]="bulkImportType === 'admin' ? 'bg-blue-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300'"
+                  class="p-4 rounded-xl border border-blue-200 dark:border-blue-700 flex flex-col items-center transition-all hover:shadow-md">
+                  <fa-icon [icon]="['fas', 'user-shield']" class="text-2xl mb-2"></fa-icon>
+                  <span>أدمن (الكنوز)</span>
+                </button>
+                
+                <button (click)="bulkImportType = 'merchant'"
+                  [class]="bulkImportType === 'merchant' ? 'bg-blue-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300'"
+                  class="p-4 rounded-xl border border-blue-200 dark:border-blue-700 flex flex-col items-center transition-all hover:shadow-md">
+                  <fa-icon [icon]="['fas', 'store']" class="text-2xl mb-2"></fa-icon>
+                  <span>تاجر معين</span>
+                </button>
+                
+                <button (click)="bulkImportType = 'publisher'"
+                  [class]="bulkImportType === 'publisher' ? 'bg-blue-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300'"
+                  class="p-4 rounded-xl border border-blue-200 dark:border-blue-700 flex flex-col items-center transition-all hover:shadow-md">
+                  <fa-icon [icon]="['fas', 'book']" class="text-2xl mb-2"></fa-icon>
+                  <span>دار نشر / جهة خاصة</span>
+                </button>
+              </div>
+
+              <!-- Merchant Selection Dropdown -->
+              <div *ngIf="bulkImportType === 'merchant'" class="animate-fadeIn">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">اختر التاجر</label>
+                <select [(ngModel)]="selectedMerchantId" 
+                  class="w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:border-transparent dark:bg-gray-700 dark:text-gray-200">
+                  <option value="">-- اختر التاجر --</option>
+                  <option *ngFor="let m of merchantsList" [value]="m._id">{{ m.name || m.username }}</option>
+                </select>
+              </div>
+
+              <!-- Publisher Selection -->
+              <div *ngIf="bulkImportType === 'publisher'" class="animate-fadeIn space-y-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">اسم دار النشر / الجهة</label>
+                  <input type="text" [(ngModel)]="selectedPublisher" 
+                    class="w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:border-transparent dark:bg-gray-700 dark:text-gray-200"
+                    placeholder="مثال: دار الشروق">
+                </div>
+                
+                <!-- Publisher Logo Upload -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center">
+                    <fa-icon [icon]="['fas', 'image']" class="text-blue-500 ml-2"></fa-icon>
+                    شعار دار النشر (اختياري)
+                  </label>
+                  <div class="flex items-center gap-4">
+                    <input type="file" (change)="onPublisherImageSelected($event)" accept="image/*"
+                      class="flex-1 px-4 py-2.5 border-2 border-dashed rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 text-sm">
+                    <div *ngIf="publisherImageFile" class="text-green-600">
+                      <fa-icon [icon]="['fas', 'check-circle']"></fa-icon>
+                    </div>
+                  </div>
+                  <p class="text-[10px] text-gray-500 mt-1">سيتم حفظ هذا الشعار ليظهر في معرض دور النشر بالصفحة الرئيسية.</p>
+                </div>
+              </div>
+
+              <!-- Default Category Selection -->
+              <div class="mt-6 pt-6 border-t border-blue-100 dark:border-blue-900/50">
+                <label class="block text-sm font-bold text-blue-800 dark:text-blue-300 mb-3 flex items-center">
+                  <fa-icon [icon]="['fas', 'list-alt']" class="ml-2"></fa-icon>
+                  التصنيف الافتراضي (في حال عدم وجود عمود تصنيف)
+                </label>
+                <select [(ngModel)]="bulkDefaultCategory" 
+                  class="w-full px-4 py-3 border-2 border-blue-100 dark:border-blue-900/30 rounded-lg focus:ring-2 focus:border-transparent dark:bg-gray-700 dark:text-gray-200">
+                  <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
+                </select>
+                <p class="text-[10px] text-gray-500 mt-2">سيتم استخدام هذا التصنيف لأي منتج ليس له تصنيف محدد في الملف.</p>
+              </div>
+            </div>
+
+            <!-- Step 2: File Upload -->
+            <div class="bg-gray-50 dark:bg-gray-900/20 p-6 rounded-2xl border border-gray-100 dark:border-gray-800">
+              <h4 class="text-xl font-bold mb-4 text-gray-800 dark:text-gray-300 flex items-center">
+                <fa-icon [icon]="['fas', 'cloud-upload-alt']" class="ml-2 text-blue-500"></fa-icon>
+                2. اختيار ملف Excel
+              </h4>
+              
+              <div class="relative group">
+                <input type="file" (change)="onBulkFileSelected($event)" accept=".xlsx, .xls" id="bulkFile"
+                  class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                <div class="p-8 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-2xl flex flex-col items-center justify-center transition-all group-hover:border-blue-400 group-hover:bg-blue-50 dark:group-hover:bg-blue-900/10">
+                  <fa-icon [icon]="['fas', 'file-excel']" class="text-5xl text-green-500 mb-4"></fa-icon>
+                  <p class="text-lg font-medium text-gray-600 dark:text-gray-400">
+                    {{ bulkFile ? bulkFile.name : 'اسحب الملف هنا أو انقر للاختيار' }}
+                  </p>
+                  <p class="text-sm text-gray-400 mt-2">يدعم ملفات .xlsx, .xls فقط</p>
+                  
+                  <!-- Template Download Link -->
+                  <button type="button" (click)="downloadTemplate(); $event.stopPropagation()" 
+                    class="mt-4 text-blue-600 dark:text-blue-400 hover:underline text-sm flex items-center">
+                    <fa-icon [icon]="['fas', 'download']" class="ml-1"></fa-icon>
+                    تحميل نموذج ملف الاستيراد (Template)
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Step 3: Column Mapping -->
+            <div *ngIf="excelHeaders.length > 0" class="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-200 dark:border-gray-700 animate-slideUp">
+              <h4 class="text-xl font-bold mb-4 text-gray-800 dark:text-gray-300 flex items-center">
+                <fa-icon [icon]="['fas', 'sitemap']" class="ml-2 text-purple-500"></fa-icon>
+                3. ربط الأعمدة (Mapping)
+              </h4>
+              <p class="text-sm text-gray-500 mb-6 italic">قم بتحديد العمود المناسب لكل حقل في النظام</p>
+              
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div *ngFor="let field of systemFields" class="flex flex-col">
+                  <label class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex justify-between">
+                    <span>{{ field.label }}</span>
+                    <span *ngIf="['product_name', 'product_category', 'product_price'].includes(field.key)" 
+                      class="text-red-500 text-xs font-bold">* مطلوب</span>
+                  </label>
+                  <select [(ngModel)]="fieldMapping[field.key]" 
+                    class="w-full px-3 py-2 border rounded-lg focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-200">
+                    <option value="">-- تجاهل --</option>
+                    <option *ngFor="let header of excelHeaders" [value]="header">{{ header }}</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Step 4: Preview -->
+            <div *ngIf="getMappedPreview().length > 0" class="bg-gray-50 dark:bg-gray-900/40 p-6 rounded-2xl border border-gray-200 dark:border-gray-700 animate-slideUp">
+              <h4 class="text-xl font-bold mb-4 text-gray-800 dark:text-gray-300 flex items-center">
+                <fa-icon [icon]="['fas', 'eye']" class="ml-2 text-indigo-500"></fa-icon>
+                4. معاينة البيانات (أول 5 صفوف)
+              </h4>
+              <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
+                <table class="w-full text-sm text-right text-gray-500 dark:text-gray-400">
+                  <thead class="text-xs text-gray-700 uppercase bg-gray-100 dark:bg-gray-700 dark:text-gray-400">
+                    <tr>
+                      <th *ngFor="let field of systemFields" class="px-4 py-3 whitespace-nowrap" [hidden]="!fieldMapping[field.key]">
+                        {{ field.label }}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let row of getMappedPreview()" class="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
+                      <td *ngFor="let field of systemFields" class="px-4 py-3 whitespace-nowrap" [hidden]="!fieldMapping[field.key]">
+                        {{ row[field.key] }}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Import Button -->
+            <div class="pt-6">
+              <button (click)="startBulkImport()" 
+                [disabled]="importingBulk || !bulkFile || excelHeaders.length === 0"
+                class="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-700 text-white text-xl font-bold rounded-2xl shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:scale-100 flex items-center justify-center">
+                <fa-icon *ngIf="importingBulk" [icon]="['fas', 'spinner']" class="ml-3 animate-spin"></fa-icon>
+                <fa-icon *ngIf="!importingBulk" [icon]="['fas', 'check-circle']" class="ml-3"></fa-icon>
+                {{ importingBulk ? 'جاري الاستيراد...' : 'بدء عملية الاستيراد' }}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1788,9 +1808,30 @@
                 <option value="withoutEbook">بدون نسخة إلكترونية</option>
               </select>
             </div>
+            <!-- Publisher Filter -->
+            <div class="flex items-center space-x-2 rtl">
+              <label for="publisherFilterMain" class="text-gray-700 dark:text-gray-300 font-semibold whitespace-nowrap">الناشر:</label>
+              <select id="publisherFilterMain" [(ngModel)]="publisherFilter" (ngModelChange)="rebuildFilteredProducts()"
+                class="border rounded px-2 py-1 dark:bg-gray-700 dark:text-gray-200 min-w-[120px]">
+                <option value="all">كل الناشرين</option>
+                <option *ngFor="let pub of uniquePublishers" [value]="pub">{{ pub }}</option>
+              </select>
+            </div>
+            <!-- Merchant Filter -->
+            <div class="flex items-center space-x-2 rtl">
+              <label for="merchantFilterMain" class="text-gray-700 dark:text-gray-300 font-semibold whitespace-nowrap">المصدر:</label>
+              <select id="merchantFilterMain" [(ngModel)]="merchantFilter" (ngModelChange)="rebuildFilteredProducts()"
+                class="border rounded px-2 py-1 dark:bg-gray-700 dark:text-gray-200 min-w-[120px]">
+                <option value="all">الكل (تجار + أدمن)</option>
+                <option value="admin">الأدمن فقط</option>
+                <optgroup label="التجار">
+                  <option *ngFor="let m of merchantsList" [value]="m.merchantName">{{ m.merchantName }}</option>
+                </optgroup>
+              </select>
+            </div>
             <!-- Category Filter -->
             <div class="flex items-center space-x-2 rtl">
-              <label for="categoryFilter" class="text-gray-700 dark:text-gray-300 font-semibold">الفئة:</label>
+              <label for="categoryFilter" class="text-gray-700 dark:text-gray-300 font-semibold whitespace-nowrap">الفئة:</label>
               <select id="categoryFilter" [(ngModel)]="currentFilter" (ngModelChange)="onCategoryFilterChange()"
                 class="border rounded px-2 py-1 dark:bg-gray-700 dark:text-gray-200">
                 <option value="جميع الفئات">جميع الفئات</option>
@@ -2123,134 +2164,13 @@
                             class="mt-1 bg-gray-100 dark:bg-gray-700 border rounded p-1 w-full">
                         </div>
                       </ng-container>
-
-                      <!-- Electronics Details -->
-                      <ng-container
-                        *ngIf="categoryFieldsMap[product.product_category || '']?.includes('electronicsType')">
-                        <div><label class="font-semibold text-gray-600 dark:text-gray-300">نوع الجهاز:</label>
-                          <p *ngIf="!product.editMode">{{ product['electronicsType'] || '-' }}</p><input
-                            *ngIf="product.editMode" type="text" [(ngModel)]="product['electronicsType']"
-                            class="mt-1 bg-gray-100 dark:bg-gray-700 border rounded p-1 w-full">
-                        </div>
-                        <div><label class="font-semibold text-gray-600 dark:text-gray-300">الموديل:</label>
-                          <p *ngIf="!product.editMode">{{ product['model'] || '-' }}</p><input *ngIf="product.editMode"
-                            type="text" [(ngModel)]="product['model']"
-                            class="mt-1 bg-gray-100 dark:bg-gray-700 border rounded p-1 w-full">
-                        </div>
-                        <div><label class="font-semibold text-gray-600 dark:text-gray-300">المواصفات:</label>
-                          <p *ngIf="!product.editMode">{{ product['specs'] || '-' }}</p><input *ngIf="product.editMode"
-                            type="text" [(ngModel)]="product['specs']"
-                            class="mt-1 bg-gray-100 dark:bg-gray-700 border rounded p-1 w-full">
-                        </div>
-                        <div><label class="font-semibold text-gray-600 dark:text-gray-300">الضمان:</label>
-                          <p *ngIf="!product.editMode">{{ product['warranty'] || '-' }}</p><input
-                            *ngIf="product.editMode" type="text" [(ngModel)]="product['warranty']"
-                            class="mt-1 bg-gray-100 dark:bg-gray-700 border rounded p-1 w-full">
-                        </div>
-                      </ng-container>
-
-                      <!-- Clothing Details -->
-                      <ng-container *ngIf="categoryFieldsMap[product.product_category || '']?.includes('clothingType')">
-                        <div><label class="font-semibold text-gray-600 dark:text-gray-300">النوع:</label>
-                          <p *ngIf="!product.editMode">{{ product['clothingType'] || '-' }}</p><input
-                            *ngIf="product.editMode" type="text" [(ngModel)]="product['clothingType']"
-                            class="mt-1 bg-gray-100 dark:bg-gray-700 border rounded p-1 w-full">
-                        </div>
-                        <div><label class="font-semibold text-gray-600 dark:text-gray-300">الموسم:</label>
-                          <p *ngIf="!product.editMode">{{ product['season'] || '-' }}</p><input *ngIf="product.editMode"
-                            type="text" [(ngModel)]="product['season']"
-                            class="mt-1 bg-gray-100 dark:bg-gray-700 border rounded p-1 w-full">
-                        </div>
-                        <div><label class="font-semibold text-gray-600 dark:text-gray-300">بلد المنشأ:</label>
-                          <p *ngIf="!product.editMode">{{ product['originCountry'] || '-' }}</p><input
-                            *ngIf="product.editMode" type="text" [(ngModel)]="product['originCountry']"
-                            class="mt-1 bg-gray-100 dark:bg-gray-700 border rounded p-1 w-full">
-                        </div>
-                      </ng-container>
-
-                      <!-- Fabric Details -->
-                      <ng-container *ngIf="categoryFieldsMap[product.product_category || '']?.includes('fabricType')">
-                        <div><label class="font-semibold text-gray-600 dark:text-gray-300">نوع القماش:</label>
-                          <p *ngIf="!product.editMode">{{ product['fabricType'] || '-' }}</p><input
-                            *ngIf="product.editMode" type="text" [(ngModel)]="product['fabricType']"
-                            class="mt-1 bg-gray-100 dark:bg-gray-700 border rounded p-1 w-full">
-                        </div>
-                        <div><label class="font-semibold text-gray-600 dark:text-gray-300">العرض:</label>
-                          <p *ngIf="!product.editMode">{{ product['width'] || '-' }}</p><input *ngIf="product.editMode"
-                            type="text" [(ngModel)]="product['width']"
-                            class="mt-1 bg-gray-100 dark:bg-gray-700 border rounded p-1 w-full">
-                        </div>
-                        <div><label class="font-semibold text-gray-600 dark:text-gray-300">الطول:</label>
-                          <p *ngIf="!product.editMode">{{ product['length'] || '-' }}</p><input *ngIf="product.editMode"
-                            type="text" [(ngModel)]="product['length']"
-                            class="mt-1 bg-gray-100 dark:bg-gray-700 border rounded p-1 w-full">
-                        </div>
-                        <div><label class="font-semibold text-gray-600 dark:text-gray-300">الاستخدام:</label>
-                          <p *ngIf="!product.editMode">{{ product['usage'] || '-' }}</p><input *ngIf="product.editMode"
-                            type="text" [(ngModel)]="product['usage']"
-                            class="mt-1 bg-gray-100 dark:bg-gray-700 border rounded p-1 w-full">
-                        </div>
-                      </ng-container>
-
-                      <!-- Furniture-specific dimensions -->
-                      <ng-container *ngIf="product.product_category === 'أثاث وديكور المنزل'">
-                        <div><label class="font-semibold text-gray-600 dark:text-gray-300">نوع الأثاث:</label>
-                          <p *ngIf="!product.editMode">{{ product['furnitureType'] || '-' }}</p><input
-                            *ngIf="product.editMode" type="text" [(ngModel)]="product['furnitureType']"
-                            class="mt-1 bg-gray-100 dark:bg-gray-700 border rounded p-1 w-full">
-                        </div>
-                        <div><label class="font-semibold text-gray-600 dark:text-gray-300">الطول (سم):</label>
-                          <p *ngIf="!product.editMode">{{ product['length'] || '-' }}</p><input *ngIf="product.editMode"
-                            type="number" [(ngModel)]="product['length']"
-                            class="mt-1 bg-gray-100 dark:bg-gray-700 border rounded p-1 w-full">
-                        </div>
-                        <div><label class="font-semibold text-gray-600 dark:text-gray-300">الارتفاع (سم):</label>
-                          <p *ngIf="!product.editMode">{{ product['height'] || '-' }}</p><input *ngIf="product.editMode"
-                            type="number" [(ngModel)]="product['height']"
-                            class="mt-1 bg-gray-100 dark:bg-gray-700 border rounded p-1 w-full">
-                        </div>
-                        <div><label class="font-semibold text-gray-600 dark:text-gray-300">طريقة التوصيل:</label>
-                          <p *ngIf="!product.editMode">{{ product['deliveryMethod'] || '-' }}</p><input
-                            *ngIf="product.editMode" type="text" [(ngModel)]="product['deliveryMethod']"
-                            class="mt-1 bg-gray-100 dark:bg-gray-700 border rounded p-1 w-full">
-                        </div>
-                      </ng-container>
-
-                      <!-- Toys Details -->
-                      <ng-container *ngIf="categoryFieldsMap[product.product_category || '']?.includes('toyType')">
-                        <div><label class="font-semibold text-gray-600 dark:text-gray-300">نوع اللعبة:</label>
-                          <p *ngIf="!product.editMode">{{ product['toyType'] || '-' }}</p><input
-                            *ngIf="product.editMode" type="text" [(ngModel)]="product['toyType']"
-                            class="mt-1 bg-gray-100 dark:bg-gray-700 border rounded p-1 w-full">
-                        </div>
-                        <div><label class="font-semibold text-gray-600 dark:text-gray-300">الفئة العمرية:</label>
-                          <p *ngIf="!product.editMode">{{ product['ageGroup'] || '-' }}</p><input
-                            *ngIf="product.editMode" type="text" [(ngModel)]="product['ageGroup']"
-                            class="mt-1 bg-gray-100 dark:bg-gray-700 border rounded p-1 w-full">
-                        </div>
-                        <div><label class="font-semibold text-gray-600 dark:text-gray-300">معايير السلامة:</label>
-                          <p *ngIf="!product.editMode">{{ product['safety'] || '-' }}</p><input *ngIf="product.editMode"
-                            type="text" [(ngModel)]="product['safety']"
-                            class="mt-1 bg-gray-100 dark:bg-gray-700 border rounded p-1 w-full">
-                        </div>
-                      </ng-container>
                     </div>
-                    <!-- Uncategorized Details -->
-                    <ng-container *ngIf="product.product_category === 'غير مصنف'">
-                      <div><label class="font-semibold text-gray-600 dark:text-gray-300">الفئة المقترحة:</label>
-                        <p *ngIf="!product.editMode">{{ product['suggestedCategory'] || '-' }}</p><input
-                          *ngIf="product.editMode" type="text" [(ngModel)]="product['suggestedCategory']"
-                          class="mt-1 bg-gray-100 dark:bg-gray-700 border rounded p-1 w-full">
-                      </div>
-                    </ng-container>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-          <p *ngIf="products.length === 0" class="text-center text-gray-500 dark:text-gray-400 py-6">لا توجد منتجات
-            حالياً
-          </p>
+
           <!-- Pagination controls for products -->
           <div class="flex justify-center mt-4 space-x-4 items-center mb-32 md:mb-0">
             <button (click)="prevProductsPage()" [disabled]="productsPage === 1"
@@ -2262,6 +2182,7 @@
         </div>
       </div>
 
+
       <!-- عرض الطلبات -->
       <div *ngIf="currentView === 'orders' || currentView === 'merchantOrders'">
         <div class="px-2 sm:px-10 mb-32 md:mb-0">
@@ -2270,7 +2191,7 @@
           </h3>
           <h3 *ngIf="currentView === 'merchantOrders'" class="text-xl font-bold mb-4 text-gray-900 dark:text-gray-200">
             طلبات
-            التجار</h3>
+            دور النشر والمكتبات</h3>
 
           <!-- Bulk action buttons for orders -->
           <div class="mb-4 flex justify-between items-center">
@@ -2374,83 +2295,49 @@
                   {{ order.shippingMethod === 'merchant' ? 'التاجر يشحن' : 'مندوب النظام' }}
                 </span>
               </div>
-              <div class="flex gap-2 mt-2">
-                <button *ngIf="order.status === 'قيد الإنتظار'" (click)="confirmShipment(order._id, 'تم الشحن')"
-                  class="w-full bg-orange-500 hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700 text-white font-semibold py-1 px-3 rounded">
-                  اشحن
-                </button>
-                <button *ngIf="order.status === 'تم الشحن' && order.isMerchantOrder"
-                  (click)="confirmShipment(order._id, 'تم الاستلام')"
-                  class="w-full bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-semibold py-1 px-3 rounded">
-                  الاستلام
-                </button>
-                <button
-                  *ngIf="(order.status === 'تم الاستلام' && order.isMerchantOrder) || (order.status === 'تم الشحن' && !order.isMerchantOrder)"
-                  (click)="confirmShipment(order._id, 'تم التسليم')"
-                  class="w-full bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700 text-white font-semibold py-1 px-3 rounded">
-                  تمت
-                </button>
-                <button *ngIf="order.status !== 'تم الإلغاء' && order.status !== 'تم التسليم'"
-                  (click)="confirmShipment(order._id, 'تم الإلغاء')"
-                  class="w-full bg-red-700 hover:bg-red-800 dark:bg-red-700 dark:hover:bg-red-800 text-white font-semibold py-1 px-3 rounded">
-                  إلغاء
-                </button>
-                <button *ngIf="order.status === 'تم الإلغاء'" (click)="deleteOrder(order._id)"
-                  class="w-full bg-gray-700 hover:bg-black dark:bg-gray-800 dark:hover:bg-black text-white font-semibold py-1 px-3 rounded">
-                  حذف
-                </button>
-                <button *ngIf="order.status === 'تم الإلغاء'" (click)="archiveOrder(order._id)"
-                  class="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-1 px-3 rounded">
-                  أرشف
-                </button>
-              </div>
             </div>
           </div>
-        </div>
 
-        <!-- تصميم الجدول للشاشات المتوسطة والكبيرة -->
-        <div class="hidden sm:block">
-          <table class="min-w-full bg-white dark:bg-gray-800 rounded-lg shadow-md text-sm mx-auto">
+          <!-- تصميم عرض الطلبات في الشاشات الكبيرة -->
+          <table class="min-w-full bg-white dark:bg-gray-800 rounded-lg shadow-md text-sm mx-auto hidden sm:table">
             <thead>
-              <tr
-                class="bg-blue-100 dark:bg-[#0a1325] text-blue-700 dark:text-blue-400 uppercase text-xs font-semibold">
-                <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">
-                  <input type="checkbox" (change)="selectAllOrders()" [checked]="isAllOrdersSelected()"
-                    [indeterminate]="isSomeOrdersSelected()" />
-                </th>
-                <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">بيانات العميل</th>
-                <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">الكتب</th>
+              <tr class="bg-blue-100 dark:bg-[#0a1325] text-blue-700 dark:text-blue-400 uppercase text-xs font-semibold">
+                <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">تحديد</th>
+                <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">العميل</th>
+                <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">المنتج</th>
                 <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">الكمية</th>
-                <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">السعر الإجمالي</th>
-                <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">الحالة</th>
+                <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">الإجمالي</th>
                 <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">الدفع</th>
-                <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">طريقة الشحن</th>
-                <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700 text-[10px]">تاريخ الطلب</th>
+                <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">الشحن</th>
+                <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">التاريخ</th>
                 <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">إجراءات</th>
               </tr>
             </thead>
             <tbody *ngIf="orders.length > 0">
               <ng-container *ngFor="let order of orders; let orderIndex = index">
-                <tr
-                  [ngClass]="{'bg-blue-50 dark:bg-[#0a1325]': orderIndex % 2 === 0, 'bg-white dark:bg-gray-800': orderIndex % 2 !== 0}">
+                <tr [ngClass]="{'bg-blue-50 dark:bg-[#0a1325]': orderIndex % 2 === 0, 'bg-white dark:bg-gray-800': orderIndex % 2 !== 0}">
                   <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700"
                     [attr.rowspan]="order.products.length">
                     <input type="checkbox" [checked]="selectedOrders.has(order._id)"
-                      (change)="toggleOrderSelection(order._id)" />
+                      (change)="toggleOrderSelection(order._id)" class="w-4 h-4" />
                   </td>
-                  <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700 rtl"
+                  <td class="py-2 px-3 border-b border-blue-200 dark:border-blue-700"
                     [attr.rowspan]="order.products.length">
-                    <div><strong>اسم العميل:</strong> {{ order.customerName }}</div>
-                    <div><strong>البريد الإلكتروني:</strong> {{ order.email }}</div>
-                    <div><strong>العنوان:</strong> {{ order.address }}</div>
-                    <div><strong>رقم الطلب:</strong> {{ order._id }}</div>
-                    
-                    <!-- Community Owner Details -->
-                    <div *ngIf="order.isCommunityItem && order.communityOwnerName" class="mt-2 p-2 bg-purple-50 dark:bg-purple-900/10 rounded-lg border border-purple-100 dark:border-purple-800/30 text-[11px]">
-                      <div class="font-bold text-purple-700 dark:text-purple-400 mb-1">👤 الطرف الآخر (المالك):</div>
-                      <div><strong>الاسم:</strong> {{ order.communityOwnerName }}</div>
-                      <div *ngIf="order.communityOwnerPhone"><strong>الهاتف:</strong> {{ order.communityOwnerPhone }}</div>
-                      <div *ngIf="order.communityOwnerAddress"><strong>العنوان:</strong> {{ order.communityOwnerAddress }}</div>
+                    <div class="text-right">
+                      <div class="font-bold">{{ order.customerName }}</div>
+                      <div class="text-[10px] text-gray-500">{{ order.email }}</div>
+                      <div class="text-[10px] text-gray-500 text-right">{{ order.address }}</div>
+                    </div>
+                    <!-- سجل التتبع -->
+                    <div *ngIf="order.statusLog && order.statusLog.length > 0"
+                         class="mt-2 text-[9px] bg-gray-50 dark:bg-gray-900/40 p-2 rounded border border-gray-100 dark:border-gray-800 max-w-[140px] mx-auto overflow-hidden text-right rtl">
+                      <div class="font-bold text-gray-400 mb-1 border-b dark:border-gray-700 pb-1 text-center">تتبع الحالة</div>
+                      <div *ngFor="let log of order.statusLog" class="mb-1.5 last:mb-0">
+                        <div class="font-bold text-gray-600 dark:text-gray-300">{{ log.status }}</div>
+                        <div class="text-[8px] text-gray-400 leading-none mt-0.5">
+                          {{ log.actor }} • {{ formatOrderShortDate(log.timestamp) }}
+                        </div>
+                      </div>
                     </div>
                   </td>
                   <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700">
@@ -2462,42 +2349,12 @@
                       </span>
                     </div>
                   </td>
-                  <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700">{{
-                    order.products[0].product_quantity }}</td>
-                  <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700 rtl"
-                    [attr.rowspan]="order.products.length">
-                    {{ order.totalAmount + ' ج.م' }}
+                  <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700">
+                    {{ order.products[0].product_quantity }}
                   </td>
                   <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700"
                     [attr.rowspan]="order.products.length">
-                    <span class="inline-block px-2 py-1 rounded-full text-xs font-semibold" [ngClass]="{
-                  'text-yellow-500': order.status === 'قيد الإنتظار',
-                  'text-orange-500': order.status === 'تم الشحن',
-                  'text-blue-500': order.status === 'تم الاستلام',
-                  'text-green-500': order.status === 'تم التسليم',
-                  'text-red-500': order.status === 'تم الإلغاء',
-                  'text-purple-600': order.status === 'ارسال الاستلام',
-                  'dark:text-yellow-400': order.status === 'قيد الإنتظار',
-                  'dark:text-orange-400': order.status === 'تم الشحن',
-                  'dark:text-blue-400': order.status === 'تم الاستلام',
-                  'dark:text-green-400': order.status === 'تم التسليم',
-                  'dark:text-red-400': order.status === 'تم الإلغاء',
-                  'dark:text-purple-400': order.status === 'ارسال الاستلام'
-                }">
-                      {{ order.status }}
-                    </span>
-
-                    <!-- سجل تتبع الطلب (ديسك توب) -->
-                    <div *ngIf="order.statusLog && order.statusLog.length > 0" 
-                         class="mt-2 text-[9px] bg-gray-50 dark:bg-gray-900/40 p-2 rounded border border-gray-100 dark:border-gray-800 max-w-[140px] mx-auto overflow-hidden text-right rtl">
-                      <div class="font-bold text-gray-400 mb-1 border-b dark:border-gray-700 pb-1 text-center">تتبع الحالة</div>
-                      <div *ngFor="let log of order.statusLog" class="mb-1.5 last:mb-0">
-                        <div class="font-bold text-gray-600 dark:text-gray-300">{{ log.status }}</div>
-                        <div class="text-[8px] text-gray-400 leading-none mt-0.5">
-                          {{ log.actor }} • {{ formatOrderShortDate(log.timestamp) }}
-                        </div>
-                      </div>
-                    </div>
+                    {{ order.totalAmount }} ج.م
                   </td>
                   <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700"
                     [attr.rowspan]="order.products.length">
@@ -3222,6 +3079,50 @@
           </div>
         </div>
 
+        <!-- Filter: Source (Merged Merchant/Publisher) -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">تحديد الجهة أو دار النشر المستهدفة</label>
+          <div class="relative">
+            <select [(ngModel)]="bulkAdjustData.combinedFilter"
+              class="w-full p-3.5 pl-10 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white text-lg font-bold shadow-sm appearance-none focus:ring-2 focus:ring-orange-500/50 outline-none">
+              <option value="all">🌍 الكل (جميع المنتجات)</option>
+              <option value="admin">👑 الأدمن فقط (كنوز)</option>
+              
+              <optgroup label="💼 دور النشر">
+                <option *ngFor="let merchant of merchantsList" [value]="'merch:' + merchant.merchantName">
+                  {{ merchant.merchantName }}
+                </option>
+              </optgroup>
+              
+              <optgroup label="📚 دور النشر">
+                <option *ngFor="let pub of uniquePublishers" [value]="'pub:' + pub">
+                  {{ pub }}
+                </option>
+              </optgroup>
+            </select>
+            <fa-icon [icon]="['fas', 'filter']" class="absolute left-4 top-4 text-gray-400 pointer-events-none"></fa-icon>
+          </div>
+        </div>
+        <!-- Filter: Sorting & Global Toggle -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">المنتجات المستهدفة</label>
+            <div class="p-2.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-lg text-blue-700 dark:text-blue-300 flex items-center gap-2">
+              <fa-icon [icon]="['fas', 'check-circle']"></fa-icon>
+              <span class="font-bold">كل المنتجات</span>
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ترتيب حسب</label>
+            <select [(ngModel)]="bulkAdjustData.sortBy"
+              class="w-full p-2.5 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+              <option value="none">بدون ترتيب (ترتيب الملف)</option>
+              <option value="price_asc">السعر (تصاعدي)</option>
+              <option value="price_desc">السعر (تنازلي)</option>
+              <option value="newest">الأحدث أولاً</option>
+            </select>
+          </div>
+        </div>
         <!-- Filter: Price Range -->
         <div class="grid grid-cols-2 gap-4">
           <div>

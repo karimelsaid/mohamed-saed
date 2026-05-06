@@ -56,7 +56,12 @@ export class IslamicComponent implements OnInit, OnDestroy {
 
     this.dataService.getData().subscribe(data => {
       // Filter books by category 'كتب دينية'
-      let filteredBooks = data.filter((book: Book) => book.product_category.includes('كتب دينية'));
+      let filteredBooks = data.filter((book: Book) => 
+        book.product_category.includes('كتب دينية') || book.product_category === 'ديني'
+      );
+
+      // Randomize the list for variety
+      filteredBooks = this.dataService.shuffleArray(filteredBooks);
 
       // Parse promotionEndDate and update rival flag based on current date
       const now = new Date().getTime();
@@ -349,7 +354,7 @@ export class IslamicComponent implements OnInit, OnDestroy {
         const distance = promoEndDate - now;
 
         if (distance < 0) {
-          book.remainingTime = book.rival ? '' : 'انتهى العرض';
+          book.remainingTime = book.rival ? '' : '';
           return;
         }
 

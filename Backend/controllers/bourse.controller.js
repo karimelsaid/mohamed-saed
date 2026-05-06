@@ -14,11 +14,11 @@ function shuffle(array) {
   return array;
 }
 
-// Utility to get Date String in Local Time
 function getLocalDateString(date) {
-  const offset = date.getTimezoneOffset();
-  const localDate = new Date(date.getTime() - (offset * 60 * 1000));
-  return localDate.toISOString().split('T')[0];
+  // Force Egypt Time (UTC+3)
+  const EGYPT_OFFSET = 3 * 60 * 60 * 1000;
+  const egyptDate = new Date(date.getTime() + EGYPT_OFFSET);
+  return egyptDate.toISOString().split('T')[0];
 }
 
 exports.getCurrentOffer = async (req, res) => {
@@ -43,10 +43,15 @@ exports.getCurrentOffer = async (req, res) => {
       return res.status(200).json({ active: true, offer: activeOffer, freeGiftThreshold: settings.bourseConfig.freeGiftThreshold });
     }
 
-    // Attempt to generate today's offers if they don't exist
+    // If no active offer found, check if we need to generate/regenerate today's offers
+    // We expect 32 slots per day. If less, something is wrong.
     const offersCount = await BourseOffer.countDocuments({ date: dateStr });
-    if (offersCount === 0) {
+    if (offersCount < 32) {
+       console.log(`[Bourse] Found only ${offersCount} offers for ${dateStr}. Regenerating...`);
+       // Delete incomplete set if any
+       await BourseOffer.deleteMany({ date: dateStr });
        await generateDailyBourseOffers(dateStr, settings.bourseConfig);
+       
        // Check again
        const newOffer = await BourseOffer.findOne({
           date: dateStr,
@@ -127,15 +132,25 @@ async function generateDailyBourseOffers(dateStr, config) {
 
   const offersToCreate = [];
   
-  const [year, month, day] = dateStr.split('-');
+  const [year, month, day] = dateStr.split('-').map(Number);
   
   for (let i = 0; i < 32; i++) {
-    const startMinutes = i * 45;
-    const endMinutes = startMinutes + 44;
+    const startMinutesTotal = i * 45;
+    const endMinutesTotal = startMinutesTotal + 44;
     
-    // Create dates in local time to avoid UTC shift
-    const startTime = new Date(year, month - 1, day, 0, startMinutes, 0);
-    const endTime = new Date(year, month - 1, day, 0, endMinutes, 59);
+    // Calculate hours and minutes for UTC creation
+    const startH = Math.floor(startMinutesTotal / 60);
+    const startM = startMinutesTotal % 60;
+    const endH = Math.floor(endMinutesTotal / 60);
+    const endM = endMinutesTotal % 60;
+
+    // Create dates assuming dateStr is Egypt time
+    // We want 00:00 Egypt, which is 21:00 UTC (previous day)
+    const startTime = new Date(Date.UTC(year, month - 1, day, startH, startM, 0));
+    startTime.setHours(startTime.getHours() - 3); // Shift back to align with Egypt Time
+
+    const endTime = new Date(Date.UTC(year, month - 1, day, endH, endM, 59));
+    endTime.setHours(endTime.getHours() - 3); // Shift back to align with Egypt Time
 
     const shuffled = shuffle([...allBooks]);
     const selectedBooks = shuffled.slice(0, Math.min(booksPerSlot, shuffled.length));
@@ -190,7 +205,7 @@ exports.getBourseSettings = async (req, res) => {
 
 exports.updateBourseSettings = async (req, res) => {
   try {
-    const { isActive, netProfitMargin, freeGiftThreshold, allowedCategories, booksPerSlot, includeMerchantProducts } = req.body;
+    const { isActive, netProfitMargin, freeGiftThreshold, allowedCategories, booksPerSlot, includeMerchantProducts, allowPublisherUpload } = req.body;
     const settings = await SystemSettings.getInstance();
     
     if (!settings.bourseConfig) {
@@ -211,6 +226,7 @@ exports.updateBourseSettings = async (req, res) => {
     if (allowedCategories !== undefined) settings.bourseConfig.allowedCategories = allowedCategories;
     if (booksPerSlot !== undefined) settings.bourseConfig.booksPerSlot = booksPerSlot;
     if (includeMerchantProducts !== undefined) settings.bourseConfig.includeMerchantProducts = includeMerchantProducts;
+    if (allowPublisherUpload !== undefined) settings.bourseConfig.allowPublisherUpload = allowPublisherUpload;
 
     await settings.save();
 

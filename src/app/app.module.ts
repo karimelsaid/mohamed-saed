@@ -42,14 +42,6 @@ import { AdminModule } from './admin/admin.module';
 import { MerchantDashboardComponent } from './merchant/dashboard/dashboard.component';
 import { TutorialComponent } from './shared/tutorial/tutorial.component';
 import { OfficeSuppliesComponent } from './book-list/office-supplies/office-supplies.component';
-import { ElectronicsComponent } from './book-list/electronics/electronics.component';
-import { ClothingComponent } from './book-list/clothing/clothing.component';
-import { CosmeticsComponent } from './book-list/cosmetics/cosmetics.component';
-import { ShoesComponent } from './book-list/shoes/shoes.component';
-import { FurnitureComponent } from './book-list/furniture/furniture.component';
-import { GamesComponent } from './book-list/games/games.component';
-import { FabricsComponent } from './book-list/fabrics/fabrics.component';
-import { OthersComponent } from './book-list/others/others.component';
 import { BooksComponent } from './book-list/books/books.component';
 import { HowToEarnComponent } from './pages/how-to-earn/how-to-earn.component';
 import { ServiceWorkerModule } from '@angular/service-worker';
@@ -77,14 +69,6 @@ import { LiveUpdateModalComponent } from './shared/components/live-update-modal/
     FavoritesComponent,
     ChatWindowComponent,
     OfficeSuppliesComponent,
-    ElectronicsComponent,
-    ClothingComponent,
-    CosmeticsComponent,
-    ShoesComponent,
-    FurnitureComponent,
-    GamesComponent,
-    FabricsComponent,
-    OthersComponent,
     BooksComponent,
 
     HowToEarnComponent,

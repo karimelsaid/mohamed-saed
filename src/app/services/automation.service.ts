@@ -32,6 +32,16 @@ export interface AutomationSettings {
   };
   googleSheetId?: string;
   googleSheetEnabled?: boolean;
+  claudeConfig: {
+    enabled: boolean;
+    lastCommand?: string;
+    lastStatus?: string;
+  };
+  n8nConfig: {
+    apiUrl: string;
+    apiKey: string;
+    syncEnabled: boolean;
+  };
 }
 
 @Injectable({
@@ -59,6 +69,18 @@ export class AutomationService {
 
   importProductsFromSheets(): Observable<any> {
     return this.http.post(`${environment.apiBaseUrl}/admin/import-products-from-sheets`, {});
+  }
+
+  executeClaudeCommand(prompt: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/claude/execute`, { prompt });
+  }
+
+  getN8nStats(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/n8n/stats`);
+  }
+
+  deployToProduction(): Observable<any> {
+    return this.http.post(`${this.apiUrl}/deploy`, {});
   }
 }
 

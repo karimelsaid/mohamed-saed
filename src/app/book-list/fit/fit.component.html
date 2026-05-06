@@ -43,7 +43,7 @@
     <!-- بيانات الكتاب -->
     <div class="w-2/3 flex flex-col justify-between">
       <!-- مؤقت تنازلي -->
-      <div *ngIf="book.rival" class="rtl flex items-center space-x-2 space-x-reverse mb-2">
+      <div *ngIf="book.rival && book.remainingTime" class="rtl flex items-center space-x-2 space-x-reverse mb-2">
         <span class="text-gray-600 dark:text-gray-300 text-xs"> - العرض ينتهي خلال</span>
         <span class="bg-yellow-300 dark:bg-gray-700 text-xs font-mono px-2 py-1 rounded shadow-md dark:shadow-lg z-10">
           {{ book.remainingTime }}
@@ -52,7 +52,6 @@
       <div *ngIf="!book.rival" class="rtl flex items-center space-x-2 space-x-reverse mb-2">
         <span
           class="text-gray-600 dark:text-gray-300 text-xs font-mono px-2 py-1 rounded shadow-md dark:shadow-lg z-10">
-          انتهى العرض
         </span>
       </div>
       <div>

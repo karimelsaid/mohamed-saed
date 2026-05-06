@@ -29,20 +29,43 @@ export class AdminAutomationComponent implements OnInit {
       instagramId: ''
     },
     googleSheetId: '',
-    googleSheetEnabled: false
+    googleSheetEnabled: false,
+    claudeConfig: {
+      enabled: false,
+      lastCommand: '',
+      lastStatus: ''
+    },
+    n8nConfig: {
+      apiUrl: 'https://n8n.knoozbook.com',
+      apiKey: '',
+      syncEnabled: false
+    }
   };
 
   stats: any[] = [];
   recentLogs: AutomationLog[] = [];
   loading = false;
   saving = false;
-  
+
+  // Claude Agent Properties
+  claudePrompt = '';
+  claudeOutput = '';
+  claudeExecuting = false;
+
+  // n8n Stats
+  n8nStats: any = null;
+  loadingN8n = false;
+
+  // Deployment
+  deploying = false;
+
   private settingsUpdateSubject = new Subject<void>();
 
   constructor(private automationService: AutomationService) { }
 
   ngOnInit(): void {
     this.loadData();
+    this.loadN8nStats();
 
     // Debounce settings updates to avoid too many API calls
     this.settingsUpdateSubject.pipe(
@@ -70,6 +93,18 @@ export class AdminAutomationComponent implements OnInit {
     });
   }
 
+  loadN8nStats(): void {
+    if (!this.settings.n8nConfig?.apiKey) return;
+    this.loadingN8n = true;
+    this.automationService.getN8nStats().subscribe({
+      next: (res) => {
+        if (res.success) this.n8nStats = res.stats;
+        this.loadingN8n = false;
+      },
+      error: () => this.loadingN8n = false
+    });
+  }
+
   onSettingsChange(): void {
     this.settingsUpdateSubject.next();
   }
@@ -88,6 +123,44 @@ export class AdminAutomationComponent implements OnInit {
     });
   }
 
+  executeClaude(): void {
+    if (!this.claudePrompt.trim()) return;
+
+    this.claudeExecuting = true;
+    this.claudeOutput = 'جاري التنفيذ...';
+    
+    this.automationService.executeClaudeCommand(this.claudePrompt).subscribe({
+      next: (res) => {
+        this.claudeExecuting = false;
+        this.claudeOutput = res.output;
+        if (res.success) {
+          this.claudePrompt = '';
+          this.loadData(); // Refresh logs
+        }
+      },
+      error: (err) => {
+        this.claudeExecuting = false;
+        this.claudeOutput = 'خطأ في التنفيذ: ' + (err.error?.message || err.message);
+      }
+    });
+  }
+
+  triggerDeploy(): void {
+    if (!confirm('هل أنت متأكد من رغبتك في مزامنة التعديلات مع السيرفر العالمي الآن؟')) return;
+    
+    this.deploying = true;
+    this.automationService.deployToProduction().subscribe({
+      next: (res) => {
+        this.deploying = false;
+        alert('✅ تم بدء عملية المزامنة بنجاح!');
+      },
+      error: (err) => {
+        this.deploying = false;
+        alert('❌ فشل المزامنة: ' + err.message);
+      }
+    });
+  }
+
   getStatusClass(status: string): string {
     switch (status) {
       case 'success': return 'badge-success';
@@ -101,6 +174,7 @@ export class AdminAutomationComponent implements OnInit {
     switch (platform) {
       case 'facebook': return 'fab fa-facebook';
       case 'instagram': return 'fab fa-instagram';
+      case 'claude': return 'fas fa-brain';
       default: return 'fas fa-robot';
     }
   }

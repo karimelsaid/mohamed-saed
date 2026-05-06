@@ -38,14 +38,6 @@ import { MerchantAuthGuard } from './guards/merchant-auth.guard';
 import { AdminAuthGuard } from './guards/admin-auth.guard';
 import { StartupGuard } from './guards/startup.guard';
 import { OfficeSuppliesComponent } from './book-list/office-supplies/office-supplies.component';
-import { ElectronicsComponent } from './book-list/electronics/electronics.component';
-import { ClothingComponent } from './book-list/clothing/clothing.component';
-import { CosmeticsComponent } from './book-list/cosmetics/cosmetics.component';
-import { ShoesComponent } from './book-list/shoes/shoes.component';
-import { FurnitureComponent } from './book-list/furniture/furniture.component';
-import { GamesComponent } from './book-list/games/games.component';
-import { FabricsComponent } from './book-list/fabrics/fabrics.component';
-import { OthersComponent } from './book-list/others/others.component';
 import { BooksComponent } from './book-list/books/books.component';
 import { LibraryComponent } from './library/library.component';
 import { EpubReaderComponent } from './epub-reader/epub-reader.component';
@@ -128,25 +120,19 @@ const routes: Routes = [
     loadComponent: () => import('./checkout-modal/order-callback/order-callback.component').then(m => m.OrderCallbackComponent)
   },
   // Routes with parameters must come before routes without parameters
-  { path: 'electronics/:id/:name?', component: BookDetailsComponent },
-  { path: 'clothing/:id/:name?', component: BookDetailsComponent },
-  { path: 'cosmetics/:id/:name?', component: BookDetailsComponent },
-  { path: 'shoes/:id/:name?', component: BookDetailsComponent },
-  { path: 'furniture/:id/:name?', component: BookDetailsComponent },
-  { path: 'games/:id/:name?', component: BookDetailsComponent },
-  { path: 'fabrics/:id/:name?', component: BookDetailsComponent },
   { path: 'office-supplies/:id/:name?', component: BookDetailsComponent },
-  { path: 'others/:id/:name?', component: BookDetailsComponent },
   // Routes without parameters come after
+  // Redirected non-book/stationery routes to Home
+  { path: 'electronics', redirectTo: '/Home', pathMatch: 'full' },
+  { path: 'clothing', redirectTo: '/Home', pathMatch: 'full' },
+  { path: 'cosmetics', redirectTo: '/Home', pathMatch: 'full' },
+  { path: 'shoes', redirectTo: '/Home', pathMatch: 'full' },
+  { path: 'furniture', redirectTo: '/Home', pathMatch: 'full' },
+  { path: 'games', redirectTo: '/Home', pathMatch: 'full' },
+  { path: 'fabrics', redirectTo: '/Home', pathMatch: 'full' },
+  { path: 'others', redirectTo: '/Home', pathMatch: 'full' },
+
   { path: 'office-supplies', component: OfficeSuppliesComponent },
-  { path: 'electronics', component: ElectronicsComponent },
-  { path: 'clothing', component: ClothingComponent },
-  { path: 'cosmetics', component: CosmeticsComponent },
-  { path: 'shoes', component: ShoesComponent },
-  { path: 'furniture', component: FurnitureComponent },
-  { path: 'games', component: GamesComponent },
-  { path: 'fabrics', component: FabricsComponent },
-  { path: 'others', component: OthersComponent },
 
   { path: 'عن-الموقع', component: AboutComponent },
   { path: 'سياسة-الخصوصية', component: PrivacyPolicyComponent },

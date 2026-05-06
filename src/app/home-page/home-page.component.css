@@ -1,69 +1,133 @@
-/*
-  Home Page Styles
-  Most styles are handled via Tailwind CSS utility classes in the HTML.
-  Global styles (like .glass-panel) are defined in src/styles.css.
+/* 
+  Kenouz Premium Design System
 */
+
+:host {
+  --gold-gradient: linear-gradient(135deg, #c5a059 0%, #8e6d3b 100%);
+  --indigo-gradient: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+}
+
+/* Glassmorphism utility */
+.glass-hero {
+  background: rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.hero-vignette {
+  background: radial-gradient(circle, transparent 20%, rgba(0,0,0,0.4) 100%);
+  pointer-events: none;
+}
 
 /* Slow floating animation for ebook image */
 @keyframes float-slow {
-
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-
-  50% {
-    transform: translateY(-15px);
-  }
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-15px) rotate(1deg); }
 }
 
 .animate-float-slow {
   animation: float-slow 4s ease-in-out infinite;
 }
 
+/* Text entrance animation */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fadeInUp {
+  animation: fadeInUp 0.8s ease-out forwards;
+}
+
+/* Delay classes */
+.delay-100 { animation-delay: 100ms; }
+.delay-200 { animation-delay: 200ms; }
+.delay-300 { animation-delay: 300ms; }
+
+/* Product Card Enhancements */
+.book-card-shadow {
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.1);
+}
+
+.book-card-shadow:hover {
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.2);
+}
+
 /* Scrolling Columns Animations */
 @keyframes scroll-up {
-  0% {
-    transform: translateY(0);
-  }
-
-  100% {
-    transform: translateY(-50%);
-  }
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-50%); }
 }
 
 @keyframes scroll-down {
-  0% {
-    transform: translateY(-50%);
-  }
-
-  100% {
-    transform: translateY(0);
-  }
+  0% { transform: translateY(-50%); }
+  100% { transform: translateY(0); }
 }
 
-.scrolling-column {
-  animation: scroll-up linear infinite;
-}
+.scrolling-column { animation: scroll-up linear infinite; }
+.scrolling-column-reverse { animation: scroll-down linear infinite; }
 
-.scrolling-column-reverse {
-  animation: scroll-down linear infinite;
-}
+.speed-slow { animation-duration: 60s; }
+.speed-medium { animation-duration: 40s; }
+.speed-fast { animation-duration: 25s; }
 
-/* Speed control */
-.speed-slow {
-  animation-duration: 60s;
-}
-
-.speed-medium {
-  animation-duration: 40s;
-}
-
-.speed-fast {
-  animation-duration: 25s;
-}
-
-/* Desktop/Mobile specific heights */
 .scrolling-hero-container {
   height: clamp(500px, 80vh, 900px);
+}
+
+/* Tab Active State Glow */
+.tab-active-glow {
+  box-shadow: 0 0 20px rgba(197, 160, 89, 0.3);
+}
+
+/* Section Header Decoration */
+.section-title-line {
+  position: relative;
+  display: inline-block;
+}
+
+.section-title-line::after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  right: 0;
+  width: 60px;
+  height: 4px;
+  background: #c5a059; /* var(--knooz-gold) fallback */
+  border-radius: 2px;
+}
+/* Hide scrollbar utility */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+/* Marquee Animation */
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes marquee-reverse {
+  0% { transform: translateX(-50%); }
+  100% { transform: translateX(0); }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 40s linear infinite;
+}
+
+.animate-marquee-reverse {
+  display: flex;
+  width: max-content;
+  animation: marquee-reverse 40s linear infinite;
+}
+
+.animate-marquee:hover, .animate-marquee-reverse:hover {
+  animation-play-state: paused;
 }

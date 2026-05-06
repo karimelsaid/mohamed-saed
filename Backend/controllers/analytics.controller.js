@@ -56,6 +56,11 @@ exports.trackStoreVisit = async (req, res) => {
         const { merchantId } = req.params;
         const today = new Date().toISOString().split('T')[0];
 
+        // Only track visits for registered merchants with valid ObjectIds
+        if (!mongoose.Types.ObjectId.isValid(merchantId)) {
+            return res.json({ success: true, message: 'Skipped tracking for virtual merchant' });
+        }
+
         const merchant = await User.findById(merchantId);
         if (!merchant || merchant.role !== 'merchant') {
             return res.status(404).json({ success: false, message: 'Merchant not found' });

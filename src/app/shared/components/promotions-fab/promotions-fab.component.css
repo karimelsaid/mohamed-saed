@@ -1,15 +1,4 @@
-.fixed {
-    filter: drop-shadow(0 10px 15px rgba(0, 0, 0, 0.1));
-}
-
 button {
     /* Ensure the gradient uses the theme colors defined in promotions */
     background: linear-gradient(135deg, var(--promo-primary, #6366f1), var(--promo-secondary, #a855f7));
-}
-
-@media (max-width: 768px) {
-    .fixed {
-        bottom: 100px; /* Adjust if bottom navbar is present */
-        left: 1rem;
-    }
 }

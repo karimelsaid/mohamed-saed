@@ -20,7 +20,8 @@ export class AdminBourseSettingsComponent implements OnInit {
     freeGiftThreshold: 1000,
     allowedCategories: [],
     booksPerSlot: 8,
-    includeMerchantProducts: false
+    includeMerchantProducts: false,
+    allowPublisherUpload: true
   };
   isLoading = true;
   isSaving = false;

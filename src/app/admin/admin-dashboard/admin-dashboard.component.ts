@@ -17,7 +17,7 @@ import * as XLSX from 'xlsx';
 import { FreeShippingRulesComponent } from './free-shipping/free-shipping-rules.component';
 import { Subscription } from 'rxjs';
 import { FaIconLibrary, FontAwesomeModule, FaIconComponent } from '@fortawesome/angular-fontawesome';
-import { faShoppingCart, faStore, faBook, faPrint, faPlus, faEdit, faTrash, faTruck, faUsers, faCheckCircle, faMoneyBillWave, faSitemap, faPlusCircle, faImage, faTag, faHashtag, faList, faDollarSign, faAlignLeft, faExclamationTriangle, faCartPlus, faHeart, faMobileAlt, faCamera, faTimes, faHome, faChartLine, faCog, faBars, faUserClock, faCoins, faUserPlus, faChartBar, faBell, faSearch, faSlidersH, faGift, faSyncAlt, faSpinner, faCloudUploadAlt, faGavel } from '@fortawesome/free-solid-svg-icons';
+import { faShoppingCart, faStore, faBook, faPrint, faPlus, faEdit, faTrash, faTruck, faUsers, faCheckCircle, faMoneyBillWave, faSitemap, faPlusCircle, faImage, faTag, faHashtag, faList, faDollarSign, faAlignLeft, faExclamationTriangle, faCartPlus, faHeart, faMobileAlt, faCamera, faTimes, faHome, faChartLine, faCog, faBars, faUserClock, faCoins, faUserPlus, faChartBar, faBell, faSearch, faSlidersH, faGift, faSyncAlt, faSpinner, faCloudUploadAlt, faGavel, faPaperPlane } from '@fortawesome/free-solid-svg-icons';
 import { PaymentRequestsComponent } from '../payment-requests/payment-requests.component';
 import { UserHierarchyComponent } from '../user-hierarchy/user-hierarchy.component';
 import { AmazonPriceCalculatorComponent } from '../amazon-price-calculator/amazon-price-calculator.component';
@@ -33,6 +33,7 @@ import { PromotionDatesComponent } from '../promotion-dates/promotion-dates.comp
 import { AdminApiService } from '../../services/admin-api.service';
 import { AdminBourseSettingsComponent } from '../admin-bourse-settings/admin-bourse-settings.component';
 import { AdminAutomationComponent } from '../admin-automation/admin-automation.component';
+import { AdminService } from '../../services/admin.service';
 
 interface Order {
   _id: string;
@@ -236,9 +237,18 @@ interface SystemSettings {
     minimumWithdrawal: number;
   };
   maintenanceMode: boolean;
+  bourseConfig: {
+    isActive: boolean;
+    netProfitMargin: number;
+    freeGiftThreshold: number;
+    allowedCategories: string[];
+    booksPerSlot: number;
+    includeMerchantProducts: boolean;
+    allowPublisherUpload: boolean;
+  };
 }
 
-export type AdminView = 'dashboard' | 'userIntelligence' | 'orders' | 'requestedBooks' | 'printOrders' | 'printingSettings' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' | 'gamificationControl' | 'notifications' | 'subscriptionControl' | 'readerFeedback' | 'promotions' | 'salesRegistration' | 'shortagesReport' | 'promotionDates' | 'salesHistory' | 'community' | 'bourseSettings' | 'automation';
+export type AdminView = 'dashboard' | 'userIntelligence' | 'orders' | 'requestedBooks' | 'printOrders' | 'printingSettings' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' | 'gamificationControl' | 'notifications' | 'subscriptionControl' | 'readerFeedback' | 'promotions' | 'salesRegistration' | 'shortagesReport' | 'promotionDates' | 'salesHistory' | 'community' | 'bourseSettings' | 'automation' | 'newsletter';
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -306,7 +316,16 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       quranMinConversionPoints: 5,
       minimumWithdrawal: 500
     },
-    maintenanceMode: false
+    maintenanceMode: false,
+    bourseConfig: {
+      isActive: false,
+      netProfitMargin: 10,
+      freeGiftThreshold: 1000,
+      allowedCategories: [],
+      booksPerSlot: 8,
+      includeMerchantProducts: false,
+      allowPublisherUpload: true
+    }
   };
   isSavingSettings: boolean = false;
   originalSettings: SystemSettings | null = null;
@@ -576,6 +595,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   showBulkAdjustModal: boolean = false;
   bulkAdjustData = {
     category: ['جميع الفئات'] as string[],
+    combinedFilter: 'all',
+    sortBy: 'none', // 'none', 'price_asc', 'price_desc', 'newest'
     minPrice: 0,
     maxPrice: 100000,
     adjustmentType: 'percentage' as 'percentage' | 'fixed' | 'sync_cost',
@@ -590,6 +611,48 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
   // Ebook filter property
   ebookFilter: 'all' | 'withEbook' | 'withoutEbook' = 'all';
+
+  // New Merchant and Publisher filters for the main table
+  merchantFilter: string = 'all';
+  publisherFilter: string = 'all';
+
+  // --- Newsletter Management ---
+  newsletterSubscribers: any[] = [];
+  isLoadingNewsletter: boolean = false;
+
+  fetchNewsletterSubscribers(): void {
+    this.isLoadingNewsletter = true;
+    this.http.get<{ success: boolean; subscribers: any[] }>(`${this.backendBaseUrl}/newsletter/subscribers`)
+      .subscribe({
+        next: (response) => {
+          if (response.success) {
+            this.newsletterSubscribers = response.subscribers;
+          }
+          this.isLoadingNewsletter = false;
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          console.error('Error fetching newsletter subscribers:', err);
+          this.isLoadingNewsletter = false;
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
+  exportNewsletterToExcel(): void {
+    if (this.newsletterSubscribers.length === 0) return;
+    
+    const data = this.newsletterSubscribers.map(s => ({
+      'البريد الإلكتروني': s.email,
+      'تاريخ الاشتراك': new Date(s.subscribedAt).toLocaleString('ar-EG'),
+      'الحالة': s.status === 'active' ? 'نشط' : 'ملغى'
+    }));
+    
+    const ws: XLSX.WorkSheet = XLSX.utils.json_to_sheet(data);
+    const wb: XLSX.WorkBook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'المشتركين');
+    XLSX.writeFile(wb, `newsletter_subscribers_${new Date().toISOString().slice(0,10)}.xlsx`);
+  }
 
   // Inventory Mode properties
   inventoryMode: boolean = false;
@@ -717,7 +780,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     'shortagesReport': 'تقرير النواقص',
     'community': 'إدارة التبادلات والمزادات',
     'bourseSettings': 'إعدادات بورصة الكتب',
-    'automation': 'نظام الأتمتة والذكاء'
+    'automation': 'نظام الأتمتة والذكاء',
+    'newsletter': 'القائمة البريدية'
   };
 
   // Global Navigation Search
@@ -779,30 +843,11 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     color: '',
     size: '',
     brand: '',
-    electronicsType: '',
-    model: '',
-    specs: '',
-    warranty: '',
-    clothingType: '',
-    season: '',
-    originCountry: '',
-    cosmeticsType: '',
-    sizeWeight: '',
-    ingredients: '',
-    suitableFor: '',
-    shoeType: '',
-    furnitureType: '',
-    deliveryMethod: '',
-    toyType: '',
-    ageGroup: '',
-    safety: '',
-    fabricType: '',
-    usage: '',
+    suggestedCategory: '',
     weight: '',
     length: '',
     width: '',
-    height: '',
-    suggestedCategory: ''
+    height: ''
   };
   selectedFiles: File[] = [];
   selectedFilesPreviews: string[] = [];
@@ -1052,6 +1097,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   modalServiceCancelText: string = 'إلغاء';
   modalServiceShowCancel: boolean = true;
   modalServiceAction: (() => void) | null = null;
+  private modalServiceSubscription: any;
 
   categories: string[] = [
     'روايات وقصص',
@@ -1064,26 +1110,12 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     'تاريخ وسير ذاتية',
     'تربية وأطفال',
     'أدوات مكتبية',
-    'إلكترونيات',
-    'ملابس',
-    'التجميل والعناية الشخصية',
-    'الأحذية',
-    'أثاث وديكور المنزل',
-    'هدية وألعاب',
-    'أقمشة',
     'غير مصنف'
   ];
 
   mainCategories: string[] = [
     'كتب',
     'أدوات مكتبية',
-    'إلكترونيات',
-    'ملابس',
-    'التجميل والعناية الشخصية',
-    'الأحذية',
-    'أثاث وديكور المنزل',
-    'هدية وألعاب',
-    'أقمشة',
     'غير مصنف'
   ];
 
@@ -1112,15 +1144,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     'تاريخ': 'تاريخ وسير ذاتية',
     'تربية': 'تربية وأطفال',
     'أدوات مكتبية': 'أدوات مكتبية',
-    'إلكترونيات': 'إلكترونيات',
-    'ملابس': 'ملابس',
-    'تجميل': 'التجميل والعناية الشخصية',
-    'احذية': 'الأحذية',
-    'اثاث': 'أثاث وديكور المنزل',
-    'العاب': 'هدية وألعاب',
-    'غير مصنف': 'غير مصنف',
-    'أقمشة': 'أقمشة',
-    'أخرى': 'غير مصنف'
+    'غير مصنف': 'غير مصنف'
   };
 
   // Reverse map from full category name to short key
@@ -1135,13 +1159,6 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     'تاريخ وسير ذاتية': 'تاريخ',
     'تربية وأطفال': 'تربية',
     'أدوات مكتبية': 'أدوات مكتبية',
-    'إلكترونيات': 'إلكترونيات',
-    'ملابس': 'ملابس',
-    'التجميل والعناية الشخصية': 'تجميل',
-    'الأحذية': 'احذية',
-    'أثاث وديكور المنزل': 'اثاث',
-    'هدية وألعاب': 'العاب',
-    'أقمشة': 'أقمشة',
     'غير مصنف': 'غير مصنف'
   };
 
@@ -1157,51 +1174,67 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     'تاريخ وسير ذاتية': ['author', 'publisher', 'pages', 'coverType', 'language', 'publishYear'],
     'تربية وأطفال': ['author', 'publisher', 'pages', 'coverType', 'language', 'publishYear'],
     'أدوات مكتبية': ['stationeryType', 'material', 'color', 'size', 'brand'],
-    'إلكترونيات': ['electronicsType', 'model', 'specs', 'warranty'],
-    'ملابس': ['clothingType', 'season', 'originCountry'],
-    'التجميل والعناية الشخصية': ['cosmeticsType', 'sizeWeight', 'ingredients', 'suitableFor'],
-    'الأحذية': ['shoeType'],
-    'أثاث وديكور المنزل': ['furnitureType', 'length', 'width', 'height', 'deliveryMethod'],
-    'هدية وألعاب': ['toyType', 'ageGroup', 'safety'],
-    'أقمشة': ['fabricType', 'width', 'length', 'usage'],
     'غير مصنف': ['suggestedCategory']
   };
 
   isBookCategory(category: string): boolean {
     if (!category) return false;
     const lowerCategory = category.toLowerCase();
-    // Check for explicit 'Books' or 'كتب' or common book categories
-    if (lowerCategory === 'كتب' || lowerCategory === 'books' ||
-      // Explicit user-specified categories
-      category === 'روايات وقصص' ||
-      category === 'تطوير الذات وعلم النفس' ||
-      category === 'كتب دينية' ||
-      category === 'قواميس ومراجع' ||
-      category === 'صحة وطب وعلوم' ||
-      category === 'أعمال وتسويق ومالية' ||
-      category === 'فنون وحرف' ||
-      category === 'تاريخ وسير ذاتية' ||
-      category === 'تربية وأطفال' ||
-      // Common keywords
-      lowerCategory.includes('رواية') || lowerCategory.includes('قصص') ||
-      lowerCategory.includes('novel') || lowerCategory.includes('story') ||
-      lowerCategory.includes('ديني') || lowerCategory.includes('تطوير') ||
-      lowerCategory.includes('نفس') || lowerCategory.includes('أعمال') ||
-      lowerCategory.includes('تسويق') || lowerCategory.includes('صحة') ||
-      lowerCategory.includes('طب') || lowerCategory.includes('قاموس') ||
-      lowerCategory.includes('مراجع') || lowerCategory.includes('تربية') ||
-      lowerCategory.includes('أطفال') || lowerCategory.includes('تاريخ') ||
-      lowerCategory.includes('سير') || lowerCategory.includes('فنون') ||
-      lowerCategory.includes('حرف')) {
-      return true;
-    }
-
-    const fullCategory = this.categoryMap[category] || category;
-    const fields = this.categoryFieldsMap[fullCategory];
-    return fields ? fields.includes('author') : false;
+    // In this pivoted version, almost everything is a book except stationery
+    if (category === 'أدوات مكتبية') return false;
+    return true; // Assume all other categories are books
   }
 
-  private modalServiceSubscription?: Subscription;
+  // Bulk Import Properties
+  isBulkImportMode = false;
+  bulkFile: File | null = null;
+  publisherImageFile: File | null = null;
+  excelHeaders: string[] = [];
+  fieldMapping: { [key: string]: string } = {};
+  merchantsList: any[] = [];
+  selectedMerchantId: string = '';
+  selectedPublisher: string = '';
+  bulkDefaultCategory: string = 'كتب';
+  bulkImportType: 'admin' | 'merchant' | 'publisher' = 'admin';
+  importingBulk = false;
+  bulkImportProgress = 0;
+  bulkImportSuccess = false;
+  parsedBulkData: any[] = [];
+  
+  // Available system fields for mapping
+  systemFields = [
+    { key: 'product_name', label: 'اسم المنتج' },
+    { key: 'product_quantity', label: 'الكمية' },
+    { key: 'product_category', label: 'التصنيف' },
+    { key: 'product_description', label: 'الوصف' },
+    { key: 'product_price', label: 'السعر (البيع)' },
+    { key: 'price_cost', label: 'سعر التكلفة' },
+    { key: 'weight', label: 'الوزن (جرام)' },
+    { key: 'author', label: 'المؤلف' },
+    { key: 'publisher', label: 'دار النشر' },
+    { key: 'barcode', label: 'الباركود' },
+    { key: 'products_id', label: 'كود المنتج' },
+    { key: 'pages', label: 'عدد الصفحات' },
+    { key: 'coverType', label: 'نوع الغلاف' },
+    { key: 'language', label: 'اللغة' },
+    { key: 'publishYear', label: 'سنة النشر' },
+    { key: 'copyType', label: 'نوع النسخة' },
+    { key: 'condition', label: 'الحالة' },
+    { key: 'image_path', label: 'رابط الصورة (URL)' },
+    { key: 'length', label: 'الطول (سم)' },
+    { key: 'width', label: 'العرض (سم)' },
+    { key: 'height', label: 'الارتفاع (سم)' },
+    { key: 'copyType', label: 'نوع النسخة' },
+    { key: 'condition', label: 'الحالة (جديد/مستعمل)' }
+  ];
+
+  get uniquePublishers(): string[] {
+    if (!this.allProducts || this.allProducts.length === 0) return [];
+    const publishers = this.allProducts
+      .map(p => p['publisher'])
+      .filter((v, i, a) => v && a.indexOf(v) === i);
+    return (publishers as string[]).sort();
+  }
 
   constructor(
     private http: HttpClient,
@@ -1211,10 +1244,11 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     private notificationService: NotificationService,
     private modalService: ModalService,
     private cdr: ChangeDetectorRef,
+    private adminService: AdminService,
     library: FaIconLibrary
   ) {
     library.addIcons(
-      faShoppingCart, faStore, faBook, faPrint, faPlus, faEdit, faTrash, faTruck, faUsers, faCheckCircle, faMoneyBillWave, faSitemap, faPlusCircle, faImage, faTag, faHashtag, faList, faDollarSign, faAlignLeft, faExclamationTriangle, faCartPlus, faHeart, faMobileAlt, faCamera, faTimes, faHome, faChartLine, faCog, faBars, faUserClock, faCoins, faUserPlus, faChartBar, faBell, faSearch, faSlidersH
+      faShoppingCart, faStore, faBook, faPrint, faPlus, faEdit, faTrash, faTruck, faUsers, faCheckCircle, faMoneyBillWave, faSitemap, faPlusCircle, faImage, faTag, faHashtag, faList, faDollarSign, faAlignLeft, faExclamationTriangle, faCartPlus, faHeart, faMobileAlt, faCamera, faTimes, faHome, faChartLine, faCog, faBars, faUserClock, faCoins, faUserPlus, faChartBar, faBell, faSearch, faSlidersH, faPaperPlane
     );
   }
 
@@ -1302,6 +1336,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       // The component will load its own data
     } else if (view === 'userHierarchy') {
       // The component will load its own data
+    } else if (view === 'newsletter') {
+      this.fetchNewsletterSubscribers();
     } else if (view === 'urgencyRequests') {
       this.urgencyRequestsPage = 1;
       this.loadUrgencyRequests();
@@ -1564,7 +1600,16 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
           quranMinConversionPoints: 5,
           minimumWithdrawal: 500
         },
-        maintenanceMode: false
+        maintenanceMode: false,
+        bourseConfig: {
+          isActive: true,
+          netProfitMargin: 10,
+          freeGiftThreshold: 1000,
+          allowedCategories: [],
+          booksPerSlot: 8,
+          includeMerchantProducts: true,
+          allowPublisherUpload: true
+        }
       };
     }
   }
@@ -1647,6 +1692,9 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
   openBulkAdjustModal(): void {
     this.showBulkAdjustModal = true;
+    if (this.merchantsList.length === 0) {
+      this.loadMerchantsList();
+    }
   }
 
   closeBulkAdjustModal(): void {
@@ -1764,6 +1812,20 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       filtered = filtered.filter((p: any) => p.linkedEbookId);
     } else if (this.ebookFilter === 'withoutEbook') {
       filtered = filtered.filter((p: any) => !p.linkedEbookId);
+    }
+
+    // Apply Merchant filter
+    if (this.merchantFilter !== 'all') {
+      if (this.merchantFilter === 'admin') {
+        filtered = filtered.filter(p => !p['merchantId'] || String(p['merchantId']).trim() === '');
+      } else {
+        filtered = filtered.filter(p => p['merchantName'] === this.merchantFilter);
+      }
+    }
+
+    // Apply Publisher filter
+    if (this.publisherFilter !== 'all') {
+      filtered = filtered.filter(p => p['publisher'] === this.publisherFilter);
     }
 
     if (this.searchTerm) {
@@ -1953,7 +2015,13 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
         product_category: p.product_category,
         product_description: p.product_description,
         product_price: p.product_price,
-        price_cost: p.price_cost
+        price_cost: p.price_cost,
+        publisher: p['publisher'] || '',
+        author: p['author'] || '',
+        publishYear: p['publishYear'] || '',
+        pages: p['pages'] || 0,
+        coverType: p['coverType'] || '',
+        language: p['language'] || ''
       }))
     };
 
@@ -1971,6 +2039,12 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
         this.http.post(`${this.backendBaseUrl}/admin/sync-to-excel`, {}).subscribe({
           next: () => console.log('Background Excel sync triggered'),
           error: (err) => console.warn('Background Excel sync failed:', err)
+        });
+
+        // Trigger background sync to Google Sheets
+        this.http.post(`${this.backendBaseUrl}/admin/sync-json-to-google-sheets`, {}).subscribe({
+          next: () => console.log('Background Google Sheets sync triggered'),
+          error: (err) => console.warn('Background Google Sheets sync failed:', err)
         });
       },
       error: (err) => {
@@ -1992,7 +2066,13 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       product.copyType !== original.copyType ||
       product.condition !== original.condition ||
       product.product_price !== original.product_price ||
-      product.price_cost !== original.price_cost
+      product.price_cost !== original.price_cost ||
+      product['publisher'] !== original['publisher'] ||
+      product['author'] !== original['author'] ||
+      product['publishYear'] !== original['publishYear'] ||
+      product['pages'] !== original['pages'] ||
+      product['coverType'] !== original['coverType'] ||
+      product['language'] !== original['language']
     );
   }
 
@@ -2196,6 +2276,251 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       this.loadProducts();
     };
     reader.readAsBinaryString(file);
+  }
+
+  toggleBulkImportMode(): void {
+    this.isBulkImportMode = !this.isBulkImportMode;
+    if (this.isBulkImportMode && this.merchantsList.length === 0) {
+      this.loadMerchantsList();
+    }
+  }
+
+  loadMerchantsList(): void {
+    this.adminService.getMerchants().subscribe({
+      next: (res: any) => {
+        this.merchantsList = res.merchants || [];
+      },
+      error: (error) => {
+        console.error('Error loading merchants:', error);
+      }
+    });
+  }
+
+  onBulkFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) {
+      return;
+    }
+    this.bulkFile = input.files[0];
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const data = e.target?.result;
+      if (!data) return;
+      const workbook = XLSX.read(data, { type: 'binary' });
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+      
+      if (jsonData.length > 0) {
+        this.excelHeaders = jsonData[0] as string[];
+        this.parsedBulkData = XLSX.utils.sheet_to_json(sheet);
+        // Auto-mapping based on similarity
+        this.autoMapFields();
+      }
+    };
+    reader.readAsBinaryString(this.bulkFile);
+  }
+
+  onPublisherImageSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      this.publisherImageFile = input.files[0];
+    }
+  }
+
+  autoMapFields(): void {
+    this.fieldMapping = {};
+    const commonMappings: { [key: string]: string[] } = {
+      'product_name': ['اسم المنتج', 'الاسم', 'Name', 'Title', 'product_name', 'اسم'],
+      'product_quantity': ['الكمية', 'العدد', 'Quantity', 'Qty', 'Stock', 'المخزن'],
+      'product_category': ['التصنيف', 'القسم', 'Category', 'Section', 'الفئة'],
+      'product_description': ['الوصف', 'التفاصيل', 'Description', 'Details'],
+      'product_price': ['السعر', 'سعر البيع', 'Price', 'Sale Price'],
+      'price_cost': ['التكلفة', 'سعر التكلفة', 'Cost', 'Cost Price'],
+      'weight': ['الوزن', 'Weight'],
+      'author': ['المؤلف', 'الكاتب', 'Author'],
+      'publisher': ['الناشر', 'دار النشر', 'Publisher'],
+      'barcode': ['الباركود', 'Barcode', 'رمز'],
+      'products_id': ['كود', 'رقم', 'ID', 'Code'],
+      'image_path': ['الصورة', 'رابط الصورة', 'Image', 'Image URL'],
+      'length': ['الطول', 'Length', 'L'],
+      'width': ['العرض', 'Width', 'W'],
+      'height': ['الارتفاع', 'Height', 'H'],
+      'copyType': ['نوع النسخة', 'Copy Type'],
+      'condition': ['الحالة', 'Condition']
+    };
+
+    this.systemFields.forEach(field => {
+      const possibleNames = commonMappings[field.key] || [];
+      const match = this.excelHeaders.find(h => 
+        possibleNames.some(p => h.toLowerCase().includes(p.toLowerCase()))
+      );
+      if (match) {
+        this.fieldMapping[field.key] = match;
+      }
+    });
+  }
+
+  startBulkImport(): void {
+    if (!this.parsedBulkData.length) {
+      this.showErrorModal('يرجى اختيار ملف Excel يحتوي على بيانات.');
+      return;
+    }
+
+    if (this.bulkImportType === 'merchant' && !this.selectedMerchantId) {
+      this.showErrorModal('يرجى اختيار التاجر أولاً.');
+      return;
+    }
+
+    if (this.bulkImportType === 'publisher' && !this.selectedPublisher) {
+      this.showErrorModal('يرجى كتابة اسم دار النشر.');
+      return;
+    }
+
+    // Check if required fields are mapped
+    const requiredFields = ['product_name', 'product_price'];
+    const missingFields = requiredFields.filter(f => !this.fieldMapping[f]);
+    if (missingFields.length > 0) {
+      const fieldLabels = missingFields.map(f => this.systemFields.find(sf => sf.key === f)?.label).join(', ');
+      this.showErrorModal(`يرجى ربط الحقول المطلوبة التالية: ${fieldLabels}`);
+      return;
+    }
+
+    this.importingBulk = true;
+    this.bulkImportProgress = 0;
+
+    // Prepare data
+    const formattedProducts = this.parsedBulkData.map(row => {
+      const product: any = {};
+      Object.keys(this.fieldMapping).forEach(key => {
+        const excelCol = this.fieldMapping[key];
+        if (excelCol) {
+          product[key] = row[excelCol];
+        }
+      });
+      // Set default quantity to 2 if missing or zero
+      if (!product.product_quantity || parseInt(product.product_quantity) <= 0) {
+        product.product_quantity = 2;
+      }
+      
+      // Fuzzy match category if provided
+      if (product.product_category) {
+        const providedCat = product.product_category.trim().toLowerCase();
+        // Try to find a match in the system categories list
+        const foundMatch = this.categories.find(c => 
+          c.toLowerCase() === providedCat || 
+          providedCat.includes(c.toLowerCase()) || 
+          c.toLowerCase().includes(providedCat)
+        );
+        if (foundMatch) {
+          product.product_category = foundMatch;
+        }
+      }
+
+      // Set default category if missing or still not in our list
+      if (!product.product_category || !this.categories.includes(product.product_category)) {
+        product.product_category = this.bulkDefaultCategory;
+      }
+      
+      return product;
+    });
+
+    const formData = new FormData();
+    formData.append('products', JSON.stringify(formattedProducts));
+    formData.append('merchantId', (this.bulkImportType === 'merchant' ? this.selectedMerchantId : null) || '');
+    formData.append('publisher', (this.bulkImportType === 'publisher' ? this.selectedPublisher : null) || '');
+    
+    if (this.publisherImageFile) {
+      formData.append('publisherImage', this.publisherImageFile);
+    }
+
+    this.http.post(`${this.backendBaseUrl}/admin/bulk-add-products`, formData).subscribe({
+      next: (res: any) => {
+        this.importingBulk = false;
+        this.bulkImportSuccess = true;
+        this.showSuccessModal(`تم استيراد ${formattedProducts.length} منتج بنجاح.`);
+        this.resetBulkImport();
+        this.loadProducts();
+      },
+      error: (err) => {
+        this.importingBulk = false;
+        console.error('Bulk Import Error:', err);
+        this.showErrorModal('حدث خطأ أثناء الاستيراد الجماعي.');
+      }
+    });
+  }
+
+  resetBulkImport(): void {
+    this.bulkFile = null;
+    this.publisherImageFile = null;
+    this.excelHeaders = [];
+    this.fieldMapping = {};
+    this.parsedBulkData = [];
+    this.isBulkImportMode = false;
+  }
+
+  syncToGoogleSheets(): void {
+    const confirmSync = confirm('هل أنت متأكد من رغبتك في مزامنة جميع البيانات مع Google Sheets؟ سيتم استبدال البيانات الحالية هناك.');
+    if (!confirmSync) return;
+
+    this.showSuccessModal('جاري بدء المزامنة مع Google Sheets في الخلفية...');
+    this.http.post(`${this.backendBaseUrl}/admin/sync-json-to-google-sheets`, {}).subscribe({
+      next: (res: any) => {
+        this.showSuccessModal(res.message || 'تمت المزامنة بنجاح');
+      },
+      error: (err) => {
+        console.error('Google Sheets sync failed:', err);
+        this.showErrorModal('فشلت المزامنة مع Google Sheets');
+      }
+    });
+  }
+
+  getMappedPreview(): any[] {
+    if (!this.parsedBulkData.length || Object.keys(this.fieldMapping).length === 0) {
+      return [];
+    }
+    return this.parsedBulkData.slice(0, 5).map(row => {
+      const preview: any = {};
+      Object.keys(this.fieldMapping).forEach(key => {
+        const excelCol = this.fieldMapping[key];
+        if (excelCol) {
+          preview[key] = row[excelCol];
+        }
+      });
+      return preview;
+    });
+  }
+
+  downloadTemplate(): void {
+    const templateData = [
+      {
+        'اسم المنتج': 'مثال: كتاب مقدمة في الفلسفة',
+        'الكمية': 10,
+        'التصنيف': 'رواية',
+        'الوصف': 'وصف تجريبي للمنتج',
+        'السعر (البيع)': 150,
+        'سعر التكلفة': 100,
+        'الوزن (جرام)': 500,
+        'المؤلف': 'اسم المؤلف',
+        'دار النشر': 'اسم الدار',
+        'الباركود': '123456789012',
+        'كود المنتج': 'PRD-001',
+        'عدد الصفحات': 200,
+        'نوع الغلاف': 'غلاف ورقي',
+        'اللغة': 'العربية',
+        'سنة النشر': 2024,
+        'الطول': 20,
+        'العرض': 14,
+        'الارتفاع': 2,
+        'نوع النسخة': 'هاي كوبي',
+        'الحالة': 'جديد'
+      }
+    ];
+
+    const worksheet = XLSX.utils.json_to_sheet(templateData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Template');
+    XLSX.writeFile(workbook, 'kenouz_bulk_import_template.xlsx');
   }
 
   handleEditClick(product: any): void {
@@ -2980,28 +3305,6 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       color: '',
       size: '',
       brand: '',
-      electronicsType: '',
-      model: '',
-      specs: '',
-      warranty: '',
-      clothingType: '',
-      season: '',
-      originCountry: '',
-      cosmeticsType: '',
-      sizeWeight: '',
-      ingredients: '',
-      suitableFor: '',
-      shoeType: '',
-      furnitureType: '',
-      height: '',
-      deliveryMethod: '',
-      toyType: '',
-      ageGroup: '',
-      safety: '',
-      fabricType: '',
-      width: '',
-      length: '',
-      usage: '',
       suggestedCategory: ''
     };
     this.selectedFiles = [];
@@ -3371,42 +3674,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   }
 
   getProductImageUrl(product: Product): string {
-    // This logic is now consistent with other working components like search-results.
-    let imagePath = product.image_path || product.product_image || '';
-    const merchantName = product.merchantName;
-    const cacheBuster = product['imageUpdateTimestamp'] ? `?t=${product['imageUpdateTimestamp']}` : '';
-
-    // If a full path is already provided in image_path, use it directly.
-    if (imagePath && imagePath.startsWith('/uploads/books/')) {
-      // The path is already correct. If it already has a cache buster from the server, keep it.
-      // If we have a local cacheBuster, we can append it, otherwise return as is.
-      if (cacheBuster) {
-        const separator = imagePath.includes('?') ? '&' : '?';
-        return imagePath + separator + cacheBuster.replace('?', '');
-      }
-      return imagePath;
-    }
-
-    // If not, build the path from scratch
-    const imageId = product.products_id || product.product_image;
-    if (!imageId) {
-      return '/assets/placeholder-book.jpg';
-    }
-
-    let finalPath;
-    if (merchantName) {
-      const sanitizedMerchantName = merchantName.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
-      finalPath = `merchant_${sanitizedMerchantName}/${imageId}/${imageId}.webp`;
-    } else {
-      // Fallback to admin path if no merchant name is found
-      finalPath = `admin__karim_mohamed__/${imageId}/${imageId}.webp`;
-    }
-
-    // Construct the full path, ensuring not to duplicate '/books/'
-    // uploadsBaseUrl is likely '/uploads' or '/uploads/books'
-    // The final path should be /uploads/books/merchant_...
-    const fullPath = `${this.uploadsBaseUrl}/${finalPath}`.replace('/books/books/', '/books/');
-    return fullPath + cacheBuster;
+    return this.dataService.getBookImageUrl(product);
   }
 
   showProductAddedModal(productData: any, files: File[]): void {

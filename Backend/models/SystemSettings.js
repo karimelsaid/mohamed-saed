@@ -71,7 +71,8 @@ const systemSettingsSchema = mongoose.Schema({
         freeGiftThreshold: { type: Number, default: 1000 },
         allowedCategories: [{ type: String }],
         booksPerSlot: { type: Number, default: 8 },
-        includeMerchantProducts: { type: Boolean, default: false }
+        includeMerchantProducts: { type: Boolean, default: false },
+        allowPublisherUpload: { type: Boolean, default: true }
     },
     shortageSettings: {
         threshold: { type: Number, default: 10 },

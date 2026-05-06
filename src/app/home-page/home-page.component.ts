@@ -1,12 +1,14 @@
 import { Component, OnInit, Inject, PLATFORM_ID } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 import { DataService } from '../services/data.service';
 import { AuthService } from '../auth/auth.service';
-import { faBook, faTools, faLaptop, faTshirt, faSpa, faShoePrints, faCouch, faGamepad, faThLarge, faEllipsisH, faStar, faFileAlt, faHeart } from '@fortawesome/free-solid-svg-icons';
+import { faBook, faLaptop, faTshirt, faSpa, faShoePrints, faCouch, faGamepad, faThLarge, faEllipsisH, faStar, faFileAlt, faHeart, faPenNib } from '@fortawesome/free-solid-svg-icons';
 import { environment } from '../../environments/environment';
 import { SeoService } from '../services/seo.service';
 import { PromotionService } from '../services/promotion.service';
+import { MerchantAuthService } from '../services/merchant-auth.service';
 
 @Component({
   selector: 'app-home-page',
@@ -31,13 +33,7 @@ export class HomePageComponent implements OnInit {
   mainSections = [
     { id: 'books', name: 'الكتب والمؤلفات', icon: faBook, filter: ['كتب'] },
     { id: 'print', name: 'خدمات الطباعة', icon: faFileAlt, filter: ['مستندات', 'طباعة'] },
-    { id: 'electronics', name: 'إلكترونيات', icon: faLaptop, filter: ['إلكترونيات'] },
-    { id: 'office-supplies', name: 'أدوات مكتبية', icon: faTools, filter: ['أدوات مكتبية'] },
-    { id: 'cosmetics', name: 'تجميل وعناية', icon: faSpa, filter: ['تجميل', 'التجميل والعناية الشخصية'] },
-    { id: 'clothing', name: 'ملابس وأقمشة', icon: faTshirt, filter: ['ملابس', 'أقمشة', 'الأحذية'] },
-    { id: 'furniture', name: 'أثاث وديكور', icon: faCouch, filter: ['أثاث', 'أثاث وديكور المنزل'] },
-    { id: 'games', name: 'هدايا وألعاب', icon: faGamepad, filter: ['العاب', 'هدايا وألعاب'] },
-    { id: 'others', name: 'أقسام أخرى', icon: faEllipsisH, filter: ['غير مصنف', 'أخرى'] }
+    { id: 'office-supplies', name: 'أدوات مكتبية', icon: faPenNib, filter: ['أدوات مكتبية'] }
   ];
 
   bookGenres = [
@@ -58,6 +54,7 @@ export class HomePageComponent implements OnInit {
   dynamicSlides: any[] = [];
   promoCurrentIndex = 0;
   promoIntervalId: any;
+  backgroundColumns: any[][] = [];
   touchStartX: number = 0;
   touchEndX: number = 0;
 
@@ -70,12 +67,23 @@ export class HomePageComponent implements OnInit {
   heroBooks: any[] = [];
   heroColumns: any[][] = [];
 
+  // Newsletter
+  newsletterEmail: string = '';
+  isSubscribing: boolean = false;
+  newsletterMessage: string = '';
+  newsletterMessageType: 'success' | 'error' = 'success';
+
+  // Merchants / Publishers
+  merchants: any[] = [];
+
   constructor(
     private dataService: DataService,
     private router: Router,
     private authService: AuthService,
     private seoService: SeoService,
     private promotionService: PromotionService,
+    private http: HttpClient,
+    private merchantAuthService: MerchantAuthService,
     @Inject(PLATFORM_ID) private platformId: Object
   ) { }
 
@@ -91,15 +99,47 @@ export class HomePageComponent implements OnInit {
     });
 
     this.dataService.getData().subscribe((data: any) => {
-      this.allProducts = data.sort((a: any, b: any) => b.products_id - a.products_id); // Newest first
+      // First sort by ID to get the newest ones
+      const sorted = data.sort((a: any, b: any) => b.products_id - a.products_id);
+      
+      // Take the top 200 newest and shuffle them for variety
+      const newestPool = sorted.slice(0, 200);
+      const rest = sorted.slice(200);
+      
+      this.allProducts = [...this.dataService.shuffleArray(newestPool), ...rest];
+      this.generateBackgroundColumns();
+      this.isLoading = false;
+    }, error => {
+      console.error('Error fetching data for home page:', error);
       this.isLoading = false;
     });
+
+    this.loadMerchants();
 
     if (isPlatformBrowser(this.platformId)) {
       window.addEventListener('resize', () => {
         this.setPromoImages();
       });
     }
+  }
+
+  generateBackgroundColumns() {
+    if (!this.allProducts || this.allProducts.length === 0) {
+      this.backgroundColumns = [];
+      return;
+    }
+    
+    // We want 5 columns with unique-ish products
+    const colSize = 10;
+    const shuffled = [...this.allProducts].sort(() => 0.5 - Math.random());
+    
+    this.backgroundColumns = [
+      shuffled.slice(0, colSize),
+      shuffled.slice(colSize, colSize * 2),
+      shuffled.slice(colSize * 2, colSize * 3),
+      shuffled.slice(colSize * 3, colSize * 4),
+      shuffled.slice(colSize * 4, colSize * 5)
+    ];
   }
 
   get filteredProducts(): any[] {
@@ -110,26 +150,27 @@ export class HomePageComponent implements OnInit {
         p.product_category.includes('روايات') ||
         p.product_category.includes('قصص') ||
         p.product_category.includes('تطوير الذات') ||
-        p.product_category.includes('دينية') ||
+        p.product_category.includes('ديني') ||
         p.product_category.includes('تاريخ') ||
         p.product_category.includes('أطفال') ||
         p.product_category.includes('أعمال') ||
         p.product_category.includes('قواميس') ||
         p.product_category.includes('صحة') ||
-        p.product_category.includes('فنون')
+        p.product_category.includes('فنون') ||
+        ['رواية', 'تنمية', 'ديني', 'اعمال', 'تربية'].includes(p.product_category)
       )
     );
 
     if (this.activeTab === 'all') {
-      return books.slice(0, 50);
+      return books.slice(0, 20);
     }
 
     const genre = this.bookGenres.find(c => c.id === this.activeTab);
-    if (!genre || !genre.filter) return books.slice(0, 50);
+    if (!genre || !genre.filter) return books.slice(0, 20);
 
     return books.filter(product =>
       genre.filter?.some(f => product.product_category && product.product_category.includes(f))
-    ).slice(0, 50);
+    ).slice(0, 20);
   }
 
   setActiveTab(tabId: string): void {
@@ -378,5 +419,78 @@ export class HomePageComponent implements OnInit {
   navigateToProduct(product: any): void {
     const route = this.getProductRoute(product);
     this.router.navigate(route);
+  }
+
+  subscribeNewsletter(): void {
+    if (!this.newsletterEmail || !this.newsletterEmail.includes('@')) {
+      this.newsletterMessage = 'يرجى إدخال بريد إلكتروني صحيح';
+      this.newsletterMessageType = 'error';
+      return;
+    }
+
+    this.isSubscribing = true;
+    this.newsletterMessage = '';
+
+    this.http.post(`${environment.apiBaseUrl}/newsletter/subscribe`, { email: this.newsletterEmail })
+      .subscribe({
+        next: (res: any) => {
+          this.isSubscribing = false;
+          this.newsletterMessage = res.message || 'تم الاشتراك بنجاح!';
+          this.newsletterMessageType = 'success';
+          this.newsletterEmail = '';
+        },
+        error: (err: any) => {
+          this.isSubscribing = false;
+          this.newsletterMessage = err.error?.message || 'حدث خطأ أثناء الاشتراك';
+          this.newsletterMessageType = 'error';
+        }
+      });
+  }
+
+  loadMerchants(): void {
+    this.merchantAuthService.getPublicMerchants().subscribe({
+      next: (res: any) => {
+        if (res.success && res.merchants && res.merchants.length > 0) {
+          this.merchants = res.merchants;
+          // Ensure we have enough items for a smooth marquee loop
+          this.prepareMarqueeMerchants();
+        }
+      },
+      error: (err) => {
+        console.error('Error loading merchants:', err);
+      }
+    });
+  }
+
+  isMarqueeActive: boolean = false;
+  marqueeMerchants: any[] = [];
+  prepareMarqueeMerchants(): void {
+    if (!this.merchants || this.merchants.length === 0) {
+      this.marqueeMerchants = [];
+      this.isMarqueeActive = false;
+      return;
+    }
+    
+    // Detect if we should use marquee or just center items
+    // If we have 6 or more items, activate marquee
+    this.isMarqueeActive = this.merchants.length >= 6;
+
+    // Just use the original list. Duplication for the loop is handled in the HTML template.
+    this.marqueeMerchants = [...this.merchants];
+  }
+
+
+  getMerchantLogoUrl(merchant: any): string {
+    if (!merchant) return 'assets/images/merchant-placeholder.png';
+    
+    // Case 1: Registered Merchant with a defined logo path in DB
+    if (merchant.logo) {
+      return `${environment.uploadsBaseUrl}/${merchant.logo}`;
+    }
+
+    // Case 2: Auto-extracted publisher or mock - look for logo in /uploads/books/publishers/[name].webp
+    // Sanitize name for filename
+    const sanitizedName = merchant.name.trim().replace(/\s+/g, '_');
+    return `${environment.uploadsBaseUrl}/publishers/${sanitizedName}.webp`;
   }
 }

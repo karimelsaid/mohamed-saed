@@ -34,6 +34,15 @@ const productSchema = new mongoose.Schema({
   copyType: { type: String, enum: ['هاي كوبي', 'أصلي', ''] },
   condition: { type: String, enum: ['جديد', 'مستعمل بحالة جيدة', ''] },
   images: [{ type: String }],
+  // New book-related fields
+  publisher: { type: String, default: '' },
+  author: { type: String, default: '' },
+  pages: { type: Number, default: 0 },
+  coverType: { type: String, default: '' },
+  language: { type: String, default: '' },
+  publishYear: { type: String, default: '' },
+  image_path: { type: String, default: '' },
+  categoryPrefix: { type: String, default: '' },
   // Analytics Tracking
   views: { type: Number, default: 0 },
   viewHistory: [{

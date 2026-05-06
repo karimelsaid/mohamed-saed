@@ -56,6 +56,7 @@ const communityRoutes = require('./routes/community.routes');
 const analyticsRoutes = require('./routes/analytics.routes');
 const bourseRoutes = require('./routes/bourse.routes');
 const automationRoutes = require('./routes/automation.routes');
+const newsletterRoutes = require('./routes/newsletter.routes');
 const express = require('express');
 const bodyParser = require('body-parser');
 const app = express();
@@ -588,6 +589,7 @@ app.use('/api/merchant', merchantRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/bourse', bourseRoutes);
 app.use('/api/automation', automationRoutes);
+app.use('/api/newsletter', newsletterRoutes);
 
 // Delete print order and associated file
 const mongoose = require('mongoose');
@@ -604,6 +606,8 @@ app.use('/api/gamification', gamificationRoutes);
 app.use('/api/notifications', notificationRoutes); // Notification Routes
 app.use('/api/quran-progress', quranProgressRoutes); // Quran Progress Routes
 app.use('/api/mutabaa', require('./routes/mutabaa.routes')); // Smart Mutaba'a Routes
+app.use('/api/hifz-plan', require('./routes/hifzPlan.routes')); // Dynamic Hifz Plan Routes
+app.use('/api/halaqa', require('./routes/halaqa.routes')); // Community Halaqa Routes
 
 // JSON 404 handler for API routes
 app.use('/api/*', (req, res) => {
@@ -612,8 +616,6 @@ app.use('/api/*', (req, res) => {
     message: `API Route not found: ${req.method} ${req.originalUrl}`
   });
 });
-app.use('/api/hifz-plan', require('./routes/hifzPlan.routes')); // Dynamic Hifz Plan Routes
-app.use('/api/halaqa', require('./routes/halaqa.routes')); // Community Halaqa Routes
 
 // Apply specific rate limiters to sensitive routes
 app.use('/api/users/login', authLimiter);

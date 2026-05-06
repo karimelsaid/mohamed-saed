@@ -40,12 +40,20 @@ export class BooksComponent implements OnInit, OnDestroy {
     copiedBookId: string | null = null;
     isLoading: boolean = true;
 
+    // Filters
+    selectedCategory: string = 'الكل';
+    maxPrice: number = 2000;
+    minPrice: number = 0;
+    sortOrder: string = 'random'; // Default to random
+
     // Book categories to filter by
     bookCategories = [
         'كتب', 'روايات وقصص', 'تطوير الذات وعلم النفس', 'كتب دينية',
         'قواميس ومراجع', 'صحة وطب وعلوم', 'أعمال وتسويق ومالية',
-        'فنون وحرف', 'تاريخ وسير ذاتية', 'تربية وأطفال'
+        'فنون وحرف', 'تاريخ وسير ذاتية', 'تربية وأطفال', 'أدوات مكتبية'
     ];
+
+    allBooks: Book[] = []; // Store all fetched books
 
     constructor(
         private dataService: DataService,
@@ -60,38 +68,77 @@ export class BooksComponent implements OnInit, OnDestroy {
         this.isLoading = true;
         this.route.queryParams.subscribe(params => {
             this.currentPage = parseInt(params['page'] || '1', 10);
+            if (params['category']) this.selectedCategory = params['category'];
+            if (params['maxPrice']) this.maxPrice = parseInt(params['maxPrice'], 10);
+            if (params['sort']) this.sortOrder = params['sort'];
         });
 
         this.dataService.getData().subscribe(data => {
-            // Filter for any book category
-            let filteredBooks = data.filter((book: Book) =>
-                this.bookCategories.some(cat => book.product_category.includes(cat))
-            );
-
-            // Process books (rival flag, discount, etc.)
-            const now = new Date().getTime();
-            filteredBooks = filteredBooks.map((book: Book) => {
-                if (book.promotionEndDate) {
-                    const now = new Date().getTime();
-                    const promoEnd = new Date(book.promotionEndDate).getTime();
-                    // Respect server-side rival status or local calculation
-                    book.rival = book.rival || promoEnd > now;
-                } else if (book.rival === undefined) {
-                    book.rival = false;
-                }
-                book.product_discount_percent = Number(book.product_discount_percent) || 0;
-                return book;
-            });
-
-            this.books = filteredBooks;
-            this.totalPages = Math.ceil(this.books.length / this.booksPerPage);
-            this.currentPage = Math.min(this.currentPage, this.totalPages) || 1;
-
-            this.updatePage();
-            this.startCountdown();
-            this.fetchRatingsForBooks();
+            this.allBooks = data;
+            this.applyFiltersAndSort();
             this.isLoading = false;
         });
+    }
+
+    applyFiltersAndSort(): void {
+        let filtered = this.allBooks.filter((book: Book) => {
+            const categoryMatch = this.selectedCategory === 'الكل' || 
+                                 (book.product_category && book.product_category.includes(this.selectedCategory)) ||
+                                 (this.selectedCategory === 'كتب' && !book.product_category); // Fallback for uncategorized
+            
+            const price = Number(book.product_price) || 0;
+            const priceMatch = price >= this.minPrice && price <= this.maxPrice;
+
+            // Ensure it's a book (belongs to one of the book categories)
+            const isBook = !book.product_category || this.bookCategories.some(cat => book.product_category && book.product_category.includes(cat));
+
+            return categoryMatch && priceMatch && isBook;
+        });
+
+        // Process books (rival flag, discount, etc.)
+        const now = new Date().getTime();
+        filtered = filtered.map((book: Book) => {
+            if (book.promotionEndDate) {
+                const promoEnd = new Date(book.promotionEndDate).getTime();
+                book.rival = book.rival || promoEnd > now;
+            } else if (book.rival === undefined) {
+                book.rival = false;
+            }
+            book.product_discount_percent = Number(book.product_discount_percent) || 0;
+            return book;
+        });
+
+        // Sorting / Randomization
+        if (this.sortOrder === 'random') {
+            filtered = this.shuffleArray(filtered);
+        } else if (this.sortOrder === 'price_asc') {
+            filtered.sort((a, b) => (Number(a.product_price) || 0) - (Number(b.product_price) || 0));
+        } else if (this.sortOrder === 'price_desc') {
+            filtered.sort((a, b) => (Number(b.product_price) || 0) - (Number(a.product_price) || 0));
+        }
+
+        this.books = filtered;
+        this.totalPages = Math.ceil(this.books.length / this.booksPerPage);
+        this.currentPage = Math.min(this.currentPage, this.totalPages) || 1;
+
+        this.updatePage();
+        this.startCountdown();
+        this.fetchRatingsForBooks();
+    }
+
+    shuffleArray(array: any[]): any[] {
+        const newArr = [...array];
+        for (let i = newArr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [newArr[i], newArr[j]] = [newArr[j], newArr[i]];
+        }
+        return newArr;
+    }
+
+    onFilterChange(): void {
+        this.currentPage = 1;
+        this.applyFiltersAndSort();
+        this.updateURL();
     }
 
     updatePage(): void {
@@ -244,7 +291,7 @@ export class BooksComponent implements OnInit, OnDestroy {
                 const promoEndDate = new Date(book.promotionEndDate).getTime();
                 const distance = promoEndDate - now;
                 if (distance < 0) {
-                    book.remainingTime = 'انتهى العرض';
+                    book.remainingTime = '';
                 } else {
                     const days = Math.floor(distance / (1000 * 60 * 60 * 24));
                     const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));

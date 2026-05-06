@@ -22,6 +22,7 @@ export class BourseComponent implements OnInit, OnDestroy {
   freeGiftThreshold = 1000;
   
   countdownStr = '00:00:00';
+  nextOfferTime: any = null;
   private timer: any;
 
   // Toast notification
@@ -51,9 +52,11 @@ export class BourseComponent implements OnInit, OnDestroy {
             this.activeOffer = res.offer;
             this.enrichBooks();
             this.startCountdown();
+            this.nextOfferTime = null;
           } else {
             this.activeOffer = null;
             this.errorMessage = res.message || 'لا يوجد عروض نشطة حالياً';
+            this.calculateNextOfferTime();
           }
           this.isLoading = false;
         },
@@ -111,6 +114,46 @@ export class BourseComponent implements OnInit, OnDestroy {
       const s = Math.floor((diff % (1000 * 60)) / 1000);
       
       this.countdownStr = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    };
+
+    updateTimer();
+    this.timer = setInterval(updateTimer, 1000);
+  }
+
+  calculateNextOfferTime() {
+    const now = new Date();
+    const minutesSinceMidnight = (now.getHours() * 60) + now.getMinutes();
+    
+    // Slots are every 45 minutes: 0, 45, 90, ...
+    const currentSlotIndex = Math.floor(minutesSinceMidnight / 45);
+    const nextSlotMinutes = (currentSlotIndex + 1) * 45;
+    
+    const nextOffer = new Date();
+    nextOffer.setHours(0, nextSlotMinutes, 0, 0);
+    
+    this.nextOfferTime = nextOffer;
+    this.startNextOfferCountdown();
+  }
+
+  startNextOfferCountdown() {
+    if (this.timer) clearInterval(this.timer);
+    
+    const updateTimer = () => {
+      if (!this.nextOfferTime) return;
+      const end = this.nextOfferTime.getTime();
+      const now = new Date().getTime();
+      const diff = end - now;
+
+      if (diff <= 0) {
+        clearInterval(this.timer);
+        this.fetchActiveOffer();
+        return;
+      }
+
+      const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const s = Math.floor((diff % (1000 * 60)) / 1000);
+      
+      this.countdownStr = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
     };
 
     updateTimer();

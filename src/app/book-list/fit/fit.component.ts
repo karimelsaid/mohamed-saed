@@ -330,7 +330,7 @@ export class FitComponent implements OnInit, OnDestroy {
         const distance = promoEndDate - now;
 
         if (distance < 0) {
-          book.remainingTime = 'انتهى العرض';
+          book.remainingTime = '';
           return;
         }
 

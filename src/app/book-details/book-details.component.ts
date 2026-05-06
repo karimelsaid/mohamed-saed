@@ -282,18 +282,34 @@ export class BookDetailsComponent implements OnInit, OnDestroy {
       baseFilename = productId;
     }
 
-    const potentialImages = [
-      this.getImageUrl(baseFilename + '.webp', this.book),
+    const potentialImages = [];
+    
+    // 1. If it's an external image, add it as the ABSOLUTE FIRST candidate
+    if (this.book.image_path && (this.book.image_path.startsWith('http') || this.book.image_path.includes('darelollaa.com'))) {
+      potentialImages.push(this.book.image_path);
+      console.log('🌐 Adding external image_path to gallery:', this.book.image_path);
+    }
+
+    // 2. Add local primary image if not external or as a fallback
+    if (!this.book.image_path || !this.book.image_path.startsWith('http')) {
+      potentialImages.push(this.getImageUrl(baseFilename + '.webp', this.book));
+    }
+
+    // 3. Add potential variations (always local candidates, will be checked if they exist)
+    potentialImages.push(
       this.getImageUrl(baseFilename + '_1.webp', this.book),
       this.getImageUrl(baseFilename + '_2.webp', this.book),
-      this.getImageUrl(baseFilename + '_3.webp', this.book),
-      this.getImageUrl(baseFilename + '_4.webp', this.book),
-      this.getImageUrl(baseFilename + '_5.webp', this.book)
-    ];
+      this.getImageUrl(baseFilename + '_3.webp', this.book)
+    );
 
     console.log(`🔍 Checking available images for baseFilename: ${baseFilename}`);
     
     const results = await Promise.all(potentialImages.map(async (url) => {
+      // If it's an external URL, trust it exists (to avoid CORS/HEAD request issues)
+      if (url.startsWith('http')) {
+        return url;
+      }
+      
       const exists = await this.checkImageExists(url);
       console.log(`📸 Image ${url} exists: ${exists}`);
       return exists ? url : null;
@@ -334,15 +350,21 @@ export class BookDetailsComponent implements OnInit, OnDestroy {
     const currentCategory = this.book.product_category;
     const currentMerchant = this.book.merchantName;
 
-    // Find related products: same category, different product, limit to 8
-    const related = this.allBooks.filter(p => {
+    // Find related products: same category, different product
+    let relatedPool = this.allBooks.filter(p => {
       const isSameCategory = p.product_category === currentCategory;
       const isDifferentProduct = p.products_id !== currentProductId;
 
       // Prioritize same merchant and category, fallback to just same category
       return isSameCategory && isDifferentProduct;
-    }).sort((a, b) => {
-      // Sort: same merchant first, then by discount, then by newest
+    });
+
+    // Shuffle the candidates to provide variety
+    relatedPool = this.dataService.shuffleArray(relatedPool);
+
+    // Now sort by priority (same merchant first) and take top 8
+    this.relatedProducts = relatedPool.sort((a, b) => {
+      // Sort: same merchant first, then by discount
       const aSameMerchant = a.merchantName === currentMerchant ? 1 : 0;
       const bSameMerchant = b.merchantName === currentMerchant ? 1 : 0;
       if (aSameMerchant !== bSameMerchant) return bSameMerchant - aSameMerchant;
@@ -353,8 +375,6 @@ export class BookDetailsComponent implements OnInit, OnDestroy {
 
       return 0;
     }).slice(0, 8);
-
-    this.relatedProducts = related;
   }
 
   // Navigate to a related product's details page
@@ -369,13 +389,6 @@ export class BookDetailsComponent implements OnInit, OnDestroy {
     const slug = this.slugService.getBookSlug(product.product_name);
     const categoryRoutes: { [key: string]: string } = {
       'أدوات مكتبية': 'office-supplies',
-      'إلكترونيات': 'electronics',
-      'ملابس': 'clothing',
-      'التجميل والعناية الشخصية': 'cosmetics',
-      'الأحذية': 'shoes',
-      'أثاث': 'furniture',
-      'ألعاب': 'games',
-      'أقمشة': 'fabrics',
       'كتب': 'book',
       'روايات وقصص': 'book',
       'تطوير الذات وعلم النفس': 'book',
@@ -387,25 +400,18 @@ export class BookDetailsComponent implements OnInit, OnDestroy {
       'فنون وحرف': 'book',
       'قواميس ومراجع': 'book'
     };
-    const route = categoryRoutes[product.product_category] || 'others';
+    const route = categoryRoutes[product.product_category] || 'book';
     return [route, product.products_id, slug];
   }
 
   // Check if product is a book category
   isBookCategory(category: string): boolean {
     const bookCategories = [
-      'كتب',
-      'روايات وقصص',
-      'تطوير الذات وعلم النفس',
-      'كتب دينية',
-      'أعمال وتسويق ومالية',
-      'صحة وطب وعلوم',
-      'تاريخ وسير ذاتية',
-      'تربية وأطفال',
-      'فنون وحرف',
-      'قواميس ومراجع'
+      'كتب', 'روايات وقصص', 'تطوير الذات وعلم النفس', 'كتب دينية', 'أعمال وتسويق ومالية',
+      'صحة وطب وعلوم', 'تاريخ وسير ذاتية', 'تربية وأطفال', 'فنون وحرف', 'قواميس ومراجع',
+      'رواية', 'تنمية', 'ديني', 'اعمال', 'تربية'
     ];
-    return bookCategories.includes(category);
+    return bookCategories.some(c => category && category.includes(c));
   }
 
   // Check if text is Arabic (for RTL book styling)

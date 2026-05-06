@@ -18,6 +18,7 @@ export class AddProductComponent implements OnInit, OnDestroy {
   selectedFiles: File[] = [];
   imagePreviews: string[] = [];
   isApproved = false;
+  allowPublisherUpload = true;
   isLoading = true;
 
   // Modal properties
@@ -39,6 +40,7 @@ export class AddProductComponent implements OnInit, OnDestroy {
     'أعمال وتسويق ومالية',
     'فنون وحرف',
     'تربية وأطفال',
+    'أدوات مكتبية',
     'أخرى'
   ];
 
@@ -73,6 +75,7 @@ export class AddProductComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
+    this.checkPublisherUploadSetting();
     this.checkMerchantApproval();
   }
 
@@ -111,6 +114,23 @@ export class AddProductComponent implements OnInit, OnDestroy {
         }
       });
     }
+  }
+
+  private checkPublisherUploadSetting() {
+    this.merchantAuthService.getSystemSettings().subscribe({
+      next: (settings) => {
+        if (settings && settings.bourseConfig) {
+          this.allowPublisherUpload = settings.bourseConfig.allowPublisherUpload !== false;
+          if (!this.allowPublisherUpload) {
+            alert('عذراً، إضافة الكتب معطلة حالياً من قبل الإدارة.');
+            this.router.navigate(['/merchant/dashboard']);
+          }
+        }
+      },
+      error: (err) => {
+        console.error('Error fetching system settings:', err);
+      }
+    });
   }
 
   onFileSelected(event: any) {

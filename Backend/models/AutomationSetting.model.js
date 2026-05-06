@@ -18,6 +18,16 @@ const automationSettingSchema = new mongoose.Schema({
     metaConfig: {
         pageId: String,
         instagramId: String
+    },
+    claudeConfig: {
+        enabled: { type: Boolean, default: false },
+        lastCommand: String,
+        lastStatus: String
+    },
+    n8nConfig: {
+        apiUrl: { type: String, default: 'https://n8n.knoozbook.com' },
+        apiKey: { type: String, default: '' },
+        syncEnabled: { type: Boolean, default: false }
     }
 }, { timestamps: true });
 

@@ -406,7 +406,7 @@ export class OfficeSuppliesComponent implements OnInit, OnDestroy {
         const distance = promoEndDate - now;
 
         if (distance < 0) {
-          product.remainingTime = 'انتهى العرض';
+          product.remainingTime = '';
           return;
         }
 

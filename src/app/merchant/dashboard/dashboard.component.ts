@@ -55,6 +55,7 @@ export class MerchantDashboardComponent implements OnInit {
   loadingUpdateRequests = false;
   loadingAnalytics = false;
   loadingShippingRates = false;
+  allowPublisherUpload = true; // Default to true
 
   regionCosts: RegionRate[] = [];
 
@@ -240,6 +241,7 @@ export class MerchantDashboardComponent implements OnInit {
     this.loadUpdateRequests();
     this.loadBooksList();
     this.loadAnalytics();
+    this.checkPublisherUploadSetting();
 
     this.productsSubscription = this.productStateService.products$.subscribe(products => {
       this.loadProducts();
@@ -349,6 +351,21 @@ export class MerchantDashboardComponent implements OnInit {
         } else {
           alert('فشل في تحميل بيانات التاجر');
         }
+      }
+    });
+  }
+
+  checkPublisherUploadSetting() {
+    this.merchantAuthService.getSystemSettings().subscribe({
+      next: (settings) => {
+        if (settings && settings.bourseConfig) {
+          this.allowPublisherUpload = settings.bourseConfig.allowPublisherUpload !== false;
+        }
+      },
+      error: (err) => {
+        console.error('Error fetching system settings:', err);
+        // Default to true if fetch fails to avoid blocking users unnecessarily
+        this.allowPublisherUpload = true;
       }
     });
   }

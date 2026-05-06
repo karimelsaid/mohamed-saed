@@ -5,7 +5,7 @@
       <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white">
         <i class="fas fa-store"></i>
       </div>
-      <span>كنوز للتاجر</span>
+      <span>كنوز لدار النشر</span>
     </div>
 
     <nav class="flex md:flex-col gap-2 mt-8 justify-center">
@@ -39,6 +39,17 @@
   <!-- Main Content Area -->
   <main class="dashboard-main py-8 px-4 sm:px-6 lg:px-8">
     
+    <!-- Publisher Upload Disabled Warning -->
+    <div *ngIf="!allowPublisherUpload" class="mb-8 p-6 bg-red-50 border border-red-200 rounded-2xl flex items-start gap-4">
+      <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center text-red-600 shrink-0">
+        <i class="fas fa-ban text-xl"></i>
+      </div>
+      <div>
+        <h3 class="text-lg font-bold text-red-800 mb-1">إضافة الكتب معطلة حالياً</h3>
+        <p class="text-red-700 text-sm">عذراً، قامت الإدارة بتعطيل ميزة إضافة أو تحديث الكتب لدور النشر في الوقت الحالي.</p>
+      </div>
+    </div>
+
     <!-- Pending Approval Warning (Persistent above tabs if pending) -->
     <div *ngIf="isMerchantPending()" class="mb-8 p-6 bg-yellow-50 border border-yellow-200 rounded-2xl flex items-start gap-4">
       <div class="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-600 shrink-0">
@@ -60,7 +71,7 @@
           </h1>
           <p>إليك ملخص سريع لتطور متجرك هذا الأسبوع.</p>
         </div>
-        <button (click)="addProduct()" [disabled]="isMerchantPending()" 
+        <button (click)="addProduct()" [disabled]="isMerchantPending() || !allowPublisherUpload" 
           class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition-all flex items-center justify-center disabled:opacity-50">
           <i class="fas fa-plus ml-2 text-white"></i>
           إضافة منتج جديد
@@ -208,7 +219,7 @@
             </h2>
             <p class="text-gray-500 dark:text-gray-400 mt-2 font-medium">تحكم في قائمة مشاريعك وتوفرها.</p>
           </div>
-          <button (click)="addProduct()" [disabled]="isMerchantPending()" 
+          <button (click)="addProduct()" [disabled]="isMerchantPending() || !allowPublisherUpload" 
             class="w-full md:w-auto px-10 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black hover:scale-105 active:scale-95 transition-all shadow-lg shadow-blue-500/25 flex items-center justify-center gap-3 disabled:opacity-50 disabled:grayscale">
             <i class="fas fa-plus"></i>
             إضافة منتج جديد

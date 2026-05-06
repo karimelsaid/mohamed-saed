@@ -317,4 +317,12 @@ export class MerchantAuthService {
   getApiUrl(): string {
     return this.apiUrl;
   }
+
+  getSystemSettings(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/admin/settings`);
+  }
+
+  getPublicMerchants(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/merchant/public/list`);
+  }
 }

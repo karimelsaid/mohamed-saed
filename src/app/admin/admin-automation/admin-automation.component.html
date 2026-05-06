@@ -116,47 +116,78 @@
               <input type="text" class="form-control" [(ngModel)]="settings.n8nWebhookUrls.commentReply" (change)="onSettingsChange()" placeholder="https://n8n.yourserver.com/webhook/...">
             </div>
           </div>
+
+          <hr style="margin: 1.5rem 0; border: 0; border-top: 1px solid #e2e8f0;">
+          
+          <div class="form-group">
+            <label>n8n API Key (للمزامنة والتحليلات)</label>
+            <div class="input-with-icon">
+              <i class="fas fa-key"></i>
+              <input type="password" class="form-control" [(ngModel)]="settings.n8nConfig!.apiKey" (change)="onSettingsChange()" placeholder="أدخل API Key الخاص بـ n8n...">
+            </div>
+            <button class="btn btn-sm btn-outline-primary" style="margin-top: 0.5rem;" (click)="loadN8nStats()" [disabled]="loadingN8n">
+              <i class="fas fa-sync" [class.fa-spin]="loadingN8n"></i> تحديث الاتصال بـ n8n
+            </button>
+          </div>
+
+          <!-- Live n8n Stats Display -->
+          <div class="n8n-live-stats" *ngIf="n8nStats">
+            <div class="stats-header">
+              <span>إحصائيات n8n الحية:</span>
+              <span class="badge badge-success">متصل</span>
+            </div>
+            <div class="stats-grid-mini">
+              <div class="mini-stat-item">
+                <div class="mini-stat-label">إجمالي الـ Workflows</div>
+                <div class="mini-stat-value">{{ n8nStats.totalWorkflows }}</div>
+              </div>
+              <div class="mini-stat-item">
+                <div class="mini-stat-label">نشط الآن</div>
+                <div class="mini-stat-value success">{{ n8nStats.totalWorkflows }}</div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
-      <section class="card google-sheets-card">
+      <!-- Claude AI Agent Card -->
+      <section class="card claude-card" [class.active]="settings.claudeConfig!.enabled">
         <div class="card-header">
-          <h2><i class="fas fa-file-excel"></i> ربط جداول بيانات جوجل (Google Sheets Sync)</h2>
+          <h2><i class="fas fa-brain"></i> Claude AI Developer Agent</h2>
+          <label class="switch">
+            <input type="checkbox" [(ngModel)]="settings.claudeConfig!.enabled" (change)="onSettingsChange()">
+            <span class="slider round"></span>
+          </label>
         </div>
         <div class="card-body">
-          <div class="setting-group">
-            <div class="setting-info">
-              <h4>تفعيل المزامنة اللحظية</h4>
-              <p>تحديث سجل المنتجات في Google Sheets فوراً عند أي تغيير</p>
-            </div>
-            <label class="switch">
-              <input type="checkbox" [(ngModel)]="settings.googleSheetEnabled" (change)="onSettingsChange()">
-              <span class="slider round"></span>
-            </label>
-          </div>
-
-          <div class="form-group" style="margin-top: 1.5rem;">
-            <label>معرف الجدول (Google Sheet ID)</label>
-            <div class="input-with-icon">
-              <i class="fas fa-id-card"></i>
-              <input type="text" class="form-control" [(ngModel)]="settings.googleSheetId" (change)="onSettingsChange()" placeholder="أدخل ID الموجود في رابط الملف...">
-            </div>
-            <p class="setting-info" style="margin-top: 0.5rem; font-size: 0.75rem; color: #64748b;">
-              <i class="fas fa-info-circle"></i>
-              تأكد من مشاركة الملف مع البريد الخاص بـ <strong>Service Account</strong> ليتمكن النظام من التحديث.
-            </p>
-          </div>
-
-          <!-- New Sync Button -->
-          <div class="sync-action" style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e2e8f0;">
-            <button class="btn btn-success btn-block" (click)="syncAllProducts()" [disabled]="loading">
-              <i class="fas" [ngClass]="loading ? 'fa-spinner fa-spin' : 'fa-cloud-download-alt'"></i>
-              إستيراد كافة المنتجات من Google Sheets (الـ 909 منتج)
+          <p class="setting-info mb-4">أعطِ تعليمات برمجية لـ Claude وسيقوم بتنفيذها في مشروعك محلياً.</p>
+          
+          <div class="claude-input-group">
+            <textarea class="form-control claude-prompt" [(ngModel)]="claudePrompt" placeholder="مثال: أضف حقل 'اللون' لجدول المنتجات وحدث الواجهة..."></textarea>
+            <button class="btn btn-primary btn-block" (click)="executeClaude()" [disabled]="claudeExecuting || !settings.claudeConfig!.enabled">
+              <i class="fas" [ngClass]="claudeExecuting ? 'fa-spinner fa-spin' : 'fa-terminal'"></i>
+              تنفيذ المهمة البرمجية
             </button>
-            <p class="setting-info" style="margin-top: 0.75rem; text-align: center; color: #059669; font-weight: 500;">
-              <i class="fas fa-magic"></i> سيقوم النظام بسحب كافة البيانات وربط الصور تلقائياً.
-            </p>
           </div>
+
+          <div class="claude-output" *ngIf="claudeOutput">
+            <div class="output-header">مخرجات العميل الذكي:</div>
+            <pre>{{ claudeOutput }}</pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- Global Sync Card -->
+      <section class="card sync-card">
+        <div class="card-header">
+          <h2><i class="fas fa-cloud-upload-alt"></i> المزامنة العالمية (Global Sync)</h2>
+        </div>
+        <div class="card-body text-center">
+          <p class="setting-info mb-4">رفع كافة التعديلات البرمجية والأتمتة إلى السيرفر العالمي بضغطة واحدة.</p>
+          <button class="btn btn-dark btn-lg btn-block" (click)="triggerDeploy()" [disabled]="deploying">
+            <i class="fas" [ngClass]="deploying ? 'fa-spinner fa-spin' : 'fa-rocket'"></i>
+            مزامنة التعديلات الآن
+          </button>
         </div>
       </section>
     </div>

@@ -92,24 +92,31 @@ exports.initCronJobs = async () => {
     });
     scheduledTasks.push(liveUpdateTask);
 
-    // 6. Bourse Offers Daily Generation (00:01 AM)
-    const bourseTask = cron.schedule('1 0 * * *', async () => {
-        console.log('🔄 Running Daily Bourse Generation...');
+    // 6. Bourse Offers Generation (Every 45 minutes to ensure health)
+    const bourseTask = cron.schedule('*/45 * * * *', async () => {
+        console.log('🔄 Checking Bourse Generation...');
         try {
             const SystemSettingsLocal = require('../models/SystemSettings');
             const BourseOffer = require('../models/BourseOffer.model');
             const BourseController = require('../controllers/bourse.controller');
             const localSettings = await SystemSettingsLocal.getInstance();
+            
             if (localSettings.bourseConfig && localSettings.bourseConfig.isActive) {
                const now = new Date();
-               const dateStr = new Date(now.getTime() - (now.getTimezoneOffset() * 60 * 1000)).toISOString().split('T')[0];
+               // Force Egypt Time (UTC+3)
+               const EGYPT_OFFSET = 3 * 60 * 60 * 1000;
+               const egyptDate = new Date(now.getTime() + EGYPT_OFFSET);
+               const dateStr = egyptDate.toISOString().split('T')[0];
+
                const offersCount = await BourseOffer.countDocuments({ date: dateStr });
-               if (offersCount === 0) {
+               if (offersCount < 32) {
+                 console.log(`[Cron] Found ${offersCount} offers for ${dateStr}. Regenerating full day...`);
+                 await BourseOffer.deleteMany({ date: dateStr });
                  await BourseController.generateDailyBourseOffers(dateStr, localSettings.bourseConfig);
                }
             }
         } catch(err) {
-            console.error('Error in daily bourse generation:', err);
+            console.error('Error in bourse generation job:', err);
         }
     });
     scheduledTasks.push(bourseTask);

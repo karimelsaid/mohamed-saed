@@ -25,6 +25,9 @@ router.delete('/urgency-requests/:requestId', adminController.deleteUrgencyReque
 // Route to add new product with image upload
 router.post('/add-product', adminController.upload.array('image', 3), adminController.addProduct);
 
+// Route to bulk add products from Excel
+router.post('/bulk-add-products', adminController.upload.single('publisherImage'), adminController.bulkAddProducts);
+
 // Route to list all products
 router.get('/products', adminController.listProducts);
 

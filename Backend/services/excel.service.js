@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const { auth } = require('../config/drive');
 
-// تصنيفات الكتب والمنتجات الأخرى
+// تصنيفات الكتب والأدوات المكتبية فقط
 const categoryMap = {
   'رواية': 'روايات وقصص',
   'تنمية': 'تطوير الذات وعلم النفس',
@@ -16,13 +16,6 @@ const categoryMap = {
   'تاريخ': 'تاريخ وسير ذاتية',
   'تربية': 'تربية وأطفال',
   'أدوات مكتبية': 'أدوات مكتبية',
-  'إلكترونيات': 'إلكترونيات',
-  'ملابس': 'ملابس',
-  'تجميل': 'التجميل والعناية الشخصية',
-  'احذية': 'الأحذية',
-  'اثاث': 'أثاث وديكور المنزل',
-  'العاب': 'هدية وألعاب',
-  'أقمشة': 'أقمشة',
   'غير مصنف': 'غير مصنف'
 };
 
@@ -38,13 +31,6 @@ const categoryFieldsMap = {
   'تاريخ وسير ذاتية': ['author', 'publisher', 'pages', 'coverType', 'language', 'publishYear'],
   'تربية وأطفال': ['author', 'publisher', 'pages', 'coverType', 'language', 'publishYear'],
   'أدوات مكتبية': ['stationeryType', 'material', 'color', 'size', 'brand'],
-  'إلكترونيات': ['electronicsType', 'model', 'specs', 'warranty'],
-  'ملابس': ['clothingType', 'season', 'originCountry'],
-  'التجميل والعناية الشخصية': ['cosmeticsType', 'sizeWeight', 'ingredients', 'suitableFor'],
-  'الأحذية': ['shoeType'],
-  'أثاث وديكور المنزل': ['furnitureType', 'length', 'width', 'height', 'deliveryMethod'],
-  'هدية وألعاب': ['toyType', 'ageGroup', 'safety'],
-  'أقمشة': ['fabricType', 'width', 'length', 'usage'],
   'غير مصنف': ['suggestedCategory']
 };
 
@@ -58,6 +44,31 @@ for (const [key, value] of Object.entries(categoryMap)) {
 
 function roundUpToNearestFive(num) {
   return Math.ceil(num / 5) * 5;
+}
+
+function cleanPrice(val) {
+  if (val === undefined || val === null) return 0;
+  if (typeof val === 'number') {
+    // Special case: if the number is small and has 3 decimal places, 
+    // it was likely a thousand-separator string parsed incorrectly by the Excel reader
+    const s = val.toString();
+    if (val < 10 && s.includes('.') && s.split('.')[1].length === 3) {
+      return val * 1000;
+    }
+    return val;
+  }
+  
+  let s = String(val).trim();
+  // Remove currency symbols if any
+  s = s.replace(/[^\d.,]/g, '');
+
+  // If it has a dot followed by 3 digits and no other separators, treat it as thousands
+  if (s.includes('.') && s.split('.')[1].length === 3 && !s.includes(',')) {
+    return parseFloat(s.replace('.', ''));
+  }
+
+  // Handle standard formats: 1,155.00 -> 1155
+  return parseFloat(s.replace(/,/g, '')) || 0;
 }
 
 async function downloadAndConvertExcel(fileId, promotionStartDateStr, promotionEndDateStr) {
@@ -94,9 +105,17 @@ async function downloadAndConvertExcel(fileId, promotionStartDateStr, promotionE
   const sheet = workbook.Sheets[sheetName];
   let json = xlsx.utils.sheet_to_json(sheet);
 
-  // Filter out products with product_quantity less than 0
+  // Filter out products:
+  // 1. Quantity less than 0
+  // 2. Category NOT in allowed list (Books & Stationery only)
+  const allowedCategories = Object.values(categoryMap);
   const filteredJson = json.filter(product => {
-    return !(product.product_quantity < 0);
+    const qtyValid = !(product.product_quantity < 0);
+    const category = product.product_category || '';
+    const categoryValid = allowedCategories.includes(category) || 
+                         (product.product_name && Object.keys(categoryMap).some(key => product.product_name.startsWith(key + '-')));
+    
+    return qtyValid && categoryValid;
   });
 
   // Save raw data for local-first updates if needed
@@ -158,10 +177,11 @@ async function processAndSaveData(filteredJson, promotionStartDate, promoEndDate
     // Check if the product has a merchantId directly from the Excel data
     const merchantId = product.merchantId ? product.merchantId.toString() : null;
 
-    // PRESERVE existing image_path if it was manually updated (contains ?v= cache buster)
-    // Only rebuild image_path if it doesn't exist or doesn't start with /uploads/
+    // PRESERVE existing image_path if it's a direct URL or has a cache buster
     const existingImagePath = product.image_path || '';
-    const hasCustomImagePath = existingImagePath.includes('?v=') || 
+    const isDirectUrl = typeof existingImagePath === 'string' && (existingImagePath.startsWith('http://') || existingImagePath.startsWith('https://'));
+    const hasCustomImagePath = isDirectUrl || 
+                                existingImagePath.includes('?v=') || 
                                 (existingImagePath.startsWith('/uploads/books/') && existingImagePath !== `/uploads/books/admin__karim_mohamed__/${product_id}/${product_id}.webp`);
 
     if (!hasCustomImagePath) {
@@ -178,7 +198,8 @@ async function processAndSaveData(filteredJson, promotionStartDate, promoEndDate
         }
       } else {
         // This is an admin product
-        product.image_path = `/uploads/books/admin__karim_mohamed__/${product_id}/${product_id}.webp`;
+        const adminFolder = 'admin__karim_mohamed__'; // Standardized folder name
+        product.image_path = `/uploads/books/${adminFolder}/${product_id}/${product_id}.webp`;
       }
     } else {
       // Preserve the existing image_path but still set merchant info if needed
@@ -218,11 +239,7 @@ async function processAndSaveData(filteredJson, promotionStartDate, promoEndDate
 
     // Adjust product_price ONLY if not already processed to avoid double multiplication (fallback scenarios)
     if (!isAlreadyProcessed) {
-      if (typeof product.product_price === 'string') {
-        price = parseFloat(product.product_price);
-      } else {
-        price = product.product_price;
-      }
+      price = cleanPrice(product.product_price);
 
       // First increase price by 175%
       price = price * 2.75;
@@ -380,6 +397,8 @@ async function addProductToExcel(productData, merchantId = null) {
       product_price: productData.product_price || 0,
       price_cost: productData.price_cost || 0,
       merchantId: productData.merchantId ? productData.merchantId.toString() : '',
+      image_path: productData.image_path || '',
+      weight: productData.weight || 0,
       author: productData.author || '',
       publisher: productData.publisher || '',
       pages: productData.pages || '',
@@ -728,12 +747,163 @@ async function removeProductFromExcel(barcode, fileId) {
   }
 }
 
+// New function to add multiple products to Excel file and update output.json
+async function bulkAddProductsToExcel(productsData) {
+  try {
+    const fileId = process.env.GOOGLE_DRIVE_FILE_ID;
+    if (!fileId) {
+      throw new Error('Missing required environment variable: GOOGLE_DRIVE_FILE_ID');
+    }
+
+    let json;
+    let workbook;
+    let sheetName;
+    let driveObj;
+
+    try {
+      const client = await auth.getClient();
+      driveObj = google.drive({ version: 'v3', auth: client });
+
+      const res = await driveObj.files.get({
+        fileId,
+        alt: 'media',
+      }, { responseType: 'arraybuffer' });
+
+      const buffer = Buffer.from(res.data);
+      workbook = xlsx.read(buffer, { type: 'buffer' });
+      sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      json = xlsx.utils.sheet_to_json(sheet);
+    } catch (driveErr) {
+      console.warn('⚠️ Could not download Excel from Drive, falling back to local output_raw.json:', driveErr.message);
+      try {
+        const rawDataPath = path.join(__dirname, '..', 'output_raw.json');
+        if (fs.existsSync(rawDataPath)) {
+          json = JSON.parse(fs.readFileSync(rawDataPath, 'utf-8'));
+        } else {
+          json = [];
+        }
+      } catch (localErr) {
+        json = [];
+      }
+    }
+
+    // Add all new products to JSON
+    for (const productData of productsData) {
+      const newRow = {
+        products_id: productData.products_id || productData.barcode,
+        barcode: productData.barcode || '',
+        product_name: productData.categoryPrefix ? productData.categoryPrefix + productData.product_name : productData.product_name,
+        product_quantity: productData.product_quantity,
+        product_category: productData.product_category,
+        product_description: productData.product_description || '',
+        product_price: productData.product_price || 0,
+        price_cost: productData.price_cost || 0,
+        merchantId: productData.merchantId ? productData.merchantId.toString() : '',
+        image_path: productData.image_path || '',
+        weight: productData.weight || 0,
+        author: productData.author || '',
+        publisher: productData.publisher || '',
+        pages: productData.pages || '',
+        coverType: productData.coverType || '',
+        language: productData.language || '',
+        publishYear: productData.publishYear || '',
+        stationeryType: productData.stationeryType || '',
+        material: productData.material || '',
+        color: productData.color || '',
+        size: productData.size || '',
+        brand: productData.brand || '',
+        electronicsType: productData.electronicsType || '',
+        model: productData.model || '',
+        specs: productData.specs || '',
+        warranty: productData.warranty || '',
+        clothingType: productData.clothingType || '',
+        season: productData.season || '',
+        originCountry: productData.originCountry || '',
+        cosmeticsType: productData.cosmeticsType || '',
+        sizeWeight: productData.sizeWeight || '',
+        ingredients: productData.ingredients || '',
+        suitableFor: productData.suitableFor || '',
+        shoeType: productData.shoeType || '',
+        furnitureType: productData.furnitureType || '',
+        height: productData.height || '',
+        deliveryMethod: productData.deliveryMethod || '',
+        toyType: productData.toyType || '',
+        ageGroup: productData.ageGroup || '',
+        safety: productData.safety || '',
+        fabricType: productData.fabricType || '',
+        width: productData.width || '',
+        length: productData.length || '',
+        usage: productData.usage || '',
+        suggestedCategory: productData.suggestedCategory || '',
+        linkedEbookId: productData.linkedEbookId || '',
+        createdAt: productData.createdAt || new Date().toISOString()
+      };
+      json.push(newRow);
+    }
+
+    const rawDataPath = path.join(__dirname, '..', 'output_raw.json');
+    fs.writeFileSync(rawDataPath, JSON.stringify(json, null, 2));
+
+    try {
+      const PromotionDate = require('../models/PromotionDate.model');
+      const promoDoc = await PromotionDate.findOne().sort({ createdAt: -1 }).exec();
+      const pStart = promoDoc ? promoDoc.startDate : new Date();
+      const pEnd = promoDoc ? promoDoc.endDate : new Date();
+      await processAndSaveData(json, pStart, pEnd);
+    } catch (procErr) {
+      console.warn('⚠️ Failed to process local data update:', procErr.message);
+    }
+
+    if (driveObj) {
+      try {
+        if (!workbook) {
+          workbook = xlsx.utils.book_new();
+          sheetName = 'Sheet1';
+          const newSheet = xlsx.utils.json_to_sheet(json);
+          xlsx.utils.book_append_sheet(workbook, newSheet, sheetName);
+        } else {
+          const newSheet = xlsx.utils.json_to_sheet(json);
+          workbook.Sheets[sheetName] = newSheet;
+        }
+        const wbout = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+        await driveObj.files.update({
+          fileId,
+          media: {
+            mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            body: wbout
+          }
+        });
+
+        const updateFileId = process.env.GOOGLE_DRIVE_FILE_update;
+        if (updateFileId && updateFileId !== fileId) {
+          await driveObj.files.update({
+            fileId: updateFileId,
+            media: {
+              mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+              body: wbout
+            }
+          });
+        }
+      } catch (uploadErr) {
+        console.warn('⚠️ Failed to sync Excel file to Google Drive (Bulk):', uploadErr.message);
+      }
+    }
+
+    return true;
+  } catch (error) {
+    console.error('❌ Critical error in bulkAddProductsToExcel:', error.message);
+    return false;
+  }
+}
+
 module.exports = {
   downloadAndConvertExcel,
   categoryMap,
   reverseCategoryMap,
   categoryFieldsMap,
   addProductToExcel,
+  bulkAddProductsToExcel,
   removeProductFromExcel,
   uploadExcelFromJson,
   updateExcelFromJson,

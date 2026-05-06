@@ -1,14 +1,21 @@
 <!-- أيقونة الدردشة العائمة بتصميم عصري -->
-<div class="fixed bottom-24 md:bottom-6 right-6 z-50 transition-transform duration-300 hover:scale-110"
+<div class="fixed bottom-44 md:bottom-28 left-4 z-50 transition-transform duration-300 hover:scale-110"
   *ngIf="!isVisible" (click)="toggleVisibility()" title="Chat with AI">
   <div
-    class="w-16 h-16 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-full shadow-2xl flex items-center justify-center cursor-pointer relative overflow-hidden group">
+    class="w-11 h-11 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-full shadow-2xl flex items-center justify-center cursor-pointer relative overflow-hidden group">
     <div class="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
-    <span class="text-3xl transform group-hover:rotate-12 transition-transform duration-300">💬</span>
+    <span class="text-xl transform group-hover:rotate-12 transition-transform duration-300">💬</span>
+    
+    <!-- Tooltip -->
+    <span
+        class="absolute left-full ml-3 bg-gray-900/90 backdrop-blur-sm text-white text-xs py-2 px-3 rounded-xl opacity-0 group-hover:opacity-100 transition-all duration-300 whitespace-nowrap pointer-events-none shadow-xl border border-white/10">
+        المساعد الذكي 🤖
+    </span>
+
     <!-- نبض إشعار اختياري -->
-    <span class="absolute top-0 right-0 -mt-1 -mr-1 flex h-4 w-4">
+    <span class="absolute top-0 right-0 -mt-0.5 -mr-0.5 flex h-3 w-3">
       <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-      <span class="relative inline-flex rounded-full h-4 w-4 bg-red-500"></span>
+      <span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
     </span>
   </div>
 </div>

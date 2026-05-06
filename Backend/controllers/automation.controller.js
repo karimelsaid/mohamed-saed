@@ -135,3 +135,47 @@ exports.getRandomProduct = async (req, res) => {
         res.status(500).json({ success: false });
     }
 };
+
+/**
+ * Execute a command using Claude Code CLI
+ */
+exports.executeClaudeCommand = async (req, res) => {
+    try {
+        const { prompt } = req.body;
+        if (!prompt) {
+            return res.status(400).json({ success: false, message: 'Prompt is required' });
+        }
+
+        const result = await automationService.runClaudeAgent(prompt);
+        res.json(result);
+    } catch (error) {
+        console.error('Error in executeClaudeCommand:', error);
+        res.status(500).json({ success: false, message: 'Server error during Claude execution' });
+    }
+};
+
+/**
+ * Get stats from n8n API
+ */
+exports.getN8nStats = async (req, res) => {
+    try {
+        const stats = await automationService.fetchN8nStats();
+        res.json({ success: true, stats });
+    } catch (error) {
+        console.error('Error in getN8nStats:', error);
+        res.status(500).json({ success: false, message: 'Server error fetching n8n stats' });
+    }
+};
+
+/**
+ * Trigger deployment to production
+ */
+exports.deployToProduction = async (req, res) => {
+    try {
+        const result = await automationService.deployToProduction();
+        res.json(result);
+    } catch (error) {
+        console.error('Error in deployToProduction:', error);
+        res.status(500).json({ success: false, message: 'Server error during deployment' });
+    }
+};

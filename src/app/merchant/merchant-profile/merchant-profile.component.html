@@ -4,7 +4,7 @@
     <div class="absolute inset-0 border-4 border-[var(--knooz-indigo)]/20 rounded-full"></div>
     <div class="absolute inset-0 border-4 border-t-[var(--knooz-gold)] rounded-full animate-spin"></div>
   </div>
-  <span class="mt-4 font-bold text-[var(--knooz-indigo)] animate-pulse">يتم إعداد المتجر...</span>
+  <span class="mt-4 font-bold text-[var(--knooz-indigo)] animate-pulse">يتم إعداد دار النشر/المكتبة...</span>
 </div>
 
 <!-- Error State -->
@@ -69,16 +69,16 @@
           <h1 class="text-4xl md:text-5xl font-black text-gray-900 dark:text-white tracking-tight">
             {{ merchant.name || merchant.merchantName }}
           </h1>
-          <!-- Visit Personal Profile Button -->
-          <a [routerLink]="['/profile', merchant._id]" 
+          <!-- Visit Personal Profile Button (Hidden for Virtual Publishers) -->
+          <a *ngIf="!merchant.isPublisher" [routerLink]="['/profile', merchant._id]" 
              class="px-5 py-2.5 rounded-xl font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg transition-all flex items-center gap-2 text-sm"
              title="زيارة الملف الشخصي لصاحب المتجر">
             <fa-icon [icon]="faUser"></fa-icon>
             <span>الملف الشخصي</span>
           </a>
         </div>
-        <div class="flex flex-wrap justify-center md:justify-start gap-6 text-sm">
-          <div class="flex items-center text-gray-500 dark:text-gray-400">
+        <div class="flex flex-wrap justify-center md:justify-start gap-6 text-sm" *ngIf="merchant.email || merchant.phone">
+          <div class="flex items-center text-gray-500 dark:text-gray-400" *ngIf="merchant.email">
             <svg class="w-5 h-5 ml-2 text-[var(--knooz-gold)]" fill="currentColor" viewBox="0 0 20 20">
               <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"></path>
               <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"></path>

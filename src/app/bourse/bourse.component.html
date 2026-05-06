@@ -44,7 +44,15 @@
         <fa-icon [icon]="['fas', 'clock']" class="text-6xl text-gray-400"></fa-icon>
       </div>
       <h3 class="text-2xl font-bold text-gray-800 dark:text-white mb-2">{{ errorMessage || 'انتهى العرض الحالي!' }}</h3>
-      <p class="text-gray-500 max-w-md text-center mb-8">ترقب العرض القادم الذي سيبدأ قريباً. عروض بورصة الكتب تتجدد كل 45 دقيقة طوال اليوم.</p>
+      <p class="text-gray-500 max-w-md text-center mb-6">عروض بورصة الكتب تتجدد كل 45 دقيقة طوال اليوم.</p>
+      
+      <div *ngIf="nextOfferTime" class="mb-8 flex flex-col items-center">
+        <span class="text-xs font-black text-red-500 uppercase tracking-widest mb-3">يبدأ العرض القادم خلال</span>
+        <div class="bg-gray-100 dark:bg-gray-900 px-8 py-3 rounded-2xl text-3xl font-mono font-black text-gray-800 dark:text-white border border-gray-200 dark:border-gray-700 shadow-inner">
+           {{ countdownStr }}
+        </div>
+      </div>
+
       <a routerLink="/" class="px-8 py-3 bg-[var(--knooz-indigo)] text-white font-bold rounded-xl hover:bg-opacity-90 transition-all shadow-lg hover:shadow-xl">العودة للرئيسية</a>
     </div>
 

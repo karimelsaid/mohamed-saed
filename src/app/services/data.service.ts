@@ -21,78 +21,62 @@ export class DataService {
 
   constructor(private http: HttpClient) { }
 
+  // Utility to shuffle an array (Fisher-Yates algorithm)
+  shuffleArray(array: any[]): any[] {
+    const newArr = [...array];
+    for (let i = newArr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [newArr[i], newArr[j]] = [newArr[j], newArr[i]];
+    }
+    return newArr;
+  }
+
   getBookImageUrl(book: any): string {
     if (!book) return 'assets/images/book-placeholder.jpg';
 
-    // 1. Get the base image source (prioritize image_path as it contains the ?v= timestamp)
-    let imagePath = book.image_path || book.product_image || '';
-    if (typeof imagePath !== 'string') imagePath = String(imagePath);
+    // 1. Check if product_image itself is a full URL (variation specific)
+    const product_image = book.product_image || '';
+    if (typeof product_image === 'string' && (product_image.startsWith('http://') || product_image.startsWith('https://'))) {
+      return product_image;
+    }
 
-    // 2. Resolve the products_id (used for folder naming)
+    // 2. Check if image_path is a full URL (original source)
+    let image_path = book.image_path || '';
+    if (typeof image_path === 'string' && (image_path.startsWith('http://') || image_path.startsWith('https://'))) {
+      // Only return image_path if we're not explicitly looking for a local variation via product_image
+      if (!product_image || 
+          product_image === book.products_id || 
+          product_image === (book.products_id + '.webp') || 
+          product_image === book.barcode || 
+          product_image === (book.barcode + '.webp')) {
+        return image_path;
+      }
+    }
+
+    // 3. Resolve the products_id (used for folder naming)
     let products_id = book.products_id || (book as any)._id;
     if (products_id) products_id = String(products_id).trim();
 
-    // 3. Determine if it's admin or merchant
+    // 4. Determine if it's admin or merchant
     const merchantName = book.merchantName;
     const isAdmin = book.merchantRole === 'admin' || !merchantName || merchantName === 'كنوز' || merchantName === 'تاجر كنوز' || merchantName === 'Kenouz';
 
-    // 4. Handle paths with slashes (Extract filename or validate structured path)
-    if (imagePath && imagePath.includes('/')) {
-      const parts = imagePath.split('/');
-      const filename = parts[parts.length - 1];
-      
-      // Check if the path's ownership matches the book's ownership
-      const pathIsAdmin = imagePath.includes('admin');
-      const ownershipMatches = (isAdmin && pathIsAdmin) || (!isAdmin && imagePath.includes('merchant'));
-
-      if (ownershipMatches && parts.length >= 3) {
-        // Ownership matches and we have a full structured path, use it
-        imagePath = parts.slice(-3).join('/');
-      } else {
-        // Ownership mismatch or incomplete path, just take the filename and rebuild later
-        imagePath = filename;
-      }
-    }
-
-    // 5. If it's just a filename (no slashes), wrap it in the structured path
-    if (imagePath && !imagePath.includes('/')) {
-      let filename = imagePath;
-      if (!filename.includes('.')) {
-        filename += '.webp';
-      }
-
-      const folderName = products_id || (filename.match(/^\d+/) ? filename.match(/^\d+/)![0] : 'unknown');
-      
-      if (isAdmin) {
-        imagePath = `admin__karim_mohamed__/${folderName}/${filename}`;
-      } else {
-        const sanitizedMerchantName = String(merchantName || 'merchant').replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
-        imagePath = `merchant_${sanitizedMerchantName}/${folderName}/${filename}`;
-      }
-    } 
-    // 6. Handle empty path fallback
-    else if (!imagePath) {
-      const folderName = products_id || 'unknown';
-      if (isAdmin) {
-        imagePath = `admin__karim_mohamed__/${folderName}/${folderName}.webp`;
-      } else {
-        const sanitizedMerchantName = String(merchantName || 'merchant').replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
-        imagePath = `merchant_${sanitizedMerchantName}/${folderName}/${folderName}.webp`;
-      }
-    }
-
-    // 7. Return the final URL with uploadsBaseUrl
-    const cleanBase = this.uploadsBaseUrl.replace(/\/$/, '');
+    const folderName = book.barcode || products_id || 'unknown';
+    let final_image = product_image || (folderName + '.webp');
     
-    // Check if the path already contains the base (to avoid double prefixing)
-    if (imagePath.includes(cleanBase)) {
-      return imagePath.startsWith('/') ? imagePath : '/' + imagePath;
+    // Ensure extension
+    if (typeof final_image === 'string' && !final_image.includes('.')) {
+      final_image += '.webp';
     }
 
-    const finalPath = imagePath.startsWith('/') ? imagePath.substring(1) : imagePath;
-    return `${cleanBase}/${finalPath}`;
+    if (isAdmin) {
+      const adminName = book.adminName || 'karim_mohamed__';
+      return `${this.uploadsBaseUrl}/admin__${adminName}/${folderName}/${final_image}`;
+    } else {
+      const sanitizedMerchantName = String(merchantName || 'merchant').replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
+      return `${this.uploadsBaseUrl}/merchant_${sanitizedMerchantName}/${folderName}/${final_image}`;
+    }
   }
-
   getData(): Observable<any[]> { // Changed return type to any[]
     // Add timestamp to bypass browser/server cache for real-time data
     const timestamp = new Date().getTime();

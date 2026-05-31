@@ -83,6 +83,7 @@ export class NavbarComponent implements OnInit {
   orderCount: number = 0;
   isAdmin: boolean = false;
   isMerchant: boolean = false;
+  isMarketer: boolean = false;
 
   showAccountModal: boolean = false;
 
@@ -98,6 +99,11 @@ export class NavbarComponent implements OnInit {
   isDarkMode: boolean = false; // Track dark mode state
   isFullScreen: boolean = false; // Track full screen state
   user: any = null; // Current user data
+
+  dynamicCategories: string[] = [];
+  bookCategories: string[] = [];
+  officeCategories: string[] = [];
+  otherCategories: string[] = [];
 
   // Search related
   searchQuery: string = '';
@@ -214,6 +220,8 @@ export class NavbarComponent implements OnInit {
       }
     }
 
+    this.loadDynamicCategories();
+
     this.dataService.getData().subscribe((data: any) => {
       this.allBooks = data;
     });
@@ -300,12 +308,8 @@ export class NavbarComponent implements OnInit {
     const isMerchantLoggedIn = this.merchantAuthService.isAuthenticated();
 
     this.isLoggedIn = isUserLoggedIn || isMerchantLoggedIn;
-    this.isAdmin = this.user?.email === 'admin@example.com' || this.user?.role === 'admin';
-
-    // Defensive: If user is admin, they shouldn't be treated as merchant in the navbar
-    if (this.isAdmin) {
-      this.isMerchant = false;
-    }
+    this.isAdmin = this.user?.email === 'admin@example.com' || this.user?.role === 'admin' || this.user?.role === 'staff';
+    this.isMarketer = isUserLoggedIn; // Allow all logged-in users to see and apply
 
     // Force immediate view update
     this.cdr.markForCheck();
@@ -490,4 +494,81 @@ export class NavbarComponent implements OnInit {
   }
 
   protected readonly Math = Math;
+
+  loadDynamicCategories(): void {
+    const defaultCats = [
+      'تطوير الذات وعلم النفس',
+      'روايات وقصص',
+      'أعمال وتسويق ومالية',
+      'صحة وطب وعلوم',
+      'قواميس ومراجع',
+      'تربية وأطفال',
+      'تاريخ وسير ذاتية',
+      'فنون وحرف',
+      'كتب دينية'
+    ];
+
+    this.dataService.getCategories().subscribe({
+      next: (res) => {
+        if (res && res.success) {
+          // Merge default categories with those from backend to ensure core ones are always there
+          this.dynamicCategories = [...new Set([...defaultCats, ...res.categories])];
+          this.groupCategories();
+          this.cdr.markForCheck();
+        }
+      },
+      error: (err) => {
+        console.error('Error loading dynamic categories:', err);
+        // Fallback to default categories on error
+        this.dynamicCategories = defaultCats;
+        this.groupCategories();
+      }
+    });
+  }
+
+  groupCategories(): void {
+    const bookKeywords = ['كتب', 'روايات', 'تطوير', 'تاريخ', 'تربية', 'صحة', 'أعمال', 'فنون', 'قواميس', 'دينية', 'ديني', 'رواية', 'تنمية'];
+    const officeKeywords = ['مكتبية', 'أدوات', 'قرطاسية'];
+
+    this.bookCategories = [];
+    this.officeCategories = [];
+    this.otherCategories = [];
+
+    this.dynamicCategories.forEach(cat => {
+      const lowerCat = cat.toLowerCase();
+      if (bookKeywords.some(k => lowerCat.includes(k))) {
+        this.bookCategories.push(cat);
+      } else if (officeKeywords.some(k => lowerCat.includes(k))) {
+        this.officeCategories.push(cat);
+      } else {
+        this.otherCategories.push(cat);
+      }
+    });
+  }
+
+  getCategoryIcon(cat: string): any {
+    const iconMap: { [key: string]: any } = {
+      'كتب دينية': faMosque,
+      'دينية': faMosque,
+      'ديني': faMosque,
+      'تطوير الذات وعلم النفس': faBrain,
+      'تنمية': faBrain,
+      'روايات وقصص': faScroll,
+      'رواية': faScroll,
+      'أعمال وتسويق ومالية': faChartLine,
+      'اعمال': faChartLine,
+      'صحة وطب وعلوم': faHeartbeat,
+      'صحة': faHeartbeat,
+      'قواميس ومراجع': faBookOpen,
+      'قاموس': faBookOpen,
+      'تربية وأطفال': faChild,
+      'تربية': faChild,
+      'تاريخ وسير ذاتية': faHistory,
+      'تاريخ': faHistory,
+      'فنون وحرف': faPalette,
+      'فن': faPalette,
+      'أدوات مكتبية': faTools
+    };
+    return iconMap[cat] || faBook;
+  }
 }

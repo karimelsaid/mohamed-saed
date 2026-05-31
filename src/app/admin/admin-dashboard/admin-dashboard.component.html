@@ -18,7 +18,7 @@
     <nav
       class="flex-1 overflow-y-auto py-4 px-2 space-y-1 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 pb-28 md:pb-4">
 
-      <button (click)="switchView('dashboard'); showSidebar = false"
+      <button *ngIf="hasPermission('dashboard')" (click)="switchView('dashboard'); showSidebar = false"
         [class]="currentView === 'dashboard' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
         class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
         <fa-icon [icon]="['fas', 'home']" class="text-lg"></fa-icon>
@@ -27,7 +27,7 @@
 
       <div class="sidebar-nav-category pt-4 pb-2 px-4 text-xs font-bold text-gray-400 uppercase tracking-wider">المتجر</div>
 
-      <button (click)="switchView('orders'); showSidebar = false"
+      <button *ngIf="hasPermission('orders')" (click)="switchView('orders'); showSidebar = false"
         [class]="currentView === 'orders' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
         class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
         <fa-icon [icon]="['fas', 'shopping-cart']"></fa-icon>
@@ -36,42 +36,42 @@
           *ngIf="totalOrders > 0">{{totalOrders}}</span>
       </button>
 
-      <button (click)="switchView('products'); showSidebar = false"
+      <button *ngIf="hasPermission('products')" (click)="switchView('products'); showSidebar = false"
         [class]="currentView === 'products' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
         class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
         <fa-icon [icon]="['fas', 'edit']"></fa-icon>
         <span>المنتجات</span>
       </button>
 
-      <button (click)="switchView('addProduct'); showSidebar = false"
+      <button *ngIf="hasPermission('addProduct')" (click)="switchView('addProduct'); showSidebar = false"
         [class]="currentView === 'addProduct' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
         class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
         <fa-icon [icon]="['fas', 'plus']"></fa-icon>
         <span>إضافة منتج</span>
       </button>
 
-      <button (click)="switchView('ebooks'); showSidebar = false"
+      <button *ngIf="hasPermission('ebooks')" (click)="switchView('ebooks'); showSidebar = false"
         [class]="currentView === 'ebooks' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
         class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
         <fa-icon [icon]="['fas', 'book-open']"></fa-icon>
         <span>الكتب الإلكترونية</span>
       </button>
 
-      <button (click)="switchView('promotions'); showSidebar = false"
+      <button *ngIf="hasPermission('promotions')" (click)="switchView('promotions'); showSidebar = false"
         [class]="currentView === 'promotions' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
         class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
         <fa-icon [icon]="['fas', 'gift']"></fa-icon>
         <span>إدارة العروض والترويج</span>
       </button>
 
-      <button (click)="switchView('promotionDates'); showSidebar = false"
+      <button *ngIf="hasPermission('promotionDates')" (click)="switchView('promotionDates'); showSidebar = false"
         [class]="currentView === 'promotionDates' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
         class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
         <fa-icon [icon]="['fas', 'calendar-alt']"></fa-icon>
         <span>إدارة تواريخ العروض</span>
       </button>
 
-      <button (click)="switchView('bourseSettings'); showSidebar = false"
+      <button *ngIf="hasPermission('bourseSettings')" (click)="switchView('bourseSettings'); showSidebar = false"
         [class]="currentView === 'bourseSettings' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
         class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
         <fa-icon [icon]="['fas', 'chart-line']"></fa-icon>
@@ -81,49 +81,63 @@
 
       <div class="sidebar-nav-category pt-4 pb-2 px-4 text-xs font-bold text-gray-400 uppercase tracking-wider">دور النشر & المستخدمين</div>
 
-      <button (click)="switchView('merchants'); showSidebar = false"
+      <button *ngIf="hasPermission('merchants')" (click)="switchView('merchants'); showSidebar = false"
         [class]="currentView === 'merchants' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
         class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
         <fa-icon [icon]="['fas', 'users']"></fa-icon>
         <span>إدارة دور النشر</span>
       </button>
 
-      <button (click)="switchView('merchantOrders'); showSidebar = false"
+      <button *ngIf="currentUserRole === 'admin'" (click)="switchView('staff'); showSidebar = false"
+        [class]="currentView === 'staff' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
+        class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
+        <fa-icon [icon]="['fas', 'user-shield']"></fa-icon>
+        <span>إدارة الموظفين 🛡️</span>
+      </button>
+
+      <button *ngIf="hasPermission('merchantOrders')" (click)="switchView('merchantOrders'); showSidebar = false"
         [class]="currentView === 'merchantOrders' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
         class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
         <fa-icon [icon]="['fas', 'store']"></fa-icon>
         <span>طلبات دور النشر</span>
       </button>
 
-      <button (click)="switchView('productApproval'); showSidebar = false"
+      <button *ngIf="hasPermission('productApproval')" (click)="switchView('productApproval'); showSidebar = false"
         [class]="currentView === 'productApproval' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
         class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
         <fa-icon [icon]="['fas', 'check-circle']"></fa-icon>
         <span>موافقة المنتجات</span>
       </button>
 
-      <button (click)="switchView('userHierarchy'); showSidebar = false"
+      <button *ngIf="hasPermission('userHierarchy')" (click)="switchView('userHierarchy'); showSidebar = false"
         [class]="currentView === 'userHierarchy' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
         class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
         <fa-icon [icon]="['fas', 'sitemap']"></fa-icon>
         <span>إدارة المستخدمين</span>
       </button>
 
-      <button (click)="switchView('userIntelligence'); showSidebar = false"
+      <button *ngIf="hasPermission('marketers')" (click)="switchView('marketers'); showSidebar = false"
+        [class]="currentView === 'marketers' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
+        class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
+        <fa-icon [icon]="['fas', 'bullhorn']"></fa-icon>
+        <span>إدارة المسوقين 📣</span>
+      </button>
+
+      <button *ngIf="hasPermission('userIntelligence')" (click)="switchView('userIntelligence'); showSidebar = false"
         [class]="currentView === 'userIntelligence' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
         class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
         <fa-icon [icon]="['fas', 'chart-bar']"></fa-icon>
         <span>ذكاء المستخدمين 🔥</span>
       </button>
 
-      <button (click)="switchView('gamificationControl'); showSidebar = false"
+      <button *ngIf="hasPermission('gamificationControl')" (click)="switchView('gamificationControl'); showSidebar = false"
         [class]="currentView === 'gamificationControl' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
         class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
         <fa-icon [icon]="['fas', 'sliders-h']"></fa-icon>
         <span>غرفة التحكم (Gamification) 🎮</span>
       </button>
 
-      <button (click)="switchView('notifications'); showSidebar = false"
+      <button *ngIf="hasPermission('notifications')" (click)="switchView('notifications'); showSidebar = false"
         [class]="currentView === 'notifications' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
         class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
         <fa-icon [icon]="['fas', 'bell']"></fa-icon>
@@ -132,105 +146,112 @@
 
       <div class="sidebar-nav-category pt-4 pb-2 px-4 text-xs font-bold text-gray-400 uppercase tracking-wider">أدوات & تقارير</div>
 
-      <button (click)="switchView('urgencyRequests'); showSidebar = false"
+      <button *ngIf="hasPermission('urgencyRequests')" (click)="switchView('urgencyRequests'); showSidebar = false"
         [class]="currentView === 'urgencyRequests' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
         class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
         <fa-icon [icon]="['fas', 'exclamation-triangle']"></fa-icon>
         <span>طلبات الطوارئ</span>
       </button>
 
-      <button (click)="switchView('requestedBooks'); showSidebar = false"
+      <button *ngIf="hasPermission('requestedBooks')" (click)="switchView('requestedBooks'); showSidebar = false"
         [class]="currentView === 'requestedBooks' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
         class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
         <fa-icon [icon]="['fas', 'book']"></fa-icon>
         <span>اقتراحات الكتب</span>
       </button>
 
-      <button (click)="switchView('salesRegistration'); showSidebar = false"
+      <button *ngIf="hasPermission('salesRegistration')" (click)="switchView('salesRegistration'); showSidebar = false"
         [class]="currentView === 'salesRegistration' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
         class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
         <fa-icon [icon]="['fas', 'cart-plus']"></fa-icon>
         <span>تسجيل مبيعات خارجية</span>
       </button>
 
-      <button (click)="switchView('salesHistory'); showSidebar = false"
+      <button *ngIf="hasPermission('salesHistory')" (click)="switchView('salesHistory'); showSidebar = false"
         [class]="currentView === 'salesHistory' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
         class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
         <fa-icon [icon]="['fas', 'history']"></fa-icon>
         <span>سجل المبيعات والعملاء</span>
       </button>
 
-      <button (click)="switchView('shortagesReport'); showSidebar = false"
+      <button *ngIf="hasPermission('shortagesReport')" (click)="switchView('shortagesReport'); showSidebar = false"
         [class]="currentView === 'shortagesReport' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
         class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
         <fa-icon [icon]="['fas', 'chart-bar']"></fa-icon>
         <span>تقرير النواقص</span>
       </button>
 
-      <button (click)="switchView('printOrders'); showSidebar = false"
+      <button *ngIf="hasPermission('printOrders')" (click)="switchView('printOrders'); showSidebar = false"
         [class]="currentView === 'printOrders' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
         class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
         <fa-icon [icon]="['fas', 'print']"></fa-icon>
         <span>طلبات الطباعة</span>
       </button>
 
-      <button (click)="switchView('printingSettings'); showSidebar = false"
+      <button *ngIf="hasPermission('printingSettings')" (click)="switchView('printingSettings'); showSidebar = false"
         [class]="currentView === 'printingSettings' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
         class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
         <fa-icon [icon]="['fas', 'cog']"></fa-icon>
         <span>إعدادات الطباعة</span>
       </button>
 
-      <button (click)="switchView('freeShippingRules'); showSidebar = false"
+      <button *ngIf="hasPermission('freeShippingRules')" (click)="switchView('freeShippingRules'); showSidebar = false"
         [class]="currentView === 'freeShippingRules' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
         class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
         <fa-icon [icon]="['fas', 'truck']"></fa-icon>
         <span>مصاريف الشحن</span>
       </button>
 
-      <button (click)="switchView('amazonCalculator'); showSidebar = false"
+      <button *ngIf="hasPermission('amazonCalculator')" (click)="switchView('amazonCalculator'); showSidebar = false"
         [class]="currentView === 'amazonCalculator' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
         class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
         <fa-icon [icon]="['fab', 'amazon']"></fa-icon>
         <span>حاسبة أمازون</span>
       </button>
 
-      <button (click)="switchView('subscriptionControl'); showSidebar = false"
+      <button *ngIf="hasPermission('subscriptionControl')" (click)="switchView('subscriptionControl'); showSidebar = false"
         [class]="currentView === 'subscriptionControl' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
         class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
         <fa-icon [icon]="['fas', 'crown']"></fa-icon>
         <span>إدارة الاشتراكات</span>
       </button>
 
-      <button (click)="switchView('mobileVersion'); showSidebar = false"
+      <button *ngIf="hasPermission('specialOffers')" (click)="switchView('specialOffers'); showSidebar = false"
+        [class]="currentView === 'specialOffers' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
+        class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
+        <fa-icon [icon]="['fas', 'gift']"></fa-icon>
+        <span>إدارة العروض الخاصة (Emails)</span>
+      </button>
+
+      <button *ngIf="hasPermission('mobileVersion')" (click)="switchView('mobileVersion'); showSidebar = false"
         [class]="currentView === 'mobileVersion' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
         class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
         <fa-icon [icon]="['fas', 'mobile-alt']"></fa-icon>
         <span>إعدادات التطبيق</span>
       </button>
 
-      <button (click)="switchView('paymentRequests'); showSidebar = false"
+      <button *ngIf="hasPermission('paymentRequests')" (click)="switchView('paymentRequests'); showSidebar = false"
         [class]="currentView === 'paymentRequests' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
         class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
         <fa-icon [icon]="['fas', 'money-bill-wave']"></fa-icon>
         <span>طلبات الدفع</span>
       </button>
 
-      <button (click)="switchView('readerFeedback'); showSidebar = false"
+      <button *ngIf="hasPermission('readerFeedback')" (click)="switchView('readerFeedback'); showSidebar = false"
         [class]="currentView === 'readerFeedback' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
         class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
         <fa-icon [icon]="['fas', 'comment-dots']"></fa-icon>
         <span>ملاحظات القراء</span>
       </button>
 
-      <button (click)="switchView('automation'); showSidebar = false"
+      <button *ngIf="hasPermission('automation')" (click)="switchView('automation'); showSidebar = false"
         [class]="currentView === 'automation' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
         class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
         <fa-icon [icon]="['fas', 'robot']" class="text-lg"></fa-icon>
         <span>نظام الأتمتة والذكاء 🤖</span>
       </button>
 
-      <button (click)="switchView('newsletter'); showSidebar = false"
+      <button *ngIf="hasPermission('newsletter')" (click)="switchView('newsletter'); showSidebar = false"
         [class]="currentView === 'newsletter' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
         class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
         <fa-icon [icon]="['fas', 'paper-plane']"></fa-icon>
@@ -883,6 +904,10 @@
         <app-subscription-settings></app-subscription-settings>
       </div>
 
+      <div *ngIf="currentView === 'specialOffers'" class="mb-28 md:mb-0 px-4">
+        <app-special-offers-manager></app-special-offers-manager>
+      </div>
+
       <div *ngIf="currentView === 'automation'" class="mb-28 md:mb-0 px-4">
         <app-admin-automation></app-admin-automation>
       </div>
@@ -1265,11 +1290,25 @@
               </label>
               <!-- Main Category Dropdown -->
               <select id="main_category" [(ngModel)]="selectedMainCategory" name="main_category" required
-                (change)="product.product_category = (selectedMainCategory !== 'كتب' ? selectedMainCategory : '')"
+                (change)="onCategoryChange($event)"
                 class="w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:border-transparent dark:bg-gray-700 dark:text-gray-200 transition duration-200">
                 <option value="" disabled selected>اختر الفئة أولاً</option>
-                <option *ngFor="let cat of mainCategories" [value]="cat">{{ cat }}</option>
+                <option *ngFor="let cat of allCategories" [value]="cat">{{ cat }}</option>
+                <option value="NEW_CATEGORY">+ إضافة قسم جديد</option>
               </select>
+            </div>
+
+            <!-- New Category Input -->
+            <div *ngIf="isAddingNewCategory" class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-200 dark:border-blue-800 space-y-4">
+              <label class="block text-sm font-bold text-blue-800 dark:text-blue-300">اسم القسم الجديد</label>
+              <div class="flex gap-2">
+                <input type="text" [(ngModel)]="newCategoryName" name="newCategoryName" 
+                  class="flex-1 px-4 py-2 border-2 rounded-lg dark:bg-gray-800" placeholder="مثلاً: أدوات هندسية">
+                <button type="button" (click)="confirmNewCategory()" 
+                  class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">تأكيد</button>
+                <button type="button" (click)="cancelNewCategory()" 
+                  class="bg-gray-400 text-white px-4 py-2 rounded-lg hover:bg-gray-500 transition">إلغاء</button>
+              </div>
             </div>
 
             <!-- Sub-category for Books -->
@@ -1280,9 +1319,11 @@
                 تصنيف الكتاب
               </label>
               <select id="product_category" [(ngModel)]="product.product_category" name="product_category" required
+                (change)="onCategoryChange($event)"
                 class="w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:border-transparent dark:bg-gray-700 dark:text-gray-200 transition duration-200">
-                <option value="" disabled selected>اختر تصنيف الكتاب</option>
-                <option *ngFor="let subCat of bookSubCategories" [value]="subCat">{{ subCat }}</option>
+                <option value="" disabled selected>اختر تصنيف المنتج</option>
+                <option *ngFor="let cat of allCategories" [value]="cat">{{ cat }}</option>
+                <option value="NEW_CATEGORY">+ إضافة قسم جديد</option>
               </select>
             </div>
 
@@ -1652,10 +1693,26 @@
                   <fa-icon [icon]="['fas', 'list-alt']" class="ml-2"></fa-icon>
                   التصنيف الافتراضي (في حال عدم وجود عمود تصنيف)
                 </label>
-                <select [(ngModel)]="bulkDefaultCategory" 
-                  class="w-full px-4 py-3 border-2 border-blue-100 dark:border-blue-900/30 rounded-lg focus:ring-2 focus:border-transparent dark:bg-gray-700 dark:text-gray-200">
-                  <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
-                </select>
+                
+                <div class="flex flex-col gap-3">
+                  <select [(ngModel)]="bulkDefaultCategory" (change)="onBulkDefaultCategoryChange($event)"
+                    class="w-full px-4 py-3 border-2 border-blue-100 dark:border-blue-900/30 rounded-lg focus:ring-2 focus:border-transparent dark:bg-gray-700 dark:text-gray-200">
+                    <option value="" disabled>-- اختر التصنيف --</option>
+                    <optgroup label="التصنيفات الحالية">
+                      <option *ngFor="let cat of allCategories" [value]="cat">{{ cat }}</option>
+                    </optgroup>
+                    <option value="NEW_CATEGORY" class="font-bold text-blue-600 dark:text-blue-400">+ إضافة قسم جديد...</option>
+                  </select>
+
+                  <!-- New Category Input for Bulk -->
+                  <div *ngIf="isBulkAddingNewCategory" class="flex gap-2 animate-fadeIn">
+                    <input type="text" [(ngModel)]="bulkNewCategoryName" 
+                      class="flex-1 px-4 py-2 border-2 border-blue-400 rounded-lg dark:bg-gray-700 dark:text-gray-200"
+                      placeholder="اسم القسم الجديد">
+                    <button (click)="confirmBulkNewCategory()" class="bg-green-600 text-white px-4 rounded-lg hover:bg-green-700">تأكيد</button>
+                    <button (click)="cancelBulkNewCategory()" class="bg-gray-200 text-gray-700 px-4 rounded-lg hover:bg-gray-300">إلغاء</button>
+                  </div>
+                </div>
                 <p class="text-[10px] text-gray-500 mt-2">سيتم استخدام هذا التصنيف لأي منتج ليس له تصنيف محدد في الملف.</p>
               </div>
             </div>
@@ -1702,11 +1759,40 @@
                     <span *ngIf="['product_name', 'product_category', 'product_price'].includes(field.key)" 
                       class="text-red-500 text-xs font-bold">* مطلوب</span>
                   </label>
-                  <select [(ngModel)]="fieldMapping[field.key]" 
+                  <select [(ngModel)]="fieldMapping[field.key]" (change)="field.key === 'product_category' ? detectCategoriesFromExcel() : null"
                     class="w-full px-3 py-2 border rounded-lg focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-200">
                     <option value="">-- تجاهل --</option>
                     <option *ngFor="let header of excelHeaders" [value]="header">{{ header }}</option>
                   </select>
+                </div>
+              </div>
+
+              <!-- Category Value Mapping Section -->
+              <div *ngIf="fieldMapping['product_category'] && detectedExcelCategories.length > 0" 
+                   class="mt-8 pt-6 border-t border-gray-100 dark:border-gray-700">
+                <h5 class="text-md font-bold text-gray-700 dark:text-gray-300 mb-4 flex items-center">
+                  <fa-icon [icon]="['fas', 'link']" class="ml-2 text-blue-500"></fa-icon>
+                  ربط قيم الأقسام (Excel ⮕ النظام)
+                </h5>
+                <p class="text-[11px] text-gray-500 mb-4">تم اكتشاف أقسام في الملف، يرجى ربط كل قيمة بالقسم المقابل لها في الموقع:</p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[300px] overflow-y-auto p-2">
+                  <div *ngFor="let excelCat of detectedExcelCategories" class="bg-gray-50 dark:bg-gray-900/40 p-3 rounded-xl border border-gray-100 dark:border-gray-800 flex flex-col gap-2">
+                    <div class="flex justify-between items-center">
+                      <span class="text-xs font-bold text-gray-600 dark:text-gray-400">قيمة الإكسل:</span>
+                      <span class="text-sm font-black text-blue-600 dark:text-blue-400">{{ excelCat }}</span>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                      <label class="text-[10px] text-gray-400">القسم في الموقع:</label>
+                      <select [(ngModel)]="categoryValueMapping[excelCat]"
+                        class="w-full text-xs px-2 py-1.5 border rounded-lg dark:bg-gray-700 dark:text-gray-200 focus:ring-1 focus:ring-blue-500">
+                        <option value="">-- استخدم الافتراضي ({{ bulkDefaultCategory }}) --</option>
+                        <optgroup label="التصنيفات المتاحة">
+                          <option *ngFor="let cat of allCategories" [value]="cat">{{ cat }}</option>
+                        </optgroup>
+                      </select>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1759,6 +1845,10 @@
 
       <div *ngIf="currentView === 'merchants'" class="mb-28 md:mb-0">
         <app-merchant-management></app-merchant-management>
+      </div>
+
+      <div *ngIf="currentView === 'marketers'" class="mb-28 md:mb-0">
+        <app-marketer-management></app-marketer-management>
       </div>
 
       <div *ngIf="currentView === 'productApproval'" class="mb-28 md:mb-0">
@@ -2937,6 +3027,97 @@
               </tr>
             </tbody>
           </table>
+        </div>
+      </div>
+
+      <!-- STAFF MANAGEMENT VIEW -->
+      <div *ngIf="currentView === 'staff'" class="space-y-8 animate-in fade-in duration-300">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h2 class="text-2xl font-bold text-gray-800 dark:text-white">إدارة الموظفين والصلاحيات 🛡️</h2>
+            <p class="text-gray-500 dark:text-gray-400">تحكم في وصول الموظفين لمختلف أقسام لوحة الإدارة</p>
+          </div>
+        </div>
+
+        <!-- Add New Staff Section -->
+        <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+          <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-4">إضافة موظف جديد</h3>
+          <div class="flex flex-col sm:flex-row gap-4">
+            <div class="relative flex-1">
+              <input type="email" [(ngModel)]="staffSearchEmail" placeholder="أدخل البريد الإلكتروني للمستخدم..."
+                class="w-full pr-10 pl-4 py-3 bg-gray-50 dark:bg-gray-900 border-none rounded-xl focus:ring-2 focus:ring-blue-500 transition-all dark:text-white">
+              <fa-icon [icon]="['fas', 'envelope']" class="absolute right-3 top-3.5 text-gray-400"></fa-icon>
+            </div>
+            <button (click)="promoteToStaff()" [disabled]="isPromotingStaff"
+              class="px-8 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-bold rounded-xl transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2">
+              <fa-icon *ngIf="isPromotingStaff" [icon]="['fas', 'spinner']" class="animate-spin"></fa-icon>
+              <span>إضافة كـ موظف</span>
+            </button>
+          </div>
+          <p class="text-xs text-gray-400 mt-2">* ملاحظة: يجب أن يكون للمستخدم حساب مسجل مسبقاً على المنصة.</p>
+        </div>
+
+        <!-- Staff List -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div *ngFor="let staff of staffMembers" 
+            class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col gap-6 group hover:shadow-md transition-all">
+            
+            <div class="flex items-start justify-between">
+              <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-400 text-xl font-bold">
+                  {{staff.username?.charAt(0) | uppercase}}
+                </div>
+                <div>
+                  <h4 class="font-bold text-gray-900 dark:text-white text-lg">{{staff.username}}</h4>
+                  <p class="text-sm text-gray-500 dark:text-gray-400">{{staff.email}}</p>
+                </div>
+              </div>
+              <button (click)="demoteFromStaff(staff._id)" 
+                class="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all" title="سحب الصلاحيات">
+                <fa-icon [icon]="['fas', 'user-minus']"></fa-icon>
+              </button>
+            </div>
+
+            <div class="space-y-6">
+              <h5 class="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                <fa-icon [icon]="['fas', 'key']"></fa-icon>
+                توزيع الصلاحيات حسب الأقسام
+              </h5>
+              
+              <div class="space-y-6">
+                <div *ngFor="let group of permissionGroups" class="bg-gray-50/50 dark:bg-gray-900/30 p-4 rounded-2xl border border-gray-100 dark:border-gray-800">
+                  <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-2">
+                      <div class="p-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm text-blue-500">
+                        <fa-icon [icon]="['fas', group.icon]"></fa-icon>
+                      </div>
+                      <span class="font-bold text-gray-700 dark:text-gray-300 text-sm">{{group.name}}</span>
+                    </div>
+                    <button (click)="toggleGroupPermissions(staff, group.views)"
+                      class="text-[10px] font-bold px-2 py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all">
+                      تحديد/إلغاء الكل
+                    </button>
+                  </div>
+
+                  <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    <button *ngFor="let viewId of group.views" (click)="togglePermission(staff, viewId)"
+                      [class]="(staff.permissions || []).includes(viewId) ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800' : 'bg-white dark:bg-gray-800 text-gray-400 border-gray-200 dark:border-gray-700'"
+                      class="flex items-center gap-2 px-3 py-2 rounded-xl border text-[11px] font-medium transition-all hover:scale-[1.02]">
+                      <fa-icon [icon]="(staff.permissions || []).includes(viewId) ? ['fas', 'check-circle'] : ['far', 'circle']"></fa-icon>
+                      {{viewTitles[viewId] || viewId}}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <div *ngIf="staffMembers.length === 0" class="lg:col-span-2 py-20 text-center bg-gray-50 dark:bg-gray-900/30 rounded-3xl border-2 border-dashed border-gray-200 dark:border-gray-800">
+            <fa-icon [icon]="['fas', 'user-shield']" class="text-6xl text-gray-300 dark:text-gray-700 mb-4 block"></fa-icon>
+            <h4 class="text-xl font-bold text-gray-400">لا يوجد موظفين حالياً</h4>
+            <p class="text-gray-500">استخدم النموذج أعلاه لإضافة موظفين جدد ومنحهم صلاحيات</p>
+          </div>
         </div>
       </div>
 

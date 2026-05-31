@@ -1,212 +1,670 @@
-<div class="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md">
-    <div class="flex justify-between items-center mb-6">
-        <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
-            <fa-icon [icon]="['fas', 'book']" class="text-blue-600"></fa-icon>
-            إدارة الكتب الإلكترونية
-        </h2>
-        <div class="text-sm text-gray-500">
-            عدد الكتب الكلي: {{ products.length }}
-        </div>
-    </div>
-
-    <!-- Search & Filter Bar -->
-    <div class="mb-6 flex flex-col md:flex-row gap-4">
-        <!-- Search -->
-        <div class="relative flex-grow">
-            <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                <fa-icon [icon]="['fas', 'search']" class="text-gray-400"></fa-icon>
+<div class="admin-ebooks-container p-4 md:p-8 min-h-screen bg-slate-50 dark:bg-slate-950">
+    
+    <!-- Hero Header -->
+    <div class="relative overflow-hidden bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-800 rounded-[2.5rem] p-8 mb-10 text-white shadow-2xl shadow-indigo-500/20">
+        <div class="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+        <div class="absolute bottom-0 left-0 w-48 h-48 bg-purple-400/20 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2"></div>
+        
+        <div class="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div class="text-center md:text-right">
+                <h2 class="text-3xl md:text-4xl font-black mb-2 flex items-center justify-center md:justify-start gap-4">
+                    <div class="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shadow-lg">
+                        <fa-icon [icon]="['fas', 'book-open']" class="text-2xl text-white"></fa-icon>
+                    </div>
+                    إدارة المكتبة الرقمية
+                </h2>
+                <p class="text-indigo-100 font-bold opacity-90">تحكم كامل في النسخ الإلكترونية والأغلفة الذكية وتعديل البيانات بدقة</p>
             </div>
-            <input type="text" [(ngModel)]="searchTerm" (keyup)="onSearch()"
-                class="block w-full pr-10 pl-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                placeholder="ابحث باسم الكتاب أو المؤلف...">
-        </div>
-
-        <!-- Status Filter -->
-        <div class="md:w-64">
-            <select [(ngModel)]="filterStatus" (change)="onFilterChange()"
-                class="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                <option value="all">عرض الكل</option>
-                <option value="available">نسخة إلكترونية متاحة ✅</option>
-                <option value="unavailable">بدون نسخة إلكترونية ❌</option>
-            </select>
+            
+            <div class="flex flex-wrap items-center justify-center gap-4">
+                <div class="glass-pill px-6 py-3 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 flex flex-col items-center">
+                    <span class="text-xs uppercase tracking-widest font-black text-indigo-200">إجمالي الكتب</span>
+                    <span class="text-2xl font-black">{{ activeTab === 'ebooks' ? totalEbooks : products.length }}</span>
+                </div>
+                <button (click)="openAddProductModal()"
+                    class="bg-emerald-500 hover:bg-emerald-400 text-white font-black px-8 py-4 rounded-3xl shadow-xl shadow-emerald-500/20 transition-all hover:-translate-y-1 active:scale-95 flex items-center gap-3">
+                    <fa-icon [icon]="['fas', 'plus-circle']"></fa-icon>
+                    <span>إضافة كتاب جديد</span>
+                </button>
+                <button *ngIf="activeTab === 'ebooks'" (click)="reindexPageCounts()" [disabled]="isReindexing"
+                    class="bg-indigo-500/30 hover:bg-indigo-500/50 border border-white/20 text-white font-black px-6 py-4 rounded-3xl shadow-xl transition-all hover:-translate-y-1 active:scale-95 flex items-center gap-3">
+                    <fa-icon *ngIf="isReindexing" [icon]="['fas', 'spinner']" class="animate-spin"></fa-icon>
+                    <fa-icon *ngIf="!isReindexing" [icon]="['fas', 'sync']"></fa-icon>
+                    <span>تحديث صفحات الكتب القديمة</span>
+                </button>
+            </div>
         </div>
     </div>
 
-    <!-- Products Table -->
-    <div class="overflow-x-auto border rounded-xl shadow-sm bg-white dark:bg-gray-800">
-        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead class="bg-gray-100 dark:bg-gray-900">
-                <tr>
-                    <th scope="col"
-                        class="px-6 py-4 text-right text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                        الغلاف
-                    </th>
-                    <th scope="col"
-                        class="px-6 py-4 text-right text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                        بيانات الكتاب
-                    </th>
-                    <th scope="col"
-                        class="px-6 py-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                        التصنيف
-                    </th>
-                    <th scope="col"
-                        class="px-6 py-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                        حالة النسخة الإلكترونية
-                    </th>
-                    <th scope="col"
-                        class="px-6 py-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider w-48">
-                        الإجراءات
-                    </th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                <tr *ngFor="let product of filteredProducts"
-                    class="hover:bg-blue-50 dark:hover:bg-gray-700 transition duration-150 ease-in-out">
-                    <td class="px-6 py-4 whitespace-nowrap align-middle">
-                        <img [src]="getProductImage(product)" alt="cover"
-                            class="h-16 w-12 object-cover rounded-md shadow-sm border border-gray-200 dark:border-gray-600">
-                    </td>
-                    <td class="px-6 py-4 align-middle">
-                        <div class="flex flex-col">
-                            <span class="text-sm font-bold text-gray-900 dark:text-gray-100 mb-1">
-                                {{ product.product_name }}
-                            </span>
-                            <span class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                                <fa-icon [icon]="['fas', 'user']" class="text-xs"></fa-icon>
-                                {{ product.author || 'المؤلف غير محدد' }}
-                            </span>
-                        </div>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-center align-middle">
-                        <span
-                            class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
-                            {{ product.product_category }}
-                        </span>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-center align-middle">
-                        <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full"
-                            [ngClass]="product.linkedEbookId ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'">
-                            {{ product.linkedEbookId ? 'متاح ✅' : 'غير متوفر ❌' }}
-                        </span>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-center align-middle">
-                        <div class="flex items-center justify-center gap-2">
-                            <!-- Update/Upload Button -->
-                            <button (click)="openUploadModal(product)"
-                                [class]="product.linkedEbookId ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-green-600 hover:bg-green-700'"
-                                class="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-white rounded-lg shadow-sm transition-colors">
-                                <fa-icon [icon]="['fas', 'upload']"></fa-icon>
-                                <span>{{ product.linkedEbookId ? 'تحديث' : 'رفع' }}</span>
-                            </button>
+    <!-- Navigation Tabs -->
+    <div class="flex items-center gap-4 mb-8 bg-slate-100 dark:bg-slate-900/60 p-2 rounded-[2rem] max-w-md border border-slate-200/50 dark:border-slate-800/50 shadow-sm">
+        <button (click)="switchTab('ebooks')" 
+            [ngClass]="activeTab === 'ebooks' ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-md' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'"
+            class="flex-1 py-3 px-6 rounded-2xl text-sm font-black transition-all active:scale-95 flex items-center justify-center gap-2">
+            <fa-icon [icon]="['fas', 'books']"></fa-icon>
+            <span>الكتب الإلكترونية ({{ totalEbooks }})</span>
+        </button>
+        <button (click)="switchTab('products')" 
+            [ngClass]="activeTab === 'products' ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-md' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'"
+            class="flex-1 py-3 px-6 rounded-2xl text-sm font-black transition-all active:scale-95 flex items-center justify-center gap-2">
+            <fa-icon [icon]="['fas', 'exchange-alt']"></fa-icon>
+            <span>ربط المنتجات الرقمية</span>
+        </button>
+    </div>
 
-                            <!-- Delete Button (Only if linkedEbookId exists) -->
-                            <button *ngIf="product.linkedEbookId" (click)="deleteEbook(product)"
-                                class="inline-flex items-center justify-center p-2 text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-sm transition-colors"
-                                title="حذف النسخة الإلكترونية نهائياً">
-                                <fa-icon [icon]="['fas', 'trash-alt']"></fa-icon>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-                <tr *ngIf="filteredProducts.length === 0 && !isLoading">
-                    <td colspan="5" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
-                        لا توجد كتب مطابقة لبحثك.
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+    <!-- Controls Section -->
+    <div class="glass-card bg-white/70 dark:bg-slate-900/50 backdrop-blur-xl rounded-[2rem] p-6 mb-8 border border-white/20 dark:border-slate-800/50 shadow-xl">
+        <div class="flex flex-col lg:flex-row gap-6">
+            <!-- Search -->
+            <div class="relative flex-grow group">
+                <div class="absolute inset-y-0 right-0 pr-5 flex items-center pointer-events-none transition-transform group-focus-within:scale-110">
+                    <fa-icon [icon]="['fas', 'search']" class="text-indigo-400"></fa-icon>
+                </div>
+                <input type="text" [(ngModel)]="searchTerm" (keyup)="onSearch()"
+                    class="block w-full pr-14 pl-6 py-4 bg-white dark:bg-slate-800 border-none rounded-3xl text-sm font-bold text-slate-700 dark:text-slate-200 placeholder-slate-400 shadow-inner focus:ring-2 focus:ring-indigo-500/50 transition-all"
+                    placeholder="ابحث باسم الكتاب، المؤلف، أو الرقم التسلسلي...">
+            </div>
+
+            <!-- Status Filter (Only for Products mapping tab) -->
+            <div class="lg:w-72" *ngIf="activeTab === 'products'">
+                <div class="relative">
+                    <select [(ngModel)]="filterStatus" (change)="onFilterChange()"
+                        class="block w-full pl-6 pr-12 py-4 bg-white dark:bg-slate-800 border-none rounded-3xl text-sm font-black text-slate-700 dark:text-slate-200 shadow-inner focus:ring-2 focus:ring-indigo-500/50 transition-all appearance-none cursor-pointer">
+                        <option value="all">عرض جميع الحالات</option>
+                        <option value="available">نسخ متاحة ✅</option>
+                        <option value="unavailable">بدون نسخ ❌</option>
+                    </select>
+                    <div class="absolute inset-y-0 left-5 flex items-center pointer-events-none">
+                        <fa-icon [icon]="['fas', 'chevron-down']" class="text-xs text-indigo-400"></fa-icon>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TABLE / LISTING SECTION -->
+    <div class="glass-card bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl rounded-[2.5rem] overflow-hidden border border-white/30 dark:border-slate-800/50 shadow-2xl">
+        <div class="overflow-x-auto">
+            
+            <!-- 1. DIRECT EBOOKS LIST (Tab = ebooks) -->
+            <table class="w-full text-right border-collapse" *ngIf="activeTab === 'ebooks'">
+                <thead>
+                    <tr class="bg-indigo-50/50 dark:bg-slate-800/50">
+                        <th class="px-8 py-6 text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">الغلاف</th>
+                        <th class="px-8 py-6 text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">معلومات الكتاب</th>
+                        <th class="px-8 py-6 text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">التصنيف</th>
+                        <th class="px-8 py-6 text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">السعر</th>
+                        <th class="px-8 py-6 text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">الإتاحة</th>
+                        <th class="px-8 py-6 text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                    <tr *ngFor="let ebook of filteredEbooks"
+                        class="hover:bg-indigo-50/30 dark:hover:bg-slate-800/30 transition-all duration-300 group">
+                        <td class="px-8 py-5">
+                            <div class="relative w-16 h-20 rounded-xl overflow-hidden shadow-lg group-hover:scale-105 transition-transform duration-500">
+                                <img [src]="ebook.coverImage.startsWith('http') ? ebook.coverImage : (ebook.coverImage.startsWith('/') ? uploadsBaseUrl + ebook.coverImage : uploadsBaseUrl + '/' + ebook.coverImage)" alt="cover"
+                                    class="w-full h-full object-cover">
+                                <div class="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors"></div>
+                            </div>
+                        </td>
+                        <td class="px-8 py-5">
+                            <div class="flex flex-col">
+                                <span class="text-base font-black text-slate-800 dark:text-slate-100 mb-1 line-clamp-1">
+                                    {{ ebook.title }}
+                                </span>
+                                <div class="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-xs font-bold">
+                                    <div class="w-1.5 h-1.5 bg-indigo-500 rounded-full"></div>
+                                    {{ ebook.author || 'المؤلف غير محدد' }}
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-8 py-5 text-center">
+                            <span class="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-black rounded-xl border border-slate-200 dark:border-slate-700">
+                                {{ getCategoryDisplayName(ebook.category) }}
+                            </span>
+                        </td>
+                        <td class="px-8 py-5 text-center font-bold text-slate-700 dark:text-slate-300">
+                            {{ ebook.price }} ر.س
+                        </td>
+                        <td class="px-8 py-5 text-center">
+                            <div class="flex flex-col items-center gap-1">
+                                <span [ngClass]="ebook.availableForSubscription ? 'bg-emerald-500 text-white shadow-emerald-500/20' : 'bg-rose-500 text-white shadow-rose-500/20'"
+                                    class="px-4 py-1.5 rounded-full text-[10px] font-black shadow-lg">
+                                    {{ ebook.availableForSubscription ? 'الاشتراك المميز 🌟' : 'شراء فردي فقط 💰' }}
+                                </span>
+                            </div>
+                        </td>
+                        <td class="px-8 py-5">
+                            <div class="flex items-center justify-center gap-3">
+                                <button (click)="openEditModal(ebook)"
+                                    class="flex items-center gap-2 px-5 py-2.5 text-xs font-black text-white bg-indigo-600 hover:bg-indigo-700 shadow-indigo-500/30 rounded-2xl shadow-lg transition-all hover:-translate-y-0.5 active:scale-95">
+                                    <fa-icon [icon]="['fas', 'edit']"></fa-icon>
+                                    تعديل البيانات
+                                </button>
+
+                                <button (click)="deleteDirectEbook(ebook)"
+                                    class="w-10 h-10 flex items-center justify-center text-rose-500 bg-rose-50 hover:bg-rose-500 hover:text-white rounded-2xl border border-rose-100 transition-all hover:shadow-lg hover:shadow-rose-500/20 active:scale-90"
+                                    title="حذف نهائي">
+                                    <fa-icon [icon]="['fas', 'trash-alt']"></fa-icon>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- 2. PRODUCTS MAPPING LIST (Tab = products) -->
+            <table class="w-full text-right border-collapse" *ngIf="activeTab === 'products'">
+                <thead>
+                    <tr class="bg-indigo-50/50 dark:bg-slate-800/50">
+                        <th class="px-8 py-6 text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">الغلاف</th>
+                        <th class="px-8 py-6 text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">معلومات المنتج</th>
+                        <th class="px-8 py-6 text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">التصنيف</th>
+                        <th class="px-8 py-6 text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">الحالة الرقمية</th>
+                        <th class="px-8 py-6 text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                    <tr *ngFor="let product of filteredProducts"
+                        class="hover:bg-indigo-50/30 dark:hover:bg-slate-800/30 transition-all duration-300 group">
+                        <td class="px-8 py-5">
+                            <div class="relative w-16 h-20 rounded-xl overflow-hidden shadow-lg group-hover:scale-105 transition-transform duration-500">
+                                <img [src]="getProductImage(product)" alt="cover"
+                                    class="w-full h-full object-cover">
+                                <div class="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors"></div>
+                            </div>
+                        </td>
+                        <td class="px-8 py-5">
+                            <div class="flex flex-col">
+                                <span class="text-base font-black text-slate-800 dark:text-slate-100 mb-1 line-clamp-1">
+                                    {{ product.product_name }}
+                                </span>
+                                <div class="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-xs font-bold">
+                                    <div class="w-1.5 h-1.5 bg-indigo-500 rounded-full"></div>
+                                    {{ product.author || 'المؤلف غير محدد' }}
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-8 py-5 text-center">
+                            <span class="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-black rounded-xl border border-slate-200 dark:border-slate-700">
+                                {{ product.product_category }}
+                            </span>
+                        </td>
+                        <td class="px-8 py-5 text-center">
+                            <div class="flex flex-col items-center gap-1">
+                                <span [ngClass]="product.linkedEbookId ? 'bg-emerald-500 text-white shadow-emerald-500/20' : 'bg-rose-500 text-white shadow-rose-500/20'"
+                                    class="px-4 py-1.5 rounded-full text-[10px] font-black shadow-lg">
+                                    {{ product.linkedEbookId ? 'متاح للتحميل' : 'غير متوفر' }}
+                                </span>
+                            </div>
+                        </td>
+                        <td class="px-8 py-5">
+                            <div class="flex items-center justify-center gap-3">
+                                <button (click)="openUploadModal(product)"
+                                    [ngClass]="product.linkedEbookId ? 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-500/30' : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/30'"
+                                    class="flex items-center gap-2 px-5 py-2.5 text-xs font-black text-white rounded-2xl shadow-lg transition-all hover:-translate-y-0.5 active:scale-95">
+                                    <fa-icon [icon]="['fas', 'cloud-upload-alt']"></fa-icon>
+                                    {{ product.linkedEbookId ? 'تحديث' : 'رفع ملف' }}
+                                </button>
+
+                                <button *ngIf="product.linkedEbookId" (click)="deleteEbook(product)"
+                                    class="w-10 h-10 flex items-center justify-center text-rose-500 bg-rose-50 hover:bg-rose-500 hover:text-white rounded-2xl border border-rose-100 transition-all hover:shadow-lg hover:shadow-rose-500/20 active:scale-90"
+                                    title="حذف نهائي">
+                                    <fa-icon [icon]="['fas', 'trash-alt']"></fa-icon>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Empty State -->
+        <div *ngIf="((activeTab === 'ebooks' ? filteredEbooks.length : filteredProducts.length) === 0) && !isLoading" class="py-20 text-center flex flex-col items-center gap-4">
+            <div class="w-20 h-20 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-300 mb-2">
+                <fa-icon [icon]="['fas', 'search']" class="text-3xl"></fa-icon>
+            </div>
+            <h3 class="text-xl font-black text-slate-800 dark:text-slate-100">لا توجد نتائج مطابقة</h3>
+            <p class="text-slate-500 font-bold max-w-xs">جرب البحث بكلمات مختلفة أو تغيير إعدادات الفلترة</p>
+        </div>
     </div>
 
     <!-- Pagination -->
-    <div *ngIf="totalPages > 1" class="flex justify-center mt-6">
-        <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+    <div *ngIf="totalPages > 1" class="flex justify-center mt-12 pb-10">
+        <div class="flex items-center gap-2 bg-white dark:bg-slate-900 p-2 rounded-3xl shadow-xl border border-white/20">
             <button [disabled]="currentPage === 1" (click)="prevPage()"
-                class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white dark:bg-gray-700 text-sm font-medium text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50">
-                السابق
+                class="w-12 h-12 flex items-center justify-center rounded-2xl bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-indigo-600 disabled:opacity-30 transition-all">
+                <fa-icon [icon]="['fas', 'chevron-right']"></fa-icon>
             </button>
-            <span
-                class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white dark:bg-gray-700 text-sm font-medium text-gray-700 dark:text-gray-200">
-                صفحة {{ currentPage }} من {{ totalPages }}
-            </span>
+            
+            <div class="px-6 text-sm font-black text-slate-700 dark:text-slate-200">
+                صفحة <span class="text-indigo-600">{{ currentPage }}</span> من {{ totalPages }}
+            </div>
+            
             <button [disabled]="currentPage === totalPages" (click)="nextPage()"
-                class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white dark:bg-gray-700 text-sm font-medium text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50">
-                التالي
-            </button>
-        </nav>
-    </div>
-
-    <!-- Loading Indicator -->
-    <div *ngIf="isLoading" class="flex justify-center my-4">
-        <div class="spinner-border animate-spin inline-block w-8 h-8 border-4 rounded-full text-blue-600" role="status">
-            <span class="visually-hidden">Loading...</span>
-        </div>
-    </div>
-</div>
-
-<!-- Upload Modal -->
-<div *ngIf="showUploadModal"
-    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm">
-    <div
-        class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md overflow-hidden transform transition-all">
-        <!-- Header -->
-        <div
-            class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex justify-between items-center">
-            <h3 class="text-lg font-bold text-gray-900 dark:text-white">
-                {{ selectedProduct?.linkedEbookId ? 'تحديث النسخة الإلكترونية' : 'إضافة نسخة إلكترونية' }}
-            </h3>
-            <button (click)="cancelUpload()"
-                class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">
-                <fa-icon [icon]="['fas', 'times']"></fa-icon>
+                class="w-12 h-12 flex items-center justify-center rounded-2xl bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-indigo-600 disabled:opacity-30 transition-all">
+                <fa-icon [icon]="['fas', 'chevron-left']"></fa-icon>
             </button>
         </div>
+    </div>
 
-        <!-- Body -->
-        <div class="p-6">
-            <div class="mb-4">
-                <p class="text-sm text-gray-600 dark:text-gray-300 font-medium">الكتاب: {{ selectedProduct?.product_name
-                    }}</p>
-                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">سيتم ربط الملف بهذا المنتج مباشرة.</p>
+    <!-- Loading Overlay -->
+    <div *ngIf="isLoading" class="fixed inset-0 z-[100] flex items-center justify-center bg-white/10 backdrop-blur-sm">
+        <div class="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+    </div>
+
+    <!-- Upload EPUB Modal -->
+    <div *ngIf="showUploadModal"
+        (click)="cancelUpload()"
+        class="fixed inset-0 z-[110] flex items-center justify-center p-4 md:p-8 bg-slate-950/60 backdrop-blur-md animate-fade-in cursor-pointer">
+        <div (click)="$event.stopPropagation()"
+            class="bg-white dark:bg-slate-900 rounded-[3rem] shadow-2xl w-full max-w-2xl overflow-hidden transform transition-all border border-white/20 dark:border-slate-800 animate-scale-in cursor-default">
+            
+            <!-- Modal Header -->
+            <div class="relative bg-gradient-to-r from-indigo-600 to-purple-700 p-8 text-white">
+                <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
+                <div class="relative z-10 flex justify-between items-center">
+                    <div>
+                        <h3 class="text-2xl font-black mb-1">إضافة محتوى رقمي للمنتج</h3>
+                        <p class="text-indigo-100 text-xs font-bold opacity-80">{{ selectedProduct?.product_name }}</p>
+                    </div>
+                    <button (click)="cancelUpload()" 
+                        class="w-10 h-10 rounded-2xl bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all active:scale-90">
+                        <fa-icon [icon]="['fas', 'times']"></fa-icon>
+                    </button>
+                </div>
             </div>
 
-            <div class="mt-4">
-                <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">ملف الكتاب (EPUB)</label>
-                <div (dragover)="onDragOver($event)" (dragleave)="onDragLeave($event)" (drop)="onDrop($event)"
-                    [class.border-blue-500]="isDragging" [class.bg-blue-50]="isDragging"
-                    class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 dark:border-gray-600 border-dashed rounded-lg hover:border-blue-500 dark:hover:border-blue-500 transition-colors cursor-pointer relative bg-gray-50 dark:bg-gray-700/50">
-                    <div class="space-y-1 text-center">
-                        <fa-icon [icon]="['fas', 'cloud-upload-alt']" class="mx-auto h-12 w-12 text-gray-400"></fa-icon>
-                        <div class="flex text-sm text-gray-600 dark:text-gray-400 justify-center">
-                            <label for="epub-upload"
-                                class="relative cursor-pointer bg-white dark:bg-gray-800 rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500 px-2">
-                                <span>اختر ملف</span>
-                                <input id="epub-upload" name="epub-upload" type="file" class="sr-only" accept=".epub"
-                                    (change)="onFileSelected($event)">
-                            </label>
-                            <p class="pl-1">أو اسحب وأفلت</p>
+            <div class="p-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <!-- EPUB Upload -->
+                    <div class="flex flex-col gap-3">
+                        <label class="text-sm font-black text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                            <fa-icon [icon]="['fas', 'file-pdf']" class="text-indigo-500"></fa-icon>
+                            ملف الكتاب (EPUB)
+                        </label>
+                        <div (dragover)="onDragOver($event, 'epub')" (dragleave)="onDragLeave($event)" (drop)="onDrop($event, 'epub')"
+                            [class.ring-4]="isDragging && dragType === 'epub'"
+                            class="group relative flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-[2rem] hover:border-indigo-500 dark:hover:border-indigo-400 transition-all bg-slate-50 dark:bg-slate-800/50 cursor-pointer overflow-hidden">
+                            
+                            <fa-icon [icon]="['fas', 'cloud-upload-alt']" 
+                                class="text-3xl text-slate-300 dark:text-slate-600 group-hover:text-indigo-500 transition-colors mb-4"></fa-icon>
+                            
+                            <div class="text-center">
+                                <label class="relative cursor-pointer text-indigo-600 dark:text-indigo-400 font-black text-sm">
+                                    <span>اختر الملف</span>
+                                    <input type="file" class="sr-only" accept=".epub" (change)="onFileSelected($event, 'epub')">
+                                </label>
+                                <p class="text-[10px] text-slate-500 font-bold mt-1">أو اسحب الملف هنا</p>
+                            </div>
+
+                            <!-- Success State -->
+                            <div *ngIf="selectedFile" class="absolute inset-0 bg-emerald-500 flex flex-col items-center justify-center p-4 text-center animate-fade-in">
+                                <fa-icon [icon]="['fas', 'check-circle']" class="text-3xl text-white mb-2"></fa-icon>
+                                <span class="text-white font-black text-xs truncate w-full px-4">{{ selectedFile.name }}</span>
+                                <button (click)="selectedFile = null; $event.stopPropagation()" class="mt-2 text-[10px] text-emerald-100 underline font-bold">تغيير الملف</button>
+                            </div>
                         </div>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">EPUB حتى 10 ميجابايت</p>
+                    </div>
+
+                    <!-- Cover Upload -->
+                    <div class="flex flex-col gap-3">
+                        <label class="text-sm font-black text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                            <fa-icon [icon]="['fas', 'image']" class="text-purple-500"></fa-icon>
+                            غلاف مخصص (اختياري)
+                        </label>
+                        <div (dragover)="onDragOver($event, 'cover')" (dragleave)="onDragLeave($event)" (drop)="onDrop($event, 'cover')"
+                            [class.ring-4]="isDragging && dragType === 'cover'"
+                            class="group relative flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-[2rem] hover:border-purple-500 dark:hover:border-purple-400 transition-all bg-slate-50 dark:bg-slate-800/50 cursor-pointer overflow-hidden">
+                            
+                            <fa-icon [icon]="['fas', 'camera-retro']" 
+                                class="text-3xl text-slate-300 dark:text-slate-600 group-hover:text-purple-500 transition-colors mb-4"></fa-icon>
+                            
+                            <div class="text-center">
+                                <label class="relative cursor-pointer text-purple-600 dark:text-purple-400 font-black text-sm">
+                                    <span>اختر صورة</span>
+                                    <input type="file" class="sr-only" accept="image/*" (change)="onFileSelected($event, 'cover')">
+                                </label>
+                                <p class="text-[10px] text-slate-500 font-bold mt-1">PNG, JPG, WebP</p>
+                            </div>
+
+                            <!-- Success State -->
+                            <div *ngIf="selectedCover" class="absolute inset-0 bg-purple-500 flex flex-col items-center justify-center p-4 text-center animate-fade-in">
+                                <fa-icon [icon]="['fas', 'check-circle']" class="text-3xl text-white mb-2"></fa-icon>
+                                <span class="text-white font-black text-xs truncate w-full px-4">{{ selectedCover.name }}</span>
+                                <button (click)="selectedCover = null; $event.stopPropagation()" class="mt-2 text-[10px] text-purple-100 underline font-bold">تغيير الصورة</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div *ngIf="selectedFile"
-                    class="mt-3 flex items-center gap-2 p-2 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded text-sm">
-                    <fa-icon [icon]="['fas', 'file-alt']"></fa-icon>
-                    <span class="truncate">{{ selectedFile.name }}</span>
+
+                <!-- Action Footer -->
+                <div class="mt-12 flex gap-4">
+                    <button (click)="cancelUpload()" 
+                        class="flex-1 py-4 px-6 rounded-3xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-black text-sm hover:bg-slate-200 transition-all active:scale-95">
+                        إلغاء العملية
+                    </button>
+                    <button (click)="submitUpload()" 
+                        [disabled]="!selectedFile || isUploading"
+                        class="flex-[2] py-4 px-6 rounded-3xl bg-gradient-to-r from-indigo-600 to-purple-700 text-white font-black text-sm shadow-xl shadow-indigo-500/30 hover:opacity-90 disabled:grayscale disabled:opacity-50 transition-all active:scale-95 flex items-center justify-center gap-3">
+                        <fa-icon *ngIf="isUploading" [icon]="['fas', 'spinner']" class="animate-spin"></fa-icon>
+                        <span>{{ isUploading ? 'جاري الرفع والتحسين...' : 'تأكيد وحفظ المحتوى' }}</span>
+                    </button>
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- Footer -->
-        <div class="px-6 py-4 bg-gray-50 dark:bg-gray-900 flex justify-end gap-3 rounded-b-lg">
-            <button (click)="cancelUpload()"
-                class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none transition-colors">
-                إلغاء
-            </button>
-            <button (click)="submitUpload()" [disabled]="!selectedFile || isUploading"
-                class="px-6 py-2 text-sm font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-all">
-                <span *ngIf="isUploading"
-                    class="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
-                <span>{{ isUploading ? 'جاري الرفع...' : 'بدء الرفع 🚀' }}</span>
-            </button>
+    <!-- Edit Ebook Modal (Premium Upgrade 🚀) -->
+    <div *ngIf="showEditModal"
+        (click)="closeEditModal()"
+        class="fixed inset-0 z-[999] flex items-center justify-center p-4 md:p-8 bg-slate-950/80 backdrop-blur-lg animate-fade-in cursor-pointer">
+        <div (click)="$event.stopPropagation()"
+            class="bg-white dark:bg-slate-900 rounded-[3rem] shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col border border-white/20 dark:border-slate-800 animate-scale-in cursor-default">
+            
+            <!-- Modal Header -->
+            <div class="relative bg-gradient-to-r from-indigo-600 to-indigo-800 p-8 text-white flex-shrink-0">
+                <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
+                <div class="relative z-10 flex justify-between items-center">
+                    <div>
+                        <h3 class="text-2xl font-black mb-1 flex items-center gap-2">
+                            <fa-icon [icon]="['fas', 'edit']"></fa-icon>
+                            تعديل بيانات الكتاب الإلكتروني
+                        </h3>
+                        <p class="text-indigo-100 text-xs font-bold opacity-80">سيتم حفظ التغييرات مباشرة في قاعدة البيانات ونشرها للمستخدمين</p>
+                    </div>
+                    <button (click)="closeEditModal()" 
+                        class="w-10 h-10 rounded-2xl bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all active:scale-90">
+                        <fa-icon [icon]="['fas', 'times']"></fa-icon>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Modal Content Form -->
+            <div class="p-8 overflow-y-auto flex-grow custom-scrollbar space-y-8">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                    <!-- General Details -->
+                    <div class="space-y-6">
+                        <h4 class="text-sm font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest flex items-center gap-2">
+                            <div class="w-2 h-4 bg-indigo-500 rounded-full"></div>
+                            بيانات الكتاب الأساسية
+                        </h4>
+
+                        <div class="space-y-4">
+                            <div class="group">
+                                <label class="block text-xs font-black text-slate-500 dark:text-slate-400 mb-2 mr-2">اسم الكتاب *</label>
+                                <input type="text" [(ngModel)]="editingEbookData.title"
+                                    class="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-bold shadow-inner focus:ring-2 focus:ring-indigo-500/50 transition-all">
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="group">
+                                    <label class="block text-xs font-black text-slate-500 dark:text-slate-400 mb-2 mr-2">المؤلف *</label>
+                                    <input type="text" [(ngModel)]="editingEbookData.author"
+                                        class="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-bold shadow-inner focus:ring-2 focus:ring-indigo-500/50 transition-all">
+                                </div>
+                                <div class="group">
+                                    <label class="block text-xs font-black text-slate-500 dark:text-slate-400 mb-2 mr-2">السعر (ر.س) *</label>
+                                    <input type="number" [(ngModel)]="editingEbookData.price"
+                                        class="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-bold shadow-inner focus:ring-2 focus:ring-indigo-500/50 transition-all">
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="group">
+                                    <label class="block text-xs font-black text-slate-500 dark:text-slate-400 mb-2 mr-2">التصنيف *</label>
+                                    <select [(ngModel)]="editingEbookData.category"
+                                        class="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-black shadow-inner focus:ring-2 focus:ring-indigo-500/50 transition-all appearance-none cursor-pointer">
+                                        <option *ngFor="let cat of availableCategories" [value]="cat.value">{{ cat.label }}</option>
+                                    </select>
+                                </div>
+                                <div class="group">
+                                    <label class="block text-xs font-black text-slate-500 dark:text-slate-400 mb-2 mr-2">الرقم التسلسلي (الباركود) للربط</label>
+                                    <input type="text" [(ngModel)]="editingEbookData.relatedProductId"
+                                        class="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-bold shadow-inner focus:ring-2 focus:ring-indigo-500/50 transition-all"
+                                        placeholder="مثال: 978977112233">
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-3 gap-4">
+                                <div class="group">
+                                    <label class="block text-xs font-black text-slate-500 dark:text-slate-400 mb-2 mr-2">الناشر</label>
+                                    <input type="text" [(ngModel)]="editingEbookData.publisher"
+                                        class="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-bold shadow-inner focus:ring-2 focus:ring-indigo-500/50 transition-all">
+                                </div>
+                                <div class="group">
+                                    <label class="block text-xs font-black text-slate-500 dark:text-slate-400 mb-2 mr-2">سنة النشر</label>
+                                    <input type="number" [(ngModel)]="editingEbookData.publishYear"
+                                        class="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-bold shadow-inner focus:ring-2 focus:ring-indigo-500/50 transition-all">
+                                </div>
+                                <div class="group">
+                                    <label class="block text-xs font-black text-slate-500 dark:text-slate-400 mb-2 mr-2">عدد الصفحات</label>
+                                    <input type="number" [(ngModel)]="editingEbookData.pages"
+                                        class="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-bold shadow-inner focus:ring-2 focus:ring-indigo-500/50 transition-all">
+                                </div>
+                            </div>
+
+                            <!-- Subscription & Status Toggles -->
+                            <div class="bg-slate-50 dark:bg-slate-800/40 p-5 rounded-2xl border border-slate-100 dark:border-slate-800/80 space-y-4">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <h5 class="text-xs font-black text-slate-700 dark:text-slate-300">متاح للاشتراك المميز VIP</h5>
+                                        <p class="text-[10px] text-slate-400 font-bold">تفعيل هذا الخيار يسمح للمشتركين بقراءة الكتاب بدون شرائه فردياً</p>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" [(ngModel)]="editingEbookData.availableForSubscription" class="sr-only peer">
+                                        <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-indigo-600"></div>
+                                    </label>
+                                </div>
+
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <h5 class="text-xs font-black text-slate-700 dark:text-slate-300 font-black">حالة الكتاب الإلكتروني</h5>
+                                        <p class="text-[10px] text-slate-400 font-bold">تحويل حالة الكتاب بين نشط وغير نشط للتحكم في العرض</p>
+                                    </div>
+                                    <select [(ngModel)]="editingEbookData.status"
+                                        class="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-black cursor-pointer focus:ring-2 focus:ring-indigo-500/30">
+                                        <option value="active">نشط (معروض) ✅</option>
+                                        <option value="inactive">غير نشط (مخفي) ❌</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="group">
+                                <label class="block text-xs font-black text-slate-500 dark:text-slate-400 mb-2 mr-2">نبذة ووصف الكتاب</label>
+                                <textarea [(ngModel)]="editingEbookData.description" rows="3"
+                                    class="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-bold shadow-inner focus:ring-2 focus:ring-indigo-500/50 transition-all resize-none"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- File Updates & Previews -->
+                    <div class="space-y-6">
+                        <h4 class="text-sm font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest flex items-center gap-2">
+                            <div class="w-2 h-4 bg-indigo-500 rounded-full"></div>
+                            ملفات الكتاب والأغلفة
+                        </h4>
+
+                        <div class="grid grid-cols-1 gap-6">
+                            <!-- Update EPUB -->
+                            <div (dragover)="onDragOver($event, 'epub')" (dragleave)="onDragLeave($event)" (drop)="onDrop($event, 'epub')"
+                                class="relative group flex flex-col items-center justify-center p-10 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-[2.5rem] hover:border-indigo-500 transition-all bg-slate-50 dark:bg-slate-800/50 overflow-hidden">
+                                <fa-icon [icon]="['fas', 'file-pdf']" class="text-4xl text-slate-300 group-hover:text-indigo-500 mb-4 transition-colors"></fa-icon>
+                                <span class="text-sm font-black text-slate-600 dark:text-slate-400">تحديث ملف EPUB (اختياري)</span>
+                                <input type="file" class="absolute inset-0 opacity-0 cursor-pointer" accept=".epub" (change)="onFileSelected($event, 'epub')">
+                                
+                                <div *ngIf="selectedFile" class="absolute inset-0 bg-indigo-600 flex flex-col items-center justify-center p-6 text-white animate-fade-in text-center">
+                                    <fa-icon [icon]="['fas', 'check-double']" class="text-3xl mb-2"></fa-icon>
+                                    <span class="text-xs font-black truncate w-full">{{ selectedFile.name }}</span>
+                                    <span class="text-[10px] opacity-70 mt-1">تم اختيار الملف الجديد لتحديثه</span>
+                                </div>
+                            </div>
+
+                            <!-- Update Cover -->
+                            <div (dragover)="onDragOver($event, 'cover')" (dragleave)="onDragLeave($event)" (drop)="onDrop($event, 'cover')"
+                                class="relative group flex flex-col items-center justify-center p-10 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-[2.5rem] hover:border-indigo-500 transition-all bg-slate-50 dark:bg-slate-800/50 overflow-hidden">
+                                <fa-icon [icon]="['fas', 'image']" class="text-4xl text-slate-300 group-hover:text-indigo-500 mb-4 transition-colors"></fa-icon>
+                                <span class="text-sm font-black text-slate-600 dark:text-slate-400">تحديث غلاف الكتاب المخصص (اختياري)</span>
+                                <input type="file" class="absolute inset-0 opacity-0 cursor-pointer" accept="image/*" (change)="onFileSelected($event, 'cover')">
+
+                                <div *ngIf="selectedCover" class="absolute inset-0 bg-purple-600 flex flex-col items-center justify-center p-6 text-white animate-fade-in text-center">
+                                    <fa-icon [icon]="['fas', 'check-double']" class="text-3xl mb-2"></fa-icon>
+                                    <span class="text-xs font-black truncate w-full">{{ selectedCover.name }}</span>
+                                    <span class="text-[10px] opacity-70 mt-1">سيتم استبدال غلاف الكتاب بهذا الغلاف</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer Buttons -->
+            <div class="p-8 bg-slate-50 dark:bg-slate-800/50 flex-shrink-0 flex gap-4">
+                <button (click)="closeEditModal()"
+                    class="flex-1 py-4 px-8 rounded-2xl bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 font-black text-sm border border-slate-200 dark:border-slate-700 hover:bg-slate-100 transition-all">
+                    إلغاء
+                </button>
+                <button (click)="submitEditEbook()"
+                    class="flex-[2] py-4 px-8 rounded-2xl bg-gradient-to-r from-indigo-600 to-indigo-800 text-white font-black text-sm shadow-xl shadow-indigo-500/20 hover:opacity-90 transition-all flex items-center justify-center gap-3">
+                    <fa-icon *ngIf="isLoading" [icon]="['fas', 'spinner']" class="animate-spin"></fa-icon>
+                    <span>حفظ وتحديث بيانات الكتاب 🚀</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add New Product Modal -->
+    <div *ngIf="showAddProductModal"
+        (click)="showAddProductModal = false"
+        class="fixed inset-0 z-[999] flex items-center justify-center p-4 md:p-8 bg-slate-950/80 backdrop-blur-lg animate-fade-in cursor-pointer">
+        <div (click)="$event.stopPropagation()"
+            class="bg-white dark:bg-slate-900 rounded-[3rem] shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col border border-white/20 dark:border-slate-800 animate-scale-in cursor-default">
+            
+            <!-- Modal Header -->
+            <div class="relative bg-gradient-to-r from-emerald-600 to-teal-700 p-8 text-white flex-shrink-0">
+                <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
+                <div class="relative z-10 flex justify-between items-center">
+                    <div>
+                        <h3 class="text-2xl font-black mb-1">إضافة منتج كتاب رقمي جديد</h3>
+                        <p class="text-emerald-100 text-xs font-bold opacity-80">سيتم إنشاء المنتج ورفع الملفات في خطوة واحدة</p>
+                    </div>
+                    <button (click)="showAddProductModal = false" 
+                        class="w-10 h-10 rounded-2xl bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all active:scale-90">
+                        <fa-icon [icon]="['fas', 'times']"></fa-icon>
+                    </button>
+                </div>
+            </div>
+
+            <div class="p-8 overflow-y-auto flex-grow custom-scrollbar">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                    <!-- Basic Info -->
+                    <div class="space-y-6">
+                        <h4 class="text-sm font-black text-emerald-600 uppercase tracking-widest flex items-center gap-2">
+                            <div class="w-2 h-4 bg-emerald-500 rounded-full"></div>
+                            بيانات الكتاب الأساسية
+                        </h4>
+
+                        <div class="space-y-4">
+                            <div class="group">
+                                <label class="block text-xs font-black text-slate-500 dark:text-slate-400 mb-2 mr-2">اسم الكتاب *</label>
+                                <input type="text" [(ngModel)]="newProduct.name"
+                                    class="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-bold shadow-inner focus:ring-2 focus:ring-emerald-500/50 transition-all"
+                                    placeholder="مثال: البداية والنهاية">
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="group">
+                                    <label class="block text-xs font-black text-slate-500 dark:text-slate-400 mb-2 mr-2">المؤلف</label>
+                                    <input type="text" [(ngModel)]="newProduct.author"
+                                        class="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-bold shadow-inner focus:ring-2 focus:ring-emerald-500/50 transition-all"
+                                        placeholder="ابن كثير">
+                                </div>
+                                <div class="group">
+                                    <label class="block text-xs font-black text-slate-500 dark:text-slate-400 mb-2 mr-2">السعر (اختياري)</label>
+                                    <input type="number" [(ngModel)]="newProduct.price"
+                                        class="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-bold shadow-inner focus:ring-2 focus:ring-emerald-500/50 transition-all"
+                                        placeholder="0">
+                                </div>
+                            </div>
+
+                            <div class="group">
+                                <label class="block text-xs font-black text-slate-500 dark:text-slate-400 mb-2 mr-2">التصنيف</label>
+                                <select [(ngModel)]="newProduct.category"
+                                    class="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-black shadow-inner focus:ring-2 focus:ring-emerald-500/50 transition-all appearance-none cursor-pointer">
+                                    <option value="Novels-stories">روايات وقصص</option>
+                                    <option value="Islamic">كتب دينية</option>
+                                    <option value="Self-development-psychology">تطوير الذات وعلم النفس</option>
+                                    <option value="History-biographies">تاريخ وسير</option>
+                                    <option value="Business-marketing-finance">مال وأعمال</option>
+                                    <option value="Education-children">تعليم وأطفال</option>
+                                    <option value="Arts-crafts">فنون وحرف</option>
+                                    <option value="Healthmedicinescience">صحة وعلوم</option>
+                                    <option value="Dictionaries-references">قواميس ومراجع</option>
+                                </select>
+                            </div>
+
+                            <div class="group">
+                                <label class="block text-xs font-black text-slate-500 dark:text-slate-400 mb-2 mr-2">وصف قصير</label>
+                                <textarea [(ngModel)]="newProduct.description" rows="3"
+                                    class="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-bold shadow-inner focus:ring-2 focus:ring-emerald-500/50 transition-all resize-none"
+                                    placeholder="اكتب نبذة مختصرة عن الكتاب..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- File Uploads -->
+                    <div class="space-y-6">
+                        <h4 class="text-sm font-black text-emerald-600 uppercase tracking-widest flex items-center gap-2">
+                            <div class="w-2 h-4 bg-emerald-500 rounded-full"></div>
+                            ملفات الكتاب الرقمي
+                        </h4>
+
+                        <div class="grid grid-cols-1 gap-6">
+                            <!-- EPUB -->
+                            <div (dragover)="onDragOver($event, 'epub')" (dragleave)="onDragLeave($event)" (drop)="onDrop($event, 'epub')"
+                                class="relative group flex flex-col items-center justify-center p-10 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-[2.5rem] hover:border-emerald-500 transition-all bg-slate-50 dark:bg-slate-800/50 overflow-hidden">
+                                <fa-icon [icon]="['fas', 'file-pdf']" class="text-4xl text-slate-300 group-hover:text-emerald-500 mb-4 transition-colors"></fa-icon>
+                                <span class="text-sm font-black text-slate-600 dark:text-slate-400">ملف EPUB الكتاب</span>
+                                <input type="file" class="absolute inset-0 opacity-0 cursor-pointer" accept=".epub" (change)="onFileSelected($event, 'epub')">
+                                
+                                <div *ngIf="selectedFile" class="absolute inset-0 bg-emerald-600 flex flex-col items-center justify-center p-6 text-white animate-fade-in text-center">
+                                    <fa-icon [icon]="['fas', 'check-double']" class="text-3xl mb-2"></fa-icon>
+                                    <span class="text-xs font-black truncate w-full">{{ selectedFile.name }}</span>
+                                    <span class="text-[10px] opacity-70 mt-1">تم اختيار الملف بنجاح</span>
+                                </div>
+                            </div>
+
+                            <!-- Cover -->
+                            <div (dragover)="onDragOver($event, 'cover')" (dragleave)="onDragLeave($event)" (drop)="onDrop($event, 'cover')"
+                                class="relative group flex flex-col items-center justify-center p-10 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-[2.5rem] hover:border-emerald-500 transition-all bg-slate-50 dark:bg-slate-800/50 overflow-hidden">
+                                <fa-icon [icon]="['fas', 'image']" class="text-4xl text-slate-300 group-hover:text-emerald-500 mb-4 transition-colors"></fa-icon>
+                                <span class="text-sm font-black text-slate-600 dark:text-slate-400">غلاف الكتاب المخصص</span>
+                                <input type="file" class="absolute inset-0 opacity-0 cursor-pointer" accept="image/*" (change)="onFileSelected($event, 'cover')">
+
+                                <div *ngIf="selectedCover" class="absolute inset-0 bg-teal-600 flex flex-col items-center justify-center p-6 text-white animate-fade-in text-center">
+                                    <fa-icon [icon]="['fas', 'check-double']" class="text-3xl mb-2"></fa-icon>
+                                    <span class="text-xs font-black truncate w-full">{{ selectedCover.name }}</span>
+                                    <span class="text-[10px] opacity-70 mt-1">تم اختيار الغلاف</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="p-8 bg-slate-50 dark:bg-slate-800/50 flex-shrink-0 flex gap-4">
+                <button (click)="showAddProductModal = false"
+                    class="flex-1 py-4 px-8 rounded-2xl bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 font-black text-sm border border-slate-200 dark:border-slate-700 hover:bg-slate-100 transition-all">
+                    إلغاء
+                </button>
+                <button (click)="submitNewProduct()" [disabled]="isAddingProduct || !selectedFile || !newProduct.name"
+                    class="flex-[2] py-4 px-8 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 text-white font-black text-sm shadow-xl shadow-emerald-500/20 hover:opacity-90 disabled:opacity-50 disabled:grayscale transition-all flex items-center justify-center gap-3">
+                    <fa-icon *ngIf="isAddingProduct" [icon]="['fas', 'spinner']" class="animate-spin"></fa-icon>
+                    <span>{{ isAddingProduct ? 'جاري إنشاء الكتاب والمحتوى...' : 'حفظ ونشر الكتاب الآن 🚀' }}</span>
+                </button>
+            </div>
         </div>
     </div>
 </div>

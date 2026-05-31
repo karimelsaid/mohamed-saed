@@ -37,8 +37,17 @@ router.patch('/products/:barcode', adminController.updateProduct);
 // Route to replace product image
 router.post('/products/:barcode/image', adminController.upload.single('image'), adminController.replaceProductImage);
 
-// Route to replace product EPUB
-router.post('/products/:barcode/epub', adminController.upload.single('epub'), adminController.replaceProductEpub);
+// Route to replace product EPUB and Cover
+router.post('/products/:barcode/epub', adminController.upload.fields([
+  { name: 'epub', maxCount: 1 },
+  { name: 'coverImage', maxCount: 1 }
+]), adminController.replaceProductEpub);
+
+// Route to create a new digital book (Product + Ebook)
+router.post('/create-digital-book', adminController.upload.fields([
+  { name: 'epub', maxCount: 1 },
+  { name: 'coverImage', maxCount: 1 }
+]), adminController.createDigitalBook);
 
 // Route to delete product
 router.delete('/products/:barcode', adminController.deleteProduct);
@@ -111,5 +120,21 @@ router.get('/shortages-report', adminController.getShortagesReport);
 router.patch('/shortage-settings', adminController.updateShortageSettings);
 router.get('/economy-settings', adminController.getEconomySettings);
 router.patch('/economy-settings', adminController.updateEconomySettings);
+router.get('/staff', adminController.listStaff);
+router.post('/staff/promote', adminController.promoteToStaff);
+router.post('/staff/demote', adminController.demoteFromStaff);
+router.patch('/staff/permissions', adminController.updateStaffPermissions);
+// Marketers
+router.get('/marketers', adminController.listMarketers);
+router.post('/marketers/promote', adminController.promoteToMarketer);
+router.patch('/marketers/:userId/config', adminController.updateMarketerConfig);
+router.post('/marketers/:userId/tasks', adminController.assignMarketerTask);
+router.post('/marketers/prizes/add', adminController.addMarketerPrize);
+router.post('/marketers/prizes/remove', adminController.removeMarketerPrize);
+
+// Global Prizes for all marketers
+router.get('/marketers/global-prizes', adminController.getGlobalPrizes);
+router.post('/marketers/global-prizes/add', adminController.addGlobalPrize);
+router.delete('/marketers/global-prizes/:prizeId', adminController.removeGlobalPrize);
 
 module.exports = router;

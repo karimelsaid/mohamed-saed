@@ -73,9 +73,17 @@ export class EbookService {
         return this.http.delete<{ success: boolean; message: string }>(`${this.apiUrl}/${id}`);
     }
 
-    uploadEbookForProduct(productId: string, file: File): Observable<{ success: boolean; message: string; linkedEbookId: string }> {
+    // Admin: Reindex page counts for old ebooks with missing/zero pages
+    reindexPageCounts(): Observable<{ success: boolean; message: string; total: number; updated: number; failed: number; results: any[] }> {
+        return this.http.post<{ success: boolean; message: string; total: number; updated: number; failed: number; results: any[] }>(`${this.apiUrl}/reindex-pages`, {});
+    }
+
+    uploadEbookForProduct(productId: string, file: File, coverImage?: File): Observable<{ success: boolean; message: string; linkedEbookId: string }> {
         const formData = new FormData();
         formData.append('epub', file);
+        if (coverImage) {
+            formData.append('coverImage', coverImage);
+        }
         return this.http.post<{ success: boolean; message: string; linkedEbookId: string }>(`${environment.apiBaseUrl}/admin/products/${productId}/epub`, formData);
     }
 

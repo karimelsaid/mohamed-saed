@@ -9,7 +9,7 @@ const subscriptionSchema = new mongoose.Schema({
     },
     plan: {
         type: String,
-        enum: ['monthly', 'yearly'],
+        enum: ['monthly', 'yearly', 'lifetime', 'free_months', 'free_days'],
         default: 'monthly',
         required: true
     },
@@ -37,7 +37,7 @@ const subscriptionSchema = new mongoose.Schema({
     },
     paymentMethod: {
         type: String,
-        enum: ['card', 'wallet', 'cash', 'manual'],
+        enum: ['card', 'wallet', 'cash', 'manual', 'special_offer'],
         default: 'card'
     },
     paymentSessionUrl: {

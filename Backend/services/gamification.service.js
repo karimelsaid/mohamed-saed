@@ -252,10 +252,10 @@ exports.getUserProfile = async (userId) => {
     const currentLevel = user.gamification.level;
     const nextLevelXP = 100 * Math.pow(currentLevel + 1, 1.5);
 
-    // Get Referral Stats
-    // Assuming we might store referral count in the future, or just count existing referrals
-    // user.referralCount is not in model explicitly, but we can return it if added
-    // For now we use the `gamification.coins` as key stat
+    // Calculate Total Reading Stats from DailyLogs
+    const allLogs = await DailyLog.find({ userId });
+    const totalMinutesRead = allLogs.reduce((acc, log) => acc + (log.minutesRead || 0), 0);
+    const totalPagesRead = allLogs.reduce((acc, log) => acc + (log.pagesRead || 0), 0);
 
     return {
         ...user.gamification,
@@ -263,7 +263,9 @@ exports.getUserProfile = async (userId) => {
         referralCode: user.referralCode,
         referralBalance: user.referralBalance || 0,
         nextLevelXP: Math.ceil(nextLevelXP),
-        profileImage: user.profileImage // Fixed: Return the profile image
+        profileImage: user.profileImage,
+        totalMinutesRead: Math.round(totalMinutesRead),
+        totalPagesRead: totalPagesRead
     };
 };
 

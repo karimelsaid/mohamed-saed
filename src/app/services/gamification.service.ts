@@ -15,6 +15,8 @@ export interface GamificationProfile {
     referralBalance?: number;
     profileImage?: string;
     lastStreakUpdate?: Date;
+    totalMinutesRead?: number;
+    totalPagesRead?: number;
 }
 
 export interface Challenge {

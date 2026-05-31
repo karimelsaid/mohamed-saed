@@ -1,80 +1,89 @@
 <div class="library-layout">
     <!-- SIDEBAR (Fixed Menu) -->
-    <!-- SIDEBAR (Fixed Menu) -->
-    <aside class="library-sidebar">
-        <div class="sidebar-content">
-            <!-- Logo area or Title -->
-            <div class="sidebar-header text-gray-800 dark:text-white">
-                <i class="fas fa-book-reader text-yellow-500"></i>
-                <span class="font-bold">المكتبة الرقمية</span>
+    <aside class="library-sidebar border-none shadow-none bg-transparent">
+        <div class="sidebar-content h-full flex flex-col gap-8 p-6">
+            <!-- Title -->
+            <div class="sidebar-header flex items-center gap-4 text-gray-800 dark:text-white">
+                <div class="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-xl shadow-indigo-500/20">
+                    <fa-icon [icon]="['fas', 'book-reader']" class="text-xl"></fa-icon>
+                </div>
+                <span class="font-black text-xl tracking-tight">المكتبة الرقمية</span>
             </div>
 
-            <!-- Dynamic Controls based on Active Tab -->
-            <div class="dynamic-controls">
+            <!-- Dynamic Controls -->
+            <div class="dynamic-controls space-y-6">
 
-                <!-- BOOKS TAB CONTROLS (Merged) -->
-                <ng-container *ngIf="activeTab === 'books'">
-                    <!-- Filters moved to Main Content -->
-                    <div class="control-group">
-                        <div class="stats-box">
-                            <span class="stat-number">{{ unifiedBooks.length }}</span>
-                            <span class="stat-label">كتب معروضة</span>
-                        </div>
+                <!-- Stats Widget -->
+                <div class="glass-card p-6 rounded-[2rem] bg-white/40 dark:bg-black/20 border-none shadow-xl">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="text-xs font-black text-gray-400 uppercase tracking-widest">إحصائيات العرض</span>
+                        <fa-icon [icon]="['fas', 'chart-pie']" class="text-indigo-500"></fa-icon>
                     </div>
-                </ng-container>
-
-                <!-- Downloads Controls -->
-                <ng-container *ngIf="activeTab === 'downloads'">
-                    <div class="control-group">
-                        <label>عرض</label>
-                        <div class="filter-options">
-                            <button class="filter-btn active w-full" style="justify-content: center;">
-                                <i class="fas fa-download"></i> التحميلات
-                            </button>
-                        </div>
+                    <div class="flex items-end gap-3">
+                        <span class="text-4xl font-black text-gray-800 dark:text-white">
+                            {{ activeTab === 'books' ? unifiedBooks.length : totalDownloadsCount }}
+                        </span>
+                        <span class="text-xs font-bold text-indigo-600 mb-1">
+                            {{ activeTab === 'books' ? 'كتاب معروض' : 'كتاب محمل' }}
+                        </span>
                     </div>
-
-                    <div class="control-group">
-                        <div class="stats-box">
-                            <span class="stat-number">{{ totalDownloadsCount }}</span>
-                            <span class="stat-label">كتاب محمل</span>
-                        </div>
-                    </div>
-                </ng-container>
+                </div>
 
                 <!-- Persistent Subscription Widget -->
-                <div class="glass-card mt-6 p-4 rounded-xl border border-yellow-400/30 bg-gradient-to-br from-yellow-500/10 to-orange-500/10"
+                <div class="glass-card p-6 rounded-[2rem] bg-gradient-to-br from-yellow-400/20 to-orange-500/20 border-2 border-yellow-400/30 shadow-xl relative overflow-hidden group"
                     *ngIf="hasActiveSubscription() && viewMode !== 'subscription'">
-                    <div class="flex items-center gap-3 mb-3 pb-3 border-b border-yellow-400/20">
-                        <div
-                            class="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center text-white shadow-lg shadow-orange-500/30">
-                            <i class="fas fa-crown"></i>
+                    <div class="absolute -top-10 -right-10 w-32 h-32 bg-yellow-400/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700"></div>
+                    
+                    <div class="relative z-10">
+                        <div class="flex items-center gap-4 mb-6">
+                            <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center text-white shadow-lg shadow-orange-500/30">
+                                <fa-icon [icon]="['fas', 'crown']"></fa-icon>
+                            </div>
+                            <div>
+                                <h4 class="font-black text-gray-800 dark:text-white text-sm">اشتراك {{ subscription?.plan === 'yearly' ? 'سنوي' : 'شهري' }}</h4>
+                                <div class="flex items-center gap-2">
+                                    <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                                    <span class="text-[10px] font-black text-green-600 uppercase">نشط الآن</span>
+                                </div>
+                            </div>
                         </div>
-                        <div>
-                            <h4 class="font-bold text-gray-800 dark:text-white text-sm">اشتراك {{ subscription?.plan ===
-                                'yearly' ? 'سنوي' : 'شهري' }}</h4>
-                            <span
-                                class="text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-600 dark:text-green-400 font-medium">نشط</span>
-                        </div>
-                    </div>
 
-                    <div class="space-y-2 mb-4">
-                        <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400">
-                            <span>التقدم</span>
-                            <span>{{ getDaysRemaining() }} يوم متبقي</span>
+                        <div class="space-y-3 mb-6">
+                            <div class="flex justify-between text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase">
+                                <span>صلاحية الوصول</span>
+                                <span class="text-orange-600">{{ getDaysRemaining() }} يوم متبقي</span>
+                            </div>
+                            <div class="h-3 bg-white/50 dark:bg-black/30 rounded-full overflow-hidden p-1 shadow-inner">
+                                <div class="h-full bg-gradient-to-r from-yellow-400 via-yellow-500 to-orange-600 rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(245,158,11,0.5)]"
+                                    [style.width.%]="getSubscriptionProgress()"></div>
+                            </div>
                         </div>
-                        <div class="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                            <div class="h-full bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full transition-all duration-1000"
-                                [style.width.%]="getSubscriptionProgress()"></div>
-                        </div>
-                    </div>
 
-                    <div class="grid grid-cols-2 gap-2">
                         <button routerLink="/subscription"
-                            class="flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 text-xs font-bold transition-colors">
-                            <i class="fas fa-cog"></i> إدارة
+                            class="w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-black py-3 rounded-xl shadow-lg hover:scale-[1.02] active:scale-95 transition-all text-xs flex items-center justify-center gap-2">
+                            <fa-icon [icon]="['fas', 'cog']"></fa-icon>
+                            إدارة اشتراكك
                         </button>
                     </div>
+                </div>
+
+                <!-- Help Widget -->
+                <div class="glass-card bg-indigo-50/50 dark:bg-gradient-to-br dark:from-indigo-600 dark:to-purple-700 p-6 rounded-[2.5rem] border-none shadow-xl shadow-indigo-500/10 dark:shadow-indigo-500/20 relative overflow-hidden group">
+                    <div class="relative z-10">
+                        <div class="w-10 h-10 bg-indigo-600 dark:bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center mb-4 text-white">
+                            <i class="fas fa-headset"></i>
+                        </div>
+                        <h4 class="text-indigo-900 dark:text-white font-black text-sm mb-2">هل تحتاج مساعدة؟</h4>
+                        <p class="text-[10px] text-indigo-800/80 dark:text-white/90 font-bold mb-4 leading-relaxed">فريقنا جاهز لمساعدتك في العثور على أي مرجع علمي.</p>
+                        <a href="https://wa.me/201094612729" target="_blank" 
+                           class="block w-full py-3 bg-indigo-600 dark:bg-white text-white dark:text-indigo-600 rounded-xl font-black text-[10px] uppercase tracking-wider hover:bg-indigo-700 dark:hover:bg-indigo-50 transition-all duration-300 text-center shadow-lg">
+                           تواصل معنا عبر واتساب
+                        </a>
+                    </div>
+                    
+                    <!-- Decorative Elements -->
+                    <div class="absolute -top-10 -right-10 w-32 h-32 bg-indigo-200/50 dark:bg-white/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700"></div>
+                    <div class="absolute -bottom-10 -left-10 w-32 h-32 bg-purple-200/50 dark:bg-purple-500/20 rounded-full blur-3xl"></div>
                 </div>
             </div>
         </div>
@@ -82,19 +91,46 @@
 
     <!-- MAIN CONTENT -->
     <main class="library-main">
+        <!-- Hero Section -->
+        <div class="hero-section mb-10 mt-6 relative overflow-hidden rounded-[3rem] bg-indigo-600 dark:bg-indigo-900 p-10 text-white shadow-2xl animate-fade-in">
+            <div class="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+            <div class="absolute bottom-0 left-0 w-48 h-48 bg-purple-500/20 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2"></div>
+            
+            <div class="relative z-10 flex flex-col md:flex-row items-center justify-between gap-10">
+                <div class="text-center md:text-right">
+                    <h1 class="text-4xl md:text-5xl font-black mb-4 tracking-tight">مكتبة كنوز الرقمية</h1>
+                    <p class="text-indigo-100/80 text-lg font-medium max-w-xl">استكشف آلاف الكتب والمراجع العلمية والنادرة في مكان واحد. بوابتك للمعرفة والتحصيل العلمي.</p>
+                </div>
+                <div class="hidden lg:block relative animate-float">
+                    <div class="w-48 h-64 bg-white/20 backdrop-blur-xl rounded-2xl border border-white/30 rotate-12 shadow-2xl flex items-center justify-center">
+                        <fa-icon [icon]="['fas', 'book-reader']" class="text-6xl text-white/50"></fa-icon>
+                    </div>
+                    <div class="absolute -bottom-6 -right-6 w-32 h-48 bg-indigo-400/30 backdrop-blur-xl rounded-xl border border-white/20 -rotate-6 shadow-2xl flex items-center justify-center">
+                        <fa-icon [icon]="['fas', 'crown']" class="text-3xl text-yellow-400/50"></fa-icon>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Top Navigation Tabs -->
-        <header class="main-header">
-            <div class="nav-tabs glass-nav">
-                <button class="nav-tab" [class.active]="activeTab === 'books'" (click)="setActiveTab('books')">
-                    <i class="fas fa-book"></i> الكتب
+        <header class="main-header sticky top-0 z-20 pt-4 pb-6 backdrop-blur-sm">
+            <div class="nav-tabs glass-nav p-1 flex items-center justify-center max-w-2xl mx-auto shadow-2xl">
+                <button class="nav-tab flex-1 py-3 px-6 rounded-2xl transition-all font-black text-sm md:text-base flex items-center justify-center gap-3" 
+                    [class.active]="activeTab === 'books'" (click)="setActiveTab('books')">
+                    <fa-icon [icon]="['fas', 'book-open']"></fa-icon>
+                    <span>الكتب</span>
                 </button>
-                <button class="nav-tab" [class.active]="activeTab === 'achievements'"
-                    (click)="setActiveTab('achievements')">
-                    <i class="fas fa-trophy"></i> إنجازاتي
+                <button class="nav-tab flex-1 py-3 px-6 rounded-2xl transition-all font-black text-sm md:text-base flex items-center justify-center gap-3" 
+                    [class.active]="activeTab === 'achievements'" (click)="setActiveTab('achievements')">
+                    <fa-icon [icon]="['fas', 'medal']"></fa-icon>
+                    <span>إنجازاتي</span>
                 </button>
-                <button class="nav-tab" [class.active]="activeTab === 'downloads'" (click)="setActiveTab('downloads')">
-                    <i class="fas fa-cloud-download-alt"></i> تحميلاتي
-                    <span class="badge" *ngIf="totalDownloadsCount > 0">{{ totalDownloadsCount }}</span>
+                <button class="nav-tab flex-1 py-3 px-6 rounded-2xl transition-all font-black text-sm md:text-base flex items-center justify-center gap-3 relative" 
+                    [class.active]="activeTab === 'downloads'" (click)="setActiveTab('downloads')">
+                    <fa-icon [icon]="['fas', 'cloud-download-alt']"></fa-icon>
+                    <span>تحميلاتي</span>
+                    <span class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-5 h-5 rounded-full flex items-center justify-center shadow-lg animate-bounce" 
+                        *ngIf="totalDownloadsCount > 0">{{ totalDownloadsCount }}</span>
                 </button>
             </div>
         </header>
@@ -105,143 +141,203 @@
             <!-- BOOKS TAB (Merged) -->
             <ng-container *ngIf="activeTab === 'books'">
 
-                <!-- FILTERS BAR (Moved from Sidebar) -->
-                <div
-                    class="filters-bar glass-card mb-6 p-4 flex flex-col md:flex-row gap-4 items-center justify-between animate-fade-in">
+                <!-- FILTERS BAR -->
+                <div class="filters-bar glass-card mb-10 p-4 rounded-[2.5rem] flex flex-col lg:flex-row gap-6 items-center justify-between animate-fade-in">
                     <!-- Search -->
-                    <div class="search-box premium-input flex-1 w-full relative min-w-[300px]">
-                        <i class="fas fa-search absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                    <div class="search-box premium-input flex-1 w-full relative group">
+                        <i class="fas fa-search absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-indigo-500 transition-colors"></i>
                         <input type="text" [(ngModel)]="searchQuery" (input)="onSearch()"
-                            class="w-full pr-10 pl-4 py-2 bg-transparent border-none focus:outline-none text-gray-800 dark:text-white"
-                            placeholder="ابحث عن اسم الكتاب أو المؤلف..." />
+                            class="w-full pr-14 pl-6 py-4 bg-white/50 dark:bg-black/20 rounded-3xl border border-transparent focus:border-indigo-500 focus:outline-none text-gray-800 dark:text-white font-bold transition-all shadow-inner"
+                            placeholder="ابحث عن اسم الكتاب، المؤلف، أو كلمة دلالية..." />
                     </div>
 
-                    <!-- Categories -->
-                    <div class="category-select w-full md:w-auto min-w-[200px]">
-                        <select [(ngModel)]="selectedCategory" (change)="onCategoryChange()"
-                            class="premium-select w-full px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-800 border-none focus:ring-2 focus:ring-yellow-500 text-gray-700 dark:text-gray-300">
-                            <option value="">جميع الأقسام ({{ allCategories.length }})</option>
-                            <option *ngFor="let cat of allCategories" [value]="cat">{{ cat }}</option>
-                        </select>
-                    </div>
-
-                    <!-- View Filters -->
-                    <div class="view-filters flex gap-2 w-full md:w-auto justify-center">
-                        <button [class.active-filter]="viewMode === 'all'" (click)="setViewMode('all')"
-                            class="px-4 py-2 rounded-lg text-sm font-bold transition-all border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800"
-                            [ngClass]="{'bg-yellow-500 text-white border-yellow-500 hover:bg-yellow-600': viewMode === 'all', 'text-gray-600 dark:text-gray-300': viewMode !== 'all'}">
-                            <i class="fas fa-th ml-1"></i> الكل
-                        </button>
-                        <button [class.active-filter]="viewMode === 'favorites'" (click)="setViewMode('favorites')"
-                            class="px-4 py-2 rounded-lg text-sm font-bold transition-all border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800"
-                            [ngClass]="{'bg-red-500 text-white border-red-500 hover:bg-red-600': viewMode === 'favorites', 'text-gray-600 dark:text-gray-300': viewMode !== 'favorites'}">
-                            <i class="fas fa-heart ml-1"></i> المفضلة
-                        </button>
-                        <button [class.active-filter]="viewMode === 'subscription'"
-                            (click)="setViewMode('subscription')"
-                            class="px-4 py-2 rounded-lg text-sm font-bold transition-all border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800"
-                            [ngClass]="{'bg-blue-600 text-white border-blue-600 hover:bg-blue-700': viewMode === 'subscription', 'text-gray-600 dark:text-gray-300': viewMode !== 'subscription'}">
-                            <i class="fas fa-crown ml-1"></i> الاشتراك
-                        </button>
-                    </div>
-                </div>
-
-
-                <!-- Info Header -->
-                <div class="library-header-info flex justify-between items-center mb-6 px-2"
-                    *ngIf="viewMode !== 'subscription'">
-                    <h2 class="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
-                        <i class="fas fa-layer-group text-blue-500"></i>
-                        <span>نتائج البحث</span>
-                        <span
-                            class="text-xs font-normal text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-full">{{
-                            unifiedBooks.length }} كتاب</span>
-                    </h2>
-
-
-
-                    <!-- Subscription Prompt (Mini) -->
-                    <a routerLink="/subscription" *ngIf="!hasActiveSubscription()"
-                        class="text-xs font-bold text-yellow-600 hover:text-yellow-700 flex items-center gap-1 animate-pulse">
-                        <i class="fas fa-crown"></i>
-                        <span>اشترك للمزيد</span>
-                    </a>
-                </div>
-
-                <!-- Daily Added Books Alert & Urgent Request -->
-                <div class="library-alert animate-fade-in"
-                    *ngIf="!searchQuery && !selectedCategory && viewMode === 'all'">
-                    <div class="alert-content">
-                        <i class="fas fa-plus"></i>
-                        <span>يتم إضافة 10 كتب جديدة يومياً للمكتبة</span>
-                    </div>
-                    <button class="btn-urgent" (click)="openBookRequestModal()">
-                        <i class="fas fa-bolt"></i> استعجال كتاب
-                    </button>
-                </div>
-
-                <!-- Book Request Modal -->
-                <div class="modal-overlay" *ngIf="showRequestModal" (click)="closeBookRequestModal()">
-                    <div class="modal-content" (click)="$event.stopPropagation()">
-                        <div class="modal-header">
-                            <h3>طلب استعجال كتاب</h3>
-                            <button class="close-btn" (click)="closeBookRequestModal()"><i
-                                    class="fas fa-times"></i></button>
-                        </div>
-                        <div class="modal-body">
-                            <p class="text-gray-600 dark:text-gray-300 mb-4">أدخل اسم الكتاب الذي ترغب في إضافته
-                                للمكتبة
-                                بسرعة.</p>
-
-                            <div class="form-group">
-                                <label>اسم الكتاب *</label>
-                                <input type="text" [(ngModel)]="requestBookName" class="form-input"
-                                    placeholder="مثال: البداية والنهاية">
-                            </div>
-
-                            <div class="form-group">
-                                <label>اسم المؤلف (اختياري)</label>
-                                <input type="text" [(ngModel)]="requestAuthorName" class="form-input"
-                                    placeholder="مثال: ابن كثير">
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button class="btn-cancel" (click)="closeBookRequestModal()">إلغاء</button>
-                            <button class="btn-submit" (click)="submitBookRequest()"
-                                [disabled]="!requestBookName || isSubmittingRequest">
-                                <span *ngIf="!isSubmittingRequest">إرسال الطلب</span>
-                                <span *ngIf="isSubmittingRequest"><i class="fas fa-spinner fa-spin"></i> جاري
-                                    الإرسال...</span>
+                    <!-- Categories & View Filters Group -->
+                    <div class="flex flex-col sm:flex-row items-center gap-4 w-full lg:w-auto">
+                        <!-- View Filters -->
+                        <div class="view-filters flex p-1.5 bg-gray-100/80 dark:bg-black/40 rounded-3xl w-full sm:w-auto">
+                            <button (click)="setViewMode('all')"
+                                class="flex-1 sm:flex-none px-6 py-3 rounded-[1.25rem] text-xs font-black transition-all flex items-center justify-center gap-2"
+                                [ngClass]="viewMode === 'all' ? 'bg-indigo-600 text-white shadow-xl scale-105' : 'text-gray-500 hover:text-gray-700 dark:hover:text-white'">
+                                <fa-icon [icon]="['fas', 'th-large']"></fa-icon> الكل
+                            </button>
+                            <button (click)="setViewMode('favorites')"
+                                class="flex-1 sm:flex-none px-6 py-3 rounded-[1.25rem] text-xs font-black transition-all flex items-center justify-center gap-2"
+                                [ngClass]="viewMode === 'favorites' ? 'bg-red-500 text-white shadow-xl scale-105' : 'text-gray-500 hover:text-red-500'">
+                                <fa-icon [icon]="['fas', 'heart']"></fa-icon> المفضلة
+                            </button>
+                            <button (click)="setViewMode('subscription')"
+                                class="flex-1 sm:flex-none px-6 py-3 rounded-[1.25rem] text-xs font-black transition-all flex items-center justify-center gap-2"
+                                [ngClass]="viewMode === 'subscription' ? 'bg-yellow-500 text-gray-900 shadow-xl scale-105' : 'text-gray-500 hover:text-yellow-600'">
+                                <fa-icon [icon]="['fas', 'crown']"></fa-icon> المميز
                             </button>
                         </div>
                     </div>
                 </div>
 
-                <!-- SUBSCRIPTION DASHBOARD (Moved to Top) -->
-                <div class="subscription-dashboard animate-fade-in mb-8"
-                    *ngIf="viewMode === 'subscription' && hasActiveSubscription()">
-                    <div
-                        class="dashboard-header glass-card p-8 rounded-2xl mb-8 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-400/20 text-center relative overflow-hidden">
-                        <div
-                            class="absolute top-0 right-0 w-32 h-32 bg-yellow-500/10 rounded-fullblur-3xl -translate-y-1/2 translate-x-1/2">
+                <!-- Category Quick Navigation -->
+                <div class="category-pills flex items-center gap-3 overflow-x-auto pb-6 mb-4 no-scrollbar animate-fade-in-up">
+                    <button (click)="selectCategory('')" 
+                        class="category-pill px-6 py-2.5 rounded-2xl font-black text-xs transition-all flex items-center gap-2"
+                        [class.active]="selectedCategory === ''">
+                        <fa-icon [icon]="['fas', 'house']"></fa-icon>
+                        <span>الرئيسية</span>
+                    </button>
+                    <button (click)="selectCategory('كل الكتب')"
+                        class="category-pill px-6 py-2.5 rounded-2xl font-black text-xs transition-all flex items-center gap-2"
+                        [class.active]="selectedCategory === 'كل الكتب'">
+                        <fa-icon [icon]="['fas', 'atlas']" class="text-indigo-500 dark:text-indigo-400"></fa-icon>
+                        <span>كل الكتب</span>
+                    </button>
+                    <button *ngFor="let cat of allCategories" (click)="selectCategory(cat)"
+                        class="category-pill px-6 py-2.5 rounded-2xl font-black text-xs transition-all flex items-center gap-2"
+                        [class.active]="selectedCategory === cat">
+                        <span>{{ cat }}</span>
+                    </button>
+                </div>
+
+
+                <!-- Info Header -->
+                <div class="library-header-info flex justify-between items-center mb-8 px-4"
+                    *ngIf="viewMode !== 'subscription'">
+                    <h2 class="text-2xl font-black text-gray-800 dark:text-white flex items-center gap-4">
+                        <div class="w-2 h-8 bg-indigo-600 rounded-full"></div>
+                        <span>استكشاف الكتب</span>
+                        <span class="text-sm font-bold text-indigo-600 bg-indigo-50 dark:bg-indigo-900/40 px-4 py-1.5 rounded-2xl">
+                            {{ unifiedBooks.length }} كتاب متاح
+                        </span>
+                    </h2>
+
+                    <!-- Subscription Prompt (Mini) -->
+                    <a routerLink="/subscription" *ngIf="!hasActiveSubscription()"
+                        class="text-sm font-black text-yellow-600 hover:text-yellow-700 flex items-center gap-2 animate-pulse bg-yellow-50 dark:bg-yellow-900/20 px-4 py-2 rounded-2xl border border-yellow-200 dark:border-yellow-900/30">
+                        <fa-icon [icon]="['fas', 'crown']"></fa-icon>
+                        <span>ترقية الحساب</span>
+                    </a>
+                </div>
+
+                <!-- Daily Added Books Alert & Urgent Request -->
+                <div class="library-alert glass-card p-6 rounded-3xl mb-10 flex flex-col md:flex-row items-center justify-between gap-6 animate-fade-in border-r-8 border-yellow-500 bg-gradient-to-l from-yellow-500/5 to-transparent"
+                    *ngIf="!searchQuery && !selectedCategory && viewMode === 'all'">
+                    <div class="flex items-center gap-6">
+                        <div class="w-14 h-14 rounded-2xl bg-yellow-500/10 flex items-center justify-center text-yellow-600 text-2xl">
+                            <fa-icon [icon]="['fas', 'sparkles']"></fa-icon>
+                        </div>
+                        <div>
+                            <h4 class="font-black text-gray-800 dark:text-white text-lg">جديد المكتبة يومياً</h4>
+                            <p class="text-gray-500 dark:text-gray-400 text-sm font-bold">يتم إضافة أكثر من 10 كتب ومراجع جديدة كل صباح</p>
+                        </div>
+                    </div>
+                    <button (click)="openBookRequestModal()"
+                        class="bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-black px-8 py-3 rounded-2xl shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-3">
+                        <fa-icon [icon]="['fas', 'bolt']" class="text-yellow-400"></fa-icon>
+                        <span>استعجال كتاب معين</span>
+                    </button>
+                </div>
+
+                <!-- Book Request Modal (Premium Redesign) -->
+                <div class="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md animate-fade-in"
+                    *ngIf="showRequestModal" (click)="closeBookRequestModal()">
+                    <div class="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden border border-white/20 dark:border-slate-800 animate-scale-in transform transition-all cursor-default"
+                        (click)="$event.stopPropagation()">
+                        
+                        <!-- Header with elegant gradient -->
+                        <div class="relative bg-gradient-to-br from-amber-500 via-orange-600 to-rose-700 p-8 text-white">
+                            <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
+                            <div class="relative z-10 flex justify-between items-center">
+                                <div>
+                                    <h3 class="text-2xl font-black mb-1 flex items-center gap-3">
+                                        <fa-icon [icon]="['fas', 'bolt']" class="text-yellow-300 animate-pulse"></fa-icon>
+                                        طلب استعجال كتاب
+                                    </h3>
+                                    <p class="text-orange-100 text-xs font-medium opacity-80">سنبذل قصارى جهدنا لتوفير كتابك المفضل خلال ساعات!</p>
+                                </div>
+                                <button (click)="closeBookRequestModal()" 
+                                    class="w-10 h-10 rounded-2xl bg-white/15 hover:bg-white/25 flex items-center justify-center transition-all active:scale-90 border border-white/10">
+                                    <fa-icon [icon]="['fas', 'times']" class="text-white text-sm"></fa-icon>
+                                </button>
+                            </div>
                         </div>
 
-                        <div class="relative z-10 flex flex-col items-center">
-                            <div
-                                class="w-20 h-20 rounded-full bg-gradient-to-br from-yellow-400 to-orange-600 flex items-center justify-center text-white text-3xl shadow-xl shadow-orange-500/40 mb-4 animate-bounce-slow">
-                                <i class="fas fa-crown"></i>
-                            </div>
-                            <h2 class="text-3xl font-bold text-gray-800 dark:text-white mb-2">خطة {{ subscription?.plan
-                                === 'yearly' ? 'سنوية' : 'شهرية' }} مميزة</h2>
-                            <p class="text-gray-500 dark:text-gray-400 text-lg mb-6">استمتع بوصول غير محدود لآلاف الكتب
-                                والمراجع</p>
+                        <!-- Form Content -->
+                        <div class="p-8 space-y-6">
+                            <p class="text-slate-600 dark:text-slate-300 text-sm font-bold leading-relaxed mb-2">
+                                أدخل اسم الكتاب الذي ترغب في إضافته للمكتبة بسرعة، وسيقوم فريق الدعم بمراجعته وتوفيره بصيغة EPUB عالية الجودة فوراً.
+                            </p>
 
-                            <div class="flex gap-4">
+                            <!-- Book Name Input -->
+                            <div class="space-y-2 group">
+                                <label class="block text-xs font-black text-slate-500 dark:text-slate-400 mr-2 flex items-center gap-1.5">
+                                    <div class="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
+                                    اسم الكتاب أو المرجع *
+                                </label>
+                                <div class="relative">
+                                    <span class="absolute inset-y-0 right-5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-orange-500 transition-colors">
+                                        <fa-icon [icon]="['fas', 'book-open']"></fa-icon>
+                                    </span>
+                                    <input type="text" [(ngModel)]="requestBookName" 
+                                        class="block w-full pr-12 pl-6 py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 rounded-2xl text-sm font-bold text-slate-700 dark:text-slate-200 placeholder-slate-400 shadow-inner focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500/50 transition-all"
+                                        placeholder="مثال: البداية والنهاية لابن كثير">
+                                </div>
+                            </div>
+
+                            <!-- Author Name Input -->
+                            <div class="space-y-2 group">
+                                <label class="block text-xs font-black text-slate-500 dark:text-slate-400 mr-2 flex items-center gap-1.5">
+                                    <div class="w-1.5 h-1.5 bg-orange-400 rounded-full"></div>
+                                    اسم المؤلف (اختياري)
+                                </label>
+                                <div class="relative">
+                                    <span class="absolute inset-y-0 right-5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-orange-500 transition-colors">
+                                        <fa-icon [icon]="['fas', 'user-edit']"></fa-icon>
+                                    </span>
+                                    <input type="text" [(ngModel)]="requestAuthorName" 
+                                        class="block w-full pr-12 pl-6 py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 rounded-2xl text-sm font-bold text-slate-700 dark:text-slate-200 placeholder-slate-400 shadow-inner focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500/50 transition-all"
+                                        placeholder="مثال: الحافظ ابن كثير">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Action buttons -->
+                        <div class="p-8 bg-slate-50 dark:bg-slate-800/30 border-t border-slate-100 dark:border-slate-800/50 flex gap-4">
+                            <button (click)="closeBookRequestModal()" 
+                                class="flex-1 py-4 px-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 font-black text-sm hover:bg-slate-100 dark:hover:bg-slate-800 transition-all active:scale-95">
+                                إلغاء
+                            </button>
+                            <button (click)="submitBookRequest()" 
+                                [disabled]="!requestBookName.trim() || isSubmittingRequest"
+                                class="flex-[2] py-4 px-6 rounded-2xl bg-gradient-to-r from-orange-500 to-rose-600 text-white font-black text-sm shadow-xl shadow-orange-500/20 hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95 flex items-center justify-center gap-3">
+                                <fa-icon *ngIf="isSubmittingRequest" [icon]="['fas', 'spinner']" class="animate-spin"></fa-icon>
+                                <span>{{ isSubmittingRequest ? 'جاري إرسال طلبك الآن...' : 'إرسال طلب الاستعجال 🚀' }}</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SUBSCRIPTION DASHBOARD -->
+                <div class="subscription-dashboard animate-fade-in mb-12"
+                    *ngIf="viewMode === 'subscription' && hasActiveSubscription()">
+                    <div class="dashboard-header glass-card p-10 rounded-[2.5rem] mb-10 bg-gradient-to-br from-indigo-900 via-indigo-800 to-purple-900 text-center relative overflow-hidden border-none shadow-2xl">
+                        <div class="absolute top-0 right-0 w-64 h-64 bg-yellow-500/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2"></div>
+                        <div class="absolute bottom-0 left-0 w-64 h-64 bg-indigo-500/20 rounded-full blur-[100px] translate-y-1/2 -translate-x-1/2"></div>
+
+                        <div class="relative z-10 flex flex-col items-center">
+                            <div class="w-24 h-24 rounded-[2rem] bg-white/10 backdrop-blur-xl border border-white/20 flex items-center justify-center text-yellow-400 text-4xl shadow-2xl mb-8 animate-float">
+                                <fa-icon [icon]="['fas', 'crown']"></fa-icon>
+                            </div>
+                            <h2 class="text-4xl md:text-5xl font-black text-white mb-4">خطة {{ subscription?.plan === 'yearly' ? 'VIP السنوية' : 'Premium الشهرية' }}</h2>
+                            <p class="text-indigo-100/70 text-xl mb-10 max-w-2xl">أهلاً بك في النخبة! استمتع بكافة المزايا الحصرية والوصول اللامحدود.</p>
+
+                            <div class="flex flex-wrap justify-center gap-6">
                                 <button routerLink="/subscription"
-                                    class="btn-outline px-6 py-2 rounded-lg border-2 border-yellow-500 text-yellow-600 dark:text-yellow-400 font-bold hover:bg-yellow-500 hover:text-white transition-all flex items-center gap-2">
-                                    <i class="fas fa-cog ml-2"></i> إدارة الخطة
+                                    class="bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-black px-10 py-4 rounded-2xl shadow-xl shadow-yellow-500/30 transition-all hover:-translate-y-1 active:scale-95 flex items-center gap-3">
+                                    <fa-icon [icon]="['fas', 'user-shield']"></fa-icon>
+                                    <span>إدارة اشتراكك</span>
                                 </button>
-                                <!-- Invoice Button Removed from here as requested -->
+                                <button (click)="downloadInvoice()"
+                                    class="bg-white/10 hover:bg-white/20 text-white font-black px-10 py-4 rounded-2xl border border-white/20 backdrop-blur-md transition-all hover:-translate-y-1 active:scale-95 flex items-center gap-3">
+                                    <fa-icon [icon]="['fas', 'file-invoice-dollar']"></fa-icon>
+                                    <span>تحميل الفاتورة</span>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -282,13 +378,11 @@
                         <div class="relative pt-6 pb-2">
                             <div class="flex justify-between text-sm font-bold text-gray-600 dark:text-gray-300 mb-2">
                                 <span>البداية</span>
-                                <span class="text-yellow-600 dark:text-yellow-400">{{ getDaysRemaining() }} يوم
-                                    متبقي</span>
+                                <span class="text-yellow-600 dark:text-yellow-400">{{ getDaysRemaining() }} يوم متبقي</span>
                                 <span>النهاية</span>
                             </div>
 
-                            <div
-                                class="h-4 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden shadow-inner relative">
+                            <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden shadow-inner relative">
                                 <div class="absolute top-0 right-0 h-full bg-gradient-to-l from-yellow-400 via-orange-500 to-red-500 transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(234,179,8,0.5)]"
                                     [style.width.%]="getSubscriptionProgress()">
                                     <div class="absolute left-0 top-0 bottom-0 w-1 bg-white/50 animate-pulse"></div>
@@ -344,94 +438,364 @@
                     </div>
                 </div>
 
-                <div class="loading-state" *ngIf="isLoading && unifiedBooks.length === 0">
+                <div class="loading-state" *ngIf="isInternalLoading">
                     <div class="spinner"></div>
                     <p>جاري تحميل الكتب...</p>
                 </div>
 
+                <!-- Abjad-Style Welcome Hero Banner Showcase -->
+                <div class="hero-showcase-container relative overflow-hidden rounded-[3rem] p-8 md:p-12 mb-12 text-white shadow-2xl bg-gradient-to-br from-indigo-950 via-slate-900 to-indigo-900 border border-white/10"
+                    *ngIf="viewMode === 'all' && !selectedCategory && !searchQuery.trim() && !isInternalLoading && bookOfTheDay">
+                    
+                    <!-- Decorative glowing elements -->
+                    <div class="absolute top-0 left-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl -translate-y-1/2"></div>
+                    <div class="absolute bottom-0 right-1/4 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl translate-y-1/2"></div>
+                    
+                    <div class="relative z-10 flex flex-col lg:flex-row items-center gap-10">
+                        <!-- Book Cover with rich shadows -->
+                        <div class="relative flex-shrink-0 group">
+                            <div class="absolute inset-0 bg-indigo-500/30 rounded-3xl blur-xl group-hover:scale-105 transition-transform duration-500 opacity-60"></div>
+                            <div class="relative w-48 h-72 md:w-56 md:h-80 rounded-3xl overflow-hidden shadow-2xl border border-white/10 transform rotate-[-2deg] group-hover:rotate-0 transition-all duration-500">
+                                <img [src]="bookOfTheDay.coverUrl" alt="Book Cover" class="w-full h-full object-cover" (error)="handleImageError($event)">
+                            </div>
+                        </div>
+
+                        <!-- Book Meta & Description -->
+                        <div class="flex-grow space-y-6 text-right w-full lg:w-auto">
+                            <div class="flex flex-wrap items-center gap-3 justify-start">
+                                <span class="px-4 py-1.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-black border border-amber-500/30 flex items-center gap-1.5 animate-pulse">
+                                    <fa-icon [icon]="['fas', 'star']"></fa-icon>
+                                    ترشيح اليوم للمتميزين
+                                </span>
+                                <span class="px-4 py-1.5 rounded-full bg-white/10 text-slate-200 text-[10px] font-bold border border-white/5">
+                                    {{ bookOfTheDay.category }}
+                                </span>
+                            </div>
+
+                            <div class="space-y-2">
+                                <h1 class="text-3xl md:text-5xl font-black tracking-tight leading-tight text-white drop-shadow-sm">
+                                    {{ bookOfTheDay.title }}
+                                </h1>
+                                <p class="text-indigo-200 text-base font-bold flex items-center gap-2">
+                                    <fa-icon [icon]="['fas', 'user-edit']" class="text-indigo-400"></fa-icon>
+                                    المؤلف: {{ bookOfTheDay.author }}
+                                </p>
+                            </div>
+
+                            <p class="text-slate-300 text-sm md:text-base font-medium leading-relaxed max-w-2xl line-clamp-3">
+                                {{ bookOfTheDay.originalObject.description || 'لم يتم كتابة وصف مختصر لهذا الكتاب الإلكتروني المتميز بعد. اضغط على زر قراءة التفاصيل أو بدء القراءة لتصفح صفحاته والاستمتاع بالمحتوى الشيق.' }}
+                            </p>
+
+                            <!-- Actions -->
+                            <div class="flex flex-wrap gap-4 pt-2">
+                                <button (click)="bookOfTheDay.isDownloaded ? openEbook(bookOfTheDay.originalObject) : downloadInternalBook(bookOfTheDay.originalObject, $event)" 
+                                    class="px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-black rounded-2xl shadow-xl shadow-orange-500/20 hover:opacity-95 transition-all active:scale-95 flex items-center gap-3">
+                                    <fa-icon *ngIf="bookOfTheDay.isDownloading" [icon]="['fas', 'spinner']" class="animate-spin"></fa-icon>
+                                    <fa-icon *ngIf="!bookOfTheDay.isDownloading" [icon]="bookOfTheDay.isDownloaded ? ['fas', 'book-open'] : ['fas', 'download']"></fa-icon>
+                                    <span>
+                                        {{ bookOfTheDay.isDownloading ? 'جاري التحميل ' + bookOfTheDay.downloadProgress + '%' : (bookOfTheDay.isDownloaded ? 'ابدأ القراءة الآن' : 'تحميل الكتاب وقراءته') }}
+                                    </span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Curated Side-Scrolling Bookshelves -->
+                <div class="curated-shelves-container space-y-12 mb-12"
+                    *ngIf="viewMode === 'all' && !selectedCategory && !searchQuery.trim() && !isInternalLoading">
+                    
+                    <!-- Shelf 1: أحدث الإضافات -->
+                    <div class="shelf-wrapper" *ngIf="recentlyAddedEbooks.length > 0">
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-xl md:text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3">
+                                <span class="w-2.5 h-6 bg-gradient-to-b from-indigo-500 to-purple-600 rounded-full"></span>
+                                أحدث الإضافات للمكتبة
+                            </h2>
+                            <span class="text-xs font-black text-indigo-500 dark:text-indigo-400">جديد بالكامل 🌟</span>
+                        </div>
+                        <div class="shelf-scroller flex gap-6 overflow-x-auto pb-4 no-scrollbar">
+                            <div class="shelf-card group cursor-pointer flex flex-col items-center" 
+                                *ngFor="let book of recentlyAddedEbooks" 
+                                (click)="book.isDownloaded ? openEbook(book.originalObject) : downloadInternalBook(book.originalObject, $event)">
+                                <div class="relative w-36 h-52 md:w-40 md:h-60 rounded-[2rem] overflow-hidden shadow-lg border border-slate-100 dark:border-slate-800/80 transition-all duration-500 group-hover:-translate-y-2 group-hover:shadow-2xl flex-shrink-0">
+                                    <img [src]="book.coverUrl" alt="Book Cover" class="w-full h-full object-cover" (error)="handleImageError($event)">
+                                    
+                                    <!-- Badges -->
+                                    <span class="absolute top-3 right-3 bg-indigo-600/90 backdrop-blur-sm text-[8px] text-white px-2 py-0.5 rounded-full font-black">
+                                        {{ book.category }}
+                                    </span>
+
+                                    <!-- Interactive Overlay -->
+                                    <div class="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 z-20">
+                                        <ng-container *ngIf="!book.isDownloaded && !book.isDownloading">
+                                            <button class="bg-white text-gray-900 font-black text-xs px-5 py-2.5 rounded-full shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5">
+                                                <fa-icon [icon]="['fas', 'download']"></fa-icon>
+                                                تحميل
+                                            </button>
+                                        </ng-container>
+
+                                        <ng-container *ngIf="book.isDownloading && !book.isDownloaded">
+                                            <div class="flex flex-col items-center gap-2">
+                                                <div class="w-10 h-10 border-4 border-white/20 border-t-white rounded-full animate-spin"></div>
+                                                <span class="text-white font-black text-[10px]">{{ book.downloadProgress }}%</span>
+                                            </div>
+                                        </ng-container>
+
+                                        <ng-container *ngIf="book.isDownloaded">
+                                            <button class="bg-indigo-600 text-white font-black text-xs px-6 py-2.5 rounded-full shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5">
+                                                <fa-icon [icon]="['fas', 'book-reader']"></fa-icon>
+                                                قراءة
+                                            </button>
+                                        </ng-container>
+                                    </div>
+                                </div>
+                                <h4 class="text-sm font-black text-slate-700 dark:text-slate-200 mt-3 truncate w-36 md:w-40 text-center">{{ book.title }}</h4>
+                                <p class="text-xs font-bold text-slate-400 truncate w-36 md:w-40 text-center">{{ book.author }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Shelf 2: الأكثر شعبية -->
+                    <div class="shelf-wrapper" *ngIf="mostDownloadedEbooks.length > 0">
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-xl md:text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3">
+                                <span class="w-2.5 h-6 bg-gradient-to-b from-amber-500 to-orange-600 rounded-full"></span>
+                                الكتب الأكثر شعبية وتحميلاً
+                            </h2>
+                            <span class="text-xs font-black text-amber-500 dark:text-amber-400">موصى بها بشدة 🔥</span>
+                        </div>
+                        <div class="shelf-scroller flex gap-6 overflow-x-auto pb-4 no-scrollbar">
+                            <div class="shelf-card group cursor-pointer flex flex-col items-center" 
+                                *ngFor="let book of mostDownloadedEbooks" 
+                                (click)="book.isDownloaded ? openEbook(book.originalObject) : downloadInternalBook(book.originalObject, $event)">
+                                <div class="relative w-36 h-52 md:w-40 md:h-60 rounded-[2rem] overflow-hidden shadow-lg border border-slate-100 dark:border-slate-800/80 transition-all duration-500 group-hover:-translate-y-2 group-hover:shadow-2xl flex-shrink-0">
+                                    <img [src]="book.coverUrl" alt="Book Cover" class="w-full h-full object-cover" (error)="handleImageError($event)">
+                                    
+                                    <!-- Badges -->
+                                    <span class="absolute top-3 right-3 bg-amber-600/90 backdrop-blur-sm text-[8px] text-white px-2 py-0.5 rounded-full font-black">
+                                        {{ book.category }}
+                                    </span>
+
+                                    <!-- Interactive Overlay -->
+                                    <div class="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 z-20">
+                                        <ng-container *ngIf="!book.isDownloaded && !book.isDownloading">
+                                            <button class="bg-white text-gray-900 font-black text-xs px-5 py-2.5 rounded-full shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5">
+                                                <fa-icon [icon]="['fas', 'download']"></fa-icon>
+                                                تحميل
+                                            </button>
+                                        </ng-container>
+
+                                        <ng-container *ngIf="book.isDownloading && !book.isDownloaded">
+                                            <div class="flex flex-col items-center gap-2">
+                                                <div class="w-10 h-10 border-4 border-white/20 border-t-white rounded-full animate-spin"></div>
+                                                <span class="text-white font-black text-[10px]">{{ book.downloadProgress }}%</span>
+                                            </div>
+                                        </ng-container>
+
+                                        <ng-container *ngIf="book.isDownloaded">
+                                            <button class="bg-indigo-600 text-white font-black text-xs px-6 py-2.5 rounded-full shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5">
+                                                <fa-icon [icon]="['fas', 'book-reader']"></fa-icon>
+                                                قراءة
+                                            </button>
+                                        </ng-container>
+                                    </div>
+                                </div>
+                                <h4 class="text-sm font-black text-slate-700 dark:text-slate-200 mt-3 truncate w-36 md:w-40 text-center">{{ book.title }}</h4>
+                                <p class="text-xs font-bold text-slate-400 truncate w-36 md:w-40 text-center">{{ book.author }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Shelf 3: الأكثر قراءة -->
+                    <div class="shelf-wrapper" *ngIf="mostReadEbooks.length > 0">
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-xl md:text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3">
+                                <span class="w-2.5 h-6 bg-gradient-to-b from-emerald-500 to-teal-600 rounded-full"></span>
+                                الأكثر قراءة ونقاشاً
+                            </h2>
+                            <span class="text-xs font-black text-emerald-500 dark:text-emerald-400">انضم للقراء اليوم 📖</span>
+                        </div>
+                        <div class="shelf-scroller flex gap-6 overflow-x-auto pb-4 no-scrollbar">
+                            <div class="shelf-card group cursor-pointer flex flex-col items-center" 
+                                *ngFor="let book of mostReadEbooks" 
+                                (click)="book.isDownloaded ? openEbook(book.originalObject) : downloadInternalBook(book.originalObject, $event)">
+                                <div class="relative w-36 h-52 md:w-40 md:h-60 rounded-[2rem] overflow-hidden shadow-lg border border-slate-100 dark:border-slate-800/80 transition-all duration-500 group-hover:-translate-y-2 group-hover:shadow-2xl flex-shrink-0">
+                                    <img [src]="book.coverUrl" alt="Book Cover" class="w-full h-full object-cover" (error)="handleImageError($event)">
+                                    
+                                    <!-- Badges -->
+                                    <span class="absolute top-3 right-3 bg-emerald-600/90 backdrop-blur-sm text-[8px] text-white px-2 py-0.5 rounded-full font-black">
+                                        {{ book.category }}
+                                    </span>
+
+                                    <!-- Interactive Overlay -->
+                                    <div class="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 z-20">
+                                        <ng-container *ngIf="!book.isDownloaded && !book.isDownloading">
+                                            <button class="bg-white text-gray-900 font-black text-xs px-5 py-2.5 rounded-full shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5">
+                                                <fa-icon [icon]="['fas', 'download']"></fa-icon>
+                                                تحميل
+                                            </button>
+                                        </ng-container>
+
+                                        <ng-container *ngIf="book.isDownloading && !book.isDownloaded">
+                                            <div class="flex flex-col items-center gap-2">
+                                                <div class="w-10 h-10 border-4 border-white/20 border-t-white rounded-full animate-spin"></div>
+                                                <span class="text-white font-black text-[10px]">{{ book.downloadProgress }}%</span>
+                                            </div>
+                                        </ng-container>
+
+                                        <ng-container *ngIf="book.isDownloaded">
+                                            <button class="bg-indigo-600 text-white font-black text-xs px-6 py-2.5 rounded-full shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5">
+                                                <fa-icon [icon]="['fas', 'book-reader']"></fa-icon>
+                                                قراءة
+                                            </button>
+                                        </ng-container>
+                                    </div>
+                                </div>
+                                <h4 class="text-sm font-black text-slate-700 dark:text-slate-200 mt-3 truncate w-36 md:w-40 text-center">{{ book.title }}</h4>
+                                <p class="text-xs font-bold text-slate-400 truncate w-36 md:w-40 text-center">{{ book.author }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Shelf 4: توصيات المحررين -->
+                    <div class="shelf-wrapper" *ngIf="featuredEbooks.length > 0">
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-xl md:text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3">
+                                <span class="w-2.5 h-6 bg-gradient-to-b from-rose-500 to-pink-600 rounded-full"></span>
+                                الكتب الأعلى تقييماً (توصياتنا)
+                            </h2>
+                            <span class="text-xs font-black text-rose-500 dark:text-rose-400">تقييمات متميزة ⭐</span>
+                        </div>
+                        <div class="shelf-scroller flex gap-6 overflow-x-auto pb-4 no-scrollbar">
+                            <div class="shelf-card group cursor-pointer flex flex-col items-center" 
+                                *ngFor="let book of featuredEbooks" 
+                                (click)="book.isDownloaded ? openEbook(book.originalObject) : downloadInternalBook(book.originalObject, $event)">
+                                <div class="relative w-36 h-52 md:w-40 md:h-60 rounded-[2rem] overflow-hidden shadow-lg border border-slate-100 dark:border-slate-800/80 transition-all duration-500 group-hover:-translate-y-2 group-hover:shadow-2xl flex-shrink-0">
+                                    <img [src]="book.coverUrl" alt="Book Cover" class="w-full h-full object-cover" (error)="handleImageError($event)">
+                                    
+                                    <!-- Badges -->
+                                    <span class="absolute top-3 right-3 bg-rose-600/90 backdrop-blur-sm text-[8px] text-white px-2 py-0.5 rounded-full font-black">
+                                        {{ book.category }}
+                                    </span>
+
+                                    <!-- Interactive Overlay -->
+                                    <div class="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 z-20">
+                                        <ng-container *ngIf="!book.isDownloaded && !book.isDownloading">
+                                            <button class="bg-white text-gray-900 font-black text-xs px-5 py-2.5 rounded-full shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5">
+                                                <fa-icon [icon]="['fas', 'download']"></fa-icon>
+                                                تحميل
+                                            </button>
+                                        </ng-container>
+
+                                        <ng-container *ngIf="book.isDownloading && !book.isDownloaded">
+                                            <div class="flex flex-col items-center gap-2">
+                                                <div class="w-10 h-10 border-4 border-white/20 border-t-white rounded-full animate-spin"></div>
+                                                <span class="text-white font-black text-[10px]">{{ book.downloadProgress }}%</span>
+                                            </div>
+                                        </ng-container>
+
+                                        <ng-container *ngIf="book.isDownloaded">
+                                            <button class="bg-indigo-600 text-white font-black text-xs px-6 py-2.5 rounded-full shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5">
+                                                <fa-icon [icon]="['fas', 'book-reader']"></fa-icon>
+                                                قراءة
+                                            </button>
+                                        </ng-container>
+                                    </div>
+                                </div>
+                                <h4 class="text-sm font-black text-slate-700 dark:text-slate-200 mt-3 truncate w-36 md:w-40 text-center">{{ book.title }}</h4>
+                                <p class="text-xs font-bold text-slate-400 truncate w-36 md:w-40 text-center">{{ book.author }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- UNIFIED GRID -->
                 <div class="ebooks-grid unified-grid"
-                    *ngIf="(!isLoading || unifiedBooks.length > 0) && viewMode !== 'subscription'">
-                    <div class="ebook-card glass-card" *ngFor="let book of unifiedBooks"
+                    *ngIf="!isInternalLoading && (viewMode !== 'subscription' || hasActiveSubscription()) && (viewMode !== 'all' || selectedCategory || searchQuery.trim().length > 0)">
+                    <div class="ebook-card glass-card group relative animate-fade-in" *ngFor="let book of unifiedBooks"
                         [class.downloaded]="book.isDownloaded" [class.external-source]="book.source === 'external'">
 
-                        <div class="card-image" [class.dynamic-bg]="book.source === 'external'">
-                            <!-- Cover: Internal uses Image, External uses Spine/Dynamic -->
-                            <ng-container *ngIf="book.source === 'internal'; else externalCover">
+                        <!-- Featured Ribbon for internal paid books -->
+                        <div class="featured-ribbon" *ngIf="book.source === 'internal' && !book.isFree">
+                            مميز
+                        </div>
+
+                        <div class="card-image relative overflow-hidden aspect-[2/3]" [class.dynamic-bg]="book.source === 'external'">
+                            <!-- Cover -->
+                            <ng-container *ngIf="book.source === 'internal'">
                                 <img [src]="book.coverUrl" alt="{{ book.title }}" loading="lazy"
+                                    class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                                     (error)="handleImageError($event)">
                             </ng-container>
 
-                            <ng-template #externalCover>
-                                <div class="book-spine">
-                                    <span class="spine-title">{{ book.title }}</span>
-                                    <span class="spine-author">{{ book.author }}</span>
-                                </div>
-                            </ng-template>
+                            <div *ngIf="book.source === 'external'" class="book-spine w-full h-full flex flex-col items-center justify-center p-6 text-center bg-gradient-to-br from-indigo-600 to-purple-800 text-white">
+                                <fa-icon [icon]="['fas', 'book']" class="text-4xl mb-4 opacity-30"></fa-icon>
+                                <span class="spine-title font-black text-sm mb-2 line-clamp-3">{{ book.title }}</span>
+                                <span class="spine-author text-[10px] opacity-80">{{ book.author }}</span>
+                            </div>
 
-                            <div class="card-badges">
-                                <!-- Source Badge -->
-                                <span class="badge source-badge" [class.internal]="book.source === 'internal'"
-                                    [class.external]="book.source === 'external'">
-                                    <i class="fas" [class.fa-server]="book.source === 'internal'"
-                                        [class.fa-globe]="book.source === 'external'"></i>
-                                    {{ book.source === 'internal' ? 'الموقع' : 'الشاملة' }}
-                                </span>
-
-                                <span class="badge free" *ngIf="book.source === 'internal' && book.isFree">مجاني</span>
-                                <span class="badge premium"
-                                    *ngIf="book.source === 'internal' && !book.isFree">مميز</span>
-                                <span class="badge downloaded" *ngIf="book.isDownloaded">
-                                    <i class="fas fa-check"></i> محمل
+                            <!-- Badges Layer -->
+                            <div class="card-badges absolute top-3 right-3 flex flex-col gap-2 z-10">
+                                <span class="badge text-[10px] font-black px-3 py-1 rounded-full backdrop-blur-md shadow-lg flex items-center gap-2"
+                                    [ngClass]="book.source === 'internal' ? 'bg-indigo-600/80 text-white' : 'bg-green-500/80 text-white'">
+                                    <fa-icon [icon]="book.source === 'internal' ? ['fas', 'check-circle'] : ['fas', 'globe']"></fa-icon>
+                                    {{ book.source === 'internal' ? 'كنوز' : 'الشاملة' }}
                                 </span>
                             </div>
 
-                            <!-- Overlay Buttons -->
-                            <div class="card-overlay" *ngIf="!book.isDownloaded && !book.isDownloading">
-                                <button class="btn-download"
-                                    (click)="book.source === 'internal' ? downloadInternalBook(book.originalObject, $event) : downloadExternalBook(book.originalObject)">
-                                    <i class="fas fa-download"></i> تحميل
-                                </button>
-                            </div>
+                            <!-- Interactive Overlays -->
+                            <div class="card-overlay absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 z-20">
+                                <ng-container *ngIf="!book.isDownloaded && !book.isDownloading">
+                                    <button (click)="book.source === 'internal' ? downloadInternalBook(book.originalObject, $event) : downloadExternalBook(book.originalObject)"
+                                        class="bg-white text-gray-900 font-black px-6 py-2 rounded-full shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-2">
+                                        <fa-icon [icon]="['fas', 'download']"></fa-icon>
+                                        تحميل
+                                    </button>
+                                </ng-container>
 
-                            <div class="card-overlay" *ngIf="book.isDownloading">
-                                <button
-                                    class="btn-download cursor-not-allowed opacity-100 bg-gray-900/80 text-white hover:bg-gray-900/80">
-                                    <div class="relative w-full text-center flex flex-col items-center">
-                                        <i class="fas fa-spinner fa-spin mb-1 text-yellow-500 text-xl"></i>
-                                        <span class="font-bold text-xs">{{ book.downloadProgress }}%</span>
+                                <ng-container *ngIf="book.isDownloading && !book.isDownloaded">
+                                    <div class="flex flex-col items-center gap-3">
+                                        <div class="w-12 h-12 border-4 border-white/20 border-t-white rounded-full animate-spin"></div>
+                                        <span class="text-white font-black text-xs">{{ book.downloadProgress }}%</span>
                                     </div>
-                                </button>
+                                </ng-container>
+
+                                <ng-container *ngIf="book.isDownloaded">
+                                    <button (click)="book.source === 'internal' ? openEbook(book.originalObject) : openExternalBook(book.originalObject)"
+                                        class="bg-indigo-600 text-white font-black px-8 py-3 rounded-full shadow-xl hover:bg-indigo-700 hover:scale-105 active:scale-95 transition-all flex items-center gap-3">
+                                        <fa-icon [icon]="['fas', 'book-reader']"></fa-icon>
+                                        قراءة
+                                    </button>
+                                </ng-container>
                             </div>
 
-                            <div class="card-overlay" *ngIf="book.isDownloaded">
-                                <button class="btn-read"
-                                    (click)="book.source === 'internal' ? openEbook(book.originalObject) : openExternalBook(book.originalObject)">
-                                    <i class="fas fa-book-reader"></i> قراءة
-                                </button>
-                            </div>
+                            <!-- Favorite Button -->
+                            <button class="absolute top-3 left-3 w-8 h-8 rounded-full flex items-center justify-center z-30 transition-all shadow-lg active:scale-75"
+                                (click)="book.source === 'internal' ? toggleFavorite(book.originalObject, $event) : toggleExternalFavorite(book.originalObject, $event)"
+                                [ngClass]="(book.source === 'internal' ? isFavorite(book.originalObject) : isExternalFavorite(book.originalObject)) ? 'bg-red-500 text-white' : 'bg-white/80 text-gray-400 hover:text-red-500 backdrop-blur-md'">
+                                <fa-icon [icon]="['fas', 'heart']"></fa-icon>
+                            </button>
                         </div>
 
-                        <div class="card-info">
-                            <h3>{{ book.title }}</h3>
-                            <p class="author">{{ book.author }}</p>
-                            <div class="card-meta">
-                                <span class="category">{{ book.category || 'عام' }}</span>
-                                <div class="rating" *ngIf="book.rating">
-                                    <i class="fas fa-star"></i> {{ book.rating }}
+                        <div class="card-info p-5">
+                            <div class="flex justify-between items-start mb-2">
+                                <h3 class="font-black text-gray-800 dark:text-white text-sm line-clamp-1 leading-none">{{ book.title }}</h3>
+                                <div class="flex items-center gap-1 text-yellow-500 text-[10px] font-bold" *ngIf="book.rating">
+                                    <fa-icon [icon]="['fas', 'star']"></fa-icon>
+                                    <span>{{ book.rating }}</span>
                                 </div>
                             </div>
-                        </div>
-
-                        <div class="card-actions">
-                            <button class="action-btn"
-                                (click)="book.source === 'internal' ? toggleFavorite(book.originalObject, $event) : toggleExternalFavorite(book.originalObject, $event)"
-                                [class.active]="book.source === 'internal' ? isFavorite(book.originalObject) : isExternalFavorite(book.originalObject)">
-                                <i class="far fa-heart"
-                                    *ngIf="book.source === 'internal' ? !isFavorite(book.originalObject) : !isExternalFavorite(book.originalObject)"></i>
-                                <i class="fas fa-heart"
-                                    *ngIf="book.source === 'internal' ? isFavorite(book.originalObject) : isExternalFavorite(book.originalObject)"></i>
-                            </button>
+                            <p class="author text-gray-500 dark:text-gray-400 text-xs font-bold mb-4 line-clamp-1">{{ book.author }}</p>
+                            
+                            <div class="flex items-center justify-between">
+                                <span class="category text-[10px] font-black text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-lg">
+                                    {{ book.category || 'عام' }}
+                                </span>
+                                <span class="text-[10px] font-bold text-gray-400" *ngIf="book.source === 'internal' && book.isFree">
+                                    مجاني
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -457,12 +821,10 @@
 
                 <!-- Combined Pagination / Load More -->
                 <div class="pagination mt-12 mb-12 flex justify-center"
-                    *ngIf="(hasMoreBooks || totalExternalPages > 1) && unifiedBooks.length > 0 && viewMode !== 'subscription'">
+                    *ngIf="(hasMoreBooks || totalExternalPages > 1) && unifiedBooks.length > 0 && (viewMode !== 'subscription' || hasActiveSubscription()) && (viewMode !== 'all' || selectedCategory || searchQuery.trim().length > 0)">
                     <button (click)="loadMoreUnified()" [disabled]="isLoadingMore"
                         class="group relative px-8 py-3 rounded-full bg-white dark:bg-gray-800 text-gray-800 dark:text-white font-bold shadow-lg hover:shadow-xl transition-all border border-gray-200 dark:border-gray-700 hover:border-yellow-500 overflow-hidden">
-                        <div
-                            class="absolute inset-0 w-full h-full bg-gradient-to-r from-yellow-500/0 via-yellow-500/10 to-yellow-500/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000">
-                        </div>
+                        <div class="absolute inset-0 w-full h-full bg-gradient-to-r from-yellow-500/0 via-yellow-500/10 to-yellow-500/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
                         <div class="flex items-center gap-3 relative z-10">
                             <span *ngIf="!isLoadingMore">عرض المزيد من النتائج</span>
                             <i *ngIf="!isLoadingMore"
@@ -492,16 +854,13 @@
 
         </div>
     </main>
-    <!-- Hidden Invoice Template (Same as SubscriptionComponent) -->
-    <div class="fixed top-0 left-0 w-[210mm] min-h-[297mm] bg-white text-black p-10 z-[-1] opacity-0 pointer-events-none"
-        id="invoice-template">
 
+    <!-- Hidden Invoice Template -->
+    <div class="fixed top-0 left-0 w-[210mm] min-h-[297mm] bg-white text-black p-10 z-[-1] opacity-0 pointer-events-none" id="invoice-template">
         <!-- Header with Logo -->
         <div class="flex justify-between items-start border-b-2 border-yellow-500 pb-6 mb-8" dir="rtl">
             <div class="flex items-center gap-4">
-                <!-- Logo -->
-                <img src="logoname2.jpg" onerror="this.src='logo.ico'"
-                    class="w-24 h-24 rounded-full border-2 border-gray-100 shadow-sm object-cover">
+                <img src="logoname2.jpg" onerror="this.src='logo.ico'" class="w-24 h-24 rounded-full border-2 border-gray-100 shadow-sm object-cover">
                 <div>
                     <h1 class="text-3xl font-bold text-gray-900 leading-tight">فاتورة ضريبية مبسطة</h1>
                     <p class="text-gray-500 text-sm mt-1">knoozbook بوك الرقمية</p>
@@ -518,7 +877,6 @@
 
         <!-- Info Grid -->
         <div class="grid grid-cols-2 gap-10 mb-10" dir="rtl">
-            <!-- Client Info -->
             <div class="bg-gray-50 p-5 rounded-xl border border-gray-100">
                 <h3 class="font-bold text-gray-800 mb-4 border-b border-gray-200 pb-2 flex items-center gap-2">
                     <i class="fas fa-user text-yellow-500"></i> بيانات العميل
@@ -535,7 +893,6 @@
                 </div>
             </div>
 
-            <!-- Invoice Details -->
             <div class="bg-gray-50 p-5 rounded-xl border border-gray-100 text-left" dir="ltr">
                 <h3 class="font-bold text-gray-800 mb-4 border-b border-gray-200 pb-2 flex items-center gap-2">
                     <i class="fas fa-file-invoice text-yellow-500"></i> Invoice Details
@@ -573,27 +930,21 @@
                         <span class="text-xs text-gray-500">Digital Library Access - Premium Plan</span>
                     </td>
                     <td class="py-4 px-4 text-center text-gray-600 font-mono" id="invoice-duration">30 Days</td>
-                    <td class="py-4 px-4 text-left font-bold font-mono text-lg text-gray-900" id="invoice-price">0.00
-                        EGP</td>
+                    <td class="py-4 px-4 text-left font-bold font-mono text-lg text-gray-900" id="invoice-price">0.00 EGP</td>
                 </tr>
             </tbody>
         </table>
 
         <!-- Totals & QR -->
         <div class="flex justify-between items-end mb-12" dir="rtl">
-
-            <!-- Trust / QR Section -->
             <div class="text-center w-32">
-                <!-- Mock QR Code -->
                 <div class="bg-white p-2 border border-gray-200 rounded-lg inline-block mb-2">
-                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=KNOOZBOOK-INVOICE-VERIFIED"
-                        class="w-24 h-24 opacity-80 mix-blend-multiply" alt="QR Code">
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=KNOOZBOOK-INVOICE-VERIFIED" class="w-24 h-24 opacity-80 mix-blend-multiply" alt="QR Code">
                 </div>
                 <p class="text-[10px] text-gray-400">Scan to Verify</p>
                 <p class="text-[10px] text-gray-400 font-mono mt-1" id="invoice-qr-id">REF-000</p>
             </div>
 
-            <!-- Totals Box -->
             <div class="bg-gray-50 p-6 rounded-xl w-80 border border-gray-200">
                 <div class="flex justify-between items-center mb-3 text-sm">
                     <span class="text-gray-600">المجموع قبل الضريبة:</span>
@@ -603,8 +954,7 @@
                     <span class="text-gray-600">ضريبة القيمة المضافة (0%):</span>
                     <span class="font-mono font-medium">0.00 EGP</span>
                 </div>
-                <div
-                    class="flex justify-between items-center text-xl font-bold text-gray-900 mt-4 pt-4 border-t border-gray-300">
+                <div class="flex justify-between items-center text-xl font-bold text-gray-900 mt-4 pt-4 border-t border-gray-300">
                     <span>الإجمالي المستحق:</span>
                     <span class="font-mono text-yellow-600" id="invoice-total">0.00 EGP</span>
                 </div>
@@ -627,11 +977,39 @@
                     <p>&copy; 2025 KNOOZ BOOK. All Rights Reserved.</p>
                 </div>
             </div>
-            <!-- Security Badge -->
             <div class="mt-6 flex justify-center items-center gap-2 opacity-50">
                 <i class="fas fa-lock text-gray-400"></i>
-                <span class="text-[10px] text-gray-400 uppercase tracking-widest">Secure Payment Transaction • SSL
-                    Encrypted</span>
+                <span class="text-[10px] text-gray-400 uppercase tracking-widest">Secure Payment Transaction • SSL Encrypted</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Special Offer / Surprise Modal -->
+    <div class="modal-overlay surprise-overlay" *ngIf="showSurpriseModal" (click)="closeSurpriseModal()">
+        <div class="modal-content surprise-content animate-pop-in" (click)="$event.stopPropagation()">
+            <div class="confetti-container"></div>
+            <div class="surprise-header">
+                <div class="icon-box">
+                    <fa-icon [icon]="['fas', 'gift']" class="gift-icon"></fa-icon>
+                </div>
+                <h2>مفاجأة سارة لك! 🎁</h2>
+            </div>
+            <div class="surprise-body">
+                <p class="welcome-text">أهلاً بك يا <span>{{ authService.currentUserValue?.username }}</span> في عائلة كنوز!</p>
+                <div class="offer-box">
+                    <p class="offer-label">لقد تم اختيارك للحصول على:</p>
+                    <div class="offer-value">
+                        <fa-icon [icon]="getOfferIcon(currentOffer?.type)" class="offer-icon"></fa-icon>
+                        <span>{{ getOfferDescription(currentOffer) }}</span>
+                    </div>
+                </div>
+                <p class="enjoy-text">استمتع الآن بالقراءة اللامحدودة وآلاف الكتب العلمية والنادرة.</p>
+            </div>
+            <div class="surprise-footer">
+                <button class="btn-claim" (click)="closeSurpriseModal()">
+                    <span>رائع! ابدأ القراءة الآن</span>
+                    <fa-icon [icon]="['fas', 'arrow-left']"></fa-icon>
+                </button>
             </div>
         </div>
     </div>

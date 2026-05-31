@@ -146,18 +146,15 @@
 /* Main Content Area - Centered and Fixed Height */
 .main-content {
     position: absolute;
-    top: 74px;
-    /* Below header */
-    bottom: calc(90px + var(--safe-area-bottom));
-    /* Above footer */
+    top: 64px; /* Align exactly with header height */
+    bottom: var(--safe-area-bottom, 0px);
     left: 0;
     right: 0;
-    overflow: hidden;
+    overflow: hidden; /* Do NOT scroll here — epub.js .epub-container is the sole scroll owner */
     display: flex;
     justify-content: center;
-    align-items: center;
-    /* Center content vertically */
-    padding: 20px 0;
+    align-items: flex-start;
+    padding: 0;
 }
 
 .reader-content {
@@ -169,9 +166,21 @@
     -webkit-user-select: text;
     -moz-user-select: text;
     -ms-user-select: text;
-    touch-action: manipulation;
-    padding-bottom: 10px;
-    /* Extra room to prevent clipping */
+    overflow: hidden; /* Let epub.js .epub-container handle all scrolling */
+}
+
+/* CRITICAL: epub.js creates .epub-container as the scroll owner for continuous mode.
+   We must ensure it has proper touch scrolling and hidden scrollbars. */
+::ng-deep .epub-container {
+    -webkit-overflow-scrolling: touch !important; /* Smooth touch scroll on iOS */
+    overflow-anchor: none !important; /* Prevent snap-back during lazy loading */
+    touch-action: pan-y !important; /* Allow vertical touch scrolling */
+    scrollbar-width: none !important; /* Firefox */
+    -ms-overflow-style: none !important; /* IE/Edge */
+}
+
+::ng-deep .epub-container::-webkit-scrollbar {
+    display: none !important; /* Chrome/Safari */
 }
 
 /* Force BOK/Text content to satisfy theme colors */
@@ -199,7 +208,7 @@
     -webkit-user-select: text;
     width: 100% !important;
     max-width: 100% !important;
-    height: 100% !important;
+    /* Height must not be restricted; epub.js calculates and sets it dynamically for continuous scrolling */
     box-shadow: none !important;
     border: none !important;
 }
@@ -1451,4 +1460,435 @@
         opacity: 1;
         transform: translate(-50%, -50%) scale(1);
     }
+}
+
+/* ============================
+   Auto-Scroll Floating Controls
+   ============================ */
+.auto-scroll-fab {
+    position: fixed;
+    bottom: 24px;
+    left: 24px;
+    z-index: 900;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    background: transparent !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+}
+
+.auto-scroll-fab.active {
+    bottom: 28px;
+    background: transparent !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+}
+
+.auto-scroll-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(30, 30, 30, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 24px;
+    padding: 6px 12px;
+    border: 1px solid rgba(216, 173, 66, 0.3);
+    animation: fadeSlideUp 0.25s ease-out;
+}
+
+.auto-scroll-speed {
+    font-size: 13px;
+    font-weight: 600;
+    color: #d8ad42;
+    min-width: 32px;
+    text-align: center;
+    font-family: 'Inter', sans-serif;
+}
+
+.auto-scroll-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none !important;
+    outline: none !important;
+    background: transparent !important; /* Force transparent base to block global styles */
+    cursor: pointer;
+    transition: all 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.auto-scroll-btn:focus,
+.auto-scroll-btn:active,
+.auto-scroll-btn:hover {
+    outline: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+.auto-scroll-btn.speed-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: #e5e7eb !important;
+    font-size: 12px;
+}
+
+.auto-scroll-btn.speed-btn:hover {
+    background: rgba(255, 255, 255, 0.2) !important;
+}
+
+.auto-scroll-btn.speed-btn:disabled {
+    opacity: 0.3 !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    cursor: not-allowed;
+}
+
+.auto-scroll-btn.toggle-btn {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #d8ad42, #c49a30) !important; /* RESTORED GOLD BACKGROUND */
+    color: #1a1a1a !important;
+    font-size: 18px;
+    box-shadow: 0 4px 16px rgba(216, 173, 66, 0.4) !important;
+}
+
+.auto-scroll-btn.toggle-btn:hover,
+.auto-scroll-btn.toggle-btn:focus,
+.auto-scroll-btn.toggle-btn:active {
+    transform: scale(1.08);
+    background: linear-gradient(135deg, #e5bd54, #d8ad42) !important; /* Beautiful gold hover/active */
+    color: #1a1a1a !important;
+    box-shadow: 0 6px 20px rgba(216, 173, 66, 0.6) !important;
+}
+
+.auto-scroll-btn.toggle-btn:active {
+    transform: scale(0.95);
+}
+
+/* When auto-scrolling, pulse the button */
+.auto-scroll-fab.active .toggle-btn {
+    animation: autoScrollPulse 2s ease-in-out infinite;
+}
+
+@keyframes autoScrollPulse {
+    0%, 100% { box-shadow: 0 4px 16px rgba(216, 173, 66, 0.4); }
+    50% { box-shadow: 0 4px 24px rgba(216, 173, 66, 0.7); }
+}
+
+@keyframes fadeSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+    .auto-scroll-fab {
+        bottom: 16px;
+        left: 16px;
+    }
+
+    .auto-scroll-btn.toggle-btn {
+        width: 46px;
+        height: 46px;
+        font-size: 16px;
+    }
+
+    .auto-scroll-controls {
+        padding: 4px 10px;
+    }
+
+    .auto-scroll-btn.speed-btn {
+        width: 28px;
+        height: 28px;
+        font-size: 11px;
+    }
+
+    .auto-scroll-speed {
+        font-size: 12px;
+    }
+}
+
+/* Theme-aware: light theme adjustments */
+:host-context(.theme-light) .auto-scroll-controls,
+:host-context(.theme-sepia) .auto-scroll-controls {
+    background: rgba(255, 255, 255, 0.9);
+    border-color: rgba(216, 173, 66, 0.4);
+}
+
+:host-context(.theme-light) .auto-scroll-speed,
+:host-context(.theme-sepia) .auto-scroll-speed {
+    color: #c49a30;
+}
+
+:host-context(.theme-light) .auto-scroll-btn.speed-btn,
+:host-context(.theme-sepia) .auto-scroll-btn.speed-btn {
+    background: rgba(0, 0, 0, 0.06);
+    color: #333;
+}
+
+:host-context(.theme-light) .auto-scroll-btn.speed-btn:hover,
+:host-context(.theme-sepia) .auto-scroll-btn.speed-btn:hover {
+    background: rgba(0, 0, 0, 0.12);
+}
+
+/* ============================
+   Selection Popup Helper Controls
+   ============================ */
+.selection-helpers {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border-left: 1px solid var(--ui-border);
+    padding-left: 12px;
+    margin-left: 4px;
+}
+
+.selection-popup .selection-action-btn.helper-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 0.85rem;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ui-text);
+    background: transparent !important;
+    border: none !important;
+    transition: all 0.2s ease;
+}
+
+.selection-popup .selection-action-btn.helper-btn:hover {
+    background: rgba(216, 173, 66, 0.15) !important;
+    color: var(--accent-color) !important;
+}
+
+.selection-popup .selection-action-btn.sentence-btn {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--accent-color) !important;
+    color: var(--accent-color) !important;
+    background: transparent !important;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.selection-popup .selection-action-btn.sentence-btn:hover {
+    background: var(--accent-color) !important;
+    color: #fff !important;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+    .selection-popup {
+        padding: 6px 12px;
+        gap: 8px;
+        border-radius: 30px;
+    }
+    
+    .color-options {
+        padding-left: 8px;
+        gap: 5px;
+    }
+    
+    .selection-helpers {
+        padding-left: 8px;
+        gap: 4px;
+    }
+    
+    .selection-popup .selection-action-btn.helper-btn {
+        width: 24px;
+        height: 24px;
+        font-size: 0.75rem;
+    }
+    
+    .selection-popup .selection-action-btn.sentence-btn {
+        font-size: 0.7rem;
+        padding: 2px 6px;
+    }
+}
+
+/* ============================
+   Bottom Floating Page Bar
+   ============================ */
+.bottom-page-bar {
+    position: fixed;
+    bottom: 20px;
+    right: 50%;
+    transform: translateX(50%);
+    background: rgba(30, 30, 30, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    z-index: 850;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    direction: rtl;
+    min-width: 250px;
+}
+
+.bottom-page-bar.hidden {
+    opacity: 0;
+    transform: translate(50%, 30px);
+    pointer-events: none;
+}
+
+.bottom-page-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+}
+
+.page-number-text {
+    font-size: 13px;
+    color: #ffffff;
+    font-family: 'Cairo', sans-serif;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.page-number-text strong {
+    font-weight: 800;
+}
+
+.page-progress-track {
+    flex: 1;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 3px;
+    overflow: hidden;
+    min-width: 80px;
+}
+
+.page-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #d8ad42, #f0c14b);
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+
+.progress-percent-text {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.7);
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+}
+
+/* Theme adaptation for Bottom Bar */
+:host-context(.theme-light) .bottom-page-bar,
+:host-context(.theme-sepia) .bottom-page-bar {
+    background: rgba(255, 255, 255, 0.9);
+    border-color: rgba(0, 0, 0, 0.08);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+:host-context(.theme-light) .page-number-text,
+:host-context(.theme-sepia) .page-number-text {
+    color: #1a1a1a;
+}
+
+:host-context(.theme-light) .page-progress-track,
+:host-context(.theme-sepia) .page-progress-track {
+    background: rgba(0, 0, 0, 0.08);
+}
+
+:host-context(.theme-light) .progress-percent-text,
+:host-context(.theme-sepia) .progress-percent-text {
+    color: rgba(0, 0, 0, 0.6);
+}
+
+/* ============================
+   Floating Page Navigation Chevrons
+   ============================ */
+.page-nav-chevrons {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    transform: translateY(-50%);
+    pointer-events: none;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 20px;
+    z-index: 800;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.page-nav-chevrons.hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-50%) scale(0.95);
+}
+
+.nav-chevron-btn {
+    pointer-events: auto;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: rgba(30, 30, 30, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-size: 16px;
+}
+
+.nav-chevron-btn:hover {
+    background: rgba(196, 160, 98, 0.95);
+    border-color: rgba(196, 160, 98, 0.4);
+    transform: scale(1.12);
+    box-shadow: 0 8px 25px rgba(196, 160, 98, 0.45);
+    color: #ffffff;
+}
+
+.nav-chevron-btn:active {
+    transform: scale(0.95);
+}
+
+/* Theme adaptation for Floating Chevrons */
+:host-context(.theme-light) .nav-chevron-btn,
+:host-context(.theme-sepia) .nav-chevron-btn {
+    background: rgba(255, 255, 255, 0.85);
+    border-color: rgba(0, 0, 0, 0.08);
+    color: #1a1a1a;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+}
+
+:host-context(.theme-light) .nav-chevron-btn:hover,
+:host-context(.theme-sepia) .nav-chevron-btn:hover {
+    background: rgba(196, 160, 98, 0.95);
+    color: #ffffff;
+    border-color: rgba(196, 160, 98, 0.4);
+    box-shadow: 0 8px 25px rgba(196, 160, 98, 0.35);
 }

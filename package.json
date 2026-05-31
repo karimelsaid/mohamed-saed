@@ -4,6 +4,8 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
+    "dev": "ng serve kenouz --proxy-config proxy.conf.json --port 4200 --open",
+    "dev:no-ssr": "ng serve kenouz --proxy-config proxy.conf.json --port 4200 --open -c no-ssr",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",

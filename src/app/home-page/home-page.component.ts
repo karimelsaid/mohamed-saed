@@ -60,9 +60,9 @@ export class HomePageComponent implements OnInit {
 
   // New Hero Configuration
   heroConfig = {
-    mode: 'slider',
-    columnCount: 4,
-    scrollingSpeed: 'fast'
+    mode: 'scrolling',
+    columnCount: 5,
+    scrollingSpeed: 'slow'
   };
   heroBooks: any[] = [];
   heroColumns: any[][] = [];
@@ -89,6 +89,7 @@ export class HomePageComponent implements OnInit {
 
   ngOnInit(): void {
     this.initHero();
+    this.loadDynamicCategories();
 
     // Set SEO meta tags for the homepage
     this.seoService.updateMetaTags({
@@ -99,8 +100,18 @@ export class HomePageComponent implements OnInit {
     });
 
     this.dataService.getData().subscribe((data: any) => {
-      // First sort by ID to get the newest ones
-      const sorted = data.sort((a: any, b: any) => b.products_id - a.products_id);
+      // Normalize IDs
+      const normalizedData = data.map((b: any) => ({
+        ...b,
+        products_id: b.products_id || b.product_id || b._id
+      }));
+
+      // First sort to get the newest ones (safe comparison for string or numeric IDs)
+      const sorted = normalizedData.sort((a: any, b: any) => {
+        const idA = String(a.products_id);
+        const idB = String(b.products_id);
+        return idB.localeCompare(idA);
+      });
       
       // Take the top 200 newest and shuffle them for variety
       const newestPool = sorted.slice(0, 200);
@@ -108,6 +119,13 @@ export class HomePageComponent implements OnInit {
       
       this.allProducts = [...this.dataService.shuffleArray(newestPool), ...rest];
       this.generateBackgroundColumns();
+      
+      // Fallback: If we are in scrolling mode and haven't loaded specific hero books yet, use allProducts
+      if (this.heroConfig.mode === 'scrolling' && (!this.heroBooks || this.heroBooks.length === 0)) {
+        this.heroBooks = this.allProducts.slice(0, 32);
+        this.prepareHeroColumns();
+      }
+      
       this.isLoading = false;
     }, error => {
       console.error('Error fetching data for home page:', error);
@@ -182,25 +200,10 @@ export class HomePageComponent implements OnInit {
     return bookName.trim().replace(/\s+/g, '-');
   }
 
-  getProductRoute(product: any): string[] {
-    const slug = this.getBookSlug(product.product_name || '');
-    const category = (product.product_category || '').toLowerCase();
-
-    // 1. Try to find a match in mainSections
-    const cat = this.mainSections.find(c =>
-      c.id !== 'all' && c.filter?.some(f => category.includes(f.toLowerCase()))
-    );
-
-    if (cat) {
-      return ['/' + (cat.id === 'books' ? 'book' : cat.id), product.products_id, slug];
-    }
-
-    // 2. Broad check for book-related keywords if no specific match
-    const bookKeywords = ['كتب', 'روايات', 'قصص', 'تطوير الذات', 'دينية', 'تاريخ', 'أطفال', 'أعمال', 'قواميس', 'صحة', 'فنون'];
-    const isBook = bookKeywords.some(key => category.includes(key));
-
-    const route = isBook ? 'book' : 'others';
-    return ['/' + route, product.products_id, slug];
+  navigateToProduct(product: any) {
+    const slug = this.getBookSlug(product.product_name);
+    // Use /book for all products to ensure they open in BookDetailsComponent
+    this.router.navigate(['/book', product.products_id, slug]);
   }
 
   getBookImageUrl(book: any): string {
@@ -277,15 +280,26 @@ export class HomePageComponent implements OnInit {
           this.heroBooks = res.products;
           this.prepareHeroColumns();
           this.isLoading = false;
-          // Trigger change detection implicitly via property update
         } else {
-          console.warn('Hero books response unsuccessful', res);
-          this.fallbackToSlider();
+          console.warn('Hero books response unsuccessful or empty, falling back to allProducts');
+          if (this.allProducts && this.allProducts.length > 0) {
+            this.heroBooks = this.allProducts.slice(0, 32);
+            this.prepareHeroColumns();
+            this.isLoading = false;
+          } else {
+            this.fallbackToSlider();
+          }
         }
       },
       error: (err) => {
         console.error('Error loading hero books', err);
-        this.fallbackToSlider();
+        if (this.allProducts && this.allProducts.length > 0) {
+          this.heroBooks = this.allProducts.slice(0, 32);
+          this.prepareHeroColumns();
+          this.isLoading = false;
+        } else {
+          this.fallbackToSlider();
+        }
       }
     });
   }
@@ -297,7 +311,10 @@ export class HomePageComponent implements OnInit {
   }
 
   prepareHeroColumns(): void {
-    const count = this.heroConfig.columnCount || 4;
+    let count = this.heroConfig.columnCount || 5;
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      count = 3; // Ensure books are only distributed to visible columns on mobile
+    }
     this.heroColumns = Array.from({ length: count }, () => []);
 
     // Distribute books among columns randomly or sequentially
@@ -305,8 +322,28 @@ export class HomePageComponent implements OnInit {
       this.heroColumns[index % count].push(book);
     });
 
-    // Mirror books to ensure seamless infinite scroll if needed, 
-    // but the CSS marquee usually handles this by doubling the content.
+    // Mirror books to ensure seamless infinite scroll if needed
+    // and prevent empty gaps if the list is too short.
+    this.heroColumns.forEach(col => {
+      if (col.length > 0) {
+        const original = [...col];
+        // Ensure at least 6 items per column to cover screen height safely
+        while (col.length < 6) {
+          col.push(...original);
+        }
+      }
+    });
+  }
+
+  getAnimationDuration(itemCount: number, speed: string = 'slow'): string {
+    // Determine seconds to spend per item to maintain constant physical speed
+    let secondsPerItem = 8; // slow
+    if (speed === 'medium' || speed === 'متوسطة') secondsPerItem = 5;
+    if (speed === 'fast' || speed === 'سريعة') secondsPerItem = 2.5;
+    
+    // Total duration = items * time per item
+    // Since translateY(-50%) scrolls exactly 'itemCount' items, this makes the visual speed constant
+    return `${itemCount * secondsPerItem}s`;
   }
 
   setPromoImages(): void {
@@ -416,10 +453,6 @@ export class HomePageComponent implements OnInit {
     }
   }
 
-  navigateToProduct(product: any): void {
-    const route = this.getProductRoute(product);
-    this.router.navigate(route);
-  }
 
   subscribeNewsletter(): void {
     if (!this.newsletterEmail || !this.newsletterEmail.includes('@')) {
@@ -471,9 +504,8 @@ export class HomePageComponent implements OnInit {
       return;
     }
     
-    // Detect if we should use marquee or just center items
-    // If we have 6 or more items, activate marquee
-    this.isMarqueeActive = this.merchants.length >= 6;
+    // Activate marquee if we have any items to show
+    this.isMarqueeActive = this.merchants.length > 0;
 
     // Just use the original list. Duplication for the loop is handled in the HTML template.
     this.marqueeMerchants = [...this.merchants];
@@ -493,4 +525,22 @@ export class HomePageComponent implements OnInit {
     const sanitizedName = merchant.name.trim().replace(/\s+/g, '_');
     return `${environment.uploadsBaseUrl}/publishers/${sanitizedName}.webp`;
   }
+
+  loadDynamicCategories(): void {
+    this.dataService.getCategories().subscribe({
+      next: (res) => {
+        if (res && res.success && res.categories.length > 0) {
+          const dynamicGenres = res.categories.map((cat: string) => ({
+            id: cat,
+            name: cat,
+            filter: [cat]
+          }));
+          // Merge with unique logic to keep "All" and potentially some hardcoded ones if needed
+          this.bookGenres = [{ id: 'all', name: 'الكل' }, ...dynamicGenres];
+        }
+      },
+      error: (err) => console.error('Error loading dynamic categories:', err)
+    });
+  }
+
 }

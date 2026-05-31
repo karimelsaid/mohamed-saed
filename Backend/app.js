@@ -57,81 +57,14 @@ const analyticsRoutes = require('./routes/analytics.routes');
 const bourseRoutes = require('./routes/bourse.routes');
 const automationRoutes = require('./routes/automation.routes');
 const newsletterRoutes = require('./routes/newsletter.routes');
+const marketerRoutes = require('./routes/marketer.routes');
+const marketerController = require('./controllers/marketer.controller');
+const specialOffersRoutes = require('./routes/special-offers.routes');
 const express = require('express');
-const bodyParser = require('body-parser');
 const app = express();
-
-// --- Smart Path Detection ---
-// On server, files are in root. Locally, they are in /Backend.
-const isInsideBackend = __dirname.endsWith('Backend') || fs.existsSync(path.join(__dirname, '..', 'package.json'));
-const projectRoot = isInsideBackend ? path.join(__dirname, '..') : __dirname;
-
-const http = require('http');
-const server = http.createServer(app);
-const { Server } = require('socket.io');
-
-const io = new Server(server, {
-  path: '/api/socket.io',
-  transports: ['websocket'], // Force websocket to avoid XHR polling errors on mobile/proxies
-  cors: {
-    origin: (origin, callback) => {
-      // Allow all origins for socket in production if needed, or stick to allowedOrigins
-      if (!origin || allowedOrigins.includes(origin.replace(/\/$/, ""))) {
-        callback(null, true);
-      } else {
-        console.warn(`📡 [Socket CORS] Origin ${origin} allowed via fallback logic`);
-        callback(null, true);
-      }
-    },
-    methods: ["GET", "POST"],
-    credentials: true
-  },
-  allowEIO3: true // Support older clients if any
-});
-
-const port = process.env.PORT || 3000;
-const isProduction = process.env.NODE_ENV === 'production';
-
-// Trust proxy is required for secure cookies behind a reverse proxy (e.g. Nginx/Cloudflare)
-if (isProduction) {
-  app.set('trust proxy', 1);
-}
 
 const logStream = fs.createWriteStream(path.join(__dirname, 'requests.log'), { flags: 'a' });
 
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-
-// Rate Limiting - Global
-app.use('/api/', generalLimiter);
-
-// Request Logger for debugging
-app.use((req, res, next) => {
-  const logEntry = `[${new Date().toISOString()}] ${req.method} ${req.url} - Origin: ${req.headers.origin || 'no-origin'} - Headers: ${JSON.stringify(req.headers)}\n`;
-  // console.log(logEntry);
-  logStream.write(logEntry);
-
-  // Log response status
-  const oldSend = res.send;
-  res.send = function (data) {
-    const resLog = `[${new Date().toISOString()}] Response for ${req.url}: ${res.statusCode}\n`;
-    logStream.write(resLog);
-    return oldSend.apply(res, arguments);
-  };
-
-  next();
-});
-
-// إضافة رؤوس Cross-Origin-Opener-Policy و Cross-Origin-Embedder-Policy
-app.use((req, res, next) => {
-  // Relaxed headers to allow Google Sign-In popups and external resources
-  res.setHeader('Cross-Origin-Opener-Policy', 'unsafe-none');
-  res.setHeader('Cross-Origin-Embedder-Policy', 'unsafe-none');
-  next();
-});
-
-// إعداد CORS للسماح بالمصادر المناسبة
-// إعداد CORS للسماح بالمصادر المناسبة
 const allowedOrigins = [
   'https://knoozbook.com',
   'https://www.knoozbook.com',
@@ -146,30 +79,107 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Log origin for debugging
-    // if (origin) {
-    //   console.log(`📡 [CORS Request] Origin: ${origin}`);
-    // }
-
+    if (origin) console.log(`📡 [CORS_CHECK] Origin: ${origin}`);
     if (!origin) return callback(null, true);
-
-    // Normalize: remove trailing slash for comparison
-    const normalizedOrigin = origin.replace(/\/$/, "");
-
-    if (allowedOrigins.includes(normalizedOrigin) || allowedOrigins.includes(origin)) {
+    if (allowedOrigins.indexOf(origin) !== -1 || origin.startsWith('http://localhost') || origin.startsWith('https://knoozbook.com')) {
       callback(null, true);
     } else {
-      console.warn(`🛑 [CORS Blocked] Origin "${origin}" is not in whitelist!`);
-      // For debugging, you can temporarily allow everything by calling callback(null, true)
-      // but for production, we keep it strict and just log the failure.
-      callback(null, true); // TEMPORARY: Allow all for debugging, but we will see the log!
+      console.warn(`⚠️ [CORS_REJECTED] Origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
     }
   },
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-  exposedHeaders: ['Content-Length', 'Content-Disposition'],
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
 }));
+
+// On server, files are in root. Locally, they are in /Backend.
+const hasLocalDist = fs.existsSync(path.join(__dirname, 'dist', 'browser'));
+const projectRoot = hasLocalDist ? __dirname : (__dirname.endsWith('Backend') || fs.existsSync(path.join(__dirname, '..', 'package.json')) ? path.join(__dirname, '..') : __dirname);
+
+const http = require('http');
+const server = http.createServer(app);
+const { Server } = require('socket.io');
+
+const io = new Server(server, {
+  path: '/api/socket.io',
+  transports: ['websocket'],
+  cors: {
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin.replace(/\/$/, ""))) {
+        callback(null, true);
+      } else {
+        callback(null, true);
+      }
+    },
+    methods: ["GET", "POST"],
+    credentials: true
+  },
+  allowEIO3: true
+});
+
+const port = process.env.PORT || 3000;
+const isProduction = process.env.NODE_ENV === 'production';
+
+if (isProduction) {
+  app.set('trust proxy', 1);
+}
+
+// Marketer Short Links (Highest Priority - Before Body Parsers)
+app.get('/p/:shortCode', (req, res, next) => {
+  console.log('🚀 [ROOT_P_HIT] Code:', req.params.shortCode);
+  next();
+}, marketerController.redirectShortLink); 
+app.get('/api/p/:shortCode', marketerController.redirectShortLink);
+
+app.get('/api/p/test-config', (req, res) => res.json({ 
+  success: true, 
+  message: 'Marketer Backend is READY', 
+  timestamp: new Date(),
+  version: 'ANTIGRAVITY-MARKETER-FIX-V1'
+}));
+
+app.get('/api/test-now', (req, res) => res.send('API is LIVE and REACHABLE'));
+
+app.use((req, res, next) => {
+  if (req.url.includes('marketer')) {
+    console.log(`📡 [MARKETER_DEBUG_TOP] ${req.method} ${req.url} | Headers: ${JSON.stringify(req.headers)}`);
+  }
+  next();
+});
+
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+ 
+ // Rate Limiting - Global
+ app.use('/api/', generalLimiter);
+ 
+ // Request Logger for debugging
+ app.use((req, res, next) => {
+   res.setHeader('X-Backend-Version', 'ANTIGRAVITY-DEBUG-V5-FINAL');
+   console.log(`📡 [TRAFFIC] ${req.method} ${req.url} | Origin: ${req.headers.origin || 'N/A'}`);
+   const logEntry = `[${new Date().toISOString()}] ${req.method} ${req.url} - Origin: ${req.headers.origin || 'no-origin'} - Headers: ${JSON.stringify(req.headers)}\n`;
+   if (typeof logStream !== 'undefined') {
+     logStream.write(logEntry);
+   }
+ 
+   // Log response status
+   const oldSend = res.send;
+   res.send = function (data) {
+     const resLog = `[${new Date().toISOString()}] Response for ${req.url}: ${res.statusCode}\n`;
+     if (typeof logStream !== 'undefined') {
+       logStream.write(resLog);
+     }
+     return oldSend.apply(res, arguments);
+   };
+ 
+   next();
+ });
+ 
+ app.get('/api/ping', (req, res) => res.json({ success: true, version: 'ANTIGRAVITY-DEBUG-V3', timestamp: new Date() }));
+ app.get('/api/test-order', (req, res) => res.json({ success: true, message: 'API order path is reachable via GET' }));
+ app.post('/api/test-post', (req, res) => res.json({ success: true, message: 'API POST is working', received: req.body }));
+ app.get('/api/test-p', (req, res) => res.send('Marketer routing is working!'));
 
 // Inject IO into request for controllers
 app.use((req, res, next) => {
@@ -575,13 +585,53 @@ app.get('/uploads/:filename', (req, res) => {
 });
 
 // تسجيل المسارات
+app.use('/api/marketer', (req, res, next) => {
+  console.log(`🔍 [MARKETER_ROUTING_DEBUG] ${req.method} ${req.url}`);
+  next();
+});
+
+app.get('/api/marketer/test-db', async (req, res) => {
+  try {
+    const User = require('./models/User.model');
+    const allUsers = await User.find({}).limit(5).select('username email role marketer');
+    const marketerCount = await User.countDocuments({
+      $or: [
+        { role: 'marketer' },
+        { 'marketer.isMarketer': true },
+        { 'marketer.applicationStatus': 'approved' },
+        { 'marketer.applicationStatus': 'pending' }
+      ]
+    });
+    res.json({ success: true, totalUsersSample: allUsers, totalMarketersInDb: marketerCount });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/admin/debug/marketer-stats/:email', async (req, res) => {
+  try {
+    const User = require('./models/User.model');
+    const user = await User.findOne({ email: req.params.email });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.json({
+      email: user.email,
+      role: user.role,
+      marketerConfig: user.marketer,
+      referralCode: user.referralCode
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.use('/api/marketer', marketerRoutes);
+
 app.use('/api/users', usersRoutes);
 app.use('/api/community', communityRoutes);
 app.use('/api/books', booksRoutes);
 app.use('/api/products', productsRoutes);
 app.use('/api/orders', ordersRoutes);
-app.use('/api/payment', paymentRoutes); // تعديل المسار ليكون أكثر تحديداً
-
+app.use('/api/payment', paymentRoutes);
 app.use('/api/chat-ai', chatAiRoutes);
 app.use('/api/admin/settings', adminSettingsRoutes);
 app.use('/api/admin', adminRoutes);
@@ -603,19 +653,12 @@ app.use('/api/subscriptions', subscriptionsRoutes);
 app.use('/api/user-library', userLibraryRoutes);
 app.use('/api/reading-progress', readingProgressRoutes);
 app.use('/api/gamification', gamificationRoutes);
+app.use('/api/special-offers', specialOffersRoutes);
 app.use('/api/notifications', notificationRoutes); // Notification Routes
 app.use('/api/quran-progress', quranProgressRoutes); // Quran Progress Routes
 app.use('/api/mutabaa', require('./routes/mutabaa.routes')); // Smart Mutaba'a Routes
 app.use('/api/hifz-plan', require('./routes/hifzPlan.routes')); // Dynamic Hifz Plan Routes
 app.use('/api/halaqa', require('./routes/halaqa.routes')); // Community Halaqa Routes
-
-// JSON 404 handler for API routes
-app.use('/api/*', (req, res) => {
-  res.status(404).json({
-    success: false,
-    message: `API Route not found: ${req.method} ${req.originalUrl}`
-  });
-});
 
 // Apply specific rate limiters to sensitive routes
 app.use('/api/users/login', authLimiter);
@@ -733,14 +776,30 @@ app.get('*', async (req, res, next) => {
 
   // Development or if SSR is disabled: Fallback to CSR
   const csrPathDefault = path.join(projectRoot, 'dist', 'browser', 'index.csr.html');
+  const indexPathDefault = path.join(projectRoot, 'dist', 'browser', 'index.html');
+  
   if (fs.existsSync(csrPathDefault)) {
+    console.log(`✅ [FALLBACK] Serving index.csr.html from: ${csrPathDefault}`);
     res.sendFile(csrPathDefault);
+  } else if (fs.existsSync(indexPathDefault)) {
+    console.log(`✅ [FALLBACK] Serving index.html from: ${indexPathDefault}`);
+    res.sendFile(indexPathDefault);
   } else {
-    // If we're in ng serve mode, this is expected to be handled by the dev server proxy
-    // but the backend shouldn't crash if it hits this endpoint.
+    console.error('❌ Frontend Entry Point Not Found!');
+    console.error('Searched paths:', { csrPathDefault, indexPathDefault });
+    console.error('projectRoot was:', projectRoot);
+    console.error('__dirname was:', __dirname);
+    console.error('Local dist exists:', fs.existsSync(path.join(__dirname, 'dist', 'browser')));
+    
     res.status(404).json({
       success: false,
-      message: 'Frontend entry point not found in dist/browser. If using ng serve, access via port 4200.'
+      message: 'Frontend entry point not found in dist/browser.',
+      debug: { 
+        projectRoot, 
+        __dirname,
+        csrPathDefault, 
+        localDistFound: fs.existsSync(path.join(__dirname, 'dist', 'browser')) 
+      }
     });
   }
 });
@@ -1047,8 +1106,19 @@ async function startServer() {
     await detectAndUpdateLiveVersion();
 
     server.listen(port, '0.0.0.0', () => {
-      logger.info(`🚀 [VERSION-ANTIGRAVITY-1.1] الخادم يعمل على http://0.0.0.0:${port}`);
-      // Initialize Cron Jobs
+      const os = require('os');
+      const interfaces = os.networkInterfaces();
+      const addresses = [];
+      for (const k in interfaces) {
+        for (const k2 in interfaces[k]) {
+          const address = interfaces[k][k2];
+          if (address.family === 'IPv4' && !address.internal) {
+            addresses.push(address.address);
+          }
+        }
+      }
+      console.log('✅ [SERVER_START] IPs:', addresses.join(', '));
+      console.log(`🚀 [VERSION-ANTIGRAVITY-1.1] Running on http://0.0.0.0:${port}`);
       cronJobs.initCronJobs();
     });
   } catch (err) {
@@ -1057,7 +1127,35 @@ async function startServer() {
   }
 }
 
+// All non-API routes serve Angular
+// JSON 404 handler for API routes
+app.use('/api/*', (req, res) => {
+  console.log(`❌ [MISSED_API] ${req.method} ${req.url} - Not matched by any route`);
+  res.status(404).json({
+    success: false,
+    message: `API Route not found: ${req.method} ${req.originalUrl}`
+  });
+});
+
+// All non-API routes serve Angular
+app.get('*', (req, res) => {
+  res.sendFile(path.join(projectRoot, 'dist', 'browser', 'index.html'));
+});
+
 startServer();
+
+// --- Global Error Handler ---
+app.use((err, req, res, next) => {
+  console.error(`🔥 [ERROR_HANDLER] ${req.method} ${req.url} - ${err.message}`);
+  if (res.headersSent) {
+    return next(err);
+  }
+  res.status(500).json({
+    success: false,
+    message: 'Internal Server Error',
+    error: err.message
+  });
+});
 
 module.exports = {
   app

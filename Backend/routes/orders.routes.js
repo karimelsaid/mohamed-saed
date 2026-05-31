@@ -1,8 +1,10 @@
 const express = require('express');
 const router = express.Router();
+console.log('✅ [OrdersRoutes] File loaded and router initialized');
 const ordersController = require('../controllers/orders.controller');
 
 // Submit new order
+router.get('/ping-test', ordersController.pingOrders);
 router.post('/submit', ordersController.submitOrder);
 
 // Get user orders

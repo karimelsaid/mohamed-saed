@@ -193,11 +193,20 @@
     <span class="nav-label">حسابي</span>
   </div>
 
-  <!-- Admin Panel (Hidden on mobile bottom nav, shown only on desktop) -->
+  <!-- Admin Panel (Shown to admin/staff) -->
   <div *ngIf="isAdmin && !showOnlyNotification" routerLink="/ControlPanel" routerLinkActive="active-pill"
-    [routerLinkActiveOptions]="{exact:true}" class="nav-item-pill group hidden md:flex" #adminLink="routerLinkActive">
+    [routerLinkActiveOptions]="{exact:true}" class="nav-item-pill group flex flex-shrink-0" #adminLink="routerLinkActive">
     <fa-icon [icon]="faTachometerAlt" class="text-lg transition-colors"></fa-icon>
     <span class="nav-label">لوحة التحكم</span>
+  </div>
+
+  <!-- Marketer Hub -->
+  <div *ngIf="isMarketer && !showOnlyNotification" routerLink="/marketer-hub" routerLinkActive="active-pill"
+    [routerLinkActiveOptions]="{exact:true}" class="nav-item-pill group flex-shrink-0" #marketerLink="routerLinkActive">
+    <fa-icon [icon]="faChartLine" class="text-green-500 transition-colors"></fa-icon>
+    <span class="nav-label text-green-600 dark:text-green-400 font-bold">
+      {{ user?.role === 'marketer' || isAdmin ? 'المسوق' : 'اربح' }}
+    </span>
   </div>
 
   <!-- Merchant Panel (Hidden on mobile bottom nav, shown only on desktop) -->

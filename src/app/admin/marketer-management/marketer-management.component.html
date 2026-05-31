@@ -1,0 +1,296 @@
+<div class="p-6 bg-gray-50 dark:bg-slate-900 min-h-screen rtl">
+  <div class="flex justify-between items-center mb-8">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-3">
+        <fa-icon [icon]="faUsers" class="text-blue-600"></fa-icon>
+        إدارة المسوقين <span class="text-[10px] opacity-20">v1.1</span>
+      </h1>
+      <p class="text-gray-500 dark:text-gray-400">إدارة عمولات، مستويات، وطلبات المسوقين</p>
+    </div>
+    
+    <button (click)="showAddModal = true" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl flex items-center gap-2 transition-all">
+      <fa-icon [icon]="faUserPlus"></fa-icon>
+      ترقية مسوق يدوي
+    </button>
+  </div>
+
+  <!-- Tabbed Navigation -->
+  <div class="flex gap-4 mb-6 border-b border-gray-200 dark:border-gray-700">
+    <button 
+      (click)="activeTab = 'list'"
+      [class]="activeTab === 'list' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500'"
+      class="pb-2 px-4 font-bold transition-all"
+    >
+      المسوقين الحاليين ({{ marketers.length }})
+    </button>
+    <button 
+      (click)="activeTab = 'pending'"
+      [class]="activeTab === 'pending' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500'"
+      class="pb-2 px-4 font-bold transition-all flex items-center gap-2"
+    >
+      طلبات التقديم
+      <span *ngIf="pendingApplications.length > 0" class="bg-red-500 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full animate-pulse">{{ pendingApplications.length }}</span>
+    </button>
+    <button 
+      (click)="activeTab = 'global_prizes'"
+      [class]="activeTab === 'global_prizes' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500'"
+      class="pb-2 px-4 font-bold transition-all flex items-center gap-2"
+    >
+      <fa-icon [icon]="faTrophy" class="text-yellow-500"></fa-icon>
+      الجوائز العامة
+    </button>
+  </div>
+
+  <!-- 1. Marketers List -->
+  <div *ngIf="activeTab === 'list'" class="grid grid-cols-1 gap-6 animate-fade-in">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden">
+      <table class="w-full text-right">
+        <thead class="bg-gray-50 dark:bg-slate-700 text-gray-500 dark:text-gray-300 text-xs uppercase">
+          <tr>
+            <th class="px-6 py-4">المسوق</th>
+            <th class="px-6 py-4">العمولة</th>
+            <th class="px-6 py-4">المستوى</th>
+            <th class="px-6 py-4">النقاط</th>
+            <th class="px-6 py-4">الأرباح</th>
+            <th class="px-6 py-4">الإجراءات</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-slate-700">
+          <tr *ngFor="let m of marketers" class="hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">
+            <td class="px-6 py-4">
+              <div class="font-bold text-gray-800 dark:text-white">{{ m.username }}</div>
+              <div class="text-xs text-gray-500">{{ m.email }}</div>
+            </td>
+            <td class="px-6 py-4">
+              <div class="flex items-center gap-2">
+                <input type="number" [(ngModel)]="m.marketer.commissionRate" class="w-16 bg-transparent border-b border-gray-300 dark:border-slate-600 focus:outline-none focus:border-blue-500 text-center">
+                <span class="text-gray-400">%</span>
+              </div>
+            </td>
+            <td class="px-6 py-4">
+              <input type="text" [(ngModel)]="m.marketer.levelLabel" class="bg-transparent border-b border-gray-300 dark:border-slate-600 focus:outline-none focus:border-blue-500">
+            </td>
+            <td class="px-6 py-4 text-gray-600 dark:text-gray-400">{{ m.marketer.points || 0 }}</td>
+            <td class="px-6 py-4 font-bold text-green-600">{{ m.marketer.totalEarnings || 0 }} ج.م</td>
+            <td class="px-6 py-4">
+              <div class="flex gap-2">
+                <button (click)="updateConfig(m)" class="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors" title="حفظ التعديلات">
+                  <fa-icon [icon]="faEdit"></fa-icon>
+                </button>
+                <button (click)="selectedMarketer = m" class="p-2 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded-lg transition-colors" title="إسناد مهمة">
+                  <fa-icon [icon]="faTasks"></fa-icon>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div *ngIf="loading" class="p-12 text-center text-gray-500">جاري تحميل البيانات...</div>
+    </div>
+  </div>
+
+  <!-- 2. Pending Applications -->
+  <div *ngIf="activeTab === 'pending'" class="animate-fade-in">
+    <div *ngIf="pendingApplications.length === 0" class="text-center py-20 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700">
+      <fa-icon [icon]="faEnvelopeOpenText" class="text-5xl opacity-10 mb-4 block"></fa-icon>
+      <p class="opacity-50">لا توجد طلبات انضمام قيد الانتظار حالياً</p>
+    </div>
+
+    <div *ngIf="pendingApplications.length > 0" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div *ngFor="let app of pendingApplications" class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 space-y-4">
+        <div class="flex justify-between items-start">
+          <div class="flex items-center gap-3">
+            <div class="w-12 h-12 bg-blue-600/10 rounded-full flex items-center justify-center text-blue-600 font-bold">
+              {{ app.username.charAt(0).toUpperCase() }}
+            </div>
+            <div>
+              <h3 class="font-bold text-gray-800 dark:text-white">{{ app.username }}</h3>
+              <p class="text-xs text-gray-500">{{ app.email }}</p>
+            </div>
+          </div>
+          <span class="text-[10px] text-gray-400 flex items-center gap-1">
+            <fa-icon [icon]="faUserClock"></fa-icon>
+            {{ app.marketer.applicationDate | date:'short' }}
+          </span>
+        </div>
+
+        <div class="bg-gray-50 dark:bg-slate-900/50 p-4 rounded-xl text-sm italic text-gray-600 dark:text-gray-300 leading-relaxed border-r-4 border-blue-600/20">
+          "{{ app.marketer.bio || 'لا يوجد نبذة تعريفية' }}"
+        </div>
+
+        <div class="flex gap-3 pt-2">
+          <button (click)="approveApp(app._id)" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-bold transition-all flex items-center justify-center gap-2">
+            <fa-icon [icon]="faCheck"></fa-icon>
+            قبول الطلب
+          </button>
+          <button (click)="rejectApp(app._id)" class="flex-1 bg-red-500/10 hover:bg-red-500/20 text-red-500 py-2 rounded-lg font-bold transition-all flex items-center justify-center gap-2">
+            <fa-icon [icon]="faTimes"></fa-icon>
+            رفض الطلب
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modals -->
+  <!-- Task Assignment Modal -->
+  <div *ngIf="selectedMarketer" class="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+    <div class="fixed inset-0 bg-black/60 backdrop-blur-sm" (click)="selectedMarketer = null"></div>
+    <div class="relative bg-white dark:bg-slate-800 rounded-3xl w-full max-w-md p-8 shadow-2xl animate-fade-in z-10">
+      <h2 class="text-xl font-bold text-gray-800 dark:text-white mb-6">إسناد مهمة جديدة لـ {{ selectedMarketer.username }}</h2>
+      <div class="space-y-4 text-right" dir="rtl">
+        <input type="text" [(ngModel)]="newTask.title" placeholder="عنوان المهمة (مثال: ترويج كتاب التفسير)" class="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-3 text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none">
+        
+        <!-- Book Search for Task -->
+        <div class="relative">
+          <label class="text-[10px] text-gray-500 px-2">اربط كتاب معين بهذه المهمة (اختياري)</label>
+          <input 
+            type="text" 
+            [(ngModel)]="bookSearchQuery" 
+            (input)="searchBooks(bookSearchQuery)"
+            placeholder="ابحث عن الكتاب باسمه..." 
+            class="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-3 text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+          >
+          <div *ngIf="bookResults.length > 0" class="absolute z-20 left-0 right-0 mt-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl shadow-xl max-h-48 overflow-y-auto">
+            <div 
+              *ngFor="let b of bookResults" 
+              (click)="selectBook(b)"
+              class="p-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 cursor-pointer flex items-center gap-3 border-b border-gray-100 dark:border-slate-700 last:border-0"
+            >
+              <div class="w-8 h-10 bg-gray-100 rounded overflow-hidden">
+                <img *ngIf="b.image_path" [src]="getImgUrl(b.image_path)" class="w-full h-full object-cover">
+              </div>
+              <div>
+                <p class="text-xs font-bold">{{ b.product_name }}</p>
+                <p class="text-[8px] opacity-50">{{ b.barcode }}</p>
+              </div>
+            </div>
+          </div>
+          <textarea [(ngModel)]="newTask.description" placeholder="وصف المهمة" rows="3" class="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-3 text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none mt-4"></textarea>
+          <div class="grid grid-cols-2 gap-4 mt-4">
+            <div class="space-y-1">
+              <label class="text-[10px] text-gray-500 px-2">الهدف (مبيعات)</label>
+              <input type="number" [(ngModel)]="newTask.target" placeholder="الهدف" class="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-3 text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+            <div class="space-y-1">
+              <label class="text-[10px] text-gray-500 px-2">المكافأة (ج.م)</label>
+              <input type="number" [(ngModel)]="newTask.reward" placeholder="المكافأة" class="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-3 text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Prizes Management Section -->
+      <div class="mt-8 pt-8 border-t border-gray-100 dark:border-slate-700 space-y-4 text-right" dir="rtl">
+        <h3 class="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
+          <fa-icon [icon]="faTrophy" class="text-yellow-500"></fa-icon>
+          إدارة الجوائز الحالية
+        </h3>
+        
+        <!-- List existing prizes -->
+        <div class="space-y-2 max-h-32 overflow-y-auto">
+          <div *ngFor="let p of selectedMarketer.marketer?.prizes" class="flex justify-between items-center p-3 bg-gray-50 dark:bg-slate-900 rounded-xl border border-gray-100 dark:border-slate-700">
+            <div class="flex-grow">
+              <p class="text-xs font-bold">{{ p.title }}</p>
+              <p class="text-[10px] opacity-60">{{ p.value }}</p>
+            </div>
+            <button (click)="removePrize(selectedMarketer._id, p._id)" class="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors">
+              <fa-icon [icon]="faTimes"></fa-icon>
+            </button>
+          </div>
+          <div *ngIf="!selectedMarketer.marketer?.prizes?.length" class="text-center py-4 text-[10px] opacity-40">لا توجد جوائز مخصصة حالياً</div>
+        </div>
+
+        <!-- Add new prize form -->
+        <div class="bg-blue-50/50 dark:bg-blue-900/10 p-4 rounded-2xl border border-blue-100 dark:border-blue-900/30 space-y-3">
+          <p class="text-[10px] font-bold text-blue-600 dark:text-blue-400">إضافة جائزة جديدة للمسوق</p>
+          <input type="text" [(ngModel)]="newPrize.title" placeholder="عنوان الجائزة (مثال: جائزة المستوى 2)" class="w-full bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+          <input type="text" [(ngModel)]="newPrize.value" placeholder="القيمة (مثال: خصم 50 ج.م)" class="w-full bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+          <button (click)="addPrize()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-xs font-bold transition-all shadow-sm">إضافة الجائزة</button>
+        </div>
+      </div>
+      <div class="flex gap-4 mt-8">
+        <button (click)="assignTask(selectedMarketer._id)" class="flex-grow bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold transition-all shadow-lg shadow-blue-500/20">إسناد المهمة الآن</button>
+        <button (click)="selectedMarketer = null" class="px-6 py-3 border border-gray-200 dark:border-slate-700 text-gray-500 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-xl transition-all font-bold">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Global Prizes Tab -->
+  <div *ngIf="activeTab === 'global_prizes'" class="animate-fade-in space-y-6">
+    <div class="bg-white dark:bg-slate-800 rounded-3xl p-8 shadow-sm border border-gray-100 dark:border-slate-700">
+      <h2 class="text-2xl font-black text-gray-800 dark:text-white mb-6 flex items-center gap-3">
+        <fa-icon [icon]="faTrophy" class="text-yellow-500"></fa-icon>
+        إدارة الجوائز العامة (لجميع المسوقين)
+      </h2>
+      
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- List Global Prizes -->
+        <div class="space-y-4">
+          <h3 class="font-bold text-sm opacity-50 mb-4 uppercase tracking-widest">الجوائز النشطة حالياً</h3>
+          <div *ngFor="let p of globalPrizes" class="flex justify-between items-center p-4 bg-gray-50 dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-700 hover:border-blue-500/30 transition-all">
+            <div class="flex items-center gap-4">
+              <div class="w-10 h-10 bg-yellow-500/10 rounded-xl flex items-center justify-center text-yellow-600 font-bold">
+                L{{ p.minLevel }}
+              </div>
+              <div>
+                <p class="font-bold text-gray-800 dark:text-white">{{ p.title }}</p>
+                <p class="text-xs text-blue-600 dark:text-blue-400 font-bold">{{ p.value }}</p>
+              </div>
+            </div>
+            <button (click)="removeGlobalPrize(p._id)" class="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 p-3 rounded-xl transition-all">
+              <fa-icon [icon]="faTimes"></fa-icon>
+            </button>
+          </div>
+          <div *ngIf="globalPrizes.length === 0" class="text-center py-20 opacity-30 italic border-2 border-dashed border-gray-100 dark:border-slate-700 rounded-3xl">
+            لا توجد جوائز عامة حالياً
+          </div>
+        </div>
+
+        <!-- Add New Global Prize Form -->
+        <div class="bg-blue-50/30 dark:bg-blue-900/5 p-8 rounded-3xl border border-blue-100 dark:border-blue-900/20 space-y-6">
+          <h3 class="font-bold text-gray-800 dark:text-white mb-2">إضافة جائزة جديدة للجميع</h3>
+          
+          <div class="space-y-4">
+            <div class="space-y-1">
+              <label class="text-xs font-bold text-gray-500 px-1">عنوان الجائزة</label>
+              <input type="text" [(ngModel)]="globalPrizeForm.title" placeholder="مثال: مكافأة المستوى 2" class="w-full bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+            
+            <div class="space-y-1">
+              <label class="text-xs font-bold text-gray-500 px-1">القيمة / الوصف</label>
+              <input type="text" [(ngModel)]="globalPrizeForm.value" placeholder="مثال: خصم 50 ج.م" class="w-full bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+
+            <div class="space-y-1">
+              <label class="text-xs font-bold text-gray-500 px-1">أدنى مستوى للاستحقاق</label>
+              <input type="number" [(ngModel)]="globalPrizeForm.minLevel" placeholder="1" class="w-full bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+
+            <button (click)="addGlobalPrize()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-xl font-bold transition-all shadow-lg shadow-blue-500/20 active:scale-95">
+              تفعيل الجائزة لجميع المسوقين
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Marketer Modal -->
+  <div *ngIf="showAddModal" class="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+    <div class="fixed inset-0 bg-black/60 backdrop-blur-sm" (click)="showAddModal = false"></div>
+    <div class="relative bg-white dark:bg-slate-800 rounded-3xl w-full max-w-md p-8 shadow-2xl animate-fade-in z-10 text-right" dir="rtl">
+      <h2 class="text-xl font-bold text-gray-800 dark:text-white mb-6 text-center">ترقية مستخدم لمسوق</h2>
+      <div class="space-y-2 mb-6">
+        <label class="text-sm font-medium text-gray-700 dark:text-gray-300 px-1">البريد الإلكتروني للمستخدم</label>
+        <input type="email" [(ngModel)]="promoteEmail" placeholder="example@mail.com" class="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-4 text-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none shadow-inner">
+      </div>
+      <div class="flex gap-4">
+        <button (click)="promoteUser(promoteEmail)" [disabled]="isPromoting" class="flex-grow bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-xl font-bold transition-all shadow-lg shadow-blue-500/20 disabled:bg-gray-400">
+          {{ isPromoting ? 'جاري التنفيذ...' : 'تأكيد الترقية' }}
+        </button>
+        <button (click)="showAddModal = false" class="px-6 py-4 border border-gray-200 dark:border-slate-700 text-gray-500 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-xl transition-all font-bold">إلغاء</button>
+      </div>
+    </div>
+  </div>
+</div>

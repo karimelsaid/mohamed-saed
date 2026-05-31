@@ -12,6 +12,7 @@ const sitemapService = require('../services/sitemap.service');
 const normalizeArabic = (str) => {
   if (!str) return '';
   return str
+    .normalize('NFC')
     .replace(/[أإآا]/g, 'ا')
     .replace(/[ةه]/g, 'ه')
     .replace(/[ىي]/g, 'ي')
@@ -372,9 +373,24 @@ async function getPublicMerchants(req, res) {
     .select('username merchantName logo bio coverPhoto _id')
     .sort({ createdAt: -1 });
 
-    // 1. Get all unique publishers that have products in the system (from DB)
+    // 1. Get all unique publishers that have products in the system (from DB & Excel output.json)
     const activePublishersRaw = await Product.distinct('publisher');
-    const normalizedActivePublishers = activePublishersRaw
+    
+    let excelPublishers = [];
+    try {
+      const outputJsonPath = path.join(__dirname, '..', 'output.json');
+      if (fs.existsSync(outputJsonPath)) {
+        const excelData = JSON.parse(fs.readFileSync(outputJsonPath, 'utf8'));
+        excelPublishers = excelData
+          .map(b => b.publisher)
+          .filter(p => p && p.trim());
+      }
+    } catch (excelErr) {
+      console.error('Error reading output.json for publishers:', excelErr);
+    }
+
+    const allPublishers = [...activePublishersRaw, ...excelPublishers];
+    const normalizedActivePublishers = allPublishers
       .filter(p => p && p.trim())
       .map(p => normalizeArabic(p));
 
@@ -395,8 +411,6 @@ async function getPublicMerchants(req, res) {
       .filter(m => normalizedActivePublishers.includes(m.normalizedName));
 
     // 3. Add Virtual Publishers (those who have an uploaded logo in the publishers folder)
-    const fs = require('fs');
-    const path = require('path');
     const publishersDir = path.join(__dirname, '..', 'uploads', 'books', 'publishers');
     
     if (fs.existsSync(publishersDir)) {
@@ -431,7 +445,15 @@ async function getPublicMerchants(req, res) {
     // Remove the temporary normalizedName field before sending to client
     const finalMerchants = formattedMerchants.map(({ normalizedName, ...rest }) => rest);
 
-    res.json({ success: true, merchants: finalMerchants });
+    res.json({ 
+      success: true, 
+      merchants: finalMerchants,
+      debug: {
+        excelLength: excelPublishers.length,
+        normalizedActiveLength: normalizedActivePublishers.length,
+        publishersDirExists: fs.existsSync(publishersDir)
+      }
+    });
   } catch (error) {
     console.error('Error in getPublicMerchants:', error);
     res.status(500).json({ success: false, message: 'Server error' });
@@ -721,7 +743,7 @@ async function deleteProduct(req, res) {
       return res.status(404).json({ success: false, message: 'Product not found or does not belong to you' });
     }
 
-    // Delete product folder if exists
+    // 1. Folder Cleanup
     if (product.product_image) {
       const sanitizedUsername = req.merchant.username.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
       const barcode = product.product_image ? product.product_image.split('/').pop().replace('.webp', '') : productId;
@@ -733,64 +755,19 @@ async function deleteProduct(req, res) {
       }
     }
 
-    // If product was approved, remove from Excel and update Google Drive
+    // 2. Excel & JSON Removal (only if approved)
     if (product.status === 'approved') {
       const barcode = product.product_image ? product.product_image.split('/').pop().replace('.webp', '') : productId;
+      const excelService = require('../services/excel.service');
       const fileId = process.env.GOOGLE_DRIVE_FILE_ID;
-
-      if (fileId) {
-        const client = await require('../config/drive').auth.getClient();
-        const drive = require('googleapis').google.drive({ version: 'v3', auth: client });
-
-        const resDrive = await drive.files.get({
-          fileId,
-          alt: 'media',
-        }, { responseType: 'arraybuffer' });
-
-        const buffer = Buffer.from(resDrive.data);
-        const xlsx = require('xlsx');
-        const workbook = xlsx.read(buffer, { type: 'buffer' });
-        const sheetName = workbook.SheetNames[0];
-        const sheet = workbook.Sheets[sheetName];
-        let json = xlsx.utils.sheet_to_json(sheet);
-
-        // Find and remove product by barcode
-        const productIndex = json.findIndex(p => {
-          if (!p.products_id) return false;
-          const pId = String(p.products_id).trim();
-          const bId = String(barcode).trim();
-          return pId === bId || Number(pId) === Number(bId) || pId === String(Number(bId)) || String(Number(pId)) === bId;
-        });
-        if (productIndex !== -1) {
-          json.splice(productIndex, 1);
-
-          // Convert JSON back to sheet
-          const newSheet = xlsx.utils.json_to_sheet(json);
-          workbook.Sheets[sheetName] = newSheet;
-
-          // Write workbook to buffer
-          const wbout = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
-
-          // Upload updated Excel file back to Google Drive
-          await drive.files.update({
-            fileId,
-            media: {
-              mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-              body: wbout
-            }
-          });
-
-          // Update output.json
-          await downloadAndConvertExcel(fileId);
-          await updateExcelFromJson(process.env.GOOGLE_DRIVE_FILE_update);
-        }
-      }
+      await excelService.removeProductFromExcel(barcode, fileId);
 
       // Update sitemap
+      const sitemapService = require('../services/sitemap.service');
       sitemapService.generateSitemap();
     }
 
-    // Delete the product from database
+    // 3. Delete from DB
     await Product.findByIdAndDelete(productId);
 
     res.json({ success: true, message: 'Product deleted successfully' });
@@ -816,7 +793,7 @@ async function bulkDeleteProducts(req, res) {
       return res.status(404).json({ success: false, message: 'Some products not found or do not belong to you' });
     }
 
-    // Delete product folders
+    // 1. Folder Cleanup
     for (const product of products) {
       if (product.product_image) {
         const sanitizedUsername = req.merchant.username.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
@@ -830,67 +807,20 @@ async function bulkDeleteProducts(req, res) {
       }
     }
 
-    // Handle approved products - remove from Excel and update Google Drive
+    // 2. Excel & JSON Removal (only approved)
     const approvedProducts = products.filter(p => p.status === 'approved');
     if (approvedProducts.length > 0) {
+      const barcodes = approvedProducts.map(p => p.product_image ? p.product_image.split('/').pop().replace('.webp', '') : p._id.toString());
+      const excelService = require('../services/excel.service');
       const fileId = process.env.GOOGLE_DRIVE_FILE_ID;
-
-      if (fileId) {
-        const client = await require('../config/drive').auth.getClient();
-        const drive = require('googleapis').google.drive({ version: 'v3', auth: client });
-
-        const resDrive = await drive.files.get({
-          fileId,
-          alt: 'media',
-        }, { responseType: 'arraybuffer' });
-
-        const buffer = Buffer.from(resDrive.data);
-        const xlsx = require('xlsx');
-        const workbook = xlsx.read(buffer, { type: 'buffer' });
-        const sheetName = workbook.SheetNames[0];
-        const sheet = workbook.Sheets[sheetName];
-        let json = xlsx.utils.sheet_to_json(sheet);
-
-        // Remove all approved products from Excel
-        for (const product of approvedProducts) {
-          const barcode = product.product_image ? product.product_image.split('/').pop().replace('.webp', '') : product._id;
-          const productIndex = json.findIndex(p => {
-            if (!p.products_id) return false;
-            const pId = String(p.products_id).trim();
-            const bId = String(barcode).trim();
-            return pId === bId || Number(pId) === Number(bId) || pId === String(Number(bId)) || String(Number(pId)) === bId;
-          });
-          if (productIndex !== -1) {
-            json.splice(productIndex, 1);
-          }
-        }
-
-        // Convert JSON back to sheet
-        const newSheet = xlsx.utils.json_to_sheet(json);
-        workbook.Sheets[sheetName] = newSheet;
-
-        // Write workbook to buffer
-        const wbout = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
-
-        // Upload updated Excel file back to Google Drive
-        await drive.files.update({
-          fileId,
-          media: {
-            mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            body: wbout
-          }
-        });
-
-        // Update output.json
-        await downloadAndConvertExcel(fileId);
-        await updateExcelFromJson(process.env.GOOGLE_DRIVE_FILE_update);
-      }
+      await excelService.bulkRemoveProductsFromExcel(barcodes, fileId);
 
       // Update sitemap
+      const sitemapService = require('../services/sitemap.service');
       sitemapService.generateSitemap();
     }
 
-    // Delete products from database
+    // 3. Delete from DB
     await Product.deleteMany({ _id: { $in: productIds }, merchantId });
 
     res.json({ success: true, message: 'Products deleted successfully' });
@@ -983,8 +913,6 @@ async function getMerchantByUsername(req, res) {
 
     if (!merchant) {
       // FALLBACK: Check if this name exists as a 'publisher' in output.json
-      const fs = require('fs');
-      const path = require('path');
       const outputPath = path.join(__dirname, '..', 'output.json');
       
       if (fs.existsSync(outputPath)) {
@@ -1085,8 +1013,6 @@ async function getProductsByMerchantId(req, res) {
       normalizeArabic(p.publisher) === normalizedTargetName
     );
 
-    const fs = require('fs');
-    const path = require('path');
     const outputPath = path.join(__dirname, '..', 'output.json');
     
     let catalogProducts = [];

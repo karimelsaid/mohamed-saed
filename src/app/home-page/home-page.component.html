@@ -4,24 +4,34 @@
   <div class="relative w-full overflow-hidden bg-white dark:bg-gray-950 transition-colors duration-500" style="height: 850px; min-height: 85vh;">
     
     <!-- 1. Scrolling Columns Mode -->
-    <div *ngIf="heroConfig.mode === 'scrolling' && backgroundColumns && backgroundColumns.length > 0" 
+    <div *ngIf="heroConfig.mode === 'scrolling' && heroColumns && heroColumns.length > 0" 
          class="absolute inset-0 z-0 overflow-hidden pointer-events-none">
       <div class="hero-vignette absolute inset-0 z-10"></div>
       <div class="flex gap-6 md:gap-10 h-full px-6 opacity-40 dark:opacity-30">
-        <div *ngFor="let col of backgroundColumns; let i = index" 
-             class="flex-1 flex flex-col gap-8 min-w-[140px] md:min-w-[200px]"
+        <div *ngFor="let col of heroColumns; let i = index" 
+             class="flex-1 overflow-hidden min-w-[140px] md:min-w-[200px]"
              [class.hidden]="i > 2"
-             [class.md:flex]="true"
-             [ngClass]="i % 2 === 0 ? 'scrolling-column speed-slow' : 'scrolling-column-reverse speed-medium'">
-          
-          <div *ngFor="let product of col" 
-               class="w-full h-48 md:h-72 flex-shrink-0 rounded-2xl bg-gray-200 dark:bg-white/10 overflow-hidden border border-gray-300 dark:border-white/20 shadow-xl">
-            <img [src]="getBookImageUrl(product)" class="w-full h-full object-cover blur-[0.5px]">
-          </div>
-          
-          <div *ngFor="let product of col" 
-               class="w-full h-48 md:h-72 flex-shrink-0 rounded-2xl bg-gray-200 dark:bg-white/10 overflow-hidden border border-gray-300 dark:border-white/20 shadow-xl">
-            <img [src]="getBookImageUrl(product)" class="w-full h-full object-cover blur-[0.5px]">
+             [class.md:block]="true">
+             
+          <div class="flex flex-col gap-8 h-max"
+               [ngClass]="i % 2 === 0 ? 'scrolling-column' : 'scrolling-column-reverse'"
+               [ngStyle]="{'animation-duration': getAnimationDuration(col.length, heroConfig.scrollingSpeed)}">
+            
+            <!-- First Set -->
+            <div class="flex flex-col gap-8">
+              <div *ngFor="let product of col" 
+                   class="w-full h-48 md:h-72 flex-shrink-0 rounded-2xl bg-gray-200 dark:bg-white/10 overflow-hidden border border-gray-300 dark:border-white/20 shadow-xl">
+                <img [src]="getBookImageUrl(product)" onerror="this.src='assets/images/book-placeholder.jpg'" class="w-full h-full object-cover blur-[0.5px]" [alt]="product.product_name">
+              </div>
+            </div>
+            
+            <!-- Second Set (Duplicate for Infinite Scroll) -->
+            <div class="flex flex-col gap-8">
+              <div *ngFor="let product of col" 
+                   class="w-full h-48 md:h-72 flex-shrink-0 rounded-2xl bg-gray-200 dark:bg-white/10 overflow-hidden border border-gray-300 dark:border-white/20 shadow-xl">
+                <img [src]="getBookImageUrl(product)" onerror="this.src='assets/images/book-placeholder.jpg'" class="w-full h-full object-cover blur-[0.5px]" [alt]="product.product_name">
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -76,6 +86,61 @@
     </div>
   </div>
 
+  <!-- 🌟 Knooz Ecosystem / Services Hub (Top Level) -->
+  <div class="container mx-auto px-4 py-16">
+    <div class="flex flex-col items-center mb-12 text-center">
+      <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-xs font-bold uppercase tracking-widest mb-6 border border-blue-100 dark:border-blue-800">
+        <fa-icon [icon]="['fas', 'star']"></fa-icon>
+        خدمات كنوز الحصرية
+      </div>
+      <h2 class="text-3xl md:text-5xl font-black text-gray-900 dark:text-white mb-4">تجربة قراءة تتخطى مجرد الشراء</h2>
+      <div class="w-24 h-1.5 bg-gradient-to-r from-transparent via-blue-500 to-transparent rounded-full opacity-50"></div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+      
+      <!-- Book Exchange -->
+      <a [routerLink]="['/reader-community']" [queryParams]="{section: 'exchange'}" class="group relative overflow-hidden bg-white dark:bg-gray-800 p-8 rounded-[3.5rem] shadow-xl hover:shadow-2xl transition-all duration-500 border border-gray-100 dark:border-gray-700 hover:-translate-y-2">
+        <div class="absolute -right-8 -top-8 w-32 h-32 bg-green-500/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700"></div>
+        <div class="w-16 h-16 bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-2xl flex items-center justify-center mb-6 text-3xl group-hover:bg-green-600 group-hover:text-white transition-all duration-500">
+          <fa-icon [icon]="['fas', 'sync-alt']"></fa-icon>
+        </div>
+        <h3 class="text-xl font-black text-gray-900 dark:text-white mb-3">تبادل الكتب</h3>
+        <p class="text-gray-500 dark:text-gray-400 text-sm leading-relaxed">ركن المقايضة: استبدل كتبك القديمة بكنوز جديدة من مكتبات قراء آخرين.</p>
+      </a>
+
+      <!-- Auctions -->
+      <a [routerLink]="['/reader-community']" [queryParams]="{section: 'auctions'}" class="group relative overflow-hidden bg-white dark:bg-gray-800 p-8 rounded-[3.5rem] shadow-xl hover:shadow-2xl transition-all duration-500 border border-gray-100 dark:border-gray-700 hover:-translate-y-2">
+        <div class="absolute -right-8 -top-8 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700"></div>
+        <div class="w-16 h-16 bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-2xl flex items-center justify-center mb-6 text-3xl group-hover:bg-amber-600 group-hover:text-white transition-all duration-500">
+          <fa-icon [icon]="['fas', 'gavel']"></fa-icon>
+        </div>
+        <h3 class="text-xl font-black text-gray-900 dark:text-white mb-3">المزادات</h3>
+        <p class="text-gray-500 dark:text-gray-400 text-sm leading-relaxed">مزادات كنوز: نافس للحصول على طبعات نادرة ونسخ موقعة بأفضل الأسعار.</p>
+      </a>
+
+      <!-- Custom Offers -->
+      <a [routerLink]="['/promotions']" [queryParams]="{builder: 'true'}" class="group relative overflow-hidden bg-gradient-to-br from-indigo-600 to-blue-700 p-8 rounded-[3.5rem] shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 cursor-pointer">
+        <div class="absolute -right-8 -top-8 w-32 h-32 bg-white/20 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700"></div>
+        <div class="w-16 h-16 bg-white/20 backdrop-blur-md text-white rounded-2xl flex items-center justify-center mb-6 text-3xl group-hover:bg-white group-hover:text-indigo-600 transition-all duration-500">
+          <span>💡</span>
+        </div>
+        <h3 class="text-xl font-black text-white mb-3">أنشئ عرضك الخاص!</h3>
+        <p class="text-indigo-100 text-sm leading-relaxed">اكتشف ذكاء محرك الأسعار لدينا.. أضف أي كتابين أو أكثر لسلتك وسنقوم فوراً بحساب التوازن المثالي بين أعلى خصم وأقصى توفير لك.</p>
+      </a>
+
+      <!-- Bundles -->
+      <a routerLink="/bundles" class="group relative overflow-hidden bg-white dark:bg-gray-800 p-8 rounded-[3.5rem] shadow-xl hover:shadow-2xl transition-all duration-500 border border-gray-100 dark:border-gray-700 hover:-translate-y-2">
+        <div class="absolute -right-8 -top-8 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700"></div>
+        <div class="w-16 h-16 bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-2xl flex items-center justify-center mb-6 text-3xl group-hover:bg-purple-600 group-hover:text-white transition-all duration-500">
+          <fa-icon [icon]="['fas', 'boxes']"></fa-icon>
+        </div>
+        <h3 class="text-xl font-black text-gray-900 dark:text-white mb-3">باقات الكتب</h3>
+        <p class="text-gray-500 dark:text-gray-400 text-sm leading-relaxed">باقات القراءة: مجموعات مختارة بعناية توفر لك الوقت والمال.</p>
+      </a>
+    </div>
+  </div>
+
   <!-- 📈 Book Bourse Banner -->
   <div class="container mx-auto px-4 py-8">
     <a routerLink="/bourse"
@@ -116,6 +181,7 @@
     </a>
   </div>
 
+
   <!-- Consolidated New Arrivals Section -->
   <div class="container mx-auto px-4 py-24">
     <div class="flex flex-col items-center mb-16 text-center">
@@ -152,7 +218,7 @@
     </div>
 
     <!-- Luxury Product Grid -->
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-8 md:gap-12">
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 md:gap-8 lg:gap-12">
       <ng-container *ngIf="!isLoading; else loadingSkeleton">
         <div *ngFor="let product of filteredProducts" class="group h-full flex flex-col">
           <!-- Premium Book Card -->
@@ -182,38 +248,48 @@
               </div>
 
               <!-- Price Badge (Glassmorphism) -->
-              <div class="absolute bottom-4 right-4 bg-white/20 dark:bg-black/30 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/30 dark:border-white/10 shadow-lg group-hover:opacity-0 transition-opacity duration-300">
-                <span class="text-sm md:text-base font-black text-white">
-                  {{ product.product_price | number }} <span class="text-[10px] font-bold">ج.م</span>
+              <div class="absolute bottom-3 right-3 md:bottom-4 md:right-4 bg-white/20 dark:bg-black/30 backdrop-blur-md px-3 py-1.5 md:px-4 md:py-2 rounded-xl md:rounded-2xl border border-white/30 dark:border-white/10 shadow-lg group-hover:opacity-0 transition-opacity duration-300">
+                <span class="text-xs md:text-base font-black text-white">
+                  {{ product.product_price | number }} <span class="text-[9px] md:text-[10px] font-bold">ج.م</span>
                 </span>
               </div>
 
               <!-- Discount Tag -->
               <div *ngIf="product.product_discount_percent"
-                class="absolute top-6 left-0 bg-gradient-to-r from-red-600 to-red-500 text-white text-[10px] md:text-xs font-black px-4 py-2 rounded-r-2xl shadow-xl transform -translate-x-1 group-hover:translate-x-0 transition-transform duration-500">
+                class="absolute top-4 md:top-6 left-0 bg-gradient-to-r from-red-600 to-red-500 text-white text-[9px] md:text-xs font-black px-3 py-1.5 md:px-4 md:py-2 rounded-r-xl md:rounded-r-2xl shadow-xl transform -translate-x-1 group-hover:translate-x-0 transition-transform duration-500">
                 {{ product.product_discount_percent }}% خصم
               </div>
             </div>
 
             <!-- Content -->
-            <div class="p-8 flex flex-col flex-1 relative z-10">
-              <div class="mb-4">
-                <span class="text-[10px] md:text-[11px] font-black text-[var(--knooz-gold-dark)] uppercase tracking-[0.2em] bg-[var(--knooz-gold)]/10 px-3 py-1 rounded-full">{{ product.product_category }}</span>
+            <div class="p-4 md:p-8 flex flex-col flex-1 relative z-10">
+              <div class="mb-2 md:mb-4">
+                <span class="text-[9px] md:text-[11px] font-black text-[var(--knooz-gold-dark)] uppercase tracking-[0.2em] bg-[var(--knooz-gold)]/10 px-2.5 py-1 rounded-full">{{ product.product_category }}</span>
               </div>
-              <h3 class="font-bold text-gray-900 dark:text-white text-lg md:text-xl leading-snug line-clamp-2 mb-6 group-hover:text-indigo-600 dark:group-hover:text-[var(--knooz-gold)] transition-colors duration-300">
+              <h3 class="font-bold text-gray-900 dark:text-white text-sm md:text-xl leading-snug line-clamp-2 mb-3 md:mb-6 group-hover:text-indigo-600 dark:group-hover:text-[var(--knooz-gold)] transition-colors duration-300">
                 {{ product.product_name }}
               </h3>
               
-              <div class="mt-auto pt-6 border-t border-gray-100 dark:border-gray-700/50 flex items-center justify-between">
-                <div class="flex flex-col">
-                  <span *ngIf="product.product_price_before_discount > product.product_price" class="text-xs text-gray-400 line-through mb-1">
-                    {{ product.product_price_before_discount | number }} ج.م
-                  </span>
-                  <span class="text-xs font-bold text-gray-500 dark:text-gray-400">متاح الآن</span>
+              <div class="mt-auto pt-4 md:pt-6 border-t border-gray-100 dark:border-gray-700/50">
+                <div class="flex items-center justify-between mb-3 md:mb-6">
+                    <div class="flex flex-col">
+                        <span *ngIf="product.product_price_before_discount > product.product_price" class="text-[10px] md:text-xs text-gray-400 line-through mb-0.5">
+                            {{ product.product_price_before_discount | number }} ج.م
+                        </span>
+                        <span class="text-[9px] md:text-xs font-bold text-gray-500 dark:text-gray-400">متاح الآن</span>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-lg md:text-2xl font-black text-indigo-600 dark:text-[var(--knooz-gold)]">
+                            {{ product.product_price | number }} <span class="text-[10px] md:text-xs font-medium">ج.م</span>
+                        </span>
+                    </div>
                 </div>
-                <div class="w-10 h-10 rounded-full border border-gray-100 dark:border-gray-700 flex items-center justify-center text-gray-400 group-hover:border-[var(--knooz-gold)] group-hover:text-[var(--knooz-gold)] transition-all duration-300">
-                   <fa-icon [icon]="['fas', 'angle-left']"></fa-icon>
-                </div>
+
+                <button (click)="navigateToProduct(product)"
+                        class="w-full flex items-center justify-center gap-2 py-3 md:py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl md:rounded-2xl font-black text-[11px] md:text-sm transition-all shadow-lg shadow-indigo-600/20 active:scale-95 group/btn">
+                    <fa-icon [icon]="['fas', 'eye']" class="group-hover/btn:scale-110 transition-transform"></fa-icon>
+                    <span>عرض التفاصيل</span>
+                </button>
               </div>
             </div>
           </div>
@@ -244,58 +320,58 @@
 
     <div class="relative overflow-hidden group">
       <!-- Gradient Overlays for smooth fade -->
-      <div class="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-gray-50 dark:from-gray-950 to-transparent z-10"></div>
-      <div class="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-gray-50 dark:from-gray-950 to-transparent z-10"></div>
+      <div class="absolute inset-y-0 left-0 w-16 md:w-32 bg-gradient-to-r from-gray-50 dark:from-gray-950 to-transparent z-10 pointer-events-none"></div>
+      <div class="absolute inset-y-0 right-0 w-16 md:w-32 bg-gradient-to-l from-gray-50 dark:from-gray-950 to-transparent z-10 pointer-events-none"></div>
 
       <!-- Marquee Track -->
       <div [class.animate-marquee]="isMarqueeActive" 
            [class.justify-center]="!isMarqueeActive"
-           class="flex gap-12 py-8">
+           class="relative z-20 flex flex-nowrap gap-6 md:gap-12 py-8 overflow-x-auto no-scrollbar touch-pan-x">
         <!-- Main Set -->
-        <div *ngFor="let m of marqueeMerchants" 
+        <a *ngFor="let m of marqueeMerchants" 
              [routerLink]="['/', m.name.trim().split(' ').join('-')]"
-             class="flex-shrink-0 w-48 h-48 bg-white dark:bg-gray-800 rounded-[2.5rem] shadow-sm hover:shadow-2xl transition-all duration-500 flex flex-col items-center justify-center p-6 border border-gray-100 dark:border-gray-700/50 cursor-pointer hover:-translate-y-2 group/publisher">
-          <div class="w-24 h-24 rounded-full overflow-hidden mb-4 bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-800 transition-transform duration-500 group-hover/publisher:scale-110">
-            <img [src]="getMerchantLogoUrl(m)" [alt]="m.name" class="w-full h-full object-cover">
+             class="flex-shrink-0 w-36 h-36 md:w-48 md:h-48 bg-white dark:bg-gray-800 rounded-[2rem] md:rounded-[2.5rem] shadow-sm hover:shadow-2xl transition-all duration-500 flex flex-col items-center justify-center p-4 md:p-6 border border-gray-100 dark:border-gray-700/50 cursor-pointer hover:-translate-y-2 group/publisher no-underline">
+          <div class="w-16 h-16 md:w-24 md:h-24 rounded-full overflow-hidden mb-3 md:mb-4 bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-800 transition-transform duration-500 group-hover/publisher:scale-110">
+            <img [src]="getMerchantLogoUrl(m)" onerror="this.src='assets/images/merchant-placeholder.png'" [alt]="m.name" class="w-full h-full object-cover">
           </div>
-          <span class="text-sm font-black text-gray-800 dark:text-gray-200 text-center line-clamp-1 group-hover/publisher:text-amber-600 transition-colors">{{ m.name }}</span>
-        </div>
+          <span class="text-xs md:text-sm font-black text-gray-800 dark:text-gray-200 text-center line-clamp-1 group-hover/publisher:text-amber-600 transition-colors">{{ m.name }}</span>
+        </a>
         <!-- Duplicate Set for Seamless Loop (Only if active) -->
         <ng-container *ngIf="isMarqueeActive">
-          <div *ngFor="let m of marqueeMerchants" 
+          <a *ngFor="let m of marqueeMerchants" 
                [routerLink]="['/', m.name.trim().split(' ').join('-')]"
-               class="flex-shrink-0 w-48 h-48 bg-white dark:bg-gray-800 rounded-[2.5rem] shadow-sm hover:shadow-2xl transition-all duration-500 flex flex-col items-center justify-center p-6 border border-gray-100 dark:border-gray-700/50 cursor-pointer hover:-translate-y-2 group/publisher">
-            <div class="w-24 h-24 rounded-full overflow-hidden mb-4 bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-800 transition-transform duration-500 group-hover/publisher:scale-110">
-              <img [src]="getMerchantLogoUrl(m)" [alt]="m.name" class="w-full h-full object-cover">
+               class="flex-shrink-0 w-36 h-36 md:w-48 md:h-48 bg-white dark:bg-gray-800 rounded-[2rem] md:rounded-[2.5rem] shadow-sm hover:shadow-2xl transition-all duration-500 flex flex-col items-center justify-center p-4 md:p-6 border border-gray-100 dark:border-gray-700/50 cursor-pointer hover:-translate-y-2 group/publisher no-underline">
+            <div class="w-16 h-16 md:w-24 md:h-24 rounded-full overflow-hidden mb-3 md:mb-4 bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-800 transition-transform duration-500 group-hover/publisher:scale-110">
+              <img [src]="getMerchantLogoUrl(m)" onerror="this.src='assets/images/merchant-placeholder.png'" [alt]="m.name" class="w-full h-full object-cover">
             </div>
-            <span class="text-sm font-black text-gray-800 dark:text-gray-200 text-center line-clamp-1 group-hover/publisher:text-amber-600 transition-colors">{{ m.name }}</span>
-          </div>
+            <span class="text-xs md:text-sm font-black text-gray-800 dark:text-gray-200 text-center line-clamp-1 group-hover/publisher:text-amber-600 transition-colors">{{ m.name }}</span>
+          </a>
         </ng-container>
       </div>
     </div>
 
     <!-- Second Row (Reverse Direction) -->
-    <div class="relative overflow-hidden mt-8 group" *ngIf="merchants.length > 5">
-      <div class="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-gray-50 dark:from-gray-950 to-transparent z-10"></div>
-      <div class="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-gray-50 dark:from-gray-950 to-transparent z-10"></div>
+    <div class="relative overflow-hidden mt-4 md:mt-8 group" *ngIf="merchants.length > 5">
+      <div class="absolute inset-y-0 left-0 w-16 md:w-32 bg-gradient-to-r from-gray-50 dark:from-gray-950 to-transparent z-10 pointer-events-none"></div>
+      <div class="absolute inset-y-0 right-0 w-16 md:w-32 bg-gradient-to-l from-gray-50 dark:from-gray-950 to-transparent z-10 pointer-events-none"></div>
       
-      <div class="animate-marquee-reverse flex gap-12 py-8">
-        <div *ngFor="let m of marqueeMerchants.slice().reverse()" 
+      <div class="animate-marquee-reverse relative z-20 flex flex-nowrap gap-6 md:gap-12 py-8 overflow-x-auto no-scrollbar touch-pan-x">
+        <a *ngFor="let m of marqueeMerchants.slice().reverse()" 
              [routerLink]="['/', m.name.trim().split(' ').join('-')]"
-             class="flex-shrink-0 w-48 h-48 bg-white dark:bg-gray-800 rounded-[2.5rem] shadow-sm hover:shadow-2xl transition-all duration-500 flex flex-col items-center justify-center p-6 border border-gray-100 dark:border-gray-700/50 cursor-pointer hover:-translate-y-2 group/publisher">
-          <div class="w-24 h-24 rounded-full overflow-hidden mb-4 bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-800 transition-transform duration-500 group-hover/publisher:scale-110">
-            <img [src]="getMerchantLogoUrl(m)" [alt]="m.name" class="w-full h-full object-cover">
+             class="flex-shrink-0 w-36 h-36 md:w-48 md:h-48 bg-white dark:bg-gray-800 rounded-[2rem] md:rounded-[2.5rem] shadow-sm hover:shadow-2xl transition-all duration-500 flex flex-col items-center justify-center p-4 md:p-6 border border-gray-100 dark:border-gray-700/50 cursor-pointer hover:-translate-y-2 group/publisher no-underline">
+          <div class="w-16 h-16 md:w-24 md:h-24 rounded-full overflow-hidden mb-3 md:mb-4 bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-800 transition-transform duration-500 group-hover/publisher:scale-110">
+            <img [src]="getMerchantLogoUrl(m)" onerror="this.src='assets/images/merchant-placeholder.png'" [alt]="m.name" class="w-full h-full object-cover">
           </div>
-          <span class="text-sm font-black text-gray-800 dark:text-gray-200 text-center line-clamp-1 group-hover/publisher:text-amber-600 transition-colors">{{ m.name }}</span>
-        </div>
-        <div *ngFor="let m of marqueeMerchants.slice().reverse()" 
+          <span class="text-xs md:text-sm font-black text-gray-800 dark:text-gray-200 text-center line-clamp-1 group-hover/publisher:text-amber-600 transition-colors">{{ m.name }}</span>
+        </a>
+        <a *ngFor="let m of marqueeMerchants.slice().reverse()" 
              [routerLink]="['/', m.name.trim().split(' ').join('-')]"
-             class="flex-shrink-0 w-48 h-48 bg-white dark:bg-gray-800 rounded-[2.5rem] shadow-sm hover:shadow-2xl transition-all duration-500 flex flex-col items-center justify-center p-6 border border-gray-100 dark:border-gray-700/50 cursor-pointer hover:-translate-y-2 group/publisher">
-          <div class="w-24 h-24 rounded-full overflow-hidden mb-4 bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-800 transition-transform duration-500 group-hover/publisher:scale-110">
-            <img [src]="getMerchantLogoUrl(m)" [alt]="m.name" class="w-full h-full object-cover">
+             class="flex-shrink-0 w-36 h-36 md:w-48 md:h-48 bg-white dark:bg-gray-800 rounded-[2rem] md:rounded-[2.5rem] shadow-sm hover:shadow-2xl transition-all duration-500 flex flex-col items-center justify-center p-4 md:p-6 border border-gray-100 dark:border-gray-700/50 cursor-pointer hover:-translate-y-2 group/publisher no-underline">
+          <div class="w-16 h-16 md:w-24 md:h-24 rounded-full overflow-hidden mb-3 md:mb-4 bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-800 transition-transform duration-500 group-hover/publisher:scale-110">
+            <img [src]="getMerchantLogoUrl(m)" onerror="this.src='assets/images/merchant-placeholder.png'" [alt]="m.name" class="w-full h-full object-cover">
           </div>
-          <span class="text-sm font-black text-gray-800 dark:text-gray-200 text-center line-clamp-1 group-hover/publisher:text-amber-600 transition-colors">{{ m.name }}</span>
-        </div>
+          <span class="text-xs md:text-sm font-black text-gray-800 dark:text-gray-200 text-center line-clamp-1 group-hover/publisher:text-amber-600 transition-colors">{{ m.name }}</span>
+        </a>
       </div>
     </div>
   </div>

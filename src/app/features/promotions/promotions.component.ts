@@ -10,6 +10,7 @@ import { CheckoutModalComponent } from '../../checkout-modal/checkout-modal.comp
 import { FormsModule } from '@angular/forms';
 import { faGift, faBoxOpen, faStar, faChevronLeft, faArrowRight, faCopy, faClock } from '@fortawesome/free-solid-svg-icons';
 import { interval, Subscription } from 'rxjs';
+import { ActivatedRoute } from '@angular/router';
 import { environment } from '../../../environments/environment';
 
 @Component({
@@ -57,6 +58,7 @@ export class PromotionsComponent implements OnInit, OnDestroy, AfterViewInit {
         private promotionService: PromotionService,
         private authService: AuthService,
         private dataService: DataService,
+        private route: ActivatedRoute,
         @Inject(PLATFORM_ID) private platformId: Object
     ) { }
 
@@ -64,6 +66,17 @@ export class PromotionsComponent implements OnInit, OnDestroy, AfterViewInit {
         this.loadInitialData();
         this.loadProductsForBuilder();
         this.authService.user$.subscribe(user => this.user = user);
+
+        // Check for 'builder' query param to auto-open custom builder
+        this.route.queryParams.subscribe(params => {
+            if (params['builder'] === 'true') {
+                this.showCustomBuilder = true;
+                // Scroll to builder section after a small delay to ensure it's rendered
+                setTimeout(() => {
+                    document.getElementById('customBuilderSection')?.scrollIntoView({ behavior: 'smooth' });
+                }, 500);
+            }
+        });
 
         // Timer to refresh coupon countdowns every second
         this.timerSubscription = interval(1000).subscribe(() => {

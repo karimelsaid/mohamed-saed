@@ -13,7 +13,7 @@ import { environment } from '../../environments/environment';
 export class FavoritesComponent implements OnInit {
   uploadsBaseUrl = environment.uploadsBaseUrl;
   favoriteBooks: any[] = [];
-  isLoading = true;
+  isLoading = false;
   showLoginPrompt = false;
   constructor(
     private authService: AuthService,

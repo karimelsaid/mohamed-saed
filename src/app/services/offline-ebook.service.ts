@@ -11,7 +11,7 @@ import { catchError, map, switchMap, tap } from 'rxjs/operators';
 export class OfflineEbookService {
     private dbName = 'KenouzEbookCache';
     private storeName = 'ebooks';
-    private dbVersion = 1;
+    private dbVersion = 2;
 
     // Key for encryption/decryption (Generated simply for this device instance)
     // In a real high-security production app, this might be derived from user credentials or server-sent

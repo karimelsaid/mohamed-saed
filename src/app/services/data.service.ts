@@ -11,8 +11,10 @@ export class DataService {
   private apiUrl = environment.apiBaseUrl ? environment.apiBaseUrl + '/books/get-excel-data' : '/api/books/get-excel-data';
   private productsApiUrl = environment.apiBaseUrl ? environment.apiBaseUrl + '/products/get-excel-data' : '/api/products/get-excel-data';
   private recentBooksApiUrl = environment.apiBaseUrl ? environment.apiBaseUrl + '/books/get-recent-books' : '/api/books/get-recent-books';
+  private searchApiUrl = environment.apiBaseUrl ? environment.apiBaseUrl + '/books/search' : '/api/books/search';
   private ordersApiUrl = environment.apiBaseUrl ? environment.apiBaseUrl + '/orders' : '/api/orders';
   private usersApiUrl = environment.apiBaseUrl ? environment.apiBaseUrl + '/users' : '/api/users';
+  private categoriesApiUrl = environment.apiBaseUrl ? environment.apiBaseUrl + '/books/categories' : '/api/books/categories';
 
   private ordersSubject = new BehaviorSubject<any[]>([]);
   public orders$ = this.ordersSubject.asObservable();
@@ -119,6 +121,20 @@ export class DataService {
     return this.http.get(this.recentBooksApiUrl);
   }
 
+  search(params: any): Observable<any> {
+    let queryParams = `?q=${encodeURIComponent(params.q || '')}`;
+    if (params.page) queryParams += `&page=${params.page}`;
+    if (params.limit) queryParams += `&limit=${params.limit}`;
+    if (params.category) queryParams += `&category=${encodeURIComponent(params.category)}`;
+    if (params.minPrice) queryParams += `&minPrice=${params.minPrice}`;
+    if (params.maxPrice) queryParams += `&maxPrice=${params.maxPrice}`;
+    if (params.publisher) queryParams += `&publisher=${encodeURIComponent(params.publisher)}`;
+    if (params.author) queryParams += `&author=${encodeURIComponent(params.author)}`;
+    if (params.sortBy) queryParams += `&sortBy=${params.sortBy}`;
+
+    return this.http.get<any>(this.searchApiUrl + queryParams);
+  }
+
   getProductsByCategory(category: string): Observable<any> {
     return this.http.get(`${this.productsApiUrl}?category=${encodeURIComponent(category)}`);
   }
@@ -155,5 +171,9 @@ export class DataService {
   updateOrderShippingAddress(userId: string, orderId: string, addressData: any): Observable<any> {
     const url = this.usersApiUrl + '/' + userId + '/orders/' + orderId + '/shipping-address';
     return this.http.put(url, addressData);
+  }
+
+  getCategories(): Observable<any> {
+    return this.http.get<any>(this.categoriesApiUrl);
   }
 }

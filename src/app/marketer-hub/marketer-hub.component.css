@@ -1,0 +1,157 @@
+:host {
+  /* Default: Light Mode (Day Mode) */
+  --hub-bg: #ffffff;
+  --hub-gradient: linear-gradient(180deg, #ffffff 0%, #f3f4f6 100%);
+  --hub-text: #0f172a;
+  --hub-glass: #ffffff;
+  --hub-glass-border: rgba(0, 0, 0, 0.1);
+  --hub-card-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  --hub-hover: #f8fafc;
+  display: block;
+}
+
+/* Only apply dark mode if the .dark class is present on the html/body */
+:host-context(.dark) {
+  --hub-bg: #0f172a;
+  --hub-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+  --hub-text: #f8fafc;
+  --hub-glass: rgba(30, 41, 59, 0.7);
+  --hub-glass-border: rgba(255, 255, 255, 0.1);
+  --hub-card-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  --hub-hover: rgba(255, 255, 255, 0.05);
+}
+
+.marketer-container {
+  background: var(--hub-bg) !important;
+  background-image: var(--hub-gradient) !important;
+  color: var(--hub-text) !important;
+  font-family: 'Outfit', 'Cairo', sans-serif;
+  direction: rtl;
+  min-height: 100vh;
+  width: 100%;
+  position: relative;
+  z-index: 10;
+  padding-top: 180px; /* Increased padding to clear navbar content */
+  box-sizing: border-box;
+  transition: all 0.3s ease;
+}
+
+.glass-card {
+  background: var(--hub-glass);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--hub-glass-border);
+  border-radius: 24px;
+  box-shadow: var(--hub-card-shadow);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-effect {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--hub-glass-border);
+}
+
+.hover-scale:hover {
+  transform: translateY(-8px);
+  background: var(--hub-hover);
+  box-shadow: 0 25px 30px -5px rgba(0, 0, 0, 0.08);
+}
+
+.status-badge {
+  padding: 6px 14px;
+  border-radius: 99px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.025em;
+}
+
+.status-badge.completed, .status-badge.delivered, .status-badge.تم\ التسليم {
+  background: rgba(34, 197, 94, 0.15);
+  color: #166534;
+}
+
+.status-badge.pending, .status-badge.قيد\ الإنتظار {
+  background: rgba(234, 179, 8, 0.15);
+  color: #854d0e;
+}
+
+.status-badge.shipped, .status-badge.تم\ الشحن {
+  background: rgba(59, 130, 246, 0.15);
+  color: #1e40af;
+}
+
+/* Dark mode badge adjustments */
+@media (prefers-color-scheme: dark) {
+  .status-badge.completed, .status-badge.delivered, .status-badge.تم\ التسليم { color: #4ade80; }
+  .status-badge.pending, .status-badge.قيد\ الإنتظار { color: #fde047; }
+  .status-badge.shipped, .status-badge.تم\ الشحن { color: #60a5fa; }
+}
+
+:host-context(.dark) {
+  .status-badge.completed, .status-badge.delivered, .status-badge.تم\ التسليم { color: #4ade80; }
+  .status-badge.pending, .status-badge.قيد\ الإنتظار { color: #fde047; }
+  .status-badge.shipped, .status-badge.تم\ الشحن { color: #60a5fa; }
+}
+
+.tab-btn {
+  background: transparent;
+  color: var(--hub-text);
+  opacity: 0.6;
+}
+
+.tab-btn:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.active-tab {
+  background: var(--hub-glass) !important;
+  opacity: 1;
+  color: var(--primary);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  border: 1px solid var(--primary-light);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--primary-light);
+  border-radius: 10px;
+}
+
+.prize-card {
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.prize-card:hover {
+  transform: translateX(-5px);
+  border-color: var(--primary);
+}
+
+/* Animations */
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes bounceIn {
+  0% { opacity: 0; transform: scale(0.3); }
+  50% { opacity: 0.9; transform: scale(1.1); }
+  80% { transform: scale(0.89); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.animate-fade-in { animation: fadeIn 0.8s ease-out; }
+.animate-slide-up { animation: slideUp 0.8s ease-out; }
+.animate-bounce-in { animation: bounceIn 0.6s cubic-bezier(0.215, 0.61, 0.355, 1); }
+
+@media (max-width: 768px) {
+  .glass-card { border-radius: 16px; }
+  .tab-btn { padding: 8px 12px; font-size: 0.8rem; }
+}

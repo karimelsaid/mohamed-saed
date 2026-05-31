@@ -1,0 +1,97 @@
+<div class="admin-container" dir="rtl">
+    <div class="header-section">
+        <h1>إدارة العروض الخاصة (المسودة البيضاء)</h1>
+        <p>قم بإضافة رسائل بريد إلكتروني للحصول على خصومات أو فترات مجانية أو وصول مدى الحياة.</p>
+    </div>
+
+    <!-- Alert Message -->
+    <div *ngIf="message.text" [class]="'alert alert-' + message.type">
+        {{ message.text }}
+    </div>
+
+    <!-- Add New Offer Form -->
+    <div class="card add-offer-card">
+        <h3><fa-icon [icon]="icons.plus"></fa-icon> إضافة مستخدم جديد للقائمة</h3>
+        <div class="form-grid">
+            <div class="form-group">
+                <label>البريد الإلكتروني</label>
+                <input type="email" [(ngModel)]="newOffer.email" placeholder="example@email.com">
+            </div>
+            
+            <div class="form-group">
+                <label>نوع المفاجأة</label>
+                <select [(ngModel)]="newOffer.type">
+                    <option value="free_months">شهور مجانية</option>
+                    <option value="free_days">أيام مجانية</option>
+                    <option value="lifetime">مدى الحياة مجاناً</option>
+                    <option value="discount">خصم إضافي (%)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>القيمة (عدد الشهور/الأيام/النسبة)</label>
+                <input type="number" [(ngModel)]="newOffer.value" [disabled]="newOffer.type === 'lifetime'">
+            </div>
+
+            <div class="form-group">
+                <label>ملاحظات (تظهر للأدمن فقط)</label>
+                <input type="text" [(ngModel)]="newOffer.notes" placeholder="مثلاً: هدية للمسابقة">
+            </div>
+        </div>
+        
+        <div class="action-row">
+            <button class="btn-primary" (click)="addOffer()" [disabled]="isLoading">
+                <span *ngIf="!isLoading">إضافة إلى القائمة الذهبية</span>
+                <span *ngIf="isLoading">جاري الإضافة...</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Offers List -->
+    <div class="card list-card">
+        <div class="list-header">
+            <h3>قائمة المستفيدين الحالية ({{ offers.length }})</h3>
+            <button class="btn-refresh" (click)="loadOffers()"><fa-icon [icon]="icons.clock"></fa-icon></button>
+        </div>
+
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>البريد الإلكتروني</th>
+                        <th>نوع العرض</th>
+                        <th>القيمة</th>
+                        <th>الحالة</th>
+                        <th>تاريخ الإضافة</th>
+                        <th>إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let offer of offers">
+                        <td class="email-cell">{{ offer.email }}</td>
+                        <td>
+                            <span class="badge" [ngClass]="offer.type">
+                                <fa-icon [icon]="offer.type === 'lifetime' ? icons.crown : (offer.type === 'discount' ? icons.percent : icons.gift)"></fa-icon>
+                                {{ getOfferTypeName(offer.type) }}
+                            </span>
+                        </td>
+                        <td>{{ offer.type === 'lifetime' ? '∞' : offer.value }}</td>
+                        <td>
+                            <span class="status-dot" [ngClass]="offer.isClaimed ? 'claimed' : 'pending'"></span>
+                            {{ offer.isClaimed ? 'تم التفعيل' : 'بانتظار الدخول' }}
+                        </td>
+                        <td>{{ offer.createdAt | date:'shortDate' }}</td>
+                        <td>
+                            <button class="btn-icon delete" (click)="deleteOffer(offer._id!)" title="حذف">
+                                <fa-icon [icon]="icons.trash"></fa-icon>
+                            </button>
+                        </td>
+                    </tr>
+                    <tr *ngIf="offers.length === 0 && !isLoading">
+                        <td colspan="6" class="empty-state">لا يوجد مستخدمون في القائمة حالياً.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

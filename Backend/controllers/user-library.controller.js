@@ -79,14 +79,22 @@ exports.checkAccess = async (req, res) => {
         const userId = req.user._id;
         const { ebookId } = req.params;
 
-        // Check subscription
+        // Check subscription (Primary: Subscription model, Fallback: User model)
         const subscription = await Subscription.findActiveSubscription(userId);
-        if (subscription) {
+        const hasUserSubscription = req.user.activeSubscription && 
+                                   req.user.subscriptionEndDate && 
+                                   new Date(req.user.subscriptionEndDate) > new Date();
+
+        if (subscription || hasUserSubscription) {
             return res.json({
                 success: true,
                 hasAccess: true,
                 accessType: 'subscription',
-                subscription: subscription
+                subscription: subscription || { 
+                    status: 'active', 
+                    endDate: req.user.subscriptionEndDate,
+                    plan: 'special_offer'
+                }
             });
         }
 

@@ -80,6 +80,17 @@
           <span class="w-2 h-2 bg-red-500 rounded-full animate-pulse ml-1"></span>
           <span class="ml-1 text-sm sm:text-xs font-bold text-red-600 dark:text-red-400">📈 البورصة</span>
         </div>
+
+        <div *ngIf="isMarketer"
+          class="flex items-end sm:items-center cursor-pointer px-1 py-2 rounded-lg hover:bg-green-400/20 transition-all duration-300 hover:scale-105"
+          routerLink="/marketer-hub" routerLinkActive="text-green-400 bg-green-400/20"
+          [routerLinkActiveOptions]="{exact:true}">
+          <fa-icon class="m-1 text-2xl sm:text-sm text-right transition-transform duration-300 text-green-500"
+            [icon]="faChartLine"></fa-icon>
+          <span class="ml-1 text-sm sm:text-xs font-bold text-green-600 dark:text-green-400">
+            {{ user?.role === 'marketer' || isAdmin ? 'لوحة المسوق' : 'انضم للمسوقين' }}
+          </span>
+        </div>
         <!-- Desktop Dropdown Overlay -->
         <div *ngIf="!scrollBook || !scrollProducts" class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-40"
           (click)="scrollBook=true; scrollProducts=true"></div>
@@ -100,85 +111,35 @@
 
           <!-- Menu Items -->
           <div class="py-2">
-            <div (click)="scrollBook = true" routerLinkActive="text-orange-400" routerLink="/Islamic"
+            <!-- Dynamic Book Categories -->
+            <div *ngFor="let cat of bookCategories" (click)="scrollBook = true" 
+              [routerLink]="['/category', cat]" routerLinkActive="text-orange-400"
               class="cursor-pointer flex items-center px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group">
               <fa-icon
                 class="text-blue-600 dark:text-blue-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"
-                [icon]="faMosque"></fa-icon>
-              <li class="text-sm font-medium">دينية</li>
+                [icon]="getCategoryIcon(cat)"></fa-icon>
+              <li class="text-sm font-medium">{{ cat }}</li>
             </div>
 
-            <div (click)="scrollBook = true"
-              class="cursor-pointer flex items-center px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group"
-              routerLinkActive="text-orange-400" routerLink="/Self-development-psychology">
+            <!-- Other Categories -->
+            <div *ngFor="let cat of otherCategories" (click)="scrollBook = true" 
+              [routerLink]="['/category', cat]" routerLinkActive="text-orange-400"
+              class="cursor-pointer flex items-center px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group">
               <fa-icon
-                class="text-green-600 dark:text-green-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"
-                [icon]="faBrain"></fa-icon>
-              <li class="text-sm font-medium">تطوير الذات وعلم النفس</li>
+                class="text-blue-600 dark:text-blue-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"
+                [icon]="getCategoryIcon(cat)"></fa-icon>
+              <li class="text-sm font-medium">{{ cat }}</li>
             </div>
 
-            <div (click)="scrollBook = true"
-              class="cursor-pointer flex items-center px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group"
-              routerLinkActive="text-orange-400" routerLink="/Novels-stories">
-              <fa-icon
-                class="text-purple-600 dark:text-purple-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"
-                [icon]="faScroll"></fa-icon>
-              <li class="text-sm font-medium">روايات وقصص</li>
-            </div>
-
-            <div (click)="scrollBook = true"
-              class="cursor-pointer flex items-center px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group"
-              routerLinkActive="text-orange-400" routerLink="/Business-Marketing-Finance">
-              <fa-icon
-                class="text-emerald-600 dark:text-emerald-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"
-                [icon]="faChartLine"></fa-icon>
-              <li class="text-sm font-medium">أعمال وتسويق ومالية</li>
-            </div>
-
-            <div (click)="scrollBook = true"
-              class="cursor-pointer flex items-center px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group"
-              routerLinkActive="text-orange-400" routerLink="/HealthMedicineScience">
-              <fa-icon
-                class="text-red-600 dark:text-red-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"
-                [icon]="faHeartbeat"></fa-icon>
-              <li class="text-sm font-medium">صحة وطب وعلوم</li>
-            </div>
-
-            <div (click)="scrollBook = true"
-              class="cursor-pointer flex items-center px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group"
-              routerLinkActive="text-orange-400" routerLink="/Dictionaries-References">
-              <fa-icon
-                class="text-indigo-600 dark:text-indigo-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"
-                [icon]="faBookOpen"></fa-icon>
-              <li class="text-sm font-medium">قواميس ومراجع</li>
-            </div>
-
-            <div (click)="scrollBook = true"
-              class="cursor-pointer flex items-center px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group"
-              routerLinkActive="text-orange-400" routerLink="/Education-children">
-              <fa-icon
-                class="text-pink-600 dark:text-pink-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"
-                [icon]="faChild"></fa-icon>
-              <li class="text-sm font-medium">تربية وأطفال</li>
-            </div>
-
-            <div (click)="scrollBook = true"
-              class="cursor-pointer flex items-center px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group"
-              routerLinkActive="text-orange-400" routerLink="/History-Biographies">
-              <fa-icon
-                class="text-amber-600 dark:text-amber-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"
-                [icon]="faHistory"></fa-icon>
-              <li class="text-sm font-medium">تاريخ وسير ذاتية</li>
-            </div>
-
-            <div (click)="scrollBook = true"
-              class="cursor-pointer flex items-center px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group"
-              routerLinkActive="text-orange-400" routerLink="/Arts-crafts">
-              <fa-icon
-                class="text-teal-600 dark:text-teal-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"
-                [icon]="faPalette"></fa-icon>
-              <li class="text-sm font-medium">فنون وحرف</li>
-            </div>
+            <!-- Fallback if no dynamic categories yet -->
+            <ng-container *ngIf="bookCategories.length === 0">
+              <div (click)="scrollBook = true" routerLinkActive="text-orange-400" routerLink="/Islamic"
+                class="cursor-pointer flex items-center px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group">
+                <fa-icon class="text-blue-600 dark:text-blue-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200" [icon]="faMosque"></fa-icon>
+                <li class="text-sm font-medium">دينية</li>
+              </div>
+              <!-- ... more fallbacks can be added or just let dynamic take over ... -->
+            </ng-container>
           </div>
 
           <!-- Footer -->
@@ -321,6 +282,35 @@
             </div>
           </div>
 
+          <!-- Marketer Hub -->
+          <div *ngIf="isMarketer" (click)="exitBars()" routerLink="/marketer-hub" routerLinkActive="bg-green-50 dark:bg-green-900/30"
+            class="flex gap-4 items-center p-4 rounded-xl cursor-pointer hover:bg-green-50 dark:hover:bg-green-900/30 transition-all duration-200 group">
+            <div
+              class="flex items-center justify-center w-10 h-10 rounded-lg bg-green-100 dark:bg-green-900/30 mr-4 group-hover:scale-110 transition-transform duration-200">
+              <fa-icon [icon]="faChartLine" class="text-green-600 dark:text-green-400"></fa-icon>
+            </div>
+            <div>
+              <span class="font-medium text-green-600 dark:text-green-400 block font-bold">
+                {{ user?.role === 'marketer' || isAdmin ? 'لوحة المسوق' : 'انضم للمسوقين' }}
+              </span>
+              <span class="text-sm text-gray-500 dark:text-gray-400">
+                {{ user?.role === 'marketer' || isAdmin ? 'إدارة الروابط والأرباح' : 'اربح عمولة على المبيعات' }}
+              </span>
+            </div>
+          </div>
+
+
+          <!-- Control Panel (Admin/Staff) -->
+          <div *ngIf="isAdmin" (click)="exitBars()" routerLink="/ControlPanel" routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
+            class="flex gap-4 items-center p-4 rounded-xl cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all duration-200 group border-2 border-blue-200 dark:border-blue-800">
+            <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-blue-600 text-white mr-4 group-hover:scale-110 transition-transform duration-200 shadow-lg shadow-blue-500/30">
+              <fa-icon [icon]="faTachometerAlt"></fa-icon>
+            </div>
+            <div>
+              <span class="font-bold text-blue-600 dark:text-blue-400 block">لوحة التحكم</span>
+              <span class="text-xs text-gray-500 dark:text-gray-400">إدارة المنصة والموظفين</span>
+            </div>
+          </div>
 
         </div>
 
@@ -335,81 +325,22 @@
           </div>
 
           <div class="space-y-1">
-            <!-- Islamic -->
-            <div (click)="exitBars()" routerLink="/Islamic" routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
+            <!-- Dynamic Categories in Mobile -->
+            <div *ngFor="let cat of dynamicCategories" (click)="exitBars()" [routerLink]="['/category', cat]" routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
               class="flex items-center p-3 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group">
-              <fa-icon [icon]="faMosque"
+              <fa-icon [icon]="getCategoryIcon(cat)"
                 class="text-blue-600 dark:text-blue-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"></fa-icon>
-              <span class="font-medium text-gray-700 dark:text-gray-300">دينية</span>
+              <span class="font-medium text-gray-700 dark:text-gray-300">{{ cat }}</span>
             </div>
 
-            <!-- Self Development -->
-            <div (click)="exitBars()" routerLink="/Self-development-psychology"
-              routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
-              class="flex items-center p-3 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group">
-              <fa-icon [icon]="faBrain"
-                class="text-green-600 dark:text-green-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"></fa-icon>
-              <span class="font-medium text-gray-700 dark:text-gray-300">تطوير الذات وعلم النفس</span>
-            </div>
-
-            <!-- Novels -->
-            <div (click)="exitBars()" routerLink="/Novels-stories" routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
-              class="flex items-center p-3 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group">
-              <fa-icon [icon]="faScroll"
-                class="text-purple-600 dark:text-purple-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"></fa-icon>
-              <span class="font-medium text-gray-700 dark:text-gray-300">روايات وقصص</span>
-            </div>
-
-            <!-- Business -->
-            <div (click)="exitBars()" routerLink="/Business-Marketing-Finance"
-              routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
-              class="flex items-center p-3 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group">
-              <fa-icon [icon]="faChartLine"
-                class="text-emerald-600 dark:text-emerald-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"></fa-icon>
-              <span class="font-medium text-gray-700 dark:text-gray-300">أعمال وتسويق ومالية</span>
-            </div>
-
-            <!-- Health -->
-            <div (click)="exitBars()" routerLink="/HealthMedicineScience"
-              routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
-              class="flex items-center p-3 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group">
-              <fa-icon [icon]="faHeartbeat"
-                class="text-red-600 dark:text-red-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"></fa-icon>
-              <span class="font-medium text-gray-700 dark:text-gray-300">صحة وطب وعلوم</span>
-            </div>
-
-            <!-- Dictionaries -->
-            <div (click)="exitBars()" routerLink="/Dictionaries-References"
-              routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
-              class="flex items-center p-3 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group">
-              <fa-icon [icon]="faBookOpen"
-                class="text-indigo-600 dark:text-indigo-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"></fa-icon>
-              <span class="font-medium text-gray-700 dark:text-gray-300">قواميس ومراجع</span>
-            </div>
-
-            <!-- Education -->
-            <div (click)="exitBars()" routerLink="/Education-children" routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
-              class="flex items-center p-3 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group">
-              <fa-icon [icon]="faChild"
-                class="text-pink-600 dark:text-pink-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"></fa-icon>
-              <span class="font-medium text-gray-700 dark:text-gray-300">تربية وأطفال</span>
-              <!-- History -->
-              <div (click)="exitBars()" routerLink="/History-Biographies"
-                routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
+            <!-- Fallback for Mobile if no categories -->
+            <ng-container *ngIf="dynamicCategories.length === 0">
+              <div (click)="exitBars()" routerLink="/Islamic" routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
                 class="flex items-center p-3 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group">
-                <fa-icon [icon]="faHistory"
-                  class="text-amber-600 dark:text-amber-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"></fa-icon>
-                <span class="font-medium text-gray-700 dark:text-gray-300">تاريخ وسير ذاتية</span>
+                <fa-icon [icon]="faMosque" class="text-blue-600 dark:text-blue-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"></fa-icon>
+                <span class="font-medium text-gray-700 dark:text-gray-300">دينية</span>
               </div>
-
-              <!-- Arts -->
-              <div (click)="exitBars()" routerLink="/Arts-crafts" routerLinkActive="bg-blue-50 dark:bg-blue-900/30"
-                class="flex items-center p-3 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group">
-                <fa-icon [icon]="faPalette"
-                  class="text-teal-600 dark:text-teal-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"></fa-icon>
-                <span class="font-medium text-gray-700 dark:text-gray-300">فنون وحرف</span>
-              </div>
-            </div>
+            </ng-container>
           </div>
 
           <div *ngIf="showNotificationsDropdown" (click)="showNotificationsDropdown = false"

@@ -91,50 +91,120 @@ exports.getHeroConfig = async (req, res) => {
 
 exports.getHeroBooks = async (req, res) => {
     try {
-        // Fetch ~50 random products that have images
-        // Using $sample for randomness
-        const products = await Product.aggregate([
-            { 
-                $match: { 
-                    $or: [
-                        { product_image: { $exists: true, $ne: '' } },
-                        { image_path: { $exists: true, $ne: '' } }
-                    ]
-                } 
-            },
-            { $sample: { size: 32 } },
-            {
-                $lookup: {
-                    from: 'users',
-                    localField: 'merchantId',
-                    foreignField: '_id',
-                    as: 'merchant'
-                }
-            },
-            { $unwind: { path: '$merchant', preserveNullAndEmptyArrays: true } },
-            {
-                $project: {
-                    product_name: 1,
-                    product_image: 1,
-                    image_path: 1,
-                    product_price: 1,
-                    barcode: 1,
-                    author: 1,
-                    products_id: { $ifNull: ['$products_id', '$product_image'] },
-                    merchantId: 1,
-                    merchantName: {
-                        $cond: {
-                            if: { $eq: ['$merchant.role', 'admin'] },
-                            then: null, // Admin products should have null merchantName for consistency with other components
-                            else: { $ifNull: ['$merchant.merchantName', '$merchant.username'] }
-                        }
-                    },
-                    merchantRole: { $ifNull: ['$merchant.role', 'admin'] }
+        // 1. Fetch from output.json (Excel)
+        let excelProducts = [];
+        const filePath = path.join(__dirname, '..', 'output.json');
+        if (fs.existsSync(filePath)) {
+            try {
+                excelProducts = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+            } catch (e) {
+                console.error('Error parsing output.json in getHeroBooks:', e);
+            }
+        }
+
+        // 2. Fetch from MongoDB Product collection
+        const dbProducts = await Product.find({ 
+            status: 'approved',
+            $or: [
+                { product_image: { $exists: true, $ne: '' } },
+                { image_path: { $exists: true, $ne: '' } }
+            ]
+        }).lean();
+
+        // 3. Load merchant role and names
+        const merchants = await User.find({ role: { $in: ['merchant', 'admin'] } })
+            .select('_id name merchantName logo role')
+            .lean();
+            
+        const merchantMap = new Map();
+        merchants.forEach(m => merchantMap.set(m._id.toString(), {
+            name: (m.merchantName || m.name || 'كنوز'),
+            logo: m.logo,
+            role: m.role
+        }));
+
+        // 4. Merge and Unify
+        const uniqueItems = new Map();
+        
+        const getMatchKey = (item) => {
+            if (!item) return null;
+            if (item.products_id && /^\d+$/.test(item.products_id.toString())) return item.products_id.toString();
+            if (item.product_image && /^\d+$/.test(item.product_image.toString())) return item.product_image.toString();
+            return item.products_id || (item._id ? item._id.toString() : null);
+        };
+
+        excelProducts.forEach(item => {
+            const matchKey = getMatchKey(item);
+            if (matchKey && (item.product_image || item.image_path)) {
+                uniqueItems.set(matchKey, {
+                    ...item,
+                    isDbProduct: false
+                });
+            }
+        });
+
+        dbProducts.forEach(product => {
+            const matchKey = getMatchKey(product);
+            const excelMatch = uniqueItems.get(matchKey);
+
+            let finalPid = product._id.toString();
+            if (excelMatch && excelMatch.products_id) finalPid = excelMatch.products_id.toString();
+
+            const mergedProduct = {
+                ...(excelMatch || {}),
+                ...product,
+                products_id: finalPid,
+                _id: product._id.toString(),
+                isDbProduct: true
+            };
+
+            const itemKey = matchKey || finalPid;
+            uniqueItems.set(itemKey, mergedProduct);
+        });
+
+        let allProducts = Array.from(uniqueItems.values());
+
+        // 5. Enrich merchant fields
+        allProducts.forEach(book => {
+            if (!book.merchantId && !book.isDbProduct) book.merchantId = '69d11b07df78621a8d7b1559';
+
+            if (merchantMap && book.merchantId) {
+                const mInfo = merchantMap.get(book.merchantId.toString());
+                if (mInfo) {
+                    book.merchantName = mInfo.name;
+                    book.merchantLogo = mInfo.logo || book.merchantLogo;
+                    book.merchantRole = mInfo.role;
                 }
             }
-        ]);
+            if (!book.merchantName) book.merchantName = 'كنوز';
+            book.products_id = book.products_id || book.product_image || book._id;
+        });
+
+        // 6. Ensure they have a valid image
+        allProducts = allProducts.filter(p => p.product_image || p.image_path);
+
+        // 7. Shuffle and pick 32 random items
+        const shuffled = allProducts.sort(() => 0.5 - Math.random());
+        const sampledProducts = shuffled.slice(0, 32);
+
+        // 8. Map to frontend fields
+        const products = sampledProducts.map(p => ({
+            _id: p._id ? p._id.toString() : p.products_id,
+            product_name: p.product_name || p.bookName,
+            product_image: p.product_image,
+            image_path: p.image_path,
+            product_price: p.product_price,
+            barcode: p.barcode || p.products_id,
+            author: p.author || '',
+            products_id: p.products_id,
+            merchantId: p.merchantId,
+            merchantName: p.merchantRole === 'admin' ? null : p.merchantName,
+            merchantRole: p.merchantRole || 'admin'
+        }));
+
         res.status(200).json({ success: true, products });
     } catch (error) {
+        console.error('Error in getHeroBooks:', error);
         res.status(500).json({ success: false, message: 'Error fetching hero books', error: error.message });
     }
 };

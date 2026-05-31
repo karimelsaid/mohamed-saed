@@ -8,10 +8,10 @@ const verifyAdmin = async (req, res, next) => {
             });
         }
 
-        if (req.user.role !== 'admin') {
+        if (req.user.role !== 'admin' && req.user.role !== 'staff') {
             return res.status(403).json({
                 success: false,
-                message: 'الوصول مرفوض. هذه الصفحة للمسؤولين فقط.'
+                message: 'الوصول مرفوض. هذه الصفحة للمسؤولين أو الموظفين فقط.'
             });
         }
 

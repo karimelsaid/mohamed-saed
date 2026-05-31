@@ -1,359 +1,356 @@
-<div class="container mx-auto p-4 md:p-8 space-y-8 bg-gray-50 dark:bg-gray-900 min-h-screen rtl transition-colors duration-300"
+<div class="container mx-auto p-4 md:p-8 space-y-12 bg-transparent rtl transition-colors duration-300"
     dir="rtl">
 
     <!-- Header / Summary Section (Logged In) -->
-    <div *ngIf="isLoggedIn; else guestHeader" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div *ngIf="isLoggedIn; else guestHeader" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
         <!-- Streak Card -->
-        <!-- Streak Card -->
-        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 flex flex-col justify-between border-r-4"
-            [ngClass]="hasReadToday ? 'border-green-500' : 'border-orange-500'">
-
-            <div class="flex justify-between items-start w-full mb-4">
+        <div class="glass-card rounded-3xl shadow-2xl p-8 flex flex-col justify-between border-t-4 border-orange-500 overflow-hidden relative group">
+            <div class="absolute top-0 right-0 -mr-10 -mt-10 w-32 h-32 bg-orange-500/10 rounded-full blur-3xl group-hover:bg-orange-500/20 transition-all"></div>
+            
+            <div class="flex justify-between items-start w-full mb-6 relative z-10">
                 <div class="flex flex-col">
-                    <span class="text-xs font-semibold uppercase tracking-wider mb-1"
+                    <span class="text-xs font-bold uppercase tracking-widest mb-2 flex items-center gap-2"
                         [ngClass]="hasReadToday ? 'text-green-500' : 'text-orange-500'">
-                        {{ hasReadToday ? '✅ حالة اليوم' : '⏳ حالة اليوم' }}
+                        <span class="w-2 h-2 rounded-full animate-pulse" [ngClass]="hasReadToday ? 'bg-green-500' : 'bg-orange-500'"></span>
+                        {{ hasReadToday ? 'حالة اليوم: نشط' : 'حالة اليوم: انتظار' }}
                     </span>
-                    <h2 class="text-xl font-bold text-gray-800 dark:text-white leading-tight">
-                        {{ hasReadToday ? 'قرأت اليوم!' : 'لسه مقريتش!' }}
-                        <br>
-                        <span class="text-sm font-normal text-gray-500 dark:text-gray-400">
-                            {{ hasReadToday ? 'حافظت على سلسلتك 🔥' : 'صفحة واحدة تحمي سلسلتك' }}
-                        </span>
+                    <h2 class="text-2xl font-black text-gray-800 dark:text-white leading-none mb-2">
+                        {{ hasReadToday ? 'قرأت اليوم!' : 'لم تقرأ بعد' }}
                     </h2>
+                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                        {{ hasReadToday ? 'حافظت على شعلة الحماس 🔥' : 'دقيقة واحدة تحمي سلسلتك اليوم' }}
+                    </p>
                 </div>
-                <div class="relative group">
-                    <!-- Info Icon / Tooltip Trigger -->
-                    <div
-                        class="w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-400 text-xs cursor-help">
-                        ℹ️</div>
-                    <!-- Tooltip -->
-                    <div
-                        class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-black text-white text-xs rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 text-center">
-                        يتم احتساب اليوم عند القراءة لمدة دقيقة واحدة على الأقل قبل 00:00 UTC
-                    </div>
-                </div>
+                <div class="text-4xl animate-float">🔥</div>
             </div>
 
             <!-- Active Streak Progress -->
-            <div class="w-full mt-2">
-                <div class="flex justify-between text-xs mb-2">
-                    <span class="font-bold text-gray-700 dark:text-gray-200">🔥 سلسلة حالية</span>
-                    <span class="text-gray-500">{{ profile?.currentStreak || 0 }} / {{ nextStreakMilestone }}
-                        أيام</span>
-                </div>
-                <!-- Progress Bar Container -->
-                <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
-                    <!-- Progress Fill -->
-                    <!-- We create segments feeling -->
-                    <div class="h-full bg-gradient-to-r from-orange-400 to-red-500 transition-all duration-1000 relative"
-                        [style.width.%]="streakProgressPercent">
-                        <!-- Striped pattern overlay -->
-                        <div class="absolute top-0 left-0 w-full h-full"
-                            style="background-image: linear-gradient(45deg,rgba(255,255,255,.15) 25%,transparent 25%,transparent 50%,rgba(255,255,255,.15) 50%,rgba(255,255,255,.15) 75%,transparent 75%,transparent); background-size: 1rem 1rem;">
-                        </div>
+            <div class="w-full mt-4 relative z-10">
+                <div class="flex justify-between items-end mb-3">
+                    <div class="flex flex-col">
+                        <span class="text-3xl font-black text-orange-600 dark:text-orange-400">{{ profile?.currentStreak || 0 }}</span>
+                        <span class="text-[10px] text-gray-400 uppercase font-bold">يوم متواصل</span>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-xs font-bold text-gray-500">الهدف: {{ nextStreakMilestone }} يوم</span>
                     </div>
                 </div>
-                <p class="text-xs text-orange-600 dark:text-orange-400 mt-2 font-medium text-center">
-                    {{ nextStreakMilestone - (profile?.currentStreak || 0) }} أيام وتصل إلى إنجاز جديد 🏆
+                
+                <div class="w-full bg-gray-200/50 dark:bg-gray-700/50 rounded-full h-4 overflow-hidden p-1 shadow-inner">
+                    <div class="h-full bg-gradient-to-r from-orange-400 via-orange-500 to-red-600 rounded-full transition-all duration-1000 relative progress-shimmer"
+                        [style.width.%]="streakProgressPercent">
+                    </div>
+                </div>
+                
+                <p class="text-xs text-center mt-4 font-bold text-gray-600 dark:text-gray-300">
+                    تبقي {{ nextStreakMilestone - (profile?.currentStreak || 0) }} أيام للوصول للوسام القادم 🏆
                 </p>
             </div>
 
             <!-- Best Record -->
-            <div class="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2">
-                <span class="text-xl">🏆</span>
-                <div class="flex flex-col">
-                    <span class="text-xs text-gray-500 dark:text-gray-400">أفضل إنجاز لك</span>
-                    <span class="text-sm font-bold text-gray-800 dark:text-white">{{ profile?.longestStreak || 0 }} أيام
-                        متواصلة</span>
-                </div>
-            </div>
-
-        </div>
-
-        <!-- Level Card -->
-        <div
-            class="md:col-span-2 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl shadow-lg p-6 text-white relative overflow-hidden">
-            <div class="absolute top-0 left-0 -ml-8 -mt-8 w-32 h-32 bg-white opacity-10 rounded-full"></div>
-
-            <div class="flex items-center justify-between mb-4">
-                <div>
-                    <p class="text-indigo-200 font-semibold mb-1">المستوى الحالي</p>
-                    <h2 class="text-4xl font-bold">المستوى {{ profile?.level || 1 }}</h2>
-                </div>
-                <div class="bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 flex items-center gap-2">
-                    <fa-icon [icon]="faCoins" class="text-yellow-300 text-xl"></fa-icon>
-                    <span class="text-xl font-bold">{{ (profile?.coins || 0) | number:'1.0-0' }} عملة</span>
-                </div>
-            </div>
-
-            <!-- Detail Stats -->
-            <div class="mb-6">
-                <div class="flex justify-between text-sm mb-2 text-indigo-100">
-                    <span>إجمالي نقاط الخبرة: {{ (profile?.xp || 0) | number:'1.0-0' }}</span>
-                    <span>المستوى التالي: {{ (profile?.nextLevelXP || 100) | number:'1.0-0' }} نقطة</span>
-                </div>
-                <div class="w-full bg-black/20 rounded-full h-4 backdrop-blur-sm overflow-hidden">
-                    <div class="bg-yellow-400 h-4 rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(250,204,21,0.5)]"
-                        [style.width.%]="calculateLevelProgress()">
+            <div class="mt-8 pt-6 border-t border-gray-100 dark:border-gray-700/50 flex items-center justify-between relative z-10">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-yellow-500/10 flex items-center justify-center text-yellow-600 text-xl">
+                        🏆
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-[10px] text-gray-400 font-bold">الرقم القياسي</span>
+                        <span class="text-sm font-bold text-gray-800 dark:text-white">{{ profile?.longestStreak || 0 }} أيام</span>
                     </div>
                 </div>
-                <p class="text-xs text-indigo-200 mt-2 italic">اقرأ المزيد لكسب النقاط وفتح الأوسمة!</p>
-                <button (click)="showAchievementCard = true"
-                    class="mt-4 w-full bg-white/10 hover:bg-white/20 text-white border border-white/30 rounded-lg py-2 flex items-center justify-center gap-2 transition-all group">
-                    <span>مشاركة الإنجاز الآن</span>
-                    <span class="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform">🚀</span>
+                <fa-icon [icon]="['fas', 'chevron-left']" class="text-gray-300"></fa-icon>
+            </div>
+        </div>
+
+        <!-- Level & XP Card -->
+        <div class="lg:col-span-2 glass-card rounded-3xl shadow-2xl p-8 text-white relative overflow-hidden group border-t-4 border-indigo-500">
+            <!-- Background Decorative Elements -->
+            <div class="absolute inset-0 bg-gradient-to-br from-indigo-600 via-purple-700 to-fuchsia-800 opacity-90 group-hover:opacity-100 transition-opacity"></div>
+            <div class="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10"></div>
+            <div class="absolute -top-24 -left-24 w-64 h-64 bg-white/10 rounded-full blur-3xl animate-pulse"></div>
+            <div class="absolute -bottom-24 -right-24 w-64 h-64 bg-indigo-400/20 rounded-full blur-3xl"></div>
+
+            <div class="relative z-10">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
+                    <div class="flex items-center gap-6">
+                        <div class="w-20 h-20 rounded-2xl bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center text-4xl shadow-2xl transform -rotate-3 group-hover:rotate-0 transition-transform duration-500">
+                            {{ profile?.level || 1 }}
+                        </div>
+                        <div>
+                            <span class="text-indigo-200 text-xs font-black uppercase tracking-widest mb-1 block">رتبة القارئ</span>
+                            <h2 class="text-4xl font-black mb-1">المستوى {{ profile?.level || 1 }}</h2>
+                            <p class="text-indigo-100/70 text-sm">أنت في الطريق لتصبح خبيراً في القراءة!</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex flex-col items-end">
+                        <div class="bg-black/30 backdrop-blur-xl rounded-2xl px-6 py-4 border border-white/10 shadow-2xl flex items-center gap-4">
+                            <div class="w-10 h-10 rounded-full bg-yellow-400 flex items-center justify-center text-gray-900 text-xl shadow-[0_0_15px_rgba(250,204,21,0.5)]">
+                                <fa-icon [icon]="faCoins"></fa-icon>
+                            </div>
+                            <div class="flex flex-col">
+                                <span class="text-[10px] text-white/50 font-bold uppercase">الرصيد المتاح</span>
+                                <span class="text-2xl font-black text-yellow-300">{{ (profile?.coins || 0) | number:'1.0-0' }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- XP Progress -->
+                <div class="space-y-4">
+                    <div class="flex justify-between items-end">
+                        <div class="flex flex-col">
+                            <span class="text-[10px] text-indigo-200 font-bold uppercase">التقدم للمستوى التالي</span>
+                            <span class="text-sm font-black">{{ (profile?.xp || 0) | number:'1.0-0' }} / {{ (profile?.nextLevelXP || 100) | number:'1.0-0' }} XP</span>
+                        </div>
+                        <span class="text-xs font-bold bg-white/10 px-3 py-1 rounded-full border border-white/20">
+                            متبقي {{ (profile?.nextLevelXP || 100) - (profile?.xp || 0) }} نقطة
+                        </span>
+                    </div>
+                    
+                    <div class="w-full bg-black/30 rounded-full h-6 p-1 border border-white/10 shadow-inner overflow-hidden">
+                        <div class="h-full bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-500 rounded-full transition-all duration-1000 ease-out shadow-[0_0_20px_rgba(250,204,21,0.4)] relative progress-shimmer"
+                            [style.width.%]="calculateLevelProgress()">
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-between items-center pt-4">
+                        <button (click)="showAchievementCard = true"
+                            class="bg-white text-indigo-600 hover:bg-indigo-50 font-black px-8 py-3 rounded-2xl shadow-xl transition-all active:scale-95 flex items-center gap-3">
+                            <span>مشاركة الإنجاز</span>
+                            <fa-icon [icon]="['fas', 'share-alt']"></fa-icon>
+                        </button>
+                        
+                        <div class="hidden md:flex items-center gap-4 text-xs text-indigo-100/60 font-bold italic">
+                            <fa-icon [icon]="['fas', 'info-circle']"></fa-icon>
+                            <span>كل صفحة تقرأها تمنحك 2 XP إضافية</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Library Progress Stats Grid -->
+    <div *ngIf="isLoggedIn && profile" class="grid grid-cols-2 md:grid-cols-4 gap-6 animate-fade-in">
+        <!-- Total Reading Time -->
+        <div class="glass-card p-6 rounded-3xl shadow-xl border border-white/10 flex flex-col items-center text-center group hover:border-blue-500/50 transition-all duration-300">
+            <div class="w-14 h-14 rounded-2xl bg-blue-500/10 text-blue-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <fa-icon [icon]="['fas', 'clock']" class="text-2xl"></fa-icon>
+            </div>
+            <span class="text-xs text-gray-500 font-black uppercase tracking-widest mb-1">إجمالي الوقت</span>
+            <span class="text-3xl font-black text-gray-800 dark:text-white">{{ profile.totalMinutesRead || 0 }}</span>
+            <span class="text-[10px] text-blue-500 font-bold">دقيقة قراءة</span>
+        </div>
+
+        <!-- Pages Read -->
+        <div class="glass-card p-6 rounded-3xl shadow-xl border border-white/10 flex flex-col items-center text-center group hover:border-green-500/50 transition-all duration-300">
+            <div class="w-14 h-14 rounded-2xl bg-green-500/10 text-green-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <fa-icon [icon]="['fas', 'book-open']" class="text-2xl"></fa-icon>
+            </div>
+            <span class="text-xs text-gray-500 font-black uppercase tracking-widest mb-1">الصفحات</span>
+            <span class="text-3xl font-black text-gray-800 dark:text-white">{{ profile.totalPagesRead || 0 }}</span>
+            <span class="text-[10px] text-green-500 font-bold">صفحة منجزة</span>
+        </div>
+
+        <!-- Coins Exchange -->
+        <div class="glass-card p-6 rounded-3xl shadow-xl border border-white/10 flex flex-col items-center text-center group hover:border-yellow-500/50 transition-all duration-300">
+            <div class="w-14 h-14 rounded-2xl bg-yellow-500/10 text-yellow-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <fa-icon [icon]="faCoins" class="text-2xl"></fa-icon>
+            </div>
+            <span class="text-xs text-gray-500 font-black uppercase tracking-widest mb-1">العملات</span>
+            <span class="text-3xl font-black text-gray-800 dark:text-white">{{ profile.coins || 0 }}</span>
+            <span class="text-[10px] text-yellow-600 font-bold">قابلة للتحويل</span>
+        </div>
+
+        <!-- Wallet Balance -->
+        <div class="glass-card p-6 rounded-3xl shadow-xl border border-white/10 flex flex-col items-center text-center group hover:border-purple-500/50 transition-all duration-300">
+            <div class="w-14 h-14 rounded-2xl bg-purple-500/10 text-purple-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <fa-icon [icon]="['fas', 'wallet']" class="text-2xl"></fa-icon>
+            </div>
+            <span class="text-xs text-gray-500 font-black uppercase tracking-widest mb-1">المحفظة</span>
+            <span class="text-3xl font-black text-gray-800 dark:text-white">{{ profile.referralBalance || 0 }}</span>
+            <span class="text-[10px] text-purple-500 font-bold">جنيه مصري</span>
+        </div>
+    </div>
+
+    <!-- Challenges Section -->
+    <div *ngIf="isLoggedIn" class="space-y-8">
+        <div class="flex items-center justify-between">
+            <h3 class="text-3xl font-black text-gray-800 dark:text-white flex items-center gap-4">
+                <span class="w-2 h-10 bg-indigo-600 rounded-full"></span>
+                التحديات والمهام
+            </h3>
+            <button class="text-sm font-bold text-indigo-600 dark:text-indigo-400 hover:underline">عرض الكل</button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div *ngFor="let challenge of challenges"
+                class="glass-card rounded-3xl shadow-xl p-8 border border-white/10 hover:border-indigo-500/30 transition-all duration-500 relative overflow-hidden group">
+                
+                <div *ngIf="challenge.status === 'completed'"
+                    class="absolute top-0 left-0 bg-green-500 text-white text-[10px] font-black px-4 py-1 rounded-br-2xl uppercase tracking-widest z-10">
+                    مكتمل ✅
+                </div>
+
+                <div class="flex items-center gap-5 mb-6">
+                    <div class="w-16 h-16 rounded-2xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 flex items-center justify-center text-3xl group-hover:rotate-12 transition-transform">
+                        {{ getIconForType(challenge.type) }}
+                    </div>
+                    <div>
+                        <h4 class="font-black text-lg text-gray-800 dark:text-white leading-tight mb-1">{{ challenge.title }}</h4>
+                        <span class="text-[10px] font-black text-indigo-600 bg-indigo-50 dark:bg-indigo-900/40 px-3 py-1 rounded-full uppercase">
+                            +{{ challenge.xpReward }} XP
+                        </span>
+                    </div>
+                </div>
+
+                <p class="text-gray-500 dark:text-gray-400 text-sm mb-8 leading-relaxed h-12 overflow-hidden">{{ challenge.description }}</p>
+
+                <div *ngIf="challenge.joined" class="space-y-4">
+                    <div class="flex justify-between items-center text-xs font-black text-gray-400">
+                        <span>التقدم المنجز</span>
+                        <span class="text-indigo-600">{{ challenge.progress }} / {{ challenge.targetValue }}</span>
+                    </div>
+                    <div class="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-3 p-0.5 overflow-hidden border border-white/10">
+                        <div class="bg-indigo-600 h-full rounded-full transition-all duration-1000 progress-shimmer"
+                            [style.width.%]="(challenge.progress / challenge.targetValue) * 100">
+                        </div>
+                    </div>
+
+                    <button *ngIf="challenge.status === 'completed' && !challenge.rewardsClaimed"
+                        (click)="claimReward(challenge)"
+                        class="w-full mt-6 bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white font-black py-3 rounded-2xl transition-all shadow-xl shadow-orange-500/20 active:scale-95">
+                        استلام المكافأة 🎁
+                    </button>
+
+                    <button *ngIf="challenge.status === 'completed' && challenge.rewardsClaimed" disabled
+                        class="w-full mt-6 bg-gray-100 dark:bg-gray-800 text-gray-400 font-black py-3 rounded-2xl cursor-not-allowed border border-gray-200 dark:border-gray-700">
+                        تم استلام الجائزة ✅
+                    </button>
+                </div>
+
+                <button *ngIf="!challenge.joined" (click)="joinChallenge(challenge)"
+                    class="w-full mt-6 border-2 border-indigo-600 text-indigo-600 hover:bg-indigo-600 hover:text-white font-black py-3 rounded-2xl transition-all duration-300 active:scale-95">
+                    بدء التحدي الآن
                 </button>
             </div>
-
         </div>
     </div>
+
+    <!-- Leaderboard / Hall of Fame -->
+    <div class="space-y-8 pb-12">
+        <div class="flex items-center justify-between">
+            <h3 class="text-3xl font-black text-gray-800 dark:text-white flex items-center gap-4">
+                <span class="w-2 h-10 bg-yellow-500 rounded-full"></span>
+                قاعة المشاهير 👑
+            </h3>
+        </div>
+
+        <div class="glass-card rounded-[2rem] shadow-2xl border border-white/10 overflow-hidden bg-white/40 dark:bg-gray-800/40">
+            <!-- Header for Desktop -->
+            <div class="hidden md:grid grid-cols-4 gap-4 px-10 py-6 bg-gray-900/5 dark:bg-black/20 text-xs font-black text-gray-500 uppercase tracking-widest">
+                <span class="col-span-1">الترتيب</span>
+                <span class="col-span-1">القارئ</span>
+                <span class="col-span-1">المستوى</span>
+                <span class="col-span-1 text-left">إجمالي النقاط</span>
+            </div>
+
+            <div class="divide-y divide-gray-200/50 dark:divide-white/5">
+                <div *ngFor="let user of leaderboard; let i = index"
+                    class="group px-6 md:px-10 py-6 flex flex-col md:grid md:grid-cols-4 gap-4 items-center transition-all hover:bg-white/60 dark:hover:bg-white/5"
+                    [ngClass]="i < 3 ? 'bg-gradient-to-r from-yellow-500/5 to-transparent' : ''">
+                    
+                    <!-- Rank -->
+                    <div class="col-span-1 flex items-center gap-4 w-full md:w-auto">
+                        <div class="w-10 h-10 rounded-2xl flex items-center justify-center font-black text-xl shadow-inner"
+                            [ngClass]="{
+                                'bg-yellow-400 text-gray-900 shadow-yellow-400/20': i === 0,
+                                'bg-gray-300 text-gray-800 shadow-gray-300/20': i === 1,
+                                'bg-orange-400 text-gray-900 shadow-orange-400/20': i === 2,
+                                'bg-gray-100 dark:bg-gray-700 text-gray-500': i > 2
+                            }">
+                            {{ i + 1 }}
+                        </div>
+                        <span *ngIf="i < 3" class="text-xs font-black uppercase text-yellow-600 dark:text-yellow-400">نخبة القراء</span>
+                    </div>
+
+                    <!-- User Info -->
+                    <div class="col-span-1 flex items-center gap-4 w-full md:w-auto">
+                        <div class="relative">
+                            <div class="w-14 h-14 rounded-2xl overflow-hidden border-2 border-white dark:border-gray-700 shadow-xl group-hover:scale-110 transition-transform">
+                                <img *ngIf="user.profileImage" [src]="getImageUrl(user.profileImage)" class="w-full h-full object-cover">
+                                <div *ngIf="!user.profileImage" class="w-full h-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-400">
+                                    <fa-icon [icon]="faUser"></fa-icon>
+                                </div>
+                            </div>
+                            <div *ngIf="i < 3" class="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-white dark:bg-gray-800 flex items-center justify-center shadow-lg text-[10px]">
+                                {{ i === 0 ? '🥇' : (i === 1 ? '🥈' : '🥉') }}
+                            </div>
+                        </div>
+                        <span class="font-black text-gray-800 dark:text-white truncate">{{ user.username }}</span>
+                    </div>
+
+                    <!-- Level -->
+                    <div class="col-span-1 w-full md:w-auto">
+                        <div class="flex items-center gap-3">
+                            <span class="text-xs font-bold text-gray-500 md:hidden">المستوى:</span>
+                            <span class="px-4 py-1.5 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-black text-xs">
+                                مستوى {{ user.gamification?.level || user.level || 1 }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Points -->
+                    <div class="col-span-1 text-left w-full md:w-auto">
+                        <div class="flex items-center justify-between md:justify-end gap-3">
+                            <span class="text-xs font-bold text-gray-500 md:hidden">النقاط:</span>
+                            <span class="text-xl font-black text-gray-900 dark:text-white">
+                                {{ (user.gamification?.xp || user.xp || 0) | number }}
+                                <span class="text-[10px] text-gray-400 font-bold ml-1">XP</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>
 
-<!-- Quran Progress Stats Grid -->
-<div *ngIf="isLoggedIn && quranProgress" class="grid grid-cols-2 md:grid-cols-4 gap-4 animate-fade-in">
-    <!-- Total Points -->
-    <div
-        class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center text-center">
-        <div
-            class="w-10 h-10 rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 flex items-center justify-center mb-2">
-            <i class="fas fa-coins"></i>
-        </div>
-        <span class="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">نقاط القرآن</span>
-        <span class="text-xl font-bold text-gray-800 dark:text-white mt-1">{{ quranProgress.totalPoints | number
-            }}</span>
-    </div>
-
-    <!-- Verses Memorized -->
-    <div
-        class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center text-center">
-        <div
-            class="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 flex items-center justify-center mb-2">
-            <i class="fas fa-brain"></i>
-        </div>
-        <span class="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">آيات محفوظة</span>
-        <span class="text-xl font-bold text-gray-800 dark:text-white mt-1">{{ quranProgress.versesMemorized | number
-            }}</span>
-    </div>
-
-    <!-- Pages Read -->
-    <div
-        class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center text-center">
-        <div
-            class="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-2">
-            <i class="fas fa-book-open"></i>
-        </div>
-        <span class="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">صفحات مقروءة</span>
-        <span class="text-xl font-bold text-gray-800 dark:text-white mt-1">{{ quranProgress.pagesRead | number }}</span>
-    </div>
-
-    <!-- Khatmat -->
-    <div
-        class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center text-center">
-        <div
-            class="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 flex items-center justify-center mb-2">
-            <i class="fas fa-check-double"></i>
-        </div>
-        <span class="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">الختمات</span>
-        <span class="text-xl font-bold text-gray-800 dark:text-white mt-1">{{ quranProgress.khatmatCount | number
-            }}</span>
-    </div>
-</div>
-
-<!-- Header (Guest View) -->
+<!-- Guest Header -->
 <ng-template #guestHeader>
-    <div
-        class="mt-32 mb-12 bg-gradient-to-r from-indigo-900 to-purple-900 rounded-3xl p-8 md:p-12 text-center text-white relative overflow-hidden shadow-2xl">
-        <!-- Background Shapes -->
-        <div class="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2">
-        </div>
-        <div
-            class="absolute bottom-0 left-0 w-48 h-48 bg-yellow-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2">
-        </div>
+    <div class="mt-20 mb-20 bg-gradient-to-br from-indigo-900 via-indigo-800 to-purple-900 rounded-[3rem] p-12 text-center text-white relative overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.3)] animate-fade-in border border-white/10">
+        <div class="absolute top-0 right-0 w-96 h-96 bg-indigo-500/20 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2"></div>
+        <div class="absolute bottom-0 left-0 w-96 h-96 bg-yellow-500/10 rounded-full blur-[100px] translate-y-1/2 -translate-x-1/2"></div>
 
-        <h1 class="text-3xl md:text-5xl font-bold mb-6 relative z-10">
-            انضم لأفضل القراء العرب 🏆
-        </h1>
-        <p class="text-xl text-indigo-100 mb-8 max-w-2xl mx-auto relative z-10">
-            سجل حسابك الآن وابدأ رحلتك في جمع النقاط، الأوسمة، والمكافآت المالية مقابل كل دقيقة قراءة!
-        </p>
-        <div class="flex justify-center gap-4 relative z-10">
-            <button routerLink="/register"
-                class="bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold py-3 px-8 rounded-xl shadow-lg transition-transform hover:-translate-y-1">
-                إنشاء حساب مجاني
-            </button>
-            <button routerLink="/login"
-                class="bg-white/10 hover:bg-white/20 text-white font-bold py-3 px-8 rounded-xl border border-white/20 transition-all">
-                تسجيل الدخول
-            </button>
+        <div class="relative z-10 max-w-4xl mx-auto">
+            <div class="w-24 h-24 bg-white/10 backdrop-blur-xl rounded-3xl flex items-center justify-center text-4xl mx-auto mb-8 shadow-2xl border border-white/20 animate-float">
+                🏆
+            </div>
+            <h1 class="text-4xl md:text-6xl font-black mb-8 leading-tight">
+                حول قراءتك إلى <span class="text-yellow-400">إنجازات</span> حقيقية
+            </h1>
+            <p class="text-xl text-indigo-100/80 mb-12 leading-relaxed">
+                سجل الآن وابدأ في جمع النقاط، الارتقاء بالمستوى، والحصول على مكافآت مالية مقابل كل دقيقة تقضيها في القراءة داخل مكتبة كنوز الرقمية.
+            </p>
+            <div class="flex flex-col sm:flex-row justify-center gap-6">
+                <button routerLink="/register"
+                    class="bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-black py-5 px-12 rounded-[2rem] shadow-2xl shadow-yellow-500/30 transition-all hover:-translate-y-2 active:scale-95 text-lg">
+                    إنشاء حساب مجاني
+                </button>
+                <button routerLink="/login"
+                    class="bg-white/10 hover:bg-white/20 text-white font-black py-5 px-12 rounded-[2rem] border border-white/20 backdrop-blur-xl transition-all hover:bg-white/5 active:scale-95 text-lg">
+                    تسجيل الدخول
+                </button>
+            </div>
         </div>
     </div>
 </ng-template>
 
-<!-- Achievement Card Modal (Logged In Only) -->
+<!-- Achievement Card -->
 <app-achievement-card *ngIf="isLoggedIn" [visible]="showAchievementCard" [userName]="profile?.username || 'قارئ متميز'"
     [coinsEarned]="profile?.coins || 0" [milestoneTitle]="'المستوى ' + (profile?.level || 1)"
     [userImage]="getImageUrl(profile?.profileImage)" (close)="showAchievementCard = false">
-</app-achievement-card>
-
-<!-- Challenges Section (Logged In Only) -->
-<div *ngIf="isLoggedIn">
-    <h3 class="text-2xl font-bold text-gray-800 dark:text-white mb-6 flex items-center">
-        <span class="ml-2">🏆</span> التحديات النشطة
-    </h3>
-
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div *ngFor="let challenge of challenges"
-            class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-100 dark:border-gray-700 hover:shadow-xl transition-all duration-300 relative overflow-hidden">
-
-            <!-- Status Badge -->
-            <div *ngIf="challenge.status === 'completed'"
-                class="absolute top-0 left-0 bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-br-xl">
-                مكتمل
-            </div>
-
-            <div class="flex items-start mb-4">
-                <div
-                    class="w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center text-2xl ml-4">
-                    {{ getIconForType(challenge.type) }}
-                </div>
-                <div>
-                    <h4 class="font-bold text-lg text-gray-800 dark:text-white">{{ challenge.title }}</h4>
-                    <span
-                        class="text-xs text-blue-600 dark:text-blue-400 font-semibold bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-full">+{{
-                        challenge.xpReward }} نقطة</span>
-                </div>
-            </div>
-
-            <p class="text-gray-600 dark:text-gray-300 text-sm mb-6">{{ challenge.description }}</p>
-
-            <!-- Progress Bar (Only if joined) -->
-            <div *ngIf="challenge.joined" class="space-y-2">
-                <div class="flex justify-between text-xs font-semibold text-gray-500 dark:text-gray-400">
-                    <span>التقدم</span>
-                    <span>{{ challenge.progress }} / {{ challenge.targetValue }}</span>
-                </div>
-                <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                    <div class="bg-blue-600 h-2 rounded-full transition-all duration-700"
-                        [style.width.%]="(challenge.progress / challenge.targetValue) * 100">
-                    </div>
-                </div>
-
-                <button *ngIf="challenge.status === 'completed' && !challenge.rewardsClaimed"
-                    (click)="claimReward(challenge)"
-                    class="w-full mt-4 bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 rounded-lg transition-colors animate-bounce shadow-md">
-                    طالب بالمكافأة 🎁
-                </button>
-
-                <button *ngIf="challenge.status === 'completed' && challenge.rewardsClaimed" disabled
-                    class="w-full mt-4 bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 font-bold py-2 rounded-lg cursor-not-allowed">
-                    تم الاستلام ✅
-                </button>
-            </div>
-
-            <!-- Join Button -->
-            <button *ngIf="!challenge.joined" (click)="joinChallenge(challenge)"
-                class="w-full mt-4 border-2 border-indigo-600 dark:border-indigo-400 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-500 font-bold py-2 rounded-lg transition-colors duration-300">
-                قبل التحدي
-            </button>
-
-        </div>
-    </div>
-</div>
-
-<!-- Leaderboard Preview -->
-<div>
-    <h3 class="text-2xl font-bold text-gray-800 dark:text-white mb-6 flex items-center">
-        <span class="ml-2">👑</span> أفضل القراء
-    </h3>
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden">
-        <!-- Mobile View: Cards Layout (Visible only on small screens) -->
-        <div class="block md:hidden">
-            <div *ngFor="let user of leaderboard; let i = index"
-                class="p-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between"
-                [ngClass]="i < 3 ? 'bg-yellow-50 dark:bg-yellow-900/10' : ''">
-                <div class="flex items-center gap-3">
-                    <!-- Rank -->
-                    <div class="w-8 flex-shrink-0 text-center font-bold text-gray-500">
-                        <span *ngIf="i == 0">🥇</span>
-                        <span *ngIf="i == 1">🥈</span>
-                        <span *ngIf="i == 2">🥉</span>
-                        <span *ngIf="i > 2">#{{i + 1}}</span>
-                    </div>
-
-                    <!-- Avatar -->
-                    <div
-                        class="w-12 h-12 rounded-full overflow-hidden border border-gray-200 dark:border-gray-600 bg-gray-100 flex-shrink-0 relative">
-                        <img *ngIf="user.profileImage" [src]="getImageUrl(user.profileImage)"
-                            class="w-full h-full object-cover">
-                        <div *ngIf="!user.profileImage"
-                            class="w-full h-full flex items-center justify-center bg-gray-200 dark:bg-gray-700 text-gray-400">
-                            <fa-icon [icon]="faUser"></fa-icon>
-                        </div>
-                    </div>
-
-                    <!-- Info -->
-                    <div>
-                        <h4 class="font-bold text-gray-900 dark:text-white text-sm">{{ user.username }}</h4>
-                        <p class="text-xs text-gray-500">المستوى {{ user.gamification?.level || user.level || 1 }}
-                        </p>
-                    </div>
-                </div>
-
-                <!-- Points -->
-                <div class="text-indigo-600 dark:text-indigo-400 font-bold text-sm">
-                    {{ (user.gamification?.xp || user.xp || 0) | number }}
-                </div>
-            </div>
-        </div>
-
-        <!-- Desktop View: Table Layout (Hidden on mobile) -->
-        <table class="min-w-full text-right hidden md:table">
-            <thead class="bg-gray-50 dark:bg-gray-700">
-                <tr>
-                    <th
-                        class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        الترتيب</th>
-                    <th
-                        class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        القارئ</th>
-                    <th
-                        class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        المستوى</th>
-                    <th
-                        class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        النقاط</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                <tr *ngFor="let user of leaderboard; let i = index"
-                    [ngClass]="i < 3 ? 'bg-yellow-50 dark:bg-yellow-900/40' : 'bg-white dark:bg-gray-800'">
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <span *ngIf="i == 0">🥇</span>
-                        <span *ngIf="i == 1">🥈</span>
-                        <span *ngIf="i == 2">🥉</span>
-                        <span *ngIf="i > 2" class="font-mono text-gray-500 dark:text-gray-400">#{{i + 1}}</span>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap flex items-center gap-3">
-                        <div
-                            class="relative w-10 h-10 rounded-full overflow-hidden border border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-                            <img *ngIf="user.profileImage" [src]="getImageUrl(user.profileImage)"
-                                class="w-full h-full object-cover">
-                            <fa-icon *ngIf="!user.profileImage" [icon]="faUser"
-                                class="text-gray-400 dark:text-gray-500 text-lg">
-                            </fa-icon>
-                        </div>
-                        <span class="font-medium text-gray-900 dark:text-white">{{ user.username }}</span>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-gray-600 dark:text-gray-300">
-                        المستوى {{ user.gamification?.level || user.level || 1 }}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-indigo-600 dark:text-indigo-400 font-bold">
-                        {{ (user.gamification?.xp || user.xp || 0) | number }} نقطة
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-</div>
+</app-achievement-card>

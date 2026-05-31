@@ -21,7 +21,7 @@ import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 export class CartComponent implements OnInit {
   uploadsBaseUrl = environment.uploadsBaseUrl;
   cartBooks: any[] = [];
-  isLoading = true;
+  isLoading = false;
   totalPrice = 0;
   appliedCoupon: any = null;
   showCheckoutModal = false;
@@ -99,6 +99,7 @@ export class CartComponent implements OnInit {
   loadCartBooks() {
     this.authService.cartBookIds.subscribe(bookIds => {
       if (bookIds.length > 0) {
+        this.isLoading = true;
         this.dataService.getData().pipe(
           map((books: any[]) => {
             // Map books and check if their ID exists in cart with or without :free suffix

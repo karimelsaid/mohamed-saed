@@ -89,6 +89,7 @@ export interface ReaderSettings {
     textAlign: 'left' | 'right' | 'justify' | 'center';
     margin: 'narrow' | 'normal' | 'wide';
     backgroundImage: string | null;
+    layoutMode?: 'scroll' | 'pages';
 }
 
 // Reading Progress interface

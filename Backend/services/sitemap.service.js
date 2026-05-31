@@ -132,22 +132,8 @@ class SitemapService extends EventEmitter {
           { path: '/', changefreq: 'daily', priority: '1.0' },
           { path: '/Home', changefreq: 'daily', priority: '0.9' },
           { path: '/books', changefreq: 'daily', priority: '0.8' },
-          { path: '/Business-Marketing-Finance', changefreq: 'weekly', priority: '0.7' },
-          { path: '/Education-children', changefreq: 'weekly', priority: '0.7' },
-          { path: '/Arts-crafts', changefreq: 'weekly', priority: '0.7' },
-          { path: '/HealthMedicineScience', changefreq: 'weekly', priority: '0.7' },
-          { path: '/Islamic', changefreq: 'weekly', priority: '0.7' },
-          { path: '/Novels-stories', changefreq: 'weekly', priority: '0.7' },
-          { path: '/Self-development-psychology', changefreq: 'weekly', priority: '0.7' },
-          { path: '/History-Biographies', changefreq: 'weekly', priority: '0.7' },
-          { path: '/Dictionaries-References', changefreq: 'weekly', priority: '0.7' },
-          { path: '/electronics', changefreq: 'weekly', priority: '0.6' },
-          { path: '/clothing', changefreq: 'weekly', priority: '0.6' },
-          { path: '/cosmetics', changefreq: 'weekly', priority: '0.6' },
-          { path: '/shoes', changefreq: 'weekly', priority: '0.6' },
-          { path: '/furniture', changefreq: 'weekly', priority: '0.6' },
-          { path: '/games', changefreq: 'weekly', priority: '0.6' },
-          { path: '/office-supplies', changefreq: 'weekly', priority: '0.6' },
+          { path: '/basket', changefreq: 'weekly', priority: '0.6' },
+          { path: '/favorites', changefreq: 'weekly', priority: '0.6' },
           { path: '/عن-الموقع', changefreq: 'monthly', priority: '0.4' },
           { path: '/سياسة-الخصوصية', changefreq: 'monthly', priority: '0.3' },
           { path: '/الشروط-والاحكام', changefreq: 'monthly', priority: '0.3' },
@@ -159,6 +145,16 @@ class SitemapService extends EventEmitter {
     <lastmod>${todayDate}</lastmod>
     <changefreq>${page.changefreq}</changefreq>
     <priority>${page.priority}</priority>
+  </url>`).join('');
+
+        // --- Dynamic Category Pages ---
+        const uniqueCategories = [...new Set(books.map(b => b.product_category).filter(Boolean))];
+        const categoryUrls = uniqueCategories.map(cat => `
+  <url>
+    <loc>${baseUrl}/category/${encodeURIComponent(cat)}</loc>
+    <lastmod>${todayDate}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
   </url>`).join('');
 
         // --- Product Pages ---
@@ -186,7 +182,7 @@ class SitemapService extends EventEmitter {
         }).join('');
 
         const sitemapContent = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${staticUrls}${productUrls}
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${staticUrls}${categoryUrls}${productUrls}
 </urlset>`;
 
         // Ensure directory exists

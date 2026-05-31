@@ -9,6 +9,8 @@ import { AccountModalComponent } from '../../auth/account-modal/account-modal.co
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { GamificationService } from '../../services/gamification.service';
+import { forkJoin } from 'rxjs';
+import { take } from 'rxjs/operators';
 
 @Component({
     selector: 'app-books',
@@ -44,6 +46,7 @@ export class BooksComponent implements OnInit, OnDestroy {
     selectedCategory: string = 'الكل';
     maxPrice: number = 2000;
     minPrice: number = 0;
+    siteMaxPrice: number = 5000;
     sortOrder: string = 'random'; // Default to random
 
     // Book categories to filter by
@@ -66,15 +69,49 @@ export class BooksComponent implements OnInit, OnDestroy {
 
     ngOnInit(): void {
         this.isLoading = true;
-        this.route.queryParams.subscribe(params => {
-            this.currentPage = parseInt(params['page'] || '1', 10);
-            if (params['category']) this.selectedCategory = params['category'];
-            if (params['maxPrice']) this.maxPrice = parseInt(params['maxPrice'], 10);
-            if (params['sort']) this.sortOrder = params['sort'];
+
+        // Subscribe to both params (for /category/:name) and queryParams
+        forkJoin({
+            params: this.route.params.pipe(take(1)),
+            queryParams: this.route.queryParams.pipe(take(1))
+        }).subscribe(({ params, queryParams }: { params: any, queryParams: any }) => {
+            if (params['name']) {
+                this.selectedCategory = params['name'];
+            } else if (queryParams['category']) {
+                this.selectedCategory = queryParams['category'];
+            }
+
+            this.currentPage = parseInt(queryParams['page'] || '1', 10);
+            if (queryParams['maxPrice']) this.maxPrice = parseInt(queryParams['maxPrice'], 10);
+            if (queryParams['sort']) this.sortOrder = params['sort'] || queryParams['sort'] || 'random';
+            
+            this.loadBooks();
         });
 
+        // Also subscribe to changes for subsequent navigations
+        this.route.params.subscribe(params => {
+            if (params['name']) {
+                this.selectedCategory = params['name'];
+                this.applyFiltersAndSort();
+            }
+        });
+    }
+
+    loadBooks(): void {
+        this.isLoading = true;
         this.dataService.getData().subscribe(data => {
-            this.allBooks = data;
+            this.allBooks = data.map((b: any) => ({
+                ...b,
+                products_id: b.products_id || b.product_id || b._id
+            }));
+            
+            // Calculate site-wide max price
+            if (this.allBooks.length > 0) {
+              const prices = this.allBooks.map(b => Number(b.product_price) || 0);
+              this.siteMaxPrice = Math.max(...prices);
+              this.maxPrice = this.siteMaxPrice; // Initialize filter to max
+            }
+
             this.applyFiltersAndSort();
             this.isLoading = false;
         });
@@ -84,15 +121,13 @@ export class BooksComponent implements OnInit, OnDestroy {
         let filtered = this.allBooks.filter((book: Book) => {
             const categoryMatch = this.selectedCategory === 'الكل' || 
                                  (book.product_category && book.product_category.includes(this.selectedCategory)) ||
-                                 (this.selectedCategory === 'كتب' && !book.product_category); // Fallback for uncategorized
+                                 (this.selectedCategory === 'كتب' && (!book.product_category || book.product_category.includes('كتب')));
             
             const price = Number(book.product_price) || 0;
             const priceMatch = price >= this.minPrice && price <= this.maxPrice;
 
-            // Ensure it's a book (belongs to one of the book categories)
-            const isBook = !book.product_category || this.bookCategories.some(cat => book.product_category && book.product_category.includes(cat));
-
-            return categoryMatch && priceMatch && isBook;
+            // In dynamic mode, we trust the category match primarily
+            return categoryMatch && priceMatch;
         });
 
         // Process books (rival flag, discount, etc.)
@@ -181,6 +216,11 @@ export class BooksComponent implements OnInit, OnDestroy {
 
     scrollToTop(): void {
         window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    navigateToProduct(book: any): void {
+        const slug = this.getBookSlug(book.product_name);
+        this.router.navigate(['/book', book.products_id, slug]);
     }
 
     // Helper methods

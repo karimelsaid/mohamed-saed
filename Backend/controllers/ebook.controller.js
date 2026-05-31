@@ -4,6 +4,21 @@ const UserLibrary = require('../models/UserLibrary.model');
 const fs = require('fs');
 const path = require('path');
 const epubService = require('../services/epub.service');
+const sharp = require('sharp');
+
+// Helper to normalize Arabic text for consistent searching (Same as main books engine)
+function normalizeArabic(text) {
+    if (!text) return '';
+    return String(text)
+        .replace(/[أإآا]/g, 'ا')
+        .replace(/[ةه]/g, 'ه')
+        .replace(/[يى]/g, 'ي')
+        .replace(/[ؤ]/g, 'و')
+        .replace(/[ئ]/g, 'ي')
+        .replace(/[\u064B-\u065F]/g, '') // Remove Harakat (diacritics)
+        .toLowerCase()
+        .trim();
+}
 
 // Get all ebooks with filters and pagination
 exports.getAllEbooks = async (req, res) => {
@@ -26,19 +41,32 @@ exports.getAllEbooks = async (req, res) => {
             query.language = language;
         }
 
-        if (search) {
-            // Build flexible Arabic regex pattern
-            const flexSearch = search
-                .replace(/[أإآا]/g, '[أإآا]')
-                .replace(/[هة]/g, '[هة]')
-                .replace(/[يى]/g, '[يى]')
-                .replace(/\s+/g, '\\s+');
-            const searchRegex = new RegExp(flexSearch, 'i');
-            query.$or = [
-                { title: searchRegex },
-                { author: searchRegex },
-                { description: searchRegex }
-            ];
+        if (search && search.trim()) {
+            const keywords = normalizeArabic(search).split(/\s+/).filter(k => k.length > 0);
+            
+            // Build complex search query using keywords and normalization fallback
+            // Note: Mongoose doesn't support custom normalization in $regex easily without plugins,
+            // so we use a flexible regex for each keyword that covers common Arabic variations.
+            const keywordQueries = keywords.map(kw => {
+                const flexKw = kw
+                    .replace(/[اأإآ]/g, '[اأإآ]')
+                    .replace(/[هة]/g, '[هة]')
+                    .replace(/[يىئ]/g, '[يىئ]')
+                    .replace(/[وؤ]/g, '[وؤ]');
+                
+                const regex = new RegExp(flexKw, 'i');
+                return {
+                    $or: [
+                        { title: regex },
+                        { author: regex },
+                        { description: regex },
+                        { publisher: regex },
+                        { relatedProductId: regex }
+                    ]
+                };
+            });
+
+            query.$and = keywordQueries;
         }
 
         // Get total count for pagination metadata
@@ -53,24 +81,10 @@ exports.getAllEbooks = async (req, res) => {
         let resultEbooks = ebooks;
 
         // Filter out ebooks whose files have been deleted ONLY if includeInvalid is NOT true
+        // Relaxed Check: We bypass strict local filesystem check to ensure all books registered in MongoDB
+        // remain visible in the catalog, preventing path discrepancies or sync delays from hiding books.
         if (includeInvalid !== 'true') {
-            resultEbooks = ebooks.filter(ebook => {
-                if (!ebook.epubFilePath) return false;
-
-                // Normalize path - remove duplicate 'uploads/ebooks/' if present
-                let normalizedPath = ebook.epubFilePath;
-                if (normalizedPath.includes('uploads/ebooks/uploads/ebooks/')) {
-                    normalizedPath = normalizedPath.replace('uploads/ebooks/uploads/ebooks/', 'uploads/ebooks/');
-                }
-
-                const possiblePaths = [
-                    path.join(__dirname, '..', '..', normalizedPath),
-                    path.join(__dirname, '..', normalizedPath),
-                    normalizedPath
-                ];
-
-                return possiblePaths.some(p => fs.existsSync(p));
-            });
+            resultEbooks = ebooks;
         }
 
         res.json({
@@ -347,48 +361,51 @@ exports.createEbook = async (req, res) => {
         // 1. Create initial record (validate basic fields first)
         const ebook = await Ebook.create(ebookData);
 
-        // 2. Handle file upload
-        if (req.file) {
-            const oldPath = req.file.path;
-            const fileExt = path.extname(req.file.originalname);
+        // 2. Handle EPUB upload
+        if (req.files && req.files['epubFile']) {
+            const file = req.files['epubFile'][0];
+            const oldPath = file.path;
+            const fileExt = path.extname(file.originalname);
             const sanitizedTitle = ebook.title.replace(/[^a-zA-Z0-9]/g, '_');
             const newFileName = `${sanitizedTitle}_${ebook._id}${fileExt}`;
             const newPath = path.join('uploads', 'ebooks', newFileName);
 
-            // Ensure directory exists
             const ebooksDir = path.join(__dirname, '..', 'uploads', 'ebooks');
-            if (!fs.existsSync(ebooksDir)) {
-                fs.mkdirSync(ebooksDir, { recursive: true });
-            }
+            if (!fs.existsSync(ebooksDir)) fs.mkdirSync(ebooksDir, { recursive: true });
 
-            // Move/Rename file
             fs.renameSync(oldPath, path.join(__dirname, '..', newPath));
-
             ebook.epubFilePath = newPath;
-            ebook.fileSize = req.file.size;
+            ebook.fileSize = file.size;
 
-            // --- 3. Extract Metadata & Auto-Fill ---
             const metadata = await epubService.extractMetadata(path.join(__dirname, '..', newPath));
             if (metadata) {
-                // Only update if current value is placeholder or empty
-                if (!ebook.author || ebook.author === 'Unknown' || ebook.author === 'unknown') {
-                    ebook.author = metadata.author;
-                }
-                if (!ebook.publisher && metadata.publisher) {
-                    ebook.publisher = metadata.publisher;
-                }
-                if ((!ebook.pages || ebook.pages === 0) && metadata.pages) {
-                    ebook.pages = metadata.pages;
-                }
-                if (!ebook.description && metadata.description) {
-                    ebook.description = metadata.description;
-                }
+                if (!ebook.author || ebook.author === 'Unknown') ebook.author = metadata.author;
+                if (!ebook.publisher && metadata.publisher) ebook.publisher = metadata.publisher;
+                if ((!ebook.pages || ebook.pages === 0) && metadata.pages) ebook.pages = metadata.pages;
+                if (!ebook.description && metadata.description) ebook.description = metadata.description;
             }
-
-            // Removed Mini Generation logic here as per requirement
-
-            await ebook.save();
         }
+
+        // 3. Handle Cover Image upload
+        if (req.files && req.files['coverImage']) {
+            const file = req.files['coverImage'][0];
+            const sanitizedTitle = ebook.title.replace(/[^a-zA-Z0-9]/g, '_');
+            const newFileName = `cover_${sanitizedTitle}_${ebook._id}.webp`;
+            const relativePath = path.join('uploads', 'ebooks', newFileName);
+            const fullPath = path.join(__dirname, '..', relativePath);
+
+            await sharp(file.path)
+                .resize({ width: 600 })
+                .webp({ quality: 80 })
+                .toFile(fullPath);
+
+            // Delete original temporary file
+            if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+            
+            ebook.coverImage = '/' + relativePath;
+        }
+
+        await ebook.save();
 
         res.status(201).json({
             success: true,
@@ -432,53 +449,56 @@ exports.updateEbook = async (req, res) => {
             });
         }
 
-        // Handle file upload if new file provided
-        if (req.file) {
+        // Handle EPUB upload if new file provided
+        if (req.files && req.files['epubFile']) {
+            const file = req.files['epubFile'][0];
             // Delete old file
             if (ebook.epubFilePath && fs.existsSync(path.join(__dirname, '..', ebook.epubFilePath))) {
                 fs.unlinkSync(path.join(__dirname, '..', ebook.epubFilePath));
             }
-            // Logic for mini file deletion (legacy cleanup)
-            if (ebook.miniEpubFilePath && fs.existsSync(path.join(__dirname, '..', ebook.miniEpubFilePath))) {
-                fs.unlinkSync(path.join(__dirname, '..', ebook.miniEpubFilePath));
-            }
 
-            const oldPath = req.file.path;
-            const fileExt = path.extname(req.file.originalname);
+            const fileExt = path.extname(file.originalname);
             const sanitizedTitle = (updateData.title || ebook.title).replace(/[^a-zA-Z0-9]/g, '_');
             const newFileName = `${sanitizedTitle}_${ebook._id}${fileExt}`;
             const newPath = path.join('uploads', 'ebooks', newFileName);
 
-            // Ensure directory exists
             const ebooksDir = path.join(__dirname, '..', 'uploads', 'ebooks');
-            if (!fs.existsSync(ebooksDir)) {
-                fs.mkdirSync(ebooksDir, { recursive: true });
-            }
+            if (!fs.existsSync(ebooksDir)) fs.mkdirSync(ebooksDir, { recursive: true });
 
-            // Move/Rename file
-            fs.renameSync(oldPath, path.join(__dirname, '..', newPath));
-
+            fs.renameSync(file.path, path.join(__dirname, '..', newPath));
             updateData.epubFilePath = newPath;
-            updateData.fileSize = req.file.size;
-            // Clear mini epub path if it existed
-            updateData.miniEpubFilePath = null;
+            updateData.fileSize = file.size;
 
-            // --- Extract Metadata & Auto-Fill ---
             const metadata = await epubService.extractMetadata(path.join(__dirname, '..', newPath));
             if (metadata) {
-                if (!updateData.author && (ebook.author === 'Unknown' || !ebook.author)) {
-                    updateData.author = metadata.author;
-                }
-                if (!updateData.publisher && !ebook.publisher && metadata.publisher) {
-                    updateData.publisher = metadata.publisher;
-                }
-                if ((!updateData.pages || updateData.pages == 0) && metadata.pages) {
-                    updateData.pages = metadata.pages;
-                }
-                if (!updateData.description && !ebook.description && metadata.description) {
-                    updateData.description = metadata.description;
-                }
+                if (!updateData.author && (!ebook.author || ebook.author === 'Unknown')) updateData.author = metadata.author;
+                if (!updateData.publisher && !ebook.publisher && metadata.publisher) updateData.publisher = metadata.publisher;
+                if ((!updateData.pages || updateData.pages == 0) && metadata.pages) updateData.pages = metadata.pages;
+                if (!updateData.description && !ebook.description && metadata.description) updateData.description = metadata.description;
             }
+        }
+
+        // Handle Cover Image upload
+        if (req.files && req.files['coverImage']) {
+            const file = req.files['coverImage'][0];
+            // Delete old cover if local
+            if (ebook.coverImage && ebook.coverImage.startsWith('/uploads')) {
+                const oldCoverPath = path.join(__dirname, '..', ebook.coverImage.substring(1));
+                if (fs.existsSync(oldCoverPath)) fs.unlinkSync(oldCoverPath);
+            }
+
+            const sanitizedTitle = (updateData.title || ebook.title).replace(/[^a-zA-Z0-9]/g, '_');
+            const newFileName = `cover_${sanitizedTitle}_${ebook._id}.webp`;
+            const relativePath = path.join('uploads', 'ebooks', newFileName);
+            const fullPath = path.join(__dirname, '..', relativePath);
+
+            await sharp(file.path)
+                .resize({ width: 600 })
+                .webp({ quality: 80 })
+                .toFile(fullPath);
+
+            if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+            updateData.coverImage = '/' + relativePath;
         }
 
         // Handle logic for cover image update if it's passed as a filepath string (e.g. from a separate upload handler)
@@ -593,6 +613,74 @@ exports.deleteEbook = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'خطأ في حذف الكتاب الإلكتروني',
+            error: error.message
+        });
+    }
+};
+
+/**
+ * Re-index page counts for all ebooks that have pages=0 or missing.
+ * Admin-only endpoint. Scans each EPUB file and extracts the real page count.
+ */
+exports.reindexPages = async (req, res) => {
+    try {
+        // Find all ebooks with no pages or pages=0
+        const ebooks = await Ebook.find({
+            $or: [
+                { pages: { $exists: false } },
+                { pages: null },
+                { pages: 0 }
+            ],
+            epubFilePath: { $exists: true, $ne: null }
+        });
+
+        console.log(`📖 [REINDEX] Found ${ebooks.length} ebooks with missing page counts`);
+
+        let updated = 0;
+        let failed = 0;
+        const results = [];
+
+        for (const ebook of ebooks) {
+            try {
+                const fullPath = path.join(__dirname, '..', ebook.epubFilePath);
+                
+                if (!fs.existsSync(fullPath)) {
+                    results.push({ id: ebook._id, title: ebook.title, status: 'file_missing' });
+                    failed++;
+                    continue;
+                }
+
+                const metadata = await epubService.extractMetadata(fullPath);
+                if (metadata && metadata.pages > 0) {
+                    ebook.pages = metadata.pages;
+                    await ebook.save();
+                    results.push({ id: ebook._id, title: ebook.title, status: 'updated', pages: metadata.pages });
+                    updated++;
+                    console.log(`  ✅ ${ebook.title}: ${metadata.pages} pages`);
+                } else {
+                    results.push({ id: ebook._id, title: ebook.title, status: 'no_pages_found' });
+                    failed++;
+                }
+            } catch (err) {
+                results.push({ id: ebook._id, title: ebook.title, status: 'error', error: err.message });
+                failed++;
+                console.error(`  ❌ ${ebook.title}: ${err.message}`);
+            }
+        }
+
+        res.json({
+            success: true,
+            message: `تم تحديث ${updated} كتاب، فشل ${failed} كتاب من أصل ${ebooks.length}`,
+            total: ebooks.length,
+            updated,
+            failed,
+            results
+        });
+    } catch (error) {
+        console.error('Error reindexing pages:', error);
+        res.status(500).json({
+            success: false,
+            message: 'خطأ في إعادة فهرسة الصفحات',
             error: error.message
         });
     }

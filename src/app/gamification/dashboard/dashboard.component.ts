@@ -8,7 +8,7 @@ import { SharedModule } from '../../shared/shared.module';
 import { AuthService } from '../../auth/auth.service';
 import { environment } from '../../../environments/environment';
 import { RouterModule } from '@angular/router';
-import { QuranProgressService, QuranProgress } from '../../services/quran-progress.service';
+
 
 @Component({
     selector: 'app-gamification-dashboard',
@@ -21,7 +21,7 @@ export class GamificationDashboardComponent implements OnInit {
     faCoins = faCoins;
     faUser = faUser;
     profile: GamificationProfile | null = null;
-    quranProgress: QuranProgress | null = null;
+
     challenges: Challenge[] = [];
     leaderboard: any[] = [];
     loading = true;
@@ -31,8 +31,7 @@ export class GamificationDashboardComponent implements OnInit {
 
     constructor(
         private gamificationService: GamificationService,
-        private authService: AuthService,
-        private quranProgressService: QuranProgressService
+        private authService: AuthService
     ) { }
 
     getImageUrl(path: string | undefined): string {
@@ -70,15 +69,7 @@ export class GamificationDashboardComponent implements OnInit {
                 error: (err: any) => console.error(err)
             });
 
-            // Load Quran Progress
-            this.quranProgressService.getProgress().subscribe({
-                next: (res: { success: boolean; progress: QuranProgress }) => {
-                    if (res.success) {
-                        this.quranProgress = res.progress;
-                    }
-                },
-                error: (err: any) => console.error('Error loading Quran progress:', err)
-            });
+
 
             // Load Challenges
             this.gamificationService.getChallenges().subscribe({

@@ -112,8 +112,7 @@ async function downloadAndConvertExcel(fileId, promotionStartDateStr, promotionE
   const filteredJson = json.filter(product => {
     const qtyValid = !(product.product_quantity < 0);
     const category = product.product_category || '';
-    const categoryValid = allowedCategories.includes(category) || 
-                         (product.product_name && Object.keys(categoryMap).some(key => product.product_name.startsWith(key + '-')));
+    const categoryValid = !!category || (product.product_name && product.product_name.includes('-'));
     
     return qtyValid && categoryValid;
   });
@@ -157,81 +156,84 @@ async function processAndSaveData(filteredJson, promotionStartDate, promoEndDate
       product.barcode = String(product_id).trim();
     }
 
-    let name = product.product_name || '';
+    // Preserve all existing fields from the product object (like is_digital, linkedEbookId)
+    const productData = { ...product };
+
+    let name = productData.product_name || '';
     // Prefer product_category field if valid
     let category = null;
-    if (product.product_category && Object.values(categoryMap).includes(product.product_category)) {
-      category = product.product_category;
+    if (productData.product_category && Object.values(categoryMap).includes(productData.product_category)) {
+      category = productData.product_category;
     } else {
       let categoryKey = name.split('-')[0].trim();
-      category = categoryMap[categoryKey] || 'غير مصنف';
+      category = categoryMap[categoryKey] || categoryKey || 'غير مصنف';
     }
-    product.product_category = category;
+    productData.product_category = category;
 
     if (name.includes('-')) {
-      product.product_name = name.split('-').slice(1).join('-').trim();
+      productData.product_name = name.split('-').slice(1).join('-').trim();
     }
 
-    product.product_image = product_id;
+    productData.product_image = product_id;
 
     // Check if the product has a merchantId directly from the Excel data
-    const merchantId = product.merchantId ? product.merchantId.toString() : null;
+    const merchantId = productData.merchantId ? productData.merchantId.toString() : null;
 
     // PRESERVE existing image_path if it's a direct URL or has a cache buster
-    const existingImagePath = product.image_path || '';
+    const existingImagePath = productData.image_path || '';
     const isDirectUrl = typeof existingImagePath === 'string' && (existingImagePath.startsWith('http://') || existingImagePath.startsWith('https://'));
     const hasCustomImagePath = isDirectUrl || 
-                                existingImagePath.includes('?v=') || 
-                                (existingImagePath.startsWith('/uploads/books/') && existingImagePath !== `/uploads/books/admin__karim_mohamed__/${product_id}/${product_id}.webp`);
+                                 existingImagePath.includes('?v=') || 
+                                 (existingImagePath.startsWith('/uploads/books/') && existingImagePath !== `/uploads/books/admin__karim_mohamed__/${product_id}/${product_id}.webp`);
 
     if (!hasCustomImagePath) {
       if (merchantId) {
         const merchantData = merchantMap.get(merchantId);
         if (merchantData) {
           const sanitizedUsername = merchantData.username.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
-          product.image_path = `/uploads/books/merchant_${sanitizedUsername}/${product_id}/${product_id}.webp`;
-          product.merchantName = merchantData.username; // Add merchant name to the product data
-          product.merchantLogo = merchantData.logo; // Add merchant logo to the product data
+          productData.image_path = `/uploads/books/merchant_${sanitizedUsername}/${product_id}/${product_id}.webp`;
+          productData.merchantName = merchantData.username; // Add merchant name to the product data
+          productData.merchantLogo = merchantData.logo; // Add merchant logo to the product data
         } else {
           // Merchant not found, fallback to admin path
-          product.image_path = `/uploads/books/admin__karim_mohamed__/${product_id}/${product_id}.webp`;
+          productData.image_path = `/uploads/books/admin__karim_mohamed__/${product_id}/${product_id}.webp`;
         }
       } else {
         // This is an admin product
         const adminFolder = 'admin__karim_mohamed__'; // Standardized folder name
-        product.image_path = `/uploads/books/${adminFolder}/${product_id}/${product_id}.webp`;
+        productData.image_path = `/uploads/books/${adminFolder}/${product_id}/${product_id}.webp`;
       }
     } else {
       // Preserve the existing image_path but still set merchant info if needed
       if (merchantId) {
         const merchantData = merchantMap.get(merchantId);
         if (merchantData) {
-          product.merchantName = merchantData.username;
-          product.merchantLogo = merchantData.logo;
+          productData.merchantName = merchantData.username;
+          productData.merchantLogo = merchantData.logo;
         }
       }
     }
 
     // Add promotionEndDate property for frontend countdown
-    product.promotionEndDate = promoEndDate.toISOString();
+    productData.promotionEndDate = promoEndDate.toISOString();
 
     // Check if this is a merchant product (has merchantId)
     const isMerchantProduct = !!merchantId;
 
     if (isMerchantProduct) {
       // === MERCHANT PRODUCTS: Use the exact price, add 20% markup for crossed-out price (marketing) ===
-      let merchantPrice = product.product_price;
+      let merchantPrice = productData.product_price;
       if (typeof merchantPrice === 'string') {
         merchantPrice = parseFloat(merchantPrice);
       }
-      product.product_price = merchantPrice;
+      productData.product_price = merchantPrice;
       // Add 20% markup as "before discount" price for marketing
-      product.product_price_before_discount = Math.ceil(merchantPrice * 1.20);
+      productData.product_price_before_discount = Math.ceil(merchantPrice * 1.20);
       // Calculate discount percentage
-      product.product_discount_percent = 20;
-      product.rival = false; // Merchant products don't participate in admin promotions
-      product.is_processed = true;
-      updatedData.push(product);
+      productData.product_discount_percent = 20;
+      productData.rival = false; // Merchant products don't participate in admin promotions
+      productData.is_processed = true;
+      updatedData.push(productData);
       continue; // Skip to next product
     }
 
@@ -239,13 +241,13 @@ async function processAndSaveData(filteredJson, promotionStartDate, promoEndDate
 
     // Adjust product_price ONLY if not already processed to avoid double multiplication (fallback scenarios)
     if (!isAlreadyProcessed) {
-      price = cleanPrice(product.product_price);
+      price = cleanPrice(productData.product_price);
 
       // First increase price by 175%
       price = price * 2.75;
     } else {
       // Already processed, use the price as is (it's already adjusted)
-      price = product.product_price;
+      price = productData.product_price;
     }
 
     // Save increased price before discount for comparison
@@ -273,24 +275,24 @@ async function processAndSaveData(filteredJson, promotionStartDate, promoEndDate
     }
 
     if (!isAlreadyProcessed) {
-      product.product_price_before_discount = increasedAdjustedPrice;
+      productData.product_price_before_discount = increasedAdjustedPrice;
     }
 
     // Add rival property: true if in promotion period, else false
     const today = new Date();
     // Ensure promoEndDate is after promotionStartDate
     if (promoEndDate.getTime() <= promotionStartDate.getTime()) {
-      product.rival = false;
+      productData.rival = false;
     } else {
-      product.rival = today.getTime() >= promotionStartDate.getTime() && today.getTime() <= promoEndDate.getTime();
+      productData.rival = today.getTime() >= promotionStartDate.getTime() && today.getTime() <= promoEndDate.getTime();
     }
 
     // If current date is within promotion period, discount price by dividing by 2.75
     if (today >= promotionStartDate && today <= promoEndDate) {
       price = price / 2.75;
       // Ensure price after discount is not less than original price before increase
-      if (price < product.product_price) {
-        price = product.product_price;
+      if (price < productData.product_price) {
+        price = productData.product_price;
       }
     }
 
@@ -316,23 +318,36 @@ async function processAndSaveData(filteredJson, promotionStartDate, promoEndDate
     }
 
     if (!isAlreadyProcessed) {
-      product.product_price = adjustedPrice;
+      productData.product_price = adjustedPrice;
     }
 
     // Calculate discount percentage and round up to nearest 5
     let discountPercent = 0;
-    if (product.product_price_before_discount > 0) {
-      discountPercent = ((product.product_price_before_discount - product.product_price) / product.product_price_before_discount) * 100;
+    if (productData.product_price_before_discount > 0) {
+      discountPercent = ((productData.product_price_before_discount - productData.product_price) / productData.product_price_before_discount) * 100;
     }
-    product.product_discount_percent = roundUpToNearestFive(discountPercent);
+    productData.product_discount_percent = roundUpToNearestFive(discountPercent);
 
-    product.is_processed = true; // Mark as processed for idempotency
-    updatedData.push(product);
+    productData.is_processed = true; // Mark as processed for idempotency
+    updatedData.push(productData);
   }
 
   console.log('✅ Excel data updated with image, category, and discount percent.');
-  fs.writeFileSync(path.join(__dirname, '..', 'output.json'), JSON.stringify(updatedData, null, 2));
-  return updatedData;
+
+  // Deduplicate before saving (same name + same image_path = true duplicate)
+  const seenProducts = new Set();
+  const finalData = updatedData.filter(p => {
+    const key = (p.product_name || '') + '||' + (p.image_path || '');
+    if (seenProducts.has(key)) return false;
+    seenProducts.add(key);
+    return true;
+  });
+  if (finalData.length < updatedData.length) {
+    console.log(`🧹 Removed ${updatedData.length - finalData.length} duplicate products from output.json`);
+  }
+
+  fs.writeFileSync(path.join(__dirname, '..', 'output.json'), JSON.stringify(finalData, null, 2));
+  return finalData;
 }
 
 // New function to add product to Excel file and update output.json
@@ -739,10 +754,123 @@ async function removeProductFromExcel(barcode, fileId) {
         }
       }
     }
-
     return true;
   } catch (error) {
     console.error('❌ Critical error in removeProductFromExcel:', error.message);
+    return false;
+  }
+}
+
+async function bulkRemoveProductsFromExcel(barcodes, fileId) {
+  try {
+    if (!fileId) {
+      fileId = process.env.GOOGLE_DRIVE_FILE_ID;
+    }
+    if (!fileId) {
+      throw new Error('Missing required file ID for Excel update');
+    }
+
+    let json;
+    let workbook;
+    let sheetName;
+    let driveObj;
+
+    try {
+      const client = await auth.getClient();
+      driveObj = google.drive({ version: 'v3', auth: client });
+
+      const res = await driveObj.files.get({
+        fileId,
+        alt: 'media',
+      }, { responseType: 'arraybuffer' });
+
+      const buffer = Buffer.from(res.data);
+      workbook = xlsx.read(buffer, { type: 'buffer' });
+      sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      json = xlsx.utils.sheet_to_json(sheet);
+    } catch (driveErr) {
+      console.warn('⚠️ Could not download Excel from Drive for bulk removal, falling back to local output_raw.json:', driveErr.message);
+      try {
+        const rawDataPath = path.join(__dirname, '..', 'output_raw.json');
+        if (fs.existsSync(rawDataPath)) {
+          json = JSON.parse(fs.readFileSync(rawDataPath, 'utf-8'));
+        } else {
+          json = [];
+        }
+      } catch (localErr) {
+        json = [];
+      }
+    }
+
+    const initialCount = json.length;
+    const bcStrs = barcodes.map(bc => String(bc).trim());
+
+    json = json.filter(p => {
+      if (!p.products_id) return true;
+      const pId = String(p.products_id).trim();
+      return !bcStrs.includes(pId) && !bcStrs.includes(String(Number(pId)));
+    });
+
+    if (json.length !== initialCount) {
+      // Write raw data locally immediately
+      const rawDataPath = path.join(__dirname, '..', 'output_raw.json');
+      fs.writeFileSync(rawDataPath, JSON.stringify(json, null, 2));
+
+      // Process and Update output.json locally immediately
+      try {
+        const PromotionDate = require('../models/PromotionDate.model');
+        const promoDoc = await PromotionDate.findOne().sort({ createdAt: -1 }).exec();
+        const pStart = promoDoc ? promoDoc.startDate : new Date();
+        const pEnd = promoDoc ? promoDoc.endDate : new Date();
+        await processAndSaveData(json, pStart, pEnd);
+        console.log(`✅ Local data (output.json) updated after bulk removal of ${initialCount - json.length} items.`);
+      } catch (procErr) {
+        console.warn('⚠️ Failed to process local data update after bulk removal:', procErr.message);
+      }
+
+      // Attempt to upload back to Google Drive
+      if (driveObj) {
+        try {
+          if (!workbook) {
+            workbook = xlsx.utils.book_new();
+            sheetName = 'Sheet1';
+            const newSheet = xlsx.utils.json_to_sheet(json);
+            xlsx.utils.book_append_sheet(workbook, newSheet, sheetName);
+          } else {
+            const newSheet = xlsx.utils.json_to_sheet(json);
+            workbook.Sheets[sheetName] = newSheet;
+          }
+          const wbout = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+
+          await driveObj.files.update({
+            fileId,
+            media: {
+              mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+              body: wbout
+            }
+          });
+
+          const updateFileId = process.env.GOOGLE_DRIVE_FILE_update;
+          if (updateFileId && updateFileId !== fileId) {
+            await driveObj.files.update({
+              fileId: updateFileId,
+              media: {
+                mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                body: wbout
+              }
+            });
+          }
+          console.log('✅ Excel files synced to Google Drive after bulk removal');
+        } catch (uploadErr) {
+          console.warn('⚠️ Failed to sync Excel file to Google Drive after bulk removal:', uploadErr.message);
+        }
+      }
+    }
+
+    return true;
+  } catch (error) {
+    console.error('❌ Critical error in bulkRemoveProductsFromExcel:', error.message);
     return false;
   }
 }
@@ -905,6 +1033,7 @@ module.exports = {
   addProductToExcel,
   bulkAddProductsToExcel,
   removeProductFromExcel,
+  bulkRemoveProductsFromExcel,
   uploadExcelFromJson,
   updateExcelFromJson,
   processAndSaveData

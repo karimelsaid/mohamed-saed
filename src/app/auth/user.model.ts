@@ -20,7 +20,8 @@ export interface User {
     favoriteCategories?: string[];
     likesReceived?: number;
     cart: string[];
-    role?: 'user' | 'merchant' | 'admin';
+    role?: 'user' | 'merchant' | 'admin' | 'staff';
+    permissions?: string[];
     merchantName?: string;
     approved?: boolean;
 

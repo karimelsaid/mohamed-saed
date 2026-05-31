@@ -3,29 +3,17 @@ const fs = require('fs');
 const path = require('path');
 const FILE_ID = '1N6rRpXCZRnmw4Os9HK9X-tKS9ZWKOI9M';
 
-// Cache for enriched data
-let cachedEnrichedData = null;
-let lastCacheUpdate = 0;
+// Models
 const Product = require('../models/Product.model');
-const User = require('../models/User.model'); // Added this import
+const User = require('../models/User.model');
+const PromotionDate = require('../models/PromotionDate.model');
 
-// Cache for enriched data - This will be removed/replaced by cachedExcelData
-// let cachedEnrichedData = null;
-// let lastCacheUpdate = 0;
-// const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-
-// Cache for recent books
-let cachedRecentBooks = null;
-let lastRecentUpdate = 0;
-
-// Cache for Excel data (output.json)
+// Cache settings
 let cachedExcelData = null;
 let lastExcelUpdate = 0;
-
-// Cache for unified result (Excel + DB)
 let cachedUnifiedData = null;
 let lastUnifiedUpdate = 0;
-const CACHE_TTL = 2 * 60 * 1000; // 2 minutes (reduced from 5 to stay fresher)
+const CACHE_TTL = 2 * 60 * 1000; // 2 minutes
 
 function clearBooksCache() {
   console.log('🧹 [BooksController] Clearing unified data cache');
@@ -33,59 +21,109 @@ function clearBooksCache() {
   lastUnifiedUpdate = 0;
 }
 
-// Helper to get a consistent key for matching (prefer numeric barcode)
+// Helper to normalize Arabic text for consistent searching
+function normalizeArabic(text) {
+  if (!text) return '';
+  return String(text)
+    .replace(/[أإآا]/g, 'ا')
+    .replace(/[ةه]/g, 'ه')
+    .replace(/[يى]/g, 'ي')
+    .replace(/[ؤ]/g, 'و')
+    .replace(/[ئ]/g, 'ي')
+    .replace(/[\u064B-\u065F]/g, '') // Remove Harakat (diacritics)
+    .toLowerCase()
+    .trim();
+}
+
+/**
+ * Internal helper to get unified (Excel + DB) data with caching
+ */
+async function fetchUnifiedData() {
+  const now = Date.now();
+  
+  if (cachedUnifiedData && (now - lastUnifiedUpdate < CACHE_TTL)) {
+    return cachedUnifiedData;
+  }
+
+  let excelProducts = [];
+  const filePath = path.join(__dirname, '..', 'output.json');
+  
+  if (cachedExcelData && (now - lastExcelUpdate < (CACHE_TTL * 5))) {
+    excelProducts = cachedExcelData;
+  } else if (fs.existsSync(filePath)) {
+    try {
+      excelProducts = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      cachedExcelData = excelProducts;
+      lastExcelUpdate = now;
+    } catch (e) {
+      console.error('Error parsing output.json:', e);
+    }
+  }
+
+  const dbProducts = await Product.find({ status: 'approved' }).lean();
+
+  const merchants = await User.find({ role: { $in: ['merchant', 'admin'] } })
+    .select('_id name merchantName logo role merchantShippingMethod')
+    .lean();
+    
+  const merchantMap = new Map();
+  merchants.forEach(m => merchantMap.set(m._id.toString(), {
+    name: (m.merchantName || m.name || 'كنوز'),
+    logo: m.logo,
+    role: m.role,
+    shippingMethod: m.merchantShippingMethod || 'knoozbook'
+  }));
+
+  const ratingsData = await User.aggregate([
+    { $unwind: { path: '$ratedBooks', preserveNullAndEmptyArrays: false } },
+    { $group: { _id: '$ratedBooks.bookId', averageRating: { $avg: '$ratedBooks.rating' }, ratingCount: { $sum: 1 } } }
+  ]);
+  const ratingsMap = {};
+  ratingsData.forEach(r => { ratingsMap[r._id] = { averageRating: r.averageRating, ratingCount: r.ratingCount }; });
+
+  const promoDoc = await PromotionDate.findOne().sort({ createdAt: -1 }).lean();
+
+  const result = unifyAndEnrichData(excelProducts, dbProducts, promoDoc, merchantMap, ratingsMap);
+
+  // Filter out digital products from the public physical listing
+  const filteredResult = result.filter(item => {
+    const isDigital = item.is_digital === true || 
+                      item.is_digital === 'true' || 
+                      (item.products_id && String(item.products_id).startsWith('DIG-')) ||
+                      (item.barcode && String(item.barcode).startsWith('DIG-'));
+    return !isDigital;
+  });
+
+  cachedUnifiedData = filteredResult;
+  lastUnifiedUpdate = now;
+
+  console.log(`✅ [BooksController] Unified ${filteredResult.length} items (${dbProducts.length} from DB)`);
+  return filteredResult;
+}
+
 const getMatchKey = (item) => {
   if (!item) return null;
-  // 1. If numeric products_id exists, use it
-  if (item.products_id && /^\d+$/.test(item.products_id.toString())) {
-    return item.products_id.toString();
-  }
-
-  // 2. If product_image is a numeric barcode, use it
-  if (item.product_image && /^\d+$/.test(item.product_image.toString())) {
-    return item.product_image.toString();
-  }
-
-  // 3. Try to extract ID from path (e.g. "admin__.../393/393.webp")
-  if (item.product_image && typeof item.product_image === 'string' && item.product_image.includes('/')) {
-    const parts = item.product_image.split('/');
-    const folder = parts[parts.length - 2];
-    const filename = parts[parts.length - 1].split('.')[0];
-    if (/^\d+$/.test(folder)) return folder;
-    if (/^\d+$/.test(filename)) return filename;
-  }
-
-  // 4. Default to Mongo ID if available
+  if (item.products_id && /^\d+$/.test(item.products_id.toString())) return item.products_id.toString();
+  if (item.product_image && /^\d+$/.test(item.product_image.toString())) return item.product_image.toString();
   return item.products_id || (item._id ? item._id.toString() : null);
 };
 
-/**
- * Centralized helper to unify Excel and DB products with consistent promotional logic
- */
 function unifyAndEnrichData(excelProducts, dbProducts, promoDoc, merchantMap, ratingsMap) {
   const uniqueItems = new Map();
   const excelMap = new Map();
   const nowTime = new Date();
 
-  // 1. Map Excel products for matching
   excelProducts.forEach(item => {
     const matchKey = getMatchKey(item);
     if (matchKey) excelMap.set(matchKey, item);
   });
 
-  // 2. Process DB products (Authoritative for Merchant/Stock, but merge with Excel Promos)
   dbProducts.forEach(product => {
     const matchKey = getMatchKey(product);
     const excelMatch = excelMap.get(matchKey);
 
     let finalPid = product._id.toString();
-    if (excelMatch && excelMatch.products_id) {
-      finalPid = excelMatch.products_id.toString();
-    } else if (matchKey && /^\d+$/.test(matchKey)) {
-      finalPid = matchKey;
-    } else if (product.products_id) {
-      finalPid = product.products_id.toString();
-    }
+    if (excelMatch && excelMatch.products_id) finalPid = excelMatch.products_id.toString();
 
     const mergedProduct = {
       ...(excelMatch || {}),
@@ -95,276 +133,154 @@ function unifyAndEnrichData(excelProducts, dbProducts, promoDoc, merchantMap, ra
       isDbProduct: true
     };
 
-    // For products with a matching Excel entry, DB IS NOW THE SOURCE OF TRUTH for pricing and images.
-    // We only take data from Excel if it's missing in the DB.
-    if (excelMatch) {
-      if (product.product_price === undefined && excelMatch.product_price !== undefined) {
-        mergedProduct.product_price = excelMatch.product_price;
-      }
-      if (product.product_price_before_discount === undefined && excelMatch.product_price_before_discount !== undefined) {
-        mergedProduct.product_price_before_discount = excelMatch.product_price_before_discount;
-      }
-      if (product.product_discount_percent === undefined && excelMatch.product_discount_percent !== undefined) {
-        mergedProduct.product_discount_percent = excelMatch.product_discount_percent;
-      }
-      if (product.price_cost === undefined && excelMatch.price_cost !== undefined) {
-        mergedProduct.price_cost = excelMatch.price_cost;
-      }
-    }
-
-    // Apply Price/Promo Restoration Logic (Only if DB hasn't overridden it and we need to fix it)
-    if (excelMatch) {
-      const dbPrice = Number(product.product_price) || 0;
-      const dbPriceBefore = Number(product.product_price_before_discount) || 0;
-      
-      // If DB has a discount percent but no before price, we let the AUTO-FIX handle it later.
-      // We no longer blindly force Excel prices over DB prices.
-      
-      // Keep rival status if DB doesn't have it defined
-      if (product.rival === undefined && excelMatch.rival !== undefined) {
-        mergedProduct.rival = excelMatch.rival;
-      }
-    }
-    // Guard: If this key already exists in uniqueItems (from a previous DB product that was
-    // already merged with Excel), skip this duplicate to prevent overwriting with stale data.
     const itemKey = matchKey || finalPid;
-    if (uniqueItems.has(itemKey) && !excelMatch) {
-      // This is a duplicate DB product without an Excel match — skip it
-      return;
-    }
     uniqueItems.set(itemKey, mergedProduct);
     if (matchKey) excelMap.delete(matchKey);
   });
 
-  // 3. Add remaining Excel products
   excelMap.forEach((item, matchKey) => {
-    const pid = item.products_id || matchKey || (item._id ? item._id.toString() : null);
-    uniqueItems.set(matchKey, {
-      ...item,
-      products_id: pid,
-      isDbProduct: false
-    });
+    const pid = item.products_id || matchKey;
+    uniqueItems.set(matchKey, { ...item, products_id: pid, isDbProduct: false });
   });
 
   const jsonData = Array.from(uniqueItems.values());
 
-  // 4. Enrich with Merchants, Ratings, and Global Promotion
   jsonData.forEach(book => {
-    // Merchant Info
-    if (!book.merchantId && !book.isDbProduct) {
-      // Assign to primary admin for all Excel products without a link
-      book.merchantId = '69d11b07df78621a8d7b1559';
-    }
+    if (!book.merchantId && !book.isDbProduct) book.merchantId = '69d11b07df78621a8d7b1559';
 
     if (merchantMap && book.merchantId) {
-      const mId = book.merchantId.toString();
-      const mInfo = merchantMap.get(mId);
+      const mInfo = merchantMap.get(book.merchantId.toString());
       if (mInfo) {
         book.merchantName = mInfo.name;
         book.merchantLogo = mInfo.logo || book.merchantLogo;
         book.merchantRole = mInfo.role;
         book.shippingMethod = mInfo.shippingMethod || book.shippingMethod;
-      } else {
-        book.merchantName = 'كنوز';
       }
-    } else if (!book.merchantName) {
-      // Default for products without a specific merchant (Admin fallback)
-      book.merchantName = 'كنوز';
     }
+    if (!book.merchantName) book.merchantName = 'كنوز';
 
-    // Ratings
     if (ratingsMap && ratingsMap[book.products_id]) {
       book.averageRating = ratingsMap[book.products_id].averageRating;
       book.ratingCount = ratingsMap[book.products_id].ratingCount;
-    } else {
-      book.averageRating = book.averageRating || 0;
-      book.ratingCount = book.ratingCount || 0;
     }
 
-    // Global Promotion
     if (promoDoc) {
       const promoEndDate = new Date(promoDoc.endDate);
-      const promotionStartDate = new Date(promoDoc.startDate);
+      const promoStartDate = new Date(promoDoc.startDate);
       book.promotionEndDate = promoEndDate.toISOString();
-
-      let globalRival = false;
-      if (promoEndDate.getTime() > promotionStartDate.getTime()) {
-        globalRival = nowTime.getTime() >= promotionStartDate.getTime() && nowTime.getTime() <= promoEndDate.getTime();
-      }
+      const globalRival = nowTime >= promoStartDate && nowTime <= promoEndDate;
       book.rival = book.rival || globalRival;
     }
 
-    // AUTO-FIX: Ensure original price and discount percent are consistent
-    let finalPrice = Number(book.product_price) || 0;
-    let currentBefore = Number(book.product_price_before_discount) || 0;
-    let discountPercent = Number(book.product_discount_percent) || 0;
-
-    // 0. DATA SANITATION: If 'before' is lower than 'current', swap them
-    if (currentBefore > 0 && currentBefore < finalPrice) {
-      const temp = finalPrice;
-      finalPrice = currentBefore;
-      currentBefore = temp;
-      book.product_price = finalPrice;
-      book.product_price_before_discount = currentBefore;
-    }
-
-    // Fix negative percentages
-    if (discountPercent < 0) {
-      discountPercent = Math.abs(discountPercent);
-      book.product_discount_percent = discountPercent;
-    }
-
-    // 1. Always recalculate accurate percentage if there's a valid before price
-    if (currentBefore > finalPrice) {
-      book.product_discount_percent = Math.round(((currentBefore - finalPrice) / currentBefore) * 100);
-      discountPercent = book.product_discount_percent;
-    } else {
-      book.product_discount_percent = 0;
-      discountPercent = 0;
-    }
-
-    // 2. If we have percent but 'before' is missing or same as current, calculate 'before'
-    if (discountPercent > 0 && (currentBefore <= finalPrice || currentBefore === 0)) {
-      book.product_price_before_discount = Math.round(finalPrice / (1 - discountPercent / 100));
-    }
-
-    // 3. AUTO-FIX COST: If price_cost is missing or 0, apply 70% fallback (Admin/Kenouz products)
-    if (!book.price_cost || Number(book.price_cost) === 0) {
-      book.price_cost = Math.ceil(finalPrice * 0.7);
-    }
+    // Auto-fix pricing
+    let price = Number(book.product_price) || 0;
+    let before = Number(book.product_price_before_discount) || 0;
+    if (before > 0 && before < price) [price, before] = [before, price];
+    
+    book.product_price = price;
+    book.product_price_before_discount = before;
+    book.product_discount_percent = before > price ? Math.round(((before - price) / before) * 100) : 0;
+    
+    if (!book.price_cost || Number(book.price_cost) === 0) book.price_cost = Math.ceil(price * 0.7);
   });
 
   return jsonData;
 }
 
-// Unified function to get both Excel and DB products
 async function getExcelData(req, res) {
   try {
-    const now = Date.now();
-    
-    // Manual cache clear trigger
-    if (req.query.clearCache === 'true') {
-      cachedUnifiedData = null;
-      console.log('🧹 [BooksController] Manual cache clear triggered via API');
-    }
-    
-    // Check full unified cache first
-    if (cachedUnifiedData && (now - lastUnifiedUpdate < CACHE_TTL)) {
-      // console.log('⚡ [BooksController] Returning cached unified result');
-      return res.json(cachedUnifiedData);
-    }
-
-    let excelProducts = [];
-    const filePath = path.join(__dirname, '..', 'output.json');
-    if (cachedExcelData && (now - lastExcelUpdate < (CACHE_TTL * 2.5))) { // Excel cache can be older
-      excelProducts = cachedExcelData;
-    } else if (fs.existsSync(filePath)) {
-      excelProducts = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-      cachedExcelData = excelProducts;
-      lastExcelUpdate = now;
-    }
-
-    const dbProducts = await Product.find({ status: 'approved' }).lean();
-
-    // Get Merchants & Admins to properly identify "Kenouz" products
-    const merchants = await User.find({ role: { $in: ['merchant', 'admin'] } }).select('_id name merchantName logo role merchantShippingMethod').lean();
-    const merchantMap = new Map();
-    merchants.forEach(m => merchantMap.set(m._id.toString(), {
-      name: (m.merchantName || m.name || 'كنوز'),
-      logo: m.logo,
-      role: m.role,
-      shippingMethod: m.merchantShippingMethod || 'knoozbook'
-    }));
-
-    // Get Promotion
-    const PromotionDate = require('../models/PromotionDate.model');
-    const promoDoc = await PromotionDate.findOne().sort({ createdAt: -1 }).lean();
-
-    const result = unifyAndEnrichData(excelProducts, dbProducts, promoDoc, merchantMap, null);
-
-    // Update unified cache
-    cachedUnifiedData = result;
-    lastUnifiedUpdate = now;
-
-    console.log(`✅ [BooksController] Unified ${result.length} items (${dbProducts.length} from DB)`);
+    if (req.query.clearCache === 'true') clearBooksCache();
+    const result = await fetchUnifiedData();
     res.json(result);
   } catch (error) {
-    console.error('❌ [BooksController] error in getExcelData:', error);
-    res.status(500).json({ message: 'Error fetching unified books', error: error.message });
+    res.status(500).json({ message: 'Error fetching books', error: error.message });
   }
 }
 
-// دالة لإرجاع آخر 50 كتابًا مضافًا مع توحيد البيانات
-async function getRecentBooks(req, res) {
+async function searchBooks(req, res) {
   try {
-    const now = Date.now();
-    let excelProducts = [];
-    const filePath = path.join(__dirname, '..', 'output.json');
+    const { q, page = 1, limit = 20, category, minPrice, maxPrice, publisher, author, sortBy = 'relevance' } = req.query;
+    const allData = await fetchUnifiedData();
+    let filtered = allData;
 
-    // 1. Get all Excel products
-    if (fs.existsSync(filePath)) {
-      excelProducts = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    if (q && q.trim()) {
+      const keywords = normalizeArabic(q).split(/\s+/).filter(k => k.length > 0);
+      filtered = filtered.filter(item => {
+        const text = normalizeArabic(`${item.product_name} ${item.author} ${item.publisher} ${item.merchantName || ''} ${item.product_description} ${item.products_id} ${item.barcode} ${item.product_image}`);
+        return keywords.every(kw => text.includes(kw));
+      });
     }
 
-    // 2. Get all approved DB products
-    const dbProducts = await Product.find({ status: 'approved' }).lean();
+    if (category) {
+      const normCat = normalizeArabic(category);
+      filtered = filtered.filter(item => item.product_category && normalizeArabic(item.product_category).includes(normCat));
+    }
 
-    // 3. Get Merchants
-    const merchants = await User.find({ role: { $in: ['merchant', 'admin'] } }).select('_id name merchantName logo merchantShippingMethod role').lean();
-    const merchantMap = new Map();
-    merchants.forEach(m => merchantMap.set(m._id.toString(), {
-      name: m.merchantName || m.name || 'كنوز',
-      logo: m.logo,
-      role: m.role,
-      shippingMethod: m.merchantShippingMethod || 'knoozbook'
-    }));
+    if (author) {
+      const normAuthor = normalizeArabic(author);
+      filtered = filtered.filter(item => item.author && normalizeArabic(item.author).includes(normAuthor));
+    }
 
-    // 4. Get Ratings (Aggregate)
-    const ratingsData = await User.aggregate([
-      { $unwind: { path: '$ratedBooks', preserveNullAndEmptyArrays: false } }, // Bug fix: ignore users with no ratings
-      { $group: { _id: '$ratedBooks.bookId', averageRating: { $avg: '$ratedBooks.rating' }, ratingCount: { $sum: 1 } } }
-    ]);
-    const ratingsMap = {};
-    ratingsData.forEach(r => { ratingsMap[r._id] = { averageRating: r.averageRating, ratingCount: r.ratingCount }; });
+    if (publisher) {
+      const normPub = normalizeArabic(publisher);
+      filtered = filtered.filter(item => item.publisher && normalizeArabic(item.publisher).includes(normPub));
+    }
 
-    // 5. Get Promotion
-    const PromotionDate = require('../models/PromotionDate.model');
-    const promoDoc = await PromotionDate.findOne().sort({ createdAt: -1 }).lean();
+    if (minPrice) filtered = filtered.filter(item => (item.product_price || 0) >= parseFloat(minPrice));
+    if (maxPrice) filtered = filtered.filter(item => (item.product_price || 0) <= parseFloat(maxPrice));
 
-    // 6. Unify EVERYTHING
-    const unified = unifyAndEnrichData(excelProducts, dbProducts, promoDoc, merchantMap, ratingsMap);
+    if (sortBy === 'priceAsc') filtered.sort((a, b) => (a.product_price || 0) - (b.product_price || 0));
+    else if (sortBy === 'priceDesc') filtered.sort((a, b) => (b.product_price || 0) - (a.product_price || 0));
+    else if (sortBy === 'newest') filtered.sort((a, b) => (b.isDbProduct ? 1 : 0) - (a.isDbProduct ? 1 : 0));
 
-    // 7. Sort by createdAt (or fallback for Excel items) and take top 50
-    const sorted = unified.sort((a, b) => {
-      // Use the best available date: createdAt, lastStockUpdate, or a fallback date field if it exists
-      const dateA = (a.createdAt || a.lastStockUpdate || a.date) ? new Date(a.createdAt || a.lastStockUpdate || a.date).getTime() : 0;
-      const dateB = (b.createdAt || b.lastStockUpdate || b.date) ? new Date(b.createdAt || b.lastStockUpdate || b.date).getTime() : 0;
+    // 7. Pagination & Metadata
+    const totalCount = filtered.length;
+    const startIndex = (parseInt(page) - 1) * parseInt(limit);
+    const paginatedItems = filtered.slice(startIndex, startIndex + parseInt(limit));
+
+    // Get unique categories from the filtered set (before pagination)
+    const availableCategories = [...new Set(filtered.map(item => item.product_category).filter(Boolean))].sort();
+
+    res.json({
+      success: true,
+      totalCount,
+      page: parseInt(page),
+      totalPages: Math.ceil(totalCount / parseInt(limit)),
+      items: paginatedItems,
+      availableCategories
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Search error', error: error.message });
+  }
+}
+
+async function getRecentBooks(req, res) {
+  try {
+    const unified = await fetchUnifiedData();
+    const sorted = [...unified].sort((a, b) => {
+      const dateA = new Date(a.createdAt || a.lastStockUpdate || 0).getTime();
+      const dateB = new Date(b.createdAt || b.lastStockUpdate || 0).getTime();
       return dateB - dateA;
     }).slice(0, 50);
-
-    console.log(`📦 [BooksController] getRecentBooks: Unified and sorted ${sorted.length} items`);
     res.json(sorted);
   } catch (error) {
-    console.error('❌ [BooksController] error in getRecentBooks:', error);
     res.status(500).json({ message: 'Error fetching recent books', error: error.message });
   }
 }
 
-// تنزيل وتحويل بيانات Excel من Google Drive
-async function updateBooksData() {
+async function getCategories(req, res) {
   try {
-    console.log('جاري تحديث بيانات الكتب من Google Drive...');
-    await downloadAndConvertExcel(FILE_ID);
-    console.log('✅ تم تحديث بيانات الكتب بنجاح');
+    const allData = await fetchUnifiedData();
+    const categories = [...new Set(allData.map(item => item.product_category).filter(Boolean))].sort();
+    res.json({ success: true, categories });
   } catch (error) {
-    console.error('❌ فشل في تحديث بيانات الكتب:', error);
-    throw error;
+    console.error('Error fetching categories:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch categories' });
   }
 }
 
-module.exports = {
-  getExcelData,
-  getRecentBooks,
-  updateBooksData,
-  clearBooksCache
-};
+async function updateBooksData() {
+  await downloadAndConvertExcel(FILE_ID);
+}
+
+module.exports = { getExcelData, getRecentBooks, searchBooks, updateBooksData, clearBooksCache, getCategories };

@@ -1,15 +1,6 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
-// استيراد المكونات الخاصة بكل قسم
-import { AamalComponent } from './book-list/aamal/aamal.component';
-import { ChildComponent } from './book-list/child/child.component';
-import { FenonComponent } from './book-list/fenon/fenon.component';
-import { FitComponent } from './book-list/fit/fit.component';
-import { IslamicComponent } from './book-list/islamic/islamic.component';
-import { RewayatComponent } from './book-list/rewayat/rewayat.component';
-import { TatwerComponent } from './book-list/tatwer/tatwer.component';
-import { TarekhComponent } from './book-list/tarekh/tarekh.component';
-import { QamosComponent } from './book-list/qamos/qamos.component';
+// Removed redundant category imports
 import { SearchResultsComponent } from './search-results/search-results.component';
 import { HomePageComponent } from './home-page/home-page.component';
 import { CartComponent } from './cart/cart.component';
@@ -37,7 +28,6 @@ import { MerchantProfileComponent } from './merchant/merchant-profile/merchant-p
 import { MerchantAuthGuard } from './guards/merchant-auth.guard';
 import { AdminAuthGuard } from './guards/admin-auth.guard';
 import { StartupGuard } from './guards/startup.guard';
-import { OfficeSuppliesComponent } from './book-list/office-supplies/office-supplies.component';
 import { BooksComponent } from './book-list/books/books.component';
 import { LibraryComponent } from './library/library.component';
 import { EpubReaderComponent } from './epub-reader/epub-reader.component';
@@ -45,6 +35,8 @@ import { SubscriptionComponent } from './subscription/subscription.component';
 import { DownloadsComponent } from './downloads/downloads.component';
 import { GamificationDashboardComponent } from './gamification/dashboard/dashboard.component';
 import { HowToEarnComponent } from './pages/how-to-earn/how-to-earn.component';
+import { MarketerHubComponent } from './marketer-hub/marketer-hub.component';
+import { MarketerAuthGuard } from './guards/marketer-auth.guard';
 // Removed static imports of Mushaf for lazy loading
 const routes: Routes = [
   {
@@ -74,16 +66,21 @@ const routes: Routes = [
     ]
   },
   { path: 'Home', component: HomePageComponent },
+  { path: 'exchange', loadComponent: () => import('./features/reader-community/reader-community.component').then(m => m.ReaderCommunityComponent) },
+  { path: 'auctions', loadComponent: () => import('./features/reader-community/reader-community.component').then(m => m.ReaderCommunityComponent) },
+  { path: 'bundles', redirectTo: '/promotions', pathMatch: 'full' },
   { path: 'books', component: BooksComponent },
-  { path: 'Business-Marketing-Finance', component: AamalComponent },
-  { path: 'Education-children', component: ChildComponent },
-  { path: 'Arts-crafts', component: FenonComponent },
-  { path: 'HealthMedicineScience', component: FitComponent },
-  { path: 'Islamic', component: IslamicComponent },
-  { path: 'Novels-stories', component: RewayatComponent },
-  { path: 'Self-development-psychology', component: TatwerComponent },
-  { path: 'History-Biographies', component: TarekhComponent },
-  { path: 'Dictionaries-References', component: QamosComponent },
+  { path: 'Business-Marketing-Finance', redirectTo: '/category/أعمال وتسويق ومالية', pathMatch: 'full' },
+  { path: 'Education-children', redirectTo: '/category/تربية وأطفال', pathMatch: 'full' },
+  { path: 'Arts-crafts', redirectTo: '/category/فنون وحرف', pathMatch: 'full' },
+  { path: 'HealthMedicineScience', redirectTo: '/category/صحة وطب وعلوم', pathMatch: 'full' },
+  { path: 'Islamic', redirectTo: '/category/كتب دينية', pathMatch: 'full' },
+  { path: 'Novels-stories', redirectTo: '/category/روايات وقصص', pathMatch: 'full' },
+  { path: 'Self-development-psychology', redirectTo: '/category/تطوير الذات وعلم النفس', pathMatch: 'full' },
+  { path: 'History-Biographies', redirectTo: '/category/تاريخ وسير ذاتية', pathMatch: 'full' },
+  { path: 'Dictionaries-References', redirectTo: '/category/قواميس ومراجع', pathMatch: 'full' },
+  { path: 'office-supplies', redirectTo: '/category/أدوات مكتبية', pathMatch: 'full' },
+  { path: 'category/:name', component: BooksComponent },
   {
     path: 'ControlPanel',
     loadChildren: () => import('./admin/admin.module').then(m => m.AdminModule),
@@ -132,13 +129,13 @@ const routes: Routes = [
   { path: 'fabrics', redirectTo: '/Home', pathMatch: 'full' },
   { path: 'others', redirectTo: '/Home', pathMatch: 'full' },
 
-  { path: 'office-supplies', component: OfficeSuppliesComponent },
 
   { path: 'عن-الموقع', component: AboutComponent },
   { path: 'سياسة-الخصوصية', component: PrivacyPolicyComponent },
   { path: 'الشروط-والاحكام', component: TermsConditionsComponent },
   { path: 'achievements', component: GamificationDashboardComponent },
   { path: 'earn', component: HowToEarnComponent },
+  { path: 'marketer-hub', component: MarketerHubComponent, canActivate: [MarketerAuthGuard] },
   // Mushaf and Quran Dashboard routes removed for build separation
   // path: 'mushaf', loadChildren: ...
   // path: 'quran-dashboard', loadChildren: ...

@@ -6,12 +6,14 @@ import { OfflineEbookService } from '../services/offline-ebook.service';
 import { AuthService } from '../auth/auth.service';
 import { ExternalLibraryService, ExternalBook } from '../services/external-library.service';
 import { EbookService } from '../services/ebook.service';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 
 interface CombinedDownload {
   id: string;
   title: string;
   author?: string;
   category?: string;
+  coverUrl?: string; // Added
   source: 'internal' | 'external';
   downloadDate?: number;
   contentLength?: number;
@@ -20,7 +22,7 @@ interface CombinedDownload {
 @Component({
   selector: 'app-downloads',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, FontAwesomeModule],
   templateUrl: './downloads.component.html',
   styleUrl: './downloads.component.css'
 })
@@ -95,12 +97,14 @@ export class DownloadsComponent implements OnInit {
     // Add internal downloads
     for (const book of this.internalDownloads) {
       // Avoid duplicates
-      if (!this.allDownloads.find(d => d.id === (book._id || book.id || book.ebookId))) {
+      const id = book._id || book.id || book.ebookId;
+      if (!this.allDownloads.find(d => d.id === id)) {
         this.allDownloads.push({
-          id: book._id || book.id || book.ebookId,
+          id: id,
           title: book.title || book.metadata?.title || 'كتاب',
           author: book.author || book.metadata?.author || 'مؤلف غير معروف',
           category: book.category || book.metadata?.category || 'عام',
+          coverUrl: book.coverImage || book.metadata?.coverImage || book.coverUrl, // Added
           source: 'internal',
           downloadDate: book.downloadDate || book.timestamp || Date.now(),
           contentLength: book.size || book.contentLength || 0
@@ -270,5 +274,15 @@ export class DownloadsComponent implements OnInit {
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+
+  getCoverUrl(book: CombinedDownload): string {
+    if (!book.coverUrl) return 'assets/images/defaults/book_cover_placeholder.png';
+    if (book.coverUrl.startsWith('data:')) return book.coverUrl;
+    if (book.coverUrl.startsWith('uploads/')) {
+      const baseUrl = 'https://knoozbook.com'; // Or dynamic from env
+      return `${baseUrl}/${book.coverUrl}`;
+    }
+    return book.coverUrl;
   }
 }

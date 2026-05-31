@@ -10,7 +10,7 @@ const authenticateAdmin = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-    const admin = await User.findOne({ _id: decoded.adminId || decoded.userId, role: 'admin' });
+    const admin = await User.findOne({ _id: decoded.adminId || decoded.userId, role: { $in: ['admin', 'staff'] } });
 
     if (!admin) {
       return res.status(401).json({ success: false, message: 'Invalid token.' });

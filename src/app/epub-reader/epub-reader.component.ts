@@ -12,7 +12,8 @@ import { OfflineEbookService } from '../services/offline-ebook.service';
 import { DownloadManagerService } from '../services/download-manager.service';
 import { ExternalLibraryService } from '../services/external-library.service';
 import { GamificationService } from '../services/gamification.service';
-
+import { timeout, catchError } from 'rxjs/operators';
+import { of } from 'rxjs';
 @Component({
     selector: 'app-epub-reader',
     standalone: true,
@@ -21,7 +22,6 @@ import { GamificationService } from '../services/gamification.service';
     styleUrls: ['./epub-reader.component.css']
 })
 export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
-    @ViewChild('readerContainer', { static: false }) readerContainer!: ElementRef;
 
     ebookId: string = '';
     ebook: Ebook | null = null;
@@ -62,20 +62,29 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
     isFullscreen = false;
 
     // Content Width Control
-    contentWidth = 900; // Default width
+    contentWidth = 900; // Will be set to effectiveMaxWidth in ngOnInit
     readonly minContentWidth = 300;
-    readonly maxContentWidth = 1200;
+    readonly maxContentWidth = 9999; // No practical cap — fill the screen
     readonly contentWidthStep = 100;
 
     // Animation State
     animationClass: string = '';
 
+    // Auto-Scroll Feature
+    isAutoScrolling = false;
+    autoScrollSpeed = 0.5; // pixels per frame — gentle reading pace
+    readonly autoScrollMinSpeed = 0.1;
+    readonly autoScrollMaxSpeed = 2;
+    readonly autoScrollSpeedStep = 0.1;
+    private autoScrollAnimationId: number | null = null;
+
     // Calculate max allowed width based on screen size with responsive margin
     get effectiveMaxWidth(): number {
         if (!this.isBrowser) return 900;
-        const sideMargin = window.innerWidth < 600 ? 20 : (window.innerWidth < 900 ? 50 : 100);
+        // Very minimal margins — content fills almost the entire screen width
+        const sideMargin = window.innerWidth < 600 ? 4 : 6;
         const availableWidth = window.innerWidth - (sideMargin * 2);
-        return Math.max(this.minContentWidth, Math.min(this.maxContentWidth, availableWidth));
+        return Math.max(this.minContentWidth, availableWidth);
     }
 
     // Reader State
@@ -104,7 +113,8 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
         autoScrollSpeed: 0,
         textAlign: 'justify',
         margin: 'normal',
-        backgroundImage: null
+        backgroundImage: null,
+        layoutMode: 'scroll'
     };
 
     bookmarks: Bookmark[] = [];
@@ -128,12 +138,17 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
 
     private saveProgressInterval: any = null;
     private readingStartTime: number = 0;
+    private pagesReadSinceLastSync = new Set<number>();
+    private spinePageCounts: number[] = []; // Track visual page count per spine item (chapter)
 
     // Temporary variable for background image input
     tempBackgroundImage: string = '';
 
     isBrowser: boolean;
     private boundHandleKeydown: any;
+
+    @ViewChild('readerContainer') readerContainer!: ElementRef;
+    @ViewChild('bokReaderContainer') bokReaderContainer!: ElementRef;
 
     constructor(
         private route: ActivatedRoute,
@@ -171,9 +186,15 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
         }
 
         // Set initial content width based on screen size
-        this.contentWidth = Math.min(900, this.effectiveMaxWidth);
+        this.contentWidth = this.effectiveMaxWidth; // Fill the screen by default
 
-        this.checkAccessAndLoad();
+        this.checkAccessAndLoad().catch(err => {
+            console.error('Initial load failed', err);
+            this.isLoading = false;
+            this.error = 'فشل تحميل الكتاب. يرجى إعادة المحاولة.';
+            this.cdr.detectChanges();
+        });
+
         if (this.isBrowser) {
             this.readingStartTime = Date.now();
             this.saveProgressInterval = setInterval(() => {
@@ -186,16 +207,25 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
         if (this.isBrowser) {
             document.addEventListener('keydown', this.boundHandleKeydown);
             document.addEventListener('selectionchange', this.handleSelectionChange);
+            
+            // Add scroll listener to BOK container if it exists
+            if (this.bokReaderContainer) {
+                this.bokReaderContainer.nativeElement.addEventListener('scroll', this.handleScroll, { passive: true });
+            }
         }
     }
 
     ngOnDestroy(): void {
+        this.stopAutoScroll(); // Clean up auto-scroll animation
         this.saveProgress();
         if (this.saveProgressInterval) clearInterval(this.saveProgressInterval);
         if (this.book) this.book.destroy();
         if (this.isBrowser) {
             document.removeEventListener('keydown', this.boundHandleKeydown);
             document.removeEventListener('selectionchange', this.handleSelectionChange);
+            if (this.bokReaderContainer) {
+                this.bokReaderContainer.nativeElement.removeEventListener('scroll', this.handleScroll);
+            }
         }
     }
 
@@ -214,100 +244,89 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
     onBeforeUnload() {
         this.saveProgress();
     }
-
     private handleKeydown(event: KeyboardEvent): void {
         if (this.isNavigating) return;
-        if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') this.nextPage();
-        else if (event.key === 'ArrowRight' || event.key === 'ArrowUp') this.prevPage();
-        else if (event.key === 'Escape') this.closeAllPanels();
+
+        // Arabic RTL books navigation: ArrowRight (and ArrowDown) -> Next Page, ArrowLeft (and ArrowUp) -> Prev Page
+        if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+            if (this.settings.layoutMode === 'pages' && this.rendition) {
+                const view = (this.rendition as any).manager?.current();
+                const doc = view?.document;
+                if (doc && event.key === 'ArrowDown') {
+                    const scrollHeight = doc.documentElement.scrollHeight || doc.body.scrollHeight;
+                    const scrollTop = doc.documentElement.scrollTop || doc.body.scrollTop;
+                    const clientHeight = doc.documentElement.clientHeight || doc.body.clientHeight;
+                    // If not at bottom, let the default vertical scroll happen
+                    if (scrollHeight - (scrollTop + clientHeight) > 20) {
+                        return;
+                    }
+                }
+            }
+            this.nextPage();
+        } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+            if (this.settings.layoutMode === 'pages' && this.rendition) {
+                const view = (this.rendition as any).manager?.current();
+                const doc = view?.document;
+                if (doc && event.key === 'ArrowUp') {
+                    const scrollTop = doc.documentElement.scrollTop || doc.body.scrollTop;
+                    // If not at top, let the default vertical scroll happen
+                    if (scrollTop > 10) {
+                        return;
+                    }
+                }
+            }
+            this.prevPage();
+        } else if (event.key === 'Escape') {
+            this.closeAllPanels();
+        }
     }
 
     private async checkAccessAndLoad(): Promise<void> {
         this.isLoading = true;
+        this.cdr.detectChanges();
 
-        // --- BOK File Logic ---
-        if (this.bookType === 'bok') {
-            this.ebook = {
-                _id: this.ebookId,
-                title: 'الكتاب الشامل',
-                author: 'غير معروف',
-                accessType: 'owned'
-            } as any;
-
-            // Simple check for subscription (no persistent store for sub status here, assume if library component let us here, we might have access)
-            // But we should double check real access rights if possible.
-            // For now, load file.
-            this.userLibraryService.checkAccess(this.ebookId).subscribe({
-                next: (res) => {
-                    this.hasAccess = res.hasAccess;
-                    // Only disable preview if explicitly granted access and not 'preview' type
-                    this.isPreviewMode = res.accessType === 'preview' || !this.hasAccess;
-                    this.loadBokFile();
-                },
-                error: (err) => {
-                    console.warn('Access check failed, defaulting to preview mode', err);
-                    this.hasAccess = false;
-                    this.isPreviewMode = true;
-                    this.loadBokFile();
-                }
-            });
-            return;
-        }
-
-        // --- EPUB Logic ---
         try {
+            // --- BOK File Logic ---
+            if (this.bookType === 'bok') {
+                this.ebook = {
+                    _id: this.ebookId,
+                    title: 'الكتاب الشامل',
+                    author: 'غير معروف',
+                    accessType: 'owned'
+                } as any;
+
+                // Fire and forget access check to not block the reader
+                this.userLibraryService.checkAccess(this.ebookId).pipe(
+                    // Short timeout for the observable itself
+                    timeout(3000),
+                    catchError(err => {
+                        console.warn('Access check background failed', err);
+                        return [{ hasAccess: false, accessType: 'preview' }];
+                    })
+                ).subscribe((res: any) => {
+                    if (res) {
+                        this.hasAccess = res.hasAccess;
+                        this.isPreviewMode = res.accessType === 'preview' || !this.hasAccess;
+                        this.cdr.detectChanges();
+                    }
+                });
+
+                // Load the file (has its own internal timeouts)
+                await this.loadBokFile();
+                this.isLoading = false;
+                this.cdr.detectChanges();
+                return;
+            }
+
+            // --- EPUB Logic ---
             // 1. Get cached status if available
             const isCached = await this.offlineEbookService.isBookCached(this.ebookId);
             const cachedMetadata = isCached ? await this.offlineEbookService.getMetadata(this.ebookId) : null;
 
-            let accessResponse: any = null;
-            let ebookDetails: any = null;
-            let networkSuccess = false;
-
-            // 2. Try fetching access rights & metadata (Network)
-            try {
-                // We use Promise.allSettled to try both but not fail completely if one fails
-                const [accessRes, ebookRes] = await Promise.allSettled([
-                    this.userLibraryService.checkAccess(this.ebookId).toPromise(),
-                    this.ebookService.getEbookById(this.ebookId).toPromise()
-                ]);
-
-                if (accessRes.status === 'fulfilled') {
-                    accessResponse = accessRes.value;
-                    networkSuccess = true;
-                }
-                if (ebookRes.status === 'fulfilled') ebookDetails = ebookRes.value?.data;
-
-            } catch (networkErr) {
-                console.warn('Network requests failed (likely offline):', networkErr);
-            }
-
-            // 3. Determine Access Mode
-            if (networkSuccess && accessResponse) {
-                // Online Authoritative Check
-                this.hasAccess = accessResponse.hasAccess === true;
-                this.isPreviewMode = accessResponse.accessType === 'preview' || !this.hasAccess;
-                console.log('KENOUZ DEBUG: Online Access Check. HasAccess:', this.hasAccess, 'IsPreview:', this.isPreviewMode, 'Type:', accessResponse.accessType);
-
-                // Update cached metadata with new confirmed status
-                if (isCached && cachedMetadata) {
-                    cachedMetadata.accessType = this.hasAccess && !this.isPreviewMode ? 'owned' : 'preview';
-
-                    // SAVE EXPIRY DATE
-                    if (this.hasAccess && accessResponse.accessType === 'subscription' && accessResponse.subscription?.endDate) {
-                        cachedMetadata.subscriptionExpiry = accessResponse.subscription.endDate;
-                    } else if (this.hasAccess && accessResponse.accessType === 'owned') {
-                        cachedMetadata.subscriptionExpiry = undefined; // Permanent access
-                    }
-
-                    this.offlineEbookService.saveMetadata(this.ebookId, cachedMetadata);
-                }
-
-            } else if (isCached) {
-                // Offline Fallback
-                console.log('Using offline cached metadata for access rights');
+            // 2. Determine Initial Access Mode from Cache (INSTANT)
+            if (isCached) {
+                console.log('Using offline cached metadata for immediate access');
                 if (cachedMetadata && cachedMetadata.accessType === 'owned') {
-                    // CHECK EXPIRY if subscription
                     if (cachedMetadata.subscriptionExpiry) {
                         const expiry = new Date(cachedMetadata.subscriptionExpiry);
                         const now = new Date();
@@ -315,37 +334,71 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
                             console.warn('Offline subscription expired:', expiry);
                             this.hasAccess = false;
                             this.isPreviewMode = true;
-                            this.error = 'انتهت صلاحية اشتراكك (محفوظ محلياً). يرجى الاتصال بالإنترنت للتجديد.';
+                            // Don't error immediately, let the background network check verify
                         } else {
                             this.hasAccess = true;
                             this.isPreviewMode = false;
                         }
                     } else {
-                        // It was likely a subscription access (cached as 'owned') but has no expiry date saved.
-                        // To be strict/safe and prevent the loophole, we default to PREVIEW.
-                        // User must go online once to refresh the metadata and save the expiry date.
-                        console.warn('Offline: Subscription access found but no expiry date. Defaulting to preview for security.');
-                        this.hasAccess = false;
-                        this.isPreviewMode = true;
-                        this.error = 'يرجى الاتصال بالإنترنت لتحديث حالة اشتراكك.';
+                        // Cached as owned but no expiry
+                        this.hasAccess = true; 
+                        this.isPreviewMode = false;
                     }
                 } else {
                     this.hasAccess = false;
                     this.isPreviewMode = true;
                 }
             } else {
-                // Guest/Offline fallback: Default to Preview
-                console.warn('No authentication or offline data. Defaulting to Preview Mode.');
                 this.hasAccess = false;
                 this.isPreviewMode = true;
             }
 
-            this.ebook = ebookDetails || cachedMetadata || this.ebook;
+            this.ebook = cachedMetadata || this.ebook;
 
-            // 5. Load Progress FIRST (to ensure saved CFI is ready for initial render)
+            // 3. Fire Background Network Check (Silent - DOES NOT BLOCK UI)
+            if (this.isBrowser) {
+                Promise.allSettled([
+                    this.userLibraryService.checkAccess(this.ebookId).pipe(timeout(3000)).toPromise(),
+                    this.ebookService.getEbookById(this.ebookId).pipe(timeout(3000)).toPromise()
+                ]).then(([accessRes, ebookRes]) => {
+                    let networkSuccess = false;
+                    let accessResponse: any = null;
+
+                    if (accessRes.status === 'fulfilled') {
+                        accessResponse = accessRes.value;
+                        networkSuccess = true;
+                    }
+                    if (ebookRes.status === 'fulfilled') {
+                        this.ebook = ebookRes.value?.data || this.ebook;
+                    }
+
+                    if (networkSuccess && accessResponse) {
+                        this.hasAccess = accessResponse.hasAccess === true;
+                        this.isPreviewMode = accessResponse.accessType === 'preview' || !this.hasAccess;
+                        
+                        if (this.ebook) {
+                            this.ebook.accessType = this.isPreviewMode ? 'preview' : 'owned';
+                            
+                            // Save expiry for offline use
+                            if (this.hasAccess && accessResponse.accessType === 'subscription' && accessResponse.subscription?.endDate) {
+                                (this.ebook as any).subscriptionExpiry = accessResponse.subscription.endDate;
+                            }
+                            this.offlineEbookService.saveMetadata(this.ebookId, this.ebook);
+                        }
+                        
+                        // If it turns out user has no access, enforce preview on the reader immediately
+                        if (this.isPreviewMode && this.rendition) {
+                            console.warn('Network confirmed no access. Enforcing preview mode.');
+                            // Optional: Refresh rendition or alert user if they were illegally reading past preview
+                        }
+                    }
+                }).catch(err => console.warn('Background network check failed', err));
+            }
+
+            // 4. Load Progress FIRST (to ensure saved CFI is ready for initial render)
             await this.loadReadingProgress();
 
-            // 6. Load the File
+            // 5. Load the File (Instantly from cache if available)
             await this.loadEpubFile();
 
             // 6. If metadata was missing (Offline), fill it from EPUB package
@@ -359,11 +412,6 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
                     favorite: false,
                     accessType: this.isPreviewMode ? 'preview' : 'owned'
                 } as any;
-            }
-
-            // 7. Save metadata using the resolved access status
-            if (this.ebook) {
-                this.ebook.accessType = this.isPreviewMode ? 'preview' : 'owned';
                 this.offlineEbookService.saveMetadata(this.ebookId, this.ebook);
             }
 
@@ -375,6 +423,7 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
                 this.error = 'حدث خطأ أثناء تحميل الكتاب';
             }
             this.isLoading = false;
+            this.cdr.detectChanges();
         }
     }
 
@@ -409,81 +458,115 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
             }
         }
 
+        // Background fetch from server - WITHOUT blocking the reader initialization
+        if (this.isBrowser) {
+            this.readingProgressService.getProgress(this.ebookId).pipe(
+                timeout(3000),
+                catchError(() => of(null))
+            ).subscribe(progressResponse => {
+                if (progressResponse?.success && progressResponse.data) {
+                    const serverProgress = progressResponse.data;
+                    const serverTime = new Date(serverProgress.updatedAt || 0).getTime();
+                    const localTime = localProgress?.timestamp || 0;
 
-        try {
-            // Background fetch from server
-            const progressResponse = await this.readingProgressService.getProgress(this.ebookId).toPromise();
-            if (progressResponse?.success && progressResponse.data) {
-                const serverProgress = progressResponse.data;
+                    // 1. Sync Progress & Settings based on timestamp
+                    if (serverTime > localTime || !localProgress) {
+                        this.progress = serverProgress;
+                        if (serverProgress.settings) {
+                            this.settings = { ...this.settings, ...serverProgress.settings };
+                            if (this.bookType === 'epub') this.applyThemeToWrapper();
+                        }
+                    }
 
-                // Sync Logic: Favor Server only if it's strictly newer
-                const serverTime = new Date(serverProgress.updatedAt || 0).getTime();
-                const localTime = localProgress?.timestamp || 0;
-
-                if (serverTime > localTime || !localProgress) {
-                    this.progress = serverProgress;
+                    // 2. ALWAYS sync bookmarks and highlights from server (authoritative)
                     this.bookmarks = serverProgress.bookmarks || [];
                     this.highlights = serverProgress.highlights || [];
 
-                    if (serverProgress.settings) {
-                        this.settings = { ...this.settings, ...serverProgress.settings };
-                        if (this.bookType === 'epub') this.applyThemeToWrapper();
-                    }
-
-                    if (this.bookType === 'bok' && this.progress?.currentPage !== undefined) {
-                        this.currentPage = this.progress.currentPage;
-                        this.updateBokProgress();
-                    } else if (this.bookType === 'epub' && this.progress?.currentCfi) {
-                        this.currentCfi = this.progress.currentCfi;
-                        // If book is already displayed, jump to the new CFI
-                        if (this.rendition) {
-                            this.rendition.display(this.currentCfi);
+                    // 3. Apply position if it hasn't been set yet or if server is newer
+                    if (this.progress) {
+                        if (this.bookType === 'bok' && this.progress?.progressPercent !== undefined) {
+                            // Restore scroll position for BOK
+                            setTimeout(() => {
+                                if (this.bokReaderContainer) {
+                                    const container = this.bokReaderContainer.nativeElement;
+                                    const targetScroll = (this.progress!.progressPercent! / 100) * (container.scrollHeight - container.clientHeight);
+                                    container.scrollTo({ top: targetScroll, behavior: 'auto' });
+                                    this.updateBokProgress();
+                                }
+                            }, 500);
+                        } else if (this.bookType === 'epub' && this.progress?.currentCfi) {
+                            // If the background progress fetch brings a newer CFI and we haven't rendered it
+                            const currentRenderedCfi = (this.rendition?.currentLocation() as any)?.start?.cfi;
+                            if (currentRenderedCfi !== this.progress.currentCfi) {
+                                this.currentCfi = this.progress.currentCfi;
+                                if (this.rendition && !this.isLoading) {
+                                    this.rendition.display(this.currentCfi).catch((err: any) => console.warn('Background CFI render failed', err));
+                                }
+                            }
                         }
                     }
+
+                    // RE-APPLY HIGHLIGHTS immediately after loading from server
+                    if (this.bookType === 'epub' && this.rendition) {
+                        this.restoreHighlights(null);
+                    }
                 }
-            }
-        } catch (e) {
-            console.warn('Could not sync with server, using local progress only.', e);
-        } finally {
-            this.isProgressLoaded = true;
+            });
         }
+        
+        // Don't wait for server, just mark as loaded so epub.js can start
+        this.isProgressLoaded = true;
     }
 
     private async loadBokFile() {
         try {
+            // Safety: timeout after 10 seconds if content doesn't load
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('TIMEOUT')), 10000)
+            );
+
             // Use full ebookId - DownloadManagerService stores with the ext_ prefix
-            let content = await this.downloadManager.getBookContent(this.ebookId);
+            let contentPromise = this.downloadManager.getBookContent(this.ebookId);
+            let content: string | null = await Promise.race([contentPromise, timeoutPromise]) as any;
 
             if (!content) {
                 // Genius Solution: Auto-download if not found!
                 this.isLoading = true;
-                // remove ext_ or ext- prefix to get original ID for lookup
                 const originalId = this.ebookId.replace(/^ext[-_]/, '');
 
                 try {
-                    // Fetch Metadata first
-                    const book = await this.externalLibraryService.getBookById(originalId).toPromise();
+                    // Timeout for external book metadata
+                    const book = await Promise.race([
+                        this.externalLibraryService.getBookById(originalId).toPromise(),
+                        new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT_EXT')), 5000))
+                    ]) as any;
 
                     if (book) {
-                        // Trigger Download/Extraction
                         await new Promise<void>((resolve, reject) => {
+                            // Timeout for download process
+                            const dlTimeout = setTimeout(() => reject(new Error('TIMEOUT_DL')), 30000); // 30s for download
+                            
                             this.downloadManager.downloadAndProcessBook(
                                 this.ebookId,
                                 book.downloadUrl,
                                 { title: book.title, author: book.author, category: book.category }
                             ).subscribe({
-                                next: (p) => {
-                                    if (p.state === 'DONE') resolve();
+                                next: (p) => { 
+                                    if (p.state === 'DONE') {
+                                        clearTimeout(dlTimeout);
+                                        resolve(); 
+                                    }
                                 },
-                                error: (err) => reject(err)
+                                error: (err) => {
+                                    clearTimeout(dlTimeout);
+                                    reject(err);
+                                }
                             });
                         });
-
-                        // Try to get content again
                         content = await this.downloadManager.getBookContent(this.ebookId);
                     }
                 } catch (err) {
-                    console.warn('Auto-download failed', err);
+                    console.warn('Auto-download or metadata fetch failed/timed out', err);
                 }
             }
 
@@ -491,36 +574,25 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
                 throw new Error('File not found locally and could not be downloaded.');
             }
 
-            this.bokContentFull = content;
-
-            // Advanced Paginator (Character based for better stability)
-            // Arabic text varies in word length, characters are more consistent for layout
-            const charsPerPage = 1200; // Average for a mobile screen
-            this.bokPages = [];
-            for (let i = 0; i < content.length; i += charsPerPage) {
-                // Ensure we don't cut in the middle of a word
-                let end = i + charsPerPage;
-                if (end < content.length) {
-                    const nextSpace = content.indexOf(' ', end);
-                    if (nextSpace !== -1 && nextSpace - end < 50) {
-                        end = nextSpace;
-                    }
-                }
-                this.bokPages.push(content.substring(i, end));
-                i = end - charsPerPage; // Update loop counter
+            this.bokContentFull = content || '';
+            
+            // Optimization: If book is huge (>100k chars), chunk it for the initial view
+            // but keep the 'vertical without flipping' requirement by allowing to load more.
+            if (this.bokContentFull.length > 100000) {
+                this.bokPages = [this.bokContentFull.substring(0, 100000)];
+            } else {
+                this.bokPages = [this.bokContentFull];
             }
+            
+            this.totalPages = 1;
+            this.currentPage = 0;
 
-            this.totalPages = this.bokPages.length;
-            this.isLoading = false;
+            // Load TOC and ID Map BEFORE setting isLoading = false
+            try {
+                const tocData = await this.downloadManager.getBookTOC(this.ebookId);
+                this.idMap = await this.downloadManager.getBookIdMap(this.ebookId);
 
-            // Load Progress FIRST for BOK
-            await this.loadReadingProgress();
-
-            // Load TOC for BOK
-            const tocData = await this.downloadManager.getBookTOC(this.ebookId);
-            this.idMap = await this.downloadManager.getBookIdMap(this.ebookId);
-
-            if (tocData && tocData.length > 0) {
+                if (tocData && tocData.length > 0) {
                 // Map to NavItem
                 this.toc = tocData.map(item => ({
                     id: item.id,
@@ -534,6 +606,7 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
                 const stack: { item: NavItem, level: number }[] = [];
 
                 tocData.forEach(tItem => {
+                    const level = tItem.level || 0;
                     const navItem: NavItem = {
                         id: tItem.id,
                         href: `bok:${tItem.id}`,
@@ -541,8 +614,8 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
                         subitems: []
                     };
 
-                    // Find parent
-                    while (stack.length > 0 && stack[stack.length - 1].level >= tItem.level) {
+                    // Find parent with safety
+                    while (stack.length > 0 && stack[stack.length - 1].level >= level) {
                         stack.pop();
                     }
 
@@ -551,22 +624,29 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
                     } else {
                         rootedToc.push(navItem);
                     }
-                    stack.push({ item: navItem, level: tItem.level });
+                    stack.push({ item: navItem, level: level });
                 });
 
                 if (rootedToc.length > 0) this.toc = this.processToc(rootedToc);
-            } else {
-                this.toc = [];
+                }
+            } catch (tocErr) {
+                console.warn('BOK TOC load failed', tocErr);
             }
 
-            // Restore progress ensures UI reflects what was loaded
-            if (this.currentPage >= this.totalPages) this.currentPage = 0;
+            this.isLoading = false;
+            this.cdr.detectChanges();
             this.updateBokProgress();
 
         } catch (e: any) {
-            console.error(e);
-            this.error = 'تعذر قراءة ملف الكتاب (BOK)';
+            console.error('BOK Load Error:', e);
+            if (e.message === 'TIMEOUT') {
+                this.error = 'استغرق تحميل الكتاب وقتاً طويلاً. يرجى إعادة المحاولة.';
+            } else {
+                this.error = 'تعذر قراءة ملف الكتاب (BOK)';
+            }
+        } finally {
             this.isLoading = false;
+            this.cdr.detectChanges();
         }
     }
 
@@ -574,8 +654,19 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
         try {
             let blob: Blob | undefined;
 
+            const withTimeout = (promise: Promise<any>, ms: number, msg: string) => {
+                return Promise.race([
+                    promise,
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout: ' + msg)), ms))
+                ]);
+            };
+
             try {
-                blob = await this.offlineEbookService.getOrFetchBook(this.ebookId).toPromise();
+                blob = await withTimeout(
+                    this.offlineEbookService.getOrFetchBook(this.ebookId).toPromise(), 
+                    60000, 
+                    'Fetching book data took too long'
+                );
             } catch (err: any) {
                 if (err.message === 'NO_INTERNET') {
                     this.error = 'لا يوجد اتصال بالإنترنت. يرجى الاتصال لتحميل الكتاب لأول مرة.';
@@ -587,11 +678,48 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
 
             if (!blob) throw new Error('No content');
 
-            const arrayBuffer = await blob.arrayBuffer();
-            this.book = ePub(arrayBuffer);
-            await this.book.ready;
+            const arrayBuffer = await withTimeout(blob.arrayBuffer(), 15000, 'Reading file buffer');
+            
+            // --- KENOUZ: Check File Signature to Prevent Hangs ---
+            // ePub.js relies on JSZip which can hang indefinitely if fed an invalid file format (like a PDF or HTML error page).
+            if (arrayBuffer.byteLength > 4) {
+                const view = new DataView(arrayBuffer);
+                const magic = view.getUint32(0, false); // Big-endian
 
-            this.toc = this.processToc((await this.book.loaded.navigation).toc);
+                if (magic === 0x25504446) { // '%PDF'
+                    throw new Error('الملف المحمل هو ملف PDF وليس EPUB. الرجاء التأكد من صحة الملف على الخادم.');
+                }
+                if (magic === 0x3C21444F || magic === 0x3C68746D || magic === 0x3C3F786D) { // '<!DO', '<htm', '<?xm'
+                    throw new Error('الملف المحمل عبارة عن صفحة ويب أو خطأ من الخادم، وليس كتاب EPUB.');
+                }
+                if (magic === 0x7B227375 || magic === 0x7B0A2020 || String.fromCharCode(view.getUint8(0)) === '{') { 
+                    throw new Error('الخادم أرجع استجابة نصية (JSON) تشير إلى خطأ بدلاً من ملف الكتاب.');
+                }
+                // Check for standard ZIP signature (PK..)
+                if (magic !== 0x504B0304 && magic !== 0x504B0506 && magic !== 0x504B0708) {
+                    console.warn(`Unknown file signature: ${magic.toString(16)}`);
+                    throw new Error('الملف المحمل ليس بصيغة EPUB صالحة (الملف معطوب أو صيغته غير مدعومة).');
+                }
+            }
+
+            this.book = ePub(arrayBuffer);
+            
+            await withTimeout(this.book.ready, 20000, 'EPUB parsing (book.ready)');
+
+            const nav = await withTimeout(this.book.loaded.navigation, 15000, 'EPUB navigation loading');
+            this.toc = this.processToc(nav.toc);
+
+            // Extract page-list from EPUB navigation (publisher's actual page mapping)
+            // This gives us the REAL page count matching the print edition
+            const pageList = (nav as any).pageList || (nav as any).page_list || [];
+            if (pageList && pageList.length > 0) {
+                console.log(`KENOUZ: Found EPUB page-list with ${pageList.length} pages`);
+                if (this.ebook) {
+                    this.ebook.pages = pageList.length;
+                }
+                // Store pageList for precise page lookup by CFI
+                (this as any)._epubPageList = pageList;
+            }
 
             // Wait for the container to be available in the DOM
             let attempts = 0;
@@ -608,43 +736,161 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
                 throw new Error('تعذر العثور على عنصر عرض الكتاب (Timeout)');
             }
 
+            // Match EXACTLY with CSS: top: 64px, bottom: 80px
+            const topBarHeight = 64;
+            const bottomBarHeight = 80;
+            const availableHeight = window.innerHeight - topBarHeight - bottomBarHeight;
+            
+            const isPaginated = this.settings.layoutMode === 'pages';
+
             this.rendition = this.book.renderTo(containerElement, {
                 width: '100%',
                 height: '100%',
-                spread: 'none',
-                flow: 'paginated',
+                spread: 'none', 
+                flow: isPaginated ? 'paginated' : 'scrolled-doc', // Dynamic based on theme layout
                 direction: 'rtl',
-                allowScriptedContent: true
+                allowScriptedContent: true,
+                minSpreadWidth: 0,
+                allowStartOver: true,
+                manager: isPaginated ? 'default' : 'continuous', // Dynamic manager
+                gap: isPaginated ? 20 : 0
             } as any);
 
 
             this.bindRenditionEvents();
 
+            // HIDE LOADING FIRST: epub.js hangs if we try to display into an invisible/zero-opacity container in some browsers!
+            this.isLoading = false;
+            this.cdr.detectChanges();
+
+            // Give browser time to paint the container with opacity=1 so epub.js can calculate dimensions
+            await new Promise(resolve => setTimeout(resolve, 100));
+
             if (this.progress?.currentCfi) {
-                await this.rendition.display(this.progress.currentCfi);
+                try {
+                    await withTimeout(this.rendition.display(this.progress.currentCfi), 15000, 'Rendition display with CFI');
+                } catch (e) {
+                    console.warn('KENOUZ: Failed to render saved CFI. Falling back...', e);
+                    const firstSpineItem = this.book.spine?.first();
+                    if (firstSpineItem && firstSpineItem.href) {
+                        await withTimeout(this.rendition.display(firstSpineItem.href), 15000, 'Rendition display fallback');
+                    } else {
+                        await withTimeout(this.rendition.display(), 15000, 'Rendition display empty fallback');
+                    }
+                }
             } else {
-                await this.rendition.display();
+                const firstSpineItem = this.book.spine?.first();
+                if (firstSpineItem && firstSpineItem.href) {
+                    await withTimeout(this.rendition.display(firstSpineItem.href), 15000, 'Rendition display first spine');
+                } else {
+                    await withTimeout(this.rendition.display(), 15000, 'Rendition display no CFI');
+                }
             }
 
-            // CRITICAL FIX: Ensure theme and highlights are applied AFTER rendition is ready
-            // This handles the case where loadReadingProgress finished before rendition was created
+            // Force a resize calculation to ensure the manager populates the view correctly
+            setTimeout(() => {
+                if (this.rendition) {
+                    (this.rendition as any).resize();
+                }
+            }, 200);
+
+            // Restore the continuous scroll behavior: load all chapters smoothly and disable pruning
+            if (!isPaginated) {
+                setTimeout(() => {
+                    const manager = (this.rendition as any).manager;
+                    if (manager) {
+                        // Disable trimming — never remove loaded chapters
+                        manager.trim = () => Promise.resolve();
+                        
+                        // Override update() — prevent destroying off-screen views to preserve full scroll history
+                        manager.update = function(_offset: any) {
+                            const views = this.views.all();
+                            for (let i = 0; i < views.length; i++) {
+                                const view = views[i];
+                                if (view.displayed) {
+                                    view.show();
+                                }
+                            }
+                            return Promise.resolve();
+                        };
+                    }
+                    this.forceLoadAllChapters();
+                }, 500);
+            }
+
+            // Theme and highlights delay
             setTimeout(() => {
                 this.applyThemeToWrapper();
                 if (this.highlights && this.highlights.length > 0) {
                     console.log('KENOUZ: Restoration trigger from loadEpubFile', this.highlights.length);
                     this.restoreHighlights(null);
                 }
-            }, 500);
+            }, 1000);
 
-            this.isLoading = false;
+            // Initialize spinePageCounts with zeros for all spine items
+            const spineItems = (this.book.spine as any).items || (this.book.spine as any).spineItems || [];
+            this.spinePageCounts = new Array(spineItems.length).fill(0);
+            console.log('KENOUZ: Initialized spinePageCounts for', spineItems.length, 'spine items');
 
-            // Generate locations in background after load
-            this.book.locations.generate(1000);
+            // Generate locations in background (for percentage-based navigation slider only, NOT for page numbering)
+            const savedLocationsKey = `kenouz_locations_${this.ebookId}`;
+            if (this.isBrowser) {
+                const savedLocations = localStorage.getItem(savedLocationsKey);
+                if (savedLocations) {
+                    try {
+                        (this.book.locations as any).load(savedLocations);
+                        console.log('KENOUZ: Cached locations loaded for navigation slider.');
+                    } catch (loadErr) {
+                        console.warn('Failed to load cached locations', loadErr);
+                    }
+                }
+            }
+            // Only generate locations if NOT already cached (expensive operation)
+            const hasCachedLocations = this.isBrowser && localStorage.getItem(savedLocationsKey);
+            if (!hasCachedLocations) {
+                // Delay generation significantly to not block initial reading experience
+                setTimeout(() => {
+                    if (this.book) {
+                        (this.book.locations as any).generate(3200).then(() => {
+                            try {
+                                const serialized = (this.book!.locations as any).save();
+                                if (this.isBrowser) {
+                                    localStorage.setItem(savedLocationsKey, serialized);
+                                }
+                                console.log('KENOUZ: Locations generated for navigation slider.');
+                                
+                                // Dynamically assign pages from generated locations if metadata is missing
+                                if (this.ebook && (!this.ebook.pages || this.ebook.pages === 0)) {
+                                    this.ebook.pages = (this.book!.locations as any).length;
+                                    const currentLocation = this.rendition?.currentLocation();
+                                    if (currentLocation) {
+                                        this.updateProgress(currentLocation);
+                                        this.cdr.detectChanges();
+                                    }
+                                }
+                            } catch (saveErr) {
+                                console.warn('Failed to save locations to cache', saveErr);
+                            }
+                        }).catch((err: any) => console.warn('Failed to generate locations in background', err));
+                    }
+                }, 5000); // 5 seconds delay - let the reader render first
+            }
 
         } catch (e: any) {
-            console.error(e);
-            this.error = `فشل تحميل الملف: ${e.message || e}`;
+            console.error('EPUB Load Error:', e);
+            
+            // If the error is a parsing timeout, the cached file is likely corrupted (e.g. interrupted download or invalid file).
+            // Delete it from cache so the user can re-download it fresh.
+            if (e.message && (e.message.includes('Timeout: EPUB parsing') || e.message.includes('No content'))) {
+                console.warn('KENOUZ: Corrupted EPUB detected! Clearing from cache...');
+                this.offlineEbookService.deleteBook(this.ebookId).catch(() => {});
+                this.error = 'ملف الكتاب تالف أو لم يكتمل تحميله. قمنا بمسحه من الذاكرة، يرجى تحديث الصفحة لإعادة تحميله.';
+            } else {
+                this.error = `فشل تحميل الملف: ${e.message || e}`;
+            }
+
             this.isLoading = false;
+            this.cdr.detectChanges();
         }
     }
 
@@ -665,76 +911,48 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
                 if (doc.body) doc.body.focus();
             }
 
-            // Re-bind touch handlers to the IFRAME document directly with passive: false to allow preventDefault
-            doc.addEventListener('touchstart', (e: TouchEvent) => {
-                if (this.isNavigating) return;
-                this.touchStartX = e.changedTouches[0].clientX;
-                this.touchStartY = e.changedTouches[0].clientY;
-                this.isDragging = true;
-                this.dragOffset = 0;
-            }, { passive: false });
-
-            doc.addEventListener('touchmove', (e: TouchEvent) => {
-                if (!this.isDragging || this.isNavigating) return;
-                const currentX = e.changedTouches[0].clientX;
-                const currentY = e.changedTouches[0].clientY;
-                const diffX = currentX - this.touchStartX;
-                const diffY = currentY - this.touchStartY;
-
-                // Only track horizontal movement (ignore vertical scrolls)
-                if (Math.abs(diffX) > Math.abs(diffY)) {
-                    // Suppress browser "back/forward" navigation
-                    if (e.cancelable) e.preventDefault();
-                    e.stopPropagation();
-
-                    this.dragOffset = diffX;
-                    // Apply damping
-                    if (Math.abs(this.dragOffset) > window.innerWidth * 0.8) {
-                        this.dragOffset = (window.innerWidth * 0.8) * Math.sign(this.dragOffset);
-                    }
-                }
-            }, { passive: false });
-
-            doc.addEventListener('touchend', (e: TouchEvent) => {
-                if (this.isNavigating) {
-                    this.isDragging = false;
-                    this.dragOffset = 0;
-                    return;
-                }
-                const touchEndX = e.changedTouches[0].clientX;
-                const touchEndY = e.changedTouches[0].clientY;
-
-                if (this.isDragging) {
-                    this.isDragging = false;
-                    const diffX = this.dragOffset;
-                    const threshold = window.innerWidth * 0.15; // Lowered from 0.2 for better sensitivity
-
-                    // If it was a meaningful horizontal drag, prevent browser defaults
-                    if (Math.abs(diffX) > 20 && e.cancelable) {
-                        e.preventDefault();
-                    }
-
-                    if (Math.abs(diffX) > threshold) {
-                        if (diffX > 0) {
-                            this.nextPage(); // Dragged Right -> Next Page (RTL)
-                        } else {
-                            this.prevPage(); // Dragged Left -> Prev Page (RTL)
-                        }
-                    }
-
-                    setTimeout(() => {
-                        this.dragOffset = 0;
-                    }, 10);
-                } else {
-                    // Fallback to basic swipe detection
-                    this.handleSwipe(this.touchStartX, this.touchStartY, touchEndX, touchEndY);
-                }
-            }, { passive: false });
+            // Register touch & wheel handlers inside the iframe for smooth navigation
+            if (doc) {
+                this.bindScrollGestures(doc);
+                this.bindSwipeGestures(doc);
+                
+                // Bind keydown so arrow keys work when focus is inside the iframe
+                doc.addEventListener('keydown', this.boundHandleKeydown);
+            }
         });
 
         this.rendition.on('relocated', (location: any) => {
             this.updateProgress(location);
         });
+
+        // Fallback for continuous scroll mode: auto-load next chapter when near bottom
+        setTimeout(() => {
+            if (this.rendition) {
+                const scrollContainer = this.getScrollContainer();
+                
+                if (scrollContainer) {
+                    this.bindScrollGestures(scrollContainer);
+                    this.bindSwipeGestures(scrollContainer);
+
+                    if ((this as any)._fallbackScrollListener) {
+                        scrollContainer.removeEventListener('scroll', (this as any)._fallbackScrollListener);
+                    }
+                    
+                    (this as any)._fallbackScrollListener = () => {
+                        if (this.settings.layoutMode !== 'scroll') return;
+                        if ((this as any).isLoadingNextChapter || !this.rendition) return;
+                        
+                        const scrollBottom = scrollContainer.scrollTop + scrollContainer.clientHeight;
+                        // When user is within 300px of the bottom, load next chapter
+                        if (scrollContainer.scrollHeight - scrollBottom < 300) {
+                            this.loadNextSpineSection();
+                        }
+                    };
+                    
+                    scrollContainer.addEventListener('scroll', (this as any)._fallbackScrollListener, { passive: true });
+                }
+            }
+        }, 1000);
 
         // Listen for text selection
         this.rendition.on('selected', (cfiRange: string, contents: any) => {
@@ -766,7 +984,7 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
 
         // Hide popup and detect double-tap for controls toggle
         let lastClickTime = 0;
-        this.rendition.on('click', () => {
+        this.rendition.on('click', (event: any) => {
             const now = Date.now();
 
             // Hide selection popup on any click
@@ -779,86 +997,241 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
             if (now - lastClickTime < 300) {
                 this.toggleControls();
                 this.cdr.detectChanges();
+                lastClickTime = now;
+                return;
             }
             lastClickTime = now;
+
+            // Handle side click/tap zones when layoutMode is 'pages'
+            if (this.settings.layoutMode === 'pages' && event) {
+                const clientX = event.clientX;
+                const viewWidth = event.view?.innerWidth || event.target?.ownerDocument?.defaultView?.innerWidth || window.innerWidth;
+                
+                if (viewWidth > 0 && clientX !== undefined) {
+                    const ratio = clientX / viewWidth;
+                    // Left 25% = nextPage(), Right 25% = prevPage()
+                    if (ratio < 0.25) {
+                        this.nextPage();
+                        if (typeof event.preventDefault === 'function') event.preventDefault();
+                    } else if (ratio > 0.75) {
+                        this.prevPage();
+                        if (typeof event.preventDefault === 'function') event.preventDefault();
+                    }
+                }
+            }
+        });
+
+        // RE-APPLY HIGHLIGHTS ON EVERY RENDER
+        // This is crucial for scrolled-doc mode where chapters load/unload
+        this.rendition.on('rendered', (section: any) => {
+            console.log('KENOUZ: Section rendered, restoring highlights');
+            this.restoreHighlights(null);
         });
     }
 
-    private handleSwipe(startX: number, startY: number, endX: number, endY: number) {
-        const diffX = startX - endX;
-        const diffY = startY - endY;
+    private bindScrollGestures(target: Document | HTMLElement) {
+        const scrollContainer = this.getScrollContainer();
+        if (!scrollContainer) return;
 
-        // Check if movement is horizontal enough (ignore vertical scrolls)
-        if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > this.SWIPE_THRESHOLD) {
-            // Arabic RTL Logic (Like Physical Book):
-            // Swipe Right (diffX < 0) -> Next Page (Flip page from left to right)
-            // Swipe Left (diffX > 0) -> Prev Page (Flip page from right to left)
+        // 1. Wheel event handler
+        target.addEventListener('wheel', (event: any) => {
+            if (this.settings.layoutMode !== 'scroll' || !this.rendition || (this as any).isLoadingNextChapter) return;
+            
+            const isNotScrollable = scrollContainer.scrollHeight <= scrollContainer.clientHeight;
+            
+            if (event.deltaY > 0) {
+                // Scrolling down
+                const isAtBottom = scrollContainer.scrollHeight - (scrollContainer.scrollTop + scrollContainer.clientHeight) < 40;
+                if (isAtBottom || isNotScrollable) {
+                    this.loadNextSpineSection();
+                }
+            } else if (event.deltaY < 0) {
+                // Scrolling up
+                const isAtTop = scrollContainer.scrollTop <= 10;
+                if (isAtTop || isNotScrollable) {
+                    this.loadPrevSpineSection();
+                }
+            }
+        }, { passive: true });
 
-            if (diffX < 0) {
-                // Swipe Right -> Next Page
-                this.nextPage();
+        // 2. Touch event handlers for swiping
+        let touchStartY = 0;
+        let touchStartX = 0;
+
+        target.addEventListener('touchstart', (event: any) => {
+            if (this.settings.layoutMode !== 'scroll' || event.touches.length === 0) return;
+            touchStartY = event.touches[0].clientY;
+            touchStartX = event.touches[0].clientX;
+        }, { passive: true });
+
+        target.addEventListener('touchend', (event: any) => {
+            if (this.settings.layoutMode !== 'scroll' || !this.rendition || (this as any).isLoadingNextChapter || event.changedTouches.length === 0) return;
+            
+            const deltaY = event.changedTouches[0].clientY - touchStartY;
+            const deltaX = event.changedTouches[0].clientX - touchStartX;
+            
+            // Check if vertical swipe is dominant and exceeds threshold (50px)
+            if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 50) {
+                const isNotScrollable = scrollContainer.scrollHeight <= scrollContainer.clientHeight;
+                
+                if (deltaY < 0) {
+                    // Swiped up (scroll down intent)
+                    const isAtBottom = scrollContainer.scrollHeight - (scrollContainer.scrollTop + scrollContainer.clientHeight) < 60;
+                    if (isAtBottom || isNotScrollable) {
+                        this.loadNextSpineSection();
+                    }
+                } else if (deltaY > 0) {
+                    // Swiped down (scroll up intent)
+                    const isAtTop = scrollContainer.scrollTop <= 20;
+                    if (isAtTop || isNotScrollable) {
+                        this.loadPrevSpineSection();
+                    }
+                }
+            }
+        }, { passive: true });
+    }
+
+    private bindSwipeGestures(target: Document | HTMLElement) {
+        const frameEl = this.readerContainer?.nativeElement;
+        if (!frameEl) return;
+
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let isDragging = false;
+        let startTime = 0;
+
+        target.addEventListener('touchstart', (event: any) => {
+            if (this.settings.layoutMode !== 'pages' || event.touches.length === 0) return;
+            touchStartX = event.touches[0].clientX;
+            touchStartY = event.touches[0].clientY;
+            isDragging = true;
+            startTime = Date.now();
+            frameEl.style.transition = 'none';
+        }, { passive: true });
+
+        target.addEventListener('touchmove', (event: any) => {
+            if (!isDragging || this.settings.layoutMode !== 'pages' || event.touches.length === 0) return;
+            
+            const currentX = event.touches[0].clientX;
+            const currentY = event.touches[0].clientY;
+            const deltaX = currentX - touchStartX;
+            const deltaY = currentY - touchStartY;
+
+            if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                // Smooth slow drag movement
+                const dragTranslation = deltaX / 1.1;
+                frameEl.style.transform = `translateX(${dragTranslation}px)`;
+            }
+        }, { passive: true });
+
+        target.addEventListener('touchend', (event: any) => {
+            if (!isDragging || this.settings.layoutMode !== 'pages' || event.changedTouches.length === 0) return;
+            isDragging = false;
+
+            const touchEndX = event.changedTouches[0].clientX;
+            const touchEndY = event.changedTouches[0].clientY;
+            const deltaX = touchEndX - touchStartX;
+            const deltaY = touchEndY - touchStartY;
+            const duration = Date.now() - startTime;
+
+            const isSwipe = Math.abs(deltaX) > Math.abs(deltaY) && (Math.abs(deltaX) > 60 || (Math.abs(deltaX) > 30 && duration < 250));
+
+            if (isSwipe) {
+                const isNext = deltaX > 0; // Swipe right (drag right) -> Next Page in Arabic RTL
+                
+                frameEl.style.transition = 'transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+                const slideOutDistance = isNext ? window.innerWidth : -window.innerWidth;
+                frameEl.style.transform = `translateX(${slideOutDistance}px)`;
+
+                setTimeout(() => {
+                    if (isNext) {
+                        this.nextPage();
+                    } else {
+                        this.prevPage();
+                    }
+                    
+                    frameEl.style.transition = 'none';
+                    frameEl.style.transform = 'translateX(0)';
+                    
+                    frameEl.style.opacity = '0';
+                    setTimeout(() => {
+                        frameEl.style.transition = 'opacity 0.35s ease-out';
+                        frameEl.style.opacity = '1';
+                    }, 50);
+                }, 400);
             } else {
-                // Swipe Left -> Prev Page
-                this.prevPage();
+                frameEl.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+                frameEl.style.transform = 'translateX(0)';
+            }
+        }, { passive: true });
+    }
+
+    loadNextSpineSection(): void {
+        if (!this.rendition || (this as any).isLoadingNextChapter) return;
+        
+        const location: any = this.rendition.currentLocation();
+        const currentIndex = location?.start?.index;
+        const spineItems = (this.book?.spine as any)?.items || (this.book?.spine as any)?.spineItems || [];
+        
+        if (currentIndex !== undefined && currentIndex + 1 < spineItems.length) {
+            const nextItem = spineItems[currentIndex + 1];
+            if (nextItem?.href) {
+                (this as any).isLoadingNextChapter = true;
+                console.log('KENOUZ: Loading next section:', nextItem.href);
+                
+                this.rendition.display(nextItem.href).then(() => {
+                    const scrollContainer = this.getScrollContainer();
+                    if (scrollContainer) {
+                        scrollContainer.scrollTop = 0;
+                    }
+                    setTimeout(() => {
+                        (this as any).isLoadingNextChapter = false;
+                        this.saveProgress();
+                    }, 800);
+                }).catch((err: any) => {
+                    console.warn('KENOUZ: display next failed', err);
+                    (this as any).isLoadingNextChapter = false;
+                });
             }
         }
     }
 
-    // Public touch handlers for template binding
-    onTouchStart(event: TouchEvent) {
-        this.touchStartX = event.changedTouches[0].clientX;
-        this.touchStartY = event.changedTouches[0].clientY;
-        // Only track drag for BOK mode (EPUB uses iframe touch handlers)
-        if (this.bookType === 'bok') {
-            this.isDragging = true;
-            this.dragOffset = 0;
-        }
-    }
-
-    onTouchMove(event: TouchEvent) {
-        if (!this.isDragging) return;
-        const currentX = event.changedTouches[0].clientX;
-        this.dragOffset = currentX - this.touchStartX;
-
-        // Apply damping to drag offset to prevent over-swiping
-        if (Math.abs(this.dragOffset) > window.innerWidth * 0.8) {
-            this.dragOffset = (window.innerWidth * 0.8) * Math.sign(this.dragOffset);
-        }
-    }
-
-    onTouchEnd(event: TouchEvent) {
-        if (!this.isDragging) return;
-        this.isDragging = false;
-
-        const diffX = this.dragOffset;
-        const threshold = window.innerWidth * 0.15; // Lowered from 0.2 for better sensitivity
-
-        if (Math.abs(diffX) > threshold) {
-            if (diffX > 0) {
-                // Dragged Right -> Next Page (RTL: revealing what's on the left)
-                this.nextPage();
-            } else {
-                // Dragged Left -> Prev Page (RTL: revealing what's on the right)
-                this.prevPage();
+    loadPrevSpineSection(): void {
+        if (!this.rendition || (this as any).isLoadingNextChapter) return;
+        
+        const location: any = this.rendition.currentLocation();
+        const currentIndex = location?.start?.index;
+        const spineItems = (this.book?.spine as any)?.items || (this.book?.spine as any)?.spineItems || [];
+        
+        if (currentIndex !== undefined && currentIndex - 1 >= 0) {
+            const prevItem = spineItems[currentIndex - 1];
+            if (prevItem?.href) {
+                (this as any).isLoadingNextChapter = true;
+                console.log('KENOUZ: Loading previous section:', prevItem.href);
+                
+                this.rendition.display(prevItem.href).then(() => {
+                    setTimeout(() => {
+                        const scrollContainer = this.getScrollContainer();
+                        if (scrollContainer) {
+                            scrollContainer.scrollTop = scrollContainer.scrollHeight - scrollContainer.clientHeight - 15;
+                        }
+                    }, 150);
+                    setTimeout(() => {
+                        (this as any).isLoadingNextChapter = false;
+                        this.saveProgress();
+                    }, 800);
+                }).catch((err: any) => {
+                    console.warn('KENOUZ: display prev failed', err);
+                    (this as any).isLoadingNextChapter = false;
+                });
             }
         }
-
-        // Reset offset with transition
-        setTimeout(() => {
-            this.dragOffset = 0;
-        }, 10);
     }
+
+
 
     private applyStyleToFrame(contents?: any) {
-
-
-        const styles = {
-            'body': { 'padding': '0 10px !important' }
-        };
-
         if (this.rendition) {
-            this.rendition.themes.default(styles);
-
             this.rendition.views().forEach((view: any) => {
                 if (view.pane) view.pane.render();
             });
@@ -867,69 +1240,144 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
                 this.injectUserPreferences(contents);
                 this.injectHighlightStyles(contents);
             } else {
-                const currentView = (this.rendition as any).manager?.current();
-                if (currentView) {
-                    const iframe = this.hostEl.nativeElement.querySelector('iframe');
+                // Style ALL loaded iframes in the reader view to support scrolling / multi-chapter styling
+                const iframes = this.hostEl.nativeElement.querySelectorAll('iframe');
+                iframes.forEach((iframe: any) => {
                     if (iframe && iframe.contentDocument) {
                         const mockContents = { document: iframe.contentDocument };
                         this.injectUserPreferences(mockContents);
                         this.injectHighlightStyles(mockContents);
                     }
-                }
+                });
             }
         }
     }
 
     private injectUserPreferences(contents: any) {
         const doc = contents.document;
+        const head = doc.head;
+        
         const oldStyle = doc.getElementById('kenouz-user-styles');
         if (oldStyle) oldStyle.remove();
 
         let bgColor = '#ffffff';
-        let textColor = '#000000';
-        let bgImage = 'none';
+        let textColor = '#1a1a1a';
 
         switch (this.settings.theme) {
-            case 'sepia': bgColor = '#f8f1e3'; textColor = '#5b4636'; break;
-            case 'dark': bgColor = '#1a1a1a'; textColor = '#d1d5db'; break;
-            case 'black': bgColor = '#000000'; textColor = '#9ca3af'; break;
+            case 'sepia': bgColor = '#f8f1e3'; textColor = '#423223'; break;
+            case 'dark': bgColor = '#1a1a1a'; textColor = '#f3f4f6'; break;
+            case 'black': bgColor = '#000000'; textColor = '#d1d5db'; break;
             default: bgColor = '#ffffff'; textColor = '#1a1a1a'; break;
         }
 
-        if (this.settings.backgroundImage) {
-            bgImage = `url('${this.settings.backgroundImage}')`;
-            bgColor = 'transparent';
+        // If a background image is set, inner iframes must be transparent to let the background image shine through
+        const finalBgColor = this.settings.backgroundImage ? 'transparent' : bgColor;
+
+        // Apply shared themes to the rendition for cleaner, consistent reflow
+        if (this.rendition) {
+            this.rendition.themes.register('custom', {
+                'body': {
+                    'background-color': `${finalBgColor} !important`,
+                    'color': `${textColor} !important`,
+                    'font-family': `${this.settings.fontFamily} !important`,
+                    'font-size': `${this.settings.fontSize}px !important`,
+                    'line-height': `${this.settings.lineHeight} !important`,
+                    'text-align': `${this.settings.textAlign} !important`,
+                    'direction': 'rtl !important',
+                    'padding': `${this.settings.layoutMode === 'pages'
+                        ? '8px 4px'
+                        : (window.innerWidth < 600 ? '30px 15px' : '40px 35px')} !important`,
+                    'margin': '0 !important',
+                    'hyphens': 'auto !important',
+                    'word-break': 'break-word !important',
+                    'word-wrap': 'break-word !important',
+                    'white-space': 'normal !important',
+                    'unicode-bidi': 'isolate !important',
+                    'box-sizing': 'border-box !important',
+                    'overflow-x': this.settings.layoutMode === 'scroll' ? 'hidden !important' : 'visible !important', // Allow horizontal flow in paginated mode
+                    'overflow-y': this.settings.layoutMode === 'scroll' ? 'hidden !important' : 'auto !important', // Let vertical scroll occur inside the page in paginated mode if font scales
+                    'scrollbar-width': 'none !important', // Hide in Firefox
+                    '-ms-overflow-style': 'none !important' // Hide in IE/Edge
+                },
+                'body::-webkit-scrollbar': {
+                    'display': 'none !important' // Hide in Chrome/Safari
+                },
+                'p, div, span, li, a, h1, h2, h3, h4, h5, h6, article, section, main': {
+                    'font-family': 'inherit !important',
+                    'line-height': 'inherit !important',
+                    'text-align': 'inherit !important',
+                    'direction': 'inherit !important',
+                    'max-width': '100% !important',
+                    'height': 'auto !important',
+                    'overflow': 'visible !important',
+                    'word-wrap': 'break-word !important',
+                    'word-break': 'break-word !important',
+                    'white-space': 'normal !important',
+                    'box-sizing': 'border-box !important'
+                },
+                'span, a, b, i, strong, em': {
+                    'display': 'inline !important' // Keep inline elements inline
+                },
+                'img': {
+                    'max-width': '100% !important',
+                    'height': 'auto !important',
+                    'display': 'block !important',
+                    'margin': '15px auto !important',
+                    'border-radius': '8px !important',
+                    'float': 'none !important',
+                    'position': 'static !important'
+                }
+            });
+            this.rendition.themes.select('custom');
         }
 
         const styleEl = doc.createElement('style');
         styleEl.id = 'kenouz-user-styles';
         styleEl.textContent = `
-            body {
-                background-color: ${bgColor} !important;
-                background-image: ${bgImage} !important;
-                background-size: cover !important;
-                background-position: center !important;
-                background-repeat: no-repeat !important;
-                color: ${textColor} !important;
-                font-family: ${this.settings.fontFamily} !important;
-                padding: 0 10px !important;
+            html {
                 direction: rtl !important;
-                text-align: right !important;
-                touch-action: none !important;
-                -webkit-user-select: none !important;
-                user-select: none !important;
-            }
-            p, span, div, h1, h2, h3, h4, h5, h6, li, a { 
-                font-family: ${this.settings.fontFamily} !important;
-                line-height: ${this.settings.lineHeight} !important;
-                text-align: ${this.settings.textAlign} !important;
+                writing-mode: horizontal-tb !important;
+                background-color: ${finalBgColor} !important;
                 color: ${textColor} !important;
             }
-            p, span, div, li, a {
-                font-size: ${this.settings.fontSize}px !important;
+            body {
+                margin: 0 !important;
+                overflow-x: hidden !important;
+                overflow-y: hidden !important; /* Let the manager handle scroll */
+                scrollbar-width: none !important;
+                -ms-overflow-style: none !important;
+                background-color: ${finalBgColor} !important;
+                color: ${textColor} !important;
+            }
+            body::-webkit-scrollbar {
+                display: none !important;
+            }
+            /* Force theme colors on ALL elements — prevents white patches in dark mode */
+            *, *::before, *::after {
+                box-sizing: border-box !important;
+                background-color: transparent !important;
+                color: inherit !important;
+            }
+            /* Restore background only on html and body */
+            html, body {
+                background-color: ${finalBgColor} !important;
+            }
+            /* Keep images visible */
+            img, svg, video, canvas {
+                background-color: transparent !important;
+                color: unset !important;
+            }
+            /* Brand-consistent text selection color */
+            ::selection {
+                background-color: rgba(216, 173, 66, 0.4) !important;
+                color: inherit !important;
+            }
+            ::-moz-selection {
+                background-color: rgba(216, 173, 66, 0.4) !important;
+                color: inherit !important;
             }
         `;
-        doc.head.appendChild(styleEl);
+        head.appendChild(styleEl);
     }
 
     private injectHighlightStyles(contents: any) {
@@ -940,10 +1388,17 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
 
         // Determine blend mode based on theme for better visibility
         // Light/Sepia: Multiply (Classic highlighter effect)
-        // Dark/Black: Difference (Inverts text color to dark, keeps highlight visible) is ideal for "making text dark"
+        // Dark/Black: Screen (Makes highlights glow on dark backgrounds)
         const isDark = this.settings.theme === 'dark' || this.settings.theme === 'black';
-        const blendMode = isDark ? 'difference' : 'multiply';
-        const opacity = isDark ? '1.0' : '0.3'; // Difference needs higher opacity to effectively invert
+        const blendMode = isDark ? 'screen' : 'multiply';
+        const opacity = isDark ? '0.7' : '0.3';
+
+        // For dark mode, use darker/richer versions of the colors so they show on dark bg
+        const darkYellow = isDark ? '#b8960a' : '#fef08a';
+        const darkGreen = isDark ? '#22a558' : '#bbf7d0';
+        const darkBlue = isDark ? '#3b82f6' : '#bfdbfe';
+        const darkPink = isDark ? '#db2777' : '#fbcfe8';
+        const darkOrange = isDark ? '#ea7e2e' : '#fed7aa';
 
         const styleEl = doc.createElement('style');
         styleEl.id = 'kenouz-highlight-styles';
@@ -958,78 +1413,122 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
             [class*="kenouz-hl-"] {
                 fill-opacity: ${opacity} !important;
                 mix-blend-mode: ${blendMode} !important;
+                background-color: transparent !important; 
+            }
+            
+            /* Target both the group and the specific paths/rects inside */
+            .epubjs-annotation [class*="kenouz-hl-"],
+            .epubjs-annotation [class*="kenouz-hl-"] * {
+                fill-opacity: ${opacity} !important;
             }
 
-            /* Fix misalignment - sometimes removing padding/margin from HL helps */
             g.epubjs-hl {
                  
             }
 
             .kenouz-hl-fef08a, .kenouz-hl-fef08a *, g.kenouz-hl-fef08a path, g.kenouz-hl-fef08a rect { 
-                fill: #fef08a !important; 
-                background-color: #fef08a !important; 
-                stroke: #fef08a !important; 
+                fill: ${darkYellow} !important; 
+                background-color: ${darkYellow} !important; 
+                stroke: ${darkYellow} !important; 
             }
             .kenouz-hl-bbf7d0, .kenouz-hl-bbf7d0 *, g.kenouz-hl-bbf7d0 path, g.kenouz-hl-bbf7d0 rect { 
-                fill: #bbf7d0 !important; 
-                background-color: #bbf7d0 !important; 
-                stroke: #bbf7d0 !important;
+                fill: ${darkGreen} !important; 
+                background-color: ${darkGreen} !important; 
+                stroke: ${darkGreen} !important;
             }
             .kenouz-hl-bfdbfe, .kenouz-hl-bfdbfe *, g.kenouz-hl-bfdbfe path, g.kenouz-hl-bfdbfe rect { 
-                fill: #bfdbfe !important; 
-                background-color: #bfdbfe !important; 
-                stroke: #bfdbfe !important;
+                fill: ${darkBlue} !important; 
+                background-color: ${darkBlue} !important; 
+                stroke: ${darkBlue} !important;
             }
             .kenouz-hl-fbcfe8, .kenouz-hl-fbcfe8 *, g.kenouz-hl-fbcfe8 path, g.kenouz-hl-fbcfe8 rect { 
-                fill: #fbcfe8 !important; 
-                background-color: #fbcfe8 !important; 
-                stroke: #fbcfe8 !important;
+                fill: ${darkPink} !important; 
+                background-color: ${darkPink} !important; 
+                stroke: ${darkPink} !important;
             }
             .kenouz-hl-fed7aa, .kenouz-hl-fed7aa *, g.kenouz-hl-fed7aa path, g.kenouz-hl-fed7aa rect { 
-                fill: #fed7aa !important; 
-                background-color: #fed7aa !important; 
-                stroke: #fed7aa !important;
+                fill: ${darkOrange} !important; 
+                background-color: ${darkOrange} !important; 
+                stroke: ${darkOrange} !important;
             }
         `;
         doc.head.appendChild(styleEl);
     }
 
     private updateProgress(location: any) {
-        // Calculate percentage: Use reliable locations if available, else fall back to Spine Index
-        let percent = location.start.percentage;
+        if (!location || !location.start) return;
 
-        if ((!percent || percent === 0) && this.book) {
-            // Fallback: Calculate based on Chapter/Spine Index
-            const cfi = location.start.cfi;
-            const spineItem = this.book.spine.get(cfi);
-            if (spineItem) {
-                const index = (this.book.spine as any).spineItems.indexOf(spineItem);
-                const total = (this.book.spine as any).spineItems.length;
-                if (total > 0) {
-                    percent = index / total;
-                }
-            }
+        const currentCfi = location.start.cfi;
+        this.currentCfi = currentCfi;
+
+        // 1. Get the actual total pages of the EPUB file from the metadata (backend estimate)
+        // Fallback to book locations length (character count based pages) or a default.
+        let totalPages = 0;
+        if (this.ebook && this.ebook.pages && this.ebook.pages > 0) {
+            totalPages = this.ebook.pages;
+        } else if (this.book && (this.book as any).pages && (this.book as any).pages > 0) {
+            totalPages = (this.book as any).pages;
+        } else if (this.book?.locations && (this.book.locations as any).length > 0) {
+            totalPages = (this.book.locations as any).length;
+        } else {
+            // Fallback estimation: using spine count
+            const spineItems = (this.book?.spine as any)?.items || (this.book?.spine as any)?.spineItems || [];
+            totalPages = Math.max(1, spineItems.length * 10); // Assume average of 10 pages per chapter
         }
 
-        this.progressPercent = Math.round((percent || 0) * 100);
-        this.currentPage = location.start.displayed.page;
-        this.totalPages = location.start.displayed.total;
+        // 2. Determine current percentage progress
+        let percentage = 0;
+        if (this.book?.locations && (this.book.locations as any).length > 0) {
+            try {
+                percentage = (this.book.locations as any).percentageFromCfi(currentCfi);
+            } catch (e) {
+                percentage = location.start.percentage ?? 0;
+            }
+        } else {
+            percentage = location.start.percentage ?? 0;
+        }
+
+        // Clip percentage to safe range [0, 1]
+        percentage = Math.min(Math.max(percentage, 0), 1);
+
+        // 3. Calculate current page based on percentage and totalPages
+        let currentPage = Math.max(1, Math.round(percentage * totalPages));
+
+        // Make sure currentPage does not exceed totalPages
+        if (currentPage > totalPages) {
+            currentPage = totalPages;
+        }
+
+        // 4. Update component state
+        this.totalPages = totalPages;
+        this.currentPage = currentPage;
+        this.progressPercent = Math.min(Math.round(percentage * 100), 100);
+
+        // Record the page read (for achievements sync)
+        if (this.currentPage) {
+            this.pagesReadSinceLastSync.add(this.currentPage);
+        }
 
         // Attempt to find current chapter name
-        const chapter = location.start.displayed.chapter;
+        const chapter = location.start.displayed?.chapter;
         if (chapter) {
             this.currentChapter = chapter;
         } else {
-            // Fallback to TOC finding if chapter irrelevant
+            // Fallback to TOC finding
             const href = location.start.href;
-            const tocItem = this.toc.find(item => href.includes(item.href));
-            if (tocItem) this.currentChapter = tocItem.label;
+            if (href) {
+                const tocItem = this.toc.find((item: any) => href.includes(item.href));
+                if (tocItem) this.currentChapter = tocItem.label;
+            }
         }
     }
 
     private updateBokProgress() {
-        this.progressPercent = Math.round(((this.currentPage + 1) / this.totalPages) * 100);
-        this.currentChapter = `صفحة ${this.currentPage + 1}`;
+        // Scroll-based calculation
+        const scrollContainer = document.documentElement;
+        const totalHeight = scrollContainer.scrollHeight - window.innerHeight;
+        const currentScroll = window.scrollY;
+        this.progressPercent = Math.round((currentScroll / totalHeight) * 100);
 
         // Show subscription prompt if in preview mode and progress exceeds 20%
         if (this.isPreviewMode && this.progressPercent > 20) {
@@ -1067,12 +1566,10 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
         }
 
         // BOK Mode Navigation
-        if (this.bookType === 'bok') {
-            const targetPage = Math.floor((percent / 100) * this.totalPages);
-            this.currentPage = Math.min(Math.max(0, targetPage), this.totalPages - 1);
-            this.updateBokProgress();
-            if (this.isBrowser) window.scrollTo(0, 0);
-            this.saveProgress();
+        if (this.bookType === 'bok' && this.bokReaderContainer) {
+            const container = this.bokReaderContainer.nativeElement;
+            const targetScroll = (percent / 100) * (container.scrollHeight - container.clientHeight);
+            container.scrollTo({ top: targetScroll, behavior: 'auto' });
             return;
         }
 
@@ -1114,17 +1611,8 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
         // BOK Mode Save
         if (this.bookType === 'bok') {
             progressData = {
-                currentCfi: `bok:${this.currentPage}`,
-                progressPercent: this.progressPercent,
-                currentPage: this.currentPage,
-                totalPages: this.totalPages
+                progressPercent: this.progressPercent
             };
-
-            // Calculate words in current BOK page
-            if (this.bokPages && this.bokPages[this.currentPage]) {
-                const text = this.bokPages[this.currentPage];
-                visibleWordCount = text.trim().split(/\s+/).length;
-            }
         }
         // EPUB Mode Save
         else if (this.rendition) {
@@ -1177,6 +1665,8 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
                 const localSaveObj = {
                     ...progressData,
                     settings: this.settings,
+                    bookmarks: this.bookmarks,
+                    highlights: this.highlights,
                     timestamp: Date.now()
                 };
                 localStorage.setItem(localKey, JSON.stringify(localSaveObj));
@@ -1206,17 +1696,24 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
                     }
 
                     const formattedDuration = parseFloat(sessionDurationMinutes.toFixed(2));
+                    const pagesCount = this.pagesReadSinceLastSync.size;
 
-                    console.log(`[Gamification Debug] Session Duration: ${formattedDuration} min (Words: ${visibleWordCount})`);
+                    console.log(`[Gamification Debug] Session Duration: ${formattedDuration} min (Words: ${visibleWordCount}), Pages Read: ${pagesCount}`);
                     if (formattedDuration > 0.05) { // Min 3 seconds
                         console.log(`[Gamification Debug] Syncing progress...`);
                         this.gamificationService.syncProgress({
                             minutesRead: formattedDuration,
-                            pagesRead: 0,
+                            pagesRead: pagesCount,
                             ebookId: this.ebookId
                         }).subscribe({
                             next: (res) => {
                                 console.log('[Gamification Debug] Sync success:', res);
+                                if (res.success) {
+                                    this.pagesReadSinceLastSync.clear();
+                                    if (this.currentPage) {
+                                        this.pagesReadSinceLastSync.add(this.currentPage);
+                                    }
+                                }
                                 if (res.success && res.data.xpEarned > 0) console.log('XP Earned:', res.data.xpEarned);
                             },
                             error: (err) => console.error('[Gamification Debug] Sync error:', err)
@@ -1277,39 +1774,24 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     async nextPage() {
-        // BOK Mode
+        // BOK Mode - Scroll instead of page flip
         if (this.bookType === 'bok') {
-            const nextPageIndex = this.currentPage + 1;
-            const progress = (nextPageIndex / this.totalPages) * 100;
+            window.scrollBy({ top: window.innerHeight * 0.8, behavior: 'smooth' });
+            return;
+        }
 
-            if (this.isPreviewMode && progress > 20) {
-                this.showSubscriptionPrompt = true;
-                return;
-            }
-
-            if (this.currentPage < this.totalPages - 1) {
-                this.isNavigating = true;
-                this.animationClass = 'slide-out-right'; // RTL: Current page slides out to the right
-
-                // Faster transition for "connected" feel
-                setTimeout(() => {
-                    this.currentPage++;
-                    this.updateBokProgress();
-                    if (this.isBrowser) window.scrollTo(0, 0);
-                    this.animationClass = 'slide-in-left'; // RTL: Next page slides in from the left
-
-                    setTimeout(() => {
-                        this.animationClass = '';
-                        this.isNavigating = false;
-                    }, 250); // Reduced from 400ms
-                }, 80); // Reduced from 150ms
-
+        const isPaginated = this.settings.layoutMode === 'pages';
+        if (isPaginated && this.rendition) {
+            try {
+                await this.rendition.next();
                 this.saveProgress();
+            } catch (e) {
+                console.error('EPUB next error:', e);
             }
             return;
         }
 
-        // EPUB Mode - Enhanced "connected" transition
+        // EPUB Scroll Mode — smart next chapter loading
         if (this.rendition && !this.isNavigating) {
             if (this.isPreviewMode && this.progressPercent >= 20) {
                 this.showSubscriptionPrompt = true;
@@ -1317,79 +1799,92 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
             }
 
             this.isNavigating = true;
-            this.animationClass = 'slide-out-right'; // RTL: Current page slides out to the right
 
-            setTimeout(async () => {
-                try {
-                    if (this.rendition) {
-                        await this.rendition.next();
-                        // Slide in from left (RTL: next comes from left)
-                        this.animationClass = 'slide-in-left';
-                        setTimeout(() => {
-                            this.animationClass = '';
-                            this.isNavigating = false;
-                        }, 250);
-                        this.saveProgress();
-                    } else {
-                        this.isNavigating = false;
+            try {
+                const locationBefore: any = this.rendition.currentLocation();
+                const cfiBefore = locationBefore?.start?.cfi;
+
+                // First, try epub.js's built-in next()
+                await this.rendition.next();
+
+                const locationAfter: any = this.rendition.currentLocation();
+                const cfiAfter = locationAfter?.start?.cfi;
+
+                // If CFI didn't change, epub.js failed to advance (common with image-heavy pages).
+                // Use rendition.display(href) to jump to the next spine section — same as TOC navigation.
+                if (cfiBefore && cfiAfter && cfiBefore === cfiAfter) {
+                    const spineItems = (this.book?.spine as any)?.items || (this.book?.spine as any)?.spineItems || [];
+                    const currentIndex = locationBefore?.start?.index;
+                    if (currentIndex !== undefined && currentIndex + 1 < spineItems.length) {
+                        const nextSpineItem = spineItems[currentIndex + 1];
+                        if (nextSpineItem?.href) {
+                            console.log('KENOUZ: rendition.next() stuck. Jumping to next spine item:', nextSpineItem.href);
+                            await this.rendition!.display(nextSpineItem.href);
+                        }
                     }
-                } catch (e) {
-                    console.error('EPUB next error:', e);
-                    this.isNavigating = false;
                 }
-            }, 80); // Match BOK timing
+
+                this.saveProgress();
+            } catch (e) {
+                console.error('EPUB next error:', e);
+            } finally {
+                this.isNavigating = false;
+                this.cdr.detectChanges();
+            }
         }
     }
 
     async prevPage() {
-        // BOK Mode
+        // BOK Mode - Scroll instead of page flip
         if (this.bookType === 'bok') {
-            if (this.currentPage > 0) {
-                this.isNavigating = true;
-                this.animationClass = 'slide-out-left'; // RTL: Current page slides out to the left
+            window.scrollBy({ top: -(window.innerHeight * 0.8), behavior: 'smooth' });
+            return;
+        }
 
-                // Faster transition for "connected" feel
-                setTimeout(() => {
-                    this.currentPage--;
-                    this.updateBokProgress();
-                    if (this.isBrowser) window.scrollTo(0, 0);
-                    this.animationClass = 'slide-in-right'; // RTL: Previous page slides in from the right
-
-                    setTimeout(() => {
-                        this.animationClass = '';
-                        this.isNavigating = false;
-                    }, 250); // Reduced from 400ms
-                }, 80); // Reduced from 150ms
-
+        const isPaginated = this.settings.layoutMode === 'pages';
+        if (isPaginated && this.rendition) {
+            try {
+                await this.rendition.prev();
                 this.saveProgress();
+            } catch (e) {
+                console.error('EPUB prev error:', e);
             }
             return;
         }
 
-        // EPUB Mode - Enhanced "connected" transition
+        // EPUB Scroll Mode — smart previous chapter loading
         if (this.rendition && !this.isNavigating) {
             this.isNavigating = true;
-            this.animationClass = 'slide-out-left'; // RTL: Current page slides out to the left
 
-            setTimeout(async () => {
-                try {
-                    if (this.rendition) {
-                        await this.rendition.prev();
-                        // Slide in from right (RTL: prev comes from right)
-                        this.animationClass = 'slide-in-right';
-                        setTimeout(() => {
-                            this.animationClass = '';
-                            this.isNavigating = false;
-                        }, 250);
-                        this.saveProgress();
-                    } else {
-                        this.isNavigating = false;
+            try {
+                const locationBefore: any = this.rendition.currentLocation();
+                const cfiBefore = locationBefore?.start?.cfi;
+
+                await this.rendition.prev();
+
+                const locationAfter: any = this.rendition.currentLocation();
+                const cfiAfter = locationAfter?.start?.cfi;
+
+                // If CFI didn't change, jump to the previous spine section (same as TOC)
+                if (cfiBefore && cfiAfter && cfiBefore === cfiAfter) {
+                    const spineItems = (this.book?.spine as any)?.items || (this.book?.spine as any)?.spineItems || [];
+                    const currentIndex = locationBefore?.start?.index;
+                    if (currentIndex !== undefined && currentIndex - 1 >= 0) {
+                        const prevSpineItem = spineItems[currentIndex - 1];
+                        if (prevSpineItem?.href) {
+                            console.log('KENOUZ: rendition.prev() stuck. Jumping to previous spine item:', prevSpineItem.href);
+                            await this.rendition!.display(prevSpineItem.href);
+                        }
                     }
-                } catch (e) {
-                    console.error('EPUB prev error:', e);
-                    this.isNavigating = false;
                 }
-            }, 80); // Match BOK timing
+
+                this.saveProgress();
+            } catch (e) {
+                console.error('EPUB prev error:', e);
+            } finally {
+                this.isNavigating = false;
+                this.cdr.detectChanges();
+            }
         }
     }
 
@@ -1399,6 +1894,93 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
 
     closeSubscriptionPrompt() {
         this.showSubscriptionPrompt = false;
+    }
+
+    setLayoutMode(mode: 'scroll' | 'pages') {
+        this.settings.layoutMode = mode;
+        this.saveSettings();
+        // Reset page counts — different layout mode = different visual page sizes
+        this.spinePageCounts = new Array(this.spinePageCounts.length).fill(0);
+        
+        // Reload/re-render the book with the new mode
+        if (this.bookType === 'epub' && this.rendition) {
+            this.isLoading = true;
+            this.cdr.detectChanges();
+            
+            // Get current CFI to display it after reload
+            const currentLocation: any = this.rendition.currentLocation();
+            const currentCfi = currentLocation?.start?.cfi || null;
+            
+            // Destroy current rendition
+            try {
+                this.rendition.destroy();
+            } catch (err) {
+                console.warn('Rendition destroy error:', err);
+            }
+            
+            // Re-render
+            const containerElement = this.readerContainer?.nativeElement || (this.isBrowser ? document.getElementById('epub-reader-frame') : null);
+            if (containerElement) {
+                // Clear container innerHTML
+                containerElement.innerHTML = '';
+                
+                const isPaginated = mode === 'pages';
+                this.rendition = this.book!.renderTo(containerElement, {
+                    width: '100%',
+                    height: '100%',
+                    spread: 'none', 
+                    flow: isPaginated ? 'paginated' : 'scrolled-doc',
+                    direction: 'rtl',
+                    allowScriptedContent: true,
+                    minSpreadWidth: 0,
+                    allowStartOver: true,
+                    manager: isPaginated ? 'default' : 'continuous',
+                    gap: isPaginated ? 20 : 0
+                } as any);
+                
+                this.bindRenditionEvents();
+
+                // Restore custom overrides if switching to scroll mode
+                if (!isPaginated) {
+                    setTimeout(() => {
+                        const manager = (this.rendition as any).manager;
+                        if (manager) {
+                            manager.trim = () => Promise.resolve();
+                            manager.update = function(_offset: any) {
+                                const views = this.views.all();
+                                for (let i = 0; i < views.length; i++) {
+                                    const view = views[i];
+                                    if (view.displayed) {
+                                        view.show();
+                                    }
+                                }
+                                return Promise.resolve();
+                            };
+                        }
+                        this.forceLoadAllChapters();
+                    }, 500);
+                }
+                
+                const displayPromise = currentCfi 
+                    ? this.rendition.display(currentCfi).catch(() => {
+                        console.warn('Failed to display current CFI in new layout, falling back...');
+                        const firstSpineItem = this.book!.spine?.first();
+                        return firstSpineItem && firstSpineItem.href ? this.rendition!.display(firstSpineItem.href) : this.rendition!.display();
+                    })
+                    : this.rendition.display();
+                    
+                displayPromise.then(() => {
+                    this.applyThemeToWrapper();
+                    this.applyStyleToFrame();
+                    this.isLoading = false;
+                    this.cdr.detectChanges();
+                }).catch(err => {
+                    console.error('Failed to change layout mode:', err);
+                    this.isLoading = false;
+                    this.cdr.detectChanges();
+                });
+            }
+        }
     }
 
     // Settings
@@ -1472,47 +2054,82 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
 
     // Font & Style Controls
     changeFontSize(delta: number) {
-        this.settings.fontSize = Math.max(12, Math.min(36, this.settings.fontSize + delta));
-        this.applyStyleToFrame();
-        this.saveSettings();
-        if (this.bookType === 'epub') {
+        this.settings.fontSize = Math.max(12, Math.min(48, this.settings.fontSize + delta));
+        
+        if (this.bookType === 'epub' && this.rendition) {
+            // First apply via native fontSize for speed
+            this.rendition.themes.fontSize(this.settings.fontSize + 'px');
+            
+            // Then force a full style re-injection to ensure 'custom' theme is updated with new size
+            this.applyStyleToFrame();
+            
+            // Finally resize to ensure pagination is correct
             this.resizeRendition();
+        } else if (this.bookType === 'bok') {
+            this.applyStyleToFrame();
         } else {
-            this.recalculateBokPages();
+            this.applyStyleToFrame();
+        }
+        this.saveSettings();
+    }
+
+    async loadHighlights() {
+        if (!this.ebookId) return;
+        try {
+            const progressResponse = await this.readingProgressService.getProgress(this.ebookId).toPromise();
+            if (progressResponse?.success && progressResponse.data) {
+                this.highlights = progressResponse.data.highlights || [];
+                this.cdr.detectChanges(); // Ensure UI updates immediately
+            }
+        } catch (err) {
+            console.error('Error loading highlights:', err);
         }
     }
 
-    private recalculateBokPages() {
-        if (!this.bokContentFull) return;
+    async goToPage(cfi: string) {
+        if (!cfi) return;
 
-        // Adjust charsPerPage based on font size (inverse relationship)
-        // Base: 18px -> 1200 chars
-        const baseSize = 18;
-        const baseChars = 1200;
-        const charsPerPage = Math.floor(baseChars * (baseSize / this.settings.fontSize));
-
-        const content = this.bokContentFull;
-        const oldPage = this.currentPage;
-        const oldTotal = this.totalPages;
-
-        this.bokPages = [];
-        for (let i = 0; i < content.length; i += charsPerPage) {
-            let end = i + charsPerPage;
-            if (end < content.length) {
-                const nextSpace = content.indexOf(' ', end);
-                if (nextSpace !== -1 && nextSpace - end < 50) {
-                    end = nextSpace;
+        if (this.bookType === 'bok') {
+            const id = cfi.replace('bok:', '');
+            const wordIndex = this.idMap[id];
+            if (wordIndex !== undefined) {
+                // Find element with data-id or equivalent
+                const el = document.getElementById(id);
+                if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
             }
-            this.bokPages.push(content.substring(i, end));
-            i = end - charsPerPage;
+            this.closeAllPanels();
+            return;
         }
-        this.totalPages = this.bokPages.length;
 
-        // Try to stay on the same relative position
-        const relativePos = oldPage / oldTotal;
-        this.currentPage = Math.floor(relativePos * this.totalPages);
-        this.updateBokProgress();
+        if (!this.rendition) return;
+
+        try {
+            this.isLoading = true;
+            this.cdr.detectChanges();
+            
+            await this.rendition.display(cfi);
+            
+            // For scrolled-doc, sometimes we need an extra nudge to get the exact position
+            // especially after a font size change or initial load.
+            setTimeout(() => {
+                if (this.rendition) {
+                    const currentLocation: any = this.rendition.currentLocation();
+                    if (currentLocation && currentLocation.start && currentLocation.start.cfi !== cfi) {
+                        this.rendition.display(cfi);
+                    }
+                }
+                this.isLoading = false;
+                this.isControlsVisible = false;
+                this.cdr.detectChanges();
+            }, 300);
+            
+        } catch (err) {
+            console.error('Error navigating to CFI:', err);
+            this.isLoading = false;
+            this.cdr.detectChanges();
+        }
     }
 
     changeFontFamily(font: string) {
@@ -1544,122 +2161,145 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
         }
     }
 
-    private resizeRendition() {
-        // Optimized resize prevents jarring jumps
-        if (this.rendition) {
-            this.isNavigating = true;
-            const availableHeight = window.innerHeight - 74 - 80;
-            
-            // Capture current location to re-sync after resize
-            const currentLocation: any = this.rendition.currentLocation();
-            const cfi = currentLocation?.start?.cfi;
+    // ==========================================
+    // Auto-Scroll Feature
+    // ==========================================
+    toggleAutoScroll() {
+        if (this.isAutoScrolling) {
+            this.stopAutoScroll();
+        } else {
+            this.startAutoScroll();
+        }
+    }
 
-            const resizePromise = this.rendition.resize(this.contentWidth, availableHeight) as any;
+    startAutoScroll() {
+        this.isAutoScrolling = true;
+        this.cdr.detectChanges();
+        
+        const scrollContainer = this.getScrollContainer();
+        if (!scrollContainer) return;
+
+        // Use a float accumulator because scrollContainer.scrollTop is an integer
+        // Adding < 1 values directly to scrollTop gets rounded down to 0, which halts scrolling.
+        let currentScrollY = scrollContainer.scrollTop;
+
+        // Pause on user touch
+        const pauseHandler = () => {
+            if (this.isAutoScrolling) {
+                this.stopAutoScroll();
+            }
+        };
+        scrollContainer.addEventListener('touchstart', pauseHandler, { once: true });
+        scrollContainer.addEventListener('mousedown', pauseHandler, { once: true });
+
+        const animate = () => {
+            if (!this.isAutoScrolling) return;
             
-            if (resizePromise && typeof resizePromise.then === 'function') {
-                resizePromise.then(() => {
-                    if (cfi) {
-                        return this.rendition?.display(cfi);
-                    }
-                    return Promise.resolve();
-                }).then(() => {
+            currentScrollY += this.autoScrollSpeed;
+            scrollContainer.scrollTop = Math.round(currentScrollY);
+            
+            // Check if we've reached the bottom
+            if (scrollContainer.scrollTop + scrollContainer.clientHeight >= scrollContainer.scrollHeight - 5) {
+                this.stopAutoScroll();
+                return;
+            }
+            
+            this.autoScrollAnimationId = requestAnimationFrame(animate);
+        };
+
+        this.autoScrollAnimationId = requestAnimationFrame(animate);
+    }
+
+    stopAutoScroll() {
+        this.isAutoScrolling = false;
+        if (this.autoScrollAnimationId) {
+            cancelAnimationFrame(this.autoScrollAnimationId);
+            this.autoScrollAnimationId = null;
+        }
+        this.cdr.detectChanges();
+    }
+
+    increaseAutoScrollSpeed() {
+        this.autoScrollSpeed = Math.min(
+            Math.round((this.autoScrollSpeed + this.autoScrollSpeedStep) * 10) / 10,
+            this.autoScrollMaxSpeed
+        );
+    }
+
+    decreaseAutoScrollSpeed() {
+        this.autoScrollSpeed = Math.max(
+            Math.round((this.autoScrollSpeed - this.autoScrollSpeedStep) * 10) / 10,
+            this.autoScrollMinSpeed
+        );
+    }
+
+    private getScrollContainer(): HTMLElement | null {
+        // epub.js creates .epub-container as the scroll element
+        const container = this.readerContainer?.nativeElement?.querySelector('.epub-container');
+        if (container) return container;
+        // Fallback: BOK reader uses .reader-content directly
+        return this.bokReaderContainer?.nativeElement || null;
+    }
+
+    private resizeRendition() {
+        if (!this.rendition) return;
+
+        const currentLocation: any = this.rendition.currentLocation();
+        const cfi = currentLocation?.start?.cfi;
+        const container = this.readerContainer?.nativeElement;
+        const containerWidth = container ? container.offsetWidth : this.contentWidth;
+        
+        const topBarHeight = 64;
+        const bottomBarHeight = 80;
+        const availableHeight = window.innerHeight - topBarHeight - bottomBarHeight;
+        const finalHeight = Math.max(availableHeight, 300);
+        
+        setTimeout(async () => {
+            if (this.rendition) {
+                try {
+                    const finalHeightMeasured = container ? container.offsetHeight : finalHeight;
+                    await (this.rendition.resize(containerWidth, finalHeightMeasured) as any);
+                    if (cfi) await this.rendition.display(cfi);
                     this.isNavigating = false;
                     this.cdr.detectChanges();
-                });
-            } else {
-                // Fallback for sync resize
-                if (cfi) {
-                    this.rendition.display(cfi).then(() => {
-                        this.isNavigating = false;
-                        this.cdr.detectChanges();
-                    });
-                } else {
+                } catch (err: any) {
                     this.isNavigating = false;
-                    this.cdr.detectChanges();
                 }
             }
-        }
+        }, 50);
     }
 
     // Navigation
     goToChapter(item: NavItem) {
         if (this.bookType === 'bok' && item.href.startsWith('bok:')) {
             const id = item.href.replace('bok:', '');
-            const wordIndex = this.idMap[id];
-            if (wordIndex !== undefined) {
-                // Find character index approximate from word index
-                // Since our new pagination is character based
-                const charIndex = wordIndex * 6; // Rough average 6 chars per word with space
-                const charsPerPage = 1200;
-                const page = Math.floor(charIndex / charsPerPage);
-
-                // Preview Limit Check (BOK)
-                if (this.isPreviewMode) {
-                    const progress = (page / this.totalPages) * 100;
-                    if (progress > 20) {
-                        this.showSubscriptionPrompt = true;
-                        return;
-                    }
-                }
-
-                this.currentPage = Math.min(Math.max(0, page), this.totalPages - 1);
-                this.updateBokProgress();
-                window.scrollTo(0, 0);
-                this.closeAllPanels();
-                return;
-            }
-        }
-
-        // Preview Limit Check (EPUB)
-        // Preview Limit Check (EPUB)
-        if (this.isPreviewMode && this.book) {
-            if (this.progressPercent >= 20) {
-                this.showSubscriptionPrompt = true;
-                return;
-            }
-        }
-
-
-        this.rendition?.display(item.href).then(() => {
-            // Post-navigation check
-            // Post-navigation check
-            if (this.isPreviewMode && this.progressPercent > 20) {
-                this.showSubscriptionPrompt = true;
-            }
-
-        });
-        this.closeAllPanels();
-    }
-
-    goToPage(cfi: string) {
-        if (this.bookType === 'bok') {
-            // Unify format: remove 'bok:' prefix if present
-            const pageStr = cfi.replace('bok:', '');
-            const page = parseInt(pageStr, 10);
-
-            if (!isNaN(page)) {
-                this.currentPage = Math.min(Math.max(0, page), this.totalPages - 1);
-                this.updateBokProgress();
-                window.scrollTo(0, 0);
+            const el = document.getElementById(id);
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
             this.closeAllPanels();
             return;
         }
 
-        this.rendition?.display(cfi);
+        if (this.isPreviewMode && this.progressPercent >= 20) {
+            this.showSubscriptionPrompt = true;
+            return;
+        }
+
+        this.rendition?.display(item.href).then(() => {
+            if (this.isPreviewMode && this.progressPercent > 20) {
+                this.showSubscriptionPrompt = true;
+            }
+        });
         this.closeAllPanels();
     }
 
     private processToc(items: any[], level: number = 0): any[] {
         let result: any[] = [];
         if (!items) return result;
-
         items.forEach(item => {
-            // Add level property for indentation
             item.level = level;
             result.push(item);
-
-            // Process subitems if they exist
             if (item.subitems && item.subitems.length > 0) {
                 result = result.concat(this.processToc(item.subitems, level + 1));
             }
@@ -1671,30 +2311,23 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
         this.router.navigate(['/library']);
     }
 
-    // Bookmarks
     addBookmark() {
         if (this.bookType === 'bok') {
-            const label = `صفحة ${this.currentPage + 1}`;
-            this.readingProgressService.addBookmark(this.ebookId, this.currentPage.toString(), label).subscribe(r => {
+            const label = `موضع ${this.progressPercent}%`;
+            this.readingProgressService.addBookmark(this.ebookId, window.scrollY.toString(), label).subscribe(r => {
                 if (r.success) this.bookmarks = r.data.bookmarks || [];
             });
             return;
         }
-
         if (!this.rendition) return;
-
         const currentLocation: any = this.rendition.currentLocation();
-        if (currentLocation && currentLocation.start) {
+        if (currentLocation?.start) {
             const cfi = currentLocation.start.cfi;
             const label = this.currentChapter || `صفحة ${this.currentPage}`;
-
             this.readingProgressService.addBookmark(this.ebookId, cfi, label).subscribe({
                 next: (response) => {
-                    if (response.success) {
-                        this.bookmarks = response.data.bookmarks || [];
-                    }
-                },
-                error: (err: any) => console.error('Failed to add bookmark', JSON.stringify(err))
+                    if (response.success) this.bookmarks = response.data.bookmarks || [];
+                }
             });
         }
     }
@@ -1702,18 +2335,12 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
     removeBookmark(id: string) {
         this.readingProgressService.removeBookmark(this.ebookId, id).subscribe({
             next: (response) => {
-                if (response.success) {
-                    this.bookmarks = response.data.bookmarks || [];
-                }
-            },
-            error: (err: any) => console.error('Failed to remove bookmark', err)
+                if (response.success) this.bookmarks = response.data.bookmarks || [];
+            }
         });
     }
 
-    // Highlights
-    // Note: Advanced highlighting for BOK not implemented yet, using EPUB only
     addHighlight(color: string) {
-        // Auth Check
         const userStr = localStorage.getItem('user');
         const merchantToken = localStorage.getItem('merchant_token');
         let isLoggedIn = false;
@@ -1723,9 +2350,7 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
                 const user = JSON.parse(userStr);
                 isLoggedIn = !!(user && (user.token || user.accessToken));
             } catch (e) { isLoggedIn = false; }
-        } else if (merchantToken) {
-            isLoggedIn = true;
-        }
+        } else if (merchantToken) isLoggedIn = true;
 
         if (!isLoggedIn) {
             this.showAuthModal = true;
@@ -1738,25 +2363,18 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
             return;
         }
 
-        // DUPLICATION CHECK: Prevent adding if exact CFI exists
         const existing = this.highlights.find(h => h.cfi === this.selectedCfiRange);
         if (existing) {
-            // If different color, we might update, but here we just return to avoid double stacking
-            if (color === 'remove' || color === 'transparent') {
-                this.removeHighlight(existing._id);
-            }
+            if (color === 'remove' || color === 'transparent') this.removeHighlight(existing._id);
             this.showSelectionPopup = false;
             return;
         }
 
-        // Check if removing
         if (color === 'remove' || color === 'transparent') {
             this.removeHighlightSelection();
             return;
         }
 
-        // --- OPTIMISTIC UPDATE START ---
-        // Create a temporary highlight object to show immediately
         const tempHighlight: Highlight = {
             _id: 'temp_' + Date.now(),
             cfi: this.selectedCfiRange,
@@ -1766,53 +2384,37 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
             createdAt: new Date()
         };
 
-        // 1. Update local state
         this.highlights.push(tempHighlight);
 
-        // 2. Visual Render (Optimistic)
         if (this.bookType === 'epub') {
-            const data = { color: color }; // No styles here to avoid DOMStringMap error
+            const data = { color: color };
             const className = 'kenouz-hl-' + color.replace('#', '').toLowerCase();
-
-            // Add specific annotation immediately
             this.rendition?.annotations.add('highlight', this.selectedCfiRange, data, (e: any) => {
                 this.handleHighlightClick(e, this.selectedCfiRange);
             }, className);
 
-            // Clear selection
             if (this.currentSelectionContents) {
                 const sel = this.currentSelectionContents.window.getSelection();
                 if (sel) sel.removeAllRanges();
             }
-        } else if (this.bookType === 'bok') {
-            // Force UI update for BOK
+        } else {
             this.cdr.detectChanges();
         }
 
-        // Close popup immediately
         this.showSelectionPopup = false;
-        const note = '';
-
-        // 3. API Call (Background)
-        this.readingProgressService.addHighlight(this.ebookId, this.selectedCfiRange, this.selectedText, color, note).subscribe({
+        this.readingProgressService.addHighlight(this.ebookId, this.selectedCfiRange, this.selectedText, color, '').subscribe({
             next: (response) => {
                 if (response.success) {
-                    // Sync with server response
                     this.highlights = response.data.highlights || [];
+                    this.cdr.detectChanges();
                 }
-            },
-            error: (err: any) => {
-                console.error('Failed to save highlight (keeping optimistic version)', JSON.stringify(err));
             }
         });
 
-        // Reset selection state
         this.selectedText = '';
         this.selectedCfiRange = '';
-        // --- OPTIMISTIC UPDATE END ---
     }
 
-    // --- Auth Prompt Methods ---
     goToLogin() {
         this.router.navigate(['/login'], { queryParams: { returnUrl: this.router.url } });
     }
@@ -1826,10 +2428,6 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     private removeHighlightSelection() {
-        // "Eraser" logic
-
-        // 1. Exact Match Removal
-        // Check if there is a highlight that matches the current selection exactly
         const exactMatch = this.highlights.find(h => h.cfi === this.selectedCfiRange);
         if (exactMatch) {
             this.removeHighlight(exactMatch._id);
@@ -1837,33 +2435,6 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
             return;
         }
 
-        // 2. BOK Overlap Removal
-        if (this.bookType === 'bok') {
-            const parts = this.selectedCfiRange.split(':');
-            if (parts.length === 4) {
-                const p = parseInt(parts[1]);
-                const s = parseInt(parts[2]);
-                const e = parseInt(parts[3]);
-
-                // Find overlapping
-                const overlapping = this.highlights.find(h => {
-                    if (!h.cfi.startsWith(`bok:${p}:`)) return false;
-                    const hParts = h.cfi.split(':');
-                    const hS = parseInt(hParts[2]);
-                    const hE = parseInt(hParts[3]);
-                    // Check overlap
-                    return (s < hE && e > hS);
-                });
-
-                if (overlapping) {
-                    this.removeHighlight(overlapping._id);
-                    this.showSelectionPopup = false;
-                    return;
-                }
-            }
-        }
-
-        // 3. Fallback: Just close
         this.showSelectionPopup = false;
     }
 
@@ -1871,9 +2442,214 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
         if (this.selectedText) {
             navigator.clipboard.writeText(this.selectedText).then(() => {
                 this.showSelectionPopup = false;
-                // Toast logic
             });
         }
+    }
+
+    expandSelection(direction: 'start' | 'end') {
+        const contents = this.currentSelectionContents;
+        const isBok = !contents; // BOK reader uses main document selection
+        const win = isBok ? window : contents.window;
+        const sel = win.getSelection();
+        if (!sel || sel.rangeCount === 0) return;
+
+        const range = sel.getRangeAt(0);
+        
+        if (direction === 'start') {
+            // Expand start (in RTL Arabic, start boundary is on the right, we move it backwards in characters)
+            this.moveRangeBoundary(range, 'start', -1);
+        } else {
+            // Expand end (in RTL Arabic, end boundary is on the left, we move it forwards in characters)
+            this.moveRangeBoundary(range, 'end', 1);
+        }
+        
+        sel.removeAllRanges();
+        sel.addRange(range);
+        
+        this.selectedText = sel.toString().trim();
+        this.currentSelectionRange = range;
+        
+        // Re-calculate position
+        const rect = range.getBoundingClientRect();
+        if (isBok) {
+            this.selectionPopupPosition = {
+                x: rect.left + (rect.width / 2),
+                y: rect.top - 10 + window.scrollY
+            };
+        } else {
+            const iframeRect = contents.document.defaultView.frameElement.getBoundingClientRect();
+            this.selectionPopupPosition = {
+                x: iframeRect.left + rect.left + (rect.width / 2),
+                y: iframeRect.top + rect.top - 10
+            };
+        }
+        this.cdr.detectChanges();
+    }
+
+    selectFullSentence() {
+        const contents = this.currentSelectionContents;
+        const isBok = !contents;
+        const win = isBok ? window : contents.window;
+        const sel = win.getSelection();
+        if (!sel || sel.rangeCount === 0) return;
+
+        const range = sel.getRangeAt(0);
+        
+        // Expand start backwards until sentence punctuation
+        this.expandToSentenceBoundary(range, 'start');
+        // Expand end forwards until sentence punctuation
+        this.expandToSentenceBoundary(range, 'end');
+        
+        sel.removeAllRanges();
+        sel.addRange(range);
+        
+        this.selectedText = sel.toString().trim();
+        this.currentSelectionRange = range;
+        
+        // Re-calculate position
+        const rect = range.getBoundingClientRect();
+        if (isBok) {
+            this.selectionPopupPosition = {
+                x: rect.left + (rect.width / 2),
+                y: rect.top - 10 + window.scrollY
+            };
+        } else {
+            const iframeRect = contents.document.defaultView.frameElement.getBoundingClientRect();
+            this.selectionPopupPosition = {
+                x: iframeRect.left + rect.left + (rect.width / 2),
+                y: iframeRect.top + rect.top - 10
+            };
+        }
+        this.cdr.detectChanges();
+    }
+
+    private moveRangeBoundary(range: Range, boundary: 'start' | 'end', direction: -1 | 1) {
+        let node = boundary === 'start' ? range.startContainer : range.endContainer;
+        let offset = boundary === 'start' ? range.startOffset : range.endOffset;
+        
+        if (node.nodeType === 3) { // TEXT_NODE
+            let text = node.textContent || '';
+            if (direction === -1) {
+                // Move start backwards to the previous word boundary
+                if (offset === 0) {
+                    const prevNode = this.getAdjacentTextNode(node, -1);
+                    if (prevNode) {
+                        node = prevNode;
+                        text = node.textContent || '';
+                        offset = text.length;
+                    }
+                }
+                
+                if (offset > 0) {
+                    const sub = text.substring(0, offset).trimEnd();
+                    const lastSpace = sub.lastIndexOf(' ');
+                    if (lastSpace !== -1) {
+                        offset = lastSpace;
+                    } else {
+                        offset = 0;
+                    }
+                }
+            } else {
+                // Move end forwards to the next word boundary
+                if (offset >= text.length) {
+                    const nextNode = this.getAdjacentTextNode(node, 1);
+                    if (nextNode) {
+                        node = nextNode;
+                        text = node.textContent || '';
+                        offset = 0;
+                    }
+                }
+                
+                if (offset < text.length) {
+                    const sub = text.substring(offset).trimStart();
+                    const firstSpace = sub.indexOf(' ');
+                    if (firstSpace !== -1) {
+                        offset = offset + (text.substring(offset).length - sub.length) + firstSpace;
+                    } else {
+                        offset = text.length;
+                    }
+                }
+            }
+            
+            if (boundary === 'start') {
+                range.setStart(node, offset);
+            } else {
+                range.setEnd(node, offset);
+            }
+        }
+    }
+
+    private expandToSentenceBoundary(range: Range, boundary: 'start' | 'end') {
+        let node = boundary === 'start' ? range.startContainer : range.endContainer;
+        let offset = boundary === 'start' ? range.startOffset : range.endOffset;
+        const punctuation = ['.', '!', '؟', '?', '\n', '\r', ':', '•'];
+        
+        if (node.nodeType === 3) { // TEXT_NODE
+            let text = node.textContent || '';
+            if (boundary === 'start') {
+                while (offset > 0) {
+                    const char = text[offset - 1];
+                    if (punctuation.includes(char)) {
+                        break;
+                    }
+                    offset--;
+                }
+                range.setStart(node, offset);
+            } else {
+                while (offset < text.length) {
+                    const char = text[offset];
+                    if (punctuation.includes(char)) {
+                        break;
+                    }
+                    offset++;
+                }
+                range.setEnd(node, offset);
+            }
+        }
+    }
+
+    private getAdjacentTextNode(node: Node, direction: -1 | 1): Node | null {
+        let current: Node | null = node;
+        while (current) {
+            let next: Node | null = null;
+            if (direction === -1) {
+                next = current.previousSibling;
+                if (!next && current.parentNode) {
+                    current = current.parentNode;
+                    continue;
+                }
+            } else {
+                next = current.nextSibling;
+                if (!next && current.parentNode) {
+                    current = current.parentNode;
+                    continue;
+                }
+            }
+            
+            if (next) {
+                const textNode = this.findTextNodeDeep(next, direction);
+                if (textNode) return textNode;
+                current = next;
+            } else {
+                break;
+            }
+        }
+        return null;
+    }
+
+    private findTextNodeDeep(node: Node, direction: -1 | 1): Node | null {
+        if (node.nodeType === 3 && node.textContent?.trim()) {
+            return node;
+        }
+        const children = Array.from(node.childNodes);
+        if (direction === -1) {
+            children.reverse();
+        }
+        for (const child of children) {
+            const found = this.findTextNodeDeep(child, direction);
+            if (found) return found;
+        }
+        return null;
     }
 
     removeHighlight(id: string) {
@@ -1882,7 +2658,10 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
             this.rendition?.annotations.remove(highlight.cfi, 'highlight');
             this.readingProgressService.removeHighlight(this.ebookId, id).subscribe({
                 next: (res) => {
-                    if (res.success) this.highlights = res.data.highlights || [];
+                    if (res.success) {
+                        this.highlights = res.data.highlights || [];
+                        this.cdr.detectChanges();
+                    }
                 }
             });
         }
@@ -1890,41 +2669,32 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
 
     restoreHighlights(contents: any) {
         if (!this.rendition) return;
-
         this.highlights.forEach(h => {
-            // Only add if it belongs to EPUB
             if (!h.cfi.startsWith('bok:')) {
-                // Check if already added? (Hard with epub.js blindly, but adding again usually duplicates visual unless underlying mechanism prevents it)
-                // We rely on epub.js to manage or minimal performance impact for now.
-
                 const data = { color: h.color };
                 const className = 'kenouz-hl-' + h.color.replace('#', '').toLowerCase();
-
                 try {
                     this.rendition?.annotations.add('highlight', h.cfi, data, (e: any) => {
                         this.handleHighlightClick(e, h.cfi);
                     }, className);
-                } catch (e: any) {
-                    // Ignore errors if CFI invalid for current chapter (epub.js might throw)
-                }
+                } catch (e: any) {}
             }
         });
     }
 
-    // --- BOK (Shamela/Text) Selection Handling ---
+    handleBokMouseUp(event: Event) { }
 
-    // Handle mouse/touch up on the BOK content container
-    // Handle mouse/touch up on the BOK content container
-    handleBokMouseUp(event: Event) {
-        // Legacy handler kept for template reference but logic moved to selectionchange
-    }
+    private handleScroll = () => {
+        if (this.bookType === 'bok') {
+            this.updateBokProgress();
+            this.cdr.detectChanges();
+        }
+    };
 
     private handleSelectionChange = () => {
         if (!this.isBrowser || this.bookType !== 'bok') return;
-
         const selection = document.getSelection();
         if (selection && selection.toString().trim().length > 0) {
-            // Debounce slightly to ensure selection is stable
             if (this.selectionTimeout) clearTimeout(this.selectionTimeout);
             this.selectionTimeout = setTimeout(() => {
                 this.processBokSelection(selection);
@@ -1935,16 +2705,12 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
     private processBokSelection(selection: Selection) {
         if (!this.isBrowser) return;
         const text = selection.toString().trim();
-
-        // Calculate Range relative to the page content
         const contentContainer = document.querySelector('.bok-text-content');
-        if (!contentContainer) return;
+        if (!contentContainer || !contentContainer.contains(selection.anchorNode)) return;
 
-        // Check if selection is inside our container
-        if (!contentContainer.contains(selection.anchorNode)) return;
-
-        // Get offsets
         const range = selection.getRangeAt(0);
+        
+        // Calculate offsets relative to the full text content
         const preSelectionRange = range.cloneRange();
         preSelectionRange.selectNodeContents(contentContainer);
         preSelectionRange.setEnd(range.startContainer, range.startOffset);
@@ -1953,107 +2719,134 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
         const end = start + text.length;
 
         this.selectedText = text;
-        this.selectedCfiRange = `bok:${this.currentPage}:${start}:${end}`;
+        this.selectedCfiRange = `bok:0:${start}:${end}`;
 
-        // Calculate popup position
         const rect = range.getBoundingClientRect();
-
-        // Adjust for mobile viewport
-        const scrollTop = this.isBrowser ? (window.pageYOffset || document.documentElement.scrollTop) : 0;
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
 
         this.selectionPopupPosition = {
-            x: this.isBrowser ? Math.min(Math.max(10, rect.left + (rect.width / 2) - 100), window.innerWidth - 210) : 0, // Center but keep onscreen
-            y: rect.top + scrollTop - 60 // Position above text
+            x: Math.min(Math.max(10, rect.left + (rect.width / 2) - 100), window.innerWidth - 210),
+            y: rect.top + scrollTop - 60
         };
 
         this.showSelectionPopup = true;
         this.cdr.detectChanges();
     }
 
-    // Process BOK page to inject highlight spans
     get outputBokPage(): SafeHtml {
-        if (this.bookType !== 'bok' || !this.bokPages[this.currentPage]) return '';
-
-        const originalText = this.bokPages[this.currentPage];
-        const pageHighlights = this.highlights
-            .filter(h => h.cfi.startsWith(`bok:${this.currentPage}:`))
+        if (this.bookType !== 'bok' || this.bokPages.length === 0) return '';
+        
+        const originalText = this.bokPages[0]; // Currently showing the active chunk
+        const allHighlights = this.highlights
+            .filter(h => h.cfi.startsWith('bok:0:')) 
             .map(h => {
                 const parts = h.cfi.split(':');
-                return {
-                    start: parseInt(parts[2]),
-                    end: parseInt(parts[3]),
-                    color: h.color,
-                    id: h._id
-                };
+                return { start: parseInt(parts[2]), end: parseInt(parts[3]), color: h.color, id: h._id };
             })
+            .filter(h => h.start < originalText.length) // Only show highlights in visible chunk
             .sort((a, b) => a.start - b.start);
 
-        if (pageHighlights.length === 0) return originalText;
-
+        if (allHighlights.length === 0) return this.sanitizer.bypassSecurityTrustHtml(originalText);
+        
         let result = '';
         let currentIndex = 0;
-
-        // Simple non-overlapping logic for now
-        pageHighlights.forEach(h => {
-            if (h.start >= currentIndex) {
-                // Add text before highlight
+        
+        allHighlights.forEach(h => {
+            if (h.start >= currentIndex && h.start < originalText.length) {
                 result += originalText.substring(currentIndex, h.start);
-                // Add highlight
-                const highlightText = originalText.substring(h.start, h.end);
-                // We use inline style for background to ensure it applies
-                result += `<span class="kenouz-highlight" style="background-color: ${h.color}; cursor: pointer;" title="click to remove" data-id="${h.id}">${highlightText}</span>`;
-                currentIndex = h.end;
+                const end = Math.min(h.end, originalText.length);
+                const highlightText = originalText.substring(h.start, end);
+                result += `<span class="kenouz-highlight" style="background-color: ${h.color}; cursor: pointer;" data-id="${h.id}">${highlightText}</span>`;
+                currentIndex = end;
             }
         });
-
-        // Add remaining text
+        
         if (currentIndex < originalText.length) {
             result += originalText.substring(currentIndex);
         }
-
+        
         return this.sanitizer.bypassSecurityTrustHtml(result);
     }
 
-    // Initial BOK highlight click handler (if using event delegation)
-    // For simplicity, we might iterate highlights in the view or handle clicks on container
-    // Initial BOK highlight click handler (if using event delegation)
-    // For simplicity, we might iterate highlights in the view or handle clicks on container
     handleBokClick(event: MouseEvent) {
-        // Prevent event bubbling to avoid triggering global click handlers
         event.stopPropagation();
-
         const target = event.target as HTMLElement;
-
-        // Check for double tap
         const now = Date.now();
         if (this.lastBokClickTime && (now - this.lastBokClickTime < 300)) {
-            // Double tap detected!
             this.toggleControls();
-            this.lastBokClickTime = 0; // Reset
+            this.lastBokClickTime = 0;
             return;
         }
         this.lastBokClickTime = now;
-
         if (target.classList.contains('kenouz-highlight')) {
             const id = target.getAttribute('data-id');
-            if (id) {
-                // Direct remove for better UX on mobile
-                this.removeHighlight(id);
-            }
+            if (id) this.removeHighlight(id);
         }
     }
 
     private lastBokClickTime = 0;
 
-    // Helper to handle highlight clicks (EPUB)
     private handleHighlightClick(e: MouseEvent, cfiRange: string) {
-        e.stopPropagation(); // CRITICAL: Stop event from bubbling to 'selected' handler
-
-        // Try to find the highlight object by CFI
+        e.stopPropagation();
         const highlight = this.highlights.find(h => h.cfi === cfiRange);
-        if (highlight) {
-            // Directly remove or show small custom UI. For now, matching user request:
-            this.removeHighlight(highlight._id);
-        }
+        if (highlight) this.removeHighlight(highlight._id);
+    }
+
+    loadMoreBok() {
+        if (!this.bokContentFull) return;
+        const currentLen = this.bokPages[0].length;
+        const nextChunk = this.bokContentFull.substring(0, currentLen + 100000);
+        this.bokPages = [nextChunk];
+        this.cdr.detectChanges();
+    }
+
+    get hasMoreBok(): boolean {
+        return !!(this.bokContentFull && this.bokPages[0] && this.bokPages[0].length < this.bokContentFull.length);
+    }
+
+    forceLoadAllChapters(): void {
+        const manager = (this.rendition as any).manager;
+        if (!manager || this.settings.layoutMode === 'pages') return;
+
+        const spineItems = (this.book?.spine as any)?.items || (this.book?.spine as any)?.spineItems || [];
+        const totalSections = spineItems.length;
+        let loaded = 0;
+
+        console.log(`KENOUZ: Background loading all ${totalSections} chapters to ensure smooth scrolling...`);
+
+        const loadNext = () => {
+            if (!this.rendition || !manager) return;
+            const views = manager.views;
+            if (!views) return;
+            
+            const lastView = views.last();
+            if (!lastView || !lastView.section) {
+                manager.q.enqueue(() => manager.update(0));
+                return;
+            }
+            
+            const nextSection = lastView.section.next();
+            if (nextSection) {
+                const view = manager.append(nextSection);
+                if (view && typeof view.display === 'function') {
+                    view.display(manager.request).then(() => {
+                        loaded++;
+                        setTimeout(loadNext, 10);
+                    }).catch((err: any) => {
+                        loaded++;
+                        setTimeout(loadNext, 10);
+                    });
+                } else {
+                    loaded++;
+                    setTimeout(loadNext, 10);
+                }
+            } else {
+                console.log(`KENOUZ: Finished loading all chapters.`);
+                manager.q.enqueue(() => manager.update(0));
+            }
+        };
+
+        // Start loading next chapters recursively
+        setTimeout(loadNext, 100);
     }
 }

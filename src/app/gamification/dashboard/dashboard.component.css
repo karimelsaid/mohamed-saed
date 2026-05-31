@@ -1,4 +1,175 @@
-/* Tailwind handles most styles */
+/* Tailwind handles most styles, but we add custom premium touches */
 :host {
     display: block;
+}
+
+@keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+    100% { transform: translateY(0px); }
+}
+
+.animate-float {
+    animation: float 3s ease-in-out infinite;
+}
+
+.glass-card {
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ========================================================
+   GLOWING PREMIUM NIGHT MODE (ELIMINATES DULL GRAY)
+   ======================================================== */
+
+:host-context(.dark) .glass-card {
+    /* Beautiful deep night obsidian-indigo background instead of dull gray */
+    background: rgba(13, 12, 28, 0.8) !important;
+    /* Soft glowing periwinkle/indigo border instead of gray border */
+    border: 1px solid rgba(99, 102, 241, 0.2) !important;
+    /* Glowing violet/blue shadow for an ultra-premium neon look */
+    box-shadow: 0 10px 30px rgba(99, 102, 241, 0.08), 0 1px 8px rgba(99, 102, 241, 0.1) !important;
+}
+
+:host-context(.dark) .glass-card:hover {
+    border-color: rgba(216, 173, 66, 0.4) !important; /* Gold border glow on hover */
+    box-shadow: 0 15px 35px rgba(216, 173, 66, 0.12) !important;
+}
+
+.stat-card-gradient-blue {
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+}
+
+.stat-card-gradient-purple {
+    background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+}
+
+.progress-shimmer {
+    position: relative;
+    overflow: hidden;
+}
+
+.progress-shimmer::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+    100% { left: 100%; }
+}
+
+/* Container transparent background when embedded in library tabs */
+.container {
+    background: transparent !important;
+}
+
+:host-context(.dark) .container {
+    background: transparent !important;
+}
+
+/* High contrast pastel colors for text instead of dead gray */
+:host-context(.dark) .text-gray-500 {
+    color: #a5b4fc !important; /* Soft glowing periwinkle instead of gray */
+}
+
+:host-context(.dark) .text-gray-400 {
+    color: #c7d2fe !important; /* Light periwinkle instead of gray */
+}
+
+:host-context(.dark) .text-gray-600 {
+    color: #e2e8f0 !important; /* Off-white instead of gray */
+}
+
+:host-context(.dark) .text-gray-800 {
+    color: #ffffff !important; /* Bright crisp white */
+}
+
+/* Streak specific overrides in dark mode */
+:host-context(.dark) .text-orange-600,
+:host-context(.dark) .text-orange-500 {
+    color: #ff8c3a !important; /* Vibrant golden orange */
+}
+
+/* Target count in Streak */
+:host-context(.dark) .glass-card span.text-gray-500 {
+    color: #ffc27a !important; /* Warm peach-gold */
+}
+
+/* Best Record Card icon wrapper in dark mode */
+:host-context(.dark) .bg-yellow-500\/10 {
+    background: rgba(216, 173, 66, 0.18) !important;
+    color: #d8ad42 !important;
+}
+
+/* Muted borders replaced with glowing boundaries */
+:host-context(.dark) .border-gray-100 {
+    border-color: rgba(99, 102, 241, 0.15) !important;
+}
+
+/* Progress bar track (vibrant indigo track instead of dull gray) */
+:host-context(.dark) .bg-gray-200\/50,
+:host-context(.dark) .bg-gray-100 {
+    background-color: rgba(20, 18, 38, 0.9) !important;
+}
+
+/* Stat card Icon boxes with beautiful colors in dark mode */
+:host-context(.dark) .glass-card .bg-blue-500\/10 {
+    background: rgba(59, 130, 246, 0.2) !important;
+    color: #60a5fa !important;
+}
+
+:host-context(.dark) .glass-card .bg-green-500\/10 {
+    background: rgba(16, 185, 129, 0.2) !important;
+    color: #34d399 !important;
+}
+
+:host-context(.dark) .glass-card .bg-purple-500\/10 {
+    background: rgba(168, 85, 247, 0.2) !important;
+    color: #c084fc !important;
+}
+
+/* Leaderboard styles in dark mode (Deep elegant space navy instead of gray) */
+:host-context(.dark) .bg-gray-900\/5 {
+    background-color: rgba(10, 8, 20, 0.6) !important;
+    color: #cbd5e1 !important;
+    border-bottom: 1px solid rgba(99, 102, 241, 0.2) !important;
+}
+
+:host-context(.dark) .divide-y > * {
+    border-color: rgba(99, 102, 241, 0.1) !important;
+}
+
+/* Rank 4+ circle badge in dark mode */
+:host-context(.dark) .leaderboard .bg-gray-100,
+:host-context(.dark) .bg-gray-100.text-gray-500 {
+    background-color: rgba(99, 102, 241, 0.15) !important;
+    color: #c7d2fe !important;
+}
+
+/* Leaderboard hover rows in dark mode */
+:host-context(.dark) .hover\:bg-white\/60:hover {
+    background-color: rgba(99, 102, 241, 0.05) !important;
+}
+
+/* Guest banner premium night-sky dark mode look */
+:host-context(.dark) .guest-banner,
+:host-context(.dark) .bg-gradient-to-br.from-indigo-900 {
+    background: linear-gradient(135deg, #090812 0%, #121026 50%, #2a083f 100%) !important;
+    border: 1px solid rgba(99, 102, 241, 0.2) !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6) !important;
+}
+
+/* Challenge elements custom hover and transition */
+.glass-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
 }

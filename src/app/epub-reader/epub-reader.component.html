@@ -1,13 +1,5 @@
-<div class="reader-wrapper" [class.fullscreen]="isFullscreen" [ngClass]="'theme-' + settings.theme"
-    (touchstart)="onTouchStart($event)" (touchmove)="onTouchMove($event)" (touchend)="onTouchEnd($event)">
+<div class="reader-wrapper" [class.fullscreen]="isFullscreen" [ngClass]="'theme-' + settings.theme">
 
-    <!-- Visible Navigation Arrows -->
-    <button class="nav-arrow nav-prev" (click)="prevPage()" title="الصفحة السابقة">
-        <i class="fas fa-chevron-right"></i>
-    </button>
-    <button class="nav-arrow nav-next" (click)="nextPage()" title="الصفحة التالية">
-        <i class="fas fa-chevron-left"></i>
-    </button>
 
     <!-- Loading State -->
     <div class="loading-overlay" *ngIf="isLoading">
@@ -133,6 +125,43 @@
                 </div>
             </div>
 
+            <!-- Content Width -->
+            <div class="setting-row">
+                <span class="setting-label">عرض المحتوى</span>
+                <div class="size-control flex" style="align-items: center; gap: 10px;">
+                    <button class="icon-btn" (click)="decreaseContentWidth()" [disabled]="contentWidth <= minContentWidth" title="تضييق المحتوى">
+                        <i class="fas fa-minus"></i>
+                    </button>
+                    <span style="font-size: 14px; opacity: 0.8;">{{ contentWidth }}px</span>
+                    <button class="icon-btn" (click)="increaseContentWidth()" [disabled]="contentWidth >= effectiveMaxWidth" title="توسيع المحتوى">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Layout Mode -->
+            <div class="setting-row" *ngIf="bookType === 'epub'">
+                <span class="setting-label">طريقة القراءة</span>
+                <div class="align-options flex" style="gap: 8px;">
+                    <button class="icon-btn font-bold px-4 text-xs flex items-center gap-2" 
+                        [class.active]="settings.layoutMode !== 'pages'"
+                        (click)="setLayoutMode('scroll')" 
+                        style="width: auto; padding: 0 16px; height: 36px; border-radius: 10px; font-family: Cairo;"
+                        title="تمرير مستمر">
+                        <i class="fas fa-arrows-alt-v"></i>
+                        <span>تمرير مستمر</span>
+                    </button>
+                    <button class="icon-btn font-bold px-4 text-xs flex items-center gap-2" 
+                        [class.active]="settings.layoutMode === 'pages'"
+                        (click)="setLayoutMode('pages')" 
+                        style="width: auto; padding: 0 16px; height: 36px; border-radius: 10px; font-family: Cairo;"
+                        title="تقليب صفحات">
+                        <i class="fas fa-book-open"></i>
+                        <span>تقليب صفحات</span>
+                    </button>
+                </div>
+            </div>
+
             <!-- Background Image -->
             <div class="setting-row">
                 <span class="setting-label">خلفية مخصصة</span>
@@ -201,44 +230,20 @@
         <p class="empty-message" *ngIf="highlights.length === 0">لا توجد تظليلات بعد. حدد نصاً لتظليله.</p>
     </div>
 
-    <!-- Bottom Bar (Floating) -->
-    <div class="bottom-bar" [class.hidden]="!isControlsVisible">
-        <div class="progress-info">
-            <span>{{ currentChapter || 'صفحة ' + currentPage }}</span>
-            <!-- Content Width Controls -->
-            <div class="width-controls">
-                <button class="width-btn" (click)="decreaseContentWidth()" [disabled]="contentWidth <= minContentWidth"
-                    title="تضييق المحتوى">
-                    <i class="fas fa-minus"></i>
-                </button>
-                <span class="width-value">{{ contentWidth }}px</span>
-                <button class="width-btn" (click)="increaseContentWidth()"
-                    [disabled]="contentWidth >= effectiveMaxWidth" title="توسيع المحتوى">
-                    <i class="fas fa-plus"></i>
-                </button>
-            </div>
-            <span>{{ progressPercent }}%</span>
-        </div>
-        <input type="range" min="0" max="100" [value]="progressPercent" (input)="onProgressChange($event)"
-            class="range-slider">
-    </div>
-
     <!-- Reader Content Container (EPUB) -->
     <div class="reader-container" *ngIf="bookType === 'epub'" [style.opacity]="(isLoading || error) ? '0' : '1'"
-        [style.transform]="'translateX(' + dragOffset + 'px)'" [class.transitioning]="!isDragging">
+        [ngClass]="animationClass">
         <div class="main-content">
-            <div #readerContainer id="epub-reader-frame" class="reader-content" [style.max-width.px]="contentWidth"
-                [ngClass]="animationClass">
+            <div #readerContainer id="epub-reader-frame" class="reader-content" [style.max-width.px]="contentWidth">
             </div>
         </div>
     </div>
 
     <!-- Reader Content Container (BOK/Text) -->
     <div class="reader-container bok-container" *ngIf="bookType === 'bok'"
-        [style.opacity]="(isLoading || error) ? '0' : '1'" [style.transform]="'translateX(' + dragOffset + 'px)'"
-        [class.transitioning]="!isDragging" [ngClass]="animationClass">
+        [style.opacity]="(isLoading || error) ? '0' : '1'" [ngClass]="animationClass">
         <div class="main-content">
-            <div class="reader-content bok-text-content" [style.max-width.px]="contentWidth"
+            <div #bokReaderContainer class="reader-content bok-text-content" [style.max-width.px]="contentWidth"
                 [style.font-size.px]="settings.fontSize" [style.font-family]="settings.fontFamily"
                 [style.line-height]="settings.lineHeight" [style.text-align]="settings.textAlign"
                 [style.color]="settings.textColor" style="white-space: pre-wrap; padding: 20px 10px; min-height: 60vh;"
@@ -246,6 +251,13 @@
                 (click)="handleBokClick($event)">
 
                 <div [innerHTML]="outputBokPage"></div>
+
+                <div class="load-more-container" *ngIf="hasMoreBok" style="text-align: center; padding: 20px;">
+                    <button class="load-more-btn" (click)="loadMoreBok()" 
+                            style="background: #c4a062; color: white; border: none; padding: 10px 30px; border-radius: 20px; cursor: pointer; font-family: Cairo; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                        عرض المزيد من الكتاب...
+                    </button>
+                </div>
 
             </div>
         </div>
@@ -261,6 +273,21 @@
                 <i *ngIf="c.isRemove" class="fas fa-eraser"></i>
             </button>
         </div>
+        <!-- Selection Helpers (Expanders) -->
+        <div class="selection-helpers">
+            <!-- Expand start (in RTL Arabic, expanding backwards means expanding to the right) -->
+            <button class="selection-action-btn helper-btn" (click)="expandSelection('start')" title="توسيع البداية">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+            <button class="selection-action-btn sentence-btn" (click)="selectFullSentence()" title="تحديد جملة كاملة">
+                تحديد الجملة
+            </button>
+            <!-- Expand end (in RTL Arabic, expanding forwards means expanding to the left) -->
+            <button class="selection-action-btn helper-btn" (click)="expandSelection('end')" title="توسيع النهاية">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+        </div>
+
         <button class="selection-action-btn" (click)="copySelectedText()" title="نسخ">
             <i class="fas fa-copy"></i>
         </button>
@@ -329,6 +356,40 @@
                 <button class="auth-btn signup" (click)="goToSignup()">إنشاء حساب جديد</button>
                 <button class="auth-btn cancel" (click)="closeAuthPrompt()">ليس الآن</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Auto-Scroll Floating Controls -->
+    <div class="auto-scroll-fab" [class.active]="isAutoScrolling" *ngIf="settings.layoutMode !== 'pages'">
+        <!-- Speed controls (visible when scrolling) -->
+        <div class="auto-scroll-controls" *ngIf="isAutoScrolling">
+            <button class="auto-scroll-btn speed-btn" (click)="decreaseAutoScrollSpeed()" 
+                [disabled]="autoScrollSpeed <= autoScrollMinSpeed" title="أبطأ">
+                <i class="fas fa-minus"></i>
+            </button>
+            <span class="auto-scroll-speed">{{ autoScrollSpeed.toFixed(1) }}x</span>
+            <button class="auto-scroll-btn speed-btn" (click)="increaseAutoScrollSpeed()"
+                [disabled]="autoScrollSpeed >= autoScrollMaxSpeed" title="أسرع">
+                <i class="fas fa-plus"></i>
+            </button>
+        </div>
+        <!-- Play/Pause button -->
+        <button class="auto-scroll-btn toggle-btn" (click)="toggleAutoScroll()" 
+            [title]="isAutoScrolling ? 'إيقاف التمرير التلقائي' : 'تمرير تلقائي'">
+            <i class="fas" [ngClass]="isAutoScrolling ? 'fa-pause' : 'fa-play'"></i>
+        </button>
+    </div>
+
+    <!-- Beautiful Floating Bottom Bar with Page Indicator -->
+    <div class="bottom-page-bar" [class.hidden]="!isControlsVisible" *ngIf="bookType === 'epub' && totalPages > 0">
+        <div class="bottom-page-content">
+            <span class="page-number-text">
+                صفحة <strong class="text-amber-500" style="color: #d8ad42 !important;">{{ currentPage }}</strong> من <strong>{{ totalPages }}</strong>
+            </span>
+            <div class="page-progress-track">
+                <div class="page-progress-fill" [style.width.%]="progressPercent"></div>
+            </div>
+            <span class="progress-percent-text">{{ progressPercent }}%</span>
         </div>
     </div>
 

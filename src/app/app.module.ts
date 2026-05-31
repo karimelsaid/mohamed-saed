@@ -5,20 +5,12 @@ import { AccountModalComponent } from './auth/account-modal/account-modal.compon
 import { RouterModule } from '@angular/router';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
-import { IslamicComponent } from './book-list/islamic/islamic.component';
-import { TatwerComponent } from './book-list/tatwer/tatwer.component';
-import { RewayatComponent } from './book-list/rewayat/rewayat.component';
-import { AamalComponent } from './book-list/aamal/aamal.component';
-import { FitComponent } from './book-list/fit/fit.component';
-import { FenonComponent } from './book-list/fenon/fenon.component';
-import { ChildComponent } from './book-list/child/child.component';
+// Removed redundant category imports
 import { FontAwesomeModule, FaIconLibrary } from '@fortawesome/angular-fontawesome';
 import { fas, faBookOpen } from '@fortawesome/free-solid-svg-icons';
 import { fab, faAmazon } from '@fortawesome/free-brands-svg-icons';
 import { PrintComponent } from './print/print.component'
 import { provideHttpClient, withInterceptorsFromDi, withFetch } from '@angular/common/http';
-import { TarekhComponent } from './book-list/tarekh/tarekh.component';
-import { QamosComponent } from './book-list/qamos/qamos.component';
 import { FormsModule } from '@angular/forms';
 import { SearchResultsComponent } from './search-results/search-results.component';
 import { HomePageComponent } from './home-page/home-page.component';
@@ -41,7 +33,6 @@ import { UniversalInterceptor } from './interceptors/universal.interceptor';
 import { AdminModule } from './admin/admin.module';
 import { MerchantDashboardComponent } from './merchant/dashboard/dashboard.component';
 import { TutorialComponent } from './shared/tutorial/tutorial.component';
-import { OfficeSuppliesComponent } from './book-list/office-supplies/office-supplies.component';
 import { BooksComponent } from './book-list/books/books.component';
 import { HowToEarnComponent } from './pages/how-to-earn/how-to-earn.component';
 import { ServiceWorkerModule } from '@angular/service-worker';
@@ -55,20 +46,10 @@ import { LiveUpdateModalComponent } from './shared/components/live-update-modal/
 @NgModule({
   declarations: [
     AppComponent,
-    IslamicComponent,
-    TatwerComponent,
-    RewayatComponent,
-    AamalComponent,
-    FitComponent,
-    FenonComponent,
-    ChildComponent,
-    TarekhComponent,
-    QamosComponent,
     SearchResultsComponent,
     HomePageComponent,
     FavoritesComponent,
     ChatWindowComponent,
-    OfficeSuppliesComponent,
     BooksComponent,
 
     HowToEarnComponent,
@@ -92,7 +73,7 @@ import { LiveUpdateModalComponent } from './shared/components/live-update-modal/
     AccountModalComponent,
     VoiceCallComponent,
     ServiceWorkerModule.register('ngsw-worker.js', {
-      enabled: true, // Force enabled for testing Browser Notifications in Dev Mode
+      enabled: !isDevMode(), // Disable in Dev Mode to avoid stale design caching
       // Register the ServiceWorker as soon as the application is stable
       // or after 30 seconds (whichever comes first).
       registrationStrategy: 'registerImmediately'

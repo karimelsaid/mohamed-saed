@@ -28,7 +28,8 @@ const userSchema = new mongoose.Schema({
   isSheikh: { type: Boolean, default: false }, // للمقرئين المعتمدين
 
   // حقول التاجر الجديدة
-  role: { type: String, required: true, default: 'user', enum: ['user', 'merchant', 'admin'] },
+  role: { type: String, required: true, default: 'user', enum: ['user', 'merchant', 'admin', 'staff', 'marketer'] },
+  permissions: [{ type: String }], // e.g., ['orders', 'products', 'notifications', 'marketing']
   taxNumber: { type: String },
   logo: { type: String },
   profileImage: { type: String, default: null }, // صورة الملف الشخصي
@@ -42,6 +43,47 @@ const userSchema = new mongoose.Schema({
   averageRating: { type: Number, default: 0 },
   ratingCount: { type: Number, default: 0 },
   totalSales: { type: Number, default: 0 },
+
+  // --- نظام المسوقين (Marketers) ---
+  marketer: {
+    isMarketer: { type: Boolean, default: false },
+    applicationStatus: { type: String, enum: ['none', 'pending', 'approved', 'rejected'], default: 'none' },
+    bio: { type: String }, // نبذة عن المسوق عند التقديم
+    applicationDate: { type: Date },
+    rejectionReason: { type: String },
+    commissionRate: { type: Number, default: 10 }, // نسبة الربح الأساسية (%)
+    balance: { type: Number, default: 0 },         // الرصيد الحالي القابل للسحب
+    totalEarnings: { type: Number, default: 0 },   // إجمالي الأرباح التاريخية
+    level: { type: Number, default: 1 },           // مستوى المسوق
+    levelLabel: { type: String, default: 'مسوق مبتدئ' },
+    points: { type: Number, default: 0 },          // نقاط التقدم للمسوق
+    ordersCount: { type: Number, default: 0 },     // عدد الأوردرات الناجحة
+    clicksCount: { type: Number, default: 0 },     // عدد النقرات على روابطه
+    tasks: [{
+      title: String,
+      description: String,
+      target: Number,
+      current: { type: Number, default: 0 },
+      reward: Number, // قيمة الجائزة المالية
+      status: { type: String, enum: ['active', 'completed', 'claimed'], default: 'active' },
+      deadline: Date,
+      targetId: String, // ID of the book or target
+      targetType: { type: String, enum: ['book', 'category', 'home'], default: 'book' }
+    }],
+    prizes: [{
+      title: String,
+      value: String,
+      type: { type: String, enum: ['cash', 'gift', 'rank_up'] },
+      claimed: { type: Boolean, default: false },
+      date: { type: Date, default: Date.now }
+    }],
+    referralLinks: [{
+      targetId: String,
+      targetType: { type: String, enum: ['book', 'category', 'home'] },
+      shortCode: String,
+      clicks: { type: Number, default: 0 }
+    }]
+  },
 
   // حقول الاشتراك في الكتب الإلكترونية
   activeSubscription: { type: Boolean, default: false },
@@ -122,7 +164,9 @@ const userSchema = new mongoose.Schema({
     communityOwnerName: { type: String },
     communityOwnerPhone: { type: String },
     communityOwnerAddress: { type: String },
-    shippingMethod: { type: String, enum: ['merchant', 'knoozbook'], default: 'knoozbook' } // طريقة الشحن لهذا الطلب
+    shippingMethod: { type: String, enum: ['merchant', 'knoozbook'], default: 'knoozbook' }, // طريقة الشحن لهذا الطلب
+    referredByMarketer: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // تتبع الطلب لمسوق
+    marketerCommission: { type: Number, default: 0 } // عمولة المسوق لهذا الطلب
   }],
   requestedBooks: [{
     bookName: { type: String, required: true },

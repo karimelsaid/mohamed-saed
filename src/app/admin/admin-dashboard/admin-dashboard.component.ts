@@ -34,6 +34,8 @@ import { AdminApiService } from '../../services/admin-api.service';
 import { AdminBourseSettingsComponent } from '../admin-bourse-settings/admin-bourse-settings.component';
 import { AdminAutomationComponent } from '../admin-automation/admin-automation.component';
 import { AdminService } from '../../services/admin.service';
+import { MarketerManagementComponent } from '../marketer-management/marketer-management.component';
+import { SpecialOffersManagerComponent } from '../special-offers-manager/special-offers-manager.component';
 
 interface Order {
   _id: string;
@@ -248,7 +250,7 @@ interface SystemSettings {
   };
 }
 
-export type AdminView = 'dashboard' | 'userIntelligence' | 'orders' | 'requestedBooks' | 'printOrders' | 'printingSettings' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' | 'gamificationControl' | 'notifications' | 'subscriptionControl' | 'readerFeedback' | 'promotions' | 'salesRegistration' | 'shortagesReport' | 'promotionDates' | 'salesHistory' | 'community' | 'bourseSettings' | 'automation' | 'newsletter';
+export type AdminView = 'dashboard' | 'userIntelligence' | 'orders' | 'requestedBooks' | 'printOrders' | 'printingSettings' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'staff' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' | 'gamificationControl' | 'notifications' | 'subscriptionControl' | 'readerFeedback' | 'promotions' | 'salesRegistration' | 'shortagesReport' | 'promotionDates' | 'salesHistory' | 'community' | 'bourseSettings' | 'automation' | 'newsletter' | 'marketers' | 'specialOffers';
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -275,7 +277,9 @@ export type AdminView = 'dashboard' | 'userIntelligence' | 'orders' | 'requested
     PromotionDatesComponent,
     SalesHistoryComponent,
     AdminBourseSettingsComponent,
-    AdminAutomationComponent
+    AdminAutomationComponent,
+    MarketerManagementComponent,
+    SpecialOffersManagerComponent
   ],
   templateUrl: './admin-dashboard.component.html',
   styleUrls: ['./admin-dashboard.component.css']
@@ -286,9 +290,68 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   requestedBooks: RequestedBook[] = [];
   allRequestedBooks: RequestedBook[] = [];
   feedbacks: ReaderFeedback[] = [];
-  isAdmin: boolean = false; // Add paymentRequests to the type union
+  staffMembers: any[] = [];
+  staffSearchEmail: string = '';
+  isPromotingStaff: boolean = false;
+  
+  get allViewsList(): {id: string, title: string}[] {
+    return Object.keys(this.viewTitles).map(id => ({ id, title: this.viewTitles[id as AdminView] }));
+  }
+
+  permissionGroups = [
+    {
+      name: 'المخزون والمنتجات',
+      icon: 'box',
+      views: ['addProduct', 'products', 'productApproval', 'amazonCalculator', 'ebooks']
+    },
+    {
+      name: 'المبيعات والطلبات',
+      icon: 'shopping-cart',
+      views: ['orders', 'merchantOrders', 'requestedBooks', 'printOrders', 'salesRegistration', 'salesHistory', 'urgencyRequests']
+    },
+    {
+      name: 'إعدادات المنصة والأسعار',
+      icon: 'cog',
+      views: ['printingSettings', 'freeShippingRules', 'mobileVersion', 'gamificationControl', 'notifications', 'subscriptionControl', 'promotionDates', 'bourseSettings', 'automation', 'specialOffers']
+    },
+    {
+      name: 'المستخدمين والتجار والمسوقين',
+      icon: 'users',
+      views: ['userIntelligence', 'merchants', 'staff', 'userHierarchy', 'paymentRequests', 'newsletter', 'marketers']
+    },
+    {
+      name: 'المحتوى والمجتمع',
+      icon: 'comments',
+      views: ['newPage', 'readerFeedback', 'community']
+    }
+  ];
+
+  toggleGroupPermissions(staff: any, groupViews: string[]): void {
+    const currentPermissions = [...(staff.permissions || [])];
+    const allSelected = groupViews.every(v => currentPermissions.includes(v));
+    
+    let newPermissions: string[];
+    if (allSelected) {
+      // Deselect all in group
+      newPermissions = currentPermissions.filter(v => !groupViews.includes(v));
+    } else {
+      // Select all in group
+      newPermissions = Array.from(new Set([...currentPermissions, ...groupViews]));
+    }
+
+    this.http.patch<any>(`${this.backendBaseUrl}/admin/staff/permissions`, { userId: staff._id, permissions: newPermissions }).subscribe({
+      next: res => {
+        if (res.success) {
+          staff.permissions = newPermissions;
+        }
+      }
+    });
+  }
+
+  isAdmin: boolean = false; 
+
   showSidebar: boolean = true;
-  currentView: AdminView = 'userIntelligence'; // Defaulting to the new view to test it
+  currentView: AdminView = 'userIntelligence'; 
 
   // Gamification Control Properties
   systemSettings: SystemSettings = {
@@ -763,6 +826,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     'newPage': 'إنشاء صفحة مقالية',
     'freeShippingRules': 'مصاريف الشحن',
     'merchants': 'إدارة التجار',
+    'staff': 'إدارة الموظفين',
     'productApproval': 'اعتماد المنتجات',
     'paymentRequests': 'سحب الأرباح',
     'userHierarchy': 'شجرة العائلة (المسوقين)',
@@ -781,12 +845,28 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     'community': 'إدارة التبادلات والمزادات',
     'bourseSettings': 'إعدادات بورصة الكتب',
     'automation': 'نظام الأتمتة والذكاء',
-    'newsletter': 'القائمة البريدية'
+    'newsletter': 'القائمة البريدية',
+    'marketers': 'إدارة المسوقين العملاء',
+    'specialOffers': 'إدارة العروض الخاصة (Emails)'
   };
 
   // Global Navigation Search
   navSearchTerm: string = '';
   showNavResults: boolean = false;
+
+  get currentUserRole(): string {
+    return this.authService.currentUserValue?.role || 'user';
+  }
+
+  hasPermission(view: string): boolean {
+    const user = this.authService.currentUserValue;
+    if (!user) return false;
+    if (user.role === 'admin') return true;
+    if (user.role === 'staff') {
+      return user.permissions?.includes(view) || false;
+    }
+    return false;
+  }
 
   get filteredNavViews() {
     if (!this.navSearchTerm.trim()) return [];
@@ -1148,6 +1228,84 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   };
 
   // Reverse map from full category name to short key
+  allCategories: string[] = [];
+  isAddingNewCategory: boolean = false;
+  newCategoryName: string = '';
+
+  loadCategories(): void {
+    // Initial merge of hardcoded categories
+    const initialCategories = [...this.categories, ...this.bookSubCategories, ...this.mainCategories];
+    this.allCategories = [...new Set(initialCategories)];
+
+    this.dataService.getCategories().subscribe({
+      next: (res: any) => {
+        if (res && res.success) {
+          // Merge with API categories and ensure uniqueness
+          const combined = [...this.allCategories, ...res.categories];
+          this.allCategories = [...new Set(combined)].sort();
+        }
+      },
+      error: (err) => console.error('Error loading categories:', err)
+    });
+  }
+
+  onCategoryChange(event: any): void {
+    const value = event.target.value;
+    if (value === 'NEW_CATEGORY') {
+      this.isAddingNewCategory = true;
+      this.product.product_category = '';
+    } else {
+      this.isAddingNewCategory = false;
+      this.product.product_category = value;
+    }
+  }
+
+  onBulkDefaultCategoryChange(event: any): void {
+    const value = event.target.value;
+    if (value === 'NEW_CATEGORY') {
+      this.isBulkAddingNewCategory = true;
+      this.bulkDefaultCategory = '';
+    } else {
+      this.isBulkAddingNewCategory = false;
+      this.bulkDefaultCategory = value;
+    }
+  }
+
+  cancelBulkNewCategory(): void {
+    this.isBulkAddingNewCategory = false;
+    this.bulkNewCategoryName = '';
+    this.bulkDefaultCategory = 'كتب';
+  }
+
+  confirmBulkNewCategory(): void {
+    if (this.bulkNewCategoryName.trim()) {
+      const newCat = this.bulkNewCategoryName.trim();
+      if (!this.allCategories.includes(newCat)) {
+        this.allCategories.push(newCat);
+      }
+      this.bulkDefaultCategory = newCat;
+      this.isBulkAddingNewCategory = false;
+      this.bulkNewCategoryName = '';
+    }
+  }
+
+  cancelNewCategory(): void {
+    this.isAddingNewCategory = false;
+    this.newCategoryName = '';
+    this.product.product_category = '';
+  }
+
+  confirmNewCategory(): void {
+    if (this.newCategoryName.trim()) {
+      const newCat = this.newCategoryName.trim();
+      if (!this.allCategories.includes(newCat)) {
+        this.allCategories.push(newCat);
+      }
+      this.product.product_category = newCat;
+      this.isAddingNewCategory = false;
+      this.newCategoryName = '';
+    }
+  }
   categoryReverseMap: { [key: string]: string } = {
     'روايات وقصص': 'رواية',
     'تطوير الذات وعلم النفس': 'تنمية',
@@ -1195,11 +1353,17 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   selectedMerchantId: string = '';
   selectedPublisher: string = '';
   bulkDefaultCategory: string = 'كتب';
+  isBulkAddingNewCategory: boolean = false;
+  bulkNewCategoryName: string = '';
   bulkImportType: 'admin' | 'merchant' | 'publisher' = 'admin';
   importingBulk = false;
   bulkImportProgress = 0;
   bulkImportSuccess = false;
   parsedBulkData: any[] = [];
+  
+  // Category Mapping from Excel values to System categories
+  detectedExcelCategories: string[] = [];
+  categoryValueMapping: { [key: string]: string } = {};
   
   // Available system fields for mapping
   systemFields = [
@@ -1254,12 +1418,15 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.authService.user$.subscribe(user => {
-      if (user && user.email === 'admin@example.com' && user.role === 'admin') {
+      console.log('🏁 [AdminDashboard] User state updated:', user?.role);
+      if (user && (user.role === 'admin' || user.role === 'staff')) {
+        console.log('🚀 [AdminDashboard] Access approved for role:', user.role);
         this.isAdmin = true;
         this.loadOrders();
         this.loadNotifications();
         this.loadStats();
         this.loadSystemSettings(); // Load settings on init
+        this.loadCategories();
       } else {
         this.isAdmin = false;
         this.router.navigate(['/']);
@@ -1280,6 +1447,9 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
     // Initialize filter options
     this.filterOptions = ['جميع الفئات', ...this.categories];
+
+    // Merge hardcoded categories into allCategories initially
+    this.allCategories = [...new Set([...this.categories, ...this.bookSubCategories])];
 
     // Initialize Mobile Version Data (Default structure)
     this.mobileVersionConfig = {
@@ -1304,6 +1474,14 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   }
 
   switchView(view: AdminView): void {
+    if (!this.hasPermission(view)) {
+      this.modalService.openModal({
+        title: 'وصول مرفوض',
+        message: 'ليس لديك الصلاحية للوصول لهذه الصفحة.',
+        type: 'error'
+      });
+      return;
+    }
     this.currentView = view;
 
     if (view === 'dashboard') {
@@ -1351,7 +1529,71 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       // PromotionDatesComponent handles its own loading
     } else if (view === 'community') {
       this.fetchCommunityStats();
+    } else if (view === 'staff') {
+      this.loadStaff();
     }
+  }
+
+  loadStaff(): void {
+    this.http.get<any>(`${this.backendBaseUrl}/admin/staff`).subscribe({
+      next: res => {
+        if (res.success) {
+          this.staffMembers = res.staff;
+        }
+      },
+      error: err => console.error('Error loading staff:', err)
+    });
+  }
+
+  promoteToStaff(): void {
+    if (!this.staffSearchEmail) return;
+    this.isPromotingStaff = true;
+    this.http.post<any>(`${this.backendBaseUrl}/admin/staff/promote`, { email: this.staffSearchEmail }).subscribe({
+      next: res => {
+        this.isPromotingStaff = false;
+        if (res.success) {
+          this.loadStaff();
+          this.staffSearchEmail = '';
+          this.modalService.openModal({ title: 'نجاح', message: res.message, type: 'success' });
+        } else {
+          this.modalService.openModal({ title: 'خطأ', message: res.message, type: 'error' });
+        }
+      },
+      error: err => {
+        this.isPromotingStaff = false;
+        this.modalService.openModal({ title: 'خطأ', message: err.error?.message || 'فشل في ترقية المستخدم', type: 'error' });
+      }
+    });
+  }
+
+  demoteFromStaff(userId: string): void {
+    if (!confirm('هل أنت متأكد من سحب صلاحيات الموظف من هذا المستخدم؟')) return;
+    this.http.post<any>(`${this.backendBaseUrl}/admin/staff/demote`, { userId }).subscribe({
+      next: res => {
+        if (res.success) {
+          this.loadStaff();
+          this.modalService.openModal({ title: 'نجاح', message: res.message, type: 'success' });
+        }
+      }
+    });
+  }
+
+  togglePermission(staff: any, viewId: string): void {
+    const permissions = [...(staff.permissions || [])];
+    const index = permissions.indexOf(viewId);
+    if (index > -1) {
+      permissions.splice(index, 1);
+    } else {
+      permissions.push(viewId);
+    }
+    
+    this.http.patch<any>(`${this.backendBaseUrl}/admin/staff/permissions`, { userId: staff._id, permissions }).subscribe({
+      next: res => {
+        if (res.success) {
+          staff.permissions = permissions;
+        }
+      }
+    });
   }
 
   // --- Mobile Version Control ---
@@ -2316,6 +2558,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
         this.parsedBulkData = XLSX.utils.sheet_to_json(sheet);
         // Auto-mapping based on similarity
         this.autoMapFields();
+        // Analyze categories
+        this.detectCategoriesFromExcel();
       }
     };
     reader.readAsBinaryString(this.bulkFile);
@@ -2357,6 +2601,30 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       );
       if (match) {
         this.fieldMapping[field.key] = match;
+      }
+    });
+  }
+
+  detectCategoriesFromExcel(): void {
+    const categoryField = this.fieldMapping['product_category'];
+    if (!categoryField) {
+      this.detectedExcelCategories = [];
+      return;
+    }
+
+    const excelCategories = [...new Set(this.parsedBulkData.map((row: any) => row[categoryField]).filter(Boolean))];
+    this.detectedExcelCategories = excelCategories.map(c => String(c).trim());
+    
+    // Auto-map existing categories if they match exactly
+    this.detectedExcelCategories.forEach(excelCat => {
+      if (!this.categoryValueMapping[excelCat]) {
+        const match = this.allCategories.find(c => c.toLowerCase() === excelCat.toLowerCase());
+        if (match) {
+          this.categoryValueMapping[excelCat] = match;
+        } else {
+          // Default to current default or leave for user
+          this.categoryValueMapping[excelCat] = '';
+        }
       }
     });
   }
@@ -2403,22 +2671,28 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
         product.product_quantity = 2;
       }
       
-      // Fuzzy match category if provided
+      // Map category from Excel value to System category
       if (product.product_category) {
-        const providedCat = product.product_category.trim().toLowerCase();
-        // Try to find a match in the system categories list
-        const foundMatch = this.categories.find(c => 
-          c.toLowerCase() === providedCat || 
-          providedCat.includes(c.toLowerCase()) || 
-          c.toLowerCase().includes(providedCat)
-        );
-        if (foundMatch) {
-          product.product_category = foundMatch;
+        const excelVal = String(product.product_category).trim();
+        if (this.categoryValueMapping[excelVal]) {
+          product.product_category = this.categoryValueMapping[excelVal];
+        } else {
+          // Fuzzy match if no explicit mapping
+          const providedCat = excelVal.toLowerCase();
+          const foundMatch = [...this.allCategories, ...this.categories].find(c => 
+            c.toLowerCase() === providedCat || 
+            providedCat.includes(c.toLowerCase()) || 
+            c.toLowerCase().includes(providedCat)
+          );
+          if (foundMatch) {
+            product.product_category = foundMatch;
+          }
         }
       }
 
-      // Set default category if missing or still not in our list
-      if (!product.product_category || !this.categories.includes(product.product_category)) {
+      // Final fallback to default category if missing or still not in our lists
+      const currentAvailableCats = [...this.allCategories, ...this.categories, ...this.bookSubCategories];
+      if (!product.product_category || !currentAvailableCats.includes(product.product_category)) {
         product.product_category = this.bulkDefaultCategory;
       }
       

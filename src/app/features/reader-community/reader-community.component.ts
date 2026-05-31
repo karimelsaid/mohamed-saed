@@ -132,12 +132,30 @@ export class ReaderCommunityComponent implements OnInit {
                 this.userId = '';
                 this.userName = '';
             }
+
+            // Check both route path and query parameters
+            const currentPath = this.router.url;
+            if (currentPath.includes('/exchange')) {
+                this.activeSection = 'exchange';
+            } else if (currentPath.includes('/auctions')) {
+                this.activeSection = 'auctions';
+            } else {
+                // Fallback to query params if on generic /reader-community
+                const sectionParam = this.route.snapshot.queryParamMap.get('section');
+                if (sectionParam === 'exchange' || sectionParam === 'auctions' || sectionParam === 'feed') {
+                    this.activeSection = sectionParam as any;
+                }
+            }
+
             this.loadActiveSection();
         });
     }
 
     switchSection(section: 'feed' | 'exchange' | 'auctions') {
         this.activeSection = section;
+        // Update URL to match section for better UX and SEO
+        const newPath = section === 'feed' ? '/reader-community' : `/${section}`;
+        this.location.replaceState(newPath);
         this.loadActiveSection();
     }
 

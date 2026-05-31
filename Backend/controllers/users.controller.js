@@ -248,7 +248,7 @@ async function login(req, res) {
         username: user.username,
         email: user.email,
         phone: user.phone,
-        role: user.role,
+        role: (user.marketer && user.marketer.applicationStatus === 'approved') ? 'marketer' : user.role,
         gender: user.gender,
         governorate: user.governorate,
         city: user.city,
@@ -258,6 +258,38 @@ async function login(req, res) {
         quranProgress: user.quranProgress,
         gamification: user.gamification,
         earnedCoupons: filterActiveCoupons(user.earnedCoupons),
+        permissions: (user.marketer && user.marketer.applicationStatus === 'approved' && !(user.permissions || []).includes('marketing')) 
+          ? [...(user.permissions || []), 'marketing'] 
+          : (user.permissions || []),
+        marketer: user.marketer ? {
+          isMarketer: user.marketer.isMarketer || false,
+          applicationStatus: user.marketer.applicationStatus || 'none',
+          commissionRate: user.marketer.commissionRate || 10,
+          balance: user.marketer.balance || 0,
+          totalEarnings: user.marketer.totalEarnings || 0,
+          level: user.marketer.level || 1,
+          levelLabel: user.marketer.levelLabel || 'مسوق مبتدئ',
+          points: user.marketer.points || 0,
+          ordersCount: user.marketer.ordersCount || 0,
+          clicksCount: user.marketer.clicksCount || 0,
+          tasks: user.marketer.tasks || [],
+          prizes: user.marketer.prizes || [],
+          referralLinks: user.marketer.referralLinks || []
+        } : {
+          isMarketer: false,
+          applicationStatus: 'none',
+          commissionRate: 10,
+          balance: 0,
+          totalEarnings: 0,
+          level: 1,
+          levelLabel: 'مسوق مبتدئ',
+          points: 0,
+          ordersCount: 0,
+          clicksCount: 0,
+          tasks: [],
+          prizes: [],
+          referralLinks: []
+        },
         token: token
       }
     });
@@ -338,7 +370,7 @@ async function getUserData(req, res) {
         username: user.username,
         email: user.email,
         phone: user.phone,
-        role: user.role,
+        role: (user.marketer && user.marketer.applicationStatus === 'approved') ? 'marketer' : user.role,
         gender: user.gender,
         governorate: user.governorate,
         city: user.city,
@@ -354,7 +386,40 @@ async function getUserData(req, res) {
         coverPhoto: user.coverPhoto,
         quranProgress: user.quranProgress,
         gamification: user.gamification,
-        earnedCoupons: filterActiveCoupons(user.earnedCoupons)
+        earnedCoupons: filterActiveCoupons(user.earnedCoupons),
+        isMarketer: (user.marketer && user.marketer.applicationStatus === 'approved') || user.role === 'admin' || user.role === 'staff',
+        permissions: (user.marketer && user.marketer.applicationStatus === 'approved' && !(user.permissions || []).includes('marketing')) 
+          ? [...(user.permissions || []), 'marketing'] 
+          : (user.permissions || []),
+        marketer: user.marketer ? {
+          isMarketer: user.marketer.isMarketer || false,
+          applicationStatus: user.marketer.applicationStatus || 'none',
+          commissionRate: user.marketer.commissionRate || 10,
+          balance: user.marketer.balance || 0,
+          totalEarnings: user.marketer.totalEarnings || 0,
+          level: user.marketer.level || 1,
+          levelLabel: user.marketer.levelLabel || 'مسوق مبتدئ',
+          points: user.marketer.points || 0,
+          ordersCount: user.marketer.ordersCount || 0,
+          clicksCount: user.marketer.clicksCount || 0,
+          tasks: user.marketer.tasks || [],
+          prizes: user.marketer.prizes || [],
+          referralLinks: user.marketer.referralLinks || []
+        } : {
+          isMarketer: false,
+          applicationStatus: 'none',
+          commissionRate: 10,
+          balance: 0,
+          totalEarnings: 0,
+          level: 1,
+          levelLabel: 'مسوق مبتدئ',
+          points: 0,
+          ordersCount: 0,
+          clicksCount: 0,
+          tasks: [],
+          prizes: [],
+          referralLinks: []
+        }
       }
     });
   } catch (error) {
@@ -389,7 +454,40 @@ async function getUserProfile(req, res) {
       coverPhoto: user.coverPhoto,
       quranProgress: user.quranProgress,
       gamification: user.gamification,
-      earnedCoupons: filterActiveCoupons(user.earnedCoupons)
+      role: (user.marketer && user.marketer.applicationStatus === 'approved') ? 'marketer' : user.role,
+      permissions: (user.marketer && user.marketer.applicationStatus === 'approved' && !(user.permissions || []).includes('marketing')) 
+        ? [...(user.permissions || []), 'marketing'] 
+        : (user.permissions || []),
+      earnedCoupons: filterActiveCoupons(user.earnedCoupons),
+      marketer: user.marketer ? {
+        isMarketer: user.marketer.isMarketer || false,
+        applicationStatus: user.marketer.applicationStatus || 'none',
+        commissionRate: user.marketer.commissionRate || 10,
+        balance: user.marketer.balance || 0,
+        totalEarnings: user.marketer.totalEarnings || 0,
+        level: user.marketer.level || 1,
+        levelLabel: user.marketer.levelLabel || 'مسوق مبتدئ',
+        points: user.marketer.points || 0,
+        ordersCount: user.marketer.ordersCount || 0,
+        clicksCount: user.marketer.clicksCount || 0,
+        tasks: user.marketer.tasks || [],
+        prizes: user.marketer.prizes || [],
+        referralLinks: user.marketer.referralLinks || []
+      } : {
+        isMarketer: false,
+        applicationStatus: 'none',
+        commissionRate: 10,
+        balance: 0,
+        totalEarnings: 0,
+        level: 1,
+        levelLabel: 'مسوق مبتدئ',
+        points: 0,
+        ordersCount: 0,
+        clicksCount: 0,
+        tasks: [],
+        prizes: [],
+        referralLinks: []
+      }
     });
   } catch (error) {
     console.error('GetUserProfile Error:', error);

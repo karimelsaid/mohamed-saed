@@ -16,10 +16,14 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-    if (file.mimetype === 'application/epub+zip' || path.extname(file.originalname).toLowerCase() === '.epub') {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const isEpub = file.mimetype === 'application/epub+zip' || ext === '.epub';
+    const isImage = ['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype) || ['.jpg', '.jpeg', '.png', '.webp'].includes(ext);
+    
+    if (isEpub || isImage) {
         cb(null, true);
     } else {
-        cb(new Error('يجب أن يكون الملف بصيغة EPUB فقط'), false);
+        cb(new Error('يجب أن يكون الملف بصيغة EPUB أو صورة (JPG, PNG, WebP)'), false);
     }
 };
 
@@ -28,6 +32,11 @@ const upload = multer({
     fileFilter: fileFilter,
     limits: { fileSize: 50 * 1024 * 1024 } // 50MB max
 });
+
+const ebookUploadFields = upload.fields([
+    { name: 'epubFile', maxCount: 1 },
+    { name: 'coverImage', maxCount: 1 }
+]);
 
 // Middleware to verify authentication (you should have this already)
 const verifyToken = require('../middleware/auth.middleware');
@@ -44,8 +53,9 @@ router.get('/:ebookId/check-access', verifyToken, ebookController.checkAccess);
 
 // Admin routes (require admin role)
 const verifyAdmin = require('../middleware/admin.middleware');
-router.post('/', verifyToken, verifyAdmin, upload.single('epubFile'), ebookController.createEbook);
-router.put('/:id', verifyToken, verifyAdmin, upload.single('epubFile'), ebookController.updateEbook);
+router.post('/reindex-pages', verifyToken, verifyAdmin, ebookController.reindexPages);
+router.post('/', verifyToken, verifyAdmin, ebookUploadFields, ebookController.createEbook);
+router.put('/:id', verifyToken, verifyAdmin, ebookUploadFields, ebookController.updateEbook);
 router.delete('/:id', verifyToken, verifyAdmin, ebookController.deleteEbook);
 
 module.exports = router;

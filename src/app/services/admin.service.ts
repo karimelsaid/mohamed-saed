@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { catchError, tap } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 
 @Injectable({
@@ -142,6 +142,62 @@ export class AdminService {
 
   updateEconomySettings(settings: any): Observable<any> {
     return this.http.patch(`${this.apiUrl}/economy-settings`, settings).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  // Marketers
+  listMarketers(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/marketers`).pipe(
+      tap(res => console.log('📊 [ADMIN_SERVICE] Marketers received:', res)),
+      catchError(this.handleError)
+    );
+  }
+
+  promoteToMarketer(email: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/marketers/promote`, { email }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  updateMarketerConfig(userId: string, config: any): Observable<any> {
+    return this.http.patch(`${this.apiUrl}/marketers/${userId}/config`, config).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  assignMarketerTask(userId: string, task: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}/marketers/${userId}/tasks`, task).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  addMarketerPrize(marketerId: string, prize: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}/marketers/prizes/add`, { marketerId, ...prize }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  removeMarketerPrize(marketerId: string, prizeId: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/marketers/prizes/remove`, { marketerId, prizeId }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  getGlobalPrizes(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/marketers/global-prizes`).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  addGlobalPrize(prize: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}/marketers/global-prizes/add`, prize).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  removeGlobalPrize(prizeId: string): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/marketers/global-prizes/${prizeId}`).pipe(
       catchError(this.handleError)
     );
   }

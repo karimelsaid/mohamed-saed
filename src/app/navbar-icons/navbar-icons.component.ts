@@ -2,7 +2,7 @@ import { Component, OnInit, ViewChild, ChangeDetectorRef, Output, EventEmitter, 
 import { isPlatformBrowser } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive, NavigationEnd } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { faBars, faClose, faHome, faBook, faFilePdf, faUser, faChevronUp, faChevronDown, faSearch, faHeart, faCartPlus, faClipboardList, faTachometerAlt, faBell, faTrash, faStore, faFilter, faExpand, faBookReader, faCoins, faBookQuran, faUsers } from '@fortawesome/free-solid-svg-icons';
+import { faBars, faClose, faHome, faBook, faFilePdf, faUser, faChevronUp, faChevronDown, faSearch, faHeart, faCartPlus, faClipboardList, faTachometerAlt, faBell, faTrash, faStore, faFilter, faExpand, faBookReader, faCoins, faBookQuran, faUsers, faChartLine } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { AuthService } from '../auth/auth.service';
 import { MerchantAuthService } from '../services/merchant-auth.service';
@@ -46,6 +46,7 @@ export class NavbarIconsComponent implements OnInit {
   faCoins = faCoins;
   faBookQuran = faBookQuran;
   faUsers = faUsers;
+  faChartLine = faChartLine;
 
   openBars = false;
   scrollBook = true;
@@ -60,6 +61,8 @@ export class NavbarIconsComponent implements OnInit {
   orderCount: number = 0;
   isAdmin: boolean = false;
   isMerchant: boolean = false; // New property for merchant check
+  isMarketer: boolean = false;
+  user: any = null;
 
   showAccountModal: boolean = false;
 
@@ -96,9 +99,11 @@ export class NavbarIconsComponent implements OnInit {
     }
     // Check both AuthService and MerchantAuthService for user state
     this.authService.user$.subscribe((user) => {
+      this.user = user;
       this.isLoggedIn = !!user;
-      this.isAdmin = user?.email === 'admin@example.com';
+      this.isAdmin = user?.email === 'admin@example.com' || user?.role === 'admin' || user?.role === 'staff';
       this.isMerchant = user?.role === 'merchant'; // Set merchant flag from regular user
+      this.isMarketer = !!user && user.role !== 'merchant'; // Allow logged-in users to see and apply
 
       if (user && user.id) {
         this.authService.loadUserData(user.id);

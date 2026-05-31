@@ -82,7 +82,7 @@ const systemSettingsSchema = mongoose.Schema({
         orderQuantities: { type: Map, of: Number, default: {} } // products_id -> quantity
     },
     heroConfig: {
-        mode: { type: String, enum: ['slider', 'scrolling'], default: 'slider' },
+        mode: { type: String, enum: ['slider', 'scrolling'], default: 'scrolling' },
         columnCount: { type: Number, default: 4 },
         scrollingSpeed: { type: String, default: 'fast' } // 'slow', 'medium', 'fast'
     }

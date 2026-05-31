@@ -7,8 +7,18 @@ const Referral = require('../models/Referral.model');
 const Coupon = require('../models/Coupon.model');
 const Auction = require('../models/Auction.model');
 const BookSwap = require('../models/BookSwap.model');
+const isProduction = process.env.NODE_ENV === 'production';
+
+exports.pingOrders = (req, res) => {
+  res.json({ success: true, message: 'Orders API is reachable', version: 'V3-DEBUG' });
+};
 
 exports.submitOrder = async (req, res) => {
+  console.log('📦 [SubmitOrder] Request received:', { 
+    userId: req.body.userId, 
+    referralCode: req.body.referralCode,
+    productsCount: req.body.products?.length 
+  });
   try {
     const { userId, products, totalAmount, shippingCost, preparationTime: reqPreparationTime, merchantId, isPickup, pickupLocation, isPostOffice, referralCode, bookId, address, bourseOfferId } = req.body;
 
@@ -140,10 +150,55 @@ exports.submitOrder = async (req, res) => {
       }]
     };
 
+    // --- Marketer Attribution ---
+    console.log('🚀 [MARKETER_DEBUG_START] referralCode field value:', referralCode);
+    if (referralCode) {
+      console.log(`🔍 [SubmitOrder] Searching for marketer with: ${referralCode}`);
+      
+      // Try finding by referralCode OR _id (in case frontend sends ID)
+      let query = { referralCode: { $regex: new RegExp('^' + referralCode + '$', 'i') } };
+      if (mongoose.Types.ObjectId.isValid(referralCode)) {
+        query = { $or: [query, { _id: referralCode }] };
+      }
+
+      const marketer = await User.findOne(query);
+      
+      if (marketer) {
+        console.log(`👤 [SubmitOrder] Found marketer: ${marketer.username} (${marketer._id})`);
+        if (marketer._id.toString() === userId.toString()) {
+           console.warn(`⚠️ [SubmitOrder] Attribution skipped: User is the marketer themselves.`);
+        } else {
+           // Ensure marketer object and role are set correctly
+           if (!marketer.marketer) marketer.marketer = { isMarketer: true };
+           
+           newOrder.referredByMarketer = marketer._id;
+           
+           // Use subTotal (items price) for commission if available, else totalAmount
+           const commissionBase = totalAmount - (shippingCost || 0);
+           const rate = (marketer.marketer && marketer.marketer.commissionRate) || 10;
+           newOrder.marketerCommission = (commissionBase * rate) / 100;
+           
+           console.log(`💰 [SubmitOrder] Calculated Commission: ${newOrder.marketerCommission} (Base: ${commissionBase}, Rate: ${rate}%)`);
+
+           // Update marketer stats
+           if (!marketer.marketer.ordersCount) marketer.marketer.ordersCount = 0;
+           marketer.marketer.ordersCount += 1;
+           
+           await marketer.save();
+           console.log(`✅ [SubmitOrder] Marketer stats updated. New Order Count: ${marketer.marketer.ordersCount}`);
+        }
+      } else {
+        console.error(`❌ [SubmitOrder] Marketer NOT found for code: ${referralCode}`);
+      }
+    } else {
+      console.log(`ℹ️ [SubmitOrder] No referralCode in request body.`);
+    }
+
     user.orders.push(newOrder);
     // Clear user cart after successful order placement
     user.cart = [];
     await user.save();
+    console.log('✅ [SubmitOrder] User saved successfully. Order count:', user.orders.length);
 
     // Get the _id of the newly added order subdocument
     const addedOrder = user.orders[user.orders.length - 1];
@@ -223,7 +278,7 @@ exports.submitOrder = async (req, res) => {
       orderId: addedOrder._id
     });
 
-    // --- PUSH NOTIFICATIONS ---
+    // --- PUSH NOTIFICATIONS (Wrapped to prevent crashing order) ---
     try {
       const pushService = require('../services/push-notification.service');
 
@@ -234,9 +289,11 @@ exports.submitOrder = async (req, res) => {
         url: '/my-orders',
         data: { orderId: addedOrder._id.toString(), type: 'order_received' }
       };
+      
+      // Async without blocking
       pushService.sendToUser(userId, userPayload, { important: true }).catch(err => console.error('User Push Error:', err));
 
-      // 2. Notify Admins (New Order Alert)
+      // 2. Notify Admins
       const adminPayload = {
         title: 'طلب جديد وصل! 🚀',
         body: `طلب جديد بقيمة ${finalTotalAmount} ج.م من ${user.username}.`,
@@ -245,7 +302,7 @@ exports.submitOrder = async (req, res) => {
       };
       pushService.sendToAdmins(adminPayload, { important: true }).catch(err => console.error('Admin Push Error:', err));
 
-      // 3. Notify Merchants (if order contains merchant products)
+      // 3. Notify Merchants
       const bookIds = validatedProducts.map(p => p.bookId);
       const merchantProducts = await Product.find({ 
         $or: [
@@ -265,15 +322,20 @@ exports.submitOrder = async (req, res) => {
           data: { orderId: addedOrder._id.toString(), type: 'merchant_new_order' }
         }).catch(err => console.error('Merchant Push Error:', err));
       }
-
     } catch (pushErr) {
-      console.error('Error in order submission push:', pushErr);
+      console.error('⚠️ [SubmitOrder] Push notification non-critical error:', pushErr.message);
     }
   } catch (error) {
-    console.error('Error submitting order:', error);
+    console.error('🔥 [SubmitOrder Error]:', error);
+    res.setHeader('X-Backend-Version', 'ANTIGRAVITY-DEBUG-V3');
     res.status(500).json({
       message: 'حدث خطأ أثناء إتمام الشراء، يرجى المحاولة مرة أخرى',
-      error: error.message
+      error: error.message,
+      debug: {
+        msg: error.message,
+        stack: error.stack,
+        v: 'V3-ALERT-READY'
+      }
     });
   }
 };
@@ -419,8 +481,10 @@ exports.getAllOrders = async (req, res) => {
     allOrders.forEach(order => {
       const book = order.book;
       const product = productsWithMerchant.find(p => p.product_name === book || (p.product_image && p.product_image.replace('.webp', '') === book));
-      if (product) {
+      if (product && product.merchantId && product.merchantId.toString() === '67683937397e5b22b07b1406') {
         order.isMerchantOrder = true;
+      } else {
+        order.isMerchantOrder = false;
       }
     });
 
@@ -512,6 +576,58 @@ exports.updateOrderStatus = async (req, res) => {
           }
         }
       }
+    }
+
+    // --- Marketer Commission Payout ---
+    console.log(`🔍 [MARKETER_PAYOUT_DEBUG] Checking payout for Order: ${orderId}, Status: ${status}`);
+    if ((status === 'تم الاستلام' || status === 'تم التسليم') && order.referredByMarketer && order.marketerCommission > 0) {
+      console.log(`🎯 [MARKETER_PAYOUT_DEBUG] Order is referred by: ${order.referredByMarketer}, Commission: ${order.marketerCommission}`);
+      const marketer = await User.findById(order.referredByMarketer);
+      
+      if (marketer) {
+        console.log(`👤 [MARKETER_PAYOUT_DEBUG] Found marketer: ${marketer.email}, Current Balance: ${marketer.marketer?.balance}`);
+      } else {
+        console.error(`❌ [MARKETER_PAYOUT_DEBUG] Marketer not found in DB: ${order.referredByMarketer}`);
+      }
+
+      // Payout if marketer exists and has marketer config enabled
+      if (marketer && marketer.marketer && (marketer.marketer.isMarketer || marketer.role === 'marketer')) {
+        // Prevent double payout if already delivered
+        const alreadyPaid = order.statusLog.some(log => 
+          (log.status === 'تم الاستلام' || log.status === 'تم التسليم') && 
+          log.updatedAt < new Date(new Date().getTime() - 2000) // Increased buffer for safety
+        );
+
+        if (!alreadyPaid) {
+          console.log(`💰 [MARKETER_PAYOUT_DEBUG] Crediting ${order.marketerCommission} to ${marketer.username}...`);
+          marketer.marketer.balance = (marketer.marketer.balance || 0) + order.marketerCommission;
+          marketer.marketer.totalEarnings = (marketer.marketer.totalEarnings || 0) + order.marketerCommission;
+          marketer.marketer.points = (marketer.marketer.points || 0) + 10;
+          
+          if (marketer.marketer.tasks) {
+            marketer.marketer.tasks.forEach(task => {
+              if (task.status === 'active') {
+                task.current += 1;
+                if (task.current >= task.target) {
+                  task.status = 'completed';
+                  marketer.marketer.balance += task.reward || 0;
+                  console.log(`🏆 [MARKETER_PAYOUT_DEBUG] Task completed! Reward: ${task.reward}`);
+                }
+              }
+            });
+          }
+
+          await marketer.save();
+          console.log(`✅ [MARKETER_PAYOUT_DEBUG] Final Balance for ${marketer.username}: ${marketer.marketer.balance}`);
+        } else {
+          console.warn(`⚠️ [MARKETER_PAYOUT_DEBUG] Payout skipped: Already paid according to status log.`);
+        }
+      } else {
+        console.warn(`⚠️ [MARKETER_PAYOUT_DEBUG] Payout skipped: Marketer config missing or not a marketer role.`);
+      }
+    } else {
+       if (!order.referredByMarketer) console.log(`ℹ️ [MARKETER_PAYOUT_DEBUG] No marketer attributed to this order.`);
+       if (!(order.marketerCommission > 0)) console.log(`ℹ️ [MARKETER_PAYOUT_DEBUG] Commission is 0 or less: ${order.marketerCommission}`);
     }
 
     // Create notification message based on status

@@ -1,4 +1,5 @@
 const path = require('path');
+const { clearBooksCache } = require('./books.controller');
 const fs = require('fs');
 const multer = require('multer');
 const sharp = require('sharp');
@@ -46,6 +47,7 @@ const ProductUpdateRequest = require('../models/ProductUpdateRequest.model');
 const Product = require('../models/Product.model');
 const Order = require('../models/Order.model');
 const User = require('../models/User.model');
+const GlobalPrize = require('../models/GlobalPrize.model');
 const SystemSettings = require('../models/SystemSettings.js');
 const automationService = require('../services/automation.service');
 const googleSheetsService = require('../services/google-sheets.service');
@@ -119,6 +121,7 @@ async function addProduct(req, res) {
       furnitureType, deliveryMethod, // Furniture fields
       toyType, ageGroup, safety, // Toy fields
       fabricType, usage, // Fabric fields
+      suggestedCategory
     } = req.body;
 
     const { categoryMap, reverseCategoryMap } = require('../services/excel.service');
@@ -277,6 +280,7 @@ async function addProduct(req, res) {
       createdAt: new Date().toISOString()
     };
 
+    await Product.updateOne({ barcode }, { $set: productData }, { upsert: true });
     await addProductToExcel(productData);
 
     // SYNC TO GOOGLE SHEETS
@@ -293,6 +297,7 @@ async function addProduct(req, res) {
     // but triggerAutoPost handles barcodes/Excel items too.
     automationService.triggerAutoPost(productData).catch(err => console.error('AutoPost Trigger Error:', err));
 
+    clearBooksCache();
     res.json({ success: true, message: 'Product added successfully', barcode });
   } catch (error) {
     console.error('Error in addProduct:', error);
@@ -374,15 +379,19 @@ async function bulkAddProducts(req, res) {
 
       // Determine category prefix
       let categoryPrefix = '';
-      if (categoryMap.hasOwnProperty(shortCategoryKey)) {
-        const prefixes = {
-          'رواية': 'رواية-', 'تنمية': 'تنمية-', 'ديني': 'ديني-', 'قاموس': 'قاموس-',
-          'صحة': 'صحة-', 'اعمال': 'اعمال-', 'فن': 'فن-', 'تاريخ': 'تاريخ-',
-          'تربية': 'تربية-', 'ادوات': 'ادوات-', 'الكترونيات': 'الكترونيات-',
-          'ملابس': 'ملابس-', 'تجميل': 'تجميل-', 'احذية': 'احذية-',
-          'اثاث': 'اثاث-', 'العاب': 'العاب-', 'أقمشة': 'أقمشة-', 'اخرى': 'اخرى-'
-        };
-        categoryPrefix = prefixes[shortCategoryKey] || '';
+      const prefixes = {
+        'رواية': 'رواية-', 'تنمية': 'تنمية-', 'ديني': 'ديني-', 'قاموس': 'قاموس-',
+        'صحة': 'صحة-', 'اعمال': 'اعمال-', 'فن': 'فن-', 'تاريخ': 'تاريخ-',
+        'تربية': 'تربية-', 'ادوات': 'ادوات-', 'الكترونيات': 'الكترونيات-',
+        'ملابس': 'ملابس-', 'تجميل': 'تجميل-', 'احذية': 'احذية-',
+        'اثاث': 'اثاث-', 'العاب': 'العاب-', 'أقمشة': 'أقمشة-', 'اخرى': 'اخرى-'
+      };
+      
+      if (prefixes[shortCategoryKey]) {
+        categoryPrefix = prefixes[shortCategoryKey];
+      } else if (shortCategoryKey && !fullCategory.includes('-')) {
+        // For new dynamic categories, we can use the short key itself as a prefix if it's distinct
+        categoryPrefix = shortCategoryKey + '-';
       }
 
       const adminName = req.admin ? req.admin.username.replace(/[^a-zA-Z0-9-_]/g, '_') : 'admin';
@@ -436,6 +445,7 @@ async function bulkAddProducts(req, res) {
       googleSheetsService.syncProduct(p).catch(err => console.error('Google Sheets Sync Error (Bulk):', err));
     }
 
+    clearBooksCache();
     res.json({ success: true, message: `Successfully added ${productsToExcel.length} products.` });
   } catch (error) {
     console.error('Error in bulkAddProducts:', error);
@@ -503,6 +513,25 @@ async function listProducts(req, res) {
         console.error('Error reading ebook-mappings.json:', e);
       }
     }
+
+    // Merge linkedEbookId from persistent ebook-mappings.json
+    // ... (rest of merging logic) ...
+    // [Merged code omitted for brevity but logic below applies to final result]
+
+    // Filter out digital products from the physical inventory view
+    const { includeDigital } = req.query;
+    if (includeDigital !== 'true') {
+      products = products.filter(p => p.is_digital !== true && p.is_digital !== 'true');
+    }
+
+    // Deduplicate products (same name + same image_path = true duplicate)
+    const seen = new Set();
+    products = products.filter(p => {
+      const key = (p.product_name || '') + '||' + (p.image_path || '');
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
 
     // Do not map product_category back to short keys, send as is
     res.json({ success: true, products });
@@ -720,6 +749,7 @@ async function updateProduct(req, res) {
       googleSheetsService.syncProduct(updatedProduct.toObject()).catch(err => console.error('Google Sheets Sync Error:', err));
     }
 
+    clearBooksCache();
     res.json({ success: true, message: 'Product updated successfully' });
   } catch (error) {
     console.error('Error in updateProduct:', error);
@@ -919,6 +949,7 @@ async function batchUpdateProducts(req, res) {
       }
     }
 
+    clearBooksCache();
     res.json({ success: true, message: 'Batch update of products successful (locally persistent)' });
   } catch (error) {
     console.error('Error in batchUpdateProducts:', error);
@@ -1015,6 +1046,7 @@ async function replaceProductImage(req, res) {
       }
     }
 
+    clearBooksCache();
     res.json({ success: true, message: 'Product image replaced successfully', image_path: versionedImagePath, product_image: barcode });
   } catch (error) {
     console.error('Error in replaceProductImage:', error);
@@ -1029,7 +1061,11 @@ async function replaceProductEpub(req, res) {
     if (!barcode) {
       return res.status(400).json({ success: false, message: 'Missing product barcode' });
     }
-    if (!req.file) {
+
+    const epubFile = req.files && req.files['epub'] ? req.files['epub'][0] : null;
+    const coverImageFile = req.files && req.files['coverImage'] ? req.files['coverImage'][0] : null;
+
+    if (!epubFile) {
       return res.status(400).json({ success: false, message: 'EPUB file is required' });
     }
 
@@ -1070,7 +1106,7 @@ async function replaceProductEpub(req, res) {
         title: product.product_name,
         author: product.author || 'Unknown',
         description: product.product_description,
-        coverImage: product.product_image, // Will be updated after copying cover image
+        coverImage: product.product_image && !product.product_image.includes('placeholder') ? product.product_image : '', 
         category: englishCategory,
         language: detectedLanguage,
         pages: product.pages || 0,
@@ -1113,39 +1149,57 @@ async function replaceProductEpub(req, res) {
       }
     }
 
-    fs.writeFileSync(newPath, req.file.buffer);
+    fs.writeFileSync(newPath, epubFile.buffer);
 
     // Use forward slashes for DB storage to avoid OS-specific path issues
     const relativePath = `uploads/ebooks/${newFileName}`;
     ebook.epubFilePath = relativePath;
-    ebook.fileSize = req.file.size;
+    ebook.fileSize = epubFile.size;
 
+    // Handle Cover Image
+    const { images } = req.body;
+    let finalCover = (images && images.length > 0) ? images[0] : null;
 
-
-    // Copy product cover image to ebooks directory with bookName_ebookId.webp format
-    const productImagePath = path.join(__dirname, '../uploads/books/admin__karim_mohamed__', barcode, `${barcode}.webp`);
-    const coverFileName = `${sanitizedTitle}_${ebook._id}.webp`;
-    const coverPath = path.join(ebooksDir, coverFileName);
-
-    if (fs.existsSync(productImagePath)) {
-      try {
-        fs.copyFileSync(productImagePath, coverPath);
-        // Store with forward slashes
-        ebook.coverImage = `uploads/ebooks/${coverFileName}`;
-        console.log(`✅ Cover image copied: ${coverFileName}`);
-      } catch (copyError) {
-        console.error('Error copying cover image:', copyError);
-        // Keep original product_image as fallback
-      }
-    } else {
-      console.log(`⚠️ Product image not found at: ${productImagePath}`);
-      // Keep original product_image as fallback
+    if (coverImageFile && !finalCover) {
+      // Process uploaded cover using direct buffer write as fallback
+      const coverFileName = `cover-${barcode}-${Date.now()}.webp`;
+      const productsDir = path.join(__dirname, '../uploads/products');
+      if (!fs.existsSync(productsDir)) fs.mkdirSync(productsDir, { recursive: true });
+      const coverPath = path.join(productsDir, coverFileName);
+      
+      fs.writeFileSync(coverPath, coverImageFile.buffer);
+      finalCover = `uploads/products/${coverFileName}`;
+      console.log(`✅ New cover image file saved: ${coverFileName}`);
     }
 
-    // Generate Mini Version (REMOVED)
-    // const miniPath = path.join(ebooksDir, miniFileName);
-    // const miniCreated = await createMiniEpub(newPath, miniPath);
-    // if (miniCreated) { ebook.miniEpubFilePath = `uploads/ebooks/${miniFileName}`; }
+    if (!finalCover) {
+      // Fallback: Copy product cover image to products directory
+      const productImagePath = path.join(__dirname, '../uploads/books/admin__karim_mohamed__', barcode, `${barcode}.webp`);
+      const coverFileName = `cover-${barcode}-fallback.webp`;
+      const productsDir = path.join(__dirname, '../uploads/products');
+      if (!fs.existsSync(productsDir)) fs.mkdirSync(productsDir, { recursive: true });
+      const coverPath = path.join(productsDir, coverFileName);
+
+      if (fs.existsSync(productImagePath)) {
+        try {
+          fs.copyFileSync(productImagePath, coverPath);
+          finalCover = `uploads/products/${coverFileName}`;
+          console.log(`✅ Product cover image copied to products (fallback): ${coverFileName}`);
+        } catch (copyError) {
+          console.error('Error copying cover image fallback:', copyError);
+        }
+      }
+    }
+
+    if (finalCover) {
+      ebook.coverImage = finalCover;
+      product.product_image = finalCover; // Update in-memory product (for JSON write later)
+      
+      // Update in MongoDB
+      const Product = require('../models/Product.model');
+      await Product.findOneAndUpdate({ products_id: barcode }, { product_image: finalCover });
+      console.log('✅ Cover image linked (Digital-only/Path):', finalCover.substring(0, 50) + '...');
+    }
 
     // Explicitly clear mini path if it was set
     ebook.miniEpubFilePath = null;
@@ -1200,7 +1254,7 @@ async function deleteProduct(req, res) {
   }
 
   try {
-    // 1. Determine if it's a merchant product and clean up its folder
+    // 1. Folder Cleanup
     const outputPath = path.join(__dirname, '..', 'output.json');
     let productInfo = null;
     if (fs.existsSync(outputPath)) {
@@ -1217,7 +1271,6 @@ async function deleteProduct(req, res) {
         }
       }
     } else {
-      // Possible admin product folder (use fallback if req.admin might not be populated in some contexts, but usually it is)
       const adminUsername = req.admin ? req.admin.username : 'karim_mohamed';
       const adminUploadDir = getAdminUploadDir(adminUsername, barcode);
       if (fs.existsSync(adminUploadDir)) {
@@ -1225,69 +1278,55 @@ async function deleteProduct(req, res) {
       }
     }
 
-    // 2. Delete from MongoDB Product model (covers both admin and merchant)
-    // Use regex to be flexible with image paths
-    await Product.deleteMany({ product_image: { $regex: barcode } });
+    // 2. Delete from MongoDB Product model
+    const productInDb = await Product.findOne({ 
+      $or: [
+        { products_id: barcode },
+        { barcode: barcode }
+      ] 
+    });
 
-    // 3. Attempt to delete from Google Drive Excel
-    let deletedFromExcel = false;
-    const fileId = process.env.GOOGLE_DRIVE_FILE_ID;
-    if (fileId) {
+    if (productInDb) {
+      // If it's a digital book, cascade delete the Ebook record as well
+      if (productInDb.linkedEbookId) {
+        const Ebook = require('../models/Ebook.model');
+        await Ebook.findByIdAndDelete(productInDb.linkedEbookId);
+        console.log('🗑️ Deleted linked Ebook:', productInDb.linkedEbookId);
+      }
+      await Product.deleteOne({ _id: productInDb._id });
+    }
+
+    // 3. Delete from output.json (crucial for digital books added locally)
+    if (fs.existsSync(outputPath)) {
       try {
-        const client = await require('../config/drive').auth.getClient();
-        const drive = google.drive({ version: 'v3', auth: client });
-
-        const resDrive = await drive.files.get({
-          fileId,
-          alt: 'media',
-        }, { responseType: 'arraybuffer' });
-
-        const buffer = Buffer.from(resDrive.data);
-        const workbook = xlsx.read(buffer, { type: 'buffer' });
-        const sheetName = workbook.SheetNames[0];
-        const sheet = workbook.Sheets[sheetName];
-        let json = xlsx.utils.sheet_to_json(sheet);
-
-        const productIndex = json.findIndex(p => {
-          if (!p.products_id) return false;
-          const pId = String(p.products_id).trim();
-          const bId = String(barcode).trim();
-          return pId === bId || Number(pId) === Number(bId);
-        });
-
-        if (productIndex !== -1) {
-          json.splice(productIndex, 1);
-          const newSheet = xlsx.utils.json_to_sheet(json);
-          workbook.Sheets[sheetName] = newSheet;
-          const wbout = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
-
-          await drive.files.update({
-            fileId,
-            media: {
-              mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-              body: Buffer.from(wbout)
-            }
-          });
-          deletedFromExcel = true;
-          console.log('✅ Product deleted from Excel');
-
-          // SYNC TO GOOGLE SHEETS (REMOVE)
-          googleSheetsService.removeProduct(barcode).catch(err => console.error('Google Sheets Remove Error:', err));
-
-          // Refresh local output.json
-          await require('../services/excel.service').downloadAndConvertExcel(fileId);
+        let products = JSON.parse(fs.readFileSync(outputPath, 'utf-8'));
+        const originalCount = products.length;
+        products = products.filter(p => String(p.products_id).trim() !== String(barcode).trim());
+        
+        if (products.length < originalCount) {
+          fs.writeFileSync(outputPath, JSON.stringify(products, null, 2));
+          console.log('✅ Removed product from output.json:', barcode);
         }
-
-        // SYNC TO GOOGLE SHEETS (REMOVE)
-        for (const barcode of barcodes) {
-          googleSheetsService.removeProduct(barcode).catch(err => console.error('Google Sheets Remove Error:', err));
-        }
-
-      } catch (err) {
-        console.warn('⚠️ Google Drive Sync Warning:', err.message);
+      } catch (e) {
+        console.error('Error updating output.json during delete:', e);
       }
     }
 
+    // 4. Delete from Excel using service (for physical books)
+    const excelService = require('../services/excel.service');
+    const fileId = process.env.GOOGLE_DRIVE_FILE_ID;
+    let deletedFromExcel = false;
+    try {
+        deletedFromExcel = await excelService.removeProductFromExcel(barcode, fileId);
+    } catch (excelErr) {
+        console.log('ℹ️ Product not in Excel or Excel update skipped:', barcode);
+    }
+
+    // 5. Cleanup Google Sheets Sync
+    const googleSheetsService = require('../services/google-sheets.service');
+    googleSheetsService.removeProduct(barcode).catch(err => console.error('Google Sheets Remove Error:', err));
+
+    clearBooksCache();
     res.json({
       success: true,
       message: 'Product deleted successfully',
@@ -1306,7 +1345,7 @@ async function bulkDeleteProducts(req, res) {
       return res.status(400).json({ success: false, message: 'Barcodes array is required and must not be empty' });
     }
 
-    // 1. Clean up folders and DB for each barcode (Admin and Merchant)
+    // 1. Folder Cleanup
     const outputPath = path.join(__dirname, '..', 'output.json');
     let allProducts = [];
     if (fs.existsSync(outputPath)) {
@@ -1320,7 +1359,6 @@ async function bulkDeleteProducts(req, res) {
       const productInfo = allProducts.find(p => String(p.products_id).trim() === bcStr);
 
       if (productInfo && productInfo.merchantId) {
-        // Merchant product cleanup
         const merchantUser = await User.findById(productInfo.merchantId);
         if (merchantUser && merchantUser.username) {
           const merchantUploadDir = path.join(__dirname, '../uploads/books', 'merchant_' + merchantUser.username.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_'), bcStr);
@@ -1329,7 +1367,6 @@ async function bulkDeleteProducts(req, res) {
           }
         }
       } else {
-        // Admin product fallback cleanup
         const adminUsername = req.admin ? req.admin.username : 'karim_mohamed';
         const adminUploadDir = getAdminUploadDir(adminUsername, bcStr);
         if (fs.existsSync(adminUploadDir)) {
@@ -1338,75 +1375,32 @@ async function bulkDeleteProducts(req, res) {
       }
     }
 
-    // Delete from MongoDB Product model (bulk)
-    await Product.deleteMany({ product_image: { $in: barcodes.map(bc => new RegExp(String(bc).trim())) } });
+    // 2. Delete from MongoDB Product model (bulk)
+    const bcStrs = barcodes.map(bc => String(bc).trim());
+    await Product.deleteMany({ 
+      $or: [
+        { products_id: { $in: bcStrs } },
+        { barcode: { $in: bcStrs } },
+        { product_image: { $in: bcStrs.map(bc => new RegExp(bc)) } }
+      ] 
+    });
 
-    // 2. Attempt to delete from Google Drive Excel
-    let deletedFromExcelCount = 0;
+    // 3. Delete from Excel & JSON using service
+    const excelService = require('../services/excel.service');
     const fileId = process.env.GOOGLE_DRIVE_FILE_ID;
-    if (fileId) {
-      try {
-        const client = await require('../config/drive').auth.getClient();
-        const drive = google.drive({ version: 'v3', auth: client });
+    const deletedFromExcelCount = await excelService.bulkRemoveProductsFromExcel(barcodes, fileId);
 
-        const resDrive = await drive.files.get({
-          fileId,
-          alt: 'media',
-        }, { responseType: 'arraybuffer' });
-
-        const buffer = Buffer.from(resDrive.data);
-        const workbook = xlsx.read(buffer, { type: 'buffer' });
-        const sheetName = workbook.SheetNames[0];
-        const sheet = workbook.Sheets[sheetName];
-        let json = xlsx.utils.sheet_to_json(sheet);
-
-        let modified = false;
-        for (const barcode of barcodes) {
-          const bcStr = String(barcode).trim();
-          const productIndex = json.findIndex(p => {
-            if (!p.products_id) return false;
-            const pId = String(p.products_id).trim();
-            return pId === bcStr || Number(pId) === Number(bcStr);
-          });
-          if (productIndex !== -1) {
-            json.splice(productIndex, 1);
-            deletedFromExcelCount++;
-            modified = true;
-          }
-        }
-
-        if (modified) {
-          const newSheet = xlsx.utils.json_to_sheet(json);
-          workbook.Sheets[sheetName] = newSheet;
-          const wbout = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
-
-          await drive.files.update({
-            fileId,
-            media: {
-              mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-              body: Buffer.from(wbout)
-            }
-          });
-          console.log(`✅ ${deletedFromExcelCount} products deleted from Excel`);
-
-          // Refresh local output.json
-          await require('../services/excel.service').downloadAndConvertExcel(fileId);
-        }
-
-        // SYNC TO GOOGLE SHEETS (REMOVE)
-        for (const barcode of barcodes) {
-          googleSheetsService.removeProduct(barcode).catch(err => console.error('Google Sheets Remove Error:', err));
-        }
-
-      } catch (err) {
-        console.warn('⚠️ Bulk Google Drive Sync Warning:', err.message);
-      }
+    // 4. Cleanup Google Sheets Sync
+    const googleSheetsService = require('../services/google-sheets.service');
+    for (const barcode of barcodes) {
+      googleSheetsService.removeProduct(barcode).catch(err => console.error('Google Sheets Remove Error:', err));
     }
 
+    clearBooksCache();
     res.json({
       success: true,
       message: `Deletions processed for ${barcodes.length} items`,
-      excelUpdatedCount: deletedFromExcelCount
+      excelUpdated: !!deletedFromExcelCount
     });
   } catch (error) {
     console.error('Error in bulkDeleteProducts:', error);
@@ -1421,6 +1415,7 @@ async function syncJsonToExcel(req, res) {
     // Check if query param createCopy is set to true
     const createCopy = req.query.createCopy === 'true';
     const result = await uploadExcelFromJson(createCopy);
+    clearBooksCache();
     if (createCopy) {
       res.json({ success: true, message: 'New Excel copy created on Google Drive.', file: result });
     } else {
@@ -3539,9 +3534,19 @@ async function exportUsersToSheets(req, res) {
     res.status(500).json({ success: false, message: 'Server error during user export.' });
   }
 }
+async function getCategories(req, res) {
+  try {
+    const categories = await Product.distinct('product_category');
+    res.json({ success: true, categories: categories.filter(c => !!c) });
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch categories' });
+  }
+}
 
 module.exports = {
   upload,
+  getCategories,
   addProduct,
   listProducts,
   updateProduct,
@@ -3587,6 +3592,56 @@ module.exports = {
   bulkAdjustPrices,
   getAdminGlobalAnalytics,
   exportUsersToSheets,
+  
+  listStaff: async (req, res) => {
+    try {
+      const staff = await User.find({ role: 'staff' }).select('username email role permissions');
+      res.json({ success: true, staff });
+    } catch (error) {
+      console.error('Error in listStaff:', error);
+      res.status(500).json({ success: false, message: 'Server error' });
+    }
+  },
+
+  updateStaffPermissions: async (req, res) => {
+    try {
+      const { userId, permissions } = req.body;
+      await User.findByIdAndUpdate(userId, { permissions });
+      res.json({ success: true, message: 'Permissions updated successfully' });
+    } catch (error) {
+      console.error('Error in updateStaffPermissions:', error);
+      res.status(500).json({ success: false, message: 'Server error' });
+    }
+  },
+
+  promoteToStaff: async (req, res) => {
+    try {
+      const { email } = req.body;
+      const user = await User.findOneAndUpdate(
+        { email: { $regex: new RegExp('^' + email + '$', 'i') } },
+        { role: 'staff' },
+        { new: true }
+      ).select('username email role permissions');
+      
+      if (!user) return res.status(404).json({ success: false, message: 'المستخدم غير موجود' });
+      res.json({ success: true, user, message: 'تمت ترقية المستخدم إلى موظف بنجاح' });
+    } catch (error) {
+      console.error('Error in promoteToStaff:', error);
+      res.status(500).json({ success: false, message: 'Server error' });
+    }
+  },
+
+  demoteFromStaff: async (req, res) => {
+    try {
+      const { userId } = req.body;
+      await User.findByIdAndUpdate(userId, { role: 'user', permissions: [] });
+      res.json({ success: true, message: 'تم سحب رتبة الموظف من المستخدم' });
+    } catch (error) {
+      console.error('Error in demoteFromStaff:', error);
+      res.status(500).json({ success: false, message: 'Server error' });
+    }
+  },
+
   updateGoogleSheetFromJson: async (req, res) => {
     try {
       const outputPath = path.join(__dirname, '..', 'output.json');
@@ -3607,6 +3662,244 @@ module.exports = {
       console.error('Error in updateGoogleSheetFromJson:', error);
       if (res) res.status(500).json({ success: false, message: 'Server error' });
       return false;
+    }
+  },
+
+  // --- Marketer Management ---
+  listMarketers: async (req, res) => {
+    console.log('🔍 [ADMIN_MARKETER] Listing marketers with ultra-inclusive criteria...');
+    try {
+      const marketers = await User.find({
+        $or: [
+          { role: 'marketer' },
+          { 'marketer.isMarketer': true },
+          { 'marketer.applicationStatus': 'approved' },
+          { 'marketer.applicationStatus': 'pending' }
+        ]
+      })
+        .select('username email phone marketer role suspended createdAt');
+      
+      console.log(`✅ [ADMIN_MARKETER] Found ${marketers.length} marketers total in database.`);
+      res.json({ success: true, marketers });
+    } catch (error) {
+      console.error('🔥 [ADMIN_MARKETER] Error:', error);
+      res.status(500).json({ success: false, message: 'Error listing marketers' });
+    }
+  },
+
+  updateMarketerConfig: async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const { commissionRate, level, levelLabel, points } = req.body;
+      
+      const user = await User.findById(userId);
+      if (!user) return res.status(404).json({ success: false, message: 'Marketer not found' });
+
+      if (commissionRate !== undefined) user.marketer.commissionRate = commissionRate;
+      if (level !== undefined) user.marketer.level = level;
+      if (levelLabel !== undefined) user.marketer.levelLabel = levelLabel;
+      if (points !== undefined) user.marketer.points = points;
+
+      await user.save();
+      res.json({ success: true, message: 'Marketer configuration updated' });
+    } catch (error) {
+      res.status(500).json({ success: false, message: 'Error updating marketer' });
+    }
+  },
+
+  promoteToMarketer: async (req, res) => {
+    try {
+      const { userId, email } = req.body;
+      console.log(`🚀 [ADMIN_MARKETER] Promotion request for: ${email || userId}`);
+      let user;
+      
+      if (email) {
+        // Case-insensitive email search
+        user = await User.findOne({ email: { $regex: new RegExp('^' + email + '$', 'i') } });
+      } else if (userId) {
+        user = await User.findById(userId);
+      }
+ 
+      if (!user) {
+        console.error(`❌ [ADMIN_MARKETER] User not found for promotion: ${email || userId}`);
+        return res.status(404).json({ success: false, message: 'المستخدم غير موجود بالبريد الإلكتروني المدخل' });
+      }
+ 
+      user.role = 'marketer';
+      if (!user.marketer) user.marketer = {};
+      user.marketer.isMarketer = true;
+      user.marketer.applicationStatus = 'approved';
+      user.marketer.approved = true;
+      
+      console.log(`✅ [ADMIN_MARKETER] Promoting user: ${user.email} to marketer`);
+      await user.save();
+      res.json({ success: true, message: 'تمت ترقية المستخدم إلى مسوق بنجاح' });
+    } catch (error) {
+      console.error('🔥 [ADMIN_MARKETER] Promotion error:', error);
+      res.status(500).json({ success: false, message: 'خطأ أثناء ترقية المستخدم' });
+    }
+  },
+
+  assignMarketerTask: async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const { title, description, target, reward, deadline, targetId, targetType } = req.body;
+
+      const user = await User.findById(userId);
+      if (!user) return res.status(404).json({ success: false, message: 'Marketer not found' });
+
+      user.marketer.tasks.push({
+        title,
+        description,
+        target,
+        reward,
+        deadline,
+        targetId,
+        targetType: targetType || 'book',
+        current: 0,
+        status: 'active'
+      });
+
+      await user.save();
+      res.json({ success: true, message: 'Task assigned successfully' });
+    } catch (error) {
+      console.error('Error in assignMarketerTask:', error);
+      res.status(500).json({ success: false, message: 'Error assigning task' });
+    }
+  },
+
+  addMarketerPrize: async (req, res) => {
+    try {
+      const { marketerId, title, value } = req.body;
+      const user = await User.findById(marketerId);
+      if (!user || !user.marketer) return res.status(404).json({ success: false, message: 'Marketer not found' });
+      
+      user.marketer.prizes.push({ title, value, claimed: false });
+      await user.save();
+      res.json({ success: true, message: 'Prize added successfully' });
+    } catch (error) {
+      res.status(500).json({ success: false, message: 'Error adding prize' });
+    }
+  },
+
+  removeMarketerPrize: async (req, res) => {
+    try {
+      const { marketerId, prizeId } = req.body;
+      const user = await User.findById(marketerId);
+      if (!user || !user.marketer) return res.status(404).json({ success: false, message: 'Marketer not found' });
+      
+      user.marketer.prizes = user.marketer.prizes.filter(p => p._id.toString() !== prizeId);
+      await user.save();
+      res.json({ success: true, message: 'Prize removed successfully' });
+    } catch (error) {
+      res.status(500).json({ success: false, message: 'Error removing prize' });
+    }
+  },
+
+  addGlobalPrize: async (req, res) => {
+    try {
+      const { title, value, minLevel } = req.body;
+      const prize = new GlobalPrize({ title, value, minLevel });
+      await prize.save();
+      res.json({ success: true, message: 'Global prize added successfully' });
+    } catch (error) {
+      res.status(500).json({ success: false, message: 'Error adding global prize' });
+    }
+  },
+
+  getGlobalPrizes: async (req, res) => {
+    try {
+      const prizes = await GlobalPrize.find().sort({ minLevel: 1 });
+      res.json({ success: true, prizes });
+    } catch (error) {
+      res.status(500).json({ success: false, message: 'Error fetching global prizes' });
+    }
+  },
+
+  removeGlobalPrize: async (req, res) => {
+    try {
+      const { prizeId } = req.params;
+      await GlobalPrize.findByIdAndDelete(prizeId);
+      res.json({ success: true, message: 'Global prize removed successfully' });
+    } catch (error) {
+      res.status(500).json({ success: false, message: 'Error removing global prize' });
+    }
+  },
+
+  createDigitalBook: async (req, res) => {
+    try {
+      const { product_name, product_category, author, product_price, product_description, images } = req.body;
+      
+      if (!product_name) {
+        return res.status(400).json({ success: false, message: 'Product name is required' });
+      }
+
+      // Generate a unique barcode/id for the new digital product
+      const barcode = 'DIG-' + Date.now();
+
+      // Create new Product in output.json
+      const outputPath = path.join(__dirname, '..', 'output.json');
+      let products = [];
+      try {
+        products = JSON.parse(fs.readFileSync(outputPath, 'utf-8'));
+      } catch (e) {
+        products = [];
+      }
+      
+      let finalImage = (images && images.length > 0) ? images[0] : '';
+      
+      // If a real file was uploaded via multer, use it and convert to Base64 (digital-only)
+      if (req.files && req.files.coverImage && req.files.coverImage[0]) {
+        const file = req.files.coverImage[0];
+        const base64 = file.buffer.toString('base64');
+        const mime = file.mimetype;
+        finalImage = `data:${mime};base64,${base64}`;
+      }
+
+      const newProduct = {
+        products_id: barcode,
+        product_name,
+        product_category: product_category || 'Books',
+        author: author || 'غير محدد',
+        product_price: product_price || '0',
+        price_cost: '0',
+        product_description: product_description || '',
+        product_image: finalImage,
+        product_quantity: 999, // Set high for digital
+        is_digital: true,
+        merchantId: req.admin._id
+      };
+
+      products.unshift(newProduct); // Add to top
+      fs.writeFileSync(outputPath, JSON.stringify(products, null, 2));
+
+      // Also create in MongoDB
+      const Product = require('../models/Product.model');
+      const mongoProduct = new Product({
+        products_id: barcode,
+        product_name,
+        product_category: product_category || 'Books',
+        author: author || 'غير محدد',
+        product_price: product_price || '0',
+        price_cost: '0',
+        product_description: product_description || '',
+        product_quantity: 999, // Set high for digital
+        product_image: finalImage,
+        merchantId: req.admin._id
+      });
+      await mongoProduct.save();
+
+      // IMPORTANT: Set barcode in params so replaceProductEpub finds it
+      req.params = req.params || {};
+      req.params.barcode = barcode;
+      
+      // Call the existing logic to handle files (epub + cover)
+      // Since it's in the same module, we can just call the exported method
+      return module.exports.replaceProductEpub(req, res);
+
+    } catch (error) {
+      console.error('Error in createDigitalBook:', error);
+      res.status(500).json({ success: false, message: 'Server error during book creation' });
     }
   }
 };

@@ -49,6 +49,7 @@ export interface HifzPlan {
         memorization: { enabled: boolean; time: string };
         revision: { enabled: boolean; time: string };
         kahfFriday?: { enabled: boolean; time: string };
+        bedtimeMulkSajda?: { enabled: boolean; time: string };
     };
 }
 
@@ -127,6 +128,8 @@ export class HifzPlanService {
         totalVersesMemorized?: number;
         resetProgress?: boolean;
         currentPosition?: { surah: number; verse: number };
+        customLastReadPage?: number;
+        customLastDeepRevisionPage?: number;
     }): Observable<{ success: boolean; message: string; plan: HifzPlan }> {
         const existingPlanStr = localStorage.getItem(this.STORAGE_KEY);
         const existingPlan: HifzPlan | null = existingPlanStr ? JSON.parse(existingPlanStr) : null;
@@ -158,8 +161,8 @@ export class HifzPlanService {
                 remainingVerses: 6236 - (data.totalVersesMemorized !== undefined ? data.totalVersesMemorized : (memorizedContent.length || 0)),
                 percentage: Math.round(((data.totalVersesMemorized !== undefined ? data.totalVersesMemorized : (memorizedContent.length || 0)) / 6236) * 100),
                 lastActiveDate: new Date().toISOString(),
-                lastReadPage: shouldReset ? 0 : (existingPlan?.stats?.lastReadPage || 0),
-                lastDeepRevisionPage: shouldReset ? 0 : (existingPlan?.stats?.lastDeepRevisionPage || 0),
+                lastReadPage: data.customLastReadPage !== undefined ? data.customLastReadPage : (shouldReset ? 0 : (existingPlan?.stats?.lastReadPage || 0)),
+                lastDeepRevisionPage: data.customLastDeepRevisionPage !== undefined ? data.customLastDeepRevisionPage : (shouldReset ? 0 : (existingPlan?.stats?.lastDeepRevisionPage || 0)),
                 completionDate: this.calculateCompletionDate(data.dailyCapacity, 6236 - (data.totalVersesMemorized !== undefined ? data.totalVersesMemorized : (memorizedContent.length || 0)))
             }
         } as any;
@@ -195,10 +198,10 @@ export class HifzPlanService {
     }
 
     private generateGuestTasks(plan: HifzPlan): DailyTask[] {
-        const mutabaaDataStr = localStorage.getItem('guest_mutabaa_data');
+        const mutabaaData = this.mutabaaService.checkAndResetTodayLog();
         let todayLog: any = null;
-        if (mutabaaDataStr) {
-            todayLog = JSON.parse(mutabaaDataStr).todayLog;
+        if (mutabaaData) {
+            todayLog = mutabaaData.todayLog;
         }
 
         // Get today's weekday index (0=Sat, 6=Fri based on Arabic week)
@@ -213,9 +216,12 @@ export class HifzPlanService {
         const recitationUnit = plan.dailyCapacity.recitationType;
         const lastRead = plan.stats.lastReadPage || 0;
         const pagesDoneToday = todayLog?.tilawo?.pagesCompleted || 0;
+        const tilawaStatus = todayLog?.tilawo?.status || 'pending';
 
-        let nextStart = lastRead + 1;
-        if (nextStart > 604) nextStart = (nextStart % 604) || 1;
+        const nextStart = ((lastRead + 1 - 1) % 604) + 1;
+        const currentPage = todayLog?.tilawo?.page || 0;
+        const inProgressPage = pagesDoneToday > 0 ? (((currentPage > 0 ? currentPage : nextStart + pagesDoneToday - 1) % 604) + 1) : nextStart;
+        const displayStart = (tilawaStatus === 'done') ? nextStart : inProgressPage;
 
         const hifzDisplayAmount = (plan.dailyCapacity.newMemorization === 'verse' ? 1 : (plan.dailyCapacity.memorizationAmount || 1));
 
@@ -231,13 +237,13 @@ export class HifzPlanService {
         if (tilawaDays.includes(arabicDayIndex)) {
             tasks.push({
                 type: 'recitation',
-                label: `ورد التلاوة: ${recitationAmount} ${this.getUnitLabel(recitationUnit)} (البداية من ص ${nextStart})`,
+                label: `ورد التلاوة: ${recitationAmount} ${this.getUnitLabel(recitationUnit)} (البداية من ص ${displayStart})`,
                 status: todayLog?.tilawo?.status || 'pending',
                 amount: recitationAmount,
                 unit: recitationUnit,
                 amountDone: pagesDoneToday,
-                page: nextStart,
-                startPage: nextStart
+                page: displayStart,
+                startPage: displayStart
             });
         }
 
@@ -345,17 +351,19 @@ export class HifzPlanService {
         if (historyCount > 0 && murajaDays.includes(arabicDayIndex)) {
             const lastDeep = plan.stats.lastDeepRevisionPage || 0;
             const reviewAmount = plan.dailyCapacity.reviewAmount || 1;
-            let nextDeepStart = lastDeep + 1; // Advance to next page 
+            const reviewUnit = plan.dailyCapacity.reviewType === 'light' ? 'page' : 'juz';
+
+            let nextDeepStart = lastDeep + 1; // Advance to next page as fallback
             if (nextDeepStart > 604) nextDeepStart = 1;
 
             const revisionLabel = showRabtCard ? 'مراجعة الماضي البعيد' : 'مراجعة الماضي';
 
             tasks.push({
                 type: 'revision' as any,
-                label: `${revisionLabel}: ${reviewAmount} صفحة (البداية ص ${nextDeepStart})`,
+                label: `${revisionLabel}: ${reviewAmount} ${this.getUnitLabel(reviewUnit)} (البداية ص ${nextDeepStart})`,
                 status: todayLog?.deepMuraja?.status || 'pending',
                 amount: reviewAmount,
-                unit: 'page',
+                unit: reviewUnit,
                 amountDone: todayLog?.deepMuraja?.pagesCompleted || todayLog?.deepMuraja?.amountDone || 0,
                 page: nextDeepStart,
                 startPage: nextDeepStart

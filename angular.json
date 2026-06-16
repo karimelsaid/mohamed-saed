@@ -251,6 +251,13 @@
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
+            },
+            "no-ssr": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "ssr": false,
+              "prerender": false
             }
           },
           "defaultConfiguration": "production"
@@ -267,6 +274,9 @@
             },
             "development": {
               "buildTarget": "mushaf-wird:build:development"
+            },
+            "no-ssr": {
+              "buildTarget": "mushaf-wird:build:no-ssr"
             }
           },
           "defaultConfiguration": "development"

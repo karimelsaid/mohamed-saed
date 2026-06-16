@@ -93,8 +93,11 @@ export class SearchBarComponent implements OnInit {
 
   private normalizeArabic(text: string): string {
     return text
-      .replace(/[أإآ]/g, 'ا')
+      .replace(/[أإآا]/g, 'ا')
       .replace(/[هة]/g, 'ه')
+      .replace(/[يى]/g, 'ي')
+      .replace(/[ؤ]/g, 'و')
+      .replace(/[ئ]/g, 'ي')
       // Remove special characters except numbers and letters
       .replace(/[^0-9a-zA-Z\u0600-\u06FF\s]/g, '')
       // Remove extra spaces
@@ -127,6 +130,8 @@ export class SearchBarComponent implements OnInit {
       if (prod.product_name && typeof prod.product_name === 'string') fields.push(prod.product_name);
       if (prod.sku && typeof prod.sku === 'string') fields.push(prod.sku);
       if (prod.category && typeof prod.category === 'string') fields.push(prod.category);
+      if (prod.publisher && typeof prod.publisher === 'string') fields.push(prod.publisher);
+      if (prod.author && typeof prod.author === 'string') fields.push(prod.author);
       if (prod.tags && Array.isArray(prod.tags)) fields.push(prod.tags.join(' '));
       if (prod.description && typeof prod.description === 'string') fields.push(prod.description);
 

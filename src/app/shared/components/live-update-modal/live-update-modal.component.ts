@@ -15,6 +15,8 @@ export class LiveUpdateModalComponent {
   @Input() progress: number = 0;
   @Input() status: 'idle' | 'checking' | 'downloading' | 'applying' | 'complete' | 'error' = 'idle';
   @Input() errorMessage: string = '';
+  @Input() sizeFormatted: string = '';
+  @Input() sizeBytes: number = 0;
 
   faSyncAlt = faSyncAlt;
   faCheckCircle = faCheckCircle;
@@ -23,9 +25,26 @@ export class LiveUpdateModalComponent {
   faMagic = faMagic;
 
   @Output() onUpdate = new EventEmitter<void>();
+  @Output() onPostpone = new EventEmitter<void>();
 
   update() {
     this.onUpdate.emit();
+  }
+
+  postpone() {
+    this.onPostpone.emit();
+  }
+
+  get downloadedSizeText() {
+    if (!this.sizeBytes) return '';
+    const downloadedBytes = (this.sizeBytes * this.progress) / 100;
+    const downloadedMB = (downloadedBytes / (1024 * 1024)).toFixed(2);
+    const totalMB = (this.sizeBytes / (1024 * 1024)).toFixed(2);
+    return `${downloadedMB} MB / ${totalMB} MB`;
+  }
+
+  get updateSizeText() {
+    return this.sizeFormatted ? `حجم التحديث: ${this.sizeFormatted}` : '';
   }
 
   get statusIcon() {

@@ -75,8 +75,11 @@ export class SearchResultsComponent implements OnInit {
 
   ngOnInit(): void {
     this.route.queryParams.subscribe(params => {
-      this.searchQuery = params['q'] || '';
-      this.currentPage = parseInt(params['page'] || '1', 10);
+      this.searchQuery = params['q'] ?? '';
+
+      const parsedPage = parseInt(params['page'] ?? '1', 10);
+      this.currentPage = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
+
       this.authorFilter = params['author'] || '';
       this.publisherFilter = params['publisher'] || '';
       this.categoryFilter = params['category'] || '';
@@ -136,7 +139,8 @@ export class SearchResultsComponent implements OnInit {
     this.dataService.search(searchParams).subscribe({
       next: (response) => {
         if (response.success) {
-          this.books = (response.items || []).map((book: any) => {
+          const items = Array.isArray(response.items) ? response.items : [];
+          this.books = items.map((book: any) => {
             const rawMerchantName = book.merchantName || '';
             const isKenouz = !rawMerchantName || rawMerchantName === 'كنوز' || rawMerchantName === 'تاجر كنوز' || rawMerchantName === 'Kenouz' || book.merchantRole === 'admin';
             return {
@@ -145,13 +149,21 @@ export class SearchResultsComponent implements OnInit {
               merchantName: isKenouz ? null : rawMerchantName
             };
           });
-          this.totalBooks = response.totalCount;
-          this.totalPages = response.totalPages;
-          this.paginatedBooks = this.books;
-          this.availableCategories = response.availableCategories || [];
+          this.totalBooks = Number.isFinite(response.totalCount) ? response.totalCount : 0;
+          this.totalPages = Number.isFinite(response.totalPages) ? response.totalPages : Math.max(1, Math.ceil(this.totalBooks / this.booksPerPage));
+          if (this.currentPage > this.totalPages) {
+            this.currentPage = this.totalPages;
+            this.updateUrl();
+          }
+          this.paginatedBooks = [...this.books];
+          if (this.paginatedBooks.length === 0 && this.books.length > 0) {
+            this.paginatedBooks = [...this.books];
+          }
+          this.availableCategories = Array.isArray(response.availableCategories) ? response.availableCategories : [];
           this.fetchRatingsForBooks();
         } else {
           this.books = [];
+          this.paginatedBooks = [];
           this.totalBooks = 0;
           this.totalPages = 1;
         }

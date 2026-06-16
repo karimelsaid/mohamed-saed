@@ -4,8 +4,11 @@
       <div class="icon-wrapper" [class.rotating]="status === 'downloading' || status === 'applying'">
         <fa-icon [icon]="statusIcon"></fa-icon>
       </div>
-      <h2 class="title"> ! ✨تحديث جديد</h2>
+      <h2 class="title">✨ تحديث جديد ✨</h2>
       <p class="version-tag">الإصدار {{ version }}</p>
+      <div class="size-tag" *ngIf="sizeFormatted && (status === 'checking' || status === 'error')">
+        {{ updateSizeText }}
+      </div>
     </div>
 
     <div class="modal-body">
@@ -15,7 +18,10 @@
         <div class="progress-bar">
           <div class="progress-fill" [style.width.%]="progress"></div>
         </div>
-        <span class="progress-text">{{ progress }}%</span>
+        <div class="progress-info">
+          <span class="progress-text">{{ progress }}%</span>
+          <span class="size-text" *ngIf="sizeBytes">{{ downloadedSizeText }}</span>
+        </div>
       </div>
 
       <div class="error-msg" *ngIf="status === 'error'">
@@ -30,6 +36,9 @@
     <div class="modal-footer" *ngIf="status === 'checking' || status === 'error'">
       <button class="update-btn" (click)="update()">
         <span>هيا بنا للتحديث! 🚀</span>
+      </button>
+      <button class="postpone-btn" (click)="postpone()">
+        <span>تأجيل التحديث ⏳</span>
       </button>
     </div>
   </div>

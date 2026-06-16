@@ -51,4 +51,6 @@ const productSchema = new mongoose.Schema({
   }]
 });
 
+productSchema.index({ merchantId: 1 });
+
 module.exports = mongoose.model('Product', productSchema);

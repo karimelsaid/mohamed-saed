@@ -20,6 +20,9 @@ export class HifzWizardComponent implements OnInit {
     isLoading = true; // Start loading true
     error = '';
     resetProgress = false;
+    specifyWirdStarts = false;
+    recitationStartPage = 1;
+    revisionStartPage = 1;
 
     // Weekday labels (Sat=0 to Fri=6)
     weekdayLabels = ['السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
@@ -102,6 +105,15 @@ export class HifzWizardComponent implements OnInit {
                         }
                         if (plan.dailyCapacity.rabtDays) {
                             this.rabtDays = [...plan.dailyCapacity.rabtDays];
+                        }
+                    }
+
+                    if (plan.stats) {
+                        if (plan.stats.lastReadPage !== undefined && plan.stats.lastReadPage >= 0) {
+                            this.recitationStartPage = plan.stats.lastReadPage + 1;
+                        }
+                        if (plan.stats.lastDeepRevisionPage !== undefined && plan.stats.lastDeepRevisionPage >= 0) {
+                            this.revisionStartPage = plan.stats.lastDeepRevisionPage + 1;
                         }
                     }
 
@@ -404,6 +416,17 @@ export class HifzWizardComponent implements OnInit {
             return;
         }
 
+        if (this.specifyWirdStarts) {
+            if (this.recitationStartPage < 1 || this.recitationStartPage > 604) {
+                this.error = 'صفحة بداية ورد التلاوة يجب أن تكون بين 1 و 604';
+                return;
+            }
+            if (this.hasMemorization && (this.revisionStartPage < 1 || this.revisionStartPage > 604)) {
+                this.error = 'صفحة بداية ورد المراجعة يجب أن تكون بين 1 و 604';
+                return;
+            }
+        }
+
         this.isLoading = true;
         this.error = '';
 
@@ -451,13 +474,27 @@ export class HifzWizardComponent implements OnInit {
             rabtDays: this.rabtDays
         };
 
+        let customLastReadPage: number | undefined = undefined;
+        let customLastDeepRevisionPage: number | undefined = undefined;
+
+        if (this.specifyWirdStarts) {
+            if (this.recitationStartPage !== undefined && this.recitationStartPage >= 1 && this.recitationStartPage <= 604) {
+                customLastReadPage = this.recitationStartPage - 1;
+            }
+            if (this.hasMemorization && this.revisionStartPage !== undefined && this.revisionStartPage >= 1 && this.revisionStartPage <= 604) {
+                customLastDeepRevisionPage = this.revisionStartPage - 1;
+            }
+        }
+
         this.hifzPlanService.saveSetup({
             userLevel: this.userLevel,
             dailyCapacity: fullCapacity,
             memorizedContent,
             totalVersesMemorized: totalVersesFactor,
             resetProgress: this.resetProgress,
-            currentPosition // Pass explicitly to advance the cursor to the first gap
+            currentPosition, // Pass explicitly to advance the cursor to the first gap
+            customLastReadPage,
+            customLastDeepRevisionPage
         }).subscribe({
             next: (res) => {
                 this.isLoading = false;

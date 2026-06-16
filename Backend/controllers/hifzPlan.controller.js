@@ -502,7 +502,7 @@ exports.generateDailyTasks = async (req, res) => {
         let revisionAmountDone = 0;
         const rawPagesDone = todayLog?.deepMuraja?.pagesCompleted || 0;
 
-        if (reviewType === 'weekly') {
+        if (reviewType === 'weekly' || reviewType === 'rescue') {
             const startJuz = quranUtils.getJuzForPage(reviewStartPage);
             if (reviewAmount === 1) {
                 reviewLabel = `مراجعة الماضي: الجزء ${startJuz} كاملاً`;
@@ -520,16 +520,17 @@ exports.generateDailyTasks = async (req, res) => {
             revisionAmountDone = rawPagesDone;
         }
 
+        const isJuzBased = (reviewType === 'weekly' || reviewType === 'rescue');
         const revision = {
             type: 'revision',
             label: reviewLabel,
-            unit: reviewType === 'weekly' ? 'juz' : 'page',
-            target: reviewType === 'weekly' ? 'juz' : 'page',
+            unit: isJuzBased ? 'juz' : 'page',
+            target: isJuzBased ? 'juz' : 'page',
             amount: reviewAmount,
             startPage: reviewStartPage,
             amountDone: revisionAmountDone,
             dailyAmountDone: rawPagesDone,
-            status: (todayLog?.deepMuraja?.status === 'done' && rawPagesDone < (reviewType === 'weekly' ? 1 : reviewAmount)) ? 'pending' : (todayLog?.deepMuraja?.status || 'pending')
+            status: (todayLog?.deepMuraja?.status === 'done' && rawPagesDone < (isJuzBased ? 1 : reviewAmount)) ? 'pending' : (todayLog?.deepMuraja?.status || 'pending')
         };
 
         // 4️⃣ ورد التلاوة

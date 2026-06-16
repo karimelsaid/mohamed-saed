@@ -187,6 +187,30 @@
                 السابقة بالترتيب.</p>
         </div>
 
+        <!-- خيار تحديد بداية الأوراد يدوياً -->
+        <div class="capacity-section" style="border-top: 1px dashed #eee; padding-top: 16px; margin-top: 8px;">
+            <label class="reset-checkbox-label" style="display: flex; align-items: center; gap: 10px; cursor: pointer; color: #c2a87a; font-weight: 600; font-size: 0.95rem;">
+                <input type="checkbox" [(ngModel)]="specifyWirdStarts" style="width: 20px; height: 20px; accent-color: #c2a87a;">
+                <span>تحديد بداية الأوراد يدوياً 📍</span>
+            </label>
+            
+            <div *ngIf="specifyWirdStarts" class="wird-starts-container">
+                <!-- بداية ورد التلاوة -->
+                <div class="wird-starts-row">
+                    <span class="wird-starts-label">بداية ورد التلاوة اليومي (الصفحة):</span>
+                    <input type="number" [(ngModel)]="recitationStartPage" min="1" max="604" 
+                           class="wird-start-input">
+                </div>
+                
+                <!-- بداية ورد المراجعة (فقط لو كان لديه محفوظات) -->
+                <div *ngIf="hasMemorization" class="wird-starts-row">
+                    <span class="wird-starts-label">بداية ورد المراجعة (الصفحة):</span>
+                    <input type="number" [(ngModel)]="revisionStartPage" min="1" max="604" 
+                           class="wird-start-input">
+                </div>
+            </div>
+        </div>
+
         <div class="capacity-section" style="border-top: 1px dashed #eee; padding-top: 16px; margin-top: 8px;">
             <label class="reset-checkbox-label" style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
                 <input type="checkbox" [(ngModel)]="resetProgress" style="width: 20px; height: 20px;">

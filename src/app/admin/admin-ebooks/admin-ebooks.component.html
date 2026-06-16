@@ -547,7 +547,7 @@
                 <div class="relative z-10 flex justify-between items-center">
                     <div>
                         <h3 class="text-2xl font-black mb-1">إضافة منتج كتاب رقمي جديد</h3>
-                        <p class="text-emerald-100 text-xs font-bold opacity-80">سيتم إنشاء المنتج ورفع الملفات في خطوة واحدة</p>
+                        <p class="text-emerald-100 text-xs font-bold opacity-80">سيتم إنشاء المنتج ورفع الملفات في خطوة واحدة — الغلاف يُستخرج تلقائياً من ملف EPUB ✨</p>
                     </div>
                     <button (click)="showAddProductModal = false" 
                         class="w-10 h-10 rounded-2xl bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all active:scale-90">
@@ -568,9 +568,75 @@
                         <div class="space-y-4">
                             <div class="group">
                                 <label class="block text-xs font-black text-slate-500 dark:text-slate-400 mb-2 mr-2">اسم الكتاب *</label>
-                                <input type="text" [(ngModel)]="newProduct.name"
-                                    class="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-bold shadow-inner focus:ring-2 focus:ring-emerald-500/50 transition-all"
-                                    placeholder="مثال: البداية والنهاية">
+                                <div class="relative">
+                                    <input type="text" [(ngModel)]="newProduct.name" (ngModelChange)="onProductNameChange()"
+                                        class="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-bold shadow-inner focus:ring-2 focus:ring-emerald-500/50 transition-all"
+                                        placeholder="مثال: البداية والنهاية">
+                                    <!-- Checking spinner -->
+                                    <div *ngIf="isDuplicateCheckLoading" class="absolute left-4 top-1/2 -translate-y-1/2">
+                                        <fa-icon [icon]="['fas', 'spinner']" class="text-slate-400 animate-spin text-xs"></fa-icon>
+                                    </div>
+                                    <!-- Clear duplicate override indicator -->
+                                    <div *ngIf="duplicateMatches.length === 0 && !isDuplicateCheckLoading && newProduct.name.length > 2" class="absolute left-4 top-1/2 -translate-y-1/2">
+                                        <fa-icon [icon]="['fas', 'check']" class="text-emerald-500 text-xs"></fa-icon>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- ⚠️ Duplicate Warning Banner -->
+                            <div *ngIf="duplicateMatches.length > 0 && !duplicateOverridden"
+                                class="rounded-2xl border-2 border-amber-400 bg-amber-50 dark:bg-amber-950/40 dark:border-amber-500/60 overflow-hidden animate-fade-in">
+                                <!-- Header -->
+                                <div class="flex items-start gap-3 p-4 bg-amber-100/60 dark:bg-amber-900/30">
+                                    <div class="w-8 h-8 rounded-xl bg-amber-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                        <fa-icon [icon]="['fas', 'exclamation-triangle']" class="text-white text-sm"></fa-icon>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h5 class="text-sm font-black text-amber-800 dark:text-amber-300">تحذير: هذا الكتاب موجود مسبقاً!</h5>
+                                        <p class="text-xs text-amber-700 dark:text-amber-400 font-bold mt-0.5">تم العثور على {{ duplicateMatches.length }} كتاب متشابه في المكتبة. هل تريد المتابعة بإضافة نسخة جديدة؟</p>
+                                    </div>
+                                </div>
+                                <!-- Duplicate list -->
+                                <div class="px-4 pb-3 pt-2 space-y-2">
+                                    <div *ngFor="let match of duplicateMatches"
+                                        class="flex items-center gap-3 bg-white dark:bg-slate-900 rounded-xl p-3 border border-amber-200 dark:border-amber-800/50">
+                                        <div class="w-10 h-14 rounded-lg overflow-hidden bg-slate-100 flex-shrink-0 shadow-sm">
+                                            <img *ngIf="match.coverImage"
+                                                [src]="match.coverImage.startsWith('http') ? match.coverImage : uploadsBaseUrl + '/' + match.coverImage"
+                                                alt="غلاف" class="w-full h-full object-cover"
+                                                onerror="this.style.display='none'">
+                                            <div *ngIf="!match.coverImage" class="w-full h-full flex items-center justify-center">
+                                                <fa-icon [icon]="['fas', 'book']" class="text-slate-300 text-sm"></fa-icon>
+                                            </div>
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-xs font-black text-slate-800 dark:text-slate-100 truncate">{{ match.title }}</p>
+                                            <p class="text-[10px] text-slate-500 font-bold mt-0.5">لـ {{ match.author || 'غير محدد' }}</p>
+                                        </div>
+                                        <span class="px-2 py-1 bg-amber-100 text-amber-700 text-[9px] font-black rounded-lg border border-amber-200 flex-shrink-0">موجود</span>
+                                    </div>
+                                </div>
+                                <!-- Action buttons -->
+                                <div class="flex gap-2 px-4 pb-4">
+                                    <button (click)="showAddProductModal = false"
+                                        class="flex-1 py-2.5 px-4 text-xs font-black rounded-xl bg-rose-500 hover:bg-rose-600 text-white transition-all active:scale-95">
+                                        <fa-icon [icon]="['fas', 'times']" class="ml-1"></fa-icon>
+                                        إلغاء الإضافة
+                                    </button>
+                                    <button (click)="duplicateOverridden = true"
+                                        class="flex-1 py-2.5 px-4 text-xs font-black rounded-xl bg-amber-500 hover:bg-amber-600 text-white transition-all active:scale-95">
+                                        <fa-icon [icon]="['fas', 'plus']" class="ml-1"></fa-icon>
+                                        متابعة وإضافة نسخة جديدة
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- ✅ Override confirmed badge -->
+                            <div *ngIf="duplicateMatches.length > 0 && duplicateOverridden"
+                                class="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                                <fa-icon [icon]="['fas', 'info-circle']" class="text-slate-400 text-xs"></fa-icon>
+                                <p class="text-xs text-slate-500 font-bold">سيتم إضافة نسخة جديدة رغم وجود كتاب متشابه</p>
+                                <button (click)="duplicateOverridden = false" class="mr-auto text-[10px] text-rose-500 font-black underline">تراجع</button>
                             </div>
 
                             <div class="grid grid-cols-2 gap-4">
@@ -625,27 +691,86 @@
                             <div (dragover)="onDragOver($event, 'epub')" (dragleave)="onDragLeave($event)" (drop)="onDrop($event, 'epub')"
                                 class="relative group flex flex-col items-center justify-center p-10 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-[2.5rem] hover:border-emerald-500 transition-all bg-slate-50 dark:bg-slate-800/50 overflow-hidden">
                                 <fa-icon [icon]="['fas', 'file-pdf']" class="text-4xl text-slate-300 group-hover:text-emerald-500 mb-4 transition-colors"></fa-icon>
-                                <span class="text-sm font-black text-slate-600 dark:text-slate-400">ملف EPUB الكتاب</span>
+                                <span class="text-sm font-black text-slate-600 dark:text-slate-400">ملف EPUB الكتاب *</span>
+                                <p class="text-[10px] text-slate-400 font-bold mt-1">سيُستخرج الغلاف تلقائياً منه</p>
                                 <input type="file" class="absolute inset-0 opacity-0 cursor-pointer" accept=".epub" (change)="onFileSelected($event, 'epub')">
                                 
                                 <div *ngIf="selectedFile" class="absolute inset-0 bg-emerald-600 flex flex-col items-center justify-center p-6 text-white animate-fade-in text-center">
                                     <fa-icon [icon]="['fas', 'check-double']" class="text-3xl mb-2"></fa-icon>
                                     <span class="text-xs font-black truncate w-full">{{ selectedFile.name }}</span>
-                                    <span class="text-[10px] opacity-70 mt-1">تم اختيار الملف بنجاح</span>
+                                    <span class="text-[10px] opacity-80 mt-1">✅ سيُستخرج الغلاف تلقائياً</span>
                                 </div>
                             </div>
 
-                            <!-- Cover -->
-                            <div (dragover)="onDragOver($event, 'cover')" (dragleave)="onDragLeave($event)" (drop)="onDrop($event, 'cover')"
-                                class="relative group flex flex-col items-center justify-center p-10 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-[2.5rem] hover:border-emerald-500 transition-all bg-slate-50 dark:bg-slate-800/50 overflow-hidden">
-                                <fa-icon [icon]="['fas', 'image']" class="text-4xl text-slate-300 group-hover:text-emerald-500 mb-4 transition-colors"></fa-icon>
-                                <span class="text-sm font-black text-slate-600 dark:text-slate-400">غلاف الكتاب المخصص</span>
-                                <input type="file" class="absolute inset-0 opacity-0 cursor-pointer" accept="image/*" (change)="onFileSelected($event, 'cover')">
+                            <!-- Cover (optional) - shows extracted preview or manual upload -->
+                            <div class="relative rounded-[2.5rem] overflow-hidden border-2 transition-all"
+                                [ngClass]="extractedCoverPreviewUrl && !selectedCover ? 'border-emerald-400 bg-emerald-50/30 dark:bg-emerald-950/20' : selectedCover ? 'border-purple-400 bg-purple-50/30 dark:bg-purple-950/20' : 'border-dashed border-slate-200/60 dark:border-slate-800/60 bg-slate-50/50 dark:bg-slate-800/30 hover:border-purple-400'">
 
-                                <div *ngIf="selectedCover" class="absolute inset-0 bg-teal-600 flex flex-col items-center justify-center p-6 text-white animate-fade-in text-center">
-                                    <fa-icon [icon]="['fas', 'check-double']" class="text-3xl mb-2"></fa-icon>
-                                    <span class="text-xs font-black truncate w-full">{{ selectedCover.name }}</span>
-                                    <span class="text-[10px] opacity-70 mt-1">تم اختيار الغلاف</span>
+                                <!-- === STATE 1: LOADING === -->
+                                <div *ngIf="isExtractingCover"
+                                    class="flex flex-col items-center justify-center p-8 gap-3">
+                                    <div class="w-10 h-10 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                                    <span class="text-xs font-black text-emerald-600 dark:text-emerald-400">جاري استخراج الغلاف من EPUB...</span>
+                                </div>
+
+                                <!-- === STATE 2: EXTRACTED COVER PREVIEW (no manual cover) === -->
+                                <div *ngIf="!isExtractingCover && extractedCoverPreviewUrl && !selectedCover"
+                                    class="flex flex-col items-center gap-0 animate-fade-in">
+                                    <!-- Cover image preview -->
+                                    <div class="relative w-full aspect-[3/4] max-h-52 overflow-hidden">
+                                        <img [src]="extractedCoverPreviewUrl" alt="غلاف مستخرج"
+                                            class="w-full h-full object-cover">
+                                        <!-- Overlay badge -->
+                                        <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex items-end justify-center pb-3">
+                                            <span class="px-3 py-1 text-[10px] font-black bg-emerald-500 text-white rounded-full flex items-center gap-1.5">
+                                                <fa-icon [icon]="['fas', 'magic']" class="text-[8px]"></fa-icon>
+                                                غلاف مستخرج تلقائياً ✨
+                                            </span>
+                                        </div>
+                                        <!-- File input to replace -->
+                                        <input type="file" class="absolute inset-0 opacity-0 cursor-pointer" accept="image/*"
+                                            (change)="onFileSelected($event, 'cover')"
+                                            title="انقر لاستبدال الغلاف بصورة يدوية">
+                                    </div>
+                                    <div class="px-4 pb-3 pt-2 text-center w-full">
+                                        <p class="text-[10px] text-emerald-700 dark:text-emerald-400 font-bold">سيُرفع هذا الغلاف تلقائياً</p>
+                                        <p class="text-[9px] text-slate-400 font-bold mt-0.5">انقر على الصورة لاستبدالها بغلاف يدوي</p>
+                                    </div>
+                                </div>
+
+                                <!-- === STATE 3: MANUAL COVER SELECTED === -->
+                                <div *ngIf="!isExtractingCover && selectedCover"
+                                    class="flex flex-col items-center gap-0 animate-fade-in">
+                                    <div class="relative w-full aspect-[3/4] max-h-52 overflow-hidden bg-slate-100">
+                                        <div class="w-full h-full flex items-center justify-center bg-purple-600">
+                                            <div class="text-center text-white p-4">
+                                                <fa-icon [icon]="['fas', 'check-double']" class="text-3xl mb-2"></fa-icon>
+                                                <p class="text-xs font-black truncate w-full">{{ selectedCover.name }}</p>
+                                            </div>
+                                        </div>
+                                        <input type="file" class="absolute inset-0 opacity-0 cursor-pointer" accept="image/*"
+                                            (change)="onFileSelected($event, 'cover')">
+                                    </div>
+                                    <div class="px-4 pb-3 pt-2 text-center w-full">
+                                        <p class="text-[10px] text-purple-700 dark:text-purple-400 font-bold">غلاف يدوي محدد</p>
+                                        <button (click)="selectedCover = null; $event.stopPropagation()"
+                                            class="text-[9px] text-slate-400 underline font-bold mt-0.5">
+                                            {{ extractedCoverPreviewUrl ? 'استخدم الغلاف المستخرج تلقائياً' : 'إزالة الغلاف' }}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- === STATE 4: DEFAULT EMPTY === -->
+                                <div *ngIf="!isExtractingCover && !extractedCoverPreviewUrl && !selectedCover"
+                                    class="flex flex-col items-center justify-center p-6 group cursor-pointer">
+                                    <div class="absolute top-3 left-3">
+                                        <span class="px-3 py-1 text-[9px] font-black bg-emerald-100 text-emerald-700 rounded-full border border-emerald-200">يُستخرج تلقائياً</span>
+                                    </div>
+                                    <fa-icon [icon]="['fas', 'image']" class="text-3xl text-slate-300 group-hover:text-purple-400 mb-3 transition-colors"></fa-icon>
+                                    <span class="text-sm font-black text-slate-500 dark:text-slate-400">غلاف مخصص (اختياري)</span>
+                                    <p class="text-[10px] text-slate-400 font-bold mt-1">سيُستخرج من EPUB أو ارفع صورة يدوياً</p>
+                                    <input type="file" class="absolute inset-0 opacity-0 cursor-pointer" accept="image/*"
+                                        (change)="onFileSelected($event, 'cover')">
                                 </div>
                             </div>
                         </div>
@@ -659,7 +784,7 @@
                     class="flex-1 py-4 px-8 rounded-2xl bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 font-black text-sm border border-slate-200 dark:border-slate-700 hover:bg-slate-100 transition-all">
                     إلغاء
                 </button>
-                <button (click)="submitNewProduct()" [disabled]="isAddingProduct || !selectedFile || !newProduct.name"
+                <button (click)="submitNewProduct()" [disabled]="isAddingProduct || !selectedFile || !newProduct.name || (duplicateMatches.length > 0 && !duplicateOverridden)"
                     class="flex-[2] py-4 px-8 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 text-white font-black text-sm shadow-xl shadow-emerald-500/20 hover:opacity-90 disabled:opacity-50 disabled:grayscale transition-all flex items-center justify-center gap-3">
                     <fa-icon *ngIf="isAddingProduct" [icon]="['fas', 'spinner']" class="animate-spin"></fa-icon>
                     <span>{{ isAddingProduct ? 'جاري إنشاء الكتاب والمحتوى...' : 'حفظ ونشر الكتاب الآن 🚀' }}</span>

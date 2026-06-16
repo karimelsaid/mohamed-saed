@@ -106,11 +106,11 @@ export class HomePageComponent implements OnInit {
         products_id: b.products_id || b.product_id || b._id
       }));
 
-      // First sort to get the newest ones (safe comparison for string or numeric IDs)
+      // First sort to get the newest ones (by createdAt date descending)
       const sorted = normalizedData.sort((a: any, b: any) => {
-        const idA = String(a.products_id);
-        const idB = String(b.products_id);
-        return idB.localeCompare(idA);
+        const dateA = new Date(a.createdAt || a.lastStockUpdate || 0).getTime();
+        const dateB = new Date(b.createdAt || b.lastStockUpdate || 0).getTime();
+        return dateB - dateA;
       });
       
       // Take the top 200 newest and shuffle them for variety

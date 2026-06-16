@@ -124,11 +124,13 @@
   border: none;
   padding: 14px 40px;
   border-radius: 30px;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   cursor: pointer;
   transition: transform 0.2s, box-shadow 0.2s;
   box-shadow: 0 5px 15px rgba(108, 99, 255, 0.4);
+  width: 80%;
+  max-width: 250px;
 }
 
 .update-btn:hover {
@@ -138,6 +140,81 @@
 
 .update-btn:active {
   transform: translateY(0);
+}
+
+.postpone-btn {
+  background: transparent;
+  color: #666;
+  border: 2px solid #ccc;
+  padding: 10px 30px;
+  border-radius: 30px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 80%;
+  max-width: 250px;
+}
+
+.postpone-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: #999;
+  color: #333;
+}
+
+.dark .postpone-btn {
+  color: #ccc;
+  border-color: #555;
+}
+
+.dark .postpone-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: #777;
+  color: #fff;
+}
+
+.size-tag {
+  background: rgba(108, 99, 255, 0.1);
+  color: #6c63ff;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  display: inline-block;
+  margin-top: 5px;
+  margin-bottom: 10px;
+}
+
+.dark .size-tag {
+  background: rgba(108, 99, 255, 0.2);
+  color: #a39eff;
+}
+
+.progress-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+  padding: 0 4px;
+}
+
+.size-text {
+  font-size: 13px;
+  font-weight: 500;
+  color: #666;
+}
+
+.dark .size-text {
+  color: #aaa;
+}
+
+.modal-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  margin-top: 15px;
 }
 
 .error-msg {

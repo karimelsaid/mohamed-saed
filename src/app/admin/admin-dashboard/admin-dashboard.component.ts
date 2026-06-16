@@ -421,6 +421,31 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   productsPage: number = 1;
   productsPageSize: number = 50;
   searchTerm: string = '';
+  amazonProfitPercent: number = 80;
+
+  getAmazonPrice(costPrice: any): number {
+    const cost = Number(costPrice);
+    if (isNaN(cost) || cost <= 0) return 0;
+    const profitPercent = Number(this.amazonProfitPercent) || 80;
+    const targetNetPayout = cost + (cost * (profitPercent / 100));
+
+    const R = 13 / 100; // amazonCommissionRate (13%)
+    const T = 14 / 100; // taxRate (14%)
+    const Fc = 30; // customerShippingFee (30)
+    const S = 34; // sellerShippingFee (34)
+
+    const commissionTaxFactor = R * (1 + T);
+    const denominator = 1 - commissionTaxFactor;
+
+    if (denominator <= 0) {
+      return 0;
+    }
+
+    const numerator = targetNetPayout + S;
+    const P = (numerator / denominator) - Fc;
+
+    return Math.ceil(P);
+  }
 
   // --- Community Management State ---
   communityStats: { swaps: any[], auctions: any[] } = { swaps: [], auctions: [] };
@@ -924,7 +949,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     size: '',
     brand: '',
     suggestedCategory: '',
-    weight: '',
+    weight: 0,
     length: '',
     width: '',
     height: ''
@@ -995,16 +1020,43 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     }
   }
 
+  private normalizeExternalImageUrl(url: string): string {
+    try {
+      const parsed = new URL(url);
+      const searchParams = parsed.searchParams;
+
+      if (parsed.hostname.includes('google.com')) {
+        const imgUrl = searchParams.get('imgurl') || searchParams.get('url');
+        if (imgUrl) {
+          return decodeURIComponent(imgUrl);
+        }
+      }
+
+      if (parsed.hostname.includes('bing.com')) {
+        const imgUrl = searchParams.get('q') || searchParams.get('mediaurl') || searchParams.get('imgurl');
+        if (imgUrl) {
+          return decodeURIComponent(imgUrl);
+        }
+      }
+
+      return url;
+    } catch {
+      return url;
+    }
+  }
+
   addImageFromUrlDirect(url: string): void {
     if (this.imageUrls.length >= 3) {
       this.imageError = 'يمكنك إضافة حتى 3 روابط صور فقط.';
       return;
     }
 
+    const normalizedUrl = this.normalizeExternalImageUrl(url);
+
     try {
-      new URL(url);
-      if (!this.imageUrls.includes(url)) {
-        this.imageUrls.push(url);
+      new URL(normalizedUrl);
+      if (!this.imageUrls.includes(normalizedUrl)) {
+        this.imageUrls.push(normalizedUrl);
       }
     } catch (error) {
       // Invalid URL, ignore
@@ -1022,10 +1074,12 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       return;
     }
 
+    const normalizedUrl = this.normalizeExternalImageUrl(this.imageUrl);
+
     try {
-      new URL(this.imageUrl);
-      if (!this.imageUrls.includes(this.imageUrl)) {
-        this.imageUrls.push(this.imageUrl);
+      new URL(normalizedUrl);
+      if (!this.imageUrls.includes(normalizedUrl)) {
+        this.imageUrls.push(normalizedUrl);
         this.imageUrl = ''; // Clear the input
       } else {
         this.imageError = 'هذا الرابط موجود بالفعل.';
@@ -1254,11 +1308,29 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     if (value === 'NEW_CATEGORY') {
       this.isAddingNewCategory = true;
       this.product.product_category = '';
+    } else if (value === 'كتب') {
+      // When 'كتب' is selected as main category, clear product_category
+      // so the sub-category dropdown can set it
+      this.isAddingNewCategory = false;
+      this.product.product_category = '';
+    } else {
+      // For non-book categories (أدوات مكتبية, غير مصنف), set product_category directly
+      this.isAddingNewCategory = false;
+      this.product.product_category = value;
+    }
+  }
+
+  onSubCategoryChange(event: any): void {
+    const value = event.target.value;
+    if (value === 'NEW_CATEGORY') {
+      this.isAddingNewCategory = true;
+      this.product.product_category = '';
     } else {
       this.isAddingNewCategory = false;
       this.product.product_category = value;
     }
   }
+
 
   onBulkDefaultCategoryChange(event: any): void {
     const value = event.target.value;
@@ -1598,16 +1670,22 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
   // --- Mobile Version Control ---
   mobileVersionConfig: any = {};
+  selectedAppForVersion = 'kenouz';
+
+  onAppForVersionChange(app: string): void {
+    this.selectedAppForVersion = app;
+    this.loadMobileVersion();
+  }
 
   loadMobileVersion(): void {
-    this.http.get(`${this.backendBaseUrl}/mobile-version`).subscribe({
+    this.http.get(`${this.backendBaseUrl}/mobile-version?app=${this.selectedAppForVersion}`).subscribe({
       next: (config: any) => {
         this.mobileVersionConfig = config;
         if (!this.mobileVersionConfig.liveUpdate) {
           this.mobileVersionConfig.liveUpdate = {
             version: '1.0.0',
             enabled: false,
-            zipUrl: 'https://knoozbook.com/bundle.zip'
+            zipUrl: this.selectedAppForVersion === 'mushaf' ? 'https://knoozbook.com/mushaf-bundle.zip' : 'https://knoozbook.com/bundle.zip'
           };
         }
       },
@@ -1618,7 +1696,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   }
 
   saveMobileVersion(): void {
-    this.http.put(`${this.backendBaseUrl}/mobile-version`, this.mobileVersionConfig).subscribe({
+    this.http.put(`${this.backendBaseUrl}/mobile-version?app=${this.selectedAppForVersion}`, this.mobileVersionConfig).subscribe({
       next: (response: any) => {
         this.showSuccessModal('تم تحديث إعدادات التطبيق بنجاح');
       },
@@ -2719,7 +2797,19 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       error: (err) => {
         this.importingBulk = false;
         console.error('Bulk Import Error:', err);
-        this.showErrorModal('حدث خطأ أثناء الاستيراد الجماعي.');
+        const serverMessage = err.error?.message || err.message || '';
+        const statusCode = err.status || 0;
+        let userMessage = 'حدث خطأ أثناء الاستيراد الجماعي.';
+        if (statusCode === 401) {
+          userMessage = 'انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى.';
+        } else if (statusCode === 400) {
+          userMessage = serverMessage || 'بيانات غير صالحة. يرجى التحقق من ملف الاستيراد.';
+        } else if (statusCode === 413) {
+          userMessage = 'حجم البيانات كبير جداً. حاول تقليل عدد المنتجات.';
+        } else if (serverMessage) {
+          userMessage = `حدث خطأ: ${serverMessage}`;
+        }
+        this.showErrorModal(userMessage);
       }
     });
   }
@@ -3445,9 +3535,9 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   }
 
   onImageUrlError(index: number): void {
-    // Handle URL error, e.g., remove invalid URL
-    this.imageUrls.splice(index, 1);
-    this.showErrorModal('رابط الصورة غير صالح أو غير متاح.');
+    // Don't auto-remove the URL — it may fail to preview due to CORS but still be
+    // a perfectly valid image URL that the backend can use as image_path.
+    console.warn(`⚠️ Image URL preview failed for index ${index}: ${this.imageUrls[index]}. This may be a CORS issue, the URL is kept.`);
   }
 
   submitAddProduct(): void {
@@ -3545,7 +3635,10 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
         this.uploadProgress = 0;
         this.uploadSuccess = false;
         console.error('Upload Error:', error); // Log error for debugging
-        this.showErrorModal('حدث خطأ أثناء إضافة المنتج.');
+        // Extract server-provided message when possible
+        const serverMessage = (error && error.error && error.error.message) ? error.error.message : (error && error.message) ? error.message : 'حدث خطأ أثناء إضافة المنتج.';
+        const statusInfo = error && error.status ? ` (HTTP ${error.status})` : '';
+        this.showErrorModal(serverMessage + statusInfo);
       }
     });
   }
@@ -3579,7 +3672,11 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       color: '',
       size: '',
       brand: '',
-      suggestedCategory: ''
+      suggestedCategory: '',
+      weight: 0,
+      length: '',
+      width: '',
+      height: ''
     };
     this.selectedFiles = [];
     this.selectedFilesPreviews = [];

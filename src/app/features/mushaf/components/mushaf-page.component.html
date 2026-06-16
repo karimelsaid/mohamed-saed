@@ -583,6 +583,25 @@
 
                 <div class="custom-reminder-block">
                     <div class="reminder-label">
+                        <span>🌙 تلاوة سورة الملك والسجدة قبل النوم</span>
+                        <label class="switch">
+                            <input type="checkbox" [(ngModel)]="reminderSettings.bedtimeMulkSajda.enabled"
+                                (ngModelChange)="saveReminders()">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <div class="reminder-input-wrapper">
+                        <input type="time" [(ngModel)]="reminderSettings.bedtimeMulkSajda.time"
+                            (ngModelChange)="saveReminders()" [disabled]="!reminderSettings.bedtimeMulkSajda.enabled">
+                    </div>
+                    <div class="reminder-note">
+                        <i class="fas fa-info-circle"></i>
+                        تنبيه يومي قبل النوم لقراءة سورتي الملك والسجدة.
+                    </div>
+                </div>
+
+                <div class="custom-reminder-block">
+                    <div class="reminder-label">
                         <span>🕌 تذكير قراءة سورة الكهف (يوم الجمعة)</span>
                         <label class="switch">
                             <input type="checkbox" [(ngModel)]="reminderSettings.kahfFriday.enabled"
@@ -741,7 +760,7 @@
             <!-- Next Page -->
             <div class="mushaf-page-wrapper" *ngIf="nextPageData$ | async as nextPage; else emptyNext">
                 <div class="mushaf-page quran-text"
-                    [style.font-family]="'\'' + dataService.getFontName(pageNumber + 1) + '\''">
+                    [style.font-family]="getFontFamily(dataService.getFontName(pageNumber + 1))">
                     <div class="lines-container" [class.centered-content]="nextPage.page_number <= 2"
                         [style.--page-shift.px]="0">
                         <ng-container *ngFor="let line of nextPage.lines; trackBy: trackByLine">
@@ -808,7 +827,7 @@
             <!-- Previous Page -->
             <div class="mushaf-page-wrapper" *ngIf="prevPageData$ | async as prevPage; else emptyPrev">
                 <div class="mushaf-page quran-text"
-                    [style.font-family]="'\'' + dataService.getFontName(pageNumber - 1) + '\''">
+                    [style.font-family]="getFontFamily(dataService.getFontName(pageNumber - 1))">
                     <div class="lines-container" [class.centered-content]="prevPage.page_number <= 2"
                         [style.--page-shift.px]="0">
                         <ng-container *ngFor="let line of prevPage.lines; trackBy: trackByLine">
@@ -849,7 +868,7 @@
         <!-- Content -->
         <div class="vertical-page-wrapper" *ngFor="let page of verticalPages" [attr.data-page]="page.page_number"
             [class.first-pages]="page.page_number <= 2">
-            <div class="mushaf-page" [style.font-family]="'\'' + dataService.getFontName(page.page_number) + '\''">
+            <div class="mushaf-page" [style.font-family]="getFontFamily(dataService.getFontName(page.page_number))">
                 <div class="lines-container" [class.centered-content]="page.page_number <= 2">
                     <ng-container *ngFor="let line of page.lines">
                         <div class="mushaf-line" [ngClass]="'line-type-' + line.type"

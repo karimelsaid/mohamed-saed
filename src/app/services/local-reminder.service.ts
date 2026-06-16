@@ -9,11 +9,12 @@ export interface ReminderSettings {
     memorization: { enabled: boolean; time: string };
     revision: { enabled: boolean; time: string };
     kahfFriday: { enabled: boolean; time: string };
+    bedtimeMulkSajda: { enabled: boolean; time: string };
 }
 
 interface ScheduledNotification {
     id: string;
-    type: 'recitation' | 'memorization' | 'revision' | 'kahfFriday';
+    type: 'recitation' | 'memorization' | 'revision' | 'kahfFriday' | 'bedtimeMulkSajda';
     scheduledTime: number; // timestamp
     title: string;
     body: string;
@@ -163,7 +164,19 @@ export class LocalReminderService {
             });
         }
 
-        // 4. Kahf Friday Reminder (only on Fridays)
+        // 4. Bedtime Surah Mulk & Sajda Reminder
+        if (reminders.bedtimeMulkSajda.enabled) {
+            const nextTime = getNextOccurrence(reminders.bedtimeMulkSajda.time);
+            scheduled.push({
+                id: `bedtimeMulkSajda_${nextTime.getTime()}`,
+                type: 'bedtimeMulkSajda',
+                scheduledTime: nextTime.getTime(),
+                title: '🌙 تلاوة قبل النوم',
+                body: 'وقت تلاوة سورة الملك وسورة السجدة قبل النوم. افتح المصحف وابدأ.'
+            });
+        }
+
+        // 5. Kahf Friday Reminder (only on Fridays)
         if (reminders.kahfFriday.enabled) {
             const today = new Date();
             const dayOfWeek = today.getDay(); // 0 = Sunday, 5 = Friday
@@ -286,6 +299,9 @@ export class LocalReminderService {
             }
             if (reminders.revision.enabled && reminders.revision.time === currentTimeStr) {
                 this.showNotification('📚 ورد المراجعة', 'حان الآن موعد ورد المراجعة. افتح المصحف وراجع محفوظك السابق.');
+            }
+            if (reminders.bedtimeMulkSajda.enabled && reminders.bedtimeMulkSajda.time === currentTimeStr) {
+                this.showNotification('🌙 تلاوة قبل النوم', 'وقت تلاوة سورة الملك وسورة السجدة قبل النوم. افتح المصحف وابدأ.');
             }
 
             // Check Friday reminder

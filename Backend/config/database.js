@@ -1,5 +1,6 @@
 // إعدادات اتصال MongoDB النهائية والمستقرة
 const mongoose = require('mongoose');
+mongoose.set('bufferCommands', false);
 const dns = require('dns');
 
 // التقاط نسخة من البحث الأصلي لضمان الاستقرار
@@ -13,9 +14,9 @@ async function connectDB() {
     console.log('⏳ جاري الاتصال بـ MongoDB Atlas (البوابة: 27017)...');
     
     await mongoose.connect(uri, {
-      serverSelectionTimeoutMS: 60000,
-      connectTimeoutMS: 60000,
-      socketTimeoutMS: 75000,
+      serverSelectionTimeoutMS: 15000,
+      connectTimeoutMS: 15000,
+      socketTimeoutMS: 60000,
       family: 4
     });
 
@@ -23,6 +24,7 @@ async function connectDB() {
   } catch (err) {
     console.error('❌ فشل الاتصال بقاعدة البيانات.');
     console.error('التفاصيل:', err.message);
+    throw err;
   }
 }
 

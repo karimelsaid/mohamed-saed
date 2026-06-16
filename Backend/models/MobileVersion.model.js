@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 
 const MobileVersionSchema = new mongoose.Schema({
+    app: { type: String, default: 'kenouz' },
     android: {
         version: { type: String, default: '1.1.0' },
         minBuildNumber: { type: Number, default: 1 },

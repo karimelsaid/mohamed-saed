@@ -759,19 +759,76 @@ app.get('*', async (req, res, next) => {
   }
 
   if (isProduction && angularAppPromise) {
+    let handled = false;
+
+    // Set a fallback timer to prevent hanging
+    const timeoutTimer = setTimeout(() => {
+      if (!handled) {
+        handled = true;
+        console.warn(`⚠️ [SSR_TIMEOUT] Angular SSR took too long for: ${req.originalUrl}. Falling back to CSR.`);
+        const csrPath = path.join(projectRoot, 'dist', 'browser', 'index.csr.html');
+        if (fs.existsSync(csrPath)) {
+          res.sendFile(csrPath);
+        } else {
+          res.status(404).send('Frontend not built. Please run npm run build.');
+        }
+      }
+    }, 5000); // 5 seconds timeout
+
     try {
       const angularApp = await angularAppPromise;
-      return angularApp(req, res, next);
+
+      // Helper to clear timer and mark as handled
+      const cleanup = () => {
+        if (!handled) {
+          clearTimeout(timeoutTimer);
+          handled = true;
+          return true;
+        }
+        return false;
+      };
+
+      // Wrap response methods to clear the timeout
+      const originalSend = res.send;
+      res.send = function(...args) {
+        if (cleanup()) originalSend.apply(this, args);
+      };
+
+      const originalEnd = res.end;
+      res.end = function(...args) {
+        if (cleanup()) originalEnd.apply(this, args);
+      };
+
+      const originalRedirect = res.redirect;
+      res.redirect = function(...args) {
+        if (cleanup()) originalRedirect.apply(this, args);
+      };
+
+      return angularApp(req, res, (err) => {
+        if (cleanup()) {
+          if (err) {
+            console.error('🔥 Angular SSR next() error:', err);
+          }
+          const csrPath = path.join(projectRoot, 'dist', 'browser', 'index.csr.html');
+          if (fs.existsSync(csrPath)) {
+            res.sendFile(csrPath);
+          } else {
+            next(err);
+          }
+        }
+      });
     } catch (err) {
-      console.error('🔥 Angular SSR Error:', err);
-      // Fallback to CSR if SSR fails - but check if file exists first!
-      const csrPath = path.join(projectRoot, 'dist', 'browser', 'index.csr.html');
-      if (fs.existsSync(csrPath)) {
-        return res.sendFile(csrPath);
-      } else {
-        return res.status(404).send('Frontend not built. Please run npm run build.');
+      if (cleanup()) {
+        console.error('🔥 Angular SSR Error:', err);
+        const csrPath = path.join(projectRoot, 'dist', 'browser', 'index.csr.html');
+        if (fs.existsSync(csrPath)) {
+          return res.sendFile(csrPath);
+        } else {
+          return res.status(404).send('Frontend not built. Please run npm run build.');
+        }
       }
     }
+    return;
   }
 
   // Development or if SSR is disabled: Fallback to CSR
@@ -1097,13 +1154,16 @@ app.use((err, req, res, next) => {
   });
 });
 
-// بدء السيرفر بعد التأكد من الاتصال بقاعدة البيانات
+// بدء السيرفر بعد الاتصال بقاعدة البيانات لضمان عدم حدوث سباق
 async function startServer() {
   try {
+    // الانتظار حتى يكتمل الاتصال بقاعدة البيانات أولاً
     await connectDB();
-    
-    // Check for live updates on startup
-    await detectAndUpdateLiveVersion();
+
+    // فحص التحديثات الحية بعد الاتصال بنجاح
+    detectAndUpdateLiveVersion().catch(err => {
+      console.error('❌ [LiveUpdate] Check failed:', err.message);
+    });
 
     server.listen(port, '0.0.0.0', () => {
       const os = require('os');

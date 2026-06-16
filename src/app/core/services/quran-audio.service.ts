@@ -112,7 +112,8 @@ export class QuranAudioService {
         201: 'https://everyayah.com/data/mahmoud_ali_al_banna_32kbps',
         202: 'https://everyayah.com/data/Fares_Abbad_64kbps',
         203: 'https://everyayah.com/data/Hudhaify_128kbps',
-        205: 'https://everyayah.com/data/Mustafa_Ismail_48kbps'
+        205: 'https://everyayah.com/data/Mustafa_Ismail_48kbps',
+        220: 'https://everyayah.com/data/Nasser_Alqatami_128kbps'
     };
 
     // RECITERS who provide FULL SURAH audio only
@@ -198,8 +199,17 @@ export class QuranAudioService {
     }
 
     public isSurahReciter(reciterId: number): boolean {
-        return this.SURAH_RECITERS.has(reciterId) || reciterId === 286 || this.TIMED_RECITERS.includes(reciterId);
+        // FIX: Removed TIMED_RECITERS from this check.
+        // Timed reciters (e.g. 174 Yasser Al-Dossari) use verse-level audio files
+        // and need full verse highlighting + repetition support like standard reciters.
+        // Including them here disabled verse tracking, highlighting, and repetition.
+        return this.SURAH_RECITERS.has(reciterId) || reciterId === 286;
     }
+
+    private isTimedReciter(reciterId: number): boolean {
+        return this.TIMED_RECITERS.includes(Number(reciterId));
+    }
+
     private verseCompleted = new BehaviorSubject<{ verseKey: string; duration: number } | null>(null);
     public verseCompleted$ = this.verseCompleted.asObservable();
     private currentRepeatCount = 0;
@@ -1127,7 +1137,19 @@ export class QuranAudioService {
         try {
             let surah: string, ayah: string;
             // 1. SURAH-LEVEL CHECK (Highest Priority for SURAH_RECITERS)
+            // Timed reciters like Yasser Al-Dossari use verse-level audio files,
+            // so we should not prefer a downloaded full surah file for normal verse playback.
             if (this.isSurahReciter(reciterId)) {
+                surah = surahIdOverride ? surahIdOverride.toString() : verseKey.split(':')[0];
+                const surahFileName = `audio/${reciterId}/${surah}/full.mp3`;
+                try {
+                    const res = await Filesystem.getUri({ directory: Directory.Data, path: surahFileName });
+                    await Filesystem.stat({ directory: Directory.Data, path: surahFileName });
+                    return { raw: res.uri, converted: Capacitor.convertFileSrc(res.uri) };
+                } catch (e) { /* fallback to verse */ }
+            }
+
+            if (this.isTimedReciter(reciterId) && verseKey === 'full') {
                 surah = surahIdOverride ? surahIdOverride.toString() : verseKey.split(':')[0];
                 const surahFileName = `audio/${reciterId}/${surah}/full.mp3`;
                 try {
@@ -1392,8 +1414,7 @@ export class QuranAudioService {
             this.updateMediaSessionMetadata(verseKey, rId);
             this.startForegroundService();
 
-            // ANDROID: Let this fall through to the native bridge logic below
-            // This ensures buildNativeQueue is used which handles repetitions and speed.
+            // iOS/Web: Direct HTML5 playback
             if (Capacitor.getPlatform() !== 'android') {
                 this.audio.src = audioUrl;
                 this.audio.load();
@@ -1402,6 +1423,70 @@ export class QuranAudioService {
                 this.isPlayingNewAudio = false;
                 this.isGaplessTransitioning = false;
                 return;
+            }
+
+            // ANDROID OFFLINE FIX: Use local file directly via MediaBridge.
+            // Bypass ALL network metadata fetches and HEAD probes to prevent
+            // 12-second timeouts and playback failures when offline.
+            try {
+                this.nextVerseKey = null;
+                this.lastNativeQueueIndex = null;
+                this.lastTrackedVerseKey = null;
+                this.lastQueuedKeyNative = null;
+                console.log('[AudioService] ANDROID OFFLINE: Using local file via MediaBridge, bypassing network');
+
+                this.audio.pause();
+                this.standbyAudio.pause();
+
+                const reciters = await firstValueFrom(this.getReciters());
+                const reciterName = reciters.find(r => r.id === rId)?.name || 'القارئ';
+
+                const surahIdLocal = parseInt(verseKey.split(':')[0]);
+                const surahMetaLocal = await firstValueFrom(this.dataService.getMetadata().pipe(
+                    map(meta => meta.surahs.find(s => s.id === surahIdLocal))
+                ));
+                const surahNameLocal = surahMetaLocal?.name || `سورة ${surahIdLocal}`;
+                const titleLocal = `${surahNameLocal} - الآية ${verseKey.split(':')[1]}`;
+
+                // Load surah timings for timed/surah reciters (from cache, no network needed)
+                if (this.isSurahReciter(rId) || this.TIMED_RECITERS.includes(rId)) {
+                    const needsRefresh = this.currentSurahTimings.length === 0 ||
+                        this.currentSurahTimings[0].verse_key.split(':')[0] !== surahIdLocal.toString();
+                    if (needsRefresh) {
+                        this.currentSurahTimings = await this.getOrFetchSurahTimings(surahIdLocal, rId);
+                    }
+                }
+
+                const { items: queueItems, startPositionMs } = await this.buildNativeQueue(
+                    verseKey, rId, audioUrl, titleLocal, reciterName
+                );
+
+                if (queueItems.length > 0) {
+                    console.log(`[AudioService] OFFLINE: Setting native queue with ${queueItems.length} items`);
+                    await MediaBridge.setQueue({
+                        items: queueItems,
+                        startIndex: 0,
+                        startPositionMs: startPositionMs
+                    });
+                }
+
+                await MediaBridge.setRate({ rate: this.state.value.playbackRate }).catch(() => { });
+                this.updateState({ isPlaying: true, isBuffering: false });
+                this.isPlayingNewAudio = false;
+                this.startAndroidProgressPolling();
+
+                setTimeout(async () => {
+                    try {
+                        const status = await MediaBridge.getStatus();
+                        if (status.duration > 0) this.lastValidDuration = status.duration / 1000;
+                    } catch (e) { /* ignore */ }
+                }, 500);
+
+                this.preloadNextVerse(verseKey, rId);
+                return;
+            } catch (bridgeError) {
+                console.error('[AudioService] OFFLINE MediaBridge failed, falling through to network path:', bridgeError);
+                // Fall through to network logic as last resort
             }
         }
 
@@ -2221,7 +2306,7 @@ export class QuranAudioService {
     }
 
     getReciters(): Observable<Reciter[]> {
-        const CACHE_KEY = 'cached_reciters_list_v16';
+        const CACHE_KEY = 'cached_reciters_list_v17';
         const cached = localStorage.getItem(CACHE_KEY);
 
         const missingReciters: Reciter[] = [
@@ -2254,6 +2339,7 @@ export class QuranAudioService {
             { id: 201, name: 'محمود علي البنا', style: 'مرتل', recitationType: 'ayah' },
             { id: 202, name: 'فارس عباد', style: 'مرتل', recitationType: 'ayah' },
             { id: 205, name: 'مصطفى إسماعيل', style: 'مرتل', recitationType: 'ayah' },
+            { id: 220, name: 'ناصر القطامي (آيات)', style: 'مرتل', recitationType: 'ayah' },
             // FULL SURAH RECITERS (2000+)
             { id: 2001, name: 'عبدالله كامل ', style: 'مرتل', recitationType: 'surah' },
             { id: 2002, name: 'إدريس أبكر ', style: 'مرتل', recitationType: 'surah' },

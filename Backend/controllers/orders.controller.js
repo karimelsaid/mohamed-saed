@@ -386,116 +386,301 @@ exports.getUserOrders = async (req, res) => {
   }
 };
 
+let merchantProductsCache = {
+  merchants: null,
+  products: null,
+  expiresAt: 0
+};
+
+async function getMerchantProductsCache() {
+  if (merchantProductsCache.merchants && merchantProductsCache.products && merchantProductsCache.expiresAt > Date.now()) {
+    return merchantProductsCache;
+  }
+  try {
+    const merchants = await User.find({ role: { $in: ['merchant', 'admin'] } }).select('_id role').lean();
+    const merchantIds = merchants.filter(m => m.role === 'merchant').map(m => m._id);
+
+    // Only query products belonging to actual merchants (exclude admin-owned products)
+    const products = await Product.find({ merchantId: { $in: merchantIds } })
+      .select('product_name product_image merchantId')
+      .lean();
+    
+    merchantProductsCache = {
+      merchants,
+      products,
+      expiresAt: Date.now() + 15 * 60 * 1000 // 15 minutes cache
+    };
+  } catch (err) {
+    console.error('Error fetching merchant products mapping cache:', err);
+    if (!merchantProductsCache.merchants) {
+      merchantProductsCache.merchants = [];
+      merchantProductsCache.products = [];
+    }
+  }
+  return merchantProductsCache;
+}
+
 exports.getAllOrders = async (req, res) => {
   try {
-    const { merchantId, includeArchived } = req.query;
-    const users = await User.find().select('orders username email phone governorate city village');
-    let allOrders = [];
-    
-    for (const user of users) {
-      for (const order of user.orders) {
-        // Filter out archived orders unless explicitly requested
-        if (includeArchived !== 'true' && order.status === 'مؤرشف') {
-          continue;
-        }
-        // Handle book products
-        if (order.products && order.products.length > 0) {
-          for (const product of order.products) {
-            let baseAddress = '';
-            if (order.isPickup) {
-              baseAddress = `استلام من المكتبة: ${order.pickupLocation}`;
-            } else if (order.postOffice && order.postOffice.governorate) {
-              baseAddress = `شحن عبر مكاتب البريد: ${order.postOffice.governorate}, ${order.postOffice.city}, ${order.postOffice.address || ''}${order.postOffice.name ? ' - اسم المكتب: ' + order.postOffice.name : ''}`;
-            } else { // delivery
-              const parts = [
-                order.shippingAddress?.governorate,
-                order.shippingAddress?.city,
-                order.shippingAddress?.village
-              ].filter(Boolean);
-              baseAddress = parts.length > 0 ? parts.join(', ') : '';
-            }
-            const finalAddress = baseAddress + (user.phone ? ' - ' + user.phone : '');
+    const startTime = Date.now();
+    const { merchantId, includeArchived, page, limit } = req.query;
 
-            allOrders.push({
-              _id: order._id,
-              book: product.bookName ? product.bookName : product.bookId,
-              customerName: user.username,
-              email: user.email,
-              quantity: product.quantity,
-              address: order.address || finalAddress,
-              status: order.status,
-              orderDate: order.date,
-              totalAmount: order.totalAmount,
-              paymentStatus: order.paymentStatus, // Added paymentStatus
-              isMerchantOrder: false, // default
-              isCommunityItem: order.isCommunityItem || !!order.communityItemId || false,
-              communityItemId: order.communityItemId || null,
-              communityOwnerId: order.communityOwnerId || null,
-              communityOwnerName: order.communityOwnerName || null,
-              communityOwnerPhone: order.communityOwnerPhone || null,
-              communityOwnerAddress: order.communityOwnerAddress || null,
-              shippingAddress: order.shippingAddress || null,
-              shippingMethod: order.shippingMethod || 'knoozbook'
-            });
-          }
-        }
-      }
-    }
-    
-    // SMART-LOOKUP: Populate missing owner details for community orders
-    for (let order of allOrders) {
-      if (order.isCommunityItem && (!order.communityOwnerName || !order.communityOwnerAddress) && order.communityItemId) {
-        try {
-          // Try fetching from Auction
-          let auction = await Auction.findById(order.communityItemId).populate('userId');
-          if (auction && auction.userId) {
-            order.communityOwnerId = auction.userId._id.toString();
-            order.communityOwnerName = auction.userId.username || auction.userId.email;
-            order.communityOwnerPhone = auction.userId.phone || '';
-            order.communityOwnerAddress = [
-              auction.userId.governorate,
-              auction.userId.city,
-              auction.userId.village
-            ].filter(Boolean).join(', ');
-          } else {
-            // Try fetching from BookSwap
-            let swap = await BookSwap.findById(order.communityItemId).populate('userId');
-            if (swap && swap.userId) {
-              order.communityOwnerId = swap.userId._id.toString();
-              order.communityOwnerName = swap.userId.username || swap.userId.email;
-              order.communityOwnerPhone = swap.userId.phone || '';
-              order.communityOwnerAddress = [
-                swap.userId.governorate,
-                swap.userId.city,
-                swap.userId.village
-              ].filter(Boolean).join(', ');
-            }
-          }
-        } catch (e) { /* silent fail for individual order */ }
-      }
-    }
+    // Retrieve cached merchants and products mapping
+    const cache = await getMerchantProductsCache();
+    const merchants = cache.merchants;
+    const productsWithMerchant = cache.products;
 
-    // Always fetch products with merchantId to set isMerchantOrder
-    const productsWithMerchant = await Product.find({ merchantId: { $exists: true, $ne: null } }).select('product_name product_image merchantId');
+    const userRoleMap = new Map();
+    merchants.forEach(m => userRoleMap.set(m._id.toString(), m.role));
 
-    allOrders.forEach(order => {
-      const book = order.book;
-      const product = productsWithMerchant.find(p => p.product_name === book || (p.product_image && p.product_image.replace('.webp', '') === book));
-      if (product && product.merchantId && product.merchantId.toString() === '67683937397e5b22b07b1406') {
-        order.isMerchantOrder = true;
-      } else {
-        order.isMerchantOrder = false;
+    // Build lookup maps for products
+    const merchantProductMap = new Map();
+    productsWithMerchant.forEach(p => {
+      if (p.merchantId) {
+        const mIdStr = p.merchantId.toString();
+        const role = userRoleMap.get(mIdStr) || 'merchant';
+        const val = { merchantId: mIdStr, role };
+        if (p.product_name) merchantProductMap.set(p.product_name, val);
+        if (p.product_image) merchantProductMap.set(p.product_image.replace('.webp', ''), val);
       }
     });
 
-    res.status(200).json(allOrders);
+    const getProductInfo = (productName) => {
+      if (productName && merchantProductMap.has(productName)) {
+        return merchantProductMap.get(productName);
+      }
+      return { merchantId: '69d11b07df78621a8d7b1559', role: 'admin' }; // default admin ID
+    };
+
+    // Determine if we should filter by merchantId (only filter if requester is NOT admin or staff)
+    const requesterRole = merchantId ? userRoleMap.get(merchantId.toString()) : null;
+    const shouldFilterMerchant = merchantId && requesterRole !== 'admin' && requesterRole !== 'staff';
+
+    let merchantBookNames = [];
+    if (shouldFilterMerchant) {
+      productsWithMerchant.forEach(p => {
+        if (p.merchantId && p.merchantId.toString() === merchantId.toString()) {
+          if (p.product_name) merchantBookNames.push(p.product_name);
+          if (p.product_image) merchantBookNames.push(p.product_image.replace('.webp', ''));
+        }
+      });
+    }
+
+    // Build the aggregation pipeline
+    const pipeline = [
+      { $match: { 'orders.0': { $exists: true } } },
+      { $unwind: '$orders' }
+    ];
+
+    if (includeArchived !== 'true') {
+      pipeline.push({
+        $match: { 'orders.status': { $ne: 'مؤرشف' } }
+      });
+    }
+
+    pipeline.push({ $unwind: '$orders.products' });
+
+    if (shouldFilterMerchant) {
+      pipeline.push({
+        $match: {
+          $or: [
+            { 'orders.products.bookName': { $in: merchantBookNames } },
+            { 'orders.products.book': { $in: merchantBookNames } }
+          ]
+        }
+      });
+    }
+
+    pipeline.push({
+      $project: {
+        _id: 0,
+        username: '$username',
+        email: '$email',
+        phone: '$phone',
+        governorate: '$governorate',
+        city: '$city',
+        village: '$village',
+        
+        orderId: '$orders._id',
+        orderDate: '$orders.date',
+        orderStatus: '$orders.status',
+        totalAmount: '$orders.totalAmount',
+        paymentStatus: '$orders.paymentStatus',
+        isPickup: '$orders.isPickup',
+        pickupLocation: '$orders.pickupLocation',
+        postOffice: '$orders.postOffice',
+        shippingAddress: '$orders.shippingAddress',
+        address: '$orders.address',
+        isCommunityItem: '$orders.isCommunityItem',
+        communityItemId: '$orders.communityItemId',
+        communityOwnerId: '$orders.communityOwnerId',
+        communityOwnerName: '$orders.communityOwnerName',
+        communityOwnerPhone: '$orders.communityOwnerPhone',
+        communityOwnerAddress: '$orders.communityOwnerAddress',
+        shippingMethod: '$orders.shippingMethod',
+        statusLog: '$orders.statusLog',
+        
+        bookId: '$orders.products.bookId',
+        bookName: '$orders.products.bookName',
+        book: '$orders.products.book',
+        quantity: '$orders.products.quantity'
+      }
+    });
+
+    pipeline.push({
+      $sort: { orderDate: -1 }
+    });
+
+    let hasPagination = !!page;
+    let paginatedResult;
+    let totalCount = 0;
+
+    if (hasPagination) {
+      const pageNum = parseInt(page, 10) || 1;
+      const limitNum = parseInt(limit, 10) || 50;
+      const skipNum = (pageNum - 1) * limitNum;
+
+      pipeline.push({
+        $facet: {
+          metadata: [{ $count: 'total' }],
+          data: [{ $skip: skipNum }, { $limit: limitNum }]
+        }
+      });
+
+      const aggregationRes = await User.aggregate(pipeline);
+      const metadata = aggregationRes[0]?.metadata || [];
+      totalCount = metadata[0]?.total || 0;
+      paginatedResult = aggregationRes[0]?.data || [];
+    } else {
+      // In case no pagination is requested, limit to 5000 to protect server memory
+      pipeline.push({ $limit: 5000 });
+      paginatedResult = await User.aggregate(pipeline);
+    }
+
+    // Map aggregated results to final order entry structure
+    let allOrders = paginatedResult.map(doc => {
+      const prodName = doc.bookName || doc.book || '';
+      const prodInfo = getProductInfo(prodName);
+      
+      let baseAddress = '';
+      if (doc.isPickup) {
+        baseAddress = `استلام من المكتبة: ${doc.pickupLocation || ''}`;
+      } else if (doc.postOffice && doc.postOffice.governorate) {
+        baseAddress = `شحن عبر مكاتب البريد: ${doc.postOffice.governorate}, ${doc.postOffice.city}, ${doc.postOffice.address || ''}${doc.postOffice.name ? ' - اسم المكتب: ' + doc.postOffice.name : ''}`;
+      } else { // delivery
+        const parts = [
+          doc.shippingAddress?.governorate,
+          doc.shippingAddress?.city,
+          doc.shippingAddress?.village
+        ].filter(Boolean);
+        baseAddress = parts.length > 0 ? parts.join(', ') : '';
+      }
+      const finalAddress = baseAddress + (doc.phone ? ' - ' + doc.phone : '');
+
+      return {
+        _id: doc.orderId,
+        book: doc.bookName || doc.book || doc.bookId || '',
+        customerName: doc.username || '',
+        email: doc.email || '',
+        phone: doc.shippingAddress?.phone || doc.phone || '',
+        quantity: doc.quantity,
+        address: doc.address || finalAddress,
+        status: doc.orderStatus,
+        orderDate: doc.orderDate,
+        totalAmount: doc.totalAmount,
+        paymentStatus: doc.paymentStatus,
+        isMerchantOrder: prodInfo.role === 'merchant',
+        isCommunityItem: doc.isCommunityItem || !!doc.communityItemId || false,
+        communityItemId: doc.communityItemId || null,
+        communityOwnerId: doc.communityOwnerId || null,
+        communityOwnerName: doc.communityOwnerName || null,
+        communityOwnerPhone: doc.communityOwnerPhone || null,
+        communityOwnerAddress: doc.communityOwnerAddress || null,
+        shippingAddress: doc.shippingAddress || null,
+        shippingMethod: doc.shippingMethod || 'knoozbook',
+        statusLog: (doc.statusLog || []).map(log => ({
+          status: log.status,
+          timestamp: log.updatedAt || log.timestamp || new Date(),
+          actor: log.updatedBy || log.actor || '',
+          role: log.role || '',
+          note: log.note || ''
+        }))
+      };
+    });
+
+    // BATCH LOOKUP: Populate missing owner details for community orders
+    const communityItemIds = [];
+    allOrders.forEach(order => {
+      if (order.isCommunityItem && (!order.communityOwnerName || !order.communityOwnerAddress) && order.communityItemId) {
+        communityItemIds.push(order.communityItemId);
+      }
+    });
+
+    if (communityItemIds.length > 0) {
+      const validIds = communityItemIds.filter(id => mongoose.Types.ObjectId.isValid(id));
+      
+      const [auctions, swaps] = await Promise.all([
+        Auction.find({ _id: { $in: validIds } }).populate('userId', 'username email phone governorate city village').lean(),
+        BookSwap.find({ _id: { $in: validIds } }).populate('userId', 'username email phone governorate city village').lean()
+      ]);
+
+      const communityOwnerMap = new Map();
+      auctions.forEach(a => {
+        if (a.userId) {
+          communityOwnerMap.set(a._id.toString(), {
+            ownerId: a.userId._id.toString(),
+            ownerName: a.userId.username || a.userId.email,
+            ownerPhone: a.userId.phone || '',
+            ownerAddress: [a.userId.governorate, a.userId.city, a.userId.village].filter(Boolean).join(', ')
+          });
+        }
+      });
+      swaps.forEach(s => {
+        if (s.userId && !communityOwnerMap.has(s._id.toString())) {
+          communityOwnerMap.set(s._id.toString(), {
+            ownerId: s.userId._id.toString(),
+            ownerName: s.userId.username || s.userId.email,
+            ownerPhone: s.userId.phone || '',
+            ownerAddress: [s.userId.governorate, s.userId.city, s.userId.village].filter(Boolean).join(', ')
+          });
+        }
+      });
+
+      allOrders.forEach(order => {
+        if (order.isCommunityItem && (!order.communityOwnerName || !order.communityOwnerAddress) && order.communityItemId) {
+          const owner = communityOwnerMap.get(order.communityItemId.toString());
+          if (owner) {
+            order.communityOwnerId = owner.ownerId;
+            order.communityOwnerName = owner.ownerName;
+            order.communityOwnerPhone = owner.ownerPhone;
+            order.communityOwnerAddress = owner.ownerAddress;
+          }
+        }
+      });
+    }
+
+    console.log(`✅ [getAllOrders] Returned ${allOrders.length} orders in ${Date.now() - startTime}ms`);
+
+    if (hasPagination) {
+      res.status(200).json({
+        success: true,
+        orders: allOrders,
+        total: totalCount,
+        page: parseInt(page, 10) || 1,
+        pages: Math.ceil(totalCount / (parseInt(limit, 10) || 50))
+      });
+    } else {
+      res.status(200).json(allOrders);
+    }
   } catch (error) {
+    console.error('❌ [getAllOrders] Error:', error);
     res.status(500).json({
       message: 'Error getting all orders',
       error: error.message
     });
   }
 };
+
 
 // updateOrderStatus
 exports.updateOrderStatus = async (req, res) => {

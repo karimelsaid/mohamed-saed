@@ -289,6 +289,60 @@ class GoogleSheetsService {
     }
 
     /**
+     * Map user document to row data for Google Sheets.
+     */
+    mapUserToRow(u) {
+        return [
+            u._id.toString(),
+            u.username || '',
+            u.email || '',
+            u.phone || '',
+            u.gender || '',
+            u.role || '',
+            u.isSheikh ? 'TRUE' : 'FALSE',
+            u.approved ? 'TRUE' : 'FALSE',
+            u.suspended ? 'TRUE' : 'FALSE',
+            u.governorate || '',
+            u.city || '',
+            u.village || '',
+            u.postOffice?.governorate || '',
+            u.postOffice?.city || '',
+            u.postOffice?.address || '',
+            u.postOffice?.name || '',
+            u.activeSubscription ? 'TRUE' : 'FALSE',
+            u.subscriptionEndDate ? (typeof u.subscriptionEndDate.toISOString === 'function' ? u.subscriptionEndDate.toISOString() : String(u.subscriptionEndDate)) : '',
+            u.quranProgress?.walletBalance || 0,
+            u.referralBalance || 0,
+            u.gamification?.coins || 0,
+            u.gamification?.xp || 0,
+            u.gamification?.level || 1,
+            u.marketer?.isMarketer ? 'TRUE' : 'FALSE',
+            u.marketer?.balance || 0,
+            u.marketer?.totalEarnings || 0,
+            u.createdAt ? (typeof u.createdAt.toISOString === 'function' ? u.createdAt.toISOString() : String(u.createdAt)) : ''
+        ];
+    }
+
+    /**
+     * Find row index of a user in sheets by User ID (Column A).
+     */
+    async findRowIndexByUserId(spreadsheetId, sheetName, userId) {
+        if (!userId) return -1;
+        try {
+            const response = await this.sheets.spreadsheets.values.get({
+                spreadsheetId,
+                range: `${sheetName}!A:A`,
+            });
+            const rows = response.data.values;
+            if (!rows) return -1;
+            return rows.findIndex(row => String(row[0] || '').trim() === userId);
+        } catch (e) {
+            console.error('Error finding row index by userId:', e.message);
+            return -1;
+        }
+    }
+
+    /**
      * Sync all users to the "العملاء" sheet.
      */
     async syncUsers(users) {
@@ -298,24 +352,16 @@ class GoogleSheetsService {
             if (!spreadsheetId) return null;
 
             const sheetName = 'العملاء';
-            const headers = ['User ID', 'Username', 'Email', 'Phone', 'Role', 'Governorate', 'City', 'Village', 'Address', 'Wallet Balance', 'Referral Balance', 'Created At'];
+            const headers = [
+                'User ID', 'Username', 'Email', 'Phone', 'Gender', 'Role', 'Is Sheikh', 'Approved', 'Suspended',
+                'Governorate', 'City', 'Village', 'Post Office Governorate', 'Post Office City', 'Post Office Address', 'Post Office Name',
+                'Active Subscription', 'Subscription End Date', 'Wallet Balance', 'Referral Balance', 'Coins', 'XP', 'Level',
+                'Is Marketer', 'Marketer Balance', 'Marketer Total Earnings', 'Created At'
+            ];
             
             await this.ensureSheetExists(spreadsheetId, sheetName, headers);
 
-            const rows = users.map(u => [
-                u._id.toString(),
-                u.username || '',
-                u.email || '',
-                u.phone || '',
-                u.role || '',
-                u.governorate || '',
-                u.city || '',
-                u.village || '',
-                u.address || '',
-                u.quranProgress?.walletBalance || 0,
-                u.referralBalance || 0,
-                u.createdAt ? u.createdAt.toISOString() : ''
-            ]);
+            const rows = users.map(u => this.mapUserToRow(u));
 
             await this.sheets.spreadsheets.values.clear({
                 spreadsheetId,
@@ -340,7 +386,7 @@ class GoogleSheetsService {
     }
 
     /**
-     * Sync a single user (append) to the "العملاء" sheet.
+     * Sync a single user (insert or update) to the "العملاء" sheet.
      */
     async syncSingleUser(user) {
         try {
@@ -349,34 +395,39 @@ class GoogleSheetsService {
             if (!spreadsheetId) return null;
 
             const sheetName = 'العملاء';
-            const headers = ['User ID', 'Username', 'Email', 'Phone', 'Role', 'Governorate', 'City', 'Village', 'Address', 'Wallet Balance', 'Referral Balance', 'Created At'];
+            const headers = [
+                'User ID', 'Username', 'Email', 'Phone', 'Gender', 'Role', 'Is Sheikh', 'Approved', 'Suspended',
+                'Governorate', 'City', 'Village', 'Post Office Governorate', 'Post Office City', 'Post Office Address', 'Post Office Name',
+                'Active Subscription', 'Subscription End Date', 'Wallet Balance', 'Referral Balance', 'Coins', 'XP', 'Level',
+                'Is Marketer', 'Marketer Balance', 'Marketer Total Earnings', 'Created At'
+            ];
             
             await this.ensureSheetExists(spreadsheetId, sheetName, headers);
 
-            const row = [
-                user._id.toString(),
-                user.username || '',
-                user.email || '',
-                user.phone || '',
-                user.role || '',
-                user.governorate || '',
-                user.city || '',
-                user.village || '',
-                user.address || '',
-                user.quranProgress?.walletBalance || 0,
-                user.referralBalance || 0,
-                user.createdAt ? user.createdAt.toISOString() : new Date().toISOString()
-            ];
+            const row = this.mapUserToRow(user);
+            const existingRowIndex = await this.findRowIndexByUserId(spreadsheetId, sheetName, user._id.toString());
 
-            await this.sheets.spreadsheets.values.append({
-                spreadsheetId,
-                range: `${sheetName}!A:AZ`,
-                valueInputOption: 'USER_ENTERED',
-                insertDataOption: 'INSERT_ROWS',
-                requestBody: { values: [row] }
-            });
+            if (existingRowIndex !== -1) {
+                // UPDATE
+                await this.sheets.spreadsheets.values.update({
+                    spreadsheetId,
+                    range: `${sheetName}!A${existingRowIndex + 1}`,
+                    valueInputOption: 'USER_ENTERED',
+                    requestBody: { values: [row] }
+                });
+                console.log(`✅ [GoogleSheetsService] User updated in sheet: ${user.email}`);
+            } else {
+                // APPEND
+                await this.sheets.spreadsheets.values.append({
+                    spreadsheetId,
+                    range: `${sheetName}!A:AZ`,
+                    valueInputOption: 'USER_ENTERED',
+                    insertDataOption: 'INSERT_ROWS',
+                    requestBody: { values: [row] }
+                });
+                console.log(`✅ [GoogleSheetsService] User appended to sheet: ${user.email}`);
+            }
 
-            console.log(`✅ [GoogleSheetsService] User appended: ${user.email}`);
             return true;
         } catch (error) {
             console.error('❌ [GoogleSheetsService] Single User Sync Error:', error.message);

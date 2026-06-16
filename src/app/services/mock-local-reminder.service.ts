@@ -28,7 +28,8 @@ export class MockLocalReminderService {
             recitation: { enabled: false, time: '00:00' },
             memorization: { enabled: false, time: '00:00' },
             revision: { enabled: false, time: '00:00' },
-            kahfFriday: { enabled: false, time: '00:00' }
+            kahfFriday: { enabled: false, time: '00:00' },
+            bedtimeMulkSajda: { enabled: false, time: '22:00' }
         };
     }
 

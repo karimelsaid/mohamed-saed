@@ -12,8 +12,11 @@ export type UpdateStatus = 'idle' | 'checking' | 'downloading' | 'applying' | 'c
   providedIn: 'root'
 })
 export class LiveUpdateService {
-  // Shared storage key across all methods to ensure consistency
-  private readonly STORAGE_KEY = 'last_live_update_version';
+  private currentApp: 'kenouz' | 'mushaf' = 'kenouz';
+
+  private getStorageKey(appName: 'kenouz' | 'mushaf'): string {
+    return appName === 'mushaf' ? 'last_live_update_version_mushaf' : 'last_live_update_version';
+  }
 
   private statusSubject = new BehaviorSubject<UpdateStatus>('idle');
   public status$ = this.statusSubject.asObservable();
@@ -27,9 +30,18 @@ export class LiveUpdateService {
   private errorSubject = new BehaviorSubject<string>('');
   public error$ = this.errorSubject.asObservable();
 
+  private sizeBytesSubject = new BehaviorSubject<number>(0);
+  public sizeBytes$ = this.sizeBytesSubject.asObservable();
+
+  private sizeFormattedSubject = new BehaviorSubject<string>('');
+  public sizeFormatted$ = this.sizeFormattedSubject.asObservable();
+
   constructor(private http: HttpClient) { }
 
-  public async initialize(): Promise<void> {
+  public async initialize(appName: 'kenouz' | 'mushaf' = 'kenouz'): Promise<void> {
+    this.currentApp = appName;
+    const storageKey = this.getStorageKey(appName);
+
     if (!Capacitor.isNativePlatform()) {
       return;
     }
@@ -41,7 +53,7 @@ export class LiveUpdateService {
       // Get Native Version and Sync Storage
       const info = await App.getInfo();
       const nativeVersion = info.version;
-      const storedVersion = localStorage.getItem(this.STORAGE_KEY) || '1.0.0';
+      const storedVersion = localStorage.getItem(storageKey) || '1.0.0';
 
       console.log(`[LiveUpdate] Native: ${nativeVersion}, Stored: ${storedVersion}`);
 
@@ -49,7 +61,7 @@ export class LiveUpdateService {
       // reset stored version to native to prevent old update triggers.
       if (this.isNewerVersion(storedVersion, nativeVersion)) {
         console.log('[LiveUpdate] Native app is newer. Syncing storage version.');
-        localStorage.setItem(this.STORAGE_KEY, nativeVersion);
+        localStorage.setItem(storageKey, nativeVersion);
         this.versionSubject.next(nativeVersion);
       }
     } catch (e) {
@@ -66,18 +78,29 @@ export class LiveUpdateService {
 
     try {
       // SILENT CHECK: Don't set 'checking' status immediately to avoid UI flicker
-      const serverConfig: any = await firstValueFrom(this.http.get(`${environment.apiBaseUrl}/mobile-version`));
+      const serverConfig: any = await firstValueFrom(this.http.get(`${environment.apiBaseUrl}/mobile-version?app=${this.currentApp}`));
 
       if (!serverConfig || !serverConfig.liveUpdate || !serverConfig.liveUpdate.enabled) {
         this.statusSubject.next('idle');
         return;
       }
 
-      const { version: latestVersion, zipUrl } = serverConfig.liveUpdate;
-      const currentVersion = localStorage.getItem(this.STORAGE_KEY) || '1.0.0';
+      const { version: latestVersion, zipUrl, sizeBytes, sizeFormatted } = serverConfig.liveUpdate;
+      const currentVersion = localStorage.getItem(this.getStorageKey(this.currentApp)) || '1.0.0';
 
-      console.log(`[LiveUpdate] Current (local): ${currentVersion}, Remote: ${latestVersion}`);
+      // Set the dynamic size information
+      this.sizeBytesSubject.next(sizeBytes || 0);
+      this.sizeFormattedSubject.next(sizeFormatted || '');
+
+      console.log(`[LiveUpdate] Current (local): ${currentVersion}, Remote: ${latestVersion}, Size: ${sizeFormatted}`);
       this.versionSubject.next(latestVersion);
+
+      // Check if postponed for this session
+      if (typeof window !== 'undefined' && sessionStorage.getItem('postponed_update_version') === latestVersion) {
+        console.log('[LiveUpdate] Update postponed for this session.');
+        this.statusSubject.next('idle');
+        return;
+      }
 
       if (this.isNewerVersion(currentVersion, latestVersion)) {
         console.log(`[LiveUpdate] Mandatory update available: ${latestVersion}`);
@@ -94,10 +117,19 @@ export class LiveUpdateService {
     }
   }
 
+  public postponeUpdate(): void {
+    const latestVersion = this.versionSubject.value;
+    if (latestVersion && typeof window !== 'undefined') {
+      sessionStorage.setItem('postponed_update_version', latestVersion);
+    }
+    this.statusSubject.next('idle');
+    console.log('[LiveUpdate] Update postponed successfully.');
+  }
+
   public async startUpdate(): Promise<void> {
     try {
       const latestVersion = this.versionSubject.value;
-      const serverConfig: any = await firstValueFrom(this.http.get(`${environment.apiBaseUrl}/mobile-version`));
+      const serverConfig: any = await firstValueFrom(this.http.get(`${environment.apiBaseUrl}/mobile-version?app=${this.currentApp}`));
       const zipUrl = serverConfig.liveUpdate.zipUrl;
 
       this.statusSubject.next('downloading');
@@ -143,7 +175,7 @@ export class LiveUpdateService {
         
         // Only save to localStorage if set() was successful (it will trigger reload)
         console.log('[LiveUpdate] Bundle set successfully. Saving version to storage.');
-        localStorage.setItem(this.STORAGE_KEY, latestVersion);
+        localStorage.setItem(this.getStorageKey(this.currentApp), latestVersion);
         
       } catch (setErr: any) {
         console.error('[LiveUpdate] CapacitorUpdater.set failed:', setErr);

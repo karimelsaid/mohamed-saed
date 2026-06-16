@@ -13,7 +13,7 @@ import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 export class AmazonPriceCalculatorComponent {
     // Inputs
     costPrice: number = 100;
-    targetProfitPercent: number = 50;
+    targetProfitPercent: number = 80;
     amazonCommissionRate: number = 13;
     taxRate: number = 14;
     customerShippingFee: number = 30;

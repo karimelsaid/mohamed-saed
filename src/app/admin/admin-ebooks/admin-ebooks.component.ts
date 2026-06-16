@@ -89,6 +89,16 @@ export class AdminEbooksComponent implements OnInit {
     };
     isAddingProduct = false;
 
+    // Duplicate detection state
+    duplicateMatches: { _id: string; title: string; author: string; coverImage: string }[] = [];
+    isDuplicateCheckLoading = false;
+    duplicateOverridden = false; // user chose to proceed despite duplicates
+    private duplicateCheckTimeout: any = null;
+
+    // Extracted EPUB cover preview (data URL or object URL)
+    extractedCoverPreviewUrl: string | null = null;
+    isExtractingCover = false;
+
     // Category mappings for dropdown
     availableCategories = [
         { value: 'Business-Marketing-Finance', label: 'مال وأعمال' },
@@ -467,6 +477,13 @@ export class AdminEbooksComponent implements OnInit {
                     if (parsed.description) {
                         this.newProduct.description = parsed.description;
                     }
+                    // Reset duplicate state and trigger check
+                    this.duplicateOverridden = false;
+                    this.duplicateMatches = [];
+                    this.triggerDuplicateCheck();
+
+                    // Extract cover preview from EPUB using epubjs
+                    this.extractCoverPreviewFromEpub(file);
                 }
             } else {
                 alert('الرجاء تحميل ملف بصيغة EPUB فقط');
@@ -474,10 +491,81 @@ export class AdminEbooksComponent implements OnInit {
         } else {
             if (file.type.startsWith('image/')) {
                 this.selectedCover = file;
+                // Override extracted preview with the manually selected cover
+                if (this.extractedCoverPreviewUrl) {
+                    URL.revokeObjectURL(this.extractedCoverPreviewUrl);
+                    this.extractedCoverPreviewUrl = null;
+                }
             } else {
                 alert('الرجاء تحميل صورة صحيحة');
             }
         }
+    }
+
+    /** Extract the cover image from the EPUB file using epubjs and set a preview URL */
+    private async extractCoverPreviewFromEpub(file: File): Promise<void> {
+        this.isExtractingCover = true;
+        this.extractedCoverPreviewUrl = null;
+        try {
+            // Dynamically import epubjs to keep initial bundle small
+            const ePub = (await import('epubjs')).default;
+            const arrayBuffer = await file.arrayBuffer();
+            const book = ePub(arrayBuffer as any);
+            await book.ready;
+
+            // Try to get cover URL from epub metadata
+            const coverUrl: string | null = await book.coverUrl();
+            if (coverUrl) {
+                this.extractedCoverPreviewUrl = coverUrl;
+            }
+            book.destroy();
+        } catch (err) {
+            console.warn('⚠️ Could not extract cover preview from EPUB:', err);
+            this.extractedCoverPreviewUrl = null;
+        } finally {
+            this.isExtractingCover = false;
+        }
+    }
+
+    /** Debounced duplicate check triggered when name changes or EPUB is selected */
+    onProductNameChange(): void {
+        this.duplicateOverridden = false;
+        this.duplicateMatches = [];
+        clearTimeout(this.duplicateCheckTimeout);
+        this.duplicateCheckTimeout = setTimeout(() => {
+            this.triggerDuplicateCheck();
+        }, 600);
+    }
+
+    private triggerDuplicateCheck(): void {
+        const query = (this.newProduct.name || '').trim();
+        if (!query || query.length < 3) {
+            this.duplicateMatches = [];
+            return;
+        }
+        this.isDuplicateCheckLoading = true;
+
+        // The server already does fuzzy/text search — trust its results directly.
+        // Do NOT apply extra client-side filtering that could silently drop valid matches.
+        this.ebookService.getEbooks({ search: query }, 1, 8).subscribe({
+            next: (res) => {
+                this.isDuplicateCheckLoading = false;
+                if (res.success && res.data && res.data.length > 0) {
+                    this.duplicateMatches = res.data.map((e: any) => ({
+                        _id: e._id,
+                        title: e.title,
+                        author: e.author,
+                        coverImage: e.coverImage
+                    }));
+                } else {
+                    this.duplicateMatches = [];
+                }
+            },
+            error: () => {
+                this.isDuplicateCheckLoading = false;
+                this.duplicateMatches = [];
+            }
+        });
     }
 
     submitUpload(): void {
@@ -597,6 +685,11 @@ export class AdminEbooksComponent implements OnInit {
         this.resetNewProduct();
         this.selectedFile = null;
         this.selectedCover = null;
+        this.duplicateMatches = [];
+        this.duplicateOverridden = false;
+        this.isDuplicateCheckLoading = false;
+        this.extractedCoverPreviewUrl = null;
+        this.isExtractingCover = false;
         this.showAddProductModal = true;
     }
 
@@ -608,6 +701,12 @@ export class AdminEbooksComponent implements OnInit {
             price: 0,
             description: ''
         };
+        this.duplicateMatches = [];
+        this.duplicateOverridden = false;
+        if (this.extractedCoverPreviewUrl) {
+            URL.revokeObjectURL(this.extractedCoverPreviewUrl);
+            this.extractedCoverPreviewUrl = null;
+        }
     }
 
     getProductImage(product: Product): string {

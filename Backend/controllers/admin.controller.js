@@ -4,6 +4,117 @@ const fs = require('fs');
 const multer = require('multer');
 const sharp = require('sharp');
 const { addProductToExcel, bulkAddProductsToExcel, categoryMap, reverseCategoryMap, downloadAndConvertExcel, updateExcelFromJson } = require('../services/excel.service');
+const AdmZip = require('adm-zip');
+const xml2js = require('xml2js');
+
+/**
+ * Extracts the cover image from an EPUB buffer
+ */
+async function extractCoverFromEpub(epubBuffer) {
+  try {
+    const zip = new AdmZip(epubBuffer);
+    const entries = zip.getEntries();
+    
+    // 1. Find the .opf file
+    const opfEntry = entries.find(entry => entry.entryName.endsWith('.opf'));
+    if (!opfEntry) return null;
+    
+    const opfDir = path.dirname(opfEntry.entryName);
+    const opfText = opfEntry.getData().toString('utf8');
+    
+    // Parse the XML
+    const parser = new xml2js.Parser({ explicitArray: false, ignoreAttrs: false });
+    const opfObj = await parser.parseStringPromise(opfText);
+    
+    const packageData = opfObj.package;
+    if (!packageData) return null;
+    
+    const metadata = packageData.metadata;
+    const manifest = packageData.manifest;
+    if (!manifest || !manifest.item) return null;
+    
+    const items = Array.isArray(manifest.item) ? manifest.item : [manifest.item];
+    
+    let coverImageId = null;
+    
+    // Look for EPUB2 cover meta tag in metadata
+    if (metadata && metadata.meta) {
+      const metas = Array.isArray(metadata.meta) ? metadata.meta : [metadata.meta];
+      const coverMeta = metas.find(m => m.$ && m.$.name === 'cover');
+      if (coverMeta && coverMeta.$) {
+        coverImageId = coverMeta.$.content;
+      }
+    }
+    
+    // Look for EPUB3 properties="cover-image" or ID containing "cover" or properties containing "cover"
+    let coverItem = null;
+    if (coverImageId) {
+      coverItem = items.find(item => item.$ && item.$.id === coverImageId);
+    }
+    
+    if (!coverItem) {
+      // Find item with properties="cover-image" (EPUB 3)
+      coverItem = items.find(item => item.$ && item.$.properties && item.$.properties.includes('cover-image'));
+    }
+    
+    if (!coverItem) {
+      // Fallback: Find item with id containing "cover" and media-type starts with "image/"
+      coverItem = items.find(item => item.$ && item.$.id && item.$.id.toLowerCase().includes('cover') && item.$.mediaType && item.$.mediaType.startsWith('image/'));
+    }
+    
+    if (!coverItem) {
+      // Fallback: Find item with href containing "cover" and media-type starts with "image/"
+      coverItem = items.find(item => item.$ && item.$.href && item.$.href.toLowerCase().includes('cover') && item.$.mediaType && item.$.mediaType.startsWith('image/'));
+    }
+
+    if (!coverItem) {
+      // Final Fallback: Just get the first image item in the manifest
+      coverItem = items.find(item => item.$ && item.$.mediaType && item.$.mediaType.startsWith('image/'));
+    }
+    
+    if (coverItem && coverItem.$) {
+      const relativeHref = coverItem.$.href;
+      // Resolve path relative to the .opf file directory
+      const fullHrefPath = opfDir === '.' ? relativeHref : path.join(opfDir, relativeHref).replace(/\\/g, '/');
+      
+      const decodedPath = decodeURIComponent(fullHrefPath);
+      const imageEntry = entries.find(entry => 
+        entry.entryName === fullHrefPath || 
+        entry.entryName === decodedPath || 
+        entry.entryName.toLowerCase() === fullHrefPath.toLowerCase()
+      );
+      
+      if (imageEntry) {
+        return {
+          buffer: imageEntry.getData(),
+          mimeType: coverItem.$.mediaType || 'image/jpeg'
+        };
+      }
+    }
+    
+    // If we didn't find anything via opf manifest, do a raw file scan for "cover" in names
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
+    const coverFileEntry = entries.find(entry => {
+      const lowerName = entry.entryName.toLowerCase();
+      const ext = path.extname(lowerName);
+      return imageExtensions.includes(ext) && lowerName.includes('cover');
+    });
+    
+    if (coverFileEntry) {
+      const ext = path.extname(coverFileEntry.entryName).toLowerCase();
+      const mimeType = ext === '.png' ? 'image/png' : (ext === '.webp' ? 'image/webp' : 'image/jpeg');
+      return {
+        buffer: coverFileEntry.getData(),
+        mimeType: mimeType
+      };
+    }
+    
+  } catch (error) {
+    console.error('Error extracting cover from EPUB:', error);
+  }
+  return null;
+}
+
 
 // Mapping from Arabic short keys to English enum values used in Ebook model
 const englishCategoryMap = {
@@ -73,22 +184,32 @@ function getAdminUploadDir(adminUsername, barcode) {
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB
+  limits: { 
+    fileSize: 50 * 1024 * 1024, // 50 MB
+    fieldSize: 50 * 1024 * 1024 // 50 MB (to allow large JSON string in 'products' field during bulk import)
+  },
   fileFilter: (req, file, cb) => {
-    // Accept image files
-    if (file.mimetype.startsWith('image/')) {
+    const supportedImageTypes = [
+      'image/jpeg',
+      'image/png',
+      'image/gif',
+      'image/webp',
+      'image/bmp',
+      'image/svg+xml',
+      'image/heif',
+      'image/heic'
+    ];
+
+    if (supportedImageTypes.includes(file.mimetype) || file.mimetype.startsWith('image/')) {
       return cb(null, true);
     }
 
     // Accept EPUB and ZIP files (strict mime or fallback to extension)
-    // Common MIME types for EPUB: application/epub+zip, application/epub, application/zip, application/octet-stream
     const isEpubMime = file.mimetype === 'application/epub+zip' || file.mimetype === 'application/epub' || file.mimetype === 'application/zip' || file.mimetype === 'application/octet-stream';
     const isEpubExt = file.originalname.toLowerCase().endsWith('.epub');
     const isZipExt = file.originalname.toLowerCase().endsWith('.zip');
 
     if (isEpubMime && (isEpubExt || isZipExt)) {
-      cb(null, true);
-    } else if (file.mimetype === 'application/epub+zip' || file.mimetype === 'application/epub' || file.mimetype === 'application/zip') {
       cb(null, true);
     } else {
       console.log('Rejected file:', file.originalname, 'Mime:', file.mimetype);
@@ -96,6 +217,37 @@ const upload = multer({
     }
   }
 });
+
+function parseImageUrls(body) {
+  if (!body || body.imageUrls === undefined || body.imageUrls === null) {
+    return [];
+  }
+
+  let urls = body.imageUrls;
+  if (Array.isArray(urls)) {
+    return urls.filter(Boolean).map(String);
+  }
+
+  if (typeof urls === 'string') {
+    const trimmed = urls.trim();
+    if (!trimmed) {
+      return [];
+    }
+
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        return parsed.filter(Boolean).map(String);
+      }
+    } catch (e) {
+      // Not JSON, fallback to single string value
+    }
+
+    return [trimmed];
+  }
+
+  return [];
+}
 
 async function addProduct(req, res) {
   try {
@@ -111,6 +263,7 @@ async function addProduct(req, res) {
       product_description,
       product_price,
       price_cost,
+      merchantId, // Extract merchantId from req.body
       weight, length, width, height, // Physical dimensions
       author, publisher, pages, coverType, language, publishYear, // Book fields
       stationeryType, material, color, size, brand, // Stationery fields
@@ -124,6 +277,17 @@ async function addProduct(req, res) {
       suggestedCategory
     } = req.body;
 
+    const imageUrls = parseImageUrls(req.body);
+    const imageUrl = imageUrls.length > 0 ? imageUrls[0] : null;
+    console.log('[addProduct] request summary:', {
+      product_name,
+      product_category,
+      product_quantity,
+      weight,
+      files: (req.files || []).map(f => f.originalname),
+      imageUrls
+    });
+
     const { categoryMap, reverseCategoryMap } = require('../services/excel.service');
     const fullCategory = categoryMap[product_category] || product_category;
     const shortCategoryKey = reverseCategoryMap[fullCategory] || product_category;
@@ -132,7 +296,7 @@ async function addProduct(req, res) {
       return res.status(400).json({ success: false, message: 'Missing required fields (including weight)' });
     }
 
-    if (!req.files || req.files.length === 0) {
+    if ((!req.files || req.files.length === 0) && !imageUrl) {
       return res.status(400).json({ success: false, message: 'Image file is required' });
     }
 
@@ -142,31 +306,51 @@ async function addProduct(req, res) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
 
-    const imageFiles = req.files.filter(f => f.mimetype.startsWith('image/'));
-    const epubFile = req.files.find(f => f.mimetype === 'application/epub+zip');
+    const imageFiles = req.files ? req.files.filter(f => f.mimetype.startsWith('image/')) : [];
+    const epubFile = req.files ? req.files.find(f => f.mimetype === 'application/epub+zip') : undefined;
 
-    if (imageFiles.length === 0) {
-      return res.status(400).json({ success: false, message: 'Image file is required' });
+    let filename = '';
+    let savedImagePath = '';
+    const additionalImages = [];
+
+    if (imageFiles.length > 0) {
+      const isMultiple = imageFiles.length > 1;
+      const filenames = [];
+
+      for (let i = 0; i < imageFiles.length; i++) {
+        const file = imageFiles[i];
+        const suffix = isMultiple ? (i === 0 ? '' : '_' + i) : '';
+        const baseFilename = barcode + suffix;
+
+        const webpPath = path.join(uploadDir, baseFilename + '.webp');
+        try {
+          await sharp(file.buffer)
+            .resize({ width: 800 })
+            .webp({ quality: 80 })
+            .toFile(webpPath);
+          filenames.push(baseFilename + '.webp');
+        } catch (sharpError) {
+          console.warn('[addProduct] sharp conversion failed for', file.originalname, '-', sharpError.message);
+          const originalExt = path.extname(file.originalname) || '.jpg';
+          const fallbackPath = path.join(uploadDir, baseFilename + originalExt);
+          fs.writeFileSync(fallbackPath, file.buffer);
+          filenames.push(baseFilename + originalExt);
+        }
+      }
+
+      filename = filenames[0];
+      savedImagePath = '/uploads/books/admin__' + req.admin.username.replace(/[^a-zA-Z0-9-_]/g, '_') + '__/' + barcode + '/' + filename;
+      additionalImages.push(...filenames.map(name => '/uploads/books/admin__' + req.admin.username.replace(/[^a-zA-Z0-9-_]/g, '_') + '__/' + barcode + '/' + name));
+    } else if (imageUrl) {
+      try {
+        filename = path.basename(new URL(imageUrl).pathname) || barcode;
+      } catch (urlError) {
+        console.warn('[addProduct] Invalid URL for imageUrl, using fallback filename:', imageUrl);
+        filename = barcode;
+      }
+      savedImagePath = imageUrl;
+      additionalImages.push(imageUrl);
     }
-
-    const isMultiple = imageFiles.length > 1;
-    const filenames = [];
-
-    for (let i = 0; i < imageFiles.length; i++) {
-      const file = imageFiles[i];
-      const suffix = isMultiple ? (i === 0 ? '' : '_' + i) : '';
-
-      // WebP
-      const webpPath = path.join(uploadDir, barcode + suffix + '.webp');
-      await sharp(file.buffer)
-        .resize({ width: 800 })
-        .webp({ quality: 80 })
-        .toFile(webpPath);
-
-      filenames.push(barcode + suffix + '.webp');
-    }
-
-    const filename = filenames[0];
 
     // Handle EPUB upload if present
     let linkedEbookId = null;
@@ -229,7 +413,7 @@ async function addProduct(req, res) {
 
     // Prepare product data
     const adminName = req.admin.username.replace(/[^a-zA-Z0-9-_]/g, '_');
-    const image_path = '/uploads/books/admin__' + adminName + '__/' + barcode + '/' + filename;
+    const image_path = savedImagePath || '/uploads/books/admin__' + adminName + '__/' + barcode + '/' + filename;
     const productData = {
       barcode,
       product_name,
@@ -238,9 +422,11 @@ async function addProduct(req, res) {
       product_description,
       categoryPrefix,
       product_price: parseFloat(product_price) || 0,
-      price_cost: parseFloat(price_cost) || 0,
+      price_cost: (publisher && String(publisher).trim() !== '') ? ((parseFloat(product_price) || 0) * 0.9) : (parseFloat(price_cost) || 0),
+      merchantId: merchantId || req.admin._id, // Add merchantId here, default to admin's own ID
       image_path,
-      product_image: filename,
+      product_image: image_path,
+      images: additionalImages,
       author: author || '',
       publisher: publisher || '',
       pages: pages || '',
@@ -276,9 +462,14 @@ async function addProduct(req, res) {
       length: parseFloat(length) || '',
       height: parseFloat(height) || '',
       suggestedCategory: suggestedCategory || '',
-      linkedEbookId: linkedEbookId ? linkedEbookId.toString() : '',
+      linkedEbookId: linkedEbookId ? linkedEbookId.toString() : undefined,
+      status: 'approved',
       createdAt: new Date().toISOString()
     };
+
+    if (!linkedEbookId) {
+      delete productData.linkedEbookId;
+    }
 
     await Product.updateOne({ barcode }, { $set: productData }, { upsert: true });
     await addProductToExcel(productData);
@@ -304,7 +495,7 @@ async function addProduct(req, res) {
     if (error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE') {
       return res.status(400).json({ success: false, message: 'Image file size exceeds 3 MB limit' });
     }
-    res.status(500).json({ success: false, message: 'Server error' });
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
   }
 }
 
@@ -329,25 +520,26 @@ async function bulkAddProducts(req, res) {
       return res.status(400).json({ success: false, message: 'No products provided' });
     }
 
-    // Handle Publisher Image Upload
+    // Handle Publisher Image Upload (non-blocking - don't let this crash the import)
     if (req.file && publisher) {
-      const fs = require('fs');
-      const path = require('path');
-      const sharp = require('sharp');
-      
-      const publishersDir = path.join(__dirname, '..', 'uploads', 'books', 'publishers');
-      if (!fs.existsSync(publishersDir)) {
-        fs.mkdirSync(publishersDir, { recursive: true });
+      try {
+        const publishersDir = path.join(__dirname, '..', 'uploads', 'books', 'publishers');
+        if (!fs.existsSync(publishersDir)) {
+          fs.mkdirSync(publishersDir, { recursive: true });
+        }
+
+        const sanitizedName = publisher.trim().replace(/\s+/g, '_');
+        const targetPath = path.join(publishersDir, `${sanitizedName}.webp`);
+
+        await sharp(req.file.buffer)
+          .webp({ quality: 80 })
+          .toFile(targetPath);
+          
+        console.log(`✅ Saved publisher logo for: ${publisher} at ${targetPath}`);
+      } catch (imgErr) {
+        console.warn(`⚠️ Failed to save publisher image for ${publisher}:`, imgErr.message);
+        // Continue with import even if image processing fails
       }
-
-      const sanitizedName = publisher.trim().replace(/\s+/g, '_');
-      const targetPath = path.join(publishersDir, `${sanitizedName}.webp`);
-
-      await sharp(req.file.buffer)
-        .webp({ quality: 80 })
-        .toFile(targetPath);
-        
-      console.log(`✅ Saved publisher logo for: ${publisher} at ${targetPath}`);
     }
 
     const bulkOps = [];
@@ -357,13 +549,17 @@ async function bulkAddProducts(req, res) {
     for (const productData of products) {
       // 1. Duplicate check (Name + Image Path match)
       if (productData.product_name && productData.image_path) {
-        const existing = await Product.findOne({ 
-          product_name: productData.product_name,
-          image_path: productData.image_path 
-        });
-        if (existing) {
-          console.log(`⏩ Skipping duplicate product: ${productData.product_name}`);
-          continue;
+        try {
+          const existing = await Product.findOne({ 
+            product_name: productData.product_name,
+            image_path: productData.image_path 
+          });
+          if (existing) {
+            console.log(`⏩ Skipping duplicate product: ${productData.product_name}`);
+            continue;
+          }
+        } catch (dupCheckErr) {
+          console.warn(`⚠️ Duplicate check failed for ${productData.product_name}, proceeding:`, dupCheckErr.message);
         }
       }
 
@@ -414,7 +610,7 @@ async function bulkAddProducts(req, res) {
         publisher: publisher || productData.publisher || '',
         weight: parseFloat(productData.weight) || 0,
         product_price: cleanPrice(productData.product_price),
-        price_cost: cleanPrice(productData.price_cost),
+        price_cost: (publisher || productData.publisher || '').trim() !== '' ? (cleanPrice(productData.product_price) * 0.9) : cleanPrice(productData.price_cost),
         product_quantity: parseInt(productData.product_quantity) || 2, // Use 2 as default if 0
         createdAt: now,
         updatedAt: now,
@@ -432,91 +628,123 @@ async function bulkAddProducts(req, res) {
       });
     }
 
-    // Save to MongoDB
-    if (bulkOps.length > 0) {
-      await Product.bulkWrite(bulkOps);
+    if (bulkOps.length === 0) {
+      return res.json({ success: true, message: 'لم يتم العثور على منتجات جديدة للإضافة (جميعها مكررة).' });
     }
 
-    // Save to Excel
-    await bulkAddProductsToExcel(productsToExcel);
+    // Save to MongoDB
+    try {
+      await Product.bulkWrite(bulkOps);
+    } catch (mongoErr) {
+      console.error('❌ MongoDB bulkWrite failed:', mongoErr.message);
+      return res.status(500).json({ success: false, message: `فشل حفظ المنتجات في قاعدة البيانات: ${mongoErr.message}` });
+    }
 
-    // Sync to Google Sheets
+    // Save to Excel (non-blocking failure)
+    try {
+      await bulkAddProductsToExcel(productsToExcel);
+    } catch (excelErr) {
+      console.warn('⚠️ Excel sync failed but products saved to MongoDB:', excelErr.message);
+    }
+
+    // Sync to Google Sheets (non-blocking)
     for (const p of productsToExcel) {
       googleSheetsService.syncProduct(p).catch(err => console.error('Google Sheets Sync Error (Bulk):', err));
     }
 
     clearBooksCache();
-    res.json({ success: true, message: `Successfully added ${productsToExcel.length} products.` });
+    res.json({ success: true, message: `تمت إضافة ${productsToExcel.length} منتج بنجاح.` });
   } catch (error) {
     console.error('Error in bulkAddProducts:', error);
-    res.status(500).json({ success: false, message: 'Server error during bulk add' });
+    res.status(500).json({ success: false, message: `خطأ في الخادم أثناء الإضافة الجماعية: ${error.message}` });
   }
 }
 
+let ebookMappingsCache = {
+  mappings: null,
+  validEbookIds: null,
+  expiresAt: 0
+};
+
 async function listProducts(req, res) {
   try {
-    const fs = require('fs');
+    const fs = require('fs').promises;
+    const fsSync = require('fs');
     const path = require('path');
     const outputPath = path.join(__dirname, '..', 'output.json');
     const ebookMappingsPath = path.join(__dirname, '..', 'ebook-mappings.json');
     let products;
 
-    // Always use local output.json if available (local changes are the source of truth)
-    // Google Drive sync happens during save operations (registerSale, updateProduct, etc.)
-    if (fs.existsSync(outputPath)) {
-      products = JSON.parse(fs.readFileSync(outputPath, 'utf-8'));
-    } else {
-      // File doesn't exist, must download
+    // Always use local output.json if available
+    try {
+      const fileContent = await fs.readFile(outputPath, 'utf-8');
+      products = JSON.parse(fileContent);
+    } catch (err) {
+      // File doesn't exist or error, download from Google Drive
       products = await downloadAndConvertExcel(process.env.GOOGLE_DRIVE_FILE_ID);
     }
 
     // Merge linkedEbookId from persistent ebook-mappings.json
-    if (fs.existsSync(ebookMappingsPath)) {
+    let ebookMappings = null;
+    let validEbookIdSet = null;
+    
+    if (ebookMappingsCache.expiresAt > Date.now() && ebookMappingsCache.mappings && ebookMappingsCache.validEbookIds) {
+      ebookMappings = ebookMappingsCache.mappings;
+      validEbookIdSet = ebookMappingsCache.validEbookIds;
+    } else {
       try {
-        let ebookMappings = JSON.parse(fs.readFileSync(ebookMappingsPath, 'utf-8'));
-        let mappingsChanged = false;
-
-        // Get all valid Ebook IDs from DB
-        const validEbookIds = await Ebook.find({}, '_id').lean();
-        const validEbookIdSet = new Set(validEbookIds.map(e => e._id.toString()));
-
-        products.forEach(product => {
-          const barcode = String(product.products_id).trim();
-          if (ebookMappings[barcode]) {
-            const mappedId = ebookMappings[barcode];
-            if (validEbookIdSet.has(mappedId)) {
-              product.linkedEbookId = mappedId;
-            } else {
-              // Found a stale mapping, remove it
-              delete ebookMappings[barcode];
-              mappingsChanged = true;
-              // Also clear it from the product if it was somehow already there
-              delete product.linkedEbookId;
-            }
-          } else if (product.linkedEbookId) {
-            // Check if existing linkedEbookId is valid even if not in mappings
-            if (validEbookIdSet.has(product.linkedEbookId)) {
-              // Update mappings to include this existing link for persistence
-              ebookMappings[barcode] = product.linkedEbookId;
-              mappingsChanged = true;
-            }
-          }
-        });
-
-        if (mappingsChanged) {
-          fs.writeFileSync(ebookMappingsPath, JSON.stringify(ebookMappings, null, 2));
-          console.log('🧹 Cleaned up stale ebook mappings');
+        if (fsSync.existsSync(ebookMappingsPath)) {
+          const mappingsContent = await fs.readFile(ebookMappingsPath, 'utf-8');
+          ebookMappings = JSON.parse(mappingsContent);
+        } else {
+          ebookMappings = {};
         }
-
-        console.log('📚 Merged linkedEbookId from ebook-mappings.json');
+        const validEbookIds = await Ebook.find({}, '_id').lean();
+        validEbookIdSet = new Set(validEbookIds.map(e => e._id.toString()));
+        
+        ebookMappingsCache = {
+          mappings: ebookMappings,
+          validEbookIds: validEbookIdSet,
+          expiresAt: Date.now() + 5 * 60 * 1000 // 5 mins cache
+        };
       } catch (e) {
-        console.error('Error reading ebook-mappings.json:', e);
+        console.error('Error loading ebook mappings cache:', e);
+        ebookMappings = {};
+        validEbookIdSet = new Set();
       }
     }
 
-    // Merge linkedEbookId from persistent ebook-mappings.json
-    // ... (rest of merging logic) ...
-    // [Merged code omitted for brevity but logic below applies to final result]
+    let mappingsChanged = false;
+    products.forEach(product => {
+      const barcode = String(product.products_id).trim();
+      if (ebookMappings[barcode]) {
+        const mappedId = ebookMappings[barcode];
+        if (validEbookIdSet.has(mappedId)) {
+          product.linkedEbookId = mappedId;
+        } else {
+          // Found a stale mapping, remove it
+          delete ebookMappings[barcode];
+          mappingsChanged = true;
+          delete product.linkedEbookId;
+        }
+      } else if (product.linkedEbookId) {
+        if (validEbookIdSet.has(product.linkedEbookId)) {
+          ebookMappings[barcode] = product.linkedEbookId;
+          mappingsChanged = true;
+        }
+      }
+    });
+
+    if (mappingsChanged) {
+      try {
+        await fs.writeFile(ebookMappingsPath, JSON.stringify(ebookMappings, null, 2));
+        console.log('🧹 Cleaned up stale ebook mappings');
+        // Update cache
+        ebookMappingsCache.mappings = ebookMappings;
+      } catch (writeErr) {
+        console.error('Error writing ebook-mappings.json:', writeErr);
+      }
+    }
 
     // Filter out digital products from the physical inventory view
     const { includeDigital } = req.query;
@@ -644,6 +872,12 @@ async function updateProduct(req, res) {
     updateFieldCaseInsensitive(json[productIndex], 'coverType', coverType);
     updateFieldCaseInsensitive(json[productIndex], 'language', language);
 
+    // Enforce purchase price is 10% less than selling price for publisher products
+    const finalPublisher = json[productIndex].publisher || '';
+    if (finalPublisher.trim() !== '') {
+      json[productIndex].price_cost = (parseFloat(json[productIndex].product_price) || 0) * 0.9;
+    }
+
     if (quantityChanged) {
       json[productIndex].lastStockUpdate = now;
     }
@@ -663,6 +897,10 @@ async function updateProduct(req, res) {
         if (product_description !== undefined) updateFields.product_description = product_description;
         if (product_price !== undefined) updateFields.product_price = product_price;
         if (price_cost !== undefined) updateFields.price_cost = price_cost;
+        if (finalPublisher.trim() !== '') {
+          const matchedPrice = updateFields.product_price !== undefined ? updateFields.product_price : json[productIndex].product_price;
+          updateFields.price_cost = (parseFloat(matchedPrice) || 0) * 0.9;
+        }
         if (weight !== undefined) updateFields.weight = parseFloat(weight) || 0;
         if (length !== undefined) updateFields.length = parseFloat(length) || 0;
         if (width !== undefined) updateFields.width = parseFloat(width) || 0;
@@ -1170,6 +1408,38 @@ async function replaceProductEpub(req, res) {
       fs.writeFileSync(coverPath, coverImageFile.buffer);
       finalCover = `uploads/products/${coverFileName}`;
       console.log(`✅ New cover image file saved: ${coverFileName}`);
+    }
+
+    // Try to extract cover image from the uploaded EPUB file if no cover was provided
+    if (!finalCover) {
+      try {
+        console.log('🔍 [EPUB Cover Extractor] Attempting to extract cover image from EPUB...');
+        const extracted = await extractCoverFromEpub(epubFile.buffer);
+        if (extracted) {
+          const coverFileName = `cover-${barcode}-${Date.now()}-extracted.webp`;
+          const productsDir = path.join(__dirname, '../uploads/products');
+          if (!fs.existsSync(productsDir)) fs.mkdirSync(productsDir, { recursive: true });
+          const coverPath = path.join(productsDir, coverFileName);
+
+          try {
+            await sharp(extracted.buffer)
+              .webp({ quality: 85 })
+              .toFile(coverPath);
+            finalCover = `uploads/products/${coverFileName}`;
+            console.log(`✅ [EPUB Cover Extractor] Extracted and converted cover to webp: ${coverFileName}`);
+          } catch (sharpError) {
+            console.error('⚠️ [EPUB Cover Extractor] Sharp conversion failed, saving raw buffer:', sharpError.message);
+            const rawExt = extracted.mimeType === 'image/png' ? '.png' : (extracted.mimeType === 'image/webp' ? '.webp' : '.jpg');
+            const rawFileName = `cover-${barcode}-${Date.now()}-extracted${rawExt}`;
+            const rawPath = path.join(productsDir, rawFileName);
+            fs.writeFileSync(rawPath, extracted.buffer);
+            finalCover = `uploads/products/${rawFileName}`;
+            console.log(`✅ [EPUB Cover Extractor] Saved raw extracted cover image: ${rawFileName}`);
+          }
+        }
+      } catch (extractErr) {
+        console.error('❌ [EPUB Cover Extractor] Failed to extract cover from EPUB:', extractErr.message);
+      }
     }
 
     if (!finalCover) {
@@ -2214,29 +2484,68 @@ async function getDonationStats(req, res) {
 
 async function userHierarchy(req, res) {
   try {
-    const users = await User.find({}, 'username email phone governorate city village referralCode referralBalance role createdAt');
-    const referrals = await Referral.find({}).populate('referrerId', 'username');
+    const { page, limit, search } = req.query;
+    const hasPagination = !!page;
+
+    const query = {};
+    if (search) {
+      const searchRegex = new RegExp(search, 'i');
+      query.$or = [
+        { username: searchRegex },
+        { email: searchRegex },
+        { phone: searchRegex }
+      ];
+    }
+
+    const total = await User.countDocuments(query);
+
+    const pageNum = parseInt(page, 10) || 1;
+    const limitNum = parseInt(limit, 10) || 50;
+    const skipNum = (pageNum - 1) * limitNum;
+
+    const pipeline = [
+      { $match: query },
+      { $sort: { createdAt: -1 } }
+    ];
+
+    if (hasPagination) {
+      pipeline.push({ $skip: skipNum });
+      pipeline.push({ $limit: limitNum });
+    } else {
+      pipeline.push({ $limit: 1000 }); // Limit to 1000 to prevent server memory overflow in legacy mode
+    }
+
+    pipeline.push({
+      $project: {
+        _id: 1,
+        username: 1,
+        email: 1,
+        phone: 1,
+        governorate: 1,
+        city: 1,
+        village: 1,
+        referralCode: 1,
+        referralBalance: 1,
+        role: 1,
+        createdAt: 1,
+        ordersCount: { $size: { $ifNull: ['$orders', []] } },
+        favoritesCount: { $size: { $ifNull: ['$favorites', []] } }
+      }
+    });
+
+    const users = await User.aggregate(pipeline);
+    const userIds = users.map(u => u._id);
+
+    const referrals = await Referral.find({ referredId: { $in: userIds } })
+      .populate('referrerId', 'username')
+      .lean();
 
     const referralMap = new Map();
     referrals.forEach(ref => {
-      referralMap.set(ref.referredId.toString(), ref.referrerId);
+      if (ref.referredId && ref.referrerId) {
+        referralMap.set(ref.referredId.toString(), ref.referrerId);
+      }
     });
-
-    // Get counts for each user
-    const userIds = users.map(u => u._id);
-
-    const ordersCounts = await Order.aggregate([
-      { $match: { userId: { $in: userIds } } },
-      { $group: { _id: '$userId', count: { $sum: 1 } } }
-    ]);
-
-    const favoritesCounts = await User.aggregate([
-      { $match: { _id: { $in: userIds } } },
-      { $project: { favoritesCount: { $size: '$favorites' } } }
-    ]);
-
-    const ordersMap = new Map(ordersCounts.map(o => [o._id.toString(), o.count]));
-    const favoritesMap = new Map(favoritesCounts.map(f => [f._id.toString(), f.favoritesCount]));
 
     const usersWithReferredBy = users.map(user => {
       const referrer = referralMap.get(user._id.toString());
@@ -2252,85 +2561,183 @@ async function userHierarchy(req, res) {
         referralBalance: user.referralBalance,
         role: user.role,
         createdAt: user.createdAt,
-        ordersCount: ordersMap.get(user._id.toString()) || 0,
-        favoritesCount: favoritesMap.get(user._id.toString()) || 0,
+        ordersCount: user.ordersCount,
+        favoritesCount: user.favoritesCount,
         referredBy: (referrer && user.role !== 'admin') ? { _id: referrer._id, username: referrer.username } : null
       };
     });
 
-    res.json(usersWithReferredBy);
+    if (hasPagination) {
+      res.json({
+        success: true,
+        users: usersWithReferredBy,
+        total,
+        page: pageNum,
+        pages: Math.ceil(total / limitNum)
+      });
+    } else {
+      res.json(usersWithReferredBy);
+    }
   } catch (error) {
     console.error('Error in userHierarchy:', error);
     res.status(500).json({ message: 'Server error' });
   }
 }
 
+let statsCache = {
+  data: null,
+  expiresAt: 0
+};
+
+let merchantBookNamesSetCache = {
+  namesSet: null,
+  expiresAt: 0
+};
+
+async function getMerchantBookNamesSet() {
+  if (merchantBookNamesSetCache.namesSet && merchantBookNamesSetCache.expiresAt > Date.now()) {
+    return merchantBookNamesSetCache.namesSet;
+  }
+  try {
+    const merchants = await User.find({ role: { $in: ['merchant', 'admin'] } }).select('_id role').lean();
+    const merchantIds = merchants.filter(m => m.role === 'merchant').map(m => m._id);
+
+    // Only query products belonging to actual merchants (exclude admin-owned products)
+    const productsWithMerchant = await Product.find({ merchantId: { $in: merchantIds } })
+      .select('product_name product_image merchantId')
+      .lean();
+
+    const userRoleMap = new Map();
+    merchants.forEach(m => userRoleMap.set(m._id.toString(), m.role));
+
+    const namesSet = new Set();
+    productsWithMerchant.forEach(p => {
+      if (p.merchantId) {
+        const mIdStr = p.merchantId.toString();
+        const role = userRoleMap.get(mIdStr) || 'merchant';
+        if (role === 'merchant') {
+          if (p.product_name) namesSet.add(p.product_name);
+          if (p.product_image) namesSet.add(p.product_image.replace('.webp', ''));
+        }
+      }
+    });
+
+    merchantBookNamesSetCache = {
+      namesSet,
+      expiresAt: Date.now() + 15 * 60 * 1000 // 15 minutes cache
+    };
+  } catch (err) {
+    console.error('Error fetching merchant book names for stats:', err);
+    if (!merchantBookNamesSetCache.namesSet) {
+      merchantBookNamesSetCache.namesSet = new Set();
+    }
+  }
+  return merchantBookNamesSetCache.namesSet;
+}
+
 async function getStats(req, res) {
   try {
-    // Get total users
-    const totalUsers = await User.countDocuments();
+    if (statsCache.data && statsCache.expiresAt > Date.now()) {
+      return res.json({
+        success: true,
+        stats: statsCache.data
+      });
+    }
 
-    // Get total products from output.json
-    const fs = require('fs');
+    // Get total referrals
+    const totalReferrals = await Referral.countDocuments();
+
+    // Get total products from output.json using async fs
+    const fs = require('fs').promises;
     const path = require('path');
     const outputPath = path.join(__dirname, '..', 'output.json');
     let totalProducts = 0;
-    if (fs.existsSync(outputPath)) {
-      const products = JSON.parse(fs.readFileSync(outputPath, 'utf-8'));
+    try {
+      const fileContent = await fs.readFile(outputPath, 'utf-8');
+      const products = JSON.parse(fileContent);
       totalProducts = products.length;
+    } catch (err) {
+      console.error('Error reading output.json in getStats:', err);
     }
 
-    // Calculate total orders
-    const ordersResult = await User.aggregate([
-      { $project: { ordersSize: { $size: '$orders' } } },
-      { $group: { _id: null, total: { $sum: '$ordersSize' } } }
-    ]);
-    const totalOrders = ordersResult.length > 0 ? ordersResult[0].total : 0;
+    // Fetch products and users with roles to map merchant product names (cached)
+    const merchantBookNamesSet = await getMerchantBookNamesSet();
 
-    // Calculate total likes (favorites)
-    const likesResult = await User.aggregate([
-      { $project: { favoritesSize: { $size: '$favorites' } } },
-      { $group: { _id: null, total: { $sum: '$favoritesSize' } } }
+    // Run unified aggregation on User collection for simple metadata
+    const userStats = await User.aggregate([
+      {
+        $facet: {
+          totalUsers: [
+            { $count: 'count' }
+          ],
+          likesAndCartAndCoins: [
+            {
+              $group: {
+                _id: null,
+                totalLikes: { $sum: { $size: { $ifNull: ['$favorites', []] } } },
+                totalCartItems: { $sum: { $size: { $ifNull: ['$cart', []] } } },
+                totalCoins: { $sum: { $ifNull: ['$gamification.coins', 0] } }
+              }
+            }
+          ]
+        }
+      }
     ]);
-    const totalLikes = likesResult.length > 0 ? likesResult[0].total : 0;
 
-    // Calculate total cart items
-    const cartItemsResult = await User.aggregate([
-      { $project: { cartSize: { $size: '$cart' } } },
-      { $group: { _id: null, total: { $sum: '$cartSize' } } }
-    ]);
-    const totalCartItems = cartItemsResult.length > 0 ? cartItemsResult[0].total : 0;
+    // Fetch ONLY required fields from users with orders to count in JS
+    const usersWithOrders = await User.find(
+      { 'orders.0': { $exists: true } }
+    ).select('orders.shippingMethod orders.products.bookName orders.products.book').lean();
 
-    // Calculate total coins
-    const coinsResult = await User.aggregate([
-      { $match: { 'gamification.coins': { $exists: true } } },
-      { $group: { _id: null, total: { $sum: '$gamification.coins' } } }
-    ]);
-    const totalCoins = coinsResult.length > 0 ? coinsResult[0].total : 0;
+    let totalOrders = 0;
+    let totalMerchantOrders = 0;
 
-    // Calculate total referrals
-    const totalReferrals = await Referral.countDocuments();
+    usersWithOrders.forEach(u => {
+      if (u.orders) {
+        totalOrders += u.orders.length;
+        u.orders.forEach(order => {
+          if (order.shippingMethod === 'merchant') {
+            totalMerchantOrders++;
+          } else if (order.products && order.products.length > 0) {
+            const hasMerchantProduct = order.products.some(p => {
+              const name = p.bookName || p.book || '';
+              return merchantBookNamesSet.has(name);
+            });
+            if (hasMerchantProduct) {
+              totalMerchantOrders++;
+            }
+          }
+        });
+      }
+    });
 
-    // Calculate total merchant orders
-    const merchantOrdersResult = await User.aggregate([
-      { $unwind: '$orders' },
-      { $match: { 'orders.isMerchantOrder': true } },
-      { $group: { _id: null, total: { $sum: 1 } } }
-    ]);
-    const totalMerchantOrders = merchantOrdersResult.length > 0 ? merchantOrdersResult[0].total : 0;
+    const statsRes = userStats[0] || {};
+    const totalUsers = statsRes.totalUsers?.[0]?.count || 0;
+    
+    const likesCartCoins = statsRes.likesAndCartAndCoins?.[0] || {};
+    const totalLikes = likesCartCoins.totalLikes || 0;
+    const totalCartItems = likesCartCoins.totalCartItems || 0;
+    const totalCoins = likesCartCoins.totalCoins || 0;
+
+    const stats = {
+      totalUsers,
+      totalProducts,
+      totalOrders,
+      totalLikes,
+      totalCartItems,
+      totalCoins,
+      totalReferrals,
+      totalMerchantOrders
+    };
+
+    statsCache = {
+      data: stats,
+      expiresAt: Date.now() + 5 * 60 * 1000 // 5 minutes cache expiration
+    };
 
     res.json({
       success: true,
-      stats: {
-        totalUsers,
-        totalProducts,
-        totalOrders,
-        totalLikes,
-        totalCartItems,
-        totalCoins,
-        totalReferrals,
-        totalMerchantOrders
-      }
+      stats
     });
   } catch (error) {
     console.error('Error in getStats:', error);
@@ -3828,16 +4235,42 @@ module.exports = {
 
   createDigitalBook: async (req, res) => {
     try {
-      const { product_name, product_category, author, product_price, product_description, images } = req.body;
+      const { product_name, product_category, author, product_price, product_description } = req.body;
       
       if (!product_name) {
-        return res.status(400).json({ success: false, message: 'Product name is required' });
+        return res.status(400).json({ success: false, message: 'اسم الكتاب مطلوب' });
+      }
+
+      // Get merchantId from admin middleware (try both possible field names)
+      const merchantId = req.admin?._id || req.user?._id;
+      if (!merchantId) {
+        return res.status(401).json({ success: false, message: 'غير مصرح: لم يتم التعرف على المسؤول' });
       }
 
       // Generate a unique barcode/id for the new digital product
       const barcode = 'DIG-' + Date.now();
 
-      // Create new Product in output.json
+      // --- Handle cover image ---
+      // If manually uploaded cover, save it as a file (not base64 in JSON)
+      let finalImage = '';
+      if (req.files && req.files.coverImage && req.files.coverImage[0]) {
+        const file = req.files.coverImage[0];
+        const coverFileName = `cover-${barcode}-${Date.now()}.webp`;
+        const productsDir = path.join(__dirname, '../uploads/products');
+        if (!fs.existsSync(productsDir)) fs.mkdirSync(productsDir, { recursive: true });
+        const coverPath = path.join(productsDir, coverFileName);
+        try {
+          await sharp(file.buffer).webp({ quality: 85 }).toFile(coverPath);
+          finalImage = `uploads/products/${coverFileName}`;
+        } catch (sharpErr) {
+          console.warn('⚠️ Sharp failed for cover, saving raw:', sharpErr.message);
+          fs.writeFileSync(coverPath.replace('.webp', path.extname(file.originalname) || '.jpg'), file.buffer);
+          finalImage = `uploads/products/${coverFileName.replace('.webp', path.extname(file.originalname) || '.jpg')}`;
+        }
+        console.log('✅ Manual cover saved:', finalImage);
+      }
+
+      // --- Create in output.json ---
       const outputPath = path.join(__dirname, '..', 'output.json');
       let products = [];
       try {
@@ -3845,61 +4278,66 @@ module.exports = {
       } catch (e) {
         products = [];
       }
-      
-      let finalImage = (images && images.length > 0) ? images[0] : '';
-      
-      // If a real file was uploaded via multer, use it and convert to Base64 (digital-only)
-      if (req.files && req.files.coverImage && req.files.coverImage[0]) {
-        const file = req.files.coverImage[0];
-        const base64 = file.buffer.toString('base64');
-        const mime = file.mimetype;
-        finalImage = `data:${mime};base64,${base64}`;
-      }
+
+      const parsedPrice = parseFloat(product_price) || 0;
 
       const newProduct = {
         products_id: barcode,
         product_name,
-        product_category: product_category || 'Books',
+        product_category: product_category || 'Novels-stories',
         author: author || 'غير محدد',
-        product_price: product_price || '0',
-        price_cost: '0',
-        product_description: product_description || '',
+        product_price: parsedPrice,
+        price_cost: 0,
+        product_description: product_description || product_name,
         product_image: finalImage,
-        product_quantity: 999, // Set high for digital
+        product_quantity: 999,
         is_digital: true,
-        merchantId: req.admin._id
+        productType: 'digital',
+        weight: 0,
+        merchantId: merchantId
       };
 
-      products.unshift(newProduct); // Add to top
+      products.unshift(newProduct);
       fs.writeFileSync(outputPath, JSON.stringify(products, null, 2));
+      console.log('✅ Digital product added to output.json:', barcode);
 
-      // Also create in MongoDB
+      // --- Create in MongoDB ---
       const Product = require('../models/Product.model');
       const mongoProduct = new Product({
         products_id: barcode,
         product_name,
-        product_category: product_category || 'Books',
+        product_category: product_category || 'Novels-stories',
         author: author || 'غير محدد',
-        product_price: product_price || '0',
-        price_cost: '0',
-        product_description: product_description || '',
-        product_quantity: 999, // Set high for digital
+        product_price: parsedPrice,
+        price_cost: 0,
+        product_description: product_description || product_name,
+        product_quantity: 999,
         product_image: finalImage,
-        merchantId: req.admin._id
+        productType: 'digital',
+        weight: 0,
+        merchantId: merchantId
       });
-      await mongoProduct.save();
 
-      // IMPORTANT: Set barcode in params so replaceProductEpub finds it
+      try {
+        await mongoProduct.save();
+        console.log('✅ Digital product saved to MongoDB:', barcode);
+      } catch (mongoErr) {
+        console.error('❌ MongoDB save failed for digital product:', mongoErr.message);
+        // Remove from output.json if MongoDB fails
+        const rollback = products.filter(p => p.products_id !== barcode);
+        fs.writeFileSync(outputPath, JSON.stringify(rollback, null, 2));
+        return res.status(500).json({ success: false, message: 'خطأ في حفظ المنتج: ' + mongoErr.message });
+      }
+
+      // --- Process EPUB + cover extraction ---
       req.params = req.params || {};
       req.params.barcode = barcode;
-      
-      // Call the existing logic to handle files (epub + cover)
-      // Since it's in the same module, we can just call the exported method
+
       return module.exports.replaceProductEpub(req, res);
 
     } catch (error) {
       console.error('Error in createDigitalBook:', error);
-      res.status(500).json({ success: false, message: 'Server error during book creation' });
+      res.status(500).json({ success: false, message: 'خطأ في الخادم: ' + error.message });
     }
   }
 };

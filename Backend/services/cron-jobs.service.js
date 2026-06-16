@@ -213,14 +213,48 @@ async function processCustomReminders() {
         const minutes = String(egyptTime.getMinutes()).padStart(2, '0');
         const currentTimeStr = `${hours}:${minutes}`;
 
-        // console.log(`[Cron] Checking Quran Reminders at Egypt Time: ${currentTimeStr}`);
+        // Fetch users matching any of the active reminder schedules for the current minute in a single query
+        const users = await User.find({
+            $or: [
+                {
+                    'hifzPlan.reminders.recitation.enabled': true,
+                    'hifzPlan.reminders.recitation.time': currentTimeStr
+                },
+                {
+                    'hifzPlan.reminders.memorization.enabled': true,
+                    'hifzPlan.reminders.memorization.time': currentTimeStr
+                },
+                {
+                    'hifzPlan.reminders.revision.enabled': true,
+                    'hifzPlan.reminders.revision.time': currentTimeStr
+                }
+            ]
+        }).select('_id hifzPlan.reminders').lean();
+
+        if (users.length === 0) {
+            return;
+        }
+
+        const recitationUsers = [];
+        const memorizationUsers = [];
+        const revisionUsers = [];
+
+        users.forEach(user => {
+            const reminders = user.hifzPlan?.reminders;
+            if (reminders) {
+                if (reminders.recitation?.enabled && reminders.recitation?.time === currentTimeStr) {
+                    recitationUsers.push(user);
+                }
+                if (reminders.memorization?.enabled && reminders.memorization?.time === currentTimeStr) {
+                    memorizationUsers.push(user);
+                }
+                if (reminders.revision?.enabled && reminders.revision?.time === currentTimeStr) {
+                    revisionUsers.push(user);
+                }
+            }
+        });
 
         // 1. Recitation Reminders
-        const recitationUsers = await User.find({
-            'hifzPlan.reminders.recitation.enabled': true,
-            'hifzPlan.reminders.recitation.time': currentTimeStr
-        }).select('_id');
-
         if (recitationUsers.length > 0) {
             const payload = {
                 notification: {
@@ -236,11 +270,6 @@ async function processCustomReminders() {
         }
 
         // 2. Memorization Reminders
-        const memorizationUsers = await User.find({
-            'hifzPlan.reminders.memorization.enabled': true,
-            'hifzPlan.reminders.memorization.time': currentTimeStr
-        }).select('_id');
-
         if (memorizationUsers.length > 0) {
             const payload = {
                 notification: {
@@ -256,11 +285,6 @@ async function processCustomReminders() {
         }
 
         // 3. Revision Reminders
-        const revisionUsers = await User.find({
-            'hifzPlan.reminders.revision.enabled': true,
-            'hifzPlan.reminders.revision.time': currentTimeStr
-        }).select('_id');
-
         if (revisionUsers.length > 0) {
             const payload = {
                 notification: {

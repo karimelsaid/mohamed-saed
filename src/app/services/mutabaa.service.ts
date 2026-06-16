@@ -16,6 +16,7 @@ export interface TaskStatus {
     status: 'pending' | 'done' | 'postponed';
     pagesCompleted?: number;
     versesCompleted?: number;
+    page?: number; // last synced page for tilawa/resume support
 }
 
 export interface DailyLog {
@@ -49,10 +50,35 @@ export class MutabaaService {
         this.taskUpdatedSource.next();
     }
 
-    getMutabaaData(): Observable<MutabaaResponse> {
-        const localData = isPlatformBrowser(this.platformId) ? localStorage.getItem(this.STORAGE_KEY) : null;
+    checkAndResetTodayLog(): any {
+        if (!isPlatformBrowser(this.platformId)) {
+            return null;
+        }
+        const localData = localStorage.getItem(this.STORAGE_KEY);
         if (localData) {
-            return of(JSON.parse(localData));
+            const data = JSON.parse(localData);
+            const todayStr = new Date().toISOString().split('T')[0];
+            if (data.todayLog && data.todayLog.date !== todayStr) {
+                data.todayLog = {
+                    date: todayStr,
+                    tilawo: { status: 'pending', pagesCompleted: 0 },
+                    hifz: { status: 'pending', versesCompleted: 0 },
+                    muraja: { status: 'pending', versesCompleted: 0 },
+                    deepMuraja: { status: 'pending', pagesCompleted: 0 },
+                    rabt: { status: 'pending', versesCompleted: 0 }
+                };
+                localStorage.setItem(this.STORAGE_KEY, JSON.stringify(data));
+                this.notifyTaskUpdated();
+            }
+            return data;
+        }
+        return null;
+    }
+
+    getMutabaaData(): Observable<MutabaaResponse> {
+        const data = this.checkAndResetTodayLog();
+        if (data) {
+            return of(data);
         }
         // Return default empty plan if no local data
         const defaultResponse: MutabaaResponse = {
@@ -103,11 +129,40 @@ export class MutabaaService {
                 }
 
                 const isHifz = taskType === 'hifz' || taskType === 'new_memorization' || taskType === 'rabt';
-                (data.todayLog as any)[taskType] = {
+                const taskStatus: any = {
                     status: finalStatus,
                     pagesCompleted: isHifz ? 0 : amountDone,
                     versesCompleted: isHifz ? amountDone : 0
                 };
+
+                if (taskType === 'tilawo') {
+                    // Determine a safe page value for resume support.
+                    // Prefer an inferred page based on the plan's lastReadPage + pagesCompleted
+                    // to avoid accepting an out-of-band `currentPosition.page` that causes jumps.
+                    const hifzPlanStr2 = isPlatformBrowser(this.platformId) ? localStorage.getItem('guest_hifz_plan') : null;
+                    const hifzPlan2 = hifzPlanStr2 ? JSON.parse(hifzPlanStr2) : null;
+                    const baseLastRead = hifzPlan2?.stats?.lastReadPage || 0;
+                    const inferredPage = (amountDone !== undefined) ? (baseLastRead + amountDone) : (currentPosition?.page || 0);
+
+                    let chosenPage = 0;
+                    if (currentPosition?.page && inferredPage) {
+                        // If currentPosition is close to inferred, accept it; otherwise use inferred to be conservative
+                        if (Math.abs(currentPosition.page - inferredPage) <= 3) {
+                            chosenPage = currentPosition.page;
+                        } else {
+                            chosenPage = inferredPage;
+                        }
+                    } else if (currentPosition?.page) {
+                        chosenPage = currentPosition.page;
+                    } else if (inferredPage) {
+                        chosenPage = inferredPage;
+                    }
+
+                    if (chosenPage > 0) {
+                        taskStatus.page = chosenPage;
+                    }
+                }
+                (data.todayLog as any)[taskType] = taskStatus;
 
                 // Moved save call to the end of the method to ensure all modifications (including Al-Rabt reset) are captured.
 
@@ -221,20 +276,16 @@ export class MutabaaService {
                     localStorage.setItem(this.STORAGE_KEY, JSON.stringify(data));
                 }
 
-                // If tilawo (recitation) is done, update the lastReadPage to advance the start position for next time
+                // Advance recitation cursor only when the task is being completed for the first time.
                 if (taskType === 'tilawo') {
                     const hifzPlanStr = isPlatformBrowser(this.platformId) ? localStorage.getItem('guest_hifz_plan') : null;
-                    if (hifzPlanStr) {
+                    if (hifzPlanStr && status === 'done' && previousStatus !== 'done') {
                         const hifzPlan = JSON.parse(hifzPlanStr);
                         const currentPage = currentPosition?.page || 0;
 
                         if (currentPage > 0) {
-                            // Baseline: If we actually moved forward, update the lastReadPage
                             if (currentPage > (hifzPlan.stats.lastReadPage || 0)) {
                                 hifzPlan.stats.lastReadPage = currentPage;
-                                if (isPlatformBrowser(this.platformId)) {
-                                    localStorage.setItem('guest_hifz_plan', JSON.stringify(hifzPlan));
-                                }
                             }
                         } else if (amountDone !== undefined) {
                             const delta = amountDone - previousAmountDone;
@@ -242,16 +293,17 @@ export class MutabaaService {
                                 let nextPos = (hifzPlan.stats.lastReadPage || 0) + delta;
                                 if (nextPos > 604) nextPos = (nextPos % 604) || 604;
                                 hifzPlan.stats.lastReadPage = nextPos;
-                                if (isPlatformBrowser(this.platformId)) {
-                                    localStorage.setItem('guest_hifz_plan', JSON.stringify(hifzPlan));
-                                }
                             }
+                        }
+
+                        if (isPlatformBrowser(this.platformId)) {
+                            localStorage.setItem('guest_hifz_plan', JSON.stringify(hifzPlan));
                         }
                     }
                 }
 
-                // If deepMuraja (past revision) is progressed, update its cursor too
-                if (taskType === 'deepMuraja') {
+                // If deepMuraja (past revision) is progressed, update its cursor too only on first completion.
+                if (taskType === 'deepMuraja' && status === 'done' && previousStatus !== 'done') {
                     const hifzPlanStr = isPlatformBrowser(this.platformId) ? localStorage.getItem('guest_hifz_plan') : null;
                     if (hifzPlanStr) {
                         const hifzPlan = JSON.parse(hifzPlanStr);
@@ -260,9 +312,6 @@ export class MutabaaService {
                         if (currentPage > 0) {
                             if (currentPage > (hifzPlan.stats.lastDeepRevisionPage || 0)) {
                                 hifzPlan.stats.lastDeepRevisionPage = currentPage;
-                                if (isPlatformBrowser(this.platformId)) {
-                                    localStorage.setItem('guest_hifz_plan', JSON.stringify(hifzPlan));
-                                }
                             }
                         } else if (amountDone !== undefined) {
                             const delta = amountDone - previousAmountDone;
@@ -270,10 +319,11 @@ export class MutabaaService {
                                 let nextPos = (hifzPlan.stats.lastDeepRevisionPage || 0) + delta;
                                 if (nextPos > 604) nextPos = (nextPos % 604) || 604;
                                 hifzPlan.stats.lastDeepRevisionPage = nextPos;
-                                if (isPlatformBrowser(this.platformId)) {
-                                    localStorage.setItem('guest_hifz_plan', JSON.stringify(hifzPlan));
-                                }
                             }
+                        }
+
+                        if (isPlatformBrowser(this.platformId)) {
+                            localStorage.setItem('guest_hifz_plan', JSON.stringify(hifzPlan));
                         }
                     }
                 }

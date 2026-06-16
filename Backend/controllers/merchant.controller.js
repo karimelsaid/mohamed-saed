@@ -1039,11 +1039,24 @@ async function getProductsByMerchantId(req, res) {
        }
     });
     
-    // 3. Add catalog products
+    // 3. Add catalog products (with fallback/merge)
     catalogProducts.forEach(p => {
       const key = (p.products_id || p.barcode).toString();
       if (!productMap.has(key)) {
         productMap.set(key, p);
+      } else {
+        // Merge catalog product info into existing DB product if DB fields are empty
+        const existing = productMap.get(key);
+        const fieldsToFallback = ['publisher', 'author', 'publishYear', 'pages', 'coverType', 'language', 'weight', 'length', 'width', 'height', 'image_path', 'product_image'];
+        fieldsToFallback.forEach(f => {
+          const dbVal = existing[f];
+          const excelVal = p[f];
+          const isDbValEmpty = dbVal === undefined || dbVal === null || String(dbVal).trim() === '' || String(dbVal) === '0';
+          const isExcelValNotEmpty = excelVal !== undefined && excelVal !== null && String(excelVal).trim() !== '' && String(excelVal) !== '0';
+          if (isDbValEmpty && isExcelValNotEmpty) {
+            existing[f] = excelVal;
+          }
+        });
       }
     });
 

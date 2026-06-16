@@ -13,7 +13,9 @@ let cachedExcelData = null;
 let lastExcelUpdate = 0;
 let cachedUnifiedData = null;
 let lastUnifiedUpdate = 0;
-const CACHE_TTL = 2 * 60 * 1000; // 2 minutes
+const isProduction = process.env.NODE_ENV === 'production';
+// Increased TTL: 12 hours in production, 24 hours in dev (since it's cleared on database edits anyway)
+const CACHE_TTL = isProduction ? 12 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000; 
 
 function clearBooksCache() {
   console.log('🧹 [BooksController] Clearing unified data cache');
@@ -60,28 +62,54 @@ async function fetchUnifiedData() {
     }
   }
 
-  const dbProducts = await Product.find({ status: 'approved' }).lean();
+  let dbProducts = [];
+  let merchants = [];
+  let ratingsData = [];
+  let promoDoc = null;
 
-  const merchants = await User.find({ role: { $in: ['merchant', 'admin'] } })
-    .select('_id name merchantName logo role merchantShippingMethod')
-    .lean();
+  try {
+    // Run database queries in parallel for maximum speed
+    const dbQueriesPromise = Promise.all([
+      Product.find({ status: 'approved' }).select('-viewHistory -updatedData').lean(),
+      User.find({ role: { $in: ['merchant', 'admin'] } }).select('_id name merchantName logo role merchantShippingMethod').lean(),
+      User.aggregate([
+        { $unwind: { path: '$ratedBooks', preserveNullAndEmptyArrays: false } },
+        { $group: { _id: '$ratedBooks.bookId', averageRating: { $avg: '$ratedBooks.rating' }, ratingCount: { $sum: 1 } } }
+      ]),
+      PromotionDate.findOne().sort({ createdAt: -1 }).lean()
+    ]);
+
+    // Timeout database queries after 4 seconds to prevent user request hangs
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('MongoDB queries timed out')), 4000)
+    );
+
+    const [dbP, merch, ratings, promo] = await Promise.race([dbQueriesPromise, timeoutPromise]);
+    dbProducts = dbP || [];
+    merchants = merch || [];
+    ratingsData = ratings || [];
+    promoDoc = promo;
+  } catch (dbError) {
+    console.error('⚠️ [MongoDB Fallback] Database queries failed or timed out. Falling back to Excel-only data:', dbError.message);
+    // Proceed with empty database arrays so the website continues to load spreadsheet products
+  }
     
   const merchantMap = new Map();
-  merchants.forEach(m => merchantMap.set(m._id.toString(), {
-    name: (m.merchantName || m.name || 'كنوز'),
-    logo: m.logo,
-    role: m.role,
-    shippingMethod: m.merchantShippingMethod || 'knoozbook'
-  }));
+  merchants.forEach(m => {
+    if (!m || !m._id) {
+      console.warn('⚠️ Found merchant with null/missing _id:', m);
+      return;
+    }
+    merchantMap.set(m._id.toString(), {
+      name: (m.merchantName || m.name || 'كنوز'),
+      logo: m.logo,
+      role: m.role,
+      shippingMethod: m.merchantShippingMethod || 'knoozbook'
+    });
+  });
 
-  const ratingsData = await User.aggregate([
-    { $unwind: { path: '$ratedBooks', preserveNullAndEmptyArrays: false } },
-    { $group: { _id: '$ratedBooks.bookId', averageRating: { $avg: '$ratedBooks.rating' }, ratingCount: { $sum: 1 } } }
-  ]);
   const ratingsMap = {};
   ratingsData.forEach(r => { ratingsMap[r._id] = { averageRating: r.averageRating, ratingCount: r.ratingCount }; });
-
-  const promoDoc = await PromotionDate.findOne().sort({ createdAt: -1 }).lean();
 
   const result = unifyAndEnrichData(excelProducts, dbProducts, promoDoc, merchantMap, ratingsMap);
 
@@ -132,6 +160,20 @@ function unifyAndEnrichData(excelProducts, dbProducts, promoDoc, merchantMap, ra
       _id: product._id.toString(),
       isDbProduct: true
     };
+
+    // Fallback to Excel properties if DB properties are empty or missing
+    const fieldsToFallback = ['publisher', 'author', 'publishYear', 'pages', 'coverType', 'language', 'weight', 'length', 'width', 'height', 'image_path', 'product_image'];
+    if (excelMatch) {
+      fieldsToFallback.forEach(f => {
+        const dbVal = product[f];
+        const excelVal = excelMatch[f];
+        const isDbValEmpty = dbVal === undefined || dbVal === null || String(dbVal).trim() === '' || String(dbVal) === '0';
+        const isExcelValNotEmpty = excelVal !== undefined && excelVal !== null && String(excelVal).trim() !== '' && String(excelVal) !== '0';
+        if (isDbValEmpty && isExcelValNotEmpty) {
+          mergedProduct[f] = excelVal;
+        }
+      });
+    }
 
     const itemKey = matchKey || finalPid;
     uniqueItems.set(itemKey, mergedProduct);
@@ -193,6 +235,7 @@ async function getExcelData(req, res) {
     const result = await fetchUnifiedData();
     res.json(result);
   } catch (error) {
+    console.error('Error in getExcelData:', error);
     res.status(500).json({ message: 'Error fetching books', error: error.message });
   }
 }
@@ -200,6 +243,11 @@ async function getExcelData(req, res) {
 async function searchBooks(req, res) {
   try {
     const { q, page = 1, limit = 20, category, minPrice, maxPrice, publisher, author, sortBy = 'relevance' } = req.query;
+    const pageNumberRaw = parseInt(page, 10);
+    const limitNumberRaw = parseInt(limit, 10);
+    const pageNumber = Number.isFinite(pageNumberRaw) && pageNumberRaw > 0 ? pageNumberRaw : 1;
+    const limitNumber = Number.isFinite(limitNumberRaw) && limitNumberRaw > 0 ? limitNumberRaw : 20;
+
     const allData = await fetchUnifiedData();
     let filtered = allData;
 
@@ -231,12 +279,18 @@ async function searchBooks(req, res) {
 
     if (sortBy === 'priceAsc') filtered.sort((a, b) => (a.product_price || 0) - (b.product_price || 0));
     else if (sortBy === 'priceDesc') filtered.sort((a, b) => (b.product_price || 0) - (a.product_price || 0));
-    else if (sortBy === 'newest') filtered.sort((a, b) => (b.isDbProduct ? 1 : 0) - (a.isDbProduct ? 1 : 0));
+    else if (sortBy === 'newest') {
+      filtered.sort((a, b) => {
+        const dateA = new Date(a.createdAt || a.lastStockUpdate || 0).getTime();
+        const dateB = new Date(b.createdAt || b.lastStockUpdate || 0).getTime();
+        return dateB - dateA;
+      });
+    }
 
     // 7. Pagination & Metadata
     const totalCount = filtered.length;
-    const startIndex = (parseInt(page) - 1) * parseInt(limit);
-    const paginatedItems = filtered.slice(startIndex, startIndex + parseInt(limit));
+    const startIndex = (pageNumber - 1) * limitNumber;
+    const paginatedItems = filtered.slice(startIndex, startIndex + limitNumber);
 
     // Get unique categories from the filtered set (before pagination)
     const availableCategories = [...new Set(filtered.map(item => item.product_category).filter(Boolean))].sort();
@@ -244,8 +298,8 @@ async function searchBooks(req, res) {
     res.json({
       success: true,
       totalCount,
-      page: parseInt(page),
-      totalPages: Math.ceil(totalCount / parseInt(limit)),
+      page: pageNumber,
+      totalPages: Math.max(1, Math.ceil(totalCount / limitNumber)),
       items: paginatedItems,
       availableCategories
     });

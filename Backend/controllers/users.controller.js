@@ -78,6 +78,9 @@ async function updateUserProfile(req, res) {
 
     await user.save();
 
+    // Real-time Sync to Google Sheets
+    googleSheetsService.syncSingleUser(user).catch(err => console.error('Google Sheet Sync Error on profile update:', err));
+
     res.status(200).json({ message: 'تم تحديث بيانات الملف الشخصي وعناوين الشحن بنجاح' });
   } catch (error) {
     console.error('Error updating user profile:', error);

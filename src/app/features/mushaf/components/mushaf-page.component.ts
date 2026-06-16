@@ -53,6 +53,7 @@ export interface ReminderSettings {
     memorization: { enabled: boolean; time: string };
     revision: { enabled: boolean; time: string };
     kahfFriday: { enabled: boolean; time: string };
+    bedtimeMulkSajda: { enabled: boolean; time: string };
 }
 
 export interface MemorizationSettings {
@@ -95,6 +96,7 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
     pageLoadError: string | null = null;
 
     fontFamily: string = '';
+    tafsirFontFamily: string = '';
     isFontReady: boolean = false;
     isSidebarOpen: boolean = false;
     isSettingsOpen: boolean = false; // NEW: Settings sidebar state
@@ -231,7 +233,8 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
         recitation: { enabled: false, time: '08:00' },
         memorization: { enabled: false, time: '09:00' },
         revision: { enabled: false, time: '10:00' },
-        kahfFriday: { enabled: false, time: '08:00' }
+        kahfFriday: { enabled: false, time: '08:00' },
+        bedtimeMulkSajda: { enabled: false, time: '22:00' }
     };
     pushEnabled: boolean = false; // Track browser permission
     pushSubscribed: boolean = false; // Track actual push registration
@@ -290,7 +293,6 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
         { id: 900, name: 'أسباب النزول (الواحدي)', downloaded: true } // Local asset
     ];
     selectedTafsirId: number = 16;
-    tafsirFontFamily: string = '';
 
     get getActiveTafsirName(): string {
         const found = this.availableTafsirs.find(t => t.id === this.selectedTafsirId);
@@ -662,7 +664,8 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
                             recitation: reminders.recitation || { enabled: false, time: '08:00' },
                             memorization: reminders.memorization || { enabled: false, time: '09:00' },
                             revision: reminders.revision || { enabled: false, time: '10:00' },
-                            kahfFriday: reminders.kahfFriday || { enabled: false, time: '08:00' }
+                            kahfFriday: reminders.kahfFriday || { enabled: false, time: '08:00' },
+                            bedtimeMulkSajda: reminders.bedtimeMulkSajda || { enabled: false, time: '22:00' }
                         };
                         // Schedule local reminders
                         this.localReminderService.scheduleReminders(this.reminderSettings);
@@ -928,7 +931,8 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
                             recitation: reminders.recitation || { enabled: false, time: '08:00' },
                             memorization: reminders.memorization || { enabled: false, time: '09:00' },
                             revision: reminders.revision || { enabled: false, time: '10:00' },
-                            kahfFriday: reminders.kahfFriday || { enabled: false, time: '08:00' }
+                            kahfFriday: reminders.kahfFriday || { enabled: false, time: '08:00' },
+                            bedtimeMulkSajda: reminders.bedtimeMulkSajda || { enabled: false, time: '22:00' }
                         };
                         // Schedule local reminders
                         this.localReminderService.scheduleReminders(this.reminderSettings);
@@ -1045,7 +1049,7 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
 
                         if (this.isMemorizationMode && (this.currentTaskType === 'hifz' || this.currentTaskType === 'new_memorization')) {
                             console.log(`🚀 [Mushaf] Sabiq Advance: Auto-navigating to new Hifz task location.`);
-                            this.navigateToTask('hifz', true); // Pass seamless=true
+                            this.navigateToTask('hifz', true, true); // Pass seamless=true and resume=true
                         }
                     }
                 }
@@ -1716,7 +1720,7 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
         this.cdr.detectChanges();
     }
 
-    async navigateToTask(task: any, seamless: boolean = false): Promise<void> {
+    async navigateToTask(task: any, seamless: boolean = false, resume: boolean = false): Promise<void> {
         if (!task) return;
 
         // PREVENT starting Hifz if blocked by Al-Rabt (Linking)
@@ -1751,7 +1755,7 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
         console.log('🤖 [Mushaf] Intelligent Navigation for Task:', task);
 
         // A. Resolve Target Page First (for accurate split data resolution)
-        let target = await this.resolveTaskStartVerse(task);
+        let target = await this.resolveTaskStartVerse(task, resume);
 
         // Check if truly complete based on type (using status from backend is more stable here)
         let isTrulyComplete = (task.status === 'done');
@@ -2063,10 +2067,26 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
      * Resolves the exact starting verse key for a task.
      * Handles: 'page' (Verse 1), 'half_page' (Split Logic), 'verses' (First Verse).
      */
-    private async resolveTaskStartVerse(task: any): Promise<{ page: number, verseKey: string } | null> {
+    private async resolveTaskStartVerse(task: any, resume: boolean = false): Promise<{ page: number, verseKey: string } | null> {
         let page = Number(task.page || task.startPage || task.start_page || task.position?.page);
         const surah = task.surah || task.surahId || task.surah_id || task.position?.surah;
         const verse = task.verse || task.verseNumber || task.verse_number || task.position?.verse;
+
+        // RESUME FIX: For page-based tasks (recitation/revision), offset by daily progress
+        // only when we explicitly want to resume an ongoing task session.
+        // This prevents the dashboard button from jumping ahead to the next unread page.
+        if (resume && page && task.status !== 'done') {
+            const isPageBasedResumable = (task.type === 'recitation' || task.type === 'revision');
+            if (isPageBasedResumable) {
+                const progress = Number(task.dailyAmountDone || 0);
+                const target = Number(task.amount || Infinity);
+                if (progress > 0 && progress < target) {
+                    page = page + progress;
+                    if (page > 604) page = 1; // Wrap around to Al-Fatiha
+                    console.log(`📖 [Mushaf] Resume offset applied: +${progress} pages → page ${page}`);
+                }
+            }
+        }
 
         // If no explicit page, try to fetch it
         if (!page && surah && verse) {
@@ -2311,6 +2331,23 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
     private awardPagePoints(): void {
         if (this.isCurrentPageAwarded) return;
 
+        // Ensure the user has spent the minimum required time on the page
+        const timeSpent = Date.now() - this.pageStartTime;
+        const minRequired = this.getMinStayTime();
+        if (timeSpent < minRequired) {
+            // Do not award yet; caller may re-invoke after delay
+            return;
+        }
+
+        if (this.currentTaskType === 'recitation' && this.dailyTasks?.recitation) {
+            const task = this.dailyTasks.recitation;
+            const target = this.getTaskTargetInBaseUnits(task);
+            const currentDone = (this.initialTaskProgress['tilawo'] || 0) + this.sessionCounters.pagesRead;
+            if (task.status === 'done' || (target > 0 && currentDone >= target)) {
+                return;
+            }
+        }
+
         this.isCurrentPageAwarded = true;
 
         // Award points for completing a page
@@ -2372,11 +2409,7 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
                 this.availableReciters = validReciters;
                 this.updateFilteredReciters(); // FIX: Update the filtered list immediately
 
-                // Fallback: If currentReciterId is one of the removed ones, switch to default
-                if (this.currentReciterId === 160 || this.currentReciterId === 161) {
-                    console.warn('[MushafPage] Detected broken reciter ID selection. Resetting to default (19).');
-                    this.selectReciter(19);
-                }
+
             },
             error: err => {
                 console.error('[MushafPage] Failed to load reciters:', err);
@@ -3194,7 +3227,7 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
             // Load font for the tafsir page to ensure Uthmani script
             const fontName = this.dataService.getFontName(pageNum);
             this.fontService.loadPageFont(pageNum).then(() => {
-                this.tafsirFontFamily = `"${fontName}"`;
+                this.tafsirFontFamily = this.createFontFamily(fontName);
                 this.cdr.detectChanges();
             });
 
@@ -4313,10 +4346,18 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
         }
     }
 
+    private createFontFamily(fontName: string): string {
+        return `"${fontName}", "Amiri", "Scheherazade New", "Cairo", "Noto Naskh Arabic", serif`;
+    }
+
+    public getFontFamily(fontName: string): string {
+        return this.createFontFamily(fontName);
+    }
+
     private async loadPagesExtra(): Promise<void> {
         try {
             const fontName = this.dataService.getFontName(this.pageNumber);
-            this.fontFamily = `"${fontName}"`;
+            this.fontFamily = this.createFontFamily(fontName);
 
             // Preload current, next, and prev fonts
             const fontsToLoad = [fontName];
@@ -4731,6 +4772,8 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
     }
 
     lastTapTime: number = 0;
+    /** Prevents verse long-press from firing when a double-tap was just detected */
+    isDoubleTapPending: boolean = false;
     showNavbar: boolean = true; // Use this to toggle fixed header visibility
 
     onTouchStart(event: TouchEvent): void {
@@ -4751,7 +4794,10 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
 
         // Double Tap Detection
         if (this.touchStartTime - this.lastTapTime < 300) {
-            this.handleDoubleTap();
+            // Mark pending so verse long-press won't accidentally fire on second tap
+            this.isDoubleTapPending = true;
+            this.handleDoubleTap(); // Runs inside Angular Zone (template binding) — UI updates correctly
+            setTimeout(() => { this.isDoubleTapPending = false; }, 350);
         }
         this.lastTapTime = this.touchStartTime;
 
@@ -4765,9 +4811,8 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
                 // Allow default swipe?
             }
         }
-
-        // Ensure OnPush handles the start of interaction
-        this.cdr.markForCheck();
+        // NOTE: cdr.markForCheck() deliberately omitted here — touchmove runs outside Zone
+        // (see ngAfterViewInit) and re-entry into Zone happens only on actual state changes.
     }
 
     handleDoubleTap(): void {
@@ -4829,11 +4874,19 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
 
         // If NO selection (Idle state), require Long Press to start interactions
         if (!isSelectionOnPage) {
+            // CONFLICT FIX: Skip long-press if a double-tap was just detected
+            if (this.isDoubleTapPending) {
+                return;
+            }
             this.verseTouchTimer = setTimeout(() => {
+                // Double-check we are still not in a pending double-tap state
+                if (this.isDoubleTapPending) return;
                 this.isLongPressTriggered = true;
-                this.onAyahClick(verseKey);
-                // Haptic feedback if available (navigator.vibrate)
-                if (navigator.vibrate) navigator.vibrate(50);
+                this.ngZone.run(() => {
+                    this.onAyahClick(verseKey);
+                    // Haptic feedback if available (navigator.vibrate)
+                    if (navigator.vibrate) navigator.vibrate(50);
+                });
             }, 600); // 600ms long press requirement
         }
     }
@@ -7336,7 +7389,7 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
             if (res && res.tafsirs) {
                 // Update font again for the specific response page just in case
                 const fontName = this.dataService.getFontName(this.tafsirPageNumber);
-                this.tafsirFontFamily = `"${fontName}"`;
+                this.tafsirFontFamily = this.createFontFamily(fontName);
 
                 let lastSurahId = -1;
                 this.pageTafsirs = res.tafsirs.map((t: any) => {
@@ -7794,6 +7847,10 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
 
         if (activePage !== this.pageNumber) {
             this.pageNumber = activePage;
+            // Reset page timers/award state so the next page can be counted correctly
+            this.pageStartTime = Date.now();
+            this.isCurrentPageAwarded = false;
+
             this.currentSurah$ = this.dataService.getSurahAtPage(this.pageNumber);
             this.currentJuz$ = this.dataService.getJuzAtPage(this.pageNumber);
             localStorage.setItem('lastMushafPage', this.pageNumber.toString());

@@ -327,5 +327,8 @@
 <app-live-update-modal *ngIf="liveUpdateService.status$ | async as status"
   [version]="(liveUpdateService.version$ | async) || ''" [progress]="(liveUpdateService.progress$ | async) || 0"
   [status]="status" [errorMessage]="(liveUpdateService.error$ | async) || ''"
-  (onUpdate)="liveUpdateService.startUpdate()">
+  [sizeBytes]="(liveUpdateService.sizeBytes$ | async) || 0"
+  [sizeFormatted]="(liveUpdateService.sizeFormatted$ | async) || ''"
+  (onUpdate)="liveUpdateService.startUpdate()"
+  (onPostpone)="liveUpdateService.postponeUpdate()">
 </app-live-update-modal>

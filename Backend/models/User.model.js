@@ -331,4 +331,13 @@ const userSchema = new mongoose.Schema({
   }]
 }, { timestamps: true });
 
+userSchema.index({ role: 1 });
+userSchema.index({ phone: 1 });
+userSchema.index({ 'orders.date': -1 });
+userSchema.index({ 'orders.status': 1 });
+
+userSchema.index({ 'hifzPlan.reminders.recitation.time': 1, 'hifzPlan.reminders.recitation.enabled': 1 });
+userSchema.index({ 'hifzPlan.reminders.memorization.time': 1, 'hifzPlan.reminders.memorization.enabled': 1 });
+userSchema.index({ 'hifzPlan.reminders.revision.time': 1, 'hifzPlan.reminders.revision.enabled': 1 });
+
 module.exports = mongoose.model('User', userSchema);

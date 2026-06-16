@@ -14,7 +14,7 @@ export class AppUpdateService {
 
     constructor(private http: HttpClient) { }
 
-    public async checkForUpdate(): Promise<void> {
+    public async checkForUpdate(appName: 'kenouz' | 'mushaf' = 'kenouz'): Promise<void> {
         if (Capacitor.getPlatform() !== 'android') {
             return;
         }
@@ -23,7 +23,7 @@ export class AppUpdateService {
         this.checkNativeUpdate();
 
         // 2. Check Backend Forced Update (Blocking)
-        this.checkBackendForcedUpdate();
+        this.checkBackendForcedUpdate(appName);
     }
 
     private async checkNativeUpdate() {
@@ -39,10 +39,10 @@ export class AppUpdateService {
         }
     }
 
-    private async checkBackendForcedUpdate() {
+    private async checkBackendForcedUpdate(appName: 'kenouz' | 'mushaf') {
         try {
             // Fetch version info from backend
-            const serverConfig: any = await firstValueFrom(this.http.get('https://knoozbook.com/api/mobile-version'));
+            const serverConfig: any = await firstValueFrom(this.http.get(`https://knoozbook.com/api/mobile-version?app=${appName}`));
 
             if (!serverConfig || !serverConfig.android) return;
 

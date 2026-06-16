@@ -51,6 +51,10 @@
   backface-visibility: hidden;
 }
 
+.quran-text {
+  font-family: "Amiri", "Scheherazade New", "Cairo", "Noto Naskh Arabic", serif;
+}
+
 /* Prevent any focus outlines */
 .mushaf-screen *:focus,
 .mushaf-screen *:focus-visible {
@@ -1314,6 +1318,9 @@
   /* Portrait: fit content to screen */
   box-sizing: border-box;
   position: relative;
+  /* Allow browser to handle horizontal pan natively within page area;
+     the outer container (touch-action: none) still owns swipe-left/right */
+  touch-action: pan-x;
 }
 
 .mushaf-page::after {
@@ -6882,7 +6889,7 @@ input:checked+.slider:before {
 .tafsir-sources-view {
   flex: 1;
   overflow-y: auto;
-  padding: 15px;
+  padding: 15px 15px 30px 15px;
   background: transparent;
 }
 
@@ -6893,6 +6900,7 @@ input:checked+.slider:before {
   gap: 10px;
   max-width: 1200px;
   margin: 0 auto;
+  padding-bottom: 120px;
 }
 
 

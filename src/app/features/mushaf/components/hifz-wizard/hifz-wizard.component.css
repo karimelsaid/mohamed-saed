@@ -714,3 +714,65 @@
   background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
   color: #e2e8f0;
 }
+
+/* Wird Start Manually Inputs Styling */
+.wird-starts-container {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.wird-starts-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.wird-starts-label {
+  font-size: 0.85rem;
+  color: #ccc;
+}
+
+.wird-start-input {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 6px;
+  width: 85px;
+  text-align: center;
+  font-size: 0.85rem;
+  outline: none;
+}
+
+.wird-start-input:focus {
+  border-color: #c2a87a;
+  background: rgba(194, 168, 122, 0.15);
+}
+
+/* Cream Theme support for Wird Starts */
+:host-context(.theme-cream) .wird-starts-container {
+  background: rgba(138, 113, 80, 0.04);
+  border-color: rgba(138, 113, 80, 0.1);
+}
+
+:host-context(.theme-cream) .wird-starts-label {
+  color: #1e293b;
+}
+
+:host-context(.theme-cream) .wird-start-input {
+  background: rgba(138, 113, 80, 0.06);
+  border-color: rgba(138, 113, 80, 0.12);
+  color: #1e293b;
+}
+
+:host-context(.theme-cream) .wird-start-input:focus {
+  border-color: #c2a87a;
+  background: rgba(194, 168, 122, 0.12);
+}

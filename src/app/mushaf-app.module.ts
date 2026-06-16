@@ -15,6 +15,7 @@ import { MushafRootComponent } from './mushaf-root.component';
 import { MushafModule } from './features/mushaf/mushaf.module';
 import { GlobalErrorHandler } from './global-error-handler';
 import { VoiceCallComponent } from './features/community/voice-call/voice-call.component';
+import { LiveUpdateModalComponent } from './shared/components/live-update-modal/live-update-modal.component';
 
 // Services
 import { MushafDataService } from './core/services/mushaf-data.service';
@@ -49,6 +50,7 @@ const routes: Routes = [
         RouterModule.forRoot(routes, { useHash: true }),
         FontAwesomeModule,
         VoiceCallComponent,
+        LiveUpdateModalComponent,
         ServiceWorkerModule.register('ngsw-worker.js', {
             enabled: false,
             registrationStrategy: 'registerWhenStable:30000'

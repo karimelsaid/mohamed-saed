@@ -3,7 +3,8 @@
     "version": "1.0.0",
     "private": true,
     "scripts": {
-        "cap": "cap"
+        "cap": "cap",
+        "postinstall": "node scripts/patch-capacitor-updater.js"
     },
     "dependencies": {
         "@capacitor-community/keep-awake": "^7.0.0",
@@ -20,6 +21,7 @@
         "@capacitor/status-bar": "^7.0.4",
         "@capawesome-team/capacitor-android-foreground-service": "^7.0.1",
         "@capawesome/capacitor-app-update": "^7.2.0",
+        "@capgo/capacitor-updater": "8.43.10",
         "@capgo/native-audio": "^7.11.2",
         "capacitor-native-settings": "^7.0.2"
     },

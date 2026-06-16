@@ -13,11 +13,18 @@ export class UniversalInterceptor implements HttpInterceptor {
         let serverReq = req;
 
         if (isPlatformServer(this.platformId)) {
+            let targetUrl = req.url;
+            
+            // If it starts with the production API URL, convert to relative /api
+            if (targetUrl.startsWith('https://knoozbook.com/api')) {
+                targetUrl = targetUrl.replace('https://knoozbook.com/api', '/api');
+            }
+            
             // If the request is relative (starts with /api), prepend the server base URL
-            if (req.url.startsWith('/api')) {
+            if (targetUrl.startsWith('/api')) {
                 // We use localhost:3000 as identified in the backend logs
                 serverReq = req.clone({
-                    url: `http://localhost:3000${req.url}`
+                    url: `http://localhost:3000${targetUrl}`
                 });
                 console.log(`🌐 [UniversalInterceptor] SSR Prefix: ${serverReq.url}`);
             }

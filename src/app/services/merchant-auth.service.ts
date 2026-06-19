@@ -302,7 +302,7 @@ export class MerchantAuthService {
     if (token) {
       headers = headers.set('Authorization', `Bearer ${token}`);
     }
-    return this.http.get(`${this.apiUrl}/merchant/${id}/products`, { headers });
+    return this.http.get(`${this.apiUrl}/merchant/${encodeURIComponent(id)}/products`, { headers });
   }
 
   updateMerchantProfile(profileData: FormData): Observable<any> {

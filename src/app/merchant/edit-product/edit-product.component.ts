@@ -119,8 +119,7 @@ export class EditProductComponent implements OnInit {
     });
   }
 
-  onFilesSelected(event: any) {
-    const files = event.target.files;
+  handleFiles(files: FileList) {
     if (files.length + this.selectedFiles.length + this.imageUrls.length > 3) {
       alert('يمكنك إضافة حتى 3 صور فقط للمنتج');
       return;
@@ -128,12 +127,32 @@ export class EditProductComponent implements OnInit {
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
+      if (file.size > 1 * 1024 * 1024) { // 1MB limit
+        alert(`حجم الصورة "${file.name}" يتجاوز 1 ميجابايت. يرجى اختيار صورة أصغر.`);
+        continue;
+      }
       this.selectedFiles.push(file);
       const reader = new FileReader();
       reader.onload = (e) => {
         this.imagePreviews.push(e.target?.result as string);
       };
       reader.readAsDataURL(file);
+    }
+  }
+
+  onFilesSelected(event: any) {
+    const files = event.target.files;
+    if (files) {
+      this.handleFiles(files);
+    }
+  }
+
+  onFileDropped(event: DragEvent) {
+    event.preventDefault();
+    event.stopPropagation();
+    const files = event.dataTransfer?.files;
+    if (files) {
+      this.handleFiles(files);
     }
   }
 
@@ -227,30 +246,29 @@ export class EditProductComponent implements OnInit {
 
     // Check if product is approved - if so, submit update request
     if (this.product.status === 'approved' || this.product.status === 'pending_update') {
-      const updateData = {
-        product_name: this.product.product_name,
-        product_quantity: parseInt(this.product.product_quantity, 10),
-        product_category: this.product.product_category,
-        product_description: this.product.product_description,
-        product_price: parseFloat(this.product.product_price) || 0,
-        price_cost: parseFloat(this.product.price_cost) || 0,
-        copyType: this.product.copyType || '',
-        condition: this.product.condition || '',
-        weight: parseFloat(this.product.weight) || 0,
-        length: parseFloat(this.product.length) || 0,
-        width: parseFloat(this.product.width) || 0,
-        height: parseFloat(this.product.height) || 0,
-        images: this.imageUrls // Send existing images (reordered/partially removed)
-      };
+      const formData = new FormData();
+      formData.append('product_name', this.product.product_name);
+      formData.append('product_quantity', parseInt(this.product.product_quantity, 10).toString());
+      formData.append('product_category', this.product.product_category);
+      formData.append('product_description', this.product.product_description || '');
+      formData.append('product_price', (parseFloat(this.product.product_price) || 0).toString());
+      formData.append('price_cost', (parseFloat(this.product.price_cost) || 0).toString());
+      formData.append('copyType', this.product.copyType || '');
+      formData.append('condition', this.product.condition || '');
+      formData.append('weight', (parseFloat(this.product.weight) || 0).toString());
+      formData.append('length', (parseFloat(this.product.length) || 0).toString());
+      formData.append('width', (parseFloat(this.product.width) || 0).toString());
+      formData.append('height', (parseFloat(this.product.height) || 0).toString());
+      
+      // Send remaining existing images as a JSON string
+      formData.append('existingImages', JSON.stringify(this.imageUrls));
 
-      // Note: new images (selectedFiles) are NOT yet supported in update requests 
-      // as the backend submitProductUpdateRequest for approved products currently only handles JSON updateData.
-      // For now we inform the user or just proceed with data updates.
-      if (this.selectedFiles.length > 0) {
-        alert('تنبيه: تحديث الصور للمنتجات المعتمدة قيد التطوير حالياً. سيتم حفظ التعديلات النصية فقط.');
-      }
+      // Append new selected files
+      this.selectedFiles.forEach((file) => {
+        formData.append('images', file);
+      });
 
-      this.merchantAuthService.submitProductUpdateRequest(this.productId, updateData).subscribe({
+      this.merchantAuthService.submitProductUpdateRequest(this.productId, formData).subscribe({
         next: (res: any) => {
           if (res.success) {
             alert('تم إرسال طلب تحديث المنتج بنجاح. سيتم مراجعته من قبل الإدارة.');

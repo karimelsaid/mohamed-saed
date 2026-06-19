@@ -79,9 +79,9 @@ async function fetchUnifiedData() {
       PromotionDate.findOne().sort({ createdAt: -1 }).lean()
     ]);
 
-    // Timeout database queries after 4 seconds to prevent user request hangs
+    // Timeout database queries - increased to 15s for new server with higher latency to Atlas
     const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('MongoDB queries timed out')), 4000)
+      setTimeout(() => reject(new Error('MongoDB queries timed out')), 15000)
     );
 
     const [dbP, merch, ratings, promo] = await Promise.race([dbQueriesPromise, timeoutPromise]);
@@ -200,6 +200,19 @@ function unifyAndEnrichData(excelProducts, dbProducts, promoDoc, merchantMap, ra
       }
     }
     if (!book.merchantName) book.merchantName = 'كنوز';
+
+    // If product has a publisher, override merchantName with publisher name
+    // so the product card/details link to the correct publisher page instead of "كنوز - المتجر الرئيسي"
+    const KENOUZ_MERCHANT_NAMES = ['كنوز', 'كنوز - المتجر الرئيسي', 'تاجر كنوز', 'kenouz'];
+    if (
+      book.publisher &&
+      typeof book.publisher === 'string' &&
+      book.publisher.trim() !== '' &&
+      (book.merchantRole === 'admin' || KENOUZ_MERCHANT_NAMES.includes((book.merchantName || '').toLowerCase().trim()) || KENOUZ_MERCHANT_NAMES.includes((book.merchantName || '').trim()))
+    ) {
+      book.merchantName = book.publisher.trim();
+      book.merchantRole = 'publisher'; // Mark as virtual publisher (not admin, not merchant)
+    }
 
     if (ratingsMap && ratingsMap[book.products_id]) {
       book.averageRating = ratingsMap[book.products_id].averageRating;

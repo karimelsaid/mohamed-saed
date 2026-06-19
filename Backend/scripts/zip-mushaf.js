@@ -48,20 +48,23 @@ try {
     fs.copyFileSync(indexCsrHtml, indexHtml);
   }
 
-  const bundleId = 'com.kenouz.mushafwird';
-  const tempZipName = 'mushaf-bundle.zip';
-  const command = `npx -y @capgo/cli@latest bundle zip ${bundleId} --path "${sourceDir}" --name ${tempZipName} --no-code-check`;
-  
-  execSync(command, { stdio: 'inherit' });
-
-  const generatedZip = path.resolve(process.cwd(), tempZipName);
-  if (fs.existsSync(generatedZip)) {
-    console.log(`🚚 Moving generated zip to target: ${outputZip}`);
-    if (fs.existsSync(outputZip)) fs.unlinkSync(outputZip);
-    fs.renameSync(generatedZip, outputZip);
+  if (fs.existsSync(outputZip)) {
+    fs.unlinkSync(outputZip);
+    console.log('🗑️  Removed old mushaf-bundle.zip');
   }
 
-  console.log(`✅ Mushaf Bundle created successfully: ${outputZip}`);
+  // Use the system `zip` command (built into macOS/Linux) — fast and reliable.
+  // -r  : recursive
+  // -q  : quiet (no per-file output)
+  // -X  : exclude extra attributes (keeps the zip clean for Android/iOS unzip)
+  // --exclude: skip source maps and other build artifacts
+  const command = `cd "${sourceDir}" && zip -r -q -X "${outputZip}" . --exclude "*.map" --exclude "*.DS_Store" --exclude "__MACOSX/*"`;
+  console.log('🔧 Running zip...');
+  execSync(command, { stdio: 'inherit' });
+
+  const stats = fs.statSync(outputZip);
+  const sizeMB = (stats.size / (1024 * 1024)).toFixed(2);
+  console.log(`✅ Mushaf Bundle created successfully: ${outputZip} (${sizeMB} MB)`);
 } catch (error) {
   console.error('❌ حدث خطأ أثناء ضغط ملفات المصحف:', error.message);
   process.exit(1);

@@ -3421,10 +3421,71 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     event.stopPropagation();
     product['isDragOver'] = false;
 
+    // Case 1: actual file(s) dropped from file manager / desktop
     if (event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files.length > 0) {
       const file = event.dataTransfer.files[0];
       this.processImageUpdate(file, product);
+      return;
     }
+
+    // Case 2: content dragged from a browser (URL or image element)
+    // Priority: img src in HTML > direct image URL in uri-list > any URL in plain text
+    const imageExtRe = /\.(jpg|jpeg|png|gif|webp|bmp|avif|svg)(\?.*)?$/i;
+    let imageUrl = '';
+
+    // 2a. Extract actual image src from HTML drag data (most reliable)
+    const htmlData = event.dataTransfer?.getData('text/html') || '';
+    if (htmlData) {
+      const srcMatch = htmlData.match(/src=["']([^"']+)["']/i);
+      if (srcMatch && srcMatch[1] && srcMatch[1].startsWith('http')) {
+        imageUrl = srcMatch[1];
+      }
+    }
+
+    // 2b. uri-list: prefer URLs that end with an image extension
+    if (!imageUrl) {
+      const uriList = event.dataTransfer?.getData('text/uri-list') || '';
+      const urls = uriList.split('\n').map((u: string) => u.trim()).filter((u: string) => u && !u.startsWith('#'));
+      const directImg = urls.find((u: string) => imageExtRe.test(u));
+      if (directImg) {
+        imageUrl = directImg;
+      } else if (urls.length > 0 && urls[0].startsWith('http')) {
+        imageUrl = urls[0];
+      }
+    }
+
+    // 2c. plain text fallback
+    if (!imageUrl) {
+      const plain = (event.dataTransfer?.getData('text/plain') || '').trim();
+      if (plain.startsWith('http')) imageUrl = plain;
+    }
+
+    if (imageUrl) {
+      this.processImageUrlUpdate(imageUrl, product);
+    } else {
+      this.showErrorModal('لم يتم التعرف على صورة في المحتوى المسحوب.\nتأكد من سحب الصورة مباشرة من المتصفح، أو استخدم زر تحميل الصورة.');
+    }
+  }
+
+  processImageUrlUpdate(imageUrl: string, product: Product): void {
+    this.showProgressModal('جاري تحميل الصورة من الرابط...');
+    this.http.post(
+      `${this.backendBaseUrl}/admin/products/${product.products_id}/image`,
+      { imageUrl },
+      { headers: { 'Content-Type': 'application/json' } }
+    ).subscribe({
+      next: (_res: any) => {
+        this.closeProgressModal();
+        this.showSuccessModal('تم تحديث صورة المنتج بنجاح');
+        this.loadProducts();
+      },
+      error: (err) => {
+        this.closeProgressModal();
+        const errMsg = err?.error?.message || 'حدث خطأ أثناء تحديث صورة المنتج من الرابط';
+        this.showErrorModal(errMsg);
+        console.error('[AdminDashboard] Image URL upload error:', err);
+      }
+    });
   }
 
   onImageSelectedForUpdate(event: Event, product: Product): void {
@@ -3457,16 +3518,14 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       next: (res: any) => {
         this.closeProgressModal();
         this.showSuccessModal('تم تحديث صورة المنتج بنجاح');
-        product['imageUpdateTimestamp'] = new Date().getTime(); // Force image reload
-        
-        if (res.image_path) {
-          product.image_path = res.image_path;
-          product.product_image = res.product_image;
-        }
+        // Reload all products from server so the new image path is fetched fresh
+        this.loadProducts();
       },
       error: (err) => {
         this.closeProgressModal();
-        this.showErrorModal('حدث خطأ أثناء تحديث صورة المنتج');
+        const errMsg = (err?.error?.message) || 'حدث خطأ أثناء تحديث صورة المنتج';
+        this.showErrorModal(errMsg);
+        console.error('[AdminDashboard] Image upload error:', err);
       }
     });
   }

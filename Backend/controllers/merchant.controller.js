@@ -631,7 +631,7 @@ async function deleteMerchantOrder(req, res) {
 async function submitProductUpdateRequest(req, res) {
   try {
     const { productId } = req.params;
-    const updateData = req.body;
+    const { product_name, product_quantity, product_category, product_description, product_price, price_cost, copyType, condition, weight, length, width, height } = req.body;
     const merchantId = req.merchant._id;
 
     const Product = require('../models/Product.model');
@@ -655,6 +655,45 @@ async function submitProductUpdateRequest(req, res) {
       });
     }
 
+    // Parse existing images
+    let existingImages = [];
+    if (req.body.existingImages) {
+      try {
+        existingImages = JSON.parse(req.body.existingImages);
+      } catch (e) {
+        existingImages = Array.isArray(req.body.existingImages) ? req.body.existingImages : [req.body.existingImages];
+      }
+    }
+
+    // Process newly uploaded files
+    const barcode = product.product_image ? product.product_image.replace('.webp', '') : productId;
+    const files = req.files || [];
+    const newSavedImages = [];
+
+    if (files.length > 0) {
+      const sanitizedUsername = req.merchant.username.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
+      const uploadDir = getMerchantUploadDir(req.merchant.username, barcode);
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        // Use a unique suffix (timestamp + index) to prevent name collisions
+        const filename = `${barcode}_${Date.now()}_${i}.webp`;
+        const filepath = path.join(uploadDir, filename);
+
+        await sharp(file.buffer)
+          .resize({ width: 800 }) // Resize width to max 800px, maintain aspect ratio
+          .webp({ quality: 80 }) // Convert to webp with quality 80
+          .toFile(filepath);
+
+        newSavedImages.push(filename);
+      }
+    }
+
+    const finalImages = [...existingImages, ...newSavedImages];
+
     // Create a new ProductUpdateRequest
     const ProductUpdateRequest = require('../models/ProductUpdateRequest.model');
     const updateRequest = new ProductUpdateRequest({
@@ -676,19 +715,19 @@ async function submitProductUpdateRequest(req, res) {
         images: product.images || []
       },
       updatedProduct: {
-        product_name: updateData.product_name,
-        product_quantity: parseInt(updateData.product_quantity, 10),
-        product_category: updateData.product_category,
-        product_description: updateData.product_description,
-        product_price: parseFloat(updateData.product_price) || 0,
-        price_cost: parseFloat(updateData.price_cost) || 0,
-        copyType: updateData.copyType || '',
-        condition: updateData.condition || '',
-        weight: parseFloat(updateData.weight) || 0,
-        length: parseFloat(updateData.length) || '',
-        width: parseFloat(updateData.width) || '',
-        height: parseFloat(updateData.height) || '',
-        images: updateData.images || []
+        product_name,
+        product_quantity: parseInt(product_quantity, 10),
+        product_category,
+        product_description,
+        product_price: parseFloat(product_price) || 0,
+        price_cost: parseFloat(price_cost) || 0,
+        copyType: copyType || '',
+        condition: condition || '',
+        weight: parseFloat(weight) || 0,
+        length: parseFloat(length) || '',
+        width: parseFloat(width) || '',
+        height: parseFloat(height) || '',
+        images: finalImages
       },
       status: 'pending'
     });

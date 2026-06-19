@@ -53,6 +53,7 @@ router.get('/public-profile/:userId', getPublicProfile); // New public profile r
 // Note: /profile-image (below) handles the image upload via multer
 
 router.put('/profile/:userId', updateUserProfile);
+router.put('/update-profile/:userId', updateUserProfile);
 
 router.post('/favorites', addToFavorites);
 router.delete('/favorites/:userId/:bookId', removeFromFavorites);

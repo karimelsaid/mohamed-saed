@@ -4,21 +4,36 @@ const createPaymentSession = async (req, res) => {
     try {
         const { amount, currency, orderId, customerEmail, merchantRedirect } = req.body;
 
+        console.log('[Payment] Creating session for orderId:', orderId, 'amount:', amount, 'currency:', currency);
+
+        // Validate amount
+        const numericAmount = parseFloat(amount);
+        if (isNaN(numericAmount) || numericAmount <= 0) {
+            return res.status(400).json({ error: 'Invalid payment amount', amount });
+        }
+
         // Find user and order by orderId
         const User = require('../models/User.model');
         const user = await User.findOne({ 'orders._id': orderId });
         if (!user) {
+            console.error('[Payment] User not found for orderId:', orderId);
             return res.status(404).json({ error: 'User not found for this order' });
         }
         const order = user.orders.id(orderId);
         if (!order) {
+            console.error('[Payment] Order not found in user for orderId:', orderId);
             return res.status(404).json({ error: 'Order not found' });
         }
 
         // Check if payment session URL already exists
         if (order.paymentSessionUrl) {
+            console.log('[Payment] Reusing existing session URL for order:', orderId);
             return res.status(200).json({ sessionUrl: order.paymentSessionUrl });
         }
+
+        // Format amount properly — Kashier expects up to 2 decimal places as string
+        const formattedAmount = numericAmount.toFixed(2);
+        console.log('[Payment] Sending to Kashier — amount:', formattedAmount, 'orderId:', orderId);
 
         // Create new payment session
         const response = await axios.post(
@@ -27,7 +42,7 @@ const createPaymentSession = async (req, res) => {
                 expireAt: new Date(Date.now() + 3600000).toISOString(),
                 maxFailureAttempts: 3,
                 paymentType: 'credit',
-                amount: amount.toString(),
+                amount: formattedAmount,
                 currency: currency,
                 order: orderId,
                 merchantRedirect: merchantRedirect,
@@ -51,6 +66,9 @@ const createPaymentSession = async (req, res) => {
             }
         );
 
+        console.log('[Payment] Kashier response status:', response.status);
+        console.log('[Payment] Kashier response data:', JSON.stringify(response.data));
+
         // Save payment session URL in order
         order.paymentSessionUrl = response.data.sessionUrl;
         await user.save();
@@ -59,18 +77,22 @@ const createPaymentSession = async (req, res) => {
             sessionUrl: response.data.sessionUrl,
         });
     } catch (error) {
-        console.error('Error creating payment session:', error);
+        console.error('[Payment] Error creating payment session:', error.message);
         if (error.response) {
-            console.error('Kashier Response Error:', error.response.data);
+            console.error('[Payment] Kashier HTTP Status:', error.response.status);
+            console.error('[Payment] Kashier Response Data:', JSON.stringify(error.response.data));
             return res.status(500).json({
-                error: 'Failed to create payment session (Kashier Error)',
-                details: error.response.data,
+                error: 'Kashier payment session failed',
+                kashierStatus: error.response.status,
+                kashierError: error.response.data,
                 message: error.message
             });
         }
+        console.error('[Payment] Network/unknown error:', error.message);
         res.status(500).json({ error: 'Failed to create payment session', details: error.message });
     }
 };
+
 
 const createSubscriptionPaymentSession = async (req, res) => {
     try {

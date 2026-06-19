@@ -161,22 +161,22 @@ export class HomePageComponent implements OnInit {
   }
 
   get filteredProducts(): any[] {
-    // New Arrivals section should only show BOOKS
+    // New Arrivals section should show BOOKS and unclassified products (some publishers like دار الكرمة have "غير مصنف")
     const books = this.allProducts.filter(p =>
-      p.product_category && (
-        p.product_category.includes('كتب') ||
-        p.product_category.includes('روايات') ||
-        p.product_category.includes('قصص') ||
-        p.product_category.includes('تطوير الذات') ||
-        p.product_category.includes('ديني') ||
-        p.product_category.includes('تاريخ') ||
-        p.product_category.includes('أطفال') ||
-        p.product_category.includes('أعمال') ||
-        p.product_category.includes('قواميس') ||
-        p.product_category.includes('صحة') ||
-        p.product_category.includes('فنون') ||
-        ['رواية', 'تنمية', 'ديني', 'اعمال', 'تربية'].includes(p.product_category)
-      )
+      !p.product_category || // Include products with no category
+      p.product_category === 'غير مصنف' || // Include unclassified (e.g. دار الكرمة)
+      p.product_category.includes('كتب') ||
+      p.product_category.includes('روايات') ||
+      p.product_category.includes('قصص') ||
+      p.product_category.includes('تطوير الذات') ||
+      p.product_category.includes('ديني') ||
+      p.product_category.includes('تاريخ') ||
+      p.product_category.includes('أطفال') ||
+      p.product_category.includes('أعمال') ||
+      p.product_category.includes('قواميس') ||
+      p.product_category.includes('صحة') ||
+      p.product_category.includes('فنون') ||
+      ['رواية', 'تنمية', 'ديني', 'اعمال', 'تربية'].includes(p.product_category)
     );
 
     if (this.activeTab === 'all') {

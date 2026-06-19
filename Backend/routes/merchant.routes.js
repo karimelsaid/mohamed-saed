@@ -21,7 +21,7 @@ router.get('/orders', authenticateMerchant, merchantController.getMerchantOrders
 router.delete('/orders/:orderId', authenticateMerchant, merchantController.deleteMerchantOrder);
 router.post('/products', authenticateMerchant, merchantController.productUpload.array('images', 3), merchantController.addProduct);
 router.delete('/products/:productId', authenticateMerchant, merchantController.deleteProduct);
-router.post('/products/:productId/update-request', authenticateMerchant, merchantController.submitProductUpdateRequest);
+router.post('/products/:productId/update-request', authenticateMerchant, merchantController.productUpload.array('images', 3), merchantController.submitProductUpdateRequest);
 router.get('/update-requests', authenticateMerchant, merchantController.getMerchantUpdateRequests);
 router.patch('/update-shipping-rates', authenticateMerchant, merchantController.updateShippingRates);
 

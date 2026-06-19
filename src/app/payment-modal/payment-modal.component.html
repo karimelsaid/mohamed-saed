@@ -1,22 +1,73 @@
-<div class="fixed inset-0 z-[9999999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-    <div
-        class="bg-white dark:bg-gray-800 w-full max-w-4xl h-[90vh] rounded-2xl shadow-2xl relative overflow-hidden flex flex-col">
-        <!-- Header -->
-        <div
-            class="flex justify-between items-center p-4 border-b border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 z-10">
-            <h3 class="text-lg font-bold text-gray-800 dark:text-gray-200">الدفع الالكتروني</h3>
-            <button (click)="onClose()"
-                class="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
-                <fa-icon [icon]="faTimes" class="text-gray-500 dark:text-gray-400"></fa-icon>
-            </button>
-        </div>
+<div class="payment-overlay" (click)="onClose()">
+  <div class="payment-container" (click)="$event.stopPropagation()">
 
-        <!-- Iframe Content -->
-        <div class="flex-1 w-full bg-gray-50 dark:bg-gray-900 relative">
-            <div *ngIf="!safeUrl" class="absolute inset-0 flex items-center justify-center">
-                <div class="animate-spin rounded-full h-12 w-12 border-4 border-indigo-500 border-t-transparent"></div>
-            </div>
-            <iframe *ngIf="safeUrl" [src]="safeUrl" class="w-full h-full border-0" allow="payment"></iframe>
+    <!-- Header -->
+    <div class="payment-header">
+      <div class="payment-header-left">
+        <div class="payment-lock-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path fill-rule="evenodd" d="M12 1.5a5.25 5.25 0 00-5.25 5.25v3a3 3 0 00-3 3v6.75a3 3 0 003 3h10.5a3 3 0 003-3v-6.75a3 3 0 00-3-3v-3c0-2.9-2.35-5.25-5.25-5.25zm3.75 8.25v-3a3.75 3.75 0 10-7.5 0v3h7.5z" clip-rule="evenodd" />
+          </svg>
         </div>
+        <div>
+          <h3 class="payment-title">الدفع الإلكتروني الآمن</h3>
+          <p class="payment-subtitle">محمي بتشفير SSL 256-bit</p>
+        </div>
+      </div>
+
+      <div class="payment-header-right">
+        <!-- Security badges -->
+        <div class="payment-badges">
+          <span class="badge badge-secure">🛡 آمن</span>
+          <span class="badge badge-verified">✓ موثوق</span>
+        </div>
+        <!-- Close button -->
+        <button class="payment-close-btn" (click)="onClose()" title="إغلاق">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"/>
+          </svg>
+        </button>
+      </div>
     </div>
+
+    <!-- Progress indicator -->
+    <div class="payment-progress-bar">
+      <div class="payment-progress-fill" [class.loading]="!safeUrl"></div>
+    </div>
+
+    <!-- Iframe area -->
+    <div class="payment-iframe-wrapper">
+
+      <!-- Loading State -->
+      <div *ngIf="!safeUrl" class="payment-loading">
+        <div class="loading-spinner-ring"></div>
+        <p class="loading-text">جاري تحميل بوابة الدفع...</p>
+        <p class="loading-sub">يرجى الانتظار، هذا لن يستغرق سوى ثوانٍ</p>
+      </div>
+
+      <!-- Payment iFrame -->
+      <iframe
+        *ngIf="safeUrl"
+        [src]="safeUrl"
+        class="payment-iframe"
+        allow="payment; camera"
+        allowfullscreen
+        title="بوابة الدفع الإلكتروني">
+      </iframe>
+    </div>
+
+    <!-- Footer -->
+    <div class="payment-footer">
+      <div class="payment-footer-logos">
+        <span class="footer-logo visa">VISA</span>
+        <span class="footer-logo mastercard">MC</span>
+        <span class="footer-logo meeza">ميزة</span>
+        <span class="footer-logo fawry">فوري</span>
+      </div>
+      <p class="payment-footer-text">
+        🔒 جميع المعاملات مشفّرة ومحمية · مدعوم بـ Kashier
+      </p>
+    </div>
+
+  </div>
 </div>

@@ -3,6 +3,7 @@ const { clearBooksCache } = require('./books.controller');
 const fs = require('fs');
 const multer = require('multer');
 const sharp = require('sharp');
+const axios = require('axios');
 const { addProductToExcel, bulkAddProductsToExcel, categoryMap, reverseCategoryMap, downloadAndConvertExcel, updateExcelFromJson } = require('../services/excel.service');
 const AdmZip = require('adm-zip');
 const xml2js = require('xml2js');
@@ -1202,8 +1203,9 @@ async function replaceProductImage(req, res) {
     if (!barcode) {
       return res.status(400).json({ success: false, message: 'Missing product barcode' });
     }
-    if (!req.file) {
-      return res.status(400).json({ success: false, message: 'Image file is required' });
+    const imageUrl = req.body && req.body.imageUrl ? String(req.body.imageUrl).trim() : null;
+    if (!req.file && !imageUrl) {
+      return res.status(400).json({ success: false, message: 'Image file or imageUrl is required' });
     }
 
     const outputPath = path.join(__dirname, '..', 'output.json');
@@ -1244,21 +1246,70 @@ async function replaceProductImage(req, res) {
     const filename = barcode + '.webp';
     const filepath = path.join(uploadDir, filename);
 
-    // Compress and save image using sharp
-    await sharp(req.file.buffer)
-      .resize({ width: 800 }) // Resize width to max 800px, maintain aspect ratio
-      .webp({ quality: 80 }) // Convert to webp with quality 80
-      .toFile(filepath);
+    // Compress and save image using sharp (from file buffer or downloaded URL)
+    let imageBuffer;
+    if (req.file) {
+      imageBuffer = req.file.buffer;
+    } else {
+      // Download external image URL server-side (avoids browser CORS issues).
+      // We do NOT check Content-Type because many CDNs return application/octet-stream
+      // even for valid images. Sharp will throw a clear error if the buffer is not an image.
+      try {
+        const imageResponse = await axios.get(imageUrl, {
+          responseType: 'arraybuffer',
+          timeout: 20000,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Referer': imageUrl
+          }
+        });
+        imageBuffer = Buffer.from(imageResponse.data);
+        if (!imageBuffer || imageBuffer.length === 0) {
+          return res.status(400).json({ success: false, message: 'الرابط لم يُعد أي بيانات' });
+        }
+      } catch (downloadErr) {
+        console.error('[replaceProductImage] Failed to download external image:', downloadErr.message);
+        return res.status(400).json({ success: false, message: 'تعذر تحميل الصورة من الرابط: ' + downloadErr.message });
+      }
+    }
+
+    try {
+      await sharp(imageBuffer)
+        .resize({ width: 800 })
+        .webp({ quality: 80 })
+        .toFile(filepath);
+    } catch (sharpErr) {
+      console.error('[replaceProductImage] Sharp failed to process image:', sharpErr.message);
+      return res.status(400).json({ success: false, message: 'الملف ليس صورة صالحة أو تعذّر معالجتها: ' + sharpErr.message });
+    }
+
 
     // Add cache-busting version to the path so all pages show updated image immediately
     const versionedImagePath = `${newImagePath}?v=${Date.now()}`;
 
-    // Update MongoDB
+    // Update MongoDB — try multiple query patterns because product_image may store
+    // a full path ("/uploads/books/...") rather than just the bare barcode.
     try {
-      await Product.findOneAndUpdate(
-        { product_image: { $regex: new RegExp(`^${String(barcode).trim()}(\\.webp)?$`, 'i') } },
-        { $set: { image_path: versionedImagePath } }
+      const barcodeStr = String(barcode).trim();
+      let updated = await Product.findOneAndUpdate(
+        { products_id: barcodeStr },
+        { $set: { image_path: versionedImagePath, product_image: versionedImagePath } }
       );
+      if (!updated) {
+        updated = await Product.findOneAndUpdate(
+          { barcode: barcodeStr },
+          { $set: { image_path: versionedImagePath, product_image: versionedImagePath } }
+        );
+      }
+      if (!updated) {
+        // Fallback: legacy regex match on bare-barcode product_image values
+        await Product.findOneAndUpdate(
+          { product_image: { $regex: new RegExp(`^${barcodeStr}(\\.webp)?$`, 'i') } },
+          { $set: { image_path: versionedImagePath } }
+        );
+      }
     } catch (err) {
       console.warn('Failed to update image_path in MongoDB', err.message);
     }
@@ -1266,6 +1317,7 @@ async function replaceProductImage(req, res) {
     // Update output.json
     if (productIndex !== -1) {
       products[productIndex].image_path = versionedImagePath;
+      products[productIndex].product_image = versionedImagePath;
       fs.writeFileSync(outputPath, JSON.stringify(products, null, 2));
     }
 
@@ -1277,6 +1329,7 @@ async function replaceProductImage(req, res) {
         const rawIndex = rawProducts.findIndex(p => String(p.products_id).trim() === String(barcode).trim());
         if (rawIndex !== -1) {
           rawProducts[rawIndex].image_path = versionedImagePath;
+          rawProducts[rawIndex].product_image = versionedImagePath;
           fs.writeFileSync(rawDataPath, JSON.stringify(rawProducts, null, 2));
         }
       } catch (e) {
@@ -1285,7 +1338,7 @@ async function replaceProductImage(req, res) {
     }
 
     clearBooksCache();
-    res.json({ success: true, message: 'Product image replaced successfully', image_path: versionedImagePath, product_image: barcode });
+    res.json({ success: true, message: 'Product image replaced successfully', image_path: versionedImagePath, product_image: versionedImagePath });
   } catch (error) {
     console.error('Error in replaceProductImage:', error);
     res.status(500).json({ success: false, message: 'Server error' });
@@ -2261,6 +2314,13 @@ async function updateProductUpdateRequest(req, res) {
       product.product_description = request.updatedProduct.product_description;
       product.product_price = request.updatedProduct.product_price;
       product.price_cost = request.updatedProduct.price_cost;
+      product.copyType = request.updatedProduct.copyType;
+      product.condition = request.updatedProduct.condition;
+      product.weight = request.updatedProduct.weight;
+      product.length = request.updatedProduct.length;
+      product.width = request.updatedProduct.width;
+      product.height = request.updatedProduct.height;
+      product.images = request.updatedProduct.images;
 
       await product.save();
 

@@ -121,6 +121,16 @@ export class CheckoutModalComponent implements OnInit {
   codFee: number = 10;
   showCodConfirmation: boolean = false;
   merchantShippers: string[] = [];
+  paymentMethod: string = 'online';
+
+  isDigitalItem(item: any): boolean {
+    if (!item) return false;
+    return item.productType === 'digital' || 
+           item.is_digital === true || 
+           item.is_digital === 'true' || 
+           (item.products_id && String(item.products_id).startsWith('DIG-')) ||
+           (item.barcode && String(item.barcode).startsWith('DIG-'));
+  }
 
   private cartItemsLoaded: boolean = false;
   private freeShippingRulesLoaded: boolean = false;
@@ -284,6 +294,7 @@ export class CheckoutModalComponent implements OnInit {
             this.userProfile = profile;
             this.editedUserProfile = { ...profile }; // clone for editing
             this.updateCities();
+            this.validateLocation(); // initialize locationValid based on loaded profile
             this.calculateShippingCost();
             this.calculateTotalPrice();
             if (this.editedUserProfile && this.editedUserProfile.phone) {
@@ -320,13 +331,14 @@ export class CheckoutModalComponent implements OnInit {
       this.isLoading = false;
     } else if (this.bookId) {
       this.dataService.getData().pipe(
-        map((books: any[]) => books.filter(book => book.products_id === this.bookId))
+        map((books: any[]) => books.filter(book => String(book.products_id) === String(this.bookId)))
       ).subscribe({
         next: (filteredBooks) => {
           this.cartItems = filteredBooks.map(item => ({
             ...item,
             quantity: item.quantity ?? 1
           }));
+          this.calculateShippingCost();
           this.calculateTotalPrice();
           this.isLoading = false;
         },
@@ -348,7 +360,7 @@ export class CheckoutModalComponent implements OnInit {
                 const realId = idInCart.split(':')[0];
                 const bourseOfferId = isBourse ? idInCart.split(':bourse:')[1] : null;
 
-                const bookMatch = books.find(b => b.products_id === realId);
+                const bookMatch = books.find(b => String(b.products_id) === String(realId));
                 if (bookMatch) {
                   let finalPrice = bookMatch.product_price;
                   
@@ -377,9 +389,11 @@ export class CheckoutModalComponent implements OnInit {
           ).subscribe({
             next: (filteredBooks) => {
               this.cartItems = filteredBooks.sort((a, b) => {
-                if (a.product_quantity > 0 && b.product_quantity <= 0) return -1;
-                if (a.product_quantity <= 0 && b.product_quantity > 0) return 1;
-                return b.product_quantity - a.product_quantity;
+                const aQty = a.product_quantity || 0;
+                const bQty = b.product_quantity || 0;
+                if (aQty > 0 && bQty <= 0) return -1;
+                if (aQty <= 0 && bQty > 0) return 1;
+                return bQty - aQty;
               });
               this.isLoading = false;
               this.cartItemsLoaded = true;
@@ -422,8 +436,8 @@ export class CheckoutModalComponent implements OnInit {
     }
     
 
-    const items = this.checkOutItems;
-    console.log('[DEBUG-SHIPPING] Total items in checkout:', items.length);
+    const items = this.checkOutItems.filter(item => !this.isDigitalItem(item));
+    console.log('[DEBUG-SHIPPING] Total physical items in checkout:', items.length);
     
     // Split items for free shipping check: only platform-shipped items (internal or knoozbook)
     const platformItems = items.filter(item => {
@@ -587,7 +601,7 @@ export class CheckoutModalComponent implements OnInit {
         return total + (price * qty);
       }
 
-      if (book.product_quantity > 0) {
+      if (book.product_quantity > 0 || this.isDigitalItem(book)) {
         const price = parseFloat(book.product_price);
         const qty = book.quantity || 1;
 
@@ -628,7 +642,10 @@ export class CheckoutModalComponent implements OnInit {
   }
 
   get hasPurchasableItems(): boolean {
-    return this.cartItems.some(item => item.product_quantity > 0);
+    if (this.customPackage && this.customPackage.products && this.customPackage.products.length > 0) {
+      return true;
+    }
+    return this.cartItems.some(item => item.product_quantity > 0 || this.isDigitalItem(item));
   }
 
   get hasMerchantProducts(): boolean {
@@ -658,33 +675,18 @@ export class CheckoutModalComponent implements OnInit {
     this.close.emit();
   }
 
-  nextStep(): void {
-    if (this.currentStep < 3) {
-      if (this.currentStep === 1) {
-        if (!this.userProfile) {
-          // If profile is not loaded, try to load it or alert
-          this.authService.user$.pipe(take(1)).subscribe(user => {
-            if (!user) {
-              alert('يجب تسجيل الدخول للمتابعة');
-              // Optionally redirect to login or show login modal
-            } else {
-              // Try reloading profile if we have a user but no profile yet
-              this.loadUserProfile();
-              // Allow proceeding locally, but the view handle the loading state
-              this.currentStep++;
-            }
-          });
-          return;
-        }
-      }
-      this.currentStep++;
-    }
+  openAccountModal(): void {
+    // Close checkout and let parent handle login/register modal
+    this.onClose();
+    // Trigger login modal via auth service or navigation
+    setTimeout(() => {
+      const loginBtn = document.querySelector('[data-action="open-login"]') as HTMLElement;
+      if (loginBtn) loginBtn.click();
+    }, 300);
   }
 
-  previousStep(): void {
-    if (this.currentStep > 1) {
-      this.currentStep--;
-    }
+  navigateToLogin(): void {
+    window.location.href = '/login';
   }
 
   decreaseQuantity(item: any): void {
@@ -881,16 +883,100 @@ export class CheckoutModalComponent implements OnInit {
     });
   }
 
-  completePurchase(): void {
+  confirmAndSubmitOrder(): void {
+    if (this.isProcessing) return;
+    
+    this.errorMessage = '';
+
+    if (!this.isPickup) {
+      if (this.isPostOffice) {
+        const govValid = this.governorates.some(g => g.governorate_name === this.postOfficeGovernorate);
+        const cityValid = this.postOfficeCities.includes(this.postOfficeCity);
+        const addressValid = this.postOfficeAddress.trim().length > 0;
+        const nameValid = this.postOfficeName.trim().length > 0;
+
+        if (!govValid || !cityValid || !addressValid || !nameValid) {
+          this.errorMessage = 'يرجى إدخال جميع تفاصيل مكتب البريد بشكل صحيح.';
+          return;
+        }
+        
+        if (this.userProfile) {
+          this.userProfile.postOffice = {
+            name: this.postOfficeName,
+            address: this.postOfficeAddress,
+            governorate: this.postOfficeGovernorate,
+            city: this.postOfficeCity
+          };
+        }
+      } else {
+        if (!this.editedUserProfile) return;
+        this.validatePhone();
+        this.validateLocation();
+        
+        if (!this.phoneValid) {
+          this.errorMessage = 'رقم الهاتف غير صالح. يجب أن يتكون من 11 رقماً ويبدأ بـ 010 أو 011 أو 012 أو 015.';
+          return;
+        }
+        
+        if (!this.locationValid) {
+          this.errorMessage = 'يرجى اختيار المحافظة والمدينة بشكل صحيح.';
+          return;
+        }
+        
+        if (!this.editedUserProfile.village || this.editedUserProfile.village.trim().length === 0) {
+          this.errorMessage = 'يرجى إدخال تفاصيل العنوان (الشارع / المنطقة / رقم المنزل).';
+          return;
+        }
+
+        this.userProfile = { ...this.editedUserProfile };
+      }
+    }
+
     this.isProcessing = true;
-    this.showPurchaseConfirmation = true;
+
+    // Save profile data to backend dynamically before placing the order
+    if (this.userProfile && !this.isPickup) {
+      this.dataService.updateUserProfile(this.userProfile).subscribe({
+        next: () => {
+          console.log('User profile updated successfully on order submit.');
+          this.authService.setUser(this.userProfile);
+          this.proceedToPurchase();
+        },
+        error: (error: any) => {
+          console.error('Error updating user profile before order submit:', error);
+          this.proceedToPurchase(); // Proceed with purchase anyway even if profile save fails
+        }
+      });
+    } else {
+      this.proceedToPurchase();
+    }
+  }
+
+  private proceedToPurchase(): void {
+    if (this.finalTotal <= 0) {
+      this.executePurchase();
+    } else if (this.paymentMethod === 'cod') {
+      if (this.isPickup) {
+        this.codFee = 0;
+        this.finalConfirmCOD();
+      } else {
+        this.showCodConfirmation = true;
+        this.isProcessing = false;
+      }
+    } else {
+      this.executePurchase();
+    }
+  }
+
+  completePurchase(): void {
+    this.confirmAndSubmitOrder();
   }
 
   executePurchase(): void {
     this.showPurchaseConfirmation = false;
 
-    // Use standardized checkOutItems getter
-    const purchasedItems = this.checkOutItems.filter(item => (item.product_quantity > 0 || this.customPackage));
+    // Use standardized checkOutItems getter supporting digital products
+    const purchasedItems = this.checkOutItems.filter(item => (item.product_quantity > 0 || this.isDigitalItem(item) || this.customPackage));
 
     const purchasedBookIds = purchasedItems.map(item => item.products_id);
 
@@ -947,7 +1033,8 @@ export class CheckoutModalComponent implements OnInit {
 
             const orderId = response.orderId;
             const currency = 'EGP';
-            const merchantRedirect = window.location.origin + '/order/callback';
+            const merchantRedirect = environment.paymentCallbackUrl;
+
 
             if (orderId && this.userProfile && this.userProfile.email) {
               // FOR ZERO TOTAL ORDERS: Complete directly
@@ -974,13 +1061,29 @@ export class CheckoutModalComponent implements OnInit {
                     this.showPaymentModal = true;
                     this.isProcessing = false;
                   } else {
-                    alert('فشل في الحصول على رابط الدفع');
+                    console.error('[Payment] No sessionUrl in response:', paymentResponse);
+                    this.errorMessage = 'فشل في الحصول على رابط الدفع. يرجى المحاولة مرة أخرى.';
                     this.isProcessing = false;
                   }
                 },
-                error: (paymentError) => {
-                  console.error('خطأ في إنشاء طلب الدفع:', paymentError);
-                  alert('حدث خطأ أثناء إنشاء طلب الدفع، يرجى المحاولة مرة أخرى');
+                error: (paymentError: any) => {
+                  // Log full error for debugging
+                  console.error('[Payment] Error creating payment session:', paymentError);
+                  const backendError = paymentError?.error;
+                  if (backendError?.kashierError) {
+                    console.error('[Payment] Kashier Error Details:', JSON.stringify(backendError.kashierError));
+                    console.error('[Payment] Kashier HTTP Status:', backendError.kashierStatus);
+                  }
+                  
+                  // Build user-friendly message
+                  let msg = 'حدث خطأ أثناء إنشاء طلب الدفع، يرجى المحاولة مرة أخرى.';
+                  if (backendError?.error === 'Invalid payment amount') {
+                    msg = 'قيمة الطلب غير صحيحة. يرجى التحقق من السلة والمحاولة مجدداً.';
+                  } else if (backendError?.error === 'User not found for this order') {
+                    msg = 'لم يتم العثور على الطلب. يرجى تسجيل الدخول والمحاولة مجدداً.';
+                  }
+                  
+                  this.errorMessage = msg;
                   this.isProcessing = false;
                 }
               });
@@ -1024,8 +1127,8 @@ export class CheckoutModalComponent implements OnInit {
     this.showPurchaseConfirmation = false;
     this.isProcessing = true;
 
-    // Use standardized checkOutItems getter
-    const purchasedItems = this.checkOutItems.filter(item => (item.product_quantity > 0 || this.customPackage));
+    // Use standardized checkOutItems getter supporting digital products
+    const purchasedItems = this.checkOutItems.filter(item => (item.product_quantity > 0 || this.isDigitalItem(item) || this.customPackage));
 
     const purchasedBookIds = purchasedItems.map(item => item.products_id);
 

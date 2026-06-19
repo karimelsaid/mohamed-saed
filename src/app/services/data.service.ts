@@ -55,13 +55,26 @@ export class DataService {
       }
     }
 
+    // 2b. If image_path is already a local /uploads/ path, return it directly.
+    // This prevents re-wrapping and producing a doubled URL like:
+    //   /uploads/books/admin__x__/123//uploads/books/admin__x__/123/123.webp
+    if (typeof image_path === 'string' && image_path.startsWith('/uploads/')) {
+      return image_path;
+    }
+
+    // 1b. If product_image is already a local /uploads/ path, return it directly.
+    if (typeof product_image === 'string' && product_image.startsWith('/uploads/')) {
+      return product_image;
+    }
+
     // 3. Resolve the products_id (used for folder naming)
     let products_id = book.products_id || (book as any)._id;
     if (products_id) products_id = String(products_id).trim();
 
     // 4. Determine if it's admin or merchant
+    // 'publisher' merchantRole means it's a virtual publisher stored under the admin folder
     const merchantName = book.merchantName;
-    const isAdmin = book.merchantRole === 'admin' || !merchantName || merchantName === 'كنوز' || merchantName === 'تاجر كنوز' || merchantName === 'Kenouz';
+    const isAdmin = book.merchantRole === 'admin' || book.merchantRole === 'publisher' || !merchantName || merchantName === 'كنوز' || merchantName === 'تاجر كنوز' || merchantName === 'Kenouz';
 
     const folderName = book.barcode || products_id || 'unknown';
     let final_image = product_image || (folderName + '.webp');
@@ -95,13 +108,17 @@ export class DataService {
             // Standardize merchant detection (Treat Kenouz/Empty as Admin)
             const rawMerchantName = book.merchantName || '';
             const isKenouz = !rawMerchantName || rawMerchantName === 'كنوز' || rawMerchantName === 'تاجر كنوز' || rawMerchantName === 'Kenouz' || book.merchantRole === 'admin';
+            // 'publisher' = virtual publisher with no DB account (e.g. دار دوّن)
+            const isPublisher = book.merchantRole === 'publisher';
             
             const enrichedBook = { 
               ...book, 
               products_id: id,
-              merchantRole: isKenouz ? 'admin' : (book.merchantRole || 'merchant'),
+              // Keep 'publisher' role so the frontend shows the publisher link;
+              // treat Kenouz/empty as 'admin' to hide the merchant link
+              merchantRole: isPublisher ? 'publisher' : (isKenouz ? 'admin' : (book.merchantRole || 'merchant')),
               // Ensure merchantName is removed if it's Kenouz to hide "By Kenouz"
-              merchantName: isKenouz ? null : rawMerchantName
+              merchantName: isKenouz && !isPublisher ? null : rawMerchantName
             };
 
             if (!uniqueItems.has(id)) {
@@ -164,7 +181,7 @@ export class DataService {
   }
 
   updateUserProfile(user: any): Observable<any> {
-    const url = this.usersApiUrl + '/update-profile/' + user.id;
+    const url = this.usersApiUrl + '/profile/' + user.id;
     return this.http.put(url, user);
   }
 

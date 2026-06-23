@@ -420,6 +420,9 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   products: Product[] = [];
   productsPage: number = 1;
   productsPageSize: number = 50;
+  totalProductsCount: number = 0;
+  availablePublishers: string[] = [];
+  availableMerchants: string[] = [];
   searchTerm: string = '';
   amazonProfitPercent: number = 80;
 
@@ -1465,11 +1468,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   ];
 
   get uniquePublishers(): string[] {
-    if (!this.allProducts || this.allProducts.length === 0) return [];
-    const publishers = this.allProducts
-      .map(p => p['publisher'])
-      .filter((v, i, a) => v && a.indexOf(v) === i);
-    return (publishers as string[]).sort();
+    return (this.availablePublishers as string[] || []).sort();
   }
 
   constructor(
@@ -1499,6 +1498,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
         this.loadStats();
         this.loadSystemSettings(); // Load settings on init
         this.loadCategories();
+        this.loadMerchantsList();
       } else {
         this.isAdmin = false;
         this.router.navigate(['/']);
@@ -1574,6 +1574,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       this.loadPrintOrders();
     } else if (view === 'products') {
       this.loadProducts();
+      this.loadFilterOptions();
     } else if (view === 'merchants') {
       // No data loading needed currently for merchants
     } else if (view === 'productApproval') {
@@ -1963,33 +1964,61 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
 
 
-  loadProducts(): void {
-    this.http.get<{ success: boolean; products: Product[] }>(`${this.backendBaseUrl}/admin/products`).subscribe({
+  loadFilterOptions(): void {
+    this.http.get<{ success: boolean; availablePublishers: string[]; availableCategories: string[]; availableMerchants: string[] }>(
+      `${this.backendBaseUrl}/admin/filter-options`
+    ).subscribe({
       next: (response) => {
         if (response.success) {
-          // Trim product_category to match categories array exactly
+          this.availablePublishers = response.availablePublishers || [];
+          this.availableMerchants = response.availableMerchants || [];
+          this.cdr.detectChanges();
+        }
+      },
+      error: (err) => {
+        console.error('Failed to load filter options:', err);
+      }
+    });
+  }
+
+  loadProducts(): void {
+    const params = `?page=${this.productsPage}&limit=${this.productsPageSize}` +
+                   `&searchTerm=${encodeURIComponent(this.searchTerm || '')}` +
+                   `&category=${encodeURIComponent(this.currentFilter || '')}` +
+                   `&ebookFilter=${this.ebookFilter || ''}` +
+                   `&merchantFilter=${this.merchantFilter || ''}` +
+                   `&publisherFilter=${encodeURIComponent(this.publisherFilter || '')}` +
+                   `&sortField=${this.sortField || ''}` +
+                   `&sortDirection=${this.sortDirection || 'asc'}`;
+
+    this.http.get<{ success: boolean; products: Product[]; totalCount: number; availablePublishers: string[]; availableMerchants: string[] }>(`${this.backendBaseUrl}/admin/products${params}`).subscribe({
+      next: (response) => {
+        if (response.success) {
           response.products.forEach((p, index) => {
             if (p.product_category && typeof p.product_category === 'string') {
               p.product_category = p.product_category.trim();
-              // If it's a short key, map to full category name
               if (this.categoryMap[p.product_category]) {
                 p.product_category = this.categoryMap[p.product_category];
               }
             }
-            // Ensure product_category is set to a valid category or default to first category
             if (!p.product_category || !this.categories.includes(p.product_category)) {
               p.product_category = this.categories[0];
             }
-            // Add fileOrder property based on index in the file
-            p.fileOrder = index;
-            p.editMode = false; // Initialize editMode for each product
-            p.isSaving = false; // Initialize isSaving for each product
-            p.detailsOpen = false; // Initialize detailsOpen for each product
+            p.fileOrder = index + (this.productsPage - 1) * this.productsPageSize;
+            p.editMode = false;
+            p.isSaving = false;
+            p.detailsOpen = false;
           });
-          this.allProducts = response.products;
-          this.originalProducts = JSON.parse(JSON.stringify(response.products)); // deep copy for change detection
-          this.rebuildFilteredProducts();
-          this.updateProductsPage();
+          this.products = response.products;
+          this.originalProducts = JSON.parse(JSON.stringify(response.products));
+          this.totalProductsCount = response.totalCount ?? response.products.length;
+          if (response.availablePublishers && response.availablePublishers.length > 0) {
+            this.availablePublishers = response.availablePublishers;
+          }
+          if (response.availableMerchants && response.availableMerchants.length > 0) {
+            this.availableMerchants = response.availableMerchants;
+          }
+          this.cdr.detectChanges();
         }
       },
       error: (err) => {
@@ -2120,130 +2149,36 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   private _filteredProducts: Product[] = [];
 
   rebuildFilteredProducts(): void {
-    let filtered = this.allProducts;
-
-    // Apply category filter
-    if (this.currentFilter && this.currentFilter !== 'جميع الفئات') {
-      filtered = filtered.filter(p => p.product_category === this.currentFilter);
-    }
-
-    // Apply ebook filter
-    if (this.ebookFilter === 'withEbook') {
-      filtered = filtered.filter((p: any) => p.linkedEbookId);
-    } else if (this.ebookFilter === 'withoutEbook') {
-      filtered = filtered.filter((p: any) => !p.linkedEbookId);
-    }
-
-    // Apply Merchant filter
-    if (this.merchantFilter !== 'all') {
-      if (this.merchantFilter === 'admin') {
-        filtered = filtered.filter(p => !p['merchantId'] || String(p['merchantId']).trim() === '');
-      } else {
-        filtered = filtered.filter(p => p['merchantName'] === this.merchantFilter);
-      }
-    }
-
-    // Apply Publisher filter
-    if (this.publisherFilter !== 'all') {
-      filtered = filtered.filter(p => p['publisher'] === this.publisherFilter);
-    }
-
-    if (this.searchTerm) {
-      const lowerSearch = this.searchTerm.toLowerCase();
-      filtered = filtered.filter(p => {
-        if (!p.product_name || typeof p.product_name !== 'string') {
-          return false;
-        }
-        return p.product_name.toLowerCase().includes(lowerSearch);
-      });
-    }
-
-    if (this.sortField !== '') {
-      filtered = filtered.slice().sort((a, b) => {
-        if (this.sortField === 'purchaseValue') {
-          const aTotal = (a.product_quantity || 0) * (a.price_cost || 0);
-          const bTotal = (b.product_quantity || 0) * (b.price_cost || 0);
-          return this.sortDirection === 'asc' ? aTotal - bTotal : bTotal - aTotal;
-        }
-
-        if (this.sortField === 'lastStockUpdate') {
-          const aDate = a.lastStockUpdate ? new Date(a.lastStockUpdate).getTime() : 0;
-          const bDate = b.lastStockUpdate ? new Date(b.lastStockUpdate).getTime() : 0;
-          return this.sortDirection === 'asc' ? aDate - bDate : bDate - aDate;
-        }
-
-        if (this.sortField === 'createdAt' || this.sortField === 'fileOrder') {
-          const aOrder = a.fileOrder ?? 0;
-          const bOrder = b.fileOrder ?? 0;
-          if (this.sortDirection === 'asc') {
-            return aOrder - bOrder;
-          } else {
-            return bOrder - aOrder;
-          }
-        }
-
-        const aValue = a[this.sortField as keyof Product];
-        const bValue = b[this.sortField as keyof Product];
-
-        if (aValue == null) return 1;
-        if (bValue == null) return -1;
-
-        // Force numeric comparison for quantity and price fields
-        const numericFields = ['product_quantity', 'product_price', 'price_cost'];
-        if (numericFields.includes(this.sortField as string)) {
-          const aNum = Number(aValue) || 0;
-          const bNum = Number(bValue) || 0;
-          return this.sortDirection === 'asc' ? aNum - bNum : bNum - aNum;
-        }
-
-        if (typeof aValue === 'string' && typeof bValue === 'string') {
-          const comparison = aValue.localeCompare(bValue);
-          return this.sortDirection === 'asc' ? comparison : -comparison;
-        } else if (typeof aValue === 'number' && typeof bValue === 'number') {
-          return this.sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
-        } else {
-          return 0;
-        }
-      });
-    }
-
-    this._filteredProducts = filtered;
+    this.productsPage = 1;
+    this.loadProducts();
   }
 
   get filteredProducts(): Product[] {
-    return this._filteredProducts;
+    return this.products;
   }
 
   updateProductsPage(): void {
-    const start = (this.productsPage - 1) * this.productsPageSize;
-    const end = this.productsPage * this.productsPageSize;
-    this.products = this._filteredProducts.slice(start, end);
+    // Handled on server-side
   }
 
   nextProductsPage(): void {
     if (this.productsPage < this.totalProductsPages()) {
       this.productsPage++;
-      this.updateProductsPage();
+      this.loadProducts();
       this.scrollToTop();
     }
   }
 
   onSearchTermChange(): void {
-    this.productsPage = 1;
     this.rebuildFilteredProducts();
-    this.updateProductsPage();
   }
 
   onEbookFilterChange(): void {
-    this.productsPage = 1;
     this.rebuildFilteredProducts();
-    this.updateProductsPage();
   }
 
   onCategoryFilterChange(): void {
-    this.productsPage = 1;
     this.rebuildFilteredProducts();
-    this.updateProductsPage();
   }
 
   onSortFieldChange(newValue: string): void {
@@ -2254,27 +2189,24 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       this.sortField = value;
       this.sortDirection = 'asc';
     }
-    this.productsPage = 1;
     this.rebuildFilteredProducts();
-    this.updateProductsPage();
   }
 
   toggleSortDirection(): void {
     this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
-    this.rebuildFilteredProducts();
-    this.updateProductsPage();
+    this.loadProducts();
   }
 
   prevProductsPage(): void {
     if (this.productsPage > 1) {
       this.productsPage--;
-      this.updateProductsPage();
+      this.loadProducts();
       this.scrollToTop();
     }
   }
 
   totalProductsPages(): number {
-    return Math.ceil(this._filteredProducts.length / this.productsPageSize);
+    return Math.ceil(this.totalProductsCount / this.productsPageSize) || 1;
   }
 
   updateProduct(product: Product): void {
@@ -2319,8 +2251,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
   saveAllProducts(): void {
     console.log('--- Starting Save All Products ---');
-    const changedProducts = this.allProducts.filter(p => this.hasProductChanged(p));
-    console.log(`Found ${changedProducts.length} changed products out of ${this.allProducts.length}`);
+    const changedProducts = this.products.filter(p => this.hasProductChanged(p));
+    console.log(`Found ${changedProducts.length} changed products out of ${this.products.length}`);
 
     if (changedProducts.length === 0) {
       this.showErrorModal('لم يتم اكتشاف أي تغييرات لحفظها');
@@ -2457,119 +2389,141 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
 
   exportProductsToExcel(): void {
-    let filtered = [...this.allProducts];
+    this.http.get<{ success: boolean; products: Product[] }>(`${this.backendBaseUrl}/admin/products?all=true`).subscribe({
+      next: (response) => {
+        if (response.success) {
+          let filtered = [...response.products];
 
-    // 1. Filter by categories
-    if (this.exportOptions.categories.length > 0 && !this.exportOptions.categories.includes('جميع الفئات')) {
-      filtered = filtered.filter(p => this.exportOptions.categories.includes(p.product_category));
-    }
+          // 1. Filter by categories
+          if (this.exportOptions.categories.length > 0 && !this.exportOptions.categories.includes('جميع الفئات')) {
+            filtered = filtered.filter(p => this.exportOptions.categories.includes(p.product_category));
+          }
 
-    // 2. Filter by max quantity
-    if (this.exportOptions.maxQuantity !== null) {
-      filtered = filtered.filter(p => p.product_quantity <= (this.exportOptions.maxQuantity || 0));
-    }
+          // 2. Filter by max quantity
+          if (this.exportOptions.maxQuantity !== null) {
+            filtered = filtered.filter(p => p.product_quantity <= (this.exportOptions.maxQuantity || 0));
+          }
 
-    if (filtered.length === 0) {
-      this.showErrorModal('لا توجد منتجات تطابق هذه الفلاتر للتصدير.');
-      return;
-    }
+          if (filtered.length === 0) {
+            this.showErrorModal('لا توجد منتجات تطابق هذه الفلاتر للتصدير.');
+            return;
+          }
 
-    const worksheet = XLSX.utils.json_to_sheet(filtered.map(p => ({
-      'المعرف': p.products_id,
-      'الباركود': p['barcode'] || '',
-      'اسم المنتج': p.product_name,
-      'الفئة': p.product_category,
-      'الكمية': p.product_quantity,
-      'سعر التكلفة': p.price_cost,
-      'سعر البيع': p.product_price,
-      'الوصف': p.product_description
-    })));
+          const worksheet = XLSX.utils.json_to_sheet(filtered.map(p => ({
+            'المعرف': p.products_id,
+            'الباركود': p['barcode'] || '',
+            'اسم المنتج': p.product_name,
+            'الفئة': p.product_category,
+            'الكمية': p.product_quantity,
+            'سعر التكلفة': p.price_cost,
+            'سعر البيع': p.product_price,
+            'الوصف': p.product_description
+          })));
 
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Filtered Products');
-    XLSX.writeFile(workbook, `products_export_${new Date().toISOString().slice(0, 10)}.xlsx`);
-    this.showExportModal = false;
+          const workbook = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(workbook, worksheet, 'Filtered Products');
+          XLSX.writeFile(workbook, `products_export_${new Date().toISOString().slice(0, 10)}.xlsx`);
+          this.showExportModal = false;
+        } else {
+          this.showErrorModal('فشل في جلب المنتجات للتصدير');
+        }
+      },
+      error: () => {
+        this.showErrorModal('خطأ في الاتصال بالخادم أثناء تصدير المنتجات');
+      }
+    });
   }
 
   exportAllDataToExcel(): void {
-    const workbook = XLSX.utils.book_new();
+    this.http.get<{ success: boolean; products: Product[] }>(`${this.backendBaseUrl}/admin/products?all=true`).subscribe({
+      next: (response) => {
+        if (response.success) {
+          const workbook = XLSX.utils.book_new();
 
-    // Export Orders
-    const ordersWorksheet = XLSX.utils.json_to_sheet(this.allOrders.map(order => ({
-      'رقم الطلب': order._id,
-      'اسم العميل': order.customerName,
-      'البريد الإلكتروني': order.email,
-      'الهاتف': order.phone,
-      'العنوان': order.address,
-      'المنتجات': order.products.map(p => `${p.product_name} (${p.product_quantity})`).join(', '),
-      'الحالة': order.status,
-      'تاريخ الطلب': order.orderDate,
-      'السعر الإجمالي': order.totalAmount,
-      'طلب تاجر': order.isMerchantOrder ? 'نعم' : 'لا'
-    })));
-    XLSX.utils.book_append_sheet(workbook, ordersWorksheet, 'الطلبات');
+          // Export Orders
+          const ordersWorksheet = XLSX.utils.json_to_sheet(this.allOrders.map(order => ({
+            'رقم الطلب': order._id,
+            'اسم العميل': order.customerName,
+            'البريد الإلكتروني': order.email,
+            'الهاتف': order.phone,
+            'العنوان': order.address,
+            'المنتجات': order.products.map(p => `${p.product_name} (${p.product_quantity})`).join(', '),
+            'الحالة': order.status,
+            'تاريخ الطلب': order.orderDate,
+            'السعر الإجمالي': order.totalAmount,
+            'طلب تاجر': order.isMerchantOrder ? 'نعم' : 'لا'
+          })));
+          XLSX.utils.book_append_sheet(workbook, ordersWorksheet, 'الطلبات');
 
-    // Export Products
-    const productsWorksheet = XLSX.utils.json_to_sheet(this.allProducts.map(product => ({
-      'اسم المنتج': product.product_name,
-      'الكمية': product.product_quantity,
-      'الفئة': product.product_category,
-      'الوصف': product.product_description,
-      'سعر البيع': product.product_price,
-      'سعر الشراء': product.price_cost,
-      'تاريخ الإنشاء': product.createdAt
-    })));
-    XLSX.utils.book_append_sheet(workbook, productsWorksheet, 'المنتجات');
+          // Export Products
+          const productsWorksheet = XLSX.utils.json_to_sheet(response.products.map(product => ({
+            'اسم المنتج': product.product_name,
+            'الكمية': product.product_quantity,
+            'الفئة': product.product_category,
+            'الوصف': product.product_description,
+            'سعر البيع': product.product_price,
+            'سعر الشراء': product.price_cost,
+            'تاريخ الإنشاء': product.createdAt
+          })));
+          XLSX.utils.book_append_sheet(workbook, productsWorksheet, 'المنتجات');
 
-    // Export Requested Books
-    const requestedBooksWorksheet = XLSX.utils.json_to_sheet(this.allRequestedBooks.map(book => ({
-      'اسم الكتاب': book.bookName,
-      'اسم المؤلف': book.authorName || 'غير محدد',
-      'صاحب الاقتراح': book.username ? `${book.username} (${book.userId})` : 'غير معروف',
-      'تم إضافته': book.added ? 'نعم' : 'لا',
-      'تاريخ الطلب': book.dateRequested
-    })));
-    XLSX.utils.book_append_sheet(workbook, requestedBooksWorksheet, 'اقتراحات الكتب');
+          // Export Requested Books
+          const requestedBooksWorksheet = XLSX.utils.json_to_sheet(this.allRequestedBooks.map(book => ({
+            'اسم الكتاب': book.bookName,
+            'اسم المؤلف': book.authorName || 'غير محدد',
+            'صاحب الاقتراح': book.username ? `${book.username} (${book.userId})` : 'غير معروف',
+            'تم إضافته': book.added ? 'نعم' : 'لا',
+            'تاريخ الطلب': book.dateRequested
+          })));
+          XLSX.utils.book_append_sheet(workbook, requestedBooksWorksheet, 'اقتراحات الكتب');
 
-    // Export Print Orders
-    const printOrdersWorksheet = XLSX.utils.json_to_sheet(this.allPrintOrders.map(order => ({
-      'رقم الطلب': order.orderId,
-      'اسم المستخدم': order.username,
-      'البريد الإلكتروني': order.email,
-      'الهاتف': order.phone,
-      'العنوان': order.address,
-      'الحالة': order.status,
-      'تاريخ الطلب': order.orderDate,
-      'السعر الإجمالي': order.totalAmount,
-      'المشاريع': order.printProjects.map(p => `${p.projectTitle} (${p.filename})`).join(', ')
-    })));
-    XLSX.utils.book_append_sheet(workbook, printOrdersWorksheet, 'طلبات الطباعة');
+          // Export Print Orders
+          const printOrdersWorksheet = XLSX.utils.json_to_sheet(this.allPrintOrders.map(order => ({
+            'رقم الطلب': order.orderId,
+            'اسم المستخدم': order.username,
+            'البريد الإلكتروني': order.email,
+            'الهاتف': order.phone,
+            'العنوان': order.address,
+            'الحالة': order.status,
+            'تاريخ الطلب': order.orderDate,
+            'السعر الإجمالي': order.totalAmount,
+            'المشاريع': order.printProjects.map(p => `${p.projectTitle} (${p.filename})`).join(', ')
+          })));
+          XLSX.utils.book_append_sheet(workbook, printOrdersWorksheet, 'طلبات الطباعة');
 
-    // Export Urgency Requests
-    const urgencyRequestsWorksheet = XLSX.utils.json_to_sheet(this.allUrgencyRequests.map(request => ({
-      'اسم الكتاب': request.bookName,
-      'التاجر': request.merchantName || 'غير محدد',
-      'صاحب الطلب': request.username,
-      'تم التنفيذ': request.fulfilled ? 'نعم' : 'لا',
-      'تاريخ الطلب': request.requestedAt
-    })));
-    XLSX.utils.book_append_sheet(workbook, urgencyRequestsWorksheet, 'طلبات الطوارئ');
+          // Export Urgency Requests
+          const urgencyRequestsWorksheet = XLSX.utils.json_to_sheet(this.allUrgencyRequests.map(request => ({
+            'اسم الكتاب': request.bookName,
+            'التاجر': request.merchantName || 'غير محدد',
+            'صاحب الطلب': request.username,
+            'تم التنفيذ': request.fulfilled ? 'نعم' : 'لا',
+            'تاريخ الطلب': request.requestedAt
+          })));
+          XLSX.utils.book_append_sheet(workbook, urgencyRequestsWorksheet, 'طلبات الطوارئ');
 
-    // Export Stats Summary
-    const statsWorksheet = XLSX.utils.json_to_sheet([{
-      'إجمالي المستخدمين': this.totalUsers,
-      'إجمالي المنتجات': this.totalProducts,
-      'إجمالي الطلبات': this.totalOrders,
-      'إجمالي طلبات التجار': this.totalMerchantOrders,
-      'إجمالي الإعجابات': this.totalLikes,
-      'إجمالي عناصر السلة': this.totalCartItems,
-      'إجمالي اقتراحات الكتب': this.totalRequestedBooks,
-      'إجمالي طلبات الطباعة': this.totalPrintOrders,
-      'إجمالي طلبات الطوارئ': this.totalUrgencyRequests
-    }]);
-    XLSX.utils.book_append_sheet(workbook, statsWorksheet, 'الإحصائيات');
+          // Export Stats Summary
+          const statsWorksheet = XLSX.utils.json_to_sheet([{
+            'إجمالي المستخدمين': this.totalUsers,
+            'إجمالي المنتجات': this.totalProducts,
+            'إجمالي الطلبات': this.totalOrders,
+            'إجمالي طلبات التجار': this.totalMerchantOrders,
+            'إجمالي الإعجابات': this.totalLikes,
+            'إجمالي عناصر السلة': this.totalCartItems,
+            'إجمالي اقتراحات الكتب': this.totalRequestedBooks,
+            'إجمالي طلبات الطباعة': this.totalPrintOrders,
+            'إجمالي طلبات الطوارئ': this.totalUrgencyRequests
+          }]);
+          XLSX.utils.book_append_sheet(workbook, statsWorksheet, 'الإحصائيات');
 
-    XLSX.writeFile(workbook, 'all_data_export.xlsx');
+          XLSX.writeFile(workbook, 'all_data_export.xlsx');
+        } else {
+          this.showErrorModal('فشل في جلب المنتجات لتصدير كافة البيانات');
+        }
+      },
+      error: () => {
+        this.showErrorModal('خطأ في الاتصال بالخادم لتصدير كافة البيانات');
+      }
+    });
   }
 
   importProductsFromExcel(event: Event): void {

@@ -1,10 +1,10 @@
-import { Component, OnInit, OnDestroy, ViewChild } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ChangeDetectorRef, Inject, PLATFORM_ID } from '@angular/core';
 import { GamificationService } from '../services/gamification.service';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { take } from 'rxjs/operators';
 import { DataService } from '../services/data.service';
 import { Book } from '../book';
-import { CommonModule, NgIf } from '@angular/common';
+import { CommonModule, NgIf, isPlatformBrowser } from '@angular/common';
 import { CheckoutModalComponent } from '../checkout-modal/checkout-modal.component';
 import { AccountModalComponent } from '../auth/account-modal/account-modal.component';
 import { SharedModule } from '../shared/shared.module';
@@ -18,13 +18,24 @@ import { SlugService } from '../services/slug.service';
 import { PromotionService } from '../services/promotion.service';
 import { SeoService } from '../services/seo.service';
 import { AnalyticsService } from '../services/analytics.service';
+import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
 
 @Component({
   selector: 'app-book-details',
   standalone: true,
-  imports: [CommonModule, NgIf, CheckoutModalComponent, SharedModule, FontAwesomeModule, RouterModule],
+  imports: [
+    CommonModule,
+    RouterModule,
+    FontAwesomeModule,
+    SharedModule,
+    NgxSkeletonLoaderModule,
+    CheckoutModalComponent,
+    AccountModalComponent,
+  ],
   templateUrl: './book-details.component.html',
-  styleUrls: ['./book-details.component.css']
+  styleUrls: ['./book-details.component.css'],
+  // ✅ SSR FIX: شيلنا OnPush لأنها بتمنع Angular Universal من رؤية التغييرات وقت SSR render
+  // البراوزر هيشتغل عادي مع Default - الفرق في الأداء مش محسوس على صفحة واحدة
 })
 export class BookDetailsComponent implements OnInit, OnDestroy {
   uploadsBaseUrl = environment.uploadsBaseUrl;
@@ -37,6 +48,7 @@ export class BookDetailsComponent implements OnInit, OnDestroy {
   showCopySuccess = false;
   book: Book | undefined;
   loading: boolean = true;
+  imagesLoading: boolean = true;
   error: string | null = null;
   showCheckoutModal = false;
   showLoginPrompt = false; // متغير للتحكم في عرض النافذة العائمة
@@ -48,7 +60,9 @@ export class BookDetailsComponent implements OnInit, OnDestroy {
   relatedProducts: Book[] = [];
 
   private bookId: string | null = null;
+  private loadedBookId: string | null = null;
   private allBooks: Book[] = [];
+  private static resolvedImagesCache = new Map<string, string[]>();
   appliedCoupon: any = null;
   constructor(
     private route: ActivatedRoute,
@@ -60,54 +74,154 @@ export class BookDetailsComponent implements OnInit, OnDestroy {
     public gamificationService: GamificationService,
     private promotionService: PromotionService,
     private seoService: SeoService,
-    private analyticsService: AnalyticsService
+    private analyticsService: AnalyticsService,
+    private cdr: ChangeDetectorRef,
+    @Inject(PLATFORM_ID) private platformId: Object
   ) { }
 
   ngOnInit(): void {
-    this.route.paramMap.subscribe(paramMap => {
-      this.bookId = paramMap.get('id');
-      if (this.bookId !== null) {
-        const trimmedId = this.bookId.trim();
-        console.log('BookDetailsComponent: id from URL:', trimmedId);
-        this.loading = true;
-        this.error = null;
-        this.dataService.getData().subscribe({
-          next: (books: Book[]) => {
-            console.log('BookDetailsComponent: number of books fetched:', books.length);
-            console.log('BookDetailsComponent: searching for book with id:', trimmedId);
-            this.allBooks = books;
-            this.book = books.find(b => b.products_id.toString() === trimmedId);
-            if (!this.book) {
-              console.warn('BookDetailsComponent: book not found for id:', trimmedId);
-              this.error = 'الكتاب غير موجود';
-              this.loading = false;
-            } else {
-              this.loadAvailableImages();
-              this.handleReferral(); // Handle referral after book is loaded
-              this.fetchAverageRating(this.book.products_id.toString());
-              this.loadRelatedProducts();
-              this.updateSeoTags(this.book);
-              // Track product view
-              this.analyticsService.trackProductView(this.book.products_id.toString()).subscribe();
-              // Check if accessed via /product/ and redirect to category-specific URL
-              this.route.url.subscribe(urlSegments => {
-                if (urlSegments.length > 0 && urlSegments[0].path === 'product') {
-                  const categoryRoute = this.getProductRoute(this.book!);
-                  this.router.navigate(categoryRoute, { replaceUrl: true });
+    // ✅ SSR FIX: استخدم snapshot مباشرة بدل subscribe عشان Angular Zone تقدر تقفل
+    const snapshotParamMap = this.route.snapshot.paramMap;
+    const snapshotRawId = snapshotParamMap.get('id');
+
+    if (snapshotRawId !== null) {
+      const trimmedId = snapshotRawId.trim();
+      this.loadedBookId = trimmedId;
+      this.bookId = trimmedId;
+
+      // ✅ SSR: استخدم بيانات الـ Resolver الجاهزة مباشرة بدون HTTP call تاني
+      const resolvedBook = this.route.snapshot.data['book'];
+      if (resolvedBook) {
+        this.book = resolvedBook;
+        this.loading = false;
+        this.imagesLoading = false;
+        this.updateSeoTags(this.book!);
+
+        // ✅ SSR FIX: detectChanges بدل markForCheck عشان Angular Universal يسحب
+        // الـ HTML بعد ما الـ view يتحدث فعلاً — markForCheck مش كافي في SSR
+        // لأن مفيش change detection cycles تانية بعد ngOnInit في Angular Universal
+        this.cdr.detectChanges();
+
+        if (isPlatformBrowser(this.platformId)) {
+          this.loadAvailableImages();
+          this.handleReferral();
+          this.fetchAverageRating(this.book!.products_id.toString());
+          this.loadRelatedProductsAsync();
+          this.analyticsService.trackProductView(this.book!.products_id.toString()).subscribe();
+          this.route.url.subscribe(urlSegments => {
+            if (urlSegments.length > 0 && urlSegments[0].path === 'product') {
+              const categoryRoute = this.getProductRoute(this.book!);
+              this.router.navigate(categoryRoute, { replaceUrl: true });
+            }
+            this.cdr.markForCheck();
+          });
+          this.cdr.markForCheck();
+        }
+
+        // ✅ Browser only: subscribe للـ paramMap عشان الـ navigation الداخلي يشتغل
+        if (isPlatformBrowser(this.platformId)) {
+          this.route.paramMap.subscribe(paramMap => {
+            const rawId = paramMap.get('id');
+            if (rawId !== null) {
+              const newId = rawId.trim();
+              if (this.loadedBookId === newId) return;
+              this.loadedBookId = newId;
+              this.bookId = newId;
+              this.loading = true;
+              this.imagesLoading = true;
+              this.error = null;
+              this.cdr.markForCheck();
+              this.dataService.getBookById(newId).subscribe({
+                next: (book: Book | null) => {
+                  if (!book) {
+                    this.error = 'الكتاب غير موجود';
+                    this.loading = false;
+                    this.imagesLoading = false;
+                  } else {
+                    this.book = book;
+                    this.loading = false;
+                    this.updateSeoTags(this.book);
+                    this.loadAvailableImages();
+                    this.handleReferral();
+                    this.fetchAverageRating(this.book.products_id.toString());
+                    this.loadRelatedProductsAsync();
+                    this.analyticsService.trackProductView(this.book.products_id.toString()).subscribe();
+                  }
+                  this.cdr.markForCheck();
+                },
+                error: () => {
+                  this.error = 'حدث خطأ أثناء جلب بيانات الكتاب';
+                  this.loading = false;
+                  this.imagesLoading = false;
+                  this.cdr.markForCheck();
                 }
               });
             }
-          },
-          error: (err) => {
-            this.error = 'حدث خطأ أثناء جلب بيانات الكتاب';
-            this.loading = false;
-          }
-        });
-      } else {
-        this.error = 'معرف الكتاب غير موجود في الرابط';
-        this.loading = false;
+          });
+        }
+        return;
       }
-    });
+    }
+
+    // Fallback: لو مفيش resolver data أو id (browser navigation فقط)
+    if (isPlatformBrowser(this.platformId)) {
+      this.route.paramMap.subscribe(paramMap => {
+        const rawId = paramMap.get('id');
+        if (rawId !== null) {
+          const trimmedId = rawId.trim();
+          if (this.loadedBookId === trimmedId) return;
+          this.loadedBookId = trimmedId;
+          this.bookId = trimmedId;
+          this.loading = true;
+          this.imagesLoading = true;
+          this.error = null;
+          this.cdr.markForCheck();
+          this.dataService.getBookById(trimmedId).subscribe({
+            next: (book: Book | null) => {
+              if (!book) {
+                console.warn('BookDetailsComponent: book not found for id:', trimmedId);
+                this.error = 'الكتاب غير موجود';
+                this.loading = false;
+                this.imagesLoading = false;
+                this.cdr.markForCheck();
+              } else {
+                this.book = book;
+                this.loading = false;
+                this.updateSeoTags(this.book);
+                this.loadAvailableImages();
+                this.handleReferral();
+                this.fetchAverageRating(this.book.products_id.toString());
+                this.loadRelatedProductsAsync();
+                this.analyticsService.trackProductView(this.book.products_id.toString()).subscribe();
+                this.route.url.subscribe(urlSegments => {
+                  if (urlSegments.length > 0 && urlSegments[0].path === 'product') {
+                    const categoryRoute = this.getProductRoute(this.book!);
+                    this.router.navigate(categoryRoute, { replaceUrl: true });
+                  }
+                  this.cdr.markForCheck();
+                });
+                this.cdr.markForCheck();
+              }
+            },
+            error: () => {
+              this.error = 'حدث خطأ أثناء جلب بيانات الكتاب';
+              this.loading = false;
+              this.imagesLoading = false;
+              this.cdr.markForCheck();
+            }
+          });
+        } else {
+          this.error = 'معرف الكتاب غير موجود في الرابط';
+          this.loading = false;
+          this.cdr.markForCheck();
+        }
+      });
+    } else {
+      // SSR بدون resolver data
+      this.error = 'الكتاب غير موجود';
+      this.loading = false;
+      this.cdr.markForCheck();
+    }
   }
 
   private handleReferral(): void {
@@ -135,11 +249,11 @@ export class BookDetailsComponent implements OnInit, OnDestroy {
         next: (res) => {
           this.averageRating = res.averageRating;
           this.ratingCount = res.ratingCount;
-          this.loading = false;
+          this.cdr.markForCheck();
         },
         error: (err) => {
           console.error('Error fetching average rating:', err);
-          this.loading = false;
+          this.cdr.markForCheck();
         }
       });
   }
@@ -181,7 +295,11 @@ export class BookDetailsComponent implements OnInit, OnDestroy {
       const cleanUrl = decodeURIComponent(url);
       navigator.clipboard.writeText(cleanUrl).then(() => {
         this.showCopySuccess = true;
-        setTimeout(() => this.showCopySuccess = false, 2000);
+        this.cdr.markForCheck();
+        setTimeout(() => {
+          this.showCopySuccess = false;
+          this.cdr.markForCheck();
+        }, 2000);
       }).catch(err => {
         console.error('Failed to copy: ', err);
       });
@@ -193,6 +311,7 @@ export class BookDetailsComponent implements OnInit, OnDestroy {
 
   closeLoginPrompt(): void {
     this.showLoginPrompt = false; // إغلاق النافذة العائمة
+    this.cdr.markForCheck();
   }
 
   requestUrgency(): void {
@@ -201,6 +320,7 @@ export class BookDetailsComponent implements OnInit, OnDestroy {
         this.submitUrgencyRequest();
       } else {
         this.showLoginPrompt = true;
+        this.cdr.markForCheck();
       }
     });
   }
@@ -212,6 +332,7 @@ export class BookDetailsComponent implements OnInit, OnDestroy {
       if (!user) {
         alert('يجب تسجيل الدخول لإرسال طلب استعجال');
         this.showLoginPrompt = true;
+        this.cdr.markForCheck();
         return;
       }
 
@@ -252,6 +373,7 @@ export class BookDetailsComponent implements OnInit, OnDestroy {
       } else {
         this.showLoginPrompt = true;
       }
+      this.cdr.markForCheck();
     });
   }
 
@@ -260,9 +382,22 @@ export class BookDetailsComponent implements OnInit, OnDestroy {
   }
 
   private async loadAvailableImages(): Promise<void> {
-    if (!this.book) return;
+    if (!this.book) {
+      this.imagesLoading = false;
+      return;
+    }
 
     const productId = String(this.book.products_id);
+    const cacheKey = productId;
+    if (BookDetailsComponent.resolvedImagesCache.has(cacheKey)) {
+      this.availableImages = BookDetailsComponent.resolvedImagesCache.get(cacheKey) || [];
+      this.selectedImageIndex = 0;
+      this.imagesLoading = false;
+      this.cdr.markForCheck();
+      console.log('⚡ Loaded availableImages from static cache:', this.availableImages);
+      return;
+    }
+
     // Use the product_image filename as base, or fall back to productId
     let baseFilename = '';
     const rawImage = this.book.product_image || this.book.image_path || '';
@@ -317,13 +452,16 @@ export class BookDetailsComponent implements OnInit, OnDestroy {
 
     // Filter out nulls and duplicates
     this.availableImages = [...new Set(results.filter((url): url is string => url !== null))];
+    BookDetailsComponent.resolvedImagesCache.set(cacheKey, this.availableImages);
     this.selectedImageIndex = 0;
+    this.imagesLoading = false;
+    this.cdr.markForCheck();
     
     console.log(`✅ Final availableImages array:`, this.availableImages);
   }
 
   private checkImageExists(url: string): Promise<boolean> {
-    return fetch(url, { method: 'GET' })
+    return fetch(url, { method: 'HEAD' })
       .then(res => res.ok)
       .catch(() => {
         // Fallback to Image object if fetch fails (e.g. CORS)
@@ -341,6 +479,24 @@ export class BookDetailsComponent implements OnInit, OnDestroy {
     // Create a temporary book object with the variation image path to reuse DataService logic
     const tempBook = { ...book, product_image: imagePath };
     return this.dataService.getBookImageUrl(tempBook);
+  }
+
+  private loadRelatedProductsAsync(): void {
+    if (!this.book || !this.book.product_category) {
+      return;
+    }
+    this.dataService.search({ category: this.book.product_category, limit: 12 }).subscribe({
+      next: (response: any) => {
+        if (response && response.success && Array.isArray(response.items)) {
+          this.allBooks = response.items;
+          this.loadRelatedProducts();
+        }
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        console.warn('Error loading related products pool:', err);
+      }
+    });
   }
 
   // Load related products based on category and merchant
@@ -484,10 +640,26 @@ export class BookDetailsComponent implements OnInit, OnDestroy {
       rating: this.averageRating,
       ratingCount: this.ratingCount
     });
+
+    // Set Breadcrumb JSON-LD (Home → Category → Book)
+    const categoryUrl = book.product_category
+      ? `https://knoozbook.com/category/${encodeURIComponent(book.product_category)}`
+      : 'https://knoozbook.com/books';
+
+    this.seoService.setBreadcrumbJsonLd([
+      { name: 'الرئيسية', url: 'https://knoozbook.com/Home' },
+      { name: book.product_category || 'كتب', url: categoryUrl },
+      { name: book.product_name, url: productUrl }
+    ]);
   }
 
   ngOnDestroy(): void {
     // Reset to defaults when leaving the page
     this.seoService.resetToDefaults();
+    // Only access DOM in browser — document is not defined in Node.js SSR
+    if (isPlatformBrowser(this.platformId)) {
+      const breadcrumb = document.querySelector('script[data-type="breadcrumb"]');
+      if (breadcrumb) breadcrumb.remove();
+    }
   }
 }

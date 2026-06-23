@@ -1,4 +1,5 @@
-import { Injectable, OnDestroy } from '@angular/core';
+import { Injectable, OnDestroy, Inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { io, Socket } from 'socket.io-client';
 import { BehaviorSubject, Observable, Subject } from 'rxjs';
 import { environment } from '../../../environments/environment';
@@ -44,7 +45,20 @@ export class PresenceService implements OnDestroy {
     private socketStatusSubject = new BehaviorSubject<string>('جاري التهيئة...');
     public socketStatus$ = this.socketStatusSubject.asObservable();
 
-    constructor() {
+    constructor(
+        @Inject(PLATFORM_ID) private platformId: Object
+    ) {
+        if (!isPlatformBrowser(this.platformId)) {
+            console.log('🔌 [PresenceService] Server mode detected. Mocking socket.');
+            this.socket = {
+                on: () => this,
+                off: () => this,
+                emit: () => this,
+                disconnect: () => this
+            } as any;
+            return;
+        }
+
         let socketUrl = environment.apiBaseUrl.split('/api')[0] || '';
         // Ensure we don't have trailing slashes
         if (socketUrl && socketUrl.endsWith('/')) {
@@ -134,22 +148,26 @@ export class PresenceService implements OnDestroy {
     }
 
     setOnline(userId: string, username: string) {
+        if (!isPlatformBrowser(this.platformId)) return;
         localStorage.setItem('last_user_id', userId);
         localStorage.setItem('last_username', username);
         this.socket.emit('user_online', { userId, username });
     }
 
     joinHalaqa(halaqaId: string, userId: string, username: string) {
+        if (!isPlatformBrowser(this.platformId)) return;
         console.log(`🏠 Joining Halaqa room: ${halaqaId} as ${username}`);
         this.socket.emit('join_halaqa', { halaqaId, userId, username });
     }
 
     forceReconnect() {
+        if (!isPlatformBrowser(this.platformId)) return;
         this.socketStatusSubject.next('إعادة اتصال يدوي...');
         this.socket.disconnect().connect();
     }
 
     syncPage(halaqaId: string, userId: string, pageNumber: number) {
+        if (!isPlatformBrowser(this.platformId)) return;
         if (this.socket) {
             console.log(`📤 Sending page sync: Page ${pageNumber} for Halaqa ${halaqaId}`);
             this.socket.emit('sync_page', { halaqaId, userId, pageNumber });
@@ -157,7 +175,7 @@ export class PresenceService implements OnDestroy {
     }
 
     ngOnDestroy() {
-        if (this.socket) {
+        if (isPlatformBrowser(this.platformId) && this.socket) {
             this.socket.disconnect();
         }
     }

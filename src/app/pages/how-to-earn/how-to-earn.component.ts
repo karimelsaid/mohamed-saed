@@ -1,6 +1,9 @@
 import { Component, OnInit } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { environment } from '../../../environments/environment';
 import {
   faBookOpen,
@@ -19,7 +22,8 @@ import {
   selector: 'app-how-to-earn',
   templateUrl: './how-to-earn.component.html',
   styleUrls: ['./how-to-earn.component.css'],
-  standalone: false
+  standalone: true,
+  imports: [CommonModule, RouterModule, FormsModule, FontAwesomeModule]
 })
 export class HowToEarnComponent implements OnInit {
 

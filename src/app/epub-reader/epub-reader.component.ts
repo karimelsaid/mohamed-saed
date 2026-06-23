@@ -288,11 +288,17 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
         try {
             // --- BOK File Logic ---
             if (this.bookType === 'bok') {
+                // Check if the book is downloaded locally first
+                const isBokDownloaded = await this.downloadManager.isBookAvailable(this.ebookId);
+                
+                this.hasAccess = isBokDownloaded ? true : false;
+                this.isPreviewMode = isBokDownloaded ? false : true;
+
                 this.ebook = {
                     _id: this.ebookId,
                     title: 'الكتاب الشامل',
                     author: 'غير معروف',
-                    accessType: 'owned'
+                    accessType: isBokDownloaded ? 'owned' : 'preview'
                 } as any;
 
                 // Fire and forget access check to not block the reader
@@ -301,7 +307,11 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
                     timeout(3000),
                     catchError(err => {
                         console.warn('Access check background failed', err);
-                        return [{ hasAccess: false, accessType: 'preview' }];
+                        // If it's already downloaded, we default to full offline access
+                        if (isBokDownloaded) {
+                            return of({ hasAccess: true, accessType: 'owned' });
+                        }
+                        return of({ hasAccess: false, accessType: 'preview' });
                     })
                 ).subscribe((res: any) => {
                     if (res) {

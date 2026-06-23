@@ -46,18 +46,46 @@ export class FreeShippingService {
     }
   };
 
+  private cachedRules: FreeShippingRules | null = null;
   private apiUrl = `${environment.apiBaseUrl}/admin/settings/free-shipping-rules`;
 
   constructor(private http: HttpClient) { }
 
   getRules(): Observable<FreeShippingRules> {
+    if (this.cachedRules) {
+      return of(this.cachedRules);
+    }
+
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('kenouz_free_shipping_rules');
+      if (stored) {
+        try {
+          this.cachedRules = JSON.parse(stored);
+          return of(this.cachedRules!);
+        } catch (e) {}
+      }
+    }
+
     return this.http.get<{ success: boolean; rules: FreeShippingRules }>(this.apiUrl).pipe(
-      map(response => response.rules),
+      map(response => {
+        if (response && response.success && response.rules) {
+          this.cachedRules = response.rules;
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('kenouz_free_shipping_rules', JSON.stringify(response.rules));
+          }
+          return response.rules;
+        }
+        return this.defaultRules;
+      }),
       catchError(() => of(this.defaultRules))
     );
   }
 
   saveRules(rules: FreeShippingRules): Observable<any> {
+    this.cachedRules = rules;
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('kenouz_free_shipping_rules', JSON.stringify(rules));
+    }
     return this.http.post(this.apiUrl, rules);
   }
 }

@@ -762,15 +762,175 @@ async function listProducts(req, res) {
       return true;
     });
 
-    // Do not map product_category back to short keys, send as is
-    res.json({ success: true, products });
+    // Exclude non-book categories (أثاث وديكور المنزل، إلكترونيات، هدية وألعاب، التجميل والعناية الشخصية، ملابس، أدوات مكتبية)
+    const excludedCategories = [
+      'أثاث وديكور المنزل',
+      'إلكترونيات',
+      'هدية وألعاب',
+      'التجميل والعناية الشخصية',
+      'ملابس',
+      'أدوات مكتبية'
+    ];
+    products = products.filter(p => !excludedCategories.includes((p.product_category || '').trim()));
+
+    // Extract unique publishers and merchants before applying filters/pagination
+    const availablePublishers = [...new Set(products.map(p => p.publisher).filter(p => typeof p === 'string' && p.trim() !== ''))];
+    const availableMerchants = [...new Set(products.map(p => p.merchantName).filter(p => typeof p === 'string' && p.trim() !== ''))];
+
+    // Server-Side Filtering, Searching, and Sorting
+    const {
+      page = 1,
+      limit = 50,
+      searchTerm,
+      category,
+      ebookFilter,
+      merchantFilter,
+      publisherFilter,
+      sortField,
+      sortDirection = 'asc',
+      all = 'false'
+    } = req.query;
+
+    const pageNum = parseInt(page, 10) || 1;
+    const limitNum = parseInt(limit, 10) || 50;
+
+    // Apply category filter
+    if (category && category !== 'جميع الفئات') {
+      products = products.filter(p => p.product_category === category);
+    }
+
+    // Apply ebook filter
+    if (ebookFilter === 'withEbook') {
+      products = products.filter(p => p.linkedEbookId);
+    } else if (ebookFilter === 'withoutEbook') {
+      products = products.filter(p => !p.linkedEbookId);
+    }
+
+    // Apply Merchant filter
+    if (merchantFilter && merchantFilter !== 'all') {
+      if (merchantFilter === 'admin') {
+        products = products.filter(p => !p.merchantId || p.merchantId === '69d11b07df78621a8d7b1559');
+      } else {
+        products = products.filter(p => p.merchantName === merchantFilter);
+      }
+    }
+
+    // Apply Publisher filter
+    if (publisherFilter && publisherFilter !== 'all') {
+      products = products.filter(p => p.publisher === publisherFilter);
+    }
+
+    // Apply Search filter
+    if (searchTerm) {
+      const lowerSearch = searchTerm.toLowerCase().trim();
+      products = products.filter(p => {
+        const name = (p.product_name || '').toLowerCase();
+        const barcode = (p.barcode || '').toLowerCase();
+        const id = String(p.products_id || '').toLowerCase();
+        return name.includes(lowerSearch) || barcode.includes(lowerSearch) || id.includes(lowerSearch);
+      });
+    }
+
+    // Apply Sorting
+    if (sortField) {
+      products.sort((a, b) => {
+        let aValue = a[sortField];
+        let bValue = b[sortField];
+
+        if (sortField === 'purchaseValue') {
+          aValue = (a.product_quantity || 0) * (a.price_cost || 0);
+          bValue = (b.product_quantity || 0) * (b.price_cost || 0);
+        } else if (sortField === 'lastStockUpdate') {
+          aValue = a.lastStockUpdate ? new Date(a.lastStockUpdate).getTime() : 0;
+          bValue = b.lastStockUpdate ? new Date(b.lastStockUpdate).getTime() : 0;
+        }
+
+        if (aValue == null) return 1;
+        if (bValue == null) return -1;
+
+        const numericFields = ['product_quantity', 'product_price', 'price_cost'];
+        if (numericFields.includes(sortField)) {
+          const aNum = Number(aValue) || 0;
+          const bNum = Number(bValue) || 0;
+          return sortDirection === 'asc' ? aNum - bNum : bNum - aNum;
+        }
+
+        if (typeof aValue === 'string' && typeof bValue === 'string') {
+          const comparison = aValue.localeCompare(bValue);
+          return sortDirection === 'asc' ? comparison : -comparison;
+        } else if (typeof aValue === 'number' && typeof bValue === 'number') {
+          return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+        } else {
+          return 0;
+        }
+      });
+    }
+
+    const totalCount = products.length;
+
+    // Apply Pagination
+    if (all !== 'true') {
+      const startIndex = (pageNum - 1) * limitNum;
+      products = products.slice(startIndex, startIndex + limitNum);
+    }
+
+    res.json({ success: true, products, totalCount, availablePublishers, availableMerchants });
   } catch (error) {
     console.error('Error in listProducts:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 }
 
-// New API to update product details
+// Dedicated API to get all available filter options from the full product list
+async function getFilterOptions(req, res) {
+  try {
+    const fs = require('fs').promises;
+    const path = require('path');
+    const outputPath = path.join(__dirname, '..', 'output.json');
+
+    let products;
+    try {
+      const fileContent = await fs.readFile(outputPath, 'utf-8');
+      products = JSON.parse(fileContent);
+    } catch (err) {
+      products = [];
+    }
+
+    // Filter out digital products
+    products = products.filter(p => p.is_digital !== true && p.is_digital !== 'true');
+
+    // Deduplicate
+    const seen = new Set();
+    products = products.filter(p => {
+      const key = (p.product_name || '') + '||' + (p.image_path || '');
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    // Exclude non-book categories
+    const excludedCategories = [
+      'أثاث وديكور المنزل',
+      'إلكترونيات',
+      'هدية وألعاب',
+      'التجميل والعناية الشخصية',
+      'ملابس',
+      'أدوات مكتبية'
+    ];
+    products = products.filter(p => !excludedCategories.includes((p.product_category || '').trim()));
+
+    const availablePublishers = [...new Set(products.map(p => p.publisher).filter(p => typeof p === 'string' && p.trim() !== ''))].sort();
+    const availableCategories = [...new Set(products.map(p => p.product_category).filter(Boolean))].sort();
+    const availableMerchants = [...new Set(products.map(p => p.merchantName).filter(p => typeof p === 'string' && p.trim() !== ''))].sort();
+
+    res.json({ success: true, availablePublishers, availableCategories, availableMerchants });
+  } catch (error) {
+    console.error('Error in getFilterOptions:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+}
+
+
 async function updateProduct(req, res) {
   try {
     const { barcode } = req.params;
@@ -4016,6 +4176,7 @@ module.exports = {
   getCategories,
   addProduct,
   listProducts,
+  getFilterOptions,
   updateProduct,
   replaceProductImage,
   replaceProductEpub,

@@ -1,4 +1,8 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { ActivatedRoute, Router } from '@angular/router';
 import { DataService } from '../services/data.service';
 import { Book } from '../book';
@@ -17,7 +21,8 @@ import { AnalyticsService } from '../services/analytics.service';
   selector: 'app-search-results',
   templateUrl: './search-results.component.html',
   styleUrls: ['./search-results.component.css'],
-  standalone: false,
+  standalone: true,
+  imports: [CommonModule, RouterModule, FormsModule, FontAwesomeModule, AccountModalComponent]
 })
 export class SearchResultsComponent implements OnInit {
   uploadsBaseUrl = environment.uploadsBaseUrl;
@@ -382,4 +387,9 @@ export class SearchResultsComponent implements OnInit {
   toggleSidebar(): void {
     this.isSidebarOpen = !this.isSidebarOpen;
   }
+
+  trackByBook(index: number, item: any): string {
+    return item.products_id || item._id || index.toString();
+  }
 }
+

@@ -31,6 +31,9 @@ router.post('/bulk-add-products', adminController.upload.single('publisherImage'
 // Route to list all products
 router.get('/products', adminController.listProducts);
 
+// Route to get all filter options (publishers, categories, merchants) from the full product list
+router.get('/filter-options', adminController.getFilterOptions);
+
 // Route to update product details
 router.patch('/products/:barcode', adminController.updateProduct);
 

@@ -1,3 +1,7 @@
+// Fix Zone.js + undici conflict
+globalThis.__Zone_disable_node_timers = true;
+globalThis.__Zone_disable_customElements = true;
+globalThis.__Zone_disable_requestAnimationFrame = true;
 
 process.on('uncaughtException', (err) => {
   console.error('🔥 UNCAUGHT EXCEPTION:', err);
@@ -62,6 +66,8 @@ const marketerController = require('./controllers/marketer.controller');
 const specialOffersRoutes = require('./routes/special-offers.routes');
 const express = require('express');
 const app = express();
+const compression = require('compression');
+app.use(compression());
 
 const logStream = fs.createWriteStream(path.join(__dirname, 'requests.log'), { flags: 'a' });
 
@@ -707,17 +713,56 @@ generateRobotsTxt();
 
 function generateRobotsTxt() {
   try {
-    const disallowRoutes = ['/login', '/register', '/basket', '/Favorites', '/ControlPanel'];
-    const allowRoutes = ['book', 'Home', 'Business-Marketing-Finance', 'Education-children', 'Arts-crafts', 'HealthMedicineScience', 'Islamic', 'Novels-stories', 'Self-development-psychology', 'History-Biographies', 'Dictionaries-References', 'research', 'requests', 'print'];
+    // Explicitly block pages that should NOT be indexed
+    const disallowRoutes = [
+      '/login',
+      '/register',
+      '/basket',
+      '/favorites',
+      '/Favorites',
+      '/ControlPanel',
+      '/research',       // Search results - no independent SEO value
+      '/profile',        // User account pages
+      '/profile/',
+      '/requests',       // User order history
+      '/library',        // Personal reading library
+      '/reader/',        // eBook reader
+      '/achievements',   // Gamification - not for indexing
+      '/earn',
+      '/referrals',
+      '/print',
+      '/downloads',
+      '/subscription',
+      '/marketer-hub',
+      '/merchant/',
+      '/order/',
+      '/subscription/',
+    ];
+
+    // Explicitly allow pages that ARE indexable
+    const allowRoutes = [
+      //'/Home',
+      '/book/',
+      '/category/',
+      '/books',
+      '/promotions',
+      '/bourse',
+      '/community',
+      '/عن-الموقع',
+      '/سياسة-الخصوصية',
+      '/الشروط-والاحكام',
+    ];
 
     let content = 'User-agent: *\n';
+    // Allow rules come FIRST (more specific = higher priority in robots.txt)
+    allowRoutes.forEach(route => {
+      content += `Allow: ${route}\n`;
+    });
     disallowRoutes.forEach(route => {
       content += `Disallow: ${route}\n`;
     });
-    allowRoutes.forEach(route => {
-      content += `Allow: /${route}\n`;
-    });
 
+    // Point to sitemap index (covers all sub-sitemaps)
     content += '\nSitemap: https://knoozbook.com/sitemap.xml\n';
 
     const robotsPath = path.join(projectRoot, 'dist', 'browser', 'robots.txt');
@@ -726,6 +771,7 @@ function generateRobotsTxt() {
       fs.mkdirSync(dir, { recursive: true });
     }
     fs.writeFileSync(robotsPath, content);
+    console.log('✅ robots.txt generated successfully');
   } catch (error) {
     console.error('❌ فشل في إنشاء robots.txt:', error.message);
   }
@@ -746,8 +792,56 @@ app.use(express.static(path.join(projectRoot, 'dist', 'browser'), {
   index: false // Don't serve index.html directly from static middleware
 }));
 
+// ============================================================
+// SEO: Server-level permanent redirects (301)
+// These must be placed BEFORE the SSR catch-all so Googlebot
+// receives proper redirects instead of client-side navigation.
+// ============================================================
+
+// Redirect root / to /Home (LandingComponent only works client-side)
+app.get('/', (req, res) => {
+  res.redirect(301, '/Home');
+});
+
+// Redirect /product/:id/:name? → /book/:id/:name?
+// Unifies product URLs so each product has exactly one canonical URL.
+app.get('/product/:id/:name?', (req, res) => {
+  const { id, name } = req.params;
+  const destination = name ? `/book/${id}/${name}` : `/book/${id}`;
+  res.redirect(301, destination);
+});
+
+// Redirect old English category aliases → /category/:arabicName
+const categoryAliasMap = {
+  'Business-Marketing-Finance': '/category/%D8%A3%D8%B9%D9%85%D8%A7%D9%84%20%D9%88%D8%AA%D8%B3%D9%88%D9%8A%D9%82%20%D9%88%D9%85%D8%A7%D9%84%D9%8A%D8%A9',
+  'Education-children':         '/category/%D8%AA%D8%B1%D8%A8%D9%8A%D8%A9%20%D9%88%D8%A3%D8%B7%D9%81%D8%A7%D9%84',
+  'Arts-crafts':                '/category/%D9%81%D9%86%D9%88%D9%86%20%D9%88%D8%AD%D8%B1%D9%81',
+  'HealthMedicineScience':      '/category/%D8%B5%D8%AD%D8%A9%20%D9%88%D8%B7%D8%A8%20%D9%88%D8%B9%D9%84%D9%88%D9%85',
+  'Islamic':                    '/category/%D9%83%D8%AA%D8%A8%20%D8%AF%D9%8A%D9%86%D9%8A%D8%A9',
+  'Novels-stories':             '/category/%D8%B1%D9%88%D8%A7%D9%8A%D8%A7%D8%AA%20%D9%88%D9%82%D8%B5%D8%B5',
+  'Self-development-psychology':'/category/%D8%AA%D8%B7%D9%88%D9%8A%D8%B1%20%D8%A7%D9%84%D8%B0%D8%A7%D8%AA%20%D9%88%D8%B9%D9%84%D9%85%20%D8%A7%D9%84%D9%86%D9%81%D8%B3',
+  'History-Biographies':        '/category/%D8%AA%D8%A7%D8%B1%D9%8A%D8%AE%20%D9%88%D8%B3%D9%8A%D8%B1%20%D8%B0%D8%A7%D8%AA%D9%8A%D8%A9',
+  'Dictionaries-References':    '/category/%D9%82%D9%88%D8%A7%D9%85%D9%8A%D8%B3%20%D9%88%D9%85%D8%B1%D8%A7%D8%AC%D8%B9',
+};
+Object.entries(categoryAliasMap).forEach(([alias, target]) => {
+  app.get(`/${alias}`, (req, res) => res.redirect(301, target));
+});
+
+// Bypass SSR for lazy-loaded routes — not supported in Angular Universal (NgModule)
+const csrBypassRoutes = ["/books", "/category", "/research", "/basket", "/favorites", "/earn", "/bourse", "/exchange", "/auctions", "/community", "/reader-community", "/subscription/callback", "/order/callback", "/promotions"];
+csrBypassRoutes.forEach(route => {
+  app.get(`${route}*`, (req, res) => {
+    const csrPath = path.join(projectRoot, "dist", "browser", "index.csr.html");
+    if (fs.existsSync(csrPath)) return res.sendFile(csrPath);
+    return res.sendFile(path.join(projectRoot, "dist", "browser", "index.html"));
+  });
+});
+
+
+
 // SSR Catch-all route
 app.get('*', async (req, res, next) => {
+
   if (req.path.startsWith('/api/') || req.path.startsWith('/uploads/')) {
     return next();
   }
@@ -759,74 +853,45 @@ app.get('*', async (req, res, next) => {
   }
 
   if (isProduction && angularAppPromise) {
-    let handled = false;
-
-    // Set a fallback timer to prevent hanging
-    const timeoutTimer = setTimeout(() => {
-      if (!handled) {
-        handled = true;
-        console.warn(`⚠️ [SSR_TIMEOUT] Angular SSR took too long for: ${req.originalUrl}. Falling back to CSR.`);
-        const csrPath = path.join(projectRoot, 'dist', 'browser', 'index.csr.html');
-        if (fs.existsSync(csrPath)) {
-          res.sendFile(csrPath);
-        } else {
-          res.status(404).send('Frontend not built. Please run npm run build.');
-        }
-      }
-    }, 5000); // 5 seconds timeout
+    const csrPath = path.join(projectRoot, 'dist', 'browser', 'index.csr.html');
+    const serveCsr = () => {
+      if (fs.existsSync(csrPath)) res.sendFile(csrPath);
+      else res.status(404).send('Frontend not built.');
+    };
 
     try {
       const angularApp = await angularAppPromise;
 
-      // Helper to clear timer and mark as handled
-      const cleanup = () => {
-        if (!handled) {
-          clearTimeout(timeoutTimer);
-          handled = true;
-          return true;
-        }
-        return false;
-      };
-
-      // Wrap response methods to clear the timeout
-      const originalSend = res.send;
-      res.send = function(...args) {
-        if (cleanup()) originalSend.apply(this, args);
-      };
-
-      const originalEnd = res.end;
-      res.end = function(...args) {
-        if (cleanup()) originalEnd.apply(this, args);
-      };
-
-      const originalRedirect = res.redirect;
-      res.redirect = function(...args) {
-        if (cleanup()) originalRedirect.apply(this, args);
-      };
-
-      return angularApp(req, res, (err) => {
-        if (cleanup()) {
-          if (err) {
-            console.error('🔥 Angular SSR next() error:', err);
-          }
-          const csrPath = path.join(projectRoot, 'dist', 'browser', 'index.csr.html');
-          if (fs.existsSync(csrPath)) {
-            res.sendFile(csrPath);
-          } else {
-            next(err);
-          }
+      // Use Promise.race to enforce timeout — avoids Zone.js blocking setTimeout
+      const ssrPromise = new Promise((resolve, reject) => {
+        try {
+          angularApp(req, res, (err) => {
+            if (err) reject(err);
+            else resolve('next');
+          });
+        } catch (e) {
+          reject(e);
         }
       });
-    } catch (err) {
-      if (cleanup()) {
-        console.error('🔥 Angular SSR Error:', err);
-        const csrPath = path.join(projectRoot, 'dist', 'browser', 'index.csr.html');
-        if (fs.existsSync(csrPath)) {
-          return res.sendFile(csrPath);
-        } else {
-          return res.status(404).send('Frontend not built. Please run npm run build.');
+
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('SSR_TIMEOUT')), 5000)
+      );
+
+      await Promise.race([ssrPromise, timeoutPromise]).catch((err) => {
+        if (!res.headersSent) {
+          if (err && err.message === 'SSR_TIMEOUT') {
+            console.warn(`⚠️ [SSR_TIMEOUT] ${req.originalUrl} — falling back to CSR`);
+          } else {
+            console.error('🔥 SSR error:', err);
+          }
+          serveCsr();
         }
-      }
+      });
+
+    } catch (err) {
+      console.error('🔥 Angular SSR Error:', err);
+      if (!res.headersSent) serveCsr();
     }
     return;
   }

@@ -118,6 +118,9 @@ export class DownloadsComponent implements OnInit {
 
   setActiveTab(tab: 'downloads' | 'favorites') {
     this.activeTab = tab;
+    if (tab === 'favorites') {
+      this.loadFavorites();
+    }
   }
 
   // Modal State
@@ -193,7 +196,11 @@ export class DownloadsComponent implements OnInit {
     const downloadedFavorites = this.allDownloads.filter(d => favoriteIds.includes(d.id));
     this.favorites = [...downloadedFavorites];
 
-    // 2. Find missing favorites (not downloaded)
+    // 2. Find missing favorites (not downloaded) - only if on favorites sub-tab and online
+    if (this.activeTab !== 'favorites' || !navigator.onLine) {
+      return;
+    }
+
     const missingIds = favoriteIds.filter(id => !downloadedFavorites.some(d => d.id === id));
 
     // 3. Fetch metadata for missing items

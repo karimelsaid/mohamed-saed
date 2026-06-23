@@ -84,6 +84,20 @@ export function app(): express.Express {
     server.get('**', (req, res, next) => {
         const { protocol, originalUrl, baseUrl, headers } = req;
 
+        // SSR TIMEOUT GUARD: If Angular SSR hangs (Zone.js never stabilizes due to
+        // an unguarded HTTP call), fall back to CSR shell after 5s instead of
+        // waiting 30s for Nginx to return 504.
+        let responded = false;
+        const ssrTimeout = setTimeout(() => {
+            if (!responded) {
+                responded = true;
+                console.warn(`⚠️ [SSR Timeout] Falling back to CSR for: ${originalUrl}`);
+                res.sendFile(join(browserDistFolder, 'index.csr.html'), (err: any) => {
+                    if (err) res.sendFile(join(browserDistFolder, 'index.html'));
+                });
+            }
+        }, 5000);
+
         commonEngine
             .render({
                 bootstrap,
@@ -92,8 +106,20 @@ export function app(): express.Express {
                 publicPath: browserDistFolder,
                 providers: [{ provide: APP_BASE_HREF, useValue: baseUrl }],
             })
-            .then((html) => res.send(html))
-            .catch((err) => next(err));
+            .then((html) => {
+                if (!responded) {
+                    responded = true;
+                    clearTimeout(ssrTimeout);
+                    res.send(html);
+                }
+            })
+            .catch((err) => {
+                if (!responded) {
+                    responded = true;
+                    clearTimeout(ssrTimeout);
+                    next(err);
+                }
+            });
     });
 
     return server;

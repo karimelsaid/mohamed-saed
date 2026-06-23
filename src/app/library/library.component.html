@@ -139,7 +139,7 @@
         <div class="content-area">
 
             <!-- BOOKS TAB (Merged) -->
-            <ng-container *ngIf="activeTab === 'books'">
+            <div [class.hidden]="activeTab !== 'books'">
 
                 <!-- FILTERS BAR -->
                 <div class="filters-bar glass-card mb-10 p-4 rounded-[2.5rem] flex flex-col lg:flex-row gap-6 items-center justify-between animate-fade-in">
@@ -438,9 +438,13 @@
                     </div>
                 </div>
 
-                <div class="loading-state" *ngIf="isInternalLoading">
-                    <div class="spinner"></div>
-                    <p>جاري تحميل الكتب...</p>
+                <!-- Skeleton Loader Grid -->
+                <div class="ebooks-grid unified-grid animate-pulse py-10" *ngIf="isInternalLoading">
+                    <div class="ebook-card bg-white/40 dark:bg-slate-900/40 border border-white/20 dark:border-slate-800 rounded-3xl p-4 space-y-4" *ngFor="let item of [1,2,3,4,5,6,7,8]">
+                        <div class="aspect-[2/3] bg-slate-200 dark:bg-slate-800 rounded-2xl w-full"></div>
+                        <div class="h-4 bg-slate-200 dark:bg-slate-800 rounded-full w-3/4"></div>
+                        <div class="h-3 bg-slate-200 dark:bg-slate-800 rounded-full w-1/2"></div>
+                    </div>
                 </div>
 
                 <!-- Abjad-Style Welcome Hero Banner Showcase -->
@@ -836,21 +840,21 @@
                     </button>
                 </div>
 
-            </ng-container>
+            </div>
 
             <!-- ACHIEVEMENTS TAB -->
-            <ng-container *ngIf="activeTab === 'achievements'">
+            <div [class.hidden]="activeTab !== 'achievements'">
                 <div class="achievements-wrapper glass-container p-6">
                     <app-gamification-dashboard></app-gamification-dashboard>
                 </div>
-            </ng-container>
+            </div>
 
             <!-- DOWNLOADS -->
-            <ng-container *ngIf="activeTab === 'downloads'">
+            <div [class.hidden]="activeTab !== 'downloads'">
                 <div class="downloads-wrapper glass-container">
                     <app-downloads [activeTab]="downloadsTab"></app-downloads>
                 </div>
-            </ng-container>
+            </div>
 
         </div>
     </main>

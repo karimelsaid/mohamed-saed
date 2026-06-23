@@ -1,4 +1,5 @@
-import { Injectable } from '@angular/core';
+import { Injectable, Inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
@@ -41,8 +42,15 @@ export class GamificationService {
     private apiUrl = `${environment.apiBaseUrl}/gamification`;
     public poundValue: number = 50;
 
-    constructor(private http: HttpClient) {
-        this.loadSettings();
+    constructor(
+        private http: HttpClient,
+        @Inject(PLATFORM_ID) private platformId: Object
+    ) {
+        // Only load settings in browser — avoids making HTTP call during SSR
+        // which would keep Zone.js busy and prevent Angular from reaching stable state
+        if (isPlatformBrowser(this.platformId)) {
+            this.loadSettings();
+        }
     }
 
     loadSettings() {

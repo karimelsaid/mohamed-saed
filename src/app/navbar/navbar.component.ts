@@ -220,11 +220,17 @@ export class NavbarComponent implements OnInit {
       }
     }
 
-    this.loadDynamicCategories();
+    // Load dynamic categories in browser only — HTTP call not needed during SSR
+    if (isPlatformBrowser(this.platformId)) {
+      this.loadDynamicCategories();
+    }
 
-    this.dataService.getData().subscribe((data: any) => {
-      this.allBooks = data;
-    });
+    // Load allBooks data only in browser (not during SSR)
+    if (isPlatformBrowser(this.platformId)) {
+      this.dataService.getData().subscribe((data: any) => {
+        this.allBooks = data;
+      });
+    }
 
     // الاشتراك في تحديثات المستخدمين العاديين
     this.authService.user$.subscribe((user) => {
@@ -314,10 +320,12 @@ export class NavbarComponent implements OnInit {
     // Force immediate view update
     this.cdr.markForCheck();
 
-    // Additional check to ensure admin button appears immediately
-    setTimeout(() => {
-      this.cdr.markForCheck();
-    }, 100);
+    // Additional check to ensure admin button appears immediately (browser only)
+    if (isPlatformBrowser(this.platformId)) {
+      setTimeout(() => {
+        this.cdr.markForCheck();
+      }, 100);
+    }
 
     if (this.user) {
       if (isPlatformBrowser(this.platformId)) {

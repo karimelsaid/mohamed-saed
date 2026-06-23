@@ -1,4 +1,7 @@
 import { Component, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
+import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
 import { AuthService } from '../auth/auth.service';
 import { DataService } from '../services/data.service';
 import { map } from 'rxjs/operators';
@@ -6,7 +9,8 @@ import { environment } from '../../environments/environment';
 
 @Component({
   selector: 'app-favorites',
-  standalone: false,
+  standalone: true,
+  imports: [CommonModule, RouterModule, NgxSkeletonLoaderModule],
   templateUrl: './favorites.component.html',
   styleUrls: ['./favorites.component.css']
 })

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common'; 
 import { RouterModule, Router, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -131,7 +131,8 @@ export class LibraryComponent implements OnInit, OnDestroy {
         private downloadManager: DownloadManagerService,
         private specialOffersService: SpecialOffersService,
         private router: Router,
-        private route: ActivatedRoute
+        private route: ActivatedRoute,
+        private cdr: ChangeDetectorRef
     ) { }
 
     ngOnInit(): void {
@@ -274,6 +275,22 @@ export class LibraryComponent implements OnInit, OnDestroy {
                 this.isInternalLoading = true;
             }
             this.currentPage = 1;
+
+            // Offline First: Load locally cached books from IndexedDB immediately (within milliseconds)
+            this.offlineEbookService.getCachedBooks().then(cachedBooks => {
+                if (cachedBooks && cachedBooks.length > 0 && this.ebooks.length === 0) {
+                    this.ebooks = cachedBooks;
+                    this.allLoadedEbooks = [...cachedBooks];
+                    cachedBooks.forEach(b => this.ownedEbookIds.add(b._id));
+                    this.applyFilters();
+                    
+                    // Instantly hide full-page loader to make UI interactive
+                    this.isLoading = false;
+                    this.isInternalLoading = false;
+                    this.cdr.markForCheck();
+                    console.log('⚡ Offline First: Displayed cached books from IndexedDB instantly');
+                }
+            }).catch(err => console.error('Failed to load offline books cache', err));
         }
 
         const rawCategory = (this.selectedCategory && this.selectedCategory !== 'كل الكتب') ? this.getCategoryRawKey(this.selectedCategory) : '';
@@ -290,7 +307,6 @@ export class LibraryComponent implements OnInit, OnDestroy {
 
                 // Update the cache: merge new results with any previously loaded books
                 if (!append) {
-                    // If search is active, merge with cache; if no search, replace cache
                     if (!this.searchQuery) {
                         this.allLoadedEbooks = [...this.ebooks];
                     } else {
@@ -320,6 +336,7 @@ export class LibraryComponent implements OnInit, OnDestroy {
                 this.isLoading = false;
                 this.isInternalLoading = false;
                 this.isLoadingMore = false;
+                this.cdr.markForCheck();
             },
             error: (err) => {
                 console.error('Error loading ebooks:', err);
@@ -332,6 +349,7 @@ export class LibraryComponent implements OnInit, OnDestroy {
             this.userLibraryService.getUserLibrary().subscribe({
                 next: (response) => {
                     this.ownedEbookIds = new Set(response.data.map((item: any) => typeof item.ebookId === 'object' ? item.ebookId._id : item.ebookId));
+                    this.applyFilters();
                 },
                 error: (err) => console.error('Error loading library:', err)
             });

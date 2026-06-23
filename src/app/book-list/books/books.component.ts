@@ -1,4 +1,8 @@
-import { Component, ViewChild, OnInit, OnDestroy } from '@angular/core';
+import { Component, ViewChild, OnInit, OnDestroy, Inject, PLATFORM_ID } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
+import { RouterModule } from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { ActivatedRoute, Router } from '@angular/router';
 import { DataService } from '../../services/data.service';
 import { Book } from '../../book';
@@ -9,14 +13,17 @@ import { AccountModalComponent } from '../../auth/account-modal/account-modal.co
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { GamificationService } from '../../services/gamification.service';
+import { SeoService } from '../../services/seo.service';
 import { forkJoin } from 'rxjs';
 import { take } from 'rxjs/operators';
+import { Meta } from '@angular/platform-browser';
 
 @Component({
     selector: 'app-books',
     templateUrl: './books.component.html',
     styleUrls: ['./books.component.css'],
-    standalone: false
+    standalone: true,
+    imports: [CommonModule, RouterModule, FormsModule, FontAwesomeModule, AccountModalComponent]
 })
 export class BooksComponent implements OnInit, OnDestroy {
     uploadsBaseUrl = environment.uploadsBaseUrl;
@@ -64,13 +71,33 @@ export class BooksComponent implements OnInit, OnDestroy {
         private router: Router,
         private authService: AuthService,
         private http: HttpClient,
-        public gamificationService: GamificationService
+        public gamificationService: GamificationService,
+        private seoService: SeoService,
+        private meta: Meta,
+        @Inject(PLATFORM_ID) private platformId: Object
     ) { }
 
     ngOnInit(): void {
         this.isLoading = true;
 
-        // Subscribe to both params (for /category/:name) and queryParams
+        // SSR CRITICAL: forkJoin on route.params + route.queryParams on the server
+        // never completes because ActivatedRoute hot observables don't emit on SSR,
+        // which blocks Zone.js stabilization and causes 30s timeout / 504 errors.
+        // Solution: read snapshot synchronously on SSR (instant, no async needed),
+        // and use the full async forkJoin only in the browser.
+        if (!isPlatformBrowser(this.platformId)) {
+            const params = this.route.snapshot.params;
+            const queryParams = this.route.snapshot.queryParams;
+            if (params['name']) this.selectedCategory = params['name'];
+            else if (queryParams['category']) this.selectedCategory = queryParams['category'];
+            this.currentPage = parseInt(queryParams['page'] || '1', 10);
+            if (queryParams['maxPrice']) this.maxPrice = parseInt(queryParams['maxPrice'], 10);
+            if (queryParams['sort']) this.sortOrder = queryParams['sort'] || 'random';
+            this.loadBooks(); // will bail out immediately via isPlatformBrowser guard inside
+            return;
+        }
+
+        // Browser: use forkJoin for reactivity
         forkJoin({
             params: this.route.params.pipe(take(1)),
             queryParams: this.route.queryParams.pipe(take(1))
@@ -99,6 +126,14 @@ export class BooksComponent implements OnInit, OnDestroy {
 
     loadBooks(): void {
         this.isLoading = true;
+
+        // SSR optimization: set SEO tags immediately and skip fetching 13MB file
+        if (!isPlatformBrowser(this.platformId)) {
+            this.updateSeoForCategory();
+            this.isLoading = false;
+            return;
+        }
+
         this.dataService.getData().subscribe(data => {
             this.allBooks = data.map((b: any) => ({
                 ...b,
@@ -113,7 +148,75 @@ export class BooksComponent implements OnInit, OnDestroy {
             }
 
             this.applyFiltersAndSort();
+            this.updateSeoForCategory();
             this.isLoading = false;
+        });
+    }
+
+    /**
+     * Sets category-specific SEO meta tags and handles pagination noindex.
+     * Called after books load so we know the category and page number.
+     */
+    private updateSeoForCategory(): void {
+        const category = this.selectedCategory;
+        const page = this.currentPage;
+        const isAllBooks = category === 'الكل';
+
+        // Canonical always points to page 1 (no ?page= param)
+        const canonicalUrl = isAllBooks
+            ? 'https://knoozbook.com/books'
+            : `https://knoozbook.com/category/${encodeURIComponent(category)}`;
+
+        // For paginated pages beyond page 1: noindex, follow to save Crawl Budget
+        if (page > 1) {
+            this.meta.updateTag({ name: 'robots', content: 'noindex, follow' });
+        } else {
+            this.meta.updateTag({ name: 'robots', content: 'index, follow' });
+        }
+
+        // Category-specific descriptions
+        const categoryDescriptions: { [key: string]: string } = {
+            'روايات وقصص':             'تصفح أفضل الروايات والقصص العربية والمترجمة. اشتر كتابك المفضل بأسعار مميزة مع توصيل لجميع المحافظات.',
+            'تطوير الذات وعلم النفس':  'اكتشف كتب تطوير الذات وعلم النفس. مجموعة متنوعة من أفضل الكتب العربية والمترجمة في التنمية البشرية.',
+            'كتب دينية':               'كتب دينية إسلامية متنوعة: تفسير، فقه، سيرة، حديث، وعلوم القرآن. اطلب الآن مع توصيل سريع.',
+            'أعمال وتسويق ومالية':    'كتب الأعمال والتسويق والمالية الشخصية. طوّر مسيرتك المهنية واقرأ من أفضل المراجع العربية والعالمية.',
+            'تاريخ وسير ذاتية':       'كتب التاريخ والسير الذاتية: اكتشف قصص العظماء وحوادث التاريخ بأقلام أفضل المؤلفين العرب والأجانب.',
+            'تربية وأطفال':           'كتب الأطفال وتربية الأبناء: قصص تعليمية وترفيهية ومراجع في التربية الحديثة. مناسبة لجميع الأعمار.',
+            'صحة وطب وعلوم':         'كتب الصحة والطب والعلوم. ثقّف نفسك بأحدث المعرفة الطبية والعلمية بأسعار مناسبة.',
+            'فنون وحرف':              'كتب الفنون والحرف اليدوية. تعلّم مهارات جديدة واستكشف عالم الإبداع مع مجموعتنا المتميزة.',
+            'قواميس ومراجع':          'قواميس ومعاجم ومراجع علمية وأدبية. مجموعة شاملة من المراجع العربية والثنائية اللغة.',
+        };
+
+        const categoryKeywords: { [key: string]: string } = {
+            'روايات وقصص':             'روايات عربية, روايات مترجمة, قصص قصيرة, شراء روايات أونلاين, knoozbook',
+            'تطوير الذات وعلم النفس':  'كتب تطوير ذات, تنمية بشرية, علم النفس, كتب نفسية, knoozbook',
+            'كتب دينية':               'كتب إسلامية, كتب دينية, تفسير قرآن, سيرة نبوية, كتب فقه, knoozbook',
+            'أعمال وتسويق ومالية':    'كتب أعمال, تسويق, مالية شخصية, ريادة أعمال, knoozbook',
+            'تاريخ وسير ذاتية':       'كتب تاريخ, سير ذاتية, تراجم, حضارة إسلامية, knoozbook',
+            'تربية وأطفال':           'قصص أطفال, كتب تربية, تعليم الأطفال, كتب للأطفال, knoozbook',
+            'صحة وطب وعلوم':         'كتب طبية, صحة وتغذية, كتب علوم, طب بشري, knoozbook',
+            'فنون وحرف':              'كتب فنون, حرف يدوية, رسم, تصوير فوتوغرافي, knoozbook',
+            'قواميس ومراجع':          'قواميس عربية, معاجم, قاموس عربي إنجليزي, مراجع علمية, knoozbook',
+        };
+
+        const title = isAllBooks
+            ? 'كل الكتب | knoozbook'
+            : `${category} | knoozbook`;
+
+        const description = isAllBooks
+            ? 'تصفح مجموعة knoozbook الكاملة من الكتب العربية والمترجمة بأسعار مميزة وتوصيل لجميع المحافظات.'
+            : (categoryDescriptions[category] || `تصفح أفضل ${category} في knoozbook. مجموعة متنوعة من الكتب بأسعار مميزة مع توصيل لجميع المحافظات.`);
+
+        const keywords = isAllBooks
+            ? 'knoozbook, شراء كتب أونلاين, كتب عربية, مكتبة إلكترونية'
+            : (categoryKeywords[category] || `${category}, كتب عربية, knoozbook, شراء كتب`);
+
+        this.seoService.updateMetaTags({
+            title: isAllBooks ? 'كل الكتب' : category,
+            description,
+            keywords,
+            url: canonicalUrl,
+            type: 'website'
         });
     }
 
@@ -168,6 +271,10 @@ export class BooksComponent implements OnInit, OnDestroy {
             [newArr[i], newArr[j]] = [newArr[j], newArr[i]];
         }
         return newArr;
+    }
+
+    trackByBook(index: number, item: any): string {
+        return item.products_id || item._id || index.toString();
     }
 
     onFilterChange(): void {

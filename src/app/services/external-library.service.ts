@@ -20,22 +20,75 @@ export interface ExternalBook {
 })
 export class ExternalLibraryService {
     private jsonUrl = 'json/bok.json'; // Assumed to be served from public/json/bok.json
-    private booksCache$: Observable<ExternalBook[]> | null = null;
+    private booksInMemory: ExternalBook[] | null = null;
 
     constructor(private http: HttpClient) { }
 
     getAllBooks(): Observable<ExternalBook[]> {
-        if (!this.booksCache$) {
-            this.booksCache$ = this.http.get<any>(this.jsonUrl).pipe(
-                map(data => this.processJson(data)),
-                shareReplay(1),
-                catchError(err => {
-                    console.error('Failed to load external books', err);
-                    return of([]);
-                })
-            );
+        if (this.booksInMemory) {
+            return of(this.booksInMemory);
         }
-        return this.booksCache$;
+
+        return new Observable<ExternalBook[]>(observer => {
+            let localLoaded = false;
+
+            const loadFromCache = async () => {
+                try {
+                    if (typeof window !== 'undefined' && 'caches' in window) {
+                        const cache = await caches.open('kenouz-external-library-cache');
+                        const cachedResponse = await cache.match(this.jsonUrl);
+                        if (cachedResponse) {
+                            const data = await cachedResponse.json();
+                            const books = this.processJson(data);
+                            if (books.length > 0) {
+                                this.booksInMemory = books;
+                                observer.next(books);
+                                localLoaded = true;
+                                console.log('📚 Loaded 4970 books from native Cache Storage');
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Failed to read external books from Cache Storage', e);
+                }
+            };
+
+            const fetchFromNetwork = () => {
+                this.http.get<any>(this.jsonUrl).subscribe({
+                    next: (data: any) => {
+                        const books = this.processJson(data);
+                        this.booksInMemory = books;
+                        observer.next(books);
+                        
+                        // Cache it for next time
+                        if (typeof window !== 'undefined' && 'caches' in window) {
+                            caches.open('kenouz-external-library-cache').then(cache => {
+                                cache.put(this.jsonUrl, new Response(JSON.stringify(data)));
+                            }).catch(err => console.warn('Failed to cache external books', err));
+                        }
+                        
+                        observer.complete();
+                    },
+                    error: (err: any) => {
+                        console.error('Failed to fetch external books from network', err);
+                        if (!localLoaded) {
+                            observer.next([]);
+                        }
+                        observer.complete();
+                    }
+                });
+            };
+
+            // Execute SWR
+            loadFromCache().then(() => {
+                if (typeof navigator !== 'undefined' && navigator.onLine) {
+                    fetchFromNetwork();
+                } else {
+                    if (!localLoaded) observer.next([]);
+                    observer.complete();
+                }
+            });
+        });
     }
 
     private processJson(data: any): ExternalBook[] {

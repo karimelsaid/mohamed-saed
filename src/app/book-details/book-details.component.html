@@ -1,8 +1,49 @@
 <div class="rtl book-details-container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 md:pt-40 mb-32 md:mb-0">
-  <div *ngIf="loading" class="text-center text-gray-500 dark:text-gray-400 py-8">جارٍ تحميل بيانات الكتاب...</div>
-  <div *ngIf="error" class="text-center text-red-600 dark:text-red-500 font-bold py-8">{{ error }}</div>
-  <div *ngIf="book"
-    class="bg-white dark:bg-gray-800 rounded-xl shadow-lg dark:shadow-2xl p-6 sm:p-8 relative overflow-hidden border-2 border-blue-200 dark:border-blue-800">
+  <div *ngIf="loading; else contentTemplate" class="animate-pulse space-y-8 pb-12">
+    <!-- Title and merchant skeleton -->
+    <div class="space-y-3">
+      <ngx-skeleton-loader count="1" [theme]="{ height: '40px', width: '60%', 'background-color': 'rgba(156, 163, 175, 0.15)', 'border-radius': '12px' }"></ngx-skeleton-loader>
+      <ngx-skeleton-loader count="1" [theme]="{ height: '20px', width: '20%', 'background-color': 'rgba(156, 163, 175, 0.15)', 'border-radius': '8px' }"></ngx-skeleton-loader>
+    </div>
+
+    <!-- Main details split skeleton -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <!-- Left: Image Gallery skeleton -->
+      <div class="flex flex-col items-center space-y-4">
+        <ngx-skeleton-loader count="1" [theme]="{ height: '420px', width: '300px', 'background-color': 'rgba(156, 163, 175, 0.15)', 'border-radius': '12px' }"></ngx-skeleton-loader>
+        <div class="flex gap-2">
+          <ngx-skeleton-loader count="3" [theme]="{ height: '64px', width: '64px', 'background-color': 'rgba(156, 163, 175, 0.15)', 'border-radius': '8px', 'margin-right': '8px' }"></ngx-skeleton-loader>
+        </div>
+      </div>
+
+      <!-- Right: Details skeleton -->
+      <div class="space-y-6">
+        <!-- Price skeleton -->
+        <ngx-skeleton-loader count="1" [theme]="{ height: '60px', width: '150px', 'background-color': 'rgba(156, 163, 175, 0.15)', 'border-radius': '8px' }"></ngx-skeleton-loader>
+        
+        <!-- Specifications grid skeleton -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <ngx-skeleton-loader count="4" [theme]="{ height: '24px', 'background-color': 'rgba(156, 163, 175, 0.15)', 'border-radius': '6px' }"></ngx-skeleton-loader>
+        </div>
+
+        <!-- Description block skeleton -->
+        <div class="border-2 border-gray-200 dark:border-gray-700/50 rounded-xl p-6 bg-gray-50/50 dark:bg-gray-800/30 space-y-3">
+          <ngx-skeleton-loader count="1" [theme]="{ height: '30px', width: '30%', 'background-color': 'rgba(156, 163, 175, 0.15)', 'border-radius': '8px' }"></ngx-skeleton-loader>
+          <ngx-skeleton-loader count="3" [theme]="{ height: '18px', 'background-color': 'rgba(156, 163, 175, 0.15)', 'border-radius': '6px' }"></ngx-skeleton-loader>
+        </div>
+
+        <!-- Rating skeleton -->
+        <ngx-skeleton-loader count="1" [theme]="{ height: '40px', width: '250px', 'background-color': 'rgba(156, 163, 175, 0.15)', 'border-radius': '8px' }"></ngx-skeleton-loader>
+
+        <!-- Button skeleton -->
+        <ngx-skeleton-loader count="1" [theme]="{ height: '56px', width: '100%', 'background-color': 'rgba(156, 163, 175, 0.15)', 'border-radius': '12px' }"></ngx-skeleton-loader>
+      </div>
+    </div>
+  </div>
+  <ng-template #contentTemplate>
+    <div *ngIf="error" class="text-center text-red-600 dark:text-red-500 font-bold py-8">{{ error }}</div>
+    <div *ngIf="book"
+      class="bg-white dark:bg-gray-800 rounded-xl shadow-lg dark:shadow-2xl p-6 sm:p-8 relative overflow-hidden border-2 border-blue-200 dark:border-blue-800">
     <!-- Background gradient for appeal -->
     <div
       class="absolute inset-0 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-700 opacity-60">
@@ -30,37 +71,51 @@
       <!-- Amazon-like layout: left images, right details -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
         <!-- Left: Image Gallery -->
-        <div class="flex flex-col items-center">
-          <!-- Main Image -->
-          <div class="relative mb-4">
-            <!-- 3D Book Display (for book categories) -->
-            <div *ngIf="isBookCategory(book.product_category); else defaultImage" class="main-book-container">
-              <div class="book main-book" [class.book-rtl]="isArabicText(book.product_name)">
-                <img [src]="availableImages[selectedImageIndex] || ''" [alt]="book.product_name" />
-              </div>
+        <div class="flex flex-col items-center animate-fadeIn duration-500">
+          <!-- Main Image Container with Fixed Size (max-w-md, h-[420px]) to prevent Layout Shift -->
+          <div class="relative mb-4 w-[300px] sm:w-[400px] max-w-md h-[420px] flex items-center justify-center bg-gray-50/50 dark:bg-gray-900/30 rounded-xl overflow-hidden shadow-xl border-4 border-white dark:border-gray-700/50">
+            <!-- Images Loading Skeleton -->
+            <div *ngIf="imagesLoading" class="absolute inset-0 flex items-center justify-center p-4">
+              <ngx-skeleton-loader count="1" [theme]="{ width: '100%', height: '100%', 'background-color': 'rgba(156, 163, 175, 0.15)', 'border-radius': '12px', margin: '0' }"></ngx-skeleton-loader>
             </div>
-            <!-- Default Image Display (for other categories) -->
-            <ng-template #defaultImage>
-              <img [src]="availableImages[selectedImageIndex] || ''" alt="{{ book.product_name }}"
-                class="w-full max-w-md h-96 object-contain rounded-xl shadow-xl dark:shadow-2xl border-4 border-white dark:border-gray-700" />
-            </ng-template>
+
+            <!-- Loaded Images State -->
+            <ng-container *ngIf="!imagesLoading">
+              <ng-container *ngIf="availableImages.length > 0; else placeholderImage">
+                <!-- 3D Book Display (for book categories) -->
+                <div *ngIf="isBookCategory(book.product_category); else defaultImage" class="main-book-container w-full h-full flex items-center justify-center">
+                  <div class="book main-book" [class.book-rtl]="isArabicText(book.product_name)">
+                    <img [src]="availableImages[selectedImageIndex] || ''" [alt]="book.product_name" />
+                  </div>
+                </div>
+                <!-- Default Image Display (for other categories) -->
+                <ng-template #defaultImage>
+                  <img [src]="availableImages[selectedImageIndex] || ''" alt="{{ book.product_name }}"
+                    class="w-full h-full object-contain" />
+                </ng-template>
+              </ng-container>
+              <ng-template #placeholderImage>
+                <img src="assets/images/book-placeholder.jpg" alt="لا توجد صورة متوفرة"
+                  class="w-full h-full object-contain opacity-60" />
+              </ng-template>
+            </ng-container>
 
             <!-- شريط الخصم -->
-            <div *ngIf="(book.product_discount_percent || 0) > 0"
+            <div *ngIf="!imagesLoading && (book.product_discount_percent || 0) > 0"
               class="absolute -top-4 -left-4 bg-gradient-to-r from-red-500 to-red-600 dark:from-red-600 dark:to-red-700 text-white text-sm font-bold px-4 py-3 rounded-full shadow-lg z-20 animate-pulse transform">
               {{ book.product_discount_percent }}% خصم
             </div>
-            <button (click)="copyBookLink()" title="نسخ رابط الكتاب"
+            <button *ngIf="!imagesLoading" (click)="copyBookLink()" title="نسخ رابط الكتاب"
               class="absolute bottom-3 left-3 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-full p-3 shadow-lg transform hover:scale-110 transition-transform">
               <fa-icon [icon]="faShareAlt" class="text-gray-700 dark:text-gray-300 h-6 w-6"></fa-icon>
             </button>
           </div>
 
           <!-- Thumbnails -->
-          <div *ngIf="availableImages.length > 1" class="w-full max-w-md">
-            <div class="flex gap-2 overflow-x-auto pb-2" style="scrollbar-width: thin;">
+          <div *ngIf="!imagesLoading && availableImages.length > 1" class="w-full max-w-md">
+            <div class="flex gap-2 overflow-x-auto pb-2 justify-center" style="scrollbar-width: thin;">
               <img *ngFor="let img of availableImages; let i = index" [src]="img" alt="صورة {{ i + 1 }}"
-                (click)="selectedImageIndex = i"
+                (click)="selectedImageIndex = i" loading="lazy"
                 class="flex-shrink-0 w-16 h-16 object-cover rounded-lg cursor-pointer border-2 transition-all duration-200 hover:shadow-md"
                 [class.border-blue-500]="i === selectedImageIndex" [class.border-gray-300]="i !== selectedImageIndex" />
             </div>
@@ -320,6 +375,7 @@
       </div>
     </div>
   </div>
+  </ng-template>
 </div>
 
 <!-- Related Products Section -->
@@ -362,7 +418,7 @@
         <div *ngIf="isBookCategory(product.product_category); else defaultProductCard" class="book-container"
           (click)="navigateToProduct(product)">
           <div class="book" [class.book-rtl]="isArabicText(product.product_name)">
-            <img [src]="getBookImageUrl(product)" [alt]="product.product_name" />
+            <img [src]="getBookImageUrl(product)" [alt]="product.product_name" loading="lazy" />
             <!-- Badges -->
             <div class="absolute top-2 left-2 z-20">
               <div *ngIf="(product.product_discount_percent || 0) > 0"
@@ -407,7 +463,7 @@
             class="group relative bg-white dark:bg-gray-800 rounded-3xl shadow-xl dark:shadow-2xl hover:shadow-2xl dark:hover:shadow-3xl transition-all duration-500 transform hover:-translate-y-3 overflow-hidden border-2 border-gray-100 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600">
             <div
               class="relative h-56 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 overflow-hidden">
-              <img [src]="getBookImageUrl(product)" [alt]="product.product_name"
+              <img [src]="getBookImageUrl(product)" [alt]="product.product_name" loading="lazy"
                 class="w-full h-full object-cover group-hover:scale-125 transition-transform duration-500 ease-out">
               <div *ngIf="(product.product_discount_percent || 0) > 0"
                 class="absolute top-3 left-3 bg-gradient-to-br from-red-500 to-red-600 text-white px-3 py-1.5 rounded-full text-sm font-black shadow-lg transform group-hover:scale-125 transition-transform duration-300">
@@ -483,7 +539,7 @@
     /* Adjust width for main book */
     height: 420px;
     /* Adjust height for main book */
-    perspective: 1500px;
+    margin: 0 auto;
   }
 
   .main-book {
@@ -496,7 +552,6 @@
     /* Adjust width as needed */
     height: 250px;
     /* Adjust height as needed */
-    perspective: 1000px;
     margin: 1rem auto;
   }
 
@@ -505,17 +560,12 @@
     height: 100%;
     position: relative;
     cursor: pointer;
+    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.3s ease;
   }
 
   .book:hover {
-    box-shadow: 0 35px 60px -15px rgba(0, 0, 0, 0.3);
-  }
-
-  /* RTL Book Styling */
-  .book.book-rtl {
-  }
-
-  .book.book-rtl:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
   }
 
   .book.book-rtl img {

@@ -1,4 +1,7 @@
 import { Component, OnInit, Inject, PLATFORM_ID } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { HttpClient } from '@angular/common/http';
 import { isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
@@ -9,10 +12,12 @@ import { environment } from '../../environments/environment';
 import { SeoService } from '../services/seo.service';
 import { PromotionService } from '../services/promotion.service';
 import { MerchantAuthService } from '../services/merchant-auth.service';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-home-page',
-  standalone: false,
+  standalone: true,
+  imports: [CommonModule, RouterModule, FontAwesomeModule, FormsModule],
   templateUrl: './home-page.component.html',
   styleUrls: ['./home-page.component.css']
 })
@@ -88,8 +93,15 @@ export class HomePageComponent implements OnInit {
   ) { }
 
   ngOnInit(): void {
-    this.initHero();
-    this.loadDynamicCategories();
+    // initHero() triggers 3 HTTP calls (getHeroConfig/getHeroSlides/getHeroBooks)
+    // — only needed in the browser for visual rendering
+    if (isPlatformBrowser(this.platformId)) {
+      this.initHero();
+    }
+    // Load dynamic categories in browser only — HTTP call not needed during SSR
+    if (isPlatformBrowser(this.platformId)) {
+      this.loadDynamicCategories();
+    }
 
     // Set SEO meta tags for the homepage
     this.seoService.updateMetaTags({
@@ -99,40 +111,46 @@ export class HomePageComponent implements OnInit {
       url: 'https://knoozbook.com/Home'
     });
 
-    this.dataService.getData().subscribe((data: any) => {
-      // Normalize IDs
-      const normalizedData = data.map((b: any) => ({
-        ...b,
-        products_id: b.products_id || b.product_id || b._id
-      }));
+    if (isPlatformBrowser(this.platformId)) {
+      this.dataService.getData().subscribe((data: any) => {
+        // Normalize IDs
+        const normalizedData = data.map((b: any) => ({
+          ...b,
+          products_id: b.products_id || b.product_id || b._id
+        }));
 
-      // First sort to get the newest ones (by createdAt date descending)
-      const sorted = normalizedData.sort((a: any, b: any) => {
-        const dateA = new Date(a.createdAt || a.lastStockUpdate || 0).getTime();
-        const dateB = new Date(b.createdAt || b.lastStockUpdate || 0).getTime();
-        return dateB - dateA;
+        // First sort to get the newest ones (by createdAt date descending)
+        const sorted = normalizedData.sort((a: any, b: any) => {
+          const dateA = new Date(a.createdAt || a.lastStockUpdate || 0).getTime();
+          const dateB = new Date(b.createdAt || b.lastStockUpdate || 0).getTime();
+          return dateB - dateA;
+        });
+        
+        // Take the top 200 newest and shuffle them for variety
+        const newestPool = sorted.slice(0, 200);
+        const rest = sorted.slice(200);
+        
+        this.allProducts = [...this.dataService.shuffleArray(newestPool), ...rest];
+        this.generateBackgroundColumns();
+        
+        // Fallback: If we are in scrolling mode and haven't loaded specific hero books yet, use allProducts
+        if (this.heroConfig.mode === 'scrolling' && (!this.heroBooks || this.heroBooks.length === 0)) {
+          this.heroBooks = this.allProducts.slice(0, 32);
+          this.prepareHeroColumns();
+        }
+        
+        this.isLoading = false;
+      }, error => {
+        console.error('Error fetching data for home page:', error);
+        this.isLoading = false;
       });
-      
-      // Take the top 200 newest and shuffle them for variety
-      const newestPool = sorted.slice(0, 200);
-      const rest = sorted.slice(200);
-      
-      this.allProducts = [...this.dataService.shuffleArray(newestPool), ...rest];
-      this.generateBackgroundColumns();
-      
-      // Fallback: If we are in scrolling mode and haven't loaded specific hero books yet, use allProducts
-      if (this.heroConfig.mode === 'scrolling' && (!this.heroBooks || this.heroBooks.length === 0)) {
-        this.heroBooks = this.allProducts.slice(0, 32);
-        this.prepareHeroColumns();
-      }
-      
-      this.isLoading = false;
-    }, error => {
-      console.error('Error fetching data for home page:', error);
-      this.isLoading = false;
-    });
+    }
 
-    this.loadMerchants();
+    // SSR CRITICAL: loadMerchants() makes an HTTP call that never completes during SSR,
+    // preventing Zone.js from stabilizing and causing 30s timeout / 504 errors.
+    if (isPlatformBrowser(this.platformId)) {
+      this.loadMerchants();
+    }
 
     if (isPlatformBrowser(this.platformId)) {
       window.addEventListener('resize', () => {
@@ -193,6 +211,10 @@ export class HomePageComponent implements OnInit {
 
   setActiveTab(tabId: string): void {
     this.activeTab = tabId;
+  }
+
+  trackByProduct(index: number, item: any): string {
+    return item.products_id || item._id || index.toString();
   }
 
   // Helper Methods

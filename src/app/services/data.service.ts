@@ -19,6 +19,10 @@ export class DataService {
   private ordersSubject = new BehaviorSubject<any[]>([]);
   public orders$ = this.ordersSubject.asObservable();
 
+  private booksSubject = new BehaviorSubject<any[]>([]);
+  private isLoaded = false;
+  private loadingObservable: Observable<any[]> | null = null;
+
   private uploadsBaseUrl = environment.uploadsBaseUrl || '/uploads/books';
 
   constructor(private http: HttpClient) { }
@@ -92,13 +96,20 @@ export class DataService {
       return `${this.uploadsBaseUrl}/merchant_${sanitizedMerchantName}/${folderName}/${final_image}`;
     }
   }
-  getData(): Observable<any[]> { // Changed return type to any[]
-    // Add timestamp to bypass browser/server cache for real-time data
+
+  getData(): Observable<any[]> {
+    if (this.isLoaded) {
+      return this.booksSubject.asObservable();
+    }
+
+    if (this.loadingObservable) {
+      return this.loadingObservable;
+    }
+
     const timestamp = new Date().getTime();
-    // Corrected URL to use this.apiUrl directly with timestamp
-    return this.http.get<any[]>(`${this.apiUrl}?t=${timestamp}`).pipe(
+    this.loadingObservable = this.http.get<any[]>(`${this.apiUrl}?t=${timestamp}`).pipe(
       map(books => {
-        const uniqueItems = new Map<string, any>(); // Changed Book to any
+        const uniqueItems = new Map<string, any>();
 
         books.forEach(book => {
           let id = book.products_id || (book as any)._id;
@@ -128,10 +139,40 @@ export class DataService {
         });
 
         const result = Array.from(uniqueItems.values());
+        this.booksSubject.next(result);
+        this.isLoaded = true;
+        this.loadingObservable = null;
         return result;
       }),
       shareReplay(1)
     );
+
+    return this.loadingObservable;
+  }
+
+  getBookById(id: string): Observable<any> {
+    // If cache is loaded, find it in memory instantly (0ms network request!)
+    if (this.isLoaded) {
+      const book = this.booksSubject.value.find(b => b.products_id.toString() === id.toString());
+      if (book) {
+        return new Observable(observer => {
+          observer.next(book);
+          observer.complete();
+        });
+      }
+    }
+
+    // Otherwise, fetch just the single book details from the server (lightweight)
+    const url = environment.apiBaseUrl ? `${environment.apiBaseUrl}/books/details/${id}` : `/api/books/details/${id}`;
+    return this.http.get<{ success: boolean; data: any }>(url).pipe(
+      map(res => res.success ? res.data : null)
+    );
+  }
+
+  clearCache(): void {
+    this.isLoaded = false;
+    this.booksSubject.next([]);
+    this.loadingObservable = null;
   }
 
   getRecentBooks(): Observable<any> {

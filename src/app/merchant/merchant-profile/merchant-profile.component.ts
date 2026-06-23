@@ -1,4 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, Inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { MerchantAuthService } from '../../services/merchant-auth.service';
 import { environment } from '../../../environments/environment';
@@ -43,10 +44,21 @@ export class MerchantProfileComponent implements OnInit {
     private authService: AuthService,
     private modalService: ModalService,
     private router: Router,
-    private analyticsService: AnalyticsService
+    private analyticsService: AnalyticsService,
+    @Inject(PLATFORM_ID) private platformId: Object
   ) { }
 
   ngOnInit(): void {
+    // SSR CRITICAL: MerchantProfileComponent is mapped to path ':username' which catches
+    // ALL unknown URLs including /Home, /book/..., etc. during SSR.
+    // The HTTP call to merchant/by-name/:username on the server never completes,
+    // causing Zone.js to never stabilize → 30s timeout → 504 Gateway Error.
+    // Solution: skip ALL data fetching on SSR. The page renders empty shell,
+    // browser hydration handles the actual data load instantly after.
+    if (this.platformId !== 'browser') {
+      return;
+    }
+
     this.route.paramMap.subscribe(params => {
       const usernameParam = params.get('username');
 

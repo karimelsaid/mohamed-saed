@@ -346,8 +346,30 @@ async function getCategories(req, res) {
   }
 }
 
+async function getBookById(req, res) {
+  try {
+    const { id } = req.params;
+    if (!id) {
+      return res.status(400).json({ success: false, message: 'معرف الكتاب مطلوب' });
+    }
+    
+    const trimmedId = id.trim();
+    const allData = await fetchUnifiedData();
+    const book = allData.find(item => item.products_id.toString() === trimmedId);
+    
+    if (!book) {
+      return res.status(404).json({ success: false, message: 'الكتاب غير موجود' });
+    }
+    
+    res.json({ success: true, data: book });
+  } catch (error) {
+    console.error('Error fetching book by ID:', error);
+    res.status(500).json({ success: false, message: 'خطأ في جلب بيانات الكتاب', error: error.message });
+  }
+}
+
 async function updateBooksData() {
   await downloadAndConvertExcel(FILE_ID);
 }
 
-module.exports = { getExcelData, getRecentBooks, searchBooks, updateBooksData, clearBooksCache, getCategories };
+module.exports = { getExcelData, getRecentBooks, searchBooks, updateBooksData, clearBooksCache, getCategories, getBookById };

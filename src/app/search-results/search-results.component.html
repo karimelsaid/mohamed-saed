@@ -190,7 +190,7 @@
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-8">
-  <div *ngFor="let book of paginatedBooks ; let i = index"
+  <div *ngFor="let book of paginatedBooks; let i = index; trackBy: trackByBook"
     class="group relative bg-white dark:bg-gray-800/40 rounded-[2.5rem] p-5 shadow-sm hover:shadow-2xl transition-all duration-500 border border-gray-100 dark:border-gray-700/30 flex flex-col gap-5 relative overflow-hidden"
     [style.animationDelay]="i * 50 + 'ms'">
     
@@ -202,7 +202,7 @@
 
     <!-- Image Section -->
     <div class="w-full aspect-[4/3] rounded-[2rem] overflow-hidden bg-gray-50 dark:bg-gray-900/40 relative flex items-center justify-center p-4 transition-all duration-500 group-hover:bg-gray-100 dark:group-hover:bg-gray-900/60 shadow-inner">
-      <img [routerLink]="getProductRoute(book)" [src]="getBookImageUrl(book)" [alt]="book.product_name"
+      <img [routerLink]="getProductRoute(book)" [src]="getBookImageUrl(book)" [alt]="book.product_name" loading="lazy"
         class="max-w-full max-h-full object-contain cursor-pointer transition-transform duration-700 group-hover:scale-110 drop-shadow-2xl" />
       <div class="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
     </div>

@@ -40,7 +40,7 @@ exports.trackProductView = async (req, res) => {
             product.viewHistory.shift();
         }
 
-        await product.save();
+        await product.save({ validateBeforeSave: false });
         res.json({ success: true, views: product.views });
     } catch (error) {
         console.error('Error tracking product view:', error);
@@ -82,7 +82,7 @@ exports.trackStoreVisit = async (req, res) => {
             merchant.storeViewHistory.shift();
         }
 
-        await merchant.save();
+        await merchant.save({ validateBeforeSave: false });
         res.json({ success: true, storeViews: merchant.storeViews });
     } catch (error) {
         console.error('Error tracking store visit:', error);

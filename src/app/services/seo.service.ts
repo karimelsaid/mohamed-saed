@@ -144,6 +144,32 @@ export class SeoService {
     }
 
     /**
+     * Set Breadcrumb JSON-LD structured data for product/category pages.
+     * Improves how Google understands page hierarchy and may show breadcrumbs in SERPs.
+     * @param items - Array of breadcrumb items [{name, url}]
+     */
+    setBreadcrumbJsonLd(items: { name: string; url: string }[]): void {
+        // Remove existing breadcrumb script if any
+        const existing = this.document.querySelector('script[data-type="breadcrumb"]');
+        if (existing) existing.remove();
+
+        const script = this.document.createElement('script');
+        script.type = 'application/ld+json';
+        script.setAttribute('data-type', 'breadcrumb');
+        script.text = JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'BreadcrumbList',
+            'itemListElement': items.map((item, index) => ({
+                '@type': 'ListItem',
+                'position': index + 1,
+                'name': item.name,
+                'item': item.url
+            }))
+        });
+        this.document.head.appendChild(script);
+    }
+
+    /**
      * Remove existing JSON-LD elements.
      */
     removeJsonLd(): void {

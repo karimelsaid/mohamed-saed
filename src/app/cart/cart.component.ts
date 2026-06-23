@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { AuthService } from '../auth/auth.service';
 import { DataService } from '../services/data.service';
 import { map, take } from 'rxjs/operators';
+import { forkJoin } from 'rxjs';
 import { CommonModule, NgIf } from '@angular/common';
 import { CheckoutModalComponent } from '../checkout-modal/checkout-modal.component';
 import { environment } from '../../environments/environment';
@@ -100,16 +101,23 @@ export class CartComponent implements OnInit {
     this.authService.cartBookIds.subscribe(bookIds => {
       if (bookIds.length > 0) {
         this.isLoading = true;
-        this.dataService.getData().pipe(
-          map((books: any[]) => {
-            // Map books and check if their ID exists in cart with or without :free suffix
-            return bookIds.map(idInCart => {
+        const uniqueRealIds = Array.from(new Set(bookIds.map(id => id.split(':')[0])));
+        const requests = uniqueRealIds.map(id => this.dataService.getBookById(id));
+        
+        forkJoin(requests).subscribe({
+          next: (booksList) => {
+            const booksMap = new Map<string, any>();
+            booksList.forEach(b => {
+              if (b) booksMap.set(String(b.products_id), b);
+            });
+
+            const books = bookIds.map(idInCart => {
               const isFree = idInCart.endsWith(':free');
               const isBourse = idInCart.includes(':bourse:');
               const realId = idInCart.split(':')[0];
               const bourseOfferId = isBourse ? idInCart.split(':bourse:')[1] : null;
 
-              const bookMatch = books.find(b => b.products_id === realId);
+              const bookMatch = booksMap.get(realId);
               if (bookMatch) {
                 let finalPrice = bookMatch.product_price;
                 let isExpiredBourse = false;
@@ -117,7 +125,6 @@ export class CartComponent implements OnInit {
                 if (isFree) {
                   finalPrice = 0;
                 } else if (isBourse) {
-                   // Check against active offer
                    if (this.activeBourseOffer && this.activeBourseOffer._id === bourseOfferId) {
                       const bourseBookInfo = this.activeBourseOffer.books.find((b: any) => b.bookId === realId);
                       if (bourseBookInfo) {
@@ -126,13 +133,13 @@ export class CartComponent implements OnInit {
                          isExpiredBourse = true;
                       }
                    } else {
-                      isExpiredBourse = true; // offer no longer active
+                      isExpiredBourse = true;
                    }
                 }
 
                 return {
                   ...bookMatch,
-                  products_id: idInCart, // Keep the suffix
+                  products_id: idInCart,
                   product_price: finalPrice,
                   isFree: isFree,
                   isBourse: isBourse,
@@ -142,13 +149,10 @@ export class CartComponent implements OnInit {
               }
               return null;
             }).filter(b => b !== null);
-          })
-        ).subscribe({
-          next: (books) => {
+
             console.log(`[Cart] Loaded ${books.length} matching books out of ${bookIds.length} IDs in cart`);
             this.cartBooks = books;
             
-            // Check flags
             this.hasExpiredBourseItems = books.some(b => b.isExpiredBourse);
             this.hasActiveBourseItems = books.some(b => b.isBourse && !b.isExpiredBourse);
             this.hasNormalItems = books.some(b => !b.isBourse && !b.isFree);

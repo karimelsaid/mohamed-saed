@@ -119,19 +119,20 @@ export class AppComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    // تحقق من وجود صفحة البحث في المسار
-    this.router.events.subscribe((event: any) => {
-      if (event.url) {
-        // تحقق إذا كان الـ URL يحتوي على استعلام البحث
-        this.isSearchPage = event.url.includes('/search'); // على حسب المسار الذي تستخدمه للبحث
-      }
-    });
-
-    this.router.events.subscribe((event: any) => {
-      if (event instanceof NavigationEnd) {
-        if (isPlatformBrowser(this.platformId)) {
-          window.scrollTo(0, 0);
+    // SSR CRITICAL: All router.events and modal subscriptions MUST be inside isPlatformBrowser.
+    // On the server, these are hot observables that never complete — causing Zone.js to never
+    // stabilize, which makes Angular SSR hang until timeout (15s/30s).
+    if (isPlatformBrowser(this.platformId)) {
+      // تحقق من وجود صفحة البحث في المسار
+      this.router.events.subscribe((event: any) => {
+        if (event.url) {
+          // تحقق إذا كان الـ URL يحتوي على استعلام البحث
+          this.isSearchPage = event.url.includes('/search'); // على حسب المسار الذي تستخدمه للبحث
         }
+      });
+
+      this.router.events.pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd)).subscribe((event: NavigationEnd) => {
+        window.scrollTo(0, 0);
 
         this.isAdminPage = event.urlAfterRedirects.includes('/admin') || event.urlAfterRedirects.includes('/ControlPanel');
 
@@ -139,20 +140,15 @@ export class AppComponent implements OnInit {
         // Only update state if we are navigating to a "real" page (Home or Mushaf)
         if (event.urlAfterRedirects !== '/' && !event.urlAfterRedirects.includes('landing')) {
           this.isMushafPage = event.urlAfterRedirects.includes('/mushaf');
-          // Persist state
-          if (isPlatformBrowser(this.platformId)) {
-            localStorage.setItem('last_mushaf_state', this.isMushafPage ? 'mushaf' : 'home');
-          }
+          localStorage.setItem('last_mushaf_state', this.isMushafPage ? 'mushaf' : 'home');
         }
-      }
-    });
+      });
 
-    // Load allBooks data here
-    this.dataService.getData().subscribe((data: any) => {
-      this.allBooks = data;
-    });
+      // Load allBooks data only in browser (not during SSR)
+      this.dataService.getData().subscribe((data: any) => {
+        this.allBooks = data;
+      });
 
-    if (isPlatformBrowser(this.platformId)) {
       // Initialize dark mode from localStorage or system preference
       const darkModeStored = localStorage.getItem('darkMode');
       if (darkModeStored !== null) {
@@ -170,59 +166,52 @@ export class AppComponent implements OnInit {
           this.tutorialService.startTutorial();
         }, 5000); // Show tutorial after 5 seconds delay
       }
-    }
 
-    // Subscribe to modal service
-    this.modalSubscription = this.modalService.modal$.subscribe(config => {
-      this.modalConfig = config;
-    });
+      // Subscribe to modal service (browser only — Subject never completes on server)
+      this.modalSubscription = this.modalService.modal$.subscribe(config => {
+        this.modalConfig = config;
+      });
 
-    // Auto-resume Mushaf logic moved to StartupGuard
-    // const lastState = localStorage.getItem('last_mushaf_state');
-    // const currentPath = window.location.pathname;
-    // if (lastState === 'mushaf' && (currentPath === '/' || currentPath === '/home' || currentPath === '/index.html')) {
-    //   this.router.navigate(['/mushaf']);
-    // }
+      // Global Push Listener for Optimistic Updates (browser only — keeps Zone.js busy on server)
+      this.pushService.pushPayload.subscribe((payload: any) => {
+        console.log('⚡ Optimistic Notification Update:', payload);
+        if (payload && payload.notification) {
+          // Construct temporary notification object
+          const newNotification: any = {
+            message: payload.notification.body || payload.body,
+            type: payload.data?.type || 'system',
+            read: false,
+            createdAt: new Date().toISOString(),
+            relatedId: payload.data?.relatedId
+          };
+          // Add random ID if not present
+          if (!newNotification._id) {
+            newNotification._id = `temp_${Date.now()}`;
+          }
 
-    // Global Push Listener for Optimistic Updates
-    this.pushService.pushPayload.subscribe((payload: any) => {
-      console.log('⚡ Optimistic Notification Update:', payload);
-      if (payload && payload.notification) {
-        // Construct temporary notification object
-        const newNotification: any = {
-          message: payload.notification.body || payload.body,
-          type: payload.data?.type || 'system',
-          read: false,
-          createdAt: new Date().toISOString(),
-          relatedId: payload.data?.relatedId
-        };
-        // Add random ID if not present
-        if (!newNotification._id) {
-          newNotification._id = `temp_${Date.now()}`;
+          this.notificationService.addNotification(newNotification);
         }
+      });
 
-        this.notificationService.addNotification(newNotification);
-      }
-    });
+      // Auto-subscribe logged in users to push system and voice calling (browser only)
+      this.authService.user$.subscribe(user => {
+        if (user && user.id) {
+          // This ensures that valid token is sent to backend whenever user is known
+          this.pushService.subscribeToNotifications();
 
-    // Auto-subscribe logged in users to push system and voice calling
-    this.authService.user$.subscribe(user => {
-      if (user && user.id && isPlatformBrowser(this.platformId)) {
-        // This ensures that valid token is sent to backend whenever user is known
-        this.pushService.subscribeToNotifications();
+          // Initialize Voice Call Peer
+          this.voiceCallService.init(user.id);
+        }
+      });
 
-        // Initialize Voice Call Peer
-        this.voiceCallService.init(user.id);
-      }
-    });
-
-    // Promotion Theme Propagation
-    this.promotionService.initializeTheme();
-    this.promotionService.activeTheme$.subscribe(theme => {
-      if (theme) {
-        this.applyPromotionTheme(theme);
-      }
-    });
+      // Promotion Theme Propagation (browser only — initializeTheme() makes HTTP call)
+      this.promotionService.initializeTheme();
+      this.promotionService.activeTheme$.subscribe(theme => {
+        if (theme) {
+          this.applyPromotionTheme(theme);
+        }
+      });
+    }
   }
 
   applyPromotionTheme(theme: any) {

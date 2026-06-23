@@ -1,4 +1,4 @@
-import { Component, Output, EventEmitter, OnInit, Input } from '@angular/core';
+import { Component, Output, EventEmitter, OnInit, Input, ChangeDetectorRef } from '@angular/core';
 import { AuthService } from '../auth/auth.service';
 import { DataService } from '../services/data.service';
 import { PaymentService } from '../services/payment.service';
@@ -171,7 +171,8 @@ export class CheckoutModalComponent implements OnInit {
     private paymentService: PaymentService,
     private freeShippingService: FreeShippingService,
     private promotionService: PromotionService,
-    private http: HttpClient
+    private http: HttpClient,
+    private cdr: ChangeDetectorRef
   ) { }
 
   calculateDiscountedPrice(price: number, bookId?: string, quantity: number = 1): { discountedPrice: number, discountedQty: number } {
@@ -269,19 +270,34 @@ export class CheckoutModalComponent implements OnInit {
     });
     this.loadUserProfile();
     this.loadFreeShippingRules();
+    this.loadCartItems();
     this.loadBourseOffer();
   }
 
   loadBourseOffer() {
     this.http.get<{active: boolean, offer?: any}>(`${environment.apiBaseUrl}/bourse/active`).subscribe({
       next: (res) => {
-        if (res.active && res.offer) {
+        if (res && res.active && res.offer) {
           this.activeBourseOffer = res.offer;
+          
+          if (this.cartItems && this.cartItems.some(item => item.isBourse)) {
+            this.cartItems = this.cartItems.map(item => {
+              if (item.isBourse && String(item.bourseOfferId) === String(res.offer._id)) {
+                const bourseBookInfo = res.offer.books.find((b: any) => b.bookId === item.products_id.split(':')[0]);
+                if (bourseBookInfo) {
+                  item.product_price = bourseBookInfo.boursePrice;
+                }
+              }
+              return item;
+            });
+            this.calculateShippingCost();
+            this.calculateTotalPrice();
+            this.cdr.markForCheck();
+          }
         }
-        this.loadCartItems(); // Load cart AFTER bourse data is ready
       },
-      error: () => {
-        this.loadCartItems(); // Still load cart even if bourse fails
+      error: (err) => {
+        console.warn('Failed to load bourse offer in background', err);
       }
     });
   }
@@ -289,31 +305,58 @@ export class CheckoutModalComponent implements OnInit {
   loadUserProfile() {
     this.authService.user$.pipe(take(1)).subscribe(currentUser => {
       if (currentUser && currentUser.id) {
+        this.userProfile = currentUser;
+        this.editedUserProfile = { ...currentUser };
+        this.updateCities();
+        this.validateLocation();
+        this.calculateShippingCost();
+        this.calculateTotalPrice();
+        
+        if (this.editedUserProfile && this.editedUserProfile.phone) {
+          const egyptPhoneRegex = /^(010|011|012|015)[0-9]{8}$/;
+          this.phoneTouched = egyptPhoneRegex.test(this.editedUserProfile.phone);
+          this.phoneValid = this.phoneTouched;
+        }
+        if (this.userProfile?.postOffice) {
+          this.postOfficeGovernorate = this.userProfile.postOffice.governorate || '';
+          this.postOfficeCity = this.userProfile.postOffice.city || '';
+          this.postOfficeName = this.userProfile.postOffice.name || '';
+          this.postOfficeAddress = this.userProfile.postOffice.address || '';
+          this.onPostOfficeGovernorateChange();
+        }
+        this.cdr.markForCheck();
+
         this.authService.getUserProfile(currentUser.id).subscribe({
           next: (profile) => {
-            this.userProfile = profile;
-            this.editedUserProfile = { ...profile }; // clone for editing
-            this.updateCities();
-            this.validateLocation(); // initialize locationValid based on loaded profile
-            this.calculateShippingCost();
-            this.calculateTotalPrice();
-            if (this.editedUserProfile && this.editedUserProfile.phone) {
-              const egyptPhoneRegex = /^(010|011|012|015)[0-9]{8}$/;
-              this.phoneTouched = egyptPhoneRegex.test(this.editedUserProfile.phone);
-              this.phoneValid = this.phoneTouched;
-            }
-            if (this.userProfile?.postOffice) {
-              this.postOfficeGovernorate = this.userProfile.postOffice.governorate || '';
-              this.postOfficeCity = this.userProfile.postOffice.city || '';
-              this.postOfficeName = this.userProfile.postOffice.name || '';
-              this.postOfficeAddress = this.userProfile.postOffice.address || '';
-              this.onPostOfficeGovernorateChange();
+            if (profile) {
+              this.userProfile = profile;
+              this.editedUserProfile = { ...profile };
+              this.updateCities();
+              this.validateLocation();
+              this.calculateShippingCost();
+              this.calculateTotalPrice();
+              if (this.editedUserProfile && this.editedUserProfile.phone) {
+                const egyptPhoneRegex = /^(010|011|012|015)[0-9]{8}$/;
+                this.phoneTouched = egyptPhoneRegex.test(this.editedUserProfile.phone);
+                this.phoneValid = this.phoneTouched;
+              }
+              if (this.userProfile?.postOffice) {
+                this.postOfficeGovernorate = this.userProfile.postOffice.governorate || '';
+                this.postOfficeCity = this.userProfile.postOffice.city || '';
+                this.postOfficeName = this.userProfile.postOffice.name || '';
+                this.postOfficeAddress = this.userProfile.postOffice.address || '';
+                this.onPostOfficeGovernorateChange();
+              }
+              this.cdr.markForCheck();
             }
           },
           error: (err) => {
-            console.error('خطأ في جلب بيانات المستخدم:', err);
+            console.warn('Error fetching user profile in background:', err);
+            this.cdr.markForCheck();
           }
         });
+      } else {
+        this.cdr.markForCheck();
       }
     });
   }
@@ -329,38 +372,51 @@ export class CheckoutModalComponent implements OnInit {
       }));
       this.totalPrice = this.customPackage.totalPrice;
       this.isLoading = false;
+      this.cdr.markForCheck();
     } else if (this.bookId) {
-      this.dataService.getData().pipe(
-        map((books: any[]) => books.filter(book => String(book.products_id) === String(this.bookId)))
-      ).subscribe({
-        next: (filteredBooks) => {
-          this.cartItems = filteredBooks.map(item => ({
-            ...item,
-            quantity: item.quantity ?? 1
-          }));
+      this.dataService.getBookById(this.bookId).subscribe({
+        next: (book) => {
+          if (book) {
+            this.cartItems = [{
+              ...book,
+              quantity: 1
+            }];
+          } else {
+            this.cartItems = [];
+          }
           this.calculateShippingCost();
           this.calculateTotalPrice();
           this.isLoading = false;
+          this.cdr.markForCheck();
         },
         error: (err) => {
           console.error('Error loading book by id:', err);
           this.cartItems = [];
           this.isLoading = false;
+          this.cdr.markForCheck();
         }
       });
     } else {
       this.authService.cartBookIds.subscribe(bookIds => {
         console.log('Received book IDs:', bookIds);
         if (bookIds.length > 0) {
-          this.dataService.getData().pipe(
-            map((books: any[]) => {
-              return bookIds.map(idInCart => {
+          const uniqueRealIds = Array.from(new Set(bookIds.map(id => id.split(':')[0])));
+          const requests = uniqueRealIds.map(id => this.dataService.getBookById(id));
+          
+          forkJoin(requests).subscribe({
+            next: (booksList) => {
+              const booksMap = new Map<string, any>();
+              booksList.forEach(b => {
+                if (b) booksMap.set(String(b.products_id), b);
+              });
+
+              const filteredBooks = bookIds.map(idInCart => {
                 const isFree = idInCart.endsWith(':free');
                 const isBourse = idInCart.includes(':bourse:');
                 const realId = idInCart.split(':')[0];
                 const bourseOfferId = isBourse ? idInCart.split(':bourse:')[1] : null;
 
-                const bookMatch = books.find(b => String(b.products_id) === String(realId));
+                const bookMatch = booksMap.get(realId);
                 if (bookMatch) {
                   let finalPrice = bookMatch.product_price;
                   
@@ -385,9 +441,7 @@ export class CheckoutModalComponent implements OnInit {
                 }
                 return null;
               }).filter(b => b !== null);
-            })
-          ).subscribe({
-            next: (filteredBooks) => {
+
               this.cartItems = filteredBooks.sort((a, b) => {
                 const aQty = a.product_quantity || 0;
                 const bQty = b.product_quantity || 0;
@@ -399,15 +453,18 @@ export class CheckoutModalComponent implements OnInit {
               this.cartItemsLoaded = true;
               this.calculateShippingCost();
               this.calculateTotalPrice();
+              this.cdr.markForCheck();
             },
             error: (err) => {
               console.error('Error loading cart items:', err);
               this.isLoading = false;
+              this.cdr.markForCheck();
             }
           });
         } else {
           this.cartItems = [];
           this.isLoading = false;
+          this.cdr.markForCheck();
         }
       });
     }

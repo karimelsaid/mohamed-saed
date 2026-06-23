@@ -104,7 +104,7 @@
         <!-- Books Grid (Luxury Style) -->
         <div *ngIf="!isLoading && books.length > 0"
             class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-8">
-            <div *ngFor="let book of paginatedBooks"
+            <div *ngFor="let book of paginatedBooks; trackBy: trackByBook"
                 class="group relative bg-white dark:bg-gray-800/50 rounded-[2.5rem] overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-gray-100 dark:border-gray-700/50 flex flex-col h-full">
                 
                 <!-- Hover Glow -->

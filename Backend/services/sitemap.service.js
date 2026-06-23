@@ -2,13 +2,20 @@ const fs = require('fs');
 const path = require('path');
 const { EventEmitter } = require('events');
 
+/**
+ * Generates a URL slug that EXACTLY matches Angular's SlugService.getBookSlug().
+ * Keeps: Arabic letters, Latin letters/numbers (\w), and hyphens.
+ * Removes: all other characters (punctuation, special chars, etc.)
+ */
 function slugify(text) {
-  return text.toString().toLowerCase()
-    .replace(/\s+/g, '-')           // Replace spaces with -
-    .replace(/[^\u0600-\u06FF\w\-]+/g, '')       // Remove all non-word chars except Arabic letters
-    .replace(/\-\-+/g, '-')         // Replace multiple - with single -
-    .replace(/^-+/, '')             // Trim - from start of text
-    .replace(/-+$/, '');            // Trim - from end of text
+  if (!text) return '';
+  return text.toString()
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')                                              // spaces → hyphens
+    .replace(/[^\w\u0621-\u064A\u0660-\u0669\u06F0-\u06F9\-]+/g, '') // keep Arabic + Latin + numbers + hyphen
+    .replace(/--+/g, '-')                                              // collapse multiple hyphens
+    .replace(/^-+|-+$/g, '');                                         // trim leading/trailing hyphens
 }
 
 // Mapping of Arabic category names to Angular route paths
@@ -127,19 +134,36 @@ class SitemapService extends EventEmitter {
         const stableDate = this.getStableWeeklyDate();
         const todayDate = new Date().toISOString().split('T')[0];
 
-        // --- Static Pages ---
-        const staticPages = [
-          { path: '/', changefreq: 'daily', priority: '1.0' },
-          { path: '/Home', changefreq: 'daily', priority: '0.9' },
-          { path: '/books', changefreq: 'daily', priority: '0.8' },
-          { path: '/basket', changefreq: 'weekly', priority: '0.6' },
-          { path: '/favorites', changefreq: 'weekly', priority: '0.6' },
-          { path: '/عن-الموقع', changefreq: 'monthly', priority: '0.4' },
-          { path: '/سياسة-الخصوصية', changefreq: 'monthly', priority: '0.3' },
-          { path: '/الشروط-والاحكام', changefreq: 'monthly', priority: '0.3' },
+        // Exclude non-book, non-indexable categories
+        const excludedCategories = [
+          'أثاث وديكور المنزل', 'إلكترونيات', 'هدية وألعاب',
+          'التجميل والعناية الشخصية', 'ملابس', 'أدوات مكتبية'
         ];
 
-        const staticUrls = staticPages.map(page => `
+        // Deduplicate and filter books
+        const seen = new Set();
+        const filteredBooks = books.filter(b => {
+          if (!b.products_id) return false;
+          const id = String(b.products_id);
+          if (seen.has(id)) return false;
+          seen.add(id);
+          // Filter out excluded categories
+          if (excludedCategories.includes((b.product_category || '').trim())) return false;
+          return true;
+        });
+
+        // --- Static Pages (only indexable pages) ---
+        const staticPages = [
+          { path: '/Home', changefreq: 'daily',   priority: '1.0' },
+          { path: '/books', changefreq: 'daily',   priority: '0.9' },
+          { path: '/عن-الموقع', changefreq: 'monthly', priority: '0.5' },
+          { path: '/سياسة-الخصوصية', changefreq: 'monthly', priority: '0.3' },
+          { path: '/الشروط-والاحكام', changefreq: 'monthly', priority: '0.3' },
+          { path: '/promotions', changefreq: 'daily', priority: '0.8' },
+          { path: '/bourse', changefreq: 'weekly', priority: '0.6' },
+        ];
+
+        const staticUrlsXml = staticPages.map(page => `
   <url>
     <loc>${baseUrl}${page.path}</loc>
     <lastmod>${todayDate}</lastmod>
@@ -147,27 +171,29 @@ class SitemapService extends EventEmitter {
     <priority>${page.priority}</priority>
   </url>`).join('');
 
-        // --- Dynamic Category Pages ---
-        const uniqueCategories = [...new Set(books.map(b => b.product_category).filter(Boolean))];
-        const categoryUrls = uniqueCategories.map(cat => `
+        // --- Category Pages (only book categories) ---
+        const bookCategories = [...new Set(filteredBooks.map(b => b.product_category).filter(Boolean))];
+        const categoryUrlsXml = bookCategories.map(cat => `
   <url>
     <loc>${baseUrl}/category/${encodeURIComponent(cat)}</loc>
     <lastmod>${todayDate}</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
+    <priority>0.8</priority>
   </url>`).join('');
 
         // --- Product Pages ---
-        const productUrls = books.map(book => {
+        const productUrlsXml = filteredBooks.map(book => {
           const slug = slugify(book.product_name || '');
           const productId = book.product_id || book.products_id;
           const categoryRoute = getCategoryRoute(book.product_category);
-          const loc = `${baseUrl}/${categoryRoute}/${productId}/${slug}`;
-          // Use promotion end date if available, otherwise stable weekly date
+          // Only use 'book' or 'office-supplies' routes — skip old redirected routes
+          const safeRoute = ['book', 'office-supplies'].includes(categoryRoute) ? categoryRoute : 'book';
+          const loc = slug
+            ? `${baseUrl}/${safeRoute}/${productId}/${slug}`
+            : `${baseUrl}/${safeRoute}/${productId}`;
           const lastmod = book.promotionEndDate
             ? new Date(book.promotionEndDate).toISOString().split('T')[0]
             : stableDate;
-          // Higher priority for in-stock and promoted items
           const hasDiscount = (book.product_discount_percent || 0) > 0;
           const inStock = (book.product_quantity || 0) > 0;
           const priority = hasDiscount ? '0.9' : (inStock ? '0.8' : '0.5');
@@ -181,17 +207,37 @@ class SitemapService extends EventEmitter {
   </url>`;
         }).join('');
 
-        const sitemapContent = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${staticUrls}${categoryUrls}${productUrls}
+        // --- Build Sitemap Index (split into 3 sub-sitemaps) ---
+        const sitemapStaticContent = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${staticUrlsXml}${categoryUrlsXml}
 </urlset>`;
 
-        // Ensure directory exists
+        const sitemapProductsContent = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${productUrlsXml}
+</urlset>`;
+
+        const sitemapIndexContent = `<?xml version="1.0" encoding="UTF-8"?>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <sitemap>
+    <loc>${baseUrl}/sitemap-static.xml</loc>
+    <lastmod>${todayDate}</lastmod>
+  </sitemap>
+  <sitemap>
+    <loc>${baseUrl}/sitemap-products.xml</loc>
+    <lastmod>${stableDate}</lastmod>
+  </sitemap>
+</sitemapindex>`;
+
+        // Ensure output directory exists
         await fs.promises.mkdir(path.dirname(this.sitemapPath), { recursive: true });
 
-        // Write sitemap.xml
-        await fs.promises.writeFile(this.sitemapPath, sitemapContent, 'utf8');
-        console.log(`✅ Sitemap generated: ${books.length} products + ${staticPages.length} static pages`);
-        return; // Success, exit loop
+        // Write all sitemap files
+        await fs.promises.writeFile(this.sitemapPath, sitemapIndexContent, 'utf8');
+        await fs.promises.writeFile(this.sitemapPath.replace('sitemap.xml', 'sitemap-static.xml'), sitemapStaticContent, 'utf8');
+        await fs.promises.writeFile(this.sitemapPath.replace('sitemap.xml', 'sitemap-products.xml'), sitemapProductsContent, 'utf8');
+
+        console.log(`✅ Sitemap index generated: ${filteredBooks.length} products, ${staticPages.length} static, ${bookCategories.length} categories`);
+        return; // Success
 
       } catch (error) {
         console.warn(`⚠️ Attempt ${attempt}/${maxRetries} failed to generate sitemap: ${error.message}`);

@@ -12,10 +12,7 @@ import { fab, faAmazon } from '@fortawesome/free-brands-svg-icons';
 import { PrintComponent } from './print/print.component'
 import { provideHttpClient, withInterceptorsFromDi, withFetch } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
-import { SearchResultsComponent } from './search-results/search-results.component';
-import { HomePageComponent } from './home-page/home-page.component';
 import { SharedModule } from './shared/shared.module';
-import { FavoritesComponent } from './favorites/favorites.component';
 import { LocationStrategy, PathLocationStrategy } from '@angular/common';
 import { ChatWindowComponent } from './components/chat-window/chat-window.component';
 import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
@@ -31,29 +28,26 @@ import { UniversalInterceptor } from './interceptors/universal.interceptor';
 // Removed static imports for lazy loading
 
 import { AdminModule } from './admin/admin.module';
+import { SearchResultsComponent } from './search-results/search-results.component';
 import { MerchantDashboardComponent } from './merchant/dashboard/dashboard.component';
 import { TutorialComponent } from './shared/tutorial/tutorial.component';
-import { BooksComponent } from './book-list/books/books.component';
-import { HowToEarnComponent } from './pages/how-to-earn/how-to-earn.component';
 import { ServiceWorkerModule } from '@angular/service-worker';
-import { LandingComponent } from './core/components/landing/landing.component';
 import { VoiceCallComponent } from './features/community/voice-call/voice-call.component';
 import { NetworkStatusComponent } from './shared/components/network-status/network-status.component';
 import { PromotionsFabComponent } from './shared/components/promotions-fab/promotions-fab.component';
 import { LiveUpdateModalComponent } from './shared/components/live-update-modal/live-update-modal.component';
 
+// ✅ SSR-compatible standalone components
+import { HomePageComponent } from './home-page/home-page.component';
+import { BookDetailsComponent } from './book-details/book-details.component';
+import { CheckoutModalComponent } from './checkout-modal/checkout-modal.component';
+import { PaymentModalComponent } from './payment-modal/payment-modal.component';
+
 
 @NgModule({
   declarations: [
     AppComponent,
-    SearchResultsComponent,
-    HomePageComponent,
-    FavoritesComponent,
     ChatWindowComponent,
-    BooksComponent,
-
-    HowToEarnComponent,
-    LandingComponent,
   ],
   imports: [
     BrowserModule,
@@ -66,24 +60,27 @@ import { LiveUpdateModalComponent } from './shared/components/live-update-modal/
     NavbarModule,
     NavbarIconsModule,
     SearchBarModule,
+    SearchResultsComponent,
     AdminModule,
-    // Removed from initial bundle
     MerchantDashboardComponent,
     TutorialComponent,
     AccountModalComponent,
     VoiceCallComponent,
     ServiceWorkerModule.register('ngsw-worker.js', {
-      enabled: !isDevMode(), // Disable in Dev Mode to avoid stale design caching
-      // Register the ServiceWorker as soon as the application is stable
-      // or after 30 seconds (whichever comes first).
-      registrationStrategy: 'registerImmediately'
+      enabled: !isDevMode(),
+      registrationStrategy: 'registerWhenStable:30000'
     }),
     NetworkStatusComponent,
     PromotionsFabComponent,
-    LiveUpdateModalComponent
+    LiveUpdateModalComponent,
+    // ✅ كلهم standalone — بيتحطوا في imports[]
+    HomePageComponent,
+    BookDetailsComponent,
+    CheckoutModalComponent,
+    PaymentModalComponent,
   ],
   providers: [
-    provideHttpClient(withInterceptorsFromDi(), withFetch()), // استخدام provideHttpClient بدلاً من HttpClientModule مع تفعيل fetch
+    provideHttpClient(withInterceptorsFromDi(), withFetch()),
     { provide: LocationStrategy, useClass: PathLocationStrategy },
     { provide: HTTP_INTERCEPTORS, useClass: UniversalInterceptor, multi: true },
     { provide: HTTP_INTERCEPTORS, useClass: MerchantAuthInterceptor, multi: true },

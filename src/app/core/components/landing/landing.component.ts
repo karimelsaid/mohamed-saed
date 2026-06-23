@@ -17,7 +17,7 @@ import { Router } from '@angular/router';
       align-items: center;
     }
   `],
-  standalone: false
+  standalone: true
 })
 export class LandingComponent implements OnInit {
 

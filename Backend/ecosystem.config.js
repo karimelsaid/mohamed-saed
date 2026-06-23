@@ -4,9 +4,14 @@ module.exports = {
       name: 'kenouz-backend',
       script: 'app.js',
       cwd: __dirname,
-      instances: 'max', // استخدم جميع الأنوية
-      exec_mode: 'cluster', // لتوزيع الحمل
-      watch: false, // الأفضل غلقه في الإنتاج
+      // IMPORTANT: Use 'fork' not 'cluster' for Angular SSR.
+      // Cluster mode causes issues with dynamic ESM imports (server.mjs)
+      // and causes SSR requests to hang indefinitely.
+      instances: 1,
+      exec_mode: 'fork',
+      watch: false,
+      max_memory_restart: '800M',
+      node_args: '--max-old-space-size=512',
       env_development: {
         NODE_ENV: 'development',
         PORT: 3000,

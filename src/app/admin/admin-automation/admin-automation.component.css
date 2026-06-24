@@ -601,3 +601,391 @@ input:checked + .slider:before {
 :host-context(.dark) .stats-header span {
   color: #cbd5e1;
 }
+
+/* Workflow Management Styles */
+.workflow-card .card-header h2 i {
+  color: #f59e0b;
+}
+
+.workflow-import-section {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.workflow-import-section h5 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  color: #475569;
+}
+
+.btn-group {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.workflow-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.workflow-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  transition: all 0.2s;
+}
+
+.workflow-item:hover {
+  border-color: #cbd5e1;
+  background-color: #f1f5f9;
+}
+
+.workflow-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.workflow-info h6 {
+  font-weight: 600;
+  margin: 0;
+  color: #1e293b;
+}
+
+.workflow-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Modal Styles */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+
+.modal.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 1rem;
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+}
+
+.modal-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #64748b;
+  transition: color 0.2s;
+}
+
+.close-btn:hover {
+  color: #1e293b;
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.workflow-details {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background-color: #f8fafc;
+  border-radius: 0.5rem;
+}
+
+.workflow-details p {
+  margin: 0.5rem 0;
+  font-size: 0.875rem;
+}
+
+.workflow-details strong {
+  color: #475569;
+}
+
+.modal-body h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: #1e293b;
+}
+
+.executions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.execution-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.375rem;
+}
+
+.execution-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.execution-status {
+  font-size: 0.875rem;
+  color: #64748b;
+}
+
+.loading-state {
+  text-align: center;
+  padding: 2rem;
+  color: #64748b;
+}
+
+/* Dark Mode for Workflow Card */
+:host-context(.dark) .workflow-card .card-header h2 i {
+  color: #fbbf24;
+}
+
+:host-context(.dark) .workflow-import-section {
+  border-bottom-color: #334155;
+}
+
+:host-context(.dark) .workflow-import-section h5 {
+  color: #cbd5e1;
+}
+
+:host-context(.dark) .workflow-item {
+  background-color: #1e293b;
+  border-color: #334155;
+}
+
+:host-context(.dark) .workflow-item:hover {
+  background-color: #0f172a;
+  border-color: #475569;
+}
+
+:host-context(.dark) .workflow-info h6 {
+  color: #f1f5f9;
+}
+
+:host-context(.dark) .modal-content {
+  background-color: #1e293b;
+  border: 1px solid #334155;
+}
+
+:host-context(.dark) .modal-header {
+  border-bottom-color: #334155;
+}
+
+:host-context(.dark) .modal-header h3 {
+  color: #f1f5f9;
+}
+
+:host-context(.dark) .close-btn {
+  color: #94a3b8;
+}
+
+:host-context(.dark) .close-btn:hover {
+  color: #f1f5f9;
+}
+
+:host-context(.dark) .workflow-details {
+  background-color: #0f172a;
+  border: 1px solid #334155;
+}
+
+:host-context(.dark) .workflow-details strong {
+  color: #cbd5e1;
+}
+
+:host-context(.dark) .modal-body h4 {
+  color: #f1f5f9;
+}
+
+:host-context(.dark) .execution-item {
+  background-color: #0f172a;
+  border-color: #334155;
+}
+
+:host-context(.dark) .execution-status {
+  color: #94a3b8;
+}
+
+:host-context(.dark) .loading-state {
+  color: #94a3b8;
+}
+
+/* Advanced Stats Styles */
+.stat-change.positive {
+  color: #10b981;
+}
+
+.stat-change.negative {
+  color: #ef4444;
+}
+
+.conversion { background-color: #dbeafe; color: #1d4ed8; }
+.active-workflows { background-color: #f3e8ff; color: #7c3aed; }
+
+:host-context(.dark) .conversion { background-color: #1e3a5f; color: #60a5fa; }
+:host-context(.dark) .active-workflows { background-color: #2d1b4e; color: #a78bfa; }
+
+/* Alerts Section */
+.alerts-section {
+  margin-bottom: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.alert-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid;
+  transition: all 0.2s;
+}
+
+.alert-item.warning {
+  background-color: #fef3c7;
+  border-color: #f59e0b;
+  color: #92400e;
+}
+
+.alert-item.success {
+  background-color: #dcfce7;
+  border-color: #10b981;
+  color: #065f46;
+}
+
+.alert-item.error {
+  background-color: #fee2e2;
+  border-color: #ef4444;
+  color: #991b1b;
+}
+
+.alert-item.info {
+  background-color: #dbeafe;
+  border-color: #3b82f6;
+  color: #1e40af;
+}
+
+.alert-item i {
+  font-size: 1.25rem;
+  margin-top: 0.125rem;
+}
+
+.alert-content {
+  flex: 1;
+}
+
+.alert-content strong {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: 0.875rem;
+}
+
+.alert-content p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: inherit;
+  opacity: 0.9;
+}
+
+.alert-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+  padding: 0.25rem;
+}
+
+.alert-close:hover {
+  opacity: 1;
+}
+
+/* Dark Mode for Alerts */
+:host-context(.dark) .alert-item.warning {
+  background-color: #451a03;
+  border-color: #f59e0b;
+  color: #fcd34d;
+}
+
+:host-context(.dark) .alert-item.success {
+  background-color: #064e3b;
+  border-color: #10b981;
+  color: #34d399;
+}
+
+:host-context(.dark) .alert-item.error {
+  background-color: #7f1d1d;
+  border-color: #ef4444;
+  color: #f87171;
+}
+
+:host-context(.dark) .alert-item.info {
+  background-color: #1e3a5f;
+  border-color: #3b82f6;
+  color: #60a5fa;
+}
+
+/* Responsive Stats Grid */
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+}

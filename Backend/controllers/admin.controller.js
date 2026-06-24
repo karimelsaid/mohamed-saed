@@ -290,7 +290,9 @@ async function addProduct(req, res) {
     });
 
     const { categoryMap, reverseCategoryMap } = require('../services/excel.service');
-    const fullCategory = categoryMap[product_category] || product_category;
+    // Only use category if it exists in categoryMap, otherwise default to 'غير مصنف'
+    // This prevents product names from being used as category names
+    const fullCategory = categoryMap[product_category] || 'غير مصنف';
     const shortCategoryKey = reverseCategoryMap[fullCategory] || product_category;
 
     if (!product_name || !product_quantity || !product_category || weight === undefined || weight === null || weight === '') {
@@ -1153,6 +1155,101 @@ async function updateProduct(req, res) {
   } catch (error) {
     console.error('Error in updateProduct:', error);
     res.status(500).json({ success: false, message: 'Server error' });
+  }
+}
+
+// New API to bulk update selected products by IDs with common updates
+async function bulkUpdateProductsByIds(req, res) {
+  try {
+    const { productIds, updates } = req.body;
+    console.log(`📦 [AdminController] bulkUpdateProductsByIds called for ${productIds?.length || 0} products`);
+
+    if (!Array.isArray(productIds) || productIds.length === 0) {
+      return res.status(400).json({ success: false, message: 'No product IDs provided' });
+    }
+
+    if (!updates || Object.keys(updates).length === 0) {
+      return res.status(400).json({ success: false, message: 'No updates provided' });
+    }
+
+    // Load local JSON data directly (skip Drive download)
+    const rawDataPath = path.join(__dirname, '..', 'output_raw.json');
+    let json;
+    if (fs.existsSync(rawDataPath)) {
+      json = JSON.parse(fs.readFileSync(rawDataPath, 'utf-8'));
+    } else {
+      const outputPath = path.join(__dirname, '..', 'output.json');
+      if (fs.existsSync(outputPath)) {
+        json = JSON.parse(fs.readFileSync(outputPath, 'utf-8'));
+      } else {
+        return res.status(500).json({ success: false, message: 'No local product data available' });
+      }
+    }
+
+    const now = new Date().toISOString();
+    let updatedCount = 0;
+
+    // Update each product by MongoDB _id
+    for (const productId of productIds) {
+      try {
+        // Find and update product in MongoDB
+        const mongoProduct = await Product.findById(productId);
+        if (!mongoProduct) {
+          console.warn(`Product with _id ${productId} not found in MongoDB`);
+          continue;
+        }
+
+        // Update MongoDB
+        await Product.findByIdAndUpdate(productId, { $set: updates });
+
+        // Find corresponding product in JSON by barcode (products_id)
+        const barcode = mongoProduct.products_id || mongoProduct.product_image;
+        const productIndex = json.findIndex(p => {
+          if (!p.products_id) return false;
+          const pId = String(p.products_id).trim();
+          const bId = String(barcode).trim();
+          return pId === bId || Number(pId) === Number(bId) || pId === String(Number(bId)) || String(Number(pId)) === bId;
+        });
+
+        if (productIndex !== -1) {
+          // Apply updates to JSON
+          for (const [key, value] of Object.entries(updates)) {
+            json[productIndex][key] = value;
+          }
+        } else {
+          console.warn(`Product with barcode ${barcode} not found in JSON`);
+        }
+
+        updatedCount++;
+      } catch (mongoError) {
+        console.error(`Failed to update product ${productId}:`, mongoError.message);
+      }
+    }
+
+    if (updatedCount === 0) {
+      return res.status(404).json({ success: false, message: 'No products found with the provided IDs' });
+    }
+
+    // Save raw data locally immediately
+    fs.writeFileSync(rawDataPath, JSON.stringify(json, null, 2));
+
+    // Process and update output.json locally immediately
+    try {
+      const promoDoc = await PromotionDate.findOne().sort({ createdAt: -1 }).exec();
+      const pStart = promoDoc ? promoDoc.startDate : new Date();
+      const pEnd = promoDoc ? promoDoc.endDate : new Date();
+      const { processAndSaveData } = require('../services/excel.service');
+      await processAndSaveData(json, pStart, pEnd);
+      console.log('✅ Local data (output_raw.json & output.json) updated successfully during bulk update');
+    } catch (procErr) {
+      console.warn('⚠️ Failed to process local data update:', procErr.message);
+    }
+
+    clearBooksCache();
+    res.json({ success: true, message: `تم تحديث ${updatedCount} منتج بنجاح` });
+  } catch (error) {
+    console.error('Error in bulkUpdateProductsByIds:', error);
+    res.status(500).json({ success: false, message: 'Server error during bulk update' });
   }
 }
 
@@ -4187,6 +4284,7 @@ module.exports = {
   syncJsonToExcel,
   batchUpdateProducts,
   batchUpdateProductsMain,
+  bulkUpdateProductsByIds,
   getPromotionDates,
   updatePromotionDates,
   getFreeShippingRules,

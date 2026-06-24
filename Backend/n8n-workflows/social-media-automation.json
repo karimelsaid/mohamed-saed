@@ -1,0 +1,170 @@
+{
+  "name": "Social Media Automation - KnoozBook",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "auto-post",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook - Auto Post Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [250, 300],
+      "webhookId": "auto-post-webhook"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.link }}",
+        "options": {}
+      },
+      "id": "http-request-product-details",
+      "name": "Fetch Product Details",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "resource": "page",
+        "operation": "post",
+        "pageId": "={{ $env.META_PAGE_ID }}",
+        "text": "=📚 كتاب جديد: {{ $json.name }}\n\n{{ $json.description }}\n\n💰 السعر: {{ $json.price }} ج.م\n\n🔗 اطلبه الآن: {{ $json.link }}\n\n#كتب #قراءة #ثقافة #knoozbook",
+        "imageUrl": "={{ $json.image }}",
+        "additionalFields": {}
+      },
+      "id": "facebook-post",
+      "name": "Post to Facebook",
+      "type": "n8n-nodes-base.facebook",
+      "typeVersion": 1,
+      "position": [650, 200],
+      "credentials": {
+        "facebookApi": {
+          "id": "facebook-credentials",
+          "name": "Facebook API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "container",
+        "operation": "create",
+        "caption": "=📚 كتاب جديد: {{ $json.name }}\n\n{{ $json.description }}\n\n💰 السعر: {{ $json.price }} ج.م\n\n🔗 اطلبه الآن: {{ $json.link }}\n\n#كتب #قراءة #ثقافة #knoozbook",
+        "imageUrl": "={{ $json.image }}",
+        "additionalFields": {}
+      },
+      "id": "instagram-post",
+      "name": "Post to Instagram",
+      "type": "n8n-nodes-base.instagram",
+      "typeVersion": 1,
+      "position": [650, 400],
+      "credentials": {
+        "instagramApi": {
+          "id": "instagram-credentials",
+          "name": "Instagram API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BACKEND_URL }}/api/automation/log",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"type\": \"post\",\n  \"platform\": \"facebook\",\n  \"status\": \"success\",\n  \"title\": \"Auto-Post: {{ $json.name }}\",\n  \"details\": {\n    \"caption\": \"{{ $json.name }}\",\n    \"imageUrl\": \"{{ $json.image }}\",\n    \"link\": \"{{ $json.link }}\"\n  },\n  \"metadata\": {\n    \"productId\": \"{{ $json.id }}\"\n  }\n}",
+        "options": {}
+      },
+      "id": "log-success",
+      "name": "Log Success to Backend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"message\": \"Product posted successfully to social media\",\n  \"data\": {\n    \"productId\": \"{{ $json.id }}\",\n    \"name\": \"{{ $json.name }}\",\n    \"timestamp\": \"{{ $now.toISO() }}\"\n  }\n}"
+      },
+      "id": "response",
+      "name": "Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1050, 300]
+    }
+  ],
+  "connections": {
+    "webhook-trigger": {
+      "main": [
+        [
+          {
+            "node": "http-request-product-details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "http-request-product-details": {
+      "main": [
+        [
+          {
+            "node": "facebook-post",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "instagram-post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "facebook-post": {
+      "main": [
+        [
+          {
+            "node": "log-success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "instagram-post": {
+      "main": [
+        [
+          {
+            "node": "log-success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "log-success": {
+      "main": [
+        [
+          {
+            "node": "response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2024-01-01T00:00:00.000Z",
+  "versionId": "1"
+}

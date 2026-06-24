@@ -80,6 +80,49 @@
     }
 }
 
+/* Prevent horizontal scroll on main content */
+main {
+    overflow-x: hidden !important;
+    width: 100% !important;
+}
+
+/* Ensure tables don't cause horizontal scroll */
+table {
+    min-width: 100% !important;
+    width: 100% !important;
+}
+
+/* Responsive container for product cards and tables */
+.overflow-x-auto {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+}
+
+/* Improve responsiveness for product cards */
+@media (max-width: 640px) {
+    .product-card {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    
+    .product-card img {
+        max-width: 100% !important;
+        height: auto !important;
+    }
+}
+
+/* Responsive filter controls */
+@media (max-width: 768px) {
+    .flex.flex-col.sm\\:flex-row {
+        flex-direction: column !important;
+        align-items: stretch !important;
+    }
+    
+    .flex.items-center.gap-4 {
+        flex-wrap: wrap !important;
+    }
+}
+
 /* Dark Mode Input & Card Refinements */
 .dark input, 
 .dark select, 

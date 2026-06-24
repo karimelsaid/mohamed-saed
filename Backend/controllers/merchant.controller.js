@@ -218,7 +218,9 @@ async function addProduct(req, res) {
     let { product_name, product_quantity, product_category, product_description, product_price, price_cost, copyType, condition, weight, length, width, height } = req.body;
 
     // Map merchant category to standard category
-    product_category = merchantCategoryMap[product_category] || product_category;
+    // Only use category if it exists in merchantCategoryMap, otherwise default to 'غير مصنف'
+    // This prevents product names from being used as category names
+    product_category = merchantCategoryMap[product_category] || 'غير مصنف';
 
     if (!product_name || !product_quantity || !product_category || !product_description || product_description.trim() === '' || weight === undefined || weight === null || weight === '') {
       return res.status(400).json({ success: false, message: 'Missing required fields or product description is empty (including weight)' });

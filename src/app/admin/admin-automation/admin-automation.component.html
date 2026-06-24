@@ -16,34 +16,76 @@
     <div class="stat-card">
       <div class="stat-icon social-posts"><i class="fas fa-paper-plane"></i></div>
       <div class="stat-content">
-        <h3>المنشورات</h3>
-        <p class="stat-value">24</p>
-        <span class="stat-change">+12% هذا الشهر</span>
+        <h3>المنشورات التلقائية</h3>
+        <p class="stat-value">{{ advancedStats.totalPosts || 0 }}</p>
+        <span class="stat-change" [ngClass]="advancedStats.postGrowth >= 0 ? 'positive' : 'negative'">
+          <i [ngClass]="advancedStats.postGrowth >= 0 ? 'fa-arrow-up' : 'fa-arrow-down'"></i>
+          {{ abs(advancedStats.postGrowth || 0) }}% هذا الشهر
+        </span>
       </div>
     </div>
     <div class="stat-card">
       <div class="stat-icon auto-replies"><i class="fas fa-comment-dots"></i></div>
       <div class="stat-content">
-        <h3>الردود التلقائية</h3>
-        <p class="stat-value">158</p>
-        <span class="stat-change">+45% هذا الشهر</span>
+        <h3>الردود الذكية</h3>
+        <p class="stat-value">{{ advancedStats.totalReplies || 0 }}</p>
+        <span class="stat-change" [ngClass]="advancedStats.replyGrowth >= 0 ? 'positive' : 'negative'">
+          <i [ngClass]="advancedStats.replyGrowth >= 0 ? 'fa-arrow-up' : 'fa-arrow-down'"></i>
+          {{ abs(advancedStats.replyGrowth || 0) }}% هذا الشهر
+        </span>
       </div>
     </div>
     <div class="stat-card">
       <div class="stat-icon engagement"><i class="fas fa-heart"></i></div>
       <div class="stat-content">
-        <h3>تفاعل العملاء</h3>
-        <p class="stat-value">1.2k</p>
-        <span class="stat-change">+8% هذا الشهر</span>
+        <h3>معدل التفاعل</h3>
+        <p class="stat-value">{{ advancedStats.engagementRate || 0 }}%</p>
+        <span class="stat-change" [ngClass]="advancedStats.engagementGrowth >= 0 ? 'positive' : 'negative'">
+          <i [ngClass]="advancedStats.engagementGrowth >= 0 ? 'fa-arrow-up' : 'fa-arrow-down'"></i>
+          {{ abs(advancedStats.engagementGrowth || 0) }}% هذا الشهر
+        </span>
       </div>
     </div>
     <div class="stat-card">
       <div class="stat-icon savings"><i class="fas fa-clock"></i></div>
       <div class="stat-content">
-        <h3>وقت تم توفيره</h3>
-        <p class="stat-value">12h</p>
+        <h3>الوقت الموفر</h3>
+        <p class="stat-value">{{ advancedStats.timeSaved || 0 }}س</p>
         <span class="stat-change">هذا الأسبوع</span>
       </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon conversion"><i class="fas fa-shopping-cart"></i></div>
+      <div class="stat-content">
+        <h3>معدل التحويل</h3>
+        <p class="stat-value">{{ advancedStats.conversionRate || 0 }}%</p>
+        <span class="stat-change" [ngClass]="advancedStats.conversionGrowth >= 0 ? 'positive' : 'negative'">
+          <i [ngClass]="advancedStats.conversionGrowth >= 0 ? 'fa-arrow-up' : 'fa-arrow-down'"></i>
+          {{ abs(advancedStats.conversionGrowth || 0) }}% هذا الشهر
+        </span>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon active-workflows"><i class="fas fa-project-diagram"></i></div>
+      <div class="stat-content">
+        <h3>Workflows نشطة</h3>
+        <p class="stat-value">{{ getActiveWorkflowsCount() }}/{{ workflows.length }}</p>
+        <span class="stat-change">من أصل {{ workflows.length }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Alerts Section -->
+  <div class="alerts-section" *ngIf="alerts.length > 0">
+    <div class="alert-item" *ngFor="let alert of alerts" [ngClass]="alert.type">
+      <i [ngClass]="alert.icon"></i>
+      <div class="alert-content">
+        <strong>{{ alert.title }}</strong>
+        <p>{{ alert.message }}</p>
+      </div>
+      <button class="alert-close" (click)="dismissAlert(alert.id)">
+        <i class="fas fa-times"></i>
+      </button>
     </div>
   </div>
 
@@ -85,13 +127,6 @@
             <div class="form-group">
               <label>أقصى عدد منشورات يومياً</label>
               <input type="number" class="form-control" [(ngModel)]="settings.dailyPostLimit" (change)="onSettingsChange()">
-            </div>
-            <div class="form-group">
-              <label>نموذج الذكاء الاصطناعي</label>
-              <select class="form-control" [(ngModel)]="settings.aiModel" (change)="onSettingsChange()">
-                <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-                <option value="gpt-4">GPT-4 (أكثر ذكاءً)</option>
-              </select>
             </div>
           </div>
         </div>
@@ -150,44 +185,57 @@
         </div>
       </section>
 
-      <!-- Claude AI Agent Card -->
-      <section class="card claude-card" [class.active]="settings.claudeConfig!.enabled">
+      <!-- n8n Workflow Management Card -->
+      <section class="card workflow-card">
         <div class="card-header">
-          <h2><i class="fas fa-brain"></i> Claude AI Developer Agent</h2>
-          <label class="switch">
-            <input type="checkbox" [(ngModel)]="settings.claudeConfig!.enabled" (change)="onSettingsChange()">
-            <span class="slider round"></span>
-          </label>
+          <h2><i class="fas fa-project-diagram"></i> إدارة Workflows (n8n)</h2>
+          <button class="btn btn-sm btn-outline-primary" (click)="loadWorkflows()" [disabled]="loadingWorkflows">
+            <i class="fas fa-sync" [class.fa-spin]="loadingWorkflows"></i> تحديث
+          </button>
         </div>
         <div class="card-body">
-          <p class="setting-info mb-4">أعطِ تعليمات برمجية لـ Claude وسيقوم بتنفيذها في مشروعك محلياً.</p>
-          
-          <div class="claude-input-group">
-            <textarea class="form-control claude-prompt" [(ngModel)]="claudePrompt" placeholder="مثال: أضف حقل 'اللون' لجدول المنتجات وحدث الواجهة..."></textarea>
-            <button class="btn btn-primary btn-block" (click)="executeClaude()" [disabled]="claudeExecuting || !settings.claudeConfig!.enabled">
-              <i class="fas" [ngClass]="claudeExecuting ? 'fa-spinner fa-spin' : 'fa-terminal'"></i>
-              تنفيذ المهمة البرمجية
-            </button>
+          <div class="workflow-import-section">
+            <h5>استيراد Workflows الجاهزة</h5>
+            <div class="btn-group">
+              <button class="btn btn-sm btn-outline-success" (click)="importPresetWorkflow('social-media-automation')">
+                <i class="fas fa-share-alt"></i> Social Media Automation
+              </button>
+              <button class="btn btn-sm btn-outline-success" (click)="importPresetWorkflow('ai-sales-agent')">
+                <i class="fas fa-robot"></i> AI Sales Agent
+              </button>
+              <button class="btn btn-sm btn-outline-success" (click)="importPresetWorkflow('event-tracking')">
+                <i class="fas fa-chart-line"></i> Event Tracking
+              </button>
+            </div>
           </div>
 
-          <div class="claude-output" *ngIf="claudeOutput">
-            <div class="output-header">مخرجات العميل الذكي:</div>
-            <pre>{{ claudeOutput }}</pre>
+          <div class="workflow-list" *ngIf="workflows.length > 0">
+            <div class="workflow-item" *ngFor="let workflow of workflows">
+              <div class="workflow-info">
+                <h6>{{ workflow.name }}</h6>
+                <span class="badge" [ngClass]="workflow.active ? 'badge-success' : 'badge-secondary'">
+                  {{ workflow.active ? 'نشط' : 'متوقف' }}
+                </span>
+              </div>
+              <div class="workflow-actions">
+                <button class="btn btn-sm btn-outline-primary" (click)="viewWorkflowDetails(workflow)">
+                  <i class="fas fa-eye"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-warning" (click)="toggleWorkflow(workflow)">
+                  <i class="fas" [ngClass]="workflow.active ? 'fa-pause' : 'fa-play'"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-success" (click)="executeWorkflow(workflow.id)">
+                  <i class="fas fa-play-circle"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger" (click)="deleteWorkflow(workflow.id)">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
-      </section>
-
-      <!-- Global Sync Card -->
-      <section class="card sync-card">
-        <div class="card-header">
-          <h2><i class="fas fa-cloud-upload-alt"></i> المزامنة العالمية (Global Sync)</h2>
-        </div>
-        <div class="card-body text-center">
-          <p class="setting-info mb-4">رفع كافة التعديلات البرمجية والأتمتة إلى السيرفر العالمي بضغطة واحدة.</p>
-          <button class="btn btn-dark btn-lg btn-block" (click)="triggerDeploy()" [disabled]="deploying">
-            <i class="fas" [ngClass]="deploying ? 'fa-spinner fa-spin' : 'fa-rocket'"></i>
-            مزامنة التعديلات الآن
-          </button>
+          <div class="empty-state" *ngIf="workflows.length === 0 && !loadingWorkflows">
+            <p>لا توجد workflows حالياً. قم باستيراد workflow جاهز أو إنشاء واحد جديد.</p>
+          </div>
         </div>
       </section>
     </div>
@@ -239,6 +287,44 @@
           </div>
         </div>
       </section>
+    </div>
+  </div>
+
+  <!-- Workflow Details Modal -->
+  <div class="modal" *ngIf="showWorkflowModal" [class.active]="showWorkflowModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>{{ selectedWorkflow?.name }}</h3>
+        <button class="close-btn" (click)="closeModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="workflow-details">
+          <p><strong>الحالة:</strong> <span class="badge" [ngClass]="selectedWorkflow?.active ? 'badge-success' : 'badge-secondary'">
+            {{ selectedWorkflow?.active ? 'نشط' : 'متوقف' }}
+          </span></p>
+          <p><strong>الـ ID:</strong> {{ selectedWorkflow?.id }}</p>
+          <p><strong>آخر تحديث:</strong> {{ selectedWorkflow?.updatedAt | date:'medium' }}</p>
+        </div>
+
+        <h4>سجل التنفيذات (Executions)</h4>
+        <div class="executions-list" *ngIf="workflowExecutions.length > 0">
+          <div class="execution-item" *ngFor="let execution of workflowExecutions">
+            <div class="execution-info">
+              <span class="badge" [ngClass]="execution.finished ? 'badge-success' : 'badge-warning'">
+                {{ execution.finished ? 'مكتمل' : 'جاري' }}
+              </span>
+              <small>{{ execution.startedAt | date:'short' }}</small>
+            </div>
+            <div class="execution-status">{{ execution.status }}</div>
+          </div>
+        </div>
+        <div class="empty-state" *ngIf="workflowExecutions.length === 0 && !loadingExecutions">
+          <p>لا توجد تنفيذات سابقة</p>
+        </div>
+        <div class="loading-state" *ngIf="loadingExecutions">
+          <i class="fas fa-spinner fa-spin"></i> جاري التحميل...
+        </div>
+      </div>
     </div>
   </div>
 </div>

@@ -11,7 +11,7 @@ import { SharedModule } from '../shared/shared.module';
 import { AuthService } from '../auth/auth.service';
 import { HttpClient } from '@angular/common/http';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { faStar, faShareAlt, faCoins } from '@fortawesome/free-solid-svg-icons';
+import { faStar, faShareAlt, faCoins, faChevronUp, faChevronDown } from '@fortawesome/free-solid-svg-icons';
 import { faStar as faStarRegular } from '@fortawesome/free-regular-svg-icons';
 import { environment } from '../../environments/environment';
 import { SlugService } from '../services/slug.service';
@@ -44,6 +44,8 @@ export class BookDetailsComponent implements OnInit, OnDestroy {
   faStarRegular = faStarRegular;
   faShareAlt = faShareAlt;
   faCoins = faCoins;
+  faChevronUp = faChevronUp;
+  faChevronDown = faChevronDown;
 
   showCopySuccess = false;
   book: Book | undefined;
@@ -52,6 +54,7 @@ export class BookDetailsComponent implements OnInit, OnDestroy {
   error: string | null = null;
   showCheckoutModal = false;
   showLoginPrompt = false; // متغير للتحكم في عرض النافذة العائمة
+  showAdditionalDetails: boolean = false; // متغير للتحكم في عرض التفاصيل الإضافية
 
   averageRating: number = 0;
   ratingCount: number = 0;
@@ -262,6 +265,10 @@ export class BookDetailsComponent implements OnInit, OnDestroy {
     return this.dataService.getBookImageUrl(book);
   }
   // دالة نسخ الرابط
+  toggleAdditionalDetails(): void {
+    this.showAdditionalDetails = !this.showAdditionalDetails;
+  }
+
   copyBookLink(): void {
     if (!this.book) return;
     const categoryRoute = this.getProductRoute(this.book);

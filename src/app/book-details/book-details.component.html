@@ -251,8 +251,15 @@
             </div>
           </div>
 
+          <!-- Toggle Button for Additional Details -->
+          <button (click)="toggleAdditionalDetails()"
+            class="w-full mb-4 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white px-6 py-3 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg font-semibold flex items-center justify-center gap-2">
+            <fa-icon [icon]="showAdditionalDetails ? ['fas', 'chevron-up'] : ['fas', 'chevron-down']"></fa-icon>
+            {{ showAdditionalDetails ? 'إخفاء التفاصيل الإضافية' : 'عرض التفاصيل الإضافية' }}
+          </button>
+
           <!-- Additional Details Based on Category -->
-          <div [ngSwitch]="book.product_category" class="mb-8">
+          <div [ngSwitch]="book.product_category" class="mb-8" *ngIf="showAdditionalDetails">
             <!-- 📚 كتب (موحد لجميع تصنيفات الكتب) -->
             <ng-container *ngSwitchCase="'كتب'">
               <ng-container *ngSwitchCase="'روايات وقصص'">

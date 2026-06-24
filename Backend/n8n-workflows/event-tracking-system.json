@@ -1,0 +1,363 @@
+{
+  "name": "Event Tracking System - KnoozBook",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "track-event",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook - Event Tracker",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [250, 300],
+      "webhookId": "event-tracking-webhook"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "event-type",
+              "leftValue": "={{ $json.eventType }}",
+              "rightValue": "impression",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "classify-event",
+      "name": "Classify Event Type",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BACKEND_URL }}/api/analytics/track",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"eventType\": \"{{ $json.eventType }}\",\n  \"productId\": \"{{ $json.productId }}\",\n  \"userId\": \"{{ $json.userId || 'anonymous' }}\",\n  \"sessionId\": \"{{ $json.sessionId }}\",\n  \"metadata\": {\n    \"source\": \"{{ $json.source || 'direct' }}\",\n    \"device\": \"{{ $json.device || 'desktop' }}\",\n    \"timestamp\": \"{{ $now.toISO() }}\"\n  }\n}",
+        "options": {}
+      },
+      "id": "track-impression",
+      "name": "Track Impression",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [650, 150]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BACKEND_URL }}/api/analytics/track",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"eventType\": \"click\",\n  \"productId\": \"{{ $json.productId }}\",\n  \"userId\": \"{{ $json.userId || 'anonymous' }}\",\n  \"sessionId\": \"{{ $json.sessionId }}\",\n  \"metadata\": {\n    \"clickType\": \"{{ $json.clickType || 'product_link' }}\",\n    \"source\": \"{{ $json.source || 'direct' }}\",\n    \"timestamp\": \"{{ $now.toISO() }}\"\n  }\n}",
+        "options": {}
+      },
+      "id": "track-click",
+      "name": "Track Click",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [650, 250]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BACKEND_URL }}/api/analytics/track",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"eventType\": \"comment\",\n  \"productId\": \"{{ $json.productId }}\",\n  \"userId\": \"{{ $json.userId || 'anonymous' }}\",\n  \"sessionId\": \"{{ $json.sessionId }}\",\n  \"metadata\": {\n    \"commentText\": \"{{ $json.commentText }}\",\n    \"platform\": \"{{ $json.platform || 'website' }}\",\n    \"timestamp\": \"{{ $now.toISO() }}\"\n  }\n}",
+        "options": {}
+      },
+      "id": "track-comment",
+      "name": "Track Comment",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [650, 350]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BACKEND_URL }}/api/analytics/track",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"eventType\": \"purchase\",\n  \"productId\": \"{{ $json.productId }}\",\n  \"userId\": \"{{ $json.userId }}\",\n  \"orderId\": \"{{ $json.orderId }}\",\n  \"sessionId\": \"{{ $json.sessionId }}\",\n  \"metadata\": {\n    \"amount\": \"{{ $json.amount }}\",\n    \"paymentMethod\": \"{{ $json.paymentMethod }}\",\n    \"timestamp\": \"{{ $now.toISO() }}\"\n  }\n}",
+        "options": {}
+      },
+      "id": "track-purchase",
+      "name": "Track Purchase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [650, 450]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BACKEND_URL }}/api/analytics/track",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"eventType\": \"{{ $json.eventType }}\",\n  \"productId\": \"{{ $json.productId }}\",\n  \"userId\": \"{{ $json.userId || 'anonymous' }}\",\n  \"sessionId\": \"{{ $json.sessionId }}\",\n  \"metadata\": {\n    \"timestamp\": \"{{ $now.toISO() }}\"\n  }\n}",
+        "options": {}
+      },
+      "id": "track-other",
+      "name": "Track Other Event",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [650, 550]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BACKEND_URL }}/api/analytics/aggregate",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"timeRange\": \"24h\",\n  \"metrics\": [\"impressions\", \"clicks\", \"comments\", \"purchases\"]\n}",
+        "options": {}
+      },
+      "id": "aggregate-metrics",
+      "name": "Aggregate Metrics",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "high-engagement",
+              "leftValue": "={{ $json.engagementRate }}",
+              "rightValue": "5",
+              "operator": {
+                "type": "number",
+                "operation": "larger"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-engagement",
+      "name": "Check High Engagement",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BACKEND_URL }}/api/automation/trigger-promotion",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"productId\": \"{{ $json.productId }}\",\n  \"reason\": \"high_engagement\",\n  \"metrics\": {{ $json }}\n}",
+        "options": {}
+      },
+      "id": "trigger-promotion",
+      "name": "Trigger Auto Promotion",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1250, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"message\": \"Event tracked successfully\",\n  \"data\": {\n    \"eventType\": \"{{ $json.eventType }}\",\n    \"timestamp\": \"{{ $now.toISO() }}\",\n    \"aggregated\": {{ $json }}\n  }\n}"
+      },
+      "id": "response",
+      "name": "Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1450, 300]
+    }
+  ],
+  "connections": {
+    "webhook-trigger": {
+      "main": [
+        [
+          {
+            "node": "classify-event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "classify-event": {
+      "main": [
+        [
+          {
+            "node": "track-impression",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "track-click",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "track-comment",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "track-purchase",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "track-other",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "track-impression": {
+      "main": [
+        [
+          {
+            "node": "aggregate-metrics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "track-click": {
+      "main": [
+        [
+          {
+            "node": "aggregate-metrics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "track-comment": {
+      "main": [
+        [
+          {
+            "node": "aggregate-metrics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "track-purchase": {
+      "main": [
+        [
+          {
+            "node": "aggregate-metrics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "track-other": {
+      "main": [
+        [
+          {
+            "node": "aggregate-metrics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "aggregate-metrics": {
+      "main": [
+        [
+          {
+            "node": "check-engagement",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check-engagement": {
+      "main": [
+        [
+          {
+            "node": "trigger-promotion",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "trigger-promotion": {
+      "main": [
+        [
+          {
+            "node": "response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2024-01-01T00:00:00.000Z",
+  "versionId": "1"
+}

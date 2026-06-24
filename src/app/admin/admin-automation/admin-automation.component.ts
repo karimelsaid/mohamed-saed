@@ -47,6 +47,25 @@ export class AdminAutomationComponent implements OnInit {
   loading = false;
   saving = false;
 
+  // Advanced Stats
+  advancedStats = {
+    totalPosts: 24,
+    postGrowth: 12,
+    totalReplies: 158,
+    replyGrowth: 45,
+    engagementRate: 8.5,
+    engagementGrowth: 8,
+    timeSaved: 12,
+    conversionRate: 3.2,
+    conversionGrowth: 15
+  };
+
+  // Alerts
+  alerts: any[] = [
+    { id: 1, type: 'warning', icon: 'fas fa-exclamation-triangle', title: 'تنبيه: معدل التفاعل منخفض', message: 'معدل التفاعل انخفض بنسبة 5% في الأسبوع الماضي' },
+    { id: 2, type: 'success', icon: 'fas fa-check-circle', title: 'نجاح: Workflow جديد', message: 'تم تفعيل AI Sales Agent بنجاح' }
+  ];
+
   // Claude Agent Properties
   claudePrompt = '';
   claudeOutput = '';
@@ -59,6 +78,14 @@ export class AdminAutomationComponent implements OnInit {
   // Deployment
   deploying = false;
 
+  // n8n Workflow Management
+  workflows: any[] = [];
+  selectedWorkflow: any = null;
+  loadingWorkflows = false;
+  showWorkflowModal = false;
+  workflowExecutions: any[] = [];
+  loadingExecutions = false;
+
   private settingsUpdateSubject = new Subject<void>();
 
   constructor(private automationService: AutomationService) { }
@@ -66,6 +93,7 @@ export class AdminAutomationComponent implements OnInit {
   ngOnInit(): void {
     this.loadData();
     this.loadN8nStats();
+    this.loadWorkflows();
 
     // Debounce settings updates to avoid too many API calls
     this.settingsUpdateSubject.pipe(
@@ -201,6 +229,101 @@ export class AdminAutomationComponent implements OnInit {
         alert('❌ حدث خطأ أثناء عملية الاستيراد: ' + (err.error?.message || err.message));
       }
     });
+  }
+
+  // n8n Workflow Management Methods
+  loadWorkflows(): void {
+    if (!this.settings.n8nConfig?.apiKey) return;
+    this.loadingWorkflows = true;
+    this.automationService.getWorkflows().subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.workflows = res.workflows;
+        }
+        this.loadingWorkflows = false;
+      },
+      error: () => this.loadingWorkflows = false
+    });
+  }
+
+  toggleWorkflow(workflow: any): void {
+    this.automationService.toggleWorkflow(workflow.id, !workflow.active).subscribe({
+      next: () => {
+        workflow.active = !workflow.active;
+      },
+      error: (err) => alert('فشل تغيير الحالة: ' + err.message)
+    });
+  }
+
+  deleteWorkflow(id: string): void {
+    if (!confirm('هل أنت متأكد من حذف هذا Workflow؟')) return;
+    this.automationService.deleteWorkflow(id).subscribe({
+      next: () => {
+        this.workflows = this.workflows.filter(w => w.id !== id);
+      },
+      error: (err) => alert('فشل الحذف: ' + err.message)
+    });
+  }
+
+  viewWorkflowDetails(workflow: any): void {
+    this.selectedWorkflow = workflow;
+    this.showWorkflowModal = true;
+    this.loadWorkflowExecutions(workflow.id);
+  }
+
+  loadWorkflowExecutions(id: string): void {
+    this.loadingExecutions = true;
+    this.automationService.getWorkflowExecutions(id).subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.workflowExecutions = res.executions;
+        }
+        this.loadingExecutions = false;
+      },
+      error: () => this.loadingExecutions = false
+    });
+  }
+
+  importPresetWorkflow(workflowName: string): void {
+    if (!confirm('هل تريد استيراد هذا Workflow؟')) return;
+    this.automationService.importWorkflow(workflowName).subscribe({
+      next: (res) => {
+        if (res.success) {
+          alert('✅ تم استيراد Workflow بنجاح!');
+          this.loadWorkflows();
+        }
+      },
+      error: (err) => alert('فشل الاستيراد: ' + err.message)
+    });
+  }
+
+  executeWorkflow(id: string): void {
+    this.automationService.executeWorkflow(id).subscribe({
+      next: (res) => {
+        if (res.success) {
+          alert('✅ تم تنفيذ Workflow بنجاح!');
+          this.loadWorkflowExecutions(id);
+        }
+      },
+      error: (err) => alert('فشل التنفيذ: ' + err.message)
+    });
+  }
+
+  closeModal(): void {
+    this.showWorkflowModal = false;
+    this.selectedWorkflow = null;
+  }
+
+  dismissAlert(alertId: number): void {
+    this.alerts = this.alerts.filter(a => a.id !== alertId);
+  }
+
+  abs(value: number): number {
+    return Math.abs(value);
+  }
+
+  getActiveWorkflowsCount(): number {
+    return this.workflows.filter(w => w.active).length;
   }
 }
 

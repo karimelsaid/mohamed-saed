@@ -18,6 +18,7 @@ import { FreeShippingRulesComponent } from './free-shipping/free-shipping-rules.
 import { Subscription } from 'rxjs';
 import { FaIconLibrary, FontAwesomeModule, FaIconComponent } from '@fortawesome/angular-fontawesome';
 import { faShoppingCart, faStore, faBook, faPrint, faPlus, faEdit, faTrash, faTruck, faUsers, faCheckCircle, faMoneyBillWave, faSitemap, faPlusCircle, faImage, faTag, faHashtag, faList, faDollarSign, faAlignLeft, faExclamationTriangle, faCartPlus, faHeart, faMobileAlt, faCamera, faTimes, faHome, faChartLine, faCog, faBars, faUserClock, faCoins, faUserPlus, faChartBar, faBell, faSearch, faSlidersH, faGift, faSyncAlt, faSpinner, faCloudUploadAlt, faGavel, faPaperPlane } from '@fortawesome/free-solid-svg-icons';
+import { faWhatsapp } from '@fortawesome/free-brands-svg-icons';
 import { PaymentRequestsComponent } from '../payment-requests/payment-requests.component';
 import { UserHierarchyComponent } from '../user-hierarchy/user-hierarchy.component';
 import { AmazonPriceCalculatorComponent } from '../amazon-price-calculator/amazon-price-calculator.component';
@@ -762,6 +763,25 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     lowStockThreshold: 5
   };
 
+  // Bulk Edit Properties
+  showBulkEditModalFlag: boolean = false;
+  bulkEditData: any = {
+    copyType: '',
+    condition: '',
+    category: '',
+    author: '',
+    publisher: '',
+    pages: '',
+    coverType: '',
+    language: '',
+    publishYear: '',
+    stationeryType: '',
+    material: '',
+    color: '',
+    size: '',
+    brand: ''
+  };
+
   toggleExportCategorySelection(cat: string): void {
     if (cat === 'جميع الفئات') {
       this.exportOptions.categories = ['جميع الفئات'];
@@ -1483,7 +1503,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     library: FaIconLibrary
   ) {
     library.addIcons(
-      faShoppingCart, faStore, faBook, faPrint, faPlus, faEdit, faTrash, faTruck, faUsers, faCheckCircle, faMoneyBillWave, faSitemap, faPlusCircle, faImage, faTag, faHashtag, faList, faDollarSign, faAlignLeft, faExclamationTriangle, faCartPlus, faHeart, faMobileAlt, faCamera, faTimes, faHome, faChartLine, faCog, faBars, faUserClock, faCoins, faUserPlus, faChartBar, faBell, faSearch, faSlidersH, faPaperPlane
+      faShoppingCart, faStore, faBook, faPrint, faPlus, faEdit, faTrash, faTruck, faUsers, faCheckCircle, faMoneyBillWave, faSitemap, faPlusCircle, faImage, faTag, faHashtag, faList, faDollarSign, faAlignLeft, faExclamationTriangle, faCartPlus, faHeart, faMobileAlt, faCamera, faTimes, faHome, faChartLine, faCog, faBars, faUserClock, faCoins, faUserPlus, faChartBar, faBell, faSearch, faSlidersH, faPaperPlane, faWhatsapp
     );
   }
 
@@ -2181,6 +2201,11 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     this.rebuildFilteredProducts();
   }
 
+  onPageSizeChange(): void {
+    this.productsPage = 1;
+    this.loadProducts();
+  }
+
   onSortFieldChange(newValue: string): void {
     const value = newValue as keyof Product | '';
     if (value === this.sortField) {
@@ -2384,6 +2409,108 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
   bulkDeleteSelectedProducts(): void {
     this.bulkDeleteSelectedProductsWithModal();
+  }
+
+  showBulkEditModal(): void {
+    // Reset bulk edit data
+    this.bulkEditData = {
+      copyType: '',
+      condition: '',
+      category: '',
+      author: '',
+      publisher: '',
+      pages: '',
+      coverType: '',
+      language: '',
+      publishYear: '',
+      stationeryType: '',
+      material: '',
+      color: '',
+      size: '',
+      brand: ''
+    };
+    this.showBulkEditModalFlag = true;
+  }
+
+  applyBulkEdit(): void {
+    const selectedProductIds = Array.from(this.selectedProducts);
+    if (selectedProductIds.length === 0) {
+      this.showErrorModal('لم يتم تحديد أي منتجات');
+      return;
+    }
+
+    // Build update data with only non-empty fields
+    const updateData: any = {};
+    if (this.bulkEditData.copyType) updateData.copyType = this.bulkEditData.copyType;
+    if (this.bulkEditData.condition) updateData.condition = this.bulkEditData.condition;
+    if (this.bulkEditData.category) updateData.product_category = this.bulkEditData.category;
+    
+    // Add category-specific fields
+    if (this.bulkEditData.category && this.categoryFieldsMap[this.bulkEditData.category]) {
+      this.categoryFieldsMap[this.bulkEditData.category].forEach(field => {
+        if (this.bulkEditData[field]) {
+          updateData[field] = this.bulkEditData[field];
+        }
+      });
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      this.showErrorModal('لم يتم تحديد أي حقول للتعديل');
+      return;
+    }
+
+    this.showProgressModal('جاري تطبيق التعديل الجماعي...');
+
+    this.http.patch(`${this.backendBaseUrl}/admin/products/bulk-update`, {
+      productIds: selectedProductIds,
+      updates: updateData
+    }).subscribe({
+      next: () => {
+        this.closeProgressModal();
+        this.showSuccessModal('تم تطبيق التعديل الجماعي بنجاح');
+        this.showBulkEditModalFlag = false;
+        this.selectedProducts.clear();
+        this.loadProducts();
+      },
+      error: (err) => {
+        this.closeProgressModal();
+        console.error('Bulk edit error:', err);
+        const errorMessage = err.error?.message || err.message || 'حدث خطأ أثناء تطبيق التعديل الجماعي';
+        this.showErrorModal(errorMessage);
+      }
+    });
+  }
+
+  getFieldLabel(field: string): string {
+    const labels: { [key: string]: string } = {
+      author: 'المؤلف',
+      publisher: 'دار النشر',
+      pages: 'عدد الصفحات',
+      coverType: 'نوع الغلاف',
+      language: 'اللغة',
+      publishYear: 'سنة النشر',
+      stationeryType: 'نوع الأداة',
+      material: 'الخامة',
+      color: 'اللون',
+      size: 'المقاس/السعة',
+      brand: 'الماركة'
+    };
+    return labels[field] || field;
+  }
+
+  getWhatsAppUrl(phone: string | undefined): string {
+    if (!phone) return '';
+    // Clean phone number - remove spaces, dashes, and ensure it starts with country code
+    let cleanedPhone = phone.replace(/[\s\-\(\)]/g, '');
+    // If it doesn't start with +, add Egypt country code
+    if (!cleanedPhone.startsWith('+')) {
+      if (cleanedPhone.startsWith('0')) {
+        cleanedPhone = '+2' + cleanedPhone.substring(1);
+      } else {
+        cleanedPhone = '+2' + cleanedPhone;
+      }
+    }
+    return `https://wa.me/${cleanedPhone.replace('+', '')}`;
   }
 
 

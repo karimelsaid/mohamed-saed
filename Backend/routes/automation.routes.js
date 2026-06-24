@@ -19,6 +19,15 @@ router.post('/log', automationController.receiveLog);
 // n8n fetches random product
 router.get('/random-product', automationController.getRandomProduct);
 
+// AI Sales Agent routes
+router.post('/ai-analyze', automationController.aiAnalyzeIntent);
+router.get('/recommend-books', automationController.recommendBooks);
+
+// Event Tracking routes
+router.post('/track', automationController.trackEvent);
+router.post('/aggregate', automationController.aggregateMetrics);
+router.post('/trigger-promotion', automationController.triggerPromotion);
+
 // Claude and n8n advanced integration
 router.post('/claude/execute', automationController.executeClaudeCommand);
 router.get('/n8n/stats', automationController.getN8nStats);

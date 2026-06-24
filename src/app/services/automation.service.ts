@@ -82,5 +82,42 @@ export class AutomationService {
   deployToProduction(): Observable<any> {
     return this.http.post(`${this.apiUrl}/deploy`, {});
   }
+
+  // n8n Workflow Management
+  getWorkflows(): Observable<any> {
+    return this.http.get(`${environment.apiBaseUrl}/n8n/workflows`);
+  }
+
+  getWorkflow(id:	string): Observable<any> {
+    return this.http.get(`${environment.apiBaseUrl}/n8n/workflows/${id}`);
+  }
+
+  createWorkflow(workflowData: any): Observable<any> {
+    return this.http.post(`${environment.apiBaseUrl}/n8n/workflows`, { workflowData });
+  }
+
+  updateWorkflow(id: string, workflowData: any): Observable<any> {
+    return this.http.patch(`${environment.apiBaseUrl}/n8n/workflows/${id}`, { workflowData });
+  }
+
+  toggleWorkflow(id: string, active: boolean): Observable<any> {
+    return this.http.patch(`${environment.apiBaseUrl}/n8n/workflows/${id}/toggle`, { active });
+  }
+
+  deleteWorkflow(id: string): Observable<any> {
+    return this.http.delete(`${environment.apiBaseUrl}/n8n/workflows/${id}`);
+  }
+
+  getWorkflowExecutions(id: string, limit: number = 20): Observable<any> {
+    return this.http.get(`${environment.apiBaseUrl}/n8n/workflows/${id}/executions?limit=${limit}`);
+  }
+
+  importWorkflow(workflowName: string): Observable<any> {
+    return this.http.post(`${environment.apiBaseUrl}/n8n/workflows/import`, { workflowName });
+  }
+
+  executeWorkflow(id: string, data?: any): Observable<any> {
+    return this.http.post(`${environment.apiBaseUrl}/n8n/workflows/${id}/execute`, data || {});
+  }
 }
 

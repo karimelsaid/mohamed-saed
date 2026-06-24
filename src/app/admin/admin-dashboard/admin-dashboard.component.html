@@ -1906,6 +1906,10 @@
             class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded mb-2 disabled:opacity-50">
             حذف المحدد ({{ selectedProducts.size }})
           </button>
+          <button (click)="showBulkEditModal()" [disabled]="selectedProducts.size === 0"
+            class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded mb-2 disabled:opacity-50">
+            تعديل جماعي ({{ selectedProducts.size }})
+          </button>
         </div>
         <div class="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <input type="text" placeholder="ابحث عن منتج..." [(ngModel)]="searchTerm" (input)="onSearchTermChange()"
@@ -2298,12 +2302,25 @@
           </div>
 
           <!-- Pagination controls for products -->
-          <div class="flex justify-center mt-4 space-x-4 items-center mb-32 md:mb-0">
-            <button (click)="prevProductsPage()" [disabled]="productsPage === 1"
-              class="px-3 py-1 bg-gray-300 dark:bg-gray-600 rounded disabled:opacity-50">السابق</button>
-            <span class="text-gray-900 dark:text-gray-200">صفحة {{ productsPage }} من {{ totalProductsPages() }}</span>
-            <button (click)="nextProductsPage()" [disabled]="productsPage === totalProductsPages()"
-              class="px-3 py-1 bg-gray-300 dark:bg-gray-600 rounded disabled:opacity-50">التالي</button>
+          <div class="flex flex-col sm:flex-row justify-center items-center gap-4 mt-4 mb-32 md:mb-0">
+            <div class="flex items-center gap-2">
+              <button (click)="prevProductsPage()" [disabled]="productsPage === 1"
+                class="px-3 py-1 bg-gray-300 dark:bg-gray-600 rounded disabled:opacity-50">السابق</button>
+              <span class="text-gray-900 dark:text-gray-200">صفحة {{ productsPage }} من {{ totalProductsPages() }}</span>
+              <button (click)="nextProductsPage()" [disabled]="productsPage === totalProductsPages()"
+                class="px-3 py-1 bg-gray-300 dark:bg-gray-600 rounded disabled:opacity-50">التالي</button>
+            </div>
+            <div class="flex items-center gap-2">
+              <label class="text-gray-700 dark:text-gray-300 text-sm">عدد المنتجات:</label>
+              <select [(ngModel)]="productsPageSize" (ngModelChange)="onPageSizeChange()"
+                class="border rounded px-2 py-1 dark:bg-gray-700 dark:text-gray-200 text-sm">
+                <option [ngValue]="10">10</option>
+                <option [ngValue]="25">25</option>
+                <option [ngValue]="50">50</option>
+                <option [ngValue]="100">100</option>
+                <option [ngValue]="200">200</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>
@@ -2421,6 +2438,13 @@
                   {{ order.shippingMethod === 'merchant' ? 'التاجر يشحن' : 'مندوب النظام' }}
                 </span>
               </div>
+              <div *ngIf="order.phone || order.communityOwnerPhone" class="mt-2">
+                <a [href]="getWhatsAppUrl(order.phone || order.communityOwnerPhone)" target="_blank"
+                   class="inline-flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-semibold transition-colors">
+                  <fa-icon [icon]="['fab', 'whatsapp']" class="text-lg"></fa-icon>
+                  تواصل عبر واتساب
+                </a>
+              </div>
             </div>
           </div>
 
@@ -2507,8 +2531,15 @@
                   <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700"
                     [attr.rowspan]="order.products.length">
                     <div class="flex flex-col gap-2 mt-2">
+                      <!-- WhatsApp Button -->
+                      <a *ngIf="order.phone || order.communityOwnerPhone" 
+                         [href]="getWhatsAppUrl(order.phone || order.communityOwnerPhone)" target="_blank"
+                         class="inline-flex items-center justify-center gap-1 bg-green-500 hover:bg-green-600 text-white py-1 px-3 rounded text-xs font-semibold transition-colors">
+                        <fa-icon [icon]="['fab', 'whatsapp']"></fa-icon>
+                        واتساب
+                      </a>
                       <!-- Merchant Handling Indicator -->
-                      <div *ngIf="order.shippingMethod === 'merchant' && order.status !== 'تم التسليم' && order.status !== 'تم الإلغاء'" 
+                      <div *ngIf="order.shippingMethod === 'merchant' && order.status !== 'تم التسليم' && order.status !== 'تم الإلغاء'"
                            class="bg-blue-50 dark:bg-blue-900/20 p-2 rounded border border-blue-100 dark:border-blue-800 mb-2">
                         <div class="text-[10px] text-blue-700 dark:text-blue-300 font-bold text-center">
                           <i class="fas fa-store-alt ml-1"></i>
@@ -3517,6 +3548,81 @@
           ابدأ التصدير الآن 📥
         </button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bulk Edit Modal -->
+<div *ngIf="showBulkEditModalFlag" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-[1100]">
+  <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-96 max-w-full shadow-lg">
+    <h3 class="text-xl font-bold mb-4 text-gray-900 dark:text-white">تعديل جماعي للمنتجات المحددة ({{ selectedProducts.size }})</h3>
+    
+    <div class="space-y-4">
+      <!-- Copy Type -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">نوع النسخة</label>
+        <select [(ngModel)]="bulkEditData.copyType" class="w-full p-2 border rounded dark:bg-gray-700 dark:text-gray-200">
+          <option value="">بدون تغيير</option>
+          <option value="أصلي">أصلي</option>
+          <option value="هاي كوبي">هاي كوبي</option>
+        </select>
+      </div>
+      
+      <!-- Condition -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">الحالة</label>
+        <select [(ngModel)]="bulkEditData.condition" class="w-full p-2 border rounded dark:bg-gray-700 dark:text-gray-200">
+          <option value="">بدون تغيير</option>
+          <option value="جديد">جديد</option>
+          <option value="مستعمل بحالة جيدة">مستعمل بحالة جيدة</option>
+        </select>
+      </div>
+      
+      <!-- Category -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">التصنيف</label>
+        <select [(ngModel)]="bulkEditData.category" class="w-full p-2 border rounded dark:bg-gray-700 dark:text-gray-200">
+          <option value="">بدون تغيير</option>
+          <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
+        </select>
+      </div>
+      
+      <!-- Additional category-specific fields -->
+      <div *ngIf="bulkEditData.category && categoryFieldsMap[bulkEditData.category]">
+        <div *ngFor="let field of categoryFieldsMap[bulkEditData.category]" class="mb-2">
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ getFieldLabel(field) }}</label>
+          <input *ngIf="field !== 'coverType' && field !== 'language'" 
+                 type="text" [(ngModel)]="bulkEditData[field]" 
+                 class="w-full p-2 border rounded dark:bg-gray-700 dark:text-gray-200"
+                 placeholder="بدون تغيير">
+          <select *ngIf="field === 'coverType'" [(ngModel)]="bulkEditData[field]" 
+                  class="w-full p-2 border rounded dark:bg-gray-700 dark:text-gray-200">
+            <option value="">بدون تغيير</option>
+            <option value="غلاف عادي">غلاف عادي</option>
+            <option value="غلاف مقوى">غلاف مقوى</option>
+            <option value="غلاف مجلد">غلاف مجلد</option>
+          </select>
+          <select *ngIf="field === 'language'" [(ngModel)]="bulkEditData[field]" 
+                  class="w-full p-2 border rounded dark:bg-gray-700 dark:text-gray-200">
+            <option value="">بدون تغيير</option>
+            <option value="العربية">العربية</option>
+            <option value="الإنجليزية">الإنجليزية</option>
+            <option value="فرنسية">فرنسية</option>
+            <option value="أخرى">أخرى</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    
+    <div class="flex gap-3 mt-6">
+      <button (click)="showBulkEditModalFlag = false" 
+              class="flex-1 px-4 py-2 bg-gray-300 dark:bg-gray-600 rounded text-gray-700 dark:text-gray-200 hover:bg-gray-400 dark:hover:bg-gray-500">
+        إلغاء
+      </button>
+      <button (click)="applyBulkEdit()" 
+              class="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded">
+        تطبيق التعديل
+      </button>
     </div>
   </div>
 </div>

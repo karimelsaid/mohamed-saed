@@ -60,6 +60,7 @@ const communityRoutes = require('./routes/community.routes');
 const analyticsRoutes = require('./routes/analytics.routes');
 const bourseRoutes = require('./routes/bourse.routes');
 const automationRoutes = require('./routes/automation.routes');
+const n8nWorkflowRoutes = require('./routes/n8n-workflow.routes');
 const newsletterRoutes = require('./routes/newsletter.routes');
 const marketerRoutes = require('./routes/marketer.routes');
 const marketerController = require('./controllers/marketer.controller');
@@ -645,6 +646,7 @@ app.use('/api/merchant', merchantRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/bourse', bourseRoutes);
 app.use('/api/automation', automationRoutes);
+app.use('/api/n8n', n8nWorkflowRoutes);
 app.use('/api/newsletter', newsletterRoutes);
 
 // Delete print order and associated file

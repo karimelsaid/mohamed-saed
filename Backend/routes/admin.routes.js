@@ -34,6 +34,12 @@ router.get('/products', adminController.listProducts);
 // Route to get all filter options (publishers, categories, merchants) from the full product list
 router.get('/filter-options', adminController.getFilterOptions);
 
+// New route for batch update products (must come before :barcode route)
+router.post('/products/batch-update', adminController.batchUpdateProducts);
+
+// New route for bulk update products by IDs (must come before :barcode route)
+router.patch('/products/bulk-update', adminController.bulkUpdateProductsByIds);
+
 // Route to update product details
 router.patch('/products/:barcode', adminController.updateProduct);
 
@@ -71,9 +77,6 @@ router.post('/sync-json-to-google-sheets', async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to update Google Sheets from output.json.' });
   }
 });
-
-// New route for batch update products
-router.post('/products/batch-update', adminController.batchUpdateProducts);
 
 // New route to import products from Google Sheets to MongoDB
 router.post('/import-products-from-sheets', adminController.importProductsFromSheets);

@@ -165,8 +165,9 @@ async function processAndSaveData(filteredJson, promotionStartDate, promoEndDate
     if (productData.product_category && Object.values(categoryMap).includes(productData.product_category)) {
       category = productData.product_category;
     } else {
-      let categoryKey = name.split('-')[0].trim();
-      category = categoryMap[categoryKey] || categoryKey || 'غير مصنف';
+      // If category is not valid, default to 'غير مصنف' instead of using product name
+      // This prevents product names from being used as category names
+      category = 'غير مصنف';
     }
     productData.product_category = category;
 

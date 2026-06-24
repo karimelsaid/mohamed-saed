@@ -119,18 +119,15 @@ export class HomePageComponent implements OnInit {
           products_id: b.products_id || b.product_id || b._id
         }));
 
-        // First sort to get the newest ones (by createdAt date descending)
+        // Sort by creation date (newest first) to show truly latest products
+        // No shuffling to ensure fair display without prioritizing any specific products
         const sorted = normalizedData.sort((a: any, b: any) => {
           const dateA = new Date(a.createdAt || a.lastStockUpdate || 0).getTime();
           const dateB = new Date(b.createdAt || b.lastStockUpdate || 0).getTime();
           return dateB - dateA;
         });
-        
-        // Take the top 200 newest and shuffle them for variety
-        const newestPool = sorted.slice(0, 200);
-        const rest = sorted.slice(200);
-        
-        this.allProducts = [...this.dataService.shuffleArray(newestPool), ...rest];
+
+        this.allProducts = sorted;
         this.generateBackgroundColumns();
         
         // Fallback: If we are in scrolling mode and haven't loaded specific hero books yet, use allProducts

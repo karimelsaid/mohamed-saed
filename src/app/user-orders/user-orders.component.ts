@@ -9,6 +9,7 @@ import { PaymentService } from '../services/payment.service';
 import { ModalService } from '../services/modal.service';
 import { PaymentModalComponent } from '../payment-modal/payment-modal.component';
 import { Browser } from '@capacitor/browser';
+import { AnalyticsTrackingService } from '../services/analytics-tracking.service';
 
 interface RatedBook {
   bookId: string;
@@ -76,7 +77,13 @@ export class UserOrdersComponent implements OnInit {
   showPaymentModal: boolean = false;
   paymentUrl: string = '';
 
-  constructor(private http: HttpClient, private authService: AuthService, private paymentService: PaymentService, private modalService: ModalService) { }
+  constructor(
+    private http: HttpClient,
+    private authService: AuthService,
+    private paymentService: PaymentService,
+    private modalService: ModalService,
+    private analyticsTrackingService: AnalyticsTrackingService
+  ) { }
 
   ngOnInit(): void {
     this.authService.user$.subscribe(user => {
@@ -148,6 +155,9 @@ export class UserOrdersComponent implements OnInit {
     if (!this.userId) return;
     this.http.post(`${environment.apiBaseUrl}/users/submit-rating`, { userId: this.userId, bookId, rating }).subscribe({
       next: () => {
+        // Track comment event
+        const commentId = `rating_${this.userId}_${bookId}_${Date.now()}`;
+        this.analyticsTrackingService.trackComment(bookId, commentId, 'user_orders');
         // Update local rating
         const ratedBookIndex = this.ratedBooks.findIndex(rb => rb.bookId === bookId);
         if (ratedBookIndex !== -1) {

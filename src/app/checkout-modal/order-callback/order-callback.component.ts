@@ -3,6 +3,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { environment } from '../../../environments/environment';
+import { AnalyticsTrackingService } from '../../services/analytics-tracking.service';
 
 @Component({
     selector: 'app-order-callback',
@@ -44,7 +45,8 @@ export class OrderCallbackComponent implements OnInit {
     constructor(
         private route: ActivatedRoute,
         private http: HttpClient,
-        private router: Router
+        private router: Router,
+        private analyticsTrackingService: AnalyticsTrackingService
     ) { }
 
     ngOnInit(): void {
@@ -62,6 +64,17 @@ export class OrderCallbackComponent implements OnInit {
                     this.success = response.success;
 
                     if (this.success) {
+                        // Track purchase batch event
+                        if (response['orderId'] && response['products'] && Array.isArray(response['products'])) {
+                            const products = response['products'].map((p: any) => ({
+                                productId: p.id || p.book || p.bookId || p.products_id,
+                                amount: p.price || p.product_price || p.amount || 0
+                            }));
+                            this.analyticsTrackingService.trackPurchaseBatch(
+                                products,
+                                response['orderId']
+                            );
+                        }
                         this.notifyParent(true, response.message);
                         // Auto redirect after 3 seconds
                         setTimeout(() => {

@@ -113,8 +113,8 @@ export class AuthService {
     );
   }
 
-  requestBook(userId: string, bookName: string, authorName: string): Observable<any> {
-    const data = { userId, bookName, authorName };
+  requestBook(userId: string, bookName: string, authorName: string, phoneNumber?: string): Observable<any> {
+    const data = { userId, bookName, authorName, phoneNumber };
     return this.http.post(`${this.apiUrl}/users/request-book`, data);
   }
 

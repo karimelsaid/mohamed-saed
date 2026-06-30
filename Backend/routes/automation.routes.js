@@ -18,10 +18,35 @@ router.get('/logs', automationController.getLogs);
 router.post('/log', automationController.receiveLog);
 // n8n fetches random product
 router.get('/random-product', automationController.getRandomProduct);
+// n8n fetches product by ID
+router.get('/product/:id', automationController.getProductById);
+// n8n fetches product by ID (new endpoint for V4)
+router.get('/product/:productId', automationController.getProduct);
+// n8n fetches random product (new endpoint for V4)
+router.get('/products/random', automationController.getRandomProduct);
+// n8n fetches settings (new endpoint for V4)
+router.get('/settings', automationController.getSettings);
+// n8n checks daily count (new endpoint for V4)
+router.get('/daily-count', automationController.getDailyCount);
+// generate post image for social media
+router.post('/generate-post-image', automationController.generatePostImage);
+// product created webhook trigger
+router.post('/product-created', automationController.productCreated);
 
 // AI Sales Agent routes
 router.post('/ai-analyze', automationController.aiAnalyzeIntent);
 router.get('/recommend-books', automationController.recommendBooks);
+
+// AI Content Generation routes
+router.post('/ai/generate-content', automationController.aiGenerateContent);
+
+// AI Orchestrator routes
+router.post('/ai/execute', automationController.aiExecute);
+router.get('/ai/metrics', automationController.getAIMetrics);
+router.get('/ai/cost-report', automationController.getAICostReport);
+router.get('/ai/performance-report', automationController.getAIPerformanceReport);
+router.get('/ai/error-report', automationController.getAIErrorReport);
+router.get('/ai/health', automationController.getAIHealth);
 
 // Event Tracking routes
 router.post('/track', automationController.trackEvent);

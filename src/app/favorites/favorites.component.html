@@ -67,11 +67,12 @@
   <div *ngIf="!isLoading && favoriteBooks.length > 0"
     class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-8">
     <div *ngFor="let book of favoriteBooks ; let i = index"
+      [attr.data-product-id]="book.products_id"
       class="group bg-white dark:bg-gray-800 rounded-2xl md:rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border border-gray-100 dark:border-gray-700 overflow-hidden fade-in"
       [style.animationDelay]="i * 400 + 'ms'">
 
       <!-- Book Image Section -->
-      <div class="relative w-full h-56 overflow-hidden bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
+      <div class="relative w-full h-56 overflow-hidden bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4 cursor-pointer" (click)="navigateToProduct(book)">
         <img [src]="getBookImageUrl(book)" [alt]="book.product_name"
           class="h-full w-auto object-contain group-hover:scale-105 transition-transform duration-500"
           data-attempt="0" />

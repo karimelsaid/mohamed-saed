@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node app.js",
     "dev": "nodemon app.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest",
+    "test:coverage": "jest --coverage"
   },
   "keywords": [],
   "author": "",
@@ -26,6 +27,7 @@
     "express-rate-limit": "^8.2.1",
     "express-session": "^1.18.2",
     "firebase-admin": "^13.6.0",
+    "form-data": "^4.0.6",
     "google-auth-library": "^10.6.1",
     "googleapis": "^171.4.0",
     "iconv-lite": "^0.7.0",
@@ -34,15 +36,24 @@
     "mongoose": "^8.13.2",
     "multer": "^1.4.5-lts.2",
     "node-cron": "^3.0.3",
+    "node-vibrant": "^4.0.4",
     "pdf-lib": "^1.17.1",
-    "sharp": "^0.34.2",
+    "sharp": "^0.34.5",
     "socket.io": "^4.8.3",
     "tesseract.js": "^6.0.1",
     "unrar-promise": "^3.1.0",
+    "uuid": "^14.0.1",
     "web-push": "^3.6.7",
     "winston": "^3.19.0",
     "winston-daily-rotate-file": "^5.0.0",
     "xlsx": "^0.18.5",
     "xml2js": "^0.6.2"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "jest": "^30.4.2",
+    "jest-mock-axios": "^4.9.0",
+    "mongodb-memory-server": "^11.2.0",
+    "supertest": "^7.2.2"
   }
 }

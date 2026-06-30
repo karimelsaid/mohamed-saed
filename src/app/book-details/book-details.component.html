@@ -251,13 +251,6 @@
             </div>
           </div>
 
-          <!-- Toggle Button for Additional Details -->
-          <button (click)="toggleAdditionalDetails()"
-            class="w-full mb-4 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white px-6 py-3 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg font-semibold flex items-center justify-center gap-2">
-            <fa-icon [icon]="showAdditionalDetails ? ['fas', 'chevron-up'] : ['fas', 'chevron-down']"></fa-icon>
-            {{ showAdditionalDetails ? 'إخفاء التفاصيل الإضافية' : 'عرض التفاصيل الإضافية' }}
-          </button>
-
           <!-- Additional Details Based on Category -->
           <div [ngSwitch]="book.product_category" class="mb-8" *ngIf="showAdditionalDetails">
             <!-- 📚 كتب (موحد لجميع تصنيفات الكتب) -->
@@ -365,19 +358,68 @@
             <span class="text-lg text-gray-700 dark:text-gray-300 font-semibold">({{ ratingCount }} تقييم)</span>
           </div>
 
-          <div *ngIf="book.product_quantity == 0"
-            class="text-gray-700 dark:text-gray-300 mb-6 p-4 bg-red-50 dark:bg-red-900 rounded-lg">
-            هذا الكتاب غير متوفر حالياً<br>
-            <span class="text-gray-600 dark:text-gray-400 text-sm">متوقع توافره خلال 3-5 أيام عمل</span>
+          <!-- Purchase Section - Redesigned for Better Conversion -->
+          <div class="space-y-4">
+            <!-- Trust Badges -->
+            <div *ngIf="book.product_quantity > 0" class="flex flex-wrap gap-2 justify-center mb-4">
+              <span class="inline-flex items-center gap-1.5 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-3 py-1.5 rounded-full text-xs font-semibold border border-green-200 dark:border-green-800">
+                <fa-icon [icon]="['fas', 'check-circle']" class="text-green-500"></fa-icon>
+                متوفر الآن
+              </span>
+              <span class="inline-flex items-center gap-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-3 py-1.5 rounded-full text-xs font-semibold border border-blue-200 dark:border-blue-800">
+                <fa-icon [icon]="['fas', 'truck']" class="text-blue-500"></fa-icon>
+                شحن لجميع المحافظات
+              </span>
+              <span class="inline-flex items-center gap-1.5 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-3 py-1.5 rounded-full text-xs font-semibold border border-purple-200 dark:border-purple-800">
+                <fa-icon [icon]="['fas', 'money-bill-wave']" class="text-purple-500"></fa-icon>
+                الدفع عند الاستلام
+              </span>
+              <span class="inline-flex items-center gap-1.5 bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 px-3 py-1.5 rounded-full text-xs font-semibold border border-orange-200 dark:border-orange-800">
+                <fa-icon [icon]="['fas', 'bolt']" class="text-orange-500"></fa-icon>
+                توصيل سريع
+              </span>
+            </div>
+
+            <!-- Out of Stock Message -->
+            <div *ngIf="book.product_quantity == 0"
+              class="bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/30 dark:to-orange-900/30 border-2 border-red-200 dark:border-red-800 rounded-2xl p-5 text-center">
+              <div class="flex items-center justify-center gap-3 mb-2">
+                <fa-icon [icon]="['fas', 'exclamation-circle']" class="text-red-500 text-2xl"></fa-icon>
+                <span class="text-lg font-bold text-red-700 dark:text-red-400">نفدت الكمية</span>
+              </div>
+              <p class="text-sm text-red-600 dark:text-red-300 mb-4">متوقع توافره خلال 3-5 أيام عمل</p>
+              <button (click)="requestUrgency()"
+                class="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 dark:from-orange-600 dark:to-red-600 dark:hover:from-orange-700 dark:hover:to-red-700 text-white px-6 py-3 rounded-xl font-bold text-base transition-all duration-300 transform hover:scale-105 shadow-lg flex items-center justify-center gap-2">
+                <fa-icon [icon]="['fas', 'bell']"></fa-icon>
+                طلب استعجال التوفر
+              </button>
+            </div>
+
+            <!-- Main CTA Button -->
+            <button *ngIf="book.product_quantity > 0" (click)="onBuyNowClick()"
+              class="group relative w-full bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 hover:from-emerald-600 hover:via-green-600 hover:to-teal-600 dark:from-emerald-600 dark:via-green-600 dark:to-teal-600 dark:hover:from-emerald-700 dark:hover:via-green-700 dark:hover:to-teal-700 text-white px-8 py-5 rounded-2xl font-bold text-xl shadow-2xl transition-all duration-300 transform hover:scale-[1.02] hover:shadow-green-500/25 active:scale-[0.98] overflow-hidden">
+              <!-- Shine Effect -->
+              <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+              
+              <!-- Button Content -->
+              <div class="relative flex items-center justify-center gap-3">
+                <fa-icon [icon]="['fas', 'shopping-cart']" class="text-2xl group-hover:scale-110 transition-transform duration-300"></fa-icon>
+                <span>احصل على نسختك الآن</span>
+                <fa-icon [icon]="['fas', 'arrow-left']" class="text-xl group-hover:translate-x-1 transition-transform duration-300"></fa-icon>
+              </div>
+
+              <!-- Pulse Animation -->
+              <div class="absolute inset-0 rounded-2xl animate-pulse-ring opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            </button>
+
+            <!-- Secondary Info -->
+            <div *ngIf="book.product_quantity > 0" class="text-center space-y-2 mt-4">
+              <p class="text-sm text-gray-600 dark:text-gray-400">
+                <fa-icon [icon]="['fas', 'shield-alt']" class="text-green-500 mr-1"></fa-icon>
+                ضمان 100% على جودة المنتج
+              </p>
+            </div>
           </div>
-          <button *ngIf="book.product_quantity > 0" (click)="onBuyNowClick()"
-            class="w-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 dark:from-blue-700 dark:via-indigo-700 dark:to-purple-700 text-white px-8 py-4 rounded-xl hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 dark:hover:from-blue-800 dark:hover:via-indigo-800 dark:hover:to-purple-800 transition-all duration-300 transform hover:scale-105 shadow-xl font-bold text-lg animate-pulse">
-            اشترِ الآن واحصل على الخصم!
-          </button>
-          <button *ngIf="book.product_quantity == 0" (click)="requestUrgency()"
-            class="w-full bg-gradient-to-r from-orange-500 to-red-500 dark:from-orange-600 dark:to-red-600 text-white px-8 py-4 rounded-xl hover:from-orange-600 hover:to-red-600 dark:hover:from-orange-700 dark:hover:to-red-700 transition-all duration-300 transform hover:scale-105 shadow-xl font-bold text-lg animate-pulse">
-            طلب استعجال التوفر
-          </button>
         </div>
       </div>
     </div>

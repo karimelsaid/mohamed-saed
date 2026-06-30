@@ -28,6 +28,20 @@ const automationSettingSchema = new mongoose.Schema({
         apiUrl: { type: String, default: 'https://n8n.knoozbook.com' },
         apiKey: { type: String, default: '' },
         syncEnabled: { type: Boolean, default: false }
+    },
+    // Social Media Automation V4 Settings
+    socialPosts: {
+        enabled: { type: Boolean, default: true },
+        dailyLimit: { type: Number, default: 5 },
+        schedule: { type: [String], default: ['09:00', '12:00', '15:00', '18:00', '21:00'] },
+        platforms: { type: [String], default: ['facebook', 'instagram'] },
+        aiModels: { type: [String], default: ['gpt-4o', 'claude-3.5-sonnet', 'gemini-2.5-flash', 'gpt-3.5-turbo'] }
+    },
+    whatsappStatus: {
+        enabled: { type: Boolean, default: true },
+        dailyLimit: { type: Number, default: 10 },
+        schedule: { type: [String], default: ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00'] },
+        includeCaption: { type: Boolean, default: false }
     }
 }, { timestamps: true });
 

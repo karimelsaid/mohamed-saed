@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
-import { Observable, BehaviorSubject, tap } from 'rxjs';
+import { Observable, BehaviorSubject, tap, shareReplay } from 'rxjs';
 
 @Injectable({
     providedIn: 'root'
@@ -151,7 +151,9 @@ export class PromotionService {
 
     // Hero Slide Management
     getHeroSlides(): Observable<any> {
-        return this.http.get(`${this.apiUrl}/hero-slides`);
+        return this.http.get(`${this.apiUrl}/hero-slides`).pipe(
+            shareReplay(1) // Cache the result for 1 second to prevent duplicate calls
+        );
     }
 
     createHeroSlide(slide: any): Observable<any> {

@@ -764,14 +764,13 @@ async function listProducts(req, res) {
       return true;
     });
 
-    // Exclude non-book categories (أثاث وديكور المنزل، إلكترونيات، هدية وألعاب، التجميل والعناية الشخصية، ملابس، أدوات مكتبية)
+    // Exclude non-book categories (أثاث وديكور المنزل، إلكترونيات، هدية وألعاب، التجميل والعناية الشخصية، ملابس)
     const excludedCategories = [
       'أثاث وديكور المنزل',
       'إلكترونيات',
       'هدية وألعاب',
       'التجميل والعناية الشخصية',
-      'ملابس',
-      'أدوات مكتبية'
+      'ملابس'
     ];
     products = products.filter(p => !excludedCategories.includes((p.product_category || '').trim()));
 
@@ -939,10 +938,12 @@ async function updateProduct(req, res) {
     console.log(`📦 [AdminController] updateProduct called for barcode: ${barcode}`);
     console.log('📝 [AdminController] Update body:', JSON.stringify(req.body, null, 2));
     
-    const { 
-      product_name, product_quantity, product_category, product_description, 
+    const {
+      product_name, product_quantity, product_category, product_description,
       product_price, price_cost, weight, length, width, height,
-      publisher, author, publishYear, pages, coverType, language
+      publisher, author, publishYear, pages, coverType, language,
+      stationeryType, material, color, size, brand,
+      copyType, condition
     } = req.body;
 
     if (!barcode) {
@@ -1026,7 +1027,9 @@ async function updateProduct(req, res) {
     if (product_description !== undefined) json[productIndex].product_description = product_description;
     if (product_price !== undefined) json[productIndex].product_price = product_price;
     if (price_cost !== undefined) json[productIndex].price_cost = price_cost;
-    
+    if (copyType !== undefined) json[productIndex].copyType = copyType;
+    if (condition !== undefined) json[productIndex].condition = condition;
+
     // Use the helper for book-specific fields to avoid duplicate columns in Excel
     updateFieldCaseInsensitive(json[productIndex], 'publisher', publisher);
     updateFieldCaseInsensitive(json[productIndex], 'author', author);
@@ -1034,6 +1037,12 @@ async function updateProduct(req, res) {
     updateFieldCaseInsensitive(json[productIndex], 'pages', pages);
     updateFieldCaseInsensitive(json[productIndex], 'coverType', coverType);
     updateFieldCaseInsensitive(json[productIndex], 'language', language);
+    // Add stationery-specific fields
+    updateFieldCaseInsensitive(json[productIndex], 'stationeryType', stationeryType);
+    updateFieldCaseInsensitive(json[productIndex], 'material', material);
+    updateFieldCaseInsensitive(json[productIndex], 'color', color);
+    updateFieldCaseInsensitive(json[productIndex], 'size', size);
+    updateFieldCaseInsensitive(json[productIndex], 'brand', brand);
 
     // Enforce purchase price is 10% less than selling price for publisher products
     const finalPublisher = json[productIndex].publisher || '';
@@ -1077,6 +1086,15 @@ async function updateProduct(req, res) {
         if (pages !== undefined) updateFields.pages = parseInt(pages) || 0;
         if (coverType !== undefined) updateFields.coverType = coverType;
         if (language !== undefined) updateFields.language = language;
+        // Sync copyType and condition to MongoDB
+        if (copyType !== undefined) updateFields.copyType = copyType;
+        if (condition !== undefined) updateFields.condition = condition;
+        // Sync stationery-specific fields to MongoDB
+        if (stationeryType !== undefined) updateFields.stationeryType = stationeryType;
+        if (material !== undefined) updateFields.material = material;
+        if (color !== undefined) updateFields.color = color;
+        if (size !== undefined) updateFields.size = size;
+        if (brand !== undefined) updateFields.brand = brand;
 
         await Product.findOneAndUpdate(
           { product_image: { $regex: new RegExp(`^${barcodeToMatch}(\\.webp)?$`, 'i') } },
@@ -1189,35 +1207,39 @@ async function bulkUpdateProductsByIds(req, res) {
     const now = new Date().toISOString();
     let updatedCount = 0;
 
-    // Update each product by MongoDB _id
+    // Update each product by products_id (barcode) instead of MongoDB _id
     for (const productId of productIds) {
       try {
-        // Find and update product in MongoDB
-        const mongoProduct = await Product.findById(productId);
-        if (!mongoProduct) {
-          console.warn(`Product with _id ${productId} not found in MongoDB`);
-          continue;
-        }
-
-        // Update MongoDB
-        await Product.findByIdAndUpdate(productId, { $set: updates });
-
-        // Find corresponding product in JSON by barcode (products_id)
-        const barcode = mongoProduct.products_id || mongoProduct.product_image;
+        // Find product in JSON by products_id (barcode)
         const productIndex = json.findIndex(p => {
           if (!p.products_id) return false;
           const pId = String(p.products_id).trim();
-          const bId = String(barcode).trim();
+          const bId = String(productId).trim();
           return pId === bId || Number(pId) === Number(bId) || pId === String(Number(bId)) || String(Number(pId)) === bId;
         });
 
-        if (productIndex !== -1) {
-          // Apply updates to JSON
-          for (const [key, value] of Object.entries(updates)) {
-            json[productIndex][key] = value;
-          }
+        if (productIndex === -1) {
+          console.warn(`Product with products_id ${productId} not found in JSON`);
+          continue;
+        }
+
+        // Apply updates to JSON
+        for (const [key, value] of Object.entries(updates)) {
+          json[productIndex][key] = value;
+        }
+
+        // Find and update product in MongoDB by products_id
+        const mongoProduct = await Product.findOne({ 
+          $or: [
+            { products_id: productId },
+            { product_image: { $regex: new RegExp(`^${String(productId).trim()}(\\.webp)?$`, 'i') } }
+          ]
+        });
+
+        if (mongoProduct) {
+          await Product.findByIdAndUpdate(mongoProduct._id, { $set: updates });
         } else {
-          console.warn(`Product with barcode ${barcode} not found in JSON`);
+          console.warn(`Product with products_id ${productId} not found in MongoDB`);
         }
 
         updatedCount++;
@@ -1243,6 +1265,45 @@ async function bulkUpdateProductsByIds(req, res) {
       console.log('✅ Local data (output_raw.json & output.json) updated successfully during bulk update');
     } catch (procErr) {
       console.warn('⚠️ Failed to process local data update:', procErr.message);
+    }
+
+    // Sync to Google Drive
+    try {
+      const fileId = process.env.GOOGLE_DRIVE_FILE_ID;
+      if (fileId) {
+        const client = await require('../config/drive').auth.getClient();
+        const drive = google.drive({ version: 'v3', auth: client });
+        const xlsx = require('xlsx');
+        
+        const workbook = xlsx.utils.book_new();
+        const sheet = xlsx.utils.json_to_sheet(json);
+        xlsx.utils.book_append_sheet(workbook, sheet, 'Sheet1');
+        const wbout = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+
+        await drive.files.update({
+          fileId,
+          media: {
+            mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            body: wbout
+          }
+        });
+        console.log('✅ Bulk update synced to Google Drive');
+
+        // Sync to Google Sheets
+        for (const productId of productIds) {
+          const mongoProduct = await Product.findOne({
+            $or: [
+              { products_id: productId },
+              { product_image: { $regex: new RegExp(`^${String(productId).trim()}(\\.webp)?$`, 'i') } }
+            ]
+          });
+          if (mongoProduct) {
+            googleSheetsService.syncProduct(mongoProduct.toObject()).catch(err => console.error('Google Sheets Sync Error:', err));
+          }
+        }
+      }
+    } catch (driveError) {
+      console.warn('⚠️ Failed to sync to Google Drive:', driveError.message);
     }
 
     clearBooksCache();
@@ -1337,7 +1398,9 @@ async function batchUpdateProducts(req, res) {
         if (update.product_description !== undefined) json[productIndex].product_description = update.product_description;
         if (update.product_price !== undefined) json[productIndex].product_price = update.product_price;
         if (update.price_cost !== undefined) json[productIndex].price_cost = update.price_cost;
-        
+        if (update.copyType !== undefined) json[productIndex].copyType = update.copyType;
+        if (update.condition !== undefined) json[productIndex].condition = update.condition;
+
         console.log(`🔍 [AdminController] Updating product ${update.products_id} in JSON. Publisher: ${update.publisher}`);
         
         // Add book-specific fields for batch update using case-insensitive helper
@@ -1347,6 +1410,12 @@ async function batchUpdateProducts(req, res) {
         updateFieldCaseInsensitive(json[productIndex], 'pages', update.pages);
         updateFieldCaseInsensitive(json[productIndex], 'coverType', update.coverType);
         updateFieldCaseInsensitive(json[productIndex], 'language', update.language);
+        // Add stationery-specific fields
+        updateFieldCaseInsensitive(json[productIndex], 'stationeryType', update.stationeryType);
+        updateFieldCaseInsensitive(json[productIndex], 'material', update.material);
+        updateFieldCaseInsensitive(json[productIndex], 'color', update.color);
+        updateFieldCaseInsensitive(json[productIndex], 'size', update.size);
+        updateFieldCaseInsensitive(json[productIndex], 'brand', update.brand);
 
         if (quantityChanged) {
           json[productIndex].lastStockUpdate = now;
@@ -1371,6 +1440,15 @@ async function batchUpdateProducts(req, res) {
           if (update.pages !== undefined) updateFields.pages = parseInt(update.pages) || 0;
           if (update.coverType !== undefined) updateFields.coverType = update.coverType;
           if (update.language !== undefined) updateFields.language = update.language;
+          // Sync copyType and condition to MongoDB
+          if (update.copyType !== undefined) updateFields.copyType = update.copyType;
+          if (update.condition !== undefined) updateFields.condition = update.condition;
+          // Sync stationery-specific fields to MongoDB
+          if (update.stationeryType !== undefined) updateFields.stationeryType = update.stationeryType;
+          if (update.material !== undefined) updateFields.material = update.material;
+          if (update.color !== undefined) updateFields.color = update.color;
+          if (update.size !== undefined) updateFields.size = update.size;
+          if (update.brand !== undefined) updateFields.brand = update.brand;
 
           await Product.findOneAndUpdate(
             { product_image: { $regex: new RegExp(`^${barcodeToMatch}(\\.webp)?$`, 'i') } },

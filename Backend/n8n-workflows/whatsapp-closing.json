@@ -1,0 +1,365 @@
+{
+  "name": "WhatsApp Closing - KnoozBook",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp-closing",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook - Hot Lead Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [250, 300],
+      "webhookId": "whatsapp-closing-webhook"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-book-request",
+              "leftValue": "={{ $json.bookTitle || $json.bookId }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty"
+              }
+            },
+            {
+              "id": "has-phone",
+              "leftValue": "={{ $json.phoneNumber }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "validate-data",
+      "name": "Validate Lead Data",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BACKEND_URL }}/api/book-requests",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"bookName\": \"{{ $json.bookTitle }}\",\n  \"category\": \"{{ $json.category || 'general' }}\",\n  \"userId\": \"{{ $json.userId }}\",\n  \"sessionId\": \"{{ $json.sessionId }}\"\n}",
+        "options": {}
+      },
+      "id": "save-book-request",
+      "name": "Save Book Request",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "request-saved",
+              "leftValue": "={{ $json.success }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-save",
+      "name": "Check Save Success",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "unit": "hours",
+        "amount": 24
+      },
+      "id": "wait-24h",
+      "name": "Wait 24 Hours",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.BACKEND_URL }}/api/book-requests/{{ $('Webhook - Hot Lead Trigger').item.json.bookTitle }}/status",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "check-availability",
+      "name": "Check Book Availability",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "book-available",
+              "leftValue": "={{ $json.available }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-if-available",
+      "name": "Check If Available",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1450, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.WHATSAPP_API_URL }}/send",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"to\": \"{{ $('Webhook - Hot Lead Trigger').item.json.phoneNumber }}\",\n  \"message\": \"مرحباً! 📚 الكتاب اللي كنت بتدور عليه ({{ $('Webhook - Hot Lead Trigger').item.json.bookTitle }}) متوفر دلوقتي في مكتبة كنوز للكتب!\\n\\nتقدر تطلبه من الموقع: https://knoozbook.com/book/{{ $json.bookId }}\\n\\nأو تواصل معنا على واتساب: {{ $env.WHATSAPP_NUMBER }}\"\n}",
+        "options": {}
+      },
+      "id": "send-whatsapp-notification",
+      "name": "Send WhatsApp Notification",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1650, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.WHATSAPP_API_URL }}/send",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"to\": \"{{ $('Webhook - Hot Lead Trigger').item.json.phoneNumber }}\",\n  \"message\": \"مرحباً! 📚 عايزين نتأكد إنك لسه مهتم بالكتاب ({{ $('Webhook - Hot Lead Trigger').item.json.bookTitle }})؟\\n\\nلو عايز تواصل معنا مباشرة، ابعتلنا على واتساب: {{ $env.WHATSAPP_NUMBER }}\"\n}",
+        "options": {}
+      },
+      "id": "send-followup",
+      "name": "Send Follow-up Message",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1650, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BACKEND_URL }}/api/automation/log",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"type\": \"whatsapp\",\n  \"platform\": \"whatsapp\",\n  \"status\": \"success\",\n  \"title\": \"WhatsApp Closing Message\",\n  \"details\": {\n    \"bookTitle\": \"{{ $('Webhook - Hot Lead Trigger').item.json.bookTitle }}\",\n    \"phoneNumber\": \"{{ $('Webhook - Hot Lead Trigger').item.json.phoneNumber }}\",\n    \"messageType\": \"{{ $json.available ? 'notification' : 'followup' }}\"\n  },\n  \"metadata\": {\n    \"userId\": \"{{ $('Webhook - Hot Lead Trigger').item.json.userId }}\",\n    \"bookId\": \"{{ $('Webhook - Hot Lead Trigger').item.json.bookId }}\"\n  }\n}",
+        "options": {}
+      },
+      "id": "log-whatsapp",
+      "name": "Log WhatsApp Message",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1850, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"message\": \"WhatsApp closing workflow triggered\",\n  \"data\": {\n    \"bookTitle\": \"{{ $('Webhook - Hot Lead Trigger').item.json.bookTitle }}\",\n    \"scheduledFollowup\": \"24 hours\",\n    \"timestamp\": \"{{ $now.toISO() }}\"\n  }\n}"
+      },
+      "id": "response",
+      "name": "Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2050, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": false,\n  \"message\": \"Invalid lead data\",\n  \"timestamp\": \"{{ $now.toISO() }}\"\n}"
+      },
+      "id": "error-response",
+      "name": "Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [450, 450]
+    }
+  ],
+  "connections": {
+    "webhook-trigger": {
+      "main": [
+        [
+          {
+            "node": "validate-data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "validate-data": {
+      "main": [
+        [
+          {
+            "node": "save-book-request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "error-response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "save-book-request": {
+      "main": [
+        [
+          {
+            "node": "check-save",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check-save": {
+      "main": [
+        [
+          {
+            "node": "wait-24h",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "wait-24h": {
+      "main": [
+        [
+          {
+            "node": "check-availability",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check-availability": {
+      "main": [
+        [
+          {
+            "node": "check-if-available",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check-if-available": {
+      "main": [
+        [
+          {
+            "node": "send-whatsapp-notification",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "send-followup",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "send-whatsapp-notification": {
+      "main": [
+        [
+          {
+            "node": "log-whatsapp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "send-followup": {
+      "main": [
+        [
+          {
+            "node": "log-whatsapp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "log-whatsapp": {
+      "main": [
+        [
+          {
+            "node": "response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2026-06-27T00:00:00.000Z",
+  "versionId": "1"
+}

@@ -17,6 +17,7 @@ import { SeoService } from '../../services/seo.service';
 import { forkJoin } from 'rxjs';
 import { take } from 'rxjs/operators';
 import { Meta } from '@angular/platform-browser';
+import { AnalyticsTrackingService } from '../../services/analytics-tracking.service';
 
 @Component({
     selector: 'app-books',
@@ -49,6 +50,10 @@ export class BooksComponent implements OnInit, OnDestroy {
     copiedBookId: string | null = null;
     isLoading: boolean = true;
 
+    // Analytics tracking
+    private trackedProducts = new Set<string>();
+    private intersectionObserver: IntersectionObserver | null = null;
+
     // Filters
     selectedCategory: string = 'الكل';
     maxPrice: number = 2000;
@@ -74,6 +79,7 @@ export class BooksComponent implements OnInit, OnDestroy {
         public gamificationService: GamificationService,
         private seoService: SeoService,
         private meta: Meta,
+        private analyticsTrackingService: AnalyticsTrackingService,
         @Inject(PLATFORM_ID) private platformId: Object
     ) { }
 
@@ -150,6 +156,9 @@ export class BooksComponent implements OnInit, OnDestroy {
             this.applyFiltersAndSort();
             this.updateSeoForCategory();
             this.isLoading = false;
+
+            // Setup intersection observer for impression tracking
+            this.setupIntersectionObserver();
         });
     }
 
@@ -327,6 +336,8 @@ export class BooksComponent implements OnInit, OnDestroy {
 
     navigateToProduct(book: any): void {
         const slug = this.getBookSlug(book.product_name);
+        // Track click event
+        this.analyticsTrackingService.trackClick(book.products_id, 'books_page');
         this.router.navigate(['/book', book.products_id, slug]);
     }
 
@@ -452,6 +463,42 @@ export class BooksComponent implements OnInit, OnDestroy {
 
     ngOnDestroy(): void {
         if (this.countdownInterval) clearInterval(this.countdownInterval);
+        if (this.intersectionObserver) this.intersectionObserver.disconnect();
+    }
+
+    // Analytics: Setup intersection observer for impression tracking
+    private setupIntersectionObserver(): void {
+        if (!isPlatformBrowser(this.platformId) || typeof IntersectionObserver === 'undefined') {
+            return;
+        }
+
+        this.intersectionObserver = new IntersectionObserver(
+            (entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const productId = entry.target.getAttribute('data-product-id');
+                        if (productId && !this.trackedProducts.has(productId)) {
+                            this.trackedProducts.add(productId);
+                            this.analyticsTrackingService.trackImpression(productId, 'books_page');
+                            // Stop observing after tracking once
+                            this.intersectionObserver?.unobserve(entry.target);
+                        }
+                    }
+                });
+            },
+            {
+                threshold: 0.5, // Track when 50% of the element is visible
+                rootMargin: '0px'
+            }
+        );
+
+        // Observe product cards after a short delay to ensure DOM is ready
+        setTimeout(() => {
+            const productCards = document.querySelectorAll('[data-product-id]');
+            productCards.forEach(card => {
+                this.intersectionObserver?.observe(card);
+            });
+        }, 500);
     }
 
     getDisplayedPages(): (number | string)[] {

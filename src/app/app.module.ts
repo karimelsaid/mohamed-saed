@@ -15,6 +15,7 @@ import { FormsModule } from '@angular/forms';
 import { SharedModule } from './shared/shared.module';
 import { LocationStrategy, PathLocationStrategy } from '@angular/common';
 import { ChatWindowComponent } from './components/chat-window/chat-window.component';
+import { QuickActionsComponent } from './components/quick-actions/quick-actions.component';
 import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
 import { NavbarModule } from './navbar/navbar.module';
 import { NavbarIconsModule } from './navbar-icons/navbar-icons.module';
@@ -48,6 +49,7 @@ import { PaymentModalComponent } from './payment-modal/payment-modal.component';
   declarations: [
     AppComponent,
     ChatWindowComponent,
+    QuickActionsComponent,
   ],
   imports: [
     BrowserModule,

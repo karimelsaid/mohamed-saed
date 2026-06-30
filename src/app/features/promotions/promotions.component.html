@@ -150,7 +150,9 @@
                                 <div class="product-images-grid mb-6" *ngIf="pkg.products?.length">
                                     <div class="product-thumb-container">
                                         <div *ngFor="let product of pkg.products.slice(0, 6)"
-                                            class="product-thumb-wrapper group/thumb">
+                                            [attr.data-product-id]="product.products_id || product._id"
+                                            class="product-thumb-wrapper group/thumb cursor-pointer"
+                                            (click)="navigateToProduct(product)">
                                             <img [src]="product._imageUrl || getProductImageUrl(product)"
                                                 [alt]="product.product_name || 'منتج'" class="product-thumb-img"
                                                 draggable="false"

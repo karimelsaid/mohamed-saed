@@ -1,0 +1,333 @@
+{
+  "name": "AI Sales Agent V2 - KnoozBook (Chat AI Controller)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sales-agent-v2",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook - Social Media Message",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [250, 300],
+      "webhookId": "sales-agent-v2-webhook"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-message",
+              "leftValue": "={{ $json.message || $json.comment }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "validate-input",
+      "name": "Validate Input Data",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BACKEND_URL }}/api/chat-ai",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"{{ $json.message || $json.comment }}\"\n    }\n  ],\n  \"conversationId\": \"{{ $json.conversationId || $json.userId }}\",\n  \"model\": \"gemini-2.5-flash\",\n  \"temperature\": 0.7,\n  \"maxTokens\": 1000\n}",
+        "options": {}
+      },
+      "id": "chat-ai-controller",
+      "name": "Chat AI Controller",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "success-response",
+              "leftValue": "={{ $json.success }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-response",
+      "name": "Check Response Success",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "is-comment",
+              "leftValue": "={{ $json.commentId }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-message-type",
+      "name": "Check Message Type",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "resource": "comment",
+        "operation": "comment",
+        "commentId": "={{ $('Webhook - Social Media Message').item.json.commentId }}",
+        "message": "={{ $json.data.choices[0].message.content }}",
+        "additionalFields": {}
+      },
+      "id": "reply-comment",
+      "name": "Reply to Comment",
+      "type": "n8n-nodes-base.facebook",
+      "typeVersion": 1,
+      "position": [1250, 200],
+      "credentials": {
+        "facebookApi": {
+          "id": "facebook-credentials",
+          "name": "Facebook API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "recipientId": "={{ $('Webhook - Social Media Message').item.json.userId }}",
+        "message": "={{ $json.data.choices[0].message.content }}",
+        "additionalFields": {}
+      },
+      "id": "reply-dm",
+      "name": "Reply to DM",
+      "type": "n8n-nodes-base.facebook",
+      "typeVersion": 1,
+      "position": [1250, 400],
+      "credentials": {
+        "facebookApi": {
+          "id": "facebook-credentials",
+          "name": "Facebook API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BACKEND_URL }}/api/automation/log",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"type\": \"comment\",\n  \"platform\": \"{{ $('Webhook - Social Media Message').item.json.platform || 'facebook' }}\",\n  \"status\": \"success\",\n  \"title\": \"AI Sales Agent V2 Response\",\n  \"details\": {\n    \"message\": \"{{ $('Webhook - Social Media Message').item.json.message || $('Webhook - Social Media Message').item.json.comment }}\",\n    \"response\": \"{{ $json.data.choices[0].message.content }}\",\n    \"booksFound\": \"{{ $json.data.books.length }}\",\n    \"conversationId\": \"{{ $json.conversationId }}\"\n  },\n  \"metadata\": {\n    \"userId\": \"{{ $('Webhook - Social Media Message').item.json.userId }}\",\n    \"commentId\": \"{{ $('Webhook - Social Media Message').item.json.commentId }}\"\n  }\n}",
+        "options": {}
+      },
+      "id": "log-interaction",
+      "name": "Log Interaction",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1450, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"message\": \"AI response sent successfully\",\n  \"data\": {\n    \"response\": \"{{ $json.data.choices[0].message.content }}\",\n    \"books\": \"{{ $json.data.books }}\",\n    \"buttons\": \"{{ $json.data.buttons }}\",\n    \"conversationId\": \"{{ $json.conversationId }}\",\n    \"timestamp\": \"{{ $now.toISO() }}\"\n  }\n}"
+      },
+      "id": "response",
+      "name": "Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1650, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": false,\n  \"message\": \"Invalid input data\",\n  \"timestamp\": \"{{ $now.toISO() }}\"\n}"
+      },
+      "id": "error-response",
+      "name": "Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [650, 450]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": false,\n  \"message\": \"Failed to generate AI response\",\n  \"error\": \"{{ $json.message || 'Unknown error' }}\",\n  \"timestamp\": \"{{ $now.toISO() }}\"\n}"
+      },
+      "id": "ai-error-response",
+      "name": "AI Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [850, 450]
+    }
+  ],
+  "connections": {
+    "webhook-trigger": {
+      "main": [
+        [
+          {
+            "node": "validate-input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "validate-input": {
+      "main": [
+        [
+          {
+            "node": "chat-ai-controller",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "error-response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "chat-ai-controller": {
+      "main": [
+        [
+          {
+            "node": "check-response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check-response": {
+      "main": [
+        [
+          {
+            "node": "check-message-type",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ai-error-response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check-message-type": {
+      "main": [
+        [
+          {
+            "node": "reply-comment",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "reply-dm",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "reply-comment": {
+      "main": [
+        [
+          {
+            "node": "log-interaction",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "reply-dm": {
+      "main": [
+        [
+          {
+            "node": "log-interaction",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "log-interaction": {
+      "main": [
+        [
+          {
+            "node": "response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2026-06-27T00:00:00.000Z",
+  "versionId": "2"
+}

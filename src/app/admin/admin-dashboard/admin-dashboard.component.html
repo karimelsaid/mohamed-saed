@@ -251,6 +251,13 @@
         <span>نظام الأتمتة والذكاء 🤖</span>
       </button>
 
+      <button *ngIf="hasPermission('automation')" (click)="switchView('aiControlCenter'); showSidebar = false"
+        [class]="currentView === 'aiControlCenter' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
+        class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
+        <fa-icon [icon]="['fas', 'microchip']" class="text-lg"></fa-icon>
+        <span>AI Control Center 🧠</span>
+      </button>
+
       <button *ngIf="hasPermission('newsletter')" (click)="switchView('newsletter'); showSidebar = false"
         [class]="currentView === 'newsletter' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
         class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
@@ -910,6 +917,10 @@
 
       <div *ngIf="currentView === 'automation'" class="mb-28 md:mb-0 px-4">
         <app-admin-automation></app-admin-automation>
+      </div>
+
+      <div *ngIf="currentView === 'aiControlCenter'" class="mb-28 md:mb-0 px-4">
+        <app-ai-control-center></app-ai-control-center>
       </div>
 
       <div *ngIf="currentView === 'bourseSettings'" class="mb-28 md:mb-0 px-4">
@@ -1874,106 +1885,133 @@
       <div *ngIf="currentView === 'products'" class="px-4 sm:px-10 max-w-6xl mx-auto mb-32 md:mb-0 view-enter">
         <h3 class="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">عرض وتعديل المنتجات</h3>
         <!-- Search bar for filtering products -->
-        <div class="mb-4 flex justify-between items-center">
-          <div class="flex gap-2">
-            <button (click)="saveAllProducts()"
-              class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded mb-2">
-              حفظ الكل
-            </button>
-            <button (click)="showExportModal = true"
-              class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded mb-2">
-              تصدير إلى Excel
-            </button>
-            <button (click)="openBulkAdjustModal()"
-              class="bg-orange-600 hover:bg-orange-700 text-white font-semibold py-2 px-4 rounded mb-2 flex items-center gap-2">
-              <fa-icon [icon]="['fas', 'percentage']"></fa-icon>
-              تعديل الأسعار جماعياً
-            </button>
-            <button (click)="inventoryMode = !inventoryMode"
-              class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded mb-2 flex items-center gap-2">
-              <fa-icon [icon]="inventoryMode ? ['fas', 'th-large'] : ['fas', 'list']"></fa-icon>
-              {{ inventoryMode ? 'عرض البطاقات' : 'وضع الجرد (جدول)' }}
-            </button>
-            <div class="flex items-center gap-2 mb-2 bg-orange-50 dark:bg-orange-950/20 px-3 py-2 rounded border border-orange-200 dark:border-orange-900/50">
-              <fa-icon [icon]="['fab', 'amazon']" class="text-orange-500"></fa-icon>
-              <span class="text-xs font-semibold text-gray-700 dark:text-gray-300">نسبة ربح أمازون:</span>
-              <input type="number" [(ngModel)]="amazonProfitPercent"
-                class="w-16 px-1.5 py-0.5 text-center border rounded dark:bg-gray-700 dark:text-gray-200 text-xs font-bold" />
-              <span class="text-xs text-gray-500">%</span>
+        <div class="mb-4 flex flex-col gap-4">
+          <!-- Top Actions Row -->
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="flex flex-wrap gap-2">
+              <button (click)="saveAllProducts()"
+                class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded text-sm">
+                حفظ الكل
+              </button>
+              <button (click)="showExportModal = true"
+                class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded text-sm">
+                تصدير إلى Excel
+              </button>
+              <button (click)="openWholesalePriceModal()"
+                class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded text-sm flex items-center gap-2">
+                <fa-icon [icon]="['fas', 'file-excel']"></fa-icon>
+                إكسل أسعار الجملة
+              </button>
+              <button (click)="openBulkAdjustModal()"
+                class="bg-orange-600 hover:bg-orange-700 text-white font-semibold py-2 px-4 rounded text-sm flex items-center gap-2">
+                <fa-icon [icon]="['fas', 'percentage']"></fa-icon>
+                تعديل الأسعار جماعياً
+              </button>
+              <button (click)="inventoryMode = !inventoryMode"
+                class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded text-sm flex items-center gap-2">
+                <fa-icon [icon]="inventoryMode ? ['fas', 'th-large'] : ['fas', 'list']"></fa-icon>
+                {{ inventoryMode ? 'عرض البطاقات' : 'وضع الجرد' }}
+              </button>
+              <div class="flex items-center gap-2 bg-orange-50 dark:bg-orange-950/20 px-3 py-2 rounded border border-orange-200 dark:border-orange-900/50">
+                <fa-icon [icon]="['fab', 'amazon']" class="text-orange-500"></fa-icon>
+                <span class="text-xs font-semibold text-gray-700 dark:text-gray-300">أمازون:</span>
+                <input type="number" [(ngModel)]="amazonProfitPercent"
+                  class="w-14 px-1.5 py-0.5 text-center border rounded dark:bg-gray-700 dark:text-gray-200 text-xs font-bold" />
+                <span class="text-xs text-gray-500">%</span>
+              </div>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <!-- Select All Checkbox -->
+              <div class="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 px-3 py-2 rounded border border-gray-300 dark:border-gray-600">
+                <input type="checkbox" (change)="selectAllProducts()" [checked]="isAllProductsSelected()"
+                  [indeterminate]="isSomeProductsSelected()"
+                  class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 cursor-pointer" />
+                <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">تحديد الكل</span>
+                <span class="text-xs text-gray-500">({{ selectedProducts.size }}/{{ products.length }})</span>
+              </div>
+              <button (click)="showBulkEditModal()" [disabled]="selectedProducts.size === 0"
+                class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded text-sm disabled:opacity-50">
+                تعديل جماعي
+              </button>
+              <button (click)="bulkDeleteSelectedProductsWithModal()" [disabled]="selectedProducts.size === 0"
+                class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded text-sm disabled:opacity-50">
+                حذف المحدد
+              </button>
             </div>
           </div>
-          <button (click)="bulkDeleteSelectedProductsWithModal()" [disabled]="selectedProducts.size === 0"
-            class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded mb-2 disabled:opacity-50">
-            حذف المحدد ({{ selectedProducts.size }})
-          </button>
-          <button (click)="showBulkEditModal()" [disabled]="selectedProducts.size === 0"
-            class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded mb-2 disabled:opacity-50">
-            تعديل جماعي ({{ selectedProducts.size }})
-          </button>
-        </div>
-        <div class="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <input type="text" placeholder="ابحث عن منتج..." [(ngModel)]="searchTerm" (input)="onSearchTermChange()"
-            class="w-full sm:w-1/2 border rounded px-3 py-2 dark:bg-gray-700 dark:text-gray-200" />
-          <div class="flex items-center gap-4">
-            <!-- Ebook Filter -->
-            <div class="flex items-center space-x-2 rtl">
-              <label for="ebookFilter" class="text-gray-700 dark:text-gray-300 font-semibold">فلترة:</label>
-              <select id="ebookFilter" [(ngModel)]="ebookFilter" (ngModelChange)="onEbookFilterChange()"
-                class="border rounded px-2 py-1 dark:bg-gray-700 dark:text-gray-200">
-                <option value="all">كل المنتجات</option>
-                <option value="withEbook">لها نسخة إلكترونية</option>
-                <option value="withoutEbook">بدون نسخة إلكترونية</option>
-              </select>
+
+          <!-- Filters Row - Improved Layout -->
+          <div class="flex flex-col lg:flex-row lg:items-center gap-3 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+            <!-- Search -->
+            <div class="flex-grow lg:flex-grow-0 lg:w-1/3">
+              <input type="text" placeholder="ابحث عن منتج..." [(ngModel)]="searchTerm" (input)="onSearchTermChange()"
+                class="w-full border rounded px-3 py-2 dark:bg-gray-700 dark:text-gray-200 text-sm" />
             </div>
-            <!-- Publisher Filter -->
-            <div class="flex items-center space-x-2 rtl">
-              <label for="publisherFilterMain" class="text-gray-700 dark:text-gray-300 font-semibold whitespace-nowrap">الناشر:</label>
-              <select id="publisherFilterMain" [(ngModel)]="publisherFilter" (ngModelChange)="rebuildFilteredProducts()"
-                class="border rounded px-2 py-1 dark:bg-gray-700 dark:text-gray-200 min-w-[120px]">
-                <option value="all">كل الناشرين</option>
-                <option *ngFor="let pub of uniquePublishers" [value]="pub">{{ pub }}</option>
-              </select>
-            </div>
-            <!-- Merchant Filter -->
-            <div class="flex items-center space-x-2 rtl">
-              <label for="merchantFilterMain" class="text-gray-700 dark:text-gray-300 font-semibold whitespace-nowrap">المصدر:</label>
-              <select id="merchantFilterMain" [(ngModel)]="merchantFilter" (ngModelChange)="rebuildFilteredProducts()"
-                class="border rounded px-2 py-1 dark:bg-gray-700 dark:text-gray-200 min-w-[120px]">
-                <option value="all">الكل (تجار + أدمن)</option>
-                <option value="admin">الأدمن فقط</option>
-                <optgroup label="التجار">
-                  <option *ngFor="let m of merchantsList" [value]="m.merchantName">{{ m.merchantName }}</option>
-                </optgroup>
-              </select>
-            </div>
-            <!-- Category Filter -->
-            <div class="flex items-center space-x-2 rtl">
-              <label for="categoryFilter" class="text-gray-700 dark:text-gray-300 font-semibold whitespace-nowrap">الفئة:</label>
-              <select id="categoryFilter" [(ngModel)]="currentFilter" (ngModelChange)="onCategoryFilterChange()"
-                class="border rounded px-2 py-1 dark:bg-gray-700 dark:text-gray-200">
-                <option value="جميع الفئات">جميع الفئات</option>
-                <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
-              </select>
-            </div>
-            <!-- Sort Controls -->
-            <div class="flex items-center space-x-2 rtl">
-              <label for="sortField" class="text-gray-700 dark:text-gray-300 font-semibold">ترتيب حسب:</label>
-              <select id="sortField" [ngModel]="sortField" (ngModelChange)="onSortFieldChange($event)"
-                class="border rounded px-2 py-1 dark:bg-gray-700 dark:text-gray-200">
-                <option value="">بدون ترتيب</option>
-                <option value="product_name">اسم المنتج</option>
-                <option value="product_quantity">الكمية</option>
-                <option value="product_price">سعر البيع</option>
-                <option value="price_cost">سعر الشراء</option>
-                <option value="purchaseValue">قيمة الشراء</option>
-                <option value="createdAt">الأحدث</option>
-                <option value="lastStockUpdate">آخر تغيير في المخزون</option>
-              </select>
-              <button (click)="toggleSortDirection()"
-                class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-3 py-1 rounded"
-                title="تبديل اتجاه الترتيب">
-                {{ sortDirection === 'asc' ? 'تصاعدي' : 'تنازلي' }}
-              </button>
+
+            <!-- Filters Grid -->
+            <div class="flex flex-wrap items-center gap-3 flex-grow">
+              <!-- Category Filter -->
+              <div class="flex items-center gap-2">
+                <label class="text-xs font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">الفئة:</label>
+                <select [(ngModel)]="currentFilter" (ngModelChange)="onCategoryFilterChange()"
+                  class="border rounded px-2 py-1.5 dark:bg-gray-700 dark:text-gray-200 text-xs min-w-[140px]">
+                  <option value="جميع الفئات">جميع الفئات</option>
+                  <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
+                </select>
+              </div>
+
+              <!-- Publisher Filter -->
+              <div class="flex items-center gap-2">
+                <label class="text-xs font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">الناشر:</label>
+                <select [(ngModel)]="publisherFilter" (ngModelChange)="rebuildFilteredProducts()"
+                  class="border rounded px-2 py-1.5 dark:bg-gray-700 dark:text-gray-200 text-xs min-w-[120px]">
+                  <option value="all">كل الناشرين</option>
+                  <option *ngFor="let pub of uniquePublishers" [value]="pub">{{ pub }}</option>
+                </select>
+              </div>
+
+              <!-- Merchant Filter -->
+              <div class="flex items-center gap-2">
+                <label class="text-xs font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">المصدر:</label>
+                <select [(ngModel)]="merchantFilter" (ngModelChange)="rebuildFilteredProducts()"
+                  class="border rounded px-2 py-1.5 dark:bg-gray-700 dark:text-gray-200 text-xs min-w-[120px]">
+                  <option value="all">الكل</option>
+                  <option value="admin">الأدمن</option>
+                  <optgroup label="التجار">
+                    <option *ngFor="let m of merchantsList" [value]="m.merchantName">{{ m.merchantName }}</option>
+                  </optgroup>
+                </select>
+              </div>
+
+              <!-- Ebook Filter -->
+              <div class="flex items-center gap-2">
+                <label class="text-xs font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">الإلكتروني:</label>
+                <select [(ngModel)]="ebookFilter" (ngModelChange)="onEbookFilterChange()"
+                  class="border rounded px-2 py-1.5 dark:bg-gray-700 dark:text-gray-200 text-xs min-w-[120px]">
+                  <option value="all">الكل</option>
+                  <option value="withEbook">لها نسخة</option>
+                  <option value="withoutEbook">بدون نسخة</option>
+                </select>
+              </div>
+
+              <!-- Sort Controls -->
+              <div class="flex items-center gap-2 border-l border-gray-300 dark:border-gray-600 pl-3">
+                <label class="text-xs font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">ترتيب:</label>
+                <select [ngModel]="sortField" (ngModelChange)="onSortFieldChange($event)"
+                  class="border rounded px-2 py-1.5 dark:bg-gray-700 dark:text-gray-200 text-xs min-w-[110px]">
+                  <option value="">بدون</option>
+                  <option value="product_name">الاسم</option>
+                  <option value="product_quantity">الكمية</option>
+                  <option value="product_price">السعر</option>
+                  <option value="price_cost">التكلفة</option>
+                  <option value="createdAt">الأحدث</option>
+                </select>
+                <button (click)="toggleSortDirection()"
+                  class="bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 font-semibold px-2 py-1 rounded text-xs"
+                  title="تبديل الاتجاه">
+                  {{ sortDirection === 'asc' ? '↑' : '↓' }}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -2650,6 +2688,7 @@
               <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">اسم الكتاب</th>
               <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">اسم المؤلف</th>
               <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">صاحب الاقتراح</th>
+              <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">رقم الهاتف</th>
               <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">تم أضافته</th>
               <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">تاريخ الطلب</th>
               <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">إجراءات</th>
@@ -2666,6 +2705,7 @@
                 محدد' }}</td>
               <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700">{{ suggestion.username ?
                 (suggestion.username + ' (' + suggestion.userId + ')') : 'غير معروف' }}</td>
+              <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700">{{ suggestion.phoneNumber || 'غير محدد' }}</td>
               <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700">
                 <input type="checkbox" [checked]="suggestion.added"
                   (click)="$event.preventDefault(); toggleAddedStatus(suggestion)" />
@@ -2673,10 +2713,16 @@
               <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700">{{
                 formatOrderDate(suggestion.dateRequested) }}</td>
               <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700">
-                <button (click)="deleteRequestedBook(suggestion._id, suggestion.userId)"
-                  class="bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 text-white px-3 py-1 rounded">
-                  حذف
-                </button>
+                <div class="flex gap-2 justify-center">
+                  <button *ngIf="suggestion.phoneNumber" (click)="openWhatsApp(suggestion.phoneNumber, suggestion.bookName)"
+                    class="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800 text-white px-3 py-1 rounded">
+                    واتساب
+                  </button>
+                  <button (click)="deleteRequestedBook(suggestion._id, suggestion.userId)"
+                    class="bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 text-white px-3 py-1 rounded">
+                    حذف
+                  </button>
+                </div>
               </td>
             </tr>
           </tbody>
@@ -2692,18 +2738,19 @@
             class="rounded-lg p-4 shadow-md dark:shadow-lg">
             <div><strong>اسم الكتاب:</strong> {{ suggestion.bookName }}</div>
             <div><strong>اسم المؤلف:</strong> {{ suggestion.authorName || 'غير محدد' }}</div>
-            <div><strong>صاحب الاقتراح:</strong> {{ suggestion.username ? (suggestion.username + ' (' +
-              suggestion.userId +
-              ')') : 'غير معروف' }}</div>
-            <div>
-              <strong>تم أضافته:</strong>
-              <input type="checkbox" [checked]="suggestion.added"
-                (click)="$event.preventDefault(); toggleAddedStatus(suggestion)" />
-            </div>
+            <div><strong>صاحب الاقتراح:</strong> {{ suggestion.username ? (suggestion.username + ' (' + suggestion.userId + ')') : 'غير معروف' }}</div>
+            <div><strong>رقم الهاتف:</strong> {{ suggestion.phoneNumber || 'غير محدد' }}</div>
+            <div><strong>تم إضافته:</strong> {{ suggestion.added ? 'نعم' : 'لا' }}</div>
             <div><strong>تاريخ الطلب:</strong> {{ formatOrderDate(suggestion.dateRequested) }}</div>
-            <div class="mt-2">
-              <button (click)="deleteRequestedBook(suggestion._id, suggestion.userId)"
-                class="bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 text-white px-3 py-1 rounded w-full">
+            <div class="mt-2 flex gap-2">
+              <button *ngIf="suggestion.phoneNumber" (click)="openWhatsApp(suggestion.phoneNumber, suggestion.bookName)"
+                class="flex-1 bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded">
+                واتساب
+              </button>
+              <button (click)="toggleAddedStatus(suggestion)" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded">
+                {{ suggestion.added ? 'تعيين كم未 مضاف' : 'تعيين كمضاف' }}
+              </button>
+              <button (click)="deleteRequestedBook(suggestion._id, suggestion.userId)" class="flex-1 bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded">
                 حذف
               </button>
             </div>
@@ -2772,6 +2819,13 @@
                   <div><strong>الاسم:</strong> {{ printOrder.username }}</div>
                   <div><strong>البريد الإلكتروني:</strong> {{ printOrder.email }}</div>
                   <div><strong>الهاتف:</strong> {{ printOrder.phone }}</div>
+                  <div *ngIf="printOrder.phone" class="mt-1">
+                    <a [href]="getWhatsAppUrl(printOrder.phone)" target="_blank"
+                       class="inline-flex items-center gap-1 bg-green-500 hover:bg-green-600 text-white py-1 px-2 rounded text-xs font-semibold transition-colors">
+                      <fa-icon [icon]="['fab', 'whatsapp']"></fa-icon>
+                      واتساب
+                    </a>
+                  </div>
                   <div>
                     <strong>تفاصيل الشحن:</strong>
                     <div *ngIf="printOrder.shippingAddress?.deliveryType === 'pickup'"
@@ -3546,6 +3600,186 @@
         <button (click)="exportProductsToExcel()"
           class="flex-[2] px-4 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl font-bold shadow-lg hover:shadow-xl hover:translate-y-[-2px] transition-all">
           ابدأ التصدير الآن 📥
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Wholesale Price Excel Modal -->
+  <div *ngIf="showWholesalePriceModal" (click)="showWholesalePriceModal = false"
+    class="fixed inset-0 z-[1200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-300">
+    <div (click)="$event.stopPropagation()"
+      class="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col transform animate-in zoom-in-95 duration-300">
+      <!-- Modal Header -->
+      <div class="bg-gradient-to-r from-emerald-500 to-teal-600 p-6 text-white shrink-0">
+        <div class="flex justify-between items-center">
+          <h3 class="text-2xl font-bold flex items-center gap-2">
+            <fa-icon [icon]="['fas', 'file-excel']"></fa-icon>
+            إكسل أسعار الجملة
+          </h3>
+          <button (click)="showWholesalePriceModal = false" class="text-white/70 hover:text-white transition-colors">
+            <fa-icon [icon]="['fas', 'times']" class="text-xl"></fa-icon>
+          </button>
+        </div>
+        <p class="text-emerald-100 mt-1">إنشاء ملف إكسل مخصص لأسعار الجملة مع خيارات متقدمة</p>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-6 space-y-5 overflow-y-auto max-h-[70vh]">
+
+        <!-- Columns Selection -->
+        <div>
+          <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">الأعمدة المطلوبة</label>
+          <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+            <label class="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-900/30 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+              <input type="checkbox" [(ngModel)]="wholesaleOptions.columns.product_name" class="w-4 h-4 text-emerald-600 rounded">
+              <span class="text-sm font-medium text-gray-700 dark:text-gray-300">اسم المنتج</span>
+            </label>
+            <label class="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-900/30 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+              <input type="checkbox" [(ngModel)]="wholesaleOptions.columns.product_category" class="w-4 h-4 text-emerald-600 rounded">
+              <span class="text-sm font-medium text-gray-700 dark:text-gray-300">الفئة</span>
+            </label>
+            <label class="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-900/30 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+              <input type="checkbox" [(ngModel)]="wholesaleOptions.columns.price_cost" class="w-4 h-4 text-emerald-600 rounded">
+              <span class="text-sm font-medium text-gray-700 dark:text-gray-300">سعر الشراء</span>
+            </label>
+            <label class="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-900/30 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+              <input type="checkbox" [(ngModel)]="wholesaleOptions.columns.product_price" class="w-4 h-4 text-emerald-600 rounded">
+              <span class="text-sm font-medium text-gray-700 dark:text-gray-300">سعر البيع</span>
+            </label>
+            <label class="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-900/30 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+              <input type="checkbox" [(ngModel)]="wholesaleOptions.columns.product_quantity" class="w-4 h-4 text-emerald-600 rounded">
+              <span class="text-sm font-medium text-gray-700 dark:text-gray-300">الكمية</span>
+            </label>
+            <label class="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-900/30 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+              <input type="checkbox" [(ngModel)]="wholesaleOptions.columns.author" class="w-4 h-4 text-emerald-600 rounded">
+              <span class="text-sm font-medium text-gray-700 dark:text-gray-300">المؤلف</span>
+            </label>
+            <label class="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-900/30 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+              <input type="checkbox" [(ngModel)]="wholesaleOptions.columns.publisher" class="w-4 h-4 text-emerald-600 rounded">
+              <span class="text-sm font-medium text-gray-700 dark:text-gray-300">الناشر</span>
+            </label>
+            <label class="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-900/30 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+              <input type="checkbox" [(ngModel)]="wholesaleOptions.columns.merchantName" class="w-4 h-4 text-emerald-600 rounded">
+              <span class="text-sm font-medium text-gray-700 dark:text-gray-300">المصدر</span>
+            </label>
+            <label class="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-900/30 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+              <input type="checkbox" [(ngModel)]="wholesaleOptions.columns.wholesale_price" class="w-4 h-4 text-emerald-600 rounded">
+              <span class="text-sm font-medium text-gray-700 dark:text-gray-300">سعر الجملة</span>
+            </label>
+            <label class="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-900/30 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+              <input type="checkbox" [(ngModel)]="wholesaleOptions.columns.copyType" class="w-4 h-4 text-emerald-600 rounded">
+              <span class="text-sm font-medium text-gray-700 dark:text-gray-300">نوع النسخة</span>
+            </label>
+            <label class="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-900/30 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+              <input type="checkbox" [(ngModel)]="wholesaleOptions.columns.condition" class="w-4 h-4 text-emerald-600 rounded">
+              <span class="text-sm font-medium text-gray-700 dark:text-gray-300">الحالة</span>
+            </label>
+            <label class="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-900/30 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+              <input type="checkbox" [(ngModel)]="wholesaleOptions.columns.barcode" class="w-4 h-4 text-emerald-600 rounded">
+              <span class="text-sm font-medium text-gray-700 dark:text-gray-300">الباركود</span>
+            </label>
+            <label class="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-900/30 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+              <input type="checkbox" [(ngModel)]="wholesaleOptions.columns.product_description" class="w-4 h-4 text-emerald-600 rounded">
+              <span class="text-sm font-medium text-gray-700 dark:text-gray-300">الوصف</span>
+            </label>
+            <label class="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-900/30 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+              <input type="checkbox" [(ngModel)]="wholesaleOptions.columns.weight" class="w-4 h-4 text-emerald-600 rounded">
+              <span class="text-sm font-medium text-gray-700 dark:text-gray-300">الوزن</span>
+            </label>
+            <label class="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-900/30 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+              <input type="checkbox" [(ngModel)]="wholesaleOptions.columns.dimensions" class="w-4 h-4 text-emerald-600 rounded">
+              <span class="text-sm font-medium text-gray-700 dark:text-gray-300">الأبعاد</span>
+            </label>
+            <label class="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-900/30 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+              <input type="checkbox" [(ngModel)]="wholesaleOptions.columns.product_price_before_discount" class="w-4 h-4 text-emerald-600 rounded">
+              <span class="text-sm font-medium text-gray-700 dark:text-gray-300">السعر قبل الخصم</span>
+            </label>
+            <label class="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-900/30 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+              <input type="checkbox" [(ngModel)]="wholesaleOptions.columns.product_discount_percent" class="w-4 h-4 text-emerald-600 rounded">
+              <span class="text-sm font-medium text-gray-700 dark:text-gray-300">نسبة الخصم</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Price Calculation Method -->
+        <div class="space-y-3">
+          <label class="block text-sm font-bold text-gray-700 dark:text-gray-300">طريقة حساب سعر الجملة</label>
+          <div class="flex gap-3">
+            <label class="flex-1 flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-900/30 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+              <input type="radio" [(ngModel)]="wholesaleOptions.priceMethod" value="same" class="w-4 h-4 text-emerald-600">
+              <span class="text-sm font-medium text-gray-700 dark:text-gray-300">نفس سعر البيع</span>
+            </label>
+            <label class="flex-1 flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-900/30 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+              <input type="radio" [(ngModel)]="wholesaleOptions.priceMethod" value="percentage" class="w-4 h-4 text-emerald-600">
+              <span class="text-sm font-medium text-gray-700 dark:text-gray-300">نسبة مئوية من سعر الشراء</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Percentage Inputs (shown only when percentage is selected) -->
+        <div *ngIf="wholesaleOptions.priceMethod === 'percentage'" class="space-y-4 p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-200 dark:border-emerald-800">
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">نسبة الأدمن (%)</label>
+              <input type="number" [(ngModel)]="wholesaleOptions.adminPercentage" 
+                class="w-full p-2.5 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white font-bold text-center"
+                placeholder="مثال: 20">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">نسبة التجار (%)</label>
+              <input type="number" [(ngModel)]="wholesaleOptions.merchantPercentage" 
+                class="w-full p-2.5 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white font-bold text-center"
+                placeholder="مثال: 15">
+            </div>
+          </div>
+          <p class="text-xs text-gray-500 dark:text-gray-400">سيتم حساب سعر الجملة = سعر الشراء + (سعر الشراء × النسبة المئوية)</p>
+        </div>
+
+        <!-- Product Scope -->
+        <div class="space-y-3">
+          <label class="block text-sm font-bold text-gray-700 dark:text-gray-300">نطاق المنتجات</label>
+          <select [(ngModel)]="wholesaleOptions.scope" 
+            class="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white font-bold">
+            <option value="all">جميع المنتجات</option>
+            <option value="category">فئة معينة</option>
+            <option value="admin">منتجات الأدمن فقط</option>
+            <option value="merchants">منتجات التجار فقط</option>
+            <option value="specific_merchant">تاجر معين</option>
+          </select>
+        </div>
+
+        <!-- Category Selection (shown when scope is category) -->
+        <div *ngIf="wholesaleOptions.scope === 'category'" class="space-y-2">
+          <label class="block text-xs font-bold text-gray-700 dark:text-gray-300">اختر الفئة</label>
+          <select [(ngModel)]="wholesaleOptions.selectedCategory" 
+            class="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white font-bold">
+            <option value="">اختر فئة</option>
+            <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
+          </select>
+        </div>
+
+        <!-- Merchant Selection (shown when scope is specific_merchant) -->
+        <div *ngIf="wholesaleOptions.scope === 'specific_merchant'" class="space-y-2">
+          <label class="block text-xs font-bold text-gray-700 dark:text-gray-300">اختر التاجر</label>
+          <select [(ngModel)]="wholesaleOptions.selectedMerchant" 
+            class="w-full p-3 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white font-bold">
+            <option value="">اختر تاجر</option>
+            <option *ngFor="let m of merchantsList" [value]="m.merchantName">{{ m.merchantName }}</option>
+          </select>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-6 bg-gray-50 dark:bg-gray-900/50 flex gap-4 shrink-0">
+        <button (click)="showWholesalePriceModal = false"
+          class="flex-1 px-4 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-200 transition-colors">
+          إلغاء
+        </button>
+        <button (click)="generateWholesaleExcel()"
+          class="flex-[2] px-4 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl font-bold shadow-lg hover:shadow-xl hover:translate-y-[-2px] transition-all">
+          إنشاء ملف الإكسل 📊
         </button>
       </div>
     </div>

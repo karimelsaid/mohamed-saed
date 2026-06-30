@@ -554,7 +554,7 @@ async function updateOrderShippingAddress(req, res) {
 }
 
 async function requestBook(req, res) {
-  const { userId, bookName, authorName } = req.body;
+  const { userId, bookName, authorName, phoneNumber } = req.body;
 
   if (!userId || !bookName) {
     return res.status(400).json({ message: 'userId و bookName مطلوبان' });
@@ -564,9 +564,15 @@ async function requestBook(req, res) {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: 'المستخدم غير موجود' });
 
+    // If phoneNumber is provided and user doesn't have a phone, update user's phone
+    if (phoneNumber && !user.phone) {
+      user.phone = phoneNumber;
+    }
+
     user.requestedBooks.push({
       bookName,
       authorName: authorName || '',
+      phoneNumber: phoneNumber || user.phone || '',
       dateRequested: new Date(),
       added: false
     });
@@ -592,7 +598,7 @@ async function requestBook(req, res) {
 async function getAllRequestedBooks(req, res) {
   try {
     // Optimization: Only find users that have at least one requested book
-    const users = await User.find({ "requestedBooks.0": { $exists: true } }, 'requestedBooks username');
+    const users = await User.find({ "requestedBooks.0": { $exists: true } }, 'requestedBooks username phone');
     let allRequestedBooks = [];
 
     users.forEach(user => {
@@ -601,6 +607,7 @@ async function getAllRequestedBooks(req, res) {
           _id: rb._id,
           userId: user._id,
           username: user.username,
+          phoneNumber: rb.phoneNumber || user.phone || '',
           bookName: rb.bookName,
           authorName: rb.authorName,
           dateRequested: rb.dateRequested,
@@ -671,7 +678,7 @@ async function updateRequestedBookStatus(req, res) {
         ? `خبر سار! تمت إضافة الكتاب الذي اقترحته "${requestedBook.bookName}" إلى مكتبتنا. تفحصه الآن.`
         : `نعتذر، تمت إزالة اقتراح الكتاب "${requestedBook.bookName}" من قائمة الاهتمام حالياً.`,
       url: added ? `/product-details/${bookId}` : '/my-suggestions',
-      data: { type: 'suggestion_update', bookId, added }
+      data: { type: 'suggestion_update', bookId: String(bookId), added: String(added) }
     }).catch(err => console.error('User Push Error:', err));
   } catch (error) {
     console.error('Error updating requested book status:', error);

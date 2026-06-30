@@ -8,6 +8,7 @@ const routes: Routes = [
     { path: '', component: AdminDashboardComponent },
     { path: 'payment-requests', component: PaymentRequestsComponent },
     { path: 'automation', component: AdminAutomationComponent },
+    { path: 'ai-control-center', loadComponent: () => import('./ai-control-center/ai-control-center.component').then(m => m.AiControlCenterComponent) },
     { path: 'promotions-manager', loadComponent: () => import('./promotions-manager/promotions-manager.component').then(m => m.PromotionsManagerComponent) },
     { path: 'sales-registration', loadComponent: () => import('./sales-registration/sales-registration.component').then(m => m.SalesRegistrationComponent) },
     { path: 'shortages-report', loadComponent: () => import('./shortages-report/shortages-report.component').then(m => m.ShortagesReportComponent) },

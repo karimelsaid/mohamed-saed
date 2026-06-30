@@ -871,10 +871,28 @@ exports.updateWheelConfig = async (req, res) => {
 
 const HeroSlide = require('../models/HeroSlide.model');
 
+// Simple in-memory cache for hero slides (1 minute TTL)
+let heroSlidesCache = null;
+let heroSlidesCacheTime = 0;
+const HERO_SLIDES_CACHE_TTL = 60 * 1000; // 1 minute
+
 exports.getHeroSlides = async (req, res) => {
     try {
+        const now = Date.now();
+        
+        // Return cached data if still valid
+        if (heroSlidesCache && (now - heroSlidesCacheTime) < HERO_SLIDES_CACHE_TTL) {
+            return res.status(200).json({ success: true, slides: heroSlidesCache, cached: true });
+        }
+        
+        // Fetch from database
         const slides = await HeroSlide.find().sort({ order: 1 });
-        res.status(200).json({ success: true, slides });
+        
+        // Update cache
+        heroSlidesCache = slides;
+        heroSlidesCacheTime = now;
+        
+        res.status(200).json({ success: true, slides, cached: false });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Error fetching hero slides', error: error.message });
     }
@@ -887,6 +905,11 @@ exports.createHeroSlide = async (req, res) => {
         // For now, we assume paths are provided or handled by a separate upload middleware.
         const newSlide = new HeroSlide(slideData);
         await newSlide.save();
+        
+        // Invalidate cache
+        heroSlidesCache = null;
+        heroSlidesCacheTime = 0;
+        
         res.status(201).json({ success: true, message: 'Hero slide created', slide: newSlide });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Error creating hero slide', error: error.message });
@@ -921,6 +944,11 @@ exports.deleteHeroSlide = async (req, res) => {
         deleteFile(slide.mobilePath);
 
         await HeroSlide.findByIdAndDelete(id);
+        
+        // Invalidate cache
+        heroSlidesCache = null;
+        heroSlidesCacheTime = 0;
+        
         res.status(200).json({ success: true, message: 'Hero slide and files deleted permanently' });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Error deleting hero slide', error: error.message });

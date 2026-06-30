@@ -1,0 +1,165 @@
+<div class="ai-control-center">
+  <div class="header">
+    <h2>مركز التحكم بالذكاء الاصطناعي 🧠</h2>
+    <p>اختبار ومراقبة مهام الذكاء الاصطناعي في الوقت الفعلي</p>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <h3>إجمالي الطلبات</h3>
+      <p class="stat-value">{{ metrics?.totalRequests || 0 }}</p>
+    </div>
+    <div class="stat-card">
+      <h3>نسبة النجاح</h3>
+      <p class="stat-value">{{ metrics?.successRate || '0%' }}</p>
+    </div>
+    <div class="stat-card">
+      <h3>إجمالي التكلفة</h3>
+      <p class="stat-value">${{ metrics?.totalCost?.toFixed(6) || '0.000000' }}</p>
+    </div>
+    <div class="stat-card">
+      <h3>متوسط وقت التنفيذ</h3>
+      <p class="stat-value">{{ metrics?.averageExecutionTime || '0ms' }}</p>
+    </div>
+  </div>
+
+  <div class="health-status">
+    <h3>حالة مزودي الخدمة</h3>
+    <div class="health-grid">
+      <div *ngFor="let provider of providers" class="health-item">
+        <span class="provider-name">{{ provider }}</span>
+        <span class="health-indicator" [class.healthy]="healthStatus[provider]" [class.unhealthy]="!healthStatus[provider]">
+          {{ healthStatus[provider] ? '✓ سليم' : '✗ غير سليم' }}
+        </span>
+        <button (click)="refreshHealth()" class="refresh-btn">تحديث</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="control-panel">
+    <h3>تنفيذ مهمة الذكاء الاصطناعي</h3>
+    
+    <div class="form-grid">
+      <div class="form-group">
+        <label>المزود</label>
+        <select [(ngModel)]="selectedProvider">
+          <option *ngFor="let provider of providers" [value]="provider">{{ provider }}</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>النموذج</label>
+        <select [(ngModel)]="selectedModel">
+          <option *ngFor="let model of models" [value]="model">{{ model }}</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>المهمة</label>
+        <select [(ngModel)]="selectedTask">
+          <option *ngFor="let task of tasks" [value]="task">{{ task }}</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>بيانات الإدخال (JSON)</label>
+      <textarea [(ngModel)]="inputData" rows="4" placeholder='{"name": "اسم الكتاب", "price": 100}'></textarea>
+    </div>
+
+    <div class="form-group">
+      <label>موجه مخصص (اختياري)</label>
+      <input type="text" [(ngModel)]="customPrompt" placeholder="تجاوز الموجه الافتراضي">
+    </div>
+
+    <div class="form-group">
+      <label>موجه النظام المخصص (اختياري)</label>
+      <input type="text" [(ngModel)]="customSystemPrompt" placeholder="تجاوز موجه النظام">
+    </div>
+
+    <div class="checkbox-group">
+      <label>
+        <input type="checkbox" [(ngModel)]="skipCache"> تخطي التخزين المؤقت
+      </label>
+      <label>
+        <input type="checkbox" [(ngModel)]="skipRetry"> تخطي إعادة المحاولة
+      </label>
+    </div>
+
+    <div class="button-group">
+      <button (click)="executeTask()" [disabled]="loading" class="execute-btn">
+        {{ loading ? 'جاري التنفيذ...' : 'تنفيذ المهمة' }}
+      </button>
+      <button (click)="clearResult()" class="clear-btn">مسح</button>
+      <button (click)="refreshMetrics()" class="refresh-btn">تحديث المقاييس</button>
+    </div>
+  </div>
+
+  <div class="result-section" *ngIf="result || error">
+    <h3>النتيجة</h3>
+    
+    <div *ngIf="error" class="error-box">
+      <h4>خطأ</h4>
+      <p>{{ error }}</p>
+    </div>
+
+    <div *ngIf="result" class="result-box">
+      <div class="result-summary">
+        <div class="summary-item">
+          <span class="label">الحالة:</span>
+          <span class="value" [class.success]="result.success" [class.error]="!result.success">
+            {{ result.success ? 'نجح' : 'فشل' }}
+          </span>
+        </div>
+        <div class="summary-item">
+          <span class="label">المهمة:</span>
+          <span class="value">{{ result.task }}</span>
+        </div>
+        <div class="summary-item">
+          <span class="label">المزود:</span>
+          <span class="value">{{ result.provider }}</span>
+        </div>
+        <div class="summary-item">
+          <span class="label">النموذج:</span>
+          <span class="value">{{ result.model }}</span>
+        </div>
+        <div class="summary-item">
+          <span class="label">وقت التنفيذ:</span>
+          <span class="value">{{ getExecutionTime() }}</span>
+        </div>
+        <div class="summary-item">
+          <span class="label">التكلفة:</span>
+          <span class="value">{{ getCost() }}</span>
+        </div>
+        <div class="summary-item">
+          <span class="label">الرموز:</span>
+          <span class="value">{{ getTokens() }}</span>
+        </div>
+        <div class="summary-item">
+          <span class="label">مخزن مؤقتاً:</span>
+          <span class="value">{{ result.cached ? 'نعم' : 'لا' }}</span>
+        </div>
+      </div>
+
+      <div *ngIf="result.text" class="result-content">
+        <h4>النص المولد</h4>
+        <pre>{{ result.text }}</pre>
+      </div>
+
+      <div *ngIf="result.json" class="result-content">
+        <h4>JSON المولد</h4>
+        <pre>{{ formatJSON(result.json) }}</pre>
+      </div>
+
+      <div *ngIf="result.embedding" class="result-content">
+        <h4>التضمين (أول 10 قيم)</h4>
+        <pre>{{ result.embedding.slice(0, 10).join(', ') }}...</pre>
+      </div>
+
+      <div *ngIf="result.error" class="error-content">
+        <h4>تفاصيل الخطأ</h4>
+        <p>{{ result.error }}</p>
+      </div>
+    </div>
+  </div>
+</div>

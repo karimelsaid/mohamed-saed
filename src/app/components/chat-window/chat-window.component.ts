@@ -2,12 +2,29 @@ import { Component, OnInit, ElementRef, ViewChild, HostListener, AfterViewInit, 
 import { isPlatformBrowser } from '@angular/common';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { ChatAiService } from '../../services/chat-ai.service';
+import { QuickActionsService } from '../../services/quick-actions.service';
+import { HttpClient } from '@angular/common/http';
 import { fromEvent, Subscription } from 'rxjs';
 import { debounceTime } from 'rxjs/operators';
+
+interface ChatButton {
+  label: string;
+  action: string;
+}
 
 interface Message {
   role: 'user' | 'assistant' | 'system';
   content: string;
+  books?: Book[];
+  buttons?: ChatButton[];
+}
+
+interface Book {
+  id: string;
+  title: string;
+  author: string;
+  price: string;
+  buyUrl: string;
 }
 
 @Component({
@@ -23,23 +40,22 @@ export class ChatWindowComponent implements OnInit, AfterViewInit, OnDestroy {
   messages: Message[] = [];
   newMessage: string = '';
   isLoading: boolean = false;
+  conversationId: string | null = null;
 
-  isVisible: boolean = false; // للتحكم في ظهور الدردشة
-  darkMode: boolean = true; // تفعيل الوضع الداكن افتراضياً
-
-  isTyping: boolean = false; // مؤشر الكتابة
+  isVisible: boolean = false;
+  darkMode: boolean = true;
+  isTyping: boolean = false;
 
   @ViewChild('messagesContainer', { static: false }) messagesContainer!: ElementRef;
   @ViewChild('chatWindow', { static: false }) chatWindow!: ElementRef;
 
-  // متغيرات تحريك النافذة
   isDragging: boolean = false;
   dragStartX: number = 0;
   dragStartY: number = 0;
   posX: number = 0;
   posY: number = 0;
 
-  isFullscreen: boolean = false; // حالة ملء الشاشة
+  isFullscreen: boolean = false;
 
   chatWindowWidth: number = 320;
   chatWindowHeight: number = 400;
@@ -50,7 +66,9 @@ export class ChatWindowComponent implements OnInit, AfterViewInit, OnDestroy {
 
   constructor(
     private chatAiService: ChatAiService,
+    private quickActionsService: QuickActionsService,
     private sanitizer: DomSanitizer,
+    private http: HttpClient,
     @Inject(PLATFORM_ID) private platformId: Object
   ) { }
 
@@ -58,10 +76,206 @@ export class ChatWindowComponent implements OnInit, AfterViewInit, OnDestroy {
     if (isPlatformBrowser(this.platformId)) {
       this.initialWindowHeight = window.innerHeight;
     }
-    // يمكن إضافة رسالة ترحيبية افتراضية
+  }
+
+  // ===== استخراج الأزرار من نص الرد =====
+  private extractButtons(text: string): { cleanText: string; buttons: ChatButton[] } {
+    const buttons: ChatButton[] = [];
+    const buttonRegex = /\[BUTTON:([^:]+):([^\]]+)\]/g;
+    let match;
+
+    while ((match = buttonRegex.exec(text)) !== null) {
+      buttons.push({ label: match[1].trim(), action: match[2].trim() });
+    }
+
+    const cleanText = text.replace(/\[BUTTON:[^\]]+\]/g, '').trim();
+    return { cleanText, buttons };
+  }
+
+  // ===== معالجة الضغط على زر =====
+  onButtonClick(button: ChatButton): void {
+    switch (button.action) {
+      case 'REQUEST_BOOK':
+        this.handleRequestBook();
+        break;
+      case 'NOTIFY_WHEN_AVAILABLE':
+        this.handleNotifyWhenAvailable();
+        break;
+      case 'SHOW_ALTERNATIVES':
+        this.newMessage = 'عرض بدائل مشابهة';
+        this.sendMessage();
+        break;
+      default:
+        this.newMessage = button.label;
+        this.sendMessage();
+    }
+  }
+
+  private handleRequestBook(): void {
+    // إضافة رسالة تأكيد وإرسال طلب للـ API
     this.messages.push({
       role: 'system',
-      content: 'مرحباً! هل تريدني مساعدتك في اختيار كتاب؟'
+      content: 'جاري تسجيل طلبك لإضافة الكتاب...'
+    });
+
+    // استخراج اسم الكتاب من آخر رسائل المستخدم
+    const lastUserMessage = [...this.messages]
+      .reverse()
+      .find(m => m.role === 'user');
+
+    if (lastUserMessage) {
+      this.http.post('/api/book-requests', {
+        bookTitle: lastUserMessage.content,
+        conversationId: this.conversationId
+      }).subscribe({
+        next: () => {
+          this.messages.push({
+            role: 'assistant',
+            content: 'تم تسجيل طلبك بنجاح! سنعمل على إضافة الكتاب في أقرب وقت ممكن. 📚'
+          });
+          this.scrollToBottom();
+        },
+        error: () => {
+          this.messages.push({
+            role: 'assistant',
+            content: 'تم تسجيل طلبك! سنتواصل معك عند توفر الكتاب.'
+          });
+          this.scrollToBottom();
+        }
+      });
+    }
+  }
+
+  private handleNotifyWhenAvailable(): void {
+    this.messages.push({
+      role: 'assistant',
+      content: 'للإبلاغ عند توفر الكتاب، يرجى التواصل معنا مباشرة على الرقم 01094612729 وسنضيفك لقائمة الانتظار. 📞'
+    });
+    this.scrollToBottom();
+  }
+
+  onQuickActionSelected(event: { action: string; data?: any }): void {
+    let message = '';
+
+    switch (event.action) {
+      case 'recommend':
+        if (event.data?.topic) {
+          message = `رشح لي كتاب في مجال ${event.data.title}`;
+        } else {
+          message = 'رشح لي كتاباً';
+        }
+        break;
+      case 'search':
+        this.openSearchModal();
+        return;
+      case 'top_selling':
+        this.loadTopSellingBooks();
+        return;
+      case 'newest':
+        this.loadNewestBooks();
+        return;
+      case 'gift':
+        message = 'رشح لي كتاباً كهدية';
+        break;
+      case 'category':
+        if (event.data?.category) {
+          this.loadBooksByCategory(event.data.category);
+        }
+        return;
+      default:
+        message = event.action;
+    }
+
+    if (message) {
+      this.newMessage = message;
+      this.sendMessage();
+    }
+  }
+
+  onBookSelected(book: any): void {
+    this.messages.push({
+      role: 'assistant',
+      content: `اخترت كتاب: ${book.title}`,
+      books: [book]
+    });
+  }
+
+  openSearchModal(): void {
+    const searchTerm = prompt('أدخل اسم الكتاب:');
+    if (searchTerm) {
+      this.smartSearch(searchTerm);
+    }
+  }
+
+  loadTopSellingBooks(): void {
+    this.isLoading = true;
+    this.quickActionsService.getTopSelling(5).subscribe({
+      next: (books) => {
+        this.isLoading = false;
+        this.displayBooks(books, 'الأكثر مبيعاً');
+      },
+      error: () => {
+        this.isLoading = false;
+        this.messages.push({ role: 'assistant', content: 'حدث خطأ في تحميل الأكثر مبيعاً' });
+      }
+    });
+  }
+
+  loadNewestBooks(): void {
+    this.isLoading = true;
+    this.quickActionsService.getNewestBooks(5).subscribe({
+      next: (books) => {
+        this.isLoading = false;
+        this.displayBooks(books, 'أحدث الكتب');
+      },
+      error: () => {
+        this.isLoading = false;
+        this.messages.push({ role: 'assistant', content: 'حدث خطأ في تحميل أحدث الكتب' });
+      }
+    });
+  }
+
+  loadBooksByCategory(category: string): void {
+    this.isLoading = true;
+    this.quickActionsService.searchByCategory(category, 10).subscribe({
+      next: (response) => {
+        this.isLoading = false;
+        this.displayBooks(response.data, `تصنيف: ${category}`);
+      },
+      error: () => {
+        this.isLoading = false;
+        this.messages.push({ role: 'assistant', content: 'حدث خطأ في تحميل الكتب حسب التصنيف' });
+      }
+    });
+  }
+
+  smartSearch(query: string): void {
+    this.isLoading = true;
+    this.quickActionsService.smartSearch(query, 10).subscribe({
+      next: (response) => {
+        this.isLoading = false;
+        this.displayBooks(response.data, `نتائج البحث: ${query}`);
+      },
+      error: () => {
+        this.isLoading = false;
+        this.messages.push({ role: 'assistant', content: 'حدث خطأ في البحث' });
+      }
+    });
+  }
+
+  displayBooks(books: any[], title: string): void {
+    const formattedBooks = books.map(book => ({
+      id: book.id,
+      title: book.title,
+      author: book.author,
+      price: book.price,
+      buyUrl: book.buyUrl
+    }));
+
+    this.messages.push({
+      role: 'assistant',
+      content: title,
+      books: formattedBooks
     });
   }
 
@@ -69,13 +283,11 @@ export class ChatWindowComponent implements OnInit, AfterViewInit, OnDestroy {
     if (!isPlatformBrowser(this.platformId)) return;
     this.isFullscreen = !this.isFullscreen;
     if (this.isFullscreen) {
-      // عند تفعيل ملء الشاشة، اضبط الموضع والحجم ليملأ الشاشة
       this.posX = 0;
       this.posY = 0;
       this.chatWindowWidth = window.innerWidth;
       this.chatWindowHeight = window.innerHeight;
     } else {
-      // عند إلغاء ملء الشاشة، أعد تعيين الموضع والحجم الافتراضي
       this.chatWindowWidth = 320;
       this.chatWindowHeight = 400;
       this.updatePosition();
@@ -91,17 +303,11 @@ export class ChatWindowComponent implements OnInit, AfterViewInit, OnDestroy {
       this.chatWindowHeight = rect.height || 150;
     }
 
-    // تعيين الموضع الأولي مع تأخير بسيط للسماح باستقرار التخطيط
-    setTimeout(() => {
-      this.updatePosition();
-    }, 100);
+    setTimeout(() => { this.updatePosition(); }, 100);
 
-    // الاشتراك في حدث تغيير حجم النافذة مع debounce لتقليل عدد مرات التحديث
     this.resizeSubscription = fromEvent(window, 'resize')
       .pipe(debounceTime(200))
-      .subscribe(() => {
-        this.handleResize();
-      });
+      .subscribe(() => { this.handleResize(); });
   }
 
   ngOnDestroy(): void {
@@ -114,15 +320,11 @@ export class ChatWindowComponent implements OnInit, AfterViewInit, OnDestroy {
     if (!isPlatformBrowser(this.platformId)) return;
     const currentHeight = window.innerHeight;
     const heightDiff = this.initialWindowHeight - currentHeight;
-    const keyboardThreshold = 150; // px, threshold to detect keyboard
 
-    if (heightDiff > keyboardThreshold) {
-      // Keyboard is likely visible
+    if (heightDiff > 150) {
       this.keyboardVisible = true;
-      // Adjust marginBottom or posY to keep chat window above keyboard
-      this.posY = currentHeight - this.chatWindowHeight - 20; // 20px margin above keyboard
+      this.posY = currentHeight - this.chatWindowHeight - 20;
     } else {
-      // Keyboard hidden
       this.keyboardVisible = false;
       this.updatePosition();
     }
@@ -133,16 +335,11 @@ export class ChatWindowComponent implements OnInit, AfterViewInit, OnDestroy {
     let newPosX = window.innerWidth - this.chatWindowWidth - this.marginRight;
     let newPosY = window.innerHeight - this.chatWindowHeight - this.marginBottom;
 
-    // If keyboard visible, posY is already adjusted in handleResize
     if (!this.keyboardVisible && !this.isFullscreen) {
-      // تقييد الموضع ضمن حدود الشاشة
       newPosX = Math.min(Math.max(0, newPosX), window.innerWidth - this.chatWindowWidth);
       newPosY = Math.min(Math.max(0, newPosY), window.innerHeight - this.chatWindowHeight);
-      if (this.posX !== newPosX || this.posY !== newPosY) {
-        this.posX = newPosX;
-        this.posY = newPosY;
-        console.log('updatePosition:', { posX: this.posX, posY: this.posY, width: this.chatWindowWidth, height: this.chatWindowHeight });
-      }
+      this.posX = newPosX;
+      this.posY = newPosY;
     }
   }
 
@@ -153,67 +350,75 @@ export class ChatWindowComponent implements OnInit, AfterViewInit, OnDestroy {
           this.messagesContainer.nativeElement.scrollTop = this.messagesContainer.nativeElement.scrollHeight;
         }
       }, 100);
-    } catch (err) {
-      console.error('Scroll to bottom failed:', err);
-    }
+    } catch (err) { }
   }
 
   sendMessage(): void {
     if (!this.newMessage.trim()) return;
 
-    // إضافة رسالة المستخدم إلى المحادثة
-    this.messages.push({
-      role: 'user',
-      content: this.newMessage
-    });
-
+    this.messages.push({ role: 'user', content: this.newMessage });
     this.scrollToBottom();
 
     const messageToSend = this.newMessage;
     this.newMessage = '';
     this.isLoading = true;
-    this.isTyping = true; // بدء مؤشر الكتابة
+    this.isTyping = true;
 
-    // تحضير مصفوفة الرسائل للإرسال إلى API
     const apiMessages = this.messages.map(msg => ({
       role: msg.role,
       content: msg.content
     }));
 
-    // إرسال الرسالة إلى خدمة الذكاء الاصطناعي بدون اختيار مزود (OpenRouter فقط)
-    this.chatAiService.sendMessage(apiMessages)
-      .subscribe({
-        next: (response) => {
-          // إضافة رد المساعد إلى المحادثة
-          if (response.success && response.data.choices && response.data.choices.length > 0) {
-            const assistantMessage = response.data.choices[0].message;
-            this.messages.push({
-              role: 'assistant',
-              content: assistantMessage.content
-            });
-            this.scrollToBottom();
-          }
-          this.isLoading = false;
-          this.isTyping = false; // إيقاف مؤشر الكتابة عند استلام الرد
-        },
-        error: (error) => {
-          console.error('حدث خطأ أثناء إرسال الرسالة:', error);
+    this.chatAiService.sendMessage(
+      apiMessages,
+      this.conversationId,
+      null,
+      null,
+      'gemini-2.5-flash',
+      0.7,
+      1000
+    ).subscribe({
+      next: (response) => {
+        if (response.conversationId) {
+          this.conversationId = response.conversationId;
+        }
+
+        if (response.success && response.data.choices && response.data.choices.length > 0) {
+          const rawContent = response.data.choices[0].message.content;
+          const books = response.data.books || [];
+
+          // الأزرار بتيجي من الباكاند مباشرة أو نستخرجها من النص
+          const backendButtons: ChatButton[] = response.data.buttons || [];
+          const { cleanText, buttons: extractedButtons } = this.extractButtons(rawContent);
+          const finalButtons = backendButtons.length > 0 ? backendButtons : extractedButtons;
+
           this.messages.push({
             role: 'assistant',
-            content: 'عذراً، حدث خطأ أثناء معالجة طلبك. يرجى المحاولة مرة أخرى.'
+            content: cleanText,
+            books: books,
+            buttons: finalButtons.length > 0 ? finalButtons : undefined
           });
           this.scrollToBottom();
-          this.isLoading = false;
-          this.isTyping = false; // إيقاف مؤشر الكتابة عند الخطأ
         }
-      });
+        this.isLoading = false;
+        this.isTyping = false;
+      },
+      error: () => {
+        this.messages.push({
+          role: 'assistant',
+          content: 'عذراً، حدث خطأ أثناء معالجة طلبك. يرجى المحاولة مرة أخرى.'
+        });
+        this.scrollToBottom();
+        this.isLoading = false;
+        this.isTyping = false;
+      }
+    });
   }
 
   toggleVisibility(): void {
     this.isVisible = !this.isVisible;
   }
 
-  // دعم السحب بالماوس
   onDragStart(event: MouseEvent): void {
     this.isDragging = true;
     this.dragStartX = event.clientX - this.posX;
@@ -239,7 +444,6 @@ export class ChatWindowComponent implements OnInit, AfterViewInit, OnDestroy {
     this.isDragging = false;
   }
 
-  // دعم السحب باللمس
   onTouchStart(event: TouchEvent): void {
     if (event.touches.length === 1) {
       this.isDragging = true;
@@ -279,8 +483,17 @@ export class ChatWindowComponent implements OnInit, AfterViewInit, OnDestroy {
     this.onDragEnd(event);
   }
 
-
   sanitize(html: string): SafeHtml {
     return this.sanitizer.bypassSecurityTrustHtml(html);
+  }
+
+  openBookDetails(buyUrl: string): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    const isAndroid = /android/i.test(navigator.userAgent);
+    if (isAndroid) {
+      window.location.href = buyUrl;
+    } else {
+      window.open(buyUrl, '_blank');
+    }
   }
 }

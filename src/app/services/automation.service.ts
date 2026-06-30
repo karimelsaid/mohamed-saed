@@ -42,6 +42,20 @@ export interface AutomationSettings {
     apiKey: string;
     syncEnabled: boolean;
   };
+  // Social Media Automation V4 Settings
+  socialPosts?: {
+    enabled: boolean;
+    dailyLimit: number;
+    schedule: string[];
+    platforms: string[];
+    aiModels: string[];
+  };
+  whatsappStatus?: {
+    enabled: boolean;
+    dailyLimit: number;
+    schedule: string[];
+    includeCaption: boolean;
+  };
 }
 
 @Injectable({

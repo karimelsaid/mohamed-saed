@@ -69,8 +69,24 @@
       <div class="stat-icon active-workflows"><i class="fas fa-project-diagram"></i></div>
       <div class="stat-content">
         <h3>Workflows نشطة</h3>
-        <p class="stat-value">{{ getActiveWorkflowsCount() }}/{{ workflows.length }}</p>
-        <span class="stat-change">من أصل {{ workflows.length }}</span>
+        <p class="stat-value">{{ n8nStats?.activeWorkflows || 0 }}/{{ n8nStats?.totalWorkflows || 0 }}</p>
+        <span class="stat-change">من أصل {{ n8nStats?.totalWorkflows || 0 }}</span>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon clicks"><i class="fas fa-mouse-pointer"></i></div>
+      <div class="stat-content">
+        <h3>الضغطات</h3>
+        <p class="stat-value">{{ n8nStats?.clicks || 0 }}</p>
+        <span class="stat-change">إجمالي</span>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon searches"><i class="fas fa-search"></i></div>
+      <div class="stat-content">
+        <h3>عمليات البحث</h3>
+        <p class="stat-value">{{ n8nStats?.searches || 0 }}</p>
+        <span class="stat-change">إجمالي</span>
       </div>
     </div>
   </div>
@@ -125,8 +141,88 @@
 
           <div class="form-row">
             <div class="form-group">
-              <label>أقصى عدد منشورات يومياً</label>
+              <label>أقصى عدد منشورات يومياً (القديم - غير مستخدم في V4)</label>
               <input type="number" class="form-control" [(ngModel)]="settings.dailyPostLimit" (change)="onSettingsChange()">
+            </div>
+          </div>
+
+          <!-- Social Media Automation V4 Settings -->
+          <div class="setting-divider">
+            <h3><i class="fas fa-rocket"></i> إعدادات النشر التلقائي V4</h3>
+          </div>
+
+          <div *ngIf="settings.socialPosts">
+            <div class="setting-group">
+              <div class="setting-info">
+                <h4>المنشورات الاجتماعية (Facebook & Instagram)</h4>
+                <p>نشر تلقائي على فيسبوك وإنستجرام حسب الجدولة</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" [(ngModel)]="settings.socialPosts.enabled" (change)="onSettingsChange()">
+                <span class="slider round"></span>
+              </label>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>أقصى عدد منشورات يومياً</label>
+                <input type="number" class="form-control" [(ngModel)]="settings.socialPosts.dailyLimit" (change)="onSettingsChange()">
+              </div>
+              <div class="form-group">
+                <label>المنصات</label>
+                <div class="checkbox-group">
+                  <label class="checkbox-label">
+                    <input type="checkbox" [(ngModel)]="settings.socialPosts.platforms" [value]="'facebook'" (change)="onSettingsChange()">
+                    Facebook
+                  </label>
+                  <label class="checkbox-label">
+                    <input type="checkbox" [(ngModel)]="settings.socialPosts.platforms" [value]="'instagram'" (change)="onSettingsChange()">
+                    Instagram
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>أوقات النشر (HH:MM format, comma separated)</label>
+              <input type="text" class="form-control" [(ngModel)]="settings.socialPosts.schedule" (change)="onSettingsChange()" placeholder="09:00,12:00,15:00,18:00,21:00">
+            </div>
+
+            <div class="form-group">
+              <label>موديلات AI (fallback order)</label>
+              <input type="text" class="form-control" [(ngModel)]="settings.socialPosts.aiModels" (change)="onSettingsChange()" placeholder="groq,deepseek,mistral,gemini,cerebras,openrouter,github_models,sambanova,openai">
+            </div>
+          </div>
+
+          <div *ngIf="settings.whatsappStatus">
+            <div class="setting-group">
+              <div class="setting-info">
+                <h4>حالات WhatsApp</h4>
+                <p>نشر صور المنتجات عشوائياً على حالات الواتس</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" [(ngModel)]="settings.whatsappStatus.enabled" (change)="onSettingsChange()">
+                <span class="slider round"></span>
+              </label>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>أقصى عدد حالات يومياً</label>
+                <input type="number" class="form-control" [(ngModel)]="settings.whatsappStatus.dailyLimit" (change)="onSettingsChange()">
+              </div>
+              <div class="form-group">
+                <label>إضافة نص للصورة</label>
+                <label class="switch">
+                  <input type="checkbox" [(ngModel)]="settings.whatsappStatus.includeCaption" (change)="onSettingsChange()">
+                  <span class="slider round"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>أوقات النشر (HH:MM format, comma separated)</label>
+              <input type="text" class="form-control" [(ngModel)]="settings.whatsappStatus.schedule" (change)="onSettingsChange()" placeholder="08:00,10:00,12:00,14:00,16:00,18:00,20:00">
             </div>
           </div>
         </div>
@@ -134,37 +230,9 @@
 
       <section class="card connectivity-card">
         <div class="card-header">
-          <h2><i class="fas fa-link"></i> روابط الربط (n8n Webhooks)</h2>
+          <h2><i class="fas fa-link"></i> إحصائيات n8n الحية</h2>
         </div>
         <div class="card-body">
-          <div class="form-group">
-            <label>رابط الـ Webhook للنشر التلقائي</label>
-            <div class="input-with-icon">
-              <i class="fas fa-globe"></i>
-              <input type="text" class="form-control" [(ngModel)]="settings.n8nWebhookUrls.autoPost" (change)="onSettingsChange()" placeholder="https://n8n.yourserver.com/webhook/...">
-            </div>
-          </div>
-          <div class="form-group">
-            <label>رابط الـ Webhook للرد على التعليقات</label>
-            <div class="input-with-icon">
-              <i class="fas fa-globe"></i>
-              <input type="text" class="form-control" [(ngModel)]="settings.n8nWebhookUrls.commentReply" (change)="onSettingsChange()" placeholder="https://n8n.yourserver.com/webhook/...">
-            </div>
-          </div>
-
-          <hr style="margin: 1.5rem 0; border: 0; border-top: 1px solid #e2e8f0;">
-          
-          <div class="form-group">
-            <label>n8n API Key (للمزامنة والتحليلات)</label>
-            <div class="input-with-icon">
-              <i class="fas fa-key"></i>
-              <input type="password" class="form-control" [(ngModel)]="settings.n8nConfig!.apiKey" (change)="onSettingsChange()" placeholder="أدخل API Key الخاص بـ n8n...">
-            </div>
-            <button class="btn btn-sm btn-outline-primary" style="margin-top: 0.5rem;" (click)="loadN8nStats()" [disabled]="loadingN8n">
-              <i class="fas fa-sync" [class.fa-spin]="loadingN8n"></i> تحديث الاتصال بـ n8n
-            </button>
-          </div>
-
           <!-- Live n8n Stats Display -->
           <div class="n8n-live-stats" *ngIf="n8nStats">
             <div class="stats-header">
@@ -178,63 +246,12 @@
               </div>
               <div class="mini-stat-item">
                 <div class="mini-stat-label">نشط الآن</div>
-                <div class="mini-stat-value success">{{ n8nStats.totalWorkflows }}</div>
+                <div class="mini-stat-value success">{{ n8nStats.activeWorkflows }}</div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
-
-      <!-- n8n Workflow Management Card -->
-      <section class="card workflow-card">
-        <div class="card-header">
-          <h2><i class="fas fa-project-diagram"></i> إدارة Workflows (n8n)</h2>
-          <button class="btn btn-sm btn-outline-primary" (click)="loadWorkflows()" [disabled]="loadingWorkflows">
-            <i class="fas fa-sync" [class.fa-spin]="loadingWorkflows"></i> تحديث
-          </button>
-        </div>
-        <div class="card-body">
-          <div class="workflow-import-section">
-            <h5>استيراد Workflows الجاهزة</h5>
-            <div class="btn-group">
-              <button class="btn btn-sm btn-outline-success" (click)="importPresetWorkflow('social-media-automation')">
-                <i class="fas fa-share-alt"></i> Social Media Automation
-              </button>
-              <button class="btn btn-sm btn-outline-success" (click)="importPresetWorkflow('ai-sales-agent')">
-                <i class="fas fa-robot"></i> AI Sales Agent
-              </button>
-              <button class="btn btn-sm btn-outline-success" (click)="importPresetWorkflow('event-tracking')">
-                <i class="fas fa-chart-line"></i> Event Tracking
-              </button>
-            </div>
-          </div>
-
-          <div class="workflow-list" *ngIf="workflows.length > 0">
-            <div class="workflow-item" *ngFor="let workflow of workflows">
-              <div class="workflow-info">
-                <h6>{{ workflow.name }}</h6>
-                <span class="badge" [ngClass]="workflow.active ? 'badge-success' : 'badge-secondary'">
-                  {{ workflow.active ? 'نشط' : 'متوقف' }}
-                </span>
-              </div>
-              <div class="workflow-actions">
-                <button class="btn btn-sm btn-outline-primary" (click)="viewWorkflowDetails(workflow)">
-                  <i class="fas fa-eye"></i>
-                </button>
-                <button class="btn btn-sm btn-outline-warning" (click)="toggleWorkflow(workflow)">
-                  <i class="fas" [ngClass]="workflow.active ? 'fa-pause' : 'fa-play'"></i>
-                </button>
-                <button class="btn btn-sm btn-outline-success" (click)="executeWorkflow(workflow.id)">
-                  <i class="fas fa-play-circle"></i>
-                </button>
-                <button class="btn btn-sm btn-outline-danger" (click)="deleteWorkflow(workflow.id)">
-                  <i class="fas fa-trash"></i>
-                </button>
-              </div>
-            </div>
-          </div>
-          <div class="empty-state" *ngIf="workflows.length === 0 && !loadingWorkflows">
-            <p>لا توجد workflows حالياً. قم باستيراد workflow جاهز أو إنشاء واحد جديد.</p>
+          <div class="empty-state" *ngIf="!n8nStats">
+            <p>جاري تحميل إحصائيات n8n...</p>
           </div>
         </div>
       </section>
@@ -287,44 +304,6 @@
           </div>
         </div>
       </section>
-    </div>
-  </div>
-
-  <!-- Workflow Details Modal -->
-  <div class="modal" *ngIf="showWorkflowModal" [class.active]="showWorkflowModal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3>{{ selectedWorkflow?.name }}</h3>
-        <button class="close-btn" (click)="closeModal()">&times;</button>
-      </div>
-      <div class="modal-body">
-        <div class="workflow-details">
-          <p><strong>الحالة:</strong> <span class="badge" [ngClass]="selectedWorkflow?.active ? 'badge-success' : 'badge-secondary'">
-            {{ selectedWorkflow?.active ? 'نشط' : 'متوقف' }}
-          </span></p>
-          <p><strong>الـ ID:</strong> {{ selectedWorkflow?.id }}</p>
-          <p><strong>آخر تحديث:</strong> {{ selectedWorkflow?.updatedAt | date:'medium' }}</p>
-        </div>
-
-        <h4>سجل التنفيذات (Executions)</h4>
-        <div class="executions-list" *ngIf="workflowExecutions.length > 0">
-          <div class="execution-item" *ngFor="let execution of workflowExecutions">
-            <div class="execution-info">
-              <span class="badge" [ngClass]="execution.finished ? 'badge-success' : 'badge-warning'">
-                {{ execution.finished ? 'مكتمل' : 'جاري' }}
-              </span>
-              <small>{{ execution.startedAt | date:'short' }}</small>
-            </div>
-            <div class="execution-status">{{ execution.status }}</div>
-          </div>
-        </div>
-        <div class="empty-state" *ngIf="workflowExecutions.length === 0 && !loadingExecutions">
-          <p>لا توجد تنفيذات سابقة</p>
-        </div>
-        <div class="loading-state" *ngIf="loadingExecutions">
-          <i class="fas fa-spinner fa-spin"></i> جاري التحميل...
-        </div>
-      </div>
     </div>
   </div>
 </div>

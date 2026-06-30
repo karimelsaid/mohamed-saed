@@ -9,4 +9,7 @@ router.post('/send-message', chatAiController.sendMessage);
 // مسار للحصول على النماذج المتاحة (اختياري)
 router.get('/models', chatAiController.getAvailableModels);
 
+// مسار للحصول على محادثة بواسطة ID
+router.get('/conversation/:conversationId', chatAiController.getConversation);
+
 module.exports = router;

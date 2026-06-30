@@ -2,6 +2,7 @@ const { downloadAndConvertExcel } = require('../services/excel.service');
 const fs = require('fs');
 const path = require('path');
 const FILE_ID = '1N6rRpXCZRnmw4Os9HK9X-tKS9ZWKOI9M';
+const logger = require('../services/logger.service');
 
 // Models
 const Product = require('../models/Product.model');
@@ -89,15 +90,27 @@ async function fetchUnifiedData() {
     merchants = merch || [];
     ratingsData = ratings || [];
     promoDoc = promo;
+    
+    // Log detailed info about merchant products (debug level only)
+    const merchantProducts = dbProducts.filter(p => p.merchantId && p.merchantId.toString() !== '69d11b07df78621a8d7b1559');
+    logger.debug(`Total DB products: ${dbProducts.length}, Merchant products: ${merchantProducts.length}`);
+    if (merchantProducts.length > 0) {
+      logger.debug(`Sample merchant products:`, merchantProducts.slice(0, 3).map(p => ({
+        id: p.products_id,
+        name: p.product_name,
+        merchantId: p.merchantId,
+        category: p.product_category
+      })));
+    }
   } catch (dbError) {
-    console.error('⚠️ [MongoDB Fallback] Database queries failed or timed out. Falling back to Excel-only data:', dbError.message);
+    logger.error('MongoDB Fallback: Database queries failed or timed out. Falling back to Excel-only data:', dbError.message);
     // Proceed with empty database arrays so the website continues to load spreadsheet products
   }
     
   const merchantMap = new Map();
   merchants.forEach(m => {
     if (!m || !m._id) {
-      console.warn('⚠️ Found merchant with null/missing _id:', m);
+      logger.warn('Found merchant with null/missing _id:', m);
       return;
     }
     merchantMap.set(m._id.toString(), {
@@ -187,7 +200,18 @@ function unifyAndEnrichData(excelProducts, dbProducts, promoDoc, merchantMap, ra
 
   const jsonData = Array.from(uniqueItems.values());
 
+  // Remove duplicates based on products_id (admin products appearing twice)
+  const deduplicatedMap = new Map();
   jsonData.forEach(book => {
+    const pid = book.products_id || book._id?.toString();
+    if (pid) {
+      deduplicatedMap.set(pid, book);
+    }
+  });
+
+  const finalData = Array.from(deduplicatedMap.values());
+
+  finalData.forEach(book => {
     if (!book.merchantId && !book.isDbProduct) book.merchantId = '69d11b07df78621a8d7b1559';
 
     if (merchantMap && book.merchantId) {

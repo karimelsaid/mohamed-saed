@@ -26,6 +26,7 @@ import { Bookmark } from '../../../core/models/bookmark.model';
 import { faUsers, faUser, faSignOutAlt, faSignInAlt, faUserPlus } from '@fortawesome/free-solid-svg-icons';
 import { AuthService } from '../../../auth/auth.service';
 import { PresenceService } from '../../../core/services/presence.service';
+import { AsrReviewService, ASRReviewResponse } from '../../../services/asr-review.service';
 
 // --- Performance Optimization Interfaces ---
 export interface EnrichedMushafSegment extends MushafSegment {
@@ -162,6 +163,19 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
 
     // Voice State
     voiceState: VoiceState = 'inactive';
+
+    // ASR Voice Review State (Integrated)
+    isAsrReviewEnabled: boolean = false; // Enable ASR in review mode
+    isAsrRecording: boolean = false;
+    asrRecordingDuration: number = 0;
+    asrRecordingInterval: any = null;
+    asrReviewResult: ASRReviewResponse | null = null;
+    asrReviewLoading: boolean = false;
+    asrReviewError: string | null = null;
+    showAsrModal: boolean = false; // Show detailed results modal
+    mediaRecorder: MediaRecorder | null = null;
+    audioChunks: Blob[] = [];
+    recordedAudioBlob: Blob | null = null;
 
     filteredReciters: any[] = [];
 
@@ -396,6 +410,7 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
         public audioService: QuranAudioService,
         private router: Router,
         private http: HttpClient,
+        private asrReviewService: AsrReviewService,
         private ngZone: NgZone,
         private renderer: Renderer2,
         public bookmarkService: BookmarkService,
@@ -7938,5 +7953,415 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
         this.router.navigate([path]);
         this.isSettingsOpen = false;
         this.isSidebarOpen = false;
+    }
+
+    // --- ASR Voice Review Functions (Integrated) ---
+
+    toggleAsrReviewEnabled(): void {
+        this.isAsrReviewEnabled = !this.isAsrReviewEnabled;
+        if (!this.isAsrReviewEnabled) {
+            this.stopAsrRecording();
+            this.asrReviewResult = null;
+            this.asrReviewError = null;
+            this.errorWords.clear();
+        }
+    }
+
+    async startAsrRecording(): Promise<void> {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            this.mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+            this.audioChunks = [];
+
+            this.mediaRecorder.ondataavailable = (event) => {
+                this.audioChunks.push(event.data);
+            };
+
+            this.mediaRecorder.onstop = async () => {
+                const webmBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
+                console.log('🎤 Converting WebM to WAV...');
+                this.recordedAudioBlob = await this.convertWebMToWav(webmBlob);
+                console.log('✅ Conversion complete, WAV size:', this.recordedAudioBlob.size);
+                this.processAsrRecording();
+            };
+
+            this.mediaRecorder.start();
+            this.isAsrRecording = true;
+            this.asrRecordingDuration = 0;
+            this.asrReviewResult = null;
+            this.asrReviewError = null;
+            this.errorWords.clear();
+
+            this.asrRecordingInterval = setInterval(() => {
+                this.asrRecordingDuration++;
+            }, 1000);
+
+            this.cdr.detectChanges();
+        } catch (error) {
+            console.error('Error starting recording:', error);
+            this.asrReviewError = 'فشل في الوصول للميكروفون. يرجى التحقق من الأذونات.';
+            this.cdr.detectChanges();
+        }
+    }
+
+    async convertWebMToWav(webmBlob: Blob): Promise<Blob> {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = async () => {
+                try {
+                    const arrayBuffer = reader.result as ArrayBuffer;
+                    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+                    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+                    const wavBuffer = this.audioBufferToWav(audioBuffer);
+                    const wavBlob = new Blob([wavBuffer], { type: 'audio/wav' });
+                    resolve(wavBlob);
+                } catch (error) {
+                    console.error('Error converting audio:', error);
+                    reject(error);
+                }
+            };
+            reader.onerror = reject;
+            reader.readAsArrayBuffer(webmBlob);
+        });
+    }
+
+    private audioBufferToWav(buffer: AudioBuffer): ArrayBuffer {
+        const numChannels = buffer.numberOfChannels;
+        const sampleRate = buffer.sampleRate;
+        const format = 1; // PCM
+        const bitDepth = 16;
+
+        const bytesPerSample = bitDepth / 8;
+        const blockAlign = numChannels * bytesPerSample;
+
+        const dataLength = buffer.length * blockAlign;
+        const bufferLength = 44 + dataLength;
+
+        const arrayBuffer = new ArrayBuffer(bufferLength);
+        const view = new DataView(arrayBuffer);
+
+        // WAV header
+        const writeString = (offset: number, string: string) => {
+            for (let i = 0; i < string.length; i++) {
+                view.setUint8(offset + i, string.charCodeAt(i));
+            }
+        };
+
+        writeString(0, 'RIFF');
+        view.setUint32(4, 36 + dataLength, true);
+        writeString(8, 'WAVE');
+        writeString(12, 'fmt ');
+        view.setUint32(16, 16, true);
+        view.setUint16(20, format, true);
+        view.setUint16(22, numChannels, true);
+        view.setUint32(24, sampleRate, true);
+        view.setUint32(28, sampleRate * blockAlign, true);
+        view.setUint16(32, blockAlign, true);
+        view.setUint16(34, bitDepth, true);
+        writeString(36, 'data');
+        view.setUint32(40, dataLength, true);
+
+        // Write audio data
+        const channels = [];
+        for (let i = 0; i < numChannels; i++) {
+            channels.push(buffer.getChannelData(i));
+        }
+
+        let offset = 44;
+        for (let i = 0; i < buffer.length; i++) {
+            for (let channel = 0; channel < numChannels; channel++) {
+                const sample = Math.max(-1, Math.min(1, channels[channel][i]));
+                const intSample = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+                view.setInt16(offset, intSample, true);
+                offset += 2;
+            }
+        }
+
+        return arrayBuffer;
+    }
+
+    stopAsrRecording(): void {
+        if (this.mediaRecorder && this.isAsrRecording) {
+            this.mediaRecorder.stop();
+            this.isAsrRecording = false;
+            if (this.asrRecordingInterval) {
+                clearInterval(this.asrRecordingInterval);
+                this.asrRecordingInterval = null;
+            }
+            this.cdr.detectChanges();
+        }
+    }
+
+    stopRecording(): void {
+        if (this.mediaRecorder && this.isAsrRecording) {
+            this.mediaRecorder.stop();
+            this.isAsrRecording = false;
+            if (this.asrRecordingInterval) {
+                clearInterval(this.asrRecordingInterval);
+                this.asrRecordingInterval = null;
+            }
+            this.cdr.detectChanges();
+        }
+    }
+
+    async processAsrRecording(): Promise<void> {
+        if (!this.recordedAudioBlob) return;
+
+        console.log('🎤 Starting ASR processing...');
+        this.asrReviewLoading = true;
+        this.cdr.detectChanges();
+
+        try {
+            // Use current memorization settings for range
+            const currentSurah = this.memorizationSettings.targetSurah || this.getCurrentSurahForPage(this.pageNumber);
+            let ayahRange: { start: number; end: number };
+
+            // If in page mode, limit to smaller range (max 5 ayahs) for better accuracy
+            if (this.memorizationSettings.range === 'page') {
+                const fullPageRange = await this.getAyahRangeForPage(this.pageNumber);
+                const rangeLength = fullPageRange.end - fullPageRange.start + 1;
+                // Limit to 5 ayahs max for better ASR accuracy
+                if (rangeLength > 5) {
+                    ayahRange = {
+                        start: fullPageRange.start,
+                        end: fullPageRange.start + 4
+                    };
+                } else {
+                    ayahRange = fullPageRange;
+                }
+            } else if (this.memorizationSettings.range === 'surah') {
+                // Use custom surah range, but limit to 5 ayahs max
+                const customRange = {
+                    start: this.memorizationSettings.surahStartVerse || 1,
+                    end: this.memorizationSettings.surahEndVerse || 7
+                };
+                const rangeLength = customRange.end - customRange.start + 1;
+                if (rangeLength > 5) {
+                    ayahRange = {
+                        start: customRange.start,
+                        end: customRange.start + 4
+                    };
+                } else {
+                    ayahRange = customRange;
+                }
+            } else if (this.memorizationSettings.range === 'half_page') {
+                // Get half page range, limit to 5 ayahs max
+                const pageData = await firstValueFrom(this.dataService.getPage(this.pageNumber).pipe(take(1)));
+                if (pageData) {
+                    const verseKeys = this.getJustKeys(pageData);
+                    const isSecond = this.memorizationSettings.selectedHalf === 'second';
+                    const filteredKeys = verseKeys.filter(v => this.isVerseInSecondHalf(v, this.pageNumber) === isSecond);
+                    const ayahs = filteredKeys.map(key => parseInt(key.split(':')[1]));
+                    const halfPageRange = {
+                        start: Math.min(...ayahs),
+                        end: Math.max(...ayahs)
+                    };
+                    const rangeLength = halfPageRange.end - halfPageRange.start + 1;
+                    if (rangeLength > 5) {
+                        ayahRange = {
+                            start: halfPageRange.start,
+                            end: halfPageRange.start + 4
+                        };
+                    } else {
+                        ayahRange = halfPageRange;
+                    }
+                } else {
+                    ayahRange = { start: 1, end: 5 };
+                }
+            } else {
+                // Default to page range with limit
+                const fullPageRange = await this.getAyahRangeForPage(this.pageNumber);
+                const rangeLength = fullPageRange.end - fullPageRange.start + 1;
+                if (rangeLength > 5) {
+                    ayahRange = {
+                        start: fullPageRange.start,
+                        end: fullPageRange.start + 4
+                    };
+                } else {
+                    ayahRange = fullPageRange;
+                }
+            }
+
+            console.log('📄 Current Surah:', currentSurah, 'Ayah Range:', ayahRange);
+            console.log('📁 Audio blob size:', this.recordedAudioBlob.size, 'bytes');
+            console.log('📤 Sending ASR request with:', {
+                expected_surah: currentSurah,
+                expected_ayah_start: ayahRange.start,
+                expected_ayah_end: ayahRange.end
+            });
+
+            const audioFile = new File([this.recordedAudioBlob], 'recitation.wav', { type: 'audio/wav' });
+            console.log('📤 Sending to ASR service...');
+
+            const response = await firstValueFrom(
+                this.asrReviewService.reviewRecitation({
+                    audio_file: audioFile,
+                    expected_surah: currentSurah,
+                    expected_ayah_start: ayahRange.start,
+                    expected_ayah_end: ayahRange.end
+                })
+            );
+
+            console.log('✅ ASR Response received:', response);
+            this.asrReviewResult = response;
+            this.asrReviewError = null;
+            this.showAsrModal = true; // Show modal with results
+
+            console.log('🎨 Highlighting errors:', response.errors);
+            this.highlightAsrErrors(response.errors);
+            this.cdr.detectChanges();
+        } catch (error) {
+            console.error('❌ Error processing recording:', error);
+            this.asrReviewError = 'فشل في معالجة التسجيل. يرجى المحاولة مرة أخرى.';
+            this.asrReviewResult = null;
+        } finally {
+            this.asrReviewLoading = false;
+            console.log('🔄 ASR processing completed');
+            this.cdr.detectChanges();
+        }
+    }
+
+    getCurrentSurahForPage(pageNum: number): number {
+        if (!this.allSurahs || !this.allSurahs.length) return 1;
+        const surah = this.allSurahs.find(s => pageNum >= s.start_page && pageNum <= s.end_page);
+        return surah ? surah.id : 1;
+    }
+
+    async getAyahRangeForPage(pageNum: number): Promise<{ start: number; end: number }> {
+        try {
+            const pageData = await firstValueFrom(this.dataService.getPage(pageNum).pipe(take(1)));
+            if (!pageData) return { start: 1, end: 7 };
+
+            const verseKeys = this.getJustKeys(pageData);
+            if (verseKeys.length === 0) return { start: 1, end: 7 };
+
+            // Parse verse keys to get surah and ayah numbers
+            const ayahs = verseKeys.map(key => {
+                const [surah, ayah] = key.split(':').map(Number);
+                return { surah, ayah };
+            });
+
+            // Filter to only ayahs from the same surah (most common case)
+            const surahCounts = ayahs.reduce((acc, { surah }) => {
+                acc[surah] = (acc[surah] || 0) + 1;
+                return acc;
+            }, {} as Record<number, number>);
+
+            const mainSurah = Object.entries(surahCounts).sort((a, b) => b[1] - a[1])[0]?.[0];
+            if (!mainSurah) return { start: 1, end: 7 };
+
+            const surahAyahs = ayahs.filter(a => a.surah === Number(mainSurah));
+            if (surahAyahs.length === 0) return { start: 1, end: 7 };
+
+            const ayahNumbers = surahAyahs.map(a => a.ayah);
+            const start = Math.min(...ayahNumbers);
+            const end = Math.max(...ayahNumbers);
+
+            return { start, end };
+        } catch (error) {
+            console.error('Error getting ayah range for page:', error);
+            return { start: 1, end: 7 };
+        }
+    }
+
+    highlightAsrErrors(errors: any[]): void {
+        console.log('🎯 Highlighting ASR errors, count:', errors.length);
+        errors.forEach((error, index) => {
+            const verseKey = `${error.surah}:${error.ayah}`;
+            const wordKey = `${verseKey}:${error.word_index}`;
+
+            console.log(`   Error ${index + 1}:`, {
+                verseKey,
+                wordKey,
+                error_type: error.error_type,
+                expected: error.expected_word,
+                transcribed: error.transcribed_word
+            });
+
+            if (error.error_type === 'incorrect' || error.error_type === 'missing') {
+                this.errorWords.add(wordKey);
+                console.log(`   ✓ Added to errorWords: ${wordKey}`);
+            }
+        });
+        console.log('🎨 Total errorWords after highlighting:', this.errorWords.size);
+        this.cdr.detectChanges();
+    }
+
+    dismissAsrResult(): void {
+        this.asrReviewResult = null;
+        this.asrReviewError = null;
+        this.recordedAudioBlob = null;
+        this.errorWords.clear();
+        this.showAsrModal = false;
+        this.cdr.detectChanges();
+    }
+
+    closeAsrModal(): void {
+        this.showAsrModal = false;
+        this.cdr.detectChanges();
+    }
+
+    getTranscribedWordsWithStatus(): { text: string; status: string }[] {
+        if (!this.asrReviewResult || !this.asrReviewResult.transcribed_text) {
+            return [];
+        }
+
+        const text = this.asrReviewResult.transcribed_text;
+        const words = text.split(/\s+/).filter(w => w.length > 0);
+        const errors = this.asrReviewResult.errors || [];
+
+        return words.map(word => {
+            // Check if this word is in errors
+            const error = errors.find(e => e.transcribed_word === word);
+            if (error) {
+                return { text: word, status: error.error_type };
+            }
+            return { text: word, status: 'correct' };
+        });
+    }
+
+    getWordStatusClass(status: string): string {
+        switch (status) {
+            case 'correct':
+                return 'correct';
+            case 'incorrect':
+                return 'incorrect';
+            case 'missing':
+                return 'missing';
+            case 'extra':
+                return 'extra';
+            default:
+                return '';
+        }
+    }
+
+    getErrorTypeLabel(errorType: string): string {
+        switch (errorType) {
+            case 'missing':
+                return 'مفقودة';
+            case 'extra':
+                return 'إضافية';
+            case 'incorrect':
+                return 'خاطئة';
+            default:
+                return errorType;
+        }
+    }
+
+    getAccuracyClass(score: number): string {
+        if (score >= 0.9) return 'excellent';
+        if (score >= 0.7) return 'good';
+        if (score >= 0.5) return 'fair';
+        return 'poor';
+    }
+
+    getErrorIcon(errorType: string): string {
+        switch (errorType) {
+            case 'missing': return 'fa-minus-circle';
+            case 'extra': return 'fa-plus-circle';
+            case 'incorrect': return 'fa-times-circle';
+            default: return 'fa-exclamation-circle';
+        }
     }
 }

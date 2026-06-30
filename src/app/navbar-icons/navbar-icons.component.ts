@@ -9,6 +9,7 @@ import { MerchantAuthService } from '../services/merchant-auth.service';
 import { NotificationService, Notification } from '../services/notification.service';
 import { PushNotificationService } from '../services/push-notification.service';
 import { DataService } from '../services/data.service';
+import { AnalyticsTrackingService } from '../services/analytics-tracking.service';
 
 @Component({
   selector: 'app-navbar-icons',
@@ -90,6 +91,7 @@ export class NavbarIconsComponent implements OnInit {
     private notificationService: NotificationService,
     public pushService: PushNotificationService,
     private cdr: ChangeDetectorRef,
+    private analyticsTrackingService: AnalyticsTrackingService,
     @Inject(PLATFORM_ID) private platformId: Object
   ) { }
 
@@ -222,6 +224,10 @@ export class NavbarIconsComponent implements OnInit {
     const filter = event.filter;
     this.searchQuery = query;
     this.selectedFilter = filter;
+    // Track search event
+    if (query && query.trim()) {
+      this.analyticsTrackingService.trackSearch(query.trim());
+    }
     this.router.navigate(['/research'], { queryParams: { q: query, filter: filter } });
   }
 
@@ -259,6 +265,8 @@ export class NavbarIconsComponent implements OnInit {
 
   onSearch(): void {
     if (this.searchQuery.trim()) {
+      // Track search event
+      this.analyticsTrackingService.trackSearch(this.searchQuery.trim());
       this.router.navigate(['/research'], { queryParams: { q: this.searchQuery.trim(), filter: this.selectedFilter } });
       this.searchResults = []; // إخفاء الاقتراحات بعد تنفيذ البحث
     }

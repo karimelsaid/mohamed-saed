@@ -17,7 +17,7 @@ import * as XLSX from 'xlsx';
 import { FreeShippingRulesComponent } from './free-shipping/free-shipping-rules.component';
 import { Subscription } from 'rxjs';
 import { FaIconLibrary, FontAwesomeModule, FaIconComponent } from '@fortawesome/angular-fontawesome';
-import { faShoppingCart, faStore, faBook, faPrint, faPlus, faEdit, faTrash, faTruck, faUsers, faCheckCircle, faMoneyBillWave, faSitemap, faPlusCircle, faImage, faTag, faHashtag, faList, faDollarSign, faAlignLeft, faExclamationTriangle, faCartPlus, faHeart, faMobileAlt, faCamera, faTimes, faHome, faChartLine, faCog, faBars, faUserClock, faCoins, faUserPlus, faChartBar, faBell, faSearch, faSlidersH, faGift, faSyncAlt, faSpinner, faCloudUploadAlt, faGavel, faPaperPlane } from '@fortawesome/free-solid-svg-icons';
+import { faShoppingCart, faStore, faBook, faPrint, faPlus, faEdit, faTrash, faTruck, faUsers, faCheckCircle, faMoneyBillWave, faSitemap, faPlusCircle, faImage, faTag, faHashtag, faList, faDollarSign, faAlignLeft, faExclamationTriangle, faCartPlus, faHeart, faMobileAlt, faCamera, faTimes, faHome, faChartLine, faCog, faBars, faUserClock, faCoins, faUserPlus, faChartBar, faBell, faSearch, faSlidersH, faGift, faSyncAlt, faSpinner, faCloudUploadAlt, faGavel, faPaperPlane, faFileExcel } from '@fortawesome/free-solid-svg-icons';
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons';
 import { PaymentRequestsComponent } from '../payment-requests/payment-requests.component';
 import { UserHierarchyComponent } from '../user-hierarchy/user-hierarchy.component';
@@ -37,6 +37,7 @@ import { AdminAutomationComponent } from '../admin-automation/admin-automation.c
 import { AdminService } from '../../services/admin.service';
 import { MarketerManagementComponent } from '../marketer-management/marketer-management.component';
 import { SpecialOffersManagerComponent } from '../special-offers-manager/special-offers-manager.component';
+import { AiControlCenterComponent } from '../ai-control-center/ai-control-center.component';
 
 interface Order {
   _id: string;
@@ -73,6 +74,7 @@ interface RequestedBook {
   username?: string;
   bookName: string;
   authorName: string;
+  phoneNumber?: string;
   dateRequested: string;
   added: boolean;
 }
@@ -251,7 +253,7 @@ interface SystemSettings {
   };
 }
 
-export type AdminView = 'dashboard' | 'userIntelligence' | 'orders' | 'requestedBooks' | 'printOrders' | 'printingSettings' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'staff' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' | 'gamificationControl' | 'notifications' | 'subscriptionControl' | 'readerFeedback' | 'promotions' | 'salesRegistration' | 'shortagesReport' | 'promotionDates' | 'salesHistory' | 'community' | 'bourseSettings' | 'automation' | 'newsletter' | 'marketers' | 'specialOffers';
+export type AdminView = 'dashboard' | 'userIntelligence' | 'orders' | 'requestedBooks' | 'printOrders' | 'printingSettings' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'staff' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' | 'gamificationControl' | 'notifications' | 'subscriptionControl' | 'readerFeedback' | 'promotions' | 'salesRegistration' | 'shortagesReport' | 'promotionDates' | 'salesHistory' | 'community' | 'bourseSettings' | 'automation' | 'aiControlCenter' | 'newsletter' | 'marketers' | 'specialOffers';
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -280,7 +282,8 @@ export type AdminView = 'dashboard' | 'userIntelligence' | 'orders' | 'requested
     AdminBourseSettingsComponent,
     AdminAutomationComponent,
     MarketerManagementComponent,
-    SpecialOffersManagerComponent
+    SpecialOffersManagerComponent,
+    AiControlCenterComponent
   ],
   templateUrl: './admin-dashboard.component.html',
   styleUrls: ['./admin-dashboard.component.css']
@@ -763,6 +766,36 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     lowStockThreshold: 5
   };
 
+  // Wholesale Price Excel Modal Properties
+  showWholesalePriceModal: boolean = false;
+  wholesaleOptions = {
+    columns: {
+      product_name: true,
+      product_category: true,
+      price_cost: true,
+      product_price: true,
+      product_quantity: false,
+      author: false,
+      publisher: false,
+      merchantName: false,
+      wholesale_price: true,
+      copyType: false,
+      condition: false,
+      barcode: false,
+      product_description: false,
+      weight: false,
+      dimensions: false,
+      product_price_before_discount: false,
+      product_discount_percent: false
+    },
+    priceMethod: 'same' as 'same' | 'percentage',
+    adminPercentage: 0,
+    merchantPercentage: 0,
+    scope: 'all' as 'all' | 'category' | 'admin' | 'merchants' | 'specific_merchant',
+    selectedCategory: '',
+    selectedMerchant: ''
+  };
+
   // Bulk Edit Properties
   showBulkEditModalFlag: boolean = false;
   bulkEditData: any = {
@@ -859,6 +892,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   faSpinner = faSpinner;
   faCloudUploadAlt = faCloudUploadAlt;
   faGavel = faGavel;
+  faFileExcel = faFileExcel;
 
   // Navigation Titles Mapping
   viewTitles: Record<string, string> = {
@@ -893,6 +927,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     'community': 'إدارة التبادلات والمزادات',
     'bourseSettings': 'إعدادات بورصة الكتب',
     'automation': 'نظام الأتمتة والذكاء',
+    'aiControlCenter': 'AI Control Center',
     'newsletter': 'القائمة البريدية',
     'marketers': 'إدارة المسوقين العملاء',
     'specialOffers': 'إدارة العروض الخاصة (Emails)'
@@ -2298,7 +2333,12 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
         publishYear: p['publishYear'] || '',
         pages: p['pages'] || 0,
         coverType: p['coverType'] || '',
-        language: p['language'] || ''
+        language: p['language'] || '',
+        stationeryType: p['stationeryType'] || '',
+        material: p['material'] || '',
+        color: p['color'] || '',
+        size: p['size'] || '',
+        brand: p['brand'] || ''
       }))
     };
 
@@ -2504,9 +2544,16 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     let cleanedPhone = phone.replace(/[\s\-\(\)]/g, '');
     // If it doesn't start with +, add Egypt country code
     if (!cleanedPhone.startsWith('+')) {
+      // If it starts with 0 (e.g., 01000000000), replace 0 with +2
       if (cleanedPhone.startsWith('0')) {
         cleanedPhone = '+2' + cleanedPhone.substring(1);
-      } else {
+      }
+      // If it starts with 20 (e.g., 20100000000 or 201000000000), add + at the beginning
+      else if (cleanedPhone.startsWith('20')) {
+        cleanedPhone = '+' + cleanedPhone;
+      }
+      // Otherwise, add +2
+      else {
         cleanedPhone = '+2' + cleanedPhone;
       }
     }
@@ -2557,6 +2604,123 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       },
       error: () => {
         this.showErrorModal('خطأ في الاتصال بالخادم أثناء تصدير المنتجات');
+      }
+    });
+  }
+
+  openWholesalePriceModal(): void {
+    this.showWholesalePriceModal = true;
+  }
+
+  generateWholesaleExcel(): void {
+    this.http.get<{ success: boolean; products: Product[] }>(`${this.backendBaseUrl}/admin/products?all=true`).subscribe({
+      next: (response) => {
+        if (response.success) {
+          let filtered = [...response.products];
+
+          // Filter by scope
+          if (this.wholesaleOptions.scope === 'category' && this.wholesaleOptions.selectedCategory) {
+            filtered = filtered.filter(p => p.product_category === this.wholesaleOptions.selectedCategory);
+          } else if (this.wholesaleOptions.scope === 'admin') {
+            filtered = filtered.filter(p => !p.merchantName || p.merchantName === 'admin');
+          } else if (this.wholesaleOptions.scope === 'merchants') {
+            filtered = filtered.filter(p => p.merchantName && p.merchantName !== 'admin');
+          } else if (this.wholesaleOptions.scope === 'specific_merchant' && this.wholesaleOptions.selectedMerchant) {
+            filtered = filtered.filter(p => p.merchantName === this.wholesaleOptions.selectedMerchant);
+          }
+
+          if (filtered.length === 0) {
+            this.showErrorModal('لا توجد منتجات تطابق هذه الفلاتر للتصدير.');
+            return;
+          }
+
+          // Build the data array based on selected columns
+          const data = filtered.map(product => {
+            const row: any = {};
+
+            if (this.wholesaleOptions.columns.product_name) {
+              row['اسم المنتج'] = product.product_name;
+            }
+            if (this.wholesaleOptions.columns.product_category) {
+              row['الفئة'] = product.product_category;
+            }
+            if (this.wholesaleOptions.columns.price_cost) {
+              row['سعر الشراء'] = Math.ceil(product.price_cost || 0);
+            }
+            if (this.wholesaleOptions.columns.product_price) {
+              row['سعر البيع'] = Math.ceil(product.product_price || 0);
+            }
+            if (this.wholesaleOptions.columns.product_quantity) {
+              row['الكمية'] = product.product_quantity || 0;
+            }
+            if (this.wholesaleOptions.columns.author) {
+              row['المؤلف'] = product['author'] || '';
+            }
+            if (this.wholesaleOptions.columns.publisher) {
+              row['الناشر'] = product['publisher'] || '';
+            }
+            if (this.wholesaleOptions.columns.merchantName) {
+              row['المصدر'] = product.merchantName || 'admin';
+            }
+            if (this.wholesaleOptions.columns.copyType) {
+              row['نوع النسخة'] = product.copyType || '';
+            }
+            if (this.wholesaleOptions.columns.condition) {
+              row['الحالة'] = product.condition || '';
+            }
+            if (this.wholesaleOptions.columns.barcode) {
+              row['الباركود'] = product['barcode'] || '';
+            }
+            if (this.wholesaleOptions.columns.product_description) {
+              row['الوصف'] = product.product_description || '';
+            }
+            if (this.wholesaleOptions.columns.weight) {
+              row['الوزن'] = product.weight || 0;
+            }
+            if (this.wholesaleOptions.columns.dimensions) {
+              const length = product.length || 0;
+              const width = product.width || 0;
+              const height = product.height || 0;
+              row['الأبعاد'] = length && width && height ? `${length}×${width}×${height}` : '';
+            }
+            if (this.wholesaleOptions.columns.product_price_before_discount) {
+              row['السعر قبل الخصم'] = Math.ceil(product.product_price_before_discount || 0);
+            }
+            if (this.wholesaleOptions.columns.product_discount_percent) {
+              row['نسبة الخصم'] = product.product_discount_percent || 0;
+            }
+            if (this.wholesaleOptions.columns.wholesale_price) {
+              // Calculate wholesale price based on method
+              if (this.wholesaleOptions.priceMethod === 'same') {
+                row['سعر الجملة'] = Math.ceil(product.product_price || 0);
+              } else if (this.wholesaleOptions.priceMethod === 'percentage') {
+                const costPrice = product.price_cost || 0;
+                const percentage = product.merchantName && product.merchantName !== 'admin' 
+                  ? (this.wholesaleOptions.merchantPercentage || 0) 
+                  : (this.wholesaleOptions.adminPercentage || 0);
+                const calculatedPrice = costPrice + (costPrice * (percentage / 100));
+                row['سعر الجملة'] = Math.ceil(calculatedPrice);
+              }
+            }
+
+            return row;
+          });
+
+          const worksheet = XLSX.utils.json_to_sheet(data);
+          const workbook = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(workbook, worksheet, 'أسعار الجملة');
+          
+          const fileName = `wholesale_prices_${new Date().toISOString().slice(0, 10)}.xlsx`;
+          XLSX.writeFile(workbook, fileName);
+          
+          this.showWholesalePriceModal = false;
+          this.showSuccessModal('تم إنشاء ملف إكسل أسعار الجملة بنجاح! ✅');
+        } else {
+          this.showErrorModal('فشل في جلب المنتجات للتصدير');
+        }
+      },
+      error: () => {
+        this.showErrorModal('خطأ في الاتصال بالخادم أثناء تصدير أسعار الجملة');
       }
     });
   }
@@ -4165,6 +4329,12 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       true,
       action
     );
+  }
+
+  openWhatsApp(phoneNumber: string, bookName: string): void {
+    const message = `مرحباً، بخصوص اقتراحك لكتاب "${bookName}"`;
+    const whatsappUrl = `${this.getWhatsAppUrl(phoneNumber)}?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
   }
 
   // Helper methods for showing different modal types

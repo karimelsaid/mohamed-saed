@@ -1,0 +1,401 @@
+{
+  "name": "Book Recommendation - KnoozBook",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "book-recommendation",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook - User Event",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [250, 300],
+      "webhookId": "book-recommendation-webhook"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-user-id",
+              "leftValue": "={{ $json.userId }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty"
+              }
+            },
+            {
+              "id": "has-event-type",
+              "leftValue": "={{ $json.eventType }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "validate-event",
+      "name": "Validate User Event",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "is-book-view",
+              "leftValue": "={{ $json.eventType }}",
+              "rightValue": "book_view",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "is-book-add-to-cart",
+              "leftValue": "={{ $json.eventType }}",
+              "rightValue": "add_to_cart",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "is-book-purchase",
+              "leftValue": "={{ $json.eventType }}",
+              "rightValue": "purchase",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "check-event-type",
+      "name": "Check Event Type",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.BACKEND_URL }}/api/products/{{ $json.bookId }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "fetch-book-details",
+      "name": "Fetch Book Details",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BACKEND_URL }}/api/automation/ai/execute",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"task\": \"recommend_books\",\n  \"data\": {\n    \"category\": \"{{ $('Fetch Book Details').item.json.product_category }}\",\n    \"author\": \"{{ $('Fetch Book Details').item.json.author }}\",\n    \"excludeBookId\": \"{{ $json.bookId }}\",\n    \"userId\": \"{{ $json.userId }}\"\n  },\n  \"options\": {\n    \"limit\": 5\n  }\n}",
+        "options": {}
+      },
+      "id": "ai-recommendation",
+      "name": "AI Book Recommendation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-recommendations",
+              "leftValue": "={{ $json.success }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-recommendations",
+      "name": "Check Recommendations",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BACKEND_URL }}/api/analytics/recommendations",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"userId\": \"{{ $('Webhook - User Event').item.json.userId }}\",\n  \"triggerBookId\": \"{{ $('Webhook - User Event').item.json.bookId }}\",\n  \"triggerEventType\": \"{{ $('Webhook - User Event').item.json.eventType }}\",\n  \"recommendations\": \"{{ $json.result }}\",\n  \"timestamp\": \"{{ $now.toISO() }}\"\n}",
+        "options": {}
+      },
+      "id": "save-recommendations",
+      "name": "Save Recommendations",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1450, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "should-notify",
+              "leftValue": "={{ $('Webhook - User Event').item.json.eventType }}",
+              "rightValue": "purchase",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-notify",
+      "name": "Check If Should Notify",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1650, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BACKEND_URL }}/api/notifications/send",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"userId\": \"{{ $('Webhook - User Event').item.json.userId }}\",\n  \"type\": \"recommendation\",\n  \"title\": \"كتب ممكن نعجبك\",\n  \"message\": \"بناءً على شرائك الأخير، رشحلنا كتب ممكن تناسبك\",\n  \"data\": {\n    \"recommendations\": \"{{ $('AI Book Recommendation').item.json.result }}\"\n  }\n}",
+        "options": {}
+      },
+      "id": "send-notification",
+      "name": "Send Notification",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1850, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BACKEND_URL }}/api/automation/log",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"type\": \"recommendation\",\n  \"platform\": \"system\",\n  \"status\": \"success\",\n  \"title\": \"Book Recommendation Generated\",\n  \"details\": {\n    \"userId\": \"{{ $('Webhook - User Event').item.json.userId }}\",\n    \"triggerBookId\": \"{{ $('Webhook - User Event').item.json.bookId }}\",\n    \"triggerEventType\": \"{{ $('Webhook - User Event').item.json.eventType }}\",\n    \"recommendationsCount\": \"{{ $('AI Book Recommendation').item.json.result.length }}\"\n  },\n  \"metadata\": {\n    \"timestamp\": \"{{ $now.toISO() }}\"\n  }\n}",
+        "options": {}
+      },
+      "id": "log-recommendation",
+      "name": "Log Recommendation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2050, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"message\": \"Book recommendations generated\",\n  \"data\": {\n    \"recommendations\": \"{{ $('AI Book Recommendation').item.json.result }}\",\n    \"triggerBookId\": \"{{ $('Webhook - User Event').item.json.bookId }}\",\n    \"timestamp\": \"{{ $now.toISO() }}\"\n  }\n}"
+      },
+      "id": "response",
+      "name": "Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2250, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": false,\n  \"message\": \"Invalid event data\",\n  \"timestamp\": \"{{ $now.toISO() }}\"\n}"
+      },
+      "id": "error-response",
+      "name": "Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [450, 450]
+    }
+  ],
+  "connections": {
+    "webhook-trigger": {
+      "main": [
+        [
+          {
+            "node": "validate-event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "validate-event": {
+      "main": [
+        [
+          {
+            "node": "check-event-type",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "error-response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check-event-type": {
+      "main": [
+        [
+          {
+            "node": "fetch-book-details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "fetch-book-details": {
+      "main": [
+        [
+          {
+            "node": "ai-recommendation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ai-recommendation": {
+      "main": [
+        [
+          {
+            "node": "check-recommendations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check-recommendations": {
+      "main": [
+        [
+          {
+            "node": "save-recommendations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "save-recommendations": {
+      "main": [
+        [
+          {
+            "node": "check-notify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check-notify": {
+      "main": [
+        [
+          {
+            "node": "send-notification",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "log-recommendation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "send-notification": {
+      "main": [
+        [
+          {
+            "node": "log-recommendation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "log-recommendation": {
+      "main": [
+        [
+          {
+            "node": "response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2026-06-27T00:00:00.000Z",
+  "versionId": "1"
+}

@@ -742,6 +742,98 @@
         </div>
     </div>
 
+    <!-- ASR Results Bar (Integrated) -->
+    <div class="asr-results-bar" *ngIf="asrReviewResult && isAsrReviewEnabled" dir="rtl">
+        <div class="asr-results-content">
+            <div class="accuracy-badge-mini" [ngClass]="getAccuracyClass(asrReviewResult.accuracy_score)">
+                <span class="accuracy-percent">{{ (asrReviewResult.accuracy_score * 100).toFixed(0) }}%</span>
+            </div>
+            <div class="stats-mini">
+                <span class="stat-mini correct">✓ {{ asrReviewResult.correct_words }}</span>
+                <span class="stat-mini missing">✗ {{ asrReviewResult.missing_words }}</span>
+                <span class="stat-mini incorrect">⚠ {{ asrReviewResult.incorrect_words }}</span>
+            </div>
+            <button class="dismiss-asr-btn" (click)="dismissAsrResult()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- ASR Detailed Results Modal -->
+    <div class="asr-modal-overlay" *ngIf="asrReviewResult && showAsrModal" (click)="closeAsrModal()">
+        <div class="asr-modal" (click)="$event.stopPropagation()">
+            <div class="asr-modal-header">
+                <h3>نتيجة المراجعة الصوتية</h3>
+                <button class="asr-modal-close" (click)="closeAsrModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="asr-modal-body">
+                <!-- Accuracy Score -->
+                <div class="asr-accuracy-section">
+                    <div class="accuracy-circle" [ngClass]="getAccuracyClass(asrReviewResult.accuracy_score)">
+                        <span class="accuracy-value">{{ (asrReviewResult.accuracy_score * 100).toFixed(0) }}%</span>
+                    </div>
+                    <span class="accuracy-label">الدقة العامة</span>
+                </div>
+
+                <!-- Statistics -->
+                <div class="asr-stats-grid">
+                    <div class="stat-card correct">
+                        <div class="stat-icon">✓</div>
+                        <div class="stat-value">{{ asrReviewResult.correct_words }}</div>
+                        <div class="stat-label">صحيحة</div>
+                    </div>
+                    <div class="stat-card missing">
+                        <div class="stat-icon">✗</div>
+                        <div class="stat-value">{{ asrReviewResult.missing_words }}</div>
+                        <div class="stat-label">مفقودة</div>
+                    </div>
+                    <div class="stat-card incorrect">
+                        <div class="stat-icon">⚠</div>
+                        <div class="stat-value">{{ asrReviewResult.incorrect_words }}</div>
+                        <div class="stat-label">خاطئة</div>
+                    </div>
+                    <div class="stat-card extra">
+                        <div class="stat-icon">+</div>
+                        <div class="stat-value">{{ asrReviewResult.extra_words }}</div>
+                        <div class="stat-label">إضافية</div>
+                    </div>
+                </div>
+
+                <!-- Transcribed Text -->
+                <div class="asr-text-section">
+                    <h4>النص المسموع</h4>
+                    <div class="transcribed-text" dir="rtl">
+                        <span *ngFor="let word of getTranscribedWordsWithStatus()" 
+                              [ngClass]="getWordStatusClass(word.status)">
+                            {{ word.text }}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Errors List -->
+                <div class="asr-errors-section" *ngIf="asrReviewResult.errors && asrReviewResult.errors.length > 0">
+                    <h4>الأخطاء التفصيلية</h4>
+                    <div class="errors-list">
+                        <div *ngFor="let error of asrReviewResult.errors" class="error-item" [ngClass]="error.error_type">
+                            <div class="error-location">سورة {{ error.surah }} - آية {{ error.ayah }}</div>
+                            <div class="error-details">
+                                <span class="error-expected">المتوقع: {{ error.expected_word }}</span>
+                                <span class="error-transcribed" *ngIf="error.transcribed_word">المسموع: {{ error.transcribed_word }}</span>
+                            </div>
+                            <div class="error-type-label">{{ getErrorTypeLabel(error.error_type) }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="asr-modal-footer">
+                <button class="asr-modal-btn primary" (click)="closeAsrModal()">إغلاق</button>
+                <button class="asr-modal-btn secondary" (click)="dismissAsrResult()">تجاهل</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Mushaf Page Container (Slider) -->
     <div #pageContainer class="mushaf-page-container" [class.no-navbar]="!showNavbar"
         [class.has-fixed-header]="showNavbar" [class.scale-mode]="isMemorizationMode && !isTestPhase"
@@ -1003,11 +1095,26 @@
             </div>
 
             <!-- Mic Toggle Button (Only in Review Mode here) -->
-            <button class="mic-footer-btn" *ngIf="memorizationSettings.type === 'muraaja'"
+            <button class="mic-footer-btn" *ngIf="memorizationSettings.type === 'muraaja' && !isAsrReviewEnabled"
                 [class.active]="memorizationSettings.inputMethod === 'voice'" (click)="toggleVoiceMode()">
                 <i class="fas" [class.fa-microphone]="memorizationSettings.inputMethod === 'voice'"
                     [class.fa-microphone-slash]="memorizationSettings.inputMethod !== 'voice'"></i>
             </button>
+
+            <!-- ASR Voice Review Button -->
+            <button class="mic-footer-btn" *ngIf="memorizationSettings.type === 'muraaja'"
+                [class.active]="isAsrReviewEnabled" (click)="toggleAsrReviewEnabled()" title="مراجعة صوتية بالذكاء الاصطناعي">
+                <i class="fas fa-robot"></i>
+            </button>
+
+            <!-- ASR Recording Controls (When ASR is enabled) -->
+            <div class="asr-recording-controls" *ngIf="memorizationSettings.type === 'muraaja' && isAsrReviewEnabled">
+                <button class="record-btn-mini" [class.recording]="isAsrRecording"
+                    (click)="isAsrRecording ? stopAsrRecording() : startAsrRecording()">
+                    <i class="fas" [class.fa-stop]="isAsrRecording" [class.fa-microphone]="!isAsrRecording"></i>
+                </button>
+                <span class="recording-time" *ngIf="isAsrRecording">{{ formatTime(asrRecordingDuration) }}</span>
+            </div>
 
             <button class="exit-mode-btn" (click)="exitMemorization()">إلغاء</button>
         </div>
@@ -1025,6 +1132,11 @@
                         <i class="fas" [class.fa-microphone]="memorizationSettings.inputMethod === 'voice'"
                             [class.fa-microphone-slash]="memorizationSettings.inputMethod !== 'voice'"
                             style="font-size: 14px;"></i>
+                    </button>
+                    <!-- ASR Voice Review Button -->
+                    <button class="mic-footer-btn" style="width: 36px; height: 36px;"
+                        [class.active]="isAsrReviewEnabled" (click)="toggleAsrReviewEnabled()" title="مراجعة صوتية بالذكاء الاصطناعي">
+                        <i class="fas fa-robot" style="font-size: 14px;"></i>
                     </button>
                     <div class="test-progress">{{ currentTestQuestionIndex + 1 }} / {{ testQuestions.length }}
                     </div>
@@ -1234,6 +1346,19 @@
                             (click)="memorizationSettings.difficulty = 'easy'">سهل</button>
                         <button [class.active]="memorizationSettings.difficulty === 'hard'"
                             (click)="memorizationSettings.difficulty = 'hard'">صعب</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ASR Voice Review Option -->
+            <div class="setting-group" style="margin-top: 16px;">
+                <div class="setting-item">
+                    <label>طريقة المراجعة</label>
+                    <div class="mini-chips">
+                        <button [class.active]="!isAsrReviewEnabled"
+                            (click)="toggleAsrReviewEnabled()">يدوية</button>
+                        <button [class.active]="isAsrReviewEnabled"
+                            (click)="toggleAsrReviewEnabled()">ذكاء اصطناعي 🤖</button>
                     </div>
                 </div>
             </div>

@@ -232,7 +232,7 @@ const verifyOrderPayment = async (req, res) => {
         const user = await User.findOne({ 'orders._id': targetId });
 
         if (!user) {
-            return res.status(404).json({ success: false, message: 'Order nout found (User not found)' });
+            return res.status(404).json({ success: false, message: 'Order not found (User not found)' });
         }
 
         // Get the subdocument
@@ -252,7 +252,18 @@ const verifyOrderPayment = async (req, res) => {
 
         await user.save({ validateBeforeSave: false });
 
-        res.json({ success: true, message: 'Payment verified and order updated' });
+        // Return order details including products for analytics
+        res.json({ 
+            success: true, 
+            message: 'Payment verified and order updated',
+            orderId: order._id,
+            products: order.products ? order.products.map(p => ({
+                id: p.book || p.bookId || p.products_id,
+                price: p.price || p.product_price || 0,
+                quantity: p.quantity || 1
+            })) : [],
+            totalAmount: order.totalAmount || order.total_price || 0
+        });
 
     } catch (error) {
         console.error('Error verifying order payment:', error);

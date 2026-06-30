@@ -69,8 +69,8 @@
       </div>
 
       <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-         <div *ngFor="let book of enrichedBooks" class="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-red-500 group flex flex-col h-full relative">
-            
+         <div *ngFor="let book of enrichedBooks" [attr.data-product-id]="book.products_id" class="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-red-500 group flex flex-col h-full relative">
+
             <!-- Stock Badge -->
             <div class="absolute top-3 right-3 z-10 bg-black/70 backdrop-blur-sm text-white text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-2">
                <fa-icon [icon]="['fas', 'boxes']" class="text-gray-300"></fa-icon>
@@ -78,7 +78,7 @@
             </div>
 
             <!-- Image -->
-            <div class="relative aspect-[2/3] overflow-hidden bg-gray-100 dark:bg-gray-900 w-full group-hover:opacity-90 transition-opacity">
+            <div class="relative aspect-[2/3] overflow-hidden bg-gray-100 dark:bg-gray-900 w-full group-hover:opacity-90 transition-opacity cursor-pointer" (click)="navigateToProduct(book)">
                <img *ngIf="book.product_image" [src]="dataService.getBookImageUrl(book)" [alt]="book.bookName" loading="lazy" class="w-full h-full object-cover">
                
                <div *ngIf="!book.product_image" class="w-full h-full flex flex-col items-center justify-center text-gray-300">

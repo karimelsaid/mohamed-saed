@@ -15,6 +15,7 @@ import { FreeShippingService, FreeShippingRules } from '../services/free-shippin
 import { PaymentModalComponent } from '../payment-modal/payment-modal.component';
 import { PromotionService } from '../services/promotion.service';
 import { HttpClient } from '@angular/common/http';
+import { AnalyticsTrackingService } from '../services/analytics-tracking.service';
 
 @Component({
   selector: 'app-checkout-modal',
@@ -172,7 +173,8 @@ export class CheckoutModalComponent implements OnInit {
     private freeShippingService: FreeShippingService,
     private promotionService: PromotionService,
     private http: HttpClient,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private analyticsTrackingService: AnalyticsTrackingService
   ) { }
 
   calculateDiscountedPrice(price: number, bookId?: string, quantity: number = 1): { discountedPrice: number, discountedQty: number } {

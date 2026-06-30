@@ -17,24 +17,201 @@
     },
     {
       "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
+        "rules": {
+          "values": [
             {
-              "id": "event-type",
-              "leftValue": "={{ $json.eventType }}",
-              "rightValue": "impression",
-              "operator": {
-                "type": "string",
-                "operation": "equals"
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "impression",
+                    "leftValue": "={{ $json.body.eventType }}",
+                    "rightValue": "impression",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "click",
+                    "leftValue": "={{ $json.body.eventType }}",
+                    "rightValue": "click",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "comment",
+                    "leftValue": "={{ $json.body.eventType }}",
+                    "rightValue": "comment",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "purchase",
+                    "leftValue": "={{ $json.body.eventType }}",
+                    "rightValue": "purchase",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "search",
+                    "leftValue": "={{ $json.body.eventType }}",
+                    "rightValue": "search",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "purchase_batch",
+                    "leftValue": "={{ $json.body.eventType }}",
+                    "rightValue": "purchase_batch",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "other",
+                    "leftValue": "={{ $json.body.eventType }}",
+                    "rightValue": "impression",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEquals"
+                    }
+                  },
+                  {
+                    "id": "other2",
+                    "leftValue": "={{ $json.body.eventType }}",
+                    "rightValue": "click",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEquals"
+                    }
+                  },
+                  {
+                    "id": "other3",
+                    "leftValue": "={{ $json.body.eventType }}",
+                    "rightValue": "comment",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEquals"
+                    }
+                  },
+                  {
+                    "id": "other4",
+                    "leftValue": "={{ $json.body.eventType }}",
+                    "rightValue": "purchase",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEquals"
+                    }
+                  },
+                  {
+                    "id": "other5",
+                    "leftValue": "={{ $json.body.eventType }}",
+                    "rightValue": "search",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEquals"
+                    }
+                  },
+                  {
+                    "id": "other6",
+                    "leftValue": "={{ $json.body.eventType }}",
+                    "rightValue": "purchase_batch",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEquals"
+                    }
+                  }
+                ],
+                "combinator": "and"
               }
             }
-          ],
-          "combinator": "or"
+          ]
         },
         "options": {}
       },
@@ -52,7 +229,7 @@
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"eventType\": \"{{ $json.eventType }}\",\n  \"productId\": \"{{ $json.productId }}\",\n  \"userId\": \"{{ $json.userId || 'anonymous' }}\",\n  \"sessionId\": \"{{ $json.sessionId }}\",\n  \"metadata\": {\n    \"source\": \"{{ $json.source || 'direct' }}\",\n    \"device\": \"{{ $json.device || 'desktop' }}\",\n    \"timestamp\": \"{{ $now.toISO() }}\"\n  }\n}",
+        "jsonBody": "={\n  \"eventType\": \"{{ $json.body.eventType }}\",\n  \"productId\": \"{{ $json.body.productId }}\",\n  \"userId\": \"{{ $json.body.userId || 'anonymous' }}\",\n  \"sessionId\": \"{{ $json.body.sessionId }}\",\n  \"metadata\": {\n    \"source\": \"{{ $json.body.metadata.source || 'direct' }}\",\n    \"device\": \"{{ $json.body.metadata.device || 'desktop' }}\",\n    \"timestamp\": \"{{ $now.toISO() }}\"\n  }\n}",
         "options": {}
       },
       "id": "track-impression",
@@ -69,7 +246,7 @@
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"eventType\": \"click\",\n  \"productId\": \"{{ $json.productId }}\",\n  \"userId\": \"{{ $json.userId || 'anonymous' }}\",\n  \"sessionId\": \"{{ $json.sessionId }}\",\n  \"metadata\": {\n    \"clickType\": \"{{ $json.clickType || 'product_link' }}\",\n    \"source\": \"{{ $json.source || 'direct' }}\",\n    \"timestamp\": \"{{ $now.toISO() }}\"\n  }\n}",
+        "jsonBody": "={\n  \"eventType\": \"click\",\n  \"productId\": \"{{ $json.body.productId }}\",\n  \"userId\": \"{{ $json.body.userId || 'anonymous' }}\",\n  \"sessionId\": \"{{ $json.body.sessionId }}\",\n  \"metadata\": {\n    \"clickType\": \"{{ $json.body.clickType || 'product_link' }}\",\n    \"source\": \"{{ $json.body.source || 'direct' }}\",\n    \"timestamp\": \"{{ $now.toISO() }}\"\n  }\n}",
         "options": {}
       },
       "id": "track-click",
@@ -86,7 +263,7 @@
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"eventType\": \"comment\",\n  \"productId\": \"{{ $json.productId }}\",\n  \"userId\": \"{{ $json.userId || 'anonymous' }}\",\n  \"sessionId\": \"{{ $json.sessionId }}\",\n  \"metadata\": {\n    \"commentText\": \"{{ $json.commentText }}\",\n    \"platform\": \"{{ $json.platform || 'website' }}\",\n    \"timestamp\": \"{{ $now.toISO() }}\"\n  }\n}",
+        "jsonBody": "={\n  \"eventType\": \"comment\",\n  \"productId\": \"{{ $json.body.productId }}\",\n  \"userId\": \"{{ $json.body.userId || 'anonymous' }}\",\n  \"sessionId\": \"{{ $json.body.sessionId }}\",\n  \"metadata\": {\n    \"commentText\": \"{{ $json.body.commentText }}\",\n    \"platform\": \"{{ $json.body.platform || 'website' }}\",\n    \"timestamp\": \"{{ $now.toISO() }}\"\n  }\n}",
         "options": {}
       },
       "id": "track-comment",
@@ -103,7 +280,7 @@
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"eventType\": \"purchase\",\n  \"productId\": \"{{ $json.productId }}\",\n  \"userId\": \"{{ $json.userId }}\",\n  \"orderId\": \"{{ $json.orderId }}\",\n  \"sessionId\": \"{{ $json.sessionId }}\",\n  \"metadata\": {\n    \"amount\": \"{{ $json.amount }}\",\n    \"paymentMethod\": \"{{ $json.paymentMethod }}\",\n    \"timestamp\": \"{{ $now.toISO() }}\"\n  }\n}",
+        "jsonBody": "={\n  \"eventType\": \"purchase\",\n  \"productId\": \"{{ $json.body.productId }}\",\n  \"userId\": \"{{ $json.body.userId }}\",\n  \"orderId\": \"{{ $json.body.orderId }}\",\n  \"sessionId\": \"{{ $json.body.sessionId }}\",\n  \"metadata\": {\n    \"amount\": \"{{ $json.body.amount }}\",\n    \"paymentMethod\": \"{{ $json.body.paymentMethod }}\",\n    \"timestamp\": \"{{ $now.toISO() }}\"\n  }\n}",
         "options": {}
       },
       "id": "track-purchase",
@@ -120,7 +297,41 @@
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"eventType\": \"{{ $json.eventType }}\",\n  \"productId\": \"{{ $json.productId }}\",\n  \"userId\": \"{{ $json.userId || 'anonymous' }}\",\n  \"sessionId\": \"{{ $json.sessionId }}\",\n  \"metadata\": {\n    \"timestamp\": \"{{ $now.toISO() }}\"\n  }\n}",
+        "jsonBody": "={\n  \"eventType\": \"search\",\n  \"productId\": \"{{ $json.body.productId || '' }}\",\n  \"userId\": \"{{ $json.body.userId || 'anonymous' }}\",\n  \"sessionId\": \"{{ $json.body.sessionId }}\",\n  \"metadata\": {\n    \"searchTerm\": \"{{ $json.body.metadata.searchTerm }}\",\n    \"timestamp\": \"{{ $now.toISO() }}\"\n  }\n}",
+        "options": {}
+      },
+      "id": "track-search",
+      "name": "Track Search",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [650, 650]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BACKEND_URL }}/api/analytics/track",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"eventType\": \"purchase_batch\",\n  \"orderId\": \"{{ $json.body.orderId }}\",\n  \"userId\": \"{{ $json.body.userId || 'anonymous' }}\",\n  \"sessionId\": \"{{ $json.body.sessionId }}\",\n  \"products\": \"{{ $json.body.products }}\",\n  \"metadata\": {\n    \"totalAmount\": \"{{ $json.body.metadata.totalAmount }}\",\n    \"itemCount\": \"{{ $json.body.metadata.itemCount }}\",\n    \"timestamp\": \"{{ $now.toISO() }}\"\n  }\n}",
+        "options": {}
+      },
+      "id": "track-purchase-batch",
+      "name": "Track Purchase Batch",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [650, 750]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BACKEND_URL }}/api/analytics/track",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"eventType\": \"{{ $json.body.eventType }}\",\n  \"productId\": \"{{ $json.body.productId }}\",\n  \"userId\": \"{{ $json.body.userId || 'anonymous' }}\",\n  \"sessionId\": \"{{ $json.body.sessionId }}\",\n  \"metadata\": {\n    \"timestamp\": \"{{ $now.toISO() }}\"\n  }\n}",
         "options": {}
       },
       "id": "track-other",
@@ -131,77 +342,14 @@
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.BACKEND_URL }}/api/analytics/aggregate",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"timeRange\": \"24h\",\n  \"metrics\": [\"impressions\", \"clicks\", \"comments\", \"purchases\"]\n}",
-        "options": {}
-      },
-      "id": "aggregate-metrics",
-      "name": "Aggregate Metrics",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [850, 300]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
-            {
-              "id": "high-engagement",
-              "leftValue": "={{ $json.engagementRate }}",
-              "rightValue": "5",
-              "operator": {
-                "type": "number",
-                "operation": "larger"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "check-engagement",
-      "name": "Check High Engagement",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [1050, 300]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "={{ $env.BACKEND_URL }}/api/automation/trigger-promotion",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"productId\": \"{{ $json.productId }}\",\n  \"reason\": \"high_engagement\",\n  \"metrics\": {{ $json }}\n}",
-        "options": {}
-      },
-      "id": "trigger-promotion",
-      "name": "Trigger Auto Promotion",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [1250, 200]
-    },
-    {
-      "parameters": {
         "respondWith": "json",
-        "responseBody": "={\n  \"success\": true,\n  \"message\": \"Event tracked successfully\",\n  \"data\": {\n    \"eventType\": \"{{ $json.eventType }}\",\n    \"timestamp\": \"{{ $now.toISO() }}\",\n    \"aggregated\": {{ $json }}\n  }\n}"
+        "responseBody": "={\n  \"success\": true,\n  \"message\": \"Event tracked successfully\",\n  \"data\": {\n    \"eventType\": \"{{ $json.body.eventType }}\",\n    \"timestamp\": \"{{ $now.toISO() }}\"\n  }\n}"
       },
       "id": "response",
       "name": "Response",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [1450, 300]
+      "position": [850, 300]
     }
   ],
   "connections": {
@@ -248,6 +396,20 @@
         ],
         [
           {
+            "node": "track-search",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "track-purchase-batch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
             "node": "track-other",
             "type": "main",
             "index": 0
@@ -259,7 +421,7 @@
       "main": [
         [
           {
-            "node": "aggregate-metrics",
+            "node": "response",
             "type": "main",
             "index": 0
           }
@@ -270,7 +432,7 @@
       "main": [
         [
           {
-            "node": "aggregate-metrics",
+            "node": "response",
             "type": "main",
             "index": 0
           }
@@ -281,7 +443,7 @@
       "main": [
         [
           {
-            "node": "aggregate-metrics",
+            "node": "response",
             "type": "main",
             "index": 0
           }
@@ -292,44 +454,15 @@
       "main": [
         [
           {
-            "node": "aggregate-metrics",
+            "node": "response",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "track-other": {
+    "track-search": {
       "main": [
-        [
-          {
-            "node": "aggregate-metrics",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "aggregate-metrics": {
-      "main": [
-        [
-          {
-            "node": "check-engagement",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "check-engagement": {
-      "main": [
-        [
-          {
-            "node": "trigger-promotion",
-            "type": "main",
-            "index": 0
-          }
-        ],
         [
           {
             "node": "response",
@@ -339,7 +472,18 @@
         ]
       ]
     },
-    "trigger-promotion": {
+    "track-purchase-batch": {
+      "main": [
+        [
+          {
+            "node": "response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "track-other": {
       "main": [
         [
           {

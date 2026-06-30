@@ -18,6 +18,7 @@ import { SlugService } from '../services/slug.service';
 import { PromotionService } from '../services/promotion.service';
 import { SeoService } from '../services/seo.service';
 import { AnalyticsService } from '../services/analytics.service';
+import { AnalyticsTrackingService } from '../services/analytics-tracking.service';
 import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
 
 @Component({
@@ -78,6 +79,7 @@ export class BookDetailsComponent implements OnInit, OnDestroy {
     private promotionService: PromotionService,
     private seoService: SeoService,
     private analyticsService: AnalyticsService,
+    private analyticsTrackingService: AnalyticsTrackingService,
     private cdr: ChangeDetectorRef,
     @Inject(PLATFORM_ID) private platformId: Object
   ) { }
@@ -110,7 +112,7 @@ export class BookDetailsComponent implements OnInit, OnDestroy {
           this.handleReferral();
           this.fetchAverageRating(this.book!.products_id.toString());
           this.loadRelatedProductsAsync();
-          this.analyticsService.trackProductView(this.book!.products_id.toString()).subscribe();
+          this.analyticsTrackingService.trackImpression(this.book!.products_id.toString(), 'product_page');
           this.route.url.subscribe(urlSegments => {
             if (urlSegments.length > 0 && urlSegments[0].path === 'product') {
               const categoryRoute = this.getProductRoute(this.book!);
@@ -148,7 +150,7 @@ export class BookDetailsComponent implements OnInit, OnDestroy {
                     this.handleReferral();
                     this.fetchAverageRating(this.book.products_id.toString());
                     this.loadRelatedProductsAsync();
-                    this.analyticsService.trackProductView(this.book.products_id.toString()).subscribe();
+                    this.analyticsTrackingService.trackImpression(this.book.products_id.toString(), 'product_page');
                   }
                   this.cdr.markForCheck();
                 },
@@ -195,7 +197,7 @@ export class BookDetailsComponent implements OnInit, OnDestroy {
                 this.handleReferral();
                 this.fetchAverageRating(this.book.products_id.toString());
                 this.loadRelatedProductsAsync();
-                this.analyticsService.trackProductView(this.book.products_id.toString()).subscribe();
+                this.analyticsTrackingService.trackImpression(this.book.products_id.toString(), 'product_page');
                 this.route.url.subscribe(urlSegments => {
                   if (urlSegments.length > 0 && urlSegments[0].path === 'product') {
                     const categoryRoute = this.getProductRoute(this.book!);

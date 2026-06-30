@@ -1,5 +1,5 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, ViewChild, OnDestroy, Inject, PLATFORM_ID } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
@@ -16,6 +16,7 @@ import { AccountModalComponent } from '../auth/account-modal/account-modal.compo
 import { GamificationService } from '../services/gamification.service';
 import { PromotionService } from '../services/promotion.service';
 import { AnalyticsService } from '../services/analytics.service';
+import { AnalyticsTrackingService } from '../services/analytics-tracking.service';
 
 @Component({
   selector: 'app-search-results',
@@ -24,7 +25,7 @@ import { AnalyticsService } from '../services/analytics.service';
   standalone: true,
   imports: [CommonModule, RouterModule, FormsModule, FontAwesomeModule, AccountModalComponent]
 })
-export class SearchResultsComponent implements OnInit {
+export class SearchResultsComponent implements OnInit, OnDestroy {
   uploadsBaseUrl = environment.uploadsBaseUrl;
   faHeart = faHeart;
   faCartPlus = faCartPlus;
@@ -58,11 +59,16 @@ export class SearchResultsComponent implements OnInit {
   showRequestModal = false;
   requestedBookName = '';
   requestedAuthorName = '';
+  requestedPhoneNumber = '';
   requestSuccessMessage = '';
   isRequestSubmitting = false;
   appliedCoupon: any = null;
   expiredCouponMessage: string | null = null;
   ratings: Record<string, { averageRating: number; ratingCount: number }> = {};
+
+  // Analytics tracking
+  private trackedProducts = new Set<string>();
+  private intersectionObserver: IntersectionObserver | null = null;
 
   @ViewChild(AccountModalComponent, { static: false }) accountModal?: AccountModalComponent;
 
@@ -75,7 +81,9 @@ export class SearchResultsComponent implements OnInit {
     private modalService: ModalService,
     public gamificationService: GamificationService,
     private promotionService: PromotionService,
-    private analyticsService: AnalyticsService
+    private analyticsService: AnalyticsService,
+    private analyticsTrackingService: AnalyticsTrackingService,
+    @Inject(PLATFORM_ID) private platformId: Object
   ) { }
 
   ngOnInit(): void {
@@ -166,6 +174,12 @@ export class SearchResultsComponent implements OnInit {
           }
           this.availableCategories = Array.isArray(response.availableCategories) ? response.availableCategories : [];
           this.fetchRatingsForBooks();
+          // Setup intersection observer for impression tracking
+          this.setupIntersectionObserver();
+          // Track search event
+          if (this.searchQuery && this.searchQuery.trim()) {
+            this.analyticsTrackingService.trackSearch(this.searchQuery.trim());
+          }
         } else {
           this.books = [];
           this.paginatedBooks = [];
@@ -196,6 +210,8 @@ export class SearchResultsComponent implements OnInit {
         this.updatePage();
         this.isLoading = false;
         this.fetchRatingsForBooks();
+        // Setup intersection observer for impression tracking
+        this.setupIntersectionObserver();
       },
       error: () => this.isLoading = false
     });
@@ -357,10 +373,36 @@ export class SearchResultsComponent implements OnInit {
     if (!userId) { this.showLoginPrompt = true; return; }
     
     this.isRequestSubmitting = true;
-    this.authService.requestBook(userId, this.requestedBookName, this.requestedAuthorName).subscribe({
-      next: () => { this.requestSuccessMessage = 'تم الإرسال بنجاح'; setTimeout(() => this.closeRequestModal(), 2000); },
+    this.authService.requestBook(userId, this.requestedBookName, this.requestedAuthorName, this.requestedPhoneNumber).subscribe({
+      next: () => { 
+        this.requestSuccessMessage = 'تم الإرسال بنجاح'; 
+        setTimeout(() => this.closeRequestModal(), 2000); 
+      },
       complete: () => this.isRequestSubmitting = false
     });
+  }
+
+  userHasPhone(): boolean {
+    const userData = JSON.parse(localStorage.getItem('user') || '{}');
+    return !!(userData.phone && userData.phone.trim() !== '');
+  }
+
+  sendBookRequestViaWhatsApp(): void {
+    const userData = JSON.parse(localStorage.getItem('user') || '{}');
+    const userName = userData.name || 'مستخدم';
+    const userPhone = userData.phone || this.requestedPhoneNumber || 'غير محدد';
+    
+    const message = `📚 طلب كتاب جديد\n\n` +
+      `👤 اسم المستخدم: ${userName}\n` +
+      `📱 رقم الهاتف: ${userPhone}\n` +
+      `📖 اسم الكتاب: ${this.requestedBookName}\n` +
+      `✍️ اسم المؤلف: ${this.requestedAuthorName || 'غير محدد'}\n\n` +
+      `يرجى مراجعة هذا الطلب وإضافته للمكتبة.`;
+    
+    const whatsappNumber = '201094612729'; // Replace with actual WhatsApp number
+    const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
+    
+    window.open(whatsappUrl, '_blank');
   }
 
   closeLoginPrompt(): void { this.showLoginPrompt = false; }
@@ -390,6 +432,51 @@ export class SearchResultsComponent implements OnInit {
 
   trackByBook(index: number, item: any): string {
     return item.products_id || item._id || index.toString();
+  }
+
+  ngOnDestroy(): void {
+    if (this.intersectionObserver) this.intersectionObserver.disconnect();
+  }
+
+  navigateToProduct(book: Book): void {
+    const slug = (book.product_name || '').trim().replace(/\s+/g, '-');
+    // Track click event
+    this.analyticsTrackingService.trackClick(book.products_id, 'search_results');
+    this.router.navigate(['/book', book.products_id, slug]);
+  }
+
+  // Analytics: Setup intersection observer for impression tracking
+  private setupIntersectionObserver(): void {
+    if (!isPlatformBrowser(this.platformId) || typeof IntersectionObserver === 'undefined') {
+      return;
+    }
+
+    this.intersectionObserver = new IntersectionObserver(
+      (entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const productId = entry.target.getAttribute('data-product-id');
+            if (productId && !this.trackedProducts.has(productId)) {
+              this.trackedProducts.add(productId);
+              this.analyticsTrackingService.trackImpression(productId, 'search_results');
+              // Stop observing after tracking once
+              this.intersectionObserver?.unobserve(entry.target);
+            }
+          }
+        });
+      },
+      {
+        threshold: 0.5,
+        rootMargin: '0px'
+      }
+    );
+
+    setTimeout(() => {
+      const productCards = document.querySelectorAll('[data-product-id]');
+      productCards.forEach(card => {
+        this.intersectionObserver?.observe(card);
+      });
+    }, 500);
   }
 }
 

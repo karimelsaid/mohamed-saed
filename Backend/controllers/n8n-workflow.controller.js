@@ -5,27 +5,230 @@ const fs = require('fs');
 const path = require('path');
 
 /**
+ * Get n8n statistics (workflows, executions, etc.)
+ */
+exports.getN8nStats = async (req, res) => {
+    try {
+        const settings = await AutomationSetting.getInstance();
+        if (!settings.n8nConfig.apiKey || !settings.n8nConfig.apiUrl) {
+            // Return empty stats if credentials not configured
+            return res.json({
+                success: true,
+                stats: {
+                    totalWorkflows: 0,
+                    activeWorkflows: 0,
+                    totalExecutions: 0,
+                    successfulExecutions: 0,
+                    failedExecutions: 0,
+                    impressions: 0,
+                    comments: 0,
+                    clicks: 0,
+                    engagementRate: 0,
+                    purchases: 0,
+                    conversionRate: 0,
+                    searches: 0
+                }
+            });
+        }
+
+        const response = await axios.get(`${settings.n8nConfig.apiUrl}/api/v1/workflows`, {
+            headers: { 'X-N8N-API-KEY': settings.n8nConfig.apiKey }
+        });
+
+        const workflows = response.data.data || [];
+        const activeWorkflows = workflows.filter(w => w.active).length;
+
+        // Get analytics stats from MongoDB
+        const AnalyticsEvent = require('../models/AnalyticsEvent.model');
+        
+        const [impressions, comments, clicks, purchases, searches] = await Promise.all([
+            AnalyticsEvent.countDocuments({ eventType: 'impression' }),
+            AnalyticsEvent.countDocuments({ eventType: 'comment' }),
+            AnalyticsEvent.countDocuments({ eventType: 'click' }),
+            AnalyticsEvent.countDocuments({ eventType: 'purchase' }),
+            AnalyticsEvent.countDocuments({ eventType: 'search' })
+        ]);
+
+        const totalEvents = impressions + clicks;
+        const engagementRate = totalEvents > 0 ? ((clicks / totalEvents) * 100).toFixed(2) : 0;
+        const conversionRate = impressions > 0 ? ((purchases / impressions) * 100).toFixed(2) : 0;
+
+        res.json({
+            success: true,
+            stats: {
+                totalWorkflows: workflows.length,
+                activeWorkflows: activeWorkflows,
+                totalExecutions: 0, // TODO: fetch from n8n executions API
+                successfulExecutions: 0,
+                failedExecutions: 0,
+                impressions,
+                comments,
+                clicks,
+                engagementRate: parseFloat(engagementRate),
+                purchases,
+                conversionRate: parseFloat(conversionRate),
+                searches
+            }
+        });
+    } catch (error) {
+        console.error('[n8n] Error fetching stats:', error.message);
+        res.json({
+            success: true,
+            stats: {
+                totalWorkflows: 0,
+                activeWorkflows: 0,
+                totalExecutions: 0,
+                successfulExecutions: 0,
+                failedExecutions: 0,
+                impressions: 0,
+                comments: 0,
+                clicks: 0,
+                engagementRate: 0,
+                purchases: 0,
+                conversionRate: 0,
+                searches: 0
+            }
+        });
+    }
+};
+
+/**
+ * Set n8n API key directly (for initial setup)
+ */
+exports.setN8nApiKey = async (req, res) => {
+    try {
+        const { apiKey } = req.body;
+        if (!apiKey) {
+            return res.status(400).json({ success: false, message: 'API key is required' });
+        }
+        
+        const settings = await AutomationSetting.getInstance();
+        settings.n8nConfig.apiUrl = 'https://n8n.knoozbook.com';
+        settings.n8nConfig.apiKey = apiKey;
+        settings.n8nConfig.syncEnabled = true;
+        
+        await settings.save();
+        
+        res.json({
+            success: true,
+            message: 'n8n API key set successfully',
+            config: {
+                apiUrl: settings.n8nConfig.apiUrl,
+                apiKey: '***',
+                syncEnabled: settings.n8nConfig.syncEnabled
+            }
+        });
+    } catch (error) {
+        console.error('Error setting n8n API key:', error.message);
+        res.status(500).json({ success: false, message: 'Failed to set n8n API key' });
+    }
+};
+
+/**
+ * Update n8n configuration
+ */
+exports.updateN8nConfig = async (req, res) => {
+    try {
+        const { apiUrl, apiKey } = req.body;
+        const settings = await AutomationSetting.getInstance();
+        
+        settings.n8nConfig.apiUrl = apiUrl || 'https://n8n.knoozbook.com';
+        settings.n8nConfig.apiKey = apiKey || '';
+        settings.n8nConfig.syncEnabled = true;
+        
+        await settings.save();
+        
+        res.json({
+            success: true,
+            message: 'n8n configuration updated successfully',
+            config: {
+                apiUrl: settings.n8nConfig.apiUrl,
+                apiKey: settings.n8nConfig.apiKey ? '***' : '',
+                syncEnabled: settings.n8nConfig.syncEnabled
+            }
+        });
+    } catch (error) {
+        console.error('Error updating n8n config:', error.message);
+        res.status(500).json({ success: false, message: 'Failed to update n8n configuration' });
+    }
+};
+
+/**
+ * Get n8n configuration status
+ */
+exports.getN8nConfig = async (req, res) => {
+    try {
+        const settings = await AutomationSetting.getInstance();
+        
+        res.json({
+            success: true,
+            config: {
+                apiUrl: settings.n8nConfig.apiUrl,
+                apiKey: settings.n8nConfig.apiKey ? '***' : '',
+                syncEnabled: settings.n8nConfig.syncEnabled,
+                configured: !!(settings.n8nConfig.apiKey && settings.n8nConfig.apiUrl)
+            }
+        });
+    } catch (error) {
+        console.error('Error getting n8n config:', error.message);
+        res.status(500).json({ success: false, message: 'Failed to get n8n configuration' });
+    }
+};
+
+/**
  * Get all workflows from n8n
  */
 exports.getWorkflows = async (req, res) => {
     try {
         const settings = await AutomationSetting.getInstance();
         if (!settings.n8nConfig.apiKey || !settings.n8nConfig.apiUrl) {
-            return res.status(400).json({ success: false, message: 'n8n API credentials not configured' });
+            // Return empty stats if credentials not configured
+            return res.json({
+                success: true,
+                workflows: [],
+                total: 0,
+                totalWorkflows: 0,
+                activeWorkflows: 0,
+                totalExecutions: 0,
+                successfulExecutions: 0,
+                failedExecutions: 0
+            });
         }
 
-        const response = await axios.get(`${settings.n8nConfig.apiUrl}/rest/workflows`, {
+        console.log('[n8n] Fetching workflows from:', settings.n8nConfig.apiUrl);
+        const response = await axios.get(`${settings.n8nConfig.apiUrl}/api/v1/workflows`, {
             headers: { 'X-N8N-API-KEY': settings.n8nConfig.apiKey }
         });
 
+        console.log('[n8n] Response status:', response.status);
+        console.log('[n8n] Response data:', JSON.stringify(response.data));
+
+        const workflows = response.data.data || [];
+        const activeWorkflows = workflows.filter(w => w.active).length;
+
         res.json({
             success: true,
-            workflows: response.data.data,
-            total: response.data.data.length
+            workflows: workflows,
+            total: workflows.length,
+            totalWorkflows: workflows.length,
+            activeWorkflows: activeWorkflows
         });
     } catch (error) {
-        console.error('Error fetching workflows:', error.message);
-        res.status(500).json({ success: false, message: 'Failed to fetch workflows' });
+        console.error('[n8n] Error fetching workflows:', error.message);
+        if (error.response) {
+            console.error('[n8n] Response status:', error.response.status);
+            console.error('[n8n] Response data:', error.response.data);
+        }
+        res.json({
+            success: true,
+            workflows: [],
+            total: 0,
+            totalWorkflows: 0,
+            activeWorkflows: 0,
+            totalExecutions: 0,
+            successfulExecutions: 0,
+            failedExecutions: 0
+        });
     }
 };
 
@@ -41,7 +244,7 @@ exports.getWorkflow = async (req, res) => {
             return res.status(400).json({ success: false, message: 'n8n API credentials not configured' });
         }
 
-        const response = await axios.get(`${settings.n8nConfig.apiUrl}/rest/workflows/${id}`, {
+        const response = await axios.get(`${settings.n8nConfig.apiUrl}/api/v1/workflows/${id}`, {
             headers: { 'X-N8N-API-KEY': settings.n8nConfig.apiKey }
         });
 
@@ -64,7 +267,7 @@ exports.createWorkflow = async (req, res) => {
             return res.status(400).json({ success: false, message: 'n8n API credentials not configured' });
         }
 
-        const response = await axios.post(`${settings.n8nConfig.apiUrl}/rest/workflows`, workflowData, {
+        const response = await axios.post(`${settings.n8nConfig.apiUrl}/api/v1/workflows`, workflowData, {
             headers: { 'X-N8N-API-KEY': settings.n8nConfig.apiKey }
         });
 
@@ -103,7 +306,7 @@ exports.updateWorkflow = async (req, res) => {
             return res.status(400).json({ success: false, message: 'n8n API credentials not configured' });
         }
 
-        const response = await axios.patch(`${settings.n8nConfig.apiUrl}/rest/workflows/${id}`, workflowData, {
+        const response = await axios.patch(`${settings.n8nConfig.apiUrl}/api/v1/workflows/${id}`, workflowData, {
             headers: { 'X-N8N-API-KEY': settings.n8nConfig.apiKey }
         });
 
@@ -135,7 +338,7 @@ exports.toggleWorkflow = async (req, res) => {
             return res.status(400).json({ success: false, message: 'n8n API credentials not configured' });
         }
 
-        const response = await axios.patch(`${settings.n8nConfig.apiUrl}/rest/workflows/${id}`, {
+        const response = await axios.patch(`${settings.n8nConfig.apiUrl}/api/v1/workflows/${id}`, {
             active: active
         }, {
             headers: { 'X-N8N-API-KEY': settings.n8nConfig.apiKey }
@@ -168,7 +371,7 @@ exports.deleteWorkflow = async (req, res) => {
             return res.status(400).json({ success: false, message: 'n8n API credentials not configured' });
         }
 
-        await axios.delete(`${settings.n8nConfig.apiUrl}/rest/workflows/${id}`, {
+        await axios.delete(`${settings.n8nConfig.apiUrl}/api/v1/workflows/${id}`, {
             headers: { 'X-N8N-API-KEY': settings.n8nConfig.apiKey }
         });
 
@@ -201,7 +404,7 @@ exports.getWorkflowExecutions = async (req, res) => {
         }
 
         const response = await axios.get(
-            `${settings.n8nConfig.apiUrl}/rest/executions?workflowId=${id}&limit=${limit}`,
+            `${settings.n8nConfig.apiUrl}/api/v1/executions?workflowId=${id}&limit=${limit}`,
             {
                 headers: { 'X-N8N-API-KEY': settings.n8nConfig.apiKey }
             }
@@ -245,7 +448,7 @@ exports.importWorkflow = async (req, res) => {
         const filePath = path.join(__dirname, '../n8n-workflows', fileName);
         const workflowData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
 
-        const response = await axios.post(`${settings.n8nConfig.apiUrl}/rest/workflows`, workflowData, {
+        const response = await axios.post(`${settings.n8nConfig.apiUrl}/api/v1/workflows`, workflowData, {
             headers: { 'X-N8N-API-KEY': settings.n8nConfig.apiKey }
         });
 
@@ -277,7 +480,7 @@ exports.executeWorkflow = async (req, res) => {
             return res.status(400).json({ success: false, message: 'n8n API credentials not configured' });
         }
 
-        const response = await axios.post(`${settings.n8nConfig.apiUrl}/rest/workflows/${id}/execute`, data || {}, {
+        const response = await axios.post(`${settings.n8nConfig.apiUrl}/api/v1/workflows/${id}/execute`, data || {}, {
             headers: { 'X-N8N-API-KEY': settings.n8nConfig.apiKey }
         });
 

@@ -41,6 +41,7 @@ const ordersRoutes = require('./routes/orders.routes');
 const paymentRoutes = require('./routes/payment.routes');
 const printRoutes = require('./routes/print.routes');
 const chatAiRoutes = require('./routes/chat-ai.routes');
+const quickActionsRoutes = require('./routes/quick-actions.routes');
 const adminRoutes = require('./routes/admin.routes'); // تأكد من وجود هذا المسار
 const merchantRoutes = require('./routes/merchant.routes');
 const paymentRequestsRoutes = require('./routes/payment-requests.routes'); // استيراد مسارات طلبات الدفع
@@ -640,6 +641,8 @@ app.use('/api/products', productsRoutes);
 app.use('/api/orders', ordersRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/chat-ai', chatAiRoutes);
+app.use('/api/book-requests', require('./routes/book-request.routes'));
+app.use('/api/quick-actions', quickActionsRoutes);
 app.use('/api/admin/settings', adminSettingsRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/merchant', merchantRoutes);
@@ -667,6 +670,7 @@ app.use('/api/quran-progress', quranProgressRoutes); // Quran Progress Routes
 app.use('/api/mutabaa', require('./routes/mutabaa.routes')); // Smart Mutaba'a Routes
 app.use('/api/hifz-plan', require('./routes/hifzPlan.routes')); // Dynamic Hifz Plan Routes
 app.use('/api/halaqa', require('./routes/halaqa.routes')); // Community Halaqa Routes
+app.use('/api/asr-review', require('./routes/asr-review.routes')); // ASR Voice Review Routes
 
 // Apply specific rate limiters to sensitive routes
 app.use('/api/users/login', authLimiter);

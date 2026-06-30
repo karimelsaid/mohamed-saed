@@ -4,17 +4,17 @@ const automationLogSchema = new mongoose.Schema({
     type: { 
         type: String, 
         required: true,
-        enum: ['post', 'comment', 'dm', 'random_post', 'webhook_received']
+        enum: ['post', 'comment', 'dm', 'random_post', 'webhook_received', 'whatsapp_broadcast']
     },
     platform: { 
         type: String, 
         required: true,
-        enum: ['facebook', 'instagram', 'system']
+        enum: ['facebook', 'instagram', 'system', 'whatsapp', 'multi']
     },
     status: { 
         type: String, 
         required: true,
-        enum: ['success', 'failed', 'pending']
+        enum: ['success', 'failed', 'pending', 'error']
     },
     title: String,
     details: {
@@ -22,6 +22,8 @@ const automationLogSchema = new mongoose.Schema({
         link: String,
         imageUrl: String,
         message: String,
+        productId: String,
+        hashtags: mongoose.Schema.Types.Mixed,
         response: mongoose.Schema.Types.Mixed
     },
     error: String,

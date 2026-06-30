@@ -6,6 +6,7 @@ import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { ActivatedRoute, Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
+import { AnalyticsTrackingService } from '../services/analytics-tracking.service';
 
 @Component({
   selector: 'app-search-bar',
@@ -38,6 +39,7 @@ export class SearchBarComponent implements OnInit {
     private sanitizer: DomSanitizer,
     private route: ActivatedRoute,
     private router: Router,
+    private analyticsTrackingService: AnalyticsTrackingService,
     @Inject(PLATFORM_ID) private platformId: Object
   ) { }
 
@@ -78,6 +80,8 @@ export class SearchBarComponent implements OnInit {
 
   onSearch() {
     if (this.searchQuery.trim()) {
+      // Track search event
+      this.analyticsTrackingService.trackSearch(this.searchQuery.trim());
       this.emitSearch();
       this.searchResults = [];
       this.showSuggestions = false;

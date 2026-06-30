@@ -39,6 +39,20 @@ export class AdminAutomationComponent implements OnInit {
       apiUrl: 'https://n8n.knoozbook.com',
       apiKey: '',
       syncEnabled: false
+    },
+    // Social Media Automation V4 Settings
+    socialPosts: {
+      enabled: true,
+      dailyLimit: 5,
+      schedule: ['09:00', '12:00', '15:00', '18:00', '21:00'],
+      platforms: ['facebook', 'instagram'],
+      aiModels: ['groq', 'deepseek', 'mistral', 'gemini', 'cerebras', 'openrouter', 'github_models', 'sambanova', 'openai']
+    },
+    whatsappStatus: {
+      enabled: true,
+      dailyLimit: 10,
+      schedule: ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00'],
+      includeCaption: false
     }
   };
 
@@ -47,44 +61,25 @@ export class AdminAutomationComponent implements OnInit {
   loading = false;
   saving = false;
 
-  // Advanced Stats
+  // Advanced Stats - will be populated from n8n API
   advancedStats = {
-    totalPosts: 24,
-    postGrowth: 12,
-    totalReplies: 158,
-    replyGrowth: 45,
-    engagementRate: 8.5,
-    engagementGrowth: 8,
-    timeSaved: 12,
-    conversionRate: 3.2,
-    conversionGrowth: 15
+    totalPosts: 0,
+    postGrowth: 0,
+    totalReplies: 0,
+    replyGrowth: 0,
+    engagementRate: 0,
+    engagementGrowth: 0,
+    timeSaved: 0,
+    conversionRate: 0,
+    conversionGrowth: 0
   };
 
-  // Alerts
-  alerts: any[] = [
-    { id: 1, type: 'warning', icon: 'fas fa-exclamation-triangle', title: 'تنبيه: معدل التفاعل منخفض', message: 'معدل التفاعل انخفض بنسبة 5% في الأسبوع الماضي' },
-    { id: 2, type: 'success', icon: 'fas fa-check-circle', title: 'نجاح: Workflow جديد', message: 'تم تفعيل AI Sales Agent بنجاح' }
-  ];
-
-  // Claude Agent Properties
-  claudePrompt = '';
-  claudeOutput = '';
-  claudeExecuting = false;
+  // Alerts - will be populated from n8n API
+  alerts: any[] = [];
 
   // n8n Stats
   n8nStats: any = null;
   loadingN8n = false;
-
-  // Deployment
-  deploying = false;
-
-  // n8n Workflow Management
-  workflows: any[] = [];
-  selectedWorkflow: any = null;
-  loadingWorkflows = false;
-  showWorkflowModal = false;
-  workflowExecutions: any[] = [];
-  loadingExecutions = false;
 
   private settingsUpdateSubject = new Subject<void>();
 
@@ -93,7 +88,6 @@ export class AdminAutomationComponent implements OnInit {
   ngOnInit(): void {
     this.loadData();
     this.loadN8nStats();
-    this.loadWorkflows();
 
     // Debounce settings updates to avoid too many API calls
     this.settingsUpdateSubject.pipe(
@@ -111,6 +105,10 @@ export class AdminAutomationComponent implements OnInit {
           this.settings = data.settings;
           this.stats = data.stats;
           this.recentLogs = data.recentLogs;
+          // Calculate advanced stats from loaded data
+          if (this.n8nStats) {
+            this.calculateAdvancedStats(this.n8nStats);
+          }
         }
         this.loading = false;
       },
@@ -122,15 +120,92 @@ export class AdminAutomationComponent implements OnInit {
   }
 
   loadN8nStats(): void {
-    if (!this.settings.n8nConfig?.apiKey) return;
     this.loadingN8n = true;
     this.automationService.getN8nStats().subscribe({
       next: (res) => {
-        if (res.success) this.n8nStats = res.stats;
+        if (res.success && res.stats) {
+          this.n8nStats = res.stats;
+          // Calculate advanced stats from n8n data
+          this.calculateAdvancedStats(res.stats);
+        }
         this.loadingN8n = false;
       },
       error: () => this.loadingN8n = false
     });
+  }
+
+  calculateAdvancedStats(n8nData: any): void {
+    // Calculate stats from n8n workflows and executions
+    const totalWorkflows = n8nData.totalWorkflows || 0;
+    const activeWorkflows = n8nData.activeWorkflows || 0;
+    const totalExecutions = n8nData.totalExecutions || 0;
+    const successfulExecutions = n8nData.successfulExecutions || 0;
+    const failedExecutions = n8nData.failedExecutions || 0;
+    
+    // Get analytics stats from MongoDB (now included in n8nData response)
+    const impressions = n8nData.impressions || 0;
+    const comments = n8nData.comments || 0;
+    const clicks = n8nData.clicks || 0;
+    const engagementRate = n8nData.engagementRate || 0;
+    const purchases = n8nData.purchases || 0;
+    const conversionRate = n8nData.conversionRate || 0;
+    const searches = n8nData.searches || 0;
+    
+    // Update advanced stats with real MongoDB data
+    this.advancedStats = {
+      totalPosts: impressions, // المنشورات التلقائية = impression events
+      postGrowth: 0, // TODO: calculate from historical data
+      totalReplies: comments, // الردود الذكية = comment events
+      replyGrowth: 0, // TODO: calculate from historical data
+      engagementRate: engagementRate, // معدل التفاعل = clicks / impressions
+      engagementGrowth: 0, // TODO: calculate from historical data
+      timeSaved: Math.round(impressions * 0.5), // Estimate 30 min saved per impression
+      conversionRate: conversionRate, // معدل التحويل = purchase_batch / clicks
+      conversionGrowth: 0 // TODO: calculate from historical data
+    };
+    
+    // Generate alerts based on stats
+    this.generateAlerts(n8nData);
+  }
+
+  generateAlerts(n8nData: any): void {
+    this.alerts = [];
+    
+    // Engagement rate alert
+    if (this.advancedStats.engagementRate < 5 && this.advancedStats.engagementRate > 0) {
+      this.alerts.push({
+        id: Date.now(),
+        type: 'warning',
+        icon: 'fas fa-exclamation-triangle',
+        title: 'تنبيه: معدل التفاعل منخفض',
+        message: `معدل التفاعل الحالي ${this.advancedStats.engagementRate}% - يُنصح بتحسين المحتوى`
+      });
+    }
+    
+    // Active workflows alert
+    if (n8nData.activeWorkflows > 0) {
+      this.alerts.push({
+        id: Date.now() + 1,
+        type: 'success',
+        icon: 'fas fa-check-circle',
+        title: 'نجاح: Workflows نشطة',
+        message: `يوجد ${n8nData.activeWorkflows} من أصل ${n8nData.totalWorkflows} workflow نشط حالياً`
+      });
+    }
+    
+    // Failed executions alert
+    if (n8nData.failedExecutions > 0) {
+      const failureRate = ((n8nData.failedExecutions / n8nData.totalExecutions) * 100).toFixed(1);
+      if (parseFloat(failureRate) > 10) {
+        this.alerts.push({
+          id: Date.now() + 2,
+          type: 'warning',
+          icon: 'fas fa-exclamation-circle',
+          title: 'تنبيه: معدل فشل مرتفع',
+          message: `${n8nData.failedExecutions} من أصل ${n8nData.totalExecutions} execution فشل (${failureRate}%)`
+        });
+      }
+    }
   }
 
   onSettingsChange(): void {
@@ -147,44 +222,6 @@ export class AdminAutomationComponent implements OnInit {
       error: (err) => {
         this.saving = false;
         console.error('Error saving settings:', err);
-      }
-    });
-  }
-
-  executeClaude(): void {
-    if (!this.claudePrompt.trim()) return;
-
-    this.claudeExecuting = true;
-    this.claudeOutput = 'جاري التنفيذ...';
-    
-    this.automationService.executeClaudeCommand(this.claudePrompt).subscribe({
-      next: (res) => {
-        this.claudeExecuting = false;
-        this.claudeOutput = res.output;
-        if (res.success) {
-          this.claudePrompt = '';
-          this.loadData(); // Refresh logs
-        }
-      },
-      error: (err) => {
-        this.claudeExecuting = false;
-        this.claudeOutput = 'خطأ في التنفيذ: ' + (err.error?.message || err.message);
-      }
-    });
-  }
-
-  triggerDeploy(): void {
-    if (!confirm('هل أنت متأكد من رغبتك في مزامنة التعديلات مع السيرفر العالمي الآن؟')) return;
-    
-    this.deploying = true;
-    this.automationService.deployToProduction().subscribe({
-      next: (res) => {
-        this.deploying = false;
-        alert('✅ تم بدء عملية المزامنة بنجاح!');
-      },
-      error: (err) => {
-        this.deploying = false;
-        alert('❌ فشل المزامنة: ' + err.message);
       }
     });
   }
@@ -207,123 +244,12 @@ export class AdminAutomationComponent implements OnInit {
     }
   }
 
-  syncAllProducts(): void {
-    if (!confirm('هل أنت متأكد من استيراد كافة المنتجات من Google Sheets؟ هذا سيقوم بتحديث قاعدة البيانات الحالية.')) {
-      return;
-    }
-
-    this.loading = true;
-    this.automationService.importProductsFromSheets().subscribe({
-      next: (res) => {
-        this.loading = false;
-        if (res.success) {
-          alert('✅ تم استيراد ' + res.message + ' بنجاح!');
-          this.loadData();
-        } else {
-          alert('❌ فشل الاستيراد: ' + res.message);
-        }
-      },
-      error: (err) => {
-        this.loading = false;
-        console.error('Error syncing products:', err);
-        alert('❌ حدث خطأ أثناء عملية الاستيراد: ' + (err.error?.message || err.message));
-      }
-    });
-  }
-
-  // n8n Workflow Management Methods
-  loadWorkflows(): void {
-    if (!this.settings.n8nConfig?.apiKey) return;
-    this.loadingWorkflows = true;
-    this.automationService.getWorkflows().subscribe({
-      next: (res) => {
-        if (res.success) {
-          this.workflows = res.workflows;
-        }
-        this.loadingWorkflows = false;
-      },
-      error: () => this.loadingWorkflows = false
-    });
-  }
-
-  toggleWorkflow(workflow: any): void {
-    this.automationService.toggleWorkflow(workflow.id, !workflow.active).subscribe({
-      next: () => {
-        workflow.active = !workflow.active;
-      },
-      error: (err) => alert('فشل تغيير الحالة: ' + err.message)
-    });
-  }
-
-  deleteWorkflow(id: string): void {
-    if (!confirm('هل أنت متأكد من حذف هذا Workflow؟')) return;
-    this.automationService.deleteWorkflow(id).subscribe({
-      next: () => {
-        this.workflows = this.workflows.filter(w => w.id !== id);
-      },
-      error: (err) => alert('فشل الحذف: ' + err.message)
-    });
-  }
-
-  viewWorkflowDetails(workflow: any): void {
-    this.selectedWorkflow = workflow;
-    this.showWorkflowModal = true;
-    this.loadWorkflowExecutions(workflow.id);
-  }
-
-  loadWorkflowExecutions(id: string): void {
-    this.loadingExecutions = true;
-    this.automationService.getWorkflowExecutions(id).subscribe({
-      next: (res) => {
-        if (res.success) {
-          this.workflowExecutions = res.executions;
-        }
-        this.loadingExecutions = false;
-      },
-      error: () => this.loadingExecutions = false
-    });
-  }
-
-  importPresetWorkflow(workflowName: string): void {
-    if (!confirm('هل تريد استيراد هذا Workflow؟')) return;
-    this.automationService.importWorkflow(workflowName).subscribe({
-      next: (res) => {
-        if (res.success) {
-          alert('✅ تم استيراد Workflow بنجاح!');
-          this.loadWorkflows();
-        }
-      },
-      error: (err) => alert('فشل الاستيراد: ' + err.message)
-    });
-  }
-
-  executeWorkflow(id: string): void {
-    this.automationService.executeWorkflow(id).subscribe({
-      next: (res) => {
-        if (res.success) {
-          alert('✅ تم تنفيذ Workflow بنجاح!');
-          this.loadWorkflowExecutions(id);
-        }
-      },
-      error: (err) => alert('فشل التنفيذ: ' + err.message)
-    });
-  }
-
-  closeModal(): void {
-    this.showWorkflowModal = false;
-    this.selectedWorkflow = null;
-  }
-
   dismissAlert(alertId: number): void {
     this.alerts = this.alerts.filter(a => a.id !== alertId);
   }
 
   abs(value: number): number {
     return Math.abs(value);
-  }
-
-  getActiveWorkflowsCount(): number {
-    return this.workflows.filter(w => w.active).length;
   }
 }
 

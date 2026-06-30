@@ -1,0 +1,281 @@
+{
+  "name": "Analytics Collection - KnoozBook",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "cron-trigger",
+      "name": "Cron Trigger (Hourly)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.BACKEND_URL }}/api/analytics/aggregate",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"timeRange\": \"1h\"\n}",
+        "options": {}
+      },
+      "id": "fetch-analytics",
+      "name": "Fetch Analytics from Backend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-data",
+              "leftValue": "={{ $json.success }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-data",
+      "name": "Check Data Success",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "resource": "page",
+        "operation": "get",
+        "pageId": "={{ $env.FACEBOOK_PAGE_ID }}",
+        "additionalFields": {
+          "fields": "insights.metric(impressions,reach,engagement,fan_adds,fan_removes).period(hour).date_range(today)"
+        }
+      },
+      "id": "fetch-facebook-insights",
+      "name": "Fetch Facebook Insights",
+      "type": "n8n-nodes-base.facebook",
+      "typeVersion": 1,
+      "position": [850, 200],
+      "credentials": {
+        "facebookApi": {
+          "id": "facebook-credentials",
+          "name": "Facebook API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "media",
+        "operation": "get",
+        "id": "={{ $env.INSTAGRAM_BUSINESS_ID }}",
+        "additionalFields": {
+          "fields": "insights.metric(impressions,reach,engagement).period(hour).date_range(today)"
+        }
+      },
+      "id": "fetch-instagram-insights",
+      "name": "Fetch Instagram Insights",
+      "type": "n8n-nodes-base.instagram",
+      "typeVersion": 1,
+      "position": [850, 400],
+      "credentials": {
+        "instagramApi": {
+          "id": "instagram-credentials",
+          "name": "Instagram API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "mergeByPosition"
+      },
+      "id": "merge-insights",
+      "name": "Merge Social Media Insights",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BACKEND_URL }}/api/analytics/social-metrics",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"platform\": \"facebook\",\n  \"metrics\": {{ $json }},\n  \"timestamp\": \"{{ $now.toISO() }}\"\n}",
+        "options": {}
+      },
+      "id": "save-facebook-metrics",
+      "name": "Save Facebook Metrics",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1250, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BACKEND_URL }}/api/analytics/social-metrics",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"platform\": \"instagram\",\n  \"metrics\": {{ $json }},\n  \"timestamp\": \"{{ $now.toISO() }}\"\n}",
+        "options": {}
+      },
+      "id": "save-instagram-metrics",
+      "name": "Save Instagram Metrics",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1250, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BACKEND_URL }}/api/automation/log",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"type\": \"analytics\",\n  \"platform\": \"system\",\n  \"status\": \"success\",\n  \"title\": \"Analytics Collection\",\n  \"details\": {\n    \"facebookMetrics\": \"{{ $('Save Facebook Metrics').item.json.success }}\",\n    \"instagramMetrics\": \"{{ $('Save Instagram Metrics').item.json.success }}\",\n    \"backendMetrics\": \"{{ $('Fetch Analytics from Backend').item.json.success }}\"\n  },\n  \"metadata\": {\n    \"timestamp\": \"{{ $now.toISO() }}\",\n    \"timeRange\": \"1h\"\n  }\n}",
+        "options": {}
+      },
+      "id": "log-collection",
+      "name": "Log Collection",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1450, 300]
+    }
+  ],
+  "connections": {
+    "cron-trigger": {
+      "main": [
+        [
+          {
+            "node": "fetch-analytics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "fetch-analytics": {
+      "main": [
+        [
+          {
+            "node": "check-data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check-data": {
+      "main": [
+        [
+          {
+            "node": "fetch-facebook-insights",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "fetch-instagram-insights",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "fetch-facebook-insights": {
+      "main": [
+        [
+          {
+            "node": "merge-insights",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "fetch-instagram-insights": {
+      "main": [
+        [
+          {
+            "node": "merge-insights",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "merge-insights": {
+      "main": [
+        [
+          {
+            "node": "save-facebook-metrics",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "save-instagram-metrics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "save-facebook-metrics": {
+      "main": [
+        [
+          {
+            "node": "log-collection",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "save-instagram-metrics": {
+      "main": [
+        [
+          {
+            "node": "log-collection",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2026-06-27T00:00:00.000Z",
+  "versionId": "1"
+}

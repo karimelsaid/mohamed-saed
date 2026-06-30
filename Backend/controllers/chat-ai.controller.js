@@ -1,17 +1,15 @@
-const axios = require('axios');
-const fs = require('fs');
-const path = require('path');
-const xml2js = require('xml2js');
-require('dotenv').config();
-
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
-const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
-
-// تعديل المسار ليكون متوافقًا مع بيئة الإنتاج بعد البناء
-// سيتم نسخ الملف إلى مجلد dist/server
-const BOOKS_JSON_PATH = path.resolve(__dirname, '../output.json');
-
-let cachedBooks = null;
+const AIOrchestrator = require('../ai/services/ai-orchestrator.service');
+const BookSearchService = require('../services/book-search.service');
+const IntentAnalysisService = require('../services/intent-analysis.service');
+const ConversationManagementService = require('../services/conversation-management.service');
+const ConversationMemoryService = require('../services/conversation-memory.service');
+const SearchContextService = require('../services/search-context.service');
+const promptManager = require('../ai/services/prompt-manager.service');
+const FollowupIntentResolver = require('../services/followup-intent-resolver.service');
+const BookExclusionTracker = require('../services/book-exclusion-tracker.service');
+const ResponseSanitizer = require('../services/response-sanitizer.service');
+const { parseBookTokens, removeBookTokens } = require('../utils/book-token-parser');
+const { containsFabricatedServicePromise, removeEmptyBoldMarkers, SAFE_FALLBACK_RESPONSE } = require('../utils/safety-checks');
 
 // معلومات knoozbook
 const KENOUZ_LIBRARY_INFO = `
@@ -24,45 +22,7 @@ knoozbook
 `;
 
 /**
- * تحميل وتحليل ملف output.json لاستخراج بيانات الكتب
- */
-async function loadBooksData() {
-  if (cachedBooks) {
-    return cachedBooks;
-  }
-  try {
-    const jsonData = fs.readFileSync(BOOKS_JSON_PATH, 'utf-8');
-    const booksData = JSON.parse(jsonData);
-    const books = booksData.map(book => ({
-      title: book.product_name,
-      description: book.product_description,
-      category: book.product_category,
-      price: book.product_price,
-      quantity: book.product_quantity,
-      author: book.author,
-      publisher: book.publisher,
-      pages: book.pages,
-      coverType: book.coverType,
-      language: book.language,
-      publishYear: book.publishYear,
-      stationeryType: book.stationeryType,
-      material: book.material,
-      color: book.color,
-      size: book.size,
-      brand: book.brand,
-      // Construct the URL based on product ID and name for SEO-friendly URLs
-      url: `https://knoozbook.com/book/${book.products_id}/${encodeURIComponent(book.product_name.replace(/\s+/g, '-'))}`
-    }));
-    cachedBooks = books;
-    return books;
-  } catch (error) {
-    console.error('خطأ في تحميل أو تحليل output.json:', error);
-    return [];
-  }
-}
-
-/**
- * تحقق إذا كان الاستعلام متعلق بknoozbook بدقة أكبر
+ * تحقق إذا كان الاستعلام متعلق بknoozbook
  */
 function isKenouzLibraryQuery(query) {
   const keywords = [
@@ -77,10 +37,8 @@ function isKenouzLibraryQuery(query) {
   ];
   const lowerQuery = query.toLowerCase();
 
-  // تحقق من وجود أي من العبارات الكاملة في الاستعلام
   for (const keyword of keywords) {
     if (lowerQuery.includes(keyword)) {
-      // تحقق من وجود كلمات أخرى ذات صلة لتقليل الردود الخاطئة
       const relatedWords = ['مكتبة', 'عنوان', 'هاتف', 'رقم', 'معلومات', 'أوقات', 'مواعيد', 'كنوز', 'المكتبة'];
       let count = 0;
       for (const word of relatedWords) {
@@ -94,8 +52,8 @@ function isKenouzLibraryQuery(query) {
     }
   }
 
-  // تحقق من وجود كلمة "المكتبة" مع كلمة أخرى ذات صلة
-  if (lowerQuery.includes('مكتبة' || 'library' || 'المكتبة' || 'مكتبه' || 'المكتبه')) {
+  const libraryWords = ['مكتبة', 'library', 'المكتبة', 'مكتبه', 'المكتبه'];
+  if (libraryWords.some(word => lowerQuery.includes(word))) {
     const relatedWordsForLibrary = ['معلومات', 'عنوان', 'رقم', 'كنوز', 'هاتف', 'أوقات', 'مواعيد'];
     let count = 0;
     for (const word of relatedWordsForLibrary) {
@@ -112,184 +70,746 @@ function isKenouzLibraryQuery(query) {
 }
 
 /**
- * تعديل خوارزمية البحث عن كتب مطابقة في بيانات sitemap بناءً على نص الاستعلام
- * لتقترح الكتب إذا وُجدت أي كلمة من استعلام المستخدم في عنوان الكتاب
+ * التحقق من طلب تغيير الكتب ("غيرهم"، "كتاب آخر"، إلخ)
+ * @param {string} query - الاستعلام
+ * @returns {boolean} - هل هو طلب تغيير
  */
-function findMatchingBooks(query, books) {
+function isChangeRequest(query) {
+  const changeKeywords = [
+    'غيرهم',
+    'غيرهم',
+    'كتاب آخر',
+    'كتاب ثاني',
+    'كتاب تاني',
+    'رشح غيره',
+    'رشح غيرها',
+    'في غيره',
+    'في غيرها',
+    'بدل',
+    'استبدل',
+    'غير',
+    'اخرى',
+    'ثانية',
+    'تانية',
+    'جديد',
+    'جديدة',
+    'مختلف',
+    'مختلفة'
+  ];
+  
   const lowerQuery = query.toLowerCase();
-  // تقسيم الاستعلام إلى كلمات منفصلة
-  const queryWords = lowerQuery.split(/\s+/).filter(Boolean);
-
-  return books.filter(book => {
-    const lowerTitle = book.title.toLowerCase();
-    // تحقق من وجود أي كلمة من كلمات الاستعلام في عنوان الكتاب
-    return queryWords.some(word => lowerTitle.includes(word));
-  });
+  return changeKeywords.some(keyword => lowerQuery.includes(keyword));
 }
 
 /**
- * استبدال علامات **bold** في النص بوسم span مع خلفية صفراء ونص عريض ولون نص داكن
+ * استبدال علامات **bold** في النص بوسم span
  */
 function highlightBoldBookTitles(text) {
-  // استبدال **text** بوسم span مع خلفية صفراء ونص عريض ولون نص داكن
   return text.replace(/\*\*(.+?)\*\*/g, '<span style="background-color: yellow; font-weight: bold; color: #222;">$1</span>');
 }
 
 /**
- * إرسال رسالة إلى خدمة الذكاء الاصطناعي مع دمج بيانات الكتب من sitemap وتحسين دقة الوصف وتمييز أسماء الكتب
+ * إرسال رسالة إلى خدمة الذكاء الاصطناعي - AI Sales Agent Version 1
  * @param {Object} req - طلب HTTP
  * @param {Object} res - استجابة HTTP
  */
 exports.sendMessage = async (req, res) => {
+  const startTime = Date.now();
+  
   try {
-    const { messages, model, temperature = 0.7, max_tokens = 1000 } = req.body;
+    const { 
+      messages, 
+      conversationId = null,
+      userId = null,
+      sessionId = null,
+      model = 'gemini-2.5-flash',
+      temperature = 0.7,
+      max_tokens = 1000 
+    } = req.body;
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return res.status(400).json({ success: false, message: 'يجب توفير مصفوفة رسائل صالحة' });
     }
 
-    // الحصول على آخر رسالة من المستخدم فقط
+    // الحصول على آخر رسالة من المستخدم
     const lastUserMessage = [...messages].reverse().find(m => m.role === 'user');
-    const lastUserContent = lastUserMessage ? lastUserMessage.content.toLowerCase() : '';
+    const lastUserContent = lastUserMessage ? lastUserMessage.content : '';
 
-    // تحقق إذا كان الاستعلام متعلق بknoozbook بناءً على آخر رسالة فقط
-    if (isKenouzLibraryQuery(lastUserContent)) {
-      // الرد مباشرة بمعلومات knoozbook دون استدعاء الذكاء الاصطناعي
+    // إدارة المحادثة
+    let currentConversationId = conversationId;
+    if (!currentConversationId) {
+      const conversation = await ConversationManagementService.createConversation({
+        userId,
+        sessionId,
+        metadata: {
+          userAgent: req.headers['user-agent'],
+          ipAddress: req.ip
+        }
+      });
+      currentConversationId = conversation.conversationId;
+    }
+
+    // حفظ رسالة المستخدم
+    await ConversationManagementService.addMessage(currentConversationId, 'user', lastUserContent);
+
+    // التحقق من استعلام knoozbook
+    if (isKenouzLibraryQuery(lastUserContent.toLowerCase())) {
+      const response = `<div dir="rtl">${KENOUZ_LIBRARY_INFO}</div>`;
+      await ConversationManagementService.addMessage(currentConversationId, 'assistant', response);
+      
       return res.status(200).json({
         success: true,
+        conversationId: currentConversationId,
         data: {
           choices: [{
             message: {
-              content: `<div dir="rtl">${KENOUZ_LIBRARY_INFO}</div>`
+              content: response
             }
           }]
         }
       });
     }
 
-    // تحميل بيانات الكتب من sitemap
-    const books = await loadBooksData();
+    // الحصول على تاريخ المحادثة للتحقق من المتابعة
+    const conversationHistory = await ConversationManagementService.getMessagesForAI(currentConversationId, 5);
 
-    // تحقق إذا كان الاستعلام يحتوي على كلمات مفتاحية لتوصية الكتب
-    const bookKeywords = ['كتاب', 'كتب', 'recommend', 'book', 'suggest', 'ترشح', 'قراءة', 'قرأت'];
-    const isBookQuery = bookKeywords.some(keyword => lastUserContent.includes(keyword));
+    // تحليل نية العميل
+    console.log('[ChatAI] Analyzing intent for message:', lastUserContent);
 
-    let matchedBooks = [];
-    if (isBookQuery) {
-      matchedBooks = findMatchingBooks(lastUserContent, books);
-    }
+    // التحقق من نية شراء واضحة بدون نتيجة بحث (معالجة خاصة)
+    const purchaseIntentPatterns = [
+      /اطلبهالي/i,
+      /موافق/i,
+      /اشتريه/i,
+      /حجزه/i,
+      /ابعه لي/i,
+      /أريده/i,
+      /خذه لي/i,
+      /ماشي/i,
+      /تمام/i
+    ];
 
-    // إذا تم العثور على كتب مطابقة، أضف عناوين الكتب إلى الرسائل كرسالة نظام لتحسين الوصف
-    let enhancedMessages = [...messages];
-    if (matchedBooks.length > 0) {
-      const bookTitles = matchedBooks.map(book => book.title).join(', ');
-      enhancedMessages.push({
-        role: 'system',
-        content: `هذه قائمة بعناوين الكتب التي قد تكون ذات صلة: ${bookTitles}. يرجى تضمين وصف دقيق ومفصل لهذه الكتب في الرد. كما يرجى تمييز أسماء الكتب في النص باستخدام علامات **bold** (أي بين علامتي نجمة مزدوجة).`
+    const hasPurchaseIntent = purchaseIntentPatterns.some(pattern => pattern.test(lastUserContent));
+
+    // التحقق من آخر بحث فاشل
+    const lastAssistantMessage = conversationHistory.find(m => m.role === 'assistant');
+    const lastSearchFailed = lastAssistantMessage && (
+      lastAssistantMessage.content.includes('غير متوفر حالياً') ||
+      lastAssistantMessage.content.includes('لم أجد كتاباً')
+    );
+
+    // إذا كان هناك نية شراء واضحة وآخر بحث فشل، استجب مباشرة بدون AI
+    if (hasPurchaseIntent && lastSearchFailed) {
+      console.log('[ChatAI] Detected purchase intent after failed search, using direct response');
+      const directResponse = `للأسف لا يوجد كتاب متاح لإتمام الطلب عليه حالياً.
+تقدر تتواصل معنا مباشرة على 01094612729 للاستفسار عن إمكانية توفير الكتاب الذي تريده،
+أو تصفح موقعنا www.knoozbook.com لمشاهدة الكتب المتاحة حالياً.`;
+
+      await ConversationManagementService.addMessage(currentConversationId, 'assistant', directResponse, {
+        performance: {
+          processingTime: Date.now() - startTime,
+          tokensUsed: 0,
+          cost: 0
+        }
+      });
+
+      return res.status(200).json({
+        success: true,
+        conversationId: currentConversationId,
+        data: {
+          choices: [{
+            message: {
+              content: `<div dir="rtl">${directResponse}</div>`
+            }
+          }],
+          books: []
+        },
+        metadata: {
+          processingTime: Date.now() - startTime,
+          tokensUsed: 0,
+          cost: 0,
+          booksFound: 0,
+          directResponseUsed: true
+        }
       });
     }
 
-    const headers = {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-      'HTTP-Referer': req.headers.origin || 'https://yourwebsite.com',
-      'X-Title': 'Your Website Chat'
-    };
-    const requestBody = {
-      model: model || 'deepseek/deepseek-chat',
-      messages: enhancedMessages,
-      temperature,
-      max_tokens,
-    };
-    const response = await axios.post(OPENROUTER_API_URL, requestBody, { headers });
-
-    let combinedResponse = response.data;
-
-    // لف محتوى رد المساعد بعنصر div مع اتجاه النص من اليمين إلى اليسار
-    if (combinedResponse.choices && combinedResponse.choices.length > 0) {
-      let content = combinedResponse.choices[0].message.content;
-      // استبدال علامات **bold** بوسم span مع خلفية صفراء ونص عريض ولون نص داكن
-      content = highlightBoldBookTitles(content);
-      combinedResponse.choices[0].message.content = `<div dir="rtl">${content}</div>`;
-    }
-
-    // إذا تم العثور على كتب مطابقة، أضفها إلى الاستجابة مع تنسيق جدول HTML مع زر "اضغط هنا"
-    // if (matchedBooks.length > 0) {
-    //   const booksInfo = `<table style="width: 100%; border-collapse: collapse; direction: rtl;">
-    //     <thead>
-    //       <tr style="background-color: #3b82f6; color: white;">
-    //         <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">عنوان الكتاب</th>
-    //         <th style="border: 1px solid #ddd; padding: 8px; text-align: center;">رابط</th>
-    //       </tr>
-    //     </thead>
-    //     <tbody>
-    //       ${matchedBooks.map(book => `
-    //         <tr style="border-bottom: 1px solid #ddd;">
-    //           <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${book.title}</td>
-    //           <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">
-    //             <a href="${book.url}" target="_blank" rel="noopener noreferrer" style="background-color: #3b82f6; color: white; padding: 4px 12px; border-radius: 4px; text-decoration: none; font-weight: bold;">اضغط هنا</a>
-    //           </td>
-    //         </tr>
-    //       `).join('')}
-    //     </tbody>
-    //   </table>`;
-    //   const additionalMessage = {
-    //     role: 'system',
-    //     content: `بناءً على طلبك، هذه بعض الكتب التي قد تهمك:<br>${booksInfo}`
-    //   };
-    //   // أضف الرسالة الإضافية إلى الرد
-    //   if (!combinedResponse.choices || combinedResponse.choices.length === 0) {
-    //     combinedResponse.choices = [{ message: additionalMessage }];
-    //   } else {
-    //     combinedResponse.choices[0].message.content += `<br><br>${additionalMessage.content}`;
-    //   }
-    // }
-
-    return res.status(200).json({
-      success: true,
-      data: combinedResponse,
+    // التحقق من المتابعة
+    const followupAnalysis = FollowupIntentResolver.analyzeWithFollowup(lastUserContent, conversationHistory);
+    console.log('[ChatAI] Followup analysis:', JSON.stringify(followupAnalysis));
+    
+    // استخدام الرسالة الموسعة إذا كانت متابعة
+    const messageToAnalyze = followupAnalysis.isFollowup ? followupAnalysis.expandedMessage : lastUserContent;
+    
+    const intentAnalysis = await IntentAnalysisService.analyzeIntent(messageToAnalyze);
+    console.log('[ChatAI] Intent analysis result:', JSON.stringify(intentAnalysis));
+    
+    // البحث عن الكتب إذا لزم الأمر
+    let availableBooks = [];
+    let similarBooks = [];
+    let recommendationMessage = null;
+    let recommendationReason = null;
+    let searchResult = null;
+    
+    // تحديد نوع الرسالة (continuation أو new topic)
+    const messageType = SearchContextService.determineMessageType(messageToAnalyze, currentConversationId, intentAnalysis);
+    console.log('[ChatAI] Message type:', messageType.type, '- Should reset context:', messageType.shouldReset);
+    
+    // تحديث سياق البحث
+    SearchContextService.updateContext(currentConversationId, {
+      currentIntent: intentAnalysis.intent,
+      currentCategory: intentAnalysis.category,
+      currentKeywords: intentAnalysis.keywords
     });
-  } catch (error) {
-    const statusCode = error.response?.status || 500;
-    const errorData = error.response?.data || error.message;
-
-    console.error('خطأ في إرسال الرسالة إلى API الذكاء الاصطناعي:', errorData);
-
-    let userMessage = 'حدث خطأ أثناء معالجة طلبك';
-    if (statusCode === 401) {
-      userMessage = 'خطأ في صلاحية الوصول (API Key غير صالح). يرجى مراجعة إدارة الموقع.';
+    
+    if (IntentAnalysisService.requiresBookSearch(intentAnalysis)) {
+      let searchQuery = IntentAnalysisService.buildSearchQuery(intentAnalysis);
+      const searchOptions = IntentAnalysisService.buildSearchOptions(intentAnalysis);
+      
+      // إذا كان الـ intent هو search_book وفيه originalMessage أو اسم كتاب محدد،
+      // استخدم الرسالة الأصلية مباشرة كـ search query بدل الـ keywords الموسعة
+      // ده بيمنع إضافة categories مثل "موسيقى غناء آلات" على اسم كتاب زي "لأنك الله"
+      if (intentAnalysis.intent === 'search_book' && lastUserContent) {
+        const cleanOriginal = lastUserContent.replace(/^كتاب\s+/i, '').trim();
+        // لو الرسالة الأصلية قصيرة (اسم كتاب) والـ searchQuery طويل جداً (> ضعفين)، استخدم الأصلي
+        if (cleanOriginal.length > 0 && searchQuery.length > cleanOriginal.length * 2.5) {
+          console.log('[ChatAI] Search query too expanded, using original:', cleanOriginal);
+          searchQuery = cleanOriginal;
+        }
+      }
+      
+      // إذا كان موضوع جديد، لا نستخدم الكتب المستبعدة من المحادثة السابقة
+      let excludedBookIds = [];
+      if (messageType.type === 'continuation') {
+        excludedBookIds = followupAnalysis.isFollowup ? followupAnalysis.excludedBooks : [];
+      }
+      
+      console.log('[ChatAI] Excluded book IDs:', excludedBookIds);
+      
+      // التحقق من طلب "غيرهم" أو "كتاب آخر"
+      const changeRequestDetected = isChangeRequest(messageToAnalyze);
+      let searchOptionsToUse = { ...searchOptions, useRecommendationEngine: true };
+      
+      if (changeRequestDetected && messageType.type === 'continuation') {
+        // استخدام Last Search Result واستبعاد الكتب السابقة
+        const lastSearch = SearchContextService.getLastSearchResults(currentConversationId);
+        if (lastSearch.results.length > 0) {
+          const lastShownIds = lastSearch.results.map(b => b.id);
+          excludedBookIds.push(...lastShownIds);
+          console.log('[ChatAI] Change request detected, excluding last shown books:', lastShownIds);
+          
+          // استخدام نفس استعلام البحث الأخير
+          if (lastSearch.query) {
+            searchQuery = lastSearch.query;
+          }
+        }
+      }
+      
+      // استخدام Sales Recommendation Engine مع Conversation Memory
+      const searchResult = await BookSearchService.searchBooks(
+        searchQuery || messageToAnalyze,
+        searchOptionsToUse,
+        excludedBookIds,
+        currentConversationId,
+        intentAnalysis
+      );
+      
+      availableBooks = searchResult.books || [];
+      recommendationMessage = searchResult.message || null;
+      recommendationReason = searchResult.recommendationReason || null;
+      
+      // حفظ نتائج البحث في Search Context
+      SearchContextService.saveSearchResults(currentConversationId, searchQuery || messageToAnalyze, availableBooks);
+      
+      // استخدام Recommendation Engine التقليدي إذا كانت النتائج قليلة
+      if (availableBooks.length > 0 && availableBooks.length < 3) {
+        availableBooks = await BookSearchService.getRecommendations(
+          availableBooks,
+          searchQuery || messageToAnalyze,
+          5
+        );
+      }
+      
+      // الحصول على كتب مشابهة
+      if (availableBooks.length > 0) {
+        similarBooks = await BookSearchService.getSimilarBooks(availableBooks[0].id, 2);
+      }
+      
+      // إضافة الكتب المقترحة لقائمة الاستبعاد
+      if (availableBooks.length > 0) {
+        BookExclusionTracker.addExclusions(currentConversationId, availableBooks.map(b => b.id));
+      }
     }
 
-    return res.status(statusCode).json({
+    // بناء الـ prompt باستخدام Prompt Manager
+    // إذا كانت النية general_inquiry ولا توجد كتب متاحة، لا نرسل تعليمات اقتراح كتب
+    const shouldIncludeBooks = availableBooks.length > 0;
+    const searchWasPerformed = IntentAnalysisService.requiresBookSearch(intentAnalysis);
+    
+    // تحديد نوع الطلب (محدد أو استكشافي)
+    const requestType = intentAnalysis.requestType || 'exploratory';
+    const request_type_is_specific = requestType === 'specific';
+    const request_type_is_exploratory = requestType === 'exploratory';
+    
+    console.log('[ChatAI] Request Type:', requestType);
+    
+    // التحقق من عدم وجود الكتاب المطلوب
+    const bookNotFound = searchResult?.bookNotFound || false;
+    const requestedBook = searchResult?.requestedBook || null;
+    
+    const { system, user } = promptManager.getFullPrompt('sales', 'sales_chat', {
+      message: lastUserContent,
+      conversation_history: conversationHistory.map(m => `${m.role}: ${m.content}`).join('\n'),
+      available_books: shouldIncludeBooks ? BookSearchService.formatBooksForAI(availableBooks) : 'لا توجد كتب متاحة حالياً',
+      similar_books: shouldIncludeBooks ? BookSearchService.formatBooksForAI(similarBooks) : '',
+      recommendation_message: shouldIncludeBooks ? recommendationMessage : null,
+      recommendation_reason: shouldIncludeBooks ? recommendationReason : null,
+      search_was_performed: searchWasPerformed,
+      request_type_is_specific: request_type_is_specific,
+      request_type_is_exploratory: request_type_is_exploratory,
+      book_not_found: bookNotFound,
+      requested_book: requestedBook
+    });
+
+    // تنفيذ AI باستخدام AI Orchestrator مع fallback
+    console.log('[ChatAI] Executing AI Orchestrator with fallback...');
+    const aiResult = await AIOrchestrator.executeWithFallback('sales_chat', {
+      message: lastUserContent,
+      conversation_history: conversationHistory,
+      available_books: availableBooks,
+      similar_books: similarBooks
+    }, {
+      prompt: user,
+      systemPrompt: system,
+      provider: 'gemini',
+      temperature: temperature,
+      maxTokens: max_tokens,
+      skipCache: false
+    });
+    console.log('[ChatAI] AI Orchestrator result:', JSON.stringify(aiResult));
+
+    const processingTime = Date.now() - startTime;
+    
+    // عداد لعدد استدعاءات AI provider
+    let aiCallCount = 1; // الاستدعاء الأول بالفعل تم
+
+      if (aiResult.success) {
+      let response = aiResult.text || '';
+
+      // الحارس الأخير: فحص الرد لاكتشاف وعود بخدمات غير موجودة
+      const safetyCheck = containsFabricatedServicePromise(response);
+      if (safetyCheck.isSuspicious) {
+        console.error('[ChatAI] SECURITY ALERT: AI response contains fabricated service promises!');
+        console.error('[ChatAI] Detected patterns:', safetyCheck.detectedPatterns.join(', '));
+        console.error('[ChatAI] Original rejected response:', response);
+
+        // استبدال الرد برد آمن موحد
+        response = SAFE_FALLBACK_RESPONSE;
+
+        // تسجيل الحدث للمراجعة
+        await ConversationManagementService.addMessage(currentConversationId, 'assistant', response, {
+          intentAnalysis,
+          securityAlert: {
+            type: 'FABRICATED_SERVICE_PROMISE',
+            detectedPatterns: safetyCheck.detectedPatterns,
+            originalResponse: aiResult.text
+          },
+          performance: {
+            processingTime: Date.now() - startTime,
+            tokensUsed: aiResult.tokens?.total || 0,
+            cost: aiResult.cost || 0
+          }
+        });
+
+        return res.status(200).json({
+          success: true,
+          conversationId: currentConversationId,
+          data: {
+            choices: [{
+              message: {
+                content: `<div dir="rtl">${response}</div>`
+              }
+            }],
+            books: []
+          },
+          metadata: {
+            processingTime: Date.now() - startTime,
+            tokensUsed: aiResult.tokens?.total || 0,
+            cost: aiResult.cost || 0,
+            booksFound: 0,
+            intent: intentAnalysis.intent,
+            securityAlert: true,
+            securityAlertType: 'FABRICATED_SERVICE_PROMISE'
+          }
+        });
+      }
+
+      // التحقق من صحة تنسيق BOOK token - فقط إذا كانت هناك كتب متاحة
+      if (availableBooks.length > 0) {
+        console.log('[ChatAI] Validating BOOK token format...');
+        const isValidFormat = validateBookTokenFormat(response);
+        
+        if (!isValidFormat) {
+          console.warn('[ChatAI] BOOK token format invalid, retrying once...');
+          aiCallCount++;
+          // إعادة المحاولة مرة واحدة إذا كان التنسيق غير صحيح
+          // استخدام provider مختلف لتوزيع الحمل
+          const retryProvider = aiResult.provider === 'gemini' ? 'groq' : 'gemini';
+          const retryResult = await AIOrchestrator.executeWithFallback('sales_chat', {
+            message: lastUserContent,
+            conversation_history: conversationHistory,
+            available_books: availableBooks,
+            similar_books: similarBooks
+          }, {
+            prompt: user,
+            systemPrompt: system,
+            provider: retryProvider,
+            temperature: temperature,
+            maxTokens: Math.floor(max_tokens * 0.8), // تقليل التوكنز في retry
+            skipCache: true // تخطي الكاش عند إعادة المحاولة
+          });
+          
+          if (retryResult.success) {
+            response = retryResult.text || '';
+            console.log('[ChatAI] Retry successful with provider:', retryResult.provider);
+          } else {
+            console.error('[ChatAI] Retry failed, using original response');
+          }
+        }
+      }
+      
+      // استخراج الكتب من النص الخام **قبل** التنظيف
+      // هذا مهم جداً: يجب أن يتم الاستخراج قبل أن يقوم Sanitizer باستبدال الـ tokens
+      console.log('[ChatAI] Extracting books from raw response...');
+      const books = extractBooksFromResponse(response, availableBooks);
+      console.log('[ChatAI] Extracted books:', JSON.stringify(books));
+      
+      // تنظيف الرد باستخدام Response Sanitizer
+      console.log('[ChatAI] Sanitizing response...');
+      const sanitizedResult = await ResponseSanitizer.sanitizeWithRegeneration(
+        response,
+        availableBooks,
+        async () => {
+          // إعادة التوليد إذا فشل التنظيف
+          aiCallCount++;
+          // استخدام provider مختلف وتقليل maxTokens
+          const regenProvider = aiResult.provider === 'gemini' ? 'groq' : 'gemini';
+          const retryResult = await AIOrchestrator.executeWithFallback('sales_chat', {
+            message: lastUserContent,
+            conversation_history: conversationHistory,
+            available_books: availableBooks,
+            similar_books: similarBooks
+          }, {
+            prompt: user,
+            systemPrompt: system,
+            provider: regenProvider,
+            temperature: temperature,
+            maxTokens: Math.floor(max_tokens * 0.7), // تقليل أكبر في regeneration
+            skipCache: true // تخطي الكاش عند إعادة التوليد
+          });
+          console.log('[ChatAI] Regeneration attempt with provider:', regenProvider);
+          return retryResult.text || '';
+        }
+      );
+      
+      response = sanitizedResult.cleanedResponse;
+      const chatButtons = sanitizedResult.buttons || [];
+      console.log('[ChatAI] Sanitization result:', JSON.stringify(sanitizedResult));
+      console.log('[ChatAI] Extracted buttons:', JSON.stringify(chatButtons));
+      
+      // إزالة تنسيق الكتب من النص النهائي (للتأكد من إزالة أي tokens متبقية)
+      response = removeBookTags(response);
+
+      // إزالة علامات ** الفاضية (بعد فشل استبدال كتاب غير موجود)
+      response = removeEmptyBoldMarkers(response);
+
+      // تنسيق الرد
+      response = highlightBoldBookTitles(response);
+      response = `<div dir="rtl">${response}</div>`;
+
+      // حفظ رد المساعد
+      await ConversationManagementService.addMessage(currentConversationId, 'assistant', response, {
+        intentAnalysis,
+        recommendedBooks: availableBooks.slice(0, 3).map(book => ({
+          bookId: book.id,
+          bookTitle: book.title,
+          reason: 'مطابق لطلب البحث'
+        })),
+        performance: {
+          processingTime,
+          tokensUsed: aiResult.tokens?.total || 0,
+          cost: aiResult.cost || 0
+        },
+        modelMetadata: {
+          model: aiResult.model,
+          provider: aiResult.provider
+        }
+      });
+
+      // تسجيل عدد استدعاءات AI provider
+      console.log(`[ChatAI] Total AI calls for this message: ${aiCallCount}`);
+
+      // تحديث ملف العميل
+      if (intentAnalysis.category) {
+        await ConversationManagementService.updateCustomerProfile(currentConversationId, {
+          preferredCategories: [intentAnalysis.category],
+          lastSearchQuery: lastUserContent
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        conversationId: currentConversationId,
+        data: {
+          choices: [{
+            message: {
+              content: response
+            }
+          }],
+          books: books, // إرجاع الكتب بشكل منفصل للواجهة الأمامية
+          buttons: chatButtons // إرجاع الأزرار للواجهة الأمامية
+        },
+        metadata: {
+          processingTime,
+          tokensUsed: aiResult.tokens?.total || 0,
+          cost: aiResult.cost || 0,
+          booksFound: availableBooks.length,
+          intent: intentAnalysis.intent
+        }
+      });
+    } else {
+      // AI providers failed - check if we have books from search to provide fallback
+      if (availableBooks.length > 0) {
+        // Generate fallback response using available books without AI call
+        const fallbackBooks = availableBooks.slice(0, 3).map(b => ({
+          id: b.id,
+          title: b.title,
+          author: b.author || 'غير محدد',
+          price: b.price,
+          buyUrl: b.buyUrl || b.url || '#'
+        }));
+        
+        const fallbackText = `بناءً على بحثك، وجدت هذه الكتب التي قد تناسبك:\n\n${fallbackBooks.map((book, i) => 
+          `${i + 1}. ${book.title} - ${book.price} ج.م`
+        ).join('\n')}\n\nإذا كنت محتار، أنصحك بالبدء بكتاب "${fallbackBooks[0].title}".`;
+        
+        await ConversationManagementService.addMessage(currentConversationId, 'assistant', fallbackText, {
+          intentAnalysis,
+          recommendedBooks: fallbackBooks.map(book => ({
+            bookId: book.id,
+            bookTitle: book.title,
+            reason: 'مطابق لطلب البحث (fallback response)'
+          })),
+          performance: {
+            processingTime,
+            tokensUsed: 0,
+            cost: 0
+          }
+        });
+        
+        return res.status(200).json({
+          success: true,
+          conversationId: currentConversationId,
+          data: {
+            choices: [{
+              message: {
+                content: `<div dir="rtl">${fallbackText}</div>`
+              }
+            }],
+            books: fallbackBooks
+          },
+          metadata: {
+            processingTime,
+            tokensUsed: 0,
+            cost: 0,
+            booksFound: availableBooks.length,
+            intent: intentAnalysis.intent,
+            fallbackUsed: true,
+            aiProvidersFailed: true
+          }
+        });
+      }
+      
+      // No books available - provide helpful contact info
+      const fallbackMessage = 'كل الأنظمة مشغولة حالياً. يمكنك:\n• التواصل معنا مباشرة على 01094612729\n• زيارة موقعنا www.knoozbook.com\n• تصفح الكتب المتاحة في المكتبة';
+      
+      await ConversationManagementService.addMessage(currentConversationId, 'assistant', fallbackMessage, {
+        performance: {
+          processingTime,
+          tokensUsed: 0,
+          cost: 0
+        }
+      });
+      
+      return res.status(200).json({
+        success: true,
+        conversationId: currentConversationId,
+        data: {
+          choices: [{
+            message: {
+              content: `<div dir="rtl">${fallbackMessage}</div>`
+            }
+          }],
+          books: []
+        },
+        metadata: {
+          processingTime,
+          tokensUsed: 0,
+          cost: 0,
+          booksFound: 0,
+          intent: intentAnalysis.intent,
+          fallbackUsed: true,
+          aiProvidersFailed: true
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Error in sendMessage:', error);
+    
+    return res.status(500).json({
       success: false,
-      message: userMessage,
-      error: errorData,
+      message: 'حدث خطأ في معالجة طلبك',
+      error: error.message
     });
   }
 };
 
 /**
- * الحصول على قائمة النماذج المتاحة (اختياري)
+ * التحقق من صحة تنسيق BOOK token
+ * يدعم الصيغة الجديدة [BOOK:title] والصيغة القديمة [BOOK:id:title:author:price:url]
+ * @param {string} response - رد AI
+ * @returns {boolean} - true إذا كان التنسيق صحيح
+ */
+function validateBookTokenFormat(response) {
+  // التحقق من الصيغة الجديدة [BOOK:title]
+  const newFormatRegex = /\[BOOK:[^\]]+\]/g;
+  const newMatches = response.match(newFormatRegex);
+  
+  // التحقق من الصيغة القديمة [BOOK:id:title:author:price:url]
+  const oldFormatRegex = /\[BOOK:[^:]+:[^:]+:[^:]+:[^:]+:[^\]]+\]/g;
+  const oldMatches = response.match(oldFormatRegex);
+  
+  // إذا كان هناك أي تنسيق صحيح (جديد أو قديم)، نعتبره صحيح
+  return (newMatches && newMatches.length > 0) || (oldMatches && oldMatches.length > 0);
+}
+
+/**
+ * استخراج الكتب من التنسيق الهيكلي [BOOK:id:title:author:price:url] أو [BOOK:title]
+ * @param {string} response - رد AI
+ * @param {Array} availableBooks - الكتب المتاحة للمطابقة
+ * @returns {Array} - مصفوفة الكتب
+ */
+function extractBooksFromResponse(response, availableBooks = []) {
+  let books = parseBookTokens(response, availableBooks);
+  
+  // De-duplication: إزالة الكتب المكررة (نفس ID)
+  const uniqueBooks = Object.values(
+    books.reduce((acc, book) => {
+      if (!acc[book.id]) {
+        acc[book.id] = book;
+      }
+      return acc;
+    }, {})
+  );
+  
+  // فلترة نهائية: استبعاد أي كارد فاضي أو بـ id غير صالح
+  const filteredBooks = uniqueBooks.filter(book => {
+    // استبعاد id غير صالح (undefined, null, فارغ)
+    if (!book.id || book.id === 'undefined' || book.id === 'null' || book.id === '') {
+      console.warn('[extractBooksFromResponse] Excluding book with invalid id:', book.id);
+      return false;
+    }
+    
+    // استبعاد title غير صالح
+    if (!book.title || book.title === 'غير محدد' || book.title === 'undefined' || book.title === 'null') {
+      console.warn('[extractBooksFromResponse] Excluding book with invalid title:', book.title);
+      return false;
+    }
+    
+    // استبعاد buyUrl غير صالح أو يحتوي على undefined
+    if (!book.buyUrl || book.buyUrl === '#' || book.buyUrl.includes('/undefined/') || book.buyUrl.includes('/null/')) {
+      console.warn('[extractBooksFromResponse] Excluding book with invalid buyUrl:', book.buyUrl);
+      return false;
+    }
+    
+    // استبعاد الروابط التجريبية (example.com)
+    if (book.buyUrl.includes('example.com')) {
+      console.warn('[extractBooksFromResponse] Excluding book with example.com URL:', book.buyUrl);
+      return false;
+    }
+    
+    return true;
+  });
+  
+  return filteredBooks;
+}
+
+/**
+ * إزالة تنسيق الكتب من النص
+ * @param {string} response - رد AI
+ * @returns {string} - النص بدون تنسيق الكتب
+ */
+function removeBookTags(response) {
+  return removeBookTokens(response);
+}
+
+/**
+ * تمييز عناوين الكتب بالـ bold
+ * @param {string} text - النص
+ * @returns {string} - النص مع عناوين الكتب مميزة
+ */
+function highlightBoldBookTitles(text) {
+  // تمييز عناوين الكتب بين علامات **bold**
+  return text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+}
+
+/**
+ * الحصول على قائمة النماذج المتاحة من AI Orchestrator
  * @param {Object} req - طلب HTTP
  * @param {Object} res - استجابة HTTP
  */
 exports.getAvailableModels = async (req, res) => {
   try {
-    const headers = {
-      'Authorization': `Bearer ${OPENROUTER_API_KEY}`
-    };
-    const response = await axios.get('https://openrouter.ai/api/v1/models', { headers });
+    const models = await AIOrchestrator.getAvailableModels('gemini');
     return res.status(200).json({
       success: true,
-      data: response.data,
+      data: models
     });
   } catch (error) {
-    console.error('خطأ في الحصول على النماذج المتاحة:', error.response?.data || error.message);
-
-    return res.status(error.response?.status || 500).json({
+    console.error('Error in getAvailableModels:', error);
+    return res.status(500).json({
       success: false,
-      message: 'حدث خطأ أثناء الحصول على النماذج المتاحة',
-      error: error.response?.data || error.message,
+      message: 'حدث خطأ في الحصول على النماذج المتاحة',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * الحصول على محادثة بواسطة ID
+ * @param {Object} req - طلب HTTP
+ * @param {Object} res - استجابة HTTP
+ */
+exports.getConversation = async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+    
+    const conversation = await ConversationManagementService.getConversation(conversationId);
+    const messages = await ConversationManagementService.getMessages(conversationId);
+    const stats = await ConversationManagementService.getConversationStats(conversationId);
+
+    return res.status(200).json({
+      success: true,
+      conversation,
+      messages,
+      stats
+    });
+  } catch (error) {
+    console.error('Error in getConversation:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'حدث خطأ في الحصول على المحادثة',
+      error: error.message
     });
   }
 };

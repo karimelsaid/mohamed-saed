@@ -1,4 +1,4 @@
-import { Component, OnInit, Inject, PLATFORM_ID } from '@angular/core';
+import { Component, OnInit, OnDestroy, Inject, PLATFORM_ID } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
@@ -13,6 +13,7 @@ import { SeoService } from '../services/seo.service';
 import { PromotionService } from '../services/promotion.service';
 import { MerchantAuthService } from '../services/merchant-auth.service';
 import { FormsModule } from '@angular/forms';
+import { AnalyticsTrackingService } from '../services/analytics-tracking.service';
 
 @Component({
   selector: 'app-home-page',
@@ -21,7 +22,7 @@ import { FormsModule } from '@angular/forms';
   templateUrl: './home-page.component.html',
   styleUrls: ['./home-page.component.css']
 })
-export class HomePageComponent implements OnInit {
+export class HomePageComponent implements OnInit, OnDestroy {
   faHeart = faHeart;
 
   uploadsBaseUrl = environment.uploadsBaseUrl;
@@ -81,6 +82,10 @@ export class HomePageComponent implements OnInit {
   // Merchants / Publishers
   merchants: any[] = [];
 
+  // Analytics tracking
+  private trackedProducts = new Set<string>();
+  private intersectionObserver: IntersectionObserver | null = null;
+
   constructor(
     private dataService: DataService,
     private router: Router,
@@ -89,6 +94,7 @@ export class HomePageComponent implements OnInit {
     private promotionService: PromotionService,
     private http: HttpClient,
     private merchantAuthService: MerchantAuthService,
+    private analyticsTrackingService: AnalyticsTrackingService,
     @Inject(PLATFORM_ID) private platformId: Object
   ) { }
 
@@ -119,24 +125,36 @@ export class HomePageComponent implements OnInit {
           products_id: b.products_id || b.product_id || b._id
         }));
 
-        // Sort by creation date (newest first) to show truly latest products
-        // No shuffling to ensure fair display without prioritizing any specific products
-        const sorted = normalizedData.sort((a: any, b: any) => {
-          const dateA = new Date(a.createdAt || a.lastStockUpdate || 0).getTime();
-          const dateB = new Date(b.createdAt || b.lastStockUpdate || 0).getTime();
-          return dateB - dateA;
-        });
+        // Log detailed info
+        const merchantProducts = normalizedData.filter((p: any) => p.merchantId && p.merchantId.toString() !== '69d11b07df78621a8d7b1559');
+        console.log(`📊 [HomePage] Total products: ${normalizedData.length}, Merchant products: ${merchantProducts.length}`);
+        if (merchantProducts.length > 0) {
+          console.log(`📊 [HomePage] Sample merchant products:`, merchantProducts.slice(0, 3).map((p: any) => ({
+            id: p.products_id,
+            name: p.product_name,
+            merchantId: p.merchantId,
+            merchantName: p.merchantName,
+            category: p.product_category
+          })));
+        }
+
+        // Shuffle to show random products (including merchant products)
+        // This ensures fair display without prioritizing any specific products
+        const sorted = this.shuffleArray(normalizedData);
 
         this.allProducts = sorted;
         this.generateBackgroundColumns();
-        
+
         // Fallback: If we are in scrolling mode and haven't loaded specific hero books yet, use allProducts
         if (this.heroConfig.mode === 'scrolling' && (!this.heroBooks || this.heroBooks.length === 0)) {
           this.heroBooks = this.allProducts.slice(0, 32);
           this.prepareHeroColumns();
         }
-        
+
         this.isLoading = false;
+
+        // Setup intersection observer for impression tracking
+        this.setupIntersectionObserver();
       }, error => {
         console.error('Error fetching data for home page:', error);
         this.isLoading = false;
@@ -176,32 +194,18 @@ export class HomePageComponent implements OnInit {
   }
 
   get filteredProducts(): any[] {
-    // New Arrivals section should show BOOKS and unclassified products (some publishers like دار الكرمة have "غير مصنف")
-    const books = this.allProducts.filter(p =>
-      !p.product_category || // Include products with no category
-      p.product_category === 'غير مصنف' || // Include unclassified (e.g. دار الكرمة)
-      p.product_category.includes('كتب') ||
-      p.product_category.includes('روايات') ||
-      p.product_category.includes('قصص') ||
-      p.product_category.includes('تطوير الذات') ||
-      p.product_category.includes('ديني') ||
-      p.product_category.includes('تاريخ') ||
-      p.product_category.includes('أطفال') ||
-      p.product_category.includes('أعمال') ||
-      p.product_category.includes('قواميس') ||
-      p.product_category.includes('صحة') ||
-      p.product_category.includes('فنون') ||
-      ['رواية', 'تنمية', 'ديني', 'اعمال', 'تربية'].includes(p.product_category)
-    );
+    // Show ALL products from all categories (not just books)
+    // This includes admin products, merchant products, and all categories
+    const allProducts = this.allProducts;
 
     if (this.activeTab === 'all') {
-      return books.slice(0, 20);
+      return allProducts.slice(0, 20);
     }
 
     const genre = this.bookGenres.find(c => c.id === this.activeTab);
-    if (!genre || !genre.filter) return books.slice(0, 20);
+    if (!genre || !genre.filter) return allProducts.slice(0, 20);
 
-    return books.filter(product =>
+    return allProducts.filter(product =>
       genre.filter?.some(f => product.product_category && product.product_category.includes(f))
     ).slice(0, 20);
   }
@@ -214,6 +218,15 @@ export class HomePageComponent implements OnInit {
     return item.products_id || item._id || index.toString();
   }
 
+  shuffleArray(array: any[]): any[] {
+    const newArr = [...array];
+    for (let i = newArr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [newArr[i], newArr[j]] = [newArr[j], newArr[i]];
+    }
+    return newArr;
+  }
+
   // Helper Methods
   getBookSlug(bookName: string): string {
     return bookName.trim().replace(/\s+/g, '-');
@@ -221,6 +234,8 @@ export class HomePageComponent implements OnInit {
 
   navigateToProduct(product: any) {
     const slug = this.getBookSlug(product.product_name);
+    // Track click event
+    this.analyticsTrackingService.trackClick(product.products_id, 'home_page');
     // Use /book for all products to ensure they open in BookDetailsComponent
     this.router.navigate(['/book', product.products_id, slug]);
   }
@@ -560,6 +575,47 @@ export class HomePageComponent implements OnInit {
       },
       error: (err) => console.error('Error loading dynamic categories:', err)
     });
+  }
+
+  // Analytics: Setup intersection observer for impression tracking
+  private setupIntersectionObserver(): void {
+    if (!isPlatformBrowser(this.platformId) || typeof IntersectionObserver === 'undefined') {
+      return;
+    }
+
+    this.intersectionObserver = new IntersectionObserver(
+      (entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const productId = entry.target.getAttribute('data-product-id');
+            if (productId && !this.trackedProducts.has(productId)) {
+              this.trackedProducts.add(productId);
+              this.analyticsTrackingService.trackImpression(productId, 'home_page');
+              // Stop observing after tracking once
+              this.intersectionObserver?.unobserve(entry.target);
+            }
+          }
+        });
+      },
+      {
+        threshold: 0.5, // Track when 50% of the element is visible
+        rootMargin: '0px'
+      }
+    );
+
+    // Observe product cards after a short delay to ensure DOM is ready
+    setTimeout(() => {
+      const productCards = document.querySelectorAll('[data-product-id]');
+      productCards.forEach(card => {
+        this.intersectionObserver?.observe(card);
+      });
+    }, 500);
+  }
+
+  ngOnDestroy(): void {
+    if (this.intersectionObserver) {
+      this.intersectionObserver.disconnect();
+    }
   }
 
 }

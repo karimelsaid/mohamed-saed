@@ -11,7 +11,9 @@ import { FormsModule } from '@angular/forms';
 import { faGift, faBoxOpen, faStar, faChevronLeft, faArrowRight, faCopy, faClock } from '@fortawesome/free-solid-svg-icons';
 import { interval, Subscription } from 'rxjs';
 import { ActivatedRoute } from '@angular/router';
+import { Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
+import { AnalyticsTrackingService } from '../../services/analytics-tracking.service';
 
 @Component({
     selector: 'app-promotions',
@@ -54,11 +56,17 @@ export class PromotionsComponent implements OnInit, OnDestroy, AfterViewInit {
     faCopy = faCopy;
     faClock = faClock;
 
+    // Analytics tracking
+    private trackedProducts = new Set<string>();
+    private intersectionObserver: IntersectionObserver | null = null;
+
     constructor(
         private promotionService: PromotionService,
         private authService: AuthService,
         private dataService: DataService,
         private route: ActivatedRoute,
+        private router: Router,
+        private analyticsTrackingService: AnalyticsTrackingService,
         @Inject(PLATFORM_ID) private platformId: Object
     ) { }
 
@@ -164,6 +172,9 @@ export class PromotionsComponent implements OnInit, OnDestroy, AfterViewInit {
                     }
                 });
                 this.loading = false;
+
+                // Setup intersection observer for impression tracking
+                this.setupIntersectionObserver();
             },
             error: (err: any) => {
                 console.error(err);
@@ -458,5 +469,48 @@ export class PromotionsComponent implements OnInit, OnDestroy, AfterViewInit {
 
     ngOnDestroy(): void {
         this.timerSubscription?.unsubscribe();
+        if (this.intersectionObserver) this.intersectionObserver.disconnect();
+    }
+
+    navigateToProduct(product: any): void {
+        const slug = (product.product_name || product.bookName || '').trim().replace(/\s+/g, '-');
+        const productId = product.products_id || product._id;
+        // Track click event
+        this.analyticsTrackingService.trackClick(productId, 'promotions_page');
+        this.router.navigate(['/book', productId, slug]);
+    }
+
+    // Analytics: Setup intersection observer for impression tracking
+    private setupIntersectionObserver(): void {
+        if (!isPlatformBrowser(this.platformId) || typeof IntersectionObserver === 'undefined') {
+            return;
+        }
+
+        this.intersectionObserver = new IntersectionObserver(
+            (entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const productId = entry.target.getAttribute('data-product-id');
+                        if (productId && !this.trackedProducts.has(productId)) {
+                            this.trackedProducts.add(productId);
+                            this.analyticsTrackingService.trackImpression(productId, 'promotions_page');
+                            // Stop observing after tracking once
+                            this.intersectionObserver?.unobserve(entry.target);
+                        }
+                    }
+                });
+            },
+            {
+                threshold: 0.5,
+                rootMargin: '0px'
+            }
+        );
+
+        setTimeout(() => {
+            const productCards = document.querySelectorAll('[data-product-id]');
+            productCards.forEach(card => {
+                this.intersectionObserver?.observe(card);
+            });
+        }, 500);
     }
 }

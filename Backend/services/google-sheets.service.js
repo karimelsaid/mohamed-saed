@@ -46,6 +46,19 @@ class GoogleSheetsService {
             const sheetId = spreadsheet.data.sheets[0].properties.sheetId;
             const range = `${sheetName}!A:AZ`;
 
+            // Ensure headers exist
+            const headers = [
+                'products_id', 'barcode', 'product_name', 'product_quantity', 'product_category',
+                'product_description', 'product_price', 'price_cost', 'merchantId', 'image_path',
+                'weight', 'author', 'publisher', 'pages', 'coverType', 'language', 'publishYear',
+                'stationeryType', 'material', 'color', 'size', 'brand', 'electronicsType', 'model',
+                'specs', 'warranty', 'clothingType', 'season', 'originCountry', 'cosmeticsType',
+                'sizeWeight', 'ingredients', 'suitableFor', 'shoeType', 'furnitureType', 'height',
+                'deliveryMethod', 'toyType', 'ageGroup', 'safety', 'fabricType', 'width', 'length',
+                'usage', 'suggestedCategory', 'createdAt'
+            ];
+            await this.ensureSheetExists(spreadsheetId, sheetName, headers);
+
             // Prepare the row data based on excel.service.js structure
             const row = this.mapProductToRow(productData);
 

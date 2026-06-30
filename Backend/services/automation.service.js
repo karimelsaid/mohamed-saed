@@ -1,6 +1,7 @@
 const axios = require('axios');
 const AutomationSetting = require('../models/AutomationSetting.model');
 const AutomationLog = require('../models/AutomationLog.model');
+const AnalyticsEvent = require('../models/AnalyticsEvent.model');
 
 class AutomationService {
     /**
@@ -124,22 +125,136 @@ class AutomationService {
     async fetchN8nStats() {
         try {
             const settings = await AutomationSetting.getInstance();
-            if (!settings.n8nConfig.apiKey || !settings.n8nConfig.apiUrl) {
-                return { error: 'n8n API Key or URL is missing' };
+            const n8nApiKey = process.env.N8N_API_KEY;
+            const n8nApiUrl = process.env.N8N_API_URL || settings.n8nConfig.apiUrl;
+
+            if (!n8nApiKey || !n8nApiUrl) {
+                return { error: 'n8n API Key or URL is missing from environment' };
             }
 
-            const response = await axios.get(`${settings.n8nConfig.apiUrl}/api/v1/workflows`, {
-                headers: { 'X-N8N-API-KEY': settings.n8nConfig.apiKey }
+            // Fetch workflows using official API v1
+            const workflowsResponse = await axios.get(`${n8nApiUrl}/api/v1/workflows`, {
+                headers: { 'X-N8N-API-KEY': n8nApiKey }
             });
 
+            // Fetch recent executions using official API v1
+            const executionsResponse = await axios.get(
+                `${n8nApiUrl}/api/v1/executions?limit=100`,
+                {
+                    headers: { 'X-N8N-API-KEY': n8nApiKey }
+                }
+            );
+
+            const workflows = workflowsResponse.data.data || [];
+            const executions = executionsResponse.data.data || [];
+
+            // Calculate stats from executions
+            const successfulExecutions = executions.filter(e => e.finished && !e.stoppedAt).length;
+            const failedExecutions = executions.filter(e =>e.stoppedAt).length;
+            const totalExecutions = executions.length;
+
+            // Calculate execution rate by workflow
+            const workflowStats = {};
+            executions.forEach(exec => {
+                const workflowId = exec.workflowId;
+                if (!workflowStats[workflowId]) {
+                    workflowStats[workflowId] = { total: 0, success: 0, failed: 0 };
+                }
+                workflowStats[workflowId].total++;
+                if (exec.finished && !exec.stoppedAt) {
+                    workflowStats[workflowId].success++;
+                } else {
+                    workflowStats[workflowId].failed++;
+                }
+            });
+
+            // Attach execution stats to workflows
+            const workflowsWithStats = workflows.map(w => ({
+                ...w,
+                executionStats: workflowStats[w.id] || { total: 0, success: 0, failed: 0 }
+            }));
+
+            // Get analytics stats from MongoDB
+            const analyticsStats = await this.getAnalyticsStats();
+
             return {
-                totalWorkflows: response.data.data.length,
-                workflows: response.data.data,
+                totalWorkflows: workflows.length,
+                activeWorkflows: workflows.filter(w => w.active).length,
+                totalExecutions,
+                successfulExecutions,
+                failedExecutions,
+                successRate: totalExecutions > 0 ? ((successfulExecutions / totalExecutions) * 100).toFixed(1) : 0,
+                workflows: workflowsWithStats,
+                ...analyticsStats,
                 timestamp: new Date()
             };
         } catch (error) {
             console.error('❌ [AutomationService] Error fetching n8n stats:', error.message);
             return { error: error.message };
+        }
+    }
+
+    /**
+     * Get analytics statistics from MongoDB for the current month
+     */
+    async getAnalyticsStats() {
+        try {
+            const startOfMonth = new Date();
+            startOfMonth.setDate(1);
+            startOfMonth.setHours(0, 0, 0, 0);
+
+            // المنشورات التلقائية = impression events this month
+            const impressions = await AnalyticsEvent.countDocuments({
+                eventType: 'impression',
+                createdAt: { $gte: startOfMonth }
+            });
+
+            // الردود الذكية = comment events this month
+            const comments = await AnalyticsEvent.countDocuments({
+                eventType: 'comment',
+                createdAt: { $gte: startOfMonth }
+            });
+
+            // معدل التفاعل = clicks / impressions
+            const clicks = await AnalyticsEvent.countDocuments({
+                eventType: 'click',
+                createdAt: { $gte: startOfMonth }
+            });
+            const engagementRate = impressions > 0 ? ((clicks / impressions) * 100).toFixed(1) : 0;
+
+            // معدل التحويل = purchase_batch / clicks
+            const purchases = await AnalyticsEvent.countDocuments({
+                eventType: 'purchase_batch',
+                createdAt: { $gte: startOfMonth }
+            });
+            const conversionRate = clicks > 0 ? ((purchases / clicks) * 100).toFixed(1) : 0;
+
+            // searches this month
+            const searches = await AnalyticsEvent.countDocuments({
+                eventType: 'search',
+                createdAt: { $gte: startOfMonth }
+            });
+
+            return {
+                impressions,
+                comments,
+                clicks,
+                engagementRate: parseFloat(engagementRate),
+                purchases,
+                conversionRate: parseFloat(conversionRate),
+                searches
+            };
+        } catch (error) {
+            console.error('❌ [AutomationService] Error fetching analytics stats:', error.message);
+            return {
+                impressions: 0,
+                comments: 0,
+                clicks: 0,
+                engagementRate: 0,
+                purchases: 0,
+                conversionRate: 0,
+                searches: 0
+            };
         }
     }
 

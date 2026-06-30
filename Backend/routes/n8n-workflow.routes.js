@@ -3,6 +3,18 @@ const router = express.Router();
 const n8nWorkflowController = require('../controllers/n8n-workflow.controller');
 const { verifyToken, isAdmin } = require('../middleware/auth.middleware');
 
+// Get n8n statistics
+router.get('/stats', n8nWorkflowController.getN8nStats);
+
+// Get n8n configuration status
+router.get('/config', n8nWorkflowController.getN8nConfig);
+
+// Set n8n API key (for initial setup)
+router.post('/set-api-key', n8nWorkflowController.setN8nApiKey);
+
+// Update n8n configuration
+router.post('/config', n8nWorkflowController.updateN8nConfig);
+
 // Get all workflows
 router.get('/workflows', n8nWorkflowController.getWorkflows);
 

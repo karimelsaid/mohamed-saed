@@ -1,11 +1,13 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, OnDestroy, Inject, PLATFORM_ID } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 import { DataService } from '../services/data.service';
 import { AuthService } from '../auth/auth.service';
+import { Router } from '@angular/router';
+import { AnalyticsTrackingService } from '../services/analytics-tracking.service';
 
 @Component({
   selector: 'app-bourse',
@@ -20,7 +22,7 @@ export class BourseComponent implements OnInit, OnDestroy {
   isLoading = true;
   errorMessage = '';
   freeGiftThreshold = 1000;
-  
+
   countdownStr = '00:00:00';
   nextOfferTime: any = null;
   private timer: any;
@@ -31,10 +33,17 @@ export class BourseComponent implements OnInit, OnDestroy {
   showToastFlag = false;
   private toastTimer: any;
 
+  // Analytics tracking
+  private trackedProducts = new Set<string>();
+  private intersectionObserver: IntersectionObserver | null = null;
+
   constructor(
     private http: HttpClient,
     public dataService: DataService,
-    private authService: AuthService
+    private authService: AuthService,
+    private router: Router,
+    private analyticsTrackingService: AnalyticsTrackingService,
+    @Inject(PLATFORM_ID) private platformId: Object
   ) {}
 
   ngOnInit() {
@@ -80,6 +89,9 @@ export class BourseComponent implements OnInit, OnDestroy {
           };
        });
        this.enrichedBooks = this.shuffle(mapped);
+
+       // Setup intersection observer for impression tracking
+       this.setupIntersectionObserver();
     });
   }
 
@@ -162,6 +174,48 @@ export class BourseComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     if (this.timer) clearInterval(this.timer);
+    if (this.intersectionObserver) this.intersectionObserver.disconnect();
+  }
+
+  navigateToProduct(book: any): void {
+    const slug = book.product_name?.trim().replace(/\s+/g, '-') || book.bookId;
+    // Track click event
+    this.analyticsTrackingService.trackClick(book.products_id, 'bourse_page');
+    this.router.navigate(['/book', book.products_id, slug]);
+  }
+
+  // Analytics: Setup intersection observer for impression tracking
+  private setupIntersectionObserver(): void {
+    if (!isPlatformBrowser(this.platformId) || typeof IntersectionObserver === 'undefined') {
+      return;
+    }
+
+    this.intersectionObserver = new IntersectionObserver(
+      (entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const productId = entry.target.getAttribute('data-product-id');
+            if (productId && !this.trackedProducts.has(productId)) {
+              this.trackedProducts.add(productId);
+              this.analyticsTrackingService.trackImpression(productId, 'bourse_page');
+              // Stop observing after tracking once
+              this.intersectionObserver?.unobserve(entry.target);
+            }
+          }
+        });
+      },
+      {
+        threshold: 0.5,
+        rootMargin: '0px'
+      }
+    );
+
+    setTimeout(() => {
+      const productCards = document.querySelectorAll('[data-product-id]');
+      productCards.forEach(card => {
+        this.intersectionObserver?.observe(card);
+      });
+    }, 500);
   }
 
   showToast(message: string, type: 'success' | 'error' | 'warning' = 'success', duration = 4000) {

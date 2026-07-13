@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
@@ -10,7 +10,8 @@ import { faSearch, faHistory, faUser, faPhone, faCalendarAlt, faFileInvoice, faE
     templateUrl: './sales-history.component.html',
     styleUrls: ['./sales-history.component.css'],
     standalone: true,
-    imports: [CommonModule, FormsModule, FontAwesomeModule]
+    imports: [CommonModule, FormsModule, FontAwesomeModule],
+    encapsulation: ViewEncapsulation.None
 })
 export class SalesHistoryComponent implements OnInit {
     faSearch = faSearch;

@@ -13,7 +13,7 @@
 
   <!-- Stats Grid -->
   <div class="stats-grid">
-    <div class="stat-card">
+    <div class="stat-card clickable" (click)="openStatModal('posts')">
       <div class="stat-icon social-posts"><i class="fas fa-paper-plane"></i></div>
       <div class="stat-content">
         <h3>المنشورات التلقائية</h3>
@@ -24,7 +24,7 @@
         </span>
       </div>
     </div>
-    <div class="stat-card">
+    <div class="stat-card clickable" (click)="openStatModal('replies')">
       <div class="stat-icon auto-replies"><i class="fas fa-comment-dots"></i></div>
       <div class="stat-content">
         <h3>الردود الذكية</h3>
@@ -35,7 +35,7 @@
         </span>
       </div>
     </div>
-    <div class="stat-card">
+    <div class="stat-card clickable" (click)="openStatModal('engagement')">
       <div class="stat-icon engagement"><i class="fas fa-heart"></i></div>
       <div class="stat-content">
         <h3>معدل التفاعل</h3>
@@ -46,7 +46,7 @@
         </span>
       </div>
     </div>
-    <div class="stat-card">
+    <div class="stat-card clickable" (click)="openStatModal('time')">
       <div class="stat-icon savings"><i class="fas fa-clock"></i></div>
       <div class="stat-content">
         <h3>الوقت الموفر</h3>
@@ -54,7 +54,7 @@
         <span class="stat-change">هذا الأسبوع</span>
       </div>
     </div>
-    <div class="stat-card">
+    <div class="stat-card clickable" (click)="openStatModal('conversion')">
       <div class="stat-icon conversion"><i class="fas fa-shopping-cart"></i></div>
       <div class="stat-content">
         <h3>معدل التحويل</h3>
@@ -65,7 +65,7 @@
         </span>
       </div>
     </div>
-    <div class="stat-card">
+    <div class="stat-card clickable" (click)="openStatModal('workflows')">
       <div class="stat-icon active-workflows"><i class="fas fa-project-diagram"></i></div>
       <div class="stat-content">
         <h3>Workflows نشطة</h3>
@@ -73,7 +73,7 @@
         <span class="stat-change">من أصل {{ n8nStats?.totalWorkflows || 0 }}</span>
       </div>
     </div>
-    <div class="stat-card">
+    <div class="stat-card clickable" (click)="openStatModal('clicks')">
       <div class="stat-icon clicks"><i class="fas fa-mouse-pointer"></i></div>
       <div class="stat-content">
         <h3>الضغطات</h3>
@@ -81,7 +81,7 @@
         <span class="stat-change">إجمالي</span>
       </div>
     </div>
-    <div class="stat-card">
+    <div class="stat-card clickable" (click)="openStatModal('searches')">
       <div class="stat-icon searches"><i class="fas fa-search"></i></div>
       <div class="stat-content">
         <h3>عمليات البحث</h3>
@@ -304,6 +304,82 @@
           </div>
         </div>
       </section>
+    </div>
+  </div>
+
+  <!-- Statistics Detail Modal -->
+  <div class="modal" [class.active]="showStatModal" (click)="closeStatModal($event)">
+    <div class="modal-content stat-modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3><i class="fas fa-chart-line"></i> {{ modalTitle }}</h3>
+        <button class="close-btn" (click)="closeStatModal($event)">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div *ngIf="loadingModalData" class="loading-state">
+          <i class="fas fa-spinner fa-spin"></i> جاري تحميل البيانات...
+        </div>
+        <div *ngIf="!loadingModalData && modalData">
+          <!-- Summary Stats -->
+          <div class="stat-summary">
+            <div class="summary-item">
+              <span class="summary-label">القيمة الحالية</span>
+              <span class="summary-value">{{ modalData.currentValue }}</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">التغيير</span>
+              <span class="summary-value" [ngClass]="modalData.change >= 0 ? 'positive' : 'negative'">
+                {{ modalData.change >= 0 ? '+' : '' }}{{ modalData.change }}%
+              </span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">المتوى الشهري</span>
+              <span class="summary-value">{{ modalData.monthlyAverage }}</span>
+            </div>
+          </div>
+
+          <!-- Chart Section -->
+          <div class="chart-section">
+            <h4>الرسم البياني</h4>
+            <div class="chart-container">
+              <canvas id="statChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Detailed Stats Table -->
+          <div class="detailed-stats">
+            <h4>الإحصائيات التفصيلية</h4>
+            <table class="stats-table">
+              <thead>
+                <tr>
+                  <th>الفترة</th>
+                  <th>القيمة</th>
+                  <th>التغيير</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of modalData.history">
+                  <td>{{ item.period }}</td>
+                  <td>{{ item.value }}</td>
+                  <td [ngClass]="item.change >= 0 ? 'positive' : 'negative'">
+                    {{ item.change >= 0 ? '+' : '' }}{{ item.change }}%
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Additional Insights -->
+          <div class="insights-section" *ngIf="modalData.insights">
+            <h4>رؤى وتوصيات</h4>
+            <div class="insight-item" *ngFor="let insight of modalData.insights">
+              <i [class]="insight.icon"></i>
+              <p>{{ insight.text }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>

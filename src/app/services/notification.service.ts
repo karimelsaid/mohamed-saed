@@ -11,6 +11,7 @@ export interface Notification {
   read: boolean;
   createdAt: string;
   relatedId?: string;
+  data?: any;
 }
 
 @Injectable({

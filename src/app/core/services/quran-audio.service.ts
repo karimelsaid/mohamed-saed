@@ -858,8 +858,10 @@ export class QuranAudioService {
             } else {
                 const u = await this.getVerseAudioUrl(simVerseKey, reciterId);
                 if (!u) {
-                    console.warn(`[AudioService] Could not find URL for ${simVerseKey}, stopping queue.`);
-                    break;
+                    console.warn(`[AudioService] Could not find URL for ${simVerseKey}. Skipping to prevent queue stalling.`);
+                    simVerseKey = this.getNextVerseKeyFrom(simVerseKey);
+                    simAyahRepsLeft = isLoopingSimulation ? 1 : Math.max(1, state.repeatAyah);
+                    continue;
                 }
                 verseUrl = u;
 
@@ -1076,7 +1078,11 @@ export class QuranAudioService {
                     }
 
                     const verseUrl = await this.getVerseAudioUrl(nextKey, reciterId);
-                    if (!verseUrl) break;
+                    if (!verseUrl) {
+                        console.warn(`[AudioService] Refill: Could not find URL for ${nextKey}. Skipping to prevent queue stalling.`);
+                        nextKey = this.getNextVerseKeyFrom(nextKey);
+                        continue;
+                    }
 
                     const [surahId, ayahNum] = nextKey.split(':');
                     const surahMeta = this.cachedSurahsData?.find(s => s.id === parseInt(surahId));

@@ -12,4 +12,9 @@ router.post('/search', analyticsController.trackSearchTerm);
 // Protected analytics routes
 router.get('/merchant-stats', authenticateMerchant, analyticsController.getMerchantAnalytics);
 
+// Book recommendations endpoint for n8n workflow
+router.post('/recommendations', analyticsController.saveRecommendations);
+router.get('/recommendations/user/:userId', analyticsController.getUserRecommendations);
+router.delete('/recommendations/user/:userId', analyticsController.deleteUserRecommendations);
+
 module.exports = router;

@@ -4,7 +4,7 @@ const orderSchema = new mongoose.Schema({
   merchantId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Merchant',
-    required: true
+    required: false // Made optional for Amazon orders
   },
   customerName: {
     type: String,
@@ -59,7 +59,28 @@ const orderSchema = new mongoose.Schema({
     type: String,
     enum: ['merchant', 'knoozbook'],
     default: 'knoozbook'
-  }
+  },
+  // Amazon Integration Fields
+  source: {
+    type: String,
+    enum: ['website', 'amazon'],
+    default: 'website'
+  },
+  amazonOrderId: {
+    type: String,
+    unique: true,
+    sparse: true
+  },
+  // Stock Issue Tracking
+  hasStockIssues: {
+    type: Boolean,
+    default: false
+  },
+  stockIssueDetails: [{
+    productId: String,
+    requestedQty: Number,
+    reason: String
+  }]
 }, {
   timestamps: true
 });

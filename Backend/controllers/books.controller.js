@@ -289,11 +289,28 @@ async function searchBooks(req, res) {
     let filtered = allData;
 
     if (q && q.trim()) {
-      const keywords = normalizeArabic(q).split(/\s+/).filter(k => k.length > 0);
+      // Remove extra spaces and normalize the query
+      const normalizedQuery = normalizeArabic(q.trim().replace(/\s+/g, ' '));
+      const keywords = normalizedQuery.split(/\s+/).filter(k => k.length > 0);
+      
       filtered = filtered.filter(item => {
-        const text = normalizeArabic(`${item.product_name} ${item.author} ${item.publisher} ${item.merchantName || ''} ${item.product_description} ${item.products_id} ${item.barcode} ${item.product_image}`);
-        return keywords.every(kw => text.includes(kw));
+        // Normalize and remove extra spaces from product text
+        const text = normalizeArabic(`${item.product_name || ''} ${item.author || ''} ${item.publisher || ''} ${item.merchantName || ''} ${item.product_description || ''} ${item.products_id || ''} ${item.barcode || ''} ${item.product_image || ''}`.replace(/\s+/g, ' '));
+        
+        // Check if ANY keyword matches (more tolerant than requiring ALL keywords)
+        // This allows finding products even with typos or missing words
+        return keywords.some(kw => text.includes(kw));
       });
+      
+      // Remove duplicates based on products_id
+      const uniqueMap = new Map();
+      filtered.forEach(item => {
+        const key = item.products_id || item.barcode || item._id;
+        if (key && !uniqueMap.has(key)) {
+          uniqueMap.set(key, item);
+        }
+      });
+      filtered = Array.from(uniqueMap.values());
     }
 
     if (category) {
@@ -396,4 +413,57 @@ async function updateBooksData() {
   await downloadAndConvertExcel(FILE_ID);
 }
 
-module.exports = { getExcelData, getRecentBooks, searchBooks, updateBooksData, clearBooksCache, getCategories, getBookById };
+async function getSimilarBooks(req, res) {
+  try {
+    const { category, author, excludeBookId, limit = 5, price } = req.query;
+    const allData = await fetchUnifiedData();
+    let filtered = allData;
+
+    if (category) {
+      const normCat = normalizeArabic(category);
+      filtered = filtered.filter(item => item.product_category && normalizeArabic(item.product_category).includes(normCat));
+    }
+
+    if (author && author.trim()) {
+      const normAuthor = normalizeArabic(author);
+      filtered = filtered.filter(item => item.author && normalizeArabic(item.author).includes(normAuthor));
+    }
+
+    if (excludeBookId) {
+      filtered = filtered.filter(item => item.products_id !== excludeBookId && item.barcode !== excludeBookId);
+    }
+
+    // Filter by price range (±50% of the original book price)
+    if (price) {
+      const priceNum = parseFloat(price);
+      if (!isNaN(priceNum)) {
+        const minPrice = priceNum * 0.5;
+        const maxPrice = priceNum * 1.5;
+        filtered = filtered.filter(item => {
+          const itemPrice = item.product_price || 0;
+          return itemPrice >= minPrice && itemPrice <= maxPrice;
+        });
+      }
+    }
+
+    // Shuffle to get variety
+    filtered = filtered.sort(() => Math.random() - 0.5);
+
+    const similarBooks = filtered.slice(0, parseInt(limit)).map(item => ({
+      id: item.products_id,
+      name: item.product_name,
+      author: item.author,
+      price: item.product_price,
+      image: item.product_image,
+      category: item.product_category,
+      barcode: item.barcode
+    }));
+
+    res.json({ success: true, recommendations: similarBooks });
+  } catch (error) {
+    console.error('Error getting similar books:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+}
+
+module.exports = { getExcelData, getRecentBooks, searchBooks, updateBooksData, clearBooksCache, getCategories, getBookById, getSimilarBooks };

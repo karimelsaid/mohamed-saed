@@ -18,6 +18,24 @@
     min-height: 100vh;
     background: transparent;
     padding-top: 1rem;
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100vw;
+}
+
+.content-area {
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100%;
+}
+
+@media (max-width: 640px) {
+    .library-layout {
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100vw !important;
+        max-width: 100vw !important;
+    }
 }
 
 /* Sidebar Custom Styling */
@@ -86,14 +104,47 @@
 /* 3D Ebook Card Effects */
 .ebooks-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 2rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.25rem;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+@media (min-width: 640px) {
+    .ebooks-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 1.5rem;
+    }
+}
+
+@media (min-width: 768px) {
+    .ebooks-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 2rem;
+    }
+}
+
+@media (min-width: 1024px) {
+    .ebooks-grid {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 2rem;
+    }
+}
+
+@media (min-width: 1280px) {
+    .ebooks-grid {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 2rem;
+    }
 }
 
 .ebook-card {
     transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
     border: 1px solid transparent;
     perspective: 1000px;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .ebook-card:hover {
@@ -192,12 +243,142 @@
 
 /* Responsive Grid Adjustments */
 @media (max-width: 640px) {
-    .ebooks-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 1rem;
+    .library-sidebar {
+        display: none !important;
+    }
+    .library-layout {
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        display: block !important;
     }
     .library-main {
-        padding: 0 1rem 5rem 1rem;
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+    }
+    .hero-section {
+        padding: 1rem !important;
+        border-radius: 1rem !important;
+    }
+    .main-header {
+        padding: 0.5rem 0 !important;
+    }
+    .nav-tabs {
+        padding: 0.25rem !important;
+        border-radius: 1rem !important;
+    }
+    .nav-tab {
+        padding: 0.5rem !important;
+        font-size: 0.75rem !important;
+    }
+    .filters-bar {
+        padding: 0.5rem !important;
+        border-radius: 1rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+    .content-area {
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    .ebooks-grid, .unified-grid {
+        gap: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+    .ebook-card {
+        border-radius: 0.6rem;
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        overflow: hidden;
+    }
+    .card-image {
+        border-radius: 0.55rem;
+        aspect-ratio: auto;
+        height: 280px;
+        width: 100%;
+        position: relative;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+    .card-image img {
+        max-width: 100%;
+        height: 100%;
+        object-fit: cover;
+        width: 100%;
+        display: block;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+    .card-overlay {
+        position: absolute !important;
+        width: 100% !important;
+        height: 100% !important;
+        left: 0 !important;
+        right: 0 !important;
+        top: 0 !important;
+        bottom: 0 !important;
+        inset: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+    .skeleton-image {
+        aspect-ratio: auto;
+        height: 280px;
+        width: 100%;
+    }
+    .card-info {
+        padding: 0.8rem;
+    }
+    .card-info h3 {
+        font-size: 1rem;
+        line-height: 1.5;
+        margin-bottom: 0.3rem;
+        white-space: normal;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+    }
+    .card-info .author {
+        font-size: 0.8rem;
+        line-height: 1.4;
+        margin-bottom: 0.3rem;
+        white-space: normal;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+    }
+    .card-info .category {
+        font-size: 0.65rem;
+        padding: 0.25rem 0.6rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .card-badges {
+        top: 0.5rem;
+        right: 0.5rem;
+        gap: 0.25rem;
+    }
+    .card-badges .badge {
+        font-size: 0.55rem;
+        padding: 0.25rem 0.6rem;
     }
 }
 
@@ -267,6 +448,43 @@
 
 .skeleton {
     animation: skeleton-pulse 1.5s infinite ease-in-out;
+}
+
+/* Skeleton Grid */
+.unified-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.3rem;
+    width: 100%;
+    max-width: 100%;
+}
+
+@media (min-width: 640px) {
+    .unified-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 1.5rem;
+    }
+}
+
+@media (min-width: 768px) {
+    .unified-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 2rem;
+    }
+}
+
+@media (min-width: 1024px) {
+    .unified-grid {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 2rem;
+    }
+}
+
+@media (min-width: 1280px) {
+    .unified-grid {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 2rem;
+    }
 }
 
 /* No Scrollbar Helper */

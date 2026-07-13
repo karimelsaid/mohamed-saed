@@ -42,7 +42,7 @@
       <div class="bg-gray-100 dark:bg-gray-800/40 rounded-[2.5rem] p-8 h-[600px] animate-pulse"></div>
     </div>
     <!-- Skeleton Grid -->
-    <div class="lg:w-3/4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div class="lg:w-3/4 grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-6">
       <div *ngFor="let s of [1,2,3,4,5,6]" class="bg-gray-100 dark:bg-gray-800/40 rounded-[2.5rem] p-6 h-96 animate-pulse"></div>
     </div>
   </div>
@@ -181,10 +181,10 @@
         <p class="text-xs text-gray-400">عرض صفحة {{ currentPage }} من {{ totalPages }}</p>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-8">
+      <div class="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-3 gap-8 gap-2 sm:gap-4 xl:gap-8">
   <div *ngFor="let book of paginatedBooks; let i = index; trackBy: trackByBook"
     [attr.data-product-id]="book.products_id"
-    class="group relative bg-white dark:bg-gray-800/40 rounded-[2.5rem] p-5 shadow-sm hover:shadow-2xl transition-all duration-500 border border-gray-100 dark:border-gray-700/30 flex flex-col gap-5 relative overflow-hidden"
+    class="group relative bg-white dark:bg-gray-800/40 rounded-[2.5rem] p-5 sm:p-5 p-2 shadow-sm hover:shadow-2xl transition-all duration-500 border border-gray-100 dark:border-gray-700/30 flex flex-col gap-5 sm:gap-5 gap-2 relative overflow-hidden"
     [style.animationDelay]="i * 50 + 'ms'">
 
     <!-- Discount Badge -->
@@ -194,63 +194,63 @@
     </div>
 
     <!-- Image Section -->
-    <div class="w-full aspect-[4/3] rounded-[2rem] overflow-hidden bg-gray-50 dark:bg-gray-900/40 relative flex items-center justify-center p-4 transition-all duration-500 group-hover:bg-gray-100 dark:group-hover:bg-gray-900/60 shadow-inner cursor-pointer" (click)="navigateToProduct(book)">
+    <div class="w-full aspect-[4/3] sm:aspect-[4/3] aspect-[2/3] rounded-[2rem] sm:rounded-[2rem] rounded-[1rem] overflow-hidden bg-gray-50 dark:bg-gray-900/40 relative flex items-center justify-center p-4 sm:p-4 p-2 transition-all duration-500 group-hover:bg-gray-100 dark:group-hover:bg-gray-900/60 shadow-inner cursor-pointer" (click)="navigateToProduct(book)">
       <img [src]="getBookImageUrl(book)" [alt]="book.product_name" loading="lazy"
         class="max-w-full max-h-full object-contain transition-transform duration-700 group-hover:scale-110 drop-shadow-2xl" />
       <div class="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
     </div>
 
     <!-- Details Section -->
-    <div class="flex flex-col flex-1 px-2 text-right">
+    <div class="flex flex-col flex-1 px-2 sm:px-2 px-1 text-right">
       <div class="mb-auto">
-        <h3 class="text-xl font-black text-gray-900 dark:text-white mb-2 leading-tight hover:text-amber-600 transition-colors cursor-pointer line-clamp-2"
+        <h3 class="text-xl sm:text-xl text-base font-black text-gray-900 dark:text-white mb-2 sm:mb-2 mb-1 leading-tight hover:text-amber-600 transition-colors cursor-pointer line-clamp-2"
           (click)="navigateToProduct(book)" [title]="book.product_name">
           {{ book.product_name }}
         </h3>
 
         <!-- Rating, Merchant & Publisher Row -->
-        <div class="flex flex-wrap items-center justify-end gap-3 mb-4">
+        <div class="flex flex-wrap items-center justify-end gap-3 sm:gap-3 gap-1 mb-4 sm:mb-4 mb-2">
            <!-- Publisher (الدار) -->
-           <div *ngIf="book.publisher" 
-                class="flex items-center gap-2 bg-amber-50 dark:bg-amber-900/20 px-3 py-1 rounded-full border border-amber-100 dark:border-amber-800/50">
-             <span class="text-[10px] font-black text-amber-700 dark:text-amber-400 truncate max-w-[120px]" [title]="book.publisher">الدار: {{ book.publisher }}</span>
+           <div *ngIf="book.publisher"
+                class="flex items-center gap-2 sm:gap-2 gap-1 bg-amber-50 dark:bg-amber-900/20 px-3 sm:px-3 px-2 py-1 rounded-full border border-amber-100 dark:border-amber-800/50">
+             <span class="text-[10px] sm:text-[10px] text-[8px] font-black text-amber-700 dark:text-amber-400 truncate max-w-[120px] sm:max-w-[120px] max-w-[60px]" [title]="book.publisher">الدار: {{ book.publisher }}</span>
            </div>
 
            <!-- Merchant -->
-           <div *ngIf="book.merchantName && book['merchantRole'] !== 'admin'" 
-                class="flex items-center gap-2 bg-gray-50 dark:bg-gray-900/30 px-3 py-1 rounded-full border border-gray-100 dark:border-gray-800/50">
+           <div *ngIf="book.merchantName && book['merchantRole'] !== 'admin'"
+                class="flex items-center gap-2 sm:gap-2 gap-1 bg-gray-50 dark:bg-gray-900/30 px-3 sm:px-3 px-2 py-1 rounded-full border border-gray-100 dark:border-gray-800/50">
              <span [routerLink]="['/', book.merchantName.trim().split(' ').join('-')]"
-               class="text-[10px] font-bold text-gray-500 dark:text-gray-400 cursor-pointer hover:text-amber-600 truncate max-w-[100px]">{{ book.merchantName }}</span>
+               class="text-[10px] sm:text-[10px] text-[8px] font-bold text-gray-500 dark:text-gray-400 cursor-pointer hover:text-amber-600 truncate max-w-[100px] sm:max-w-[100px] max-w-[50px]">{{ book.merchantName }}</span>
              <ng-container *ngIf="getMerchantLogoUrl(book) as logoUrl">
-               <img [src]="logoUrl" alt="Merchant" class="w-4 h-4 object-cover rounded-full" />
+               <img [src]="logoUrl" alt="Merchant" class="w-4 h-4 sm:w-4 sm:h-4 w-3 h-3 object-cover rounded-full" />
              </ng-container>
            </div>
-           
+
            <!-- Rating -->
-           <div class="flex items-center gap-1.5">
-             <div class="flex text-amber-400 text-[10px]">
+           <div class="flex items-center gap-1.5 sm:gap-1.5 gap-1">
+             <div class="flex text-amber-400 text-[10px] sm:text-[10px] text-[8px]">
                <fa-icon *ngFor="let s of [1,2,3,4,5]" [icon]="s <= getAverageRating(book) ? faStar : faStarRegular"></fa-icon>
              </div>
-             <span class="text-[10px] font-bold text-gray-400">({{ getRatingCount(book) }})</span>
+             <span class="text-[10px] sm:text-[10px] text-[8px] font-bold text-gray-400">({{ getRatingCount(book) }})</span>
            </div>
         </div>
 
         <!-- Price & Coins -->
-        <div class="flex items-center justify-between gap-4 mb-6"
+        <div class="flex items-center justify-between gap-4 sm:gap-4 gap-2 mb-6 sm:mb-6 mb-3"
           *ngIf="calculateDiscountedPrice(book.product_price, book.products_id, 1) as discount">
-          
+
           <!-- Coins Badge -->
-          <div class="bg-amber-50 dark:bg-amber-900/20 px-3 py-1.5 rounded-xl flex items-center gap-2 border border-amber-100 dark:border-amber-800/50 shrink-0">
-             <fa-icon [icon]="faCoins" class="text-amber-500 text-[10px]"></fa-icon>
-             <span class="text-[10px] font-black text-amber-700 dark:text-amber-400">{{ ((discount.discountedQty > 0 ? discount.discountedPrice : book.product_price) * gamificationService.poundValue) | number:'1.0-0' }}</span>
+          <div class="bg-amber-50 dark:bg-amber-900/20 px-3 sm:px-3 px-2 py-1.5 sm:py-1.5 py-1 rounded-xl flex items-center gap-2 sm:gap-2 gap-1 border border-amber-100 dark:border-amber-800/50 shrink-0">
+             <fa-icon [icon]="faCoins" class="text-amber-500 text-[10px] sm:text-[10px] text-[8px]"></fa-icon>
+             <span class="text-[10px] sm:text-[10px] text-[8px] font-black text-amber-700 dark:text-amber-400">{{ ((discount.discountedQty > 0 ? discount.discountedPrice : book.product_price) * gamificationService.poundValue) | number:'1.0-0' }}</span>
           </div>
 
           <div class="flex flex-col items-end">
-            <div class="flex items-center gap-2">
-               <span class="text-2xl font-black text-green-600 dark:text-green-400">
-                 {{ (discount.discountedQty > 0 ? discount.discountedPrice : book.product_price) | number:'1.0-0' }} <span class="text-xs font-normal">ج.م</span>
+            <div class="flex items-center gap-2 sm:gap-2 gap-1">
+               <span class="text-2xl sm:text-2xl text-base font-black text-green-600 dark:text-green-400">
+                 {{ (discount.discountedQty > 0 ? discount.discountedPrice : book.product_price) | number:'1.0-0' }} <span class="text-xs sm:text-xs text-[10px] font-normal">ج.م</span>
                </span>
-               <span class="text-gray-400 line-through text-xs"
+               <span class="text-gray-400 line-through text-xs sm:text-xs text-[8px]"
                  *ngIf="(book.product_price_before_discount && book.product_price_before_discount > book.product_price) || (discount.discountedQty > 0 && discount.discountedPrice < book.product_price)">
                  {{ (book.product_price_before_discount && book.product_price_before_discount > book.product_price ?
                  book.product_price_before_discount : book.product_price) | number:'1.0-0' }}
@@ -261,26 +261,41 @@
       </div>
 
       <!-- Action Buttons -->
-      <div class="flex items-center justify-between gap-4 mt-auto pt-4 border-t border-gray-100 dark:border-gray-700/50">
-        <div class="flex gap-4">
+      <div class="flex items-center justify-between gap-4 sm:gap-4 gap-2 mt-auto pt-4 sm:pt-4 pt-2 border-t border-gray-100 dark:border-gray-700/50">
+        <div class="flex gap-4 sm:gap-4 gap-2">
           <button (click)="addToFavorites(book.products_id)" class="text-gray-300 hover:text-red-500 transition-all hover:scale-110">
-            <fa-icon [icon]="faHeart" [class.text-red-500]="isFavorite(book.products_id)" class="text-xl"></fa-icon>
+            <fa-icon [icon]="faHeart" [class.text-red-500]="isFavorite(book.products_id)" class="text-xl sm:text-xl text-lg"></fa-icon>
           </button>
           <button (click)="copyBookLink(book)" class="text-gray-300 hover:text-green-600 transition-all hover:scale-110">
-            <fa-icon [icon]="faShareAlt" class="text-xl"></fa-icon>
+            <fa-icon [icon]="faShareAlt" class="text-xl sm:text-xl text-lg"></fa-icon>
           </button>
         </div>
 
-        <button (click)="addToCart(book.products_id)" 
-          class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-2xl transition-all shadow-lg hover:shadow-blue-600/30 font-black text-xs flex items-center justify-center gap-2">
-          <fa-icon [icon]="faCartPlus"></fa-icon>
-          <span>{{ isInCart(book.products_id) ? 'في السلة' : 'أضف للسلة' }}</span>
-        </button>
+        <div class="flex gap-2 sm:gap-2 gap-1">
+          <button (click)="navigateToProduct(book)"
+            class="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 px-4 sm:px-4 px-2 py-3 sm:py-3 py-2 rounded-2xl transition-all font-black text-xs sm:text-xs text-[10px] flex items-center justify-center gap-2">
+            <span>عرض</span>
+          </button>
+          <button (click)="addToCart(book.products_id)"
+            class="bg-blue-600 hover:bg-blue-700 text-white px-4 sm:px-4 px-2 py-3 sm:py-3 py-2 rounded-2xl transition-all shadow-lg hover:shadow-blue-600/30 font-black text-xs sm:text-xs text-[10px] flex items-center justify-center gap-2">
+            <fa-icon [icon]="faCartPlus" class="text-sm sm:text-sm text-xs"></fa-icon>
+            <span>{{ isInCart(book.products_id) ? 'في السلة' : 'أضف' }}</span>
+          </button>
+        </div>
       </div>
     </div>
   </div>
       </div>
     </div>
+  </div>
+
+  <!-- Request Book Button (Always show when there are results) -->
+  <div *ngIf="books.length > 0" class="mt-12 text-center">
+    <button (click)="openRequestModal()"
+      class="px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-700 text-white font-black rounded-2xl shadow-xl hover:shadow-blue-600/30 hover:-translate-y-1 transition-all flex items-center justify-center gap-3 mx-auto">
+      <fa-icon [icon]="['fas', 'plus-circle']"></fa-icon>
+      <span>لم تجد الكتاب؟ اطلب إضافته</span>
+    </button>
   </div>
 </div>
 

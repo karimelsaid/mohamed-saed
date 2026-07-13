@@ -250,6 +250,23 @@ class AIConfig {
           temperature: 0,
           maxTokens: 0,
           timeout: 30000
+        },
+        // Book recommendation task
+        recommend_books: {
+          provider: 'groq',
+          models: {
+            groq: 'llama-3.3-70b-versatile',
+            deepseek: 'deepseek-chat',
+            mistral: 'mistral-large-latest',
+            gemini: 'gemini-2.5-flash',
+            cerebras: 'llama3.1-70b',
+            openrouter: 'meta-llama/llama-3.3-70b-instruct:free',
+            github_models: 'gpt-4o-mini',
+            sambanova: 'Meta-Llama-3.3-70B-Instruct'
+          },
+          temperature: 0.7,
+          maxTokens: 1000,
+          timeout: 30000
         }
       },
       

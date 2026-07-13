@@ -10,7 +10,7 @@
 <!-- Loading Overlay -->
 <!-- Loading Overlay -->
 <div class="loading-overlay theme-{{currentTheme}}"
-    *ngIf="(assetService.loading$ | async) || (assetService.error$ | async)"
+    *ngIf="(assetService.isInitialSetup$ | async)"
     style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 99999; 
            background: var(--bg-primary); 
            display: flex; flex-direction: column; align-items: center; justify-content: center; direction: rtl; backdrop-filter: blur(15px);">
@@ -37,10 +37,16 @@
         </p>
 
         <!-- Retry Button -->
-        <div class="error-actions" *ngIf="assetService.error$ | async" style="margin-top: 20px;">
-            <button class="retry-btn" (click)="assetService.downloadAssets()"
+        <div class="error-actions" *ngIf="assetService.error$ | async" style="margin-top: 20px; display: flex; gap: 12px; justify-content: center;">
+            <button class="retry-btn"
+                (click)="failedDownloadMushafId ? downloadMushaf(failedDownloadMushafId) : assetService.ensureAssets()"
                 style="padding: 10px 30px; background: #c2a87a; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">
                 إعادة المحاولة
+            </button>
+            <button class="dismiss-btn"
+                (click)="assetService.clearError()"
+                style="padding: 10px 20px; background: transparent; color: var(--text-secondary); border: 1px solid rgba(0,0,0,0.2); border-radius: 8px; font-weight: bold; cursor: pointer;">
+                إغلاق
             </button>
         </div>
     </div>
@@ -634,6 +640,89 @@
                         (click)="setTheme('dark')" title="ليلي"></button>
                 </div>
             </div>
+
+            <!-- ===== تخصيص عرض الصور (ورش / التجويد) ===== -->
+            <div class="settings-section" *ngIf="settingsMode === 'stats' && (selectedMushafId === 'warsh' || selectedMushafId === 'tajweed')">
+                <h4><i class="fas fa-expand"></i> طريقة عرض الصور</h4>
+                <div class="image-fit-picker" style="display: flex; gap: 8px; margin-top: 10px;">
+                    <button class="fit-btn" [class.active]="imageFitMode === 'contain'" (click)="setImageFitMode('contain')"
+                            style="flex: 1; padding: 8px; border-radius: 8px; font-size: 0.8rem; font-weight: bold; cursor: pointer; border: 1px solid rgba(194,168,122,0.3); background: rgba(255,255,255,0.03); color: var(--text-primary); transition: all 0.2s;">
+                        ملائمة للشاشة
+                    </button>
+                    <button class="fit-btn" [class.active]="imageFitMode === 'fill'" (click)="setImageFitMode('fill')"
+                            style="flex: 1; padding: 8px; border-radius: 8px; font-size: 0.8rem; font-weight: bold; cursor: pointer; border: 1px solid rgba(194,168,122,0.3); background: rgba(255,255,255,0.03); color: var(--text-primary); transition: all 0.2s;">
+                        تعبئة كامل الشاشة
+                    </button>
+                </div>
+            </div>
+
+            <!-- ===== نوع المصحف ===== -->
+            <div class="settings-section mushaf-type-section" *ngIf="settingsMode === 'stats'">
+                <h4><i class="fas fa-book-open"></i> نوع المصحف للقراءة</h4>
+
+                <!-- حالة التحميل من الـ API -->
+                <div *ngIf="availableMushafs.length === 0" class="mushaf-list-loading">
+                    <div class="spinner-small"></div>
+                    <span>جاري تحميل قائمة المصاحف...</span>
+                </div>
+
+                <!-- قائمة المصاحف المطورة -->
+                <div class="mushaf-select-list" *ngIf="availableMushafs.length > 0">
+                    <div class="mushaf-select-item" 
+                         *ngFor="let mushaf of availableMushafs"
+                         [class.active]="selectedMushafId === mushaf.id"
+                         [class.downloading]="downloadingMushafId === mushaf.id"
+                         (click)="selectedMushafId === mushaf.id ? null : (mushafDownloadStatus[mushaf.id] || !isAndroid ? selectMushaf(mushaf.id) : null)">
+                        
+                        <!-- Radio Button Indicator -->
+                        <div class="mushaf-radio-indicator">
+                            <div class="radio-outer">
+                                <div class="radio-inner" *ngIf="selectedMushafId === mushaf.id"></div>
+                            </div>
+                        </div>
+
+                        <!-- Mushaf Details -->
+                        <div class="mushaf-item-details">
+                            <span class="mushaf-item-title">{{ mushaf.name }}</span>
+                            <span class="mushaf-item-subtitle">{{ mushaf.description }}</span>
+                            
+                            <!-- Downloading Progress bar -->
+                            <div class="mushaf-item-progress" *ngIf="downloadingMushafId === mushaf.id">
+                                <div class="progress-bar-container">
+                                    <div class="progress-bar-fill" [style.width.%]="mushafDownloadProgress"></div>
+                                </div>
+                                <span class="progress-percentage">{{ mushafDownloadMessage }} ({{ mushafDownloadProgress }}%)</span>
+                            </div>
+                        </div>
+
+                        <!-- Action/Status Side -->
+                        <div class="mushaf-item-action" (click)="$event.stopPropagation()">
+                            <!-- Downloaded Status on Native -->
+                            <span class="status-badge downloaded" *ngIf="mushafDownloadStatus[mushaf.id] && isAndroid && selectedMushafId !== mushaf.id">
+                                <i class="fas fa-check"></i> جاهز
+                            </span>
+
+                            <!-- Download Button for Native if not downloaded -->
+                            <button class="mushaf-row-download-btn" 
+                                    *ngIf="isAndroid && !mushafDownloadStatus[mushaf.id] && downloadingMushafId !== mushaf.id"
+                                    [disabled]="isMushafDownloading"
+                                    (click)="downloadMushaf(mushaf.id)"
+                                    title="تحميل المصحف">
+                                <i class="fas fa-cloud-arrow-down"></i>
+                            </button>
+
+                            <!-- Downloading Spinner -->
+                            <div class="mini-spinner" *ngIf="downloadingMushafId === mushaf.id"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- رسالة الخطأ عند التحميل -->
+                <div class="mushaf-download-error" *ngIf="mushafDownloadError">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    {{ mushafDownloadError }}
+                </div>
+            </div>
         </div>
 
 
@@ -853,7 +942,13 @@
             <div class="mushaf-page-wrapper" *ngIf="nextPageData$ | async as nextPage; else emptyNext">
                 <div class="mushaf-page quran-text"
                     [style.font-family]="getFontFamily(dataService.getFontName(pageNumber + 1))">
-                    <div class="lines-container" [class.centered-content]="nextPage.page_number <= 2"
+                    <!-- Image Mode -->
+                    <div class="mushaf-page-image-container" *ngIf="selectedMushafId === 'warsh' || selectedMushafId === 'tajweed'">
+                        <img [src]="getPageImageUrl(nextPage.page_number)" class="mushaf-page-image" [style.object-fit]="imageFitMode" [style.width]="imageFitMode === 'fill' ? '100%' : 'auto'" [style.height]="imageFitMode === 'fill' ? '100%' : 'auto'" alt="صفحة {{ nextPage.page_number }}">
+                    </div>
+                    <!-- Text Mode -->
+                    <div class="lines-container" *ngIf="selectedMushafId !== 'warsh' && selectedMushafId !== 'tajweed'"
+                        [class.centered-content]="nextPage.page_number <= 2"
                         [style.--page-shift.px]="0">
                         <ng-container *ngFor="let line of nextPage.lines; trackBy: trackByLine">
                             <div class="mushaf-line" [ngClass]="'line-type-' + line.type"
@@ -888,7 +983,13 @@
             <div class="mushaf-page-wrapper current-page-wrapper" *ngIf="currentMushafPage as page"
                 [class.first-pages]="page.page_number <= 2">
                 <div class="mushaf-page quran-text" [style.font-family]="fontFamily">
-                    <div class="lines-container" [class.centered-content]="page.page_number <= 2"
+                    <!-- Image Mode -->
+                    <div class="mushaf-page-image-container" *ngIf="selectedMushafId === 'warsh' || selectedMushafId === 'tajweed'">
+                        <img [src]="getPageImageUrl(page.page_number)" class="mushaf-page-image" [style.object-fit]="imageFitMode" [style.width]="imageFitMode === 'fill' ? '100%' : 'auto'" [style.height]="imageFitMode === 'fill' ? '100%' : 'auto'" alt="صفحة {{ page.page_number }}">
+                    </div>
+                    <!-- Text Mode -->
+                    <div class="lines-container" *ngIf="selectedMushafId !== 'warsh' && selectedMushafId !== 'tajweed'"
+                        [class.centered-content]="page.page_number <= 2"
                         [style.--page-shift.px]="pageVerticalShift">
                         <ng-container *ngFor="let line of page.lines; trackBy: trackByLine">
                             <div class="mushaf-line" [ngClass]="'line-type-' + line.type"
@@ -920,7 +1021,13 @@
             <div class="mushaf-page-wrapper" *ngIf="prevPageData$ | async as prevPage; else emptyPrev">
                 <div class="mushaf-page quran-text"
                     [style.font-family]="getFontFamily(dataService.getFontName(pageNumber - 1))">
-                    <div class="lines-container" [class.centered-content]="prevPage.page_number <= 2"
+                    <!-- Image Mode -->
+                    <div class="mushaf-page-image-container" *ngIf="selectedMushafId === 'warsh' || selectedMushafId === 'tajweed'">
+                        <img [src]="getPageImageUrl(prevPage.page_number)" class="mushaf-page-image" [style.object-fit]="imageFitMode" [style.width]="imageFitMode === 'fill' ? '100%' : 'auto'" [style.height]="imageFitMode === 'fill' ? '100%' : 'auto'" alt="صفحة {{ prevPage.page_number }}">
+                    </div>
+                    <!-- Text Mode -->
+                    <div class="lines-container" *ngIf="selectedMushafId !== 'warsh' && selectedMushafId !== 'tajweed'"
+                        [class.centered-content]="prevPage.page_number <= 2"
                         [style.--page-shift.px]="0">
                         <ng-container *ngFor="let line of prevPage.lines; trackBy: trackByLine">
                             <div class="mushaf-line" [ngClass]="'line-type-' + line.type"
@@ -961,7 +1068,13 @@
         <div class="vertical-page-wrapper" *ngFor="let page of verticalPages" [attr.data-page]="page.page_number"
             [class.first-pages]="page.page_number <= 2">
             <div class="mushaf-page" [style.font-family]="getFontFamily(dataService.getFontName(page.page_number))">
-                <div class="lines-container" [class.centered-content]="page.page_number <= 2">
+                <!-- Image Mode -->
+                <div class="mushaf-page-image-container" *ngIf="selectedMushafId === 'warsh' || selectedMushafId === 'tajweed'">
+                    <img [src]="getPageImageUrl(page.page_number)" class="mushaf-page-image" [style.object-fit]="imageFitMode" [style.width]="imageFitMode === 'fill' ? '100%' : 'auto'" [style.height]="imageFitMode === 'fill' ? '100%' : 'auto'" alt="صفحة {{ page.page_number }}">
+                </div>
+                <!-- Text Mode -->
+                <div class="lines-container" *ngIf="selectedMushafId !== 'warsh' && selectedMushafId !== 'tajweed'"
+                    [class.centered-content]="page.page_number <= 2">
                     <ng-container *ngFor="let line of page.lines">
                         <div class="mushaf-line" [ngClass]="'line-type-' + line.type"
                             [style.background]="getLineBackground(line, page)"

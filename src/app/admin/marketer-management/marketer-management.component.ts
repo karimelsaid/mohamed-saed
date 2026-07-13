@@ -219,7 +219,7 @@ export class MarketerManagementComponent implements OnInit {
   }
 
   getImgUrl(imagePath: string): string {
-    if (!imagePath) return 'assets/book-placeholder.jpg';
+    if (!imagePath) return 'assets/image/book-placeholder.jpg';
     if (imagePath.startsWith('http')) return imagePath;
     
     // Cleanup leading slashes

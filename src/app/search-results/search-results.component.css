@@ -1,0 +1,148 @@
+/* Search Results Component Styles */
+
+/* Base Grid Layout */
+.grid {
+  display: grid;
+  gap: 2rem;
+}
+
+/* Mobile Responsive Adjustments */
+@media (max-width: 640px) {
+  .grid {
+    gap: 0.5rem !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+  }
+
+  .group {
+    padding: 0.5rem !important;
+    border-radius: 0.75rem !important;
+    gap: 0.5rem !important;
+  }
+
+  /* Image Section */
+  .aspect-\[4\/3\] {
+    aspect-ratio: 2/3 !important;
+    border-radius: 0.5rem !important;
+    padding: 0.25rem !important;
+    min-height: 200px !important;
+  }
+
+  .max-w-full {
+    max-width: 100% !important;
+  }
+
+  .max-h-full {
+    max-height: 100% !important;
+  }
+
+  /* Details Section */
+  .px-2 {
+    padding-left: 0.25rem !important;
+    padding-right: 0.25rem !important;
+  }
+
+  .text-xl {
+    font-size: 0.9rem !important;
+  }
+
+  .mb-2 {
+    margin-bottom: 0.25rem !important;
+  }
+
+  .mb-4 {
+    margin-bottom: 0.5rem !important;
+  }
+
+  /* Badges and Tags */
+  .px-3 {
+    padding-left: 0.25rem !important;
+    padding-right: 0.25rem !important;
+  }
+
+  .py-1 {
+    padding-top: 0.125rem !important;
+    padding-bottom: 0.125rem !important;
+  }
+
+  .text-\[10px\] {
+    font-size: 0.65rem !important;
+  }
+
+  .max-w-\[120px\] {
+    max-width: 80px !important;
+  }
+
+  .max-w-\[100px\] {
+    max-width: 60px !important;
+  }
+
+  /* Discount Badge */
+  .top-4 {
+    top: 0.5rem !important;
+  }
+
+  .right-4 {
+    right: 0.5rem !important;
+  }
+
+  .px-4 {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+
+  .py-1\.5 {
+    padding-top: 0.25rem !important;
+    padding-bottom: 0.25rem !important;
+  }
+
+  /* Price Section */
+  .text-2xl {
+    font-size: 1rem !important;
+  }
+
+  .text-lg {
+    font-size: 0.875rem !important;
+  }
+
+  /* Buttons */
+  .px-6 {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+
+  .py-3 {
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+  }
+
+  .text-sm {
+    font-size: 0.75rem !important;
+  }
+}
+
+/* Small Mobile (under 400px) */
+@media (max-width: 400px) {
+  .grid {
+    gap: 0.25rem !important;
+  }
+
+  .group {
+    padding: 0.25rem !important;
+    border-radius: 0.5rem !important;
+    gap: 0.25rem !important;
+  }
+
+  .aspect-\[4\/3\] {
+    min-height: 180px !important;
+  }
+
+  .text-xl {
+    font-size: 0.8rem !important;
+  }
+
+  .text-\[10px\] {
+    font-size: 0.6rem !important;
+  }
+}

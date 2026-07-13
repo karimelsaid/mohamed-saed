@@ -237,7 +237,7 @@
     "product_image": "/uploads/books/merchant_karim_admin/9786339999956/9786339999956.webp?v=1782093695607",
     "product_name": "اللغة والاسلوب القرأني",
     "product_price": 300,
-    "product_quantity": 2,
+    "product_quantity": 1,
     "products_id": "9786339999956",
     "publishYear": "2026",
     "publisher": "أفق",
@@ -249,7 +249,8 @@
     "merchantName": "كنوز - المتجر الرئيسي",
     "merchantLogo": "",
     "shippingMethod": "knoozbook",
-    "isDbProduct": true
+    "isDbProduct": true,
+    "lastStockUpdate": "2026-07-04T12:26:50.498Z"
   },
   {
     "_id": "6a0f7bde03358a9b973ccb25",

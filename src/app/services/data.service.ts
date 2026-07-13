@@ -38,7 +38,7 @@ export class DataService {
   }
 
   getBookImageUrl(book: any): string {
-    if (!book) return 'assets/images/book-placeholder.jpg';
+    if (!book) return 'assets/image/book-placeholder.jpg';
 
     // 1. Check if product_image itself is a full URL (variation specific)
     const product_image = book.product_image || '';
@@ -59,16 +59,16 @@ export class DataService {
       }
     }
 
-    // 2b. If image_path is already a local /uploads/ path, return it directly.
-    // This prevents re-wrapping and producing a doubled URL like:
-    //   /uploads/books/admin__x__/123//uploads/books/admin__x__/123/123.webp
+    const host = environment.apiBaseUrl.replace('/api', '');
+
+    // 2b. If image_path is already a local /uploads/ path, return it with the full host address.
     if (typeof image_path === 'string' && image_path.startsWith('/uploads/')) {
-      return image_path;
+      return host + image_path;
     }
 
-    // 1b. If product_image is already a local /uploads/ path, return it directly.
+    // 1b. If product_image is already a local /uploads/ path, return it with the full host address.
     if (typeof product_image === 'string' && product_image.startsWith('/uploads/')) {
-      return product_image;
+      return host + product_image;
     }
 
     // 3. Resolve the products_id (used for folder naming)

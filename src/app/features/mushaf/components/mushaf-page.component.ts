@@ -112,6 +112,17 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
     totalUsers: number = 0; // NEW: Total readers count
     guestModeAccepted: boolean = localStorage.getItem('guestModeAccepted') === 'true'; // Guest mode flag
 
+    // ---- Mushaf Selector State ----
+    availableMushafs: any[] = [];
+    selectedMushafId: string = 'hafs_v1';
+    imageFitMode: 'contain' | 'fill' = 'contain';
+    mushafDownloadStatus: { [id: string]: boolean } = {};
+    isMushafDownloading: boolean = false;
+    mushafDownloadMessage: string = '';
+    mushafDownloadProgress: number = 0;
+    mushafDownloadError: string | null = null;
+    downloadingMushafId: string | null = null;
+    failedDownloadMushafId: string | null = null;
 
     isMemorizationMode: boolean = false;
     showOptionsSheet: boolean = false;
@@ -490,20 +501,33 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
         });
 
         // Load all surahs and juzs for labels
-        this.dataService.getMetadata().pipe(takeUntil(this.destroy$)).subscribe(meta => {
-            if (meta) {
-                this.allSurahs = meta.surahs;
-                this.allJuzs = meta.juzs;
+        this.dataService.getMetadata().pipe(takeUntil(this.destroy$)).subscribe({
+            next: (meta) => {
+                if (meta) {
+                    this.allSurahs = meta.surahs;
+                    this.allJuzs = meta.juzs;
 
-                // Load last selected Tafsir
-                const savedTafsir = localStorage.getItem('lastSelectedTafsirId');
-                if (savedTafsir) {
-                    this.selectedTafsirId = Number(savedTafsir);
+                    // Load last selected Tafsir
+                    const savedTafsir = localStorage.getItem('lastSelectedTafsirId');
+                    if (savedTafsir) {
+                        this.selectedTafsirId = Number(savedTafsir);
+                    }
+
+                    // Updates for Wizard Sync
+                    this.isMetadataLoaded = true;
+                    this.tryShowWizard();
                 }
-
-                // Updates for Wizard Sync
-                this.isMetadataLoaded = true;
-                this.tryShowWizard();
+            },
+            error: (err) => {
+                console.error('❌ [MushafPage] Failed to load metadata:', err);
+                const activeMushafId = this.assetService.getSelectedMushafId();
+                if (activeMushafId !== 'hafs_v1') {
+                    console.warn(`[MushafPage] Selected mushaf '${activeMushafId}' metadata failed. Falling back to 'hafs_v1'...`);
+                    this.assetService.setSelectedMushafId('hafs_v1');
+                    this.dataService.clearCache();
+                    alert('عذراً، ملفات هذا المصحف غير متوفرة حالياً على الخادم. تم إرجاعك إلى المصحف الافتراضي.');
+                    window.location.reload();
+                }
             }
         });
 
@@ -571,6 +595,9 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
             this.delayBetweenRepetitions = parseInt(savedDelay, 10);
         }
 
+        // Restore image fit preference
+        this.imageFitMode = (localStorage.getItem('mushafImageFitMode') as 'contain' | 'fill') || 'contain';
+
         this.loadReciters();
 
         // Load all surahs for Audio Manager
@@ -591,6 +618,12 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
             this.currentTheme = savedTheme;
             // console.log(`[Mushaf] Restored theme: ${this.currentTheme}`);
         }
+
+        // Restore selected Mushaf ID
+        this.selectedMushafId = this.assetService.getSelectedMushafId();
+
+        // جلب قائمة المصاحف في الخلفية مبكراً
+        this.loadAvailableMushafs();
 
         this.fontService.loadBasmalahFont();
         this.loadPage();
@@ -4369,40 +4402,70 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
         return this.createFontFamily(fontName);
     }
 
+    getPageImageUrl(pageNumber: number): string {
+        const id = this.selectedMushafId;
+        const isDownloaded = this.mushafDownloadStatus[id];
+
+        if (this.isAndroid && isDownloaded && this.assetService.localBaseUri) {
+            const folder = this.assetService.getMushafFolder(id);
+            const localFileUri = `${this.assetService.localBaseUri}/${folder}images/${pageNumber}.jpg`;
+            return Capacitor.convertFileSrc(localFileUri);
+        }
+
+        return this.assetService.getRemotePageImageUrl(pageNumber, id);
+    }
+
+    setImageFitMode(mode: 'contain' | 'fill'): void {
+        this.imageFitMode = mode;
+        localStorage.setItem('mushafImageFitMode', mode);
+        this.cdr.detectChanges();
+    }
+
     private async loadPagesExtra(): Promise<void> {
         try {
             const fontName = this.dataService.getFontName(this.pageNumber);
             this.fontFamily = this.createFontFamily(fontName);
 
-            // Preload current, next, and prev fonts
-            const fontsToLoad = [fontName];
-            if (this.pageNumber > 1) fontsToLoad.push(this.dataService.getFontName(this.pageNumber - 1));
-            if (this.pageNumber < 604) fontsToLoad.push(this.dataService.getFontName(this.pageNumber + 1));
+            if (this.selectedMushafId === 'warsh' || this.selectedMushafId === 'tajweed') {
+                this.isFontReady = true;
+                this.cdr.detectChanges();
+            } else {
+                // Preload current, next, and prev fonts
+                const fontsToLoad = [fontName];
+                if (this.pageNumber > 1) fontsToLoad.push(this.dataService.getFontName(this.pageNumber - 1));
+                if (this.pageNumber < 604) fontsToLoad.push(this.dataService.getFontName(this.pageNumber + 1));
 
-            const currentFont = fontsToLoad[0];
-            const isCurrentLoaded = this.fontService.isFontLoaded(currentFont);
+                const currentFont = fontsToLoad[0];
+                const isCurrentLoaded = this.fontService.isFontLoaded(currentFont);
 
-            if (!isCurrentLoaded) {
-                // Android Optimization: Do not hide content (isFontReady = false) to prevent severe flickering.
-                // Accept micro-FOUC instead of layout thrashing.
-                if (!this.isAndroid) {
-                    this.isFontReady = false;
-                    this.cdr.detectChanges();
+                if (!isCurrentLoaded) {
+                    // Android Optimization: Do not hide content (isFontReady = false) to prevent severe flickering.
+                    // Accept micro-FOUC instead of layout thrashing.
+                    if (!this.isAndroid) {
+                        this.isFontReady = false;
+                        this.cdr.detectChanges();
+                    }
+
+                    // Wait for CURRENT page font with a 2.5s safety timeout.
+                    // This prevents a blank screen if the font request stalls or hangs indefinitely.
+                    await Promise.race([
+                        this.fontService.loadFontByName(currentFont),
+                        new Promise<void>(resolve => setTimeout(resolve, 2500))
+                    ]);
                 }
 
-                // Strictly wait for CURRENT page font
-                await this.fontService.loadFontByName(currentFont);
+                // Load others and Basmalah in background
+                const otherFonts = fontsToLoad.slice(1);
+                otherFonts.forEach(f => this.fontService.loadFontByName(f).catch(() => { }));
+                this.fontService.loadBasmalahFont().catch(() => { });
+
+                // SAFETY: do NOT await document.fonts.ready — it can hang indefinitely if any
+                // background font request is pending or fails silently, leaving the page blank.
+                // A short delay ensures the current font is rendered before revealing content.
+                await new Promise<void>(resolve => setTimeout(resolve, 400));
+                this.isFontReady = true;
+                this.cdr.detectChanges();
             }
-
-            // Load others and Basmalah in background
-            const otherFonts = fontsToLoad.slice(1);
-            otherFonts.forEach(f => this.fontService.loadFontByName(f).catch(() => { }));
-            this.fontService.loadBasmalahFont().catch(() => { });
-
-            // Final check and browser font ready signal
-            await (document as any).fonts.ready;
-            this.isFontReady = true;
-            this.cdr.detectChanges();
         } catch (err) {
             console.error('Error loading page fonts', err);
             // CRITICAL: Always show content even if font loading fails
@@ -4479,6 +4542,17 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
             error: (err) => {
                 console.error('❌ [MushafPage] Failed to load individual page data:', err);
                 this.isLoadingPage = false;
+                
+                const activeMushafId = this.assetService.getSelectedMushafId();
+                if (activeMushafId !== 'hafs_v1') {
+                    console.warn(`[MushafPage] Selected mushaf '${activeMushafId}' failed to load. Falling back to 'hafs_v1'...`);
+                    this.assetService.setSelectedMushafId('hafs_v1');
+                    this.dataService.clearCache();
+                    alert('عذراً، ملفات هذا المصحف غير متوفرة حالياً على الخادم. تم إرجاعك إلى المصحف الافتراضي.');
+                    window.location.reload();
+                    return;
+                }
+
                 this.pageLoadError = 'فشل تحميل بيانات الصفحة. يرجى إعادة المحاولة.';
                 this.cdr.detectChanges();
             }
@@ -4624,6 +4698,119 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
         localStorage.setItem('mushaf_theme', theme);
         this.isSettingsOpen = false; // Close settings after choosing theme
     }
+
+    /** جلب قائمة المصاحف المتاحة من الـ API */
+    loadAvailableMushafs(): void {
+        this.selectedMushafId = this.assetService.getSelectedMushafId();
+        this.assetService.fetchMushafList().subscribe({
+            next: (list) => {
+                this.availableMushafs = list;
+                // بعد الجلب نتحقق من حالة كل مصحف على الجهاز
+                list.forEach(m => this.checkMushafDownloaded(m.id));
+                this.cdr.detectChanges();
+            },
+            error: () => {
+                // في حالة فشل الاتصال نضع قائمة افتراضية كاملة لضمان عمل الواجهة
+                this.availableMushafs = [
+                    {
+                        id: 'hafs_v1',
+                        name: 'مصحف المدينة (الإصدار الأول)',
+                        description: 'رواية حفص عن عاصم بالخط القديم لمصحف المدينة المنورة',
+                        folder: 'hafs_v1',
+                        totalFiles: 638,
+                        active: true,
+                        isDefault: true
+                    },
+                    {
+                        id: 'hafs_v2',
+                        name: 'مصحف المدينة (الإصدار الثاني)',
+                        description: 'رواية حفص عن عاصم بالخط الجديد عالي الجودة لمصحف المدينة المنورة',
+                        folder: 'hafs_v2',
+                        totalFiles: 638,
+                        active: true,
+                        isDefault: false
+                    },
+                    {
+                        id: 'tajweed',
+                        name: 'مصحف التجويد الملون',
+                        description: 'مصحف التجويد الملون لتسهيل معرفة أحكام التجويد أثناء القراءة',
+                        folder: 'tajweed',
+                        totalFiles: 638,
+                        active: true,
+                        isDefault: false
+                    },
+                    {
+                        id: 'warsh',
+                        name: 'مصحف المدينة - رواية ورش',
+                        description: 'مصحف المدينة المنورة برواية ورش عن نافع بالرسم العثماني',
+                        folder: 'warsh',
+                        totalFiles: 638,
+                        active: true,
+                        isDefault: false
+                    }
+                ];
+                this.availableMushafs.forEach(m => this.checkMushafDownloaded(m.id));
+                this.cdr.detectChanges();
+            }
+        });
+    }
+
+    /** التحقق ما إذا كان مصحف معين محملاً محلياً */
+    async checkMushafDownloaded(mushafId: string): Promise<void> {
+        const isDownloaded = await this.assetService.checkForAssets(mushafId);
+        this.mushafDownloadStatus[mushafId] = isDownloaded;
+        this.cdr.detectChanges();
+    }
+
+    /** تحديد مصحف للقراءة (يجب أن يكون محملاً أو على الويب) */
+    selectMushaf(mushafId: string): void {
+        if (this.isMushafDownloading) return;
+        this.assetService.setSelectedMushafId(mushafId);
+        this.selectedMushafId = mushafId;
+        this.dataService.clearCache();
+        // إعادة تحميل الصفحة لتطبيق الخطوط الجديدة بشكل صحيح
+        window.location.reload();
+    }
+
+    /** تحميل مصحف جديد على الجهاز */
+    async downloadMushaf(mushafId: string): Promise<void> {
+        if (this.isMushafDownloading) return;
+
+        this.isMushafDownloading = true;
+        this.downloadingMushafId = mushafId;
+        this.failedDownloadMushafId = null; // Clear previous failure
+        this.mushafDownloadError = null;
+        this.mushafDownloadProgress = 0;
+
+        const progressSub = this.assetService.progress$.subscribe(p => {
+            this.mushafDownloadProgress = p;
+            this.cdr.detectChanges();
+        });
+        const msgSub = this.assetService.message$.subscribe(m => {
+            this.mushafDownloadMessage = m;
+            this.cdr.detectChanges();
+        });
+        const errorSub = this.assetService.error$.subscribe(e => {
+            this.mushafDownloadError = e;
+            this.cdr.detectChanges();
+        });
+
+        try {
+            await this.assetService.downloadAssets(mushafId);
+            this.mushafDownloadStatus[mushafId] = true;
+        } catch (err) {
+            console.error('[Mushaf] Download failed:', err);
+            this.failedDownloadMushafId = mushafId; // Remember which mushaf failed for retry
+        } finally {
+            progressSub.unsubscribe();
+            msgSub.unsubscribe();
+            errorSub.unsubscribe();
+            this.isMushafDownloading = false;
+            this.downloadingMushafId = null;
+            this.cdr.detectChanges();
+        }
+    }
+
 
     goToPage(page: number): void {
         // OPTIMIZATION: Only hide content if the target font isn't ready

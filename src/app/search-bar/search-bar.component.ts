@@ -17,7 +17,7 @@ import { AnalyticsTrackingService } from '../services/analytics-tracking.service
 })
 export class SearchBarComponent implements OnInit {
   @Input() allBooks: any[] = [];
-  @Output() searchExecuted = new EventEmitter<{ query: string, filter: string }>();
+  @Output() searchExecuted = new EventEmitter<{ query: string, filter: string, selectedBook?: any }>();
 
   faSearch = faSearch;
   faFilter = faFilter;
@@ -31,7 +31,7 @@ export class SearchBarComponent implements OnInit {
   selectedFilter: string = 'all';
   showSuggestions: boolean = false;
   private debounceTimer: any = null;
-  private debounceDelay = 220; // ms
+  private debounceDelay = 300; // ms - increased for better performance
 
   @ViewChild('inputElement') inputElement!: ElementRef;
 
@@ -60,7 +60,7 @@ export class SearchBarComponent implements OnInit {
     // Use URLSearchParams for the most direct and reliable access to query params
     const q = new URLSearchParams(window.location.search).get('q');
     if (q !== null) {
-      this.searchQuery = q;
+      this.searchQuery = q; // Keep the value exactly as is from URL
     }
   }
 
@@ -74,25 +74,29 @@ export class SearchBarComponent implements OnInit {
     this.emitSearch();
   }
 
-  emitSearch() {
-    this.searchExecuted.emit({ query: this.searchQuery.trim(), filter: this.selectedFilter });
+  emitSearch(selectedBook?: any) {
+    this.searchExecuted.emit({ query: this.searchQuery, filter: this.selectedFilter, selectedBook });
   }
 
-  onSearch() {
-    if (this.searchQuery.trim()) {
+  handleInput(event: any) {
+    this.searchQuery = event.target.value;
+  }
+
+  onSearch(selectedBook?: any) {
+    if (this.searchQuery) {
       // Track search event
-      this.analyticsTrackingService.trackSearch(this.searchQuery.trim());
-      this.emitSearch();
+      this.analyticsTrackingService.trackSearch(this.searchQuery);
+      this.emitSearch(selectedBook);
       this.searchResults = [];
       this.showSuggestions = false;
     }
   }
 
-  selectSuggestion(value: string) {
+  selectSuggestion(value: string, book?: any) {
     this.searchQuery = value;
     this.searchResults = [];
-    this.emitSearch();
     this.showSuggestions = false;
+    this.onSearch(book);
   }
 
   private normalizeArabic(text: string): string {
@@ -102,11 +106,8 @@ export class SearchBarComponent implements OnInit {
       .replace(/[يى]/g, 'ي')
       .replace(/[ؤ]/g, 'و')
       .replace(/[ئ]/g, 'ي')
-      // Remove special characters except numbers and letters
-      .replace(/[^0-9a-zA-Z\u0600-\u06FF\s]/g, '')
-      // Remove extra spaces
-      .replace(/\s+/g, ' ')
-      .trim();
+      // Keep Arabic, English, numbers, and common punctuation
+      .replace(/[^0-9a-zA-Z\u0600-\u06FF\s\-_.,()]/g, '');
   }
 
   onSearchKeyup() {
@@ -116,66 +117,81 @@ export class SearchBarComponent implements OnInit {
   }
 
   private performSearch() {
-    if (!this.searchQuery.trim()) {
+    if (!this.searchQuery) {
       this.searchResults = [];
       this.emitSearch();
       this.showSuggestions = false;
       return;
     }
 
-    const original = this.searchQuery.trim();
-    const q = this.normalizeArabic(original.toLowerCase());
+    const original = this.searchQuery;
+    const q = original; // Use original query without normalization
 
     const results: Array<{ item: any; score: number; highlighted: SafeHtml }> = [];
 
     for (const prod of this.allBooks) {
       if (!prod) continue;
-      const fields: string[] = [];
-      if (prod.product_name && typeof prod.product_name === 'string') fields.push(prod.product_name);
-      if (prod.sku && typeof prod.sku === 'string') fields.push(prod.sku);
-      if (prod.category && typeof prod.category === 'string') fields.push(prod.category);
-      if (prod.publisher && typeof prod.publisher === 'string') fields.push(prod.publisher);
-      if (prod.author && typeof prod.author === 'string') fields.push(prod.author);
-      if (prod.tags && Array.isArray(prod.tags)) fields.push(prod.tags.join(' '));
-      if (prod.description && typeof prod.description === 'string') fields.push(prod.description);
+      // Use fields with priority: title first, then description, then author
+      const fields: Array<{ field: string; weight: number }> = [];
+      if (prod.product_name && typeof prod.product_name === 'string') fields.push({ field: prod.product_name, weight: 3 });
+      if (prod.description && typeof prod.description === 'string') fields.push({ field: prod.description, weight: 2 });
+      if (prod.author && typeof prod.author === 'string') fields.push({ field: prod.author, weight: 1 });
+      if (prod.sku && typeof prod.sku === 'string') fields.push({ field: prod.sku, weight: 0.5 });
+      if (prod.category && typeof prod.category === 'string') fields.push({ field: prod.category, weight: 0.5 });
 
       let bestScore = 0;
       let bestField = '';
-      for (const f of fields) {
-        const nf = this.normalizeArabic(f.toLowerCase());
+      for (const { field, weight } of fields) {
+        const nf = field; // Use original field without normalization
         if (!nf) continue;
-        if (nf.includes(q)) {
+        if (nf.toLowerCase().includes(q.toLowerCase())) {
           // exact substring match -> high score
-          const pos = nf.indexOf(q);
-          // higher score if starts with query
-          const score = 1 + (pos === 0 ? 0.5 : 0) + Math.min(0.4, 0.4 / (pos + 1));
-          if (score > bestScore) { bestScore = score; bestField = f; }
+          const pos = nf.toLowerCase().indexOf(q.toLowerCase());
+          // higher score if starts with query, and apply field weight
+          const score = (1 + (pos === 0 ? 0.5 : 0) + Math.min(0.4, 0.4 / (pos + 1))) * weight;
+          if (score > bestScore) { bestScore = score; bestField = nf; }
         } else {
-          // fallback to fuzzy similarity
-          const sim = this.similarity(q, nf);
-          if (sim > bestScore) { bestScore = sim; bestField = f; }
+          // fallback to fuzzy similarity with weight
+          const sim = this.similarity(q.toLowerCase(), nf.toLowerCase()) * weight;
+          if (sim > bestScore) { bestScore = sim; bestField = nf; }
         }
       }
 
-      // Accept results with reasonable score
-      if (bestScore >= 0.45) {
+      // Lower threshold to include more results
+      if (bestScore >= 0.3) {
         const highlighted = this.createHighlight(bestField || (prod.product_name || ''), q);
         results.push({ item: prod, score: bestScore, highlighted });
       }
     }
 
-    // Sort by score and whether name starts with the query
+    // Sort by score and whether name starts with the query - improved sorting
     results.sort((a, b) => {
       const aName = (a.item.product_name || '').toLowerCase();
       const bName = (b.item.product_name || '').toLowerCase();
-      const qLower = original.toLowerCase();
-      const aStarts = aName.startsWith(qLower) ? 1 : 0;
-      const bStarts = bName.startsWith(qLower) ? 1 : 0;
-      if (aStarts !== bStarts) return bStarts - aStarts;
+      const qNorm = original.toLowerCase();
+
+      // Priority 1: Exact match at start
+      const aStartsExact = aName.startsWith(qNorm) ? 3 : 0;
+      const bStartsExact = bName.startsWith(qNorm) ? 3 : 0;
+      if (aStartsExact !== bStartsExact) return bStartsExact - aStartsExact;
+
+      // Priority 2: Contains query anywhere
+      const aContains = aName.includes(qNorm) ? 2 : 0;
+      const bContains = bName.includes(qNorm) ? 2 : 0;
+      if (aContains !== bContains) return bContains - aContains;
+
+      // Priority 3: Position in name (earlier is better)
+      if (aContains && bContains) {
+        const aPos = aName.indexOf(qNorm);
+        const bPos = bName.indexOf(qNorm);
+        if (aPos !== bPos) return aPos - bPos;
+      }
+
+      // Priority 4: Score
       return b.score - a.score;
     });
 
-    this.searchResults = results.slice(0, 40);
+    this.searchResults = results.slice(0, 15); // Reduced for better UX
     this.emitSearch();
     this.showSuggestions = this.searchResults.length > 0;
   }

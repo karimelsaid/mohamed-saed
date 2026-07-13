@@ -315,8 +315,13 @@ export class CheckoutModalComponent implements OnInit {
         this.calculateTotalPrice();
         
         if (this.editedUserProfile && this.editedUserProfile.phone) {
+          const arabicToEnglishMap: Record<string, string> = {
+            '٠': '0', '١': '1', '٢': '2', '٣': '3', '٤': '4',
+            '٥': '5', '٦': '6', '٧': '7', '٨': '8', '٩': '9'
+          };
+          const normalizedPhone = this.editedUserProfile.phone.replace(/[٠١٢٣٤٥٦٧٨٩]/g, (match) => arabicToEnglishMap[match] || match);
           const egyptPhoneRegex = /^(010|011|012|015)[0-9]{8}$/;
-          this.phoneTouched = egyptPhoneRegex.test(this.editedUserProfile.phone);
+          this.phoneTouched = egyptPhoneRegex.test(normalizedPhone);
           this.phoneValid = this.phoneTouched;
         }
         if (this.userProfile?.postOffice) {
@@ -338,8 +343,13 @@ export class CheckoutModalComponent implements OnInit {
               this.calculateShippingCost();
               this.calculateTotalPrice();
               if (this.editedUserProfile && this.editedUserProfile.phone) {
+                const arabicToEnglishMap: Record<string, string> = {
+                  '٠': '0', '١': '1', '٢': '2', '٣': '3', '٤': '4',
+                  '٥': '5', '٦': '6', '٧': '7', '٨': '8', '٩': '9'
+                };
+                const normalizedPhone = this.editedUserProfile.phone.replace(/[٠١٢٣٤٥٦٧٨٩]/g, (match) => arabicToEnglishMap[match]);
                 const egyptPhoneRegex = /^(010|011|012|015)[0-9]{8}$/;
-                this.phoneTouched = egyptPhoneRegex.test(this.editedUserProfile.phone);
+                this.phoneTouched = egyptPhoneRegex.test(normalizedPhone);
                 this.phoneValid = this.phoneTouched;
               }
               if (this.userProfile?.postOffice) {
@@ -851,9 +861,15 @@ export class CheckoutModalComponent implements OnInit {
 
   validatePhone() {
     if (!this.editedUserProfile) return;
+    // Convert Arabic numerals to English numerals
+    const arabicToEnglishMap: Record<string, string> = {
+      '٠': '0', '١': '1', '٢': '2', '٣': '3', '٤': '4',
+      '٥': '5', '٦': '6', '٧': '7', '٨': '8', '٩': '9'
+    };
+    const normalizedPhone = this.editedUserProfile.phone.replace(/[٠١٢٣٤٥٦٧٨٩]/g, (match) => arabicToEnglishMap[match] || match);
     const egyptPhoneRegex = /^(010|011|012|015)[0-9]{8}$/;
     this.phoneTouched = true;
-    this.phoneValid = egyptPhoneRegex.test(this.editedUserProfile.phone);
+    this.phoneValid = egyptPhoneRegex.test(normalizedPhone);
   }
 
   validateLocation() {
@@ -874,6 +890,13 @@ export class CheckoutModalComponent implements OnInit {
     if (!this.phoneValid || !this.locationValid) {
       return;
     }
+
+    // Convert phone number to English numerals before saving
+    const arabicToEnglishMap: Record<string, string> = {
+      '٠': '0', '١': '1', '٢': '2', '٣': '3', '٤': '4',
+      '٥': '5', '٦': '6', '٧': '7', '٨': '8', '٩': '9'
+    };
+    this.editedUserProfile.phone = this.editedUserProfile.phone.replace(/[٠١٢٣٤٥٦٧٨٩]/g, (match) => arabicToEnglishMap[match] || match);
 
     this.userProfile = { ...this.editedUserProfile };
     this.isEditingAddress = false;

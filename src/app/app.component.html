@@ -1,28 +1,56 @@
 <!-- Mushaf Download Overlay -->
 <div *ngIf="isDownloadingAssets$ | async"
-  class="fixed inset-0 z-[99999] bg-slate-900 flex flex-col items-center justify-center text-white p-6">
-  <img src="logoname2.jpg" alt="Logo" class="w-24 h-24 mb-8 animate-pulse rounded-full shadow-lg shadow-blue-500/50">
+  class="fixed inset-0 z-[99999] bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 flex flex-col items-center justify-center text-white p-6 backdrop-blur-md">
+  
+  <!-- Glowing Decorative Background Elements -->
+  <div class="absolute top-1/4 left-1/4 w-72 h-72 bg-blue-500/10 rounded-full blur-[100px] pointer-events-none"></div>
+  <div class="absolute bottom-1/4 right-1/4 w-72 h-72 bg-purple-500/10 rounded-full blur-[100px] pointer-events-none"></div>
 
-  <h2 class="text-2xl font-bold mb-4 font-kufi">جاري تحميل المصحف الشريف</h2>
-
-  <div class="w-full max-w-md bg-gray-800 rounded-full h-4 mb-4 relative overflow-hidden ring-2 ring-blue-500/30">
-    <div
-      class="bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 h-4 rounded-full transition-all duration-300 relative"
-      [style.width.%]="(downloadProgress$ | async) || 0">
-      <div class="absolute inset-0 bg-white/20 animate-[shimmer_2s_infinite]"></div>
+  <!-- Content Container -->
+  <div class="relative z-10 flex flex-col items-center w-full max-w-md text-center">
+    <!-- Animated Logo with Ring -->
+    <div class="relative mb-8 group">
+      <div class="absolute -inset-1 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full blur opacity-40 group-hover:opacity-75 transition duration-1000 group-hover:duration-200 animate-pulse"></div>
+      <img src="logoname2.jpg" alt="Logo" class="relative w-24 h-24 rounded-full shadow-2xl border-2 border-white/10">
     </div>
-  </div>
 
-  <p class="text-lg font-bold mb-8 text-blue-300">{{ (downloadProgress$ | async) || 0 }}%</p>
+    <!-- Title and Status Message -->
+    <h2 class="text-2xl font-bold mb-1 font-kufi text-transparent bg-clip-text bg-gradient-to-r from-blue-200 via-indigo-100 to-white">تهيئة المصحف الشريف</h2>
+    <p class="text-sm text-blue-300/80 mb-6 font-medium tracking-wide">{{ (downloadMessage$ | async) || 'تحميل ملفات البيانات الأساسية...' }}</p>
 
-  <div
-    class="bg-white/10 p-6 rounded-2xl border border-white/10 backdrop-blur-sm max-w-md text-center transform hover:scale-105 transition-transform duration-500">
-    <p class="text-xl leading-relaxed text-gray-200 font-medium">
-      "هذا الأمر عظيم يحتاج للصبر"
+    <!-- Circular / Linear Progress Area -->
+    <div class="w-full bg-slate-900/60 border border-white/5 backdrop-blur-lg p-5 rounded-2xl shadow-2xl mb-6">
+      <div class="flex justify-between items-center mb-2">
+        <span class="text-xs font-semibold inline-block py-1 px-2.5 uppercase rounded-full text-blue-200 bg-blue-500/10 border border-blue-500/20">
+          جاري التحميل
+        </span>
+        <span class="text-sm font-bold text-blue-300">
+          {{ (downloadProgress$ | async) || 0 }}%
+        </span>
+      </div>
+      
+      <!-- Progress Bar -->
+      <div class="w-full bg-slate-950 rounded-full h-3 overflow-hidden border border-white/5 p-[2px]">
+        <div
+          class="bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 h-2 rounded-full transition-all duration-500 relative"
+          [style.width.%]="(downloadProgress$ | async) || 0">
+          <div class="absolute inset-0 bg-white/25 animate-[shimmer_2s_infinite]"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Spiritual Quote Card -->
+    <div class="w-full bg-white/5 border border-white/10 p-5 rounded-2xl backdrop-blur-md shadow-lg transform transition-transform duration-500">
+      <p class="text-lg leading-relaxed text-slate-200 font-medium font-kufi">
+        "هذا الأمر عظيم يحتاج للصبر والانتظار"
+      </p>
+    </div>
+
+    <p class="mt-8 text-xs text-slate-400/80 flex items-center gap-2">
+      <span class="inline-block w-2 h-2 rounded-full bg-blue-500 animate-ping"></span>
+      يرجى عدم إغلاق التطبيق أثناء التهيئة
     </p>
   </div>
-
-  <p class="mt-8 text-sm text-gray-500">يرجى عدم إغلاق التطبيق أثناء التحميل</p>
 </div>
 
 <!-- هذا المكان فقط يظهر عندما يكون هناك بحث -->

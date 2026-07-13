@@ -989,3 +989,260 @@ input:checked + .slider:before {
     grid-template-columns: 1fr;
   }
 }
+
+/* Clickable Stat Cards */
+.stat-card.clickable {
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.stat-card.clickable:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 12px 24px -8px rgb(0 0 0 / 0.15);
+}
+
+.stat-card.clickable:active {
+  transform: translateY(-4px);
+}
+
+/* Statistics Modal Styles */
+.stat-modal-content {
+  max-width: 800px;
+  max-height: 90vh;
+}
+
+.modal-header h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.modal-header h3 i {
+  color: #6366f1;
+}
+
+.stat-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background-color: #f8fafc;
+  border-radius: 0.5rem;
+  border: 1px solid #e2e8f0;
+}
+
+.summary-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.summary-label {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-bottom: 0.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.summary-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.summary-value.positive {
+  color: #10b981;
+}
+
+.summary-value.negative {
+  color: #ef4444;
+}
+
+.chart-section {
+  margin-bottom: 1.5rem;
+}
+
+.chart-section h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: #1e293b;
+}
+
+.chart-container {
+  position: relative;
+  height: 300px;
+  width: 100%;
+  background-color: #f8fafc;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  border: 1px solid #e2e8f0;
+}
+
+.detailed-stats {
+  margin-bottom: 1.5rem;
+}
+
+.detailed-stats h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: #1e293b;
+}
+
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.stats-table th {
+  text-align: right;
+  background-color: #f8fafc;
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  color: #64748b;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.stats-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #f1f5f9;
+  color: #475569;
+}
+
+.stats-table tr:last-child td {
+  border-bottom: none;
+}
+
+.stats-table .positive {
+  color: #10b981;
+  font-weight: 600;
+}
+
+.stats-table .negative {
+  color: #ef4444;
+  font-weight: 600;
+}
+
+.insights-section {
+  margin-bottom: 1rem;
+}
+
+.insights-section h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: #1e293b;
+}
+
+.insight-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background-color: #f8fafc;
+  border-radius: 0.5rem;
+  margin-bottom: 0.5rem;
+  border: 1px solid #e2e8f0;
+}
+
+.insight-item:last-child {
+  margin-bottom: 0;
+}
+
+.insight-item i {
+  font-size: 1.1rem;
+  color: #6366f1;
+  margin-top: 0.125rem;
+}
+
+.insight-item p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #475569;
+  line-height: 1.5;
+}
+
+/* Dark Mode for Statistics Modal */
+:host-context(.dark) .stat-summary {
+  background-color: #0f172a;
+  border-color: #334155;
+}
+
+:host-context(.dark) .summary-label {
+  color: #94a3b8;
+}
+
+:host-context(.dark) .summary-value {
+  color: #f1f5f9;
+}
+
+:host-context(.dark) .chart-section h4 {
+  color: #f1f5f9;
+}
+
+:host-context(.dark) .chart-container {
+  background-color: #0f172a;
+  border-color: #334155;
+}
+
+:host-context(.dark) .detailed-stats h4 {
+  color: #f1f5f9;
+}
+
+:host-context(.dark) .stats-table th {
+  background-color: #1e293b;
+  color: #94a3b8;
+  border-color: #334155;
+}
+
+:host-context(.dark) .stats-table td {
+  border-color: #334155;
+  color: #cbd5e1;
+}
+
+:host-context(.dark) .insights-section h4 {
+  color: #f1f5f9;
+}
+
+:host-context(.dark) .insight-item {
+  background-color: #0f172a;
+  border-color: #334155;
+}
+
+:host-context(.dark) .insight-item i {
+  color: #818cf8;
+}
+
+:host-context(.dark) .insight-item p {
+  color: #cbd5e1;
+}
+
+/* Responsive Modal */
+@media (max-width: 768px) {
+  .stat-modal-content {
+    width: 95%;
+    max-height: 95vh;
+  }
+
+  .stat-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .chart-container {
+    height: 250px;
+  }
+
+  .stats-table {
+    font-size: 0.75rem;
+  }
+
+  .stats-table th,
+  .stats-table td {
+    padding: 0.5rem 0.75rem;
+  }
+}

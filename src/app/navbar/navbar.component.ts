@@ -119,12 +119,18 @@ export class NavbarComponent implements OnInit {
     }
   }
 
-  onSearchExecuted(event: { query: string; filter: string }) {
+  onSearchExecuted(event: { query: string; filter: string; selectedBook?: any }) {
     const query = event.query;
     const filter = event.filter;
+    const selectedBook = event.selectedBook;
     this.searchQuery = query;
     this.selectedFilter = filter;
-    this.router.navigate(['/research'], { queryParams: { q: query, filter: filter } });
+    const queryParams: any = { q: query, filter: filter };
+    if (selectedBook) {
+      // Use _id as primary identifier, fallback to barcode or products_id
+      queryParams.selectedBookId = selectedBook._id || selectedBook.barcode || selectedBook.products_id || '';
+    }
+    this.router.navigate(['/research'], { queryParams });
   }
 
   toggleDarkMode(): void {
@@ -358,10 +364,8 @@ export class NavbarComponent implements OnInit {
     this.authService.user$.subscribe(user => {
       if (!user || !user.id) return;
       this.notificationService.deleteNotification(user.id, notification._id).subscribe(() => {
-        // Remove the notification from the local array
-        this.notifications = this.notifications.filter(n => n._id !== notification._id);
-        this.unreadCount = this.notifications.filter(n => !n.read).length;
-        this.cdr.markForCheck();
+        // Refresh notifications from server to sync with other components
+        this.notificationService.refreshNotifications(user.id);
       });
     }).unsubscribe();
   }

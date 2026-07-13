@@ -164,7 +164,7 @@ async function createAccount(req, res) {
     const token = jwt.sign(
       { userId: newUser._id, email: newUser.email, role: newUser.role },
       process.env.JWT_SECRET || 'your-secret-key',
-      { expiresIn: '7d' }
+      { expiresIn: '30d' }
     );
 
     // Return user data for auto-login (similar to login response)
@@ -237,7 +237,7 @@ async function login(req, res) {
     const token = jwt.sign(
       { userId: user._id, email: user.email, role: user.role },
       process.env.JWT_SECRET || 'your-secret-key',
-      { expiresIn: '7d' }
+      { expiresIn: '30d' }
     );
 
     // Process Login Reward (Background)
@@ -890,7 +890,7 @@ async function googleSignIn(req, res) {
     const token = jwt.sign(
       { userId: user._id, email: user.email, role: user.role },
       process.env.JWT_SECRET || 'your-secret-key',
-      { expiresIn: '7d' }
+      { expiresIn: '30d' }
     );
 
     // Process Login Reward (Background)

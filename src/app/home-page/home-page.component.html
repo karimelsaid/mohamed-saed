@@ -21,7 +21,7 @@
             <div class="flex flex-col gap-8">
               <div *ngFor="let product of col" 
                    class="w-full h-48 md:h-72 flex-shrink-0 rounded-2xl bg-gray-200 dark:bg-white/10 overflow-hidden border border-gray-300 dark:border-white/20 shadow-xl">
-                <img [src]="getBookImageUrl(product)" onerror="this.src='assets/images/book-placeholder.jpg'" class="w-full h-full object-cover blur-[0.5px]" [alt]="product.product_name">
+                <img [src]="getBookImageUrl(product)" onerror="this.src='assets/image/book-placeholder.jpg'" class="w-full h-full object-cover blur-[0.5px]" [alt]="product.product_name">
               </div>
             </div>
             
@@ -29,7 +29,7 @@
             <div class="flex flex-col gap-8">
               <div *ngFor="let product of col" 
                    class="w-full h-48 md:h-72 flex-shrink-0 rounded-2xl bg-gray-200 dark:bg-white/10 overflow-hidden border border-gray-300 dark:border-white/20 shadow-xl">
-                <img [src]="getBookImageUrl(product)" onerror="this.src='assets/images/book-placeholder.jpg'" class="w-full h-full object-cover blur-[0.5px]" [alt]="product.product_name">
+                <img [src]="getBookImageUrl(product)" onerror="this.src='assets/image/book-placeholder.jpg'" class="w-full h-full object-cover blur-[0.5px]" [alt]="product.product_name">
               </div>
             </div>
           </div>
@@ -86,57 +86,60 @@
     </div>
   </div>
 
-  <!-- 🌟 Knooz Ecosystem / Services Hub (Top Level) -->
-  <div class="container mx-auto px-4 py-16">
-    <div class="flex flex-col items-center mb-12 text-center">
-      <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-xs font-bold uppercase tracking-widest mb-6 border border-blue-100 dark:border-blue-800">
+  <!-- � Premium Achievements Section -->
+  <app-premium-achievements></app-premium-achievements>
+
+  <!-- �🌟 Knooz Ecosystem / Services Hub (Top Level) -->
+  <div class="container mx-auto px-4 py-12 md:py-16 bg-gradient-to-b from-blue-50/50 to-transparent dark:from-blue-900/10 dark:to-transparent">
+    <div class="flex flex-col items-center mb-10 md:mb-12 text-center">
+      <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-[var(--knooz-gold)] to-[var(--knooz-gold-dark)] text-white text-xs font-bold uppercase tracking-widest mb-6 shadow-lg">
         <fa-icon [icon]="['fas', 'star']"></fa-icon>
         خدمات كنوز الحصرية
       </div>
-      <h2 class="text-3xl md:text-5xl font-black text-gray-900 dark:text-white mb-4">تجربة قراءة تتخطى مجرد الشراء</h2>
-      <div class="w-24 h-1.5 bg-gradient-to-r from-transparent via-blue-500 to-transparent rounded-full opacity-50"></div>
+      <h2 class="text-2xl md:text-5xl font-black text-gray-900 dark:text-white mb-4">تجربة قراءة تتخطى مجرد الشراء</h2>
+      <div class="w-24 h-1.5 bg-gradient-to-r from-transparent via-[var(--knooz-gold)] to-transparent rounded-full opacity-70"></div>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+    <div class="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8">
       
       <!-- Book Exchange -->
-      <a [routerLink]="['/reader-community']" [queryParams]="{section: 'exchange'}" class="group relative overflow-hidden bg-white dark:bg-gray-800 p-8 rounded-[3.5rem] shadow-xl hover:shadow-2xl transition-all duration-500 border border-gray-100 dark:border-gray-700 hover:-translate-y-2">
+      <a [routerLink]="['/reader-community']" [queryParams]="{section: 'exchange'}" class="group relative overflow-hidden bg-white dark:bg-gray-800 p-4 md:p-8 rounded-[2rem] md:rounded-[3.5rem] shadow-xl hover:shadow-2xl transition-all duration-500 border border-gray-100 dark:border-gray-700 hover:-translate-y-2">
         <div class="absolute -right-8 -top-8 w-32 h-32 bg-green-500/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700"></div>
-        <div class="w-16 h-16 bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-2xl flex items-center justify-center mb-6 text-3xl group-hover:bg-green-600 group-hover:text-white transition-all duration-500">
+        <div class="w-12 h-12 md:w-16 md:h-16 bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-2xl flex items-center justify-center mb-4 md:mb-6 text-2xl md:text-3xl group-hover:bg-green-600 group-hover:text-white transition-all duration-500">
           <fa-icon [icon]="['fas', 'sync-alt']"></fa-icon>
         </div>
-        <h3 class="text-xl font-black text-gray-900 dark:text-white mb-3">تبادل الكتب</h3>
-        <p class="text-gray-500 dark:text-gray-400 text-sm leading-relaxed">ركن المقايضة: استبدل كتبك القديمة بكنوز جديدة من مكتبات قراء آخرين.</p>
+        <h3 class="text-base md:text-xl font-black text-gray-900 dark:text-white mb-2 md:mb-3">تبادل الكتب</h3>
+        <p class="text-gray-500 dark:text-gray-400 text-[11px] md:text-sm leading-relaxed line-clamp-2">ركن المقايضة: استبدل كتبك القديمة بكنوز جديدة من مكتبات قراء آخرين.</p>
       </a>
 
       <!-- Auctions -->
-      <a [routerLink]="['/reader-community']" [queryParams]="{section: 'auctions'}" class="group relative overflow-hidden bg-white dark:bg-gray-800 p-8 rounded-[3.5rem] shadow-xl hover:shadow-2xl transition-all duration-500 border border-gray-100 dark:border-gray-700 hover:-translate-y-2">
+      <a [routerLink]="['/reader-community']" [queryParams]="{section: 'auctions'}" class="group relative overflow-hidden bg-white dark:bg-gray-800 p-4 md:p-8 rounded-[2rem] md:rounded-[3.5rem] shadow-xl hover:shadow-2xl transition-all duration-500 border border-gray-100 dark:border-gray-700 hover:-translate-y-2">
         <div class="absolute -right-8 -top-8 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700"></div>
-        <div class="w-16 h-16 bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-2xl flex items-center justify-center mb-6 text-3xl group-hover:bg-amber-600 group-hover:text-white transition-all duration-500">
+        <div class="w-12 h-12 md:w-16 md:h-16 bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-2xl flex items-center justify-center mb-4 md:mb-6 text-2xl md:text-3xl group-hover:bg-amber-600 group-hover:text-white transition-all duration-500">
           <fa-icon [icon]="['fas', 'gavel']"></fa-icon>
         </div>
-        <h3 class="text-xl font-black text-gray-900 dark:text-white mb-3">المزادات</h3>
-        <p class="text-gray-500 dark:text-gray-400 text-sm leading-relaxed">مزادات كنوز: نافس للحصول على طبعات نادرة ونسخ موقعة بأفضل الأسعار.</p>
+        <h3 class="text-base md:text-xl font-black text-gray-900 dark:text-white mb-2 md:mb-3">المزادات</h3>
+        <p class="text-gray-500 dark:text-gray-400 text-[11px] md:text-sm leading-relaxed line-clamp-2">مزادات كنوز: نافس للحصول على طبعات نادرة ونسخ موقعة بأفضل الأسعار.</p>
       </a>
 
       <!-- Custom Offers -->
-      <a [routerLink]="['/promotions']" [queryParams]="{builder: 'true'}" class="group relative overflow-hidden bg-gradient-to-br from-indigo-600 to-blue-700 p-8 rounded-[3.5rem] shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 cursor-pointer">
+      <a [routerLink]="['/promotions']" [queryParams]="{builder: 'true'}" class="group relative overflow-hidden bg-gradient-to-br from-indigo-600 to-blue-700 p-4 md:p-8 rounded-[2rem] md:rounded-[3.5rem] shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 cursor-pointer">
         <div class="absolute -right-8 -top-8 w-32 h-32 bg-white/20 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700"></div>
-        <div class="w-16 h-16 bg-white/20 backdrop-blur-md text-white rounded-2xl flex items-center justify-center mb-6 text-3xl group-hover:bg-white group-hover:text-indigo-600 transition-all duration-500">
+        <div class="w-12 h-12 md:w-16 md:h-16 bg-white/20 backdrop-blur-md text-white rounded-2xl flex items-center justify-center mb-4 md:mb-6 text-2xl md:text-3xl group-hover:bg-white group-hover:text-indigo-600 transition-all duration-500">
           <span>💡</span>
         </div>
-        <h3 class="text-xl font-black text-white mb-3">أنشئ عرضك الخاص!</h3>
-        <p class="text-indigo-100 text-sm leading-relaxed">اكتشف ذكاء محرك الأسعار لدينا.. أضف أي كتابين أو أكثر لسلتك وسنقوم فوراً بحساب التوازن المثالي بين أعلى خصم وأقصى توفير لك.</p>
+        <h3 class="text-base md:text-xl font-black text-white mb-2 md:mb-3">أنشئ عرضك الخاص!</h3>
+        <p class="text-indigo-100 text-[11px] md:text-sm leading-relaxed line-clamp-2">اكتشف ذكاء محرك الأسعار لدينا.. أضف أي كتابين أو أكثر لسلتك.</p>
       </a>
 
       <!-- Bundles -->
-      <a routerLink="/bundles" class="group relative overflow-hidden bg-white dark:bg-gray-800 p-8 rounded-[3.5rem] shadow-xl hover:shadow-2xl transition-all duration-500 border border-gray-100 dark:border-gray-700 hover:-translate-y-2">
+      <a routerLink="/bundles" class="group relative overflow-hidden bg-white dark:bg-gray-800 p-4 md:p-8 rounded-[2rem] md:rounded-[3.5rem] shadow-xl hover:shadow-2xl transition-all duration-500 border border-gray-100 dark:border-gray-700 hover:-translate-y-2">
         <div class="absolute -right-8 -top-8 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700"></div>
-        <div class="w-16 h-16 bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-2xl flex items-center justify-center mb-6 text-3xl group-hover:bg-purple-600 group-hover:text-white transition-all duration-500">
+        <div class="w-12 h-12 md:w-16 md:h-16 bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-2xl flex items-center justify-center mb-4 md:mb-6 text-2xl md:text-3xl group-hover:bg-purple-600 group-hover:text-white transition-all duration-500">
           <fa-icon [icon]="['fas', 'boxes']"></fa-icon>
         </div>
-        <h3 class="text-xl font-black text-gray-900 dark:text-white mb-3">باقات الكتب</h3>
-        <p class="text-gray-500 dark:text-gray-400 text-sm leading-relaxed">باقات القراءة: مجموعات مختارة بعناية توفر لك الوقت والمال.</p>
+        <h3 class="text-base md:text-xl font-black text-gray-900 dark:text-white mb-2 md:mb-3">باقات الكتب</h3>
+        <p class="text-gray-500 dark:text-gray-400 text-[11px] md:text-sm leading-relaxed line-clamp-2">باقات القراءة: مجموعات مختارة بعناية توفر لك الوقت والمال.</p>
       </a>
     </div>
   </div>
@@ -161,7 +164,7 @@
             <span class="text-white text-xs font-bold tracking-wider">عروض حصرية كل 45 دقيقة</span>
           </div>
           <h2 class="text-3xl md:text-4xl font-black text-white mb-3">
-            📈 بورصة <span class="text-yellow-400">الكتب</span>
+            📈 <span class="text-yellow-400">بورصة </span> <span class="text-yellow-400">الكتب</span>
           </h2>
           <p class="text-red-100 text-base md:text-lg max-w-lg font-medium">
             أسعار مخفضة جداً تتغير كل 45 دقيقة! اغتنم الفرصة قبل أن تنتهي.

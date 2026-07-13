@@ -1,0 +1,166 @@
+<div class="premium-achievements-section" dir="rtl">
+  <div class="outer-card">
+
+    <!-- ===== Hero Band ===== -->
+    <div class="hero-band">
+
+      <!-- Right Column: Text Content -->
+      <div class="hero-content">
+
+        <!-- Floating Label Badge -->
+        <div class="date-badge">
+          <fa-icon [icon]="faCalendar" class="badge-icon"></fa-icon>
+          <span>منذ بداية {{ statistics?.since || 2025 }}</span>
+        </div>
+
+        <!-- Headline Block -->
+        <div class="headline-block">
+          <p class="headline-pre">تـم تنفيـذ أكثر من</p>
+
+          <!-- YouTube-style Rolling Digit Counter -->
+          <div class="counter-wrapper">
+            <app-youtube-counter
+              [targetValue]="statistics?.orders || 4827"
+              [duration]="2000"
+              [slotHeight]="heroSlotHeight"
+              [suffix]="'+'"
+            ></app-youtube-counter>
+          </div>
+
+          <h2 class="sub-headline">طلبًا بنجاح</h2>
+        </div>
+
+        <!-- Brand Tagline -->
+        <div class="tagline-section">
+          <p class="tagline">نفخر بثقـة آلاف العملاء في</p>
+          <div class="brand-logo">
+            <span class="logo-knooz">Knooz</span><span class="logo-book">Book</span>
+          </div>
+        </div>
+
+        <!-- Trust Micro-Badges -->
+        <div class="micro-trust">
+          <span class="micro-badge">
+            <fa-icon [icon]="faShieldAlt"></fa-icon>
+            <span>دفع آمن</span>
+          </span>
+          <span class="micro-badge">
+            <fa-icon [icon]="faBox"></fa-icon>
+            <span>توصيل سريع</span>
+          </span>
+          <span class="micro-badge">
+            <fa-icon [icon]="faStar"></fa-icon>
+            <span>جودة مضمونة</span>
+          </span>
+        </div>
+      </div>
+
+      <!-- Left Column: Founder Portrait -->
+      <div class="founder-section">
+        <div class="founder-portrait">
+          <img
+            [src]="founder.image"
+            [alt]="founder.name"
+            loading="lazy"
+            class="founder-image"
+          />
+
+          <!-- Navy Info Card Overlay -->
+          <div class="founder-info-card">
+            <div class="founder-name-row">
+              <h3 class="founder-name">{{ founder.name }}</h3>
+              <div class="verified-badge">
+                <fa-icon [icon]="faCheckCircle" class="verified-icon"></fa-icon>
+              </div>
+            </div>
+            <div class="gold-underline"></div>
+            <p class="founder-bio">مؤسس ومطور <span class="gold-text">KnoozBook</span> أعمل يوميًا لتوفير أفضل تجربة لكل قارئ وطالب علم، وأسأل الله التوفيق والقبول</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== Stats Row ===== -->
+    <div class="stats-row">
+
+      <!-- Card 1: Orders -->
+      <div class="stat-card">
+        <div class="stat-icon-circle">
+          <fa-icon [icon]="faBox"></fa-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-number">
+            <app-animated-counter
+              [targetValue]="statistics?.orders || 4827"
+              [duration]="1500"
+              [suffix]="'+'"
+              className="stat-counter-value"
+            ></app-animated-counter>
+          </div>
+          <p class="stat-label">الطلبات المنفذة</p>
+          <p class="stat-sublabel">طلباً بنجاح</p>
+        </div>
+      </div>
+
+      <!-- Card 2: Products -->
+      <div class="stat-card">
+        <div class="stat-icon-circle">
+          <fa-icon [icon]="faBookOpen"></fa-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-number">
+            <app-animated-counter
+              [targetValue]="statistics?.products || 12000"
+              [duration]="1500"
+              [suffix]="'+'"
+              className="stat-counter-value"
+            ></app-animated-counter>
+          </div>
+          <p class="stat-label">عدد المنتجات</p>
+          <p class="stat-sublabel">منتج متنوع</p>
+        </div>
+      </div>
+
+      <!-- Card 3: Rating -->
+      <div class="stat-card">
+        <div class="stat-icon-circle">
+          <fa-icon [icon]="faStar"></fa-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-number rating-number">
+            <span class="rating-value">{{ statistics?.rating || 4.9 }}</span>
+            <span class="rating-suffix">/5</span>
+          </div>
+          <p class="stat-label">تقييم العملاء</p>
+          <div class="rating-stars">
+            <fa-icon [icon]="faStar" class="star-filled"></fa-icon>
+            <fa-icon [icon]="faStar" class="star-filled"></fa-icon>
+            <fa-icon [icon]="faStar" class="star-filled"></fa-icon>
+            <fa-icon [icon]="faStar" class="star-filled"></fa-icon>
+            <fa-icon [icon]="faStar" class="star-filled"></fa-icon>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 4: Customers -->
+      <div class="stat-card">
+        <div class="stat-icon-circle">
+          <fa-icon [icon]="faUsers"></fa-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-number">
+            <app-animated-counter
+              [targetValue]="statistics?.customers || 3500"
+              [duration]="1500"
+              [suffix]="'+'"
+              className="stat-counter-value"
+            ></app-animated-counter>
+          </div>
+          <p class="stat-label">العملاء السعداء</p>
+          <p class="stat-sublabel">عميل سعيد</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>

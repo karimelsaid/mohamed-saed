@@ -128,7 +128,11 @@ class AutomationService {
             const n8nApiKey = process.env.N8N_API_KEY;
             const n8nApiUrl = process.env.N8N_API_URL || settings.n8nConfig.apiUrl;
 
+            console.log('[fetchN8nStats] n8nApiUrl:', n8nApiUrl);
+            console.log('[fetchN8nStats] n8nApiKey exists:', !!n8nApiKey);
+
             if (!n8nApiKey || !n8nApiUrl) {
+                console.error('[fetchN8nStats] n8n API Key or URL is missing from environment');
                 return { error: 'n8n API Key or URL is missing from environment' };
             }
 
@@ -147,6 +151,9 @@ class AutomationService {
 
             const workflows = workflowsResponse.data.data || [];
             const executions = executionsResponse.data.data || [];
+
+            console.log('[fetchN8nStats] Workflows count:', workflows.length);
+            console.log('[fetchN8nStats] Executions count:', executions.length);
 
             // Calculate stats from executions
             const successfulExecutions = executions.filter(e => e.finished && !e.stoppedAt).length;
@@ -177,7 +184,7 @@ class AutomationService {
             // Get analytics stats from MongoDB
             const analyticsStats = await this.getAnalyticsStats();
 
-            return {
+            const result = {
                 totalWorkflows: workflows.length,
                 activeWorkflows: workflows.filter(w => w.active).length,
                 totalExecutions,
@@ -188,6 +195,8 @@ class AutomationService {
                 ...analyticsStats,
                 timestamp: new Date()
             };
+
+            return result;
         } catch (error) {
             console.error('❌ [AutomationService] Error fetching n8n stats:', error.message);
             return { error: error.message };
@@ -203,31 +212,39 @@ class AutomationService {
             startOfMonth.setDate(1);
             startOfMonth.setHours(0, 0, 0, 0);
 
-            // المنشورات التلقائية = impression events this month
-            const impressions = await AnalyticsEvent.countDocuments({
-                eventType: 'impression',
+            const startOfWeek = new Date();
+            startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+            startOfWeek.setHours(0, 0, 0, 0);
+
+            console.log('[getAnalyticsStats] Start of month:', startOfMonth);
+            console.log('[getAnalyticsStats] Start of week:', startOfWeek);
+
+            // المنشورات التلقائية = count of successful post events from AutomationLog this month
+            const autoPosts = await AutomationLog.countDocuments({
+                type: 'post',
+                status: 'success',
                 createdAt: { $gte: startOfMonth }
             });
 
-            // الردود الذكية = comment events this month
-            const comments = await AnalyticsEvent.countDocuments({
-                eventType: 'comment',
+            // الردود الذكية = count of successful comment_reply events from AutomationLog this month
+            const smartReplies = await AutomationLog.countDocuments({
+                type: 'comment_reply',
+                status: 'success',
                 createdAt: { $gte: startOfMonth }
             });
 
-            // معدل التفاعل = clicks / impressions
+            // معدل التحويل = orders from Order collection this month / total clicks
+            const Order = require('../models/Order.model');
+            const ordersThisMonth = await Order.countDocuments({
+                createdAt: { $gte: startOfMonth }
+            });
+
             const clicks = await AnalyticsEvent.countDocuments({
                 eventType: 'click',
                 createdAt: { $gte: startOfMonth }
             });
-            const engagementRate = impressions > 0 ? ((clicks / impressions) * 100).toFixed(1) : 0;
-
-            // معدل التحويل = purchase_batch / clicks
-            const purchases = await AnalyticsEvent.countDocuments({
-                eventType: 'purchase_batch',
-                createdAt: { $gte: startOfMonth }
-            });
-            const conversionRate = clicks > 0 ? ((purchases / clicks) * 100).toFixed(1) : 0;
+            
+            const conversionRate = clicks > 0 ? ((ordersThisMonth / clicks) * 100).toFixed(1) : 0;
 
             // searches this month
             const searches = await AnalyticsEvent.countDocuments({
@@ -235,14 +252,40 @@ class AutomationService {
                 createdAt: { $gte: startOfMonth }
             });
 
+            // الوقت الموفر = (autoPosts * 15 minutes) + (smartReplies * 5 minutes) in hours
+            const timeSavedMinutes = (autoPosts * 15) + (smartReplies * 5);
+            const timeSavedHours = (timeSavedMinutes / 60).toFixed(1);
+
+            // Weekly stats for percentage calculation
+            const autoPostsWeek = await AutomationLog.countDocuments({
+                type: 'post',
+                status: 'success',
+                createdAt: { $gte: startOfWeek }
+            });
+
+            const smartRepliesWeek = await AutomationLog.countDocuments({
+                type: 'comment_reply',
+                status: 'success',
+                createdAt: { $gte: startOfWeek }
+            });
+
+            // Calculate weekly percentage (assuming monthly target of 100 posts and 50 replies)
+            const weeklyPostPercentage = Math.min((autoPostsWeek / 25) * 100, 100).toFixed(0);
+            const weeklyReplyPercentage = Math.min((smartRepliesWeek / 12) * 100, 100).toFixed(0);
+
+            console.log('[getAnalyticsStats] AutoPosts:', autoPosts, 'SmartReplies:', smartReplies, 'Orders:', ordersThisMonth, 'Clicks:', clicks, 'Searches:', searches, 'TimeSaved:', timeSavedHours);
+
             return {
-                impressions,
-                comments,
+                impressions: autoPosts, // Changed to actual auto posts count
+                comments: smartReplies, // Changed to actual smart replies count
                 clicks,
-                engagementRate: parseFloat(engagementRate),
-                purchases,
+                engagementRate: 0, // Will be calculated from social media metrics
+                purchases: ordersThisMonth, // Changed to actual orders count
                 conversionRate: parseFloat(conversionRate),
-                searches
+                searches,
+                timeSaved: parseFloat(timeSavedHours),
+                weeklyPostPercentage: parseFloat(weeklyPostPercentage),
+                weeklyReplyPercentage: parseFloat(weeklyReplyPercentage)
             };
         } catch (error) {
             console.error('❌ [AutomationService] Error fetching analytics stats:', error.message);
@@ -253,7 +296,10 @@ class AutomationService {
                 engagementRate: 0,
                 purchases: 0,
                 conversionRate: 0,
-                searches: 0
+                searches: 0,
+                timeSaved: 0,
+                weeklyPostPercentage: 0,
+                weeklyReplyPercentage: 0
             };
         }
     }

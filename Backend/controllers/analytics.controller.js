@@ -306,3 +306,138 @@ exports.trackSearchTerm = async (req, res) => {
         res.status(500).json({ success: false, message: 'Server error' });
     }
 };
+
+/**
+ * Saves book recommendations for a user
+ */
+exports.saveRecommendations = async (req, res) => {
+    try {
+        const { userId, triggerBookId, triggerEventType, recommendations, timestamp } = req.body;
+
+        console.log('[Analytics] saveRecommendations called with:', { userId, triggerBookId, triggerEventType, recommendations, timestamp });
+
+        if (!userId || !triggerBookId || !recommendations) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'userId, triggerBookId, and recommendations are required' 
+            });
+        }
+
+        // Parse recommendations if it's a string
+        let parsedRecommendations = recommendations;
+        if (typeof recommendations === 'string') {
+            try {
+                parsedRecommendations = JSON.parse(recommendations);
+                // If the parsed result has a "recommendations" property, extract it
+                if (parsedRecommendations && parsedRecommendations.recommendations) {
+                    parsedRecommendations = parsedRecommendations.recommendations;
+                }
+            } catch (e) {
+                console.error('[Analytics] Failed to parse recommendations string:', e);
+                parsedRecommendations = [];
+            }
+        } else if (parsedRecommendations && parsedRecommendations.recommendations) {
+            // If it's already an object with recommendations property, extract it
+            parsedRecommendations = parsedRecommendations.recommendations;
+        }
+
+        // Save to AnalyticsEvent for tracking
+        await AnalyticsEvent.create({
+            eventType: 'recommendation_generated',
+            userId,
+            productId: triggerBookId,
+            metadata: {
+                triggerEventType,
+                recommendations: parsedRecommendations,
+                recommendationsCount: Array.isArray(parsedRecommendations) ? parsedRecommendations.length : 0,
+                timestamp: timestamp || new Date().toISOString()
+            },
+            createdAt: new Date()
+        });
+
+        console.log(`[Analytics] Recommendations saved for user ${userId}, trigger book ${triggerBookId}, count: ${Array.isArray(parsedRecommendations) ? parsedRecommendations.length : 0}`);
+
+        res.json({ 
+            success: true, 
+            message: 'Recommendations saved',
+            recommendationsCount: Array.isArray(parsedRecommendations) ? parsedRecommendations.length : 0
+        });
+    } catch (error) {
+        console.error('Error saving recommendations:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
+/**
+ * Gets recommendations for a user
+ */
+exports.getUserRecommendations = async (req, res) => {
+    try {
+        const { userId } = req.params;
+
+        if (!userId) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'userId is required' 
+            });
+        }
+
+        // Get the most recent recommendation events for this user
+        const recommendationEvents = await AnalyticsEvent.find({
+            eventType: 'recommendation_generated',
+            userId: userId
+        })
+        .sort({ createdAt: -1 })
+        .limit(10);
+
+        // Extract recommendations from metadata
+        const allRecommendations = [];
+        for (const event of recommendationEvents) {
+            if (event.metadata && event.metadata.recommendations) {
+                const recs = Array.isArray(event.metadata.recommendations) 
+                    ? event.metadata.recommendations 
+                    : [];
+                allRecommendations.push(...recs);
+            }
+        }
+
+        res.json({ 
+            success: true, 
+            recommendations: allRecommendations,
+            count: allRecommendations.length
+        });
+    } catch (error) {
+        console.error('Error getting user recommendations:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
+exports.deleteUserRecommendations = async (req, res) => {
+    try {
+        const { userId } = req.params;
+
+        if (!userId) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'userId is required' 
+            });
+        }
+
+        // Delete all recommendation events for this user
+        const result = await AnalyticsEvent.deleteMany({
+            eventType: 'recommendation_generated',
+            userId: userId
+        });
+
+        console.log(`[Analytics] Deleted ${result.deletedCount} recommendation events for user ${userId}`);
+
+        res.json({ 
+            success: true, 
+            message: 'Recommendations deleted',
+            deletedCount: result.deletedCount
+        });
+    } catch (error) {
+        console.error('Error deleting user recommendations:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+};

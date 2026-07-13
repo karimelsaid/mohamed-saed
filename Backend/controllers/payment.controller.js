@@ -252,6 +252,26 @@ const verifyOrderPayment = async (req, res) => {
 
         await user.save({ validateBeforeSave: false });
 
+        // Trigger book recommendation workflow
+        try {
+            const axios = require('axios');
+            const firstBookId = order.products && order.products[0] 
+                ? (order.products[0].book || order.products[0].bookId || order.products[0].products_id)
+                : null;
+            
+            if (firstBookId) {
+                await axios.post('https://n8n.knoozbook.com/webhook/book-recommendation', {
+                    userId: user._id.toString(),
+                    eventType: 'purchase',
+                    bookId: firstBookId.toString()
+                });
+                console.log('[verifyOrderPayment] Book recommendation workflow triggered for user:', user._id);
+            }
+        } catch (webhookError) {
+            console.error('[verifyOrderPayment] Failed to trigger book recommendation workflow:', webhookError.message);
+            // Don't fail the payment verification if webhook fails
+        }
+
         // Return order details including products for analytics
         res.json({ 
             success: true, 

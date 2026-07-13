@@ -14,11 +14,12 @@ import { PromotionService } from '../services/promotion.service';
 import { MerchantAuthService } from '../services/merchant-auth.service';
 import { FormsModule } from '@angular/forms';
 import { AnalyticsTrackingService } from '../services/analytics-tracking.service';
+import { PremiumAchievementsComponent } from '../shared/premium-achievements/premium-achievements.component';
 
 @Component({
   selector: 'app-home-page',
   standalone: true,
-  imports: [CommonModule, RouterModule, FontAwesomeModule, FormsModule],
+  imports: [CommonModule, RouterModule, FontAwesomeModule, FormsModule, PremiumAchievementsComponent],
   templateUrl: './home-page.component.html',
   styleUrls: ['./home-page.component.css']
 })

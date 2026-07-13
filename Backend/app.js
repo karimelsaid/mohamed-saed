@@ -107,6 +107,12 @@ const projectRoot = hasLocalDist ? __dirname : (__dirname.endsWith('Backend') ||
 
 const http = require('http');
 const server = http.createServer(app);
+
+// Increase server timeout for bulk operations (15 minutes)
+server.timeout = 900000; 
+server.keepAliveTimeout = 900000;
+server.headersTimeout = 910000;
+
 const { Server } = require('socket.io');
 
 const io = new Server(server, {
@@ -633,6 +639,7 @@ app.get('/api/admin/debug/marketer-stats/:email', async (req, res) => {
 });
 
 app.use('/api/marketer', marketerRoutes);
+app.use('/api/statistics', require('./routes/statistics.routes'));
 
 app.use('/api/users', usersRoutes);
 app.use('/api/community', communityRoutes);
@@ -657,6 +664,8 @@ const mongoose = require('mongoose');
 // تسجيل مسار طلبات الدفع
 app.use('/api/payment-requests', paymentRequestsRoutes);
 app.use('/api/mobile-version', versionRoutes); // Register version check route
+app.use('/api/mushafs', require('./routes/mushafs.routes'));
+
 
 // E-book system routes
 app.use('/api/ebooks', ebooksRoutes);

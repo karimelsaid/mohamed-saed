@@ -439,13 +439,6 @@ export class BookDetailsComponent implements OnInit, OnDestroy {
       potentialImages.push(this.getImageUrl(baseFilename + '.webp', this.book));
     }
 
-    // 3. Add potential variations (always local candidates, will be checked if they exist)
-    potentialImages.push(
-      this.getImageUrl(baseFilename + '_1.webp', this.book),
-      this.getImageUrl(baseFilename + '_2.webp', this.book),
-      this.getImageUrl(baseFilename + '_3.webp', this.book)
-    );
-
     console.log(`🔍 Checking available images for baseFilename: ${baseFilename}`);
     
     const results = await Promise.all(potentialImages.map(async (url) => {
@@ -460,7 +453,28 @@ export class BookDetailsComponent implements OnInit, OnDestroy {
     }));
 
     // Filter out nulls and duplicates
-    this.availableImages = [...new Set(results.filter((url): url is string => url !== null))];
+    const validImages = [...new Set(results.filter((url): url is string => url !== null))];
+
+    // Only check for variations if we have at least one valid image
+    if (validImages.length > 0) {
+      const variationImages = [
+        this.getImageUrl(baseFilename + '_1.webp', this.book),
+        this.getImageUrl(baseFilename + '_2.webp', this.book),
+        this.getImageUrl(baseFilename + '_3.webp', this.book)
+      ];
+
+      const variationResults = await Promise.all(variationImages.map(async (url) => {
+        const exists = await this.checkImageExists(url);
+        console.log(`📸 Variation ${url} exists: ${exists}`);
+        return exists ? url : null;
+      }));
+
+      // Add only existing variations
+      validImages.push(...variationResults.filter((url): url is string => url !== null));
+    }
+
+    // Filter out duplicates from final array
+    this.availableImages = [...new Set(validImages)];
     BookDetailsComponent.resolvedImagesCache.set(cacheKey, this.availableImages);
     this.selectedImageIndex = 0;
     this.imagesLoading = false;

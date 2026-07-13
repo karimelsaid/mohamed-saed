@@ -163,18 +163,22 @@ exports.receiveLog = async (req, res) => {
 exports.getRandomProduct = async (req, res) => {
     try {
         // Find a random approved product
-        // We can use $sample in aggregation
+        // Use $sample with a larger size to ensure randomness, then pick one
         const products = await Product.aggregate([
             { $match: { status: 'approved' } },
-            { $sample: { size: 1 } }
+            { $sample: { size: 10 } } // Get 10 random products first
         ]);
 
         if (products.length === 0) {
             return res.status(404).json({ success: false, message: 'No products found' });
         }
 
-        const product = products[0];
-        
+        // Pick one randomly from the 10 to ensure better randomness
+        const randomIndex = Math.floor(Math.random() * Math.min(products.length, 10));
+        const product = products[randomIndex];
+
+        console.log(`[getRandomProduct] Selected product: ${product.product_name} (${product.products_id}) from merchant: ${product.merchant || 'unknown'}`);
+
         // Prepare the payload as expected by n8n
         res.json({
             success: true,
@@ -186,6 +190,7 @@ exports.getRandomProduct = async (req, res) => {
                 price: product.product_price,
                 image: product.image_path || product.product_image || (product.images && product.images[0]) || '',
                 category: product.product_category,
+                merchant: product.merchant || 'unknown',
                 link: `https://knoozbook.com/product/${product.products_id}`
             }
         });
@@ -202,7 +207,14 @@ exports.getProductById = async (req, res) => {
     try {
         const { id } = req.params;
         
-        const product = await Product.findById(id);
+        // Try to find by MongoDB ObjectId first, then by products_id
+        let product;
+        try {
+            product = await Product.findById(id);
+        } catch (e) {
+            // If invalid ObjectId, search by products_id
+            product = await Product.findOne({ products_id: id });
+        }
         
         if (!product) {
             return res.status(404).json({ success: false, message: 'Product not found' });
@@ -218,6 +230,7 @@ exports.getProductById = async (req, res) => {
                 price: product.product_price,
                 image: product.image_path || product.product_image || (product.images && product.images[0]) || '',
                 category: product.product_category,
+                author: product.author,
                 link: `https://knoozbook.com/product/${product.products_id}`
             }
         });
@@ -551,15 +564,729 @@ exports.executeClaudeCommand = async (req, res) => {
 };
 
 /**
- * Get stats from n8n API
+ * Get stats from n8n API and analytics from MongoDB
  */
 exports.getN8nStats = async (req, res) => {
     try {
-        const stats = await automationService.fetchN8nStats();
-        res.json({ success: true, stats });
+        const n8nStats = await automationService.fetchN8nStats();
+        const analyticsStats = await automationService.getAnalyticsStats();
+
+        // Merge both stats
+        const combinedStats = {
+            ...n8nStats,
+            ...analyticsStats
+        };
+
+        res.json({ success: true, stats: combinedStats });
     } catch (error) {
-        console.error('Error in getN8nStats:', error);
+        console.error('[getN8nStats] Error:', error);
         res.status(500).json({ success: false, message: 'Server error fetching n8n stats' });
+    }
+};
+
+/**
+ * GET /comment-webhook — Meta webhook verification handshake.
+ * لازم يكون موجود قبل ما تقدر تفعّل الـ webhook من Meta Developer Portal،
+ * غير كده Meta هترفض تسجيل الـ webhook من الأساس.
+ * لازم تحط VERIFY_TOKEN في .env وتحط نفس القيمة في خانة "Verify Token" بالـ Portal.
+ */
+exports.verifyWebhook = (req, res) => {
+    const mode = req.query['hub.mode'];
+    const token = req.query['hub.verify_token'];
+    const challenge = req.query['hub.challenge'];
+
+    if (mode === 'subscribe' && token === process.env.META_WEBHOOK_VERIFY_TOKEN) {
+        console.log('[verifyWebhook] Webhook verified successfully');
+        return res.status(200).send(challenge);
+    }
+
+    console.warn('[verifyWebhook] Verification failed - token mismatch');
+    return res.sendStatus(403);
+};
+
+/**
+ * Generic log endpoint for n8n workflows
+ */
+exports.log = async (req, res) => {
+    try {
+        const { type, platform, status, message, metadata, error } = req.body;
+
+        const logData = {
+            type: type || 'general',
+            platform,
+            status: status || 'info',
+            message,
+            metadata: metadata || {}
+        };
+
+        if (error) {
+            logData.error = error;
+        }
+
+        const log = new AutomationLog(logData);
+        await log.save();
+
+        console.log('[log] Entry saved:', { type, platform, status });
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error in log:', error);
+        res.status(500).json({ success: false, message: 'Server error logging' });
+    }
+};
+
+/**
+ * Comment webhook for receiving Facebook/Instagram comments directly from Meta
+ */
+exports.commentWebhook = async (req, res) => {
+    try {
+        const body = req.body;
+        
+        // Meta sends: { object: 'page', entry: [{ id, changes: [{ field, value }] }] }
+        if (!body.entry || !body.entry[0] || !body.entry[0].changes) {
+            console.log('[commentWebhook] Invalid Meta payload structure');
+            return res.status(400).json({ success: false, message: 'Invalid payload' });
+        }
+
+        const platform = body.object === 'instagram' ? 'instagram' : 'facebook';
+        const entry = body.entry[0];
+        const changes = entry.changes;
+
+        // Process each change
+        for (const change of changes) {
+            if (change.field !== 'feed' && change.field !== 'comments') {
+                continue;
+            }
+
+            const value = change.value || {};
+            if (value.verb && value.verb !== 'add') {
+                continue; // Only handle new comments
+            }
+
+            const comment = value.message || value.text || '';
+            const commentId = value.comment_id || value.id;
+            const postId = value.post_id || entry.id;
+            const fromId = value.from?.id || value.from?.username;
+            const userName = value.from?.name || value.from?.username;
+
+            if (!comment || !commentId) {
+                continue;
+            }
+
+            // Skip comments from our own page
+            const facebookPageId = process.env.FACEBOOK_PAGE_ID;
+            if (facebookPageId && String(fromId) === String(facebookPageId)) {
+                console.log('[commentWebhook] Ignoring comment from our own page');
+                continue;
+            }
+
+            // Check for duplicates
+            const existing = await AutomationLog.findOne({
+                type: 'comment',
+                'metadata.commentId': commentId
+            });
+            if (existing) {
+                console.log('[commentWebhook] Duplicate comment, skipping:', commentId);
+                continue;
+            }
+
+            console.log('[commentWebhook] Processing comment:', { platform, comment, commentId, postId, fromId, userName });
+
+            // Log the comment
+            const log = new AutomationLog({
+                type: 'comment',
+                platform,
+                status: 'pending',
+                message: comment,
+                metadata: {
+                    postId,
+                    commentId,
+                    userId: fromId,
+                    userName
+                }
+            });
+            await log.save();
+
+            // Generate AI reply
+            try {
+                const GroqProvider = require('../ai/providers/groq.provider');
+                const AIConfig = require('../ai/config/ai.config');
+                const groqConfig = AIConfig.getProviderConfig('groq');
+                const groqProvider = new GroqProvider(groqConfig);
+                
+                const prompt = `
+أنت مساعد مبيعات ودود لمكتبة "كنوز بوك" (متجر كتب وروايات عربي، الموقع knoozbook.com).
+تعليق العميل: "${comment}"
+المنصة: ${platform}
+
+اكتب ردًا موجزًا ومهذبًا باللغة العربية فقط (بدون أي كلمات إنجليزية إلا اسم الموقع knoozbook.com إذا لزم).
+لو السؤال عن السعر أو التوفر وجّه العميل بأدب لرسالتنا الخاصة أو لموقعنا للاطلاع على التفاصيل.
+لا تتجاوز 3 جمل قصيرة.
+`;
+
+                const result = await groqProvider.generateText({
+                    messages: [
+                        { role: 'system', content: 'أنت مساعد مبيعات ودود لمكتبة "كنوز بوك" (متجر كتب وروايات عربي، الموقع knoozbook.com).' },
+                        { role: 'user', content: prompt }
+                    ],
+                    model: groqConfig.defaultModel,
+                    temperature: 0.7,
+                    maxTokens: 200
+                });
+                
+                const replyText = (result.text || result.response || result.output || 'شكراً لتواصلك معنا! سنساعدك بأسرع وقت.').trim();
+                console.log('[commentWebhook] AI reply:', replyText);
+
+                // Post reply to Facebook/Instagram
+                const pageToken = process.env.FACEBOOK_PAGE_TOKEN;
+                if (!pageToken) {
+                    console.error('[commentWebhook] Facebook credentials missing');
+                    continue;
+                }
+
+                let url;
+                if (platform === 'facebook') {
+                    url = `https://graph.facebook.com/v18.0/${commentId}/comments`;
+                } else if (platform === 'instagram') {
+                    url = `https://graph.facebook.com/v18.0/${commentId}/replies`;
+                } else {
+                    continue;
+                }
+
+                const response = await axios.post(url, {
+                    message: replyText,
+                    access_token: pageToken
+                });
+
+                console.log('[commentWebhook] Reply posted successfully:', response.data.id);
+
+                // Log the reply
+                await AutomationLog.create({
+                    type: 'comment_reply',
+                    platform,
+                    status: 'success',
+                    message: replyText,
+                    metadata: {
+                        commentId,
+                        postId,
+                        replyId: response.data.id
+                    }
+                });
+            } catch (error) {
+                console.error('[commentWebhook] Error processing comment:', error.message);
+                await AutomationLog.create({
+                    type: 'comment_reply',
+                    platform,
+                    status: 'failed',
+                    message: comment,
+                    error: error.message,
+                    metadata: {
+                        commentId,
+                        postId
+                    }
+                });
+            }
+        }
+
+        // Respond immediately to Meta
+        res.status(200).send('OK');
+    } catch (error) {
+        console.error('Error in commentWebhook:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
+/**
+ * Poll Facebook comments using Graph API (alternative to webhook)
+ */
+exports.pollFacebookComments = async (req, res) => {
+    try {
+        const pageId = process.env.FACEBOOK_PAGE_ID;
+        const pageToken = process.env.FACEBOOK_PAGE_TOKEN;
+
+        if (!pageId || !pageToken) {
+            console.error('[pollFacebookComments] Facebook credentials missing');
+            return res.json({ success: false, message: 'Facebook credentials missing' });
+        }
+
+        console.log('[pollFacebookComments] Starting poll for page:', pageId);
+
+        // Get recent posts
+        const postsResponse = await axios.get(
+            `https://graph.facebook.com/v18.0/${pageId}/posts`,
+            {
+                params: {
+                    fields: 'id,message,created_time',
+                    limit: 10,
+                    access_token: pageToken
+                }
+            }
+        );
+
+        const posts = postsResponse.data.data;
+        console.log('[pollFacebookComments] Found', posts.length, 'posts');
+
+        for (const post of posts) {
+            const postId = post.id;
+            
+            // Get comments for this post
+            try {
+                const commentsResponse = await axios.get(
+                    `https://graph.facebook.com/v18.0/${postId}/comments`,
+                    {
+                        params: {
+                            fields: 'id,message,created_time,from',
+                            limit: 10,
+                            access_token: pageToken
+                        }
+                    }
+                );
+
+                const comments = commentsResponse.data.data;
+                console.log('[pollFacebookComments] Post', postId, 'has', comments.length, 'comments');
+
+                for (const comment of comments) {
+                    const commentId = comment.id;
+                    const commentText = comment.message;
+                    const fromId = comment.from.id;
+                    const userName = comment.from.name;
+
+                    // Skip comments from our own page
+                    if (String(fromId) === String(pageId)) {
+                        continue;
+                    }
+
+                    // Check for duplicates
+                    const existing = await AutomationLog.findOne({
+                        type: 'comment',
+                        'metadata.commentId': commentId
+                    });
+                    if (existing) {
+                        continue;
+                    }
+
+                    console.log('[pollFacebookComments] Processing new comment:', { commentId, commentText, fromId, userName });
+
+                    // Log the comment
+                    const log = new AutomationLog({
+                        type: 'comment',
+                        platform: 'facebook',
+                        status: 'pending',
+                        message: commentText,
+                        metadata: {
+                            postId,
+                            commentId,
+                            userId: fromId,
+                            userName
+                        }
+                    });
+                    await log.save();
+
+                    // Generate AI reply
+                    try {
+                        const GroqProvider = require('../ai/providers/groq.provider');
+                        const AIConfig = require('../ai/config/ai.config');
+                        const groqConfig = AIConfig.getProviderConfig('groq');
+                        const groqProvider = new GroqProvider(groqConfig);
+                        
+                        const prompt = `
+أنت مساعد مبيعات ودود لمكتبة "كنوز بوك" (متجر كتب وروايات عربي، الموقع knoozbook.com).
+تعليق العميل: "${commentText}"
+المنصة: facebook
+
+اكتب ردًا موجزًا ومهذبًا باللغة العربية فقط (بدون أي كلمات إنجليزية إلا اسم الموقع knoozbook.com إذا لزم).
+لو السؤال عن السعر أو التوفر وجّه العميل بأدب لرسالتنا الخاصة أو لموقعنا للاطلاع على التفاصيل.
+لا تتجاوز 3 جمل قصيرة.
+`;
+
+                        const result = await groqProvider.generateText({
+                            messages: [
+                                { role: 'system', content: 'أنت مساعد مبيعات ودود لمكتبة "كنوز بوك" (متجر كتب وروايات عربي، الموقع knoozbook.com).' },
+                                { role: 'user', content: prompt }
+                            ],
+                            model: groqConfig.defaultModel,
+                            temperature: 0.7,
+                            maxTokens: 200
+                        });
+                        
+                        const replyText = (result.text || result.response || result.output || 'شكراً لتواصلك معنا! سنساعدك بأسرع وقت.').trim();
+                        console.log('[pollFacebookComments] AI reply:', replyText);
+
+                        // Post reply to Facebook
+                        const response = await axios.post(
+                            `https://graph.facebook.com/v18.0/${commentId}/comments`,
+                            {
+                                message: replyText,
+                                access_token: pageToken
+                            }
+                        );
+
+                        console.log('[pollFacebookComments] Reply posted successfully:', response.data.id);
+
+                        // Log the reply
+                        await AutomationLog.create({
+                            type: 'comment_reply',
+                            platform: 'facebook',
+                            status: 'success',
+                            message: replyText,
+                            metadata: {
+                                commentId,
+                                postId,
+                                replyId: response.data.id
+                            }
+                        });
+                    } catch (error) {
+                        console.error('[pollFacebookComments] Error processing comment:', error.message);
+                        await AutomationLog.create({
+                            type: 'comment_reply',
+                            platform: 'facebook',
+                            status: 'failed',
+                            message: commentText,
+                            error: error.message,
+                            metadata: {
+                                commentId,
+                                postId
+                            }
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('[pollFacebookComments] Error fetching comments for post', postId, ':', error.message);
+            }
+        }
+
+        res.json({ success: true, message: 'Poll completed' });
+    } catch (error) {
+        console.error('Error in pollFacebookComments:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
+/**
+ * Poll Facebook Messages (Messenger) using Graph API
+ */
+exports.pollFacebookMessages = async (req, res) => {
+    try {
+        const pageId = process.env.FACEBOOK_PAGE_ID;
+        const pageToken = process.env.FACEBOOK_PAGE_TOKEN;
+
+        if (!pageId || !pageToken) {
+            console.error('[pollFacebookMessages] Facebook credentials missing');
+            return res.json({ success: false, message: 'Facebook credentials missing' });
+        }
+
+        console.log('[pollFacebookMessages] Starting poll for page:', pageId);
+
+        // Get recent conversations
+        const conversationsResponse = await axios.get(
+            `https://graph.facebook.com/v18.0/${pageId}/conversations`,
+            {
+                params: {
+                    fields: 'id,participants,updated_time',
+                    limit: 10,
+                    access_token: pageToken
+                }
+            }
+        );
+
+        const conversations = conversationsResponse.data.data;
+        console.log('[pollFacebookMessages] Found', conversations.length, 'conversations');
+
+        for (const conversation of conversations) {
+            const conversationId = conversation.id;
+            
+            // Get messages for this conversation
+            try {
+                const messagesResponse = await axios.get(
+                    `https://graph.facebook.com/v18.0/${conversationId}/messages`,
+                    {
+                        params: {
+                            fields: 'id,message,created_time,from,to',
+                            limit: 10,
+                            access_token: pageToken
+                        }
+                    }
+                );
+
+                const messages = messagesResponse.data.data;
+                console.log('[pollFacebookMessages] Conversation', conversationId, 'has', messages.length, 'messages');
+
+                for (const message of messages) {
+                    const messageId = message.id;
+                    const messageText = message.message;
+                    const fromId = message.from.id;
+                    const fromName = message.from.name;
+                    const toId = message.to.id;
+
+                    // Skip messages from our own page
+                    if (String(fromId) === String(pageId)) {
+                        continue;
+                    }
+
+                    // Check for duplicates
+                    const existing = await AutomationLog.findOne({
+                        type: 'message',
+                        'metadata.messageId': messageId
+                    });
+                    if (existing) {
+                        continue;
+                    }
+
+                    console.log('[pollFacebookMessages] Processing new message:', { messageId, messageText, fromId, fromName });
+
+                    // Log the message
+                    const log = new AutomationLog({
+                        type: 'message',
+                        platform: 'facebook',
+                        status: 'pending',
+                        message: messageText,
+                        metadata: {
+                            conversationId,
+                            messageId,
+                            userId: fromId,
+                            userName: fromName
+                        }
+                    });
+                    await log.save();
+
+                    // Generate AI reply
+                    try {
+                        const GroqProvider = require('../ai/providers/groq.provider');
+                        const AIConfig = require('../ai/config/ai.config');
+                        const groqConfig = AIConfig.getProviderConfig('groq');
+                        const groqProvider = new GroqProvider(groqConfig);
+                        
+                        const prompt = `
+أنت مساعد مبيعات ودود لمكتبة "كنوز بوك" (متجر كتب وروايات عربي، الموقع knoozbook.com).
+رسالة العميل: "${messageText}"
+المنصة: facebook messenger
+
+اكتب ردًا موجزًا ومهذبًا باللغة العربية فقط (بدون أي كلمات إنجليزية إلا اسم الموقع knoozbook.com إذا لزم).
+لو السؤال عن السعر أو التوفر وجّه العميل بأدب لموقعنا للاطلاع على التفاصيل.
+لا تتجاوز 3 جمل قصيرة.
+`;
+
+                        const result = await groqProvider.generateText({
+                            messages: [
+                                { role: 'system', content: 'أنت مساعد مبيعات ودود لمكتبة "كنوز بوك" (متجر كتب وروايات عربي، الموقع knoozbook.com).' },
+                                { role: 'user', content: prompt }
+                            ],
+                            model: groqConfig.defaultModel,
+                            temperature: 0.7,
+                            maxTokens: 200
+                        });
+                        
+                        const replyText = (result.text || result.response || result.output || 'شكراً لتواصلك معنا! سنساعدك بأسرع وقت.').trim();
+                        console.log('[pollFacebookMessages] AI reply:', replyText);
+
+                        // Send reply via Facebook Messenger API
+                        const response = await axios.post(
+                            `https://graph.facebook.com/v18.0/${pageId}/messages`,
+                            {
+                                recipient: { id: fromId },
+                                message: { text: replyText },
+                                access_token: pageToken
+                            }
+                        );
+
+                        console.log('[pollFacebookMessages] Reply sent successfully:', response.data.message_id);
+
+                        // Log the reply
+                        await AutomationLog.create({
+                            type: 'message_reply',
+                            platform: 'facebook',
+                            status: 'success',
+                            message: replyText,
+                            metadata: {
+                                conversationId,
+                                messageId,
+                                replyId: response.data.message_id
+                            }
+                        });
+                    } catch (error) {
+                        console.error('[pollFacebookMessages] Error processing message:', error.message);
+                        await AutomationLog.create({
+                            type: 'message_reply',
+                            platform: 'facebook',
+                            status: 'failed',
+                            message: messageText,
+                            error: error.message,
+                            metadata: {
+                                conversationId,
+                                messageId
+                            }
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('[pollFacebookMessages] Error fetching messages for conversation', conversationId, ':', error.message);
+            }
+        }
+
+        res.json({ success: true, message: 'Poll completed' });
+    } catch (error) {
+        console.error('Error in pollFacebookMessages:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
+/**
+ * Generate AI reply for a comment
+ */
+exports.generateReply = async (req, res) => {
+    try {
+        const { comment, platform, productId } = req.body;
+
+        if (!comment) {
+            return res.status(400).json({ success: false, message: 'comment is required' });
+        }
+
+        console.log('[generateReply] Generating reply for:', { comment, platform, productId });
+
+        // نجيب بيانات المنتج الحقيقية من قاعدة البيانات (لو معروف) بدل ما نسيب
+        // الـ AI "يخمن" السعر أو التوفر، ده كان بيسبب معلومات غلط في الردود.
+        let productContext = 'لم يتم تحديد كتاب معين في هذا التعليق.';
+        let product = null;
+        if (productId) {
+            product = await Product.findOne({ products_id: productId })
+                .select('product_name product_description product_price status');
+        }
+        if (product) {
+            productContext = `
+اسم الكتاب: ${product.product_name}
+السعر: ${product.product_price} جنيه
+الحالة: ${product.status === 'approved' ? 'متوفر' : 'غير متوفر حاليًا'}
+وصف مختصر: ${(product.product_description || '').substring(0, 200)}
+رابط الشراء: https://knoozbook.com/book/${productId}
+`;
+        }
+
+        const prompt = `
+أنت مساعد مبيعات ودود لمكتبة "كنوز بوك" (متجر كتب وروايات عربي، الموقع knoozbook.com).
+تعليق العميل: "${comment}"
+المنصة: ${platform}
+
+بيانات الكتاب (استخدمها إن وجدت ولا تخترق أي أرقام أو معلومات غير موجودة هنا):
+${productContext}
+
+اكتب ردًا موجزًا ومهذبًا باللغة العربية فقط (بدون أي كلمات إنجليزية إلا اسم الموقع knoozbook.com إذا لزم).
+لو السؤال عن السعر أو التوفر واستخدم البيانات أعلاه، ولو الكتاب غير معروف وجّه العميل بأدب لرسالتنا الخاصة أو لموقعنا للاطلاع على التفاصيل.
+لا تتجاوز 3 جمل قصيرة.
+`;
+
+        // Use Groq provider directly for simple text generation
+        const GroqProvider = require('../ai/providers/groq.provider');
+        const AIConfig = require('../ai/config/ai.config');
+        const groqConfig = AIConfig.getProviderConfig('groq');
+        const groqProvider = new GroqProvider(groqConfig);
+        
+        const result = await groqProvider.generateText({
+            messages: [
+                { role: 'system', content: 'أنت مساعد مبيعات ودود لمكتبة "كنوز بوك" (متجر كتب وروايات عربي، الموقع knoozbook.com).' },
+                { role: 'user', content: prompt }
+            ],
+            model: groqConfig.defaultModel,
+            temperature: 0.7,
+            maxTokens: 200
+        });
+        
+        let replyText = (result.text || result.response || result.output || 'شكراً لتواصلك معنا! سنساعدك بأسرع وقت.').trim();
+
+        console.log('[generateReply] AI response:', replyText);
+
+        res.json({
+            success: true,
+            reply: replyText
+        });
+    } catch (error) {
+        console.error('Error in generateReply:', error);
+        res.status(500).json({ success: false, message: 'Server error generating reply' });
+    }
+};
+
+/**
+ * Post reply to Facebook/Instagram
+ */
+exports.postReply = async (req, res) => {
+    try {
+        const { platform, commentId, reply, postId, facebookPageToken } = req.body;
+
+        if (!commentId || !reply) {
+            return res.status(400).json({ success: false, message: 'commentId and reply are required' });
+        }
+
+        console.log('[postReply] Posting reply:', { platform, commentId, reply, postId });
+
+        // Use token from request (from n8n) or fallback to env
+        const pageToken = facebookPageToken || process.env.FACEBOOK_PAGE_TOKEN;
+
+        if (!pageToken) {
+            return res.status(500).json({ success: false, message: 'Facebook credentials missing' });
+        }
+
+        let url;
+        const data = {
+            message: reply,
+            access_token: pageToken
+        };
+
+        if (platform === 'facebook') {
+            // الرد على تعليق فيسبوك: بننشئ تعليق فرعي تحت نفس التعليق
+            url = `https://graph.facebook.com/v18.0/${commentId}/comments`;
+        } else if (platform === 'instagram') {
+            // ملحوظة مهمة: إنستجرام له endpoint مختلف تمامًا عن فيسبوك للرد على
+            // تعليق (Graph API الخاص بالتعليقات على انستجرام بيستخدم /replies
+            // مش /comments). استخدام مسار فيسبوك هنا كان هيفشل دايمًا مع انستجرام.
+            url = `https://graph.facebook.com/v18.0/${commentId}/replies`;
+        } else {
+            return res.status(400).json({ success: false, message: 'Invalid platform' });
+        }
+
+        const response = await axios.post(url, data);
+
+        console.log('[postReply] Response:', response.data);
+
+        // Log the reply
+        const log = new AutomationLog({
+            type: 'comment_reply',
+            platform,
+            status: 'success',
+            message: reply,
+            metadata: {
+                commentId,
+                postId,
+                replyId: response.data.id
+            }
+        });
+
+        await log.save();
+
+        res.json({
+            success: true,
+            replyId: response.data.id
+        });
+    } catch (error) {
+        const apiError = error.response?.data?.error?.message || error.message;
+        console.error('Error in postReply:', apiError);
+
+        // نسجل الفشل كمان عشان يبان في لوحة الأتمتة إن الرد فشل ومحدش يفتكر
+        // إن كل حاجة شغالة تمام
+        try {
+            await AutomationLog.create({
+                type: 'comment_reply',
+                platform: req.body.platform,
+                status: 'failed',
+                message: req.body.reply,
+                error: apiError,
+                metadata: {
+                    commentId: req.body.commentId,
+                    postId: req.body.postId
+                }
+            });
+        } catch (logErr) {
+            console.error('Error logging failed reply:', logErr.message);
+        }
+
+        res.status(500).json({ success: false, message: 'Server error posting reply', error: apiError });
     }
 };
 

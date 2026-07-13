@@ -29,6 +29,7 @@ import { DownloadsComponent } from './downloads/downloads.component';
 import { GamificationDashboardComponent } from './gamification/dashboard/dashboard.component';
 import { MarketerHubComponent } from './marketer-hub/marketer-hub.component';
 import { NotFoundComponent } from './not-found/not-found.component';
+import { RecommendationsComponent } from './recommendations/recommendations.component';
 
 // ✅ Standalone components imported for SSR compatibility
 import { HomePageComponent } from './home-page/home-page.component';
@@ -130,6 +131,7 @@ const routes: Routes = [
   { path: 'achievements', component: GamificationDashboardComponent },
   { path: 'earn', loadComponent: () => import('./pages/how-to-earn/how-to-earn.component').then(m => m.HowToEarnComponent) },
   { path: 'marketer-hub', component: MarketerHubComponent, canActivate: [MarketerAuthGuard] },
+  { path: 'recommendations', component: RecommendationsComponent },
   {
     path: 'community',
     children: [

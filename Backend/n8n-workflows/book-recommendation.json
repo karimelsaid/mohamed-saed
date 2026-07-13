@@ -103,7 +103,7 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "={{ $env.BACKEND_URL }}/api/products/{{ $json.bookId }}",
+        "url": "={{ $env.BACKEND_URL }}/api/automation/product/{{ $json.bookId }}",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "options": {}

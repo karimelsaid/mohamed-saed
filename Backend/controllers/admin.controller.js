@@ -278,6 +278,12 @@ async function addProduct(req, res) {
       suggestedCategory
     } = req.body;
 
+    // Rename 'language' to 'bookLanguage' to avoid MongoDB reserved keyword conflict
+    const bookLanguage = language;
+    
+    // Remove 'language' from req.body to prevent MongoDB error
+    delete req.body.language;
+    
     const imageUrls = parseImageUrls(req.body);
     const imageUrl = imageUrls.length > 0 ? imageUrls[0] : null;
     console.log('[addProduct] request summary:', {
@@ -286,7 +292,8 @@ async function addProduct(req, res) {
       product_quantity,
       weight,
       files: (req.files || []).map(f => f.originalname),
-      imageUrls
+      imageUrls,
+      bodyKeys: Object.keys(req.body)
     });
 
     const { categoryMap, reverseCategoryMap } = require('../services/excel.service');
@@ -295,8 +302,19 @@ async function addProduct(req, res) {
     const fullCategory = categoryMap[product_category] || 'غير مصنف';
     const shortCategoryKey = reverseCategoryMap[fullCategory] || product_category;
 
-    if (!product_name || !product_quantity || !product_category || weight === undefined || weight === null || weight === '') {
-      return res.status(400).json({ success: false, message: 'Missing required fields (including weight)' });
+    // Convert weight to number for validation
+    const weightNum = parseFloat(weight);
+    
+    if (!product_name || !product_quantity || !product_category || isNaN(weightNum) || weightNum <= 0) {
+      console.error('[addProduct] Validation failed:', {
+        product_name: !!product_name,
+        product_quantity: !!product_quantity,
+        product_category: !!product_category,
+        weight: weight,
+        weightNum: weightNum,
+        isValidWeight: !isNaN(weightNum) && weightNum > 0
+      });
+      return res.status(400).json({ success: false, message: 'Missing required fields (including weight - must be a positive number)' });
     }
 
     if ((!req.files || req.files.length === 0) && !imageUrl) {
@@ -418,6 +436,7 @@ async function addProduct(req, res) {
     const adminName = req.admin.username.replace(/[^a-zA-Z0-9-_]/g, '_');
     const image_path = savedImagePath || '/uploads/books/admin__' + adminName + '__/' + barcode + '/' + filename;
     const productData = {
+      products_id: barcode, // Add products_id to prevent duplicates
       barcode,
       product_name,
       product_quantity: parseInt(product_quantity, 10),
@@ -434,7 +453,7 @@ async function addProduct(req, res) {
       publisher: publisher || '',
       pages: pages || '',
       coverType: coverType || '',
-      language: language || '',
+      bookLanguage: bookLanguage || '', // Renamed from 'language' to avoid MongoDB reserved keyword
       publishYear: publishYear || '',
       stationeryType: stationeryType || '',
       material: material || '',
@@ -460,7 +479,7 @@ async function addProduct(req, res) {
       safety: safety || '',
       fabricType: fabricType || '',
       usage: usage || '',
-      weight: parseFloat(weight) || 0,
+      weight: weightNum,
       width: parseFloat(width) || '',
       length: parseFloat(length) || '',
       height: parseFloat(height) || '',
@@ -474,27 +493,48 @@ async function addProduct(req, res) {
       delete productData.linkedEbookId;
     }
 
-    await Product.updateOne({ barcode }, { $set: productData }, { upsert: true });
-    await addProductToExcel(productData);
+    await Product.updateOne({ barcode }, { $set: productData, $unset: { language: "" } }, { upsert: true });
+    
+    // Save to Excel (non-blocking failure)
+    try {
+      await addProductToExcel(productData);
+      console.log('[addProduct] Excel sync completed');
+    } catch (excelErr) {
+      console.error('[addProduct] Excel sync failed:', excelErr);
+    }
 
-    // SYNC TO GOOGLE SHEETS
-    googleSheetsService.syncProduct(productData).catch(err => console.error('Google Sheets Sync Error:', err));
+    // SYNC TO GOOGLE SHEETS (non-blocking)
+    try {
+      await googleSheetsService.syncProduct(productData);
+      console.log('[addProduct] Google Sheets sync completed');
+    } catch (sheetsErr) {
+      console.error('[addProduct] Google Sheets sync failed:', sheetsErr);
+    }
 
     try {
       sitemapService.generateSitemap();
+      console.log('[addProduct] Sitemap generated');
     } catch (sitemapError) {
-      console.warn('⚠️ Failed to generate sitemap:', sitemapError.message);
+      console.warn('[addProduct] Failed to generate sitemap:', sitemapError.message);
     }
 
-    // Trigger n8n Auto-Post
-    // Note: productData contains most fields needed. We search for the saved doc for the full object if needed,
-    // but triggerAutoPost handles barcodes/Excel items too.
-    automationService.triggerAutoPost(productData).catch(err => console.error('AutoPost Trigger Error:', err));
+    // Trigger n8n Auto-Post (non-blocking)
+    try {
+      await automationService.triggerAutoPost(productData);
+      console.log('[addProduct] Auto-post triggered');
+    } catch (autoPostErr) {
+      console.error('[addProduct] Auto-post trigger failed:', autoPostErr);
+    }
 
     clearBooksCache();
+    console.log('[addProduct] Product added successfully:', barcode);
     res.json({ success: true, message: 'Product added successfully', barcode });
   } catch (error) {
-    console.error('Error in addProduct:', error);
+    console.error('[addProduct] Error:', error);
+    console.error('[addProduct] Error stack:', error.stack);
+    console.error('[addProduct] Error name:', error.name);
+    console.error('[addProduct] Error message:', error.message);
+    
     if (error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE') {
       return res.status(400).json({ success: false, message: 'Image file size exceeds 3 MB limit' });
     }
@@ -523,6 +563,14 @@ async function bulkAddProducts(req, res) {
       return res.status(400).json({ success: false, message: 'No products provided' });
     }
 
+    // Set headers for streaming response to keep connection alive
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Transfer-Encoding', 'chunked');
+    res.setHeader('X-Accel-Buffering', 'no'); // Disable nginx buffering
+
+    // Send initial response to establish connection
+    res.write(JSON.stringify({ type: 'started', message: 'بدء معالجة المنتجات...' }) + '\n');
+
     // Handle Publisher Image Upload (non-blocking - don't let this crash the import)
     if (req.file && publisher) {
       try {
@@ -545,121 +593,241 @@ async function bulkAddProducts(req, res) {
       }
     }
 
-    const bulkOps = [];
+    const CHUNK_SIZE = 50; // Process 50 products at a time for more frequent progress updates
+    const totalProducts = products.length;
+    const chunks = [];
+    for (let i = 0; i < totalProducts; i += CHUNK_SIZE) {
+      chunks.push(products.slice(i, i + CHUNK_SIZE));
+    }
+
+    let totalProcessed = 0;
+    let totalAdded = 0;
     const productsToExcel = [];
     const now = new Date().toISOString();
 
-    for (const productData of products) {
-      // 1. Duplicate check (Name + Image Path match)
-      if (productData.product_name && productData.image_path) {
-        try {
-          const existing = await Product.findOne({ 
-            product_name: productData.product_name,
-            image_path: productData.image_path 
-          });
-          if (existing) {
-            console.log(`⏩ Skipping duplicate product: ${productData.product_name}`);
-            continue;
-          }
-        } catch (dupCheckErr) {
-          console.warn(`⚠️ Duplicate check failed for ${productData.product_name}, proceeding:`, dupCheckErr.message);
+    // Pre-load all existing products for comprehensive duplicate checking
+    const existingBarcodes = new Set();
+    const existingNameImageKeys = new Set();
+    try {
+      const allExistingProducts = await Product.find({}, { barcode: 1, product_name: 1, image_path: 1 }).lean();
+      allExistingProducts.forEach(p => {
+        if (p.barcode) {
+          existingBarcodes.add(p.barcode);
         }
-      }
-
-      // Generate barcode if not present
-      const barcode = productData.barcode || productData.products_id || generateRandomBarcode();
-      const products_id = productData.products_id || barcode;
-
-      // Map categories
-      let inputCategory = productData.product_category || '';
-      // If it's a short key, get the full name. If it's a full name, get the short key for prefixing.
-      let fullCategory = categoryMap[inputCategory] || inputCategory;
-      let shortCategoryKey = reverseCategoryMap[inputCategory] ? reverseCategoryMap[inputCategory] : (categoryMap[inputCategory] ? inputCategory : inputCategory);
-
-      // Determine category prefix
-      let categoryPrefix = '';
-      const prefixes = {
-        'رواية': 'رواية-', 'تنمية': 'تنمية-', 'ديني': 'ديني-', 'قاموس': 'قاموس-',
-        'صحة': 'صحة-', 'اعمال': 'اعمال-', 'فن': 'فن-', 'تاريخ': 'تاريخ-',
-        'تربية': 'تربية-', 'ادوات': 'ادوات-', 'الكترونيات': 'الكترونيات-',
-        'ملابس': 'ملابس-', 'تجميل': 'تجميل-', 'احذية': 'احذية-',
-        'اثاث': 'اثاث-', 'العاب': 'العاب-', 'أقمشة': 'أقمشة-', 'اخرى': 'اخرى-'
-      };
-      
-      if (prefixes[shortCategoryKey]) {
-        categoryPrefix = prefixes[shortCategoryKey];
-      } else if (shortCategoryKey && !fullCategory.includes('-')) {
-        // For new dynamic categories, we can use the short key itself as a prefix if it's distinct
-        categoryPrefix = shortCategoryKey + '-';
-      }
-
-      const adminName = req.admin ? req.admin.username.replace(/[^a-zA-Z0-9-_]/g, '_') : 'admin';
-      
-      // PRESERVE external URLs if provided
-      let image_path = productData.image_path || '';
-      if (!image_path || (!image_path.startsWith('http') && !image_path.startsWith('/uploads'))) {
-        image_path = `/uploads/books/admin__${adminName}__/${barcode}/${barcode}.webp`;
-      }
-
-      const finalProduct = {
-        ...productData,
-        barcode,
-        products_id,
-        product_category: fullCategory,
-        categoryPrefix,
-        image_path,
-        product_image: productData.product_image || barcode,
-        merchantId: merchantId || productData.merchantId || '67683937397e5b22b07b1406', // Fixed default admin ID
-        publisher: publisher || productData.publisher || '',
-        weight: parseFloat(productData.weight) || 0,
-        product_price: cleanPrice(productData.product_price),
-        price_cost: (publisher || productData.publisher || '').trim() !== '' ? (cleanPrice(productData.product_price) * 0.9) : cleanPrice(productData.price_cost),
-        product_quantity: parseInt(productData.product_quantity) || 2, // Use 2 as default if 0
-        createdAt: now,
-        updatedAt: now,
-        status: 'approved'
-      };
-
-      productsToExcel.push(finalProduct);
-
-      bulkOps.push({
-        updateOne: {
-          filter: { barcode: barcode },
-          update: { $set: finalProduct },
-          upsert: true
+        if (p.product_name && p.image_path && p.image_path.startsWith('http')) {
+          existingNameImageKeys.add(`${p.product_name}||${p.image_path}`);
         }
       });
+      console.log(`✅ Loaded ${allExistingProducts.length} existing products for duplicate checking`);
+      console.log(`📊 Existing barcodes count: ${existingBarcodes.size}`);
+      console.log(`📊 Existing name+image keys count: ${existingNameImageKeys.size}`);
+      res.write(JSON.stringify({ type: 'progress', progress: 0, message: `تم تحميل ${allExistingProducts.length} منتج موجود` }) + '\n');
+    } catch (loadErr) {
+      console.warn('⚠️ Could not preload existing products, will check individually:', loadErr.message);
     }
 
-    if (bulkOps.length === 0) {
-      return res.json({ success: true, message: 'لم يتم العثور على منتجات جديدة للإضافة (جميعها مكررة).' });
+    // Log sample of incoming products for debugging
+    console.log(`📥 Received ${products.length} products for import`);
+    if (products.length > 0) {
+      console.log(`📋 Sample first product data:`, JSON.stringify(products[0], null, 2));
     }
 
-    // Save to MongoDB
-    try {
-      await Product.bulkWrite(bulkOps);
-    } catch (mongoErr) {
-      console.error('❌ MongoDB bulkWrite failed:', mongoErr.message);
-      return res.status(500).json({ success: false, message: `فشل حفظ المنتجات في قاعدة البيانات: ${mongoErr.message}` });
+    // Process chunks sequentially to avoid overwhelming the database
+    for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {
+      const chunk = chunks[chunkIndex];
+      const bulkOps = [];
+
+      for (const productData of chunk) {
+        // 1. Duplicate check - only by barcode if explicitly provided
+        let isDuplicate = false;
+        
+        // Check by barcode (most reliable) - only if barcode is provided in data
+        if (productData.barcode && existingBarcodes.has(productData.barcode)) {
+          console.log(`⏩ Skipping duplicate product by barcode: ${productData.barcode}`);
+          totalProcessed++;
+          isDuplicate = true;
+        }
+        
+        if (isDuplicate) continue;
+
+        // Log details for debugging
+        console.log(`✅ Adding product: ${productData.product_name || 'No name'} (barcode: ${productData.barcode || 'No barcode'})`);
+        
+        // Generate barcode if not present
+        const barcode = productData.barcode || productData.products_id || generateRandomBarcode();
+
+        // Increment processed count
+        totalProcessed++;
+
+        // Barcode already generated above, use it
+        const products_id = productData.products_id || barcode;
+
+        // Map categories
+        let inputCategory = productData.product_category || '';
+        // If it's a short key, get the full name. If it's a full name, get the short key for prefixing.
+        let fullCategory = categoryMap[inputCategory] || inputCategory;
+        let shortCategoryKey = reverseCategoryMap[inputCategory] ? reverseCategoryMap[inputCategory] : (categoryMap[inputCategory] ? inputCategory : inputCategory);
+
+        // Determine category prefix
+        let categoryPrefix = '';
+        const prefixes = {
+          'رواية': 'رواية-', 'تنمية': 'تنمية-', 'ديني': 'ديني-', 'قاموس': 'قاموس-',
+          'صحة': 'صحة-', 'اعمال': 'اعمال-', 'فن': 'فن-', 'تاريخ': 'تاريخ-',
+          'تربية': 'تربية-', 'ادوات': 'ادوات-', 'الكترونيات': 'الكترونيات-',
+          'ملابس': 'ملابس-', 'تجميل': 'تجميل-', 'احذية': 'احذية-',
+          'اثاث': 'اثاث-', 'العاب': 'العاب-', 'أقمشة': 'أقمشة-', 'اخرى': 'اخرى-'
+        };
+        
+        if (prefixes[shortCategoryKey]) {
+          categoryPrefix = prefixes[shortCategoryKey];
+        } else if (shortCategoryKey && !fullCategory.includes('-')) {
+          // For new dynamic categories, we can use the short key itself as a prefix if it's distinct
+          categoryPrefix = shortCategoryKey + '-';
+        }
+
+        const adminName = req.admin ? req.admin.username.replace(/[^a-zA-Z0-9-_]/g, '_') : 'admin';
+        
+        // PRESERVE external URLs if provided
+        let image_path = productData.image_path || '';
+        if (!image_path || (!image_path.startsWith('http') && !image_path.startsWith('/uploads'))) {
+          image_path = `/uploads/books/admin__${adminName}__/${barcode}/${barcode}.webp`;
+        }
+
+        const finalProduct = {
+          ...productData,
+          barcode,
+          products_id,
+          product_category: fullCategory,
+          categoryPrefix,
+          image_path,
+          product_image: productData.product_image || barcode,
+          merchantId: merchantId || productData.merchantId || '67683937397e5b22b07b1406', // Fixed default admin ID
+          publisher: publisher || productData.publisher || '',
+          weight: parseFloat(productData.weight) || 0,
+          product_price: cleanPrice(productData.product_price),
+          price_cost: (publisher || productData.publisher || '').trim() !== '' ? (cleanPrice(productData.product_price) * 0.9) : cleanPrice(productData.price_cost),
+          product_quantity: parseInt(productData.product_quantity) || 2, // Use 2 as default if 0
+          createdAt: now,
+          updatedAt: now,
+          status: 'approved'
+        };
+
+        productsToExcel.push(finalProduct);
+
+        bulkOps.push({
+          updateOne: {
+            filter: { barcode: barcode },
+            update: { $set: finalProduct },
+            upsert: true
+          }
+        });
+        
+        console.log(`📝 Added to bulkOps. Current bulkOps length: ${bulkOps.length}`);
+
+        totalProcessed++;
+      }
+
+      // Save chunk to MongoDB using insertOne to avoid text index language override errors
+      if (bulkOps.length > 0) {
+        console.log(`💾 Attempting to save ${bulkOps.length} products to MongoDB...`);
+        
+        // Extract products from bulkOps
+        const productsToInsert = [];
+        for (const op of bulkOps) {
+          if (op.updateOne && op.updateOne.update && op.updateOne.update.$set) {
+            productsToInsert.push(op.updateOne.update.$set);
+          }
+        }
+        
+        // Log sample product for debugging
+        if (productsToInsert.length > 0) {
+          console.log(`📋 Sample product to insert:`, JSON.stringify(productsToInsert[0], null, 2));
+        }
+        
+        // Check for duplicates before inserting to avoid creating duplicate products
+        let insertedCount = 0;
+        const collection = Product.collection;
+        
+        for (const productData of productsToInsert) {
+          try {
+            // Check if product already exists
+            const existing = await collection.findOne({ barcode: productData.barcode });
+            
+            if (existing) {
+              console.log(`⏭️ Skipping duplicate product: ${productData.product_name} (barcode: ${productData.barcode})`);
+              // Skip this product - it already exists
+            } else {
+              // Only insert if it doesn't exist
+              await collection.insertOne(productData);
+              insertedCount++;
+              console.log(`✅ Inserted new product: ${productData.product_name} (barcode: ${productData.barcode})`);
+            }
+          } catch (err) {
+            console.error(`❌ Failed to process product ${productData.product_name}:`, err.message);
+          }
+        }
+        
+        console.log(`✅ MongoDB operations succeeded: inserted/updated ${insertedCount} products`);
+        totalAdded += insertedCount;
+      } else {
+        console.log(`⚠️ No products to save for this chunk`);
+      }
+
+      // Calculate progress percentage and send update
+      const progressPercent = Math.round((totalProcessed / totalProducts) * 100);
+      console.log(`📊 Progress: ${progressPercent}% (${totalProcessed}/${totalProducts} processed, ${totalAdded} added)`);
+      
+      // Send progress update to keep connection alive
+      res.write(JSON.stringify({ 
+        type: 'progress', 
+        progress: progressPercent, 
+        processed: totalProcessed,
+        added: totalAdded,
+        total: totalProducts,
+        message: `تمت معالجة ${totalProcessed} من ${totalProducts} منتج` 
+      }) + '\n');
+    }
+
+    if (totalAdded === 0) {
+      res.write(JSON.stringify({ type: 'complete', success: true, message: 'لم يتم العثور على منتجات جديدة للإضافة (جميعها مكررة).' }) + '\n');
+      return res.end();
     }
 
     // Save to Excel (non-blocking failure)
     try {
+      res.write(JSON.stringify({ type: 'info', message: 'جاري مزامنة Excel...' }) + '\n');
       await bulkAddProductsToExcel(productsToExcel);
     } catch (excelErr) {
       console.warn('⚠️ Excel sync failed but products saved to MongoDB:', excelErr.message);
     }
 
     // Sync to Google Sheets (non-blocking)
+    res.write(JSON.stringify({ type: 'info', message: 'جاري مزامنة Google Sheets...' }) + '\n');
     for (const p of productsToExcel) {
       googleSheetsService.syncProduct(p).catch(err => console.error('Google Sheets Sync Error (Bulk):', err));
     }
 
     clearBooksCache();
-    res.json({ success: true, message: `تمت إضافة ${productsToExcel.length} منتج بنجاح.` });
+    
+    // Send final response
+    res.write(JSON.stringify({ 
+      type: 'complete',
+      success: true, 
+      message: `تمت إضافة ${totalAdded} منتج بنجاح من أصل ${totalProducts} منتج.`,
+      totalProcessed,
+      totalAdded,
+      progress: 100
+    }) + '\n');
+    
+    res.end();
   } catch (error) {
     console.error('Error in bulkAddProducts:', error);
-    res.status(500).json({ success: false, message: `خطأ في الخادم أثناء الإضافة الجماعية: ${error.message}` });
+    if (!res.headersSent) {
+      res.status(500).json({ success: false, message: `خطأ في الخادم أثناء الإضافة الجماعية: ${error.message}` });
+    } else {
+      res.write(JSON.stringify({ type: 'error', message: `خطأ في الخادم: ${error.message}` }) + '\n');
+      res.end();
+    }
   }
 }
 

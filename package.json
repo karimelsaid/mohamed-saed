@@ -25,10 +25,10 @@
     "mushaf:zip": "node Backend/scripts/zip-mushaf.js",
     "mushaf:android:sync": "cd mushaf-wird-mobile && npx cap sync android",
     "mushaf:android:open": "cd mushaf-wird-mobile && npx cap open android",
-    "mushaf:android:run": "npm run mushaf:build && npm run mushaf:android:sync && npm run mushaf:android:open",
+    "mushaf:android:run": "ng build mushaf-wird --configuration production && npm run mushaf:android:sync && npm run mushaf:android:open",
     "mushaf:ios:sync": "cd mushaf-wird-mobile && npx cap sync ios",
     "mushaf:ios:open": "cd mushaf-wird-mobile && npx cap open ios",
-    "mushaf:ios:run": "npm run mushaf:build && npm run mushaf:ios:sync && npm run mushaf:ios:open"
+    "mushaf:ios:run": "npm run mushaf:build --configuration production && npm run mushaf:ios:sync && npm run mushaf:ios:open"
   },
   "private": true,
   "dependencies": {
@@ -76,6 +76,7 @@
     "express": "^4.22.1",
     "html2canvas": "^1.4.1",
     "jspdf": "^3.0.4",
+    "jszip": "^3.10.1",
     "libarchive.js": "^2.0.2",
     "lines-and-columns": "^2.0.4",
     "mdb-reader": "^3.1.0",

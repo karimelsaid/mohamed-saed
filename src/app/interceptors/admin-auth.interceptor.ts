@@ -33,6 +33,11 @@ export class AdminAuthInterceptor implements HttpInterceptor {
         return next.handle(authReq).pipe(
           catchError((error: HttpErrorResponse) => {
             if (error.status === 401) {
+              // Skip force logout for register-sale to let the component handle authError and guide the user
+              if (req.url.includes('/api/admin/register-sale')) {
+                return throwError(error);
+              }
+
               // Only logout if the user is actually an admin
               const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
               if (currentUser && currentUser.role === 'admin') {

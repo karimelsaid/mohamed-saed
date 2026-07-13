@@ -1,0 +1,117 @@
+<div class="min-h-screen bg-gradient-to-br from-amber-50 via-white to-orange-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+  <!-- Header -->
+  <div class="bg-white dark:bg-gray-800 shadow-lg sticky top-0 z-50 mt-16 md:mt-20">
+    <div class="container mx-auto px-4 py-6">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <button routerLink="/" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors">
+            <fa-icon [icon]="faBook" class="text-2xl text-gray-600 dark:text-gray-300"></fa-icon>
+          </button>
+          <div>
+            <h1 class="text-2xl font-bold text-gray-800 dark:text-white">كتب ممكن نعجبك</h1>
+            <p class="text-sm text-gray-500 dark:text-gray-400">توصيات مخصصة لك بناءً على اهتماماتك</p>
+          </div>
+        </div>
+        <button *ngIf="recommendations.length > 0" 
+                (click)="deleteRecommendations()"
+                class="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors">
+          <fa-icon [icon]="faTrash" class="text-sm"></fa-icon>
+          <span class="text-sm font-medium">حذف التوصيات</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="container mx-auto px-4 py-12">
+    <div class="flex items-center justify-center">
+      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div>
+    </div>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="error" class="container mx-auto px-4 py-12">
+    <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl p-8 text-center">
+      <fa-icon [icon]="faBook" class="text-4xl text-red-400 mb-4"></fa-icon>
+      <p class="text-red-600 dark:text-red-400">{{ error }}</p>
+      <button routerLink="/" class="mt-4 px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+        العودة للرئيسية
+      </button>
+    </div>
+  </div>
+
+  <!-- Recommendations Grid -->
+  <div *ngIf="!loading && !error" class="container mx-auto px-4 py-8">
+    <div *ngIf="recommendations.length === 0" class="text-center py-12">
+      <fa-icon [icon]="faBook" class="text-6xl text-gray-300 dark:text-gray-600 mb-4"></fa-icon>
+      <p class="text-gray-500 dark:text-gray-400 text-lg">لا توجد توصيات حالياً</p>
+    </div>
+
+    <div *ngIf="recommendations.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <div *ngFor="let book of recommendations" 
+           class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
+        
+        <!-- Book Cover -->
+        <div class="relative h-64 bg-gradient-to-br from-amber-100 to-orange-100 dark:from-gray-700 dark:to-gray-600">
+          <img *ngIf="book.image" 
+               [src]="book.image" 
+               [alt]="book.name"
+               class="w-full h-full object-cover"
+               (click)="goToBook(book.id)"
+               style="cursor: pointer;">
+          <div *ngIf="!book.image" 
+               class="w-full h-full flex items-center justify-center cursor-pointer"
+               (click)="goToBook(book.id)">
+            <fa-icon [icon]="faBook" class="text-6xl text-gray-300 dark:text-gray-500"></fa-icon>
+          </div>
+          
+          <!-- Rating Badge -->
+          <div *ngIf="book.rating" class="absolute top-3 right-3 bg-white dark:bg-gray-900 px-3 py-1 rounded-full shadow-md flex items-center gap-1">
+            <fa-icon [icon]="faStar" class="text-yellow-400 text-sm"></fa-icon>
+            <span class="text-sm font-bold text-gray-800 dark:text-white">{{ book.rating }}</span>
+          </div>
+        </div>
+
+        <!-- Book Info -->
+        <div class="p-5">
+          <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-2 line-clamp-2 cursor-pointer hover:text-amber-600 dark:hover:text-amber-400"
+              (click)="goToBook(book.id)">
+            {{ book.name }}
+          </h3>
+          <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">{{ book.author }}</p>
+          
+          <!-- Reason -->
+          <p *ngIf="book.reason" class="text-xs text-gray-500 dark:text-gray-500 mb-3 line-clamp-2">
+            {{ book.reason }}
+          </p>
+          
+          <!-- Price -->
+          <div class="flex items-center justify-between mb-4">
+            <span class="text-2xl font-bold text-amber-600 dark:text-amber-400">
+              {{ book.price }} ج.م
+            </span>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex gap-2">
+            <button (click)="addToCart(book.id)" 
+                    class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
+              <fa-icon [icon]="faCartPlus" class="text-sm"></fa-icon>
+              <span class="text-sm font-medium">السلة</span>
+            </button>
+            
+            <button (click)="addToFavorites(book.id)" 
+                    class="p-2 border-2 border-gray-200 dark:border-gray-600 rounded-lg hover:border-red-500 hover:text-red-500 transition-colors">
+              <fa-icon [icon]="faHeart"></fa-icon>
+            </button>
+            
+            <button (click)="goToBook(book.id)" 
+                    class="flex-1 bg-amber-500 hover:bg-amber-600 text-white py-2 px-4 rounded-lg transition-colors font-medium">
+              شراء
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

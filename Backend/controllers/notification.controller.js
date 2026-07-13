@@ -163,4 +163,69 @@ exports.sendAdminNotification = async (req, res) => {
     }
 };
 
+/**
+ * Public send notification endpoint for n8n workflows
+ */
+exports.sendNotification = async (req, res) => {
+    try {
+        const { userId, type, title, message, data, important } = req.body;
+
+        if (!userId || !title || !message) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'userId, title, and message are required' 
+            });
+        }
+
+        const User = require('../models/User.model');
+
+        // Save notification to database
+        const user = await User.findById(userId);
+        if (user) {
+            user.notifications.push({
+                message: message,
+                type: type || 'recommendation',
+                read: false,
+                createdAt: new Date(),
+                data: data || {}
+            });
+            await user.save({ validateBeforeSave: false });
+            console.log(`[Notification] Saved to DB for user ${userId}: ${title}`);
+        }
+
+        const payload = {
+            notification: {
+                title: title,
+                body: message,
+                icon: '/assets/icons/icon-192x192.png',
+                vibrate: [100, 50, 100],
+                data: data || {}
+            }
+        };
+
+        // Try to send notification, but don't fail if user has no subscriptions
+        try {
+            const result = await pushService.sendToUser(userId, payload, { important: important || false });
+            console.log(`[Notification] Sent push to user ${userId}: ${title}`);
+            
+            res.json({ 
+                success: true, 
+                message: 'Notification sent',
+                result
+            });
+        } catch (pushError) {
+            // If push notification fails, still return success (user might not have subscriptions)
+            console.warn(`[Notification] Push failed for user ${userId}:`, pushError.message);
+            res.json({ 
+                success: true, 
+                message: 'Notification saved to DB (no active push subscriptions)',
+                warning: 'No active push subscriptions for this user'
+            });
+        }
+    } catch (error) {
+        console.error('Error sending notification:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
 

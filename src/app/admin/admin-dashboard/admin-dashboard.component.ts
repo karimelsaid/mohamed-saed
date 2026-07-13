@@ -66,6 +66,14 @@ interface Order {
     role: string;
     note?: string;
   }[];
+  source?: 'website' | 'amazon';
+  amazonOrderId?: string;
+  hasStockIssues?: boolean;
+  stockIssueDetails?: Array<{
+    productId: string;
+    requestedQty: number;
+    reason: string;
+  }>;
 }
 
 interface RequestedBook {
@@ -145,6 +153,14 @@ interface GroupedOrder {
     role: string;
     note?: string;
   }[];
+  source?: 'website' | 'amazon';
+  amazonOrderId?: string;
+  hasStockIssues?: boolean;
+  stockIssueDetails?: Array<{
+    productId: string;
+    requestedQty: number;
+    reason: string;
+  }>;
 }
 
 interface PrintOrder {
@@ -2544,17 +2560,17 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     let cleanedPhone = phone.replace(/[\s\-\(\)]/g, '');
     // If it doesn't start with +, add Egypt country code
     if (!cleanedPhone.startsWith('+')) {
-      // If it starts with 0 (e.g., 01000000000), replace 0 with +2
+      // If it starts with 0 (e.g., 01000000000), replace leading 0 with +20
       if (cleanedPhone.startsWith('0')) {
-        cleanedPhone = '+2' + cleanedPhone.substring(1);
+        cleanedPhone = '+20' + cleanedPhone.substring(1);
       }
-      // If it starts with 20 (e.g., 20100000000 or 201000000000), add + at the beginning
+      // If it starts with 20 (e.g., 201000000000), add + at the beginning
       else if (cleanedPhone.startsWith('20')) {
         cleanedPhone = '+' + cleanedPhone;
       }
-      // Otherwise, add +2
+      // Otherwise, add full +20 prefix
       else {
-        cleanedPhone = '+2' + cleanedPhone;
+        cleanedPhone = '+20' + cleanedPhone;
       }
     }
     return `https://wa.me/${cleanedPhone.replace('+', '')}`;
@@ -3031,31 +3047,89 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       formData.append('publisherImage', this.publisherImageFile);
     }
 
-    this.http.post(`${this.backendBaseUrl}/admin/bulk-add-products`, formData).subscribe({
-      next: (res: any) => {
-        this.importingBulk = false;
-        this.bulkImportSuccess = true;
-        this.showSuccessModal(`تم استيراد ${formattedProducts.length} منتج بنجاح.`);
-        this.resetBulkImport();
-        this.loadProducts();
-      },
-      error: (err) => {
-        this.importingBulk = false;
-        console.error('Bulk Import Error:', err);
-        const serverMessage = err.error?.message || err.message || '';
-        const statusCode = err.status || 0;
-        let userMessage = 'حدث خطأ أثناء الاستيراد الجماعي.';
-        if (statusCode === 401) {
-          userMessage = 'انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى.';
-        } else if (statusCode === 400) {
-          userMessage = serverMessage || 'بيانات غير صالحة. يرجى التحقق من ملف الاستيراد.';
-        } else if (statusCode === 413) {
-          userMessage = 'حجم البيانات كبير جداً. حاول تقليل عدد المنتجات.';
-        } else if (serverMessage) {
-          userMessage = `حدث خطأ: ${serverMessage}`;
-        }
-        this.showErrorModal(userMessage);
+    // Use fetch API for streaming response to avoid timeout
+    const user = JSON.parse(localStorage.getItem('user') || 'null');
+    const token = user?.token || localStorage.getItem('token');
+    
+    fetch(`${this.backendBaseUrl}/admin/bulk-add-products`, {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'Authorization': `Bearer ${token}`
       }
+    }).then(async (response) => {
+      console.log('Response received:', response.status, response.ok);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // Read streaming response
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      if (reader) {
+        console.log('Starting to read streaming response...');
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) {
+            console.log('Stream reading completed');
+            break;
+          }
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          console.log(`Received ${lines.length} lines from stream`);
+          
+          for (const line of lines) {
+            if (line.trim()) {
+              try {
+                const data = JSON.parse(line);
+                console.log('Parsed data:', data);
+                
+                if (data.type === 'progress') {
+                  this.bulkImportProgress = data.progress;
+                  console.log(`Progress: ${data.progress}% - ${data.message}`);
+                  this.cdr.detectChanges();
+                } else if (data.type === 'complete') {
+                  this.importingBulk = false;
+                  this.bulkImportSuccess = true;
+                  this.bulkImportProgress = 100;
+                  const message = data.message || `تم استيراد ${formattedProducts.length} منتج بنجاح.`;
+                  this.showSuccessModal(message);
+                  this.resetBulkImport();
+                  this.loadProducts();
+                  return;
+                } else if (data.type === 'error') {
+                  this.importingBulk = false;
+                  this.bulkImportProgress = 0;
+                  this.showErrorModal(data.message || 'حدث خطأ أثناء الاستيراد');
+                  return;
+                } else if (data.type === 'info') {
+                  console.log('Info:', data.message);
+                }
+              } catch (parseErr) {
+                console.warn('Failed to parse streaming line:', line);
+              }
+            }
+          }
+        }
+      }
+    }).catch((err) => {
+      this.importingBulk = false;
+      this.bulkImportProgress = 0;
+      console.error('Bulk Import Error:', err);
+      let userMessage = 'حدث خطأ أثناء الاستيراد الجماعي.';
+      
+      if (err.message.includes('timeout') || err.message.includes('Timeout')) {
+        userMessage = 'انتهت مهلة الطلب بسبب كثرة المنتجات. جاري معالجتها في الخلفية...';
+      } else if (err.message.includes('Failed to fetch')) {
+        userMessage = 'فشل الاتصال بالخادم. يرجى التحقق من اتصال الإنترنت والمحاولة مرة أخرى.';
+      }
+      
+      this.showErrorModal(userMessage);
     });
   }
 
@@ -3240,7 +3314,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
                 orderDate: order.orderDate,
                 totalAmount: order.totalAmount,
                 isMerchantOrder: order.isMerchantOrder || false,
-                paymentStatus: order.paymentStatus, // Map paymentStatus
+                paymentStatus: order.paymentStatus,
                 isCommunityItem: order.isCommunityItem,
                 communityItemId: order.communityItemId,
                 communityOwnerId: order.communityOwnerId,
@@ -3248,7 +3322,11 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
                 communityOwnerPhone: order.communityOwnerPhone,
                 communityOwnerAddress: order.communityOwnerAddress,
                 statusLog: order.statusLog,
-                shippingMethod: order.shippingMethod
+                shippingMethod: order.shippingMethod,
+                source: order.source || 'website',
+                amazonOrderId: order.amazonOrderId || undefined,
+                hasStockIssues: order.hasStockIssues || false,
+                stockIssueDetails: order.stockIssueDetails || []
               };
             }
             groupedOrdersMap[order._id].products.push({
@@ -3850,6 +3928,12 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // Check network status before attempting upload
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      this.showErrorModal('لا يوجد اتصال بالإنترنت. يرجى التحقق من الاتصال والمحاولة مرة أخرى.');
+      return;
+    }
+
     this.imageError = null;
     if (!this.selectedFiles.length && !this.imageUrls.length) {
       this.imageError = 'يرجى اختيار صورة واحدة على الأقل أو إضافة رابط صورة.';
@@ -3896,12 +3980,15 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     this.uploadProgress = 0;
     this.uploadSuccess = false;
 
+    console.log('Starting upload to:', `${this.backendBaseUrl}/admin/add-product`);
+    console.log('Network status:', typeof navigator !== 'undefined' ? navigator.onLine : 'unknown');
+
     this.http.request('POST', `${this.backendBaseUrl}/admin/add-product`, {
       body: formData,
       reportProgress: true,
       observe: 'events'
     }).pipe(
-      timeout(60000), // Timeout after 1 minute
+      timeout(300000), // Timeout after 5 minutes for large file uploads
       finalize(() => {
         this.uploading = false;
         // Ensure progress is reset if not successful
@@ -3939,10 +4026,38 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
         this.uploadProgress = 0;
         this.uploadSuccess = false;
         console.error('Upload Error:', error); // Log error for debugging
+        console.error('Error details:', {
+          status: error?.status,
+          statusText: error?.statusText,
+          message: error?.message,
+          error: error?.error,
+          name: error?.name,
+          ok: error?.ok,
+          url: `${this.backendBaseUrl}/admin/add-product`
+        });
+        
         // Extract server-provided message when possible
-        const serverMessage = (error && error.error && error.error.message) ? error.error.message : (error && error.message) ? error.message : 'حدث خطأ أثناء إضافة المنتج.';
+        let errorMessage = 'حدث خطأ أثناء إضافة المنتج.';
+        
+        if (error?.status === 0) {
+          errorMessage = 'فشل الاتصال بالخادم. يرجى التحقق من اتصال الإنترنت والمحاولة مرة أخرى.';
+          console.error('Network connection failed. Possible causes: CORS, server down, or network issue.');
+        } else if (error?.status === 401) {
+          errorMessage = 'انتهت جلسة العمل. يرجى تسجيل الدخول مرة أخرى.';
+        } else if (error?.status === 403) {
+          errorMessage = 'ليس لديك صلاحية لإضافة منتجات.';
+        } else if (error?.status === 413) {
+          errorMessage = 'حجم الملفات كبير جداً. يرجى تقليل حجم الصور.';
+        } else if (error?.status === 500) {
+          errorMessage = 'خطأ في الخادم. يرجى المحاولة مرة أخرى لاحقاً.';
+        } else if (error?.error?.message) {
+          errorMessage = error.error.message;
+        } else if (error?.message) {
+          errorMessage = error.message;
+        }
+        
         const statusInfo = error && error.status ? ` (HTTP ${error.status})` : '';
-        this.showErrorModal(serverMessage + statusInfo);
+        this.showErrorModal(errorMessage + statusInfo);
       }
     });
   }

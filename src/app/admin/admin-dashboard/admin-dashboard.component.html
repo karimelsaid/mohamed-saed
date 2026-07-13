@@ -1859,6 +1859,21 @@
                 <fa-icon *ngIf="!importingBulk" [icon]="['fas', 'check-circle']" class="ml-3"></fa-icon>
                 {{ importingBulk ? 'جاري الاستيراد...' : 'بدء عملية الاستيراد' }}
               </button>
+              
+              <!-- Progress Bar -->
+              <div *ngIf="importingBulk" class="mt-4">
+                <div class="flex justify-between mb-2">
+                  <span class="text-sm font-medium text-gray-700 dark:text-gray-300">التقدم</span>
+                  <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ bulkImportProgress }}%</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-4 dark:bg-gray-700">
+                  <div class="bg-gradient-to-r from-blue-600 to-indigo-700 h-4 rounded-full transition-all duration-300" 
+                       [style.width.%]="bulkImportProgress"></div>
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                  {{ bulkImportProgress < 100 ? 'جاري معالجة المنتجات...' : 'تمت العملية بنجاح!' }}
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -2497,6 +2512,7 @@
                 <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">الإجمالي</th>
                 <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">الدفع</th>
                 <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">الشحن</th>
+                <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">المصدر</th>
                 <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">التاريخ</th>
                 <th class="py-3 px-4 text-center border-b border-blue-200 dark:border-blue-700">إجراءات</th>
               </tr>
@@ -2561,6 +2577,20 @@
                     }">
                       {{ order.shippingMethod === 'merchant' ? 'التاجر يشحن' : 'مندوب النظام' }}
                     </span>
+                  </td>
+                  <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700"
+                    [attr.rowspan]="order.products.length">
+                    <span class="inline-block px-2 py-1 rounded-full text-[10px] font-semibold" [ngClass]="{
+                      'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20': order.source === 'amazon',
+                      'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20': order.source === 'website'
+                    }">
+                      {{ order.source === 'amazon' ? 'أمازون' : 'الموقع' }}
+                    </span>
+                    <div *ngIf="order.hasStockIssues" class="mt-1">
+                      <span class="inline-block px-1.5 py-0.5 rounded text-[9px] bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                        ⚠️ مشكلة مخزون
+                      </span>
+                    </div>
                   </td>
                   <td class="py-2 px-3 text-center border-b border-blue-200 dark:border-blue-700"
                     [attr.rowspan]="order.products.length">

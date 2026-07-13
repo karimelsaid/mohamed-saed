@@ -1,6 +1,7 @@
 const UserLibrary = require('../models/UserLibrary.model');
 const Ebook = require('../models/Ebook.model');
 const Subscription = require('../models/Subscription.model');
+const axios = require('axios');
 
 // Get user's library
 exports.getUserLibrary = async (req, res) => {
@@ -57,6 +58,21 @@ exports.addToLibrary = async (req, res) => {
             acquiredVia,
             pricePaid: pricePaid || ebook.price
         });
+
+        // Trigger book recommendation workflow for purchase events
+        if (acquiredVia === 'purchase') {
+            try {
+                await axios.post('https://n8n.knoozbook.com/webhook/book-recommendation', {
+                    userId: userId.toString(),
+                    eventType: 'purchase',
+                    bookId: ebookId.toString()
+                });
+                console.log('[UserLibrary] Book recommendation workflow triggered for user:', userId);
+            } catch (webhookError) {
+                console.error('[UserLibrary] Failed to trigger book recommendation workflow:', webhookError.message);
+                // Don't fail the purchase if webhook fails
+            }
+        }
 
         res.status(201).json({
             success: true,

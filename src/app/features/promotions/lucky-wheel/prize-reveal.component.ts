@@ -287,7 +287,7 @@ export class PrizeRevealComponent {
     }
 
     getBookImage(imagePath: string): string {
-        if (!imagePath) return 'assets/book-placeholder.png';
+        if (!imagePath) return 'assets/image/book-placeholder.jpg';
         if (imagePath.startsWith('http')) return imagePath;
 
         const base = environment.apiBaseUrl.includes('localhost')

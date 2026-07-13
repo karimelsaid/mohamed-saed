@@ -216,7 +216,7 @@ export class NavbarIconsComponent implements OnInit {
   selectFilter(filter: string) {
     this.selectedFilter = filter;
     this.showFilterDropdown = false;
-    this.onSearchExecuted({ query: this.searchQuery.trim(), filter: this.selectedFilter });
+    this.onSearchExecuted({ query: this.searchQuery, filter: this.selectedFilter });
   }
 
   onSearchExecuted(event: { query: string; filter: string }) {
@@ -225,8 +225,8 @@ export class NavbarIconsComponent implements OnInit {
     this.searchQuery = query;
     this.selectedFilter = filter;
     // Track search event
-    if (query && query.trim()) {
-      this.analyticsTrackingService.trackSearch(query.trim());
+    if (query) {
+      this.analyticsTrackingService.trackSearch(query);
     }
     this.router.navigate(['/research'], { queryParams: { q: query, filter: filter } });
   }
@@ -339,9 +339,8 @@ export class NavbarIconsComponent implements OnInit {
     this.authService.user$.subscribe(user => {
       if (!user || !user.id) return;
       this.notificationService.deleteNotification(user.id, notification._id).subscribe(() => {
-        this.notifications = this.notifications.filter(n => n._id !== notification._id);
-        this.unreadCount = this.notifications.filter(n => !n.read).length;
-        this.cdr.markForCheck();
+        // Refresh notifications from server to sync with other components
+        this.notificationService.refreshNotifications(user.id);
       });
     }).unsubscribe();
   }
@@ -351,7 +350,20 @@ export class NavbarIconsComponent implements OnInit {
     this.markNotificationAsRead(notification);
 
     // Navigate based on type
-    if (notification.type === 'order') {
+    if (notification.type === 'recommendation') {
+      // Navigate to recommendations page with data
+      const recommendationsData = notification.data?.recommendations;
+      if (recommendationsData) {
+        this.router.navigate(['/recommendations'], { 
+          queryParams: { 
+            data: typeof recommendationsData === 'string' ? recommendationsData : JSON.stringify(recommendationsData)
+          } 
+        });
+      } else {
+        this.router.navigate(['/recommendations']);
+      }
+      this.showNotificationsDropdown = false;
+    } else if (notification.type === 'order') {
       this.router.navigate(['/requests']);
       this.showNotificationsDropdown = false; // Close dropdown
     }
@@ -501,7 +513,36 @@ export class NavbarIconsComponent implements OnInit {
       case 'order': return this.faCartPlus;
       case 'print_order': case 'printOrder': return this.faFilePdf;
       case 'offer': return this.faCoins;
+      case 'recommendation': return this.faBook;
       case 'system': default: return this.faBell;
     }
+  }
+
+  // Parse recommendations from notification data
+  getRecommendations(notification: Notification): any[] {
+    if (notification.type === 'recommendation' && notification.data && notification.data.recommendations) {
+      try {
+        const recommendations = typeof notification.data.recommendations === 'string' 
+          ? JSON.parse(notification.data.recommendations) 
+          : notification.data.recommendations;
+        return Array.isArray(recommendations) ? recommendations : [];
+      } catch (e) {
+        console.error('Error parsing recommendations:', e);
+        return [];
+      }
+    }
+    return [];
+  }
+
+  // Navigate to book details
+  goToBook(bookId: string): void {
+    this.showNotificationsDropdown = false;
+    this.router.navigate(['/book', bookId]);
+  }
+
+  // Add book to cart
+  addToCart(bookId: string): void {
+    this.showNotificationsDropdown = false;
+    this.router.navigate(['/book', bookId]);
   }
 }

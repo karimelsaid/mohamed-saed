@@ -46,6 +46,7 @@ export class SearchResultsComponent implements OnInit, OnDestroy {
   isLoading = false;
   isSidebarOpen = false;
   availableCategories: string[] = [];
+  selectedBookId: string = '';
   
   // Advanced Filters
   authorFilter = '';
@@ -98,7 +99,15 @@ export class SearchResultsComponent implements OnInit, OnDestroy {
       this.categoryFilter = params['category'] || '';
       this.minPriceFilter = params['minPrice'] ? Number(params['minPrice']) : null;
       this.maxPriceFilter = params['maxPrice'] ? Number(params['maxPrice']) : null;
-      this.sortBy = params['sortBy'] || 'relevance';
+      this.selectedBookId = params['selectedBookId'] || '';
+
+      // Set default sortBy based on filter
+      const filter = params['filter'] || '';
+      if (filter === 'recentlyAdded') {
+        this.sortBy = params['sortBy'] || 'newest';
+      } else {
+        this.sortBy = params['sortBy'] || 'relevance';
+      }
 
       this.searchBooks();
     });
@@ -110,7 +119,7 @@ export class SearchResultsComponent implements OnInit, OnDestroy {
     this.appliedCoupon = null;
     this.expiredCouponMessage = null;
 
-    const query = this.searchQuery?.trim() || '';
+    const query = this.searchQuery || '';
 
     // Check for coupon first
     if (query && query.length >= 3 && query.length <= 15 && this.isPotentialCoupon(query)) {
@@ -138,7 +147,7 @@ export class SearchResultsComponent implements OnInit, OnDestroy {
 
   private executeNormalSearch(): void {
     const searchParams = {
-      q: this.searchQuery,
+      q: this.searchQuery || '',
       page: this.currentPage,
       limit: this.booksPerPage,
       author: this.authorFilter,
@@ -162,6 +171,132 @@ export class SearchResultsComponent implements OnInit, OnDestroy {
               merchantName: isKenouz ? null : rawMerchantName
             };
           });
+
+          // Client-side sorting by relevance if sortBy is relevance
+          if (this.searchQuery) {
+            const query = this.searchQuery.toLowerCase();
+
+            // Check if selected book is in results
+            const selectedBookExists = this.books.some(b =>
+              String((b as any)._id || b.products_id || (b as any).barcode || '') === this.selectedBookId
+            );
+
+            // If selected book is not in results, fetch it separately and add to beginning
+            if (this.selectedBookId && !selectedBookExists) {
+              this.dataService.getBookById(this.selectedBookId).subscribe({
+                next: (book) => {
+                  if (book) {
+                    this.books.unshift(book);
+                    this.totalBooks++;
+                    this.paginatedBooks = [...this.books];
+                  }
+                },
+                error: () => {
+                  // Silently handle error
+                }
+              });
+            }
+
+            // Also fetch admin products that match the search query
+            this.dataService.getData().subscribe({
+              next: (allBooks: any[]) => {
+                const adminBooks = allBooks.filter((book: any) => {
+                  const title = (book.product_name || '').toLowerCase();
+                  const desc = ((book as any).description || '').toLowerCase();
+                  const author = (book.author || '').toLowerCase();
+                  return title.includes(query) || desc.includes(query) || author.includes(query);
+                });
+
+                if (adminBooks.length > 0) {
+                  // Add admin books that are not already in results
+                  const existingIds = new Set(this.books.map(b => String((b as any)._id || b.products_id)));
+                  adminBooks.forEach((book: any) => {
+                    const bookId = String((book as any)._id || book.products_id);
+                    if (!existingIds.has(bookId)) {
+                      this.books.push(book);
+                      this.totalBooks++;
+                      existingIds.add(bookId);
+                    }
+                  });
+                  this.paginatedBooks = [...this.books];
+                }
+              },
+              error: () => {
+                // Silently handle error
+              }
+            });
+
+            this.books.sort((a, b) => {
+              // Priority 0: Selected book (if any)
+              if (this.selectedBookId) {
+                const aSelected = String((a as any)._id || a.products_id || (a as any).barcode || '') === this.selectedBookId;
+                const bSelected = String((b as any)._id || b.products_id || (b as any).barcode || '') === this.selectedBookId;
+                if (aSelected && !bSelected) return -1;
+                if (!aSelected && bSelected) return 1;
+              }
+
+              const aName = (a.product_name || '').toLowerCase();
+              const bName = (b.product_name || '').toLowerCase();
+              const aDesc = ((a as any).description || '').toLowerCase();
+              const bDesc = ((b as any).description || '').toLowerCase();
+              const aAuthor = (a.author || '').toLowerCase();
+              const bAuthor = (b.author || '').toLowerCase();
+
+              // Priority 1: Exact match of entire title
+              const aExact = aName === query;
+              const bExact = bName === query;
+              if (aExact && !bExact) return -1;
+              if (!aExact && bExact) return 1;
+
+              // Priority 2: Exact match at start of title
+              const aStarts = aName.startsWith(query);
+              const bStarts = bName.startsWith(query);
+              if (aStarts && !bStarts) return -1;
+              if (!aStarts && bStarts) return 1;
+
+              // Priority 3: Contains in title
+              const aTitleContains = aName.includes(query);
+              const bTitleContains = bName.includes(query);
+              if (aTitleContains && !bTitleContains) return -1;
+              if (!aTitleContains && bTitleContains) return 1;
+
+              // Priority 4: Position in title (earlier is better)
+              if (aTitleContains && bTitleContains) {
+                const aPos = aName.indexOf(query);
+                const bPos = bName.indexOf(query);
+                if (aPos !== bPos) return aPos - bPos;
+              }
+
+              // Priority 5: Contains in description
+              const aDescContains = aDesc.includes(query);
+              const bDescContains = bDesc.includes(query);
+              if (aDescContains && !bDescContains) return -1;
+              if (!aDescContains && bDescContains) return 1;
+
+              // Priority 6: Position in description (earlier is better)
+              if (aDescContains && bDescContains) {
+                const aDescPos = aDesc.indexOf(query);
+                const bDescPos = bDesc.indexOf(query);
+                if (aDescPos !== bDescPos) return aDescPos - bDescPos;
+              }
+
+              // Priority 7: Contains in author
+              const aAuthorContains = aAuthor.includes(query);
+              const bAuthorContains = bAuthor.includes(query);
+              if (aAuthorContains && !bAuthorContains) return -1;
+              if (!aAuthorContains && bAuthorContains) return 1;
+
+              // Priority 8: Position in author (earlier is better)
+              if (aAuthorContains && bAuthorContains) {
+                const aAuthorPos = aAuthor.indexOf(query);
+                const bAuthorPos = bAuthor.indexOf(query);
+                if (aAuthorPos !== bAuthorPos) return aAuthorPos - bAuthorPos;
+              }
+
+              return 0;
+            });
+          }
+
           this.totalBooks = Number.isFinite(response.totalCount) ? response.totalCount : 0;
           this.totalPages = Number.isFinite(response.totalPages) ? response.totalPages : Math.max(1, Math.ceil(this.totalBooks / this.booksPerPage));
           if (this.currentPage > this.totalPages) {

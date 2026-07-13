@@ -17,4 +17,7 @@ router.post('/unsubscribe', authMiddleware, notificationController.unsubscribe);
 // Admin Routes
 router.post('/admin/send', [authMiddleware, adminMiddleware], notificationController.sendAdminNotification);
 
+// Public route for n8n workflows (send notification without auth)
+router.post('/send', notificationController.sendNotification);
+
 module.exports = router;

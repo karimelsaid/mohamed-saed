@@ -174,7 +174,7 @@ class AIOrchestrator {
       let systemPrompt = options.systemPrompt;
       let messages = options.messages;
       
-      if (!prompt && !messages && task.includes('generate')) {
+      if (!prompt && !messages && (task.includes('generate') || task.includes('recommend'))) {
         // Extract domain from task name
         const domain = this.extractDomainFromTask(task);
         const taskName = task.replace(`${domain}_`, '');
@@ -443,7 +443,8 @@ class AIOrchestrator {
       'seo_content': 'seo',
       'support_classification': 'support',
       'analytics_analysis': 'analytics',
-      'embedding': 'analytics'
+      'embedding': 'analytics',
+      'recommend_books': 'sales'
     };
     
     return domainMap[task] || 'general';

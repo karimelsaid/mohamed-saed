@@ -77,5 +77,26 @@
         "total": 706
       }
     ]
+  },
+  {
+    "id": "1783168041677",
+    "invoiceNumber": "INV-20260704-4673",
+    "date": "2026-07-04T12:27:21.677Z",
+    "customerName": "زبون نقدي",
+    "customerPhone": "غير مسجل",
+    "subtotal": 300,
+    "discountType": null,
+    "discountValue": 0,
+    "discountAmount": 0,
+    "totalAmount": 300,
+    "items": [
+      {
+        "products_id": "9786339999956",
+        "name": "اللغة والاسلوب القرأني",
+        "quantity": 1,
+        "price": 300,
+        "total": 300
+      }
+    ]
   }
 ]

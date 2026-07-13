@@ -583,10 +583,10 @@ export class LibraryComponent implements OnInit, OnDestroy {
 
         // Search Filter
         if (this.searchQuery) {
-            const q = this.normalizeArabic(this.searchQuery.toLowerCase());
+            const q = this.searchQuery.toLowerCase();
             filtered = filtered.filter(e =>
-                this.normalizeArabic(e.title.toLowerCase()).includes(q) ||
-                this.normalizeArabic(e.author.toLowerCase()).includes(q)
+                (e.title && e.title.toLowerCase().includes(q)) ||
+                (e.author && e.author.toLowerCase().includes(q))
             );
             console.log('KENOUZ DEBUG: After Search Filter:', filtered.length, 'Query:', q);
         }
@@ -629,8 +629,11 @@ export class LibraryComponent implements OnInit, OnDestroy {
 
         if (this.selectedCategory && this.selectedCategory !== 'كل الكتب') filtered = filtered.filter(b => b.category === this.selectedCategory);
         if (this.searchQuery) {
-            const q = this.normalizeArabic(this.searchQuery.toLowerCase());
-            filtered = filtered.filter(b => this.normalizeArabic(b.title.toLowerCase()).includes(q) || this.normalizeArabic(b.author.toLowerCase()).includes(q));
+            const q = this.searchQuery.toLowerCase();
+            filtered = filtered.filter(b =>
+                (b.title && b.title.toLowerCase().includes(q)) ||
+                (b.author && b.author.toLowerCase().includes(q))
+            );
         }
 
         if (this.showDownloadedOnly) {
@@ -719,7 +722,27 @@ export class LibraryComponent implements OnInit, OnDestroy {
 
     setDownloadsTab(tab: 'downloads' | 'favorites') { this.downloadsTab = tab; }
 
-    onSearch(): void {
+    handleSearchInput(): void {
+        // Get value directly from DOM element to preserve spaces exactly
+        const inputElement = document.getElementById('librarySearchInput') as HTMLInputElement;
+        if (inputElement) {
+            this.searchQuery = inputElement.value;
+        }
+
+        // 1. Instant client-side filtering (no API call, no delay)
+        this.applyFilters();
+        this.applyExternalFilters();
+
+        // 2. Debounced backend call for more/better results
+        this.searchSubject.next(this.searchQuery);
+    }
+
+    onSearch(event?: any): void {
+        // Get value directly from input element to preserve spaces
+        if (event && event.target) {
+            this.searchQuery = event.target.value;
+        }
+
         // 1. Instant client-side filtering (no API call, no delay)
         this.applyFilters();
         this.applyExternalFilters();
@@ -792,9 +815,7 @@ export class LibraryComponent implements OnInit, OnDestroy {
             .replace(/[أإآ]/g, 'ا')
             .replace(/[هة]/g, 'ه')
             .replace(/[ىي]/g, 'ي')
-            .replace(/[^0-9a-zA-Z\u0600-\u06FF\s]/g, '')
-            .replace(/\s+/g, ' ')
-            .trim();
+            .replace(/[^0-9a-zA-Z\u0600-\u06FF\s]/g, '');
     }
 
     toggleFavorite(ebook: Ebook, event: Event): void {
@@ -806,7 +827,7 @@ export class LibraryComponent implements OnInit, OnDestroy {
     isFree(ebook: Ebook): boolean { return ebook.price === 0; }
 
     handleImageError(event: any) {
-        event.target.src = 'assets/images/book-placeholder.jpg';
+        event.target.src = 'assets/image/book-placeholder.jpg';
     }
 
     getSubscriptionProgress(): number {

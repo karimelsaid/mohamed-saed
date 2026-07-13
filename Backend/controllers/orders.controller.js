@@ -7,6 +7,7 @@ const Referral = require('../models/Referral.model');
 const Coupon = require('../models/Coupon.model');
 const Auction = require('../models/Auction.model');
 const BookSwap = require('../models/BookSwap.model');
+const axios = require('axios');
 const isProduction = process.env.NODE_ENV === 'production';
 
 exports.pingOrders = (req, res) => {
@@ -277,6 +278,23 @@ exports.submitOrder = async (req, res) => {
       message: 'Order submitted successfully',
       orderId: addedOrder._id
     });
+
+    // Trigger book recommendation workflow for purchase events
+    try {
+      // Get the first bookId from the order
+      const firstBookId = validatedProducts[0]?.bookId;
+      if (firstBookId) {
+        await axios.post('https://n8n.knoozbook.com/webhook/book-recommendation', {
+          userId: userId.toString(),
+          eventType: 'purchase',
+          bookId: firstBookId.toString()
+        });
+        console.log('[SubmitOrder] Book recommendation workflow triggered for user:', userId);
+      }
+    } catch (webhookError) {
+      console.error('[SubmitOrder] Failed to trigger book recommendation workflow:', webhookError.message);
+      // Don't fail the order if webhook fails
+    }
 
     // --- PUSH NOTIFICATIONS (Wrapped to prevent crashing order) ---
     try {
@@ -557,11 +575,16 @@ exports.getAllOrders = async (req, res) => {
       paginatedResult = await User.aggregate(pipeline);
     }
 
+    // Warning if approaching 5000 limit
+    if (paginatedResult.length >= 4500) {
+      console.warn(`⚠️ [getAllOrders] Website orders (${paginatedResult.length}) approaching 5000 limit. Consider optimizing with DB-level pagination.`);
+    }
+
     // Map aggregated results to final order entry structure
     let allOrders = paginatedResult.map(doc => {
       const prodName = doc.bookName || doc.book || '';
       const prodInfo = getProductInfo(prodName);
-      
+
       let baseAddress = '';
       if (doc.isPickup) {
         baseAddress = `استلام من المكتبة: ${doc.pickupLocation || ''}`;
@@ -659,18 +682,114 @@ exports.getAllOrders = async (req, res) => {
       });
     }
 
-    console.log(`✅ [getAllOrders] Returned ${allOrders.length} orders in ${Date.now() - startTime}ms`);
+    // === FETCH AMAZON ORDERS (Admin Only) ===
+    const Order = require('../models/Order.model');
+    let amazonOrders = [];
+
+    // Only fetch Amazon orders if requester is admin or staff (not merchant)
+    if (!shouldFilterMerchant) {
+      try {
+        const amazonQuery = Order.find({ source: 'amazon' });
+
+        // Apply includeArchived filter
+        if (includeArchived !== 'true') {
+          amazonQuery.where('status').ne('cancelled');
+        }
+
+        const rawAmazonOrders = await amazonQuery.sort({ orderDate: -1 }).lean();
+
+        // Convert Amazon orders to match website order structure (keep products as array)
+        amazonOrders = rawAmazonOrders.map(order => ({
+          _id: order._id,
+          book: order.products.length > 0 ? order.products[0].product_name : 'Amazon Product',
+          customerName: order.customerName || 'Amazon Customer',
+          email: order.email || '',
+          phone: order.phone || '',
+          address: order.address || '',
+          status: order.status,
+          orderDate: order.orderDate,
+          totalAmount: order.totalAmount,
+          paymentStatus: 'completed', // Amazon orders are always paid
+          isMerchantOrder: false,
+          isCommunityItem: false,
+          communityItemId: null,
+          communityOwnerId: null,
+          communityOwnerName: null,
+          communityOwnerPhone: null,
+          communityOwnerAddress: null,
+          shippingAddress: null,
+          shippingMethod: order.shippingMethod || 'knoozbook',
+          statusLog: [],
+          source: 'amazon',
+          amazonOrderId: order.amazonOrderId,
+          hasStockIssues: order.hasStockIssues || false,
+          stockIssueDetails: order.stockIssueDetails || [],
+          products: order.products.map(p => ({
+            product_name: p.product_name || 'Amazon Product',
+            product_quantity: p.product_quantity,
+            isMerchantOrder: false,
+            isCommunityItem: false
+          }))
+        }));
+
+        console.log(`✅ [getAllOrders] Fetched ${amazonOrders.length} Amazon orders`);
+      } catch (error) {
+        console.error('❌ [getAllOrders] Error fetching Amazon orders:', error.message);
+        // Continue with website orders even if Amazon fetch fails
+      }
+    }
+
+    // === MERGE AMAZON AND WEBSITE ORDERS ===
+    // Add source field to website orders
+    allOrders.forEach(order => {
+      order.source = 'website';
+      order.amazonOrderId = null;
+      order.hasStockIssues = false;
+      order.stockIssueDetails = [];
+    });
+
+    // Merge and sort by orderDate
+    const mergedOrders = [...allOrders, ...amazonOrders].sort((a, b) => {
+      const dateA = new Date(a.orderDate || 0);
+      const dateB = new Date(b.orderDate || 0);
+      return dateB - dateA; // Descending order
+    });
+
+    // Apply pagination to merged results if requested
+    let finalOrders = mergedOrders;
+    let finalTotal = mergedOrders.length;
 
     if (hasPagination) {
+      const pageNum = parseInt(page, 10) || 1;
+      const limitNum = parseInt(limit, 10) || 50;
+      const skipNum = (pageNum - 1) * limitNum;
+
+      // Memory protection: cap total at 1000 for display
+      const maxResults = 1000;
+      finalTotal = Math.min(mergedOrders.length, maxResults);
+
+      // Apply skip/limit with cap
+      finalOrders = mergedOrders.slice(skipNum, Math.min(skipNum + limitNum, maxResults));
+
+      if (mergedOrders.length > maxResults) {
+        console.warn(`⚠️ [getAllOrders] Total orders (${mergedOrders.length}) exceeds display limit (${maxResults}), showing first ${maxResults}`);
+      }
+
       res.status(200).json({
         success: true,
-        orders: allOrders,
-        total: totalCount,
-        page: parseInt(page, 10) || 1,
-        pages: Math.ceil(totalCount / (parseInt(limit, 10) || 50))
+        orders: finalOrders,
+        total: finalTotal,
+        page: pageNum,
+        pages: Math.ceil(finalTotal / limitNum)
       });
     } else {
-      res.status(200).json(allOrders);
+      // No pagination: limit to 1000 to protect server memory
+      const maxResults = 1000;
+      if (mergedOrders.length > maxResults) {
+        console.warn(`⚠️ [getAllOrders] Total orders (${mergedOrders.length}) exceeds memory limit (${maxResults}), truncating`);
+        finalOrders = mergedOrders.slice(0, maxResults);
+      }
+      res.status(200).json(finalOrders);
     }
   } catch (error) {
     console.error('❌ [getAllOrders] Error:', error);
@@ -851,6 +970,27 @@ exports.updateOrderStatus = async (req, res) => {
 
     await user.save({ validateBeforeSave: false });
 
+    // Trigger book recommendation workflow when order is delivered (COD payment completed)
+    if (status === 'تم التسليم' || status === 'تم الاستلام') {
+      try {
+        const firstBookId = order.products && order.products[0] 
+          ? (order.products[0].book || order.products[0].bookId || order.products[0].products_id)
+          : null;
+        
+        if (firstBookId) {
+          await axios.post('https://n8n.knoozbook.com/webhook/book-recommendation', {
+            userId: user._id.toString(),
+            eventType: 'purchase',
+            bookId: firstBookId.toString()
+          });
+          console.log('[updateOrderStatus] Book recommendation workflow triggered for user:', user._id, 'on status:', status);
+        }
+      } catch (webhookError) {
+        console.error('[updateOrderStatus] Failed to trigger book recommendation workflow:', webhookError.message);
+        // Don't fail the status update if webhook fails
+      }
+    }
+
     res.status(200).json({ message: 'Order status updated successfully' });
 
     // Send Push Notification
@@ -862,6 +1002,7 @@ exports.updateOrderStatus = async (req, res) => {
       data: { orderId: orderId, type: 'order_status_update' }
     };
     pushService.sendToUser(user._id, pushPayload, { important: true }).catch(err => console.error('Push Error:', err));
+    console.log(`[Order Status Update] Notification sent to customer ${user._id} for status: ${status}`);
   } catch (error) {
     console.error('Error updating order status:', error); // Detailed error logging
     res.status(500).json({
@@ -962,6 +1103,258 @@ exports.bulkDeleteOrders = async (req, res) => {
     console.error('Error bulk deleting orders:', error);
     res.status(500).json({
       message: 'Error bulk deleting orders',
+      error: error.message
+    });
+  }
+};
+
+// Create order from Amazon (n8n integration)
+exports.createOrderFromAmazon = async (req, res) => {
+  try {
+    const {
+      amazonOrderId,
+      customerName,
+      email,
+      phone,
+      address,
+      products,
+      totalAmount,
+      orderDate
+    } = req.body;
+
+    console.log('📦 [CreateOrderFromAmazon] Request received:', { amazonOrderId, productsCount: products?.length });
+
+    // === VALIDATION ===
+    if (!amazonOrderId || typeof amazonOrderId !== 'string' || amazonOrderId.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing or invalid amazonOrderId'
+      });
+    }
+
+    if (!products || !Array.isArray(products) || products.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing or invalid products array'
+      });
+    }
+
+    if (!totalAmount || typeof totalAmount !== 'number' || totalAmount <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing or invalid totalAmount'
+      });
+    }
+
+    // Validate each product
+    for (const product of products) {
+      const quantity = product.product_quantity || product.quantity;
+      if (!quantity || typeof quantity !== 'number' || quantity <= 0 || !Number.isInteger(quantity)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid product quantity: must be a positive integer'
+        });
+      }
+
+      const price = product.product_price || product.price;
+      if (!price || typeof price !== 'number' || price <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid product price: must be a positive number'
+        });
+      }
+
+      const name = product.product_name || product.bookName;
+      if (!name || typeof name !== 'string' || name.trim() === '') {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid product name: must be a non-empty string'
+        });
+      }
+    }
+
+    // Validate optional fields
+    if (customerName && typeof customerName !== 'string') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid customerName'
+      });
+    }
+
+    if (email && typeof email !== 'string') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid email'
+      });
+    }
+
+    if (phone && typeof phone !== 'string') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid phone'
+      });
+    }
+
+    if (address && typeof address !== 'string') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid address'
+      });
+    }
+
+    if (orderDate && isNaN(Date.parse(orderDate))) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid orderDate'
+      });
+    }
+
+    // === IDEMPOTENCY (with race condition protection) ===
+    const Order = require('../models/Order.model');
+
+    // First check: quick lookup
+    const existingOrder = await Order.findOne({ amazonOrderId });
+    if (existingOrder) {
+      console.log(`⚠️ [CreateOrderFromAmazon] Order ${amazonOrderId} already exists (quick check), skipping`);
+      return res.status(200).json({
+        success: true,
+        message: 'Order already exists',
+        orderId: existingOrder._id
+      });
+    }
+
+    // Create new order in Order collection
+    const newOrder = new Order({
+      merchantId: null, // Amazon orders don't have a merchant
+      customerName: customerName || 'Amazon Customer',
+      email: email || 'amazon@customer.com',
+      phone: phone || '',
+      address: address || '',
+      products: products.map(p => ({
+        product_name: p.product_name || p.bookName || 'Product',
+        product_quantity: p.product_quantity || p.quantity || 1,
+        product_price: p.product_price || p.price || 0
+      })),
+      status: 'pending',
+      totalAmount: totalAmount,
+      orderDate: orderDate ? new Date(orderDate) : new Date(),
+      preparationTime: 1,
+      shippingMethod: 'knoozbook',
+      source: 'amazon',
+      amazonOrderId: amazonOrderId
+    });
+
+    let savedOrder;
+    try {
+      savedOrder = await newOrder.save();
+      console.log(`✅ [CreateOrderFromAmazon] Order ${amazonOrderId} created successfully`);
+    } catch (saveError) {
+      // Handle duplicate key error (race condition protection)
+      if (saveError.code === 11000 && saveError.keyPattern && saveError.keyPattern.amazonOrderId) {
+        console.log(`⚠️ [CreateOrderFromAmazon] Duplicate key error for ${amazonOrderId} (race condition), fetching existing order`);
+        const duplicateOrder = await Order.findOne({ amazonOrderId });
+        return res.status(200).json({
+          success: true,
+          message: 'Order already exists (race condition)',
+          orderId: duplicateOrder._id
+        });
+      }
+      // Re-throw other errors
+      throw saveError;
+    }
+
+    // === UPDATE PRODUCT QUANTITIES (with negative stock protection) ===
+    const Product = require('../models/Product.model');
+    const stockUpdateResults = [];
+    const stockIssues = [];
+
+    for (const product of products) {
+      try {
+        const productId = product.productId || product.bookId;
+        const quantity = product.product_quantity || product.quantity || 1;
+
+        if (productId) {
+          // Use findOneAndUpdate with condition to prevent negative stock
+          const updatedProduct = await Product.findOneAndUpdate(
+            {
+              _id: productId,
+              product_quantity: { $gte: quantity }
+            },
+            {
+              $inc: { product_quantity: -quantity },
+              $set: { lastStockUpdate: new Date() }
+            },
+            { new: true }
+          );
+
+          if (updatedProduct) {
+            console.log(`📉 [CreateOrderFromAmazon] Updated quantity for product ${productId}: ${updatedProduct.product_quantity}`);
+            stockUpdateResults.push({
+              productId,
+              success: true,
+              newQuantity: updatedProduct.product_quantity
+            });
+          } else {
+            // Product not found or insufficient stock
+            console.warn(`⚠️ [CreateOrderFromAmazon] Insufficient stock or product not found for ${productId}`);
+            stockUpdateResults.push({
+              productId,
+              success: false,
+              reason: 'Insufficient stock or product not found'
+            });
+            stockIssues.push({
+              productId,
+              requestedQty: quantity,
+              reason: 'Insufficient stock or product not found'
+            });
+          }
+        } else {
+          console.warn(`⚠️ [CreateOrderFromAmazon] Product missing productId/bookId`);
+          stockUpdateResults.push({
+            success: false,
+            reason: 'Missing productId/bookId'
+          });
+          stockIssues.push({
+            productId: 'unknown',
+            requestedQty: quantity,
+            reason: 'Missing productId/bookId'
+          });
+        }
+      } catch (error) {
+        console.error(`❌ [CreateOrderFromAmazon] Error updating quantity for product:`, error.message);
+        stockUpdateResults.push({
+          productId: product.productId || product.bookId,
+          success: false,
+          reason: error.message
+        });
+        stockIssues.push({
+          productId: product.productId || product.bookId || 'unknown',
+          requestedQty: product.product_quantity || product.quantity || 1,
+          reason: error.message
+        });
+        // Continue with other products even if one fails
+      }
+    }
+
+    // Update order with stock issues if any
+    if (stockIssues.length > 0) {
+      savedOrder.hasStockIssues = true;
+      savedOrder.stockIssueDetails = stockIssues;
+      await savedOrder.save();
+      console.warn(`⚠️ [CreateOrderFromAmazon] Order ${amazonOrderId} has stock issues: ${stockIssues.length} products`);
+    }
+
+    res.status(201).json({
+      success: true,
+      message: 'Order created successfully',
+      orderId: savedOrder._id,
+      stockUpdateResults
+    });
+  } catch (error) {
+    console.error('❌ [CreateOrderFromAmazon] Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error creating order from Amazon',
       error: error.message
     });
   }

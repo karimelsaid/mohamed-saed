@@ -79,7 +79,7 @@ export class AppComponent implements OnInit {
       // Initialize Live Updates
       this.liveUpdateService.initialize().catch(err => console.error('Live Update Init Error:', err));
     }
-    this.isDownloadingAssets$ = this.mushafAssetService.loading$;
+    this.isDownloadingAssets$ = this.mushafAssetService.isInitialSetup$;
     this.downloadProgress$ = this.mushafAssetService.progress$;
     this.downloadMessage$ = this.mushafAssetService.message$;
   }
@@ -244,11 +244,12 @@ export class AppComponent implements OnInit {
     }
   }
 
-  onSearchExecuted(event: { query: string; filter: string }) {
+  onSearchExecuted(event: { query: string; filter: string; selectedBook?: any }) {
     const query = event.query || '';
     const filter = event.filter || 'all';
-    if (query.trim()) {
-      this.router.navigate(['/research'], { queryParams: { q: query.trim(), filter } });
+    const selectedBook = event.selectedBook;
+    if (query) {
+      this.router.navigate(['/research'], { queryParams: { q: query, filter } });
     } else {
       this.router.navigate(['/research'], { queryParams: { filter } });
     }

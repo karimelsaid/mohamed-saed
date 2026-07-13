@@ -4,7 +4,7 @@ const automationLogSchema = new mongoose.Schema({
     type: { 
         type: String, 
         required: true,
-        enum: ['post', 'comment', 'dm', 'random_post', 'webhook_received', 'whatsapp_broadcast']
+        enum: ['post', 'comment', 'dm', 'random_post', 'webhook_received', 'whatsapp_broadcast', 'comment_reply', 'message', 'message_reply', 'recommendation']
     },
     platform: { 
         type: String, 

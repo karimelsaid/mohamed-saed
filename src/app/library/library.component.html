@@ -146,7 +146,7 @@
                     <!-- Search -->
                     <div class="search-box premium-input flex-1 w-full relative group">
                         <i class="fas fa-search absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-indigo-500 transition-colors"></i>
-                        <input type="text" [(ngModel)]="searchQuery" (input)="onSearch()"
+                        <input type="text" id="librarySearchInput" (input)="handleSearchInput()"
                             class="w-full pr-14 pl-6 py-4 bg-white/50 dark:bg-black/20 rounded-3xl border border-transparent focus:border-indigo-500 focus:outline-none text-gray-800 dark:text-white font-bold transition-all shadow-inner"
                             placeholder="ابحث عن اسم الكتاب، المؤلف، أو كلمة دلالية..." />
                     </div>
@@ -441,7 +441,7 @@
                 <!-- Skeleton Loader Grid -->
                 <div class="ebooks-grid unified-grid animate-pulse py-10" *ngIf="isInternalLoading">
                     <div class="ebook-card bg-white/40 dark:bg-slate-900/40 border border-white/20 dark:border-slate-800 rounded-3xl p-4 space-y-4" *ngFor="let item of [1,2,3,4,5,6,7,8]">
-                        <div class="aspect-[2/3] bg-slate-200 dark:bg-slate-800 rounded-2xl w-full"></div>
+                        <div class="bg-slate-200 dark:bg-slate-800 rounded-2xl w-full skeleton-image"></div>
                         <div class="h-4 bg-slate-200 dark:bg-slate-800 rounded-full w-3/4"></div>
                         <div class="h-3 bg-slate-200 dark:bg-slate-800 rounded-full w-1/2"></div>
                     </div>
@@ -725,7 +725,7 @@
                             مميز
                         </div>
 
-                        <div class="card-image relative overflow-hidden aspect-[2/3]" [class.dynamic-bg]="book.source === 'external'">
+                        <div class="card-image relative overflow-hidden" [class.dynamic-bg]="book.source === 'external'">
                             <!-- Cover -->
                             <ng-container *ngIf="book.source === 'internal'">
                                 <img [src]="book.coverUrl" alt="{{ book.title }}" loading="lazy"

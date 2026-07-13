@@ -10,7 +10,7 @@
         </div>
 
         <!-- Input Field -->
-        <input [(ngModel)]="searchQuery" (keyup)="onSearchKeyup()" (keydown)="onEnterPress($event)" #inputElement
+        <input [value]="searchQuery" (input)="handleInput($event)" (keyup)="onSearchKeyup()" (keydown)="onEnterPress($event)" #inputElement
           type="text" placeholder="بحث..."
           class="w-full h-10 pl-10 pr-10 py-2 text-sm bg-transparent rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200" />
 
@@ -27,7 +27,7 @@
         class="absolute w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 mt-2 rounded-lg shadow-xl max-h-60 overflow-y-auto z-[1001]">
         <ul class="divide-y divide-gray-100 dark:divide-gray-700">
           <li *ngFor="let result of searchResults"
-            (click)="selectSuggestion(result.item.product_name || result.item.name || '')"
+            (click)="selectSuggestion(result.item.product_name || result.item.name || '', result.item)"
             class="p-3 cursor-pointer hover:bg-blue-50 dark:hover:bg-gray-700 dark:text-gray-100 transition-colors duration-150 first:rounded-t-lg last:rounded-b-lg">
             <div class="flex items-center justify-between">
               <div class="flex items-center">

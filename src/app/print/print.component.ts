@@ -210,11 +210,15 @@ export class PrintComponent implements OnInit {
     if (!this.editedUserProfile || !this.userId) return;
 
     // Prepare update payload
+    const arabicToEnglishMap: Record<string, string> = {
+      '٠': '0', '١': '1', '٢': '2', '٣': '3', '٤': '4',
+      '٥': '5', '٦': '6', '٧': '7', '٨': '8', '٩': '9'
+    };
     const updateData: any = {
       governorate: this.editedUserProfile.governorate,
       city: this.editedUserProfile.city,
       village: this.editedUserProfile.village,
-      phone: this.editedUserProfile.phone
+      phone: this.editedUserProfile.phone.replace(/[٠١٢٣٤٥٦٧٨٩]/g, (match) => arabicToEnglishMap[match] || match)
     };
 
     // Call API to update profile
@@ -518,8 +522,13 @@ export class PrintComponent implements OnInit {
             this.calculateShippingCost();
             // Set phoneTouched to true if phone exists and is valid to enable dynamic validation
             if (this.editedUserProfile && this.editedUserProfile.phone) {
+              const arabicToEnglishMap: Record<string, string> = {
+                '٠': '0', '١': '1', '٢': '2', '٣': '3', '٤': '4',
+                '٥': '5', '٦': '6', '٧': '7', '٨': '8', '٩': '9'
+              };
+              const normalizedPhone = this.editedUserProfile.phone.replace(/[٠١٢٣٤٥٦٧٨٩]/g, (match) => arabicToEnglishMap[match] || match);
               const egyptPhoneRegex = /^(010|011|012|015)[0-9]{8}$/;
-              this.phoneTouched = egyptPhoneRegex.test(this.editedUserProfile.phone);
+              this.phoneTouched = egyptPhoneRegex.test(normalizedPhone);
               this.phoneValid = this.phoneTouched;
             }
             // Set post office details from user profile
@@ -690,9 +699,15 @@ export class PrintComponent implements OnInit {
 
   validatePhone() {
     if (!this.editedUserProfile) return;
+    // Convert Arabic numerals to English numerals
+    const arabicToEnglishMap: Record<string, string> = {
+      '٠': '0', '١': '1', '٢': '2', '٣': '3', '٤': '4',
+      '٥': '5', '٦': '6', '٧': '7', '٨': '8', '٩': '9'
+    };
+    const normalizedPhone = this.editedUserProfile.phone.replace(/[٠١٢٣٤٥٦٧٨٩]/g, (match) => arabicToEnglishMap[match] || match);
     const egyptPhoneRegex = /^(010|011|012|015)[0-9]{8}$/;
     this.phoneTouched = true;
-    this.phoneValid = egyptPhoneRegex.test(this.editedUserProfile.phone);
+    this.phoneValid = egyptPhoneRegex.test(normalizedPhone);
   }
 
   validateLocation() {

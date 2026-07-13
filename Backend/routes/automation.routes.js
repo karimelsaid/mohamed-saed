@@ -19,9 +19,10 @@ router.post('/log', automationController.receiveLog);
 // n8n fetches random product
 router.get('/random-product', automationController.getRandomProduct);
 // n8n fetches product by ID
+// ملاحظة: تم حذف المسار المكرر '/product/:productId' لأنه كان بنفس شكل
+// '/product/:id' فكان Express بيوجّه كل الطلبات لأول مسار مسجل (getProductById)
+// وكانت getProduct (V4) ميتة تمامًا ومفيش أي طلب هيوصلها أبدًا.
 router.get('/product/:id', automationController.getProductById);
-// n8n fetches product by ID (new endpoint for V4)
-router.get('/product/:productId', automationController.getProduct);
 // n8n fetches random product (new endpoint for V4)
 router.get('/products/random', automationController.getRandomProduct);
 // n8n fetches settings (new endpoint for V4)
@@ -57,5 +58,16 @@ router.post('/trigger-promotion', automationController.triggerPromotion);
 router.post('/claude/execute', automationController.executeClaudeCommand);
 router.get('/n8n/stats', automationController.getN8nStats);
 router.post('/deploy', automationController.deployToProduction);
+
+// AI Sales Agent V3 - Comment handling
+// GET: مطلوب من Meta نفسها للتحقق من الـ webhook وقت إعداده في Developer Portal
+// (Meta بترسل hub.challenge وازاي المفروض نردّ عليه موضّح جوه verifyWebhook)
+router.get('/comment-webhook', automationController.verifyWebhook);
+router.post('/comment-webhook', automationController.commentWebhook);
+router.post('/poll-facebook-comments', automationController.pollFacebookComments);
+router.post('/poll-facebook-messages', automationController.pollFacebookMessages);
+router.post('/generate-reply', automationController.generateReply);
+router.post('/post-reply', automationController.postReply);
+router.post('/log', automationController.log);
 
 module.exports = router;

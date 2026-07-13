@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const User = require('../models/User.model');
 
 const verifyToken = async (req, res, next) => {
@@ -63,4 +64,59 @@ const verifyToken = async (req, res, next) => {
     }
 };
 
-module.exports = verifyToken;
+const verifyN8nToken = async (req, res, next) => {
+    try {
+        const token = req.header('X-N8N-Secret');
+        const expectedToken = process.env.N8N_SECRET;
+
+        if (!token) {
+            console.log('❌ [N8NAuthMiddleware] No token provided in headers');
+            return res.status(401).json({
+                success: false,
+                message: 'Unauthorized: Missing N8N secret token'
+            });
+        }
+
+        if (!expectedToken) {
+            console.error('❌ [N8NAuthMiddleware] N8N_SECRET environment variable not configured. Please add N8N_SECRET to your .env file.');
+            return res.status(500).json({
+                success: false,
+                message: 'Server configuration error'
+            });
+        }
+
+        // Use timing-safe comparison to prevent timing attacks
+        const tokenBuffer = Buffer.from(token);
+        const expectedBuffer = Buffer.from(expectedToken);
+
+        if (tokenBuffer.length !== expectedBuffer.length) {
+            console.warn('❌ [N8NAuthMiddleware] Invalid token length');
+            return res.status(401).json({
+                success: false,
+                message: 'Unauthorized: Invalid N8N secret token'
+            });
+        }
+
+        if (!crypto.timingSafeEqual(tokenBuffer, expectedBuffer)) {
+            console.warn('❌ [N8NAuthMiddleware] Invalid token provided');
+            return res.status(401).json({
+                success: false,
+                message: 'Unauthorized: Invalid N8N secret token'
+            });
+        }
+
+        console.log('✅ [N8NAuthMiddleware] N8N request authenticated');
+        next();
+    } catch (error) {
+        console.error('❌ [N8NAuthMiddleware] Error:', error.message);
+        res.status(401).json({
+            success: false,
+            message: 'Authentication failed'
+        });
+    }
+};
+
+// Support both old and new import styles for backward compatibility
+module.exports = verifyToken; // Default export for old style: const verifyToken = require(...)
+module.exports.verifyToken = verifyToken; // Named export for new style: const { verifyToken } = require(...)
+module.exports.verifyN8nToken = verifyN8nToken; // Named export for new style: const { verifyN8nToken } = require(...)

@@ -421,38 +421,55 @@ export class AdminEbooksComponent implements OnInit {
         }
     }
 
-    parseEbookFileName(fileName: string): { bookName: string; author: string; description: string } {
+    sanitizeFileName(fileName: string): string {
         // Remove extension
         const nameWithoutExt = fileName.replace(/\.[^/.]+$/, "");
-        
+
+        // Replace underscores with spaces
+        let sanitized = nameWithoutExt.replace(/_/g, ' ');
+
+        // Remove any non-text characters (keep Arabic letters, English letters, numbers, and spaces)
+        sanitized = sanitized.replace(/[^\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFFa-zA-Z0-9\s]/g, '');
+
+        // Replace multiple spaces with single space
+        sanitized = sanitized.replace(/\s+/g, ' ');
+
+        // Trim from start and end
+        return sanitized.trim();
+    }
+
+    parseEbookFileName(fileName: string): { bookName: string; author: string; description: string } {
+        // First sanitize the filename
+        const sanitizedFileName = this.sanitizeFileName(fileName);
+
         // Split by '--'
-        const parts = nameWithoutExt.split('--').map(p => p.trim());
-        
+        const parts = sanitizedFileName.split('--').map(p => p.trim());
+
         let bookName = '';
         let author = '';
         let description = '';
-        
+
         if (parts.length > 0) {
             // First part has the book name and potentially its description/sub-title
             const firstPart = parts[0];
             // Split by Arabic semicolon '؛' or English semicolon ';'
             const subParts = firstPart.split(/[؛;]/).map(sp => sp.trim());
             bookName = subParts[0] || '';
-            
+
             if (subParts.length > 1) {
                 description = subParts.slice(1).join('؛ ').trim();
             }
         }
-        
+
         if (parts.length > 1) {
             author = parts[1] || '';
         }
-        
+
         // If there's no description, fallback to author name or book name
         if (!description) {
             description = author || bookName;
         }
-        
+
         return {
             bookName,
             author,
@@ -710,7 +727,7 @@ export class AdminEbooksComponent implements OnInit {
     }
 
     getProductImage(product: Product): string {
-        if (!product.product_image) return 'assets/images/book-placeholder.jpg';
+        if (!product.product_image) return 'assets/image/book-placeholder.jpg';
         if (product.product_image.startsWith('http') || product.product_image.startsWith('data:')) return product.product_image;
         return `${this.uploadsBaseUrl}/${product.product_image}`;
     }

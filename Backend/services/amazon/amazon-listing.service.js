@@ -254,13 +254,7 @@ class AmazonListingService {
           }
         ];
 
-        // Mandatory for many categories to avoid Incomplete status
-        payload.attributes.language = [
-          {
-            value: 'ar_AE',
-            marketplace_id: marketplaceId
-          }
-        ];
+
 
         payload.attributes.included_components = [
           {
@@ -335,55 +329,40 @@ class AmazonListingService {
           ];
         }
 
-        // Force these fields even for ELECTRONIC_BOOK_READER if it's actually a book
-        // This prevents Incomplete status on Amazon for book-like items
-        if (targetProductType === 'ABIS_BOOK' || targetProductType === 'ELECTRONIC_BOOK_READER') {
+        // Specific fields for ABIS_BOOK if selected
+        if (targetProductType === 'ABIS_BOOK') {
           if (productData.price) {
             payload.attributes.list_price = [
               {
                 currency: 'EGP',
-                value: productData.price,
-                marketplace_id: marketplaceId
+                value: productData.price
               }
             ];
           }
 
-          payload.attributes.author = [
-            {
-              value: productData.author || productData.publisher || 'عام',
-              language_tag: 'ar_AE',
-              marketplace_id: marketplaceId
-            }
-          ];
-
-          payload.attributes.binding = [
-            {
-              value: 'paperback',
-              marketplace_id: marketplaceId
-            }
-          ];
-
-          // Additional required fields for completeness
-          payload.attributes.publication_date = [
-            {
-              value: new Date().toISOString(),
-              marketplace_id: marketplaceId
-            }
-          ];
-        }
-
-        if (targetProductType === 'ABIS_BOOK') {
           payload.attributes.subject_code = [
             {
               value: 'general'
             }
           ];
 
+          payload.attributes.author = [
+            {
+              value: productData.author || productData.publisher || 'عام',
+              language_tag: 'ar_AE'
+            }
+          ];
+
           payload.attributes.pages = [
             {
               value: productData.pages || 100,
-              unit: 'pages',
-              marketplace_id: marketplaceId
+              unit: 'pages'
+            }
+          ];
+
+          payload.attributes.binding = [
+            {
+              value: 'paperback'
             }
           ];
         }

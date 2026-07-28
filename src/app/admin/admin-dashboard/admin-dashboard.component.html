@@ -123,6 +123,13 @@
         <span>Amazon Diagnostics</span>
       </button>
 
+      <button *ngIf="hasPermission('products')" (click)="switchView('amazonCatalog'); showSidebar = false"
+        [class]="currentView === 'amazonCatalog' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
+        class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
+        <fa-icon [icon]="['fab', 'amazon']"></fa-icon>
+        <span>كتالوج أمازون</span>
+      </button>
+
       <button *ngIf="hasPermission('userHierarchy')" (click)="switchView('userHierarchy'); showSidebar = false"
         [class]="currentView === 'userHierarchy' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
         class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
@@ -1950,6 +1957,10 @@
 
       <div *ngIf="currentView === 'amazonDiagnostics'" class="mb-28 md:mb-0">
         <app-amazon-diagnostics></app-amazon-diagnostics>
+      </div>
+
+      <div *ngIf="currentView === 'amazonCatalog'" class="mb-28 md:mb-0">
+        <app-amazon-catalog></app-amazon-catalog>
       </div>
 
       <div *ngIf="currentView === 'products'" class="px-4 sm:px-10 max-w-6xl mx-auto mb-32 md:mb-0 view-enter">

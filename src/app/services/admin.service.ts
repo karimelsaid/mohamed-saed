@@ -138,6 +138,18 @@ export class AdminService {
     );
   }
 
+  updateAmazonProductData(productId: string, data: any): Observable<any> {
+    return this.http.put(`${environment.apiBaseUrl}/amazon/products/${productId}/update`, data).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  republishAmazonProduct(productId: string): Observable<any> {
+    return this.http.post(`${environment.apiBaseUrl}/amazon/products/${productId}/republish`, {}).pipe(
+      catchError(this.handleError)
+    );
+  }
+
   // Product Management Methods
   getAllProducts(): Observable<any> {
     return this.http.get(`${this.apiUrl}/products`).pipe(

@@ -25,6 +25,48 @@ function logWorkflow(stage, data = {}) {
 
 class AmazonWorkflowService {
   /**
+   * Validate product data before publishing to Amazon
+   */
+  static validateProductData(product) {
+    const errors = [];
+
+    // Check required fields
+    if (!product.product_name || product.product_name.trim() === '') {
+      errors.push('Product name is required');
+    }
+
+    if (!product.product_price || product.product_price <= 0) {
+      errors.push('Product price must be greater than 0');
+    }
+
+    if (!product.product_quantity || product.product_quantity < 0) {
+      errors.push('Product quantity must be specified and non-negative');
+    }
+
+    if (!product.product_description || product.product_description.trim() === '') {
+      errors.push('Product description is required');
+    }
+
+    // Check image
+    const hasImage = product.image_path || product.mainImage || product.coverImage || 
+                     (Array.isArray(product.images) && product.images.length > 0) || 
+                     product.product_image;
+    if (!hasImage) {
+      errors.push('Product image is required');
+    }
+
+    // Check dimensions
+    if (!product.weight || product.weight <= 0) {
+      errors.push('Product weight must be specified');
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
+  }
+
+  /**
    * Calculate Amazon price based on system settings and complex formula matching the frontend
    */
   static async calculateAmazonPrice(product) {
@@ -98,6 +140,20 @@ class AmazonWorkflowService {
       if (!product) {
         throw new Error('Product not found');
       }
+
+      // Step 1.5: Validate product data before proceeding
+      const validation = this.validateProductData(product);
+      if (!validation.isValid) {
+        const errorMessage = validation.errors.join('; ');
+        logWorkflow('VALIDATION_FAILED', {
+          productId,
+          jobId,
+          errors: validation.errors
+        });
+        updateProgress(10, 'Validation failed: ' + errorMessage);
+        throw new Error('Product data validation failed: ' + errorMessage);
+      }
+      updateProgress(8, 'Product data validation passed');
 
       logWorkflow('PRODUCT_LOADED', { 
         productId, 

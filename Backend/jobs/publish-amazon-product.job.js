@@ -326,26 +326,37 @@ class PublishAmazonProductJob {
    * Retry failed job
    */
   static async retry(productId) {
-    const product = await Product.findById(productId);
+    // Support both products_id (string) and _id (MongoDB ObjectId)
+    let product = await Product.findOne({ products_id: productId });
+    if (!product) {
+      product = await Product.findById(productId);
+    }
     if (!product) {
       throw new Error('Product not found');
     }
 
-    // Reset status
-    await Product.findByIdAndUpdate(productId, {
-      amazonStatus: 'pending',
-      amazonLastError: null,
-      amazonRetryCount: 0
-    });
+    // Reset status using products_id for consistency
+    await Product.findOneAndUpdate(
+      { products_id: product.products_id || product._id.toString() },
+      {
+        amazonStatus: 'pending',
+        amazonLastError: null,
+        amazonRetryCount: 0
+      }
+    );
 
-    return this.add(productId, 'publish');
+    return this.add(product.products_id || product._id.toString(), 'publish');
   }
 
   /**
    * Sync existing Amazon listing
    */
   static async sync(productId) {
-    const product = await Product.findById(productId);
+    // Support both products_id (string) and _id (MongoDB ObjectId)
+    let product = await Product.findOne({ products_id: productId });
+    if (!product) {
+      product = await Product.findById(productId);
+    }
     if (!product) {
       throw new Error('Product not found');
     }
@@ -354,7 +365,7 @@ class PublishAmazonProductJob {
       throw new Error('Product does not have Amazon ASIN');
     }
 
-    return this.add(productId, 'sync');
+    return this.add(product.products_id || product._id.toString(), 'sync');
   }
 }
 

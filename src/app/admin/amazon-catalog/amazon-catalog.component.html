@@ -1,0 +1,264 @@
+<div class="amazon-catalog-container">
+  <div class="catalog-header">
+    <h1>
+      <i class="fas fa-amazon"></i>
+      كتالوج أمازون
+    </h1>
+    <p class="subtitle">إدارة وتحديث منتجاتك على أمازون</p>
+  </div>
+
+  <!-- Controls Section -->
+  <div class="controls-section">
+    <div class="search-box">
+      <input 
+        type="text" 
+        class="form-control" 
+        placeholder="ابحث عن المنتج أو SKU أو ASIN..."
+        [(ngModel)]="searchQuery"
+        (input)="onSearchChange()"
+      >
+      <i class="fas fa-search"></i>
+    </div>
+
+    <div class="filter-box">
+      <select 
+        class="form-control" 
+        [(ngModel)]="selectedStatus"
+        (change)="onStatusChange()"
+      >
+        <option *ngFor="let status of statusOptions" [value]="status.value">
+          {{ status.label }}
+        </option>
+      </select>
+    </div>
+
+    <div class="info-box">
+      <span class="badge badge-info">
+        <i class="fas fa-info-circle"></i>
+        {{ filteredProducts.length }} منتج
+      </span>
+    </div>
+  </div>
+
+  <!-- Loading Spinner -->
+  <div *ngIf="loading" class="loading-spinner">
+    <div class="spinner-border text-primary" role="status">
+      <span class="sr-only">جاري التحميل...</span>
+    </div>
+    <p>جاري تحميل البيانات...</p>
+  </div>
+
+  <!-- Products Table -->
+  <div *ngIf="!loading" class="products-table-wrapper">
+    <div *ngIf="filteredProducts.length === 0" class="no-products">
+      <i class="fas fa-inbox"></i>
+      <p>لا توجد منتجات تطابق معايير البحث</p>
+    </div>
+
+    <table *ngIf="filteredProducts.length > 0" class="table table-hover">
+      <thead>
+        <tr>
+          <th>الصورة</th>
+          <th>اسم المنتج</th>
+          <th>SKU</th>
+          <th>ASIN</th>
+          <th>السعر</th>
+          <th>الكمية</th>
+          <th>الحالة</th>
+          <th>آخر تحديث</th>
+          <th>الإجراءات</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let product of filteredProducts" class="product-row">
+          <!-- Image -->
+          <td class="image-cell">
+            <img 
+              [src]="getProductImage(product)" 
+              [alt]="product.product_name"
+              class="product-thumbnail"
+              onerror="this.src='/assets/placeholder.png'"
+            >
+          </td>
+
+          <!-- Product Name -->
+          <td class="name-cell">
+            <strong>{{ product.product_name }}</strong>
+          </td>
+
+          <!-- SKU -->
+          <td class="sku-cell">
+            <code>{{ product.amazonSku || 'N/A' }}</code>
+            <button 
+              *ngIf="product.amazonSku"
+              class="btn-copy"
+              (click)="copyToClipboard(product.amazonSku)"
+              title="نسخ"
+            >
+              <i class="fas fa-copy"></i>
+            </button>
+          </td>
+
+          <!-- ASIN -->
+          <td class="asin-cell">
+            <span *ngIf="product.amazonAsin" class="asin-link">
+              <code>{{ product.amazonAsin }}</code>
+              <button 
+                class="btn-copy"
+                (click)="copyToClipboard(product.amazonAsin)"
+                title="نسخ"
+              >
+                <i class="fas fa-copy"></i>
+              </button>
+              <button 
+                class="btn-open"
+                (click)="openAmazonListing(product.amazonAsin)"
+                title="فتح على أمازون"
+              >
+                <i class="fas fa-external-link-alt"></i>
+              </button>
+            </span>
+            <span *ngIf="!product.amazonAsin" class="text-muted">معلق</span>
+          </td>
+
+          <!-- Price -->
+          <td class="price-cell">
+            <div *ngIf="editingProductId === product._id" class="edit-input">
+              <input 
+                type="number" 
+                class="form-control form-control-sm"
+                [(ngModel)]="editingData.amazonPrice"
+                step="0.01"
+              >
+            </div>
+            <div *ngIf="editingProductId !== product._id">
+              {{ (product.amazonPrice || product.product_price) | currency:'EGP':'symbol':'1.2-2' }}
+            </div>
+          </td>
+
+          <!-- Quantity -->
+          <td class="quantity-cell">
+            <div *ngIf="editingProductId === product._id" class="edit-input">
+              <input 
+                type="number" 
+                class="form-control form-control-sm"
+                [(ngModel)]="editingData.product_quantity"
+                min="0"
+              >
+            </div>
+            <div *ngIf="editingProductId !== product._id">
+              {{ product.product_quantity }}
+            </div>
+          </td>
+
+          <!-- Status -->
+          <td class="status-cell">
+            <span [ngClass]="'badge ' + getStatusBadgeClass(product.amazonStatus)">
+              <i [ngClass]="'fas fa-' + getStatusIcon(product.amazonStatus)"></i>
+              {{ getStatusLabel(product.amazonStatus) }}
+            </span>
+          </td>
+
+          <!-- Last Updated -->
+          <td class="date-cell">
+            <small *ngIf="product.amazonSyncedAt">
+              {{ product.amazonSyncedAt | date:'short' }}
+            </small>
+            <small *ngIf="!product.amazonSyncedAt" class="text-muted">
+              لم يتم التحديث
+            </small>
+          </td>
+
+          <!-- Actions -->
+          <td class="actions-cell">
+            <div *ngIf="editingProductId === product._id" class="edit-actions">
+              <button 
+                class="btn btn-sm btn-success"
+                (click)="saveProductChanges()"
+                [disabled]="loading"
+              >
+                <i class="fas fa-save"></i>
+                حفظ
+              </button>
+              <button 
+                class="btn btn-sm btn-secondary"
+                (click)="cancelEdit()"
+              >
+                <i class="fas fa-times"></i>
+                إلغاء
+              </button>
+            </div>
+            <div *ngIf="editingProductId !== product._id" class="normal-actions">
+              <button 
+                class="btn btn-sm btn-primary"
+                (click)="editProduct(product)"
+                title="تعديل"
+              >
+                <i class="fas fa-edit"></i>
+              </button>
+              <button 
+                class="btn btn-sm btn-warning"
+                (click)="republishProduct(product)"
+                [disabled]="loading || product.amazonStatus === 'published'"
+                title="إعادة نشر"
+              >
+                <i class="fas fa-redo"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+
+        <!-- Error Row -->
+        <tr *ngFor="let product of filteredProducts" 
+            class="error-row" 
+            [style.display]="product.amazonLastError ? 'table-row' : 'none'"
+        >
+          <td colspan="9">
+            <div class="error-message">
+              <i class="fas fa-exclamation-triangle"></i>
+              <strong>آخر خطأ:</strong>
+              {{ product.amazonLastError }}
+              <span *ngIf="product.amazonRetryCount" class="retry-count">
+                (محاولة {{ product.amazonRetryCount }})
+              </span>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Legend -->
+  <div class="legend-section">
+    <h5>
+      <i class="fas fa-key"></i>
+      شرح الحالات
+    </h5>
+    <div class="legend-items">
+      <div class="legend-item">
+        <span class="badge badge-warning">معلق</span>
+        <p>المنتج ينتظر النشر على أمازون</p>
+      </div>
+      <div class="legend-item">
+        <span class="badge badge-info">قيد النشر</span>
+        <p>المنتج قيد المعالجة على أمازون</p>
+      </div>
+      <div class="legend-item">
+        <span class="badge badge-success">منشور</span>
+        <p>المنتج منشور بنجاح على أمازون</p>
+      </div>
+      <div class="legend-item">
+        <span class="badge badge-danger">فاشل</span>
+        <p>فشل نشر المنتج - انقر على التفاصيل لرؤية الخطأ</p>
+      </div>
+      <div class="legend-item">
+        <span class="badge badge-warning">إعادة محاولة</span>
+        <p>جاري إعادة محاولة نشر المنتج</p>
+      </div>
+      <div class="legend-item">
+        <span class="badge badge-secondary">مكبوت</span>
+        <p>المنتج مكبوت على أمازون</p>
+      </div>
+    </div>
+  </div>
+</div>

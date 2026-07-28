@@ -18,6 +18,7 @@ router.put('/products/:id/update', authMiddleware, amazonCatalogController.updat
 router.post('/products/:id/republish', authMiddleware, amazonCatalogController.republishProduct);
 router.get('/products/:id/details', authMiddleware, amazonCatalogController.getProductDetails);
 router.post('/products/bulk/status', authMiddleware, amazonCatalogController.bulkUpdateStatus);
+router.post('/products/bulk/sync', authMiddleware, amazonCatalogController.syncAll);
 
 // Public route for Amazon to download images as JPEG
 router.get('/image-proxy', amazonProductController.imageProxy);

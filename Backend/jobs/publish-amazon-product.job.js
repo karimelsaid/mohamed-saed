@@ -268,6 +268,8 @@ class PublishAmazonProductJob {
         return await AmazonWorkflowService.publishProduct(productId, job);
       } else if (action === 'sync') {
         return await AmazonWorkflowService.syncProduct(productId, job);
+      } else if (action === 'syncAll') {
+        return await AmazonWorkflowService.syncAllProducts(job);
       } else {
         throw new Error(`Unknown action: ${action}`);
       }
@@ -346,6 +348,21 @@ class PublishAmazonProductJob {
     );
 
     return this.add(product.products_id || product._id.toString(), 'publish');
+  }
+
+  /**
+   * Sync all products with Amazon
+   */
+  static async syncAll() {
+    if (!isRedisAvailable || !amazonQueue) {
+      throw new Error('Amazon queue service is unavailable. Redis is not connected.');
+    }
+
+    return await amazonQueue.add('syncAll', {}, {
+      attempts: 1,
+      removeOnComplete: true,
+      timeout: 60 * 60 * 1000 // 1 hour for bulk sync
+    });
   }
 
   /**

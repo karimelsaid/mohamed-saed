@@ -81,6 +81,34 @@
   gap: 10px;
 }
 
+.actions-box {
+  display: flex;
+  align-items: center;
+  margin-right: auto;
+}
+
+.actions-box .btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  background-color: #FF9900;
+  color: white;
+}
+
+.actions-box .btn:hover:not(:disabled) {
+  background-color: #e68a00;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.actions-box .btn i {
+  font-size: 1.1rem;
+}
+
 /* Loading Spinner */
 .loading-spinner {
   display: flex;

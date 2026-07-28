@@ -38,6 +38,17 @@
         {{ filteredProducts.length }} منتج
       </span>
     </div>
+
+    <div class="actions-box">
+      <button 
+        class="btn btn-primary" 
+        (click)="syncAllProducts()"
+        [disabled]="loading"
+      >
+        <i class="fas fa-sync-alt" [class.fa-spin]="loading"></i>
+        تحديث الكل من أمازون
+      </button>
+    </div>
   </div>
 
   <!-- Loading Spinner -->

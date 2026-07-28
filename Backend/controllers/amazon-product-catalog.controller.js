@@ -215,6 +215,40 @@ class AmazonProductCatalogController {
   }
 
   /**
+   * Sync all Amazon products with Seller Central
+   */
+  async syncAll(req, res) {
+    try {
+      if (!PublishAmazonProductJob.isAvailable()) {
+        return res.status(503).json({
+          success: false,
+          message: 'Amazon queue service is currently unavailable'
+        });
+      }
+
+      const job = await PublishAmazonProductJob.syncAll();
+
+      console.log('✅ [AMAZON CATALOG] BULK_SYNC_INITIATED', {
+        timestamp: new Date().toISOString(),
+        jobId: job.id
+      });
+
+      res.json({
+        success: true,
+        message: 'Bulk synchronization initiated',
+        jobId: job.id
+      });
+    } catch (error) {
+      console.error('Error initiating bulk sync:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error initiating bulk sync',
+        error: error.message
+      });
+    }
+  }
+
+  /**
    * Bulk update product status
    */
   async bulkUpdateStatus(req, res) {

@@ -196,6 +196,25 @@ export class AmazonCatalogComponent implements OnInit, OnDestroy {
     }
   }
 
+  syncAllProducts(): void {
+    if (confirm('هل تريد مزامنة جميع المنتجات مع أمازون الآن؟ قد تستغرق هذه العملية بعض الوقت.')) {
+      this.loading = true;
+      this.adminService.syncAllAmazonProducts()
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (response: any) => {
+            alert('بدأت عملية المزامنة الشاملة في الخلفية. سيتم تحديث البيانات تدريجياً.');
+            this.loadAmazonProducts();
+          },
+          error: (error) => {
+            console.error('Error initiating bulk sync:', error);
+            alert('فشل بدء عملية المزامنة: ' + error.message);
+            this.loading = false;
+          }
+        });
+    }
+  }
+
   copyToClipboard(text: string): void {
     navigator.clipboard.writeText(text).then(() => {
       console.log('Text copied to clipboard');

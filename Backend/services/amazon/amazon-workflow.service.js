@@ -112,6 +112,64 @@ class AmazonWorkflowService {
   }
 
   /**
+   * Sync all products with Amazon to ensure data consistency
+   */
+  static async syncAllProducts(job = null) {
+    const startTime = Date.now();
+    let syncedCount = 0;
+    let failedCount = 0;
+
+    const updateProgress = (percent, message) => {
+      if (job) {
+        job.progress(percent);
+        job.log(message);
+      }
+    };
+
+    try {
+      // Find all products that have an Amazon SKU
+      const products = await Product.find({ amazonSku: { $exists: true, $ne: null } });
+      const total = products.length;
+
+      logWorkflow('BULK_SYNC_START', { total });
+      updateProgress(0, `Starting bulk sync for ${total} products`);
+
+      for (let i = 0; i < products.length; i++) {
+        const product = products[i];
+        try {
+          await this.syncProduct(product.products_id || product._id.toString());
+          syncedCount++;
+        } catch (error) {
+          console.error(`Failed to sync product ${product.amazonSku}:`, error.message);
+          failedCount++;
+        }
+
+        const percent = Math.floor(((i + 1) / total) * 100);
+        if (percent % 10 === 0) {
+          updateProgress(percent, `Synced ${i + 1}/${total} products`);
+        }
+      }
+
+      logWorkflow('BULK_SYNC_COMPLETED', { 
+        syncedCount, 
+        failedCount, 
+        total,
+        executionTime: Date.now() - startTime 
+      });
+
+      return {
+        success: true,
+        syncedCount,
+        failedCount,
+        total
+      };
+    } catch (error) {
+      logWorkflow('BULK_SYNC_ERROR', { error: error.message });
+      throw error;
+    }
+  }
+
+  /**
    * Complete publishing workflow for new product
    */
   static async publishProduct(productId, job = null) {

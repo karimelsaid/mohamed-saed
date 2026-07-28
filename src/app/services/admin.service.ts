@@ -150,6 +150,12 @@ export class AdminService {
     );
   }
 
+  syncAllAmazonProducts(): Observable<any> {
+    return this.http.post(`${environment.apiBaseUrl}/amazon/products/bulk/sync`, {}).pipe(
+      catchError(this.handleError)
+    );
+  }
+
   // Product Management Methods
   getAllProducts(): Observable<any> {
     return this.http.get(`${this.apiUrl}/products`).pipe(

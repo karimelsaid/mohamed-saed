@@ -562,7 +562,7 @@ class AmazonWorkflowService {
         title: titles[i],
         description: product.product_description && product.product_description.trim() !== '' 
           ? product.product_description 
-          : `كتاب ${titles[i]} - من إصدارات كنوز للنشر والتوزيع`,
+          : titles[i],
         price: product.amazonPrice || product.product_price,
         quantity: product.product_quantity !== undefined ? product.product_quantity : 10,
         publisher: product.publisher,

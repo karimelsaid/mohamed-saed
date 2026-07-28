@@ -13,7 +13,9 @@ const routes: Routes = [
     { path: 'sales-registration', loadComponent: () => import('./sales-registration/sales-registration.component').then(m => m.SalesRegistrationComponent) },
     { path: 'shortages-report', loadComponent: () => import('./shortages-report/shortages-report.component').then(m => m.ShortagesReportComponent) },
     { path: 'marketers', loadComponent: () => import('./marketer-management/marketer-management.component').then(m => m.MarketerManagementComponent) },
-    { path: 'special-offers', loadComponent: () => import('./special-offers-manager/special-offers-manager.component').then(m => m.SpecialOffersManagerComponent) }
+    { path: 'special-offers', loadComponent: () => import('./special-offers-manager/special-offers-manager.component').then(m => m.SpecialOffersManagerComponent) },
+    { path: 'product-management', loadComponent: () => import('./product-management/product-management.component').then(m => m.ProductManagementComponent) },
+    { path: 'amazon-diagnostics', loadComponent: () => import('./amazon-diagnostics/amazon-diagnostics.component').then(m => m.AmazonDiagnosticsComponent) }
 ];
 
 @NgModule({

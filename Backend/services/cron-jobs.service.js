@@ -120,6 +120,39 @@ exports.initCronJobs = async () => {
         }
     });
     scheduledTasks.push(bourseTask);
+
+    // 7. Amazon pending ASIN check (Every 15 minutes)
+    const amazonPendingTask = cron.schedule('*/15 * * * *', async () => {
+        // console.log('🔄 Checking Amazon pending ASINs...');
+        try {
+            const Product = require('../models/Product.model');
+            // Since this is in services/ use the correct relative path
+            const amazonPolling = require('./amazon/amazon-polling.service');
+            
+            const pendingProducts = await Product.find({ amazonStatus: 'pending_asin' }).limit(50);
+            
+            for (const product of pendingProducts) {
+                if (product.amazonSku) {
+                    const statusResult = await amazonPolling.getProductStatus(product.amazonSku);
+                    if (statusResult.asin) {
+                        console.log(`✅ [Amazon Cron] ASIN generated for ${product.products_id}: ${statusResult.asin}`);
+                        product.amazonAsin = statusResult.asin;
+                        product.amazonStatus = 'published';
+                        product.amazonSyncedAt = new Date();
+                        await product.save();
+                    } else if (statusResult.status === 'PERMANENT_ERROR' || statusResult.status === 'INVALID') {
+                        console.log(`❌ [Amazon Cron] ASIN failed for ${product.products_id}`);
+                        product.amazonStatus = 'failed';
+                        product.amazonLastError = 'Rejected by Amazon';
+                        await product.save();
+                    }
+                }
+            }
+        } catch(err) {
+            console.error('Error in amazon pending check job:', err);
+        }
+    });
+    scheduledTasks.push(amazonPendingTask);
 };
 
 /**

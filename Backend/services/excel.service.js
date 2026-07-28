@@ -59,16 +59,55 @@ function cleanPrice(val) {
   }
   
   let s = String(val).trim();
-  // Remove currency symbols if any
+  // Remove all non-digit characters except dots and commas
   s = s.replace(/[^\d.,]/g, '');
 
-  // If it has a dot followed by 3 digits and no other separators, treat it as thousands
-  if (s.includes('.') && s.split('.')[1].length === 3 && !s.includes(',')) {
-    return parseFloat(s.replace('.', ''));
+  // If string is empty after cleaning
+  if (!s) return 0;
+
+  // Handle formats with both comma and dot (e.g., 1,155.00 or 1.155,00)
+  const hasComma = s.includes(',');
+  const hasDot = s.includes('.');
+
+  if (hasComma && hasDot) {
+    // Determine which is decimal separator based on position
+    const commaIndex = s.lastIndexOf(',');
+    const dotIndex = s.lastIndexOf('.');
+    
+    if (commaIndex > dotIndex) {
+      // Comma is after dot, so comma is decimal (European format: 1.155,00)
+      s = s.replace(/\./g, '').replace(',', '.');
+    } else {
+      // Dot is after comma, so dot is decimal (US format: 1,155.00)
+      s = s.replace(/,/g, '');
+    }
+  } else if (hasComma) {
+    // Only comma present - could be thousands or decimal
+    // If comma is followed by exactly 2 digits, treat as decimal (e.g., 10,50)
+    const parts = s.split(',');
+    if (parts.length === 2 && parts[1].length === 2) {
+      s = s.replace(',', '.');
+    } else {
+      // Treat as thousands separator
+      s = s.replace(/,/g, '');
+    }
+  } else if (hasDot) {
+    // Only dot present - could be thousands or decimal
+    const parts = s.split('.');
+    if (parts.length === 2 && parts[1].length === 3 && parts[0].length > 0) {
+      // If dot is followed by exactly 3 digits and the part before is not empty,
+      // it might be thousands separator (e.g., 1.155)
+      // But only if the number before dot is small (less than 10) to avoid breaking decimals like 100.50
+      const beforeDot = parseFloat(parts[0]);
+      if (beforeDot < 10) {
+        s = s.replace('.', '');
+      }
+    }
+    // Otherwise keep dot as decimal separator
   }
 
-  // Handle standard formats: 1,155.00 -> 1155
-  return parseFloat(s.replace(/,/g, '')) || 0;
+  const result = parseFloat(s);
+  return isNaN(result) ? 0 : result;
 }
 
 async function downloadAndConvertExcel(fileId, promotionStartDateStr, promotionEndDateStr) {
@@ -450,6 +489,8 @@ async function addProductToExcel(productData, merchantId = null) {
       usage: productData.usage || '',
       suggestedCategory: productData.suggestedCategory || '',
       linkedEbookId: productData.linkedEbookId || '',
+      status: productData.status || 'approved',
+      amazonAsin: productData.amazonAsin || '',
       createdAt: productData.createdAt || new Date().toISOString()
     };
 
@@ -966,6 +1007,8 @@ async function bulkAddProductsToExcel(productsData) {
         usage: productData.usage || '',
         suggestedCategory: productData.suggestedCategory || '',
         linkedEbookId: productData.linkedEbookId || '',
+        status: productData.status || 'approved',
+        amazonAsin: productData.amazonAsin || '',
         createdAt: productData.createdAt || new Date().toISOString()
       };
       json.push(newRow);

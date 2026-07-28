@@ -1,5 +1,5 @@
-import { Component, Input, ElementRef, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, Input, ElementRef, OnInit, OnDestroy, ChangeDetectorRef, Inject, PLATFORM_ID } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 
 @Component({
   selector: 'app-animated-counter',
@@ -29,7 +29,8 @@ export class AnimatedCounterComponent implements OnInit, OnDestroy {
 
   constructor(
     private elementRef: ElementRef,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    @Inject(PLATFORM_ID) private platformId: object
   ) {}
 
   ngOnInit() {
@@ -37,6 +38,12 @@ export class AnimatedCounterComponent implements OnInit, OnDestroy {
   }
 
   private observeVisibility() {
+    if (!isPlatformBrowser(this.platformId) || typeof IntersectionObserver === 'undefined') {
+      // On the server, we don't animate. We can just set the animatedValue to targetValue directly
+      // or just do nothing (it will stay 0 and animate on the client). Let's do nothing.
+      return;
+    }
+
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {

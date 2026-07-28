@@ -109,6 +109,20 @@
         <span>موافقة المنتجات</span>
       </button>
 
+      <button *ngIf="hasPermission('products')" (click)="switchView('productManagement'); showSidebar = false"
+        [class]="currentView === 'productManagement' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
+        class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
+        <fa-icon [icon]="['fab', 'amazon']"></fa-icon>
+        <span>إدارة المنتجات (Amazon)</span>
+      </button>
+
+      <button *ngIf="hasPermission('products')" (click)="switchView('amazonDiagnostics'); showSidebar = false"
+        [class]="currentView === 'amazonDiagnostics' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
+        class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
+        <fa-icon [icon]="['fas', 'stethoscope']"></fa-icon>
+        <span>Amazon Diagnostics</span>
+      </button>
+
       <button *ngIf="hasPermission('userHierarchy')" (click)="switchView('userHierarchy'); showSidebar = false"
         [class]="currentView === 'userHierarchy' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
         class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
@@ -1742,6 +1756,39 @@
                 </div>
                 <p class="text-[10px] text-gray-500 mt-2">سيتم استخدام هذا التصنيف لأي منتج ليس له تصنيف محدد في الملف.</p>
               </div>
+
+              <!-- Default Copy Type & Condition Selection -->
+              <div class="mt-6 pt-6 border-t border-blue-100 dark:border-blue-900/50">
+                <label class="block text-sm font-bold text-blue-800 dark:text-blue-300 mb-3 flex items-center">
+                  <fa-icon [icon]="['fas', 'tag']" class="ml-2"></fa-icon>
+                  نوع النسخة والحالة الافتراضية
+                </label>
+                <p class="text-[11px] text-gray-500 mb-4">سيتم تطبيق هذه القيم على جميع المنتجات المستوردة (بغض النظر عن محتوى ملف Excel)</p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <!-- Copy Type Selection -->
+                  <div>
+                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">نوع النسخة</label>
+                    <select [(ngModel)]="bulkDefaultCopyType"
+                      class="w-full px-4 py-3 border-2 border-blue-100 dark:border-blue-900/30 rounded-lg focus:ring-2 focus:border-transparent dark:bg-gray-700 dark:text-gray-200">
+                      <option value="">-- اختر نوع النسخة --</option>
+                      <option value="أصلي">أصلي</option>
+                      <option value="هاي كوبي">هاي كوبي</option>
+                    </select>
+                  </div>
+
+                  <!-- Condition Selection -->
+                  <div>
+                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">الحالة</label>
+                    <select [(ngModel)]="bulkDefaultCondition"
+                      class="w-full px-4 py-3 border-2 border-blue-100 dark:border-blue-900/30 rounded-lg focus:ring-2 focus:border-transparent dark:bg-gray-700 dark:text-gray-200">
+                      <option value="">-- اختر الحالة --</option>
+                      <option value="جديد">جديد</option>
+                      <option value="مستعمل بحالة جيدة">مستعمل بحالة جيدة</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <!-- Step 2: File Upload -->
@@ -1897,6 +1944,14 @@
         <app-product-approval></app-product-approval>
       </div>
 
+      <div *ngIf="currentView === 'productManagement'" class="mb-28 md:mb-0">
+        <app-product-management></app-product-management>
+      </div>
+
+      <div *ngIf="currentView === 'amazonDiagnostics'" class="mb-28 md:mb-0">
+        <app-amazon-diagnostics></app-amazon-diagnostics>
+      </div>
+
       <div *ngIf="currentView === 'products'" class="px-4 sm:px-10 max-w-6xl mx-auto mb-32 md:mb-0 view-enter">
         <h3 class="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">عرض وتعديل المنتجات</h3>
         <!-- Search bar for filtering products -->
@@ -1947,6 +2002,11 @@
               <button (click)="showBulkEditModal()" [disabled]="selectedProducts.size === 0"
                 class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded text-sm disabled:opacity-50">
                 تعديل جماعي
+              </button>
+                            <button (click)="bulkPublishAmazonSelectedProducts()" [disabled]="selectedProducts.size === 0"
+                class="bg-orange-50 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400 px-4 py-2 rounded-lg hover:bg-orange-100 dark:hover:bg-orange-900/50 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                <fa-icon [icon]="['fab', 'amazon']"></fa-icon>
+                <span>نشر المحدد على أمازون</span>
               </button>
               <button (click)="bulkDeleteSelectedProductsWithModal()" [disabled]="selectedProducts.size === 0"
                 class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded text-sm disabled:opacity-50">
@@ -2179,6 +2239,36 @@
                       جارٍ الحفظ...
                     </span>
                   </button>
+                  
+                  <!-- Amazon Publish Button -->
+                  <button *ngIf="!product['amazonAsin'] && product['status'] === 'approved'"
+                    (click)="publishProductToAmazon(product.products_id)"
+                    [disabled]="isPublishingToAmazon(product.products_id)"
+                    class="px-3 py-2 text-sm font-medium rounded-md transition-colors flex items-center justify-center gap-1"
+                    [ngClass]="isPublishingToAmazon(product.products_id) ? 'bg-gray-400 text-white' : 'bg-orange-500 hover:bg-orange-600 text-white'">
+                    <fa-icon [icon]="['fab', 'amazon']"></fa-icon>
+                    <span *ngIf="!isPublishingToAmazon(product.products_id)">Publish to Amazon</span>
+                    <span *ngIf="isPublishingToAmazon(product.products_id)">جاري...</span>
+                  </button>
+
+                  <!-- Amazon Sync Button -->
+                  <button *ngIf="product['amazonAsin']"
+                    (click)="syncProductAmazon(product.products_id)"
+                    [disabled]="isSyncingAmazon(product.products_id)"
+                    class="px-3 py-2 text-sm font-medium rounded-md transition-colors flex items-center justify-center gap-1"
+                    [ngClass]="isSyncingAmazon(product.products_id) ? 'bg-gray-400 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white'">
+                    <fa-icon [icon]="['fas', 'sync-alt']"></fa-icon>
+                    <span *ngIf="!isSyncingAmazon(product.products_id)">Sync Amazon</span>
+                    <span *ngIf="isSyncingAmazon(product.products_id)">جاري...</span>
+                  </button>
+
+                  <!-- Amazon Progress Indicator -->
+                  <div *ngIf="product['amazonProgress'] && (isPublishingToAmazon(product['_id']) || isSyncingAmazon(product['_id']))"
+                    class="px-3 py-2 text-sm font-medium rounded-md bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-200 flex items-center gap-2">
+                    <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600"></div>
+                    <span>{{ product['amazonProgress'] }}</span>
+                  </div>
+                  
                   <button (click)="product.detailsOpen = !product.detailsOpen"
                     class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-md">
                     <span *ngIf="!product.detailsOpen">عرض التفاصيل</span>
@@ -2347,6 +2437,60 @@
                             class="mt-1 bg-gray-100 dark:bg-gray-700 border rounded p-1 w-full">
                         </div>
                       </ng-container>
+                    </div>
+                  </div>
+
+                  <!-- Amazon Integration Section -->
+                  <div class="col-span-1 md:col-span-2 lg:col-span-3 p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
+                    <h4 class="font-bold text-lg mb-3 text-orange-700 dark:text-orange-300 flex items-center gap-2">
+                      <fa-icon [icon]="['fab', 'amazon']"></fa-icon>
+                      Amazon Integration
+                    </h4>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                      <div>
+                        <label class="font-semibold text-gray-600 dark:text-gray-300">الحالة:</label>
+                        <p [ngClass]="{
+                          'text-green-600 dark:text-green-400': product['amazonStatus'] === 'published',
+                          'text-blue-600 dark:text-blue-400': product['amazonStatus'] === 'publishing',
+                          'text-red-600 dark:text-red-400': product['amazonStatus'] === 'failed',
+                          'text-yellow-600 dark:text-yellow-400': product['amazonStatus'] === 'suppressed',
+                          'text-gray-600 dark:text-gray-400': !product['amazonStatus']
+                        }">
+                          {{ product['amazonStatus'] || 'غير منشور' }}
+                        </p>
+                      </div>
+                      <div>
+                        <label class="font-semibold text-gray-600 dark:text-gray-300">SKU:</label>
+                        <p class="text-gray-800 dark:text-gray-100">{{ product['amazonSku'] || '-' }}</p>
+                      </div>
+                      <div>
+                        <label class="font-semibold text-gray-600 dark:text-gray-300">ASIN:</label>
+                        <p class="text-gray-800 dark:text-gray-100">
+                          <span *ngIf="product['amazonAsin']">
+                            <a [href]="'https://www.amazon.eg/dp/' + product['amazonAsin']" target="_blank"
+                              class="text-blue-600 dark:text-blue-400 hover:underline">
+                              {{ product['amazonAsin'] }}
+                            </a>
+                          </span>
+                          <span *ngIf="!product['amazonAsin']">-</span>
+                        </p>
+                      </div>
+                      <div>
+                        <label class="font-semibold text-gray-600 dark:text-gray-300">سعر Amazon:</label>
+                        <p class="text-gray-800 dark:text-gray-100">{{ product['amazonPrice'] || '-' }} جنيه</p>
+                      </div>
+                      <div>
+                        <label class="font-semibold text-gray-600 dark:text-gray-300">آخر مزامنة:</label>
+                        <p class="text-gray-800 dark:text-gray-100">
+                          {{ product['amazonSyncedAt'] ? (product['amazonSyncedAt'] | date:'medium') : '-' }}
+                        </p>
+                      </div>
+                      <div>
+                        <label class="font-semibold text-gray-600 dark:text-gray-300">آخر خطأ:</label>
+                        <p class="text-red-600 dark:text-red-400 text-xs break-words">
+                          {{ product['amazonLastError'] || '-' }}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>

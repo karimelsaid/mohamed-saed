@@ -52,15 +52,18 @@ const productSchema = new mongoose.Schema({
   // Amazon Integration Fields
   amazonSku: { type: String, index: true },
   amazonAsin: { type: String },
-  amazonListingStatus: {
+  amazonStatus: {
     type: String,
-    enum: ['pending', 'active', 'rejected', 'needs_review'],
+    enum: ['pending', 'publishing', 'published', 'retry', 'failed', 'suppressed'],
     default: 'pending'
   },
-  amazonRejectionReason: { type: String },
-  lastSyncedToAmazon: { type: Date },
+  amazonLastError: { type: String },
+  amazonSubmissionId: { type: String },
+  amazonSyncedAt: { type: Date },
+  amazonRetryCount: { type: Number, default: 0 },
   amazonPrice: { type: Number },
-  amazonSyncInProgress: { type: Boolean, default: false }
+  amazonSyncInProgress: { type: Boolean, default: false },
+  amazonJobId: { type: String } // Track active queue job for deduplication
 });
 
 productSchema.index({ merchantId: 1 });
@@ -69,15 +72,15 @@ productSchema.index({ merchantId: 1 });
 productSchema.post('save', async function(doc, next) {
   // Only send webhook if:
   // 1. Product is approved (not pending/rejected)
-  // 2. Amazon listing status is pending (not already synced)
+  // 2. Amazon status is pending (not already synced)
   // 3. Product is physical (digital products don't go to Amazon)
-  // 4. Status or amazonListingStatus was actually modified (prevent duplicate webhooks on minor edits)
+  // 4. Status or amazonStatus was actually modified (prevent duplicate webhooks on minor edits)
   // 5. Sync is not already in progress (prevent race conditions)
   if (
     doc.status === 'approved' &&
-    doc.amazonListingStatus === 'pending' &&
+    doc.amazonStatus === 'pending' &&
     doc.productType === 'physical' &&
-    (doc.isModified('status') || doc.isModified('amazonListingStatus')) &&
+    (doc.isModified('status') || doc.isModified('amazonStatus')) &&
     !doc.amazonSyncInProgress
   ) {
     try {

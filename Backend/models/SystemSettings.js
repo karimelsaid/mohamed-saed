@@ -26,6 +26,11 @@ const systemSettingsSchema = mongoose.Schema({
         minimumWithdrawal: { type: Number, default: 500 },
         dynamicOfferProfitMargin: { type: Number, default: 50 }
     },
+    amazon: {
+        priceIncreasePercentage: { type: Number, default: 20 }, // Percentage to increase price for Amazon listings
+        marketplaceId: { type: String, default: 'ARBP9OOSHTCHU' },
+        region: { type: String, default: 'eu' }
+    },
     subscription: {
         monthlyPrice: { type: Number, default: 50 },
         yearlyPrice: { type: Number, default: 500 }

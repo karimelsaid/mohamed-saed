@@ -555,10 +555,9 @@ export class HomePageComponent implements OnInit, OnDestroy {
       return `${environment.uploadsBaseUrl}/${merchant.logo}`;
     }
 
-    // Case 2: Auto-extracted publisher or mock - look for logo in /uploads/books/publishers/[name].webp
-    // Sanitize name for filename
+    // Case 2: Auto-extracted publisher or mock - use backend endpoint to get correct image
     const sanitizedName = merchant.name.trim().replace(/\s+/g, '_');
-    return `${environment.uploadsBaseUrl}/publishers/${sanitizedName}.webp`;
+    return `${environment.apiBaseUrl}/books/publisher-logo/${encodeURIComponent(sanitizedName)}`;
   }
 
   loadDynamicCategories(): void {

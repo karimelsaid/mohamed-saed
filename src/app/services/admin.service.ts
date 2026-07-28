@@ -98,6 +98,65 @@ export class AdminService {
       catchError(this.handleError)
     );
   }
+
+  // Amazon Publishing Methods
+  publishProductToAmazon(productId: string): Observable<any> {
+    return this.http.post(`${environment.apiBaseUrl}/amazon/products/${productId}/amazon/publish`, {}).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  getProductAmazonStatus(productId: string): Observable<any> {
+    return this.http.get(`${environment.apiBaseUrl}/amazon/products/${productId}/amazon/status`).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  getAmazonProducts(status?: string): Observable<any> {
+    const params: any = {};
+    if (status && status !== 'all') params.status = status;
+    return this.http.get(`${environment.apiBaseUrl}/amazon/products`, { params }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  retryProductAmazonPublish(productId: string): Observable<any> {
+    return this.http.post(`${environment.apiBaseUrl}/amazon/products/${productId}/amazon/retry`, {}).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  getAmazonJobProgress(jobId: string): Observable<any> {
+    return this.http.get(`${environment.apiBaseUrl}/amazon/jobs/${jobId}/progress`).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  syncProductAmazon(productId: string): Observable<any> {
+    return this.http.post(`${environment.apiBaseUrl}/amazon/products/${productId}/amazon/sync`, {}).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  // Product Management Methods
+  getAllProducts(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/products`).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  updateProduct(productId: string, formData: FormData): Observable<any> {
+    return this.http.put(`${this.apiUrl}/products/${productId}`, formData).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  deleteProduct(productId: string): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/products/${productId}`).pipe(
+      catchError(this.handleError)
+    );
+  }
+
   getSystemSettings(): Observable<any> {
     return this.http.get(`${this.apiUrl}/settings`).pipe(
       catchError(this.handleError)

@@ -120,3 +120,4 @@ const verifyN8nToken = async (req, res, next) => {
 module.exports = verifyToken; // Default export for old style: const verifyToken = require(...)
 module.exports.verifyToken = verifyToken; // Named export for new style: const { verifyToken } = require(...)
 module.exports.verifyN8nToken = verifyN8nToken; // Named export for new style: const { verifyN8nToken } = require(...)
+module.exports.authMiddleware = verifyToken; // Alias for authMiddleware import style

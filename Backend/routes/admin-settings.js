@@ -35,7 +35,7 @@ router.get('/printing', async (req, res) => {
 // PUT /admin/settings - Update settings (Admin only)
 router.put('/', authenticateAdmin, async (req, res) => {
     try {
-        const { gamification, quranPoints, economy, maintenanceMode, heroConfig } = req.body;
+        const { gamification, quranPoints, economy, maintenanceMode, heroConfig, amazon } = req.body;
 
         let settings = await SystemSettings.getInstance();
 
@@ -43,6 +43,7 @@ router.put('/', authenticateAdmin, async (req, res) => {
         if (req.body.quranPoints) settings.quranPoints = { ...settings.quranPoints, ...req.body.quranPoints };
         if (economy) settings.economy = { ...settings.economy, ...economy };
         if (heroConfig) settings.heroConfig = { ...settings.heroConfig, ...heroConfig };
+        if (amazon) settings.amazon = { ...settings.amazon, ...amazon };
 
         if (req.body.printing) {
             console.log('Updating printing settings:', JSON.stringify(req.body.printing, null, 2));

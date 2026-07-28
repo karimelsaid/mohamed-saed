@@ -12,13 +12,14 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MerchantManagementComponent } from '../merchant-management/merchant-management.component';
 import { ProductApprovalComponent } from '../product-approval/product-approval.component';
+import { ProductManagementComponent } from '../product-management/product-management.component';
 import Chart from 'chart.js/auto';
 import * as XLSX from 'xlsx';
 import { FreeShippingRulesComponent } from './free-shipping/free-shipping-rules.component';
 import { Subscription } from 'rxjs';
 import { FaIconLibrary, FontAwesomeModule, FaIconComponent } from '@fortawesome/angular-fontawesome';
-import { faShoppingCart, faStore, faBook, faPrint, faPlus, faEdit, faTrash, faTruck, faUsers, faCheckCircle, faMoneyBillWave, faSitemap, faPlusCircle, faImage, faTag, faHashtag, faList, faDollarSign, faAlignLeft, faExclamationTriangle, faCartPlus, faHeart, faMobileAlt, faCamera, faTimes, faHome, faChartLine, faCog, faBars, faUserClock, faCoins, faUserPlus, faChartBar, faBell, faSearch, faSlidersH, faGift, faSyncAlt, faSpinner, faCloudUploadAlt, faGavel, faPaperPlane, faFileExcel } from '@fortawesome/free-solid-svg-icons';
-import { faWhatsapp } from '@fortawesome/free-brands-svg-icons';
+import { faShoppingCart, faStore, faBook, faPrint, faPlus, faEdit, faTrash, faTruck, faUsers, faCheckCircle, faMoneyBillWave, faSitemap, faPlusCircle, faImage, faTag, faHashtag, faList, faDollarSign, faAlignLeft, faExclamationTriangle, faCartPlus, faHeart, faMobileAlt, faCamera, faTimes, faHome, faChartLine, faCog, faBars, faUserClock, faCoins, faUserPlus, faChartBar, faBell, faSearch, faSlidersH, faGift, faSyncAlt, faSpinner, faCloudUploadAlt, faGavel, faPaperPlane, faFileExcel, faStethoscope } from '@fortawesome/free-solid-svg-icons';
+import { faWhatsapp, faAmazon } from '@fortawesome/free-brands-svg-icons';
 import { PaymentRequestsComponent } from '../payment-requests/payment-requests.component';
 import { UserHierarchyComponent } from '../user-hierarchy/user-hierarchy.component';
 import { AmazonPriceCalculatorComponent } from '../amazon-price-calculator/amazon-price-calculator.component';
@@ -38,6 +39,7 @@ import { AdminService } from '../../services/admin.service';
 import { MarketerManagementComponent } from '../marketer-management/marketer-management.component';
 import { SpecialOffersManagerComponent } from '../special-offers-manager/special-offers-manager.component';
 import { AiControlCenterComponent } from '../ai-control-center/ai-control-center.component';
+import { AmazonDiagnosticsComponent } from '../amazon-diagnostics/amazon-diagnostics.component';
 
 interface Order {
   _id: string;
@@ -269,7 +271,7 @@ interface SystemSettings {
   };
 }
 
-export type AdminView = 'dashboard' | 'userIntelligence' | 'orders' | 'requestedBooks' | 'printOrders' | 'printingSettings' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'staff' | 'productApproval' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' | 'gamificationControl' | 'notifications' | 'subscriptionControl' | 'readerFeedback' | 'promotions' | 'salesRegistration' | 'shortagesReport' | 'promotionDates' | 'salesHistory' | 'community' | 'bourseSettings' | 'automation' | 'aiControlCenter' | 'newsletter' | 'marketers' | 'specialOffers';
+export type AdminView = 'dashboard' | 'userIntelligence' | 'orders' | 'requestedBooks' | 'printOrders' | 'printingSettings' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'staff' | 'productApproval' | 'productManagement' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' | 'gamificationControl' | 'notifications' | 'subscriptionControl' | 'readerFeedback' | 'promotions' | 'salesRegistration' | 'shortagesReport' | 'promotionDates' | 'salesHistory' | 'community' | 'bourseSettings' | 'automation' | 'aiControlCenter' | 'newsletter' | 'marketers' | 'specialOffers' | 'amazonDiagnostics';
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -283,6 +285,7 @@ export type AdminView = 'dashboard' | 'userIntelligence' | 'orders' | 'requested
     FreeShippingRulesComponent,
     MerchantManagementComponent,
     ProductApprovalComponent,
+    ProductManagementComponent,
     PaymentRequestsComponent,
     UserHierarchyComponent,
     AmazonPriceCalculatorComponent,
@@ -299,7 +302,8 @@ export type AdminView = 'dashboard' | 'userIntelligence' | 'orders' | 'requested
     AdminAutomationComponent,
     MarketerManagementComponent,
     SpecialOffersManagerComponent,
-    AiControlCenterComponent
+    AiControlCenterComponent,
+    AmazonDiagnosticsComponent
   ],
   templateUrl: './admin-dashboard.component.html',
   styleUrls: ['./admin-dashboard.component.css']
@@ -372,6 +376,10 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
   showSidebar: boolean = true;
   currentView: AdminView = 'userIntelligence'; 
+
+  // Amazon tracking
+  publishingToAmazon = new Set<string>();
+  syncingAmazon = new Set<string>();
 
   // Gamification Control Properties
   systemSettings: SystemSettings = {
@@ -1506,6 +1514,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   bulkImportProgress = 0;
   bulkImportSuccess = false;
   parsedBulkData: any[] = [];
+  bulkDefaultCopyType: string = '';
+  bulkDefaultCondition: string = '';
   
   // Category Mapping from Excel values to System categories
   detectedExcelCategories: string[] = [];
@@ -1528,14 +1538,10 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     { key: 'coverType', label: 'نوع الغلاف' },
     { key: 'language', label: 'اللغة' },
     { key: 'publishYear', label: 'سنة النشر' },
-    { key: 'copyType', label: 'نوع النسخة' },
-    { key: 'condition', label: 'الحالة' },
     { key: 'image_path', label: 'رابط الصورة (URL)' },
     { key: 'length', label: 'الطول (سم)' },
     { key: 'width', label: 'العرض (سم)' },
-    { key: 'height', label: 'الارتفاع (سم)' },
-    { key: 'copyType', label: 'نوع النسخة' },
-    { key: 'condition', label: 'الحالة (جديد/مستعمل)' }
+    { key: 'height', label: 'الارتفاع (سم)' }
   ];
 
   get uniquePublishers(): string[] {
@@ -1554,7 +1560,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     library: FaIconLibrary
   ) {
     library.addIcons(
-      faShoppingCart, faStore, faBook, faPrint, faPlus, faEdit, faTrash, faTruck, faUsers, faCheckCircle, faMoneyBillWave, faSitemap, faPlusCircle, faImage, faTag, faHashtag, faList, faDollarSign, faAlignLeft, faExclamationTriangle, faCartPlus, faHeart, faMobileAlt, faCamera, faTimes, faHome, faChartLine, faCog, faBars, faUserClock, faCoins, faUserPlus, faChartBar, faBell, faSearch, faSlidersH, faPaperPlane, faWhatsapp
+      faShoppingCart, faStore, faBook, faPrint, faPlus, faEdit, faTrash, faTruck, faUsers, faCheckCircle, faMoneyBillWave, faSitemap, faPlusCircle, faImage, faTag, faHashtag, faList, faDollarSign, faAlignLeft, faExclamationTriangle, faCartPlus, faHeart, faMobileAlt, faCamera, faTimes, faHome, faChartLine, faCog, faBars, faUserClock, faCoins, faUserPlus, faChartBar, faBell, faSearch, faSlidersH, faPaperPlane, faWhatsapp, faAmazon, faStethoscope
     );
   }
 
@@ -2928,9 +2934,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       'image_path': ['الصورة', 'رابط الصورة', 'Image', 'Image URL'],
       'length': ['الطول', 'Length', 'L'],
       'width': ['العرض', 'Width', 'W'],
-      'height': ['الارتفاع', 'Height', 'H'],
-      'copyType': ['نوع النسخة', 'Copy Type'],
-      'condition': ['الحالة', 'Condition']
+      'height': ['الارتفاع', 'Height', 'H']
     };
 
     this.systemFields.forEach(field => {
@@ -3033,6 +3037,14 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       const currentAvailableCats = [...this.allCategories, ...this.categories, ...this.bookSubCategories];
       if (!product.product_category || !currentAvailableCats.includes(product.product_category)) {
         product.product_category = this.bulkDefaultCategory;
+      }
+
+      // Apply default copyType and condition (admin-selected values override Excel)
+      if (this.bulkDefaultCopyType) {
+        product.copyType = this.bulkDefaultCopyType;
+      }
+      if (this.bulkDefaultCondition) {
+        product.condition = this.bulkDefaultCondition;
       }
       
       return product;
@@ -4188,6 +4200,185 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       true,
       action
     );
+  }
+
+  // Amazon Methods
+  publishProductToAmazon(productId: string): void {
+    if (this.publishingToAmazon.has(productId)) return;
+    
+    this.publishingToAmazon.add(productId);
+    
+    this.http.post(`${environment.apiBaseUrl}/amazon/products/${productId}/amazon/publish`, {}).subscribe({
+      next: (res) => {
+        this.publishingToAmazon.delete(productId);
+        this.showSuccessModal('تم بدء النشر على أمازون');
+        this.pollAmazonStatus(productId);
+      },
+      error: (err) => {
+        this.publishingToAmazon.delete(productId);
+        if (err.status === 503) {
+          this.showErrorModal('خدمة قائمة انتظار أمازون غير متاحة حالياً. Redis غير متصل.');
+        } else {
+          this.showErrorModal('فشل في بدء النشر على أمازون');
+        }
+      }
+    });
+  }
+
+  syncProductAmazon(productId: string): void {
+    if (this.syncingAmazon.has(productId)) return;
+    
+    this.syncingAmazon.add(productId);
+    
+    this.http.post(`${environment.apiBaseUrl}/amazon/products/${productId}/amazon/sync`, {}).subscribe({
+      next: (res) => {
+        this.syncingAmazon.delete(productId);
+        this.showSuccessModal('تم بدء المزامنة مع أمازون');
+        this.pollAmazonStatus(productId);
+      },
+      error: (err) => {
+        this.syncingAmazon.delete(productId);
+        if (err.status === 503) {
+          this.showErrorModal('خدمة قائمة انتظار أمازون غير متاحة حالياً. Redis غير متصل.');
+        } else {
+          this.showErrorModal('فشل في المزامنة مع أمازون');
+        }
+      }
+    });
+  }
+
+  isPublishingToAmazon(productId: string): boolean {
+    return this.publishingToAmazon.has(productId);
+  }
+
+  isSyncingAmazon(productId: string): boolean {
+    return this.syncingAmazon.has(productId);
+  }
+
+  pollAmazonStatus(productId: string): void {
+    const pollInterval = setInterval(() => {
+      this.http.get(`${environment.apiBaseUrl}/amazon/products/${productId}/amazon/status`).subscribe({
+        next: (res: any) => {
+          const product = this.products.find((p: any) => p['_id'] === productId || p['products_id'] === productId);
+          if (product) {
+            product['amazonStatus'] = res.data.status;
+            product['amazonSku'] = res.data.sku;
+            product['amazonAsin'] = res.data.asin;
+            product['amazonLastError'] = res.data.lastError;
+            product['amazonSyncedAt'] = res.data.syncedAt;
+            product['amazonPrice'] = res.data.price;
+
+            // Update progress message based on status
+            if (res.data.status === 'publishing') {
+              if (res.data.inProgress) {
+                product['amazonProgress'] = 'جاري النشر على أمازون...';
+              } else {
+                product['amazonProgress'] = 'في انتظار المعالجة...';
+              }
+            } else if (res.data.status === 'published') {
+              product['amazonProgress'] = 'تم النشر بنجاح';
+              this.publishingToAmazon.delete(productId);
+              this.syncingAmazon.delete(productId);
+              clearInterval(pollInterval);
+            } else if (res.data.status === 'failed') {
+              product['amazonProgress'] = 'فشل النشر';
+              this.publishingToAmazon.delete(productId);
+              this.syncingAmazon.delete(productId);
+              clearInterval(pollInterval);
+            } else if (res.data.status === 'suppressed') {
+              product['amazonProgress'] = 'تم كبت المنتج';
+              this.publishingToAmazon.delete(productId);
+              this.syncingAmazon.delete(productId);
+              clearInterval(pollInterval);
+            }
+
+            if (res.data.status === 'published' || res.data.status === 'failed' || res.data.status === 'suppressed') {
+              clearInterval(pollInterval);
+            }
+          }
+        },
+        error: (err) => {
+          console.error('Error polling Amazon status:', err);
+          const product = this.products.find((p: any) => p['_id'] === productId || p['products_id'] === productId);
+          if (product) {
+            product['amazonProgress'] = 'خطأ في الاتصال';
+          }
+          clearInterval(pollInterval);
+        }
+      });
+    }, 5000);
+
+    setTimeout(() => {
+      clearInterval(pollInterval);
+    }, 15 * 60 * 1000);
+  }
+
+  
+  bulkPublishAmazonSelectedProducts(): void {
+    const selectedIds = Array.from(this.selectedProducts);
+    
+    // Filter out products that are already published or being published
+    const eligibleIds = selectedIds.filter(id => {
+      const product = this.products.find(p => p.products_id === id || p['_id'] === id);
+      return product && product['amazonStatus'] !== 'published' && product['amazonStatus'] !== 'queued' && product['amazonStatus'] !== 'publishing' && !product['amazonAsin'] && product['status'] === 'approved';
+    });
+
+    if (eligibleIds.length === 0) {
+      this.showErrorModal('جميع المنتجات المحددة منشورة بالفعل على أمازون أو لا يمكن نشرها (يجب أن تكون مقبولة).');
+      return;
+    }
+
+    const action = () => {
+      this.showProgressModal(`جاري بدء النشر لـ ${eligibleIds.length} منتجات على أمازون...`);
+      
+      let completed = 0;
+      let failed = 0;
+      
+      // Process products sequentially with delay to avoid SKU conflicts
+      eligibleIds.forEach((productId, index) => {
+        // Add delay between each request (2 seconds)
+        setTimeout(() => {
+          this.publishingToAmazon.add(productId);
+          
+          this.http.post(`${this.backendBaseUrl.replace('/api/admin', '/api')}/amazon/products/${productId}/amazon/publish`, {}).subscribe({
+            next: (res) => {
+              this.publishingToAmazon.delete(productId);
+              this.pollAmazonStatus(productId);
+              completed++;
+              this.checkBulkAmazonComplete(completed, failed, eligibleIds.length);
+            },
+            error: (err) => {
+              this.publishingToAmazon.delete(productId);
+              failed++;
+              this.checkBulkAmazonComplete(completed, failed, eligibleIds.length);
+            }
+          });
+        }, index * 2000); // 2 second delay between each product
+      });
+    };
+
+    this.openModal(
+      'تأكيد النشر على أمازون',
+      `هل أنت متأكد من نشر ${eligibleIds.length} منتج على أمازون؟ سيتم إرسالها إلى طابور الانتظار للعمل عليها.`,
+      'warning',
+      'تأكيد النشر',
+      'إلغاء',
+      true,
+      action
+    );
+  }
+
+  private checkBulkAmazonComplete(completed: number, failed: number, total: number) {
+    if (completed + failed === total) {
+      setTimeout(() => {
+        this.closeProgressModal();
+        if (failed === 0) {
+          this.showSuccessModal(`تم إرسال ${completed} منتجات إلى أمازون بنجاح.`);
+        } else {
+          this.showErrorModal(`تم إرسال ${completed} منتجات، وفشل إرسال ${failed} منتجات.`);
+        }
+      }, 500);
+    }
   }
 
   bulkDeleteSelectedProductsWithModal(): void {

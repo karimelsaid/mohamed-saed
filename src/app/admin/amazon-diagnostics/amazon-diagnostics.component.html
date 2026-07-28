@@ -1,0 +1,333 @@
+<div class="p-6">
+  <div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+      <fa-icon [icon]="['fab', 'amazon']"></fa-icon>
+      Amazon Diagnostics
+    </h1>
+    <button (click)="refresh()" 
+      class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md flex items-center gap-2">
+      <fa-icon [icon]="['fas', 'sync-alt']" [class.animate-spin]="loading"></fa-icon>
+      Refresh
+    </button>
+  </div>
+
+  <!-- Queue Availability Banner -->
+  <div *ngIf="diagnostics && !diagnostics.queueAvailable" 
+    class="bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-200 px-4 py-3 rounded mb-6 flex items-center gap-3">
+    <fa-icon [icon]="['fas', 'exclamation-circle']" class="text-xl"></fa-icon>
+    <div>
+      <p class="font-semibold">Amazon Queue Service Offline</p>
+      <p class="text-sm">Redis is not connected. Amazon publishing features are disabled.</p>
+      <p *ngIf="diagnostics.queueError" class="text-xs mt-1">Error: {{ diagnostics.queueError }}</p>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="flex justify-center items-center py-12">
+    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+  </div>
+
+  <div *ngIf="error" class="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-200 px-4 py-3 rounded mb-4">
+    {{ error }}
+  </div>
+
+  <div *ngIf="diagnostics" class="space-y-6">
+    <!-- Connection Status Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <!-- API Connection -->
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+        <h3 class="font-semibold text-gray-700 dark:text-gray-200 mb-3 flex items-center gap-2">
+          <fa-icon [icon]="['fas', 'plug']"></fa-icon>
+          API Connection
+        </h3>
+        <div class="space-y-2">
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-gray-600 dark:text-gray-400">Status:</span>
+            <span [class]="getStatusBadge(diagnostics.apiConnection.status)" class="px-2 py-1 rounded text-xs">
+              {{ diagnostics.apiConnection.status }}
+            </span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-gray-600 dark:text-gray-400">Last Checked:</span>
+            <span class="text-sm text-gray-800 dark:text-gray-200">
+              {{ diagnostics.apiConnection.lastChecked | date:'medium' }}
+            </span>
+          </div>
+          <div *ngIf="diagnostics.apiConnection.latency" class="flex justify-between items-center">
+            <span class="text-sm text-gray-600 dark:text-gray-400">Latency:</span>
+            <span class="text-sm text-gray-800 dark:text-gray-200">
+              {{ diagnostics.apiConnection.latency }}ms
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Access Token -->
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+        <h3 class="font-semibold text-gray-700 dark:text-gray-200 mb-3 flex items-center gap-2">
+          <fa-icon [icon]="['fas', 'key']"></fa-icon>
+          Access Token
+        </h3>
+        <div class="space-y-2">
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-gray-600 dark:text-gray-400">Status:</span>
+            <span [class]="getStatusBadge(diagnostics.accessToken.status)" class="px-2 py-1 rounded text-xs">
+              {{ diagnostics.accessToken.status }}
+            </span>
+          </div>
+          <div *ngIf="diagnostics.accessToken.expiresAt" class="flex justify-between items-center">
+            <span class="text-sm text-gray-600 dark:text-gray-400">Expires At:</span>
+            <span class="text-sm text-gray-800 dark:text-gray-200">
+              {{ diagnostics.accessToken.expiresAt | date:'medium' }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Redis Status -->
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+        <h3 class="font-semibold text-gray-700 dark:text-gray-200 mb-3 flex items-center gap-2">
+          <fa-icon [icon]="['fas', 'database']"></fa-icon>
+          Redis Status
+        </h3>
+        <div class="space-y-2">
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-gray-600 dark:text-gray-400">Status:</span>
+            <span [class]="getStatusBadge(diagnostics.redis.status)" class="px-2 py-1 rounded text-xs">
+              {{ diagnostics.redis.status }}
+            </span>
+          </div>
+          <div *ngIf="diagnostics.redis.memoryUsage" class="flex justify-between items-center">
+            <span class="text-sm text-gray-600 dark:text-gray-400">Memory:</span>
+            <span class="text-sm text-gray-800 dark:text-gray-200">
+              {{ diagnostics.redis.memoryUsage }}
+            </span>
+          </div>
+          <div *ngIf="diagnostics.redis.keyCount" class="flex justify-between items-center">
+            <span class="text-sm text-gray-600 dark:text-gray-400">Keys:</span>
+            <span class="text-sm text-gray-800 dark:text-gray-200">
+              {{ diagnostics.redis.keyCount }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Queue Status -->
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+        <h3 class="font-semibold text-gray-700 dark:text-gray-200 mb-3 flex items-center gap-2">
+          <fa-icon [icon]="['fas', 'tasks']"></fa-icon>
+          Queue Status
+        </h3>
+        <div class="space-y-2">
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-gray-600 dark:text-gray-400">Status:</span>
+            <span [class]="getStatusBadge(diagnostics.queue.status)" class="px-2 py-1 rounded text-xs">
+              {{ diagnostics.queue.status }}
+            </span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-gray-600 dark:text-gray-400">Waiting:</span>
+            <span class="text-sm text-gray-800 dark:text-gray-200">
+              {{ diagnostics.queue.waiting }}
+            </span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-gray-600 dark:text-gray-400">Active:</span>
+            <span class="text-sm text-gray-800 dark:text-gray-200">
+              {{ diagnostics.queue.active }}
+            </span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-gray-600 dark:text-gray-400">Completed:</span>
+            <span class="text-sm text-gray-800 dark:text-gray-200">
+              {{ diagnostics.queue.completed }}
+            </span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-gray-600 dark:text-gray-400">Failed:</span>
+            <span class="text-sm text-red-600 dark:text-red-400">
+              {{ diagnostics.queue.failed }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Seller Account -->
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+        <h3 class="font-semibold text-gray-700 dark:text-gray-200 mb-3 flex items-center gap-2">
+          <fa-icon [icon]="['fas', 'store']"></fa-icon>
+          Seller Account
+        </h3>
+        <div class="space-y-2">
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-gray-600 dark:text-gray-400">Status:</span>
+            <span [class]="getStatusBadge(diagnostics.sellerAccount.status)" class="px-2 py-1 rounded text-xs">
+              {{ diagnostics.sellerAccount.status }}
+            </span>
+          </div>
+          <div *ngIf="diagnostics.sellerAccount.sellerId" class="flex justify-between items-center">
+            <span class="text-sm text-gray-600 dark:text-gray-400">Seller ID:</span>
+            <span class="text-sm text-gray-800 dark:text-gray-200">
+              {{ diagnostics.sellerAccount.sellerId }}
+            </span>
+          </div>
+          <div *ngIf="diagnostics.sellerAccount.marketplaceId" class="flex justify-between items-center">
+            <span class="text-sm text-gray-600 dark:text-gray-400">Marketplace:</span>
+            <span class="text-sm text-gray-800 dark:text-gray-200">
+              {{ diagnostics.sellerAccount.marketplaceId }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- System Settings -->
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+        <h3 class="font-semibold text-gray-700 dark:text-gray-200 mb-3 flex items-center gap-2">
+          <fa-icon [icon]="['fas', 'cog']"></fa-icon>
+          System Settings
+        </h3>
+        <div class="space-y-2">
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-gray-600 dark:text-gray-400">Price Increase:</span>
+            <span class="text-sm text-gray-800 dark:text-gray-200">
+              {{ diagnostics.systemSettings.priceIncreasePercentage }}%
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Jobs -->
+    <div *ngIf="diagnostics.activeJobs && diagnostics.activeJobs.length > 0" class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+      <h3 class="font-semibold text-gray-700 dark:text-gray-200 mb-3 flex items-center gap-2">
+        <fa-icon [icon]="['fas', 'spinner']" class="text-blue-500"></fa-icon>
+        Active Jobs ({{ diagnostics.activeJobs.length }})
+      </h3>
+      <div class="space-y-3">
+        <div *ngFor="let job of diagnostics.activeJobs" class="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+          <div class="flex justify-between items-start mb-2">
+            <div>
+              <p class="font-medium text-gray-800 dark:text-gray-200">{{ job.productName }}</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400">Product ID: {{ job.productId }}</p>
+            </div>
+            <div class="text-right">
+              <span [class]="getJobStateBadge(job.state)" class="px-2 py-1 rounded text-xs">
+                {{ job.state }}
+              </span>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+            <div>
+              <span class="text-gray-500 dark:text-gray-400">Status:</span>
+              <span class="text-gray-800 dark:text-gray-200 ml-1">{{ job.status }}</span>
+            </div>
+            <div>
+              <span class="text-gray-500 dark:text-gray-400">Progress:</span>
+              <span class="text-gray-800 dark:text-gray-200 ml-1">{{ job.progress }}%</span>
+            </div>
+            <div>
+              <span class="text-gray-500 dark:text-gray-400">Attempts:</span>
+              <span class="text-gray-800 dark:text-gray-200 ml-1">{{ job.attemptsMade }}</span>
+            </div>
+            <div>
+              <span class="text-gray-500 dark:text-gray-400">Amazon Status:</span>
+              <span class="text-gray-800 dark:text-gray-200 ml-1">{{ job.amazonStatus || 'N/A' }}</span>
+            </div>
+          </div>
+          <div *ngIf="job.amazonSku" class="text-xs mt-2">
+            <span class="text-gray-500 dark:text-gray-400">SKU:</span>
+            <span class="text-gray-800 dark:text-gray-200 ml-1">{{ job.amazonSku }}</span>
+          </div>
+          <div *ngIf="job.amazonAsin" class="text-xs mt-1">
+            <span class="text-gray-500 dark:text-gray-400">ASIN:</span>
+            <span class="text-gray-800 dark:text-gray-200 ml-1">{{ job.amazonAsin }}</span>
+          </div>
+          <div *ngIf="job.failedReason" class="text-xs mt-2 text-red-600 dark:text-red-400 break-words">
+            <span class="font-medium">Error:</span> {{ job.failedReason }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <!-- Last Successful Publish -->
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+        <h3 class="font-semibold text-gray-700 dark:text-gray-200 mb-3 flex items-center gap-2">
+          <fa-icon [icon]="['fas', 'check-circle']" class="text-green-500"></fa-icon>
+          Last Successful Publish
+        </h3>
+        <div *ngIf="diagnostics.lastSuccessfulPublish" class="space-y-2">
+          <div>
+            <span class="text-sm text-gray-600 dark:text-gray-400">Product:</span>
+            <p class="text-sm text-gray-800 dark:text-gray-200">
+              {{ diagnostics.lastSuccessfulPublish.productName }}
+            </p>
+          </div>
+          <div>
+            <span class="text-sm text-gray-600 dark:text-gray-400">Product ID:</span>
+            <p class="text-sm text-gray-800 dark:text-gray-200">
+              {{ diagnostics.lastSuccessfulPublish.productId }}
+            </p>
+          </div>
+          <div>
+            <span class="text-sm text-gray-600 dark:text-gray-400">Timestamp:</span>
+            <p class="text-sm text-gray-800 dark:text-gray-200">
+              {{ diagnostics.lastSuccessfulPublish.timestamp | date:'medium' }}
+            </p>
+          </div>
+        </div>
+        <div *ngIf="!diagnostics.lastSuccessfulPublish" class="text-sm text-gray-500 dark:text-gray-400">
+          No successful publishes yet
+        </div>
+      </div>
+
+      <!-- Last Failed Publish -->
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+        <h3 class="font-semibold text-gray-700 dark:text-gray-200 mb-3 flex items-center gap-2">
+          <fa-icon [icon]="['fas', 'exclamation-circle']" class="text-red-500"></fa-icon>
+          Last Failed Publish
+        </h3>
+        <div *ngIf="diagnostics.lastFailedPublish" class="space-y-2">
+          <div>
+            <span class="text-sm text-gray-600 dark:text-gray-400">Product:</span>
+            <p class="text-sm text-gray-800 dark:text-gray-200">
+              {{ diagnostics.lastFailedPublish.productName }}
+            </p>
+          </div>
+          <div>
+            <span class="text-sm text-gray-600 dark:text-gray-400">Product ID:</span>
+            <p class="text-sm text-gray-800 dark:text-gray-200">
+              {{ diagnostics.lastFailedPublish.productId }}
+            </p>
+          </div>
+          <div>
+            <span class="text-sm text-gray-600 dark:text-gray-400">Timestamp:</span>
+            <p class="text-sm text-gray-800 dark:text-gray-200">
+              {{ diagnostics.lastFailedPublish.timestamp | date:'medium' }}
+            </p>
+          </div>
+          <div>
+            <span class="text-sm text-gray-600 dark:text-gray-400">Error:</span>
+            <p class="text-sm text-red-600 dark:text-red-400 break-words">
+              {{ diagnostics.lastFailedPublish.error }}
+            </p>
+          </div>
+        </div>
+        <div *ngIf="!diagnostics.lastFailedPublish" class="text-sm text-gray-500 dark:text-gray-400">
+          No failed publishes
+        </div>
+      </div>
+    </div>
+
+    <!-- Logs -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+      <h3 class="font-semibold text-gray-700 dark:text-gray-200 mb-3 flex items-center gap-2">
+        <fa-icon [icon]="['fas', 'file-alt']"></fa-icon>
+        Recent Logs (Last 50 lines)
+      </h3>
+      <div class="bg-gray-900 dark:bg-black rounded p-4 max-h-96 overflow-y-auto">
+        <pre class="text-xs text-green-400 font-mono whitespace-pre-wrap">{{ diagnostics.logs.join('\n') }}</pre>
+      </div>
+    </div>
+  </div>
+</div>

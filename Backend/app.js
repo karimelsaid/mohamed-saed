@@ -13,7 +13,53 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
+
+// Validate required Amazon environment variables
+console.log('🔍 [Amazon Config] Validating required environment variables...');
+const requiredAmazonVars = [
+  'SELLING_PARTNER_APP_CLIENT_ID',
+  'SELLING_PARTNER_APP_CLIENT_SECRET',
+  'AMAZON_SP_API_REFRESH_TOKEN',
+  'AMAZON_SP_API_MARKETPLACE_ID',
+  'AMAZON_SP_API_REGION'
+];
+
+const optionalAmazonVars = [
+  'AMAZON_SP_API_ROLE_ARN',
+  'AMAZON_SP_API_SELLER_ID',
+  'AWS_ACCESS_KEY_ID',
+  'AWS_SECRET_ACCESS_KEY',
+  'AWS_SELLING_PARTNER_ROLE',
+  'SELLING_PARTNER_SELLER_ID'
+];
+
+let missingVars = [];
+requiredAmazonVars.forEach(varName => {
+  const isSet = !!process.env[varName];
+  console.log(`  ${isSet ? '✅' : '❌'} ${varName}: ${isSet ? 'SET' : 'MISSING'}`);
+  if (!isSet) missingVars.push(varName);
+});
+
+optionalAmazonVars.forEach(varName => {
+  const isSet = !!process.env[varName];
+  console.log(`  ${isSet ? '✅' : '⚠️ '} ${varName}: ${isSet ? 'SET' : 'NOT SET (optional)'}`);
+});
+
+if (missingVars.length > 0) {
+  console.error('❌ [Amazon Config] FATAL: Missing required environment variables:', missingVars.join(', '));
+  console.error('❌ [Amazon Config] Amazon publishing features will be disabled');
+  process.env.AMAZON_CONFIG_VALID = 'false';
+} else {
+  console.log('✅ [Amazon Config] All required Amazon environment variables are set');
+  process.env.AMAZON_CONFIG_VALID = 'true';
+}
+
+// Load Amazon queue module but don't initialize yet
+console.log('🚀 [App] Loading Amazon queue module...');
+const PublishAmazonProductJob = require('./jobs/publish-amazon-product.job');
+
 const logger = require('./services/logger.service');
 const { generalLimiter, messageLimiter, authLimiter, uploadLimiter } = require('./middleware/rate-limiter.middleware');
 const User = require('./models/User.model');
@@ -22,7 +68,6 @@ const cors = require('cors');
 const session = require('express-session');
 const cron = require('node-cron');
 const fs = require('fs');
-const path = require('path');
 const { connectDB } = require('./config/database');
 const { updateBooksData } = require('./controllers/books.controller');
 const sitemapService = require('./services/sitemap.service'); // Added import for sitemap service
@@ -66,6 +111,9 @@ const newsletterRoutes = require('./routes/newsletter.routes');
 const marketerRoutes = require('./routes/marketer.routes');
 const marketerController = require('./controllers/marketer.controller');
 const specialOffersRoutes = require('./routes/special-offers.routes');
+const amazonProductRoutes = require('./routes/amazon-product.routes');
+const amazonDiagnosticsRoutes = require('./routes/amazon-diagnostics.routes');
+const publisherRoutes = require('./routes/publisher.routes');
 const express = require('express');
 const app = express();
 const compression = require('compression');
@@ -82,7 +130,8 @@ const allowedOrigins = [
   'capacitor://localhost',
   'http://localhost:4200',
   'http://localhost:8100',
-  'http://localhost:8080'
+  'http://localhost:8080',
+  'http://127.0.0.1:57885'
 ];
 
 app.use(cors({
@@ -644,6 +693,8 @@ app.use('/api/statistics', require('./routes/statistics.routes'));
 app.use('/api/users', usersRoutes);
 app.use('/api/community', communityRoutes);
 app.use('/api/books', booksRoutes);
+app.use('/api/amazon', amazonProductRoutes);
+app.use('/api/amazon', amazonDiagnosticsRoutes);
 app.use('/api/products', productsRoutes);
 app.use('/api/orders', ordersRoutes);
 app.use('/api/payment', paymentRoutes);
@@ -658,6 +709,7 @@ app.use('/api/bourse', bourseRoutes);
 app.use('/api/automation', automationRoutes);
 app.use('/api/n8n', n8nWorkflowRoutes);
 app.use('/api/newsletter', newsletterRoutes);
+app.use('/api/publishers', publisherRoutes);
 
 // Delete print order and associated file
 const mongoose = require('mongoose');
@@ -1239,6 +1291,11 @@ async function startServer() {
   try {
     // الانتظار حتى يكتمل الاتصال بقاعدة البيانات أولاً
     await connectDB();
+
+    // Initialize Amazon queue after MongoDB is connected
+    console.log('🚀 [App] Initializing Amazon queue after MongoDB connection...');
+    PublishAmazonProductJob.initializeQueue();
+    console.log('🚀 [App] Amazon queue initialization completed');
 
     // فحص التحديثات الحية بعد الاتصال بنجاح
     detectAndUpdateLiveVersion().catch(err => {

@@ -1,0 +1,257 @@
+<div class="product-management">
+  <div class="header">
+    <h2>إدارة المنتجات</h2>
+    <div class="filters">
+      <div class="profit-control">
+        <label>نسبة الربح Amazon:</label>
+        <input 
+          type="number" 
+          [(ngModel)]="profitPercentage" 
+          (change)="updateProfitPercentage()"
+          min="0" 
+          max="200" 
+          step="5"
+          class="profit-input"
+        >
+        <span>%</span>
+      </div>
+      
+      <select [(ngModel)]="statusFilter" (change)="applyFilters()" class="filter-select">
+        <option value="all">جميع الحالات</option>
+        <option value="pending">معلق</option>
+        <option value="approved">موافق عليه</option>
+        <option value="rejected">مرفوض</option>
+      </select>
+      
+      <select [(ngModel)]="amazonStatusFilter" (change)="loadProducts()" class="filter-select">
+        <option value="all">جميع حالات Amazon</option>
+        <option value="pending">معلق</option>
+        <option value="publishing">جاري النشر</option>
+        <option value="published">منشور</option>
+        <option value="failed">فشل</option>
+        <option value="suppressed">مكتوم</option>
+      </select>
+      
+      <input 
+        type="text" 
+        [(ngModel)]="searchQuery" 
+        (input)="applyFilters()" 
+        placeholder="بحث بالاسم أو ID أو SKU أو ASIN..."
+        class="search-input"
+      >
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="loading">
+    <div class="spinner"></div>
+    <p>جاري التحميل...</p>
+  </div>
+
+  <div *ngIf="error" class="error">
+    {{ error }}
+  </div>
+
+  <div *ngIf="!loading && !error" class="products-table">
+    <table>
+      <thead>
+        <tr>
+          <th>الصورة</th>
+          <th>اسم المنتج</th>
+          <th>السعر الأساسي</th>
+          <th>سعر Amazon</th>
+          <th>الكمية</th>
+          <th>الحالة</th>
+          <th>Amazon SKU</th>
+          <th>Amazon ASIN</th>
+          <th>حالة Amazon</th>
+          <th>إجراءات Amazon</th>
+          <th>إجراءات</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let product of getPaginatedProducts()">
+          <td>
+            <img [src]="getProductImageUrl(product)" [alt]="product.product_name" class="product-image">
+          </td>
+          <td>
+            <div class="product-name">
+              {{ product.product_name }}
+              <span *ngIf="product.amazonStatus && product.amazonStatus !== 'pending' && product.amazonStatus !== 'failed' && product.amazonStatus !== 'not_submitted'" class="amazon-badge" title="متاح على Amazon">
+                <fa-icon [icon]="['fab', 'amazon']"></fa-icon>
+              </span>
+            </div>
+            <div class="product-id">ID: {{ product._id }}</div>
+          </td>
+          <td>{{ product.product_price }} ج.م</td>
+          <td class="amazon-price">{{ calculateAmazonPrice(product.product_price).toFixed(2) }} ج.م</td>
+          <td>{{ product.product_quantity }}</td>
+          <td>
+            <span [class]="'status-badge ' + (product.status === 'approved' ? 'approved' : product.status === 'pending' ? 'pending' : 'rejected')">
+              {{ product.status === 'approved' ? 'موافق' : product.status === 'pending' ? 'معلق' : 'مرفوض' }}
+            </span>
+          </td>
+          <td>{{ product.amazonSku || '-' }}</td>
+          <td>
+            <span *ngIf="product.amazonAsin" class="asin-link">
+              <a [href]="'https://www.amazon.eg/dp/' + product.amazonAsin" target="_blank">{{ product.amazonAsin }}</a>
+            </span>
+            <span *ngIf="!product.amazonAsin">-</span>
+          </td>
+          <td>
+            <span [class]="'amazon-status-badge ' + getAmazonStatusClass(product.amazonStatus)">
+              {{ getAmazonStatusText(product.amazonStatus) }}
+            </span>
+            <div *ngIf="product.amazonLastError" class="amazon-error" title="{{ product.amazonLastError }}">
+              ⚠️
+            </div>
+          </td>
+          <td>
+            <div class="amazon-actions">
+              <!-- Publish Button -->
+              <button 
+                *ngIf="!product.amazonAsin && product.status === 'approved'"
+                (click)="publishToAmazon(product._id)"
+                [disabled]="isPublishingToAmazon(product._id) || product.amazonStatus === 'publishing'"
+                [class]="'amazon-btn ' + (isPublishingToAmazon(product._id) ? 'publishing' : '')"
+              >
+                {{ isPublishingToAmazon(product._id) ? 'جاري النشر...' : 'نشر على Amazon' }}
+              </button>
+              
+              <!-- Sync Button -->
+              <button 
+                *ngIf="product.amazonAsin"
+                (click)="syncAmazon(product._id)"
+                [disabled]="isSyncingAmazon(product._id) || product.amazonStatus === 'publishing'"
+                [class]="'amazon-btn sync ' + (isSyncingAmazon(product._id) ? 'syncing' : '')"
+              >
+                {{ isSyncingAmazon(product._id) ? 'جاري المزامنة...' : 'مزامنة Amazon' }}
+              </button>
+              
+              <!-- Retry Button -->
+              <button 
+                *ngIf="product.amazonStatus === 'failed' && product.amazonRetryCount < 3"
+                (click)="retryAmazon(product._id)"
+                [disabled]="isRetryingAmazon(product._id)"
+                [class]="'amazon-btn retry ' + (isRetryingAmazon(product._id) ? 'retrying' : '')"
+              >
+                {{ isRetryingAmazon(product._id) ? 'جاري إعادة المحاولة...' : 'إعادة المحاولة' }}
+              </button>
+              
+              <span *ngIf="product.amazonStatus === 'published'" class="amazon-success">
+                ✓ منشور
+              </span>
+            </div>
+          </td>
+          <td>
+            <div class="actions">
+              <button (click)="openEditModal(product)" class="action-btn edit" title="تعديل">
+                ✏️
+              </button>
+              <button (click)="deleteProduct(product._id)" class="action-btn delete" title="حذف">
+                🗑️
+              </button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div *ngIf="products.length === 0" class="no-products">
+      لا توجد منتجات
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <div *ngIf="totalPages > 1" class="pagination">
+    <button 
+      (click)="onPageChange(currentPage - 1)" 
+      [disabled]="currentPage === 1"
+      class="pagination-btn"
+    >
+      السابق
+    </button>
+    
+    <button 
+      *ngFor="let page of getPageNumbers()"
+      (click)="onPageChange(page)"
+      [class]="'pagination-btn ' + (page === currentPage ? 'active' : '')"
+    >
+      {{ page }}
+    </button>
+    
+    <button 
+      (click)="onPageChange(currentPage + 1)" 
+      [disabled]="currentPage === totalPages"
+      class="pagination-btn"
+    >
+      التالي
+    </button>
+  </div>
+
+  <!-- Edit Modal -->
+  <div *ngIf="showEditModal" class="modal-overlay" (click)="closeEditModal()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>تعديل المنتج</h3>
+        <button (click)="closeEditModal()" class="close-btn">×</button>
+      </div>
+      
+      <div class="modal-body">
+        <div class="form-group">
+          <label>اسم المنتج</label>
+          <input type="text" [(ngModel)]="editingProduct.product_name" class="form-input">
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label>السعر (ج.م)</label>
+            <input type="number" [(ngModel)]="editingProduct.product_price" class="form-input">
+          </div>
+          
+          <div class="form-group">
+            <label>الكمية</label>
+            <input type="number" [(ngModel)]="editingProduct.product_quantity" class="form-input">
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label>الوصف</label>
+          <textarea [(ngModel)]="editingProduct.product_description" class="form-textarea" rows="3"></textarea>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label>الوزن (جرام)</label>
+            <input type="number" [(ngModel)]="editingProduct.weight" class="form-input">
+          </div>
+          
+          <div class="form-group">
+            <label>الطول (سم)</label>
+            <input type="number" [(ngModel)]="editingProduct.length" class="form-input">
+          </div>
+          
+          <div class="form-group">
+            <label>العرض (سم)</label>
+            <input type="number" [(ngModel)]="editingProduct.width" class="form-input">
+          </div>
+          
+          <div class="form-group">
+            <label>الارتفاع (سم)</label>
+            <input type="number" [(ngModel)]="editingProduct.height" class="form-input">
+          </div>
+        </div>
+      </div>
+      
+      <div class="modal-footer">
+        <button (click)="closeEditModal()" class="btn btn-secondary">إلغاء</button>
+        <button 
+          (click)="saveProduct()" 
+          [disabled]="saving"
+          class="btn btn-primary"
+        >
+          {{ saving ? 'جاري الحفظ...' : 'حفظ' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

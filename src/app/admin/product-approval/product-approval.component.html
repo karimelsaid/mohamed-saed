@@ -84,6 +84,29 @@
               <span class="text-sm font-medium text-gray-600 dark:text-gray-400">السعر:</span>
               <span class="text-sm text-gray-900 dark:text-white">{{ product.product_price }} ج.م</span>
             </div>
+
+            <!-- Amazon Status -->
+            <div class="flex justify-between items-center">
+              <span class="text-sm font-medium text-gray-600 dark:text-gray-400">حالة أمازون:</span>
+              <span [class]="'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ' + getAmazonStatusClass(product.amazonStatus)">
+                {{ getAmazonStatusText(product.amazonStatus) }}
+              </span>
+            </div>
+
+            <!-- Amazon Details -->
+            <div *ngIf="product.amazonAsin || product.amazonSku" class="bg-blue-50 dark:bg-blue-900/20 p-2 rounded-lg">
+              <div *ngIf="product.amazonSku" class="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                <span class="font-medium">SKU:</span> {{ product.amazonSku }}
+              </div>
+              <div *ngIf="product.amazonAsin" class="text-xs text-gray-600 dark:text-gray-400">
+                <span class="font-medium">ASIN:</span> {{ product.amazonAsin }}
+              </div>
+            </div>
+
+            <!-- Amazon Error -->
+            <div *ngIf="product.amazonLastError" class="bg-red-50 dark:bg-red-900/20 p-2 rounded-lg">
+              <p class="text-xs text-red-700 dark:text-red-300">{{ product.amazonLastError }}</p>
+            </div>
           </div>
 
           <div class="bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg mb-4">
@@ -111,6 +134,48 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
               </svg>
               رفض
+            </button>
+          </div>
+
+          <!-- Amazon Publish Button -->
+          <div *ngIf="product.status === 'approved'" class="mt-3">
+            <!-- Publish Button for new products -->
+            <button
+              *ngIf="!product.amazonAsin"
+              (click)="publishToAmazon(product._id)"
+              [disabled]="isPublishingToAmazon(product._id) || product.amazonStatus === 'publishing'"
+              class="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+              </svg>
+              {{ getAmazonPublishButtonText(product._id, product.amazonStatus) }}
+            </button>
+            
+            <!-- Sync Button for products with ASIN -->
+            <button
+              *ngIf="product.amazonAsin"
+              (click)="syncAmazon(product._id)"
+              [disabled]="isSyncingAmazon(product._id) || product.amazonStatus === 'publishing'"
+              class="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+              </svg>
+              {{ isSyncingAmazon(product._id) ? 'جاري المزامنة...' : 'مزامنة أمازون' }}
+            </button>
+            
+            <!-- Retry Button for Failed Products -->
+            <button
+              *ngIf="product.amazonStatus === 'failed' && product.amazonRetryCount < 3"
+              (click)="retryAmazonPublish(product._id)"
+              [disabled]="isRetryingAmazon(product._id)"
+              class="mt-2 w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+              </svg>
+              {{ isRetryingAmazon(product._id) ? 'جاري إعادة المحاولة...' : 'إعادة المحاولة' }}
             </button>
           </div>
         </div>

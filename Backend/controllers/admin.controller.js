@@ -135,18 +135,65 @@ const sitemapService = require('../services/sitemap.service');
 function cleanPrice(val) {
   if (val === undefined || val === null) return 0;
   if (typeof val === 'number') {
+    // Special case: if the number is small and has 3 decimal places, 
+    // it was likely a thousand-separator string parsed incorrectly by the Excel reader
     const s = val.toString();
     if (val < 10 && s.includes('.') && s.split('.')[1].length === 3) {
       return val * 1000;
     }
     return val;
   }
+  
   let s = String(val).trim();
+  // Remove all non-digit characters except dots and commas
   s = s.replace(/[^\d.,]/g, '');
-  if (s.includes('.') && s.split('.')[1].length === 3 && !s.includes(',')) {
-    return parseFloat(s.replace('.', ''));
+
+  // If string is empty after cleaning
+  if (!s) return 0;
+
+  // Handle formats with both comma and dot (e.g., 1,155.00 or 1.155,00)
+  const hasComma = s.includes(',');
+  const hasDot = s.includes('.');
+
+  if (hasComma && hasDot) {
+    // Determine which is decimal separator based on position
+    const commaIndex = s.lastIndexOf(',');
+    const dotIndex = s.lastIndexOf('.');
+    
+    if (commaIndex > dotIndex) {
+      // Comma is after dot, so comma is decimal (European format: 1.155,00)
+      s = s.replace(/\./g, '').replace(',', '.');
+    } else {
+      // Dot is after comma, so dot is decimal (US format: 1,155.00)
+      s = s.replace(/,/g, '');
+    }
+  } else if (hasComma) {
+    // Only comma present - could be thousands or decimal
+    // If comma is followed by exactly 2 digits, treat as decimal (e.g., 10,50)
+    const parts = s.split(',');
+    if (parts.length === 2 && parts[1].length === 2) {
+      s = s.replace(',', '.');
+    } else {
+      // Treat as thousands separator
+      s = s.replace(/,/g, '');
+    }
+  } else if (hasDot) {
+    // Only dot present - could be thousands or decimal
+    const parts = s.split('.');
+    if (parts.length === 2 && parts[1].length === 3 && parts[0].length > 0) {
+      // If dot is followed by exactly 3 digits and the part before is not empty,
+      // it might be thousands separator (e.g., 1.155)
+      // But only if the number before dot is small (less than 10) to avoid breaking decimals like 100.50
+      const beforeDot = parseFloat(parts[0]);
+      if (beforeDot < 10) {
+        s = s.replace('.', '');
+      }
+    }
+    // Otherwise keep dot as decimal separator
   }
-  return parseFloat(s.replace(/,/g, '')) || 0;
+
+  const result = parseFloat(s);
+  return isNaN(result) ? 0 : result;
 }
 
 const PromotionDate = require('../models/PromotionDate.model');
@@ -485,6 +532,7 @@ async function addProduct(req, res) {
       height: parseFloat(height) || '',
       suggestedCategory: suggestedCategory || '',
       linkedEbookId: linkedEbookId ? linkedEbookId.toString() : undefined,
+      productType: 'physical', // Set productType to physical for Amazon integration
       status: 'approved',
       createdAt: new Date().toISOString()
     };
@@ -707,6 +755,7 @@ async function bulkAddProducts(req, res) {
           product_price: cleanPrice(productData.product_price),
           price_cost: (publisher || productData.publisher || '').trim() !== '' ? (cleanPrice(productData.product_price) * 0.9) : cleanPrice(productData.price_cost),
           product_quantity: parseInt(productData.product_quantity) || 2, // Use 2 as default if 0
+          productType: 'physical', // Set productType to physical for Amazon integration
           createdAt: now,
           updatedAt: now,
           status: 'approved'
@@ -998,6 +1047,48 @@ async function listProducts(req, res) {
         const id = String(p.products_id || '').toLowerCase();
         return name.includes(lowerSearch) || barcode.includes(lowerSearch) || id.includes(lowerSearch);
       });
+    }
+
+    // Merge Amazon data from MongoDB
+    try {
+      const Product = require('../models/Product.model');
+      const productIds = products.map(p => String(p.products_id || p.barcode)).filter(id => id);
+      
+      if (productIds.length > 0) {
+        const amazonProducts = await Product.find({
+          $or: [
+            { products_id: { $in: productIds } },
+            { barcode: { $in: productIds } }
+          ]
+        }).select('products_id barcode amazonStatus amazonSku amazonAsin amazonSubmissionId amazonSyncedAt amazonLastError amazonRetryCount amazonSyncInProgress amazonJobId');
+        
+        // Create a map for quick lookup
+        const amazonMap = new Map();
+        amazonProducts.forEach(ap => {
+          const key = String(ap.products_id || ap.barcode);
+          amazonMap.set(key, ap);
+        });
+        
+        // Merge Amazon data into products
+        products.forEach(product => {
+          const key = String(product.products_id || product.barcode);
+          const amazonData = amazonMap.get(key);
+          if (amazonData) {
+            product.amazonStatus = amazonData.amazonStatus;
+            product.amazonSku = amazonData.amazonSku;
+            product.amazonAsin = amazonData.amazonAsin;
+            product.amazonSubmissionId = amazonData.amazonSubmissionId;
+            product.amazonSyncedAt = amazonData.amazonSyncedAt;
+            product.amazonLastError = amazonData.amazonLastError;
+            product.amazonRetryCount = amazonData.amazonRetryCount;
+            product.amazonSyncInProgress = amazonData.amazonSyncInProgress;
+            product.amazonJobId = amazonData.amazonJobId;
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error merging Amazon data:', error);
+      // Continue without Amazon data if there's an error
     }
 
     // Apply Sorting
@@ -4473,6 +4564,16 @@ async function importProductsFromSheets(req, res) {
     }
 
     console.log(`✅ [AdminController] Clean-imported ${bulkOps.length} products successfully.`);
+
+    // Sync to output.json automatically after import
+    try {
+      const { updateExcelFromJson } = require('../services/excel.service');
+      await updateExcelFromJson();
+      console.log('✅ [AdminController] output.json synced successfully after import.');
+    } catch (syncErr) {
+      console.warn('⚠️ [AdminController] Failed to sync output.json after import:', syncErr.message);
+    }
+
     res.json({ success: true, message: `Successfully re-imported ${bulkOps.length} products with bulk optimization and images restored.` });
   } catch (error) {
     console.error('Error in importProductsFromSheets:', error);

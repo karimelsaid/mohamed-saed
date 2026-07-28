@@ -292,4 +292,9 @@ export class DownloadsComponent implements OnInit {
     }
     return book.coverUrl;
   }
+
+  handleImageError(event: Event): void {
+    const img = event.target as HTMLImageElement;
+    img.src = 'assets/images/defaults/book_cover_placeholder.png';
+  }
 }

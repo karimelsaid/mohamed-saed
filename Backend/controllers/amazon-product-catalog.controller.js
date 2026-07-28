@@ -18,7 +18,7 @@ class AmazonProductCatalogController {
         .select(
           '_id products_id product_name product_price amazonPrice product_quantity product_image image_path amazonStatus amazonSku amazonAsin amazonLastError amazonRetryCount amazonSyncedAt'
         )
-        .sort({ _id: -1 })
+        .sort({ amazonSyncedAt: -1, _id: -1 })
         .limit(500);
 
       res.json({

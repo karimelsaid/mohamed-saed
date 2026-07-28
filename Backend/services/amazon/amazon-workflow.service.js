@@ -422,7 +422,12 @@ class AmazonWorkflowService {
 
     try {
       updateProgress(5, 'Starting Amazon sync');
-      await this.updateProductStatus(productId, 'publishing', 'Starting Amazon sync');
+      // Set status to publishing immediately and update sync time to show activity in UI
+      await Product.findOneAndUpdate({ products_id: productId }, { 
+        amazonStatus: 'publishing',
+        amazonSyncInProgress: true,
+        amazonSyncedAt: new Date()
+      });
 
       const product = await Product.findOne({ products_id: productId });
       if (!product) {

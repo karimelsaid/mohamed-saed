@@ -47,6 +47,7 @@ export class AmazonCatalogComponent implements OnInit, OnDestroy {
   editingData: EditingProduct = { _id: '' };
   
   private destroy$ = new Subject<void>();
+  private refreshInterval: any;
 
   statusOptions = [
     { value: 'all', label: 'جميع المنتجات' },
@@ -64,9 +65,18 @@ export class AmazonCatalogComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadAmazonProducts();
+    // Auto refresh every 30 seconds to show sync progress
+    this.refreshInterval = setInterval(() => {
+      if (!this.loading && !this.editingProductId) {
+        this.loadAmazonProducts();
+      }
+    }, 30000);
   }
 
   ngOnDestroy(): void {
+    if (this.refreshInterval) {
+      clearInterval(this.refreshInterval);
+    }
     this.destroy$.next();
     this.destroy$.complete();
   }

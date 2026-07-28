@@ -27,7 +27,6 @@ import { AuthInterceptor } from './interceptors/auth.interceptor';
 import { ErrorInterceptor } from './interceptors/error.interceptor';
 import { UniversalInterceptor } from './interceptors/universal.interceptor';
 // Removed static imports for lazy loading
-
 import { AdminModule } from './admin/admin.module';
 import { SearchResultsComponent } from './search-results/search-results.component';
 import { MerchantDashboardComponent } from './merchant/dashboard/dashboard.component';
@@ -37,13 +36,11 @@ import { VoiceCallComponent } from './features/community/voice-call/voice-call.c
 import { NetworkStatusComponent } from './shared/components/network-status/network-status.component';
 import { PromotionsFabComponent } from './shared/components/promotions-fab/promotions-fab.component';
 import { LiveUpdateModalComponent } from './shared/components/live-update-modal/live-update-modal.component';
-
 // ✅ SSR-compatible standalone components
 import { HomePageComponent } from './home-page/home-page.component';
 import { BookDetailsComponent } from './book-details/book-details.component';
 import { CheckoutModalComponent } from './checkout-modal/checkout-modal.component';
 import { PaymentModalComponent } from './payment-modal/payment-modal.component';
-
 
 @NgModule({
   declarations: [

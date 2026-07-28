@@ -1,15 +1,9 @@
-import { NgModule } from '@angular/core';
-import { ServerModule } from '@angular/platform-server';
-import { HttpClientModule } from '@angular/common/http';
-import { AppModule } from './app.module';
-import { AppComponent } from './app.component';
+/**
+ * ⚠️ DEPRECATED: This file is deprecated and should not be used.
+ * Use app.server.module.ts instead.
+ * 
+ * This file was kept for reference only.
+ * The correct server module is defined in app.server.module.ts
+ */
 
-@NgModule({
-    imports: [
-        AppModule,
-        ServerModule,
-        HttpClientModule,
-    ],
-    bootstrap: [AppComponent],
-})
-export class AppServerModule { }
+// DO NOT USE THIS FILE - Use app.server.module.ts instead

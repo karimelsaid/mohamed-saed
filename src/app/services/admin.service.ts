@@ -115,7 +115,8 @@ export class AdminService {
   getAmazonProducts(status?: string): Observable<any> {
     const params: any = {};
     if (status && status !== 'all') params.status = status;
-    return this.http.get(`${environment.apiBaseUrl}/amazon/products`, { params }).pipe(
+    // Use the dedicated catalog endpoint which has the correct sorting and fields
+    return this.http.get(`${environment.apiBaseUrl}/amazon/catalog`, { params }).pipe(
       catchError(this.handleError)
     );
   }

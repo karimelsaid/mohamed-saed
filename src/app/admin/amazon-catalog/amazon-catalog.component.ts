@@ -54,6 +54,7 @@ export class AmazonCatalogComponent implements OnInit, OnDestroy {
     { value: 'pending', label: 'معلق' },
     { value: 'publishing', label: 'قيد النشر' },
     { value: 'published', label: 'منشور' },
+    { value: 'incomplete', label: 'غير مكتمل' },
     { value: 'failed', label: 'فاشل' },
     { value: 'retry', label: 'إعادة محاولة' },
     { value: 'suppressed', label: 'مكبوت' }
@@ -123,6 +124,7 @@ export class AmazonCatalogComponent implements OnInit, OnDestroy {
       'pending': 'badge-warning',
       'publishing': 'badge-info',
       'published': 'badge-success',
+      'incomplete': 'badge-warning',
       'failed': 'badge-danger',
       'retry': 'badge-warning',
       'suppressed': 'badge-secondary'
@@ -135,6 +137,7 @@ export class AmazonCatalogComponent implements OnInit, OnDestroy {
       'pending': 'معلق',
       'publishing': 'قيد النشر',
       'published': 'منشور',
+      'incomplete': 'غير مكتمل',
       'failed': 'فاشل',
       'retry': 'إعادة محاولة',
       'suppressed': 'مكبوت'
@@ -236,6 +239,7 @@ export class AmazonCatalogComponent implements OnInit, OnDestroy {
       'pending': 'clock',
       'publishing': 'spinner',
       'published': 'check-circle',
+      'incomplete': 'exclamation-triangle',
       'failed': 'times-circle',
       'retry': 'redo',
       'suppressed': 'ban'

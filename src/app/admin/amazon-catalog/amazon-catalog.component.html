@@ -210,7 +210,7 @@
               <button 
                 class="btn btn-sm btn-warning"
                 (click)="republishProduct(product)"
-                [disabled]="loading || product.amazonStatus === 'published'"
+                [disabled]="loading || product.amazonStatus === 'published' || product.amazonStatus === 'publishing'"
                 title="إعادة نشر"
               >
                 <i class="fas fa-redo"></i>
@@ -257,6 +257,10 @@
       <div class="legend-item">
         <span class="badge badge-success">منشور</span>
         <p>المنتج منشور بنجاح على أمازون</p>
+      </div>
+      <div class="legend-item">
+        <span class="badge badge-warning">غير مكتمل</span>
+        <p>المنتج ينقصه بعض البيانات على أمازون</p>
       </div>
       <div class="legend-item">
         <span class="badge badge-danger">فاشل</span>

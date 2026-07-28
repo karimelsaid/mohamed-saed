@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { AdminService } from '../../services/admin.service';
-import { ToastrService } from 'ngx-toastr';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
@@ -29,6 +30,8 @@ interface EditingProduct {
 
 @Component({
   selector: 'app-amazon-catalog',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
   templateUrl: './amazon-catalog.component.html',
   styleUrls: ['./amazon-catalog.component.css']
 })
@@ -41,7 +44,7 @@ export class AmazonCatalogComponent implements OnInit, OnDestroy {
   selectedStatus = 'all';
   
   editingProductId: string | null = null;
-  editingData: EditingProduct = {};
+  editingData: EditingProduct = { _id: '' };
   
   private destroy$ = new Subject<void>();
 
@@ -56,14 +59,11 @@ export class AmazonCatalogComponent implements OnInit, OnDestroy {
   ];
 
   constructor(
-    private adminService: AdminService,
-    private toastr: ToastrService
+    private adminService: AdminService
   ) {}
 
   ngOnInit(): void {
     this.loadAmazonProducts();
-    // Refresh every 30 seconds
-    setInterval(() => this.loadAmazonProducts(), 30000);
   }
 
   ngOnDestroy(): void {
@@ -83,7 +83,6 @@ export class AmazonCatalogComponent implements OnInit, OnDestroy {
         },
         error: (error) => {
           console.error('Error loading Amazon products:', error);
-          this.toastr.error('خطأ في تحميل المنتجات');
           this.loading = false;
         }
       });
@@ -148,7 +147,7 @@ export class AmazonCatalogComponent implements OnInit, OnDestroy {
 
   cancelEdit(): void {
     this.editingProductId = null;
-    this.editingData = {};
+    this.editingData = { _id: '' };
   }
 
   saveProductChanges(): void {
@@ -159,13 +158,11 @@ export class AmazonCatalogComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response: any) => {
-          this.toastr.success('تم تحديث بيانات المنتج بنجاح');
           this.cancelEdit();
           this.loadAmazonProducts();
         },
         error: (error) => {
           console.error('Error updating product:', error);
-          this.toastr.error('خطأ في تحديث بيانات المنتج');
           this.loading = false;
         }
       });
@@ -178,12 +175,10 @@ export class AmazonCatalogComponent implements OnInit, OnDestroy {
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: (response: any) => {
-            this.toastr.success('تم بدء إعادة نشر المنتج');
             this.loadAmazonProducts();
           },
           error: (error) => {
             console.error('Error republishing product:', error);
-            this.toastr.error('خطأ في إعادة نشر المنتج');
             this.loading = false;
           }
         });
@@ -203,7 +198,7 @@ export class AmazonCatalogComponent implements OnInit, OnDestroy {
 
   copyToClipboard(text: string): void {
     navigator.clipboard.writeText(text).then(() => {
-      this.toastr.success('تم نسخ النص');
+      console.log('Text copied to clipboard');
     });
   }
 

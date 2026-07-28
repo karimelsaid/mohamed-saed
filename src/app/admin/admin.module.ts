@@ -41,13 +41,11 @@ import { AdminRoutingModule } from './admin-routing.module';
     SubscriptionSettingsComponent,
     SalesHistoryComponent,
     AdminBourseSettingsComponent,
-    AdminAutomationComponent,
-    AmazonCatalogComponent
+    AdminAutomationComponent
   ],
   exports: [
     MerchantManagementComponent,
-    ProductApprovalComponent,
-    AmazonCatalogComponent
+    ProductApprovalComponent
   ]
 })
 // Force rebuild

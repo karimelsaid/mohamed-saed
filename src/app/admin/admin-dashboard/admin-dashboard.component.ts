@@ -40,6 +40,7 @@ import { MarketerManagementComponent } from '../marketer-management/marketer-man
 import { SpecialOffersManagerComponent } from '../special-offers-manager/special-offers-manager.component';
 import { AiControlCenterComponent } from '../ai-control-center/ai-control-center.component';
 import { AmazonDiagnosticsComponent } from '../amazon-diagnostics/amazon-diagnostics.component';
+import { AmazonCatalogComponent } from '../amazon-catalog/amazon-catalog.component';
 
 interface Order {
   _id: string;
@@ -271,7 +272,7 @@ interface SystemSettings {
   };
 }
 
-export type AdminView = 'dashboard' | 'userIntelligence' | 'orders' | 'requestedBooks' | 'printOrders' | 'printingSettings' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'staff' | 'productApproval' | 'productManagement' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' | 'gamificationControl' | 'notifications' | 'subscriptionControl' | 'readerFeedback' | 'promotions' | 'salesRegistration' | 'shortagesReport' | 'promotionDates' | 'salesHistory' | 'community' | 'bourseSettings' | 'automation' | 'aiControlCenter' | 'newsletter' | 'marketers' | 'specialOffers' | 'amazonDiagnostics';
+export type AdminView = 'dashboard' | 'userIntelligence' | 'orders' | 'requestedBooks' | 'printOrders' | 'printingSettings' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'staff' | 'productApproval' | 'productManagement' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' | 'gamificationControl' | 'notifications' | 'subscriptionControl' | 'readerFeedback' | 'promotions' | 'salesRegistration' | 'shortagesReport' | 'promotionDates' | 'salesHistory' | 'community' | 'bourseSettings' | 'automation' | 'aiControlCenter' | 'newsletter' | 'marketers' | 'specialOffers' | 'amazonDiagnostics' | 'amazonCatalog';
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -303,7 +304,8 @@ export type AdminView = 'dashboard' | 'userIntelligence' | 'orders' | 'requested
     MarketerManagementComponent,
     SpecialOffersManagerComponent,
     AiControlCenterComponent,
-    AmazonDiagnosticsComponent
+    AmazonDiagnosticsComponent,
+    AmazonCatalogComponent
   ],
   templateUrl: './admin-dashboard.component.html',
   styleUrls: ['./admin-dashboard.component.css']

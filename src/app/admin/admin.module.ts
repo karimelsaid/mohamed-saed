@@ -16,7 +16,6 @@ import { SubscriptionSettingsComponent } from './subscription-settings/subscript
 import { SalesHistoryComponent } from './sales-history/sales-history.component';
 import { AdminBourseSettingsComponent } from './admin-bourse-settings/admin-bourse-settings.component';
 import { AdminAutomationComponent } from './admin-automation/admin-automation.component';
-import { AmazonCatalogComponent } from './amazon-catalog/amazon-catalog.component';
 
 import { AdminRoutingModule } from './admin-routing.module';
 

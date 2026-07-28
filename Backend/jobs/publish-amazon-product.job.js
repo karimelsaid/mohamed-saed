@@ -110,6 +110,34 @@ function initializeQueue() {
       }
     });
 
+    amazonQueue.process('syncAll', 1, async (job) => {
+      console.log('🔔 [Amazon Queue Worker] JOB_RECEIVED', {
+        timestamp: new Date().toISOString(),
+        jobId: job.id,
+        action: job.name
+      });
+      
+      try {
+        const result = await PublishAmazonProductJob.process(job);
+        console.log('✅ [Amazon Queue Worker] JOB_COMPLETED', {
+          timestamp: new Date().toISOString(),
+          jobId: job.id,
+          action: job.name,
+          result
+        });
+        return result;
+      } catch (error) {
+        console.error('❌ [Amazon Queue Worker] JOB_FAILED', {
+          timestamp: new Date().toISOString(),
+          jobId: job.id,
+          action: job.name,
+          error: error.message,
+          stack: error.stack
+        });
+        throw error;
+      }
+    });
+
     console.log('✅ [Amazon Queue] Job processors set up successfully');
 
     // Handle Redis connection events

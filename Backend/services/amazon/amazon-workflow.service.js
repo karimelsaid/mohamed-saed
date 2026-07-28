@@ -43,9 +43,10 @@ class AmazonWorkflowService {
       errors.push('Product quantity must be specified and non-negative');
     }
 
-    if (!product.product_description || product.product_description.trim() === '') {
-      errors.push('Product description is required');
-    }
+    // No longer strict error for description, will use default in workflow if missing
+    // if (!product.product_description || product.product_description.trim() === '') {
+    //   errors.push('Product description is required');
+    // }
 
     // Check image
     const hasImage = product.image_path || product.mainImage || product.coverImage || 
@@ -55,10 +56,10 @@ class AmazonWorkflowService {
       errors.push('Product image is required');
     }
 
-    // Check dimensions
-    if (!product.weight || product.weight <= 0) {
-      errors.push('Product weight must be specified');
-    }
+    // No longer strict error for weight, will use default in workflow if missing
+    // if (!product.weight || product.weight <= 0) {
+    //   errors.push('Product weight must be specified');
+    // }
 
     return {
       isValid: errors.length === 0,
@@ -102,12 +103,14 @@ class AmazonWorkflowService {
    * Get product dimensions with fallbacks
    */
   static getProductDimensions(product) {
+    // Use safe defaults if dimensions are missing
+    const weight = product.weight && product.weight > 0 ? product.weight : 500;
     return {
-      length: product.length || 20,
-      width: product.width || 14,
-      height: product.height || 0.5,
-      weight: product.weight || 450,
-      packageWeight: product.weight || 450
+      length: product.length && product.length > 0 ? product.length : 20,
+      width: product.width && product.width > 0 ? product.width : 14,
+      height: product.height && product.height > 0 ? product.height : 1,
+      weight: weight,
+      packageWeight: weight
     };
   }
 
@@ -557,7 +560,9 @@ class AmazonWorkflowService {
         sku,
         productType: 'ELECTRONIC_BOOK_READER',
         title: titles[i],
-        description: product.product_description,
+        description: product.product_description && product.product_description.trim() !== '' 
+          ? product.product_description 
+          : `كتاب ${titles[i]} - من إصدارات كنوز للنشر والتوزيع`,
         price: product.amazonPrice || product.product_price,
         quantity: product.product_quantity !== undefined ? product.product_quantity : 10,
         publisher: product.publisher,
@@ -569,10 +574,10 @@ class AmazonWorkflowService {
         pages: product.pages,
         publishYear: product.publishYear,
         imageUrl: product.mainImage || product.coverImage || (Array.isArray(product.images) && product.images[0]),
-        length: dimensions.length || 25,
-        width: dimensions.width || 18,
-        height: dimensions.height || 3,
-        packageWeight: dimensions.packageWeight || 450
+        length: dimensions.length || 20,
+        width: dimensions.width || 14,
+        height: dimensions.height || 1,
+        packageWeight: dimensions.packageWeight || 500
       };
 
       let result = await AmazonListingService.createListing(productData);

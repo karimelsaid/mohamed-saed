@@ -19,27 +19,37 @@ class AmazonPollingService {
       if (listingResult.success) {
         const summaries = listingResult.data?.summaries || [];
         const summaryWithAsin = summaries.find(s => !!s.asin);
+        const issues = listingResult.data?.issues || [];
         
         if (summaryWithAsin?.asin) {
           logger.logSuccess('WaitForAsin', { sku, attempts, asin: summaryWithAsin.asin });
           return {
             success: true,
             attempts,
-            asin: summaryWithAsin.asin
+            asin: summaryWithAsin.asin,
+            issues: issues // Return issues even on success
           };
         }
 
-        // If listing response explicitly has ERROR issues, fail early
-        const issues = listingResult.data?.issues || [];
-        const hasErrors = issues.some(i => i.severity === 'ERROR');
-        if (hasErrors) {
-          const errorMsg = issues.filter(i => i.severity === 'ERROR').map(i => `${i.attributeName || ''}: ${i.message}`).join('; ');
-          logger.logError('WaitForAsin Validation Error', new Error(errorMsg), { sku });
-          return {
-            success: false,
-            error: errorMsg || 'Listing validation failed on Amazon',
-            attempts
-          };
+        // Check for any issues (ERROR or WARNING) that might explain "Incomplete" status
+        if (issues.length > 0) {
+          const errorMsg = issues.map(i => `[${i.severity}] ${i.attributeName || ''}: ${i.message}`).join('; ');
+          
+          // If there are ERRORs, we fail
+          const hasErrors = issues.some(i => i.severity === 'ERROR');
+          if (hasErrors) {
+            logger.logError('WaitForAsin Error Issues', new Error(errorMsg), { sku });
+            return {
+              success: false,
+              error: errorMsg,
+              attempts,
+              issues
+            };
+          }
+          
+          // If only WARNINGs but no ASIN yet, we might be in "Incomplete" state
+          // We don't fail yet, but we log it
+          console.warn(`⚠️ [Amazon Polling] Issues found for ${sku} (Attempt ${attempts}): ${errorMsg}`);
         }
       }
       

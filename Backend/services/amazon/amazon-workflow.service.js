@@ -348,10 +348,13 @@ class AmazonWorkflowService {
         await Product.findOneAndUpdate({ products_id: productId }, { 
           amazonAsin: asinResult.asin,
           amazonStatus: 'published',
-          amazonSyncedAt: new Date()
+          amazonSyncedAt: new Date(),
+          amazonLastError: asinResult.issues && asinResult.issues.length > 0 
+            ? 'Warnings: ' + asinResult.issues.map(i => i.message).join('; ') 
+            : null
         });
         updateProgress(100, 'ASIN assigned successfully');
-        await this.updateProductStatus(productId, 'published', 'ASIN assigned successfully');
+        await this.updateProductStatus(productId, 'published', null);
         
         logWorkflow('ASIN_ASSIGNED', { 
           productId, 
@@ -371,22 +374,33 @@ class AmazonWorkflowService {
           message: 'Product published to Amazon successfully'
         };
       } else {
-        // ASIN not assigned within timeout, but listing was submitted
-        logWorkflow('ASIN_TIMEOUT', { 
+        // ASIN not assigned within timeout
+        // If we have errors/issues, mark as incomplete or failed
+        const isActuallyIncomplete = asinResult.error && !asinResult.error.includes('Timeout');
+        const finalStatus = isActuallyIncomplete ? 'incomplete' : 'pending_asin';
+        
+        await Product.findOneAndUpdate({ products_id: productId }, { 
+          amazonStatus: finalStatus,
+          amazonLastError: asinResult.error
+        });
+
+        logWorkflow('ASIN_TIMEOUT_OR_INCOMPLETE', { 
           productId, 
           jobId,
           sku,
+          status: finalStatus,
           error: asinResult.error,
           attempts: asinResult.attempts,
-          step: 'pending_asin',
+          step: finalStatus,
           totalExecutionTime: Date.now() - startTime 
         });
 
         return {
-          success: true,
+          success: !isActuallyIncomplete,
           sku,
           submissionId: listingResult.submissionId,
-          message: 'Listing submitted to Amazon. ASIN will be assigned asynchronously.'
+          status: finalStatus,
+          message: isActuallyIncomplete ? 'Listing is incomplete on Amazon' : 'Timeout waiting for ASIN'
         };
       }
 

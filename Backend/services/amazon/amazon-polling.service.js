@@ -129,16 +129,25 @@ class AmazonPollingService {
       return { status: 'NOT_FOUND', asin: null };
     }
 
+    const issues = result.data?.issues || [];
+    const hasIssues = issues.length > 0;
+
     // Try to get status from new Listings Items API summaries
     if (result.data?.summaries && result.data.summaries.length > 0) {
       const summary = result.data.summaries[0];
-      if (summary.status && summary.status.length > 0) {
-        // Return the first status (e.g., BUYABLE, DISCOVERABLE, etc.)
-        return { status: summary.status[0], asin: summary.asin };
+      let amazonStatus = (summary.status && summary.status.length > 0) ? summary.status[0] : 'UNKNOWN';
+      
+      // Map Amazon internal statuses to our system statuses
+      // "Incomplete" in Seller Central often maps to SEARCH_SUPPRESSED or has specific issues
+      if (amazonStatus === 'SEARCH_SUPPRESSED' || (amazonStatus === 'INACTIVE' && hasIssues)) {
+        return { status: 'incomplete', asin: summary.asin, issues };
       }
-      if (summary.asin) {
-        return { status: 'PENDING', asin: summary.asin };
+
+      if (amazonStatus === 'BUYABLE' || amazonStatus === 'DISCOVERABLE') {
+        return { status: 'published', asin: summary.asin, issues };
       }
+
+      return { status: amazonStatus, asin: summary.asin, issues };
     }
 
     // Fallback for older schemas just in case

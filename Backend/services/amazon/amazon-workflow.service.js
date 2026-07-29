@@ -532,13 +532,29 @@ class AmazonWorkflowService {
 
       console.log('ℹ️ Image updated along with listing via main_product_image_locator');
 
-      updateProgress(100, 'Sync completed successfully');
-      await this.updateProductStatus(productId, 'published', null);
+      // After successful update, fetch the real-time status from Amazon to see if it's "incomplete" or "published"
+      const statusResult = await AmazonPollingService.getProductStatus(sku);
+      const finalStatus = statusResult.status === 'published' || statusResult.status === 'BUYABLE' ? 'published' : 
+                          statusResult.status === 'incomplete' ? 'incomplete' : 
+                          statusResult.status.toLowerCase();
+      
+      const issuesMsg = statusResult.issues && statusResult.issues.length > 0 
+        ? 'Issues: ' + statusResult.issues.map(i => i.message).join('; ') 
+        : null;
+
+      updateProgress(100, `Sync completed. Amazon status: ${finalStatus}`);
+      await Product.findOneAndUpdate({ products_id: productId }, { 
+        amazonStatus: finalStatus,
+        amazonLastError: issuesMsg,
+        amazonSyncInProgress: false,
+        amazonSyncedAt: new Date()
+      });
 
       return {
         success: true,
         sku,
         asin,
+        status: finalStatus,
         amazonUrl: `https://www.amazon.eg/dp/${asin}`
       };
 

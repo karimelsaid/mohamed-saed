@@ -10,7 +10,10 @@ class AmazonProductCatalogController {
       const { status } = req.query;
 
       const filter = {};
-      if (status && status !== 'all') {
+      if (status === 'incomplete') {
+        // Show both 'incomplete' and 'pending_asin' when filtering for incomplete
+        filter.amazonStatus = { $in: ['incomplete', 'pending_asin'] };
+      } else if (status && status !== 'all') {
         filter.amazonStatus = status;
       }
 

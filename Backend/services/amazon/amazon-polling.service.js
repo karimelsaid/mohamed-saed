@@ -150,6 +150,14 @@ class AmazonPollingService {
       return { status: amazonStatus, asin: summary.asin, issues };
     }
 
+    // Special case: If summaries is empty but there are issues like 8560 (Incomplete)
+    if (hasIssues) {
+      const isIncomplete = issues.some(i => i.code === '8560' || i.code === '13013' || i.message.includes('complete enough'));
+      if (isIncomplete) {
+        return { status: 'incomplete', asin: null, issues };
+      }
+    }
+
     // Fallback for older schemas just in case
     const status = result.data?.status ||
                    result.data?.SalesRankings?.[0]?.status ||

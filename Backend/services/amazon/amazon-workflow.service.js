@@ -451,8 +451,8 @@ class AmazonWorkflowService {
         throw new Error('Product not found');
       }
 
-      if (!product.amazonSku || !product.amazonAsin) {
-        throw new Error('Product does not have Amazon SKU or ASIN');
+      if (!product.amazonSku) {
+        throw new Error('Product does not have Amazon SKU');
       }
 
       const sku = product.amazonSku;

@@ -47,7 +47,6 @@ export class AmazonCatalogComponent implements OnInit, OnDestroy {
   editingData: EditingProduct = { _id: '' };
   
   private destroy$ = new Subject<void>();
-  private refreshInterval: any;
 
   statusOptions = [
     { value: 'all', label: 'جميع المنتجات' },
@@ -66,18 +65,9 @@ export class AmazonCatalogComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadAmazonProducts();
-    // Auto refresh every 30 seconds to show sync progress
-    this.refreshInterval = setInterval(() => {
-      if (!this.loading && !this.editingProductId) {
-        this.loadAmazonProducts();
-      }
-    }, 30000);
   }
 
   ngOnDestroy(): void {
-    if (this.refreshInterval) {
-      clearInterval(this.refreshInterval);
-    }
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -101,7 +91,17 @@ export class AmazonCatalogComponent implements OnInit, OnDestroy {
 
   applyFilters(): void {
     this.filteredProducts = this.products.filter(product => {
-      const matchesStatus = this.selectedStatus === 'all' || product.amazonStatus === this.selectedStatus;
+      let matchesStatus = this.selectedStatus === 'all';
+      
+      if (!matchesStatus) {
+        if (this.selectedStatus === 'incomplete') {
+          // Accept both 'incomplete' and 'pending_asin' for incomplete filter
+          matchesStatus = product.amazonStatus === 'incomplete' || product.amazonStatus === 'pending_asin';
+        } else {
+          matchesStatus = product.amazonStatus === this.selectedStatus;
+        }
+      }
+      
       const matchesSearch = !this.searchQuery || 
         product.product_name.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
         product.amazonSku?.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
@@ -166,36 +166,41 @@ export class AmazonCatalogComponent implements OnInit, OnDestroy {
   saveProductChanges(): void {
     if (!this.editingProductId) return;
 
-    this.loading = true;
     this.adminService.updateAmazonProductData(this.editingProductId, this.editingData)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response: any) => {
           this.cancelEdit();
-          this.loadAmazonProducts();
+          // Update the product locally to preserve scroll position
+          const product = this.products.find(p => p._id === this.editingProductId);
+          if (product) {
+            if (this.editingData.amazonPrice) product.amazonPrice = this.editingData.amazonPrice;
+            if (this.editingData.product_quantity !== undefined) product.product_quantity = this.editingData.product_quantity;
+            this.applyFilters();
+          }
         },
         error: (error) => {
           console.error('Error updating product:', error);
-          this.loading = false;
         }
       });
   }
 
   republishProduct(product: AmazonProduct): void {
-    if (confirm(`هل تريد إعادة نشر المنتج "${product.product_name}"؟`)) {
-      this.loading = true;
-      this.adminService.republishAmazonProduct(product._id)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: (response: any) => {
-            this.loadAmazonProducts();
-          },
-          error: (error) => {
-            console.error('Error republishing product:', error);
-            this.loading = false;
+    this.adminService.republishAmazonProduct(product._id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response: any) => {
+          // Update status locally to preserve scroll position
+          const productIndex = this.products.findIndex(p => p._id === product._id);
+          if (productIndex !== -1) {
+            this.products[productIndex].amazonStatus = 'queued';
+            this.applyFilters();
           }
-        });
-    }
+        },
+        error: (error) => {
+          console.error('Error republishing product:', error);
+        }
+      });
   }
 
   getAmazonUrl(asin: string): string {
@@ -210,22 +215,22 @@ export class AmazonCatalogComponent implements OnInit, OnDestroy {
   }
 
   syncAllProducts(): void {
-    if (confirm('هل تريد مزامنة جميع المنتجات مع أمازون الآن؟ قد تستغرق هذه العملية بعض الوقت.')) {
-      this.loading = true;
-      this.adminService.syncAllAmazonProducts()
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: (response: any) => {
-            alert('بدأت عملية المزامنة الشاملة في الخلفية. سيتم تحديث البيانات تدريجياً.');
-            this.loadAmazonProducts();
-          },
-          error: (error) => {
-            console.error('Error initiating bulk sync:', error);
-            alert('فشل بدء عملية المزامنة: ' + error.message);
-            this.loading = false;
-          }
-        });
-    }
+    this.loading = true;
+    this.adminService.syncAllAmazonProducts()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response: any) => {
+          alert('جاري بدء المزامنة الشاملة مع أمازون في الخلفية... ستتحدث الحالات والتأكيدات تلقائياً خلال ثوانٍ.');
+          setTimeout(() => this.loadAmazonProducts(), 4000);
+          setTimeout(() => this.loadAmazonProducts(), 12000);
+          setTimeout(() => this.loadAmazonProducts(), 25000);
+        },
+        error: (error) => {
+          this.loading = false;
+          console.error('Error initiating bulk sync:', error);
+          alert('فشل في بدء المزامنة الشاملة مع أمازون');
+        }
+      });
   }
 
   copyToClipboard(text: string): void {

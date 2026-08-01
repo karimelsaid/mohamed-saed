@@ -19,8 +19,8 @@ export class AdminAuthInterceptor implements HttpInterceptor {
       return next.handle(req);
     }
 
-    // Only intercept admin API calls
-    if (req.url.includes('/api/admin') || req.url.includes('/api/notifications/admin')) {
+    // Only intercept admin and amazon API calls
+    if (req.url.includes('/api/admin') || req.url.includes('/api/amazon') || req.url.includes('/api/notifications/admin')) {
       const user = JSON.parse(localStorage.getItem('user') || 'null');
 
       if (user && user.token) {

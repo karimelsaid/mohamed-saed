@@ -240,7 +240,7 @@ class AmazonListingService {
 
         payload.attributes.product_description = [
           {
-            value: productData.description || productData.title || 'كتاب أصلي',
+            value: productData.description || productData.title || 'منتج عالي الجودة',
             language_tag: 'ar_AE',
             marketplace_id: marketplaceId
           }
@@ -248,17 +248,15 @@ class AmazonListingService {
 
         payload.attributes.bullet_point = [
           {
-            value: productData.title || 'كتاب أصلي',
+            value: productData.title || 'منتج عالي الجودة',
             language_tag: 'ar_AE',
             marketplace_id: marketplaceId
           }
         ];
 
-
-
         payload.attributes.included_components = [
           {
-            value: 'كتاب',
+            value: 'منتج',
             language_tag: 'ar_AE',
             marketplace_id: marketplaceId
           }

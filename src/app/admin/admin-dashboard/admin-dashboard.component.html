@@ -130,6 +130,13 @@
         <span>كتالوج أمازون</span>
       </button>
 
+      <button *ngIf="hasPermission('products')" (click)="switchView('amazonAccounts'); showSidebar = false"
+        [class]="currentView === 'amazonAccounts' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
+        class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
+        <fa-icon [icon]="['fas', 'key']"></fa-icon>
+        <span>حسابات أمازون والربط</span>
+      </button>
+
       <button *ngIf="hasPermission('userHierarchy')" (click)="switchView('userHierarchy'); showSidebar = false"
         [class]="currentView === 'userHierarchy' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
         class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
@@ -1963,6 +1970,10 @@
         <app-amazon-catalog></app-amazon-catalog>
       </div>
 
+      <div *ngIf="currentView === 'amazonAccounts'" class="mb-28 md:mb-0">
+        <app-amazon-accounts></app-amazon-accounts>
+      </div>
+
       <div *ngIf="currentView === 'products'" class="px-4 sm:px-10 max-w-6xl mx-auto mb-32 md:mb-0 view-enter">
         <h3 class="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">عرض وتعديل المنتجات</h3>
         <!-- Search bar for filtering products -->
@@ -2251,25 +2262,35 @@
                     </span>
                   </button>
                   
-                  <!-- Amazon Publish Button -->
-                  <button *ngIf="!product['amazonAsin'] && product['status'] === 'approved'"
+                  <!-- Amazon Publish Button (For draft or failed products) -->
+                  <button *ngIf="(!product['amazonStatus'] || product['amazonStatus'] === 'failed' || product['amazonStatus'] === 'incomplete') && !product['amazonAsin'] && product['status'] !== 'rejected'"
                     (click)="publishProductToAmazon(product.products_id)"
                     [disabled]="isPublishingToAmazon(product.products_id)"
-                    class="px-3 py-2 text-sm font-medium rounded-md transition-colors flex items-center justify-center gap-1"
-                    [ngClass]="isPublishingToAmazon(product.products_id) ? 'bg-gray-400 text-white' : 'bg-orange-500 hover:bg-orange-600 text-white'">
+                    class="px-3 py-2 text-sm font-medium rounded-md transition-colors flex items-center justify-center gap-1 text-white"
+                    [ngClass]="isPublishingToAmazon(product.products_id) ? 'bg-gray-400' : (product['amazonStatus'] === 'failed' ? 'bg-red-600 hover:bg-red-700' : 'bg-orange-500 hover:bg-orange-600')">
                     <fa-icon [icon]="['fab', 'amazon']"></fa-icon>
-                    <span *ngIf="!isPublishingToAmazon(product.products_id)">Publish to Amazon</span>
+                    <span *ngIf="!isPublishingToAmazon(product.products_id)">
+                      {{ product['amazonStatus'] === 'failed' ? 'إعادة النشر (Retry Amazon)' : 'Publish to Amazon' }}
+                    </span>
                     <span *ngIf="isPublishingToAmazon(product.products_id)">جاري...</span>
                   </button>
 
-                  <!-- Amazon Sync Button -->
-                  <button *ngIf="product['amazonAsin']"
+                  <!-- Amazon Pending Status Badge -->
+                  <button *ngIf="(product['amazonStatus'] === 'pending_asin' || product['amazonStatus'] === 'publishing') && !product['amazonAsin']"
+                    [disabled]="true"
+                    class="px-3 py-2 text-sm font-medium rounded-md bg-amber-500 text-white flex items-center justify-center gap-1 opacity-90 cursor-wait">
+                    <fa-icon [icon]="['fas', 'clock']"></fa-icon>
+                    <span>قيد الانتظار (Pending ASIN)</span>
+                  </button>
+
+                  <!-- Amazon Sync Button (For published products) -->
+                  <button *ngIf="product['amazonStatus'] === 'published' || product['amazonAsin']"
                     (click)="syncProductAmazon(product.products_id)"
                     [disabled]="isSyncingAmazon(product.products_id)"
-                    class="px-3 py-2 text-sm font-medium rounded-md transition-colors flex items-center justify-center gap-1"
-                    [ngClass]="isSyncingAmazon(product.products_id) ? 'bg-gray-400 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white'">
+                    class="px-3 py-2 text-sm font-medium rounded-md transition-colors flex items-center justify-center gap-1 text-white"
+                    [ngClass]="isSyncingAmazon(product.products_id) ? 'bg-gray-400' : 'bg-emerald-600 hover:bg-emerald-700'">
                     <fa-icon [icon]="['fas', 'sync-alt']"></fa-icon>
-                    <span *ngIf="!isSyncingAmazon(product.products_id)">Sync Amazon</span>
+                    <span *ngIf="!isSyncingAmazon(product.products_id)">منشور (Sync Amazon)</span>
                     <span *ngIf="isSyncingAmazon(product.products_id)">جاري...</span>
                   </button>
 

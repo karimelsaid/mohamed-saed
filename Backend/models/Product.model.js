@@ -52,9 +52,11 @@ const productSchema = new mongoose.Schema({
   // Amazon Integration Fields
   amazonSku: { type: String, index: true },
   amazonAsin: { type: String },
+  amazonSellerId: { type: String },
+  amazonAccountId: { type: mongoose.Schema.Types.ObjectId, ref: 'AmazonAccount' },
   amazonStatus: {
     type: String,
-    enum: ['pending', 'publishing', 'published', 'retry', 'failed', 'suppressed'],
+    enum: ['pending', 'pending_asin', 'incomplete', 'publishing', 'published', 'retry', 'failed', 'suppressed'],
     default: 'pending'
   },
   amazonLastError: { type: String },

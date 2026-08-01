@@ -130,12 +130,12 @@ class AmazonWorkflowService {
     };
 
     try {
-      // Find all products that have an Amazon SKU
-      const products = await Product.find({ amazonSku: { $exists: true, $ne: null } });
+      // Find all published products that have an Amazon SKU
+      const products = await Product.find({ amazonStatus: 'published', amazonSku: { $exists: true, $ne: null } });
       const total = products.length;
 
       logWorkflow('BULK_SYNC_START', { total });
-      updateProgress(0, `Starting bulk sync for ${total} products`);
+      updateProgress(0, `Starting bulk sync for ${total} published products`);
 
       for (let i = 0; i < products.length; i++) {
         const product = products[i];
@@ -235,27 +235,39 @@ class AmazonWorkflowService {
         return await this.syncProduct(productId, job);
       }
 
-      // Step 2: Generate SKU
-      logWorkflow('SKU_GENERATION_START', { 
-        productId, 
-        jobId,
-        step: 'generating_sku' 
-      });
-      updateProgress(10, 'Generating SKU');
-      await this.updateProductStatus(productId, 'generating_sku', 'Generating SKU');
-      
-      const skuStartTime = Date.now();
-      sku = await AmazonSkuGenerator.generateUnique(Product);
-      await Product.findOneAndUpdate({ products_id: productId }, { amazonSku: sku });
-      await this.updateProductStatus(productId, 'generating_sku', 'SKU generated');
-      
-      logWorkflow('SKU_GENERATED', { 
-        productId, 
-        jobId,
-        sku,
-        step: 'generating_sku',
-        executionTime: Date.now() - skuStartTime 
-      });
+      // Step 2: Reuse existing SKU or generate new SKU
+      if (product.amazonSku) {
+        sku = product.amazonSku;
+        logWorkflow('USING_EXISTING_SKU', { 
+          productId, 
+          jobId,
+          sku,
+          step: 'using_existing_sku' 
+        });
+        updateProgress(10, `Using existing SKU: ${sku}`);
+        await this.updateProductStatus(productId, 'using_existing_sku', `Using SKU: ${sku}`);
+      } else {
+        logWorkflow('SKU_GENERATION_START', { 
+          productId, 
+          jobId,
+          step: 'generating_sku' 
+        });
+        updateProgress(10, 'Generating SKU');
+        await this.updateProductStatus(productId, 'generating_sku', 'Generating SKU');
+        
+        const skuStartTime = Date.now();
+        sku = await AmazonSkuGenerator.generateUnique(Product);
+        await Product.findOneAndUpdate({ products_id: productId }, { amazonSku: sku });
+        await this.updateProductStatus(productId, 'generating_sku', 'SKU generated');
+        
+        logWorkflow('SKU_GENERATED', { 
+          productId, 
+          jobId,
+          sku,
+          step: 'generating_sku',
+          executionTime: Date.now() - skuStartTime 
+        });
+      }
 
       // Refresh product data after SKU update
       const updatedProduct = await Product.findOne({ products_id: productId });
@@ -328,81 +340,29 @@ class AmazonWorkflowService {
       }
 
       await Product.findOneAndUpdate({ products_id: productId }, { 
-        amazonSubmissionId: listingResult.submissionId 
+        amazonSubmissionId: listingResult.submissionId,
+        amazonStatus: 'pending_asin',
+        amazonLastError: 'تم الإرسال لأمازون بنجاح، جاري متابعة تخصيص الـ ASIN في الخلفية'
       });
-      updateProgress(80, 'Listing submitted to Amazon, waiting for ASIN');
-      await this.updateProductStatus(productId, 'pending_asin', 'Listing submitted to Amazon, waiting for ASIN');
+      updateProgress(100, 'Listing submitted to Amazon successfully');
+      await this.updateProductStatus(productId, 'pending_asin', 'تم الإرسال لأمازون بنجاح، جاري التتبع في الخلفية');
 
-      // Step 8: Wait for ASIN assignment
-      logWorkflow('WAITING_FOR_ASIN', { 
+      logWorkflow('SUBMITTED_SUCCESSFULLY', { 
         productId, 
         jobId,
         sku,
         submissionId: listingResult.submissionId,
-        step: 'waiting_asin' 
+        step: 'pending_asin',
+        totalExecutionTime: Date.now() - startTime 
       });
 
-      const asinResult = await AmazonPollingService.waitForAsin(sku, 15, 10);
-      
-      if (asinResult.success) {
-        await Product.findOneAndUpdate({ products_id: productId }, { 
-          amazonAsin: asinResult.asin,
-          amazonStatus: 'published',
-          amazonSyncedAt: new Date(),
-          amazonLastError: asinResult.issues && asinResult.issues.length > 0 
-            ? 'Warnings: ' + asinResult.issues.map(i => i.message).join('; ') 
-            : null
-        });
-        updateProgress(100, 'ASIN assigned successfully');
-        await this.updateProductStatus(productId, 'published', null);
-        
-        logWorkflow('ASIN_ASSIGNED', { 
-          productId, 
-          jobId,
-          sku,
-          asin: asinResult.asin,
-          attempts: asinResult.attempts,
-          step: 'published',
-          totalExecutionTime: Date.now() - startTime 
-        });
-
-        return {
-          success: true,
-          sku,
-          asin: asinResult.asin,
-          submissionId: listingResult.submissionId,
-          message: 'Product published to Amazon successfully'
-        };
-      } else {
-        // ASIN not assigned within timeout
-        // If we have errors/issues, mark as incomplete or failed
-        const isActuallyIncomplete = asinResult.error && !asinResult.error.includes('Timeout');
-        const finalStatus = isActuallyIncomplete ? 'incomplete' : 'pending_asin';
-        
-        await Product.findOneAndUpdate({ products_id: productId }, { 
-          amazonStatus: finalStatus,
-          amazonLastError: asinResult.error
-        });
-
-        logWorkflow('ASIN_TIMEOUT_OR_INCOMPLETE', { 
-          productId, 
-          jobId,
-          sku,
-          status: finalStatus,
-          error: asinResult.error,
-          attempts: asinResult.attempts,
-          step: finalStatus,
-          totalExecutionTime: Date.now() - startTime 
-        });
-
-        return {
-          success: !isActuallyIncomplete,
-          sku,
-          submissionId: listingResult.submissionId,
-          status: finalStatus,
-          message: isActuallyIncomplete ? 'Listing is incomplete on Amazon' : 'Timeout waiting for ASIN'
-        };
-      }
+      return {
+        success: true,
+        sku,
+        submissionId: listingResult.submissionId,
+        status: 'pending_asin',
+        message: 'Product submitted to Amazon successfully. ASIN is being tracked in background.'
+      };
 
     } catch (error) {
       logWorkflow('PUBLISH_ERROR', { 
@@ -499,28 +459,32 @@ class AmazonWorkflowService {
 
       updateProgress(10, 'Sync started');
 
-      // Update listing (title, description, dimensions, weight)
-      updateProgress(20, 'Updating listing details');
-      await this.updateProductStatus(productId, 'publishing', 'Updating listing details');
+      // Only submit createListing payload to Amazon if the product is already published or has an ASIN
+      // This prevents creating duplicate draft submission records on Amazon Seller Central
+      if (product.amazonStatus === 'published' || product.amazonAsin) {
+        updateProgress(20, 'Updating listing details on Amazon');
+        await this.updateProductStatus(productId, 'publishing', 'Updating listing details');
 
-      const dimensions = this.getProductDimensions(product);
-      const listingData = {
-        sku,
-        title: product.product_name,
-        price: amazonPrice,
-        quantity: product.product_quantity,
-        length: dimensions.length,
-        width: dimensions.width,
-        height: dimensions.height,
-        packageWeight: dimensions.packageWeight,
-        asin: product.amazonAsin,
-        barcode: product.barcode
-      };
+        const dimensions = this.getProductDimensions(product);
+        const listingData = {
+          sku,
+          title: product.product_name,
+          price: amazonPrice,
+          quantity: product.product_quantity,
+          length: dimensions.length,
+          width: dimensions.width,
+          height: dimensions.height,
+          packageWeight: dimensions.packageWeight,
+          asin: product.amazonAsin,
+          barcode: null // GTIN Exemption
+        };
 
-      const listingResult = await AmazonListingService.createListing(listingData);
-      if (!listingResult.success) {
-        logger.logError('Listing Update', new Error(listingResult.error), { sku });
-        // Non-fatal error, continue with other updates
+        const listingResult = await AmazonListingService.createListing(listingData);
+        if (!listingResult.success) {
+          logger.logError('Listing Update', new Error(listingResult.error), { sku });
+        }
+      } else {
+        console.log(`ℹ️ [Amazon Sync] Product ${sku} is not published yet. Skipping createListing payload submit.`);
       }
 
       updateProgress(30, 'Listing details, price, and inventory updated');
@@ -532,23 +496,39 @@ class AmazonWorkflowService {
 
       console.log('ℹ️ Image updated along with listing via main_product_image_locator');
 
-      // After successful update, fetch the real-time status from Amazon to see if it's "incomplete" or "published"
+      // After sync attempt, fetch real-time status from Amazon SP-API
       const statusResult = await AmazonPollingService.getProductStatus(sku);
-      const finalStatus = statusResult.status === 'published' || statusResult.status === 'BUYABLE' ? 'published' : 
-                          statusResult.status === 'incomplete' ? 'incomplete' : 
-                          statusResult.status.toLowerCase();
       
-      const issuesMsg = statusResult.issues && statusResult.issues.length > 0 
-        ? 'Issues: ' + statusResult.issues.map(i => i.message).join('; ') 
-        : null;
-
-      updateProgress(100, `Sync completed. Amazon status: ${finalStatus}`);
-      await Product.findOneAndUpdate({ products_id: productId }, { 
-        amazonStatus: finalStatus,
-        amazonLastError: issuesMsg,
+      let finalStatus = 'failed';
+      let updateFields = {
         amazonSyncInProgress: false,
         amazonSyncedAt: new Date()
-      });
+      };
+
+      if (statusResult.status === 'NOT_FOUND') {
+        finalStatus = 'failed';
+        updateFields.amazonStatus = 'failed';
+        updateFields.amazonSku = null;
+        updateFields.amazonAsin = null;
+        updateFields.amazonLastError = 'المنتج غير موجود على حساب أمازون (لم يُنشر أو تم حذفه من أمازون)';
+      } else if (statusResult.status === 'published' || statusResult.status === 'BUYABLE') {
+        finalStatus = 'published';
+        updateFields.amazonStatus = 'published';
+        if (statusResult.asin) updateFields.amazonAsin = statusResult.asin;
+        updateFields.amazonLastError = null;
+      } else if (statusResult.status === 'incomplete') {
+        finalStatus = 'incomplete';
+        updateFields.amazonStatus = 'incomplete';
+        updateFields.amazonLastError = (statusResult.issues && statusResult.issues.length > 0)
+          ? statusResult.issues.map(i => i.message).join('; ')
+          : 'بيانات المنتج غير مكتملة على أمازون';
+      } else {
+        finalStatus = statusResult.status.toLowerCase();
+        updateFields.amazonStatus = finalStatus;
+      }
+
+      updateProgress(100, `Sync completed. Real Amazon status: ${finalStatus}`);
+      await Product.findOneAndUpdate({ products_id: productId }, updateFields);
 
       return {
         success: true,
@@ -569,10 +549,26 @@ class AmazonWorkflowService {
    */
   static async createListingWithRetry(product, sku, job = null, retryCount = 0) {
     const maxRetries = 3;
-    const titles = [
-      product.product_name,
-      `${product.product_name} - ورق مريح للعين`
-    ];
+    const baseName = product.product_name ? product.product_name.trim() : 'منتج';
+    const words = baseName.split(' ').filter(w => w.trim() !== '');
+    const suffix = ' - ورق مريح للعين';
+    
+    const titlesSet = new Set();
+    // 1. Original title
+    titlesSet.add(baseName);
+    // 2. Original title + suffix (highest priority if rejected as a book)
+    titlesSet.add(baseName + suffix);
+    
+    // 3. Progressively shorten title and add suffix
+    for (let i = words.length - 1; i >= 1; i--) {
+      const shortenedBase = words.slice(0, i).join(' ');
+      titlesSet.add(shortenedBase + suffix);
+    }
+    
+    const titles = Array.from(titlesSet);
+
+    // Start from the index determined by the asynchronous retry count
+    const startIndex = Math.min(product.amazonRetryCount || 0, titles.length - 1);
 
     // Prevent infinite retries
     if (retryCount >= maxRetries) {
@@ -580,7 +576,7 @@ class AmazonWorkflowService {
       return { success: false, error: 'Max retries exceeded' };
     }
 
-    for (let i = 0; i < titles.length; i++) {
+    for (let i = startIndex; i < titles.length; i++) {
       if (job) {
         job.log(`Attempt ${retryCount + 1}-${i + 1} with title: ${titles[i].substring(0, 50)}...`);
       }
@@ -590,16 +586,15 @@ class AmazonWorkflowService {
         sku,
         productType: 'ELECTRONIC_BOOK_READER',
         title: titles[i],
-        description: product.product_description && product.product_description.trim() !== '' 
-          ? product.product_description 
-          : titles[i],
+        description: `${titles[i]} - منتج عالي الجودة ورق مريح للعين`,
         price: product.amazonPrice || product.product_price,
         quantity: product.product_quantity !== undefined ? product.product_quantity : 10,
         publisher: product.publisher,
         author: product.author,
-        brand: product.publisher || product.author || 'عام',
+        brand: 'عام',
         condition: product.condition,
-        barcode: product.barcode,
+        // Always omit barcode for ELECTRONIC_BOOK_READER to force GTIN Exemption and prevent Amazon from overriding category to ABIS_BOOK via ISBN lookup
+        barcode: null,
         asin: product.amazonAsin,
         pages: product.pages,
         publishYear: product.publishYear,

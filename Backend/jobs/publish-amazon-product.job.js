@@ -19,6 +19,12 @@ function initializeQueue() {
 
     amazonQueue = new Queue('amazon-publishing', {
       redis: redisUrl,
+      settings: {
+        lockDuration: 300000,     // 5 minutes lock
+        lockRenewTime: 150000,    // Renew lock every 2.5 minutes
+        stalledInterval: 300000,  // Check stalled every 5 minutes
+        maxStalledCount: 5        // Allow up to 5 stalls before failing
+      },
       connection: {
         maxRetriesPerRequest: 3,
         retryStrategy: (times) => {
@@ -34,9 +40,15 @@ function initializeQueue() {
 
     // Test connection
     console.log('⏳ [Amazon Queue] Testing Redis connection...');
-    amazonQueue.isReady().then(() => {
+    amazonQueue.isReady().then(async () => {
       isRedisAvailable = true;
       console.log('✅ [Amazon Queue] Redis connection established successfully');
+      try {
+        await amazonQueue.clean(1000, 'failed');
+        await amazonQueue.clean(1000, 'active');
+      } catch (cleanErr) {
+        // ignore clean errors
+      }
       console.log('✅ [Amazon Queue] Queue initialized successfully');
     }).catch((error) => {
       isRedisAvailable = false;

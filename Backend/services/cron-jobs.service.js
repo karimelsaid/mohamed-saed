@@ -121,30 +121,51 @@ exports.initCronJobs = async () => {
     });
     scheduledTasks.push(bourseTask);
 
-    // 7. Amazon pending ASIN check (Every 15 minutes)
-    const amazonPendingTask = cron.schedule('*/15 * * * *', async () => {
-        // console.log('🔄 Checking Amazon pending ASINs...');
+    // 7. Amazon pending & incomplete ASIN check (Every 5 minutes)
+    const amazonPendingTask = cron.schedule('*/5 * * * *', async () => {
+        // console.log('🔄 Checking Amazon pending & incomplete ASINs...');
         try {
             const Product = require('../models/Product.model');
-            // Since this is in services/ use the correct relative path
             const amazonPolling = require('./amazon/amazon-polling.service');
             
-            const pendingProducts = await Product.find({ amazonStatus: 'pending_asin' }).limit(50);
+            const pendingProducts = await Product.find({ 
+                amazonStatus: { $in: ['pending_asin', 'incomplete'] },
+                amazonSku: { $exists: true, $ne: null }
+            }).limit(100);
             
             for (const product of pendingProducts) {
                 if (product.amazonSku) {
                     const statusResult = await amazonPolling.getProductStatus(product.amazonSku);
                     if (statusResult.asin) {
                         console.log(`✅ [Amazon Cron] ASIN generated for ${product.products_id}: ${statusResult.asin}`);
-                        product.amazonAsin = statusResult.asin;
-                        product.amazonStatus = 'published';
-                        product.amazonSyncedAt = new Date();
-                        await product.save();
+                        await Product.updateOne({ _id: product._id }, {
+                            $set: {
+                                amazonAsin: statusResult.asin,
+                                amazonStatus: 'published',
+                                amazonLastError: null,
+                                amazonSyncedAt: new Date()
+                            }
+                        });
+                    } else if (statusResult.status === 'NOT_FOUND') {
+                        console.log(`🧹 [Amazon Cron] Unlinking deleted SKU for ${product.products_id}: ${product.amazonSku}`);
+                        await Product.updateOne({ _id: product._id }, {
+                            $set: {
+                                amazonStatus: null,
+                                amazonSku: null,
+                                amazonAsin: null,
+                                amazonLastError: null
+                            }
+                        });
                     } else if (statusResult.status === 'PERMANENT_ERROR' || statusResult.status === 'INVALID') {
-                        console.log(`❌ [Amazon Cron] ASIN failed for ${product.products_id}`);
-                        product.amazonStatus = 'failed';
-                        product.amazonLastError = 'Rejected by Amazon';
-                        await product.save();
+                        const detailedError = statusResult.error || (statusResult.issues && statusResult.issues.map(i => i.message).join('; ')) || 'Rejected by Amazon';
+                        console.log(`❌ [Amazon Cron] ASIN failed for ${product.products_id}: ${detailedError}`);
+                        await Product.updateOne({ _id: product._id }, {
+                            $set: {
+                                amazonStatus: 'failed',
+                                amazonLastError: detailedError,
+                                amazonRetryCount: (product.amazonRetryCount || 0) + 1
+                            }
+                        });
                     }
                 }
             }

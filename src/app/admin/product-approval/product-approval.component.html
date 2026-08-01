@@ -141,7 +141,7 @@
           <div *ngIf="product.status === 'approved'" class="mt-3">
             <!-- Publish Button for new products -->
             <button
-              *ngIf="!product.amazonAsin"
+              *ngIf="(!product.amazonAsin && product.amazonStatus !== 'published' && product.amazonStatus !== 'pending_asin' && product.amazonStatus !== 'publishing')"
               (click)="publishToAmazon(product._id)"
               [disabled]="isPublishingToAmazon(product._id) || product.amazonStatus === 'publishing'"
               class="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -151,18 +151,27 @@
               </svg>
               {{ getAmazonPublishButtonText(product._id, product.amazonStatus) }}
             </button>
-            
-            <!-- Sync Button for products with ASIN -->
+
+            <!-- Pending Status -->
             <button
-              *ngIf="product.amazonAsin"
+              *ngIf="(product.amazonStatus === 'pending_asin' || product.amazonStatus === 'publishing') && !product.amazonAsin"
+              [disabled]="true"
+              class="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-amber-500 cursor-wait opacity-90"
+            >
+              قيد الانتظار (Pending ASIN)
+            </button>
+            
+            <!-- Sync Button for products with ASIN or published -->
+            <button
+              *ngIf="product.amazonAsin || product.amazonStatus === 'published'"
               (click)="syncAmazon(product._id)"
               [disabled]="isSyncingAmazon(product._id) || product.amazonStatus === 'publishing'"
-              class="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              class="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
               </svg>
-              {{ isSyncingAmazon(product._id) ? 'جاري المزامنة...' : 'مزامنة أمازون' }}
+              {{ isSyncingAmazon(product._id) ? 'جاري المزامنة...' : 'منشور على أمازون (مزامنة)' }}
             </button>
             
             <!-- Retry Button for Failed Products -->

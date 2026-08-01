@@ -1,26 +1,70 @@
 const SellingPartner = require('amazon-sp-api');
 const logger = require('./amazon-logger.service');
+const AmazonAccount = require('../../models/AmazonAccount.model');
 
 class AmazonAuthService {
   constructor() {
     this.client = null;
+    this.activeAccount = null;
+  }
+
+  /**
+   * Reset client instance (called when accounts are updated or switched)
+   */
+  resetClient() {
+    this.client = null;
+    this.activeAccount = null;
+  }
+
+  /**
+   * Get active Amazon seller account from database or fallback to .env
+   */
+  async getActiveAccount() {
+    try {
+      const dbAccount = await AmazonAccount.findOne({ isActive: true });
+      if (dbAccount) {
+        this.activeAccount = dbAccount;
+        return dbAccount;
+      }
+    } catch (err) {
+      console.warn('⚠️ [Amazon Auth] Error fetching active account from DB, falling back to .env:', err.message);
+    }
+
+    // Fallback to .env
+    return {
+      accountName: 'Default (.env)',
+      sellerId: process.env.AMAZON_SP_API_SELLER_ID || 'A1NLMXX19H764W',
+      marketplaceId: process.env.AMAZON_SP_API_MARKETPLACE_ID || 'ARBP9OOSHTCHU',
+      region: process.env.AMAZON_SP_API_REGION || 'eu',
+      clientId: process.env.AMAZON_SP_API_CLIENT_ID,
+      clientSecret: process.env.AMAZON_SP_API_CLIENT_SECRET,
+      refreshToken: process.env.AMAZON_SP_API_REFRESH_TOKEN
+    };
   }
 
   /**
    * Initialize Amazon SP-API client
-   * The library handles access token management automatically
    */
   async getClient() {
     if (!this.client) {
-      console.log('🔑 [Amazon Auth] Initializing SP-API client...');
-      console.log('🔑 [Amazon Auth] Region:', process.env.AMAZON_SP_API_REGION || 'eu');
-      console.log('🔑 [Amazon Auth] Refresh token:', process.env.AMAZON_SP_API_REFRESH_TOKEN ? 'SET' : 'MISSING');
+      const account = await this.getActiveAccount();
+      console.log(`🔑 [Amazon Auth] Initializing SP-API client for store: "${account.accountName}"`);
+      console.log('🔑 [Amazon Auth] Region:', account.region || 'eu');
+      console.log('🔑 [Amazon Auth] Refresh token:', account.refreshToken ? 'SET' : 'MISSING');
       
-      this.client = new SellingPartner({
-        region: process.env.AMAZON_SP_API_REGION || 'eu',
-        refresh_token: process.env.AMAZON_SP_API_REFRESH_TOKEN
-      });
-      
+      const config = {
+        region: account.region || 'eu',
+        refresh_token: account.refreshToken
+      };
+
+      if (account.clientId && account.clientSecret) {
+        config.credentials = {
+          SELLING_PARTNER_APP_CLIENT_ID: account.clientId,
+          SELLING_PARTNER_APP_CLIENT_SECRET: account.clientSecret
+        };
+      }
+
+      this.client = new SellingPartner(config);
       console.log('✅ [Amazon Auth] SP-API client initialized successfully');
     }
 
@@ -28,7 +72,36 @@ class AmazonAuthService {
   }
 
   /**
-   * Test connection to Amazon SP-API
+   * Test connection for specific credentials
+   */
+  async testSpecificAccount(creds) {
+    try {
+      const config = {
+        region: creds.region || 'eu',
+        refresh_token: creds.refresh_token
+      };
+
+      if (creds.client_id && creds.client_secret) {
+        config.credentials = {
+          SELLING_PARTNER_APP_CLIENT_ID: creds.client_id,
+          SELLING_PARTNER_APP_CLIENT_SECRET: creds.client_secret
+        };
+      }
+
+      const tempClient = new SellingPartner(config);
+      const result = await tempClient.callAPI({
+        operation: 'getMarketplaceParticipations',
+        endpoint: 'sellers'
+      });
+
+      return { success: true, data: result };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Test connection to Amazon SP-API for active client
    */
   async testConnection() {
     try {
@@ -49,27 +122,27 @@ class AmazonAuthService {
   }
 
   /**
-   * Get marketplace ID from environment or system settings
+   * Get marketplace ID from active account or environment
    */
-  getMarketplaceId() {
-    return process.env.AMAZON_SP_API_MARKETPLACE_ID || 'ARBP9OOSHTCHU';
+  async getMarketplaceId() {
+    const account = await this.getActiveAccount();
+    return account.marketplaceId || process.env.AMAZON_SP_API_MARKETPLACE_ID || 'ARBP9OOSHTCHU';
   }
 
   /**
-   * Get seller ID from environment or fallback
+   * Get seller ID from active account or environment
    */
   async getSellerId() {
-    if (process.env.AMAZON_SP_API_SELLER_ID) {
-      return process.env.AMAZON_SP_API_SELLER_ID;
-    }
-    return 'A1NLMXX19H764W';
+    const account = await this.getActiveAccount();
+    return account.sellerId || process.env.AMAZON_SP_API_SELLER_ID || 'A1NLMXX19H764W';
   }
 
   /**
    * Get endpoint URL
    */
-  getEndpointUrl() {
-    const region = process.env.AMAZON_SP_API_REGION || 'eu';
+  async getEndpointUrl() {
+    const account = await this.getActiveAccount();
+    const region = account.region || process.env.AMAZON_SP_API_REGION || 'eu';
     return `https://sellingpartnerapi-${region}.amazon.com`;
   }
 }

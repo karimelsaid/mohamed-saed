@@ -109,7 +109,7 @@
             <div class="amazon-actions">
               <!-- Publish Button -->
               <button 
-                *ngIf="!product.amazonAsin && product.status === 'approved'"
+                *ngIf="(!product.amazonAsin && product.amazonStatus !== 'published' && product.amazonStatus !== 'pending_asin' && product.amazonStatus !== 'publishing') && product.status !== 'rejected'"
                 (click)="publishToAmazon(product._id)"
                 [disabled]="isPublishingToAmazon(product._id) || product.amazonStatus === 'publishing'"
                 [class]="'amazon-btn ' + (isPublishingToAmazon(product._id) ? 'publishing' : '')"
@@ -117,14 +117,23 @@
                 {{ isPublishingToAmazon(product._id) ? 'جاري النشر...' : 'نشر على Amazon' }}
               </button>
               
+              <!-- Pending Status -->
+              <button 
+                *ngIf="(product.amazonStatus === 'pending_asin' || product.amazonStatus === 'publishing') && !product.amazonAsin"
+                [disabled]="true"
+                class="amazon-btn pending"
+              >
+                قيد الانتظار (ASIN)
+              </button>
+
               <!-- Sync Button -->
               <button 
-                *ngIf="product.amazonAsin"
+                *ngIf="product.amazonAsin || product.amazonStatus === 'published'"
                 (click)="syncAmazon(product._id)"
                 [disabled]="isSyncingAmazon(product._id) || product.amazonStatus === 'publishing'"
                 [class]="'amazon-btn sync ' + (isSyncingAmazon(product._id) ? 'syncing' : '')"
               >
-                {{ isSyncingAmazon(product._id) ? 'جاري المزامنة...' : 'مزامنة Amazon' }}
+                {{ isSyncingAmazon(product._id) ? 'جاري المزامنة...' : 'منشور (مزامنة)' }}
               </button>
               
               <!-- Retry Button -->

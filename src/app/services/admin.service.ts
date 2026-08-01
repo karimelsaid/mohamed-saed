@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError, tap } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
@@ -135,6 +135,53 @@ export class AdminService {
 
   syncProductAmazon(productId: string): Observable<any> {
     return this.http.post(`${environment.apiBaseUrl}/amazon/products/${productId}/amazon/sync`, {}).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  private getAuthHeaders(): { headers?: HttpHeaders } {
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || 'null');
+      if (user && user.token) {
+        return { headers: new HttpHeaders({ 'Authorization': `Bearer ${user.token}` }) };
+      }
+    } catch(e) {}
+    return {};
+  }
+
+  // Amazon Accounts Management
+  getAmazonAccounts(): Observable<any> {
+    return this.http.get(`${environment.apiBaseUrl}/amazon/accounts`, this.getAuthHeaders()).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  createAmazonAccount(data: any): Observable<any> {
+    return this.http.post(`${environment.apiBaseUrl}/amazon/accounts`, data, this.getAuthHeaders()).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  updateAmazonAccount(id: string, data: any): Observable<any> {
+    return this.http.put(`${environment.apiBaseUrl}/amazon/accounts/${id}`, data, this.getAuthHeaders()).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  activateAmazonAccount(id: string): Observable<any> {
+    return this.http.post(`${environment.apiBaseUrl}/amazon/accounts/${id}/activate`, {}, this.getAuthHeaders()).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  testAmazonAccountConnection(id: string): Observable<any> {
+    return this.http.post(`${environment.apiBaseUrl}/amazon/accounts/${id}/test`, {}, this.getAuthHeaders()).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  deleteAmazonAccount(id: string): Observable<any> {
+    return this.http.delete(`${environment.apiBaseUrl}/amazon/accounts/${id}`, this.getAuthHeaders()).pipe(
       catchError(this.handleError)
     );
   }

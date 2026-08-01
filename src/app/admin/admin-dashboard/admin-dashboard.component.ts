@@ -41,6 +41,7 @@ import { SpecialOffersManagerComponent } from '../special-offers-manager/special
 import { AiControlCenterComponent } from '../ai-control-center/ai-control-center.component';
 import { AmazonDiagnosticsComponent } from '../amazon-diagnostics/amazon-diagnostics.component';
 import { AmazonCatalogComponent } from '../amazon-catalog/amazon-catalog.component';
+import { AmazonAccountsComponent } from '../amazon-accounts/amazon-accounts.component';
 
 interface Order {
   _id: string;
@@ -272,7 +273,7 @@ interface SystemSettings {
   };
 }
 
-export type AdminView = 'dashboard' | 'userIntelligence' | 'orders' | 'requestedBooks' | 'printOrders' | 'printingSettings' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'staff' | 'productApproval' | 'productManagement' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' | 'gamificationControl' | 'notifications' | 'subscriptionControl' | 'readerFeedback' | 'promotions' | 'salesRegistration' | 'shortagesReport' | 'promotionDates' | 'salesHistory' | 'community' | 'bourseSettings' | 'automation' | 'aiControlCenter' | 'newsletter' | 'marketers' | 'specialOffers' | 'amazonDiagnostics' | 'amazonCatalog';
+export type AdminView = 'dashboard' | 'userIntelligence' | 'orders' | 'requestedBooks' | 'printOrders' | 'printingSettings' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'staff' | 'productApproval' | 'productManagement' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' | 'gamificationControl' | 'notifications' | 'subscriptionControl' | 'readerFeedback' | 'promotions' | 'salesRegistration' | 'shortagesReport' | 'promotionDates' | 'salesHistory' | 'community' | 'bourseSettings' | 'automation' | 'aiControlCenter' | 'newsletter' | 'marketers' | 'specialOffers' | 'amazonDiagnostics' | 'amazonCatalog' | 'amazonAccounts';
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -305,7 +306,8 @@ export type AdminView = 'dashboard' | 'userIntelligence' | 'orders' | 'requested
     SpecialOffersManagerComponent,
     AiControlCenterComponent,
     AmazonDiagnosticsComponent,
-    AmazonCatalogComponent
+    AmazonCatalogComponent,
+    AmazonAccountsComponent
   ],
   templateUrl: './admin-dashboard.component.html',
   styleUrls: ['./admin-dashboard.component.css']
@@ -956,7 +958,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     'aiControlCenter': 'AI Control Center',
     'newsletter': 'القائمة البريدية',
     'marketers': 'إدارة المسوقين العملاء',
-    'specialOffers': 'إدارة العروض الخاصة (Emails)'
+    'specialOffers': 'إدارة العروض الخاصة (Emails)',
+    'amazonAccounts': 'إدارة حسابات أمازون'
   };
 
   // Global Navigation Search
@@ -4322,7 +4325,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     // Filter out products that are already published or being published
     const eligibleIds = selectedIds.filter(id => {
       const product = this.products.find(p => p.products_id === id || p['_id'] === id);
-      return product && product['amazonStatus'] !== 'published' && product['amazonStatus'] !== 'queued' && product['amazonStatus'] !== 'publishing' && !product['amazonAsin'] && product['status'] === 'approved';
+      return product && product['amazonStatus'] !== 'published' && product['amazonStatus'] !== 'queued' && product['amazonStatus'] !== 'publishing' && !product['amazonAsin'] && product['status'] !== 'rejected';
     });
 
     if (eligibleIds.length === 0) {

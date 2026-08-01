@@ -15,6 +15,9 @@ class AmazonProductCatalogController {
         filter.amazonStatus = { $in: ['incomplete', 'pending_asin'] };
       } else if (status && status !== 'all') {
         filter.amazonStatus = status;
+      } else {
+        // When 'all' is selected in Amazon Catalog, only show products that actually belong to Amazon workflow
+        filter.amazonStatus = { $in: ['published', 'incomplete', 'failed', 'pending_asin', 'publishing', 'retry', 'suppressed'] };
       }
 
       const products = await Product.find(filter)

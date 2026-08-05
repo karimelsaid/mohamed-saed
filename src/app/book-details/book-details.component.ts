@@ -676,6 +676,41 @@ export class BookDetailsComponent implements OnInit, OnDestroy {
     ]);
   }
 
+  isAffiliateProduct(product: Book | undefined): boolean {
+    if (!product) return false;
+    return product.productType === 'affiliate' || !!(product.amazonAsin && product.amazonAsin.trim());
+  }
+
+  openAmazonAffiliateLink(product: Book): void {
+    if (!product) return;
+    const asin = (product.amazonAsin || '').trim();
+    const sellerId = product.merchantId || '';
+    const productId = product.products_id;
+
+    const trackPayload = {
+      productId: productId,
+      amazonAsin: asin,
+      sellerId: sellerId
+    };
+
+    const backendUrl = environment.apiBaseUrl || '/api';
+    this.http.post(`${backendUrl}/affiliate/track-click`, trackPayload).subscribe({
+      next: (res: any) => {
+        const affiliateUrl = res?.affiliateUrl || `https://www.amazon.eg/dp/${asin}/?tag=knoozbook-21`;
+        if (isPlatformBrowser(this.platformId)) {
+          window.open(affiliateUrl, '_blank', 'noopener,noreferrer,sponsored');
+        }
+      },
+      error: (err) => {
+        console.warn('Click tracking error, opening fallback affiliate link:', err);
+        const fallbackUrl = `https://www.amazon.eg/dp/${asin}/?tag=knoozbook-21`;
+        if (isPlatformBrowser(this.platformId)) {
+          window.open(fallbackUrl, '_blank', 'noopener,noreferrer,sponsored');
+        }
+      }
+    });
+  }
+
   ngOnDestroy(): void {
     // Reset to defaults when leaving the page
     this.seoService.resetToDefaults();

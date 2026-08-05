@@ -72,12 +72,26 @@ exports.submitOrder = async (req, res) => {
 
     // Ensure products match schema structure
     const validatedProducts = products.map(product => ({
-      bookId: product.bookId || product.book || '',
+      bookId: product.bookId || product.book || product._id || '',
       bookName: product.bookName || product.book || '',
       quantity: product.quantity || 1,
       price: product.price || 0,
       isBourseItem: product.isBourseItem || false
     }));
+
+    // COMPLIANCE SAFEGUARD: Block local checkout for affiliate products
+    for (const item of validatedProducts) {
+      if (item.bookId && mongoose.Types.ObjectId.isValid(item.bookId)) {
+        const dbProd = await Product.findById(item.bookId).select('productType amazonAsin').lean();
+        if (dbProd && (dbProd.productType === 'affiliate' || (dbProd.amazonAsin && dbProd.amazonAsin.trim()))) {
+          return res.status(400).json({
+            success: false,
+            code: 'AFFILIATE_CHECKOUT_BLOCKED',
+            message: 'منتجات أفلييت أمازون لا يمكن شراؤها مباشرة عبر المنصة. يرجى الشراء عبر رابط أمازون الرسمي.'
+          });
+        }
+      }
+    }
 
     // Bourse Offer Validation
     if (bourseOfferId) {

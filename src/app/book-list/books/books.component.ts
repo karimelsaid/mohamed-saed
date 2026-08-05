@@ -524,4 +524,42 @@ export class BooksComponent implements OnInit, OnDestroy {
 
         return pages;
     }
+
+    isAffiliateProduct(product: Book): boolean {
+        if (!product) return false;
+        return product.productType === 'affiliate' || !!(product.amazonAsin && product.amazonAsin.trim());
+    }
+
+    openAmazonAffiliateLink(product: Book, event?: MouseEvent): void {
+        if (event) {
+            event.stopPropagation();
+            event.preventDefault();
+        }
+        if (!product) return;
+        const asin = (product.amazonAsin || '').trim();
+        const sellerId = product.merchantId || '';
+        const productId = product.products_id;
+
+        const trackPayload = {
+            productId: productId,
+            amazonAsin: asin,
+            sellerId: sellerId
+        };
+
+        const backendUrl = environment.apiBaseUrl || '/api';
+        this.http.post(`${backendUrl}/affiliate/track-click`, trackPayload).subscribe({
+            next: (res: any) => {
+                const affiliateUrl = res?.affiliateUrl || `https://www.amazon.eg/dp/${asin}/?tag=knoozbook-21`;
+                if (isPlatformBrowser(this.platformId)) {
+                    window.open(affiliateUrl, '_blank', 'noopener,noreferrer,sponsored');
+                }
+            },
+            error: (err) => {
+                const fallbackUrl = `https://www.amazon.eg/dp/${asin}/?tag=knoozbook-21`;
+                if (isPlatformBrowser(this.platformId)) {
+                    window.open(fallbackUrl, '_blank', 'noopener,noreferrer,sponsored');
+                }
+            }
+        });
+    }
 }

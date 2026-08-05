@@ -137,6 +137,13 @@
         <span>حسابات أمازون والربط</span>
       </button>
 
+      <button *ngIf="hasPermission('merchants')" (click)="switchView('merchantAmazonLink'); showSidebar = false"
+        [class]="currentView === 'merchantAmazonLink' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
+        class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
+        <fa-icon [icon]="['fas', 'link']"></fa-icon>
+        <span>ربط حساب أمازون (OAuth)</span>
+      </button>
+
       <button *ngIf="hasPermission('userHierarchy')" (click)="switchView('userHierarchy'); showSidebar = false"
         [class]="currentView === 'userHierarchy' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
         class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium">
@@ -1383,6 +1390,29 @@
             </div>
 
 
+            <!-- Product Type & Amazon ASIN -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-amber-50/50 dark:bg-amber-950/20 p-4 rounded-xl border border-amber-200/60 dark:border-amber-800/60">
+              <div>
+                <label for="productType" class="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">
+                  نوع البيع والمنتج
+                </label>
+                <select id="productType" [(ngModel)]="product.productType" name="productType"
+                  class="block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:text-white transition-colors duration-200">
+                  <option value="physical">منتج عادي (بيع مباشر بالمنصة)</option>
+                  <option value="affiliate">منتج أفلييت أمازون (Amazon Affiliate)</option>
+                </select>
+              </div>
+
+              <div *ngIf="product.productType === 'affiliate'">
+                <label for="amazonAsin" class="block text-sm font-semibold text-amber-800 dark:text-amber-300 mb-2">
+                  معرف المنتج في أمازون (ASIN) أو رابط المنتج <span class="text-red-500">*</span>
+                </label>
+                <input type="text" id="amazonAsin" [(ngModel)]="product.amazonAsin" name="amazonAsin"
+                  class="block w-full px-4 py-3 border border-amber-300 dark:border-amber-600 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 dark:bg-gray-700 dark:text-white transition-colors duration-200"
+                  placeholder="مثال: B08XW2K1J8 أو رابط أمازون" />
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">سيتم توليد رابط الأفلييت تلقائياً مع Store ID: knoozbook-21</p>
+              </div>
+            </div>
             <div *ngIf="product.product_category" class="space-y-6">
               <!-- Image Upload Section -->
               <div
@@ -1972,6 +2002,10 @@
 
       <div *ngIf="currentView === 'amazonAccounts'" class="mb-28 md:mb-0">
         <app-amazon-accounts></app-amazon-accounts>
+      </div>
+
+      <div *ngIf="currentView === 'merchantAmazonLink'" class="mb-28 md:mb-0">
+        <app-merchant-amazon-link></app-merchant-amazon-link>
       </div>
 
       <div *ngIf="currentView === 'products'" class="px-4 sm:px-10 max-w-6xl mx-auto mb-32 md:mb-0 view-enter">

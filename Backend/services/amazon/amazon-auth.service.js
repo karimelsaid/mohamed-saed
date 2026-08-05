@@ -1,6 +1,7 @@
 const SellingPartner = require('amazon-sp-api');
 const logger = require('./amazon-logger.service');
 const AmazonAccount = require('../../models/AmazonAccount.model');
+const { decryptToken } = require('../../utils/crypto.util');
 
 class AmazonAuthService {
   constructor() {
@@ -48,13 +49,14 @@ class AmazonAuthService {
   async getClient() {
     if (!this.client) {
       const account = await this.getActiveAccount();
+      const plainRefreshToken = decryptToken(account.refreshToken);
       console.log(`🔑 [Amazon Auth] Initializing SP-API client for store: "${account.accountName}"`);
       console.log('🔑 [Amazon Auth] Region:', account.region || 'eu');
-      console.log('🔑 [Amazon Auth] Refresh token:', account.refreshToken ? 'SET' : 'MISSING');
+      console.log('🔑 [Amazon Auth] Refresh token:', plainRefreshToken ? 'SET' : 'MISSING');
       
       const config = {
         region: account.region || 'eu',
-        refresh_token: account.refreshToken
+        refresh_token: plainRefreshToken
       };
 
       if (account.clientId && account.clientSecret) {
@@ -76,9 +78,10 @@ class AmazonAuthService {
    */
   async testSpecificAccount(creds) {
     try {
+      const plainRefreshToken = decryptToken(creds.refresh_token);
       const config = {
         region: creds.region || 'eu',
-        refresh_token: creds.refresh_token
+        refresh_token: plainRefreshToken
       };
 
       if (creds.client_id && creds.client_secret) {

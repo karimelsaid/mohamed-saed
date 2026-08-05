@@ -92,6 +92,7 @@ const merchantRoutes = require('./routes/merchant.routes');
 const paymentRequestsRoutes = require('./routes/payment-requests.routes'); // استيراد مسارات طلبات الدفع
 const versionRoutes = require('./routes/version.routes');
 const feedbackRoutes = require('./routes/feedback.routes');
+const affiliateRoutes = require('./routes/affiliate.routes');
 // Added version routes
 const ebooksRoutes = require('./routes/ebooks.routes');
 const subscriptionsRoutes = require('./routes/subscriptions.routes');
@@ -114,6 +115,7 @@ const specialOffersRoutes = require('./routes/special-offers.routes');
 const amazonProductRoutes = require('./routes/amazon-product.routes');
 const amazonDiagnosticsRoutes = require('./routes/amazon-diagnostics.routes');
 const amazonAccountRoutes = require('./routes/amazon-account.routes');
+const amazonOAuthRoutes = require('./routes/amazon-oauth.routes');
 const publisherRoutes = require('./routes/publisher.routes');
 const express = require('express');
 const app = express();
@@ -697,6 +699,7 @@ app.use('/api/books', booksRoutes);
 app.use('/api/amazon', amazonProductRoutes);
 app.use('/api/amazon', amazonDiagnosticsRoutes);
 app.use('/api/amazon/accounts', amazonAccountRoutes);
+app.use('/api/amazon/oauth', amazonOAuthRoutes);
 app.use('/api/products', productsRoutes);
 app.use('/api/orders', ordersRoutes);
 app.use('/api/payment', paymentRoutes);
@@ -712,6 +715,7 @@ app.use('/api/automation', automationRoutes);
 app.use('/api/n8n', n8nWorkflowRoutes);
 app.use('/api/newsletter', newsletterRoutes);
 app.use('/api/publishers', publisherRoutes);
+app.use('/api/affiliate', affiliateRoutes);
 
 // Delete print order and associated file
 const mongoose = require('mongoose');

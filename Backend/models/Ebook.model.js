@@ -106,7 +106,6 @@ const ebookSchema = new mongoose.Schema({
 });
 
 // Index for faster searches
-ebookSchema.index({ title: 'text', author: 'text', description: 'text' }, { default_language: 'none', language_override: 'dummy_language_field' });
 ebookSchema.index({ category: 1 });
 ebookSchema.index({ status: 1 });
 

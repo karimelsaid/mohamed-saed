@@ -322,7 +322,8 @@ async function addProduct(req, res) {
       furnitureType, deliveryMethod, // Furniture fields
       toyType, ageGroup, safety, // Toy fields
       fabricType, usage, // Fabric fields
-      suggestedCategory
+      suggestedCategory,
+      productType, amazonAsin
     } = req.body;
 
     // Rename 'language' to 'bookLanguage' to avoid MongoDB reserved keyword conflict
@@ -443,7 +444,7 @@ async function addProduct(req, res) {
         coverImage: filename,
         epubFilePath: epubFilePath,
         fileSize: epubFile.size,
-        category: fullCategory,
+        category: englishCategoryMap[shortCategoryKey] || 'Self-development-psychology',
         pages: pages || 0,
         price: parseFloat(product_price) || 0,
         availableForSubscription: true
@@ -532,7 +533,8 @@ async function addProduct(req, res) {
       height: parseFloat(height) || '',
       suggestedCategory: suggestedCategory || '',
       linkedEbookId: linkedEbookId ? linkedEbookId.toString() : undefined,
-      productType: 'physical', // Set productType to physical for Amazon integration
+      productType: productType || 'physical', // Default to physical, can be affiliate
+      amazonAsin: amazonAsin || '',
       status: 'approved',
       createdAt: new Date().toISOString()
     };
@@ -541,7 +543,7 @@ async function addProduct(req, res) {
       delete productData.linkedEbookId;
     }
 
-    await Product.updateOne({ barcode }, { $set: productData, $unset: { language: "" } }, { upsert: true });
+    await Product.updateOne({ barcode }, { $set: productData }, { upsert: true });
     
     // Save to Excel (non-blocking failure)
     try {
@@ -1202,7 +1204,7 @@ async function updateProduct(req, res) {
       product_price, price_cost, weight, length, width, height,
       publisher, author, publishYear, pages, coverType, language,
       stationeryType, material, color, size, brand,
-      copyType, condition
+      copyType, condition, productType, amazonAsin
     } = req.body;
 
     if (!barcode) {
@@ -1288,6 +1290,8 @@ async function updateProduct(req, res) {
     if (price_cost !== undefined) json[productIndex].price_cost = price_cost;
     if (copyType !== undefined) json[productIndex].copyType = copyType;
     if (condition !== undefined) json[productIndex].condition = condition;
+    if (productType !== undefined) json[productIndex].productType = productType;
+    if (amazonAsin !== undefined) json[productIndex].amazonAsin = amazonAsin;
 
     // Use the helper for book-specific fields to avoid duplicate columns in Excel
     updateFieldCaseInsensitive(json[productIndex], 'publisher', publisher);
@@ -1348,6 +1352,8 @@ async function updateProduct(req, res) {
         // Sync copyType and condition to MongoDB
         if (copyType !== undefined) updateFields.copyType = copyType;
         if (condition !== undefined) updateFields.condition = condition;
+        if (productType !== undefined) updateFields.productType = productType;
+        if (amazonAsin !== undefined) updateFields.amazonAsin = amazonAsin;
         // Sync stationery-specific fields to MongoDB
         if (stationeryType !== undefined) updateFields.stationeryType = stationeryType;
         if (material !== undefined) updateFields.material = material;

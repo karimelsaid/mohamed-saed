@@ -42,6 +42,7 @@ import { AiControlCenterComponent } from '../ai-control-center/ai-control-center
 import { AmazonDiagnosticsComponent } from '../amazon-diagnostics/amazon-diagnostics.component';
 import { AmazonCatalogComponent } from '../amazon-catalog/amazon-catalog.component';
 import { AmazonAccountsComponent } from '../amazon-accounts/amazon-accounts.component';
+import { MerchantAmazonLinkComponent } from '../merchant-amazon-link/merchant-amazon-link.component';
 
 interface Order {
   _id: string;
@@ -273,7 +274,7 @@ interface SystemSettings {
   };
 }
 
-export type AdminView = 'dashboard' | 'userIntelligence' | 'orders' | 'requestedBooks' | 'printOrders' | 'printingSettings' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'staff' | 'productApproval' | 'productManagement' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' | 'gamificationControl' | 'notifications' | 'subscriptionControl' | 'readerFeedback' | 'promotions' | 'salesRegistration' | 'shortagesReport' | 'promotionDates' | 'salesHistory' | 'community' | 'bourseSettings' | 'automation' | 'aiControlCenter' | 'newsletter' | 'marketers' | 'specialOffers' | 'amazonDiagnostics' | 'amazonCatalog' | 'amazonAccounts';
+export type AdminView = 'dashboard' | 'userIntelligence' | 'orders' | 'requestedBooks' | 'printOrders' | 'printingSettings' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'staff' | 'productApproval' | 'productManagement' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' | 'gamificationControl' | 'notifications' | 'subscriptionControl' | 'readerFeedback' | 'promotions' | 'salesRegistration' | 'shortagesReport' | 'promotionDates' | 'salesHistory' | 'community' | 'bourseSettings' | 'automation' | 'aiControlCenter' | 'newsletter' | 'marketers' | 'specialOffers' | 'amazonDiagnostics' | 'amazonCatalog' | 'amazonAccounts' | 'merchantAmazonLink';
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -307,7 +308,8 @@ export type AdminView = 'dashboard' | 'userIntelligence' | 'orders' | 'requested
     AiControlCenterComponent,
     AmazonDiagnosticsComponent,
     AmazonCatalogComponent,
-    AmazonAccountsComponent
+    AmazonAccountsComponent,
+    MerchantAmazonLinkComponent
   ],
   templateUrl: './admin-dashboard.component.html',
   styleUrls: ['./admin-dashboard.component.css']
@@ -1039,7 +1041,9 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     weight: 0,
     length: '',
     width: '',
-    height: ''
+    height: '',
+    productType: 'physical',
+    amazonAsin: ''
   };
   selectedFiles: File[] = [];
   selectedFilesPreviews: string[] = [];

@@ -6,6 +6,16 @@ const amazonAccountSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
+  merchantId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    index: true
+  },
+  accountType: {
+    type: String,
+    enum: ['platform_default', 'merchant_oauth'],
+    default: 'platform_default'
+  },
   sellerId: {
     type: String,
     required: true,
@@ -23,18 +33,20 @@ const amazonAccountSchema = new mongoose.Schema({
   },
   clientId: {
     type: String,
-    required: true,
     trim: true
   },
   clientSecret: {
     type: String,
-    required: true,
     trim: true
   },
   refreshToken: {
     type: String,
     required: true,
     trim: true
+  },
+  isEncrypted: {
+    type: Boolean,
+    default: true
   },
   isActive: {
     type: Boolean,

@@ -259,6 +259,8 @@ export class EditProductComponent implements OnInit {
       formData.append('length', (parseFloat(this.product.length) || 0).toString());
       formData.append('width', (parseFloat(this.product.width) || 0).toString());
       formData.append('height', (parseFloat(this.product.height) || 0).toString());
+      formData.append('productType', this.product.productType || 'physical');
+      formData.append('amazonAsin', this.product.amazonAsin || '');
       
       // Send remaining existing images as a JSON string
       formData.append('existingImages', JSON.stringify(this.imageUrls));

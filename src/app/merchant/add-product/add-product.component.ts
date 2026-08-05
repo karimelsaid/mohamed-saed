@@ -309,6 +309,8 @@ export class AddProductComponent implements OnInit, OnDestroy {
       formData.append('length', this.productForm.value.length || '');
       formData.append('width', this.productForm.value.width || '');
       formData.append('height', this.productForm.value.height || '');
+      formData.append('productType', this.productForm.value.productType || 'physical');
+      formData.append('amazonAsin', this.productForm.value.amazonAsin || '');
 
       this.selectedFiles.forEach((file, index) => {
         formData.append('images', file);

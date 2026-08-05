@@ -1,31 +1,31 @@
 {
   "/api": {
-    "target": "https://knoozbook.com",
-    "secure": true,
+    "target": "http://localhost:3000",
+    "secure": false,
     "changeOrigin": true,
     "ws": true,
     "logLevel": "debug",
     "proxyTimeout": 900000
   },
   "/uploads": {
-    "target": "https://knoozbook.com",
-    "secure": true,
+    "target": "http://localhost:3000",
+    "secure": false,
     "changeOrigin": true,
     "ws": true,
     "logLevel": "debug",
     "proxyTimeout": 900000
   },
   "/socket.io": {
-    "target": "https://knoozbook.com",
-    "secure": true,
+    "target": "http://localhost:3000",
+    "secure": false,
     "changeOrigin": true,
     "ws": true,
     "logLevel": "debug",
     "proxyTimeout": 900000
   },
   "/admin": {
-    "target": "https://knoozbook.com",
-    "secure": true,
+    "target": "http://localhost:3000",
+    "secure": false,
     "changeOrigin": true,
     "ws": true,
     "logLevel": "debug",

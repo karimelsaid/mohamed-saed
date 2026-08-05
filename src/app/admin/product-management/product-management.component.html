@@ -230,6 +230,20 @@
         
         <div class="form-row">
           <div class="form-group">
+            <label>نوع البيع والمنتج</label>
+            <select [(ngModel)]="editingProduct.productType" class="form-input">
+              <option value="physical">منتج عادي</option>
+              <option value="affiliate">منتج أفلييت أمازون</option>
+            </select>
+          </div>
+          <div class="form-group" *ngIf="editingProduct.productType === 'affiliate'">
+            <label>Amazon ASIN (أو الرابط)</label>
+            <input type="text" [(ngModel)]="editingProduct.amazonAsin" class="form-input" placeholder="مثال: B08XW2K1J8">
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
             <label>الوزن (جرام)</label>
             <input type="number" [(ngModel)]="editingProduct.weight" class="form-input">
           </div>

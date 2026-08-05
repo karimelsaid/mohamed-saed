@@ -64,4 +64,8 @@ export interface Book {
   condition?: string;
   weight?: number;
   height?: number;
+  productType?: 'physical' | 'digital' | 'bundle' | 'affiliate';
+  amazonAsin?: string;
+  affiliateLink?: string;
 }
+

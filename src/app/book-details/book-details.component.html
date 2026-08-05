@@ -138,6 +138,28 @@
             </div>
           </div>
 
+          <!-- Amazon Affiliate Top Header Banner -->
+          <div *ngIf="isAffiliateProduct(book)" 
+            class="mb-6 p-4 rounded-2xl bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-amber-500/15 border-2 border-amber-500/40 shadow-sm flex items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+              <div class="w-12 h-12 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-md font-bold text-2xl">
+                <i class="fab fa-amazon"></i>
+              </div>
+              <div>
+                <span class="inline-block bg-amber-500 text-slate-950 font-extrabold text-[11px] px-2.5 py-0.5 rounded-full uppercase tracking-wider mb-1">
+                  منتج أمازون مصر (Amazon.eg)
+                </span>
+                <h4 class="text-sm font-bold text-gray-900 dark:text-gray-100">
+                  يباع ويُشحن مباشرة عبر موقع أمازون مصر
+                </h4>
+              </div>
+            </div>
+            <span class="hidden sm:inline-flex items-center gap-1 text-xs font-semibold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/50 px-3 py-1.5 rounded-lg border border-amber-300/50">
+              <i class="fas fa-external-link-alt text-amber-500"></i>
+              أفلييت رسمي
+            </span>
+          </div>
+
           <!-- السعر -->
           <div class="flex flex-col mb-4 bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg w-fit"
             *ngIf="calculateDiscountedPrice(book.product_price, book.products_id, 1) as discount">
@@ -180,6 +202,10 @@
               {{ ((discount.discountedQty > 0 ? discount.discountedPrice : book.product_price) *
               gamificationService.poundValue) | number:'1.0-0' }}
               عملة
+            </span>
+            <!-- Price Disclaimer for Affiliate -->
+            <span *ngIf="isAffiliateProduct(book)" class="text-xs text-amber-600 dark:text-amber-400 font-medium block mt-1">
+              * السعر المعروض وقت الإضافة وقابل للتغيير في موقع أمازون
             </span>
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
@@ -395,8 +421,24 @@
               </button>
             </div>
 
-            <!-- Main CTA Button -->
-            <button *ngIf="book.product_quantity > 0" (click)="onBuyNowClick()"
+            <!-- Amazon Affiliate Action Button -->
+            <div *ngIf="isAffiliateProduct(book)" class="space-y-4">
+              <button (click)="openAmazonAffiliateLink(book)"
+                class="group relative w-full bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:via-orange-600 hover:to-amber-700 text-white px-8 py-5 rounded-2xl font-bold text-xl shadow-2xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] overflow-hidden flex items-center justify-center gap-3">
+                <!-- Shine Effect -->
+                <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+                <i class="fab fa-amazon text-2xl group-hover:scale-110 transition-transform duration-300"></i>
+                <span>اشترِ من أمازون (Amazon.eg)</span>
+                <i class="fas fa-external-link-alt text-lg group-hover:translate-x-1 transition-transform duration-300"></i>
+              </button>
+              <p class="text-xs text-gray-500 dark:text-gray-400 text-center leading-relaxed bg-amber-50 dark:bg-amber-950/30 p-3 rounded-xl border border-amber-200/50 dark:border-amber-800/50">
+                <i class="fas fa-info-circle text-amber-500 mr-1"></i>
+                بصفتنا مشاركين في برنامج Amazon Associates، فنحن نحصل على عمولة من عمليات الشراء المؤهلة التي تتم عبر روابطنا.
+              </p>
+            </div>
+
+            <!-- Main CTA Button (Non-Affiliate) -->
+            <button *ngIf="!isAffiliateProduct(book) && book.product_quantity > 0" (click)="onBuyNowClick()"
               class="group relative w-full bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 hover:from-emerald-600 hover:via-green-600 hover:to-teal-600 dark:from-emerald-600 dark:via-green-600 dark:to-teal-600 dark:hover:from-emerald-700 dark:hover:via-green-700 dark:hover:to-teal-700 text-white px-8 py-5 rounded-2xl font-bold text-xl shadow-2xl transition-all duration-300 transform hover:scale-[1.02] hover:shadow-green-500/25 active:scale-[0.98] overflow-hidden">
               <!-- Shine Effect -->
               <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>

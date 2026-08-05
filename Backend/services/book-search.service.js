@@ -626,33 +626,11 @@ class BookSearchService {
   }
 
   /**
-   * المرحلة 10: Text Index Search
+   * المرحلة 10: Text Index Search (DISABLED - language_override issue)
    */
   async searchByTextIndex(query, baseQuery, limit) {
-    const books = await Product.find({
-      ...baseQuery,
-      $text: { $search: query }
-    })
-      .select({
-        products_id: 1,
-        product_name: 1,
-        product_description: 1,
-        product_category: 1,
-        product_price: 1,
-        product_quantity: 1,
-        author: 1,
-        publisher: 1,
-        pages: 1,
-        coverType: 1,
-        language: 1,
-        publishYear: 1,
-        product_image: 1,
-        image_path: 1,
-        views: 1
-      })
-      .limit(limit);
-
-    return books.map(book => this.formatBookForAI(book)).filter(b => b !== null);
+    // Temporarily disabled to avoid language_override error
+    return [];
   }
 
   /**

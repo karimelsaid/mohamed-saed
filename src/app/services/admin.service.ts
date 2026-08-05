@@ -186,6 +186,25 @@ export class AdminService {
     );
   }
 
+  // Merchant Amazon OAuth Integration
+  generateMerchantAmazonAuthUrl(merchantId: string): Observable<any> {
+    return this.http.post(`${environment.apiBaseUrl}/amazon/oauth/auth-url`, { merchantId }, this.getAuthHeaders()).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  getLinkedMerchantAmazonAccounts(): Observable<any> {
+    return this.http.get(`${environment.apiBaseUrl}/amazon/oauth/merchants`, this.getAuthHeaders()).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  unlinkMerchantAmazonAccount(id: string): Observable<any> {
+    return this.http.delete(`${environment.apiBaseUrl}/amazon/oauth/merchants/${id}`, this.getAuthHeaders()).pipe(
+      catchError(this.handleError)
+    );
+  }
+
   updateAmazonProductData(productId: string, data: any): Observable<any> {
     return this.http.put(`${environment.apiBaseUrl}/amazon/products/${productId}/update`, data).pipe(
       catchError(this.handleError)

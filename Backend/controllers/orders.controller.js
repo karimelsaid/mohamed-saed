@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const Product = require('../models/Product.model');
 const Referral = require('../models/Referral.model');
+const shippingService = require('../services/shipping/shipping.service');
 const Coupon = require('../models/Coupon.model');
 const Auction = require('../models/Auction.model');
 const BookSwap = require('../models/BookSwap.model');
@@ -369,6 +370,17 @@ exports.submitOrder = async (req, res) => {
         v: 'V3-ALERT-READY'
       }
     });
+  }
+};
+
+exports.shipOrder = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const order = await shippingService.shipOrder(orderId);
+    res.json({ success: true, message: 'تم إنشاء الشحنة بنجاح', data: order });
+  } catch (error) {
+    console.error('Ship Order Error:', error);
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 

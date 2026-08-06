@@ -4,6 +4,7 @@ import { AdminDashboardComponent } from './admin-dashboard/admin-dashboard.compo
 import { PaymentRequestsComponent } from './payment-requests/payment-requests.component';
 import { AdminAutomationComponent } from './admin-automation/admin-automation.component';
 import { AmazonCatalogComponent } from './amazon-catalog/amazon-catalog.component';
+import { ShippingSettingsComponent } from './shipping-settings/shipping-settings.component';
 
 const routes: Routes = [
     { path: '', component: AdminDashboardComponent },
@@ -17,7 +18,8 @@ const routes: Routes = [
     { path: 'special-offers', loadComponent: () => import('./special-offers-manager/special-offers-manager.component').then(m => m.SpecialOffersManagerComponent) },
     { path: 'product-management', loadComponent: () => import('./product-management/product-management.component').then(m => m.ProductManagementComponent) },
     { path: 'amazon-diagnostics', loadComponent: () => import('./amazon-diagnostics/amazon-diagnostics.component').then(m => m.AmazonDiagnosticsComponent) },
-    { path: 'amazon-catalog', component: AmazonCatalogComponent }
+    { path: 'amazon-catalog', component: AmazonCatalogComponent },
+    { path: 'shipping-settings', component: ShippingSettingsComponent }
 ];
 
 @NgModule({

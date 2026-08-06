@@ -43,6 +43,7 @@ import { AmazonDiagnosticsComponent } from '../amazon-diagnostics/amazon-diagnos
 import { AmazonCatalogComponent } from '../amazon-catalog/amazon-catalog.component';
 import { AmazonAccountsComponent } from '../amazon-accounts/amazon-accounts.component';
 import { MerchantAmazonLinkComponent } from '../merchant-amazon-link/merchant-amazon-link.component';
+import { ShippingSettingsComponent } from '../shipping-settings/shipping-settings.component';
 
 interface Order {
   _id: string;
@@ -274,7 +275,7 @@ interface SystemSettings {
   };
 }
 
-export type AdminView = 'dashboard' | 'userIntelligence' | 'orders' | 'requestedBooks' | 'printOrders' | 'printingSettings' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'staff' | 'productApproval' | 'productManagement' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' | 'gamificationControl' | 'notifications' | 'subscriptionControl' | 'readerFeedback' | 'promotions' | 'salesRegistration' | 'shortagesReport' | 'promotionDates' | 'salesHistory' | 'community' | 'bourseSettings' | 'automation' | 'aiControlCenter' | 'newsletter' | 'marketers' | 'specialOffers' | 'amazonDiagnostics' | 'amazonCatalog' | 'amazonAccounts' | 'merchantAmazonLink';
+export type AdminView = 'dashboard' | 'userIntelligence' | 'orders' | 'requestedBooks' | 'printOrders' | 'printingSettings' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'staff' | 'productApproval' | 'productManagement' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' | 'gamificationControl' | 'notifications' | 'subscriptionControl' | 'readerFeedback' | 'promotions' | 'salesRegistration' | 'shortagesReport' | 'promotionDates' | 'salesHistory' | 'community' | 'bourseSettings' | 'automation' | 'aiControlCenter' | 'newsletter' | 'marketers' | 'specialOffers' | 'amazonDiagnostics' | 'amazonCatalog' | 'amazonAccounts' | 'merchantAmazonLink' | 'shippingSettings';
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -309,7 +310,8 @@ export type AdminView = 'dashboard' | 'userIntelligence' | 'orders' | 'requested
     AmazonDiagnosticsComponent,
     AmazonCatalogComponent,
     AmazonAccountsComponent,
-    MerchantAmazonLinkComponent
+    MerchantAmazonLinkComponent,
+    ShippingSettingsComponent
   ],
   templateUrl: './admin-dashboard.component.html',
   styleUrls: ['./admin-dashboard.component.css']
@@ -342,7 +344,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     {
       name: 'إعدادات المنصة والأسعار',
       icon: 'cog',
-      views: ['printingSettings', 'freeShippingRules', 'mobileVersion', 'gamificationControl', 'notifications', 'subscriptionControl', 'promotionDates', 'bourseSettings', 'automation', 'specialOffers']
+      views: ['printingSettings', 'freeShippingRules', 'mobileVersion', 'gamificationControl', 'notifications', 'subscriptionControl', 'promotionDates', 'bourseSettings', 'automation', 'specialOffers', 'shippingSettings']
     },
     {
       name: 'المستخدمين والتجار والمسوقين',
@@ -3398,6 +3400,36 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       'هل أنت متأكد من أرشفة هذا الطلب؟',
       'warning',
       'أرشفة',
+      'إلغاء',
+      true,
+      action
+    );
+  }
+
+  autoShipOrder(orderId: string): void {
+    const action = () => {
+      this.showInfoModal('جاري الشحن', 'جاري معالجة الشحن آلياً مع شركة الشحن...');
+      this.http.post(`${environment.apiBaseUrl}/orders/ship/${orderId}`, {}).subscribe({
+        next: (res: any) => {
+          if (res.success) {
+            this.showSuccessModal('تم إنشاء الشحنة بنجاح! رقم التتبع: ' + res.data.trackingNumber);
+            this.loadOrders();
+          } else {
+            this.showErrorModal(res.message || 'فشل إنشاء الشحنة');
+          }
+        },
+        error: (err) => {
+          console.error('Shipment Error:', err);
+          this.showErrorModal(err.error?.message || 'حدث خطأ أثناء الاتصال بشركة الشحن');
+        }
+      });
+    };
+
+    this.openModal(
+      'تأكيد الشحن الآلي',
+      'هل تريد شحن هذا الطلب آلياً عبر شركة الشحن المتعاقد معها؟',
+      'info',
+      'شحن الآن',
       'إلغاء',
       true,
       action

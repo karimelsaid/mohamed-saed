@@ -166,7 +166,13 @@ const userSchema = new mongoose.Schema({
     communityOwnerAddress: { type: String },
     shippingMethod: { type: String, enum: ['merchant', 'knoozbook'], default: 'knoozbook' }, // طريقة الشحن لهذا الطلب
     referredByMarketer: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // تتبع الطلب لمسوق
-    marketerCommission: { type: Number, default: 0 } // عمولة المسوق لهذا الطلب
+    marketerCommission: { type: Number, default: 0 }, // عمولة المسوق لهذا الطلب
+    // Shipping Integration Fields
+    shippingCarrier: { type: String, enum: ['bosta', 'aramex', 'none'], default: 'none' },
+    trackingNumber: { type: String },
+    shippingId: { type: String },
+    shippingLabelUrl: { type: String },
+    shippingStatus: { type: String }
   }],
   requestedBooks: [{
     bookName: { type: String, required: true },

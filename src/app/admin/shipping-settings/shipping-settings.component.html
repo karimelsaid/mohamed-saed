@@ -1,0 +1,72 @@
+<div class="container mt-4">
+  <div class="card shadow-sm">
+    <div class="card-header bg-primary text-white">
+      <h4 class="mb-0"><i class="fas fa-shipping-fast mr-2"></i>إعدادات الشحن</h4>
+    </div>
+    <div class="card-body">
+      <div *ngIf="message" class="alert alert-success">{{ message }}</div>
+
+      <div class="form-group mb-4">
+        <label class="font-weight-bold">شركة الشحن النشطة</label>
+        <select class="form-control" [(ngModel)]="settings.activeCarrier">
+          <option value="none">تعطيل الشحن الآلي</option>
+          <option value="bosta">بوسطة (Bosta)</option>
+          <option value="aramex">أرامكس (Aramex)</option>
+        </select>
+      </div>
+
+      <hr>
+
+      <!-- Bosta Settings -->
+      <div class="carrier-section mb-4 p-3 border rounded" [class.bg-light]="settings.activeCarrier !== 'bosta'">
+        <h5 class="text-info mb-3">إعدادات بوسطة (Bosta)</h5>
+        <div class="form-group">
+          <label>API Key</label>
+          <input type="text" class="form-control" [(ngModel)]="settings.bosta.apiKey" placeholder="أدخل مفتاح API الخاص ببوسطة">
+        </div>
+        <div class="custom-control custom-switch">
+          <input type="checkbox" class="custom-control-input" id="bostaTestMode" [(ngModel)]="settings.bosta.isTestMode">
+          <label class="custom-control-label" for="bostaTestMode">وضع الاختبار (Staging)</label>
+        </div>
+      </div>
+
+      <!-- Aramex Settings -->
+      <div class="carrier-section mb-4 p-3 border rounded" [class.bg-light]="settings.activeCarrier !== 'aramex'">
+        <h5 class="text-info mb-3">إعدادات أرامكس (Aramex)</h5>
+        <div class="row">
+          <div class="col-md-6 form-group">
+            <label>User Name</label>
+            <input type="text" class="form-control" [(ngModel)]="settings.aramex.userName">
+          </div>
+          <div class="col-md-6 form-group">
+            <label>Password</label>
+            <input type="password" class="form-control" [(ngModel)]="settings.aramex.password">
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-4 form-group">
+            <label>Account Number</label>
+            <input type="text" class="form-control" [(ngModel)]="settings.aramex.accountNumber">
+          </div>
+          <div class="col-md-4 form-group">
+            <label>Account Pin</label>
+            <input type="text" class="form-control" [(ngModel)]="settings.aramex.accountPin">
+          </div>
+          <div class="col-md-4 form-group">
+            <label>Entity</label>
+            <input type="text" class="form-control" [(ngModel)]="settings.aramex.accountEntity">
+          </div>
+        </div>
+        <div class="custom-control custom-switch">
+          <input type="checkbox" class="custom-control-input" id="aramexTestMode" [(ngModel)]="settings.aramex.isTestMode">
+          <label class="custom-control-label" for="aramexTestMode">وضع الاختبار (Test)</label>
+        </div>
+      </div>
+
+      <button class="btn btn-success btn-block py-2" (click)="saveSettings()" [disabled]="loading">
+        <span *ngIf="loading" class="spinner-border spinner-border-sm mr-2"></span>
+        حفظ الإعدادات
+      </button>
+    </div>
+  </div>
+</div>

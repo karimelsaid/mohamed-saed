@@ -23,6 +23,9 @@ router.delete('/bulk-delete', ordersController.bulkDeleteOrders);
 // Update order status by ID
 router.patch('/update-status/:orderId', ordersController.updateOrderStatus);
 
+// Ship order via integrated carrier
+router.post('/ship/:orderId', ordersController.shipOrder);
+
 // Internal endpoint for Amazon integration
 router.post('/from-amazon', verifyN8nToken, ordersController.createOrderFromAmazon);
 

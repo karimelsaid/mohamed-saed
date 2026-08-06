@@ -493,6 +493,23 @@ export class MerchantDashboardComponent implements OnInit {
     this.modalOpen = true;
   }
 
+  showSuccessModal(message: string) {
+    this.openModal('نجاح', message, 'success', 'تأكيد', 'إغلاق', false);
+  }
+
+  showErrorModal(message: string) {
+    this.openModal('خطأ', message, 'error', 'تأكيد', 'إغلاق', false);
+  }
+
+  showLoadingModal(message: string) {
+    this.loadingModal.isOpen = true;
+    this.loadingModal.message = message;
+  }
+
+  closeLoadingModal() {
+    this.loadingModal.isOpen = false;
+  }
+
   closeModal() {
     this.modalOpen = false;
     this.pendingAction = null;
@@ -789,6 +806,36 @@ export class MerchantDashboardComponent implements OnInit {
     setTimeout(() => {
       this.loadingModal.isOpen = false;
     }, 2000); // Close after 2 seconds
+  }
+
+  autoShipOrder(order: any): void {
+    this.openModal(
+      'تأكيد الشحن الآلي',
+      'هل تريد شحن هذا الطلب آلياً عبر شركة الشحن المتعاقد معها؟',
+      'info',
+      'شحن الآن',
+      'إلغاء',
+      true,
+      () => {
+        this.showLoadingModal('جاري معالجة الشحن آلياً...');
+        this.http.post(`${environment.apiBaseUrl}/orders/ship/${order._id}`, {}).subscribe({
+          next: (res: any) => {
+            this.closeLoadingModal();
+            if (res.success) {
+              this.showSuccessModal('تم إنشاء الشحنة بنجاح! رقم التتبع: ' + res.data.trackingNumber);
+              this.loadOrders();
+            } else {
+              this.showErrorModal(res.message || 'فشل إنشاء الشحنة');
+            }
+          },
+          error: (err) => {
+            this.closeLoadingModal();
+            console.error('Shipment Error:', err);
+            this.showErrorModal(err.error?.message || 'حدث خطأ أثناء الاتصال بشركة الشحن');
+          }
+        });
+      }
+    );
   }
 
   confirmShipmentWithModal(order: any, newStatus: string): void {

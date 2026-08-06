@@ -80,7 +80,25 @@ const orderSchema = new mongoose.Schema({
     productId: String,
     requestedQty: Number,
     reason: String
-  }]
+  }],
+  // Shipping Integration Fields
+  shippingCarrier: {
+    type: String,
+    enum: ['bosta', 'aramex', 'none'],
+    default: 'none'
+  },
+  trackingNumber: {
+    type: String
+  },
+  shippingId: {
+    type: String
+  },
+  shippingLabelUrl: {
+    type: String
+  },
+  shippingStatus: {
+    type: String
+  }
 }, {
   timestamps: true
 });

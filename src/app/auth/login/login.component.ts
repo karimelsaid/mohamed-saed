@@ -1,4 +1,4 @@
-import { Component, OnInit, AfterViewInit, Inject, PLATFORM_ID } from '@angular/core';
+import { Component, OnInit, AfterViewInit, Inject, PLATFORM_ID, NgZone } from '@angular/core';
 import { CommonModule, Location, isPlatformBrowser } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -42,6 +42,7 @@ export class LoginComponent implements OnInit, AfterViewInit {
     private merchantAuthService: MerchantAuthService,
     private route: ActivatedRoute,
     private location: Location,
+    private ngZone: NgZone,
     @Inject(PLATFORM_ID) private platformId: Object
   ) { }
 
@@ -77,32 +78,34 @@ export class LoginComponent implements OnInit, AfterViewInit {
   async googleSignIn() {
     if (this.isAndroid) {
       try {
-        await GoogleAuth.signOut();
+        try {
+          await GoogleAuth.initialize({
+            clientId: environment.googleClientId,
+            scopes: ['profile', 'email'],
+          });
+        } catch (initErr) {
+          console.warn('⚠️ [GoogleAuth] Initialize warning:', initErr);
+        }
+        try { await GoogleAuth.signOut(); } catch (e) {}
         const result = await GoogleAuth.signIn();
-        const idToken = result.authentication.idToken;
+        const res = result as any;
+        const idToken = res?.authentication?.idToken || res?.idToken || res?.authentication?.accessToken;
+        if (!idToken) {
+          console.error('❌ No idToken received from GoogleAuth Android!');
+          this.message = '❌ لم يتم استلام رمز التحقق من Google. يرجى المحاولة مرة أخرى.';
+          return;
+        }
         this.authService.googleSignIn(idToken).subscribe({
           next: (user) => {
             this.message = '✅ تم تسجيل الدخول بنجاح! جارِ توجيهك...';
             this.isSuccess = true;
-
-            // ROBUST NAVIGATION FIX: Ensure LocalStorage is ready before moving
-            setTimeout(() => {
-              if (isPlatformBrowser(this.platformId)) {
-                const storedUser = localStorage.getItem('user');
-                if (storedUser) {
-                  console.log('✅ [Login] LocalStorage verified. Navigating...');
-                  this.router.navigateByUrl(this.returnUrl);
-                } else {
-                  console.warn('⚠️ [Login] LocalStorage empty! Retrying save...');
-                  this.authService.setUser(user); // Force save again
-                  setTimeout(() => {
-                    this.router.navigateByUrl(this.returnUrl);
-                  }, 1000); // Wait longer second time
-                }
-              } else {
-                this.router.navigateByUrl(this.returnUrl);
-              }
-            }, 800); // Initial wait
+            this.authService.setUser(user);
+            this.ngZone.run(() => {
+              const target = (this.returnUrl && !this.returnUrl.includes('/login')) ? this.returnUrl : '/';
+              this.router.navigateByUrl(target).catch(() => {
+                this.router.navigate(['/']);
+              });
+            });
           },
           error: (error) => {
             if (error.status === 400 && error.error.message) {

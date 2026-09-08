@@ -169,9 +169,23 @@ export class RegisterComponent implements OnInit, AfterViewInit {
   async googleSignIn() {
     if (this.isAndroid) {
       try {
-        await GoogleAuth.signOut();
+        try {
+          await GoogleAuth.initialize({
+            clientId: environment.googleClientId,
+            scopes: ['profile', 'email'],
+          });
+        } catch (initErr) {
+          console.warn('⚠️ [GoogleAuth] Initialize warning:', initErr);
+        }
+        try { await GoogleAuth.signOut(); } catch (e) {}
         const result = await GoogleAuth.signIn();
-        const idToken = result.authentication.idToken;
+        const res = result as any;
+        const idToken = res?.authentication?.idToken || res?.idToken || res?.authentication?.accessToken;
+        if (!idToken) {
+          console.error('❌ No idToken received from GoogleAuth Android!');
+          this.message = '❌ لم يتم استلام رمز التحقق من Google. يرجى المحاولة مرة أخرى.';
+          return;
+        }
         let referralCode = undefined;
         if (isPlatformBrowser(this.platformId)) {
           referralCode = localStorage.getItem('referralCode') || undefined;
@@ -179,7 +193,10 @@ export class RegisterComponent implements OnInit, AfterViewInit {
         this.authService.googleSignIn(idToken, referralCode).subscribe({
           next: (user) => {
             this.message = '✅ تم تسجيل الدخول بنجاح! جارِ توجيهك...';
-            this.router.navigateByUrl(this.returnUrl);
+            this.authService.setUser(user);
+            setTimeout(() => {
+              this.router.navigateByUrl(this.returnUrl);
+            }, 300);
           },
           error: (error) => {
             if (error.status === 400 && error.error.message) {

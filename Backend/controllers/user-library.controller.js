@@ -95,6 +95,25 @@ exports.checkAccess = async (req, res) => {
         const userId = req.user._id;
         const { ebookId } = req.params;
 
+        // Check global free reading FIRST
+        const SystemSettings = require('../models/SystemSettings');
+        const settings = await SystemSettings.getInstance();
+        if (settings.subscription && settings.subscription.globalFreeReading && settings.subscription.globalFreeReading.enabled) {
+            const endDate = settings.subscription.globalFreeReading.endDate ? new Date(settings.subscription.globalFreeReading.endDate) : null;
+            if (!endDate || endDate > new Date()) {
+                return res.json({
+                    success: true,
+                    hasAccess: true,
+                    accessType: 'subscription',
+                    subscription: {
+                        status: 'active',
+                        endDate: endDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+                        plan: 'global_free'
+                    }
+                });
+            }
+        }
+
         // Check subscription (Primary: Subscription model, Fallback: User model)
         const subscription = await Subscription.findActiveSubscription(userId);
         const hasUserSubscription = req.user.activeSubscription && 
@@ -170,6 +189,25 @@ exports.checkPublicAccess = async (req, res) => {
     try {
         const { ebookId } = req.params;
 
+        // Check global free reading FIRST
+        const SystemSettings = require('../models/SystemSettings');
+        const settings = await SystemSettings.getInstance();
+        if (settings.subscription && settings.subscription.globalFreeReading && settings.subscription.globalFreeReading.enabled) {
+            const endDate = settings.subscription.globalFreeReading.endDate ? new Date(settings.subscription.globalFreeReading.endDate) : null;
+            if (!endDate || endDate > new Date()) {
+                return res.json({
+                    success: true,
+                    hasAccess: true,
+                    accessType: 'subscription',
+                    subscription: {
+                        status: 'active',
+                        endDate: endDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+                        plan: 'global_free'
+                    }
+                });
+            }
+        }
+
         // Check if preview is available
         const ebook = await Ebook.findById(ebookId);
         if (ebook && ebook.miniEpubFilePath) {
@@ -180,9 +218,12 @@ exports.checkPublicAccess = async (req, res) => {
             });
         }
 
+        // By default, public access without global free reading is just preview mode for first 20%
+        // but we return hasAccess: false to let frontend enforce the 20% preview
         res.json({
             success: true,
-            hasAccess: false
+            hasAccess: false,
+            accessType: 'preview'
         });
     } catch (error) {
         console.error('Error checking public access:', error);

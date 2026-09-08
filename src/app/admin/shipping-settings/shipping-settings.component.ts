@@ -23,7 +23,11 @@ export class ShippingSettingsComponent implements OnInit {
       accountEntity: '', 
       accountCountryCode: '', 
       isTestMode: true 
-    }
+    },
+    mylerz: { username: '', password: '', isTestMode: true },
+    jnt: { customerCode: '', apiAccount: '', apiPassword: '', isTestMode: true },
+    shipblu: { apiKey: '', isTestMode: true },
+    sprint: { apiKey: '', isTestMode: true }
   };
   loading = false;
   message = '';

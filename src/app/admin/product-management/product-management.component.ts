@@ -129,6 +129,8 @@ export class ProductManagementComponent implements OnInit {
       const query = this.searchQuery.toLowerCase();
       filtered = filtered.filter(p => 
         p.product_name?.toLowerCase().includes(query) ||
+        p.publisher?.toLowerCase().includes(query) ||
+        p.status?.toLowerCase().includes(query) ||
         p._id?.toLowerCase().includes(query) ||
         p.amazonSku?.toLowerCase().includes(query) ||
         p.amazonAsin?.toLowerCase().includes(query)

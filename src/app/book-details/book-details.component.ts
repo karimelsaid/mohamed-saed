@@ -7,6 +7,7 @@ import { Book } from '../book';
 import { CommonModule, NgIf, isPlatformBrowser } from '@angular/common';
 import { CheckoutModalComponent } from '../checkout-modal/checkout-modal.component';
 import { AccountModalComponent } from '../auth/account-modal/account-modal.component';
+import { ReadingChallengeModalComponent } from '../shared/reading-challenge-modal/reading-challenge-modal.component';
 import { SharedModule } from '../shared/shared.module';
 import { AuthService } from '../auth/auth.service';
 import { HttpClient } from '@angular/common/http';
@@ -32,6 +33,7 @@ import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
     NgxSkeletonLoaderModule,
     CheckoutModalComponent,
     AccountModalComponent,
+    ReadingChallengeModalComponent
   ],
   templateUrl: './book-details.component.html',
   styleUrls: ['./book-details.component.css'],
@@ -41,6 +43,7 @@ import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
 export class BookDetailsComponent implements OnInit, OnDestroy {
   uploadsBaseUrl = environment.uploadsBaseUrl;
   @ViewChild(AccountModalComponent, { static: false }) accountModal?: AccountModalComponent;
+  @ViewChild(ReadingChallengeModalComponent, { static: false }) readingChallengeModal?: ReadingChallengeModalComponent;
   faStar = faStar;
   faStarRegular = faStarRegular;
   faShareAlt = faShareAlt;
@@ -248,6 +251,14 @@ export class BookDetailsComponent implements OnInit, OnDestroy {
     });
   }
 
+  createChallenge(book: Book) {
+    if (this.readingChallengeModal) {
+      this.readingChallengeModal.bookId = book.products_id.toString();
+      this.readingChallengeModal.bookTitle = book.product_name;
+      this.readingChallengeModal.open();
+    }
+  }
+
   fetchAverageRating(bookId: string): void {
     this.http.get<{ bookId: string; averageRating: number; ratingCount: number }>(`${environment.apiBaseUrl}/users/average-rating/${bookId}`)
       .subscribe({
@@ -315,8 +326,43 @@ export class BookDetailsComponent implements OnInit, OnDestroy {
     }
   }
 
+  isFavorite(): boolean {
+    if (!this.book) return false;
+    return this.authService.isFavorite(this.book.products_id.toString());
+  }
 
+  toggleFavorite(): void {
+    if (!this.book) return;
 
+    this.authService.user$.pipe(take(1)).subscribe(user => {
+      if (!user) {
+        this.showLoginPrompt = true;
+        this.cdr.markForCheck();
+        return;
+      }
+
+      const bookId = this.book!.products_id.toString();
+      if (this.isFavorite()) {
+        this.authService.removeFromFavorites(user.id, bookId).subscribe({
+          next: () => {
+            const currentFavs = this.authService.favoriteBookIds.getValue();
+            this.authService.favoriteBookIds.next(currentFavs.filter(id => id !== bookId));
+            this.cdr.markForCheck();
+          },
+          error: (err) => console.error('Error removing favorite:', err)
+        });
+      } else {
+        this.authService.addToFavorites(user.id, bookId).subscribe({
+          next: () => {
+            const currentFavs = this.authService.favoriteBookIds.getValue();
+            this.authService.favoriteBookIds.next([...currentFavs, bookId]);
+            this.cdr.markForCheck();
+          },
+          error: (err) => console.error('Error adding favorite:', err)
+        });
+      }
+    });
+  }
 
   closeLoginPrompt(): void {
     this.showLoginPrompt = false; // إغلاق النافذة العائمة
@@ -591,6 +637,12 @@ export class BookDetailsComponent implements OnInit, OnDestroy {
       'رواية', 'تنمية', 'ديني', 'اعمال', 'تربية'
     ];
     return bookCategories.some(c => category && category.includes(c));
+  }
+
+  // Check if product is a physical book (paper book)
+  isPhysicalBook(book: Book | undefined): boolean {
+    if (!book) return false;
+    return book.productType === 'physical';
   }
 
   // Check if text is Arabic (for RTL book styling)

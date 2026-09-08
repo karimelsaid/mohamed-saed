@@ -1,0 +1,134 @@
+<div *ngIf="showModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm rtl animate-fadeIn">
+    <div class="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden animate-slideUp">
+        
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-amber-500 to-orange-500 p-6 flex justify-between items-center text-white">
+            <h2 class="text-2xl font-black flex items-center gap-2">
+                <fa-icon [icon]="['fas', 'trophy']" class="text-yellow-200"></fa-icon> 
+                تحدي القراءة: {{ bookTitle }}
+            </h2>
+            <button (click)="closeModal()" class="text-white/80 hover:text-white transition-colors">
+                <fa-icon [icon]="['fas', 'times']" class="text-xl"></fa-icon>
+            </button>
+        </div>
+
+        <div class="p-6">
+            <!-- Messages -->
+            <div *ngIf="error" class="bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 p-3 rounded-xl mb-4 font-bold text-sm">
+                {{ error }}
+            </div>
+            <div *ngIf="success" class="bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 p-3 rounded-xl mb-4 font-bold text-sm">
+                {{ success }}
+            </div>
+
+            <!-- Mode Selection -->
+            <div *ngIf="mode === 'select'" class="space-y-6">
+                <p class="text-gray-600 dark:text-gray-300 text-center mb-6">شارك القراءة مع الأصدقاء وتنافسوا على المراكز الأولى والنقاط!</p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <button (click)="mode = 'create'" class="p-6 rounded-2xl border-2 border-orange-200 dark:border-orange-900/50 hover:border-orange-500 dark:hover:border-orange-500 bg-orange-50/50 dark:bg-orange-900/10 hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-all text-center group">
+                        <div class="w-16 h-16 mx-auto bg-orange-100 dark:bg-orange-800 text-orange-500 rounded-full flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">
+                            <fa-icon [icon]="['fas', 'plus']"></fa-icon>
+                        </div>
+                        <h3 class="font-black text-gray-800 dark:text-white mb-2">إنشاء غرفة جديدة</h3>
+                        <p class="text-xs text-gray-500">أنشئ تحدي خاص بك وادعُ أصدقائك عبر رابط خاص</p>
+                    </button>
+                    
+                    <button (click)="mode = 'join'" class="p-6 rounded-2xl border-2 border-indigo-200 dark:border-indigo-900/50 hover:border-indigo-500 dark:hover:border-indigo-500 bg-indigo-50/50 dark:bg-indigo-900/10 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition-all text-center group">
+                        <div class="w-16 h-16 mx-auto bg-indigo-100 dark:bg-indigo-800 text-indigo-500 rounded-full flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">
+                            <fa-icon [icon]="['fas', 'sign-in-alt']"></fa-icon>
+                        </div>
+                        <h3 class="font-black text-gray-800 dark:text-white mb-2">الانضمام بكود</h3>
+                        <p class="text-xs text-gray-500">لديك كود دعوة من صديق؟ أدخله هنا للانضمام فوراً</p>
+                    </button>
+                </div>
+
+                <div class="mt-8 pt-8 border-t border-gray-100 dark:border-gray-700">
+                    <h3 class="font-black text-gray-800 dark:text-white mb-4 flex items-center gap-2">
+                        <fa-icon [icon]="['fas', 'globe']" class="text-blue-500"></fa-icon> تحديات عامة بانتظارك
+                    </h3>
+                    
+                    <div *ngIf="loading" class="text-center py-4 text-gray-500">
+                        <fa-icon [icon]="['fas', 'spinner']" class="animate-spin text-2xl"></fa-icon>
+                    </div>
+
+                    <div *ngIf="!loading && publicChallenges.length === 0" class="text-center py-6 bg-gray-50 dark:bg-gray-800/50 rounded-2xl">
+                        <p class="text-gray-500 text-sm">لا توجد تحديات عامة حالياً لهذا الكتاب. كن أول من ينشئ تحدياً!</p>
+                    </div>
+
+                    <div *ngIf="!loading && publicChallenges.length > 0" class="space-y-3 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+                        <div *ngFor="let ch of publicChallenges" class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-4 rounded-xl flex items-center justify-between hover:shadow-md transition-shadow">
+                            <div>
+                                <h4 class="font-bold text-gray-800 dark:text-white">{{ ch.title }}</h4>
+                                <div class="text-xs text-gray-500 flex gap-3 mt-1">
+                                    <span title="الأعضاء"><fa-icon [icon]="['fas', 'users']"></fa-icon> {{ ch.participants.length }}/{{ ch.maxParticipants }}</span>
+                                    <span title="النهاية"><fa-icon [icon]="['fas', 'calendar-alt']"></fa-icon> {{ ch.endDate | date:'mediumDate' }}</span>
+                                </div>
+                            </div>
+                            <button (click)="joinPublic(ch._id)" class="px-4 py-2 bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 rounded-lg font-bold text-sm hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors">
+                                انضمام
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Create Mode -->
+            <div *ngIf="mode === 'create'" class="space-y-4">
+                <button (click)="mode = 'select'" class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-sm mb-4 flex items-center gap-1">
+                    <fa-icon [icon]="['fas', 'arrow-right']"></fa-icon> رجوع
+                </button>
+                
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">اسم التحدي</label>
+                    <input type="text" [(ngModel)]="title" class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">وصف (اختياري)</label>
+                    <textarea [(ngModel)]="description" class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500" rows="2"></textarea>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">تاريخ النهاية</label>
+                        <input type="date" [(ngModel)]="endDate" class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">أقصى عدد مشاركين</label>
+                        <input type="number" [(ngModel)]="maxParticipants" min="2" max="100" class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500">
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2 mt-2">
+                    <input type="checkbox" id="isPublic" [(ngModel)]="isPublic" class="w-4 h-4 text-orange-500 rounded border-gray-300 focus:ring-orange-500">
+                    <label for="isPublic" class="text-sm font-bold text-gray-700 dark:text-gray-300">تحدي عام (يظهر للجميع في صفحة الكتاب)</label>
+                </div>
+
+                <button (click)="createChallenge()" [disabled]="loading" class="w-full mt-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-black py-4 rounded-xl shadow-lg transition-all disabled:opacity-70 flex items-center justify-center gap-2">
+                    <fa-icon *ngIf="loading" [icon]="['fas', 'spinner']" class="animate-spin"></fa-icon>
+                    إنشاء التحدي الآن
+                </button>
+            </div>
+
+            <!-- Join Mode -->
+            <div *ngIf="mode === 'join'" class="space-y-4">
+                <button (click)="mode = 'select'" class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-sm mb-4 flex items-center gap-1">
+                    <fa-icon [icon]="['fas', 'arrow-right']"></fa-icon> رجوع
+                </button>
+
+                <div class="text-center py-6">
+                    <fa-icon [icon]="['fas', 'ticket-alt']" class="text-5xl text-indigo-200 dark:text-indigo-900/50 mb-4 block"></fa-icon>
+                    <label class="block text-lg font-black text-gray-700 dark:text-gray-300 mb-4">أدخل كود الدعوة</label>
+                    <input type="text" [(ngModel)]="inviteCode" placeholder="مثال: CHALLENGE-XYZ123" class="w-full max-w-sm mx-auto px-6 py-4 rounded-2xl border-2 border-indigo-200 dark:border-indigo-800 bg-indigo-50/50 dark:bg-indigo-900/10 text-center text-xl tracking-wider font-bold text-indigo-700 dark:text-indigo-300 focus:outline-none focus:border-indigo-500 block mb-6">
+                    
+                    <button (click)="joinByCode()" [disabled]="loading" class="w-full max-w-sm mx-auto bg-indigo-600 hover:bg-indigo-700 text-white font-black py-4 rounded-xl shadow-lg shadow-indigo-500/30 transition-all disabled:opacity-70 flex items-center justify-center gap-2">
+                        <fa-icon *ngIf="loading" [icon]="['fas', 'spinner']" class="animate-spin"></fa-icon>
+                        انضمام للتحدي
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>

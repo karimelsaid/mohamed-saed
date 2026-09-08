@@ -12,8 +12,13 @@ import { OfflineEbookService } from '../services/offline-ebook.service';
 import { DownloadManagerService } from '../services/download-manager.service';
 import { ExternalLibraryService } from '../services/external-library.service';
 import { GamificationService } from '../services/gamification.service';
+import { SubscriptionService } from '../services/subscription.service';
+import { ReadingChallengeService } from '../services/reading-challenge.service';
 import { timeout, catchError } from 'rxjs/operators';
 import { of } from 'rxjs';
+import { Capacitor } from '@capacitor/core';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+
 @Component({
     selector: 'app-epub-reader',
     standalone: true,
@@ -45,6 +50,7 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
     showSubscriptionPrompt = false;
     showAuthModal = false;
     isPreviewMode = true;
+    isLoggedIn = false;
     private initialLocation: string | null = null;
     private selectionTimeout: any;
     prices = { monthly: 50, yearly: 500 };
@@ -58,8 +64,17 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
 
     // UI State
     isControlsVisible = true;
+    isMusicPlaying = false;
+    private backgroundMusic: HTMLAudioElement | null = null;
     activeSection: 'toc' | 'settings' | 'bookmarks' | 'highlights' | null = null;
     isFullscreen = false;
+    
+    // Music Download State
+    isMusicDownloading = false;
+    musicDownloadProgress = 0;
+    musicDownloadError = false;
+    musicDownloaded = false;
+    showInternetErrorModal = false;
 
     // Content Width Control
     contentWidth = 900; // Will be set to effectiveMaxWidth in ngOnInit
@@ -141,6 +156,12 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
     private pagesReadSinceLastSync = new Set<number>();
     private spinePageCounts: number[] = []; // Track visual page count per spine item (chapter)
 
+    // Reading Challenge State
+    activeChallenges: any[] = [];
+    showLeaderboard = false;
+    private lastChallengeSyncTime = 0;
+    private readonly CHALLENGE_SYNC_INTERVAL = 15000; // Sync every 15 seconds
+
     // Temporary variable for background image input
     tempBackgroundImage: string = '';
 
@@ -160,6 +181,8 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
         private downloadManager: DownloadManagerService,
         private externalLibraryService: ExternalLibraryService,
         private gamificationService: GamificationService,
+        private subscriptionService: SubscriptionService,
+        private readingChallengeService: ReadingChallengeService,
         private cdr: ChangeDetectorRef,
         private sanitizer: DomSanitizer,
         private hostEl: ElementRef,
@@ -172,6 +195,24 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     ngOnInit(): void {
+        // Load dynamic prices from backend
+        this.subscriptionService.loadPrices();
+        this.subscriptionService.prices$.subscribe(p => this.prices = p);
+
+        // Check login state
+        if (this.isBrowser) {
+            const userStr = localStorage.getItem('user');
+            const merchantToken = localStorage.getItem('merchant_token');
+            if (userStr) {
+                try {
+                    const user = JSON.parse(userStr);
+                    this.isLoggedIn = !!(user && (user.token || user.accessToken));
+                } catch (e) { this.isLoggedIn = false; }
+            } else if (merchantToken) {
+                this.isLoggedIn = true;
+            }
+        }
+
         this.ebookId = this.route.snapshot.paramMap.get('ebookId') || '';
         if (!this.ebookId) {
             this.router.navigate(['/library']);
@@ -200,6 +241,9 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
             this.saveProgressInterval = setInterval(() => {
                 this.saveProgress();
             }, 10000);
+
+            // Load active reading challenges for this book
+            this.loadActiveChallenges();
         }
     }
 
@@ -217,6 +261,10 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
 
     ngOnDestroy(): void {
         this.stopAutoScroll(); // Clean up auto-scroll animation
+        if (this.backgroundMusic) {
+            this.backgroundMusic.pause();
+            this.backgroundMusic = null;
+        }
         this.saveProgress();
         if (this.saveProgressInterval) clearInterval(this.saveProgressInterval);
         if (this.book) this.book.destroy();
@@ -302,7 +350,11 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
                 } as any;
 
                 // Fire and forget access check to not block the reader
-                this.userLibraryService.checkAccess(this.ebookId).pipe(
+                const accessObservable = this.isLoggedIn 
+                    ? this.userLibraryService.checkAccess(this.ebookId) 
+                    : this.userLibraryService.checkPublicAccess(this.ebookId);
+
+                accessObservable.pipe(
                     // Short timeout for the observable itself
                     timeout(3000),
                     catchError(err => {
@@ -367,8 +419,12 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
 
             // 3. Fire Background Network Check (Silent - DOES NOT BLOCK UI)
             if (this.isBrowser) {
+                const accessObservable = this.isLoggedIn 
+                    ? this.userLibraryService.checkAccess(this.ebookId) 
+                    : this.userLibraryService.checkPublicAccess(this.ebookId);
+
                 Promise.allSettled([
-                    this.userLibraryService.checkAccess(this.ebookId).pipe(timeout(3000)).toPromise(),
+                    accessObservable.pipe(timeout(3000)).toPromise(),
                     this.ebookService.getEbookById(this.ebookId).pipe(timeout(3000)).toPromise()
                 ]).then(([accessRes, ebookRes]) => {
                     let networkSuccess = false;
@@ -951,6 +1007,12 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
                     (this as any)._fallbackScrollListener = () => {
                         if (this.settings.layoutMode !== 'scroll') return;
                         if ((this as any).isLoadingNextChapter || !this.rendition) return;
+                        // Block auto-loading if in preview mode and past 20%
+                        if (this.isPreviewMode && this.progressPercent >= 20) {
+                            this.showSubscriptionPrompt = true;
+                            this.cdr.detectChanges();
+                            return;
+                        }
                         
                         const scrollBottom = scrollContainer.scrollTop + scrollContainer.clientHeight;
                         // When user is within 300px of the bottom, load next chapter
@@ -977,17 +1039,30 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
                     this.currentSelectionRange = range;
                     this.currentSelectionContents = contents;
 
-                    // Get position for popup
-                    const rect = range.getBoundingClientRect();
+                    // Position popup at top center of screen to avoid Android selection bar
                     const iframeRect = contents.document.defaultView.frameElement.getBoundingClientRect();
+                    const screenWidth = window.innerWidth;
+                    const screenHeight = window.innerHeight;
 
                     this.selectionPopupPosition = {
-                        x: iframeRect.left + rect.left + (rect.width / 2),
-                        y: iframeRect.top + rect.top - 10
+                        x: screenWidth / 2, // Center horizontally
+                        y: 80 // Fixed position from top to avoid Android selection bar
                     };
 
                     this.showSelectionPopup = true;
                     this.cdr.detectChanges();
+
+                    // Prevent Android native selection menu
+                    setTimeout(() => {
+                        try {
+                            // Clear the selection to prevent Android toolbar
+                            selection.removeAllRanges();
+                            // Re-create selection for our highlight functionality
+                            selection.addRange(range);
+                        } catch (e) {
+                            console.log('Selection manipulation:', e);
+                        }
+                    }, 50);
                 }
             }
         });
@@ -1178,6 +1253,12 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
 
     loadNextSpineSection(): void {
         if (!this.rendition || (this as any).isLoadingNextChapter) return;
+        // Block loading next chapter in preview mode past 20%
+        if (this.isPreviewMode && this.progressPercent >= 20) {
+            this.showSubscriptionPrompt = true;
+            this.cdr.detectChanges();
+            return;
+        }
         
         const location: any = this.rendition.currentLocation();
         const currentIndex = location?.start?.index;
@@ -1514,6 +1595,12 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
         this.currentPage = currentPage;
         this.progressPercent = Math.min(Math.round(percentage * 100), 100);
 
+        // 5. ENFORCE preview limit on every location change
+        if (this.isPreviewMode && this.progressPercent >= 20) {
+            this.showSubscriptionPrompt = true;
+            this.cdr.detectChanges();
+        }
+
         // Record the page read (for achievements sync)
         if (this.currentPage) {
             this.pagesReadSinceLastSync.add(this.currentPage);
@@ -1735,7 +1822,60 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
                 },
                 error: (err: any) => console.error('Failed to save progress', JSON.stringify(err))
             });
+
+            // --- READING CHALLENGE SYNC ---
+            const challengeNow = Date.now();
+            if (this.activeChallenges.length > 0 && (challengeNow - this.lastChallengeSyncTime > this.CHALLENGE_SYNC_INTERVAL)) {
+                this.lastChallengeSyncTime = challengeNow;
+                for (const challenge of this.activeChallenges) {
+                    this.readingChallengeService.updateProgress(challenge._id, this.progressPercent).subscribe({
+                        next: (res: any) => {
+                            if (res.success && res.data) {
+                                // Update local challenge data with fresh server data
+                                const idx = this.activeChallenges.findIndex((c: any) => c._id === challenge._id);
+                                if (idx >= 0) {
+                                    this.activeChallenges[idx] = res.data;
+                                    this.cdr.detectChanges();
+                                }
+                            }
+                        },
+                        error: () => {} // Silent fail
+                    });
+                }
+            }
         }
+    }
+
+    // --- Reading Challenge Methods ---
+    loadActiveChallenges() {
+        if (!this.ebookId || !this.isLoggedIn) return;
+        this.readingChallengeService.getMyChallengesForBook(this.ebookId).subscribe({
+            next: (res: any) => {
+                this.activeChallenges = res.data || [];
+                this.cdr.detectChanges();
+            },
+            error: () => this.activeChallenges = []
+        });
+    }
+
+    toggleLeaderboard() {
+        this.showLeaderboard = !this.showLeaderboard;
+    }
+
+    getParticipantName(participant: any): string {
+        return participant?.userId?.username || 'مستخدم';
+    }
+
+    getParticipantAvatar(participant: any): string {
+        if (participant?.userId?.profilePicture) {
+            return participant.userId.profilePicture;
+        }
+        return '';
+    }
+
+    getSortedParticipants(challenge: any): any[] {
+        if (!challenge?.participants) return [];
+        return [...challenge.participants].sort((a: any, b: any) => b.progressPercent - a.progressPercent);
     }
 
     // Interactions
@@ -1779,11 +1919,168 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
         }
     }
 
+    async initializeBackgroundMusic() {
+        if (!this.isBrowser) return;
+        
+        try {
+            const musicUrl = 'https://knoozbook.com/static/موسيقى للتركيز.mp3';
+            let audioSrc = musicUrl;
+            
+            if (Capacitor.isNativePlatform()) {
+                try {
+                    const stat = await Filesystem.stat({
+                        path: 'music/focus-music.mp3',
+                        directory: Directory.Data
+                    });
+                    
+                    const localUrl = await Filesystem.getUri({
+                        path: 'music/focus-music.mp3',
+                        directory: Directory.Data
+                    });
+                    
+                    audioSrc = Capacitor.convertFileSrc(localUrl.uri);
+                    this.musicDownloaded = true;
+                    console.log('🎵 Using local cached music');
+                } catch (e) {
+                    console.log('🎵 Local music not found, needs download');
+                    this.musicDownloaded = false;
+                }
+            } else {
+                this.musicDownloaded = true;
+            }
+            
+            this.backgroundMusic = new Audio(audioSrc);
+            this.backgroundMusic.loop = true;
+            this.backgroundMusic.volume = 0.5;
+        } catch (error) {
+            console.error('❌ Error initializing background music:', error);
+        }
+    }
+
+    async downloadMusicFile() {
+        if (!this.isBrowser) return;
+        
+        if (!Capacitor.isNativePlatform()) {
+            this.musicDownloaded = true;
+            return;
+        }
+        
+        this.isMusicDownloading = true;
+        this.musicDownloadProgress = 0;
+        this.musicDownloadError = false;
+        this.cdr.detectChanges();
+        
+        try {
+            if (!navigator.onLine) {
+                throw new Error('لا يوجد اتصال بالإنترنت');
+            }
+            
+            console.log('📥 Downloading music...');
+            
+            const musicUrl = 'https://knoozbook.com/static/موسيقى للتركيز.mp3';
+            
+            try {
+                await Filesystem.mkdir({
+                    path: 'music',
+                    directory: Directory.Data,
+                    recursive: true
+                });
+            } catch (e) {}
+            
+            let progressListener: any;
+            if ((Filesystem as any).addListener) {
+                progressListener = await (Filesystem as any).addListener('progress', (progress: any) => {
+                    if (progress.url === musicUrl) {
+                        this.musicDownloadProgress = Math.round((progress.bytes / progress.contentLength) * 100);
+                        this.cdr.detectChanges();
+                    }
+                });
+            }
+            
+            const result = await Filesystem.downloadFile({
+                url: musicUrl,
+                path: 'music/focus-music.mp3',
+                directory: Directory.Data,
+                progress: true
+            });
+            
+            if (progressListener) {
+                progressListener.remove();
+            }
+            
+            this.musicDownloadProgress = 100;
+            this.musicDownloaded = true;
+            console.log('✅ Music downloaded to:', result.path);
+            
+            this.isMusicDownloading = false;
+            this.cdr.detectChanges();
+            
+            await this.initializeBackgroundMusic();
+            
+        } catch (error) {
+            console.error('❌ Error downloading music:', error);
+            this.isMusicDownloading = false;
+            this.musicDownloadError = true;
+            this.showInternetErrorModal = true;
+            this.cdr.detectChanges();
+        }
+    }
+
+    async toggleMusic() {
+        if (!this.isBrowser) return;
+        
+        if (!this.backgroundMusic) {
+            await this.initializeBackgroundMusic();
+        }
+        
+        this.playPauseMusic();
+    }
+
+    async playPauseMusic() {
+        if (!this.isBrowser) return;
+        
+        try {
+            // Use HTML Audio for all platforms for consistency
+            if (!this.backgroundMusic) {
+                await this.initializeBackgroundMusic();
+            }
+            
+            if (this.backgroundMusic) {
+                if (this.isMusicPlaying) {
+                    this.backgroundMusic.pause();
+                    this.isMusicPlaying = false;
+                } else {
+                    this.backgroundMusic.play().then(() => {
+                        this.isMusicPlaying = true;
+                    }).catch(err => {
+                        console.error('Error playing music:', err);
+                        this.isMusicPlaying = false;
+                    });
+                }
+            }
+        } catch (error) {
+            console.error('Error toggling music:', error);
+            this.isMusicPlaying = false;
+        }
+    }
+
+    closeInternetErrorModal() {
+        this.showInternetErrorModal = false;
+        this.musicDownloadError = false;
+    }
+
     closeAllPanels() {
         this.activeSection = null;
     }
 
     async nextPage() {
+        // Universal preview check — block ALL navigation past 20%
+        if (this.isPreviewMode && this.progressPercent >= 20) {
+            this.showSubscriptionPrompt = true;
+            this.cdr.detectChanges();
+            return;
+        }
+
         // BOK Mode - Scroll instead of page flip
         if (this.bookType === 'bok') {
             window.scrollBy({ top: window.innerHeight * 0.8, behavior: 'smooth' });
@@ -1899,10 +2196,17 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     goToSubscription() {
+        if (!this.isLoggedIn) {
+            this.router.navigate(['/login'], { queryParams: { returnUrl: this.router.url } });
+            return;
+        }
         this.router.navigate(['/subscription']);
     }
 
     closeSubscriptionPrompt() {
+        if (this.isPreviewMode && this.progressPercent >= 20) {
+            return; // Prevent closing if they exceeded limit
+        }
         this.showSubscriptionPrompt = false;
     }
 
@@ -2731,16 +3035,28 @@ export class EpubReaderComponent implements OnInit, OnDestroy, AfterViewInit {
         this.selectedText = text;
         this.selectedCfiRange = `bok:0:${start}:${end}`;
 
-        const rect = range.getBoundingClientRect();
-        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        // Position popup at top center of screen to avoid Android selection bar
+        const screenWidth = window.innerWidth;
 
         this.selectionPopupPosition = {
-            x: Math.min(Math.max(10, rect.left + (rect.width / 2) - 100), window.innerWidth - 210),
-            y: rect.top + scrollTop - 60
+            x: screenWidth / 2, // Center horizontally
+            y: 80 // Fixed position from top to avoid Android selection bar
         };
 
         this.showSelectionPopup = true;
         this.cdr.detectChanges();
+
+        // Prevent Android native selection menu
+        setTimeout(() => {
+            try {
+                // Clear the selection to prevent Android toolbar
+                selection.removeAllRanges();
+                // Re-create selection for our highlight functionality
+                selection.addRange(range);
+            } catch (e) {
+                console.log('Selection manipulation:', e);
+            }
+        }, 50);
     }
 
     get outputBokPage(): SafeHtml {

@@ -21,7 +21,11 @@ export class PushNotificationService {
     ) {
         // Initialize listeners if on native platform
         if (Capacitor.isNativePlatform()) {
-            this.registerNativeListeners();
+            try {
+                this.registerNativeListeners();
+            } catch (e) {
+                console.warn('⚠️ [PushService] Failed to register native push listeners:', e);
+            }
         }
 
         // Initialize Web Push foreground listeners
@@ -150,20 +154,18 @@ export class PushNotificationService {
             }
 
             if (permStatus.receive !== 'granted') {
-                throw new Error('User denied permissions!');
+                console.warn('⚠️ [PushService] User denied push permissions.');
+                return false;
             }
 
             // Register with Apple / Google to get token
-            await PushNotifications.register();
+            await PushNotifications.register().catch(e => {
+                console.warn('⚠️ [PushService] PushNotifications.register() failed silently:', e);
+            });
             return true;
         } catch (e) {
-            console.error('❌ [PushService] Native registration failed:', e);
-            // On iOS we want to know, on Android we might want to be silent if missing Firebase
-            if (Capacitor.getPlatform() === 'android') {
-                console.warn('⚠️ [PushService] Android Push registration failed. Verify google-services.json.');
-                return false;
-            }
-            throw new Error('فشل تسجيل التنبيهات. تأكد من إعدادات الخدمة.');
+            console.warn('⚠️ [PushService] Native registration failed silently:', e);
+            return false;
         }
     }
 

@@ -21,6 +21,8 @@ class AmazonAuthService {
    * Get active Amazon seller account from database or fallback to .env
    */
   async getActiveAccount() {
+    // TEMPORARILY DISABLED: Reverting to .env only until OAuth is approved
+    /*
     try {
       const dbAccount = await AmazonAccount.findOne({ isActive: true });
       if (dbAccount) {
@@ -30,6 +32,7 @@ class AmazonAuthService {
     } catch (err) {
       console.warn('⚠️ [Amazon Auth] Error fetching active account from DB, falling back to .env:', err.message);
     }
+    */
 
     // Fallback to .env
     return {

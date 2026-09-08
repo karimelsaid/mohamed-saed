@@ -1,0 +1,9 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.kenouz.bookstore2",
+    "sha256_cert_fingerprints":
+    ["27:1A:B1:79:7E:90:E6:4D:9C:E6:2B:47:EF:57:02:A6:EF:8A:68:ED:43:6C:C8:A0:59:4F:89:A9:25:E5:B6:A0"]
+  }
+}]

@@ -48,5 +48,4 @@ import { AdminRoutingModule } from './admin-routing.module';
     ProductApprovalComponent
   ]
 })
-// Force rebuild
 export class AdminModule { }

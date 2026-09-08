@@ -2,12 +2,14 @@ const axios = require('axios');
 
 class BostaService {
   constructor(config) {
-    this.apiKey = config.apiKey;
-    this.baseUrl = config.isTestMode ? 'https://staging-api.bosta.co' : 'https://api.bosta.co';
+    this.apiKey = config.apiKey ? config.apiKey.trim() : '';
+    this.baseUrl = config.isTestMode ? 'https://stg-app.bosta.co' : 'https://api.bosta.co';
   }
 
   async createShipment(orderData) {
     try {
+      console.log(`[BostaService] Creating shipment via ${this.baseUrl}/api/v2/deliveries`);
+      console.log(`[BostaService] Using API Key: "${this.apiKey}"`);
       const response = await axios.post(`${this.baseUrl}/api/v2/deliveries`, {
         type: 10, // Package Delivery
         specs: {

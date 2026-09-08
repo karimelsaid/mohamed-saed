@@ -1,0 +1,384 @@
+<!-- Toast Notifications -->
+<div class="yt-toast-container">
+  <div *ngFor="let toast of toasts" 
+    class="yt-toast" [class.yt-toast-success]="toast.type === 'success'" 
+    [class.yt-toast-error]="toast.type === 'error'" [class.yt-toast-info]="toast.type === 'info'">
+    <span>{{ toast.message }}</span>
+    <button (click)="removeToast(toast.id)" class="yt-toast-close">&times;</button>
+  </div>
+</div>
+
+<div class="yt-manager" dir="rtl">
+  <!-- Header -->
+  <div class="yt-header">
+    <div class="yt-header-content">
+      <div class="yt-header-icon">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="32" height="32">
+          <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+        </svg>
+      </div>
+      <div>
+        <h1 class="yt-title">إدارة فيديوهات اليوتيوب</h1>
+        <p class="yt-subtitle">إنشاء ونشر وجدولة الفيديوهات عبر n8n و NotebookLM</p>
+      </div>
+    </div>
+    <button (click)="openCreateForm()" class="yt-btn-create">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20">
+        <line x1="12" y1="5" x2="12" y2="19"></line>
+        <line x1="5" y1="12" x2="19" y2="12"></line>
+      </svg>
+      فيديو جديد
+    </button>
+  </div>
+
+  <!-- Stats Cards -->
+  <div class="yt-stats-grid">
+    <div class="yt-stat-card yt-stat-total" (click)="statusFilter = 'all'; onFilterChange()">
+      <div class="yt-stat-icon">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8 12.5v-9l6 4.5-6 4.5z"/></svg>
+      </div>
+      <div class="yt-stat-info">
+        <span class="yt-stat-number">{{ stats.total }}</span>
+        <span class="yt-stat-label">إجمالي الفيديوهات</span>
+      </div>
+    </div>
+
+    <div class="yt-stat-card yt-stat-published" (click)="statusFilter = 'published'; onFilterChange()">
+      <div class="yt-stat-icon">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+      </div>
+      <div class="yt-stat-info">
+        <span class="yt-stat-number">{{ stats.published }}</span>
+        <span class="yt-stat-label">منشورة</span>
+      </div>
+    </div>
+
+    <div class="yt-stat-card yt-stat-scheduled" (click)="statusFilter = 'scheduled'; onFilterChange()">
+      <div class="yt-stat-icon">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+      </div>
+      <div class="yt-stat-info">
+        <span class="yt-stat-number">{{ stats.scheduled }}</span>
+        <span class="yt-stat-label">مجدولة</span>
+      </div>
+    </div>
+
+    <div class="yt-stat-card yt-stat-processing" (click)="statusFilter = 'processing'; onFilterChange()">
+      <div class="yt-stat-icon yt-spin">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8c-.45-.83-.7-1.79-.7-2.8 0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2c.44.84.7 1.79.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z"/></svg>
+      </div>
+      <div class="yt-stat-info">
+        <span class="yt-stat-number">{{ stats.processing }}</span>
+        <span class="yt-stat-label">قيد المعالجة</span>
+      </div>
+    </div>
+
+    <div class="yt-stat-card yt-stat-failed" *ngIf="stats.failed > 0" (click)="statusFilter = 'failed'; onFilterChange()">
+      <div class="yt-stat-icon">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+      </div>
+      <div class="yt-stat-info">
+        <span class="yt-stat-number">{{ stats.failed }}</span>
+        <span class="yt-stat-label">فشلت</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter Bar -->
+  <div class="yt-filter-bar">
+    <div class="yt-filter-tabs">
+      <button [class.active]="statusFilter === 'all'" (click)="statusFilter = 'all'; onFilterChange()">الكل</button>
+      <button [class.active]="statusFilter === 'draft'" (click)="statusFilter = 'draft'; onFilterChange()">مسودة</button>
+      <button [class.active]="statusFilter === 'scheduled'" (click)="statusFilter = 'scheduled'; onFilterChange()">مجدولة</button>
+      <button [class.active]="statusFilter === 'processing'" (click)="statusFilter = 'processing'; onFilterChange()">قيد المعالجة</button>
+      <button [class.active]="statusFilter === 'published'" (click)="statusFilter = 'published'; onFilterChange()">منشورة</button>
+      <button [class.active]="statusFilter === 'failed'" (click)="statusFilter = 'failed'; onFilterChange()">فشلت</button>
+    </div>
+    <button (click)="loadVideos(); loadStats()" class="yt-refresh-btn" title="تحديث">
+      <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+    </button>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="yt-loading">
+    <div class="yt-loading-spinner"></div>
+    <span>جاري التحميل...</span>
+  </div>
+
+  <!-- Empty State -->
+  <div *ngIf="!loading && videos.length === 0" class="yt-empty">
+    <div class="yt-empty-icon">
+      <svg viewBox="0 0 24 24" fill="currentColor" width="64" height="64"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8 12.5v-9l6 4.5-6 4.5z"/></svg>
+    </div>
+    <h3>لا توجد فيديوهات {{ statusFilter !== 'all' ? '(' + getStatusLabel(statusFilter) + ')' : '' }}</h3>
+    <p>ابدأ بإنشاء فيديو جديد لملخص نصي أو شرح فيديو يوتيوب</p>
+    <button (click)="openCreateForm()" class="yt-btn-create">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18">
+        <line x1="12" y1="5" x2="12" y2="19"></line>
+        <line x1="5" y1="12" x2="19" y2="12"></line>
+      </svg>
+      إنشاء فيديو جديد
+    </button>
+  </div>
+
+  <!-- Videos List -->
+  <div *ngIf="!loading && videos.length > 0" class="yt-videos-list">
+    <div *ngFor="let video of videos" class="yt-video-card" [class.yt-video-failed]="video.status === 'failed'" [class.yt-video-published]="video.status === 'published'">
+      <!-- Thumbnail/Status indicator -->
+      <div class="yt-video-thumbnail">
+        <img *ngIf="video.thumbnailUrl" [src]="video.thumbnailUrl" [alt]="video.title">
+        <div *ngIf="!video.thumbnailUrl" class="yt-video-placeholder">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="40" height="40"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8 12.5v-9l6 4.5-6 4.5z"/></svg>
+        </div>
+        <div class="yt-video-status-badge" [class]="'yt-status-' + video.status">
+          {{ getStatusLabel(video.status) }}
+        </div>
+      </div>
+
+      <!-- Video Info -->
+      <div class="yt-video-info">
+        <h3 class="yt-video-title">{{ video.title }}</h3>
+        <p class="yt-video-desc" *ngIf="video.description">{{ video.description }}</p>
+        
+        <div class="yt-video-meta">
+          <span class="yt-meta-badge yt-meta-type">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+            {{ getContentTypeLabel(video.contentType) }}
+          </span>
+          <span class="yt-meta-badge yt-meta-privacy">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+            {{ getPrivacyLabel(video.privacy) }}
+          </span>
+          <span class="yt-meta-badge" *ngIf="video.category">{{ video.category }}</span>
+          <span class="yt-meta-badge yt-meta-time">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+            {{ getTimeAgo(video.createdAt) }}
+          </span>
+        </div>
+
+        <!-- Schedule info -->
+        <div *ngIf="video.status === 'scheduled' && video.scheduledAt" class="yt-schedule-info">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>
+          مجدول للنشر: {{ formatDate(video.scheduledAt) }}
+        </div>
+
+        <!-- YouTube link -->
+        <a *ngIf="video.youtubeUrl" [href]="video.youtubeUrl" target="_blank" class="yt-video-link">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/><polygon fill="#fff" points="9.545,15.568 15.818,12 9.545,8.432"/></svg>
+          مشاهدة على اليوتيوب
+        </a>
+
+        <!-- Error message -->
+        <div *ngIf="video.status === 'failed' && video.errorMessage" class="yt-error-msg">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+          {{ video.errorMessage }}
+        </div>
+
+        <!-- Tags -->
+        <div *ngIf="video.tags && video.tags.length > 0" class="yt-video-tags">
+          <span *ngFor="let tag of video.tags" class="yt-tag">#{{ tag }}</span>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="yt-video-actions">
+        <button *ngIf="video.status === 'draft' || video.status === 'scheduled'" 
+          (click)="publishNow(video)" 
+          [disabled]="actionLoading[video._id]"
+          class="yt-action-btn yt-action-publish" title="نشر فوري">
+          <svg *ngIf="!actionLoading[video._id]" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M8 5v14l11-7z"/></svg>
+          <div *ngIf="actionLoading[video._id]" class="yt-btn-spinner"></div>
+        </button>
+
+        <button *ngIf="video.status === 'draft' || video.status === 'failed'" 
+          (click)="triggerWorkflow(video)" 
+          [disabled]="actionLoading[video._id]"
+          class="yt-action-btn yt-action-workflow" title="تفعيل Workflow">
+          <svg *ngIf="!actionLoading[video._id]" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M19 8l-4 4h3c0 3.31-2.69 6-6 6-1.01 0-1.97-.25-2.8-.7l-1.46 1.46C8.97 19.54 10.43 20 12 20c4.42 0 8-3.58 8-8h3l-4-4zM6 12c0-3.31 2.69-6 6-6 1.01 0 1.97.25 2.8.7l1.46-1.46C15.03 4.46 13.57 4 12 4c-4.42 0-8 3.58-8 8H1l4 4 4-4H6z"/></svg>
+          <div *ngIf="actionLoading[video._id]" class="yt-btn-spinner"></div>
+        </button>
+
+        <button *ngIf="video.status !== 'published' && video.status !== 'processing' && video.status !== 'uploading'" 
+          (click)="openScheduleModal(video)" 
+          class="yt-action-btn yt-action-schedule" title="جدولة">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>
+        </button>
+
+        <button *ngIf="video.status !== 'processing' && video.status !== 'uploading'" 
+          (click)="openEditForm(video)" 
+          class="yt-action-btn yt-action-edit" title="تعديل">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+        </button>
+
+        <button *ngIf="video.status === 'failed'" 
+          (click)="retryVideo(video)" 
+          [disabled]="actionLoading[video._id]"
+          class="yt-action-btn yt-action-retry" title="إعادة المحاولة">
+          <svg *ngIf="!actionLoading[video._id]" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+          <div *ngIf="actionLoading[video._id]" class="yt-btn-spinner"></div>
+        </button>
+
+        <button (click)="confirmDelete(video)" 
+          [disabled]="actionLoading[video._id] || video.status === 'processing' || video.status === 'uploading'"
+          class="yt-action-btn yt-action-delete" title="حذف">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <div *ngIf="totalPages > 1" class="yt-pagination">
+    <button (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 1" class="yt-page-btn">
+      <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+    </button>
+    <button *ngFor="let page of pagesArray" (click)="goToPage(page)" 
+      [class.active]="page === currentPage" class="yt-page-btn yt-page-num">{{ page }}</button>
+    <button (click)="goToPage(currentPage + 1)" [disabled]="currentPage === totalPages" class="yt-page-btn">
+      <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- Create/Edit Modal -->
+<div *ngIf="showCreateForm" class="yt-modal-overlay" (click)="closeCreateForm()">
+  <div class="yt-modal" (click)="$event.stopPropagation()" dir="rtl">
+    <div class="yt-modal-header">
+      <h2>{{ editingVideo ? 'تعديل الفيديو' : 'إنشاء فيديو جديد' }}</h2>
+      <button (click)="closeCreateForm()" class="yt-modal-close">&times;</button>
+    </div>
+
+    <div class="yt-modal-body">
+      <!-- Title -->
+      <div class="yt-form-group">
+        <label>عنوان الفيديو *</label>
+        <input type="text" [(ngModel)]="formData.title" placeholder="أدخل عنوان الفيديو" class="yt-input">
+      </div>
+
+      <!-- Description -->
+      <div class="yt-form-group">
+        <label>وصف الفيديو</label>
+        <textarea [(ngModel)]="formData.description" placeholder="أدخل وصف الفيديو" rows="3" class="yt-input yt-textarea"></textarea>
+      </div>
+
+      <!-- Content Type -->
+      <div class="yt-form-group">
+        <label>نوع المحتوى *</label>
+        <div class="yt-radio-group">
+          <label class="yt-radio-option" [class.active]="formData.contentType === 'text_summary'">
+            <input type="radio" [(ngModel)]="formData.contentType" value="text_summary" name="contentType">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+            <span>ملخص / شرح لمحتوى نصي</span>
+          </label>
+          <label class="yt-radio-option" [class.active]="formData.contentType === 'video_summary'">
+            <input type="radio" [(ngModel)]="formData.contentType" value="video_summary" name="contentType">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/><polygon fill="#fff" points="9.545,15.568 15.818,12 9.545,8.432"/></svg>
+            <span>ملخص لرابط فيديو يوتيوب</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Source Content -->
+      <div class="yt-form-group">
+        <label>{{ formData.contentType === 'text_summary' ? 'المحتوى النصي *' : 'رابط فيديو اليوتيوب *' }}</label>
+        <textarea *ngIf="formData.contentType === 'text_summary'" 
+          [(ngModel)]="formData.sourceContent" 
+          placeholder="الصق المحتوى النصي هنا لإنشاء ملخص فيديو منه" 
+          rows="6" class="yt-input yt-textarea"></textarea>
+        <input *ngIf="formData.contentType === 'video_summary'" 
+          type="url" [(ngModel)]="formData.sourceContent" 
+          placeholder="https://www.youtube.com/watch?v=..." class="yt-input">
+      </div>
+
+      <!-- Tags -->
+      <div class="yt-form-group">
+        <label>الكلمات المفتاحية (مفصولة بفاصلة)</label>
+        <input type="text" [(ngModel)]="formData.tags" placeholder="كتب, ملخص, تعليم" class="yt-input">
+      </div>
+
+      <!-- Category & Privacy Row -->
+      <div class="yt-form-row">
+        <div class="yt-form-group">
+          <label>التصنيف</label>
+          <select [(ngModel)]="formData.category" class="yt-input yt-select">
+            <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
+          </select>
+        </div>
+        <div class="yt-form-group">
+          <label>الخصوصية</label>
+          <select [(ngModel)]="formData.privacy" class="yt-input yt-select">
+            <option value="public">عام</option>
+            <option value="unlisted">غير مدرج</option>
+            <option value="private">خاص</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Schedule Toggle -->
+      <div class="yt-form-group">
+        <label class="yt-toggle-label">
+          <div class="yt-toggle" [class.active]="formData.scheduleEnabled" (click)="formData.scheduleEnabled = !formData.scheduleEnabled">
+            <div class="yt-toggle-knob"></div>
+          </div>
+          جدولة النشر
+        </label>
+        <div *ngIf="formData.scheduleEnabled" class="yt-schedule-input">
+          <input type="datetime-local" [(ngModel)]="formData.scheduledAt" class="yt-input">
+        </div>
+      </div>
+    </div>
+
+    <div class="yt-modal-footer">
+      <button (click)="closeCreateForm()" class="yt-btn-secondary">إلغاء</button>
+      <button (click)="submitForm()" [disabled]="creating" class="yt-btn-primary">
+        <div *ngIf="creating" class="yt-btn-spinner"></div>
+        {{ creating ? 'جاري الحفظ...' : (editingVideo ? 'حفظ التعديلات' : 'إنشاء الفيديو') }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Schedule Modal -->
+<div *ngIf="showScheduleModal" class="yt-modal-overlay" (click)="showScheduleModal = false">
+  <div class="yt-modal yt-modal-sm" (click)="$event.stopPropagation()" dir="rtl">
+    <div class="yt-modal-header">
+      <h2>جدولة النشر</h2>
+      <button (click)="showScheduleModal = false" class="yt-modal-close">&times;</button>
+    </div>
+    <div class="yt-modal-body">
+      <div class="yt-form-group">
+        <label>تاريخ النشر</label>
+        <input type="date" [(ngModel)]="scheduleDate" class="yt-input">
+      </div>
+      <div class="yt-form-group">
+        <label>وقت النشر</label>
+        <input type="time" [(ngModel)]="scheduleTime" class="yt-input">
+      </div>
+    </div>
+    <div class="yt-modal-footer">
+      <button (click)="showScheduleModal = false" class="yt-btn-secondary">إلغاء</button>
+      <button (click)="confirmSchedule()" class="yt-btn-primary">تأكيد الجدولة</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div *ngIf="showDeleteConfirm" class="yt-modal-overlay" (click)="showDeleteConfirm = false">
+  <div class="yt-modal yt-modal-sm" (click)="$event.stopPropagation()" dir="rtl">
+    <div class="yt-modal-header yt-modal-header-danger">
+      <h2>تأكيد الحذف</h2>
+      <button (click)="showDeleteConfirm = false" class="yt-modal-close">&times;</button>
+    </div>
+    <div class="yt-modal-body" style="text-align: center; padding: 2rem;">
+      <svg viewBox="0 0 24 24" fill="#ef4444" width="48" height="48" style="margin-bottom: 1rem;">
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+      </svg>
+      <p style="font-size: 1.1rem; margin-bottom: 0.5rem;">هل أنت متأكد من حذف هذا الفيديو؟</p>
+      <p style="color: #94a3b8; font-size: 0.9rem;">{{ deleteVideoTitle }}</p>
+    </div>
+    <div class="yt-modal-footer">
+      <button (click)="showDeleteConfirm = false" class="yt-btn-secondary">إلغاء</button>
+      <button (click)="deleteVideo()" class="yt-btn-danger">حذف نهائي</button>
+    </div>
+  </div>
+</div>

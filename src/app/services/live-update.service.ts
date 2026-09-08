@@ -60,7 +60,8 @@ export class LiveUpdateService {
       // If native version is newer than stored version (e.g., fresh APK install), 
       // reset stored version to native to prevent old update triggers.
       if (this.isNewerVersion(storedVersion, nativeVersion)) {
-        console.log('[LiveUpdate] Native app is newer. Syncing storage version.');
+        console.log('[LiveUpdate] Native app is newer. Resetting stored bundles and syncing storage version.');
+        try { await CapacitorUpdater.reset(); } catch (resetErr) {}
         localStorage.setItem(storageKey, nativeVersion);
         this.versionSubject.next(nativeVersion);
       }
@@ -78,7 +79,14 @@ export class LiveUpdateService {
 
     try {
       // SILENT CHECK: Don't set 'checking' status immediately to avoid UI flicker
-      const serverConfig: any = await firstValueFrom(this.http.get(`${environment.apiBaseUrl}/mobile-version?app=${this.currentApp}`));
+      let serverConfig: any;
+      try {
+        serverConfig = await firstValueFrom(this.http.get(`${environment.apiBaseUrl}/mobile-version?app=${this.currentApp}`));
+      } catch (httpErr) {
+        console.warn('[LiveUpdate] HttpClient failed, attempting direct fetch fallback...', httpErr);
+        const rawRes = await fetch(`https://knoozbook.com/api/mobile-version?app=${this.currentApp}`);
+        serverConfig = await rawRes.json();
+      }
 
       if (!serverConfig || !serverConfig.liveUpdate || !serverConfig.liveUpdate.enabled) {
         this.statusSubject.next('idle');
@@ -102,7 +110,7 @@ export class LiveUpdateService {
         return;
       }
 
-      if (this.isNewerVersion(currentVersion, latestVersion)) {
+      if (this.isNewerVersion(currentVersion, latestVersion) || (latestVersion && currentVersion !== latestVersion)) {
         console.log(`[LiveUpdate] Mandatory update available: ${latestVersion}`);
         this.statusSubject.next('checking'); // Only show modal now that we KNOW there's an update
       } else {
@@ -110,8 +118,6 @@ export class LiveUpdateService {
         this.statusSubject.next('idle');
       }
     } catch (error: any) {
-      // SILENT FAIL: Version check is a background operation.
-      // Never show an error modal here — only startUpdate() should surface errors.
       console.warn('[LiveUpdate] Version check failed (offline or backend unreachable). Staying idle.', error?.status || error?.message || '');
       this.statusSubject.next('idle');
     }

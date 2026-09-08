@@ -1,0 +1,213 @@
+<!-- Main Challenge Details Modal -->
+<div *ngIf="showModal && challenge" class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm rtl animate-fadeIn modal-backdrop" (click)="onBackdropClick($event)">
+    <div class="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-slideUp relative border border-slate-200 dark:border-slate-800 max-h-[90vh] flex flex-col">
+        
+        <!-- Header Image & Info -->
+        <div class="relative h-48 bg-gradient-to-r from-amber-500 to-orange-500 flex-shrink-0">
+            <!-- Background Cover Blur (if available) -->
+            <div *ngIf="challenge.bookCover" class="absolute inset-0 opacity-20">
+                <img [src]="challenge.bookCover" class="w-full h-full object-cover blur-sm">
+            </div>
+            
+            <div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+            
+            <button (click)="closeModal()" class="absolute top-4 left-4 w-10 h-10 bg-black/30 hover:bg-black/50 backdrop-blur-md rounded-full text-white flex items-center justify-center transition-colors z-10">
+                <fa-icon [icon]="['fas', 'times']" class="text-lg"></fa-icon>
+            </button>
+
+            <div class="absolute bottom-0 right-0 left-0 p-6 flex items-end gap-4">
+                <div class="w-20 h-28 rounded-lg shadow-xl overflow-hidden bg-white flex-shrink-0 border-2 border-white/20">
+                    <img *ngIf="challenge.bookCover" [src]="challenge.bookCover" class="w-full h-full object-cover">
+                    <div *ngIf="!challenge.bookCover" class="w-full h-full flex items-center justify-center text-slate-400 text-3xl"><fa-icon [icon]="['fas', 'book']"></fa-icon></div>
+                </div>
+                <div class="flex-1 pb-1">
+                    <h2 class="text-2xl font-black text-white mb-1 line-clamp-2 leading-tight">{{ challenge.title }}</h2>
+                    <p class="text-white/80 text-sm font-bold flex items-center gap-2">
+                        <fa-icon [icon]="['fas', 'book-open']"></fa-icon>
+                        {{ challenge.bookTitle || 'الكتاب المرفق بالتحدي' }}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-6 overflow-y-auto flex-1">
+            <!-- Motivation Message -->
+            <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-2xl p-4 mb-6 flex gap-4 items-start">
+                <div class="w-12 h-12 bg-amber-100 dark:bg-amber-800 rounded-full flex items-center justify-center text-amber-500 text-2xl flex-shrink-0">
+                    <fa-icon [icon]="['fas', 'fire']"></fa-icon>
+                </div>
+                <div>
+                    <h4 class="font-black text-amber-800 dark:text-amber-400 mb-1">حان وقت المنافسة!</h4>
+                    <p class="text-sm font-medium text-amber-700/80 dark:text-amber-500/80 leading-relaxed">
+                        أنت الآن تتنافس مع {{ challenge.participants?.length }} أشخاص! ابدأ القراءة الآن واصعد في سلم الترتيب. كل صفحة تقرأها تقربك من المركز الأول!
+                    </p>
+                </div>
+            </div>
+
+            <!-- Leaderboard -->
+            <div class="mb-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-black text-slate-800 dark:text-white flex items-center gap-2">
+                        <fa-icon [icon]="['fas', 'medal']" class="text-yellow-500"></fa-icon>
+                        ترتيب المشاركين
+                    </h3>
+                    <span class="text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-3 py-1 rounded-full">
+                        ينتهي: {{ challenge.endDate | date:'mediumDate' }}
+                    </span>
+                </div>
+
+                <div class="space-y-3 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
+                    <div *ngFor="let p of getSortedParticipants(); let rank = index" 
+                        class="flex items-center gap-3 p-3 rounded-2xl border transition-all"
+                        [ngClass]="{
+                            'bg-gradient-to-l from-yellow-50 to-white dark:from-yellow-900/20 dark:to-slate-800 border-yellow-200 dark:border-yellow-900/50 shadow-sm': rank === 0,
+                            'bg-gradient-to-l from-slate-50 to-white dark:from-slate-800/50 dark:to-slate-800 border-slate-200 dark:border-slate-700 shadow-sm': rank === 1,
+                            'bg-gradient-to-l from-orange-50 to-white dark:from-orange-900/20 dark:to-slate-800 border-orange-200 dark:border-orange-900/50 shadow-sm': rank === 2,
+                            'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700': rank > 2
+                        }">
+                        
+                        <!-- Rank -->
+                        <div class="w-8 h-8 rounded-full flex items-center justify-center font-black text-sm flex-shrink-0"
+                            [ngClass]="{
+                                'bg-yellow-100 text-yellow-600': rank === 0,
+                                'bg-slate-200 text-slate-600': rank === 1,
+                                'bg-orange-100 text-orange-600': rank === 2,
+                                'bg-slate-100 dark:bg-slate-700 text-slate-400': rank > 2
+                            }">
+                            {{ rank + 1 }}
+                        </div>
+                        
+                        <!-- Avatar -->
+                        <div class="w-10 h-10 rounded-full overflow-hidden bg-slate-200 flex-shrink-0 border-2 border-white shadow-sm">
+                            <img *ngIf="getParticipantAvatar(p)" [src]="getParticipantAvatar(p)" class="w-full h-full object-cover">
+                            <div *ngIf="!getParticipantAvatar(p)" class="w-full h-full flex items-center justify-center text-slate-400 text-xs"><fa-icon [icon]="['fas', 'user']"></fa-icon></div>
+                        </div>
+                        
+                        <!-- Info & Progress -->
+                        <div class="flex-1 min-w-0">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="font-bold text-slate-800 dark:text-white text-sm truncate">{{ getParticipantName(p) }}</span>
+                                <span class="font-black text-xs" [ngClass]="{
+                                    'text-yellow-600': rank === 0,
+                                    'text-slate-600 dark:text-slate-400': rank === 1,
+                                    'text-orange-600': rank === 2,
+                                    'text-slate-500': rank > 2
+                                }">{{ p.progressPercent }}%</span>
+                            </div>
+                            <div class="w-full h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                                <div class="h-full rounded-full transition-all duration-1000"
+                                    [style.width]="p.progressPercent + '%'"
+                                    [ngClass]="{
+                                        'bg-yellow-400': rank === 0,
+                                        'bg-slate-400': rank === 1,
+                                        'bg-orange-400': rank === 2,
+                                        'bg-indigo-400': rank > 2
+                                    }">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="space-y-3">
+                <!-- Start Reading Action -->
+                <button (click)="startReading()" class="w-full relative group overflow-hidden rounded-2xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 p-4 shadow-xl hover:shadow-2xl transition-all active:scale-95">
+                    <div class="absolute inset-0 w-full h-full bg-gradient-to-r from-amber-500/0 via-amber-500/30 to-amber-500/0 translate-x-[100%] group-hover:-translate-x-[100%] transition-transform duration-1000"></div>
+                    <div class="flex items-center justify-center gap-3 relative z-10">
+                        <fa-icon [icon]="['fas', 'book-reader']" class="text-xl group-hover:-translate-y-1 transition-transform"></fa-icon>
+                        <span class="font-black text-lg">بدء القراءة الآن</span>
+                    </div>
+                </button>
+
+                <!-- Share/Invite Action -->
+                <button (click)="shareChallenge()" class="w-full flex items-center justify-center gap-2 p-3 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 text-emerald-600 dark:text-emerald-400 hover:from-emerald-100 hover:to-teal-100 dark:hover:from-emerald-900/30 dark:hover:to-teal-900/30 rounded-xl font-bold transition-all border border-emerald-200 dark:border-emerald-800/50">
+                    <fa-icon [icon]="['fas', 'share-alt']"></fa-icon>
+                    <span>دعوة أصدقاء للانضمام</span>
+                </button>
+
+                <!-- Shared Success Message -->
+                <div *ngIf="showShareSuccess" class="text-center text-emerald-500 text-sm font-bold animate-fadeIn">
+                    <fa-icon [icon]="['fas', 'check-circle']" class="ml-1"></fa-icon>
+                    تم نسخ رابط التحدي!
+                </div>
+
+                <!-- Host Action: End/Delete -->
+                <button *ngIf="isHost" (click)="openDeleteConfirm()" [disabled]="isProcessing" class="w-full flex items-center justify-center gap-2 p-3 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl font-bold transition-colors disabled:opacity-50">
+                    <fa-icon [icon]="['fas', 'trash-alt']"></fa-icon>
+                    <span>إنهاء وحذف التحدي</span>
+                </button>
+
+                <!-- Participant Action: Leave/Surrender -->
+                <button *ngIf="!isHost" (click)="openLeaveConfirm()" [disabled]="isProcessing" class="w-full flex items-center justify-center gap-2 p-3 text-slate-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl font-bold transition-colors disabled:opacity-50">
+                    <fa-icon [icon]="['fas', 'flag']"></fa-icon>
+                    <span>الاستسلام والمغادرة</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Confirmation Dialog: Delete Challenge (Host) -->
+<div *ngIf="showConfirmDelete" class="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md rtl animate-fadeIn">
+    <div class="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden border border-red-200 dark:border-red-800/50" style="animation: slideUp 0.3s ease-out">
+        <!-- Red Gradient Header -->
+        <div class="bg-gradient-to-r from-red-500 to-rose-500 p-6 text-center">
+            <div class="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto mb-3">
+                <fa-icon [icon]="['fas', 'exclamation-triangle']" class="text-white text-3xl"></fa-icon>
+            </div>
+            <h3 class="text-xl font-black text-white">إنهاء التحدي</h3>
+        </div>
+        
+        <div class="p-6 text-center">
+            <p class="text-slate-600 dark:text-slate-300 font-medium leading-relaxed mb-6">
+                هل أنت متأكد أنك تريد <span class="text-red-500 font-black">إنهاء هذا التحدي وحذفه للجميع</span>؟
+                <br>
+                <span class="text-sm text-slate-400 dark:text-slate-500">لا يمكن التراجع عن هذا الإجراء</span>
+            </p>
+            
+            <div class="flex gap-3">
+                <button (click)="cancelDelete()" class="flex-1 py-3 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                    تراجع
+                </button>
+                <button (click)="confirmDelete()" [disabled]="isProcessing" class="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-red-500 to-rose-500 text-white font-black hover:from-red-600 hover:to-rose-600 transition-all shadow-lg hover:shadow-red-500/30 disabled:opacity-50 active:scale-95">
+                    <span *ngIf="!isProcessing">نعم، أنهِ التحدي</span>
+                    <span *ngIf="isProcessing">جاري الحذف...</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Confirmation Dialog: Leave Challenge (Participant) -->
+<div *ngIf="showConfirmLeave" class="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md rtl animate-fadeIn">
+    <div class="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden border border-amber-200 dark:border-amber-800/50" style="animation: slideUp 0.3s ease-out">
+        <!-- Amber Gradient Header -->
+        <div class="bg-gradient-to-r from-amber-500 to-orange-500 p-6 text-center">
+            <div class="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto mb-3">
+                <fa-icon [icon]="['fas', 'flag']" class="text-white text-3xl"></fa-icon>
+            </div>
+            <h3 class="text-xl font-black text-white">الاستسلام</h3>
+        </div>
+        
+        <div class="p-6 text-center">
+            <p class="text-slate-600 dark:text-slate-300 font-medium leading-relaxed mb-2">
+                هل أنت متأكد أنك تريد <span class="text-amber-500 font-black">الاستسلام ومغادرة التحدي</span>؟
+            </p>
+            <p class="text-sm text-slate-400 dark:text-slate-500 mb-6">
+                سيتم إزالتك من قائمة المتنافسين ولن تتمكن من العودة تلقائياً
+            </p>
+            
+            <div class="flex gap-3">
+                <button (click)="cancelLeave()" class="flex-1 py-3 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                    متابعة التحدي
+                </button>
+                <button (click)="confirmLeave()" [disabled]="isProcessing" class="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-black hover:from-amber-600 hover:to-orange-600 transition-all shadow-lg hover:shadow-amber-500/30 disabled:opacity-50 active:scale-95">
+                    <span *ngIf="!isProcessing">نعم، استسلم</span>
+                    <span *ngIf="isProcessing">جاري المغادرة...</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

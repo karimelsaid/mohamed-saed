@@ -279,6 +279,16 @@
                     </button>
                   </div>
                   
+                  <!-- Alert Message -->
+                  <div *ngIf="item.showMessage" class="p-1.5 bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400 text-[10px] rounded-lg flex items-center gap-1 animate-pulse">
+                    ⚠ {{ item.message }}
+                  </div>
+                  
+                  <!-- Quantity Warning -->
+                  <div *ngIf="item.quantity > item.product_quantity && !isDigitalItem(item) && !item.showMessage" class="p-1.5 bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400 text-[10px] rounded-lg flex items-center gap-1 animate-pulse">
+                    ⚠ الكمية المطلوبة: {{ item.quantity }} | المتوفر: {{ item.product_quantity }}
+                  </div>
+                  
                   <span class="text-xs font-bold text-green-600 dark:text-green-400">
                     {{ (item.isFree ? 0 : item.product_price * (item.quantity || 1)) | number:'1.0-0' }} ج.م
                   </span>

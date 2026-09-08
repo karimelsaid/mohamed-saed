@@ -4,6 +4,12 @@
         <p>قم بتحديد معايير النواقص وتحميل تقرير Excel للموردين.</p>
     </div>
 
+    <!-- Loading State -->
+    <div class="loading-overlay" *ngIf="isLoading">
+        <div class="loading-spinner"></div>
+        <p>جاري تحميل البيانات...</p>
+    </div>
+
     <!-- Settings Section -->
     <div class="settings-section card">
         <h3><fa-icon [icon]="faCog"></fa-icon> إعدادات التقرير</h3>
@@ -62,7 +68,7 @@
     </div>
 
     <!-- Shortage Preview & Batch Editing -->
-    <div class="preview-section card">
+    <div class="preview-section card" *ngIf="!isLoading">
         <div class="section-header">
             <h3><fa-icon [icon]="faChartBar"></fa-icon> مراجعة محتوى التقرير ({{ shortageItems.length }} منتج)</h3>
             <div class="preview-actions">
@@ -70,7 +76,7 @@
                     <fa-icon [icon]="faTrash"></fa-icon>
                     <span>إفراغ القائمة اليدوية</span>
                 </button>
-                <button class="btn-save-all" [disabled]="!hasChanges() || isSaving" (click)="saveAllQuantities()">
+                <button class="btn-save-all" [disabled]="!_hasChanges || isSaving" (click)="saveAllQuantities()">
                     <fa-icon [icon]="faCheckCircle"></fa-icon>
                     <span>حفظ التغييرات</span>
                 </button>
@@ -91,11 +97,11 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr *ngFor="let item of shortageItems"
-                        [class.changed]="manualQuantities[item.products_id] !== originalQuantities[item.products_id]">
+                    <tr *ngFor="let item of pagedItems; trackBy: trackByProductId"
+                        [class.changed]="isRowChanged(item.products_id)">
                         <td>
                             <div class="product-info">
-                                <img [src]="item.image_path" alt="" class="mini-img">
+                                <img [src]="item.image_path" alt="" class="mini-img" loading="lazy">
                                 <div class="name-status">
                                     <span>{{ item.product_name }}</span>
                                     <div class="status-tags">
@@ -112,7 +118,7 @@
                         </td>
                         <td class="text-center">
                             <input type="number" [(ngModel)]="manualQuantities[item.products_id]" class="table-input"
-                                min="1">
+                                min="1" (ngModelChange)="onQuantityChange()">
                         </td>
                         <td>{{ item.product_category }}</td>
                         <td class="text-center">
@@ -125,6 +131,22 @@
                 </tbody>
             </table>
         </div>
+
+        <!-- Pagination -->
+        <div class="pagination" *ngIf="totalPages > 1">
+            <button class="page-btn" (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 1">
+                <fa-icon [icon]="faChevronRight"></fa-icon>
+            </button>
+            <button *ngFor="let page of visiblePages" class="page-btn" [class.active]="page === currentPage"
+                (click)="goToPage(page)">
+                {{ page }}
+            </button>
+            <button class="page-btn" (click)="goToPage(currentPage + 1)" [disabled]="currentPage === totalPages">
+                <fa-icon [icon]="faChevronLeft"></fa-icon>
+            </button>
+            <span class="page-info">صفحة {{ currentPage }} من {{ totalPages }}</span>
+        </div>
+
         <div class="no-data" *ngIf="shortageItems.length === 0">
             لا توجد منتجات حالياً في التقرير. ابحث وأضف منتجات بالأسفل أو قلل "حد النواقص".
         </div>
@@ -149,10 +171,10 @@
         </div>
 
         <div class="search-results-list premium" *ngIf="bookSearchResults.length > 0">
-            <div class="result-item premium-card" *ngFor="let product of bookSearchResults">
+            <div class="result-item premium-card" *ngFor="let product of bookSearchResults; trackBy: trackByProductId">
                 <div class="result-info">
                     <div class="img-wrapper">
-                        <img [src]="product.image_path" alt="" class="mini-img">
+                        <img [src]="product.image_path" alt="" class="mini-img" loading="lazy">
                     </div>
                     <div class="product-detail">
                         <span class="p-name">{{ product.product_name }}</span>

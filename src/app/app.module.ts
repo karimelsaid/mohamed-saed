@@ -66,7 +66,7 @@ import { PaymentModalComponent } from './payment-modal/payment-modal.component';
     AccountModalComponent,
     VoiceCallComponent,
     ServiceWorkerModule.register('ngsw-worker.js', {
-      enabled: !isDevMode(),
+      enabled: !isDevMode() && typeof window !== 'undefined' && !(window as any)?.Capacitor?.isNativePlatform(),
       registrationStrategy: 'registerWhenStable:30000'
     }),
     NetworkStatusComponent,
@@ -79,7 +79,7 @@ import { PaymentModalComponent } from './payment-modal/payment-modal.component';
     PaymentModalComponent,
   ],
   providers: [
-    provideHttpClient(withInterceptorsFromDi(), withFetch()),
+    provideHttpClient(withInterceptorsFromDi()),
     { provide: LocationStrategy, useClass: PathLocationStrategy },
     { provide: HTTP_INTERCEPTORS, useClass: UniversalInterceptor, multi: true },
     { provide: HTTP_INTERCEPTORS, useClass: MerchantAuthInterceptor, multi: true },

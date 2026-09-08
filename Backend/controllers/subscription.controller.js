@@ -89,8 +89,8 @@ exports.subscribe = async (req, res) => {
                     amount: price,
                     currency: 'EGP',
                     subscriptionId: subscription._id,
-                    customerEmail: req.user.email,
-                    merchantRedirect: `${process.env.FRONTEND_URL || 'http://localhost:4200'}/subscription/callback`
+                    customerEmail: req.user.email || 'customer@knoozbook.com',
+                    merchantRedirect: `${process.env.FRONTEND_URL || 'https://knoozbook.com'}/subscription/callback`
                 }
             };
 
@@ -101,10 +101,11 @@ exports.subscribe = async (req, res) => {
                 status: function (code) {
                     return {
                         json: function (data) {
-                            if (code === 200) {
+                            if (code >= 200 && code < 300) {
                                 paymentResult = data;
                             } else {
                                 paymentError = data;
+                                console.error(`❌ Payment mockRes.status(${code}).json:`, JSON.stringify(data));
                             }
                         }
                     };
@@ -117,10 +118,11 @@ exports.subscribe = async (req, res) => {
             // Call payment controller directly
             await paymentController.createSubscriptionPaymentSession(mockReq, mockRes);
 
-            console.log('✅ Payment controller result:', paymentResult);
+            console.log('✅ Payment controller result:', JSON.stringify(paymentResult));
+            if (paymentError) console.error('❌ Payment controller error:', JSON.stringify(paymentError));
 
             if (paymentError || !paymentResult || !paymentResult.sessionUrl) {
-                throw new Error(paymentError?.error || 'No payment session URL returned');
+                throw new Error(paymentError?.error || paymentError?.message || 'No payment session URL returned');
             }
 
             const paymentSessionUrl = paymentResult.sessionUrl;

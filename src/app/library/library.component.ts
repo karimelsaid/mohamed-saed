@@ -1,5 +1,5 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
-import { CommonModule } from '@angular/common'; 
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, Inject, PLATFORM_ID, ViewChild, ElementRef } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common'; 
 import { RouterModule, Router, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { Subscription as RxSubscription, Subject } from 'rxjs';
@@ -22,6 +22,9 @@ import { Share } from '@capacitor/share';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Capacitor } from '@capacitor/core';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import { ReadingChallengeModalComponent } from '../shared/reading-challenge-modal/reading-challenge-modal.component';
+import { ReadingChallengeService } from '../services/reading-challenge.service';
+import { ChallengeDetailsModalComponent } from '../shared/challenge-details-modal/challenge-details-modal.component';
 
 export interface UnifiedBook {
     id: string;
@@ -42,11 +45,15 @@ export interface UnifiedBook {
 @Component({
     selector: 'app-library',
     standalone: true,
-    imports: [CommonModule, RouterModule, FormsModule, DownloadsComponent, GamificationDashboardComponent, FontAwesomeModule],
+    imports: [CommonModule, RouterModule, FormsModule, DownloadsComponent, GamificationDashboardComponent, FontAwesomeModule, ReadingChallengeModalComponent, ChallengeDetailsModalComponent],
     templateUrl: './library.component.html',
     styleUrls: ['./library.component.css']
 })
 export class LibraryComponent implements OnInit, OnDestroy {
+    @ViewChild('searchInput') searchInput!: ElementRef;
+    @ViewChild(ReadingChallengeModalComponent) readingChallengeModal?: ReadingChallengeModalComponent;
+    @ViewChild(ChallengeDetailsModalComponent) challengeDetailsModal?: ChallengeDetailsModalComponent;
+    
     // Internal Books State
     ebooks: Ebook[] = [];
     allLoadedEbooks: Ebook[] = []; // Cache of all loaded books for instant client-side search
@@ -76,7 +83,7 @@ export class LibraryComponent implements OnInit, OnDestroy {
     // General State
     // 'books' covers both internal and external (merged view)
     // 'achievements' is the new tab
-    activeTab: 'books' | 'achievements' | 'downloads' = 'books';
+    activeTab: 'books' | 'achievements' | 'downloads' | 'challenges' = 'books';
     downloadsTab: 'downloads' | 'favorites' = 'downloads';
     subscription: Subscription | null = null;
     subscriptionHistory: Subscription[] = [];
@@ -95,6 +102,10 @@ export class LibraryComponent implements OnInit, OnDestroy {
     mostReadEbooks: UnifiedBook[] = [];
     featuredEbooks: UnifiedBook[] = [];
     bookOfTheDay: UnifiedBook | null = null;
+    
+    // Challenges State
+    myChallenges: any[] = [];
+    publicChallenges: any[] = [];
 
     categories: string[] = [];
     allCategories: string[] = []; // Unified list
@@ -105,6 +116,11 @@ export class LibraryComponent implements OnInit, OnDestroy {
     viewMode: 'all' | 'owned' | 'favorites' | 'subscription' = 'all';
     bookSource: 'internal' | 'external' = 'internal'; // Toggle for merged books tab
     showDownloadedOnly: boolean = false;
+    
+    // Sidebar Advanced Filters
+    selectedLanguage: string = ''; // '', 'ar', 'en'
+    selectedPriceMode: string = ''; // '', 'free', 'paid'
+    selectedRating: number = 0; // 0 for all, 1,2,3,4,5 min rating
 
     // Pagination State (Internal)
     currentPage: number = 1;
@@ -117,6 +133,14 @@ export class LibraryComponent implements OnInit, OnDestroy {
     showSurpriseModal = false;
     currentOffer: WhitelistedOffer | null = null;
 
+    // Quick View State
+    quickViewBook: UnifiedBook | null = null;
+    showQuickViewModal = false;
+
+    // Shared Book State (for /library/:bookId route)
+    private sharedBookId: string | null = null;
+    private sharedBookHandled = false;
+
     private uploadsBaseUrl = environment.uploadsBaseUrl;
     private subscriptions: RxSubscription[] = [];
     private searchSubject = new Subject<string>();
@@ -126,13 +150,15 @@ export class LibraryComponent implements OnInit, OnDestroy {
         private subscriptionService: SubscriptionService,
         private userLibraryService: UserLibraryService,
         public authService: AuthService,
+        private readingChallengeService: ReadingChallengeService,
         private offlineEbookService: OfflineEbookService,
         private externalLibraryService: ExternalLibraryService,
         private downloadManager: DownloadManagerService,
         private specialOffersService: SpecialOffersService,
         private router: Router,
         private route: ActivatedRoute,
-        private cdr: ChangeDetectorRef
+        private cdr: ChangeDetectorRef,
+        @Inject(PLATFORM_ID) private platformId: Object
     ) { }
 
     ngOnInit(): void {
@@ -142,8 +168,19 @@ export class LibraryComponent implements OnInit, OnDestroy {
             }
         });
 
-        // Check login status
-        const isLoggedIn = this.authService.isLoggedIn();
+        // Check for shared book ID from /library/:bookId route
+        this.route.params.subscribe(params => {
+            if (params['bookId']) {
+                this.sharedBookId = params['bookId'];
+                this.sharedBookHandled = false;
+            }
+        });
+
+        // Check login status (only in browser to avoid SSR issues with auth state)
+        let isLoggedIn = false;
+        if (isPlatformBrowser(this.platformId)) {
+            isLoggedIn = this.authService.isLoggedIn();
+        }
 
         this.categories = this.ebookService.getCategories();
         this.updateUnifiedCategories();
@@ -159,50 +196,63 @@ export class LibraryComponent implements OnInit, OnDestroy {
             });
             this.subscriptions.push(sub);
             
+            // Load challenges immediately if logged in
+            this.loadMyChallenges();
+            
             // Check for Special Offers (Surprise!)
-            this.checkForSpecialOffers();
+            if (isPlatformBrowser(this.platformId)) {
+                this.checkForSpecialOffers();
+            }
         }
 
-        this.loadData();
-        this.loadExternalData();
+        if (isPlatformBrowser(this.platformId)) {
+            this.loadData();
+            this.loadExternalData();
+        } else {
+            // SSR Fallback
+            this.isLoading = false;
+            this.isInternalLoading = false;
+        }
 
-        // Subscribe to Favorite IDs
-        const favSub = this.authService.favoriteBookIds.subscribe(ids => {
-            this.favoriteEbookIds = new Set(ids);
-            if (this.viewMode === 'favorites') {
-                this.applyFilters();
-            }
-        });
-        this.subscriptions.push(favSub);
+        if (isPlatformBrowser(this.platformId)) {
+            // Subscribe to Favorite IDs
+            const favSub = this.authService.favoriteBookIds.subscribe(ids => {
+                this.favoriteEbookIds = new Set(ids);
+                if (this.viewMode === 'favorites') {
+                    this.applyFilters();
+                }
+            });
+            this.subscriptions.push(favSub);
 
-        // Subscribe to Downloaded Book IDs (for persistence across page refresh)
-        const downloadSub = this.downloadManager.downloadedBookIds$.subscribe(ids => {
-            this.downloadedBooks = ids;
+            // Subscribe to Downloaded Book IDs (for persistence across page refresh)
+            const downloadSub = this.downloadManager.downloadedBookIds$.subscribe(ids => {
+                this.downloadedBooks = ids;
+                this.updateTotalDownloadsCount();
+                this.updateUnifiedGrid(); // Fix: Update UI for "Read" button
+            });
+            this.subscriptions.push(downloadSub);
+
+            // Initial load of total downloads count
             this.updateTotalDownloadsCount();
-            this.updateUnifiedGrid(); // Fix: Update UI for "Read" button
-        });
-        this.subscriptions.push(downloadSub);
 
-        // Initial load of total downloads count
-        this.updateTotalDownloadsCount();
+            // Ensure favorites are loaded (if user is logged in)
+            this.authService.user$.subscribe(user => {
+                if (user && user.id) {
+                    this.authService.loadUserData(user.id);
+                }
+            });
 
-        // Ensure favorites are loaded (if user is logged in)
-        this.authService.user$.subscribe(user => {
-            if (user && user.id) {
-                this.authService.loadUserData(user.id);
-            }
-        });
+            this.checkInternalDownloads();
 
-        this.checkInternalDownloads();
-
-        // Debounced backend search (only fires after 500ms of no typing)
-        const searchSub = this.searchSubject.pipe(
-            debounceTime(500),
-            distinctUntilChanged()
-        ).subscribe(query => {
-            this.loadData(false); // Fetch from backend with the search query
-        });
-        this.subscriptions.push(searchSub);
+            // Debounced backend search (only fires after 500ms of no typing)
+            const searchSub = this.searchSubject.pipe(
+                debounceTime(500),
+                distinctUntilChanged()
+            ).subscribe(query => {
+                this.loadData(false); // Fetch from backend with the search query
+            });
+            this.subscriptions.push(searchSub);
+        }
     }
 
     loadSubscriptionHistory() {
@@ -337,6 +387,9 @@ export class LibraryComponent implements OnInit, OnDestroy {
                 this.isInternalLoading = false;
                 this.isLoadingMore = false;
                 this.cdr.markForCheck();
+
+                // Auto-open shared book if navigated via /library/:bookId
+                this.tryOpenSharedBook();
             },
             error: (err) => {
                 console.error('Error loading ebooks:', err);
@@ -448,7 +501,7 @@ export class LibraryComponent implements OnInit, OnDestroy {
             title: book.title,
             author: book.author,
             coverUrl: 'assets/images/defaults/book_cover_placeholder.png', // Or dynamic 
-            category: book.category,
+            category: this.getCategoryName(book.category),
             source: 'external',
             rating: undefined,
             isFree: true,
@@ -597,6 +650,26 @@ export class LibraryComponent implements OnInit, OnDestroy {
             console.log('KENOUZ DEBUG: After Category Filter:', filtered.length, 'Cat (Display):', this.selectedCategory, 'Sample Cat (Raw):', this.ebooks[0]?.category);
         }
 
+        // Advanced Sidebar Filters
+        if (this.selectedLanguage) {
+            // Assume e.language might be 'ar', 'en', 'arabic', etc. Adjust safely
+            filtered = filtered.filter(e => e.language && e.language.toLowerCase().startsWith(this.selectedLanguage));
+        }
+
+        if (this.selectedPriceMode === 'free') {
+            filtered = filtered.filter(e => !e.price || e.price === 0);
+        } else if (this.selectedPriceMode === 'paid') {
+            filtered = filtered.filter(e => e.price && e.price > 0);
+        }
+
+        if (this.selectedRating > 0) {
+            filtered = filtered.filter(e => {
+                const stats = this.getBookStats(e._id);
+                const realRating = e.averageRating || stats.rating;
+                return realRating >= this.selectedRating;
+            });
+        }
+
         this.filteredEbooks = filtered;
         console.log('KENOUZ DEBUG: Final Filtered Ebooks:', this.filteredEbooks.length);
         this.updateUnifiedGrid(); // Trigger Merge
@@ -640,11 +713,42 @@ export class LibraryComponent implements OnInit, OnDestroy {
             filtered = filtered.filter(b => this.downloadedBooks.has(b.id));
         }
 
+        // Advanced Sidebar Filters (External are free, mostly no language/rating guarantees)
+        if (this.selectedPriceMode === 'paid') {
+            filtered = []; // All external books are free
+        }
+        if (this.selectedRating > 0) {
+            filtered = []; // External books usually don't have ratings mapped
+        }
+
         this.filteredExternalBooks = filtered;
         this.externalTotalItems = filtered.length;
         this.externalCurrentPage = 1;
         this.updateExternalPagination();
         this.updateUnifiedGrid(); // Trigger Merge
+    }
+
+    setAdvancedFilter(type: 'language' | 'price' | 'rating', value: any): void {
+        if (type === 'language') this.selectedLanguage = value;
+        else if (type === 'price') this.selectedPriceMode = value;
+        else if (type === 'rating') this.selectedRating = value;
+        
+        this.applyFilters();
+        this.applyExternalFilters();
+        
+        // Scroll to results slightly
+        const element = document.querySelector('.library-header-info');
+        if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }
+
+    clearAdvancedFilters(): void {
+        this.selectedLanguage = '';
+        this.selectedPriceMode = '';
+        this.selectedRating = 0;
+        this.applyFilters();
+        this.applyExternalFilters();
     }
 
     updateExternalPagination() {
@@ -680,6 +784,86 @@ export class LibraryComponent implements OnInit, OnDestroy {
         this.requestAuthorName = '';
     }
 
+    // --- Quick View Modal Logic ---
+    openQuickView(book: UnifiedBook, event: Event) {
+        event.stopPropagation();
+        this.quickViewBook = book;
+        this.showQuickViewModal = true;
+    }
+
+    closeQuickView() {
+        this.showQuickViewModal = false;
+        setTimeout(() => this.quickViewBook = null, 300); // clear after animation
+    }
+
+    /**
+     * Tries to open the shared book's Quick View modal.
+     * Called after data loads when navigated via /library/:bookId.
+     * If the book is already in the loaded list, opens it directly.
+     * Otherwise, fetches it from the API.
+     */
+    private tryOpenSharedBook() {
+        if (!this.sharedBookId || this.sharedBookHandled) return;
+
+        // First check if the book is already in the unified grid
+        const found = this.unifiedBooks.find(b => b.id === this.sharedBookId);
+        if (found) {
+            this.sharedBookHandled = true;
+            setTimeout(() => this.openQuickView(found, new MouseEvent('click')), 300);
+            return;
+        }
+
+        // Also check allLoadedEbooks
+        const foundInCache = this.allLoadedEbooks.find(b => b._id === this.sharedBookId);
+        if (foundInCache) {
+            this.sharedBookHandled = true;
+            const mapped: UnifiedBook = {
+                id: foundInCache._id,
+                title: foundInCache.title,
+                author: foundInCache.author,
+                coverUrl: this.getCoverImageUrl(foundInCache),
+                category: this.getCategoryName(foundInCache.category),
+                source: 'internal',
+                rating: foundInCache.averageRating,
+                isFree: foundInCache.price === 0,
+                originalObject: foundInCache,
+                isDownloaded: this.isInternalBookDownloaded(foundInCache),
+                isDownloading: this.isInternalBookDownloading(foundInCache),
+                downloadProgress: 0,
+                createdAt: foundInCache.createdAt ? new Date(foundInCache.createdAt) : new Date(0)
+            };
+            setTimeout(() => this.openQuickView(mapped, new MouseEvent('click')), 300);
+            return;
+        }
+
+        // Fetch from API if not found locally
+        this.sharedBookHandled = true;
+        this.ebookService.getEbookById(this.sharedBookId).subscribe({
+            next: (res) => {
+                if (res.success && res.data) {
+                    const book = res.data;
+                    const mapped: UnifiedBook = {
+                        id: book._id,
+                        title: book.title,
+                        author: book.author,
+                        coverUrl: this.getCoverImageUrl(book),
+                        category: this.getCategoryName(book.category),
+                        source: 'internal',
+                        rating: book.averageRating,
+                        isFree: book.price === 0,
+                        originalObject: book,
+                        isDownloaded: this.isInternalBookDownloaded(book),
+                        isDownloading: false,
+                        downloadProgress: 0,
+                        createdAt: book.createdAt ? new Date(book.createdAt) : new Date(0)
+                    };
+                    this.openQuickView(mapped, new MouseEvent('click'));
+                }
+            },
+            error: (err) => console.error('Error fetching shared book:', err)
+        });
+    }
+
     submitBookRequest() {
         if (!this.requestBookName.trim()) return;
 
@@ -706,9 +890,8 @@ export class LibraryComponent implements OnInit, OnDestroy {
         }).unsubscribe();
     }
 
-
     // --- Tab & Search Interactions ---
-    setActiveTab(tab: 'books' | 'achievements' | 'downloads') {
+    setActiveTab(tab: 'books' | 'achievements' | 'downloads' | 'challenges') {
         this.activeTab = tab;
         this.selectedCategory = '';
         this.searchQuery = '';
@@ -1034,6 +1217,10 @@ export class LibraryComponent implements OnInit, OnDestroy {
             targetBook.isDownloading = true;
             targetBook.downloadProgress = 0;
         }
+        if (this.quickViewBook && this.quickViewBook.id === book.id) {
+            this.quickViewBook.isDownloading = true;
+            this.quickViewBook.downloadProgress = 0;
+        }
 
         this.downloadManager.downloadAndProcessBook(
             book.id,
@@ -1051,6 +1238,12 @@ export class LibraryComponent implements OnInit, OnDestroy {
                         currentBook.isDownloading = false;
                         currentBook.isDownloaded = true;
                     }
+                }
+                
+                if (this.quickViewBook && this.quickViewBook.id === book.id) {
+                    this.quickViewBook.isDownloading = progress.state !== 'DONE';
+                    this.quickViewBook.downloadProgress = progress.progress;
+                    if (progress.state === 'DONE') this.quickViewBook.isDownloaded = true;
                 }
 
                 // If done, mark as ready
@@ -1082,8 +1275,6 @@ export class LibraryComponent implements OnInit, OnDestroy {
             this.downloadedBooks.add(bookId);
         }
     }
-
-
 
     isExternalFavorite(book: any): boolean {
         return this.offlineEbookService.isLocalFavorite(book.id);
@@ -1128,13 +1319,104 @@ export class LibraryComponent implements OnInit, OnDestroy {
         }
     }
 
-    downloadInternalBook(ebook: Ebook, event: Event) {
-        event.stopPropagation(); // Prevent opening book
+    async shareBook(book: any, event?: Event) {
+        if (event) {
+            event.stopPropagation();
+        }
+        
+        let url = 'https://knoozbook.com/library';
+        const bookId = book._id || book.id || book.bookId;
+        
+        if (book.source === 'internal' || bookId) {
+             url = `https://knoozbook.com/library/${bookId}`;
+        }
+        
+        const cleanUrl = decodeURIComponent(url);
+        const text = `اقرأ كتاب "${book.title}" على مكتبة كنوز الرقمية\n${cleanUrl}`;
+        
+        try {
+            if (typeof window !== 'undefined' && (window as any).Android && (window as any).Android.share) {
+                (window as any).Android.share(text);
+            } else if (navigator.share) {
+                await navigator.share({
+                    title: book.title,
+                    text: text
+                });
+            } else {
+                await Share.share({
+                    title: book.title,
+                    text: text,
+                    dialogTitle: 'مشاركة الكتاب'
+                });
+            }
+        } catch (err) {
+            console.warn('Share cancelled or failed', err);
+        }
+    }
+
+    createChallenge(book: any) {
+        if (this.readingChallengeModal) {
+            this.readingChallengeModal.bookId = book._id || book.id || (book.products_id ? book.products_id.toString() : '');
+            this.readingChallengeModal.bookTitle = book.title;
+            this.readingChallengeModal.bookCover = book.coverImage || book.products_image || '';
+            this.readingChallengeModal.open();
+        }
+    }
+
+    loadMyChallenges() {
+        this.readingChallengeService.getMyChallenges().subscribe({
+            next: (res: any) => {
+                if (res.success) {
+                    this.myChallenges = res.data || [];
+                    
+                    // If no challenges, load public challenges to show them
+                    if (this.myChallenges.length === 0) {
+                        this.readingChallengeService.getAllPublicChallenges().subscribe({
+                            next: (pubRes: any) => {
+                                if (pubRes.success) {
+                                    this.publicChallenges = pubRes.data || [];
+                                }
+                            }
+                        });
+                    }
+                }
+            },
+            error: (err) => console.error('Failed to load challenges:', err)
+        });
+    }
+
+    joinPublicChallenge(challengeId: string) {
+        this.readingChallengeService.joinChallenge({ challengeId }).subscribe({
+            next: (res: any) => {
+                if (res.success) {
+                    // Reload my challenges to reflect the new joined challenge
+                    this.loadMyChallenges();
+                }
+            },
+            error: (err: any) => {
+                const msg = err.error?.message || 'حدث خطأ أثناء الانضمام للتحدي';
+                alert(msg); // fallback to simple alert for now
+            }
+        });
+    }
+
+    viewChallenge(challenge: any) {
+        if (this.challengeDetailsModal) {
+            this.challengeDetailsModal.open(challenge);
+        }
+    }
+
+    async downloadInternalBook(ebook: Ebook, event: Event) {
+        if (event) { event.stopPropagation(); } // Prevent opening book
 
         if (this.downloadedInternalBooks.has(ebook._id)) return;
         if (this.internalDownloadStates[ebook._id]) return;
 
         this.internalDownloadStates[ebook._id] = { state: 'PENDING', progress: 0 };
+        if (this.quickViewBook && this.quickViewBook.id === ebook._id) {
+            this.quickViewBook.isDownloading = true;
+            this.quickViewBook.downloadProgress = 0;
+        }
         this.updateUnifiedGrid(); // Update UI immediately to show spinner/progress
 
         this.offlineEbookService.downloadBookWithProgress(ebook._id, ebook).subscribe({
@@ -1154,6 +1436,12 @@ export class LibraryComponent implements OnInit, OnDestroy {
                     this.bookOfTheDay.isDownloading = status.state !== 'DONE';
                     this.bookOfTheDay.downloadProgress = status.progress;
                     if (status.state === 'DONE') this.bookOfTheDay.isDownloaded = true;
+                }
+                
+                if (this.quickViewBook && this.quickViewBook.id === ebook._id) {
+                    this.quickViewBook.isDownloading = status.state !== 'DONE';
+                    this.quickViewBook.downloadProgress = status.progress;
+                    if (status.state === 'DONE') this.quickViewBook.isDownloaded = true;
                 }
 
                 if (status.state === 'DONE') {

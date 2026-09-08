@@ -80,6 +80,7 @@ const crypto = require('crypto');
 
 // استيراد المسارات
 const usersRoutes = require('./routes/users.routes');
+const promotionsRoutes = require('./routes/promotion.routes');
 const booksRoutes = require('./routes/books.routes');
 const productsRoutes = require('./routes/products.routes');
 const ordersRoutes = require('./routes/orders.routes');
@@ -88,6 +89,8 @@ const printRoutes = require('./routes/print.routes');
 const chatAiRoutes = require('./routes/chat-ai.routes');
 const quickActionsRoutes = require('./routes/quick-actions.routes');
 const adminRoutes = require('./routes/admin.routes'); // تأكد من وجود هذا المسار
+const statisticsRoutes = require('./routes/statistics.routes');
+const bookRequestRoutes = require('./routes/book-request.routes');
 const merchantRoutes = require('./routes/merchant.routes');
 const paymentRequestsRoutes = require('./routes/payment-requests.routes'); // استيراد مسارات طلبات الدفع
 const versionRoutes = require('./routes/version.routes');
@@ -118,6 +121,9 @@ const amazonAccountRoutes = require('./routes/amazon-account.routes');
 const amazonOAuthRoutes = require('./routes/amazon-oauth.routes');
 const publisherRoutes = require('./routes/publisher.routes');
 const shippingSettingRoutes = require('./routes/shipping-setting.routes');
+const youtubeVideoRoutes = require('./routes/youtube-video.routes');
+const adminPartnershipRoutes = require('./routes/adminPartnershipRoutes');
+const partnerRoutes = require('./routes/partnerRoutes');
 const express = require('express');
 const app = express();
 const compression = require('compression');
@@ -162,7 +168,7 @@ const http = require('http');
 const server = http.createServer(app);
 
 // Increase server timeout for bulk operations (15 minutes)
-server.timeout = 900000; 
+server.timeout = 900000;
 server.keepAliveTimeout = 900000;
 server.headersTimeout = 910000;
 
@@ -196,12 +202,12 @@ if (isProduction) {
 app.get('/p/:shortCode', (req, res, next) => {
   console.log('🚀 [ROOT_P_HIT] Code:', req.params.shortCode);
   next();
-}, marketerController.redirectShortLink); 
+}, marketerController.redirectShortLink);
 app.get('/api/p/:shortCode', marketerController.redirectShortLink);
 
-app.get('/api/p/test-config', (req, res) => res.json({ 
-  success: true, 
-  message: 'Marketer Backend is READY', 
+app.get('/api/p/test-config', (req, res) => res.json({
+  success: true,
+  message: 'Marketer Backend is READY',
   timestamp: new Date(),
   version: 'ANTIGRAVITY-MARKETER-FIX-V1'
 }));
@@ -217,36 +223,36 @@ app.use((req, res, next) => {
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
- 
- // Rate Limiting - Global
- app.use('/api/', generalLimiter);
- 
- // Request Logger for debugging
- app.use((req, res, next) => {
-   res.setHeader('X-Backend-Version', 'ANTIGRAVITY-DEBUG-V5-FINAL');
-   console.log(`📡 [TRAFFIC] ${req.method} ${req.url} | Origin: ${req.headers.origin || 'N/A'}`);
-   const logEntry = `[${new Date().toISOString()}] ${req.method} ${req.url} - Origin: ${req.headers.origin || 'no-origin'} - Headers: ${JSON.stringify(req.headers)}\n`;
-   if (typeof logStream !== 'undefined') {
-     logStream.write(logEntry);
-   }
 
-   // Log response status
-   const oldSend = res.send;
-   res.send = function (data) {
-     const resLog = `[${new Date().toISOString()}] Response for ${req.url}: ${res.statusCode}\n`;
-     if (typeof logStream !== 'undefined') {
-       logStream.write(resLog);
-     }
-     return oldSend.apply(res, arguments);
-   };
+// Rate Limiting - Global
+app.use('/api/', generalLimiter);
 
-   next();
- });
- 
- app.get('/api/ping', (req, res) => res.json({ success: true, version: 'ANTIGRAVITY-DEBUG-V3', timestamp: new Date() }));
- app.get('/api/test-order', (req, res) => res.json({ success: true, message: 'API order path is reachable via GET' }));
- app.post('/api/test-post', (req, res) => res.json({ success: true, message: 'API POST is working', received: req.body }));
- app.get('/api/test-p', (req, res) => res.send('Marketer routing is working!'));
+// Request Logger for debugging
+app.use((req, res, next) => {
+  res.setHeader('X-Backend-Version', 'ANTIGRAVITY-DEBUG-V5-FINAL');
+  console.log(`📡 [TRAFFIC] ${req.method} ${req.url} | Origin: ${req.headers.origin || 'N/A'}`);
+  const logEntry = `[${new Date().toISOString()}] ${req.method} ${req.url} - Origin: ${req.headers.origin || 'no-origin'} - Headers: ${JSON.stringify(req.headers)}\n`;
+  if (typeof logStream !== 'undefined') {
+    logStream.write(logEntry);
+  }
+
+  // Log response status
+  const oldSend = res.send;
+  res.send = function (data) {
+    const resLog = `[${new Date().toISOString()}] Response for ${req.url}: ${res.statusCode}\n`;
+    if (typeof logStream !== 'undefined') {
+      logStream.write(resLog);
+    }
+    return oldSend.apply(res, arguments);
+  };
+
+  next();
+});
+
+app.get('/api/ping', (req, res) => res.json({ success: true, version: 'ANTIGRAVITY-DEBUG-V3', timestamp: new Date() }));
+app.get('/api/test-order', (req, res) => res.json({ success: true, message: 'API order path is reachable via GET' }));
+app.post('/api/test-post', (req, res) => res.json({ success: true, message: 'API POST is working', received: req.body }));
+app.get('/api/test-p', (req, res) => res.send('Marketer routing is working!'));
 
 // Inject IO into request for controllers
 app.use((req, res, next) => {
@@ -421,12 +427,13 @@ app.get('/api/extract-book', async (req, res) => {
 
     console.log(`[EXTRACT] Downloaded to: ${rarPath}`);
 
-    // 2. Extract RAR (Using unrar-promise dynamically)
-    // unrar-promise needs unrar binary on system. 
-    // Alternative: node-unrar-js (pure JS) or child_process.exec('unrar x ...')
-    const unrar = require('unrar-promise');
-    await unrar.extract(rarPath, tempDir);
-    console.log(`[EXTRACT] Extracted to: ${tempDir}`);
+    // 2. Extract RAR using node-unrar-js (pure JS, no system binary needed)
+    const { createExtractorFromFile } = require('node-unrar-js');
+    const extractor = await createExtractorFromFile({ filepath: rarPath, targetPath: tempDir });
+    const extractResult = extractor.extract();
+    // Iterate through extracted files to ensure extraction completes
+    const extractedFiles = [...extractResult.files];
+    console.log(`[EXTRACT] Extracted ${extractedFiles.length} files to: ${tempDir}`);
 
     // 3. Find .bok file (Access/MDB)
     const files = fs.readdirSync(tempDir);
@@ -445,33 +452,72 @@ app.get('/api/extract-book', async (req, res) => {
     const reader = new MDBReader(buffer);
 
     // Shamela .bok structure:
-    // Table 'book' usually has 'nass' (text) and 'id'
-    // Or 'b' + bookId table
+    // Content table: 'b' + number (e.g. 'b31700') with columns: id, nass, page, Part
+    // TOC table: 't' + number (e.g. 't31700') with columns: id, tit, lvl, sub
     const tables = reader.getTableNames();
     console.log(`[EXTRACT] Tables:`, tables);
 
-    // Look for a table that starts with 'b' or contains content
-    const contentTable = tables.find(t => t.toLowerCase().startsWith('b') || t.toLowerCase() === 'book');
-    
+    // Find content table (starts with 'b' followed by digits)
+    const contentTable = tables.find(t => /^b\d+$/i.test(t)) || tables.find(t => t.toLowerCase().startsWith('b') || t.toLowerCase() === 'book');
+
     if (!contentTable) {
       throw new Error('Could not find content table in .bok');
     }
 
+    console.log(`[EXTRACT] Using content table: ${contentTable}`);
     const table = reader.getTable(contentTable);
-    const rows = table.getData(); // This can be huge!
+    const rows = table.getData();
 
-    // Convert rows to text, handling encoding (Shamela is usually Windows-1256)
-    // mdb-reader usually returns strings, but if they are garbled we might need raw buffers.
-    // Shamela stores text in 'nass' column.
-    let fullText = rows.map(r => r.nass || r.Nass || '').join('\n\n');
+    // Fix Windows-1256 encoding - mdb-reader reads as latin1, need to convert
+    const iconv = require('iconv-lite');
+    const fixEncoding = (text) => {
+      if (!text) return '';
+      // Convert from the garbled latin1 representation back to proper Arabic
+      const buf = Buffer.from(text, 'latin1');
+      return iconv.decode(buf, 'win1256');
+    };
+
+    // Extract text from 'nass' column with encoding fix
+    let fullText = rows.map(r => {
+      const rawText = r.nass || r.Nass || '';
+      return fixEncoding(rawText);
+    }).join('\n\n');
 
     // Clean up HTML-like tags Shamela uses
     fullText = fullText.replace(/<(.*?)>/g, '');
 
+    // Build TOC from t-table if available
+    const tocTableName = contentTable.replace(/^b/i, 't');
+    let toc = [];
+    let idMap = {};
+    if (tables.includes(tocTableName)) {
+      try {
+        const tocTable = reader.getTable(tocTableName);
+        const tocRows = tocTable.getData();
+        toc = tocRows.map(r => ({
+          id: r.id,
+          title: fixEncoding(r.tit || ''),
+          level: r.lvl || 1
+        }));
+        // Build idMap: maps page IDs to row indices
+        rows.forEach((r, idx) => {
+          if (r.id) idMap[String(r.id)] = idx;
+        });
+        console.log(`[EXTRACT] Built TOC with ${toc.length} entries`);
+      } catch (e) {
+        console.log(`[EXTRACT] TOC extraction failed:`, e.message);
+      }
+    }
+
+    console.log(`[EXTRACT] Extracted ${rows.length} pages, total text length: ${fullText.length}`);
+
     res.json({
       success: true,
       bookId,
-      text: fullText.substring(0, 50000) // Return first 50k chars for now
+      content: fullText,
+      length: fullText.length,
+      toc,
+      idMap
     });
 
   } catch (error) {
@@ -483,12 +529,13 @@ app.get('/api/extract-book', async (req, res) => {
       if (fs.existsSync(tempDir)) {
         // fs.rmSync(tempDir, { recursive: true, force: true });
       }
-    } catch (e) {}
+    } catch (e) { }
   }
 });
 
 // Routes
 app.use('/api/users', usersRoutes);
+app.use('/api/promotions', promotionsRoutes);
 app.use('/api/books', booksRoutes);
 app.use('/api/products', productsRoutes);
 app.use('/api/orders', ordersRoutes);
@@ -497,6 +544,9 @@ app.use('/api/feedback', feedbackRoutes);
 app.use('/api/chat-ai', chatAiRoutes);
 app.use('/api/quick-actions', quickActionsRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/admin/settings', adminSettingsRoutes);
+app.use('/api/statistics', statisticsRoutes);
+app.use('/api/book-requests', bookRequestRoutes);
 app.use('/api/merchant', merchantRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/bourse', bourseRoutes);
@@ -506,6 +556,9 @@ app.use('/api/newsletter', newsletterRoutes);
 app.use('/api/publishers', publisherRoutes);
 app.use('/api/affiliate', affiliateRoutes);
 app.use('/api/shipping-settings', shippingSettingRoutes);
+app.use('/api/youtube', youtubeVideoRoutes);
+app.use('/api/admin/partnership', adminPartnershipRoutes);
+app.use('/api/partnership', partnerRoutes);
 
 // Delete print order and associated file
 const mongoose = require('mongoose');
@@ -528,6 +581,7 @@ app.use('/api/mutabaa', require('./routes/mutabaa.routes')); // Smart Mutaba'a R
 app.use('/api/hifz-plan', require('./routes/hifzPlan.routes')); // Dynamic Hifz Plan Routes
 app.use('/api/halaqa', require('./routes/halaqa.routes')); // Community Halaqa Routes
 app.use('/api/asr-review', require('./routes/asr-review.routes')); // ASR Voice Review Routes
+app.use('/api/reading-challenges', require('./routes/reading-challenge.routes')); // Reading Challenges Routes
 
 // Apply specific rate limiters to sensitive routes
 app.use('/api/users/login', authLimiter);
@@ -535,10 +589,10 @@ app.use('/api/halaqa/upload-voice', uploadLimiter);
 app.use('/api/halaqa/upload-file', uploadLimiter);
 
 // Amazon Integration Routes
-app.use('/api/amazon-products', amazonProductRoutes);
-app.use('/api/amazon-diagnostics', amazonDiagnosticsRoutes);
-app.use('/api/amazon-accounts', amazonAccountRoutes);
-app.use('/api/amazon-oauth', amazonOAuthRoutes);
+app.use('/api/amazon', amazonProductRoutes);
+app.use('/api/amazon', amazonDiagnosticsRoutes);
+app.use('/api/amazon/accounts', amazonAccountRoutes);
+app.use('/api/amazon/oauth', amazonOAuthRoutes);
 
 // Serve uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -558,7 +612,7 @@ if (fs.existsSync(distPath)) {
     if (req.url.startsWith('/api/')) return next();
     // Skip file extensions
     if (req.url.includes('.')) return next();
-    
+
     res.sendFile(path.join(distPath, 'index.html'));
   });
 } else {
@@ -584,7 +638,7 @@ const startServer = async () => {
     if (process.env.AMAZON_CONFIG_VALID === 'true') {
       console.log('🚀 [App] Initializing Amazon Publish Queue...');
       try {
-        await PublishAmazonProductJob.initialize();
+        await PublishAmazonProductJob.initializeQueue();
         console.log('✅ [App] Amazon Publish Queue initialized');
       } catch (queueErr) {
         console.error('❌ [App] Failed to initialize Amazon queue:', queueErr.message);
@@ -592,7 +646,7 @@ const startServer = async () => {
     }
 
     // Start cron jobs
-    cronJobs.init();
+    cronJobs.initCronJobs();
     console.log('✅ [App] Cron jobs initialized');
 
     server.listen(port, () => {

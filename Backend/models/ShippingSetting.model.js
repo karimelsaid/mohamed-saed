@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const shippingSettingSchema = new mongoose.Schema({
   activeCarrier: {
     type: String,
-    enum: ['bosta', 'aramex', 'none'],
+    enum: ['bosta', 'aramex', 'mylerz', 'jnt', 'shipblu', 'sprint', 'none'],
     default: 'none'
   },
   bosta: {
@@ -18,6 +18,25 @@ const shippingSettingSchema = new mongoose.Schema({
     accountPin: { type: String, default: '' },
     accountEntity: { type: String, default: '' },
     accountCountryCode: { type: String, default: '' },
+    isTestMode: { type: Boolean, default: true }
+  },
+  mylerz: {
+    username: { type: String, default: '' },
+    password: { type: String, default: '' },
+    isTestMode: { type: Boolean, default: true }
+  },
+  jnt: {
+    customerCode: { type: String, default: '' },
+    apiAccount: { type: String, default: '' },
+    apiPassword: { type: String, default: '' },
+    isTestMode: { type: Boolean, default: true }
+  },
+  shipblu: {
+    apiKey: { type: String, default: '' },
+    isTestMode: { type: Boolean, default: true }
+  },
+  sprint: {
+    apiKey: { type: String, default: '' },
     isTestMode: { type: Boolean, default: true }
   }
 }, {

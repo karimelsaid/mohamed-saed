@@ -1,6 +1,10 @@
 const ShippingSetting = require('../../models/ShippingSetting.model');
 const BostaService = require('./bosta.service');
 const AramexService = require('./aramex.service');
+const MylerzService = require('./mylerz.service');
+const JNTService = require('./jnt.service');
+const ShipBluService = require('./shipblu.service');
+const SprintService = require('./sprint.service');
 const Order = require('../../models/Order.model');
 
 class ShippingService {
@@ -10,10 +14,13 @@ class ShippingService {
       throw new Error('No active shipping carrier configured');
     }
 
-    if (settings.activeCarrier === 'bosta') {
-      return new BostaService(settings.bosta);
-    } else if (settings.activeCarrier === 'aramex') {
-      return new AramexService(settings.aramex);
+    switch(settings.activeCarrier) {
+      case 'bosta': return new BostaService(settings.bosta);
+      case 'aramex': return new AramexService(settings.aramex);
+      case 'mylerz': return new MylerzService(settings.mylerz);
+      case 'jnt': return new JNTService(settings.jnt);
+      case 'shipblu': return new ShipBluService(settings.shipblu);
+      case 'sprint': return new SprintService(settings.sprint);
     }
     
     throw new Error('Unsupported carrier');

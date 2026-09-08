@@ -5,6 +5,7 @@ import { PaymentRequestsComponent } from './payment-requests/payment-requests.co
 import { AdminAutomationComponent } from './admin-automation/admin-automation.component';
 import { AmazonCatalogComponent } from './amazon-catalog/amazon-catalog.component';
 import { ShippingSettingsComponent } from './shipping-settings/shipping-settings.component';
+import { PartnershipComponent } from './partnership/partnership.component';
 
 const routes: Routes = [
     { path: '', component: AdminDashboardComponent },
@@ -19,7 +20,9 @@ const routes: Routes = [
     { path: 'product-management', loadComponent: () => import('./product-management/product-management.component').then(m => m.ProductManagementComponent) },
     { path: 'amazon-diagnostics', loadComponent: () => import('./amazon-diagnostics/amazon-diagnostics.component').then(m => m.AmazonDiagnosticsComponent) },
     { path: 'amazon-catalog', component: AmazonCatalogComponent },
-    { path: 'shipping-settings', component: ShippingSettingsComponent }
+    { path: 'shipping-settings', component: ShippingSettingsComponent },
+    { path: 'partnership', component: PartnershipComponent },
+    { path: 'youtube-manager', loadComponent: () => import('./youtube-manager/youtube-manager.component').then(m => m.YoutubeManagerComponent) }
 ];
 
 @NgModule({

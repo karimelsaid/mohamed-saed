@@ -852,6 +852,40 @@ exports.updateOrderStatus = async (req, res) => {
     }
 
     const oldStatus = order.status;
+    
+    // Auto-Shipment Integration
+    if (status === 'تم الشحن' && oldStatus !== 'تم الشحن') {
+      try {
+        const shippingService = require('../services/shipping/shipping.service');
+        await shippingService.shipOrder(orderId);
+        
+        // Re-fetch user since shippingService saved it
+        const freshUser = await User.findOne({ 'orders._id': orderId });
+        const freshOrder = freshUser.orders.id(orderId);
+        
+        const updatedBy = req.body.updatedBy || (req.user ? req.user.username || req.user.email : 'مستخدم');
+        const updatedRole = req.body.role || (req.user ? req.user.role : 'user');
+        
+        freshOrder.statusLog.push({
+          status: status,
+          updatedAt: new Date(),
+          updatedBy: updatedBy,
+          role: updatedRole,
+          note: req.body.note || 'تم إنشاء بوليصة الشحن آلياً'
+        });
+        
+        await freshUser.save();
+        return res.json({ message: 'Order status updated and shipped successfully via active carrier', order: freshOrder });
+      } catch (shippingError) {
+        if (shippingError.message === 'No active shipping carrier configured' || shippingError.message === 'Unsupported carrier') {
+           console.log('[Shipping] Fallback to manual status update because no carrier is active.');
+        } else {
+           console.error('[Shipping API Error]', shippingError.message);
+           return res.status(500).json({ message: 'فشل إنشاء بوليصة الشحن عبر الشركة: ' + shippingError.message });
+        }
+      }
+    }
+
     order.status = status;
 
     // Push to status log

@@ -144,6 +144,23 @@ exports.checkAccess = async (req, res) => {
         const { ebookId } = req.params;
         const userId = req.user._id;
 
+        // Check if global free reading is active
+        const SystemSettings = require('../models/SystemSettings');
+        const settings = await SystemSettings.getInstance();
+        
+        if (settings.subscription && settings.subscription.globalFreeReading && settings.subscription.globalFreeReading.enabled) {
+            const endDate = settings.subscription.globalFreeReading.endDate;
+            const now = new Date();
+            
+            if (!endDate || new Date(endDate) > now) {
+                return res.json({
+                    success: true,
+                    hasAccess: true,
+                    accessType: 'subscription'
+                });
+            }
+        }
+
         // Check if user has active subscription
         const activeSubscription = await Subscription.findActiveSubscription(userId);
 

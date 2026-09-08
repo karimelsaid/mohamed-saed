@@ -228,6 +228,13 @@
     </span>
   </div>
 
+  <!-- Partner Dashboard -->
+  <div *ngIf="isLoggedIn && !showOnlyNotification" routerLink="/partner-dashboard" routerLinkActive="active-pill"
+    [routerLinkActiveOptions]="{exact:true}" class="nav-item-pill group flex-shrink-0" #partnerLink="routerLinkActive">
+    <fa-icon [icon]="faHandshake" class="text-[var(--knooz-gold)] transition-colors"></fa-icon>
+    <span class="nav-label text-[var(--knooz-gold)] font-bold">شريك</span>
+  </div>
+
   <!-- Merchant Panel (Hidden on mobile bottom nav, shown only on desktop) -->
   <div *ngIf="isMerchant && !showOnlyNotification" routerLink="/merchant/dashboard" routerLinkActive="active-pill"
     [routerLinkActiveOptions]="{exact:true}" class="nav-item-pill group hidden md:flex"

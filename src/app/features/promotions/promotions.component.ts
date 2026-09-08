@@ -8,12 +8,14 @@ import { AuthService } from '../../auth/auth.service';
 import { DataService } from '../../services/data.service';
 import { CheckoutModalComponent } from '../../checkout-modal/checkout-modal.component';
 import { FormsModule } from '@angular/forms';
-import { faGift, faBoxOpen, faStar, faChevronLeft, faArrowRight, faCopy, faClock } from '@fortawesome/free-solid-svg-icons';
+import { faGift, faBoxOpen, faStar, faChevronLeft, faArrowRight, faCopy, faClock, faShareNodes } from '@fortawesome/free-solid-svg-icons';
 import { interval, Subscription } from 'rxjs';
 import { ActivatedRoute } from '@angular/router';
 import { Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import { AnalyticsTrackingService } from '../../services/analytics-tracking.service';
+import { Share } from '@capacitor/share';
+import { Capacitor } from '@capacitor/core';
 
 @Component({
     selector: 'app-promotions',
@@ -28,6 +30,7 @@ export class PromotionsComponent implements OnInit, OnDestroy, AfterViewInit {
     private timerSubscription?: Subscription;
     theme: any;
     packages: any[] = [];
+    targetPackageId: string | null = null;
     loading = true;
     user: any = null;
     winningPrize: any = null;
@@ -55,6 +58,7 @@ export class PromotionsComponent implements OnInit, OnDestroy, AfterViewInit {
     faArrowRight = faArrowRight;
     faCopy = faCopy;
     faClock = faClock;
+    faShareNodes = faShareNodes;
 
     // Analytics tracking
     private trackedProducts = new Set<string>();
@@ -75,7 +79,7 @@ export class PromotionsComponent implements OnInit, OnDestroy, AfterViewInit {
         this.loadProductsForBuilder();
         this.authService.user$.subscribe(user => this.user = user);
 
-        // Check for 'builder' query param to auto-open custom builder
+        // Check for 'builder' and 'packageId' query params
         this.route.queryParams.subscribe(params => {
             if (params['builder'] === 'true') {
                 this.showCustomBuilder = true;
@@ -83,6 +87,10 @@ export class PromotionsComponent implements OnInit, OnDestroy, AfterViewInit {
                 setTimeout(() => {
                     document.getElementById('customBuilderSection')?.scrollIntoView({ behavior: 'smooth' });
                 }, 500);
+            }
+            if (params['packageId']) {
+                this.targetPackageId = params['packageId'];
+                this.tryOpenTargetPackage();
             }
         });
 
@@ -173,6 +181,9 @@ export class PromotionsComponent implements OnInit, OnDestroy, AfterViewInit {
                 });
                 this.loading = false;
 
+                // Auto-open shared package
+                this.tryOpenTargetPackage();
+
                 // Setup intersection observer for impression tracking
                 this.setupIntersectionObserver();
             },
@@ -207,6 +218,44 @@ export class PromotionsComponent implements OnInit, OnDestroy, AfterViewInit {
         navigator.clipboard.writeText(code).then(() => {
             alert('تم نسخ الكود بنجاح! 🎉');
         });
+    }
+
+    async sharePackage(pkg: any) {
+        if (!isPlatformBrowser(this.platformId)) return;
+        const shareUrl = `https://knoozbook.com/promotions?packageId=${pkg._id}`;
+        const shareTitle = `باقة ${pkg.name} من كنوز`;
+        
+        let booksList = '';
+        if (pkg.products && pkg.products.length > 0) {
+            booksList = '\n\nمحتويات الباقة:\n' + pkg.products.map((p: any, index: number) => 
+                `${index + 1}- ${p.product_name || p.title || p.name || 'كتاب'}`
+            ).join('\n');
+        }
+
+        const shareText = `احصل على ${pkg.name} بسعر ${pkg.promoPrice} ج.م فقط بدلاً من ${pkg.totalOriginalPrice} ج.م! 🎁${booksList}\n\nاضغط هنا للحصول على العرض:\n${shareUrl}`;
+
+        try {
+            if (Capacitor.isNativePlatform()) {
+                await Share.share({
+                    title: shareTitle,
+                    text: shareText,
+                    dialogTitle: 'مشاركة الباقة المميزة'
+                });
+            } else if (navigator.share) {
+                await navigator.share({
+                    title: shareTitle,
+                    text: shareText
+                });
+            } else {
+                this.copyCode(shareText);
+            }
+        } catch (error) {
+            console.error('Error sharing package:', error);
+            // Fallback for cancellation or error
+            if (!Capacitor.isNativePlatform() && error && (error as any).name !== 'AbortError') {
+                this.copyCode(shareText);
+            }
+        }
     }
 
     getRemainingTime(coupon: any): string {
@@ -271,6 +320,16 @@ export class PromotionsComponent implements OnInit, OnDestroy, AfterViewInit {
     viewPackageDetails(pkg: any) {
         this.selectedPackage = pkg;
         this.showDetailsModal = true;
+    }
+
+    tryOpenTargetPackage() {
+        if (this.targetPackageId && this.packages.length > 0) {
+            const pkg = this.packages.find(p => p._id === this.targetPackageId);
+            if (pkg) {
+                this.viewPackageDetails(pkg);
+                this.targetPackageId = null; // Clear so it only happens once
+            }
+        }
     }
 
     purchasePackage(pkg: any) {
@@ -446,6 +505,9 @@ export class PromotionsComponent implements OnInit, OnDestroy, AfterViewInit {
         // If it's already a full URL
         if (imageId.startsWith('http')) return imageId;
 
+        // If it's a relative server path (e.g. /uploads/books/...)
+        if (imageId.startsWith('/uploads/')) return `https://knoozbook.com${imageId}`;
+
         const merchant = book.merchantId;
         // Logic to determine if it's an admin product
         const isAdmin = merchant?.role === 'admin' || (!merchant && !book.merchantName);
@@ -457,7 +519,7 @@ export class PromotionsComponent implements OnInit, OnDestroy, AfterViewInit {
             finalPath = `admin__karim_mohamed__/${id}/${id}.webp`;
         } else {
             // Pattern for merchants: merchant_{username}/{id}/{id}.webp
-            const username = merchant?.username || book.merchantName || 'unknown';
+            const username = merchant?.usernme || book.merchantName || 'unknown';
             const sanitized = String(username).replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
             const id = /^\d+$/.test(imageId) ? imageId : pid;
             finalPath = `merchant_${sanitized}/${id}/${id}.webp`;

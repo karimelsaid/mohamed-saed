@@ -35,6 +35,10 @@
         </div>
 
         <div class="top-actions">
+            <!-- Music Button -->
+            <button class="icon-btn" (click)="toggleMusic()" [class.active]="isMusicPlaying" title="موسيقى التركيز">
+                <i class="fas" [ngClass]="isMusicPlaying ? 'fa-volume-up' : 'fa-volume-mute'"></i>
+            </button>
             <button class="icon-btn" (click)="toggleSection('toc')" [class.active]="activeSection === 'toc'"
                 title="الفهرس">
                 <i class="fas fa-list-ul"></i>
@@ -51,9 +55,79 @@
                 [class.active]="activeSection === 'highlights'" title="التظليلات">
                 <i class="fas fa-highlighter"></i>
             </button>
+            <!-- Reading Challenge Leaderboard Button -->
+            <button *ngIf="activeChallenges.length > 0" class="icon-btn" (click)="toggleLeaderboard()" [class.active]="showLeaderboard"
+                title="تحدي القراءة" style="position: relative;">
+                <i class="fas fa-trophy" style="color: #f59e0b;"></i>
+                <span style="position:absolute;top:2px;right:2px;width:8px;height:8px;background:#22c55e;border-radius:50;border:1px solid white;" *ngIf="activeChallenges.length > 0"></span>
+            </button>
         </div>
     </div>
 
+    <!-- Reading Challenge Leaderboard Panel -->
+    <div *ngIf="showLeaderboard && activeChallenges.length > 0" 
+        style="position:fixed;top:60px;left:16px;z-index:9999;width:320px;max-height:calc(100vh - 80px);overflow-y:auto;background:rgba(255,255,255,0.97);border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,0.3);backdrop-filter:blur(20px);border:1px solid rgba(0,0,0,0.1);">
+        
+        <!-- Header -->
+        <div style="background:linear-gradient(135deg,#f59e0b,#ea580c);padding:16px 20px;border-radius:20px 20px 0 0;display:flex;align-items:center;justify-content:space-between;">
+            <div style="display:flex;align-items:center;gap:8px;">
+                <i class="fas fa-trophy" style="color:#fef08a;font-size:20px;"></i>
+                <span style="color:white;font-weight:900;font-size:16px;">تحدي القراءة</span>
+            </div>
+            <button (click)="toggleLeaderboard()" style="background:rgba(255,255,255,0.2);border:none;color:white;width:28px;height:28px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <!-- Challenges List -->
+        <div style="padding:12px;" *ngFor="let challenge of activeChallenges; let i = index">
+            <div style="background:linear-gradient(135deg,#fffbeb,#fef3c7);border-radius:16px;padding:14px;border:1px solid #fde68a;margin-bottom:8px;">
+                <h4 style="font-weight:900;font-size:13px;color:#92400e;margin:0 0 4px 0;">{{ challenge.title }}</h4>
+                <div style="font-size:11px;color:#a16207;margin-bottom:10px;">
+                    <i class="fas fa-users"></i> {{ challenge.participants?.length || 0 }} مشاركين
+                </div>
+                
+                <!-- Participants Leaderboard -->
+                <div *ngFor="let p of getSortedParticipants(challenge); let rank = index" 
+                    style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:12px;margin-bottom:4px;"
+                    [style.background]="rank === 0 ? 'linear-gradient(135deg,#fef08a,#fde68a)' : rank === 1 ? 'linear-gradient(135deg,#e5e7eb,#d1d5db)' : rank === 2 ? 'linear-gradient(135deg,#fed7aa,#fdba74)' : 'white'">
+                    
+                    <!-- Rank -->
+                    <div style="width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:11px;"
+                        [style.background]="rank === 0 ? '#f59e0b' : rank === 1 ? '#9ca3af' : rank === 2 ? '#ea580c' : '#e5e7eb'"
+                        [style.color]="rank < 3 ? 'white' : '#6b7280'">
+                        {{ rank + 1 }}
+                    </div>
+                    
+                    <!-- Avatar -->
+                    <div style="width:28px;height:28px;border-radius:50%;overflow:hidden;background:#e5e7eb;flex-shrink:0;">
+                        <img *ngIf="getParticipantAvatar(p)" [src]="getParticipantAvatar(p)" style="width:100%;height:100%;object-fit:cover;">
+                        <div *ngIf="!getParticipantAvatar(p)" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:12px;color:#9ca3af;">
+                            <i class="fas fa-user"></i>
+                        </div>
+                    </div>
+                    
+                    <!-- Name + Progress -->
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-weight:800;font-size:11px;color:#1f2937;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                            {{ getParticipantName(p) }}
+                        </div>
+                        <div style="width:100%;height:6px;background:#e5e7eb;border-radius:3px;margin-top:3px;overflow:hidden;">
+                            <div style="height:100%;border-radius:3px;transition:width 0.5s ease;"
+                                [style.width]="p.progressPercent + '%'"
+                                [style.background]="rank === 0 ? '#f59e0b' : rank === 1 ? '#6b7280' : '#ea580c'">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Percentage -->
+                    <div style="font-weight:900;font-size:12px;color:#f59e0b;flex-shrink:0;">
+                        {{ p.progressPercent }}%
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
     <!-- Popup Panels (Overlay) -->
     <div class="overlay-backdrop" *ngIf="activeSection" (click)="closeAllPanels()"></div>
 
@@ -264,8 +338,7 @@
     </div>
 
     <!-- Selection Popup (for highlighting and copying) -->
-    <div class="selection-popup" *ngIf="showSelectionPopup" [style.left.px]="selectionPopupPosition.x"
-        [style.top.px]="selectionPopupPosition.y">
+    <div class="selection-popup" *ngIf="showSelectionPopup" [style.left.px]="selectionPopupPosition.x">
         <div class="color-options">
             <button *ngFor="let c of highlightColors" class="color-btn" [class.remove-btn]="c.isRemove"
                 [style.backgroundColor]="c.isRemove ? 'transparent' : c.color" [title]="c.name"
@@ -293,10 +366,24 @@
         </button>
     </div>
 
+    <!-- Internet Error Modal -->
+    <div class="modal-overlay" *ngIf="showInternetErrorModal">
+        <div class="modal-content">
+            <div class="modal-icon">
+                <i class="fas fa-wifi"></i>
+            </div>
+            <h3 class="modal-title">لا يوجد اتصال بالإنترنت</h3>
+            <p class="modal-message">يجب الاتصال بالإنترنت لتحميل الموسيقى في الخلفية</p>
+            <div class="modal-actions">
+                <button class="modal-btn primary" (click)="closeInternetErrorModal()">حسناً</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Subscription Prompt Overlay (Preview Mode) -->
     <div class="subscription-overlay" *ngIf="showSubscriptionPrompt">
         <div class="subscription-prompt">
-            <button class="close-prompt" (click)="closeSubscriptionPrompt()">
+            <button class="close-prompt" (click)="closeSubscriptionPrompt()" *ngIf="!(isPreviewMode && progressPercent >= 20)">
                 <i class="fas fa-times"></i>
             </button>
 
@@ -333,10 +420,27 @@
                 </div>
             </div>
 
-            <button class="subscribe-now-btn" (click)="goToSubscription()">
+            <button class="subscribe-now-btn" (click)="goToSubscription()" *ngIf="isLoggedIn">
                 <i class="fas fa-crown"></i>
                 اشترك الآن وأكمل رحلتك!
             </button>
+
+            <div *ngIf="!isLoggedIn" style="text-align: center;">
+                <p style="color: #fbbf24; font-weight: bold; margin-bottom: 12px; font-size: 1.05rem;">
+                    <i class="fas fa-user-lock"></i>
+                    سجل دخولك أولاً لتتمكن من الاشتراك
+                </p>
+                <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                    <button class="subscribe-now-btn" (click)="goToLogin()" style="flex: 1; min-width: 140px;">
+                        <i class="fas fa-sign-in-alt"></i>
+                        تسجيل الدخول
+                    </button>
+                    <button class="subscribe-now-btn" (click)="goToSignup()" style="flex: 1; min-width: 140px; background: linear-gradient(135deg, #10b981, #059669);">
+                        <i class="fas fa-user-plus"></i>
+                        إنشاء حساب
+                    </button>
+                </div>
+            </div>
 
             <p class="back-link">
                 <a (click)="goBack()">العودة للمكتبة</a>

@@ -1,0 +1,178 @@
+<div class="p-6 md:p-8 max-w-7xl mx-auto">
+  <div class="flex items-center justify-between mb-8">
+    <div>
+      <h1 class="text-3xl font-black text-gray-900 dark:text-white mb-2 flex items-center gap-3">
+        <fa-icon [icon]="['fas', 'handshake']" class="text-[var(--knooz-gold)]"></fa-icon>
+        إدارة نظام الشركاء
+      </h1>
+      <p class="text-gray-500 dark:text-gray-400">تحكم كامل في أسهم الشركة، الجولات الاستثمارية، وتوزيع الأرباح.</p>
+    </div>
+  </div>
+
+  <!-- Navigation Tabs -->
+  <div class="flex gap-2 overflow-x-auto pb-4 mb-8 border-b border-gray-200 dark:border-gray-700 custom-scrollbar">
+    <button (click)="setTab('settings')" 
+            class="px-6 py-3 rounded-t-xl font-bold transition-colors whitespace-nowrap"
+            [ngClass]="activeTab === 'settings' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 border-b-2 border-indigo-600' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'">
+      <fa-icon [icon]="['fas', 'cogs']" class="ml-2"></fa-icon> إعدادات الشراكة
+    </button>
+    <button (click)="setTab('applications')" 
+            class="px-6 py-3 rounded-t-xl font-bold transition-colors whitespace-nowrap"
+            [ngClass]="activeTab === 'applications' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 border-b-2 border-indigo-600' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'">
+      <fa-icon [icon]="['fas', 'file-signature']" class="ml-2"></fa-icon> طلبات الانضمام
+    </button>
+    <button (click)="setTab('captable')" 
+            class="px-6 py-3 rounded-t-xl font-bold transition-colors whitespace-nowrap"
+            [ngClass]="activeTab === 'captable' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 border-b-2 border-indigo-600' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'">
+      <fa-icon [icon]="['fas', 'chart-pie']" class="ml-2"></fa-icon> جدول الحصص (Cap Table)
+    </button>
+  </div>
+
+  <!-- Alerts -->
+  <div *ngIf="successMessage" class="bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 p-4 rounded-xl mb-6 font-bold flex items-center gap-3">
+    <fa-icon [icon]="['fas', 'check-circle']"></fa-icon> {{ successMessage }}
+  </div>
+  <div *ngIf="error" class="bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 p-4 rounded-xl mb-6 font-bold flex items-center gap-3">
+    <fa-icon [icon]="['fas', 'exclamation-circle']"></fa-icon> {{ error }}
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="py-20 text-center">
+    <fa-icon [icon]="['fas', 'circle-notch']" animation="spin" class="text-4xl text-[var(--knooz-gold)]"></fa-icon>
+  </div>
+
+  <!-- Tab Content: Settings -->
+  <div *ngIf="!isLoading && activeTab === 'settings'" class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 md:p-8">
+    <h2 class="text-xl font-black mb-6 text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-700 pb-4">إعدادات الجولة الاستثمارية</h2>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div>
+        <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">حالة الشراكة</label>
+        <select [(ngModel)]="settings.status" class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white font-bold">
+          <option value="OPEN">مفتوح للتقديم (OPEN)</option>
+          <option value="PAUSED">موقوف مؤقتاً (PAUSED)</option>
+          <option value="CLOSED">مغلق (CLOSED)</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">تقييم الشركة (ج.م)</label>
+        <input type="number" [(ngModel)]="settings.companyValuation" class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white font-bold text-left" dir="ltr">
+      </div>
+      <div>
+        <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">إجمالي أسهم الشركة</label>
+        <input type="number" [(ngModel)]="settings.totalShares" class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white font-bold text-left" dir="ltr">
+      </div>
+      <div>
+        <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">سعر السهم (ج.م)</label>
+        <input type="number" [(ngModel)]="settings.sharePrice" class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white font-bold text-left text-[var(--knooz-gold)]" dir="ltr">
+      </div>
+      <div>
+        <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">الأسهم المتاحة للبيع</label>
+        <input type="number" [(ngModel)]="settings.availableShares" class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white font-bold text-left" dir="ltr">
+      </div>
+      <div>
+        <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">الحد الأدنى للاستثمار (ج.م)</label>
+        <input type="number" [(ngModel)]="settings.minimumInvestment" class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white font-bold text-left text-indigo-600" dir="ltr">
+      </div>
+      
+      <div class="lg:col-span-3">
+        <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">وصف الجولة للجمهور</label>
+        <textarea [(ngModel)]="settings.description" rows="3" class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white font-medium"></textarea>
+      </div>
+    </div>
+    
+    <div class="mt-8 flex justify-end">
+      <button (click)="saveSettings()" class="px-8 py-3 bg-gray-900 hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-100 dark:text-gray-900 text-white rounded-xl font-black transition-colors shadow-lg">
+        حفظ الإعدادات
+      </button>
+    </div>
+  </div>
+
+  <!-- Tab Content: Applications -->
+  <div *ngIf="!isLoading && activeTab === 'applications'" class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-right">
+        <thead class="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+          <tr>
+            <th class="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">اسم الشريك</th>
+            <th class="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">المبلغ / الأسهم</th>
+            <th class="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">تاريخ الطلب</th>
+            <th class="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">الحالة</th>
+            <th class="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase text-center">إجراء</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+          <tr *ngFor="let app of applications" class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+            <td class="px-6 py-4">
+              <div class="font-bold text-gray-900 dark:text-white">{{ app.partnerId?.fullName }}</div>
+              <div class="text-xs text-gray-500">{{ app.partnerId?.email }}</div>
+              <div class="text-xs text-gray-500" dir="ltr">{{ app.partnerId?.phone }}</div>
+            </td>
+            <td class="px-6 py-4">
+              <div class="font-black text-[var(--knooz-gold)]">{{ app.investmentAmount | number }} ج.م</div>
+              <div class="text-xs text-gray-500 font-bold">{{ app.requestedShares | number }} سهم</div>
+            </td>
+            <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
+              {{ app.createdAt | date:'short' }}
+            </td>
+            <td class="px-6 py-4">
+              <span class="px-3 py-1 text-xs font-bold rounded-full bg-blue-100 text-blue-700">{{ app.status }}</span>
+            </td>
+            <td class="px-6 py-4 text-center">
+              <button *ngIf="app.status !== 'APPROVED'" (click)="approveApplication(app._id)" class="px-4 py-2 bg-green-100 hover:bg-green-200 text-green-700 rounded-lg text-sm font-bold transition-colors">
+                اعتماد الشراكة
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="applications.length === 0">
+            <td colspan="5" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400 font-bold">
+              لا توجد طلبات شراكة حالياً.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Tab Content: Cap Table -->
+  <div *ngIf="!isLoading && activeTab === 'captable'" class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+    <div class="p-6 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 flex justify-between items-center">
+      <h2 class="text-lg font-black text-gray-900 dark:text-white">جدول الحصص والملكية (Cap Table)</h2>
+      <div class="text-sm font-bold text-gray-500">مجموع الشركاء: {{ capTable.length }}</div>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-right">
+        <thead class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+          <tr>
+            <th class="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">اسم الشريك</th>
+            <th class="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">عدد الأسهم المملوكة</th>
+            <th class="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">نسبة الملكية</th>
+            <th class="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">تاريخ الاعتماد</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+          <tr *ngFor="let shareholder of capTable" class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+            <td class="px-6 py-4 font-bold text-gray-900 dark:text-white">
+              {{ shareholder.partnerId?.fullName || 'غير معروف' }}
+            </td>
+            <td class="px-6 py-4 font-black text-indigo-700 dark:text-indigo-400">
+              {{ shareholder.shares | number }} سهم
+            </td>
+            <td class="px-6 py-4 font-black text-[var(--knooz-gold)]">
+              {{ shareholder.ownershipPercentage | number:'1.2-4' }}%
+            </td>
+            <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
+              {{ shareholder.createdAt | date:'mediumDate' }}
+            </td>
+          </tr>
+          <tr *ngIf="capTable.length === 0">
+            <td colspan="4" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400 font-bold">
+              لا يوجد شركاء معتمدين في جدول الملكية.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>

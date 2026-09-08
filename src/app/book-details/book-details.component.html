@@ -109,6 +109,13 @@
               class="absolute bottom-3 left-3 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-full p-3 shadow-lg transform hover:scale-110 transition-transform">
               <fa-icon [icon]="faShareAlt" class="text-gray-700 dark:text-gray-300 h-6 w-6"></fa-icon>
             </button>
+
+            <!-- Favorite Button -->
+            <button *ngIf="!imagesLoading" (click)="toggleFavorite()" title="أضف إلى المفضلة"
+              class="absolute top-3 right-3 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-full p-3 shadow-lg transform hover:scale-110 transition-colors z-20"
+              [ngClass]="isFavorite() ? 'text-red-500' : 'text-gray-400 dark:text-gray-500 hover:text-red-500'">
+              <fa-icon [icon]="['fas', 'heart']" class="h-6 w-6"></fa-icon>
+            </button>
           </div>
 
           <!-- Thumbnails -->
@@ -158,6 +165,23 @@
               <i class="fas fa-external-link-alt text-amber-500"></i>
               أفلييت رسمي
             </span>
+          </div>
+
+          <!-- تنبيه توفر المنتج للمنتجات غير الخاصة بالأدمن -->
+          <div *ngIf="book['merchantRole'] !== 'admin'" class="mb-4 p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border-2 border-amber-200 dark:border-amber-800">
+            <div class="flex items-start gap-3">
+              <div class="flex-shrink-0">
+                <svg class="w-6 h-6 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                </svg>
+              </div>
+              <div class="flex-1">
+                <h4 class="text-sm font-bold text-amber-800 dark:text-amber-300 mb-1">ملاحظة هامة بخصوص التوفر</h4>
+                <p class="text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
+                  هذا المنتج قد يتأخر أو قد يكون غير متاح حالياً. سنقوم بالتواصل معك في أسرع وقت ممكن بعد الطلب لإبلاغك بحالة التوفر.
+                </p>
+              </div>
+            </div>
           </div>
 
           <!-- السعر -->
@@ -431,10 +455,6 @@
                 <span>اشترِ من أمازون (Amazon.eg)</span>
                 <i class="fas fa-external-link-alt text-lg group-hover:translate-x-1 transition-transform duration-300"></i>
               </button>
-              <p class="text-xs text-gray-500 dark:text-gray-400 text-center leading-relaxed bg-amber-50 dark:bg-amber-950/30 p-3 rounded-xl border border-amber-200/50 dark:border-amber-800/50">
-                <i class="fas fa-info-circle text-amber-500 mr-1"></i>
-                بصفتنا مشاركين في برنامج Amazon Associates، فنحن نحصل على عمولة من عمليات الشراء المؤهلة التي تتم عبر روابطنا.
-              </p>
             </div>
 
             <!-- Main CTA Button (Non-Affiliate) -->
@@ -452,6 +472,13 @@
 
               <!-- Pulse Animation -->
               <div class="absolute inset-0 rounded-2xl animate-pulse-ring opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            </button>
+            
+            <!-- Reading Challenge Button -->
+            <button *ngIf="!isAffiliateProduct(book) && book.product_quantity > 0 && isBookCategory(book.product_category) && !isPhysicalBook(book)" (click)="createChallenge(book)"
+              class="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white px-6 py-4 rounded-2xl font-bold text-lg shadow-lg shadow-orange-500/25 transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 mt-4">
+              <fa-icon [icon]="['fas', 'trophy']" class="text-yellow-200 text-xl"></fa-icon>
+              <span>اقرأ مع أصدقائك 🏆</span>
             </button>
 
             <!-- Secondary Info -->
@@ -722,3 +749,4 @@
 
 <app-checkout-modal *ngIf="showCheckoutModal" [bookId]="book?.products_id" (close)="showCheckoutModal = false">
 </app-checkout-modal>
+<app-reading-challenge-modal *ngIf="book" [bookId]="book.products_id" [bookTitle]="book.product_name"></app-reading-challenge-modal>

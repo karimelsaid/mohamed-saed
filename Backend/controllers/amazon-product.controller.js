@@ -30,7 +30,7 @@ class AmazonProductController {
         });
       }
 
-      const product = await Product.findOne({ products_id: id });
+      const product = await Product.findOne({ $or: [ { products_id: id }, ...(require('mongoose').Types.ObjectId.isValid(id) ? [{ _id: id }] : []) ] });
       if (!product) {
         console.log('❌ [AMAZON CONTROLLER] PRODUCT_NOT_FOUND', {
           timestamp: new Date().toISOString(),
@@ -116,7 +116,7 @@ class AmazonProductController {
       });
 
       // Update product status with job ID for deduplication
-      await Product.findOneAndUpdate({ products_id: id }, {
+      await Product.findOneAndUpdate({ $or: [ { products_id: id }, ...(require('mongoose').Types.ObjectId.isValid(id) ? [{ _id: id }] : []) ] }, {
         amazonStatus: 'queued',
         amazonSyncInProgress: true,
         amazonRetryCount: 0,
@@ -147,7 +147,7 @@ class AmazonProductController {
     try {
       const { id } = req.params;
 
-      const product = await Product.findOne({ products_id: id }).select(
+      const product = await Product.findOne({ $or: [ { products_id: id }, ...(require('mongoose').Types.ObjectId.isValid(id) ? [{ _id: id }] : []) ] }).select(
         'amazonStatus amazonSku amazonAsin amazonSubmissionId amazonSyncedAt amazonLastError amazonRetryCount amazonSyncInProgress amazonJobId'
       );
 
@@ -221,7 +221,7 @@ class AmazonProductController {
     try {
       const { id } = req.params;
 
-      const product = await Product.findOne({ products_id: id });
+      const product = await Product.findOne({ $or: [ { products_id: id }, ...(require('mongoose').Types.ObjectId.isValid(id) ? [{ _id: id }] : []) ] });
       if (!product) {
         return res.status(404).json({
           success: false,
@@ -286,7 +286,7 @@ class AmazonProductController {
         });
       }
 
-      const product = await Product.findOne({ products_id: id });
+      const product = await Product.findOne({ $or: [ { products_id: id }, ...(require('mongoose').Types.ObjectId.isValid(id) ? [{ _id: id }] : []) ] });
       if (!product) {
         return res.status(404).json({
           success: false,
@@ -324,7 +324,7 @@ class AmazonProductController {
       const job = await PublishAmazonProductJob.sync(id);
 
       // Update product status with job ID for deduplication
-      await Product.findOneAndUpdate({ products_id: id }, {
+      await Product.findOneAndUpdate({ $or: [ { products_id: id }, ...(require('mongoose').Types.ObjectId.isValid(id) ? [{ _id: id }] : []) ] }, {
         amazonStatus: 'publishing',
         amazonSyncInProgress: true,
         amazonJobId: job.id
@@ -359,9 +359,9 @@ class AmazonProductController {
       }
 
       const products = await Product.find(filter)
-        .select('_id product_name product_price product_quantity status image_path product_image amazonStatus amazonSku amazonAsin amazonSyncedAt amazonLastError amazonRetryCount')
+        .select('_id product_name product_price product_quantity status publisher image_path product_image amazonStatus amazonSku amazonAsin amazonSyncedAt amazonLastError amazonRetryCount')
         .sort({ _id: -1 }) // Sort by latest products by default
-        .limit(200);
+        .limit(1000);
 
       res.json({
         success: true,

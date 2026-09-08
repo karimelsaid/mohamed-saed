@@ -109,8 +109,7 @@ exports.getAffiliateLink = async (req, res) => {
       success: true,
       productId: product._id,
       asin,
-      affiliateUrl,
-      disclosure: 'بصفتنا مشاركين في برنامج Amazon Associates، فنحن نحصل على عمولة من عمليات الشراء المؤهلة التي تتم عبر روابطنا.'
+      affiliateUrl
     });
   } catch (error) {
     console.error('❌ [Affiliate Controller] Error getting link:', error);

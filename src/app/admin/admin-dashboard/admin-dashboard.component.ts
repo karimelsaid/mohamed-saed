@@ -18,7 +18,7 @@ import * as XLSX from 'xlsx';
 import { FreeShippingRulesComponent } from './free-shipping/free-shipping-rules.component';
 import { Subscription } from 'rxjs';
 import { FaIconLibrary, FontAwesomeModule, FaIconComponent } from '@fortawesome/angular-fontawesome';
-import { faShoppingCart, faStore, faBook, faPrint, faPlus, faEdit, faTrash, faTruck, faUsers, faCheckCircle, faMoneyBillWave, faSitemap, faPlusCircle, faImage, faTag, faHashtag, faList, faDollarSign, faAlignLeft, faExclamationTriangle, faCartPlus, faHeart, faMobileAlt, faCamera, faTimes, faHome, faChartLine, faCog, faBars, faUserClock, faCoins, faUserPlus, faChartBar, faBell, faSearch, faSlidersH, faGift, faSyncAlt, faSpinner, faCloudUploadAlt, faGavel, faPaperPlane, faFileExcel, faStethoscope } from '@fortawesome/free-solid-svg-icons';
+import { faShoppingCart, faStore, faBook, faPrint, faPlus, faEdit, faTrash, faTruck, faUsers, faCheckCircle, faMoneyBillWave, faSitemap, faPlusCircle, faImage, faTag, faHashtag, faList, faDollarSign, faAlignLeft, faExclamationTriangle, faCartPlus, faHeart, faMobileAlt, faCamera, faTimes, faHome, faChartLine, faCog, faBars, faUserClock, faCoins, faUserPlus, faChartBar, faBell, faSearch, faSlidersH, faGift, faSyncAlt, faSpinner, faCloudUploadAlt, faGavel, faPaperPlane, faFileExcel, faStethoscope, faRobot, faHandshake, faFolder, faUserMinus } from '@fortawesome/free-solid-svg-icons';
 import { faWhatsapp, faAmazon } from '@fortawesome/free-brands-svg-icons';
 import { PaymentRequestsComponent } from '../payment-requests/payment-requests.component';
 import { UserHierarchyComponent } from '../user-hierarchy/user-hierarchy.component';
@@ -39,11 +39,13 @@ import { AdminService } from '../../services/admin.service';
 import { MarketerManagementComponent } from '../marketer-management/marketer-management.component';
 import { SpecialOffersManagerComponent } from '../special-offers-manager/special-offers-manager.component';
 import { AiControlCenterComponent } from '../ai-control-center/ai-control-center.component';
+import { PartnershipComponent } from '../partnership/partnership.component';
 import { AmazonDiagnosticsComponent } from '../amazon-diagnostics/amazon-diagnostics.component';
 import { AmazonCatalogComponent } from '../amazon-catalog/amazon-catalog.component';
 import { AmazonAccountsComponent } from '../amazon-accounts/amazon-accounts.component';
 import { MerchantAmazonLinkComponent } from '../merchant-amazon-link/merchant-amazon-link.component';
 import { ShippingSettingsComponent } from '../shipping-settings/shipping-settings.component';
+import { YoutubeManagerComponent } from '../youtube-manager/youtube-manager.component';
 
 interface Order {
   _id: string;
@@ -275,7 +277,7 @@ interface SystemSettings {
   };
 }
 
-export type AdminView = 'dashboard' | 'userIntelligence' | 'orders' | 'requestedBooks' | 'printOrders' | 'printingSettings' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'staff' | 'productApproval' | 'productManagement' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' | 'gamificationControl' | 'notifications' | 'subscriptionControl' | 'readerFeedback' | 'promotions' | 'salesRegistration' | 'shortagesReport' | 'promotionDates' | 'salesHistory' | 'community' | 'bourseSettings' | 'automation' | 'aiControlCenter' | 'newsletter' | 'marketers' | 'specialOffers' | 'amazonDiagnostics' | 'amazonCatalog' | 'amazonAccounts' | 'merchantAmazonLink' | 'shippingSettings';
+export type AdminView = 'dashboard' | 'partnership' | 'partnerDashboard' | 'userIntelligence' | 'orders' | 'requestedBooks' | 'printOrders' | 'printingSettings' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'staff' | 'productApproval' | 'productManagement' | 'merchantManagement' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' | 'gamificationControl' | 'notifications' | 'subscriptionControl' | 'readerFeedback' | 'promotions' | 'salesRegistration' | 'shortagesReport' | 'promotionDates' | 'salesHistory' | 'community' | 'bourseSettings' | 'automation' | 'aiControlCenter' | 'newsletter' | 'marketers' | 'specialOffers' | 'amazonDiagnostics' | 'amazonCatalog' | 'amazonAccounts' | 'merchantAmazonLink' | 'shippingSettings' | 'youtubeManager';
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -285,11 +287,17 @@ export type AdminView = 'dashboard' | 'userIntelligence' | 'orders' | 'requested
     FormsModule,
     RouterModule,
     FontAwesomeModule,
+    MerchantManagementComponent,
+    ProductManagementComponent,
+    AmazonDiagnosticsComponent,
+    AmazonCatalogComponent,
+    AmazonAccountsComponent,
+    MerchantAmazonLinkComponent,
+    ShippingSettingsComponent,
+    YoutubeManagerComponent,
     ModalDialogComponent,
     FreeShippingRulesComponent,
-    MerchantManagementComponent,
     ProductApprovalComponent,
-    ProductManagementComponent,
     PaymentRequestsComponent,
     UserHierarchyComponent,
     AmazonPriceCalculatorComponent,
@@ -307,11 +315,7 @@ export type AdminView = 'dashboard' | 'userIntelligence' | 'orders' | 'requested
     MarketerManagementComponent,
     SpecialOffersManagerComponent,
     AiControlCenterComponent,
-    AmazonDiagnosticsComponent,
-    AmazonCatalogComponent,
-    AmazonAccountsComponent,
-    MerchantAmazonLinkComponent,
-    ShippingSettingsComponent
+    PartnershipComponent
   ],
   templateUrl: './admin-dashboard.component.html',
   styleUrls: ['./admin-dashboard.component.css']
@@ -334,29 +338,136 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     {
       name: 'المخزون والمنتجات',
       icon: 'box',
-      views: ['addProduct', 'products', 'productApproval', 'amazonCalculator', 'ebooks']
+      views: ['addProduct', 'products', 'productApproval', 'productManagement', 'amazonCalculator', 'ebooks', 'amazonDiagnostics', 'amazonCatalog', 'amazonAccounts', 'merchantAmazonLink']
     },
     {
       name: 'المبيعات والطلبات',
       icon: 'shopping-cart',
-      views: ['orders', 'merchantOrders', 'requestedBooks', 'printOrders', 'salesRegistration', 'salesHistory', 'urgencyRequests']
+      views: ['orders', 'merchantOrders', 'requestedBooks', 'printOrders', 'salesRegistration', 'salesHistory', 'urgencyRequests', 'shortagesReport']
     },
     {
       name: 'إعدادات المنصة والأسعار',
       icon: 'cog',
-      views: ['printingSettings', 'freeShippingRules', 'mobileVersion', 'gamificationControl', 'notifications', 'subscriptionControl', 'promotionDates', 'bourseSettings', 'automation', 'specialOffers', 'shippingSettings']
+      views: ['printingSettings', 'freeShippingRules', 'mobileVersion', 'gamificationControl', 'notifications', 'subscriptionControl', 'promotionDates', 'bourseSettings', 'automation', 'specialOffers', 'shippingSettings', 'promotions']
     },
     {
       name: 'المستخدمين والتجار والمسوقين',
       icon: 'users',
-      views: ['userIntelligence', 'merchants', 'staff', 'userHierarchy', 'paymentRequests', 'newsletter', 'marketers']
+      views: ['dashboard', 'userIntelligence', 'merchants', 'merchantManagement', 'staff', 'userHierarchy', 'paymentRequests', 'newsletter', 'marketers']
     },
     {
       name: 'المحتوى والمجتمع',
       icon: 'comments',
-      views: ['newPage', 'readerFeedback', 'community']
+      views: ['newPage', 'readerFeedback', 'community', 'youtubeManager']
+    },
+    {
+      name: 'الذكاء الاصطناعي والتقنية',
+      icon: 'robot',
+      views: ['aiControlCenter', 'automation']
+    },
+    {
+      name: 'إدارة الشراكات',
+      icon: 'handshake',
+      views: ['partnership', 'partnerDashboard']
     }
   ];
+
+  // Get all available views from AdminView type for auto-sync
+  getAllAvailableViews(): string[] {
+    const allViews: string[] = [
+      'dashboard', 'partnership', 'partnerDashboard', 'userIntelligence', 'orders', 'requestedBooks', 'printOrders', 
+      'printingSettings', 'addProduct', 'products', 'newPage', 'freeShippingRules', 'merchants', 
+      'staff', 'productApproval', 'productManagement', 'merchantManagement', 'merchantOrders', 
+      'paymentRequests', 'userHierarchy', 'urgencyRequests', 'amazonCalculator', 'ebooks', 
+      'mobileVersion', 'gamificationControl', 'notifications', 'subscriptionControl', 'readerFeedback', 
+      'promotions', 'salesRegistration', 'shortagesReport', 'promotionDates', 'salesHistory', 
+      'community', 'bourseSettings', 'automation', 'aiControlCenter', 'newsletter', 'marketers', 
+      'specialOffers', 'amazonDiagnostics', 'amazonCatalog', 'amazonAccounts', 'merchantAmazonLink', 
+      'shippingSettings', 'youtubeManager'
+    ];
+    return allViews;
+  }
+
+  // Auto-sync permission groups with available views
+  syncPermissionGroups(): void {
+    const allViews = this.getAllAvailableViews();
+    const groupedViews = this.permissionGroups.flatMap(group => group.views);
+    
+    // Find views not in any group
+    const unassignedViews = allViews.filter(view => !groupedViews.includes(view));
+    
+    if (unassignedViews.length > 0) {
+      console.log('🔍 [AdminDashboard] Found unassigned views:', unassignedViews);
+      
+      // Categorize unassigned views based on keywords
+      const unassignedByCategory = this.categorizeUnassignedViews(unassignedViews);
+      
+      // Add categorized views to appropriate groups
+      Object.entries(unassignedByCategory).forEach(([category, views]) => {
+        const targetGroup = this.permissionGroups.find(g => g.name === category);
+        if (targetGroup) {
+          targetGroup.views = [...new Set([...targetGroup.views, ...views])];
+          console.log(`✅ [AdminDashboard] Added ${views.length} views to ${category}`);
+        } else {
+          // Create new group if category doesn't exist
+          this.permissionGroups.push({
+            name: category,
+            icon: 'folder',
+            views: views
+          });
+          console.log(`➕ [AdminDashboard] Created new group: ${category}`);
+        }
+      });
+    }
+  }
+
+  // Categorize unassigned views based on keywords
+  private categorizeUnassignedViews(views: string[]): Record<string, string[]> {
+    const categories: Record<string, string[]> = {
+      'المخزون والمنتجات': [],
+      'المبيعات والطلبات': [],
+      'إعدادات المنصة والأسعار': [],
+      'المستخدمين والتجار والمسوقين': [],
+      'المحتوى والمجتمع': [],
+      'الذكاء الاصطناعي والتقنية': [],
+      'إدارة الشراكات': []
+    };
+
+    views.forEach(view => {
+      const viewLower = view.toLowerCase();
+      
+      if (viewLower.includes('product') || viewLower.includes('amazon') || viewLower.includes('ebook') || viewLower.includes('calculator')) {
+        categories['المخزون والمنتجات'].push(view);
+      } else if (viewLower.includes('order') || viewLower.includes('sale') || viewLower.includes('request') || viewLower.includes('shortage')) {
+        categories['المبيعات والطلبات'].push(view);
+      } else if (viewLower.includes('setting') || viewLower.includes('notification') || viewLower.includes('gamification') || viewLower.includes('subscription') || viewLower.includes('promotion') || viewLower.includes('shipping') || viewLower.includes('bourse') || viewLower.includes('mobile')) {
+        categories['إعدادات المنصة والأسعار'].push(view);
+      } else if (viewLower.includes('user') || viewLower.includes('merchant') || viewLower.includes('staff') || viewLower.includes('marketer') || viewLower.includes('payment') || viewLower.includes('hierarchy') || viewLower.includes('newsletter')) {
+        categories['المستخدمين والتجار والمسوقين'].push(view);
+      } else if (viewLower.includes('content') || viewLower.includes('community') || viewLower.includes('feedback') || viewLower.includes('youtube') || viewLower.includes('page')) {
+        categories['المحتوى والمجتمع'].push(view);
+      } else if (viewLower.includes('ai') || viewLower.includes('automation') || viewLower.includes('tech')) {
+        categories['الذكاء الاصطناعي والتقنية'].push(view);
+      } else if (viewLower.includes('partner') || viewLower.includes('partnership')) {
+        categories['إدارة الشراكات'].push(view);
+      } else if (viewLower === 'dashboard') {
+        // Dashboard is a special case - add to user intelligence as main view
+        categories['المستخدمين والتجار والمسوقين'].push(view);
+      } else {
+        // Default to settings for unknown views
+        categories['إعدادات المنصة والأسعار'].push(view);
+      }
+    });
+
+    // Remove empty categories
+    Object.keys(categories).forEach(key => {
+      if (categories[key].length === 0) {
+        delete categories[key];
+      }
+    });
+
+    return categories;
+  }
 
   toggleGroupPermissions(staff: any, groupViews: string[]): void {
     const currentPermissions = [...(staff.permissions || [])];
@@ -375,12 +486,18 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       next: res => {
         if (res.success) {
           staff.permissions = newPermissions;
+          // Update current user if the staff member is the logged-in user
+          if (this.authService.currentUserValue?.id === staff._id) {
+            const updatedUser = { ...this.authService.currentUserValue, permissions: newPermissions };
+            this.authService.setUser(updatedUser);
+          }
         }
       }
     });
   }
 
-  isAdmin: boolean = false; 
+  isAdmin: boolean = false;
+  isStaff: boolean = false; 
 
   showSidebar: boolean = true;
   currentView: AdminView = 'userIntelligence'; 
@@ -929,6 +1046,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   // Navigation Titles Mapping
   viewTitles: Record<string, string> = {
     'dashboard': 'لوحة التحكم الرئيسية',
+    'partnership': 'نظام الشراكة',
+    'partnerDashboard': 'لوحة الشريك',
     'userIntelligence': 'ذكاء المستخدمين',
     'orders': 'إدارة الطلبات',
     'merchantOrders': 'طلبات التجار',
@@ -942,6 +1061,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     'merchants': 'إدارة التجار',
     'staff': 'إدارة الموظفين',
     'productApproval': 'اعتماد المنتجات',
+    'productManagement': 'إدارة المنتجات (Amazon)',
+    'merchantManagement': 'إدارة دور النشر',
     'paymentRequests': 'سحب الأرباح',
     'userHierarchy': 'شجرة العائلة (المسوقين)',
     'urgencyRequests': 'طلبات الاستعجال',
@@ -956,6 +1077,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     'salesRegistration': 'تسجيل مبيعات خارجية',
     'salesHistory': 'سجل المبيعات والعملاء',
     'shortagesReport': 'تقرير النواقص',
+    'promotionDates': 'إدارة تواريخ العروض',
     'community': 'إدارة التبادلات والمزادات',
     'bourseSettings': 'إعدادات بورصة الكتب',
     'automation': 'نظام الأتمتة والذكاء',
@@ -963,7 +1085,12 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     'newsletter': 'القائمة البريدية',
     'marketers': 'إدارة المسوقين العملاء',
     'specialOffers': 'إدارة العروض الخاصة (Emails)',
-    'amazonAccounts': 'إدارة حسابات أمازون'
+    'amazonDiagnostics': 'Amazon Diagnostics',
+    'amazonCatalog': 'كتالوج أمازون',
+    'amazonAccounts': 'إدارة حسابات أمازون',
+    'merchantAmazonLink': 'ربط حسابات أمازون',
+    'shippingSettings': 'إعدادات الشحن',
+    'youtubeManager': 'إدارة فيديوهات اليوتيوب'
   };
 
   // Global Navigation Search
@@ -982,6 +1109,30 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       return user.permissions?.includes(view) || false;
     }
     return false;
+  }
+
+  hasAnyPermissionInGroup(groupViews: string[]): boolean {
+    if (this.isAdmin) return true;
+    return groupViews.some(view => this.hasPermission(view));
+  }
+
+  // Check if a field should be shown based on filter mode
+  shouldShowField(fieldName: string): boolean {
+    if (this.fieldFilterMode === 'all') return true;
+    
+    const requiredFields = this.categoryRequiredFields[this.product.product_category] || this.commonRequiredFields;
+    return requiredFields.includes(fieldName);
+  }
+  
+  // Get required fields for current category
+  getCurrentRequiredFields(): string[] {
+    return this.categoryRequiredFields[this.product.product_category] || this.commonRequiredFields;
+  }
+  
+  // Check if a field is required
+  isFieldRequired(fieldName: string): boolean {
+    const requiredFields = this.getCurrentRequiredFields();
+    return requiredFields.includes(fieldName);
   }
 
   get filteredNavViews() {
@@ -1049,6 +1200,19 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   };
   selectedFiles: File[] = [];
   selectedFilesPreviews: string[] = [];
+  
+  // Field filtering mode
+  fieldFilterMode: 'all' | 'required' = 'all';
+  
+  // Define required fields for each category
+  categoryRequiredFields: Record<string, string[]> = {
+    'كتب': ['product_name', 'product_quantity', 'product_price', 'price_cost', 'weight', 'product_description'],
+    'أدوات مكتبية': ['product_name', 'product_quantity', 'product_price', 'price_cost', 'weight', 'product_description'],
+    'غير مصنف': ['product_name', 'product_quantity', 'product_price', 'price_cost', 'weight', 'product_description']
+  };
+  
+  // Common required fields for all categories
+  commonRequiredFields: string[] = ['product_name', 'product_quantity', 'product_price', 'price_cost', 'weight', 'product_description'];
   mainImageIndex: number = 0;
   imageError: string | null = null;
 
@@ -1571,16 +1735,20 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     library: FaIconLibrary
   ) {
     library.addIcons(
-      faShoppingCart, faStore, faBook, faPrint, faPlus, faEdit, faTrash, faTruck, faUsers, faCheckCircle, faMoneyBillWave, faSitemap, faPlusCircle, faImage, faTag, faHashtag, faList, faDollarSign, faAlignLeft, faExclamationTriangle, faCartPlus, faHeart, faMobileAlt, faCamera, faTimes, faHome, faChartLine, faCog, faBars, faUserClock, faCoins, faUserPlus, faChartBar, faBell, faSearch, faSlidersH, faPaperPlane, faWhatsapp, faAmazon, faStethoscope
+      faShoppingCart, faStore, faBook, faPrint, faPlus, faEdit, faTrash, faTruck, faUsers, faCheckCircle, faMoneyBillWave, faSitemap, faPlusCircle, faImage, faTag, faHashtag, faList, faDollarSign, faAlignLeft, faExclamationTriangle, faCartPlus, faHeart, faMobileAlt, faCamera, faTimes, faHome, faChartLine, faCog, faBars, faUserClock, faCoins, faUserPlus, faChartBar, faBell, faSearch, faSlidersH, faPaperPlane, faWhatsapp, faAmazon, faStethoscope, faRobot, faHandshake, faFolder, faUserMinus
     );
   }
 
   ngOnInit(): void {
+    // Auto-sync permission groups with available views
+    this.syncPermissionGroups();
+
     this.authService.user$.subscribe(user => {
       console.log('🏁 [AdminDashboard] User state updated:', user?.role);
       if (user && (user.role === 'admin' || user.role === 'staff')) {
         console.log('🚀 [AdminDashboard] Access approved for role:', user.role);
-        this.isAdmin = true;
+        this.isAdmin = user.role === 'admin';
+        this.isStaff = user.role === 'staff';
         this.loadOrders();
         this.loadNotifications();
         this.loadStats();
@@ -1589,6 +1757,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
         this.loadMerchantsList();
       } else {
         this.isAdmin = false;
+        this.isStaff = false;
         this.router.navigate(['/']);
       }
     });
@@ -1752,6 +1921,11 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       next: res => {
         if (res.success) {
           staff.permissions = permissions;
+          // Update current user if the staff member is the logged-in user
+          if (this.authService.currentUserValue?.id === staff._id) {
+            const updatedUser = { ...this.authService.currentUserValue, permissions: permissions };
+            this.authService.setUser(updatedUser);
+          }
         }
       }
     });
@@ -4036,7 +4210,12 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     console.log('Starting upload to:', `${this.backendBaseUrl}/admin/add-product`);
     console.log('Network status:', typeof navigator !== 'undefined' ? navigator.onLine : 'unknown');
 
-    this.http.request('POST', `${this.backendBaseUrl}/admin/add-product`, {
+    // Fix for Capacitor dropping Authorization headers on FormData requests
+    const user = JSON.parse(localStorage.getItem('user') || 'null');
+    const token = user?.token || localStorage.getItem('token') || '';
+    const url = `${this.backendBaseUrl}/admin/add-product${token ? '?token=' + encodeURIComponent(token) : ''}`;
+
+    this.http.request('POST', url, {
       body: formData,
       reportProgress: true,
       observe: 'events'

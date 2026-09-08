@@ -58,7 +58,7 @@
 
 <!-- زر التواصل - تصميم احترافي ومبهر -->
 <div *ngIf="!isMushafPage && !isAdminPage" [ngClass]="{'out':outOn,'on':!outOn}"
-  class="z-50 fixed top-[20%] -left-10 transform transition-all duration-500 ease-in-out">
+  class="z-[9998] fixed top-[20%] -left-10 transform transition-all duration-500 ease-in-out">
   <div class="relative group">
     <div
       class="absolute -inset-1 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 rounded-2xl blur opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse">
@@ -313,8 +313,23 @@
       </div>
 
       <div class="mt-8 pt-6 border-t border-white/5 text-center">
-        <p class="text-xs text-gray-500 mb-2 max-w-2xl mx-auto font-medium">جميع الكتب المعروضة أصلية ويتم توفيرها مباشرة من دور النشر المتعاقد معها، لضمان أعلى جودة وحماية كاملة لحقوق الملكية الفكرية.</p>
-        <p class="text-[11px] text-amber-500/80 mb-4 max-w-2xl mx-auto dir-rtl font-sans">بصفتنا مشاركين في برنامج Amazon Associates، فنحن نحصل على عمولة من عمليات الشراء المؤهلة التي تتم عبر روابطنا.</p>
+        <p class="text-xs text-gray-500 mb-2 max-w-2xl mx-auto font-medium">جميع الكتب المعروضة أصلية ويتم توفيرها مباشرة من دور النشر المتعاقد معها، لضمان أعلى جودة وحماية كاملة لحقوق الملكية الفكرية.</p>        
+        <!-- Payment Methods -->
+        <div class="flex flex-col items-center justify-center mb-6 gap-3">
+          <span class="text-xs text-gray-500 uppercase tracking-widest">طرق الدفع المتاحة</span>
+          <div class="flex items-center gap-4 bg-white/5 py-3 px-6 rounded-2xl border border-white/10">
+             <!-- Visa -->
+             <div class="text-white text-2xl" title="فيزا"><fa-icon [icon]="['fab', 'cc-visa']"></fa-icon></div>
+             <!-- MasterCard -->
+             <div class="text-white text-2xl" title="ماستركارد"><fa-icon [icon]="['fab', 'cc-mastercard']"></fa-icon></div>
+             <!-- Cash on Delivery -->
+             <div class="flex items-center gap-1.5 text-gray-300 font-bold text-sm bg-white/10 px-3 py-1 rounded-lg" title="الدفع عند الاستلام">
+                <fa-icon [icon]="['fas', 'money-bill-wave']"></fa-icon>
+                <span>الدفع عند الاستلام</span>
+             </div>
+          </div>
+        </div>
+
         <p class="text-sm text-gray-400">© {{ currentYear }} knoozbook. جميع الحقوق محفوظة.</p>
       </div>
     </div>

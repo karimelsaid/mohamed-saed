@@ -65,8 +65,8 @@ try {
   // -r  : recursive
   // -q  : quiet (no per-file output)
   // -X  : exclude extra attributes (keeps the zip clean for Android/iOS unzip)
-  // --exclude: skip source maps and other build artifacts
-  const command = `cd "${sourceDir}" && zip -r -q -X "${outputZip}" . --exclude "*.map" --exclude "*.DS_Store" --exclude "__MACOSX/*"`;
+  // --exclude: skip source maps, build artifacts, static folder, and unused files
+  const command = `cd "${sourceDir}" && zip -r -q -X "${outputZip}" . --exclude "*.map" --exclude "*.DS_Store" --exclude "__MACOSX/*" --exclude "static/*" --exclude "static/**/*" --exclude "ebook.png" --exclude "print1.png" --exclude "print2.png" --exclude "print3.png" --exclude "background.jpg" --exclude "موسيقى للتركيز.mp3"`;
   console.log('🔧 Running zip...');
   execSync(command, { stdio: 'inherit' });
 

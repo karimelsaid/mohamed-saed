@@ -82,6 +82,7 @@ export class QuranAudioService {
     private isTimedPlayback = false;
     private lastEndTriggeredVerseKey = '';
     private isPlayingNewAudio = false; // Flag to track if new audio is being loaded
+    private mutexStartTime = 0; // Timestamp when mutex was acquired to prevent permanent deadlock
     private isGaplessTransitioning = false; // Flag to track gapless transitions
     private lastVerseStartTime = 0; // Track start time to detect rapid loops
     private pendingPlayRequest: { verseKey: string; reciterId: number } | null = null; // Track pending play requests
@@ -97,17 +98,27 @@ export class QuranAudioService {
 
     // Fallback URLs for reciters with missing/broken specific verse audio on QDC API
     private readonly RECITER_OVERRIDES: { [key: number]: string } = {
-        19: 'https://everyayah.com/data/Ahmed_ibn_Ali_al-Ajamy_128kbps_ketaballah.net',
+        1: 'https://everyayah.com/data/Alafasy_128kbps',
+        2: 'https://everyayah.com/data/AbdulSamad_64kbps',
+        3: 'https://everyayah.com/data/Abdul_Basit_Murattal_192kbps',
+        4: 'https://everyayah.com/data/Abu_Bakr_Ash-Shaatree_128kbps',
+        5: 'https://everyayah.com/data/Hani_Rifai_192kbps',
+        6: 'https://everyayah.com/data/Husary_128kbps',
+        7: 'https://everyayah.com/data/Minshawy_Murattal_128kbps',
+        9: 'https://everyayah.com/data/Minshawy_Murattal_128kbps',
+        10: 'https://everyayah.com/data/Saood_ash-Shuraym_128kbps',
+        11: 'https://everyayah.com/data/Mohammad_al_Tablaway_128kbps',
         12: 'https://everyayah.com/data/Husary_Muallim_128kbps',
         13: 'https://everyayah.com/data/Hudhaify_128kbps',
+        14: 'https://everyayah.com/data/Muhammad_Ayyoub_128kbps',
+        19: 'https://everyayah.com/data/Ahmed_ibn_Ali_al-Ajamy_128kbps_ketaballah.net',
         85: 'https://everyayah.com/data/Ghamadi_40kbps',
         110: 'https://everyayah.com/data/Abdullah_Basfar_64kbps',
-        14: 'https://everyayah.com/data/Muhammad_Ayyoub_128kbps',
-        158: 'https://everyayah.com/data/Ali_Jaber_64kbps', // Corrected from Studio path
+        158: 'https://everyayah.com/data/Ali_Jaber_64kbps',
         159: 'https://everyayah.com/data/MaherAlMuaiqly128kbps',
-        174: 'https://everyayah.com/data/Yasser_Ad-Dussary_128kbps',
         161: 'https://everyayah.com/data/khalefa_al_tunaiji_64kbps',
         168: 'https://everyayah.com/data/Minshawy_Teacher_128kbps',
+        174: 'https://everyayah.com/data/Yasser_Ad-Dussary_128kbps',
         200: 'https://everyayah.com/data/Yaser_Salamah_128kbps',
         201: 'https://everyayah.com/data/mahmoud_ali_al_banna_32kbps',
         202: 'https://everyayah.com/data/Fares_Abbad_64kbps',
@@ -1195,37 +1206,53 @@ export class QuranAudioService {
         }
     }
 
-    private async probeAudioUrl(originalUrl: string): Promise<string | null> {
+    private async probeAudioUrl(originalUrl: string): Promise<string> {
+        if (!originalUrl) return originalUrl;
+        
+        // Fast path for standard direct audio streams and CDNs
+        if (originalUrl.endsWith('.mp3') || originalUrl.endsWith('.m4a') || originalUrl.includes('everyayah.com') || originalUrl.includes('qurancdn.com')) {
+            return originalUrl;
+        }
+
         try {
-            // 1. Try Original
+            // 1. Try Original HEAD
             const res1 = await fetch(originalUrl, { method: 'HEAD' });
-            if (res1.ok && res1.headers.get('content-type')?.includes('audio')) return originalUrl;
+            if (res1.ok) return originalUrl;
 
             // 2. Try with .mp3 extension if not present
             if (!originalUrl.endsWith('.mp3')) {
-                const mp3Url = originalUrl.replace(/\.[^/.]+$/, "") + ".mp3"; // replace extension
+                const mp3Url = originalUrl.replace(/\.[^/.]+$/, "") + ".mp3";
                 const res2 = await fetch(mp3Url, { method: 'HEAD' });
-                if (res2.ok && res2.headers.get('content-type')?.includes('audio')) return mp3Url;
+                if (res2.ok) return mp3Url;
             }
 
             // 3. Try with .m4a extension
             const m4aUrl = originalUrl.replace(/\.[^/.]+$/, "") + ".m4a";
             const res3 = await fetch(m4aUrl, { method: 'HEAD' });
-            if (res3.ok && res3.headers.get('content-type')?.includes('audio')) return m4aUrl;
+            if (res3.ok) return m4aUrl;
 
-            // 4. Try alternate Miracle CDN
-            return null;
+            return originalUrl; // Fallback to originalUrl optimistically
         } catch (e) {
-            console.warn('[AudioService] Probe network error, assuming original might work:', e);
+            console.warn('[AudioService] Probe network error, assuming original URL works:', e);
             return originalUrl; // Optimistic fallback
         }
     }
 
     async playVerse(verseKey: string, reciterId?: number, muted?: boolean, isNewSession: boolean = true, force: boolean = false, externalControl?: boolean) {
-        // CRITICAL: Aggressive mutex to prevent NativeAudio hammering
+        // CRITICAL: Aggressive mutex with 8s timeout auto-release to prevent deadlocks
         if (this.isPlayingNewAudio) {
-            // Already processing - completely ignore this call
-            return;
+            if (this.mutexStartTime && Date.now() - this.mutexStartTime > 8000) {
+                console.warn('[AudioService] Mutex held too long (>8s), force releasing lock.');
+                this.isPlayingNewAudio = false;
+                this.mutexStartTime = 0;
+            } else if (!force && !isNewSession) {
+                return;
+            } else {
+                // User explicitly triggered play or new session - allow overriding active mutex
+                console.log('[AudioService] Force releasing mutex for new session or forced play request.');
+                this.isPlayingNewAudio = false;
+                this.mutexStartTime = 0;
+            }
         }
 
         const now = Date.now();
@@ -1259,6 +1286,7 @@ export class QuranAudioService {
 
         // Set mutex IMMEDIATELY before any async work
         this.isPlayingNewAudio = true;
+        this.mutexStartTime = now;
         this.lastPlayCallVerseKey = verseKey;
         this.lastPlayCallTime = now;
         this.lastValidDuration = 0; // RESET LATCh for new verse
@@ -1370,6 +1398,7 @@ export class QuranAudioService {
             try {
                 this.activeAudio.volume = 0; // Start silent for fade in
                 await this.activeAudio.play();
+                this.lastVerseStartTime = Date.now();
 
                 // 2. Fade IN new player (FAST for punchy start) - SKIP if muted
                 if (!muted) {
@@ -1560,14 +1589,15 @@ export class QuranAudioService {
 
                     if (operationId !== this.currentOperationId) return;
 
-                    if (!response) {
-                        console.warn('[AudioService] Empty response or timeout');
-                        this.updateState({ isBuffering: false, isPlaying: false });
-                        this.isPlayingNewAudio = false;
-                        this.isGaplessTransitioning = false;
-                        return;
+                    if (!response || (!response.audio_file && !response.audio && !response.audio_files)) {
+                        console.warn('[AudioService] Empty response or timeout, using EveryAyah direct fallback');
+                        const [surah, ayah] = verseKey.split(':');
+                        const paddedSurah = surah.padStart(3, '0');
+                        const paddedAyah = ayah.padStart(3, '0');
+                        audioData = { url: `https://everyayah.com/data/Alafasy_128kbps/${paddedSurah}${paddedAyah}.mp3` };
+                    } else {
+                        audioData = response?.audio_file || response?.audio || (response?.audio_files && response.audio_files[0]);
                     }
-                    audioData = response?.audio_file || response?.audio || (response?.audio_files && response.audio_files[0]);
 
                     // Optional: cache individual metadata for future
                     try { cache.put(metadataUrl, new Response(JSON.stringify(response))); } catch (e) { }
@@ -1774,6 +1804,7 @@ export class QuranAudioService {
                     await this.startForegroundService();
                     this.audio.loop = false; // Reset unlocking loop
                     await this.audio.play();
+                    this.lastVerseStartTime = Date.now();
                     console.log('[AudioService] Playback started successfully');
 
                     // CRITICAL: Start precision clock for the first verse or standard loads
@@ -2029,7 +2060,12 @@ export class QuranAudioService {
     setPlaybackRange(range: 'surah' | 'page' | 'juz' | 'quran' | 'single' | 'custom', specificRange?: { start: string; end: string }, rangeEndVerseKey?: string | null) {
         // NOTE: specificRange should be passed explicitly by the component when needed
         // Do NOT auto-compute here as currentVerseKey might not be updated yet
-        this.updateState({ playbackRange: range, specificRange, rangeEndVerseKey, currentGroupRepeatCount: 0 });
+        this.updateState({
+            playbackRange: range,
+            specificRange: (range === 'custom' || range === 'page' || range === 'juz') ? specificRange : undefined,
+            rangeEndVerseKey: rangeEndVerseKey !== undefined ? rangeEndVerseKey : null,
+            currentGroupRepeatCount: 0
+        });
     }
 
     setShuffle(enabled: boolean) {
@@ -2143,12 +2179,14 @@ export class QuranAudioService {
         }
 
         // CRITICAL: Loop Breaker
-        // If the audio "completed" almost instantly (< 500ms), it's likely a native error or corruption.
+        // If the audio "completed" almost instantly (< 200ms), it's likely a native error or corruption.
         // We must IGNORE it to prevent an infinite loop of Play -> Error -> Complete -> PlayNext -> Play
         const elapsed = Date.now() - this.lastVerseStartTime;
-        if (elapsed < 500) {
+        if (elapsed < 200) {
             console.warn(`[AudioService] Rapid audio completion detected (${elapsed}ms). Ignoring loop and stopping.`);
             this.updateState({ isPlaying: false, isBuffering: false });
+            this.isPlayingNewAudio = false;
+            this.mutexStartTime = 0;
             return;
         }
 
@@ -3171,6 +3209,18 @@ export class QuranAudioService {
         const s = this.snapshot; // Use snapshot for consistency
         const end = s.rangeEndVerseKey;
 
+        // Mode specific boundaries take precedence if mode is explicitly set to 'surah', 'single', or 'quran'
+        if (s.playbackRange === 'surah') {
+            const surahInRange = s.currentVerseKey?.split(':')[0] || verseKey.split(':')[0];
+            return verseKey.startsWith(`${surahInRange}:`);
+        }
+        if (s.playbackRange === 'single') {
+            return verseKey === (s.currentVerseKey || verseKey);
+        }
+        if (s.playbackRange === 'quran') {
+            return true;
+        }
+
         // PRIORITY 1: specificRange (Page, Juz, Custom)
         if (s.specificRange && s.specificRange.start && s.specificRange.end) {
             const currentTotal = this.getTotalAyahIndex(verseKey);
@@ -3186,23 +3236,7 @@ export class QuranAudioService {
             return currentTotal <= endTotal;
         }
 
-        // Mode specific boundaries
-        switch (s.playbackRange) {
-            case 'surah':
-                const surahInRange = s.currentVerseKey?.split(':')[0] || verseKey.split(':')[0];
-                return verseKey.startsWith(`${surahInRange}:`);
-            case 'single':
-                return verseKey === (s.currentVerseKey || verseKey);
-            case 'juz':
-            case 'page':
-            case 'custom':
-                // If we reach here, specificRange was missing/incomplete
-                return true;
-            case 'quran':
-                return true;
-            default:
-                return true;
-        }
+        return true;
     }
 
     private getPlaybackRangeStart(): string | null {

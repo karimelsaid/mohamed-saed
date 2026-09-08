@@ -123,8 +123,11 @@ export class SearchResultsComponent implements OnInit, OnDestroy {
 
     // Check for coupon first
     if (query && query.length >= 3 && query.length <= 15 && this.isPotentialCoupon(query)) {
-      const userData = JSON.parse(localStorage.getItem('user') || '{}');
-      this.promotionService.validateCoupon(query, userData.id, 0).subscribe({
+      let userData: any = {};
+      if (isPlatformBrowser(this.platformId)) {
+        userData = JSON.parse(localStorage.getItem('user') || '{}');
+      }
+      this.promotionService.validateCoupon(query, userData.id || '', 0).subscribe({
         next: (res: any) => {
           this.appliedCoupon = res;
           this.promotionService.setActiveCoupon(res);
@@ -452,7 +455,10 @@ export class SearchResultsComponent implements OnInit, OnDestroy {
 
   // --- Auth & Cart ---
   addToFavorites(bookId: string): void {
-    const userData = JSON.parse(localStorage.getItem('user') || '{}');
+    let userData: any = {};
+    if (isPlatformBrowser(this.platformId)) {
+      userData = JSON.parse(localStorage.getItem('user') || '{}');
+    }
     if (!userData.id) { this.showLoginPrompt = true; return; }
     
     if (this.isFavorite(bookId)) {
@@ -466,7 +472,10 @@ export class SearchResultsComponent implements OnInit, OnDestroy {
   isInCart(bookId: string): boolean { return this.authService.isInCart(bookId); }
 
   addToCart(bookId: string): void {
-    const userData = JSON.parse(localStorage.getItem('user') || '{}');
+    let userData: any = {};
+    if (isPlatformBrowser(this.platformId)) {
+      userData = JSON.parse(localStorage.getItem('user') || '{}');
+    }
     if (!userData.id) { this.showLoginPrompt = true; return; }
     
     if (this.isInCart(bookId)) {
@@ -504,7 +513,10 @@ export class SearchResultsComponent implements OnInit, OnDestroy {
   closeRequestModal(): void { this.showRequestModal = false; }
   submitBookRequest(): void {
     if (!this.requestedBookName.trim()) return;
-    const userId = JSON.parse(localStorage.getItem('user') || '{}').id;
+    let userId = '';
+    if (isPlatformBrowser(this.platformId)) {
+      userId = JSON.parse(localStorage.getItem('user') || '{}').id;
+    }
     if (!userId) { this.showLoginPrompt = true; return; }
     
     this.isRequestSubmitting = true;
@@ -518,12 +530,18 @@ export class SearchResultsComponent implements OnInit, OnDestroy {
   }
 
   userHasPhone(): boolean {
-    const userData = JSON.parse(localStorage.getItem('user') || '{}');
+    let userData: any = {};
+    if (isPlatformBrowser(this.platformId)) {
+      userData = JSON.parse(localStorage.getItem('user') || '{}');
+    }
     return !!(userData.phone && userData.phone.trim() !== '');
   }
 
   sendBookRequestViaWhatsApp(): void {
-    const userData = JSON.parse(localStorage.getItem('user') || '{}');
+    let userData: any = {};
+    if (isPlatformBrowser(this.platformId)) {
+      userData = JSON.parse(localStorage.getItem('user') || '{}');
+    }
     const userName = userData.name || 'مستخدم';
     const userPhone = userData.phone || this.requestedPhoneNumber || 'غير محدد';
     

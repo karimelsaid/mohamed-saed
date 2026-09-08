@@ -1,0 +1,165 @@
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900 pb-20">
+  <!-- Hero Section -->
+  <div class="relative bg-gradient-to-br from-indigo-950 via-indigo-900 to-gray-900 pt-32 pb-24 overflow-hidden">
+    <div class="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
+    <div class="absolute -right-32 -top-32 w-96 h-96 bg-[var(--knooz-gold)]/20 rounded-full blur-3xl"></div>
+    
+    <div class="container mx-auto px-4 relative z-10 text-center">
+      <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[var(--knooz-gold)]/10 text-[var(--knooz-gold)] text-sm font-bold uppercase tracking-widest mb-6 border border-[var(--knooz-gold)]/30">
+        <fa-icon [icon]="['fas', 'handshake']"></fa-icon>
+        نظام الشراكة من كنوز
+      </div>
+      <h1 class="text-4xl md:text-6xl font-black text-white mb-6 leading-tight">
+        كن شريكاً في قصة نجاح <br /> <span class="text-[var(--knooz-gold)]">knoozbook</span>
+      </h1>
+      <p class="text-indigo-200 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed">
+        شاركنا النمو واكتسب أسهم حقيقية في الشركة. عائدات وأرباح شفافة، لوحة تحكم ذكية، وإدارة استثمارية موثوقة.
+      </p>
+    </div>
+  </div>
+
+  <div class="container mx-auto px-4 -mt-12 relative z-20">
+    <div *ngIf="isLoading" class="flex justify-center items-center py-20 bg-white dark:bg-gray-800 rounded-3xl shadow-xl">
+      <fa-icon [icon]="['fas', 'spinner']" animation="spin" class="text-4xl text-[var(--knooz-gold)]"></fa-icon>
+    </div>
+
+    <div *ngIf="!isLoading && settings" class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      
+      <!-- Left Column: Investment Terms & Info -->
+      <div class="lg:col-span-5 flex flex-col gap-6">
+        <div class="bg-white dark:bg-gray-800 rounded-[2rem] p-8 shadow-xl border border-gray-100 dark:border-gray-700">
+          <h2 class="text-2xl font-black text-gray-900 dark:text-white mb-6 flex items-center gap-3">
+            <fa-icon [icon]="['fas', 'chart-pie']" class="text-[var(--knooz-gold)]"></fa-icon>
+            تفاصيل الجولة الحالية
+          </h2>
+          
+          <div *ngIf="settings.status !== 'OPEN'" class="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-4 rounded-xl font-bold flex items-center gap-3 mb-6">
+            <fa-icon [icon]="['fas', 'lock']"></fa-icon>
+            <span>عذراً، باب الشراكة مغلق حالياً.</span>
+          </div>
+
+          <div class="space-y-4">
+            <div class="flex justify-between items-center p-4 bg-gray-50 dark:bg-gray-700/30 rounded-xl">
+              <span class="text-gray-500 dark:text-gray-400 font-bold">تقييم الشركة</span>
+              <span class="font-black text-lg text-gray-900 dark:text-white">{{ settings.companyValuation | number }} ج.م</span>
+            </div>
+            <div class="flex justify-between items-center p-4 bg-gray-50 dark:bg-gray-700/30 rounded-xl">
+              <span class="text-gray-500 dark:text-gray-400 font-bold">سعر السهم</span>
+              <span class="font-black text-lg text-[var(--knooz-gold)]">{{ settings.sharePrice }} ج.م</span>
+            </div>
+            <div class="flex justify-between items-center p-4 bg-gray-50 dark:bg-gray-700/30 rounded-xl">
+              <span class="text-gray-500 dark:text-gray-400 font-bold">الأسهم المتاحة</span>
+              <span class="font-black text-lg text-gray-900 dark:text-white">{{ settings.availableShares | number }} سهم</span>
+            </div>
+            <div class="flex justify-between items-center p-4 bg-gray-50 dark:bg-gray-700/30 rounded-xl border border-indigo-100 dark:border-indigo-900">
+              <span class="text-indigo-900 dark:text-indigo-300 font-bold">الحد الأدنى للاستثمار</span>
+              <span class="font-black text-lg text-indigo-700 dark:text-indigo-400">{{ settings.minimumInvestment | number }} ج.م</span>
+            </div>
+          </div>
+          
+          <div class="mt-6 text-sm text-gray-500 dark:text-gray-400 leading-relaxed border-t border-gray-100 dark:border-gray-700 pt-6">
+            {{ settings.description || 'تتيح لك هذه الجولة الاستثمارية فرصة فريدة لامتلاك حصة في الشركة مع حقوق كاملة في الأرباح الصافية الموزعة وفقاً للعقود المبرمة.' }}
+          </div>
+        </div>
+
+        <!-- Trust Features -->
+        <div class="bg-gradient-to-br from-[#c5a059] to-[#a68648] rounded-[2rem] p-8 shadow-xl text-white">
+          <h3 class="text-xl font-black mb-6">لماذا تستثمر معنا؟</h3>
+          <ul class="space-y-4">
+            <li class="flex items-start gap-3">
+              <fa-icon [icon]="['fas', 'check-circle']" class="mt-1"></fa-icon>
+              <span>عقود قانونية موثقة تضمن كامل حقوقك المالية والملكية.</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <fa-icon [icon]="['fas', 'check-circle']" class="mt-1"></fa-icon>
+              <span>لوحة تحكم شفافة لمتابعة مبيعات وأرباح الشركة يومياً.</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <fa-icon [icon]="['fas', 'check-circle']" class="mt-1"></fa-icon>
+              <span>نموذج عمل مستقر ومتنامي في قطاع النشر والتجارة الإلكترونية.</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Right Column: Application Form -->
+      <div class="lg:col-span-7">
+        <div class="bg-white dark:bg-gray-800 rounded-[2rem] p-8 md:p-10 shadow-xl border border-gray-100 dark:border-gray-700">
+          <h2 class="text-2xl font-black text-gray-900 dark:text-white mb-2">طلب الانضمام كشريك</h2>
+          <p class="text-gray-500 dark:text-gray-400 mb-8">يرجى تعبئة البيانات بدقة. سيقوم فريقنا بمراجعة طلبك والتواصل معك لإتمام الإجراءات القانونية.</p>
+
+          <div *ngIf="error" class="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-4 rounded-xl font-bold mb-6">
+            {{ error }}
+          </div>
+          <div *ngIf="successMessage" class="bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 p-4 rounded-xl font-bold mb-6">
+            {{ successMessage }}
+          </div>
+
+          <form (ngSubmit)="submitApplication()" #appForm="ngForm" class="space-y-6" [class.opacity-50]="settings.status !== 'OPEN'">
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">الاسم الرباعي <span class="text-red-500">*</span></label>
+                <input type="text" name="fullName" [(ngModel)]="applicationData.fullName" required [disabled]="settings.status !== 'OPEN'"
+                  class="w-full px-5 py-4 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-[var(--knooz-gold)] focus:border-transparent outline-none transition-all dark:text-white">
+              </div>
+              <div>
+                <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">نوع الشريك <span class="text-red-500">*</span></label>
+                <select name="partnerType" [(ngModel)]="applicationData.partnerType" required [disabled]="settings.status !== 'OPEN'"
+                  class="w-full px-5 py-4 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-[var(--knooz-gold)] focus:border-transparent outline-none transition-all dark:text-white">
+                  <option value="INDIVIDUAL">فرد</option>
+                  <option value="COMPANY">شركة / مؤسسة</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">رقم الهاتف المحمول (الواتساب) <span class="text-red-500">*</span></label>
+                <input type="tel" name="phone" [(ngModel)]="applicationData.phone" required [disabled]="settings.status !== 'OPEN'"
+                  class="w-full px-5 py-4 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-[var(--knooz-gold)] focus:border-transparent outline-none transition-all dark:text-white text-left" dir="ltr">
+              </div>
+              <div>
+                <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">البريد الإلكتروني <span class="text-red-500">*</span></label>
+                <input type="email" name="email" [(ngModel)]="applicationData.email" required [disabled]="settings.status !== 'OPEN'"
+                  class="w-full px-5 py-4 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-[var(--knooz-gold)] focus:border-transparent outline-none transition-all dark:text-white text-left" dir="ltr">
+              </div>
+            </div>
+
+            <div class="bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900/30 p-6 rounded-2xl mt-8">
+              <h3 class="text-lg font-black text-indigo-950 dark:text-white mb-4">تفاصيل الاستثمار</h3>
+              
+              <div class="space-y-6">
+                <div>
+                  <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">مبلغ الاستثمار (ج.م) <span class="text-red-500">*</span></label>
+                  <div class="relative">
+                    <input type="number" name="investmentAmount" [(ngModel)]="applicationData.investmentAmount" (input)="onInvestmentChange()" required [min]="settings.minimumInvestment" [disabled]="settings.status !== 'OPEN'"
+                      class="w-full px-5 py-4 text-xl font-black text-indigo-900 dark:text-white bg-white dark:bg-gray-800 border-2 border-indigo-200 dark:border-indigo-700 rounded-xl focus:ring-0 focus:border-[var(--knooz-gold)] outline-none transition-all">
+                    <span class="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 font-bold">ج.م</span>
+                  </div>
+                </div>
+
+                <div class="flex items-center justify-between p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+                  <span class="text-gray-600 dark:text-gray-300 font-bold">الأسهم المستحقة بناءً على المبلغ:</span>
+                  <span class="text-2xl font-black text-[var(--knooz-gold)]">{{ applicationData.requestedShares | number }} سهم</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-8">
+              <button type="submit" [disabled]="!appForm.form.valid || isSubmitting || settings.status !== 'OPEN'"
+                class="w-full py-5 bg-[var(--knooz-gold)] hover:bg-[#a68648] text-indigo-950 font-black text-xl rounded-xl transition-all duration-300 hover:shadow-lg disabled:opacity-50 flex items-center justify-center gap-3">
+                <fa-icon *ngIf="isSubmitting" [icon]="['fas', 'circle-notch']" animation="spin"></fa-icon>
+                <span>{{ isSubmitting ? 'جاري الإرسال...' : 'تقديم طلب الشراكة' }}</span>
+              </button>
+              <p class="text-center text-xs text-gray-400 mt-4">
+                بتقديمك لهذا الطلب، أنت لا تلتزم بأي مدفوعات حالياً. سيتم التواصل معك للمناقشة وتوقيع العقود قانونياً قبل الدفع.
+              </p>
+            </div>
+          </form>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

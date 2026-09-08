@@ -2,7 +2,7 @@ import { Component, OnInit, ViewChild, ChangeDetectorRef, Output, EventEmitter, 
 import { isPlatformBrowser } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive, NavigationEnd } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { faBars, faClose, faHome, faBook, faFilePdf, faUser, faChevronUp, faChevronDown, faSearch, faHeart, faCartPlus, faClipboardList, faTachometerAlt, faBell, faTrash, faStore, faFilter, faExpand, faBookReader, faCoins, faBookQuran, faUsers, faChartLine } from '@fortawesome/free-solid-svg-icons';
+import { faBars, faClose, faHome, faBook, faFilePdf, faUser, faChevronUp, faChevronDown, faSearch, faHeart, faCartPlus, faClipboardList, faTachometerAlt, faBell, faTrash, faStore, faFilter, faExpand, faBookReader, faCoins, faBookQuran, faUsers, faChartLine, faHandshake } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { AuthService } from '../auth/auth.service';
 import { MerchantAuthService } from '../services/merchant-auth.service';
@@ -48,6 +48,7 @@ export class NavbarIconsComponent implements OnInit {
   faBookQuran = faBookQuran;
   faUsers = faUsers;
   faChartLine = faChartLine;
+  faHandshake = faHandshake;
 
   openBars = false;
   scrollBook = true;

@@ -50,7 +50,7 @@ class AmazonListingService {
   async createListing(productData) {
     const startTime = Date.now();
     const client = await amazonAuth.getClient();
-    const marketplaceId = amazonAuth.getMarketplaceId();
+    const marketplaceId = await amazonAuth.getMarketplaceId();
     const sellerId = await amazonAuth.getSellerId();
 
     try {
@@ -461,7 +461,7 @@ class AmazonListingService {
   async getListing(sku) {
     const startTime = Date.now();
     const client = await amazonAuth.getClient();
-    const marketplaceId = amazonAuth.getMarketplaceId();
+    const marketplaceId = await amazonAuth.getMarketplaceId();
     const sellerId = await amazonAuth.getSellerId();
 
     try {
@@ -507,7 +507,7 @@ class AmazonListingService {
   async deleteListing(sku) {
     const startTime = Date.now();
     const client = await amazonAuth.getClient();
-    const marketplaceId = amazonAuth.getMarketplaceId();
+    const marketplaceId = await amazonAuth.getMarketplaceId();
     const sellerId = await amazonAuth.getSellerId();
 
     try {
@@ -550,7 +550,7 @@ class AmazonListingService {
    */
   async getProductTypeSchema(productType = 'ELECTRONIC_BOOK_READER') {
     const client = await amazonAuth.getClient();
-    const marketplaceId = amazonAuth.getMarketplaceId();
+    const marketplaceId = await amazonAuth.getMarketplaceId();
 
     try {
       const result = await client.callAPI({

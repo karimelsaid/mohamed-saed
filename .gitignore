@@ -17,6 +17,11 @@ Backend/output.json
 android/.gradle/
 android/app/build/
 android/.idea/
+# Android signing / secrets
+*.jks
+*.keystore
+android/keystore.properties
+android/app/google-services.json
 
 # Capacitor Android build
 mushaf-wird-mobile/android/build/
@@ -38,3 +43,12 @@ src/environments/*.local.ts
 *.keystore
 .DS_Store
 Thumbs.db
+# Environment files
+.env
+*.env
+
+# Android signing / secrets
+*.jks
+*.keystore
+android/keystore.properties
+android/app/google-services.json

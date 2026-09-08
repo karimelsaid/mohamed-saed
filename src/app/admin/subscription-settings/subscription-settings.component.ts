@@ -20,7 +20,11 @@ import { fas } from '@fortawesome/free-solid-svg-icons';
 export class SubscriptionSettingsComponent implements OnInit {
     subscriptionSettings = {
         monthlyPrice: 50,
-        yearlyPrice: 500
+        yearlyPrice: 500,
+        globalFreeReading: {
+            enabled: false,
+            endDate: null as string | null
+        }
     };
 
     isLoading = false;
@@ -42,7 +46,10 @@ export class SubscriptionSettingsComponent implements OnInit {
             next: (settings) => {
                 this.isLoading = false;
                 if (settings && settings.subscription) {
-                    this.subscriptionSettings = { ...settings.subscription };
+                    this.subscriptionSettings = { 
+                        ...settings.subscription,
+                        globalFreeReading: settings.subscription.globalFreeReading || { enabled: false, endDate: null }
+                    };
                 }
             },
             error: (err) => {

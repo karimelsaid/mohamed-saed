@@ -82,6 +82,11 @@ router.get('/', async (req, res) => {
         if (responseData.liveUpdate) {
             responseData.liveUpdate.sizeBytes = sizeBytes;
             responseData.liveUpdate.sizeFormatted = sizeFormatted;
+            // Add cache-busting query param so Cloudflare CDN doesn't serve stale zip for new versions
+            if (responseData.liveUpdate.zipUrl && responseData.liveUpdate.version) {
+                const baseUrl = responseData.liveUpdate.zipUrl.split('?')[0];
+                responseData.liveUpdate.zipUrl = `${baseUrl}?v=${responseData.liveUpdate.version}`;
+            }
         }
 
         res.json(responseData);

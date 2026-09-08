@@ -7,7 +7,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 import { DataService } from '../services/data.service';
 import { AuthService } from '../auth/auth.service';
-import { faBook, faLaptop, faTshirt, faSpa, faShoePrints, faCouch, faGamepad, faThLarge, faEllipsisH, faStar, faFileAlt, faHeart, faPenNib } from '@fortawesome/free-solid-svg-icons';
+import { faBook, faLaptop, faTshirt, faSpa, faShoePrints, faCouch, faGamepad, faThLarge, faEllipsisH, faStar, faFileAlt, faHeart, faPenNib, faChevronDown, faChevronUp } from '@fortawesome/free-solid-svg-icons';
 import { environment } from '../../environments/environment';
 import { SeoService } from '../services/seo.service';
 import { PromotionService } from '../services/promotion.service';
@@ -35,6 +35,9 @@ export class HomePageComponent implements OnInit, OnDestroy {
 
   // Icons
   faStar = faStar;
+  faChevronDown = faChevronDown;
+  faChevronUp = faChevronUp;
+  isServicesExpanded: boolean = true;
 
   // Sections & Categories
   mainSections = [
@@ -45,6 +48,8 @@ export class HomePageComponent implements OnInit, OnDestroy {
 
   bookGenres = [
     { id: 'all', name: 'الكل' },
+    { id: 'bestsellers', name: '🔥 الأكثر مبيعاً' },
+    { id: 'new-arrivals', name: '✨ وصل حديثاً' },
     { id: 'novels', name: 'روايات وقصص', filter: ['روايات وقصص'] },
     { id: 'islamic', name: 'كتب دينية', filter: ['كتب دينية'] },
     { id: 'development', name: 'تطوير الذات', filter: ['تطوير الذات وعلم النفس'] },
@@ -82,6 +87,20 @@ export class HomePageComponent implements OnInit, OnDestroy {
 
   // Merchants / Publishers
   merchants: any[] = [];
+
+  // Bourse variables
+  bourseOffer: any = null;
+  bourseBooks: any[] = [];
+  bourseCountdownStr: string = '00:00:00';
+  private bourseTimer: any;
+
+  // Featured Promotion Packages
+  featuredPackages: any[] = [];
+
+  // Subscription pricing (dynamic)
+  subscriptionMonthlyPrice: number = 0;
+  subscriptionYearlyPrice: number = 0;
+  subscriptionYearlySaving: number = 0;
 
   // Analytics tracking
   private trackedProducts = new Set<string>();
@@ -172,7 +191,104 @@ export class HomePageComponent implements OnInit, OnDestroy {
       window.addEventListener('resize', () => {
         this.setPromoImages();
       });
+      
+      // Fetch active bourse offer for homepage preview
+      this.fetchBourseOffer();
+
+      // Fetch featured promotion packages
+      this.loadFeaturedPackages();
+
+      // Fetch subscription prices
+      this.fetchSubscriptionPrices();
+
+      // Check hasVisitedBefore for Collapsible Services
+      const hasVisited = localStorage.getItem('hasVisitedBefore');
+      if (hasVisited === 'true') {
+        this.isServicesExpanded = false;
+      } else {
+        localStorage.setItem('hasVisitedBefore', 'true');
+        this.isServicesExpanded = true;
+      }
     }
+  }
+
+  toggleServices(): void {
+    this.isServicesExpanded = !this.isServicesExpanded;
+  }
+
+  loadFeaturedPackages(): void {
+    this.promotionService.getAllPackages().subscribe({
+      next: (res: any) => {
+        let pkgs = Array.isArray(res) ? res : (res.packages || []);
+        // Filter packages that have products
+        pkgs = pkgs.filter((p: any) => p.isActive !== false);
+        // Fix pricing
+        pkgs.forEach((pkg: any) => {
+          let calcOrigPrice = 0;
+          if (pkg.products) {
+            pkg.products.forEach((p: any) => {
+              p._imageUrl = this.getPackageProductImageUrl(p);
+              calcOrigPrice += Number(p.product_price || p.price || 0) || 0;
+            });
+          }
+          if (!pkg.totalOriginalPrice || pkg.totalOriginalPrice <= 0) pkg.totalOriginalPrice = calcOrigPrice;
+          if (!pkg.promoPrice || pkg.promoPrice <= 0) pkg.promoPrice = pkg.fixedPrice || pkg.price || 0;
+          if (pkg.totalOriginalPrice <= pkg.promoPrice) pkg.totalOriginalPrice = Math.round(pkg.promoPrice * 1.35);
+        });
+        // Shuffle and pick 5
+        this.featuredPackages = this.shuffleArray([...pkgs]).slice(0, 5);
+      },
+      error: () => { /* silent */ }
+    });
+  }
+
+  getPackageProductImageUrl(book: any): string {
+    if (!book) return this.uploadsBaseUrl + '/placeholder.webp';
+    let imageId = book.product_image ? String(book.product_image) : '';
+    const pid = book.products_id || book._id;
+    if (!imageId) imageId = String(pid);
+    if (imageId.startsWith('http')) return imageId;
+    if (imageId.startsWith('/uploads/')) return `https://knoozbook.com${imageId}`;
+    const merchant = book.merchantId;
+    const isAdmin = merchant?.role === 'admin' || (!merchant && !book.merchantName);
+    if (isAdmin) {
+      const id = /^\d+$/.test(imageId) ? imageId : pid;
+      return `${this.uploadsBaseUrl}/admin__karim_mohamed__/${id}/${id}.webp`;
+    } else {
+      const username = merchant?.username || book.merchantName || 'unknown';
+      const sanitized = String(username).replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
+      const id = /^\d+$/.test(imageId) ? imageId : pid;
+      return `${this.uploadsBaseUrl}/merchant_${sanitized}/${id}/${id}.webp`;
+    }
+  }
+
+  calculateDiscount(original: number, promo: number): number {
+    if (!original || original <= 0) return 0;
+    return Math.round(((original - promo) / original) * 100);
+  }
+
+  fetchSubscriptionPrices(): void {
+    this.http.get<{success: boolean; data: {monthly: number; yearly: number}}>(`${environment.apiBaseUrl}/subscriptions/prices`)
+      .subscribe({
+        next: (res) => {
+          if (res.success && res.data) {
+            this.subscriptionMonthlyPrice = res.data.monthly;
+            this.subscriptionYearlyPrice = res.data.yearly;
+            // Calculate saving percentage: (monthly*12 - yearly) / (monthly*12) * 100
+            const yearlyIfMonthly = this.subscriptionMonthlyPrice * 12;
+            if (yearlyIfMonthly > 0) {
+              this.subscriptionYearlySaving = Math.round(((yearlyIfMonthly - this.subscriptionYearlyPrice) / yearlyIfMonthly) * 100);
+            }
+          }
+        },
+        error: (err) => {
+          console.error('Error fetching subscription prices:', err);
+          // Fallback defaults
+          this.subscriptionMonthlyPrice = 49;
+          this.subscriptionYearlyPrice = 299;
+          this.subscriptionYearlySaving = 49;
+        }
+      });
   }
 
   generateBackgroundColumns() {
@@ -195,12 +311,32 @@ export class HomePageComponent implements OnInit, OnDestroy {
   }
 
   get filteredProducts(): any[] {
-    // Show ALL products from all categories (not just books)
-    // This includes admin products, merchant products, and all categories
     const allProducts = this.allProducts;
 
     if (this.activeTab === 'all') {
       return allProducts.slice(0, 20);
+    }
+
+    if (this.activeTab === 'bestsellers') {
+      return [...allProducts].sort((a, b) => {
+        const viewsA = a.views || 0;
+        const viewsB = b.views || 0;
+        if (viewsB !== viewsA) return viewsB - viewsA;
+        const discA = a.product_discount_percent || 0;
+        const discB = b.product_discount_percent || 0;
+        return discB - discA;
+      }).slice(0, 20);
+    }
+
+    if (this.activeTab === 'new-arrivals') {
+      return [...allProducts].sort((a, b) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        if (dateB !== dateA) return dateB - dateA;
+        const idA = parseInt(a.products_id) || 0;
+        const idB = parseInt(b.products_id) || 0;
+        return idB - idA;
+      }).slice(0, 20);
     }
 
     const genre = this.bookGenres.find(c => c.id === this.activeTab);
@@ -209,6 +345,11 @@ export class HomePageComponent implements OnInit, OnDestroy {
     return allProducts.filter(product =>
       genre.filter?.some(f => product.product_category && product.product_category.includes(f))
     ).slice(0, 20);
+  }
+
+  isBestseller(product: any): boolean {
+    if (!product) return false;
+    return (product.views > 15) || (product.product_discount_percent >= 25);
   }
 
   setActiveTab(tabId: string): void {
@@ -503,7 +644,7 @@ export class HomePageComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (res: any) => {
           this.isSubscribing = false;
-          this.newsletterMessage = res.message || 'تم الاشتراك بنجاح!';
+          this.newsletterMessage = res.message ? res.message + ' - كود الخصم: KNOOZ10' : 'تم الاشتراك بنجاح! كود الخصم الخاص بك هو: KNOOZ10';
           this.newsletterMessageType = 'success';
           this.newsletterEmail = '';
         },
@@ -575,6 +716,107 @@ export class HomePageComponent implements OnInit, OnDestroy {
       },
       error: (err) => console.error('Error loading dynamic categories:', err)
     });
+  }
+
+  // Bourse Preview Logic
+  fetchBourseOffer() {
+    this.http.get<{active: boolean; offer?: any; freeGiftThreshold: number; message?: string}>(`${environment.apiBaseUrl}/bourse/active`)
+      .subscribe({
+        next: (res) => {
+          if (res.active && res.offer) {
+            this.bourseOffer = res.offer;
+            this.enrichBourseBooks();
+            this.startBourseCountdown();
+          } else {
+            this.bourseOffer = null;
+            this.bourseBooks = [];
+            this.calculateNextOfferTime();
+          }
+        },
+        error: (err) => {
+          console.error('Error fetching bourse offer for home page', err);
+        }
+      });
+  }
+
+  enrichBourseBooks() {
+    if (!this.allProducts || this.allProducts.length === 0) {
+      setTimeout(() => this.enrichBourseBooks(), 500);
+      return;
+    }
+    
+    const mapped = this.bourseOffer.books.map((b: any) => {
+      const product = this.allProducts.find(p => p.products_id === b.bookId) || {};
+      return {
+        ...b,
+        product_image: product.product_image,
+        bookName: product.product_name || b.bookName,
+        merchantName: product.merchantName,
+        products_id: b.bookId
+      };
+    });
+    this.bourseBooks = mapped;
+  }
+
+  startBourseCountdown() {
+    if (this.bourseTimer) clearInterval(this.bourseTimer);
+    
+    const updateTimer = () => {
+      if (!this.bourseOffer) return;
+      const end = new Date(this.bourseOffer.endTime).getTime();
+      const now = new Date().getTime();
+      const diff = end - now;
+
+      if (diff <= 0) {
+        clearInterval(this.bourseTimer);
+        this.bourseCountdownStr = 'انتهى العرض!';
+        setTimeout(() => this.fetchBourseOffer(), 3000);
+        return;
+      }
+
+      const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const s = Math.floor((diff % (1000 * 60)) / 1000);
+      
+      this.bourseCountdownStr = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    };
+
+    updateTimer();
+    this.bourseTimer = setInterval(updateTimer, 1000);
+  }
+
+  calculateNextOfferTime() {
+    const now = new Date();
+    const minutesSinceMidnight = (now.getHours() * 60) + now.getMinutes();
+    
+    const currentSlotIndex = Math.floor(minutesSinceMidnight / 45);
+    const nextSlotMinutes = (currentSlotIndex + 1) * 45;
+    
+    const nextOffer = new Date();
+    nextOffer.setHours(0, nextSlotMinutes, 0, 0);
+    
+    if (this.bourseTimer) clearInterval(this.bourseTimer);
+    
+    const updateTimer = () => {
+      const end = nextOffer.getTime();
+      const nowTime = new Date().getTime();
+      const diff = end - nowTime;
+
+      if (diff <= 0) {
+        clearInterval(this.bourseTimer);
+        this.fetchBourseOffer();
+        return;
+      }
+
+      const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const s = Math.floor((diff % (1000 * 60)) / 1000);
+      
+      this.bourseCountdownStr = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    };
+
+    updateTimer();
+    this.bourseTimer = setInterval(updateTimer, 1000);
   }
 
   // Analytics: Setup intersection observer for impression tracking

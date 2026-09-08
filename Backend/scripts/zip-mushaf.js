@@ -65,6 +65,17 @@ try {
   const stats = fs.statSync(outputZip);
   const sizeMB = (stats.size / (1024 * 1024)).toFixed(2);
   console.log(`✅ Mushaf Bundle created successfully: ${outputZip} (${sizeMB} MB)`);
+
+  // Copy to root dist/browser for Nginx static serving compatibility
+  const rootDistZip = path.join(__dirname, '..', '..', 'dist', 'browser', 'mushaf-bundle.zip');
+  if (path.resolve(outputZip) !== path.resolve(rootDistZip)) {
+    try {
+      const rootDistDir = path.dirname(rootDistZip);
+      if (!fs.existsSync(rootDistDir)) fs.mkdirSync(rootDistDir, { recursive: true });
+      fs.copyFileSync(outputZip, rootDistZip);
+      console.log(`📋 Copied bundle to root Nginx dir: ${rootDistZip}`);
+    } catch (e) { }
+  }
 } catch (error) {
   console.error('❌ حدث خطأ أثناء ضغط ملفات المصحف:', error.message);
   process.exit(1);

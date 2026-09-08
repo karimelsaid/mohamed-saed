@@ -33,7 +33,11 @@ const systemSettingsSchema = mongoose.Schema({
     },
     subscription: {
         monthlyPrice: { type: Number, default: 50 },
-        yearlyPrice: { type: Number, default: 500 }
+        yearlyPrice: { type: Number, default: 500 },
+        globalFreeReading: {
+            enabled: { type: Boolean, default: false },
+            endDate: { type: Date, default: null }
+        }
     },
     notificationSchedules: {
         streakSaver: { hour: { type: Number, default: 20 }, minute: { type: Number, default: 0 } },

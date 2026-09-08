@@ -3,6 +3,13 @@
   "appName": "knoozbook",
   "webDir": "dist/mobile/browser",
   "bundledWebRuntime": false,
+  "server": {
+    "iosScheme": "capacitor",
+    "androidScheme": "https",
+    "allowNavigation": [
+      "*"
+    ]
+  },
   "plugins": {
     "CapacitorHttp": {
       "enabled": true
@@ -10,6 +17,11 @@
     "CapacitorUpdater": {
       "stats": false,
       "autoUpdate": false
+    },
+    "GoogleAuth": {
+      "scopes": ["profile", "email"],
+      "serverClientId": "933338292435-c9bk3oo6i1oe3qkhkvp8crflmthhg0kc.apps.googleusercontent.com",
+      "forceCodeForRefreshToken": true
     }
   }
 }

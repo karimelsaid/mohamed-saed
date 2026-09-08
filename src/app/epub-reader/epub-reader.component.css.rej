@@ -1,0 +1,22 @@
+@@ -408,8 +408,8 @@
+ /* ============================
+    Popups / Modals (Settings, TOC)
+    ============================ */
+ .overlay-backdrop {
+-    position: absolute;
++    position: fixed;
+     top: 64px; /* Below top bar */
+     left: 0;
+     right: 0;
+@@ -419,9 +419,10 @@
+ .popup-panel {
+     position: absolute;
+     top: 70px;
+-    right: 16px;
++    left: 20px;
+     width: 320px;
++    max-height: calc(100vh - 140px);
+     background: var(--ui-bg);
+     border: 1px solid var(--ui-border);
+     border-radius: 12px;
+ 

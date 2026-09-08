@@ -3,8 +3,8 @@ import { Router, NavigationEnd } from '@angular/router';
 import { Location, isPlatformBrowser } from '@angular/common'; // Import Location
 import { App } from '@capacitor/app'; // Import App
 import { Capacitor } from '@capacitor/core'; // Import Capacitor
-import { faChevronLeft, faChevronRight, faSearch } from '@fortawesome/free-solid-svg-icons';
-import { faGooglePlay, faYoutube } from '@fortawesome/free-brands-svg-icons';
+import { faChevronLeft, faChevronRight, faSearch, faMoneyBillWave } from '@fortawesome/free-solid-svg-icons';
+import { faGooglePlay, faYoutube, faCcVisa, faCcMastercard } from '@fortawesome/free-brands-svg-icons';
 import { DataService } from './services/data.service';
 import { ModalService, ModalConfig } from './services/modal.service';
 import { TutorialService } from './services/tutorial.service';
@@ -38,6 +38,9 @@ export class AppComponent implements OnInit {
   faSearch = faSearch;
   faGooglePlay = faGooglePlay;
   faYoutube = faYoutube;
+  faCcVisa = faCcVisa;
+  faCcMastercard = faCcMastercard;
+  faMoneyBillWave = faMoneyBillWave;
   outOn = false;
   isSearchPage: boolean = false; // متغير لتحديد إذا كانت الصفحة هي صفحة البحث
   isMushafPage: boolean = false;
@@ -144,6 +147,22 @@ export class AppComponent implements OnInit {
         }
       });
 
+      // Capacitor Deep Link Listener
+      if (Capacitor.isNativePlatform()) {
+        App.addListener('appUrlOpen', (event: { url: string }) => {
+          const domain = 'knoozbook.com';
+          const pathArray = event.url.split(domain);
+          if (pathArray.length > 1) {
+            const appPath = pathArray.pop();
+            if (appPath) {
+              this.ngZone.run(() => {
+                this.router.navigateByUrl(appPath);
+              });
+            }
+          }
+        });
+      }
+
       // Load allBooks data only in browser (not during SSR)
       this.dataService.getData().subscribe((data: any) => {
         this.allBooks = data;
@@ -196,11 +215,19 @@ export class AppComponent implements OnInit {
       // Auto-subscribe logged in users to push system and voice calling (browser only)
       this.authService.user$.subscribe(user => {
         if (user && user.id) {
-          // This ensures that valid token is sent to backend whenever user is known
-          this.pushService.subscribeToNotifications();
+          try {
+            this.pushService.subscribeToNotifications().catch(err => {
+              console.warn('⚠️ [AppComponent] Push subscription failed silently:', err);
+            });
+          } catch (err) {
+            console.warn('⚠️ [AppComponent] Push subscription error:', err);
+          }
 
-          // Initialize Voice Call Peer
-          this.voiceCallService.init(user.id);
+          try {
+            this.voiceCallService.init(user.id);
+          } catch (err) {
+            console.warn('⚠️ [AppComponent] Voice call init error:', err);
+          }
         }
       });
 

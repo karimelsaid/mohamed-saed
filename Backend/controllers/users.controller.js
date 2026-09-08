@@ -261,9 +261,11 @@ async function login(req, res) {
         quranProgress: user.quranProgress,
         gamification: user.gamification,
         earnedCoupons: filterActiveCoupons(user.earnedCoupons),
-        permissions: (user.marketer && user.marketer.applicationStatus === 'approved' && !(user.permissions || []).includes('marketing')) 
-          ? [...(user.permissions || []), 'marketing'] 
-          : (user.permissions || []),
+        permissions: (user.role === 'staff') 
+          ? (user.permissions || []) 
+          : ((user.marketer && user.marketer.applicationStatus === 'approved' && !(user.permissions || []).includes('marketing')) 
+            ? [...(user.permissions || []), 'marketing'] 
+            : (user.permissions || [])),
         marketer: user.marketer ? {
           isMarketer: user.marketer.isMarketer || false,
           applicationStatus: user.marketer.applicationStatus || 'none',
@@ -365,6 +367,8 @@ async function getUserData(req, res) {
     const user = await User.findById(req.params.userId).populate('earnedCoupons.couponId');
     if (!user) return res.status(404).json({ message: 'المستخدم غير موجود' });
 
+    console.log('📋 [getUserData] User:', user.email, 'role:', user.role, 'permissions:', user.permissions);
+
     res.status(200).json({
       favorites: user.favorites,
       cart: user.cart,
@@ -391,9 +395,11 @@ async function getUserData(req, res) {
         gamification: user.gamification,
         earnedCoupons: filterActiveCoupons(user.earnedCoupons),
         isMarketer: (user.marketer && user.marketer.applicationStatus === 'approved') || user.role === 'admin' || user.role === 'staff',
-        permissions: (user.marketer && user.marketer.applicationStatus === 'approved' && !(user.permissions || []).includes('marketing')) 
-          ? [...(user.permissions || []), 'marketing'] 
-          : (user.permissions || []),
+        permissions: (user.role === 'staff') 
+          ? (user.permissions || []) 
+          : ((user.marketer && user.marketer.applicationStatus === 'approved' && !(user.permissions || []).includes('marketing')) 
+            ? [...(user.permissions || []), 'marketing'] 
+            : (user.permissions || [])),
         marketer: user.marketer ? {
           isMarketer: user.marketer.isMarketer || false,
           applicationStatus: user.marketer.applicationStatus || 'none',

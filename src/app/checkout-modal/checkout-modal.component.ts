@@ -774,9 +774,9 @@ export class CheckoutModalComponent implements OnInit {
   increaseQuantity(item: any): void {
     if (!item.quantity) item.quantity = 1;
 
+    // Allow increasing quantity beyond available stock with warning
     if (item.quantity >= item.product_quantity) {
-      this.showAlert(item, 'لا يمكن زيادة الكمية عن ' + item.product_quantity);
-      return;
+      this.showAlert(item, 'تنبيه: الكمية المطلوبة تتجاوز المتوفر حالياً (' + item.product_quantity + '). قد يكون هناك تأخير في التوصيل.');
     }
 
     item.quantity++;
@@ -1163,6 +1163,14 @@ export class CheckoutModalComponent implements OnInit {
                     msg = 'قيمة الطلب غير صحيحة. يرجى التحقق من السلة والمحاولة مجدداً.';
                   } else if (backendError?.error === 'User not found for this order') {
                     msg = 'لم يتم العثور على الطلب. يرجى تسجيل الدخول والمحاولة مجدداً.';
+                  } else if (backendError?.error === 'Order not found') {
+                    msg = 'لم يتم العثور على الطلب. يرجى المحاولة مجدداً.';
+                  } else if (backendError?.error === 'Payment provider timeout. Please try again.') {
+                    msg = 'انتهت مهلة الاتصال ببوابة الدفع. يرجى المحاولة مرة أخرى.';
+                  } else if (backendError?.error === 'Kashier payment session failed') {
+                    msg = 'فشل الاتصال ببوابة الدفع. يرجى المحاولة لاحقاً أو التواصل مع الدعم.';
+                  } else if (paymentError?.status === 0 || paymentError?.status === 504) {
+                    msg = 'لا يوجد اتصال بالسيرفر. يرجى التحقق من اتصال الإنترنت والمحاولة مجدداً.';
                   }
                   
                   this.errorMessage = msg;

@@ -106,7 +106,7 @@
 
         <!-- Books Dropdown -->
         <ul [ngClass]="{hidden:scrollBook}"
-          class="absolute bg-white dark:bg-[#0a1325] text-blue-950 dark:text-blue-100 right-36 md:right-[220px] top-20 rounded-lg shadow-2xl border border-blue-200 dark:border-blue-800 w-48 lg:w-80 overflow-hidden transform transition-all duration-300 ease-in-out z-50 opacity-0 scale-95"
+          class="absolute bg-white dark:bg-[#0a1325] text-blue-950 dark:text-blue-100 right-36 md:right-[220px] top-20 rounded-lg shadow-2xl border border-blue-200 dark:border-blue-800 w-48 lg:w-[500px] xl:w-[650px] overflow-hidden transform transition-all duration-300 ease-in-out z-50 opacity-0 scale-95"
           [style.opacity]="scrollBook ? '0' : '1'" [style.transform]="scrollBook ? 'scale(0.95)' : 'scale(1)'"
           (click)="$event.stopPropagation()">
           <!-- Header -->
@@ -119,15 +119,15 @@
           </div>
 
           <!-- Menu Items -->
-          <div class="py-2">
+          <div class="py-2 grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 max-h-[70vh] overflow-y-auto">
             <!-- Dynamic Book Categories -->
             <div *ngFor="let cat of bookCategories" (click)="scrollBook = true" 
-              [routerLink]="['/category', cat]" routerLinkActive="text-orange-400"
+              [routerLink]="['/category', cat]" routerLinkActive="text-orange-400 font-bold bg-blue-50 dark:bg-blue-900/30"
               class="cursor-pointer flex items-center px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200 group">
               <fa-icon
                 class="text-blue-600 dark:text-blue-400 ml-3 text-sm group-hover:scale-110 transition-transform duration-200"
                 [icon]="getCategoryIcon(cat)"></fa-icon>
-              <li class="text-sm font-medium">{{ cat }}</li>
+              <li class="text-sm font-medium group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors duration-200">{{ cat }}</li>
             </div>
 
             <!-- Other Categories -->

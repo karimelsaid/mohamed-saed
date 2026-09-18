@@ -15,6 +15,7 @@ export class DataService {
   private ordersApiUrl = environment.apiBaseUrl ? environment.apiBaseUrl + '/orders' : '/api/orders';
   private usersApiUrl = environment.apiBaseUrl ? environment.apiBaseUrl + '/users' : '/api/users';
   private categoriesApiUrl = environment.apiBaseUrl ? environment.apiBaseUrl + '/books/categories' : '/api/books/categories';
+  private adminCategoriesApiUrl = environment.apiBaseUrl ? environment.apiBaseUrl + '/categories' : '/api/categories';
 
   private ordersSubject = new BehaviorSubject<any[]>([]);
   public orders$ = this.ordersSubject.asObservable();
@@ -49,7 +50,6 @@ export class DataService {
     // 2. Check if image_path is a full URL (original source)
     let image_path = book.image_path || '';
     if (typeof image_path === 'string' && (image_path.startsWith('http://') || image_path.startsWith('https://'))) {
-      // Only return image_path if we're not explicitly looking for a local variation via product_image
       if (!product_image || 
           product_image === book.products_id || 
           product_image === (book.products_id + '.webp') || 
@@ -59,7 +59,15 @@ export class DataService {
       }
     }
 
-    const host = environment.apiBaseUrl.replace('/api', '');
+    let host = environment.apiBaseUrl.replace('/api', '');
+    if (!host || host.includes('localhost') || host.includes('127.0.0.1')) {
+      host = 'https://knoozbook.com';
+    }
+
+    let uploadsBase = this.uploadsBaseUrl;
+    if (!uploadsBase || uploadsBase.includes('localhost') || uploadsBase.includes('127.0.0.1')) {
+      uploadsBase = 'https://knoozbook.com/uploads/books';
+    }
 
     // 2b. If image_path is already a local /uploads/ path, return it with the full host address.
     if (typeof image_path === 'string' && image_path.startsWith('/uploads/')) {
@@ -76,9 +84,9 @@ export class DataService {
     if (products_id) products_id = String(products_id).trim();
 
     // 4. Determine if it's admin or merchant
-    // 'publisher' merchantRole means it's a virtual publisher stored under the admin folder
     const merchantName = book.merchantName;
-    const isAdmin = book.merchantRole === 'admin' || book.merchantRole === 'publisher' || !merchantName || merchantName === 'كنوز' || merchantName === 'تاجر كنوز' || merchantName === 'Kenouz';
+    const isExplicitMerchant = book.merchantRole === 'merchant' || (book.merchantId && book.merchantRole !== 'admin');
+    const isAdmin = !isExplicitMerchant && (book.merchantRole === 'admin' || book.merchantRole === 'publisher' || !merchantName || merchantName === 'كنوز' || merchantName === 'تاجر كنوز' || merchantName === 'Kenouz');
 
     const folderName = book.barcode || products_id || 'unknown';
     let final_image = product_image || (folderName + '.webp');
@@ -90,10 +98,10 @@ export class DataService {
 
     if (isAdmin) {
       const adminName = book.adminName || 'karim_mohamed__';
-      return `${this.uploadsBaseUrl}/admin__${adminName}/${folderName}/${final_image}`;
+      return `${uploadsBase}/admin__${adminName}/${folderName}/${final_image}`;
     } else {
       const sanitizedMerchantName = String(merchantName || 'merchant').replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
-      return `${this.uploadsBaseUrl}/merchant_${sanitizedMerchantName}/${folderName}/${final_image}`;
+      return `${uploadsBase}/merchant_${sanitizedMerchantName}/${folderName}/${final_image}`;
     }
   }
 
@@ -233,5 +241,25 @@ export class DataService {
 
   getCategories(): Observable<any> {
     return this.http.get<any>(this.categoriesApiUrl);
+  }
+
+  // Admin Categories Management
+  getAdminCategories(): Observable<any> {
+    return this.http.get<any>(this.adminCategoriesApiUrl);
+  }
+
+  createAdminCategory(data: any, token: string): Observable<any> {
+    const headers = { Authorization: `Bearer ${token}` };
+    return this.http.post<any>(this.adminCategoriesApiUrl, data, { headers });
+  }
+
+  updateAdminCategory(id: string, data: any, token: string): Observable<any> {
+    const headers = { Authorization: `Bearer ${token}` };
+    return this.http.put<any>(`${this.adminCategoriesApiUrl}/${id}`, data, { headers });
+  }
+
+  deleteAdminCategory(id: string, token: string): Observable<any> {
+    const headers = { Authorization: `Bearer ${token}` };
+    return this.http.delete<any>(`${this.adminCategoriesApiUrl}/${id}`, { headers });
   }
 }

@@ -124,12 +124,18 @@ const shippingSettingRoutes = require('./routes/shipping-setting.routes');
 const youtubeVideoRoutes = require('./routes/youtube-video.routes');
 const adminPartnershipRoutes = require('./routes/adminPartnershipRoutes');
 const partnerRoutes = require('./routes/partnerRoutes');
+const categoriesRoutes = require('./routes/categories.routes');
 const express = require('express');
 const app = express();
 const compression = require('compression');
 app.use(compression());
 
-const logStream = fs.createWriteStream(path.join(__dirname, 'requests.log'), { flags: 'a' });
+// Request Logger for debugging
+app.use((req, res, next) => {
+  res.setHeader('X-Backend-Version', 'ANTIGRAVITY-DEBUG-V5-FINAL');
+  console.log(`📡 [TRAFFIC] ${req.method} ${req.url} | Origin: ${req.headers.origin || 'N/A'}`);
+  next();
+});
 
 const allowedOrigins = [
   'https://knoozbook.com',
@@ -227,27 +233,7 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 // Rate Limiting - Global
 app.use('/api/', generalLimiter);
 
-// Request Logger for debugging
-app.use((req, res, next) => {
-  res.setHeader('X-Backend-Version', 'ANTIGRAVITY-DEBUG-V5-FINAL');
-  console.log(`📡 [TRAFFIC] ${req.method} ${req.url} | Origin: ${req.headers.origin || 'N/A'}`);
-  const logEntry = `[${new Date().toISOString()}] ${req.method} ${req.url} - Origin: ${req.headers.origin || 'no-origin'} - Headers: ${JSON.stringify(req.headers)}\n`;
-  if (typeof logStream !== 'undefined') {
-    logStream.write(logEntry);
-  }
 
-  // Log response status
-  const oldSend = res.send;
-  res.send = function (data) {
-    const resLog = `[${new Date().toISOString()}] Response for ${req.url}: ${res.statusCode}\n`;
-    if (typeof logStream !== 'undefined') {
-      logStream.write(resLog);
-    }
-    return oldSend.apply(res, arguments);
-  };
-
-  next();
-});
 
 app.get('/api/ping', (req, res) => res.json({ success: true, version: 'ANTIGRAVITY-DEBUG-V3', timestamp: new Date() }));
 app.get('/api/test-order', (req, res) => res.json({ success: true, message: 'API order path is reachable via GET' }));
@@ -535,6 +521,7 @@ app.get('/api/extract-book', async (req, res) => {
 
 // Routes
 app.use('/api/users', usersRoutes);
+app.use('/api/categories', categoriesRoutes);
 app.use('/api/promotions', promotionsRoutes);
 app.use('/api/books', booksRoutes);
 app.use('/api/products', productsRoutes);
@@ -613,7 +600,10 @@ if (fs.existsSync(distPath)) {
     // Skip file extensions
     if (req.url.includes('.')) return next();
 
-    res.sendFile(path.join(distPath, 'index.html'));
+    const indexPath = fs.existsSync(path.join(distPath, 'index.html'))
+      ? path.join(distPath, 'index.html')
+      : path.join(distPath, 'index.csr.html');
+    res.sendFile(indexPath);
   });
 } else {
   console.warn(`⚠️ [App] Static files directory not found: ${distPath}`);

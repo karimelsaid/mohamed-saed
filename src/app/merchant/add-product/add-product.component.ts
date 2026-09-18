@@ -4,6 +4,7 @@ import { MerchantAuthService } from '../../services/merchant-auth.service';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { ModalDialogComponent } from '../../shared/modal-dialog/modal-dialog.component';
+import { DataService } from '../../services/data.service';
 
 @Component({
   selector: 'app-add-product',
@@ -30,19 +31,7 @@ export class AddProductComponent implements OnInit, OnDestroy {
   onConfirm: (() => void) | null = null;
   onCancel: (() => void) | null = null;
 
-  bookCategories = [
-    'روايات وقصص',
-    'تاريخ وسير ذاتية',
-    'قواميس ومراجع',
-    'كتب دينية',
-    'صحة وطب وعلوم',
-    'تطوير الذات وعلم النفس',
-    'أعمال وتسويق ومالية',
-    'فنون وحرف',
-    'تربية وأطفال',
-    'أدوات مكتبية',
-    'أخرى'
-  ];
+  bookCategories: string[] = [];
 
   @ViewChild('videoElement') videoElement!: ElementRef;
   @ViewChild('canvasElement') canvasElement!: ElementRef;
@@ -55,7 +44,8 @@ export class AddProductComponent implements OnInit, OnDestroy {
     private fb: FormBuilder,
     private merchantAuthService: MerchantAuthService,
     private router: Router,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private dataService: DataService
   ) {
     this.productForm = this.fb.group({
       product_name: ['', Validators.required],
@@ -77,6 +67,23 @@ export class AddProductComponent implements OnInit, OnDestroy {
   ngOnInit() {
     this.checkPublisherUploadSetting();
     this.checkMerchantApproval();
+    this.loadCategories();
+  }
+
+  private loadCategories() {
+    this.dataService.getAdminCategories().subscribe({
+      next: (res) => {
+        if (res.success && res.categories) {
+          // Filter only active categories for books (or all active if preferred)
+          this.bookCategories = res.categories
+            .filter((c: any) => c.isActive)
+            .map((c: any) => c.name);
+        }
+      },
+      error: (err) => {
+        console.error('Error loading categories:', err);
+      }
+    });
   }
 
   private checkMerchantApproval() {

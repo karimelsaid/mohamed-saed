@@ -10,8 +10,8 @@ module.exports = {
       instances: 1,
       exec_mode: 'fork',
       watch: false,
-      max_memory_restart: '800M',
-      node_args: '--max-old-space-size=512',
+      max_memory_restart: '1500M',
+      node_args: '--max-old-space-size=2048',
       env_development: {
         NODE_ENV: 'development',
         PORT: 3000,

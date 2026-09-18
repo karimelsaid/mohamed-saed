@@ -346,4 +346,4 @@ userSchema.index({ 'hifzPlan.reminders.recitation.time': 1, 'hifzPlan.reminders.
 userSchema.index({ 'hifzPlan.reminders.memorization.time': 1, 'hifzPlan.reminders.memorization.enabled': 1 });
 userSchema.index({ 'hifzPlan.reminders.revision.time': 1, 'hifzPlan.reminders.revision.enabled': 1 });
 
-module.exports = mongoose.model('User', userSchema);
+module.exports = mongoose.models.User || mongoose.model('User', userSchema);

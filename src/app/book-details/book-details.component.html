@@ -53,7 +53,7 @@
         book.product_name }}</h2>
       <!-- اسم التاجر -->
       <div *ngIf="book.merchantName && book['merchantRole'] !== 'admin'" class="mb-4 flex items-center justify-between flex-wrap gap-4">
-        <a [routerLink]="['/', book.merchantName.trim().split(' ').join('-')]"
+        <a [routerLink]="['/', book.merchantName.trim().split(' ').join('')]"
           class="text-sm text-blue-600 dark:text-blue-400 hover:underline cursor-pointer font-medium">بواسطة {{
           book.merchantName }}</a>
 
@@ -84,14 +84,14 @@
               <ng-container *ngIf="availableImages.length > 0; else placeholderImage">
                 <!-- 3D Book Display (for book categories) -->
                 <div *ngIf="isBookCategory(book.product_category); else defaultImage" class="main-book-container w-full h-full flex items-center justify-center">
-                  <div class="book main-book" [class.book-rtl]="isArabicText(book.product_name)">
-                    <img [src]="availableImages[selectedImageIndex] || ''" [alt]="book.product_name" />
+                  <div class="book main-book cursor-pointer hover:scale-105 transition-transform duration-300" [class.book-rtl]="isArabicText(book.product_name)" (click)="openImageModal()">
+                    <img [src]="availableImages[selectedImageIndex] || ''" [alt]="book.product_name" class="w-full h-full object-contain" />
                   </div>
                 </div>
                 <!-- Default Image Display (for other categories) -->
                 <ng-template #defaultImage>
                   <img [src]="availableImages[selectedImageIndex] || ''" alt="{{ book.product_name }}"
-                    class="w-full h-full object-contain" />
+                    class="w-full h-full object-contain cursor-pointer hover:scale-105 transition-transform duration-300" (click)="openImageModal()" />
                 </ng-template>
               </ng-container>
               <ng-template #placeholderImage>
@@ -750,3 +750,40 @@
 <app-checkout-modal *ngIf="showCheckoutModal" [bookId]="book?.products_id" (close)="showCheckoutModal = false">
 </app-checkout-modal>
 <app-reading-challenge-modal *ngIf="book" [bookId]="book.products_id" [bookTitle]="book.product_name"></app-reading-challenge-modal>
+
+<!-- Fullscreen Image Modal -->
+<div *ngIf="isImageModalOpen && availableImages.length > 0" 
+  class="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 sm:p-8"
+  (click)="onModalBackdropClick($event)">
+  
+  <!-- Close Button -->
+  <button class="absolute top-4 right-4 sm:top-6 sm:right-6 text-white hover:text-gray-300 transition-colors bg-black/50 hover:bg-black/80 rounded-full w-12 h-12 flex items-center justify-center text-3xl z-10 cursor-pointer"
+    (click)="closeImageModal()" title="إغلاق">
+    &times;
+  </button>
+  
+  <!-- Main Image Display with Zoom/Pan Support -->
+  <div class="relative w-full max-w-5xl h-full max-h-[85vh] flex items-center justify-center overflow-hidden" 
+    (click)="onModalBackdropClick($event)">
+    <img [src]="availableImages[selectedImageIndex] || ''" [alt]="book?.product_name" 
+      class="max-w-full max-h-full object-contain shadow-2xl rounded-lg cursor-zoom-in transition-transform duration-100 ease-out will-change-transform touch-none"
+      [style.transform]="getImageTransform()"
+      (dblclick)="onImageDoubleTap($event)"
+      (touchstart)="onImageTouchStart($event)"
+      (touchmove)="onImageTouchMove($event)"
+      (touchend)="onImageTouchEnd($event)"
+      (touchcancel)="onImageTouchEnd($event)" />
+  </div>
+
+  <!-- Thumbnails for quick navigation (bottom) -->
+  <div *ngIf="availableImages.length > 1" class="absolute bottom-4 left-0 right-0 flex justify-center gap-4 px-4 overflow-x-auto py-2" (click)="$event.stopPropagation()">
+    <img *ngFor="let img of availableImages; let i = index" 
+      [src]="img" 
+      class="h-20 w-20 object-contain bg-white rounded-md cursor-pointer border-2 transition-all duration-200 shadow-md hover:scale-110"
+      [class.border-blue-500]="i === selectedImageIndex" 
+      [class.opacity-100]="i === selectedImageIndex"
+      [class.border-transparent]="i !== selectedImageIndex"
+      [class.opacity-60]="i !== selectedImageIndex"
+      (click)="selectedImageIndex = i" />
+  </div>
+</div>

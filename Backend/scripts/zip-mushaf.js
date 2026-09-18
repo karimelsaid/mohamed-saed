@@ -76,6 +76,41 @@ try {
       console.log(`📋 Copied bundle to root Nginx dir: ${rootDistZip}`);
     } catch (e) { }
   }
+
+  // Auto-bump MongoDB version for app: 'mushaf'
+  try {
+    const mongoose = require('mongoose');
+    require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+    const MobileVersion = require('../models/MobileVersion.model');
+
+    const mongoUri = process.env.MONGO_URI || "mongodb+srv://karimmohamed2729:joufTO0k8VcsbZcd@kenouz.oup4o7v.mongodb.net/?retryWrites=true&w=majority&appName=kenouz";
+    mongoose.connect(mongoUri).then(async () => {
+      let config = await MobileVersion.findOne({ app: 'mushaf' });
+      if (!config) config = new MobileVersion({ app: 'mushaf' });
+
+      let currentVersion = config.liveUpdate?.version || '2.2.0';
+      let dbParts = currentVersion.split('.').map(Number);
+      if (dbParts.length < 3) dbParts = [2, 2, 0];
+      const newVersion = `${dbParts[0]}.${dbParts[1]}.${(dbParts[2] || 0) + 1}`;
+
+      config.liveUpdate = {
+        ...config.liveUpdate,
+        version: newVersion,
+        enabled: true,
+        zipUrl: 'https://knoozbook.com/mushaf-bundle.zip',
+        lastZipMtime: stats.mtime
+      };
+      if (config.android) config.android.version = newVersion;
+      if (config.ios) config.ios.version = newVersion;
+
+      await config.save();
+      console.log(`🚀 [AutoVersion] Mushaf Live Update DB version bumped to: ${newVersion}`);
+      await mongoose.disconnect();
+    }).catch(err => {
+      console.warn('⚠️ [AutoVersion] Could not update MongoDB version:', err.message);
+    });
+  } catch (dbErr) { }
+
 } catch (error) {
   console.error('❌ حدث خطأ أثناء ضغط ملفات المصحف:', error.message);
   process.exit(1);

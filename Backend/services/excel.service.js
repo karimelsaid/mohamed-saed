@@ -175,6 +175,10 @@ async function processAndSaveData(filteredJson, promotionStartDate, promoEndDate
     const allMerchants = await User.find({ role: 'merchant' }, '_id username logo');
     merchantMap = new Map(allMerchants.map(m => [m._id.toString(), { username: m.username, logo: m.logo }]));
   }
+  
+  const CategoryModel = require('../models/Category.model');
+  const allDynamicCategories = await CategoryModel.find({}, 'name');
+  const validDynamicCategoryNames = new Set(allDynamicCategories.map(c => c.name));
 
   // Ensure promoEndDate/promotionStartDate are Dates if they came from JSON
   promotionStartDate = new Date(promotionStartDate);
@@ -201,7 +205,7 @@ async function processAndSaveData(filteredJson, promotionStartDate, promoEndDate
     let name = productData.product_name || '';
     // Prefer product_category field if valid
     let category = null;
-    if (productData.product_category && Object.values(categoryMap).includes(productData.product_category)) {
+    if (productData.product_category && (Object.values(categoryMap).includes(productData.product_category) || validDynamicCategoryNames.has(productData.product_category))) {
       category = productData.product_category;
     } else {
       // If category is not valid, default to 'غير مصنف' instead of using product name

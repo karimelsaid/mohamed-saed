@@ -65,6 +65,115 @@ export class BookDetailsComponent implements OnInit, OnDestroy {
   selectedImageIndex: number = 0;
   availableImages: string[] = [];
   relatedProducts: Book[] = [];
+  
+  isImageModalOpen: boolean = false;
+  imageZoomScale: number = 1;
+  imageTranslateX: number = 0;
+  imageTranslateY: number = 0;
+  private lastTapTime: number = 0;
+  private initialPinchDistance: number = 0;
+  private initialZoomScale: number = 1;
+  private lastTouchX: number = 0;
+  private lastTouchY: number = 0;
+  private isPanning: boolean = false;
+
+  openImageModal(): void {
+    this.isImageModalOpen = true;
+    this.resetZoom();
+  }
+
+  closeImageModal(): void {
+    this.isImageModalOpen = false;
+    this.resetZoom();
+  }
+
+  onModalBackdropClick(event: MouseEvent): void {
+    // Only close if clicked directly on the backdrop, not on child elements
+    if (event.target === event.currentTarget) {
+      this.closeImageModal();
+    }
+  }
+
+  resetZoom(): void {
+    this.imageZoomScale = 1;
+    this.imageTranslateX = 0;
+    this.imageTranslateY = 0;
+  }
+
+  onImageDoubleTap(event: TouchEvent | MouseEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    if (this.imageZoomScale > 1) {
+      this.resetZoom();
+    } else {
+      this.imageZoomScale = 2.5;
+    }
+  }
+
+  onImageTouchStart(event: TouchEvent): void {
+    if (event.touches.length === 2) {
+      // Pinch start
+      event.preventDefault();
+      this.initialPinchDistance = this.getTouchDistance(event.touches[0], event.touches[1]);
+      this.initialZoomScale = this.imageZoomScale;
+    } else if (event.touches.length === 1) {
+      // Check for double-tap
+      const now = Date.now();
+      if (now - this.lastTapTime < 300) {
+        this.onImageDoubleTap(event);
+        this.lastTapTime = 0;
+        return;
+      }
+      this.lastTapTime = now;
+
+      // Pan start (only when zoomed in)
+      if (this.imageZoomScale > 1) {
+        this.isPanning = true;
+        this.lastTouchX = event.touches[0].clientX;
+        this.lastTouchY = event.touches[0].clientY;
+      }
+    }
+  }
+
+  onImageTouchMove(event: TouchEvent): void {
+    if (event.touches.length === 2) {
+      // Pinch zoom
+      event.preventDefault();
+      const currentDistance = this.getTouchDistance(event.touches[0], event.touches[1]);
+      const scale = (currentDistance / this.initialPinchDistance) * this.initialZoomScale;
+      this.imageZoomScale = Math.min(Math.max(scale, 1), 5);
+      if (this.imageZoomScale <= 1) {
+        this.imageTranslateX = 0;
+        this.imageTranslateY = 0;
+      }
+    } else if (event.touches.length === 1 && this.isPanning && this.imageZoomScale > 1) {
+      // Panning
+      event.preventDefault();
+      const deltaX = event.touches[0].clientX - this.lastTouchX;
+      const deltaY = event.touches[0].clientY - this.lastTouchY;
+      this.imageTranslateX += deltaX;
+      this.imageTranslateY += deltaY;
+      this.lastTouchX = event.touches[0].clientX;
+      this.lastTouchY = event.touches[0].clientY;
+    }
+  }
+
+  onImageTouchEnd(event: TouchEvent): void {
+    this.isPanning = false;
+    if (this.imageZoomScale <= 1) {
+      this.resetZoom();
+    }
+  }
+
+  private getTouchDistance(touch1: Touch, touch2: Touch): number {
+    const dx = touch1.clientX - touch2.clientX;
+    const dy = touch1.clientY - touch2.clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  getImageTransform(): string {
+    return `scale(${this.imageZoomScale}) translate(${this.imageTranslateX / this.imageZoomScale}px, ${this.imageTranslateY / this.imageZoomScale}px)`;
+  }
 
   private bookId: string | null = null;
   private loadedBookId: string | null = null;

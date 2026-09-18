@@ -218,9 +218,14 @@ async function addProduct(req, res) {
     let { product_name, product_quantity, product_category, product_description, product_price, price_cost, copyType, condition, weight, length, width, height } = req.body;
 
     // Map merchant category to standard category
-    // Only use category if it exists in merchantCategoryMap, otherwise default to 'غير مصنف'
-    // This prevents product names from being used as category names
-    product_category = merchantCategoryMap[product_category] || 'غير مصنف';
+    // Only use category if it exists in Category model or merchantCategoryMap, otherwise default to 'غير مصنف'
+    const CategoryModel = require('../models/Category.model');
+    const dynamicCategory = await CategoryModel.findOne({ name: product_category });
+    if (dynamicCategory) {
+      product_category = dynamicCategory.name;
+    } else {
+      product_category = merchantCategoryMap[product_category] || 'غير مصنف';
+    }
 
     if (!product_name || !product_quantity || !product_category || !product_description || product_description.trim() === '' || weight === undefined || weight === null || weight === '') {
       return res.status(400).json({ success: false, message: 'Missing required fields or product description is empty (including weight)' });
@@ -465,14 +470,17 @@ async function getPublicMerchants(req, res) {
 async function getMerchantProducts(req, res) {
   try {
     const merchantId = req.merchant._id;
+    const merchantName = req.merchant.merchantName || req.merchant.name || req.merchant.username;
     const Product = require('../models/Product.model');
 
     const products = await Product.find({ merchantId }).sort({ createdAt: -1 }).lean();
 
-    // Ensure products_id is present for each product
+    // Ensure products_id and merchant details are present for each product
     const enrichedProducts = products.map(p => ({
       ...p,
       products_id: p.products_id || p._id.toString(),
+      merchantName: p.merchantName || merchantName,
+      merchantRole: p.merchantRole || 'merchant',
       shippingMethod: req.merchant.merchantShippingMethod || 'knoozbook'
     }));
 
@@ -925,32 +933,52 @@ async function getMerchantById(req, res) {
 async function getMerchantByUsername(req, res) {
   try {
     const rawUsername = req.params.username;
-    const usernameWithSpaces = rawUsername.replace(/-/g, ' ');
+    if (!rawUsername) {
+      return res.status(400).json({ success: false, message: 'اسم التاجر مطلوب' });
+    }
 
-    // Use regex for flexible matching (case-insensitive, ignore surrounding spaces, handle Arabic variations)
-    const nameRegex = (name) => {
-      let pattern = name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      // Normalize Arabic characters in the regex pattern
-      pattern = pattern
-        .replace(/[أإآا]/g, '[أإآا]')
-        .replace(/[ةه]/g, '[ةه]')
-        .replace(/[ىي]/g, '[ىي]')
-        .replace(/ؤ/g, '[ؤو]')
-        .replace(/ئ/g, '[ئىي]');
-      return { $regex: new RegExp('^\\s*' + pattern + '\\s*$', 'i') };
+    const decodedUsername = decodeURIComponent(rawUsername);
+    const usernameWithSpaces = decodedUsername.replace(/[-_]+/g, ' ');
+
+    // Flexible regex matching: allows optional spaces/hyphens/underscores between characters
+    const flexRegex = (name) => {
+      const clean = name.replace(/[\\-_\\s]+/g, '').trim();
+      let escapedChars = [];
+      for (let char of clean) {
+        let p = char.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+          .replace(/[أإآا]/g, '[أإآا]')
+          .replace(/[ةه]/g, '[ةه]')
+          .replace(/[ىي]/g, '[ىي]')
+          .replace(/ؤ/g, '[ؤو]')
+          .replace(/ئ/g, '[ئىي]');
+        escapedChars.push(p);
+      }
+      const pattern = '^\\s*' + escapedChars.join('[\\-_\\s]*') + '\\s*$';
+      return new RegExp(pattern, 'i');
     };
+
+    const flexPattern = flexRegex(decodedUsername);
 
     const searchQuery = {
       role: 'merchant',
       $or: [
-        { username: nameRegex(rawUsername) },
-        { username: nameRegex(usernameWithSpaces) },
-        { merchantName: nameRegex(rawUsername) },
-        { merchantName: nameRegex(usernameWithSpaces) }
+        { username: flexPattern },
+        { merchantName: flexPattern }
       ]
     };
 
-    const merchant = await User.findOne(searchQuery);
+    let merchant = await User.findOne(searchQuery);
+
+    if (!merchant) {
+      // Memory scan fallback for merchants if regex fails on edge cases
+      const cleanTarget = decodedUsername.replace(/[\s-_]+/g, '').toLowerCase();
+      const allMerchants = await User.find({ role: 'merchant' });
+      merchant = allMerchants.find(m => {
+        const uClean = (m.username || '').replace(/[\s-_]+/g, '').toLowerCase();
+        const mClean = (m.merchantName || '').replace(/[\s-_]+/g, '').toLowerCase();
+        return (uClean && uClean === cleanTarget) || (mClean && mClean === cleanTarget);
+      });
+    }
 
     if (!merchant) {
       // FALLBACK: Check if this name exists as a 'publisher' in output.json

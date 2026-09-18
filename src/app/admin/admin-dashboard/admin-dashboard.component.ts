@@ -46,6 +46,7 @@ import { AmazonAccountsComponent } from '../amazon-accounts/amazon-accounts.comp
 import { MerchantAmazonLinkComponent } from '../merchant-amazon-link/merchant-amazon-link.component';
 import { ShippingSettingsComponent } from '../shipping-settings/shipping-settings.component';
 import { YoutubeManagerComponent } from '../youtube-manager/youtube-manager.component';
+import { AdminCategoriesComponent } from '../admin-categories/admin-categories.component';
 
 interface Order {
   _id: string;
@@ -277,7 +278,7 @@ interface SystemSettings {
   };
 }
 
-export type AdminView = 'dashboard' | 'partnership' | 'partnerDashboard' | 'userIntelligence' | 'orders' | 'requestedBooks' | 'printOrders' | 'printingSettings' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'staff' | 'productApproval' | 'productManagement' | 'merchantManagement' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' | 'gamificationControl' | 'notifications' | 'subscriptionControl' | 'readerFeedback' | 'promotions' | 'salesRegistration' | 'shortagesReport' | 'promotionDates' | 'salesHistory' | 'community' | 'bourseSettings' | 'automation' | 'aiControlCenter' | 'newsletter' | 'marketers' | 'specialOffers' | 'amazonDiagnostics' | 'amazonCatalog' | 'amazonAccounts' | 'merchantAmazonLink' | 'shippingSettings' | 'youtubeManager';
+export type AdminView = 'dashboard' | 'partnership' | 'partnerDashboard' | 'userIntelligence' | 'orders' | 'requestedBooks' | 'printOrders' | 'printingSettings' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'staff' | 'productApproval' | 'productManagement' | 'merchantManagement' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' | 'gamificationControl' | 'notifications' | 'subscriptionControl' | 'readerFeedback' | 'promotions' | 'salesRegistration' | 'shortagesReport' | 'promotionDates' | 'salesHistory' | 'community' | 'bourseSettings' | 'automation' | 'aiControlCenter' | 'newsletter' | 'marketers' | 'specialOffers' | 'amazonDiagnostics' | 'amazonCatalog' | 'amazonAccounts' | 'merchantAmazonLink' | 'shippingSettings' | 'youtubeManager' | 'categories';
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -315,7 +316,8 @@ export type AdminView = 'dashboard' | 'partnership' | 'partnerDashboard' | 'user
     MarketerManagementComponent,
     SpecialOffersManagerComponent,
     AiControlCenterComponent,
-    PartnershipComponent
+    PartnershipComponent,
+    AdminCategoriesComponent
   ],
   templateUrl: './admin-dashboard.component.html',
   styleUrls: ['./admin-dashboard.component.css']
@@ -1090,7 +1092,8 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     'amazonAccounts': 'إدارة حسابات أمازون',
     'merchantAmazonLink': 'ربط حسابات أمازون',
     'shippingSettings': 'إعدادات الشحن',
-    'youtubeManager': 'إدارة فيديوهات اليوتيوب'
+    'youtubeManager': 'إدارة فيديوهات اليوتيوب',
+    'categories': 'إدارة التصنيفات'
   };
 
   // Global Navigation Search
@@ -1544,19 +1547,54 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   newCategoryName: string = '';
 
   loadCategories(): void {
-    // Initial merge of hardcoded categories
+    // Initial merge of hardcoded categories as fallback
     const initialCategories = [...this.categories, ...this.bookSubCategories, ...this.mainCategories];
     this.allCategories = [...new Set(initialCategories)];
 
-    this.dataService.getCategories().subscribe({
+    // Fetch dynamic categories from admin API
+    this.dataService.getAdminCategories().subscribe({
       next: (res: any) => {
-        if (res && res.success) {
-          // Merge with API categories and ensure uniqueness
-          const combined = [...this.allCategories, ...res.categories];
-          this.allCategories = [...new Set(combined)].sort();
+        if (res && res.success && res.categories) {
+          const activeCategories = res.categories.filter((c: any) => c.isActive !== false);
+          const bookCats = activeCategories.filter((c: any) => c.type === 'book');
+          const nonBookCats = activeCategories.filter((c: any) => c.type !== 'book');
+
+          if (bookCats.length > 0) {
+            this.bookSubCategories = bookCats.map((c: any) => c.name);
+          }
+
+          // Build mainCategories dynamically
+          const dynamicMain: string[] = ['كتب'];
+          nonBookCats.forEach((c: any) => {
+            if (!dynamicMain.includes(c.name)) {
+              dynamicMain.push(c.name);
+            }
+          });
+          if (!dynamicMain.includes('أدوات مكتبية')) dynamicMain.push('أدوات مكتبية');
+          if (!dynamicMain.includes('غير مصنف')) dynamicMain.push('غير مصنف');
+          this.mainCategories = dynamicMain;
+
+          // Rebuild categories (all subcategories + main)
+          this.categories = [...this.bookSubCategories, ...nonBookCats.map((c: any) => c.name), 'غير مصنف'];
+
+          // Rebuild allCategories
+          const combined = [...this.categories, ...this.bookSubCategories, ...this.mainCategories];
+          this.allCategories = [...new Set(combined)];
         }
       },
-      error: (err) => console.error('Error loading categories:', err)
+      error: (err) => {
+        console.error('Error loading dynamic categories:', err);
+        // Fallback: also try the simple categories endpoint
+        this.dataService.getCategories().subscribe({
+          next: (res: any) => {
+            if (res && res.success) {
+              const combined = [...this.allCategories, ...res.categories];
+              this.allCategories = [...new Set(combined)].sort();
+            }
+          },
+          error: (err2) => console.error('Error loading categories fallback:', err2)
+        });
+      }
     });
   }
 

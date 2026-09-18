@@ -32,7 +32,7 @@
 
   <!-- Premium Hero Section -->
   <div class="premium-hero"
-    [style.backgroundImage]="'url(' + (merchant.coverPhoto ? (uploadsBaseUrl + '/' + merchant.coverPhoto) : 'https://images.unsplash.com/photo-1507842217343-583bb7270b66?q=80&w=2000&auto=format&fit=crop') + ')'">
+    [style.backgroundImage]="'url(' + (merchant.coverPhoto ? getCoverUrl(merchant.coverPhoto) : 'https://images.unsplash.com/photo-1507842217343-583bb7270b66?q=80&w=2000&auto=format&fit=crop') + ')'">
     <div class="absolute bottom-10 left-10 right-10 flex flex-wrap justify-between md:justify-end items-center gap-4">
       <div class="glass-pill flex items-center gap-2 order-1">
         <span class="w-2 h-2 rounded-full bg-green-400 animate-ping"></span>
@@ -54,7 +54,7 @@
         </div>
         <div
           class="relative w-40 h-40 md:w-48 md:h-48 rounded-full overflow-hidden border-8 border-white dark:border-gray-900 shadow-2xl bg-white dark:bg-gray-800">
-          <img *ngIf="merchant.logo" [src]="uploadsBaseUrl + '/' + merchant.logo" alt="شعار التاجر"
+          <img *ngIf="merchant.logo" [src]="getLogoUrl(merchant.logo)" alt="شعار التاجر"
             class="w-full h-full object-cover" />
           <div *ngIf="!merchant.logo"
             class="w-full h-full bg-gradient-to-br from-[var(--knooz-indigo)] to-blue-700 flex items-center justify-center text-white">

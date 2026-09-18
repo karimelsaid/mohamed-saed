@@ -521,12 +521,26 @@ export class NavbarComponent implements OnInit {
       'كتب دينية'
     ];
 
-    this.dataService.getCategories().subscribe({
+    this.dataService.getAdminCategories().subscribe({
       next: (res) => {
         if (res && res.success) {
-          // Merge default categories with those from backend to ensure core ones are always there
-          this.dynamicCategories = [...new Set([...defaultCats, ...res.categories])];
-          this.groupCategories();
+          const activeCategories = res.categories.filter((c: any) => c.isActive !== false);
+          
+          this.bookCategories = [];
+          this.officeCategories = [];
+          this.otherCategories = [];
+          this.dynamicCategories = [];
+
+          activeCategories.forEach((c: any) => {
+            this.dynamicCategories.push(c.name);
+            if (c.type === 'book') {
+              this.bookCategories.push(c.name);
+            } else if (c.type === 'stationery') {
+              this.officeCategories.push(c.name);
+            } else {
+              this.otherCategories.push(c.name);
+            }
+          });
           this.cdr.markForCheck();
         }
       },

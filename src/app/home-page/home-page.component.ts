@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, Inject, PLATFORM_ID } from '@angular/core';
+import { Component, OnInit, OnDestroy, Inject, PLATFORM_ID, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
@@ -46,19 +46,10 @@ export class HomePageComponent implements OnInit, OnDestroy {
     { id: 'office-supplies', name: 'أدوات مكتبية', icon: faPenNib, filter: ['أدوات مكتبية'] }
   ];
 
-  bookGenres = [
+  bookGenres: any[] = [
     { id: 'all', name: 'الكل' },
     { id: 'bestsellers', name: '🔥 الأكثر مبيعاً' },
-    { id: 'new-arrivals', name: '✨ وصل حديثاً' },
-    { id: 'novels', name: 'روايات وقصص', filter: ['روايات وقصص'] },
-    { id: 'islamic', name: 'كتب دينية', filter: ['كتب دينية'] },
-    { id: 'development', name: 'تطوير الذات', filter: ['تطوير الذات وعلم النفس'] },
-    { id: 'children', name: 'أطفال وتربية', filter: ['تربية وأطفال'] },
-    { id: 'history', name: 'تاريخ وسير', filter: ['تاريخ وسير ذاتية'] },
-    { id: 'business', name: 'أعمال ومالية', filter: ['أعمال وتسويق ومالية'] },
-    { id: 'reference', name: 'قواميس ومراجع', filter: ['قواميس ومراجع'] },
-    { id: 'health', name: 'صحة وعلوم', filter: ['صحة وطب وعلوم'] },
-    { id: 'arts', name: 'فنون وحرف', filter: ['فنون وحرف'] }
+    { id: 'new-arrivals', name: '✨ وصل حديثاً' }
   ];
 
   // Promo Carousel
@@ -115,6 +106,7 @@ export class HomePageComponent implements OnInit, OnDestroy {
     private http: HttpClient,
     private merchantAuthService: MerchantAuthService,
     private analyticsTrackingService: AnalyticsTrackingService,
+    private cdr: ChangeDetectorRef,
     @Inject(PLATFORM_ID) private platformId: Object
   ) { }
 
@@ -123,10 +115,6 @@ export class HomePageComponent implements OnInit, OnDestroy {
     // — only needed in the browser for visual rendering
     if (isPlatformBrowser(this.platformId)) {
       this.initHero();
-    }
-    // Load dynamic categories in browser only — HTTP call not needed during SSR
-    if (isPlatformBrowser(this.platformId)) {
-      this.loadDynamicCategories();
     }
 
     // Set SEO meta tags for the homepage
@@ -209,11 +197,41 @@ export class HomePageComponent implements OnInit, OnDestroy {
         localStorage.setItem('hasVisitedBefore', 'true');
         this.isServicesExpanded = true;
       }
+
+      // Load dynamic book categories
+      this.loadDynamicCategories();
     }
   }
 
   toggleServices(): void {
     this.isServicesExpanded = !this.isServicesExpanded;
+  }
+
+  loadDynamicCategories(): void {
+    this.dataService.getAdminCategories().subscribe({
+      next: (res: any) => {
+        if (res && res.success) {
+          const activeCategories = res.categories.filter((c: any) => c.isActive !== false && c.type === 'book');
+          const dynamicGenres = activeCategories.map((c: any) => ({
+            id: c._id || c.name.replace(/\s+/g, '-').toLowerCase(),
+            name: c.name,
+            filter: [c.name]
+          }));
+          
+          this.bookGenres = [
+            { id: 'all', name: 'الكل' },
+            { id: 'bestsellers', name: '🔥 الأكثر مبيعاً' },
+            { id: 'new-arrivals', name: '✨ وصل حديثاً' },
+            ...dynamicGenres
+          ];
+          
+          this.cdr.markForCheck();
+        }
+      },
+      error: (err: any) => {
+        console.error('Error loading dynamic categories in home:', err);
+      }
+    });
   }
 
   loadFeaturedPackages(): void {
@@ -343,7 +361,7 @@ export class HomePageComponent implements OnInit, OnDestroy {
     if (!genre || !genre.filter) return allProducts.slice(0, 20);
 
     return allProducts.filter(product =>
-      genre.filter?.some(f => product.product_category && product.product_category.includes(f))
+      genre.filter?.some((f: string) => product.product_category && product.product_category.includes(f))
     ).slice(0, 20);
   }
 
@@ -693,30 +711,24 @@ export class HomePageComponent implements OnInit, OnDestroy {
     
     // Case 1: Registered Merchant with a defined logo path in DB
     if (merchant.logo) {
-      return `${environment.uploadsBaseUrl}/${merchant.logo}`;
+      let logo = merchant.logo;
+      if (logo.startsWith('http://') || logo.startsWith('https://') || logo.startsWith('data:')) {
+        return logo.replace(/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?/, 'https://knoozbook.com');
+      }
+      if (logo.startsWith('/uploads/') || logo.startsWith('uploads/')) {
+        const clean = logo.startsWith('/') ? logo : `/${logo}`;
+        return `https://knoozbook.com${clean}`;
+      }
+      const cleanLogo = logo.startsWith('/') ? logo.substring(1) : logo;
+      return `https://knoozbook.com/uploads/books/${cleanLogo}`;
     }
 
     // Case 2: Auto-extracted publisher or mock - use backend endpoint to get correct image
-    const sanitizedName = merchant.name.trim().replace(/\s+/g, '_');
-    return `${environment.apiBaseUrl}/books/publisher-logo/${encodeURIComponent(sanitizedName)}`;
+    const sanitizedName = (merchant.name || merchant.merchantName || '').trim().replace(/\s+/g, '_');
+    return `https://knoozbook.com/api/books/publisher-logo/${encodeURIComponent(sanitizedName)}`;
   }
 
-  loadDynamicCategories(): void {
-    this.dataService.getCategories().subscribe({
-      next: (res) => {
-        if (res && res.success && res.categories.length > 0) {
-          const dynamicGenres = res.categories.map((cat: string) => ({
-            id: cat,
-            name: cat,
-            filter: [cat]
-          }));
-          // Merge with unique logic to keep "All" and potentially some hardcoded ones if needed
-          this.bookGenres = [{ id: 'all', name: 'الكل' }, ...dynamicGenres];
-        }
-      },
-      error: (err) => console.error('Error loading dynamic categories:', err)
-    });
-  }
+
 
   // Bourse Preview Logic
   fetchBourseOffer() {

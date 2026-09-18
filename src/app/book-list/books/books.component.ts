@@ -1,4 +1,4 @@
-import { Component, ViewChild, OnInit, OnDestroy, Inject, PLATFORM_ID } from '@angular/core';
+import { Component, ViewChild, OnInit, OnDestroy, Inject, PLATFORM_ID, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -62,7 +62,7 @@ export class BooksComponent implements OnInit, OnDestroy {
     sortOrder: string = 'random'; // Default to random
 
     // Book categories to filter by
-    bookCategories = [
+    bookCategories: string[] = [
         'كتب', 'روايات وقصص', 'تطوير الذات وعلم النفس', 'كتب دينية',
         'قواميس ومراجع', 'صحة وطب وعلوم', 'أعمال وتسويق ومالية',
         'فنون وحرف', 'تاريخ وسير ذاتية', 'تربية وأطفال', 'أدوات مكتبية'
@@ -80,7 +80,8 @@ export class BooksComponent implements OnInit, OnDestroy {
         private seoService: SeoService,
         private meta: Meta,
         private analyticsTrackingService: AnalyticsTrackingService,
-        @Inject(PLATFORM_ID) private platformId: Object
+        @Inject(PLATFORM_ID) private platformId: Object,
+        private cdr: ChangeDetectorRef
     ) { }
 
     ngOnInit(): void {
@@ -126,6 +127,27 @@ export class BooksComponent implements OnInit, OnDestroy {
             if (params['name']) {
                 this.selectedCategory = params['name'];
                 this.applyFiltersAndSort();
+            }
+        });
+
+        if (isPlatformBrowser(this.platformId)) {
+            this.loadDynamicCategories();
+        }
+    }
+
+    loadDynamicCategories(): void {
+        this.dataService.getAdminCategories().subscribe({
+            next: (res: any) => {
+                if (res && res.success) {
+                    const activeCategories = res.categories.filter((c: any) => c.isActive !== false && c.type === 'book');
+                    if (activeCategories.length > 0) {
+                        this.bookCategories = activeCategories.map((c: any) => c.name);
+                        this.cdr.markForCheck();
+                    }
+                }
+            },
+            error: (err) => {
+                console.error('Error loading dynamic categories:', err);
             }
         });
     }

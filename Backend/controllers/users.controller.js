@@ -459,7 +459,7 @@ async function getUserProfile(req, res) {
       taxNumber: user.taxNumber,
       logo: user.logo,
       shippingRates: user.shippingRates || [],
-      profileImage: user.profileImage,
+      profileImage: user.profileImage || user.logo || null,
       coverPhoto: user.coverPhoto,
       quranProgress: user.quranProgress,
       gamification: user.gamification,

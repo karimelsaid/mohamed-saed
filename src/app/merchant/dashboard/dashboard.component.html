@@ -470,6 +470,15 @@
                 <fa-icon [icon]="faEnvelope" class="text-sm"></fa-icon>
                 <span>{{ merchant?.email }}</span>
               </div>
+              <div class="flex flex-wrap items-center justify-center md:justify-start gap-2 mt-3">
+                <a [routerLink]="['/', getStoreSlug()]" target="_blank" class="text-xs font-bold bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-3 py-1.5 rounded-lg hover:underline flex items-center gap-1.5">
+                  <fa-icon [icon]="faStore"></fa-icon>
+                  <span>{{ getStoreUrl() }}</span>
+                </a>
+                <button (click)="copyStoreLink()" class="text-xs font-bold bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 px-3 py-1.5 rounded-lg transition-colors">
+                  {{ copyStoreLinkSuccess ? 'تم النسخ! ✓' : 'نسخ الرابط' }}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -611,8 +620,8 @@
                   </label>
                   <div class="flex items-center gap-4">
                     <div class="w-20 h-20 rounded-xl border-2 border-dashed dark:border-gray-700 flex items-center justify-center overflow-hidden bg-gray-50 dark:bg-gray-900">
-                      <img *ngIf="logoPreview" [src]="logoPreview" class="w-full h-full object-cover">
-                      <fa-icon *ngIf="!logoPreview" [icon]="faStore" class="text-gray-300 text-2xl"></fa-icon>
+                      <img *ngIf="logoPreview || getLogoUrl(merchant?.logo)" [src]="logoPreview || getLogoUrl(merchant?.logo)" class="w-full h-full object-cover">
+                      <fa-icon *ngIf="!logoPreview && !getLogoUrl(merchant?.logo)" [icon]="faStore" class="text-gray-300 text-2xl"></fa-icon>
                     </div>
                     <input type="file" (change)="onFileSelected($event)" 
                       class="flex-1 text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-gray-700 dark:file:text-gray-200">
@@ -626,8 +635,8 @@
                   </label>
                   <div class="flex flex-col gap-4">
                     <div class="w-full h-24 rounded-xl border-2 border-dashed dark:border-gray-700 flex items-center justify-center overflow-hidden bg-gray-50 dark:bg-gray-900">
-                      <img *ngIf="coverPreview" [src]="coverPreview" class="w-full h-full object-cover">
-                      <fa-icon *ngIf="!coverPreview" [icon]="faCamera" class="text-gray-300 text-2xl"></fa-icon>
+                      <img *ngIf="coverPreview || getCoverUrl(merchant?.coverPhoto)" [src]="coverPreview || getCoverUrl(merchant?.coverPhoto)" class="w-full h-full object-cover">
+                      <fa-icon *ngIf="!coverPreview && !getCoverUrl(merchant?.coverPhoto)" [icon]="faCamera" class="text-gray-300 text-2xl"></fa-icon>
                     </div>
                     <input type="file" (change)="onCoverFileSelected($event)" 
                       class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100 dark:file:bg-gray-700 dark:file:text-gray-200">

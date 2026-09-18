@@ -345,10 +345,18 @@ async function addProduct(req, res) {
     });
 
     const { categoryMap, reverseCategoryMap } = require('../services/excel.service');
-    // Only use category if it exists in categoryMap, otherwise default to 'غير مصنف'
-    // This prevents product names from being used as category names
-    const fullCategory = categoryMap[product_category] || 'غير مصنف';
-    const shortCategoryKey = reverseCategoryMap[fullCategory] || product_category;
+    // Only use category if it exists in Category model or categoryMap, otherwise default to 'غير مصنف'
+    const CategoryModel = require('../models/Category.model');
+    const dynamicCategory = await CategoryModel.findOne({ name: product_category });
+    let fullCategory;
+    let shortCategoryKey;
+    if (dynamicCategory) {
+      fullCategory = dynamicCategory.name;
+      shortCategoryKey = product_category;
+    } else {
+      fullCategory = categoryMap[product_category] || 'غير مصنف';
+      shortCategoryKey = reverseCategoryMap[fullCategory] || product_category;
+    }
 
     // Convert weight to number for validation
     const weightNum = parseFloat(weight);
@@ -2914,13 +2922,15 @@ async function updateProductUpdateRequest(req, res) {
       product.product_description = request.updatedProduct.product_description;
       product.product_price = request.updatedProduct.product_price;
       product.price_cost = request.updatedProduct.price_cost;
-      product.copyType = request.updatedProduct.copyType;
-      product.condition = request.updatedProduct.condition;
-      product.weight = request.updatedProduct.weight;
-      product.length = request.updatedProduct.length;
-      product.width = request.updatedProduct.width;
-      product.height = request.updatedProduct.height;
-      product.images = request.updatedProduct.images;
+      product.copyType = request.updatedProduct.copyType || product.copyType || 'أصلي';
+      product.condition = request.updatedProduct.condition || product.condition || 'جديد';
+      product.weight = request.updatedProduct.weight || product.weight || 0.5;
+      product.length = request.updatedProduct.length || product.length || '20';
+      product.width = request.updatedProduct.width || product.width || '15';
+      product.height = request.updatedProduct.height || product.height || '2';
+      if (request.updatedProduct.images && request.updatedProduct.images.length > 0) {
+        product.images = request.updatedProduct.images;
+      }
 
       await product.save();
 
@@ -2929,63 +2939,72 @@ async function updateProductUpdateRequest(req, res) {
       const fileId = process.env.GOOGLE_DRIVE_FILE_ID;
 
       if (fileId) {
-        const client = await require('../config/drive').auth.getClient();
-        const drive = google.drive({ version: 'v3', auth: client });
+        try {
+          const client = await require('../config/drive').auth.getClient();
+          const drive = google.drive({ version: 'v3', auth: client });
 
-        const resDrive = await drive.files.get({
-          fileId,
-          alt: 'media',
-        }, { responseType: 'arraybuffer' });
-
-        const buffer = Buffer.from(resDrive.data);
-        const workbook = xlsx.read(buffer, { type: 'buffer' });
-        const sheetName = workbook.SheetNames[0];
-        const sheet = workbook.Sheets[sheetName];
-        let json = xlsx.utils.sheet_to_json(sheet);
-
-        // Find and update product in Excel
-        const productIndex = json.findIndex(p => {
-          if (!p.products_id) return false;
-          const pId = String(p.products_id).trim();
-          const bId = String(barcode).trim();
-          return pId === bId || Number(pId) === Number(bId) || pId === String(Number(bId)) || String(Number(pId)) === bId;
-        });
-        if (productIndex !== -1) {
-          json[productIndex].product_name = product.product_name;
-          json[productIndex].product_quantity = product.product_quantity;
-          json[productIndex].product_category = product.product_category;
-          json[productIndex].product_description = product.product_description;
-          json[productIndex].product_price = product.product_price;
-          json[productIndex].price_cost = product.price_cost;
-
-          // Convert JSON back to sheet
-          const newSheet = xlsx.utils.json_to_sheet(json);
-          workbook.Sheets[sheetName] = newSheet;
-
-          // Write workbook to buffer
-          const wbout = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
-
-          // Upload updated Excel file back to Google Drive
-          await drive.files.update({
+          const resDrive = await drive.files.get({
             fileId,
-            media: {
-              mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-              body: wbout
-            }
+            alt: 'media',
+          }, { responseType: 'arraybuffer' });
+
+          const buffer = Buffer.from(resDrive.data);
+          const workbook = xlsx.read(buffer, { type: 'buffer' });
+          const sheetName = workbook.SheetNames[0];
+          const sheet = workbook.Sheets[sheetName];
+          let json = xlsx.utils.sheet_to_json(sheet);
+
+          // Find and update product in Excel
+          const productIndex = json.findIndex(p => {
+            if (!p.products_id) return false;
+            const pId = String(p.products_id).trim();
+            const bId = String(barcode).trim();
+            return pId === bId || Number(pId) === Number(bId) || pId === String(Number(bId)) || String(Number(pId)) === bId;
           });
+          if (productIndex !== -1) {
+            json[productIndex].product_name = product.product_name;
+            json[productIndex].product_quantity = product.product_quantity;
+            json[productIndex].product_category = product.product_category;
+            json[productIndex].product_description = product.product_description;
+            json[productIndex].product_price = product.product_price;
+            json[productIndex].price_cost = product.price_cost;
 
-          // Update output.json
-          await downloadAndConvertExcel(fileId);
-          await updateExcelFromJson(process.env.GOOGLE_DRIVE_FILE_update);
-    // SYNC TO GOOGLE SHEETS (Quantity Update)
-    const productForSync = await Product.findOne({ product_image: { $regex: new RegExp(`^${barcode.trim()}(\\.webp)?$`, 'i') } });
-    if (productForSync) {
-      googleSheetsService.syncProduct(productForSync.toObject()).catch(err => console.error('Google Sheets Sync Error:', err));
-    }
+            // Convert JSON back to sheet
+            const newSheet = xlsx.utils.json_to_sheet(json);
+            workbook.Sheets[sheetName] = newSheet;
 
-          // SYNC TO GOOGLE SHEETS
-          googleSheetsService.syncProduct(product.toObject()).catch(err => console.error('Google Sheets Sync Error:', err));
+            // Write workbook to buffer
+            const wbout = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+
+            // Upload updated Excel file back to Google Drive
+            await drive.files.update({
+              fileId,
+              media: {
+                mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                body: wbout
+              }
+            });
+
+            // Update output.json
+            await downloadAndConvertExcel(fileId);
+            await updateExcelFromJson(process.env.GOOGLE_DRIVE_FILE_update);
+          }
+        } catch (excelErr) {
+          console.error('Excel/Drive Sync Error during product update approval:', excelErr.message);
         }
+      }
+      
+      try {
+        // SYNC TO GOOGLE SHEETS (Quantity Update)
+        const productForSync = await Product.findOne({ product_image: { $regex: new RegExp(`^${barcode.trim()}(\\.webp)?$`, 'i') } });
+        if (productForSync) {
+          googleSheetsService.syncProduct(productForSync.toObject()).catch(err => console.error('Google Sheets Sync Error:', err));
+        }
+
+        // SYNC TO GOOGLE SHEETS
+        googleSheetsService.syncProduct(product.toObject()).catch(err => console.error('Google Sheets Sync Error:', err));
+      } catch (sheetsErr) {
+        console.error('Google Sheets sync setup error:', sheetsErr.message);
       }
 
       // Update sitemap

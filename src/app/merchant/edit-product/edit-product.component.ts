@@ -4,6 +4,7 @@ import { MerchantAuthService } from '../../services/merchant-auth.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { environment } from '../../../environments/environment';
+import { DataService } from '../../services/data.service';
 
 @Component({
   selector: 'app-edit-product',
@@ -36,18 +37,7 @@ export class EditProductComponent implements OnInit {
   @ViewChild('canvas') canvasElement!: ElementRef;
   stream: MediaStream | null = null;
 
-  categories = [
-    'روايات وقصص',
-    'تاريخ وسير ذاتية',
-    'قواميس ومراجع',
-    'كتب دينية',
-    'صحة وطب وعلوم',
-    'تطوير الذات وعلم النفس',
-    'أعمال وتسويق ومالية',
-    'فنون وحرف',
-    'تربية وأطفال',
-    'أخرى'
-  ];
+  categories: string[] = [];
 
   generalCategories = [
     'كتب',
@@ -67,17 +57,34 @@ export class EditProductComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private merchantAuthService: MerchantAuthService
+    private merchantAuthService: MerchantAuthService,
+    private dataService: DataService
   ) { }
 
   ngOnInit(): void {
     this.productId = this.route.snapshot.params['id'];
     if (this.productId) {
       this.loadProduct();
+      this.loadCategories();
     } else {
       alert('معرف المنتج غير صحيح');
       this.router.navigate(['/merchant/dashboard']);
     }
+  }
+
+  private loadCategories() {
+    this.dataService.getAdminCategories().subscribe({
+      next: (res) => {
+        if (res.success && res.categories) {
+          this.categories = res.categories
+            .filter((c: any) => c.isActive)
+            .map((c: any) => c.name);
+        }
+      },
+      error: (err) => {
+        console.error('Error loading categories:', err);
+      }
+    });
   }
 
   loadProduct() {

@@ -701,15 +701,54 @@ export class MerchantDashboardComponent implements OnInit {
     }
   }
 
-  getCoverUrl(cover: string): string {
+  getCoverUrl(cover: string | null | undefined): string {
     if (!cover) return '';
-    return `/uploads/books/${cover}`;
+    if (cover.startsWith('http://') || cover.startsWith('https://') || cover.startsWith('data:')) {
+      return cover.replace(/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?/, 'https://knoozbook.com');
+    }
+    if (cover.startsWith('/uploads/') || cover.startsWith('uploads/')) {
+      const clean = cover.startsWith('/') ? cover : `/${cover}`;
+      return `https://knoozbook.com${clean}`;
+    }
+    const cleanCover = cover.startsWith('/') ? cover.substring(1) : cover;
+    return `https://knoozbook.com/uploads/books/${cleanCover}`;
   }
 
-  getLogoUrl(logo: string): string {
+  getLogoUrl(logo: string | null | undefined): string {
     if (!logo) return '';
-    // Construct the full URL to the logo image served statically at /uploads/books/
-    return `/uploads/books/${logo}`;
+    if (logo.startsWith('http://') || logo.startsWith('https://') || logo.startsWith('data:')) {
+      return logo.replace(/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?/, 'https://knoozbook.com');
+    }
+    if (logo.startsWith('/uploads/') || logo.startsWith('uploads/')) {
+      const clean = logo.startsWith('/') ? logo : `/${logo}`;
+      return `https://knoozbook.com${clean}`;
+    }
+    const cleanLogo = logo.startsWith('/') ? logo.substring(1) : logo;
+    return `https://knoozbook.com/uploads/books/${cleanLogo}`;
+  }
+
+  getStoreSlug(): string {
+    const name = this.merchant?.merchantName || this.merchant?.name || '';
+    return name.trim().replace(/\s+/g, '');
+  }
+
+  getStoreUrl(): string {
+    const slug = this.getStoreSlug();
+    if (typeof window !== 'undefined' && window.location && window.location.origin && window.location.origin.includes('knoozbook.com')) {
+      return `${window.location.origin}/${slug}`;
+    }
+    return `https://knoozbook.com/${slug}`;
+  }
+
+  copyStoreLinkSuccess = false;
+  copyStoreLink() {
+    const url = this.getStoreUrl();
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(url).then(() => {
+        this.copyStoreLinkSuccess = true;
+        setTimeout(() => this.copyStoreLinkSuccess = false, 3000);
+      });
+    }
   }
 
   toggleEditMode() {
@@ -756,6 +795,10 @@ export class MerchantDashboardComponent implements OnInit {
   }
 
   getProductImageUrl(product: any): string {
+    if (!product) return 'assets/image/book-placeholder.jpg';
+    if (!product.merchantName && this.merchant) {
+      product.merchantName = this.merchant.merchantName || this.merchant.name || this.merchant.username;
+    }
     return this.dataService.getBookImageUrl(product);
   }
 

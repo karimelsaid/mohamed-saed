@@ -180,6 +180,32 @@ export class MerchantProfileComponent implements OnInit {
     return `${this.uploadsBaseUrl}/${finalPath}`.replace(/\/\//g, '/').replace('https:/', 'https://');
   }
 
+  getCoverUrl(cover: string | null | undefined): string {
+    if (!cover) return '';
+    if (cover.startsWith('http://') || cover.startsWith('https://') || cover.startsWith('data:')) {
+      return cover.replace(/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?/, 'https://knoozbook.com');
+    }
+    if (cover.startsWith('/uploads/') || cover.startsWith('uploads/')) {
+      const clean = cover.startsWith('/') ? cover : `/${cover}`;
+      return `https://knoozbook.com${clean}`;
+    }
+    const cleanCover = cover.startsWith('/') ? cover.substring(1) : cover;
+    return `https://knoozbook.com/uploads/books/${cleanCover}`;
+  }
+
+  getLogoUrl(logo: string | null | undefined): string {
+    if (!logo) return '';
+    if (logo.startsWith('http://') || logo.startsWith('https://') || logo.startsWith('data:')) {
+      return logo.replace(/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?/, 'https://knoozbook.com');
+    }
+    if (logo.startsWith('/uploads/') || logo.startsWith('uploads/')) {
+      const clean = logo.startsWith('/') ? logo : `/${logo}`;
+      return `https://knoozbook.com${clean}`;
+    }
+    const cleanLogo = logo.startsWith('/') ? logo.substring(1) : logo;
+    return `https://knoozbook.com/uploads/books/${cleanLogo}`;
+  }
+
   getBookSlug(bookName: string): string {
     return bookName.trim().replace(/\s+/g, '-');
   }
@@ -229,7 +255,7 @@ export class MerchantProfileComponent implements OnInit {
     }
 
     if (!route) {
-      route = 'others';
+      route = 'book';
     }
 
     // Prioritize products_id (barcode)

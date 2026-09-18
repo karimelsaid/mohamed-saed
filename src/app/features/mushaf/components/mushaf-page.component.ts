@@ -4075,7 +4075,7 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
         }
 
         if (!nextGlobal) {
-            nextGlobal = await this.getNextVerseGlobal(currentKey, 'quran');
+            nextGlobal = await this.getNextVerseGlobal(currentKey, state.playbackRange);
         }
 
         // Smart Shuffle: If current verse is the last of the surah, and shuffle is on, pick random surah.
@@ -7663,9 +7663,32 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
     }
 
     private isWithinActiveRange(verseKey: string, state: PlaybackState): boolean {
-        // If no boundary set (like 'quran' mode), everything is within range
+        // Priority 0: Explicit playback range mode overrides legacy/stale rangeEndVerseKey
+        if (state.playbackRange === 'quran') {
+            return true;
+        }
+        if (state.playbackRange === 'surah') {
+            const surahInRange = state.currentVerseKey?.split(':')[0] || verseKey.split(':')[0];
+            return verseKey.startsWith(`${surahInRange}:`);
+        }
+        if (state.playbackRange === 'single') {
+            return verseKey === (state.currentVerseKey || verseKey);
+        }
+
+        // Priority 1: specificRange (Page, Juz, Custom)
+        if (state.specificRange && state.specificRange.start && state.specificRange.end) {
+            const parseKey = (key: string) => {
+                const parts = key.split(':').map(Number);
+                return (parts[0] || 0) * 1000 + (parts[1] || 0);
+            };
+            const currentVal = parseKey(verseKey);
+            const startVal = parseKey(state.specificRange.start);
+            const endVal = parseKey(state.specificRange.end);
+            return currentVal >= startVal && currentVal <= endVal;
+        }
+
+        // Priority 2: rangeEndVerseKey
         if (!state.rangeEndVerseKey) {
-            console.log(`[MushafPage] isWithinActiveRange: No boundary set, returning true.`);
             return true;
         }
 

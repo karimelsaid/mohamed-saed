@@ -106,8 +106,17 @@ export class MerchantProfileComponent implements OnInit {
     });
   }
 
-  getLogoUrl(logo: string): string {
-    return `${environment.apiBaseUrl}/uploads/books/${logo}?t=${this.logoTimestamp}`;
+  getLogoUrl(logo: string | null | undefined): string {
+    if (!logo) return '';
+    if (logo.startsWith('http://') || logo.startsWith('https://') || logo.startsWith('data:')) {
+      return logo.replace(/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?/, 'https://knoozbook.com');
+    }
+    if (logo.startsWith('/uploads/') || logo.startsWith('uploads/')) {
+      const clean = logo.startsWith('/') ? logo : `/${logo}`;
+      return `https://knoozbook.com${clean}?t=${this.logoTimestamp}`;
+    }
+    const cleanLogo = logo.startsWith('/') ? logo.substring(1) : logo;
+    return `https://knoozbook.com/uploads/books/${cleanLogo}?t=${this.logoTimestamp}`;
   }
 
   onLogoError(event: any) {

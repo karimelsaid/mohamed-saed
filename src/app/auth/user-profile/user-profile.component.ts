@@ -305,7 +305,7 @@ export class UserProfileComponent implements OnInit, OnDestroy {
         this.profileUser = { ...this.profileUser, ...data };
         console.log('👤 Profile Data Loaded (Private):', { role: this.profileUser?.role, userId: this.profileUser?.id, merchantName: this.profileUser?.merchantName });
         this.profileForm.patchValue(data);
-        this.profileImage = this.getProfileImageUrl(data.profileImage);
+        this.profileImage = this.getProfileImageUrl(data.profileImage || data.logo);
         this.coverPhoto = this.getProfileImageUrl(data.coverPhoto);
         this.bio = data.bio || '';
         this.isLoading = false;
@@ -890,10 +890,28 @@ export class UserProfileComponent implements OnInit, OnDestroy {
 
   getProfileImageUrl(url: string | null | undefined): string | null {
     if (!url) return null;
-    if (url.startsWith('http')) return url;
-    // Remove '/api' from apiBaseUrl to get the root domain
-    const rootUrl = environment.apiBaseUrl.replace('/api', '');
-    // Ensure url starts with /
+    if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) return url;
+
+    let rootUrl = environment.apiBaseUrl.replace('/api', '');
+    if (!rootUrl || rootUrl.includes('localhost') || rootUrl.includes('127.0.0.1')) {
+      rootUrl = 'https://knoozbook.com';
+    }
+
+    let uploadsBase = environment.uploadsBaseUrl;
+    if (!uploadsBase || uploadsBase.includes('localhost') || uploadsBase.includes('127.0.0.1')) {
+      uploadsBase = 'https://knoozbook.com/uploads/books';
+    }
+
+    if (url.startsWith('/uploads/') || url.startsWith('uploads/')) {
+      const clean = url.startsWith('/') ? url : `/${url}`;
+      return `${rootUrl}${clean}`;
+    }
+
+    if (url.startsWith('merchant_') || url.startsWith('/merchant_') || url.startsWith('publishers/') || url.startsWith('/publishers/')) {
+      const clean = url.replace(/^\//, '');
+      return `${uploadsBase}/${clean}`;
+    }
+
     const cleanPath = url.startsWith('/') ? url : `/${url}`;
     return `${rootUrl}${cleanPath}`;
   }

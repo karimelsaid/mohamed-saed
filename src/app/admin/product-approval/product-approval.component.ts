@@ -58,7 +58,8 @@ export class ProductApprovalComponent implements OnInit {
         this.approvedCount++;
         this.showSuccessToast = true;
         this.successMessage = `تمت الموافقة على المنتج بنجاح! إجمالي المنتجات المعتمدة: ${this.approvedCount}`;
-        this.loadProducts();
+        // Remove product locally instead of reloading everything
+        this.products = this.products.filter(p => p._id !== productId);
 
         // Hide toast after 3 seconds
         setTimeout(() => {
@@ -75,7 +76,8 @@ export class ProductApprovalComponent implements OnInit {
   rejectProduct(productId: string) {
     this.adminService.updateProductApproval(productId, 'rejected').subscribe({
       next: () => {
-        this.loadProducts();
+        // Remove product locally instead of reloading everything
+        this.products = this.products.filter(p => p._id !== productId);
       },
       error: () => {
         this.showErrorModal('فشل في رفض المنتج');

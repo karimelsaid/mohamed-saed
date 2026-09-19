@@ -95,8 +95,6 @@
           </div>
         </div>
       </div>
-
-      <!-- Action Area Removed -->
     </div>
 
     <!-- About & Stats -->
@@ -137,29 +135,83 @@
     </div>
 
     <!-- Luxury Product Section -->
-    <div class="mt-20">
-      <div class="flex items-center justify-between mb-12">
-        <div>
-          <h2 class="text-3xl font-black text-gray-900 dark:text-white">إبداعاتنا المعروضة</h2>
-          <div class="w-16 h-1.5 bg-[var(--knooz-gold)] rounded-full mt-2"></div>
+    <div class="mt-16">
+      <!-- Header + Search + Filters -->
+      <div class="mb-8">
+        <div class="flex items-center justify-between mb-6">
+          <div>
+            <h2 class="text-2xl font-black text-gray-900 dark:text-white">إبداعاتنا المعروضة</h2>
+            <div class="w-12 h-1 bg-[var(--knooz-gold)] rounded-full mt-2"></div>
+          </div>
+          <span class="text-sm text-gray-500 dark:text-gray-400 font-medium">
+            {{ filteredProducts.length }} من {{ products.length }} منتج
+          </span>
         </div>
-        <div class="flex gap-2">
-          <!-- Optional filter/sort controls -->
+
+        <!-- Search Bar -->
+        <div class="relative mb-4">
+          <fa-icon [icon]="faSearch" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></fa-icon>
+          <input
+            type="text"
+            [(ngModel)]="searchQuery"
+            (ngModelChange)="onSearchChange()"
+            placeholder="ابحث في منتجات المتجر..."
+            class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl py-3 pr-11 pl-4 text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--knooz-indigo)]/30 shadow-sm transition"
+          />
+          <button *ngIf="searchQuery" (click)="searchQuery=''; onSearchChange()"
+            class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition">
+            <fa-icon [icon]="faTimes" class="text-sm"></fa-icon>
+          </button>
+        </div>
+
+        <!-- Category Filter Pills -->
+        <div *ngIf="categories.length > 0" class="flex flex-wrap gap-2">
+          <button
+            (click)="onCategoryChange('')"
+            class="px-4 py-1.5 rounded-full text-xs font-bold transition-all border"
+            [class.bg-[var(--knooz-indigo)]]="selectedCategory === ''"
+            [class.text-white]="selectedCategory === ''"
+            [class.border-[var(--knooz-indigo)]]="selectedCategory === ''"
+            [class.bg-white]="selectedCategory !== ''"
+            [class.dark:bg-gray-800]="selectedCategory !== ''"
+            [class.text-gray-600]="selectedCategory !== ''"
+            [class.dark:text-gray-300]="selectedCategory !== ''"
+            [class.border-gray-200]="selectedCategory !== ''"
+            [class.dark:border-gray-700]="selectedCategory !== ''"
+          >
+            الكل
+          </button>
+          <button
+            *ngFor="let cat of categories"
+            (click)="onCategoryChange(cat)"
+            class="px-4 py-1.5 rounded-full text-xs font-bold transition-all border"
+            [class.bg-[var(--knooz-indigo)]]="selectedCategory === cat"
+            [class.text-white]="selectedCategory === cat"
+            [class.border-[var(--knooz-indigo)]]="selectedCategory === cat"
+            [class.bg-white]="selectedCategory !== cat"
+            [class.dark:bg-gray-800]="selectedCategory !== cat"
+            [class.text-gray-600]="selectedCategory !== cat"
+            [class.dark:text-gray-300]="selectedCategory !== cat"
+            [class.border-gray-200]="selectedCategory !== cat"
+            [class.dark:border-gray-700]="selectedCategory !== cat"
+          >
+            {{ cat }}
+          </button>
         </div>
       </div>
 
       <!-- Products Skeleton / Loading -->
-      <div *ngIf="loadingProducts" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-        <div *ngFor="let item of [1,2,3,4]"
-          class="animate-pulse bg-white dark:bg-gray-800 rounded-[1.5rem] p-4 border border-gray-100 dark:border-gray-800">
-          <div class="aspect-[3/4] bg-gray-200 dark:bg-gray-700 rounded-xl mb-4"></div>
-          <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3 mb-2"></div>
-          <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+      <div *ngIf="loadingProducts" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        <div *ngFor="let item of [1,2,3,4,5,6,7,8,9,10]"
+          class="animate-pulse bg-white dark:bg-gray-800 rounded-2xl p-3 border border-gray-100 dark:border-gray-800">
+          <div class="aspect-[3/4] bg-gray-200 dark:bg-gray-700 rounded-xl mb-3"></div>
+          <div class="h-3 bg-gray-200 dark:bg-gray-700 rounded w-2/3 mb-2"></div>
+          <div class="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
         </div>
       </div>
 
       <!-- No Products -->
-      <div *ngIf="products.length === 0 && !loadingProducts"
+      <div *ngIf="filteredProducts.length === 0 && !loadingProducts"
         class="bg-white dark:bg-gray-800 rounded-[3rem] py-20 text-center border-2 border-dashed border-gray-200 dark:border-gray-800">
         <div
           class="w-24 h-24 bg-gray-50 dark:bg-gray-900/50 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -169,60 +221,64 @@
             </path>
           </svg>
         </div>
-        <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">في انتظار الجديد...</h3>
-        <p class="text-gray-500">جاري تجميع نخبة جديدة من الأعمال الفنية والأدبية</p>
+        <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">
+          {{ (searchQuery || selectedCategory) ? 'لا توجد نتائج مطابقة' : 'في انتظار الجديد...' }}
+        </h3>
+        <p class="text-gray-500 mb-4">
+          {{ (searchQuery || selectedCategory) ? 'جرب تغيير كلمة البحث أو التصنيف' : 'جاري تجميع نخبة جديدة من الأعمال الفنية والأدبية' }}
+        </p>
+        <button *ngIf="searchQuery || selectedCategory" (click)="clearFilters()"
+          class="px-6 py-2 bg-[var(--knooz-indigo)] text-white rounded-xl text-sm font-bold hover:opacity-90 transition">
+          مسح الفلاتر
+        </button>
       </div>
 
-      <!-- Premium Products Grid -->
-      <div *ngIf="products.length > 0 && !loadingProducts"
-        class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-        <div *ngFor="let product of products"
-          class="product-card-premium group relative bg-white dark:bg-gray-800 rounded-[1.5rem] overflow-hidden border border-gray-100 dark:border-gray-800">
+      <!-- Products Grid - Compact Cards -->
+      <div *ngIf="filteredProducts.length > 0 && !loadingProducts"
+        class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        <div *ngFor="let product of filteredProducts"
+          class="product-card-premium group relative bg-white dark:bg-gray-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-800 hover:shadow-lg transition-shadow duration-300">
 
           <!-- Image Container -->
           <div class="relative aspect-[3/4] overflow-hidden bg-gray-100 dark:bg-gray-900">
             <img [src]="getProductImageUrl(product)" [alt]="product.product_name"
-              class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
 
             <!-- Hover Overlay -->
             <div
-              class="absolute inset-0 bg-gradient-to-t from-[var(--knooz-indigo)]/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-6">
+              class="absolute inset-0 bg-gradient-to-t from-[var(--knooz-indigo)]/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-3">
               <a [routerLink]="getProductRoute(product)"
-                class="w-full bg-white text-[var(--knooz-indigo)] py-3 rounded-xl font-black text-center text-sm shadow-2xl">
+                class="w-full bg-white text-[var(--knooz-indigo)] py-2 rounded-xl font-black text-center text-xs shadow-2xl">
                 اكتشف التفاصيل
               </a>
             </div>
 
-
-
             <!-- Discount Badge -->
             <div *ngIf="product.product_discount_percent"
-              class="absolute top-4 right-4 bg-red-600 text-white text-xs font-black px-3 py-1 rounded-full shadow-lg z-20">
+              class="absolute top-2 right-2 bg-red-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-lg z-20">
               {{ product.product_discount_percent }}%
             </div>
           </div>
 
           <!-- Content -->
-          <div class="p-6">
-            <div class="flex items-center gap-2 mb-2">
-              <span class="text-[10px] font-black uppercase text-[var(--knooz-gold-dark)] tracking-tighter">
-                {{ product.product_category }}
-              </span>
-            </div>
+          <div class="p-3">
+            <span class="text-[9px] font-black uppercase text-[var(--knooz-gold-dark)] tracking-tighter block mb-1">
+              {{ product.product_category }}
+            </span>
             <h3
-              class="font-bold text-gray-900 dark:text-white text-sm line-clamp-2 min-h-[2.5em] mb-4 group-hover:text-[var(--knooz-indigo)] transition-colors">
+              class="font-bold text-gray-900 dark:text-white text-xs line-clamp-2 min-h-[2.5em] mb-2 group-hover:text-[var(--knooz-indigo)] transition-colors">
               {{ product.product_name }}
             </h3>
 
             <div class="flex items-center justify-between mt-auto">
-              <span class="text-xl font-black text-[var(--knooz-indigo)] dark:text-[var(--knooz-gold-light)]">
-                {{ product.product_price }} <span class="text-[10px] font-normal opacity-60">ج.م</span>
+              <span class="text-base font-black text-[var(--knooz-indigo)] dark:text-[var(--knooz-gold-light)]">
+                {{ product.product_price }} <span class="text-[9px] font-normal opacity-60">ج.م</span>
               </span>
-              <div class="flex items-center gap-2">
+              <div class="flex items-center gap-1">
                 <!-- Add to Favorites Button -->
                 <button (click)="addToFavorites(product.products_id || product._id)"
-                  class="w-10 h-10 rounded-xl flex items-center justify-center transition-all"
-                  [class.bg-[var(--knooz-gold-light)]]="isFavorite(product.products_id || product._id)"
+                  class="w-8 h-8 rounded-lg flex items-center justify-center transition-all text-sm"
+                  [class.bg-amber-100]="isFavorite(product.products_id || product._id)"
                   [class.text-indigo-950]="isFavorite(product.products_id || product._id)"
                   [class.bg-gray-50]="!isFavorite(product.products_id || product._id)"
                   [class.dark:bg-gray-900]="!isFavorite(product.products_id || product._id)"
@@ -233,14 +289,14 @@
 
                 <!-- Add to Cart Button -->
                 <button (click)="addToCart(product.products_id || product._id)"
-                  class="w-10 h-10 rounded-xl flex items-center justify-center transition-all"
-                  [class.bg-[var(--knooz-gold-light)]]="isInCart(product.products_id || product._id)"
+                  class="w-8 h-8 rounded-lg flex items-center justify-center transition-all text-sm"
+                  [class.bg-amber-100]="isInCart(product.products_id || product._id)"
                   [class.text-indigo-950]="isInCart(product.products_id || product._id)"
                   [class.bg-gray-50]="!isInCart(product.products_id || product._id)"
                   [class.dark:bg-gray-900]="!isInCart(product.products_id || product._id)"
                   [class.text-gray-400]="!isInCart(product.products_id || product._id)"
                   [title]="isInCart(product.products_id || product._id) ? 'إزالة من السلة' : 'إضافة إلى السلة'">
-                  <fa-icon [icon]="faCartPlus" class="text-lg"></fa-icon>
+                  <fa-icon [icon]="faCartPlus"></fa-icon>
                 </button>
               </div>
             </div>

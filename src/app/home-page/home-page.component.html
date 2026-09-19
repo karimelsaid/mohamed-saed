@@ -505,7 +505,7 @@
              [routerLink]="['/', m.name.trim().split(' ').join('')]"
              class="flex-shrink-0 w-36 h-36 md:w-48 md:h-48 bg-white dark:bg-gray-800 rounded-[2rem] md:rounded-[2.5rem] shadow-sm hover:shadow-2xl transition-all duration-500 flex flex-col items-center justify-center p-4 md:p-6 border border-gray-100 dark:border-gray-700/50 cursor-pointer hover:-translate-y-2 group/publisher no-underline">
           <div class="w-16 h-16 md:w-24 md:h-24 rounded-full overflow-hidden mb-3 md:mb-4 bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-800 transition-transform duration-500 group-hover/publisher:scale-110">
-            <img [src]="getMerchantLogoUrl(m)" onerror="this.src='assets/images/merchant-placeholder.png'" [alt]="m.name" loading="lazy" class="w-full h-full object-cover">
+            <img [src]="getMerchantLogoUrl(m)" onerror="this.src='assets/default-merchant-logo.png'" [alt]="m.name" loading="lazy" class="w-full h-full object-cover">
           </div>
           <span class="text-xs md:text-sm font-black text-gray-800 dark:text-gray-200 text-center line-clamp-1 group-hover/publisher:text-amber-600 transition-colors">{{ m.name }}</span>
         </a>
@@ -515,7 +515,7 @@
                [routerLink]="['/', m.name.trim().split(' ').join('')]"
                class="flex-shrink-0 w-36 h-36 md:w-48 md:h-48 bg-white dark:bg-gray-800 rounded-[2rem] md:rounded-[2.5rem] shadow-sm hover:shadow-2xl transition-all duration-500 flex flex-col items-center justify-center p-4 md:p-6 border border-gray-100 dark:border-gray-700/50 cursor-pointer hover:-translate-y-2 group/publisher no-underline">
             <div class="w-16 h-16 md:w-24 md:h-24 rounded-full overflow-hidden mb-3 md:mb-4 bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-800 transition-transform duration-500 group-hover/publisher:scale-110">
-              <img [src]="getMerchantLogoUrl(m)" onerror="this.src='assets/images/merchant-placeholder.png'" [alt]="m.name" loading="lazy" class="w-full h-full object-cover">
+              <img [src]="getMerchantLogoUrl(m)" onerror="this.src='assets/default-merchant-logo.png'" [alt]="m.name" loading="lazy" class="w-full h-full object-cover">
             </div>
             <span class="text-xs md:text-sm font-black text-gray-800 dark:text-gray-200 text-center line-clamp-1 group-hover/publisher:text-amber-600 transition-colors">{{ m.name }}</span>
           </a>

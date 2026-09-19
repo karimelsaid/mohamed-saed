@@ -163,7 +163,7 @@ function unifyAndEnrichData(excelProducts, dbProducts, promoDoc, merchantMap, ra
     const matchKey = getMatchKey(product);
     const excelMatch = excelMap.get(matchKey);
 
-    let finalPid = product._id.toString();
+    let finalPid = product.products_id ? product.products_id.toString() : product._id.toString();
     if (excelMatch && excelMatch.products_id) finalPid = excelMatch.products_id.toString();
 
     const mergedProduct = {

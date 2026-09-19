@@ -280,6 +280,7 @@ async function addProduct(req, res) {
 
     // Save product to MongoDB with status 'pending' and merchantId
     const Product = require('../models/Product.model');
+    const merchantDisplayName = req.merchant.merchantName || req.merchant.username;
     const newProduct = new Product({
       product_name,
       product_quantity: parseInt(product_quantity, 10),
@@ -298,6 +299,8 @@ async function addProduct(req, res) {
       condition: condition || '',
       status: 'pending',
       merchantId: req.merchant._id,
+      merchantName: merchantDisplayName,
+      publisher: merchantDisplayName,
       createdAt: new Date()
     });
     await newProduct.save();

@@ -141,19 +141,27 @@ export class SearchBarComponent implements OnInit {
 
       let bestScore = 0;
       let bestField = '';
+      const qLower = q.toLowerCase();
+      
       for (const { field, weight } of fields) {
-        const nf = field; // Use original field without normalization
+        const nf = field;
         if (!nf) continue;
-        if (nf.toLowerCase().includes(q.toLowerCase())) {
+        
+        const nfLower = nf.toLowerCase();
+        
+        if (nfLower.includes(qLower)) {
           // exact substring match -> high score
-          const pos = nf.toLowerCase().indexOf(q.toLowerCase());
+          const pos = nfLower.indexOf(qLower);
           // higher score if starts with query, and apply field weight
           const score = (1 + (pos === 0 ? 0.5 : 0) + Math.min(0.4, 0.4 / (pos + 1))) * weight;
           if (score > bestScore) { bestScore = score; bestField = nf; }
         } else {
-          // fallback to fuzzy similarity with weight
-          const sim = this.similarity(q.toLowerCase(), nf.toLowerCase()) * weight;
-          if (sim > bestScore) { bestScore = sim; bestField = nf; }
+          // fallback to fuzzy similarity with weight ONLY for short fields (name, author) to prevent freezing
+          // Do NOT run levenshtein on description or very long texts!
+          if (nf.length < 200) {
+            const sim = this.similarity(qLower, nfLower) * weight;
+            if (sim > bestScore) { bestScore = sim; bestField = nf; }
+          }
         }
       }
 

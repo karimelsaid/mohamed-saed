@@ -562,73 +562,46 @@ export class BookDetailsComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Use the product_image filename as base, or fall back to productId
-    let baseFilename = '';
-    const rawImage = this.book.product_image || this.book.image_path || '';
-    
-    if (rawImage && typeof rawImage === 'string') {
-      const parts = rawImage.split('/');
-      baseFilename = parts[parts.length - 1];
-      // Strip extension
-      if (baseFilename.includes('.')) {
-        baseFilename = baseFilename.substring(0, baseFilename.lastIndexOf('.'));
+    let validImages: string[] = [];
+    const bookData = this.book as any;
+
+    // 1. If backend provided images array, use it directly (super fast)
+    if (bookData.images && Array.isArray(bookData.images) && bookData.images.length > 0) {
+      validImages = bookData.images.map((imgName: string) => {
+        if (imgName.startsWith('http')) return imgName;
+        return this.getImageUrl(imgName, this.book!);
+      });
+    } else if (bookData.product_images && Array.isArray(bookData.product_images) && bookData.product_images.length > 0) {
+      validImages = bookData.product_images.map((imgName: string) => {
+        if (imgName.startsWith('http')) return imgName;
+        return this.getImageUrl(imgName, this.book!);
+      });
+    } else {
+      // 2. Fallback for older products
+      if (this.book.image_path && (this.book.image_path.startsWith('http') || this.book.image_path.includes('darelollaa.com'))) {
+        validImages.push(this.book.image_path);
+      } else {
+        let baseFilename = '';
+        const rawImage = this.book.product_image || this.book.image_path || '';
+        
+        if (rawImage && typeof rawImage === 'string') {
+          const parts = rawImage.split('/');
+          baseFilename = parts[parts.length - 1];
+          if (baseFilename.includes('.')) {
+            baseFilename = baseFilename.substring(0, baseFilename.lastIndexOf('.'));
+          }
+          baseFilename = baseFilename.replace(/_\d+$/, '');
+        }
+
+        if (!baseFilename || baseFilename === 'undefined' || baseFilename === 'null') {
+          baseFilename = productId;
+        }
+
+        validImages.push(this.getImageUrl(baseFilename + '.webp', this.book));
+        // Note: We skip checking for _1.webp or _2.webp with HEAD requests because it causes severe latency when they don't exist.
       }
-      // Strip variation suffixes (_1, _2, etc) if they already exist
-      baseFilename = baseFilename.replace(/_\d+$/, '');
     }
 
-    if (!baseFilename || baseFilename === 'undefined' || baseFilename === 'null') {
-      baseFilename = productId;
-    }
-
-    const potentialImages = [];
-    
-    // 1. If it's an external image, add it as the ABSOLUTE FIRST candidate
-    if (this.book.image_path && (this.book.image_path.startsWith('http') || this.book.image_path.includes('darelollaa.com'))) {
-      potentialImages.push(this.book.image_path);
-      console.log('🌐 Adding external image_path to gallery:', this.book.image_path);
-    }
-
-    // 2. Add local primary image if not external or as a fallback
-    if (!this.book.image_path || !this.book.image_path.startsWith('http')) {
-      potentialImages.push(this.getImageUrl(baseFilename + '.webp', this.book));
-    }
-
-    console.log(`🔍 Checking available images for baseFilename: ${baseFilename}`);
-    
-    const results = await Promise.all(potentialImages.map(async (url) => {
-      // If it's an external URL, trust it exists (to avoid CORS/HEAD request issues)
-      if (url.startsWith('http')) {
-        return url;
-      }
-      
-      const exists = await this.checkImageExists(url);
-      console.log(`📸 Image ${url} exists: ${exists}`);
-      return exists ? url : null;
-    }));
-
-    // Filter out nulls and duplicates
-    const validImages = [...new Set(results.filter((url): url is string => url !== null))];
-
-    // Only check for variations if we have at least one valid image
-    if (validImages.length > 0) {
-      const variationImages = [
-        this.getImageUrl(baseFilename + '_1.webp', this.book),
-        this.getImageUrl(baseFilename + '_2.webp', this.book),
-        this.getImageUrl(baseFilename + '_3.webp', this.book)
-      ];
-
-      const variationResults = await Promise.all(variationImages.map(async (url) => {
-        const exists = await this.checkImageExists(url);
-        console.log(`📸 Variation ${url} exists: ${exists}`);
-        return exists ? url : null;
-      }));
-
-      // Add only existing variations
-      validImages.push(...variationResults.filter((url): url is string => url !== null));
-    }
-
-    // Filter out duplicates from final array
     this.availableImages = [...new Set(validImages)];
     BookDetailsComponent.resolvedImagesCache.set(cacheKey, this.availableImages);
     this.selectedImageIndex = 0;

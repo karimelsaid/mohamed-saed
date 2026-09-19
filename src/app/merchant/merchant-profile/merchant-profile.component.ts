@@ -6,7 +6,8 @@ import { environment } from '../../../environments/environment';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { faHeart, faCartPlus, faSignInAlt, faStar, faUser } from '@fortawesome/free-solid-svg-icons';
+import { FormsModule } from '@angular/forms';
+import { faHeart, faCartPlus, faSignInAlt, faStar, faUser, faSearch, faTimes, faFilter } from '@fortawesome/free-solid-svg-icons';
 import { faStar as faStarRegular } from '@fortawesome/free-regular-svg-icons';
 import { AuthService } from '../../auth/auth.service';
 import { ModalService } from '../../services/modal.service';
@@ -17,16 +18,22 @@ import { AnalyticsService } from '../../services/analytics.service';
   templateUrl: './merchant-profile.component.html',
   styleUrls: ['./merchant-profile.component.css'],
   standalone: true,
-  imports: [CommonModule, RouterModule, FontAwesomeModule]
+  imports: [CommonModule, RouterModule, FontAwesomeModule, FormsModule]
 })
 export class MerchantProfileComponent implements OnInit {
   username: string | null = null;
   merchant: any = null;
   products: any[] = [];
+  filteredProducts: any[] = [];
   loadingMerchant = false;
   loadingProducts = false;
   error: string | null = null;
   uploadsBaseUrl = environment.uploadsBaseUrl;
+
+  // Filter & Search state
+  searchQuery = '';
+  selectedCategory = '';
+  categories: string[] = [];
 
   // Icons
   faHeart = faHeart;
@@ -35,6 +42,9 @@ export class MerchantProfileComponent implements OnInit {
   faStar = faStar;
   faStarRegular = faStarRegular;
   faUser = faUser;
+  faSearch = faSearch;
+  faTimes = faTimes;
+  faFilter = faFilter;
 
   showLoginPrompt = false;
 
@@ -49,12 +59,6 @@ export class MerchantProfileComponent implements OnInit {
   ) { }
 
   ngOnInit(): void {
-    // SSR CRITICAL: MerchantProfileComponent is mapped to path ':username' which catches
-    // ALL unknown URLs including /Home, /book/..., etc. during SSR.
-    // The HTTP call to merchant/by-name/:username on the server never completes,
-    // causing Zone.js to never stabilize → 30s timeout → 504 Gateway Error.
-    // Solution: skip ALL data fetching on SSR. The page renders empty shell,
-    // browser hydration handles the actual data load instantly after.
     if (this.platformId !== 'browser') {
       return;
     }
@@ -62,15 +66,17 @@ export class MerchantProfileComponent implements OnInit {
     this.route.paramMap.subscribe(params => {
       const usernameParam = params.get('username');
 
-      // Reset state on every navigation attempt
       this.error = null;
       this.loadingMerchant = false;
       this.merchant = null;
       this.products = [];
+      this.filteredProducts = [];
+      this.searchQuery = '';
+      this.selectedCategory = '';
+      this.categories = [];
 
       if (usernameParam) {
         console.log(`[MerchantProfile] Activated for username: ${usernameParam}`);
-        // Guard against reserved routes and invalid values that might fall through
         const reservedKeywords = ['favorites', 'basket', 'login', 'register', 'Home', 'Home-page', 'profile', 'requests', 'referrals', 'library', 'mushaf', 'search', 'research', 'undefined', 'null'];
 
         if (reservedKeywords.includes(usernameParam.toLowerCase())) {
@@ -79,8 +85,6 @@ export class MerchantProfileComponent implements OnInit {
         }
 
         this.username = usernameParam.trim();
-        console.log(`[MerchantProfile] Loading data for: ${this.username}`);
-        // Guard: Check if the username looks like a static asset (file extension)
         const fileExtensions = /\.(js|css|png|jpg|jpeg|gif|svg|webp|ico|map|ttf|woff|woff2)$/i;
         if (fileExtensions.test(this.username)) {
           console.warn(`[MerchantProfile] Skipping static asset request: ${this.username}`);
@@ -101,7 +105,6 @@ export class MerchantProfileComponent implements OnInit {
           this.merchant = data.merchant;
           this.loadingMerchant = false;
           this.loadMerchantProducts(data.merchant._id);
-          // Track store visit
           this.analyticsService.trackStoreVisit(data.merchant._id).subscribe();
         } else {
           this.error = data.message || 'لا يمكن العثور على التاجر.';
@@ -120,7 +123,30 @@ export class MerchantProfileComponent implements OnInit {
     this.loadingProducts = true;
     this.merchantAuthService.getProductsByMerchantId(id).subscribe({
       next: (res: any) => {
-        this.products = res.products || res || [];
+        // Sort newest first
+        const raw: any[] = res.products || res || [];
+        this.products = raw.sort((a, b) => {
+          const getTimestamp = (obj: any) => {
+            if (obj.createdAt) return new Date(obj.createdAt).getTime();
+            if (obj._id) {
+              const hex = obj._id.toString().substring(0, 8);
+              return parseInt(hex, 16) * 1000;
+            }
+            return 0;
+          };
+          return getTimestamp(b) - getTimestamp(a);
+        });
+
+        // Extract unique categories
+        const cats = new Set<string>();
+        this.products.forEach(p => {
+          if (p.product_category && p.product_category.trim()) {
+            cats.add(p.product_category.trim());
+          }
+        });
+        this.categories = Array.from(cats);
+
+        this.applyFilters();
         this.loadingProducts = false;
       },
       error: (err: any) => {
@@ -130,17 +156,47 @@ export class MerchantProfileComponent implements OnInit {
     });
   }
 
+  applyFilters() {
+    let result = [...this.products];
+
+    if (this.selectedCategory) {
+      result = result.filter(p => p.product_category === this.selectedCategory);
+    }
+
+    if (this.searchQuery.trim()) {
+      const q = this.searchQuery.trim().toLowerCase();
+      result = result.filter(p =>
+        (p.product_name || '').toLowerCase().includes(q) ||
+        (p.product_description || '').toLowerCase().includes(q)
+      );
+    }
+
+    this.filteredProducts = result;
+  }
+
+  onSearchChange() {
+    this.applyFilters();
+  }
+
+  onCategoryChange(cat: string) {
+    this.selectedCategory = cat;
+    this.applyFilters();
+  }
+
+  clearFilters() {
+    this.searchQuery = '';
+    this.selectedCategory = '';
+    this.applyFilters();
+  }
+
   getProductImageUrl(product: any): string {
     let imagePath = product.image_path || product.product_image || '';
     const merchantName = product.merchantName || (this.merchant ? (this.merchant.merchantName || this.merchant.name) : null);
 
-    // If it's a merchant product, we want to construct the path specifically
-    // Unless it's already a full path
     if (imagePath && (imagePath.startsWith('http') || imagePath.startsWith('/uploads/'))) {
       return imagePath;
     }
 
-    // Prefer products_id (barcode) if available, fallback to product_image
     const imageId = product.products_id || product.product_image;
     if (!imageId) {
       return '/assets/placeholder-book.jpg';
@@ -148,11 +204,9 @@ export class MerchantProfileComponent implements OnInit {
 
     let finalPath = String(imageId);
 
-    // If it's just a barcode/ID (no slashes, no extension)
     if (!finalPath.includes('/') && !finalPath.includes('.')) {
       if (merchantName) {
         const sanitizedMerchantName = merchantName.replace(/[^a-zA-Z0-9\u0600-\u06FF-_]/g, '_');
-        // Handle admin vs regular merchant
         if (this.merchant && (this.merchant.role === 'admin' || this.merchant.merchantName === 'Kenouz')) {
           finalPath = `admin__karim_mohamed__/${finalPath}/${finalPath}.webp`;
         } else {
@@ -162,7 +216,6 @@ export class MerchantProfileComponent implements OnInit {
         finalPath = `admin__karim_mohamed__/${finalPath}/${finalPath}.webp`;
       }
     } else if (!finalPath.includes('/')) {
-      // Has extension but no path
       const id = finalPath.split('.')[0].split('_')[0];
       const filename = finalPath.includes('.') ? finalPath : finalPath + '.webp';
       if (merchantName) {
@@ -235,7 +288,6 @@ export class MerchantProfileComponent implements OnInit {
       'قواميس ومراجع': 'book'
     };
 
-    // 1. Try exact or partial match in categoryRoutes
     let route = categoryRoutes[category];
     if (!route) {
       for (const [key, value] of Object.entries(categoryRoutes)) {
@@ -246,7 +298,6 @@ export class MerchantProfileComponent implements OnInit {
       }
     }
 
-    // 2. Broad check for book-related keywords
     if (!route) {
       const bookKeywords = ['كتب', 'روايات', 'قصص', 'تطوير الذات', 'دينية', 'تاريخ', 'أطفال', 'أعمال', 'قواميس', 'صحة', 'فنون'];
       if (bookKeywords.some(key => category.includes(key))) {
@@ -258,9 +309,7 @@ export class MerchantProfileComponent implements OnInit {
       route = 'book';
     }
 
-    // Prioritize products_id (barcode)
     const productId = product.products_id || product.product_image || product._id || product.id;
-
     return ['/' + route, productId, slug];
   }
 

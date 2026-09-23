@@ -4775,9 +4775,11 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
         this.selectedMushafId = this.assetService.getSelectedMushafId();
         this.assetService.fetchMushafList().subscribe({
             next: (list) => {
-                this.availableMushafs = list;
+                // Keep the built-in online/API edition visible even when the
+                // backend list predates this frontend feature.
+                this.availableMushafs = this.ensureHifzMuyassarOption(list);
                 // بعد الجلب نتحقق من حالة كل مصحف على الجهاز
-                list.forEach(m => this.checkMushafDownloaded(m.id));
+                this.availableMushafs.forEach(m => this.checkMushafDownloaded(m.id));
                 this.cdr.detectChanges();
             },
             error: () => {
@@ -4833,6 +4835,22 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
                 this.cdr.detectChanges();
             }
         });
+    }
+
+    private ensureHifzMuyassarOption(list: any[] | null | undefined): any[] {
+        const mushafs = Array.isArray(list) ? [...list] : [];
+        if (!mushafs.some(m => m?.id === 'hifz_muyassar')) {
+            mushafs.push({
+                id: 'hifz_muyassar',
+                name: 'مصحف الحفظ الميسر',
+                description: 'نسخة مصورة تساعد على الحفظ مع تظليل الآية أثناء التلاوة',
+                folder: 'hifz_muyassar',
+                totalFiles: 1208,
+                active: true,
+                isDefault: false
+            });
+        }
+        return mushafs;
     }
 
     /** التحقق ما إذا كان مصحف معين محملاً محلياً */

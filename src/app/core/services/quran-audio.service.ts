@@ -1,7 +1,7 @@
 import { Injectable, NgZone, Inject, PLATFORM_ID } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { isPlatformBrowser } from '@angular/common';
-import { BehaviorSubject, Observable, map, firstValueFrom, timeout, catchError, of, throwError, tap, take } from 'rxjs';
+import { BehaviorSubject, Observable, map, firstValueFrom, timeout, catchError, of, throwError, tap, take, switchMap } from 'rxjs';
 import { ForegroundService } from '@capawesome-team/capacitor-android-foreground-service';
 import { Capacitor } from '@capacitor/core';
 import { App } from '@capacitor/app';
@@ -15,6 +15,28 @@ export interface Reciter {
     name: string;
     style: string;
     recitationType?: 'ayah' | 'surah';
+    source?: 'quran.com' | 'mp3quran';
+    originalReciterId?: number;
+    moshafId?: number;
+    rewayaId?: number;
+    server?: string;
+    surahList?: number[];
+}
+
+export interface Mp3QuranMoshaf {
+    id: number;
+    name: string;
+    rewaya_id: number;
+    server: string;
+    surah_total: number;
+    moshaf_type?: number;
+    surah_list: string;
+}
+
+export interface Mp3QuranReciter {
+    id: number;
+    name: string;
+    moshaf: Mp3QuranMoshaf[];
 }
 
 export interface VerseTiming {
@@ -144,6 +166,15 @@ export class QuranAudioService {
         2013: 'https://server6.mp3quran.net/kurdi/' // Raad Al-Kurdi
     };
 
+    /**
+     * MP3Quran uses a reciter id and a separate moshaf id. Keep the selected
+     * moshaf here so two recordings belonging to the same reciter cannot
+     * accidentally share one server URL.
+     */
+    private readonly MP3QURAN_API = 'https://www.mp3quran.net/api/v3/reciters?language=ar';
+    private readonly MP3QURAN_ID_OFFSET = 100000;
+    private readonly MP3QURAN_MOSHAF_BY_APP_ID = new Map<number, Mp3QuranMoshaf>();
+
     // Reciter Classification Sets
     private readonly SURAH_RECITERS = new Set([2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013]);
     private readonly TEACHER_RECITERS = new Set([12, 168, 161, 126]); // Hosary, Minshawy, Tunaiji, Basfar (Muallim)
@@ -214,7 +245,53 @@ export class QuranAudioService {
         // Timed reciters (e.g. 174 Yasser Al-Dossari) use verse-level audio files
         // and need full verse highlighting + repetition support like standard reciters.
         // Including them here disabled verse tracking, highlighting, and repetition.
-        return this.SURAH_RECITERS.has(reciterId) || reciterId === 286;
+        return this.SURAH_RECITERS.has(reciterId) || reciterId === 286 || this.isMp3QuranReciter(reciterId);
+    }
+
+    private isMp3QuranReciter(reciterId: number): boolean {
+        return this.MP3QURAN_MOSHAF_BY_APP_ID.has(Number(reciterId));
+    }
+
+    private mp3QuranAppId(reciterId: number, moshafId: number): number {
+        return this.MP3QURAN_ID_OFFSET + (Number(reciterId) * 1000) + Number(moshafId);
+    }
+
+    private registerMp3QuranReciter(reciterId: number, moshaf: Mp3QuranMoshaf): number {
+        const appId = this.mp3QuranAppId(reciterId, moshaf.id);
+        this.MP3QURAN_MOSHAF_BY_APP_ID.set(appId, moshaf);
+        return appId;
+    }
+
+    private buildMp3QuranSurahUrl(moshaf: Mp3QuranMoshaf, surahNumber: number): string {
+        const availableSurahs = new Set(
+            String(moshaf.surah_list || '')
+                .split(',')
+                .map(value => Number(value.trim()))
+                .filter(Boolean)
+        );
+        if (!availableSurahs.has(Number(surahNumber))) {
+            throw new Error(`Surah ${surahNumber} is not available in moshaf ${moshaf.id}`);
+        }
+        const server = moshaf.server.replace(/\/+$/, '');
+        return `${server}/${String(surahNumber).padStart(3, '0')}.mp3`;
+    }
+
+    private getMp3QuranSurahUrl(reciterId: number, surahNumber: number): string | null {
+        const moshaf = this.MP3QURAN_MOSHAF_BY_APP_ID.get(Number(reciterId));
+        return moshaf ? this.buildMp3QuranSurahUrl(moshaf, surahNumber) : null;
+    }
+
+    private hydrateMp3QuranReciters(reciters: Reciter[]): void {
+        reciters
+            .filter(reciter => reciter.source === 'mp3quran' && reciter.moshafId && reciter.server)
+            .forEach(reciter => this.MP3QURAN_MOSHAF_BY_APP_ID.set(reciter.id, {
+                id: reciter.moshafId!,
+                name: reciter.name,
+                rewaya_id: reciter.rewayaId || 2,
+                server: reciter.server!,
+                surah_total: reciter.surahList?.length || 114,
+                surah_list: (reciter.surahList || Array.from({ length: 114 }, (_, i) => i + 1)).join(',')
+            }));
     }
 
     private isTimedReciter(reciterId: number): boolean {
@@ -728,6 +805,23 @@ export class QuranAudioService {
         const state = this.snapshot;
         const isSurahType = this.isSurahReciter(reciterId);
 
+        // MP3Quran files are complete surahs and do not expose Quran.com
+        // verse timings. Queue one item only; queueing every ayah with the
+        // same URL would replay the complete surah once per ayah on Android.
+        if (this.isMp3QuranReciter(reciterId)) {
+            const item = {
+                url: currentUrl,
+                title: currentTitle,
+                artist: artistName,
+                verseKey: currentVerseKey,
+                clippingStartMs: -1,
+                clippingEndMs: -1
+            };
+            this.lastQueuedKeyNative = currentVerseKey;
+            this.lastNativeQueueIndex = 0;
+            return { items: [item], startPositionMs: 0 };
+        }
+
         // --- COMMON REPETITION LOGIC (Calculated once) ---
         // We use a simulation flag to track if we are in a repeat cycle (Cycles 2+)
         let isLoopingSimulation = state.currentGroupRepeatCount > 0;
@@ -996,10 +1090,10 @@ export class QuranAudioService {
         }
 
         // Check for surah reciters (FULL SURAH SOURCES)
-        if (this.SURAH_RECITERS.has(reciterId)) {
+        if (this.SURAH_RECITERS.has(reciterId) || this.isMp3QuranReciter(reciterId)) {
             const [surah] = verseKey.split(':');
-            const paddedSurah = surah.padStart(3, '0');
-            return `${this.SURAH_SOURCES[reciterId]}/${paddedSurah}.mp3`;
+            return this.getMp3QuranSurahUrl(reciterId, Number(surah)) ||
+                `${this.SURAH_SOURCES[reciterId]}/${surah.padStart(3, '0')}.mp3`;
         }
 
         // Check for reciter overrides (Ayah-level overrides)
@@ -1544,11 +1638,11 @@ export class QuranAudioService {
             let overrideUrl: string | null = null;
 
             // 1. Check Full Surah Mode (Highest Priority Priority)
-            const isSurahMode = this.SURAH_RECITERS.has(rId);
+            const isSurahMode = this.SURAH_RECITERS.has(rId) || this.isMp3QuranReciter(rId);
             if (isSurahMode) {
                 const [surah] = verseKey.split(':');
-                const paddedSurah = surah.padStart(3, '0');
-                overrideUrl = `${this.SURAH_SOURCES[rId]}/${paddedSurah}.mp3`;
+                overrideUrl = this.getMp3QuranSurahUrl(rId, Number(surah)) ||
+                    `${this.SURAH_SOURCES[rId]}/${surah.padStart(3, '0')}.mp3`;
                 console.log(`[AudioService] FULL SURAH MODE for Reciter ${rId}: ${overrideUrl}`);
             }
             // 2. Check Standard Verse Overrides
@@ -2145,7 +2239,7 @@ export class QuranAudioService {
         // Since Surah reciters play a multi-verse clip as a single item, when it ends,
         // we essentially completed all verses up to lastQueuedKeyNative.
         // We must update the state so logic proceeds from THERE, not the starting verse.
-        if (this.SURAH_RECITERS.has(s.reciterId) && this.lastQueuedKeyNative) {
+        if (this.isSurahReciter(s.reciterId) && this.lastQueuedKeyNative) {
             console.log(`[AudioService] Surah Reciter ended. Fast-forwarding state from ${s.currentVerseKey} to ${this.lastQueuedKeyNative}`);
             // Force update internal state so subsequent logic uses the correct "ended" verse
             this.updateState({ currentVerseKey: this.lastQueuedKeyNative });
@@ -2193,7 +2287,7 @@ export class QuranAudioService {
         // 1. Ayah Repetition (Skip if external control is active OR SURAH RECITER)
         // FIX: Disable ayah repetition for Surah Reciters to prevent "repeat whole surah per ayah" bug
         // FIX: Disable ayah repetition if we are in a group repetition > 0 (Smart Repetition)
-        const isSurahReciter = s.reciterId && this.SURAH_RECITERS.has(s.reciterId);
+        const isSurahReciter = s.reciterId && this.isSurahReciter(s.reciterId);
         console.log(`[AudioService] handleAudioEnded Check: Reciter=${s.reciterId} (Surah=${isSurahReciter}), External=${s.externalPlaybackControl}, RepeatAyah=${s.repeatAyah}, CurrentAyahRep=${s.currentAyahRepeatCount}, RepeatGroup=${s.repeatGroup}, CurrentGroupRep=${s.currentGroupRepeatCount}`);
 
         // "lo kan youjad takrar lil ayat la to3id takraraha marra okhra fi al majmou3a"
@@ -2234,7 +2328,7 @@ export class QuranAudioService {
             // SURAH RECITERS: Do NOT auto-advance to the next Surah.
             // The segment plays as a single block. When it ends, fall through to stop/group-repeat logic.
             const rId = Number(s.reciterId);
-            if (this.SURAH_RECITERS.has(rId)) {
+            if (this.isSurahReciter(rId)) {
                 console.log(`[AudioService] Surah Reciter segment ended. Skipping auto-advance. Will check group repeat.`);
                 // Fall through to stop/group-repeat logic below
             }
@@ -2275,7 +2369,7 @@ export class QuranAudioService {
         // For Surah Reciters, the segment is atomic. The "next" is always out of range
         // (since the entire Surah was played as one block), so we force effectiveNextKey
         // to null to ensure we hit the stop/group-repeat logic.
-        if (this.SURAH_RECITERS.has(Number(s.reciterId))) {
+        if (this.isSurahReciter(Number(s.reciterId))) {
             effectiveNextKey = null;
         }
 
@@ -2283,7 +2377,7 @@ export class QuranAudioService {
             // HIFZ FIX: If external control is active (Hifz/Revision), DO NOT handle group repetitions or stop here.
             // We must fall through to fire 'verseCompleted' so the Component determines the next step (Wait/Repeat/Exit).
             // Surah Reciters are atomic, so they still follow internal logic.
-            if (s.externalPlaybackControl && !this.SURAH_RECITERS.has(Number(s.reciterId))) {
+            if (s.externalPlaybackControl && !this.isSurahReciter(Number(s.reciterId))) {
                 console.log('[AudioService] End of range in External Control Mode. Falling through to notify component.');
             } else {
                 // Truly out of range OR no next verse (end of surah/queue) -> handle group repetitions or stop
@@ -2406,7 +2500,8 @@ export class QuranAudioService {
                     id: r.id,
                     name: r.translated_name?.name || r.reciter_name,
                     style: r.style,
-                    recitationType: 'ayah' as const
+                    recitationType: 'ayah' as const,
+                    source: 'quran.com' as const
                 }));
 
                 missingReciters.forEach(mr => {
@@ -2428,7 +2523,43 @@ export class QuranAudioService {
                     return this.normalizeArabicName(a.name).localeCompare(this.normalizeArabicName(b.name), 'ar');
                 });
             }),
+            switchMap((quranReciters: Reciter[]) => this.http.get<{ reciters: Mp3QuranReciter[] }>(this.MP3QURAN_API).pipe(
+                map(response => {
+                    const warshReciters: Reciter[] = [];
+                    for (const reciter of response.reciters || []) {
+                        // Match both the common Warsh label and Warsh via al-Azraq.
+                        const warshMoshafs = (reciter.moshaf || []).filter(moshaf =>
+                            /ورش|warsh/i.test(`${moshaf.name} ${moshaf.server}`)
+                        );
+                        for (const moshaf of warshMoshafs) {
+                            const appId = this.registerMp3QuranReciter(reciter.id, moshaf);
+                            const surahList = String(moshaf.surah_list || '')
+                                .split(',')
+                                .map(value => Number(value.trim()))
+                                .filter(Boolean);
+                            warshReciters.push({
+                                id: appId,
+                                name: `${reciter.name} - ${moshaf.name}`,
+                                style: 'ورش',
+                                recitationType: 'surah',
+                                source: 'mp3quran',
+                                originalReciterId: reciter.id,
+                                moshafId: moshaf.id,
+                                rewayaId: moshaf.rewaya_id,
+                                server: moshaf.server,
+                                surahList
+                            });
+                        }
+                    }
+                    return [...quranReciters, ...warshReciters];
+                }),
+                catchError(err => {
+                    console.warn('[AudioService] MP3Quran reciters unavailable; using Quran.com reciters only', err);
+                    return of(quranReciters);
+                })
+            )),
             tap((reciters: Reciter[]) => {
+                this.hydrateMp3QuranReciters(reciters);
                 localStorage.setItem(CACHE_KEY, JSON.stringify(reciters));
             }),
             catchError(err => {
@@ -2442,7 +2573,14 @@ export class QuranAudioService {
 
         if (cached) {
             try {
-                return of(JSON.parse(cached) as Reciter[]);
+                const reciters = JSON.parse(cached) as Reciter[];
+                this.hydrateMp3QuranReciters(reciters);
+                // Old caches contain only Quran.com readers. Refresh once so
+                // Warsh readers become visible without requiring a manual clear.
+                if (!reciters.some(reciter => reciter.source === 'mp3quran')) {
+                    return fetchAndCache;
+                }
+                return of(reciters);
             } catch (e) {
                 return fetchAndCache;
             }
@@ -2719,18 +2857,16 @@ export class QuranAudioService {
             }
         }
 
-        // SURAH RECITERS (2001-2013) - mp3quran.net format
-        if (this.SURAH_RECITERS.has(reciterId)) {
+        // Full-surah sources, including dynamically loaded MP3Quran Warsh moshafs.
+        if (this.SURAH_RECITERS.has(reciterId) || this.isMp3QuranReciter(reciterId)) {
             const baseUrl = this.SURAH_SOURCES[reciterId];
-            if (!baseUrl) {
-                console.error('[AudioService] No SURAH_SOURCE for reciter:', reciterId);
+            const audioUrl = this.getMp3QuranSurahUrl(reciterId, surahId) ||
+                (baseUrl ? `${baseUrl.replace(/\/+$/, '')}/${surahId.toString().padStart(3, '0')}.mp3` : null);
+            if (!audioUrl) {
+                console.error('[AudioService] No full-surah source for reciter:', reciterId);
                 this.clearProgress(cancellationKey);
                 throw new Error('Surah source not configured for this reciter');
             }
-
-            // mp3quran.net uses XXX.mp3 format (e.g., 001.mp3 for Al-Fatiha)
-            const paddedSurah = surahId.toString().padStart(3, '0');
-            const audioUrl = `${baseUrl}${paddedSurah}.mp3`;
 
             try {
                 // Download Audio File to Filesystem
@@ -2756,8 +2892,11 @@ export class QuranAudioService {
                 }
 
                 updateProgress(95);
-                // Fetch and Cache Timings (Required for Hifz repetition/clipping offline)
-                await this.getOrFetchSurahTimings(surahId, reciterId);
+                // Quran.com timings do not exist for MP3Quran moshafs. The
+                // native player handles the downloaded file as one item.
+                if (!this.isMp3QuranReciter(reciterId)) {
+                    await this.getOrFetchSurahTimings(surahId, reciterId);
+                }
 
                 // Cache marker for isSurahCached calls
                 const v4MarkerUrl = `https://api.quran.com/api/v4/recitations/${reciterId}/by_chapter/${surahId}`;

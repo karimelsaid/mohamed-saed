@@ -2061,6 +2061,22 @@
             </button>
         </div>
         <div class="reciter-modal-body">
+            <div class="recitation-filter" role="tablist" aria-label="اختيار الرواية">
+                <button type="button" class="recitation-filter-btn"
+                    [class.active]="recitationFilter === 'hafs'"
+                    (click)="setRecitationFilter('hafs')" role="tab"
+                    [attr.aria-selected]="recitationFilter === 'hafs'">
+                    <i class="fas fa-book-quran"></i>
+                    <span>قراء حفص</span>
+                </button>
+                <button type="button" class="recitation-filter-btn warsh"
+                    [class.active]="recitationFilter === 'warsh'"
+                    (click)="setRecitationFilter('warsh')" role="tab"
+                    [attr.aria-selected]="recitationFilter === 'warsh'">
+                    <i class="fas fa-mosque"></i>
+                    <span>قراء ورش</span>
+                </button>
+            </div>
             <div class="reciter-list">
                 <div class="reciter-item" *ngFor="let r of filteredReciters"
                     [class.selected]="r.id === (reciterSelectionContext === 'hifz' ? hifzReciterId : currentReciterId)"
@@ -2082,6 +2098,10 @@
                         *ngIf="r.id === (reciterSelectionContext === 'hifz' ? hifzReciterId : currentReciterId)">
                         <i class="fas fa-check"></i>
                     </div>
+                </div>
+                <div class="reciter-empty" *ngIf="filteredReciters.length === 0">
+                    <i class="fas fa-headphones-slash"></i>
+                    <p>لا توجد قراءات متاحة في هذا التصنيف</p>
                 </div>
             </div>
         </div>

@@ -189,6 +189,7 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
     recordedAudioBlob: Blob | null = null;
 
     filteredReciters: any[] = [];
+    recitationFilter: 'hafs' | 'warsh' = 'hafs';
 
     // Touch and Swipe properties
     private touchStartX: number = 0;
@@ -874,18 +875,36 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
 
     openReciterModal(context: 'global' | 'hifz' = 'global'): void {
         this.reciterSelectionContext = context;
+        const selectedId = context === 'hifz' ? this.hifzReciterId : this.currentReciterId;
+        const selectedReciter = this.availableReciters.find(r => r.id === selectedId);
+        this.recitationFilter = this.isWarshReciter(selectedReciter) ? 'warsh' : 'hafs';
         this.updateFilteredReciters();
         this.showReciterModal = true;
         this.cdr.detectChanges();
     }
 
+    isWarshReciter(reciter: any): boolean {
+        if (!reciter) return false;
+        return reciter.source === 'mp3quran' || reciter.source === 'everyayah' ||
+            /ورش|warsh/i.test(`${reciter.name || ''} ${reciter.style || ''}`);
+    }
+
+    setRecitationFilter(filter: 'hafs' | 'warsh'): void {
+        this.recitationFilter = filter;
+        this.updateFilteredReciters();
+        this.cdr.detectChanges();
+    }
+
     private updateFilteredReciters(): void {
-        if (this.reciterSelectionContext === 'hifz') {
-            // Priority: Ayah reciters first
-            this.filteredReciters = this.availableReciters.filter(r => r.recitationType === 'ayah');
-        } else {
-            this.filteredReciters = this.availableReciters;
-        }
+        this.filteredReciters = this.availableReciters.filter(reciter => {
+            const matchesNarration = this.recitationFilter === 'warsh'
+                ? this.isWarshReciter(reciter)
+                : !this.isWarshReciter(reciter);
+            const matchesContext = this.reciterSelectionContext === 'hifz'
+                ? reciter.recitationType === 'ayah'
+                : true;
+            return matchesNarration && matchesContext;
+        });
     }
 
     closeReciterModal(): void {

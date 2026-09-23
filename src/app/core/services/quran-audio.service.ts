@@ -3008,7 +3008,7 @@ export class QuranAudioService {
 
         // --- NON-TIMED / VERSE-BY-VERSE DOWNLOAD ---
         const metadataUrl = `https://api.quran.com/api/v4/recitations/${reciterId}/by_chapter/${surahId}`;
-        const hasOverride = !!this.RECITER_OVERRIDES[reciterId];
+        const hasOverride = !!this.RECITER_OVERRIDES[reciterId] || this.isWarshAyahReciter(reciterId);
 
         try {
             let metaResponse: any = null;
@@ -3035,7 +3035,9 @@ export class QuranAudioService {
                     const verseKey = `${surahId}:${i}`;
                     let audioUrl = '';
 
-                    if (this.RECITER_OVERRIDES[reciterId]) {
+                    if (this.isWarshAyahReciter(reciterId)) {
+                        audioUrl = this.buildWarshAyahUrl(reciterId, verseKey);
+                    } else if (this.RECITER_OVERRIDES[reciterId]) {
                         const paddedSurah = surahId.toString().padStart(3, '0');
                         const paddedAyah = i.toString().padStart(3, '0');
                         audioUrl = `${this.RECITER_OVERRIDES[reciterId]}/${paddedSurah}${paddedAyah}.mp3`;
@@ -3079,7 +3081,9 @@ export class QuranAudioService {
                     audioUrl = `https://audio.qurancdn.com/${audioUrl}`;
                 }
 
-                // Check and Probe URL for 404s/Correct extensions
+                // Check and Probe URL for 404s/Correct extensions. EveryAyah
+                // already uses the canonical SSSAAA.mp3 URL, but probing it
+                // keeps the existing retry/fallback behavior for other sources.
                 const validUrl = await this.probeAudioUrl(audioUrl);
                 if (validUrl) audioUrl = validUrl;
 

@@ -11534,6 +11534,60 @@ input:checked+.slider:before {
 
 }
 
+.recitation-filter {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 14px;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding-bottom: 8px;
+  background: inherit;
+}
+
+.recitation-filter-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  border: 1px solid rgba(194, 168, 122, 0.35);
+  border-radius: 10px;
+  background: rgba(194, 168, 122, 0.06);
+  color: var(--text-secondary, #64748b);
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.recitation-filter-btn:hover,
+.recitation-filter-btn.active {
+  background: #c2a87a;
+  border-color: #c2a87a;
+  color: #fff;
+  box-shadow: 0 3px 10px rgba(194, 168, 122, 0.25);
+}
+
+.recitation-filter-btn.warsh.active {
+  background: #556b2f;
+  border-color: #556b2f;
+  box-shadow: 0 3px 10px rgba(85, 107, 47, 0.25);
+}
+
+.reciter-empty {
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--text-secondary, #64748b);
+}
+
+.reciter-empty i {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 1.8rem;
+  opacity: 0.65;
+}
+
 
 
 .reciter-list {

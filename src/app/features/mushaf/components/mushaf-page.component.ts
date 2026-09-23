@@ -123,6 +123,9 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
     mushafDownloadError: string | null = null;
     downloadingMushafId: string | null = null;
     failedDownloadMushafId: string | null = null;
+    hifzMuyassarPageData: { image: string; coordinates: any[]; verses: any[] } | null = null;
+    private readonly hifzMuyassarImageWidth = 1447;
+    private readonly hifzMuyassarImageHeight = 2297;
 
     isMemorizationMode: boolean = false;
     showOptionsSheet: boolean = false;
@@ -4425,6 +4428,13 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
         const id = this.selectedMushafId;
         const isDownloaded = this.mushafDownloadStatus[id];
 
+        if (id === 'hifz_muyassar') {
+            if (this.isAndroid && isDownloaded && this.assetService.localBaseUri) {
+                return Capacitor.convertFileSrc(`${this.assetService.localBaseUri}/hifz_muyassar/images/${pageNumber}.webp`);
+            }
+            return this.assetService.getRemotePageImageUrl(pageNumber, id);
+        }
+
         if (this.isAndroid && isDownloaded && this.assetService.localBaseUri) {
             const folder = this.assetService.getMushafFolder(id);
             const localFileUri = `${this.assetService.localBaseUri}/${folder}images/${pageNumber}.jpg`;
@@ -4432,6 +4442,47 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
         }
 
         return this.assetService.getRemotePageImageUrl(pageNumber, id);
+    }
+
+    isImageMushaf(): boolean {
+        return this.selectedMushafId === 'warsh' || this.selectedMushafId === 'tajweed' || this.selectedMushafId === 'hifz_muyassar';
+    }
+
+    getHifzMuyassarVerseStyle(verseKey: string): Record<string, string> {
+        if (this.selectedMushafId !== 'hifz_muyassar' || !this.hifzMuyassarPageData) return {};
+        const verseNumber = Number(verseKey.split(':')[1]);
+        const item = this.hifzMuyassarPageData.coordinates?.find(c => Number(c.verse_number) === verseNumber);
+        if (!item?.coords) return {};
+        try {
+            const points = typeof item.coords === 'string' ? JSON.parse(item.coords) : item.coords;
+            if (!Array.isArray(points) || points.length < 4) return {};
+            const xs = points.map((p: number[]) => Number(p[0]));
+            const ys = points.map((p: number[]) => Number(p[1]));
+            const left = Math.min(...xs), top = Math.min(...ys);
+            const right = Math.max(...xs), bottom = Math.max(...ys);
+            return {
+                left: `${(left / this.hifzMuyassarImageWidth) * 100}%`,
+                top: `${(top / this.hifzMuyassarImageHeight) * 100}%`,
+                width: `${((right - left) / this.hifzMuyassarImageWidth) * 100}%`,
+                height: `${((bottom - top) / this.hifzMuyassarImageHeight) * 100}%`
+            };
+        } catch (_) {
+            return {};
+        }
+    }
+
+    private async loadHifzMuyassarPageData(page: number): Promise<void> {
+        if (this.selectedMushafId !== 'hifz_muyassar') {
+            this.hifzMuyassarPageData = null;
+            return;
+        }
+        try {
+            this.hifzMuyassarPageData = await this.assetService.getHifzMuyassarPageData(page);
+            this.cdr.detectChanges();
+        } catch (error) {
+            console.warn('[MushafPage] Failed to load Hifz Muyassar coordinates:', error);
+            this.hifzMuyassarPageData = null;
+        }
     }
 
     setImageFitMode(mode: 'contain' | 'fill'): void {
@@ -4445,7 +4496,7 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
             const fontName = this.dataService.getFontName(this.pageNumber);
             this.fontFamily = this.createFontFamily(fontName);
 
-            if (this.selectedMushafId === 'warsh' || this.selectedMushafId === 'tajweed') {
+            if (this.isImageMushaf()) {
                 this.isFontReady = true;
                 this.cdr.detectChanges();
             } else {
@@ -4548,6 +4599,7 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
                 console.log(`✅ [MushafPage] Page ${this.pageNumber} data loaded.`);
                 this.isLoadingPage = false;
                 this.currentMushafPage = p || null;
+                void this.loadHifzMuyassarPageData(this.pageNumber);
 
                 // Trigger font loading and wait
                 this.loadPages();
@@ -4764,6 +4816,15 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
                         description: 'مصحف المدينة المنورة برواية ورش عن نافع بالرسم العثماني',
                         folder: 'warsh',
                         totalFiles: 638,
+                        active: true,
+                        isDefault: false
+                    },
+                    {
+                        id: 'hifz_muyassar',
+                        name: 'مصحف الحفظ الميسر',
+                        description: 'نسخة مصورة تساعد على الحفظ مع تظليل الآية أثناء التلاوة',
+                        folder: 'hifz_muyassar',
+                        totalFiles: 1208,
                         active: true,
                         isDefault: false
                     }

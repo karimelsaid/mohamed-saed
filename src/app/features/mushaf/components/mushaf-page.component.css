@@ -20939,7 +20939,19 @@ select:focus {
   padding: 10px;
 
   background: transparent;
+  position: relative;
 
+}
+
+.hifz-verse-highlight {
+  position: absolute;
+  z-index: 2;
+  border: 3px solid rgba(220, 38, 38, 0.9);
+  background: rgba(250, 204, 21, 0.22);
+  border-radius: 8px;
+  pointer-events: none;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.45), 0 2px 12px rgba(220, 38, 38, 0.35);
+  transition: all 0.25s ease;
 }
 
 

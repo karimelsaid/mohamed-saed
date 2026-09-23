@@ -642,7 +642,7 @@
             </div>
 
             <!-- ===== تخصيص عرض الصور (ورش / التجويد) ===== -->
-            <div class="settings-section" *ngIf="settingsMode === 'stats' && (selectedMushafId === 'warsh' || selectedMushafId === 'tajweed')">
+            <div class="settings-section" *ngIf="settingsMode === 'stats' && (isImageMushaf())">
                 <h4><i class="fas fa-expand"></i> طريقة عرض الصور</h4>
                 <div class="image-fit-picker" style="display: flex; gap: 8px; margin-top: 10px;">
                     <button class="fit-btn" [class.active]="imageFitMode === 'contain'" (click)="setImageFitMode('contain')"
@@ -943,11 +943,11 @@
                 <div class="mushaf-page quran-text"
                     [style.font-family]="getFontFamily(dataService.getFontName(pageNumber + 1))">
                     <!-- Image Mode -->
-                    <div class="mushaf-page-image-container" *ngIf="selectedMushafId === 'warsh' || selectedMushafId === 'tajweed'">
+                    <div class="mushaf-page-image-container" *ngIf="isImageMushaf()">
                         <img [src]="getPageImageUrl(nextPage.page_number)" class="mushaf-page-image" [style.object-fit]="imageFitMode" [style.width]="imageFitMode === 'fill' ? '100%' : 'auto'" [style.height]="imageFitMode === 'fill' ? '100%' : 'auto'" alt="صفحة {{ nextPage.page_number }}">
                     </div>
                     <!-- Text Mode -->
-                    <div class="lines-container" *ngIf="selectedMushafId !== 'warsh' && selectedMushafId !== 'tajweed'"
+                    <div class="lines-container" *ngIf="!isImageMushaf()"
                         [class.centered-content]="nextPage.page_number <= 2"
                         [style.--page-shift.px]="0">
                         <ng-container *ngFor="let line of nextPage.lines; trackBy: trackByLine">
@@ -984,11 +984,13 @@
                 [class.first-pages]="page.page_number <= 2">
                 <div class="mushaf-page quran-text" [style.font-family]="fontFamily">
                     <!-- Image Mode -->
-                    <div class="mushaf-page-image-container" *ngIf="selectedMushafId === 'warsh' || selectedMushafId === 'tajweed'">
+                    <div class="mushaf-page-image-container" *ngIf="isImageMushaf()">
                         <img [src]="getPageImageUrl(page.page_number)" class="mushaf-page-image" [style.object-fit]="imageFitMode" [style.width]="imageFitMode === 'fill' ? '100%' : 'auto'" [style.height]="imageFitMode === 'fill' ? '100%' : 'auto'" alt="صفحة {{ page.page_number }}">
+                        <div class="hifz-verse-highlight" *ngIf="selectedMushafId === 'hifz_muyassar' && playingVerseKey"
+                            [ngStyle]="getHifzMuyassarVerseStyle(playingVerseKey)"></div>
                     </div>
                     <!-- Text Mode -->
-                    <div class="lines-container" *ngIf="selectedMushafId !== 'warsh' && selectedMushafId !== 'tajweed'"
+                    <div class="lines-container" *ngIf="!isImageMushaf()"
                         [class.centered-content]="page.page_number <= 2"
                         [style.--page-shift.px]="pageVerticalShift">
                         <ng-container *ngFor="let line of page.lines; trackBy: trackByLine">
@@ -1022,11 +1024,11 @@
                 <div class="mushaf-page quran-text"
                     [style.font-family]="getFontFamily(dataService.getFontName(pageNumber - 1))">
                     <!-- Image Mode -->
-                    <div class="mushaf-page-image-container" *ngIf="selectedMushafId === 'warsh' || selectedMushafId === 'tajweed'">
+                    <div class="mushaf-page-image-container" *ngIf="isImageMushaf()">
                         <img [src]="getPageImageUrl(prevPage.page_number)" class="mushaf-page-image" [style.object-fit]="imageFitMode" [style.width]="imageFitMode === 'fill' ? '100%' : 'auto'" [style.height]="imageFitMode === 'fill' ? '100%' : 'auto'" alt="صفحة {{ prevPage.page_number }}">
                     </div>
                     <!-- Text Mode -->
-                    <div class="lines-container" *ngIf="selectedMushafId !== 'warsh' && selectedMushafId !== 'tajweed'"
+                    <div class="lines-container" *ngIf="!isImageMushaf()"
                         [class.centered-content]="prevPage.page_number <= 2"
                         [style.--page-shift.px]="0">
                         <ng-container *ngFor="let line of prevPage.lines; trackBy: trackByLine">
@@ -1069,11 +1071,11 @@
             [class.first-pages]="page.page_number <= 2">
             <div class="mushaf-page" [style.font-family]="getFontFamily(dataService.getFontName(page.page_number))">
                 <!-- Image Mode -->
-                <div class="mushaf-page-image-container" *ngIf="selectedMushafId === 'warsh' || selectedMushafId === 'tajweed'">
+                <div class="mushaf-page-image-container" *ngIf="isImageMushaf()">
                     <img [src]="getPageImageUrl(page.page_number)" class="mushaf-page-image" [style.object-fit]="imageFitMode" [style.width]="imageFitMode === 'fill' ? '100%' : 'auto'" [style.height]="imageFitMode === 'fill' ? '100%' : 'auto'" alt="صفحة {{ page.page_number }}">
                 </div>
                 <!-- Text Mode -->
-                <div class="lines-container" *ngIf="selectedMushafId !== 'warsh' && selectedMushafId !== 'tajweed'"
+                <div class="lines-container" *ngIf="!isImageMushaf()"
                     [class.centered-content]="page.page_number <= 2">
                     <ng-container *ngFor="let line of page.lines">
                         <div class="mushaf-line" [ngClass]="'line-type-' + line.type"

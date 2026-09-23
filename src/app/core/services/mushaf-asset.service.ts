@@ -33,6 +33,10 @@ export class MushafAssetService {
     // ZIP-based image download config (for warsh / tajweed)
     private readonly PAGES_PER_ZIP = 20;
     private readonly TOTAL_PAGES = 604;
+    private readonly HIFZ_MUYASSAR_ID = 'hifz_muyassar';
+    private readonly HIFZ_MUYASSAR_RIWAYA = 1; // Official API: Hafs
+    private readonly HIFZ_MUYASSAR_API = 'https://newapi.hefzmoyaser.net/api';
+    private readonly HIFZ_MUYASSAR_STORAGE = 'https://newapi.hefzmoyaser.net/storage/mushaf_images/hafs';
 
     public localBaseUri: string = '';
 
@@ -84,6 +88,9 @@ export class MushafAssetService {
     }
 
     getRemotePageImageUrl(pageNumber: number, mushafId: string): string {
+        if (mushafId === this.HIFZ_MUYASSAR_ID) {
+            return `${this.HIFZ_MUYASSAR_STORAGE}/${pageNumber}.webp`;
+        }
         if (mushafId === 'warsh') {
             return `https://raw.githubusercontent.com/QuranHub/quran-pages-images/main/kfgqpc/warsh/${pageNumber}.jpg`;
         }
@@ -91,6 +98,43 @@ export class MushafAssetService {
             return `https://raw.githubusercontent.com/QuranHub/quran-pages-images/main/easyquran.com/hafs-tajweed/${pageNumber}.jpg`;
         }
         return '';
+    }
+
+    isHifzMuyassar(mushafId: string = this.getSelectedMushafId()): boolean {
+        return mushafId === this.HIFZ_MUYASSAR_ID;
+    }
+
+    async getHifzMuyassarPageData(page: number): Promise<{ image: string; coordinates: any[]; verses: any[] }> {
+        const folder = `mushaf_assets/${this.HIFZ_MUYASSAR_ID}`;
+        const dataPath = `${folder}/pages/${page}.json`;
+        if (Capacitor.isNativePlatform()) {
+            try {
+                const local = await Filesystem.readFile({ path: dataPath, directory: Directory.Data, encoding: Encoding.UTF8 });
+                return JSON.parse(local.data as string);
+            } catch (_) { /* fetch below */ }
+        }
+
+        const query = `page=${page}&riwaya=${this.HIFZ_MUYASSAR_RIWAYA}`;
+        const [pageMeta, coords, verses] = await Promise.all([
+            firstValueFrom(this.http.get<any>(`${this.HIFZ_MUYASSAR_API}/pages/show?${query}`)),
+            firstValueFrom(this.http.get<any>(`${this.HIFZ_MUYASSAR_API}/page/coordinates?${query}`)),
+            firstValueFrom(this.http.get<any>(`${this.HIFZ_MUYASSAR_API}/verses?${query}`))
+        ]);
+        const result = {
+            image: pageMeta?.data?.image || this.getRemotePageImageUrl(page, this.HIFZ_MUYASSAR_ID),
+            coordinates: coords?.data || [],
+            verses: verses?.data || []
+        };
+        if (Capacitor.isNativePlatform()) {
+            await this.ensureDirectory(`${folder}/pages`);
+            await Filesystem.writeFile({
+                path: dataPath,
+                data: JSON.stringify(result),
+                directory: Directory.Data,
+                encoding: Encoding.UTF8
+            });
+        }
+        return result;
     }
 
     /**
@@ -113,19 +157,27 @@ export class MushafAssetService {
                 directory: Directory.Data
             });
 
-            // Verify essential files exist to prevent false positives from corrupt downloads
-            await Filesystem.stat({
-                path: `${pathPrefix}data/mushaf.json`,
-                directory: Directory.Data
-            });
-
-            if (id === 'warsh' || id === 'tajweed') {
+            if (id === this.HIFZ_MUYASSAR_ID) {
+                await Filesystem.stat({
+                    path: `${pathPrefix}images/1.webp`,
+                    directory: Directory.Data
+                });
+                await Filesystem.stat({
+                    path: `${pathPrefix}pages/1.json`,
+                    directory: Directory.Data
+                });
+            } else if (id === 'warsh' || id === 'tajweed') {
                 // For image mushafs, verify the first page image exists
                 await Filesystem.stat({
                     path: `${pathPrefix}images/1.jpg`,
                     directory: Directory.Data
                 });
             } else {
+                // Verify essential JSON data for font-based mushafs.
+                await Filesystem.stat({
+                    path: `${pathPrefix}data/mushaf.json`,
+                    directory: Directory.Data
+                });
                 // For font mushafs, verify the basmalah font exists
                 await Filesystem.stat({
                     path: `${pathPrefix}fonts/QCF_BSML.woff2`,
@@ -199,6 +251,19 @@ export class MushafAssetService {
         this.messageSubject.next('بدء تحميل المصحف الشريف...');
 
         try {
+            if (id === this.HIFZ_MUYASSAR_ID) {
+                await this.downloadHifzMuyassarAssets(pathPrefix);
+                await Filesystem.writeFile({
+                    path: `${pathPrefix}completed.marker`,
+                    data: 'completed',
+                    directory: Directory.Data,
+                    encoding: Encoding.UTF8
+                });
+                this.messageSubject.next('تم تحميل مصحف الحفظ الميسر للعمل دون إنترنت');
+                this.progressSubject.next(100);
+                return;
+            }
+
             // Create directories first
             await this.ensureDirectory(pathPrefix);
             await this.ensureDirectory(`${pathPrefix}fonts`);
@@ -284,6 +349,40 @@ export class MushafAssetService {
             throw error;
         } finally {
             this.loadingSubject.next(false);
+        }
+    }
+
+    private async downloadHifzMuyassarAssets(pathPrefix: string): Promise<void> {
+        this.totalFiles = this.TOTAL_PAGES * 2;
+        this.completedFiles = 0;
+        await this.ensureDirectory(pathPrefix);
+        await this.ensureDirectory(`${pathPrefix}/pages`);
+        await this.ensureDirectory(`${pathPrefix}/images`);
+
+        for (let page = 1; page <= this.TOTAL_PAGES; page++) {
+            this.messageSubject.next(`تحميل صفحة الحفظ الميسر ${page} من ${this.TOTAL_PAGES}...`);
+            const pageData = await this.getHifzMuyassarPageData(page);
+            const imageUrl = pageData.image.startsWith('http')
+                ? pageData.image
+                : `https://newapi.hefzmoyaser.net${pageData.image}`;
+            const imagePath = `${pathPrefix}/images/${page}.webp`;
+            const jsonPath = `${pathPrefix}/pages/${page}.json`;
+
+            try {
+                await Filesystem.stat({ path: imagePath, directory: Directory.Data });
+                this.completedFiles++;
+            } catch (_) {
+                await this.downloadWithRetry(imageUrl, imagePath);
+            }
+
+            await Filesystem.writeFile({
+                path: jsonPath,
+                data: JSON.stringify(pageData),
+                directory: Directory.Data,
+                encoding: Encoding.UTF8
+            });
+            this.completedFiles++;
+            this.progressSubject.next(Math.round((this.completedFiles / this.totalFiles) * 100));
         }
     }
 
@@ -596,7 +695,10 @@ export class MushafAssetService {
      */
     async getJsonData<T>(path: string): Promise<T> {
         const id = this.getSelectedMushafId();
-        const folder = this.getMushafFolder(id);
+        // The Muyassar edition supplies its own page images/coordinates;
+        // navigation metadata and verse keys remain the bundled Hafs schema.
+        const dataMushafId = this.isHifzMuyassar(id) ? 'hafs_v1' : id;
+        const folder = this.getMushafFolder(dataMushafId);
         const pathPrefix = `mushaf_assets/${folder}`;
 
         const url = `${environment.mushafBaseUrl}/${folder}${path}`;

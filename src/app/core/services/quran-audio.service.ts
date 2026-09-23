@@ -15,7 +15,7 @@ export interface Reciter {
     name: string;
     style: string;
     recitationType?: 'ayah' | 'surah';
-    source?: 'quran.com' | 'mp3quran';
+    source?: 'quran.com' | 'mp3quran' | 'everyayah';
     originalReciterId?: number;
     moshafId?: number;
     rewayaId?: number;
@@ -174,6 +174,11 @@ export class QuranAudioService {
     private readonly MP3QURAN_API = 'https://www.mp3quran.net/api/v3/reciters?language=ar';
     private readonly MP3QURAN_ID_OFFSET = 100000;
     private readonly MP3QURAN_MOSHAF_BY_APP_ID = new Map<number, Mp3QuranMoshaf>();
+    private readonly WARSH_AYAH_SOURCES: { [key: number]: string } = {
+        300001: 'https://everyayah.com/data/warsh/warsh_Abdul_Basit_128kbps',
+        300002: 'https://everyayah.com/data/warsh/warsh_ibrahim_aldosary_128kbps',
+        300003: 'https://everyayah.com/data/warsh/warsh_yassin_al_jazaery_64kbps'
+    };
 
     // Reciter Classification Sets
     private readonly SURAH_RECITERS = new Set([2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013]);
@@ -250,6 +255,18 @@ export class QuranAudioService {
 
     private isMp3QuranReciter(reciterId: number): boolean {
         return this.MP3QURAN_MOSHAF_BY_APP_ID.has(Number(reciterId));
+    }
+
+    private isWarshAyahReciter(reciterId: number): boolean {
+        return Boolean(this.WARSH_AYAH_SOURCES[Number(reciterId)]);
+    }
+
+    private buildWarshAyahUrl(reciterId: number, verseKey: string): string {
+        const baseUrl = this.WARSH_AYAH_SOURCES[Number(reciterId)];
+        if (!baseUrl) throw new Error(`Warsh ayah source not configured for reciter ${reciterId}`);
+        const [surah, ayah] = verseKey.split(':').map(value => Number(value));
+        if (!surah || !ayah) throw new Error(`Invalid verse key: ${verseKey}`);
+        return `${baseUrl}/${String(surah).padStart(3, '0')}${String(ayah).padStart(3, '0')}.mp3`;
     }
 
     private mp3QuranAppId(reciterId: number, moshafId: number): number {
@@ -1089,6 +1106,11 @@ export class QuranAudioService {
             return Capacitor.getPlatform() === 'android' ? localResult.raw : localResult.converted;
         }
 
+        // EveryAyah Warsh sources are individual ayah files, named SSSAAA.mp3.
+        if (this.isWarshAyahReciter(reciterId)) {
+            return this.buildWarshAyahUrl(reciterId, verseKey);
+        }
+
         // Check for surah reciters (FULL SURAH SOURCES)
         if (this.SURAH_RECITERS.has(reciterId) || this.isMp3QuranReciter(reciterId)) {
             const [surah] = verseKey.split(':');
@@ -1638,8 +1660,13 @@ export class QuranAudioService {
             let overrideUrl: string | null = null;
 
             // 1. Check Full Surah Mode (Highest Priority Priority)
+            if (this.isWarshAyahReciter(rId)) {
+                overrideUrl = this.buildWarshAyahUrl(rId, verseKey);
+                console.log(`[AudioService] EVERYAYAH WARSH AYAH MODE for Reciter ${rId}: ${overrideUrl}`);
+            }
+            // 1b. Check Full Surah Mode (MP3Quran and legacy fixed sources)
             const isSurahMode = this.SURAH_RECITERS.has(rId) || this.isMp3QuranReciter(rId);
-            if (isSurahMode) {
+            if (!overrideUrl && isSurahMode) {
                 const [surah] = verseKey.split(':');
                 overrideUrl = this.getMp3QuranSurahUrl(rId, Number(surah)) ||
                     `${this.SURAH_SOURCES[rId]}/${surah.padStart(3, '0')}.mp3`;
@@ -2444,7 +2471,7 @@ export class QuranAudioService {
     }
 
     getReciters(): Observable<Reciter[]> {
-        const CACHE_KEY = 'cached_reciters_list_v17';
+        const CACHE_KEY = 'cached_reciters_list_v18';
         const cached = localStorage.getItem(CACHE_KEY);
 
         const missingReciters: Reciter[] = [
@@ -2551,7 +2578,33 @@ export class QuranAudioService {
                             });
                         }
                     }
-                    return [...quranReciters, ...warshReciters];
+                    const warshAyahReciters: Reciter[] = [
+                        {
+                            id: 300001,
+                            name: 'عبد الباسط عبد الصمد - ورش (آيات)',
+                            style: 'ورش عن نافع - آيات',
+                            recitationType: 'ayah',
+                            source: 'everyayah',
+                            server: this.WARSH_AYAH_SOURCES[300001]
+                        },
+                        {
+                            id: 300002,
+                            name: 'إبراهيم الدوسري - ورش (آيات)',
+                            style: 'ورش عن نافع - آيات',
+                            recitationType: 'ayah',
+                            source: 'everyayah',
+                            server: this.WARSH_AYAH_SOURCES[300002]
+                        },
+                        {
+                            id: 300003,
+                            name: 'ياسين الجزائري - ورش (آيات)',
+                            style: 'ورش عن نافع - آيات',
+                            recitationType: 'ayah',
+                            source: 'everyayah',
+                            server: this.WARSH_AYAH_SOURCES[300003]
+                        }
+                    ];
+                    return [...quranReciters, ...warshReciters, ...warshAyahReciters];
                 }),
                 catchError(err => {
                     console.warn('[AudioService] MP3Quran reciters unavailable; using Quran.com reciters only', err);
@@ -3169,6 +3222,10 @@ export class QuranAudioService {
         const localFile = await this.getLocalUri(verseKey, reciterId);
         if (localFile) {
             return localFile.converted;
+        }
+
+        if (this.isWarshAyahReciter(reciterId)) {
+            return this.buildWarshAyahUrl(reciterId, verseKey);
         }
 
         const metadataUrl = `${this.audioUrlBase}/${reciterId}/by_ayah/${verseKey}`;

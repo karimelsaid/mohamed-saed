@@ -4499,13 +4499,34 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
                 parsed = typeof item.coords === 'string' ? JSON.parse(item.coords) : item.coords;
             } catch (_) { return null; }
             if (!Array.isArray(parsed) || parsed.length < 3) return null;
-            const verseKey = pageVerseKeys[index] || `1:${item.verse_number}`;
+            // The API's `verse_number` restarts at every surah. Pair the
+            // coordinate with the API verse record and convert its global
+            // verse_id to surah:ayah, which remains correct across pages
+            // containing more than one surah.
+            const apiVerse = this.hifzMuyassarPageData?.verses?.[index];
+            const verseKey = this.getVerseKeyFromGlobalId(apiVerse?.verse_id)
+                || pageVerseKeys[index]
+                || `1:${item.verse_number}`;
             return {
                 verseKey,
                 points: parsed.map(point => `${point[0]},${point[1]}`).join(' '),
                 active: verseKey === this.selectedVerseKey || verseKey === this.playingVerseKey
             };
         }).filter((item): item is { verseKey: string; points: string; active: boolean } => !!item);
+    }
+
+    private getVerseKeyFromGlobalId(globalId: number | string | undefined): string | null {
+        const target = Number(globalId);
+        if (!Number.isFinite(target) || target < 1 || !Array.isArray(this.allSurahs)) return null;
+        let firstId = 1;
+        for (const surah of this.allSurahs) {
+            const count = Number(surah.verses_count || surah.ayahs_count || 0);
+            if (target >= firstId && target < firstId + count) {
+                return `${surah.id}:${target - firstId + 1}`;
+            }
+            firstId += count;
+        }
+        return null;
     }
 
     onHifzMuyassarVerseClick(event: Event, verseKey: string): void {

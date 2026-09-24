@@ -4471,6 +4471,37 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
         }
     }
 
+    getHifzMuyassarOverlayItems(): Array<{ verseKey: string; points: string; active: boolean }> {
+        if (this.selectedMushafId !== 'hifz_muyassar' || !this.hifzMuyassarPageData) return [];
+        const pageVerseKeys: string[] = [];
+        for (const line of this.currentMushafPage?.lines || []) {
+            for (const segment of line.segments || []) {
+                if (segment.verse_key && !pageVerseKeys.includes(segment.verse_key)) {
+                    pageVerseKeys.push(segment.verse_key);
+                }
+            }
+        }
+        return (this.hifzMuyassarPageData.coordinates || []).map((item, index) => {
+            let parsed: number[][] = [];
+            try {
+                parsed = typeof item.coords === 'string' ? JSON.parse(item.coords) : item.coords;
+            } catch (_) { return null; }
+            if (!Array.isArray(parsed) || parsed.length < 3) return null;
+            const verseKey = pageVerseKeys[index] || `1:${item.verse_number}`;
+            return {
+                verseKey,
+                points: parsed.map(point => `${point[0]},${point[1]}`).join(' '),
+                active: verseKey === this.selectedVerseKey || verseKey === this.playingVerseKey
+            };
+        }).filter((item): item is { verseKey: string; points: string; active: boolean } => !!item);
+    }
+
+    onHifzMuyassarVerseClick(event: Event, verseKey: string): void {
+        event.preventDefault();
+        event.stopPropagation();
+        this.onAyahClick(verseKey);
+    }
+
     private async loadHifzMuyassarPageData(page: number): Promise<void> {
         if (this.selectedMushafId !== 'hifz_muyassar') {
             this.hifzMuyassarPageData = null;

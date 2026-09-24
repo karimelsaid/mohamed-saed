@@ -130,6 +130,7 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
     isMemorizationMode: boolean = false;
     showOptionsSheet: boolean = false;
     selectedVerseKey: string | null = null;
+    private lastSurahReciterNavigationKey: string | null = null;
 
     @ViewChild(MutabaaTrackerComponent) mutabaaTracker!: MutabaaTrackerComponent;
     @ViewChild('pageContainer', { static: false }) pageContainerEl?: ElementRef;
@@ -467,13 +468,24 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
 
             const newKey = state.currentVerseKey;
 
-            // SURAH RECITER OVERRIDE: Disable verse-level UI features (highlighting, auto-scroll, auto-nav)
-            // for Surah-only reciters as they play continuous large files as a single atomic block.
+            // SURAH RECITER OVERRIDE: Navigate to the selected surah, but
+            // disable verse-level highlighting/selection for full-surah files.
             if (state.reciterId && this.audioService.isSurahReciter(state.reciterId)) {
+                // A full-surah file still starts from a real verse key. Use it
+                // for navigation, but never expose verse-level highlighting.
+                if (newKey && this.lastSurahReciterNavigationKey !== newKey) {
+                    this.lastSurahReciterNavigationKey = newKey;
+                    this.autoNavigateToVerse(newKey);
+                }
                 this.playingVerseKey = null;
+                this.selectedVerseKey = null;
+                this.selectedVersesSet.clear();
+                this.computedRange = null;
                 this.cdr.detectChanges();
                 return;
             }
+
+            this.lastSurahReciterNavigationKey = null;
 
             if (this.playingVerseKey !== newKey) {
                 this.playingVerseKey = newKey;

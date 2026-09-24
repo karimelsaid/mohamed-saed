@@ -984,7 +984,7 @@
                 [class.first-pages]="page.page_number <= 2">
                 <div class="mushaf-page quran-text" [style.font-family]="fontFamily">
                     <!-- Image Mode -->
-                    <div class="mushaf-page-image-container" *ngIf="isImageMushaf()">
+                    <div class="mushaf-page-image-container" [class.hifz-muyassar-image-container]="selectedMushafId === 'hifz_muyassar'" *ngIf="isImageMushaf()">
                         <img [src]="getPageImageUrl(page.page_number)" class="mushaf-page-image" [style.object-fit]="imageFitMode" [style.width]="imageFitMode === 'fill' ? '100%' : 'auto'" [style.height]="imageFitMode === 'fill' ? '100%' : 'auto'" alt="صفحة {{ page.page_number }}">
                         <svg *ngIf="selectedMushafId === 'hifz_muyassar'" class="hifz-verse-overlay"
                             viewBox="0 0 1447 2297" preserveAspectRatio="xMidYMid meet" aria-label="تحديد آيات الحفظ الميسر">

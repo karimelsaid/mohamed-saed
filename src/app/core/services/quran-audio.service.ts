@@ -2470,8 +2470,37 @@ export class QuranAudioService {
         return normalized.trim();
     }
 
+    private getStaticWarshAyahReciters(): Reciter[] {
+        return [
+            {
+                id: 300001,
+                name: 'عبد الباسط عبد الصمد - ورش (آيات)',
+                style: 'ورش عن نافع - آيات',
+                recitationType: 'ayah',
+                source: 'everyayah',
+                server: this.WARSH_AYAH_SOURCES[300001]
+            },
+            {
+                id: 300002,
+                name: 'إبراهيم الدوسري - ورش (آيات)',
+                style: 'ورش عن نافع - آيات',
+                recitationType: 'ayah',
+                source: 'everyayah',
+                server: this.WARSH_AYAH_SOURCES[300002]
+            },
+            {
+                id: 300003,
+                name: 'ياسين الجزائري - ورش (آيات)',
+                style: 'ورش عن نافع - آيات',
+                recitationType: 'ayah',
+                source: 'everyayah',
+                server: this.WARSH_AYAH_SOURCES[300003]
+            }
+        ];
+    }
+
     getReciters(): Observable<Reciter[]> {
-        const CACHE_KEY = 'cached_reciters_list_v18';
+        const CACHE_KEY = 'cached_reciters_list_v19';
         const cached = localStorage.getItem(CACHE_KEY);
 
         const missingReciters: Reciter[] = [
@@ -2578,37 +2607,12 @@ export class QuranAudioService {
                             });
                         }
                     }
-                    const warshAyahReciters: Reciter[] = [
-                        {
-                            id: 300001,
-                            name: 'عبد الباسط عبد الصمد - ورش (آيات)',
-                            style: 'ورش عن نافع - آيات',
-                            recitationType: 'ayah',
-                            source: 'everyayah',
-                            server: this.WARSH_AYAH_SOURCES[300001]
-                        },
-                        {
-                            id: 300002,
-                            name: 'إبراهيم الدوسري - ورش (آيات)',
-                            style: 'ورش عن نافع - آيات',
-                            recitationType: 'ayah',
-                            source: 'everyayah',
-                            server: this.WARSH_AYAH_SOURCES[300002]
-                        },
-                        {
-                            id: 300003,
-                            name: 'ياسين الجزائري - ورش (آيات)',
-                            style: 'ورش عن نافع - آيات',
-                            recitationType: 'ayah',
-                            source: 'everyayah',
-                            server: this.WARSH_AYAH_SOURCES[300003]
-                        }
-                    ];
+                    const warshAyahReciters = this.getStaticWarshAyahReciters();
                     return [...quranReciters, ...warshReciters, ...warshAyahReciters];
                 }),
                 catchError(err => {
-                    console.warn('[AudioService] MP3Quran reciters unavailable; using Quran.com reciters only', err);
-                    return of(quranReciters);
+                    console.warn('[AudioService] MP3Quran reciters unavailable; using static Warsh ayah fallback', err);
+                    return of([...quranReciters, ...this.getStaticWarshAyahReciters()]);
                 })
             )),
             tap((reciters: Reciter[]) => {
@@ -2617,7 +2621,7 @@ export class QuranAudioService {
             }),
             catchError(err => {
                 console.error('[AudioService] Failed to fetch reciters, returning defaults', err);
-                const sortedDefaults = [...missingReciters].sort((a: Reciter, b: Reciter) => {
+                const sortedDefaults = [...missingReciters, ...this.getStaticWarshAyahReciters()].sort((a: Reciter, b: Reciter) => {
                     return this.normalizeArabicName(a.name).localeCompare(this.normalizeArabicName(b.name), 'ar');
                 });
                 return of(sortedDefaults);
@@ -2630,7 +2634,10 @@ export class QuranAudioService {
                 this.hydrateMp3QuranReciters(reciters);
                 // Old caches contain only Quran.com readers. Refresh once so
                 // Warsh readers become visible without requiring a manual clear.
-                if (!reciters.some(reciter => reciter.source === 'mp3quran')) {
+                const hasStaticWarsh = [300001, 300002, 300003].every(id =>
+                    reciters.some(reciter => Number(reciter.id) === id)
+                );
+                if (!hasStaticWarsh || !reciters.some(reciter => reciter.source === 'mp3quran')) {
                     return fetchAndCache;
                 }
                 return of(reciters);

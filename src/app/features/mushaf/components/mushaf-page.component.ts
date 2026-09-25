@@ -102,6 +102,8 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
     isSidebarOpen: boolean = false;
     isSettingsOpen: boolean = false; // NEW: Settings sidebar state
     settingsMode: 'wird' | 'stats' = 'stats';
+    showSupportModal: boolean = false;
+    supportModalTab: 'support' | 'book' = 'support';
     sidebarTab: 'surahs' | 'juzs' | 'pages' | 'bookmarks' = 'surahs';
     currentTheme: string = 'cream'; // NEW: Default Mushaf theme
     themes = ['cream', 'white', 'green', 'sky', 'blue', 'dark']; // Added 'sky' for Madina Blue style
@@ -4826,6 +4828,24 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
             this.closeTafsir();
         }
         this.cdr.detectChanges();
+    }
+
+    openSupportModal(tab: 'support' | 'book' = 'support'): void {
+        this.supportModalTab = tab;
+        this.showSupportModal = true;
+        this.cdr.detectChanges();
+    }
+
+    closeSupportModal(): void {
+        this.showSupportModal = false;
+        this.cdr.detectChanges();
+    }
+
+    openSupportLink(kind: 'whatsapp' | 'book'): void {
+        const url = kind === 'whatsapp'
+            ? 'https://wa.me/message/5THZRJ4YPZLUA1'
+            : 'https://play.google.com/store/apps/details?id=com.kenouz.bookstore2&pcampaignid=web_share';
+        window.open(url, '_blank', 'noopener,noreferrer');
     }
 
     setTheme(theme: string): void {

@@ -228,6 +228,25 @@
             </button>
         </div>
 
+        <div class="settings-support-section" *ngIf="settingsMode === 'stats'">
+            <button class="settings-support-card support-card" (click)="openSupportModal('support')">
+                <span class="settings-support-icon"><i class="fas fa-hand-holding-heart"></i></span>
+                <span class="settings-support-copy">
+                    <strong>ساهم في دعم كنوز</strong>
+                    <small>شارك في استمرار هذا العمل ونشر الخير</small>
+                </span>
+                <i class="fas fa-chevron-left settings-support-arrow"></i>
+            </button>
+            <button class="settings-support-card book-card" (click)="openSupportModal('book')">
+                <span class="settings-support-icon"><i class="fas fa-book-open"></i></span>
+                <span class="settings-support-copy">
+                    <strong>KnoozBook</strong>
+                    <small>بابك إلى الكتب والروايات الورقية والإلكترونية</small>
+                </span>
+                <i class="fas fa-chevron-left settings-support-arrow"></i>
+            </button>
+        </div>
+
 
 
         <div class="settings-scroll-container">
@@ -2222,6 +2241,31 @@
 </div>
 
 <!-- NEW BOTTOM NAVIGATION BAR -->
+<div class="support-modal-overlay theme-{{currentTheme}}" *ngIf="showSupportModal" (click)="closeSupportModal()">
+    <div class="support-modal" (click)="$event.stopPropagation()">
+        <button class="support-modal-close" (click)="closeSupportModal()" aria-label="إغلاق">
+            <i class="fas fa-times"></i>
+        </button>
+        <div class="support-modal-hero" *ngIf="supportModalTab === 'support'">
+            <div class="support-modal-symbol"><i class="fas fa-hand-holding-heart"></i></div>
+            <h3>ساهم في دعم كنوز</h3>
+            <p>بدعمك يستمر هذا العمل النافع، ونستطيع تطوير تجربة القرآن ونشر الخير لعدد أكبر من الناس.</p>
+            <p class="support-modal-note">للمساهمة أو الاستفسار تواصل معنا عبر واتساب.</p>
+            <button class="support-action whatsapp-action" (click)="openSupportLink('whatsapp')">
+                <i class="fab fa-whatsapp"></i><span>التواصل عبر واتساب</span><i class="fas fa-arrow-up-left-from-circle"></i>
+            </button>
+        </div>
+        <div class="support-modal-hero" *ngIf="supportModalTab === 'book'">
+            <div class="support-modal-symbol book-symbol"><i class="fas fa-book-open"></i></div>
+            <h3>KnoozBook</h3>
+            <p>اكتشف عالمًا من الكتب والروايات الورقية والإلكترونية. اجعل القراءة بابًا للمعرفة، واختر كتابك القادم بسهولة.</p>
+            <p class="support-modal-note">حمّل التطبيق وابدأ رحلتك مع الكتاب.</p>
+            <button class="support-action play-action" (click)="openSupportLink('book')">
+                <i class="fab fa-google-play"></i><span>اكتشف KnoozBook</span><i class="fas fa-arrow-up-left-from-circle"></i>
+            </button>
+        </div>
+    </div>
+</div>
 <div class="bottom-navbar theme-{{currentTheme}}" [class.hidden-navbar]="!showNavbar">
     <div class="nav-container">
         <button class="nav-item" [class.active]="isSettingsOpen && settingsMode === 'stats'"

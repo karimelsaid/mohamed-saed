@@ -4842,9 +4842,25 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
     }
 
     openSupportLink(kind: 'whatsapp' | 'book'): void {
+        if (kind === 'book' && Capacitor.getPlatform() === 'android') {
+            // Android WebView can fail to resolve play.google.com. The market
+            // scheme opens the installed Google Play app directly instead.
+            const marketUrl = 'market://details?id=com.kenouz.bookstore2';
+            const intentUrl = 'intent://details?id=com.kenouz.bookstore2#Intent;scheme=market;package=com.android.vending;end';
+            try {
+                window.location.href = marketUrl;
+                setTimeout(() => {
+                    if (document.visibilityState === 'visible') window.location.href = intentUrl;
+                }, 700);
+            } catch (_) {
+                window.location.href = intentUrl;
+            }
+            return;
+        }
+
         const url = kind === 'whatsapp'
             ? 'https://wa.me/message/5THZRJ4YPZLUA1'
-            : 'https://play.google.com/store/apps/details?id=com.kenouz.bookstore2&pcampaignid=web_share';
+            : 'https://play.google.com/store/apps/details?id=com.kenouz.bookstore2';
         window.open(url, '_blank', 'noopener,noreferrer');
     }
 

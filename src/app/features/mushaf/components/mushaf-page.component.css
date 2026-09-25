@@ -273,6 +273,16 @@
 .settings-support-copy strong { font-size: .9rem; }
 .settings-support-copy small { color: rgba(255,255,255,.66); font-size: .72rem; line-height: 1.45; }
 .settings-support-arrow { color: rgba(255,255,255,.5); font-size: .75rem; }
+.mushaf-screen.theme-white .settings-support-copy strong,
+.mushaf-screen.theme-cream .settings-support-copy strong,
+.mushaf-screen.theme-sky .settings-support-copy strong { color: #334155; }
+.mushaf-screen.theme-white .settings-support-copy small,
+.mushaf-screen.theme-cream .settings-support-copy small,
+.mushaf-screen.theme-sky .settings-support-copy small { color: #64748b; }
+.mushaf-screen.theme-white .settings-support-arrow,
+.mushaf-screen.theme-cream .settings-support-arrow,
+.mushaf-screen.theme-sky .settings-support-arrow { color: #94a3b8; }
+.community-coming-soon { pointer-events: none; }
 .support-modal-overlay { position: fixed; inset: 0; z-index: 10000; display: grid; place-items: center; padding: 20px; background: rgba(8,12,18,.72); backdrop-filter: blur(7px); }
 .support-modal { position: relative; width: min(420px,100%); overflow: hidden; border: 1px solid rgba(194,168,122,.35); border-radius: 24px; padding: 28px 22px 22px; text-align: center; color: var(--text-primary,#f5f1e8); background: linear-gradient(155deg,#26352e,#17231f 72%); box-shadow: 0 24px 80px rgba(0,0,0,.42); animation: supportModalIn .22s ease-out; }
 .support-modal-close { position: absolute; top: 12px; left: 12px; width: 32px; height: 32px; border: 0; border-radius: 50%; background: rgba(255,255,255,.1); color: rgba(255,255,255,.75); cursor: pointer; }

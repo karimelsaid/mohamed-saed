@@ -68,7 +68,7 @@
 </ng-template>
 
 <!-- Main Mushaf Screen -->
-<div class="mushaf-screen theme-{{currentTheme}}" [class.hifz-muyassar-mushaf]="selectedMushafId === 'hifz_muyassar'" *ngIf="currentPageData$ | async as page; else fallbackTemplate">
+<div class="mushaf-screen theme-{{currentTheme}}" [class.hifz-muyassar-mushaf]="selectedMushafId === 'hifz_muyassar'" [class.continuous-layout]="isContinuousMode" *ngIf="currentPageData$ | async as page; else fallbackTemplate">
 
     <!-- Sidebar / Index Drawer -->
     <div class="mushaf-sidebar pb-20" [class.open]="isSidebarOpen" [class.animating]="sidebarOffset === 0"

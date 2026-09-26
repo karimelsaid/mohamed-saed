@@ -2587,6 +2587,13 @@
   touch-action: pan-y;
 }
 
+/* In continuous mode the horizontal slider must not remain as an empty flex
+   sibling. Otherwise some Android WebViews route the gesture to the hidden
+   slider instead of the vertical scroller. */
+.mushaf-screen.continuous-layout .mushaf-page-container {
+  display: none;
+}
+
 
 .mushaf-page-container.no-navbar {
 
@@ -16574,6 +16581,9 @@ select:focus {
      page container uses touch-action:none for page swipes. */
   touch-action: pan-y;
   overscroll-behavior-y: contain;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
 
 }
 
@@ -20993,7 +21003,9 @@ select:focus {
 
   padding: 10px;
 
-  background: transparent;
+  /* Match the surrounding Mushaf theme while keeping the scanned image
+     itself untouched. */
+  background: inherit;
   position: relative;
 
 }

@@ -34,17 +34,8 @@ const ebookSchema = new mongoose.Schema({
     category: {
         type: String,
         required: true,
-        enum: [
-            'Business-Marketing-Finance',
-            'Education-children',
-            'Arts-crafts',
-            'HealthMedicineScience',
-            'Islamic',
-            'Novels-stories',
-            'Self-development-psychology',
-            'History-Biographies',
-            'Dictionaries-References'
-        ]
+        trim: true,
+        default: 'غير مصنف'
     },
     language: {
         type: String,

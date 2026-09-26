@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams, HttpEvent } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, of } from 'rxjs';
+import { map, tap } from 'rxjs/operators';
 import { Ebook, AccessCheckResponse } from '../models/ebook.model';
 
 import { environment } from '../../environments/environment';
@@ -87,34 +88,67 @@ export class EbookService {
         return this.http.post<{ success: boolean; message: string; linkedEbookId: string }>(`${environment.apiBaseUrl}/admin/products/${productId}/epub`, formData);
     }
 
-    // Get categories for filtering
+    // Legacy English-to-Arabic category map (for old ebooks stored with English enum values)
+    private legacyCategoryMap: { [key: string]: string } = {
+        'Business-Marketing-Finance': 'أعمال وتسويق ومالية',
+        'Business-marketing-finance': 'أعمال وتسويق ومالية',
+        'Education-children': 'تربية وأطفال',
+        'Arts-crafts': 'فنون وحرف',
+        'HealthMedicineScience': 'صحة وطب وعلوم',
+        'Healthmedicinescience': 'صحة وطب وعلوم',
+        'Islamic': 'كتب دينية',
+        'Novels-stories': 'روايات وقصص',
+        'Self-development-psychology': 'تطوير الذات وعلم النفس',
+        'History-Biographies': 'تاريخ وسير ذاتية',
+        'History-biographies': 'تاريخ وسير ذاتية',
+        'Dictionaries-References': 'قواميس ومراجع',
+        'Dictionaries-references': 'قواميس ومراجع',
+        'office-supplies': 'أدوات مكتبية'
+    };
+
+    // Cached admin categories
+    private adminCategoriesCache: { value: string; label: string }[] | null = null;
+
+    // Get hardcoded fallback categories (legacy support)
     getCategories(): string[] {
         return [
-            'Business-Marketing-Finance',
-            'Education-children',
-            'Arts-crafts',
-            'HealthMedicineScience',
-            'Islamic',
-            'Novels-stories',
-            'Self-development-psychology',
-            'History-Biographies',
-            'Dictionaries-References'
+            'روايات وقصص',
+            'تطوير الذات وعلم النفس',
+            'كتب دينية',
+            'أعمال وتسويق ومالية',
+            'صحة وطب وعلوم',
+            'تاريخ وسير ذاتية',
+            'تربية وأطفال',
+            'فنون وحرف',
+            'قواميس ومراجع'
         ];
     }
 
-    // Get category display name in Arabic
+    // Fetch categories dynamically from the admin API
+    fetchAdminCategories(): Observable<{ value: string; label: string }[]> {
+        if (this.adminCategoriesCache) {
+            return of(this.adminCategoriesCache);
+        }
+        const categoriesUrl = `${environment.apiBaseUrl.replace('/api', '')}/api/categories`;
+        return this.http.get<any>(categoriesUrl).pipe(
+            map((res: any) => {
+                const cats = (res.data || res || []).filter((c: any) => c.isActive !== false);
+                return cats.map((c: any) => ({ value: c.name, label: c.name }));
+            }),
+            tap((cats: { value: string; label: string }[]) => {
+                this.adminCategoriesCache = cats;
+            })
+        );
+    }
+
+    // Get category display name in Arabic (handles legacy English values + Arabic categories)
     getCategoryDisplayName(category: string): string {
-        const categoryNames: { [key: string]: string } = {
-            'Business-Marketing-Finance': 'الأعمال والتسويق والمالية',
-            'Education-children': 'تعليم الأطفال',
-            'Arts-crafts': 'الفنون والحرف',
-            'HealthMedicineScience': 'الصحة والطب والعلوم',
-            'Islamic': 'إسلامي',
-            'Novels-stories': 'الروايات والقصص',
-            'Self-development-psychology': 'تطوير الذات وعلم النفس',
-            'History-Biographies': 'التاريخ والسير الذاتية',
-            'Dictionaries-References': 'القواميس والمراجع'
-        };
-        return categoryNames[category] || category;
+        if (!category) return 'غير مصنف';
+        // If it's a legacy English enum value, translate it
+        if (this.legacyCategoryMap[category]) {
+            return this.legacyCategoryMap[category];
+        }
+        // Otherwise it's already an Arabic category name — return as-is
+        return category;
     }
 }

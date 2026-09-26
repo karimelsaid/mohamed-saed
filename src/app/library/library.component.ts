@@ -182,8 +182,20 @@ export class LibraryComponent implements OnInit, OnDestroy {
             isLoggedIn = this.authService.isLoggedIn();
         }
 
-        this.categories = this.ebookService.getCategories();
-        this.updateUnifiedCategories();
+        this.ebookService.fetchAdminCategories().subscribe({
+            next: (cats) => {
+                if (cats && cats.length > 0) {
+                    this.categories = cats.map(c => c.value);
+                } else {
+                    this.categories = this.ebookService.getCategories();
+                }
+                this.updateUnifiedCategories();
+            },
+            error: () => {
+                this.categories = this.ebookService.getCategories();
+                this.updateUnifiedCategories();
+            }
+        });
 
         if (isLoggedIn) {
             this.subscriptionService.refreshStatus();

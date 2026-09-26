@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { EbookService } from '../../services/ebook.service';
+import { DataService } from '../../services/data.service';
 import { Ebook } from '../../models/ebook.model';
 import { environment } from '../../../environments/environment';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
@@ -66,7 +67,7 @@ export class AdminEbooksComponent implements OnInit {
         _id: '',
         title: '',
         author: '',
-        category: 'Novels-stories',
+        category: 'روايات وقصص',
         description: '',
         price: 0,
         availableForSubscription: true,
@@ -82,7 +83,7 @@ export class AdminEbooksComponent implements OnInit {
     showAddProductModal = false;
     newProduct = {
         name: '',
-        category: 'Novels-stories',
+        category: 'روايات وقصص',
         author: '',
         publisher: '',
         price: 0,
@@ -100,29 +101,40 @@ export class AdminEbooksComponent implements OnInit {
     extractedCoverPreviewUrl: string | null = null;
     isExtractingCover = false;
 
-    // Category mappings for dropdown
-    availableCategories = [
-        { value: 'Business-Marketing-Finance', label: 'مال وأعمال' },
-        { value: 'Education-children', label: 'تعليم وأطفال' },
-        { value: 'Arts-crafts', label: 'فنون وحرف' },
-        { value: 'HealthMedicineScience', label: 'صحة وعلوم' },
-        { value: 'Islamic', label: 'كتب دينية' },
-        { value: 'Novels-stories', label: 'روايات وقصص' },
-        { value: 'Self-development-psychology', label: 'تطوير الذات وعلم النفس' },
-        { value: 'History-Biographies', label: 'تاريخ وسير' },
-        { value: 'Dictionaries-References', label: 'قواميس ومراجع' }
-    ];
+    // Category mappings for dropdown (loaded dynamically from admin API)
+    availableCategories: { value: string; label: string }[] = [];
 
     private backendBaseUrl = environment.apiBaseUrl;
     uploadsBaseUrl = environment.uploadsBaseUrl;
 
     constructor(
         private ebookService: EbookService,
+        private dataService: DataService,
         private http: HttpClient
     ) { }
 
     ngOnInit(): void {
         this.loadEbooks();
+        this.loadAdminCategories();
+    }
+
+    // Load categories dynamically from admin API
+    private loadAdminCategories(): void {
+        this.ebookService.fetchAdminCategories().subscribe({
+            next: (cats) => {
+                if (cats && cats.length > 0) {
+                    this.availableCategories = cats;
+                    // Set default category to first available
+                    if (!this.editingEbookData.category || this.editingEbookData.category === 'روايات وقصص') {
+                        this.editingEbookData.category = cats[0].value;
+                    }
+                    if (!this.newProduct.category || this.newProduct.category === 'روايات وقصص') {
+                        this.newProduct.category = cats[0].value;
+                    }
+                }
+            },
+            error: (err) => console.error('Failed to load admin categories', err)
+        });
     }
 
     // --- TAB SWITCHER ---

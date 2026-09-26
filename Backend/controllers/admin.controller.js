@@ -2039,14 +2039,8 @@ async function replaceProductEpub(req, res) {
     }
 
     if (!ebook) {
-      // Map Arabic category (short or full) to English enum value
-      let englishCategory = englishCategoryMap[product.product_category];
-      if (!englishCategory) {
-        // If product_category is a full Arabic name, get its short key via reverseCategoryMap
-        const shortKey = reverseCategoryMap[product.product_category] || product.product_category;
-        // Then map the short key to English enum
-        englishCategory = englishCategoryMap[shortKey] || 'Novels-stories';
-      }
+      // Use product's real category directly (preserving Arabic categories added by admin)
+      const bookCategory = product.product_category || 'غير مصنف';
 
       // Auto-detect language from product name
       const hasEnglishChars = /[a-zA-Z]/.test(product.product_name);
@@ -2060,7 +2054,7 @@ async function replaceProductEpub(req, res) {
         description: product.product_description,
         publisher: cleanedProductPublisher,
         coverImage: product.product_image && !product.product_image.includes('placeholder') ? product.product_image : '', 
-        category: englishCategory,
+        category: bookCategory,
         language: detectedLanguage,
         pages: product.pages || 0,
         price: cleanPrice(product.product_price),
@@ -5075,7 +5069,7 @@ module.exports = {
       const newProduct = {
         products_id: barcode,
         product_name: cleanedTitle,
-        product_category: product_category || 'Novels-stories',
+        product_category: product_category || 'غير مصنف',
         author: cleanedAuthor,
         publisher: cleanedPublisher,
         epubFileHash,
@@ -5099,7 +5093,7 @@ module.exports = {
       const mongoProduct = new Product({
         products_id: barcode,
         product_name: cleanedTitle,
-        product_category: product_category || 'Novels-stories',
+        product_category: product_category || 'غير مصنف',
         author: cleanedAuthor,
         publisher: cleanedPublisher,
         epubFileHash,

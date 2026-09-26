@@ -376,7 +376,7 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
         show: false,
         tempRepeatAyah: 1,
         tempRepeatGroup: 1,
-        tempRange: 'page' as any,
+        tempRange: 'surah' as any,
         tempSpeed: 1.0,
 
         // Custom Range Selection
@@ -2969,6 +2969,9 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
         const currentPage = pages.find(p => p.page_number === this.pageNumber);
         const refKey = this.extractVerseKeys(currentPage ? [currentPage] : [])[0] || '1:1';
 
+        // The normal player starts a complete surah unless the user chooses
+        // another range explicitly in Audio Settings.
+        this.audioService.setPlaybackRange('surah', undefined, null);
         await this.playVerseAudio(refKey);
     }
 
@@ -3098,7 +3101,7 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
         // User Request: Return audio options to their default values
         this.audioSettingsModal.tempRepeatAyah = 1;
         this.audioSettingsModal.tempRepeatGroup = 1;
-        this.audioSettingsModal.tempRange = 'page';
+        this.audioSettingsModal.tempRange = 'surah';
         this.audioSettingsModal.tempSpeed = 1.0;
 
 
@@ -3106,7 +3109,7 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
         // Reset Service State
         this.audioService.setRepeatSettings(1, 1);
         this.audioService.setPlaybackRate(1.0);
-        this.audioService.setPlaybackRange('page', undefined, null); // Reset range in service
+        this.audioService.setPlaybackRange('surah', undefined, null); // Default back to full-surah playback
 
         this.cdr.detectChanges();
     }
@@ -3221,6 +3224,8 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
     onSurahChange(event: any) {
         const id = event?.target ? parseInt(event.target.value, 10) : parseInt(event, 10);
         if (isNaN(id)) return;
+        this.audioSettingsModal.tempRange = 'surah';
+        this.audioService.setPlaybackRange('surah', undefined, null);
         this.audioService.playVerse(`${id}:1`);
     }
 

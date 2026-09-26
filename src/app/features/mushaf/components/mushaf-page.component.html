@@ -1009,8 +1009,7 @@
                             viewBox="0 0 1447 2297" preserveAspectRatio="xMidYMid meet" aria-label="تحديد آيات الحفظ الميسر">
                             <polygon *ngFor="let item of getHifzMuyassarOverlayItems()"
                                 [attr.points]="item.points" [class.active]="item.active"
-                                (click)="onHifzMuyassarVerseClick($event, item.verseKey)"
-                                (touchend)="onHifzMuyassarVerseClick($event, item.verseKey)"></polygon>
+                                (click)="onHifzMuyassarVerseClick($event, item.verseKey)"></polygon>
                         </svg>
                     </div>
                     <!-- Text Mode -->

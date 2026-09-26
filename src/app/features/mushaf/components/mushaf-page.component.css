@@ -20993,7 +20993,8 @@ select:focus {
   z-index: 2;
   width: calc(100% - 20px);
   height: calc(100% - 20px);
-  pointer-events: auto;
+  /* Let swipe/double-tap events bubble to .mushaf-page-container. */
+  pointer-events: none;
   overflow: visible;
 }
 
@@ -21011,7 +21012,8 @@ select:focus {
   stroke-width: 0;
   vector-effect: non-scaling-stroke;
   cursor: pointer;
-  pointer-events: all;
+  /* A tap can still select an ayah, while touch gestures pass through. */
+  pointer-events: auto;
   transition: fill 0.18s ease, stroke 0.18s ease;
 }
 

@@ -16564,6 +16564,11 @@ select:focus {
 
   -webkit-overflow-scrolling: touch;
 
+  /* Keep native finger scrolling available even though the horizontal
+     page container uses touch-action:none for page swipes. */
+  touch-action: pan-y;
+  overscroll-behavior-y: contain;
+
 }
 
 
@@ -21057,6 +21062,12 @@ select:focus {
 
   filter: sepia(0.4) hue-rotate(50deg) contrast(1.05) brightness(0.95);
 
+}
+
+/* The Hifz Muyassar page is a scanned Mushaf image. Never recolor or invert
+   the scan when the surrounding reader theme changes. */
+.mushaf-screen.hifz-muyassar-mushaf .mushaf-page-image {
+  filter: none !important;
 }
 
 

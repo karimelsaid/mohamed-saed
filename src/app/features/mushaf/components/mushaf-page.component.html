@@ -54,7 +54,7 @@
 
 <!-- Fallback Templates -->
 <ng-template #fallbackTemplate>
-    <div class="mushaf-screen theme-{{currentTheme}}"
+    <div class="mushaf-screen theme-{{currentTheme}}" [class.hifz-muyassar-mushaf]="selectedMushafId === 'hifz_muyassar'"
         *ngIf="!(assetService.loading$ | async) && !(assetService.error$ | async)"
         style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh;">
 
@@ -68,7 +68,7 @@
 </ng-template>
 
 <!-- Main Mushaf Screen -->
-<div class="mushaf-screen theme-{{currentTheme}}" *ngIf="currentPageData$ | async as page; else fallbackTemplate">
+<div class="mushaf-screen theme-{{currentTheme}}" [class.hifz-muyassar-mushaf]="selectedMushafId === 'hifz_muyassar'" *ngIf="currentPageData$ | async as page; else fallbackTemplate">
 
     <!-- Sidebar / Index Drawer -->
     <div class="mushaf-sidebar pb-20" [class.open]="isSidebarOpen" [class.animating]="sidebarOffset === 0"
@@ -1087,8 +1087,7 @@
     </div>
 
     <!-- NEW: Continuous Vertical Mode -->
-    <div class="mushaf-vertical-viewer quran-text" *ngIf="isContinuousMode" (scroll)="onVerticalScroll($event)"
-        (touchstart)="onTouchStart($event)" (touchmove)="onTouchMove($event)" (touchend)="onTouchEnd($event)">
+    <div class="mushaf-vertical-viewer quran-text" *ngIf="isContinuousMode" (scroll)="onVerticalScroll($event)">
         <!-- Content -->
         <div class="vertical-page-wrapper" *ngFor="let page of verticalPages" [attr.data-page]="page.page_number"
             [class.first-pages]="page.page_number <= 2">

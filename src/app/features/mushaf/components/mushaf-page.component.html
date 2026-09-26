@@ -944,6 +944,7 @@
 
     <!-- Mushaf Page Container (Slider) -->
     <div #pageContainer class="mushaf-page-container" [class.no-navbar]="!showNavbar"
+        [class.continuous-mode]="isContinuousMode"
         [class.has-fixed-header]="showNavbar" [class.scale-mode]="isMemorizationMode && !isTestPhase"
         [class.recitation-session]="isMemorizationMode && memorizationSettings.type === 'recitation'"
         [class.tap-active]="isMemorizationMode && memorizationSettings.type === 'muraaja'"

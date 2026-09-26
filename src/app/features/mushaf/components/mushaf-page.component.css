@@ -2580,6 +2580,12 @@
 
 }
 
+/* Continuous mode owns vertical scrolling. The normal reader needs
+   touch-action:none for horizontal page swipes, so switch it only while the
+   vertical viewer is active. */
+.mushaf-page-container.continuous-mode {
+  touch-action: pan-y;
+}
 
 
 .mushaf-page-container.no-navbar {

@@ -639,12 +639,18 @@
                                 <button (click)="duplicateOverridden = false" class="mr-auto text-[10px] text-rose-500 font-black underline">تراجع</button>
                             </div>
 
-                            <div class="grid grid-cols-2 gap-4">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div class="group">
                                     <label class="block text-xs font-black text-slate-500 dark:text-slate-400 mb-2 mr-2">المؤلف</label>
                                     <input type="text" [(ngModel)]="newProduct.author"
                                         class="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-bold shadow-inner focus:ring-2 focus:ring-emerald-500/50 transition-all"
                                         placeholder="ابن كثير">
+                                </div>
+                                <div class="group">
+                                    <label class="block text-xs font-black text-slate-500 dark:text-slate-400 mb-2 mr-2">الناشر</label>
+                                    <input type="text" [(ngModel)]="newProduct.publisher"
+                                        class="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm font-bold shadow-inner focus:ring-2 focus:ring-emerald-500/50 transition-all"
+                                        placeholder="دار الشروق">
                                 </div>
                                 <div class="group">
                                     <label class="block text-xs font-black text-slate-500 dark:text-slate-400 mb-2 mr-2">السعر (اختياري)</label>

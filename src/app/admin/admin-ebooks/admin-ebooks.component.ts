@@ -84,6 +84,7 @@ export class AdminEbooksComponent implements OnInit {
         name: '',
         category: 'Novels-stories',
         author: '',
+        publisher: '',
         price: 0,
         description: ''
     };
@@ -429,7 +430,9 @@ export class AdminEbooksComponent implements OnInit {
         let sanitized = nameWithoutExt.replace(/_/g, ' ');
 
         // Remove any non-text characters (keep Arabic letters, English letters, numbers, and spaces)
-        sanitized = sanitized.replace(/[^\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFFa-zA-Z0-9\s]/g, '');
+        // Keep commas, semicolons and hyphens because they separate the
+        // title, author and publisher in common ebook filenames.
+        sanitized = sanitized.replace(/[^\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFFa-zA-Z0-9\s,;؛-]/g, '');
 
         // Replace multiple spaces with single space
         sanitized = sanitized.replace(/\s+/g, ' ');
@@ -438,15 +441,22 @@ export class AdminEbooksComponent implements OnInit {
         return sanitized.trim();
     }
 
-    parseEbookFileName(fileName: string): { bookName: string; author: string; description: string } {
-        // First sanitize the filename
-        const sanitizedFileName = this.sanitizeFileName(fileName);
+    parseEbookFileName(fileName: string): { bookName: string; author: string; publisher: string; description: string } {
+        // Remove common source watermark before sanitizing. This prevents
+        // names such as "( WeLib.org )" from leaking into book metadata.
+        const withoutSourceTag = fileName
+            .replace(/\(\s*welib\s*\.\s*org\s*\)/gi, '')
+            .replace(/\bwelib\s*\.\s*org\b/gi, '')
+            .replace(/\s{2,}/g, ' ')
+            .trim();
+        const sanitizedFileName = this.sanitizeFileName(withoutSourceTag);
 
         // Split by '--'
         const parts = sanitizedFileName.split('--').map(p => p.trim());
 
         let bookName = '';
         let author = '';
+        let publisher = '';
         let description = '';
 
         if (parts.length > 0) {
@@ -462,7 +472,9 @@ export class AdminEbooksComponent implements OnInit {
         }
 
         if (parts.length > 1) {
-            author = parts[1] || '';
+            const authorPublisher = (parts[1] || '').split(',').map(p => p.trim()).filter(Boolean);
+            author = authorPublisher.shift() || '';
+            publisher = authorPublisher.join(', ');
         }
 
         // If there's no description, fallback to author name or book name
@@ -473,6 +485,7 @@ export class AdminEbooksComponent implements OnInit {
         return {
             bookName,
             author,
+            publisher,
             description
         };
     }
@@ -491,6 +504,7 @@ export class AdminEbooksComponent implements OnInit {
                     if (parsed.author) {
                         this.newProduct.author = parsed.author;
                     }
+                    this.newProduct.publisher = parsed.publisher || '';
                     if (parsed.description) {
                         this.newProduct.description = parsed.description;
                     }
@@ -625,6 +639,7 @@ export class AdminEbooksComponent implements OnInit {
             formData.append('product_name', this.newProduct.name);
             formData.append('product_category', this.newProduct.category);
             formData.append('author', this.newProduct.author);
+            formData.append('publisher', this.newProduct.publisher);
             formData.append('product_price', this.newProduct.price.toString());
             formData.append('product_description', this.newProduct.description);
             formData.append('epub', this.selectedFile);
@@ -715,6 +730,7 @@ export class AdminEbooksComponent implements OnInit {
             name: '',
             category: 'Novels-stories',
             author: '',
+            publisher: '',
             price: 0,
             description: ''
         };

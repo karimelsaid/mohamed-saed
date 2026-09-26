@@ -7,6 +7,42 @@ const axios = require('axios');
 const { addProductToExcel, bulkAddProductsToExcel, categoryMap, reverseCategoryMap, downloadAndConvertExcel, updateExcelFromJson } = require('../services/excel.service');
 const AdmZip = require('adm-zip');
 const xml2js = require('xml2js');
+const crypto = require('crypto');
+
+function cleanBookText(value) {
+  return String(value || '')
+    .replace(/\(\s*welib\s*\.\s*org\s*\)/gi, '')
+    .replace(/\bwelib\s*\.\s*org\b/gi, '')
+    .replace(/[\u064B-\u065F\u0670]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/^[,؛،\-–—|]+|[,؛،\-–—|]+$/g, '')
+    .trim();
+}
+
+function normalizeBookText(value) {
+  return cleanBookText(value)
+    .toLowerCase()
+    .replace(/[أإآا]/g, 'ا')
+    .replace(/[ةه]/g, 'ه')
+    .replace(/[يى]/g, 'ي');
+}
+
+function parseBookFilenameMetadata(value) {
+  const cleaned = cleanBookText(String(value || '').replace(/\.[^/.]+$/, ''));
+  const parts = cleaned.split('--').map(part => cleanBookText(part)).filter(Boolean);
+  const title = cleanBookText(parts[0] || cleaned);
+  const authorPublisher = (parts[1] || '').split(',').map(part => cleanBookText(part)).filter(Boolean);
+  return {
+    title,
+    author: authorPublisher[0] || '',
+    publisher: authorPublisher.slice(1).join(', ')
+  };
+}
+
+function getEpubHash(file) {
+  return file?.buffer ? crypto.createHash('sha256').update(file.buffer).digest('hex') : '';
+}
 
 /**
  * Extracts the cover image from an EPUB buffer
@@ -1977,7 +2013,24 @@ async function replaceProductEpub(req, res) {
       return res.status(404).json({ success: false, message: 'Product not found' });
     }
 
-    const sanitizedTitle = product.product_name.replace(/[^a-zA-Z0-9\u0600-\u06FF]/g, '_');
+    const parsedFilename = parseBookFilenameMetadata(epubFile.originalname || product.product_name);
+    const cleanedProductTitle = cleanBookText(product.product_name) || parsedFilename.title;
+    const cleanedProductAuthor = cleanBookText(product.author) || parsedFilename.author || 'غير محدد';
+    const cleanedProductPublisher = cleanBookText(product.publisher) || parsedFilename.publisher;
+    const epubFileHash = getEpubHash(epubFile);
+    const duplicateFile = epubFileHash
+      ? await Product.findOne({ productType: 'digital', epubFileHash, products_id: { $ne: barcode } }).select('products_id product_name author')
+      : null;
+    if (duplicateFile) {
+      return res.status(409).json({
+        success: false,
+        duplicate: true,
+        message: `هذا الملف مضاف بالفعل للكتاب: "${duplicateFile.product_name}"`,
+        existing: duplicateFile
+      });
+    }
+
+    const sanitizedTitle = cleanedProductTitle.replace(/[^a-zA-Z0-9\u0600-\u06FF]/g, '_');
 
     // Check if Ebook exists
     let ebook;
@@ -2002,9 +2055,10 @@ async function replaceProductEpub(req, res) {
 
       // Create new Ebook if not existing
       ebook = new Ebook({
-        title: product.product_name,
-        author: product.author || 'Unknown',
+        title: cleanedProductTitle,
+        author: cleanedProductAuthor,
         description: product.product_description,
+        publisher: cleanedProductPublisher,
         coverImage: product.product_image && !product.product_image.includes('placeholder') ? product.product_image : '', 
         category: englishCategory,
         language: detectedLanguage,
@@ -2054,6 +2108,9 @@ async function replaceProductEpub(req, res) {
     const relativePath = `uploads/ebooks/${newFileName}`;
     ebook.epubFilePath = relativePath;
     ebook.fileSize = epubFile.size;
+    ebook.title = cleanedProductTitle;
+    ebook.author = cleanedProductAuthor;
+    ebook.publisher = cleanedProductPublisher;
 
     // Handle Cover Image
     const { images } = req.body;
@@ -2141,6 +2198,22 @@ async function replaceProductEpub(req, res) {
 
     await ebook.save();
 
+    await Product.findOneAndUpdate(
+      { products_id: String(barcode).trim() },
+      {
+        $set: {
+          product_name: cleanedProductTitle,
+          author: cleanedProductAuthor,
+          publisher: cleanedProductPublisher,
+          epubFileHash,
+          epubFilePath: relativePath,
+          linkedEbookId: ebook._id,
+          productType: 'digital',
+          digitalDelivery: true
+        }
+      }
+    );
+
     // Update product with linkedEbookId
     console.log('💾 Saving linkedEbookId:', ebook._id.toString(), 'for product:', barcode);
 
@@ -2161,6 +2234,10 @@ async function replaceProductEpub(req, res) {
     // Update local JSON array - always update to ensure it's saved
     const productIndex = products.findIndex(p => String(p.products_id).trim() === String(barcode).trim());
     if (productIndex !== -1) {
+      products[productIndex].product_name = cleanedProductTitle;
+      products[productIndex].author = cleanedProductAuthor;
+      products[productIndex].publisher = cleanedProductPublisher;
+      products[productIndex].epubFileHash = epubFileHash;
       products[productIndex].linkedEbookId = ebook._id.toString();
       fs.writeFileSync(outputPath, JSON.stringify(products, null, 2));
       console.log('✅ linkedEbookId saved to output.json for product index:', productIndex);
@@ -4926,10 +5003,33 @@ module.exports = {
 
   createDigitalBook: async (req, res) => {
     try {
-      const { product_name, product_category, author, product_price, product_description } = req.body;
-      
+      const { product_name, product_category, author, publisher, product_price, product_description } = req.body;
+
       if (!product_name) {
         return res.status(400).json({ success: false, message: 'اسم الكتاب مطلوب' });
+      }
+
+      const epubFile = req.files && req.files.epub && req.files.epub[0];
+      const parsedFilename = parseBookFilenameMetadata(epubFile?.originalname || product_name);
+      const cleanedTitle = cleanBookText(product_name) || parsedFilename.title;
+      const cleanedAuthor = cleanBookText(author) || parsedFilename.author || 'غير محدد';
+      const cleanedPublisher = cleanBookText(publisher) || parsedFilename.publisher;
+      const epubFileHash = getEpubHash(epubFile);
+
+      const duplicateByHash = epubFileHash
+        ? await Product.findOne({ productType: 'digital', epubFileHash }).select('products_id product_name author linkedEbookId')
+        : null;
+      const duplicateByMetadata = await Product.findOne({
+        productType: 'digital', product_name: cleanedTitle, author: cleanedAuthor
+      }).select('products_id product_name author linkedEbookId');
+      const duplicate = duplicateByHash || duplicateByMetadata;
+      if (duplicate) {
+        return res.status(409).json({
+          success: false,
+          duplicate: true,
+          message: `هذا الكتاب مضاف بالفعل: "${duplicate.product_name}"${duplicate.author ? ` — ${duplicate.author}` : ''}`,
+          existing: duplicate
+        });
       }
 
       // Get merchantId from admin middleware (try both possible field names)
@@ -4974,12 +5074,14 @@ module.exports = {
 
       const newProduct = {
         products_id: barcode,
-        product_name,
+        product_name: cleanedTitle,
         product_category: product_category || 'Novels-stories',
-        author: author || 'غير محدد',
+        author: cleanedAuthor,
+        publisher: cleanedPublisher,
+        epubFileHash,
         product_price: parsedPrice,
         price_cost: 0,
-        product_description: product_description || product_name,
+        product_description: cleanBookText(product_description) || cleanedTitle,
         product_image: finalImage,
         product_quantity: 999,
         is_digital: true,
@@ -4996,12 +5098,14 @@ module.exports = {
       const Product = require('../models/Product.model');
       const mongoProduct = new Product({
         products_id: barcode,
-        product_name,
+        product_name: cleanedTitle,
         product_category: product_category || 'Novels-stories',
-        author: author || 'غير محدد',
+        author: cleanedAuthor,
+        publisher: cleanedPublisher,
+        epubFileHash,
         product_price: parsedPrice,
         price_cost: 0,
-        product_description: product_description || product_name,
+        product_description: cleanBookText(product_description) || cleanedTitle,
         product_quantity: 999,
         product_image: finalImage,
         productType: 'digital',

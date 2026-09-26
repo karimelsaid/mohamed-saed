@@ -28,6 +28,7 @@ const productSchema = new mongoose.Schema({
   productType: { type: String, enum: ['physical', 'digital', 'bundle', 'affiliate'], default: 'physical' },
   linkedEbookId: { type: mongoose.Schema.Types.ObjectId, ref: 'Ebook' },
   epubFilePath: { type: String, default: '' },
+  epubFileHash: { type: String, index: true, default: '' },
   miniEpubFilePath: { type: String, default: '' },
   digitalDelivery: { type: Boolean, default: false },
   lastStockUpdate: { type: Date },

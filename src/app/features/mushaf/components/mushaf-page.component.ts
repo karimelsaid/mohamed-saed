@@ -5200,14 +5200,15 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
         this.touchStartY = event.touches[0].clientY;
         this.touchStartTime = Date.now();
 
-        // Double Tap Detection
-        if (this.touchStartTime - this.lastTapTime < 300) {
-            // Mark pending so verse long-press won't accidentally fire on second tap
+        // Double Tap Detection (supports fast and slow double taps up to 600ms)
+        if (this.lastTapTime > 0 && (this.touchStartTime - this.lastTapTime) < 600) {
             this.isDoubleTapPending = true;
-            this.handleDoubleTap(); // Runs inside Angular Zone (template binding) — UI updates correctly
+            this.handleDoubleTap();
+            this.lastTapTime = 0;
             setTimeout(() => { this.isDoubleTapPending = false; }, 350);
+        } else {
+            this.lastTapTime = this.touchStartTime;
         }
-        this.lastTapTime = this.touchStartTime;
 
         this.slideOffset = 0;
         this.isVerticalScroll = false;
@@ -5451,6 +5452,22 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
             }
             this.ngZone.run(() => this.resetSwipe());
         }
+    }
+
+    onVerticalTouchStart(event: TouchEvent): void {
+        const now = Date.now();
+        if (this.lastTapTime > 0 && (now - this.lastTapTime) < 600) {
+            this.isDoubleTapPending = true;
+            this.handleDoubleTap();
+            this.lastTapTime = 0;
+            setTimeout(() => { this.isDoubleTapPending = false; }, 350);
+        } else {
+            this.lastTapTime = now;
+        }
+    }
+
+    onTouchCancel(event?: TouchEvent): void {
+        this.ngZone.run(() => this.resetSwipe());
     }
 
     private resetSwipe(): void {

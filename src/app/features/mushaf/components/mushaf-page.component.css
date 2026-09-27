@@ -2695,12 +2695,8 @@
 
   position: relative;
 
-  /* Allow browser to handle horizontal pan natively within page area;
-
-     the outer container (touch-action: none) still owns swipe-left/right */
-
-  touch-action: pan-x;
-
+  /* Normal slider mode: touch-action: none so custom JavaScript swipe handler receives 100% of gestures */
+  touch-action: none !important;
 }
 
 
@@ -16550,94 +16546,83 @@ select:focus {
 /* 9. Mushaf Vertical Mode (Continuous Scroll) */
 
 .mushaf-vertical-viewer {
-
   width: 100vw;
-
-  height: 100vh;
-
   background-color: transparent;
-
   overflow-y: auto;
-
   overflow-x: hidden;
-
   display: flex;
-
   flex-direction: column;
-
   align-items: center;
-
+  padding-top: calc(8px + env(safe-area-inset-top));
   padding-bottom: 100px;
-
-  /* Space for bottom content */
-
   scroll-behavior: auto;
-
-  /* Managed by JS for auto-scroll */
-
   -webkit-overflow-scrolling: touch;
-
-  /* Keep native finger scrolling available even though the horizontal
-     page container uses touch-action:none for page swipes. */
-  touch-action: pan-y;
+  touch-action: pan-y !important;
   overscroll-behavior-y: contain;
   flex: 1 1 auto;
   min-height: 0;
   height: auto;
-
+  transition: padding-top 0.3s ease-in-out;
 }
 
+.mushaf-vertical-viewer.has-navbar {
+  padding-top: calc(56px + env(safe-area-inset-top));
+}
 
+/* Ensure every element inside the vertical viewer permits vertical panning */
+.mushaf-vertical-viewer,
+.mushaf-vertical-viewer * {
+  touch-action: pan-y !important;
+}
 
 .vertical-page-wrapper {
-
   width: 100%;
-
   min-height: auto;
-
-  /* changed from 100vh to auto to prevent gaps */
-
   display: flex;
-
   justify-content: center;
-
   position: relative;
-
   margin-bottom: 0;
-
   padding-bottom: 0;
-
+  touch-action: pan-y !important;
 }
-
-
 
 /* Ensure pages in vertical mode look like pages */
-
 .mushaf-vertical-viewer .mushaf-page {
-
   height: auto !important;
-
   min-height: auto !important;
-
   overflow: visible !important;
-
   padding-bottom: 20px;
-
   max-width: 95%;
-
-  /* Match landscape constraint */
-
   box-shadow: none;
-
-  /* optional: cleaner look for continuous stream */
-
   border-bottom: 1px solid rgba(194, 168, 122, 0.2);
-
-  /* separator */
-
+  touch-action: pan-y !important;
 }
 
+.mushaf-vertical-viewer .mushaf-page-image-container {
+  width: 100%;
+  height: auto !important;
+  min-height: auto !important;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 10px 0;
+  touch-action: pan-y !important;
+  user-select: none;
+  -webkit-user-select: none;
+}
 
+.mushaf-vertical-viewer .mushaf-page-image {
+  width: 100% !important;
+  max-width: 100% !important;
+  height: auto !important;
+  max-height: none !important;
+  object-fit: contain;
+  touch-action: pan-y !important;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+}
 
 /* Loading state container */
 
@@ -20986,28 +20971,19 @@ select:focus {
 /* Page Image Mode Styles */
 
 .mushaf-page-image-container {
-
   width: 100%;
-
   height: 100%;
-
   display: flex;
-
   justify-content: center;
-
   align-items: center;
-
   overflow: hidden;
-
   box-sizing: border-box;
-
   padding: 10px;
-
-  /* Match the surrounding Mushaf theme while keeping the scanned image
-     itself untouched. */
   background: inherit;
   position: relative;
-
+  touch-action: none !important;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .hifz-verse-overlay {
@@ -21016,9 +20992,9 @@ select:focus {
   z-index: 2;
   width: calc(100% - 20px);
   height: calc(100% - 20px);
-  /* Let swipe/double-tap events bubble to .mushaf-page-container. */
   pointer-events: none;
   overflow: visible;
+  touch-action: none !important;
 }
 
 .hifz-muyassar-image-container .mushaf-page-image {
@@ -21035,8 +21011,8 @@ select:focus {
   stroke-width: 0;
   vector-effect: non-scaling-stroke;
   cursor: pointer;
-  /* A tap can still select an ayah, while touch gestures pass through. */
   pointer-events: auto;
+  touch-action: none !important;
   transition: fill 0.18s ease, stroke 0.18s ease;
 }
 
@@ -21046,25 +21022,36 @@ select:focus {
   stroke: transparent;
 }
 
-
-
 .mushaf-page-image {
-
   max-width: 100%;
-
   max-height: 100%;
-
   object-fit: contain;
-
   border-radius: 4px;
-
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-
   transition: filter 0.3s ease;
-
+  pointer-events: none;
+  touch-action: none !important;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
 }
 
+/* In continuous vertical mode, allow vertical dragging/panning over images */
+.mushaf-vertical-viewer .mushaf-page-image-container {
+  width: 100%;
+  height: auto !important;
+  touch-action: pan-y !important;
+}
 
+.mushaf-vertical-viewer .mushaf-page-image {
+  width: 100% !important;
+  max-width: 100% !important;
+  height: auto !important;
+  max-height: none !important;
+  touch-action: pan-y !important;
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
 
 /* Eye protection: invert page image colors in dark theme */
 

@@ -797,7 +797,7 @@
     </div>
 
     <!-- FIXED HEADER: Persistent UI for Page Info & Bookmark to prevent flickering -->
-    <div class="fixed-mushaf-header" *ngIf="currentMushafPage && !isContinuousMode && showNavbar"
+    <div class="fixed-mushaf-header" *ngIf="currentMushafPage && showNavbar"
         [class.hidden]="!showNavbar">
 
         <!-- Centered Info Block with Integrated Indicators -->
@@ -948,7 +948,7 @@
         [class.has-fixed-header]="showNavbar" [class.scale-mode]="isMemorizationMode && !isTestPhase"
         [class.recitation-session]="isMemorizationMode && memorizationSettings.type === 'recitation'"
         [class.tap-active]="isMemorizationMode && memorizationSettings.type === 'muraaja'"
-        (touchstart)="onTouchStart($event)" (touchmove)="onTouchMove($event)" (touchend)="onTouchEnd($event)">
+        (touchstart)="onTouchStart($event)" (touchmove)="onTouchMove($event)" (touchend)="onTouchEnd($event)" (dblclick)="handleDoubleTap()">
 
         <!-- Touch Ripple Overlay -->
         <div *ngFor="let ripple of ripples; trackBy: trackByRipple" class="touch-ripple" [style.left.px]="ripple.x"
@@ -964,7 +964,7 @@
                     [style.font-family]="getFontFamily(dataService.getFontName(pageNumber + 1))">
                     <!-- Image Mode -->
                     <div class="mushaf-page-image-container" *ngIf="isImageMushaf()">
-                        <img [src]="getPageImageUrl(nextPage.page_number)" class="mushaf-page-image" [style.object-fit]="imageFitMode" [style.width]="imageFitMode === 'fill' ? '100%' : 'auto'" [style.height]="imageFitMode === 'fill' ? '100%' : 'auto'" alt="صفحة {{ nextPage.page_number }}">
+                        <img [src]="getPageImageUrl(nextPage.page_number)" class="mushaf-page-image" draggable="false" [style.object-fit]="imageFitMode" [style.width]="imageFitMode === 'fill' ? '100%' : 'auto'" [style.height]="imageFitMode === 'fill' ? '100%' : 'auto'" alt="صفحة {{ nextPage.page_number }}">
                     </div>
                     <!-- Text Mode -->
                     <div class="lines-container" *ngIf="!isImageMushaf()"
@@ -1005,7 +1005,7 @@
                 <div class="mushaf-page quran-text" [style.font-family]="fontFamily">
                     <!-- Image Mode -->
                     <div class="mushaf-page-image-container" [class.hifz-muyassar-image-container]="selectedMushafId === 'hifz_muyassar'" *ngIf="isImageMushaf()">
-                        <img [src]="getPageImageUrl(page.page_number)" class="mushaf-page-image" [style.object-fit]="imageFitMode" [style.width]="imageFitMode === 'fill' ? '100%' : 'auto'" [style.height]="imageFitMode === 'fill' ? '100%' : 'auto'" alt="صفحة {{ page.page_number }}">
+                        <img [src]="getPageImageUrl(page.page_number)" class="mushaf-page-image" draggable="false" [style.object-fit]="imageFitMode" [style.width]="imageFitMode === 'fill' ? '100%' : 'auto'" [style.height]="imageFitMode === 'fill' ? '100%' : 'auto'" alt="صفحة {{ page.page_number }}">
                         <svg *ngIf="selectedMushafId === 'hifz_muyassar'" class="hifz-verse-overlay"
                             viewBox="0 0 1447 2297" preserveAspectRatio="xMidYMid meet" aria-label="تحديد آيات الحفظ الميسر">
                             <polygon *ngFor="let item of getHifzMuyassarOverlayItems()"
@@ -1049,7 +1049,7 @@
                     [style.font-family]="getFontFamily(dataService.getFontName(pageNumber - 1))">
                     <!-- Image Mode -->
                     <div class="mushaf-page-image-container" *ngIf="isImageMushaf()">
-                        <img [src]="getPageImageUrl(prevPage.page_number)" class="mushaf-page-image" [style.object-fit]="imageFitMode" [style.width]="imageFitMode === 'fill' ? '100%' : 'auto'" [style.height]="imageFitMode === 'fill' ? '100%' : 'auto'" alt="صفحة {{ prevPage.page_number }}">
+                        <img [src]="getPageImageUrl(prevPage.page_number)" class="mushaf-page-image" draggable="false" [style.object-fit]="imageFitMode" [style.width]="imageFitMode === 'fill' ? '100%' : 'auto'" [style.height]="imageFitMode === 'fill' ? '100%' : 'auto'" alt="صفحة {{ prevPage.page_number }}">
                     </div>
                     <!-- Text Mode -->
                     <div class="lines-container" *ngIf="!isImageMushaf()"
@@ -1088,14 +1088,14 @@
     </div>
 
     <!-- NEW: Continuous Vertical Mode -->
-    <div class="mushaf-vertical-viewer quran-text" *ngIf="isContinuousMode" (scroll)="onVerticalScroll($event)">
+    <div class="mushaf-vertical-viewer quran-text" *ngIf="isContinuousMode" [class.has-navbar]="showNavbar" (scroll)="onVerticalScroll($event)" (touchstart)="onVerticalTouchStart($event)" (dblclick)="handleDoubleTap()">
         <!-- Content -->
         <div class="vertical-page-wrapper" *ngFor="let page of verticalPages" [attr.data-page]="page.page_number"
             [class.first-pages]="page.page_number <= 2">
             <div class="mushaf-page" [style.font-family]="getFontFamily(dataService.getFontName(page.page_number))">
                 <!-- Image Mode -->
                 <div class="mushaf-page-image-container" *ngIf="isImageMushaf()">
-                    <img [src]="getPageImageUrl(page.page_number)" class="mushaf-page-image" [style.object-fit]="imageFitMode" [style.width]="imageFitMode === 'fill' ? '100%' : 'auto'" [style.height]="imageFitMode === 'fill' ? '100%' : 'auto'" alt="صفحة {{ page.page_number }}">
+                    <img [src]="getPageImageUrl(page.page_number)" class="mushaf-page-image" draggable="false" [style.object-fit]="imageFitMode" [style.width]="imageFitMode === 'fill' ? '100%' : 'auto'" [style.height]="imageFitMode === 'fill' ? '100%' : 'auto'" alt="صفحة {{ page.page_number }}">
                 </div>
                 <!-- Text Mode -->
                 <div class="lines-container" *ngIf="!isImageMushaf()"

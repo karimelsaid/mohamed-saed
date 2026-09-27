@@ -180,6 +180,22 @@ export class QuranAudioService {
         300003: 'https://everyayah.com/data/warsh/warsh_yassin_al_jazaery_64kbps'
     };
 
+    // Stable full-surah Warsh sources. These are also used when the
+    // MP3Quran catalogue request is unavailable or blocked on mobile.
+    private readonly STATIC_WARSH_SURAH_MOSHAFS: Array<{ id: number; name: string; server: string; surahList?: number[] }> = [
+        { id: 301001, name: 'محمد عبدالكريم - ورش (الأصبهاني)', server: 'https://server12.mp3quran.net/m_krm/Rewayat-Warsh-A-n-Nafi-Men-Tariq-Abi-Baker-Alasbahani/' },
+        { id: 301002, name: 'محمود خليل الحصري - ورش', server: 'https://server13.mp3quran.net/husr/Rewayat-Warsh-A-n-Nafi/' },
+        { id: 301003, name: 'محمد سايد - ورش', server: 'https://server16.mp3quran.net/m_sayed/Rewayat-Warsh-A-n-Nafi/' },
+        { id: 301004, name: 'القارئ ياسين - ورش', server: 'https://server11.mp3quran.net/qari/' },
+        { id: 301005, name: 'العيون الكوشي - ورش', server: 'https://server11.mp3quran.net/koshi/' },
+        { id: 301006, name: 'إبراهيم الدوسري - ورش', server: 'https://server10.mp3quran.net/ibrahim_dosri/Rewayat-Warsh-A-n-Nafi/' },
+        { id: 301007, name: 'عبدالمجيب بنكيران - ورش', server: 'https://server16.mp3quran.net/A-Benkirane/Rewayat-Warsh-A-n-Nafi/' },
+        { id: 301008, name: 'أحمد ديبان - ورش', server: 'https://server16.mp3quran.net/deban/Rewayat-Warsh-A-n-Nafi-Men-Tariq-Alazraq/' },
+        { id: 301009, name: 'رشيد بلعالية - ورش', server: 'https://server6.mp3quran.net/bl3/Rewayat-Warsh-A-n-Nafi/' },
+        { id: 301010, name: 'عبدالباسط عبدالصمد - ورش (سور)', server: 'https://server7.mp3quran.net/basit/Rewayat-Warsh-A-n-Nafi/' },
+        { id: 301011, name: 'عمر القزابري - ورش', server: 'https://server9.mp3quran.net/omar_warsh/' }
+    ];
+
     // Reciter Classification Sets
     private readonly SURAH_RECITERS = new Set([2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013]);
     private readonly TEACHER_RECITERS = new Set([12, 168, 161, 126]); // Hosary, Minshawy, Tunaiji, Basfar (Muallim)
@@ -2499,6 +2515,40 @@ export class QuranAudioService {
         ];
     }
 
+    private getStaticWarshSurahReciters(): Reciter[] {
+        return this.STATIC_WARSH_SURAH_MOSHAFS.map(moshaf => {
+            this.MP3QURAN_MOSHAF_BY_APP_ID.set(moshaf.id, {
+                id: moshaf.id,
+                name: moshaf.name,
+                rewaya_id: 2,
+                server: moshaf.server,
+                surah_total: 114,
+                surah_list: (moshaf.surahList || Array.from({ length: 114 }, (_, i) => i + 1)).join(',')
+            });
+            return {
+                id: moshaf.id,
+                name: moshaf.name,
+                style: 'ورش عن نافع - سور',
+                recitationType: 'surah',
+                source: 'mp3quran',
+                originalReciterId: moshaf.id,
+                moshafId: moshaf.id,
+                rewayaId: 2,
+                server: moshaf.server,
+                surahList: moshaf.surahList || Array.from({ length: 114 }, (_, i) => i + 1)
+            };
+        });
+    }
+
+    private mergeWarshFallbackReciters(reciters: Reciter[]): Reciter[] {
+        const byId = new Map(reciters.map(reciter => [Number(reciter.id), reciter]));
+        [...this.getStaticWarshSurahReciters(), ...this.getStaticWarshAyahReciters()]
+            .forEach(reciter => {
+                if (!byId.has(Number(reciter.id))) byId.set(Number(reciter.id), reciter);
+            });
+        return Array.from(byId.values());
+    }
+
     getReciters(): Observable<Reciter[]> {
         const CACHE_KEY = 'cached_reciters_list_v19';
         const cached = localStorage.getItem(CACHE_KEY);
@@ -2608,11 +2658,11 @@ export class QuranAudioService {
                         }
                     }
                     const warshAyahReciters = this.getStaticWarshAyahReciters();
-                    return [...quranReciters, ...warshReciters, ...warshAyahReciters];
+                    return this.mergeWarshFallbackReciters([...quranReciters, ...warshReciters, ...warshAyahReciters]);
                 }),
                 catchError(err => {
                     console.warn('[AudioService] MP3Quran reciters unavailable; using static Warsh ayah fallback', err);
-                    return of([...quranReciters, ...this.getStaticWarshAyahReciters()]);
+                    return of(this.mergeWarshFallbackReciters(quranReciters));
                 })
             )),
             tap((reciters: Reciter[]) => {
@@ -2621,7 +2671,7 @@ export class QuranAudioService {
             }),
             catchError(err => {
                 console.error('[AudioService] Failed to fetch reciters, returning defaults', err);
-                const sortedDefaults = [...missingReciters, ...this.getStaticWarshAyahReciters()].sort((a: Reciter, b: Reciter) => {
+                const sortedDefaults = this.mergeWarshFallbackReciters(missingReciters).sort((a: Reciter, b: Reciter) => {
                     return this.normalizeArabicName(a.name).localeCompare(this.normalizeArabicName(b.name), 'ar');
                 });
                 return of(sortedDefaults);
@@ -2640,7 +2690,7 @@ export class QuranAudioService {
                 if (!hasStaticWarsh || !reciters.some(reciter => reciter.source === 'mp3quran')) {
                     return fetchAndCache;
                 }
-                return of(reciters);
+                return of(this.mergeWarshFallbackReciters(reciters));
             } catch (e) {
                 return fetchAndCache;
             }

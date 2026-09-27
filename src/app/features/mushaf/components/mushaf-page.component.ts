@@ -2785,8 +2785,8 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
         return curr >= start && curr <= end;
     }
 
-    async playVerseAudio(verseKey: string): Promise<void> {
-        const activeReciterId = (this.isMemorizationMode || this.isAutoRepeat) ? this.hifzReciterId : this.currentReciterId;
+    async playVerseAudio(verseKey: string, forcedReciterId?: number): Promise<void> {
+        const activeReciterId = forcedReciterId || ((this.isMemorizationMode || this.isAutoRepeat) ? this.hifzReciterId : this.currentReciterId);
 
         // Check for Custom Range First
         if (this.computedRange && this.selectedVersesSet.size > 0) {
@@ -4097,7 +4097,7 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
             if (currentIndex !== -1 && currentIndex < this.sessionAyahs.length - 1) {
                 const nextKey = this.sessionAyahs[currentIndex + 1];
                 this.currentAyahIndex = currentIndex + 1; // CRITICAL: Update cursor for next completion
-                this.playVerseAudio(nextKey);
+                this.playVerseAudio(nextKey, state.reciterId || undefined);
                 return;
             } else {
                 this.handleGroupEnd(state);
@@ -4137,7 +4137,10 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
         }
 
         // 3. Play and Navigate
-        this.playVerseAudio(nextGlobal);
+        // Keep the exact active reciter across automatic verse transitions.
+        // This is essential for Warsh full-surah sources whose app ids are
+        // different from Quran.com recitation ids.
+        this.playVerseAudio(nextGlobal, state.reciterId || undefined);
     }
 
     private async getPageForVerseKey(verseKey: string): Promise<number> {

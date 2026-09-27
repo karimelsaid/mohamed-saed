@@ -234,6 +234,12 @@ export class HifzWizardComponent implements OnInit {
         this.checkAllSelected();
     }
 
+    clearMemorizedSelection(): void {
+        this.memorizedSurahs = [];
+        this.isAllSelected = false;
+        this.searchQuery = '';
+    }
+
     isSurahSelected(surahId: number): boolean {
         return this.memorizedSurahs.some(s => s.surahId === surahId);
     }

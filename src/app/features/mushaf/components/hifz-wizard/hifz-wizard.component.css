@@ -776,3 +776,122 @@
   border-color: #c2a87a;
   background: rgba(194, 168, 122, 0.12);
 }
+
+/* --- Simplified Hifz wizard redesign --- */
+.wizard-container {
+  background: #f8faf9;
+  color: #20332d;
+  padding: 18px 16px calc(18px + env(safe-area-inset-bottom));
+  font-family: 'Tajawal', sans-serif;
+  max-width: 720px;
+  margin: 0 auto;
+  height: 100%;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.wizard-header { margin-bottom: 14px; }
+.wizard-kicker { color: #8e7650; font-size: .75rem; font-weight: 800; letter-spacing: .04em; margin-bottom: 3px; }
+.wizard-header h2 { color: #1f4d3b; font-size: 1.55rem; margin: 0 0 4px; font-weight: 900; }
+.wizard-intro { color: #71807a; font-size: .82rem; margin: 0 0 17px; }
+.close-btn { top: -4px; left: 0; color: #71807a; background: #edf3ef; width: 35px; height: 35px; padding: 0; }
+.close-btn:hover { background: #dfeae3; color: #1f4d3b; }
+.wizard-steps { display: flex; align-items: center; gap: 8px; direction: rtl; margin: 0 4px 10px; }
+.wizard-step { border: 0; background: transparent; display: flex; align-items: center; gap: 7px; color: #9aa8a1; padding: 0; text-align: right; cursor: pointer; }
+.wizard-step.active { color: #1f4d3b; }
+.wizard-step .step-number { display: grid; place-items: center; width: 27px; height: 27px; border-radius: 50%; border: 1px solid #cdd9d1; font-size: .78rem; font-weight: 900; }
+.wizard-step.active .step-number { color: white; background: #287657; border-color: #287657; box-shadow: 0 3px 8px #28765735; }
+.wizard-step b, .wizard-step small { display: block; white-space: nowrap; }
+.wizard-step b { font-size: .78rem; }
+.wizard-step small { font-size: .65rem; color: #91a099; margin-top: 1px; }
+.step-line { flex: 1; height: 2px; background: #dce6df; min-width: 18px; }
+.step-line.done { background: #70a98b; }
+.progress-bar { height: 4px; background: #e2ebe5; border-radius: 8px; margin: 0; }
+.progress-bar .progress { background: linear-gradient(90deg,#8e7650,#287657); border-radius: inherit; }
+.step-content { min-height: 0; padding: 0 2px 6px; overflow: visible; }
+.wizard-panel { animation: panelIn .22s ease-out; }
+@keyframes panelIn { from { opacity: .2; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+.panel-heading { display: flex; align-items: flex-start; gap: 11px; margin: 15px 0 13px; }
+.panel-icon { display: grid; place-items: center; flex: 0 0 38px; height: 38px; border-radius: 12px; background: #e7f1ea; font-size: 1.25rem; }
+.step-content h3 { color: #203c31; font-size: 1.12rem; margin: 1px 0 4px; font-weight: 900; }
+.step-desc, .panel-heading p { color: #73817a; font-size: .78rem; margin: 0; line-height: 1.6; }
+.start-from-zero, .plan-summary-card { width: 100%; display: flex; align-items: center; gap: 10px; text-align: right; border: 1px solid #d9e8dc; background: #eef8f0; color: #245c42; border-radius: 14px; padding: 11px 12px; margin-bottom: 13px; cursor: pointer; }
+.start-from-zero small, .plan-summary-card small { display: block; color: #71877a; font-size: .7rem; margin-top: 3px; }
+.start-from-zero b, .plan-summary-card b { font-size: .83rem; }
+.start-from-zero i { margin-right: auto; color: #6f9580; }
+.zero-icon, .summary-icon { width: 32px; height: 32px; display: grid; place-items: center; background: #fff; border-radius: 10px; font-size: 1.1rem; }
+.selection-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 9px; }
+.selection-tabs { display: inline-flex; gap: 3px; padding: 3px; background: #e9f0eb; border-radius: 10px; }
+.tab-btn { border: 0; background: transparent; color: #71817a; border-radius: 8px; padding: 7px 15px; font-size: .78rem; font-weight: 800; cursor: pointer; }
+.tab-btn.active { background: #fff; color: #236348; box-shadow: 0 2px 6px #1f4d3b18; }
+.select-all-btn { border: 0; background: transparent; color: #8e7650; font-size: .72rem; font-weight: 800; padding: 8px 2px; cursor: pointer; }
+.select-all-btn i { margin-left: 5px; }
+.search-box { display: flex; align-items: center; gap: 8px; background: white; border: 1px solid #dce7df; border-radius: 11px; padding: 0 11px; margin-bottom: 10px; }
+.search-box i { color: #8ba294; font-size: .8rem; }
+.search-box input { flex: 1; border: 0; outline: 0; background: transparent; color: #263b31; padding: 10px 0; font-size: .8rem; }
+.clear-search { border: 0; background: #edf3ef; color: #71817a; width: 20px; height: 20px; border-radius: 50%; cursor: pointer; }
+.selection-hint { background: #fffdf5; color: #8b7654; border: 1px solid #f0e4c7; border-radius: 10px; padding: 8px 10px; font-size: .7rem; margin-bottom: 11px; }
+.selection-hint i { margin-left: 5px; }
+.surah-grid { gap: 7px; margin-bottom: 13px; }
+.surah-chip { background: #fff; border: 1px solid #dce7df; color: #455a50; border-radius: 10px; padding: 8px 9px; font-size: .75rem; flex: 1 0 30%; min-width: 105px; justify-content: flex-start; box-shadow: 0 1px 2px #254d3910; }
+.surah-chip.selected { background: #e5f3e8; color: #1d6341; border-color: #75ae8b; }
+.surah-number { display: inline-grid; place-items: center; width: 21px; height: 21px; background: #edf3ef; color: #6e8b7a; border-radius: 7px; font-size: .68rem; font-weight: 900; }
+.surah-chip.selected .surah-number { background: #287657; color: white; }
+.chip-percent { margin-right: auto; background: transparent; color: #8e7650; padding: 0; font-size: .65rem; }
+.chip-check { color: #287657; margin-right: auto; font-size: .7rem; }
+.selected-surahs { background: #fff; border: 1px solid #dce7df; border-radius: 14px; padding: 11px 12px; }
+.selected-title { display: flex; align-items: baseline; justify-content: space-between; color: #245c42; font-size: .8rem; margin-bottom: 3px; }
+.selected-title span { color: #98a59f; font-size: .66rem; }
+.selected-surah-item { padding: 10px 0; border-bottom: 1px solid #edf2ee; }
+.selected-surah-item:last-child { border-bottom: 0; }
+.surah-info-row { gap: 8px; }
+.surah-name { color: #2f4d3d; font-size: .8rem; }
+.mini-check { display: inline-grid; place-items: center; width: 18px; height: 18px; background: #e3f2e7; color: #287657; border-radius: 50%; font-size: .65rem; margin-left: 5px; }
+.surah-progress-small { color: #8b9c92; font-size: .68rem; }
+.toggle-range-btn { border: 0; color: #8e7650; padding: 5px 0; font-size: .68rem; }
+.toggle-range-btn i { margin-left: 5px; }
+.surah-range-options { background: #f6faf7; padding: 9px; border-radius: 9px; margin-top: 5px; }
+.range-main-label { color: #65806f; font-size: .7rem; }
+.range-inputs-flex { gap: 8px; margin-top: 7px; }
+.range-input-group { gap: 5px; color: #83928a; font-size: .7rem; }
+.range-select { background: #fff; border: 1px solid #d9e5dc; color: #30473b; padding: 7px 4px; border-radius: 7px; font-size: .75rem; }
+.capacity-section { background: #fff; border: 1px solid #e0e9e2; border-radius: 14px; padding: 13px; margin-bottom: 11px; }
+.focus-section { border-color: #9bc5a8; box-shadow: 0 4px 14px #2876570b; }
+.section-header { gap: 9px; margin-bottom: 11px; }
+.section-icon { display: grid; place-items: center; width: 32px; height: 32px; background: #eef7f0; border-radius: 9px; font-size: 1rem; }
+.section-header label { color: #2c523e; font-size: .85rem; font-weight: 900; margin: 0; }
+.section-header small { display: block; color: #8a9991; font-size: .67rem; margin-top: 2px; }
+.capacity-row { gap: 8px; }
+.capacity-select, .capacity-input { background: #f8fbf9; border: 1px solid #d9e6dc; color: #30473b; padding: 10px; border-radius: 9px; font-size: .78rem; }
+.capacity-input { color: #1f4d3b; width: 58px; }
+.days-label { color: #65806f; font-size: .7rem; font-weight: 800; margin-top: 12px; }
+.days-label span { color: #a0aba5; font-weight: 400; margin-right: 5px; }
+.weekday-selector { gap: 5px; margin-top: 7px; }
+.day-chip, .all-btn { background: #f6faf7; border: 1px solid #dce8df; color: #71847a; padding: 6px 8px; border-radius: 8px; font-size: .66rem; }
+.day-chip.selected, .all-btn.selected { background: #e0f0e4; border-color: #78ae8b; color: #246344; }
+.plan-summary-card { cursor: default; background: #fffaf0; border-color: #f0dfb4; color: #745c35; }
+.plan-summary-card button { margin-right: auto; border: 0; background: transparent; color: #987a43; font-size: .7rem; font-weight: 800; cursor: pointer; }
+.advanced-options { background: #fff; border: 1px solid #e0e9e2; border-radius: 12px; padding: 11px 13px; color: #536b5e; font-size: .78rem; }
+.advanced-options summary { cursor: pointer; font-weight: 800; list-style: none; }
+.advanced-options summary::-webkit-details-marker { display: none; }
+.advanced-options summary i { margin-left: 6px; color: #8e7650; }
+.toggle-option { display: flex; align-items: center; gap: 8px; margin-top: 13px; color: #60756a; font-size: .75rem; }
+.toggle-option input { accent-color: #287657; }
+.danger-option { color: #a56f6f; }
+.wird-starts-container { display: flex; gap: 8px; margin-top: 9px; flex-wrap: wrap; }
+.wird-starts-container label { color: #829189; font-size: .7rem; }
+.wird-starts-container input { width: 60px; margin-right: 4px; border: 1px solid #d9e5dc; border-radius: 7px; padding: 5px; }
+.wizard-footer { position: sticky; bottom: 0; background: linear-gradient(180deg, #f8faf900 0%, #f8faf9 22%); padding-top: 18px; margin-top: 2px; gap: 9px; z-index: 3; }
+.nav-btn { padding: 12px 14px; border-radius: 11px; font-size: .85rem; box-shadow: none; }
+.nav-btn.next { background: #287657; color: white; }
+.nav-btn.next:hover { background: #1f6045; }
+.nav-btn.prev { flex: 0 0 105px; background: #e9f0eb; color: #456555; }
+.loading-state { display: flex; align-items: center; justify-content: center; gap: 9px; color: #65806f; min-height: 180px; font-size: .85rem; }
+.error-msg { display: flex; align-items: center; gap: 6px; background: #fff1f1; border: 1px solid #f0caca; color: #a34d4d; border-radius: 10px; padding: 9px; font-size: .75rem; margin: 9px 0 0; }
+@media (max-width: 430px) {
+  .wizard-container { padding-left: 12px; padding-right: 12px; }
+  .wizard-step b { font-size: .7rem; }
+  .wizard-step small { font-size: .59rem; }
+  .surah-chip { flex-basis: 46%; min-width: 0; }
+  .day-chip, .all-btn { padding: 6px 6px; font-size: .61rem; }
+  .capacity-select { min-width: 0; }
+}

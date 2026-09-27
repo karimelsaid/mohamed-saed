@@ -1,235 +1,153 @@
 <div class="wizard-container">
-    <div class="wizard-header">
-        <button class="close-btn" (click)="closeWizard()">
-            <i class="fas fa-times"></i>
+  <header class="wizard-header">
+    <button class="close-btn" type="button" (click)="closeWizard()" aria-label="إغلاق">
+      <i class="fas fa-times"></i>
+    </button>
+
+    <div class="wizard-kicker">رحلتك مع القرآن</div>
+    <h2>إعداد خطة الحفظ</h2>
+    <p class="wizard-intro">خطوتان فقط لنصنع لك وردًا يناسب وقتك وقدرتك.</p>
+
+    <div class="wizard-steps" aria-label="مراحل إعداد الخطة">
+      <button type="button" class="wizard-step" [class.active]="currentStep === 1" (click)="currentStep = 1">
+        <span class="step-number">1</span>
+        <span><b>محفوظاتك</b><small>أين وصلت؟</small></span>
+      </button>
+      <span class="step-line" [class.done]="currentStep === 2"></span>
+      <button type="button" class="wizard-step" [class.active]="currentStep === 2" (click)="currentStep = 2">
+        <span class="step-number">2</span>
+        <span><b>وردك اليومي</b><small>ما يناسبك؟</small></span>
+      </button>
+    </div>
+
+    <div class="progress-bar" aria-hidden="true">
+      <div class="progress" [style.width.%]="(currentStep / totalSteps) * 100"></div>
+    </div>
+  </header>
+
+  <main class="step-content" *ngIf="!isLoading || surahList.length > 0">
+    <!-- الخطوة الأولى -->
+    <section *ngIf="currentStep === 1" class="wizard-panel">
+      <div class="panel-heading">
+        <div class="panel-icon">📍</div>
+        <div>
+          <h3>أين وصلت في الحفظ؟</h3>
+          <p>اختر السور التي حفظتها حتى لا تظهر لك في ورد الحفظ الجديد.</p>
+        </div>
+      </div>
+
+      <button type="button" class="start-from-zero" (click)="clearMemorizedSelection()">
+        <span class="zero-icon">🌱</span>
+        <span><b>سأبدأ من البداية</b><small>اترك القائمة فارغة وانتقل للخطوة التالية</small></span>
+        <i class="fas fa-chevron-left"></i>
+      </button>
+
+      <div class="selection-toolbar">
+        <div class="selection-tabs" role="tablist">
+          <button type="button" class="tab-btn" [class.active]="selectionTab === 'surah'" (click)="selectionTab = 'surah'">السور</button>
+          <button type="button" class="tab-btn" [class.active]="selectionTab === 'juz'" (click)="selectionTab = 'juz'">الأجزاء</button>
+        </div>
+        <button type="button" class="select-all-btn" [class.active]="isAllSelected" (click)="toggleSelectAll()">
+          <i class="fas fa-check-double"></i>{{ isAllSelected ? 'إلغاء الكل' : 'تحديد الكل' }}
         </button>
-        <h2>إعداد خطة الحفظ 🎯</h2>
-        <div class="progress-bar">
-            <div class="progress" [style.width.%]="(currentStep / totalSteps) * 100"></div>
-        </div>
-        <div class="step-indicator">الخطوة {{currentStep}} من {{totalSteps}}</div>
-    </div>
+      </div>
 
-    <!-- الخطوة 1: خريطة محفوظاتك (was Step 2) -->
+      <div class="search-box">
+        <i class="fas fa-search"></i>
+        <input type="search" placeholder="ابحث عن سورة..." [(ngModel)]="searchQuery" aria-label="البحث عن سورة">
+        <button *ngIf="searchQuery" type="button" class="clear-search" (click)="searchQuery = ''">×</button>
+      </div>
 
-    <!-- الخطوة 2: خريطة محفوظاتك -->
-    <div class="step-content" *ngIf="currentStep === 1">
-        <h3>📍 خريطة محفوظاتك</h3>
-        <p class="step-desc">حدد ما حفظته سابقاً لضبط خطة المراجعة</p>
+      <div class="selection-hint" *ngIf="memorizedSurahs.length === 0">
+        <i class="fas fa-lightbulb"></i> يمكنك اختيار سورة كاملة أو تحديد الآيات التي حفظتها داخلها.
+      </div>
 
-        <!-- Tabs -->
-        <div class="selection-tabs">
-            <button class="tab-btn" [class.active]="selectionTab === 'surah'" (click)="selectionTab = 'surah'">
-                بالسورة 📖
-            </button>
-            <button class="tab-btn" [class.active]="selectionTab === 'juz'" (click)="selectionTab = 'juz'">
-                بالجزء 📚
-            </button>
-        </div>
-
-        <!-- Controls -->
-        <div class="selection-controls">
-            <div class="search-box">
-                <i class="fas fa-search"></i>
-                <input type="text" placeholder="بحث عن سورة..." [(ngModel)]="searchQuery">
-            </div>
-            <button class="select-all-btn" [class.active]="isAllSelected" (click)="toggleSelectAll()">
-                {{ isAllSelected ? 'إلغاء تحديد الكل' : 'تحديد الكل' }}
-                <i class="fas fa-check-double"></i>
-            </button>
-        </div>
-
-        <!-- Surah Selection -->
-        <div class="surah-grid" *ngIf="selectionTab === 'surah'">
-            <button *ngFor="let surah of filteredSurahs" class="surah-chip" [class.selected]="isSurahSelected(surah.id)"
-                (click)="toggleSurah(surah.id, surah.name)">
-                <span class="surah-number">{{ surah.id }}</span>
-                {{ surah.name }}
-                <span *ngIf="getSurahPercent(surah.id) > 0" class="chip-percent">{{ getSurahPercent(surah.id) }}%</span>
-            </button>
-        </div>
-
-        <!-- Juz Selection -->
-        <div class="surah-grid" *ngIf="selectionTab === 'juz'">
-            <button *ngFor="let juz of juzList" class="surah-chip juz-chip" [class.selected]="isJuzSelected(juz.id)"
-                (click)="toggleJuz(juz.id)">
-                الجزء {{ juz.id }}
-            </button>
-        </div>
-
-        <!-- Selected Summary -->
-        <div class="selected-surahs" *ngIf="memorizedSurahs.length > 0">
-            <h4>تم تحديد {{ memorizedSurahs.length }} سورة:</h4>
-            <div class="selected-list">
-                <div *ngFor="let surah of memorizedSurahs" class="selected-surah-item">
-                    <div class="surah-info-row">
-                        <span class="surah-name">{{ surah.surahName }}</span>
-                        <span *ngIf="surah.totalVerses && surah.memorizedVerseCount" class="surah-progress-small">
-                            ({{ surah.memorizedVerseCount }}/{{ surah.totalVerses }} آية - {{
-                            ((surah.memorizedVerseCount / surah.totalVerses) * 100) | number:'1.0-0' }}%)
-                        </span>
-                    </div>
-
-                    <div class="surah-actions">
-                        <button class="toggle-range-btn" (click)="toggleRangeSettings(surah)">
-                            {{ surah.showRangeSettings ? 'إخفاء النطاق' : 'تحديد نطاق محفوظ' }}
-                        </button>
-                    </div>
-
-                    <div class="surah-range-options" *ngIf="surah.showRangeSettings">
-                        <label class="range-main-label">اختر النطاق المحفوظ:</label>
-                        <div class="range-inputs-flex">
-                            <div class="range-input-group">
-                                <label>من:</label>
-                                <select [(ngModel)]="surah.fromVerse" (ngModelChange)="updateCount(surah)"
-                                    class="range-select">
-                                    <option *ngFor="let v of getVerseRange(surah.totalVerses)" [value]="v">آية {{ v }}
-                                    </option>
-                                </select>
-                            </div>
-                            <div class="range-input-group">
-                                <label>إلى:</label>
-                                <select [(ngModel)]="surah.toVerse" (ngModelChange)="updateCount(surah)"
-                                    class="range-select">
-                                    <option *ngFor="let v of getVerseRange(surah.totalVerses)" [value]="v">آية {{ v }}
-                                    </option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- الخطوة 3: طاقتك اليومية -->
-    <div class="step-content" *ngIf="currentStep === 2">
-        <h3>⚡ طاقتك اليومية</h3>
-        <p class="step-desc">حدد مقدار يناسب طاقتك</p>
-
-        <!-- ورد التلاوة -->
-        <div class="capacity-section">
-            <div class="section-header">
-                <span class="section-icon">📖</span>
-                <label>ورد التلاوة اليومي</label>
-            </div>
-            <div class="capacity-row">
-                <select [(ngModel)]="dailyCapacity.recitationType" class="capacity-select">
-                    <option value="page">صفحة</option>
-                    <option value="half_hizb">نصف حزب</option>
-                    <option value="hizb">حزب</option>
-                    <option value="juz">جزء</option>
-                </select>
-                <input type="number" [(ngModel)]="dailyCapacity.recitationAmount" min="1" max="10"
-                    class="capacity-input">
-            </div>
-            <div class="weekday-selector">
-                <button class="all-btn" [class.selected]="areAllDaysSelected('tilawa')"
-                    (click)="toggleAllDays('tilawa')">الكل</button>
-                <button *ngFor="let day of weekdayLabels; let i = index" class="day-chip"
-                    [class.selected]="isDaySelected('tilawa', i)" (click)="toggleDay('tilawa', i)">
-                    {{ day }}
-                </button>
-            </div>
-        </div>
-
-        <!-- الحفظ الجديد -->
-        <div class="capacity-section">
-            <div class="section-header">
-                <span class="section-icon">🧠</span>
-                <label>مقدار الحفظ الجديد</label>
-            </div>
-            <div class="capacity-row">
-                <select [(ngModel)]="dailyCapacity.newMemorization" class="capacity-select"
-                    [class.full]="dailyCapacity.newMemorization === 'verse'">
-                    <option value="verse">آية واحدة</option>
-                    <option value="verses">عدد آيات</option>
-                    <option value="half_page">نصف صفحة</option>
-                    <option value="page">صفحة كاملة</option>
-                </select>
-                <input *ngIf="dailyCapacity.newMemorization !== 'verse'" type="number"
-                    [(ngModel)]="dailyCapacity.memorizationAmount" min="1" max="100" class="capacity-input">
-            </div>
-            <div class="weekday-selector">
-                <button class="all-btn" [class.selected]="areAllDaysSelected('hifz')"
-                    (click)="toggleAllDays('hifz')">الكل</button>
-                <button *ngFor="let day of weekdayLabels; let i = index" class="day-chip"
-                    [class.selected]="isDaySelected('hifz', i)" (click)="toggleDay('hifz', i)">
-                    {{ day }}
-                </button>
-            </div>
-        </div>
-
-        <!-- المراجعة البعيدة - Only show if user has memorization -->
-        <div class="capacity-section" *ngIf="hasMemorization">
-            <div class="section-header">
-                <span class="section-icon">🛡️</span>
-                <label>المراجعة البعيدة (للماضي)</label>
-            </div>
-            <div class="capacity-row">
-                <select [(ngModel)]="dailyCapacity.reviewType" class="capacity-select">
-                    <option value="light">بالصفحات</option>
-                    <option value="weekly">بالأجزاء</option>
-                </select>
-                <input type="number" [(ngModel)]="dailyCapacity.reviewAmount" min="1" max="30" class="capacity-input"
-                    placeholder="الكمية">
-            </div>
-            <div class="weekday-selector">
-                <button class="all-btn" [class.selected]="areAllDaysSelected('muraja')"
-                    (click)="toggleAllDays('muraja')">الكل</button>
-                <button *ngFor="let day of weekdayLabels; let i = index" class="day-chip"
-                    [class.selected]="isDaySelected('muraja', i)" (click)="toggleDay('muraja', i)">
-                    {{ day }}
-                </button>
-            </div>
-            <p class="step-desc" style="margin-top: 8px; font-size: 0.8rem;">* سيتم اختيار
-                {{dailyCapacity.reviewAmount}} {{dailyCapacity.reviewType === 'light' ? 'صفحة' : 'جزء'}} من محفوظاتك
-                السابقة بالترتيب.</p>
-        </div>
-
-        <!-- خيار تحديد بداية الأوراد يدوياً -->
-        <div class="capacity-section" style="border-top: 1px dashed #eee; padding-top: 16px; margin-top: 8px;">
-            <label class="reset-checkbox-label" style="display: flex; align-items: center; gap: 10px; cursor: pointer; color: #c2a87a; font-weight: 600; font-size: 0.95rem;">
-                <input type="checkbox" [(ngModel)]="specifyWirdStarts" style="width: 20px; height: 20px; accent-color: #c2a87a;">
-                <span>تحديد بداية الأوراد يدوياً 📍</span>
-            </label>
-            
-            <div *ngIf="specifyWirdStarts" class="wird-starts-container">
-                <!-- بداية ورد التلاوة -->
-                <div class="wird-starts-row">
-                    <span class="wird-starts-label">بداية ورد التلاوة اليومي (الصفحة):</span>
-                    <input type="number" [(ngModel)]="recitationStartPage" min="1" max="604" 
-                           class="wird-start-input">
-                </div>
-                
-                <!-- بداية ورد المراجعة (فقط لو كان لديه محفوظات) -->
-                <div *ngIf="hasMemorization" class="wird-starts-row">
-                    <span class="wird-starts-label">بداية ورد المراجعة (الصفحة):</span>
-                    <input type="number" [(ngModel)]="revisionStartPage" min="1" max="604" 
-                           class="wird-start-input">
-                </div>
-            </div>
-        </div>
-
-        <div class="capacity-section" style="border-top: 1px dashed #eee; padding-top: 16px; margin-top: 8px;">
-            <label class="reset-checkbox-label" style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
-                <input type="checkbox" [(ngModel)]="resetProgress" style="width: 20px; height: 20px;">
-                <span style="font-size: 0.9rem; color: #d32f2f; font-weight: 500;">إعادة ضبط ورد التلاوة والمراجعة
-                    للبداية (صفحة 1)</span>
-            </label>
-        </div>
-    </div>
-
-    <!-- أزرار التنقل -->
-    <div class="wizard-footer">
-        <button class="nav-btn prev" *ngIf="currentStep > 1" (click)="prevStep()">
-            <i class="fas fa-arrow-right"></i> السابق
+      <div class="surah-grid" *ngIf="selectionTab === 'surah'">
+        <button type="button" *ngFor="let surah of filteredSurahs" class="surah-chip" [class.selected]="isSurahSelected(surah.id)" (click)="toggleSurah(surah.id, surah.name)">
+          <span class="surah-number">{{ surah.id }}</span>
+          <span>{{ surah.name }}</span>
+          <span *ngIf="getSurahPercent(surah.id) > 0" class="chip-percent">{{ getSurahPercent(surah.id) }}%</span>
+          <i *ngIf="isSurahSelected(surah.id)" class="fas fa-check chip-check"></i>
         </button>
-        <button class="nav-btn next" (click)="nextStep()" [disabled]="isLoading">
-            {{ currentStep === totalSteps ? (isLoading ? 'جاري الحفظ...' : '✅ إبدأ رحلتك') : 'التالي' }}
-            <i class="fas fa-arrow-left" *ngIf="currentStep < totalSteps"></i>
-        </button>
-    </div>
+      </div>
 
-    <p class="error-msg" *ngIf="error">{{ error }}</p>
+      <div class="surah-grid" *ngIf="selectionTab === 'juz'">
+        <button type="button" *ngFor="let juz of juzList" class="surah-chip juz-chip" [class.selected]="isJuzSelected(juz.id)" (click)="toggleJuz(juz.id)">
+          <span class="surah-number">{{ juz.id }}</span> الجزء {{ juz.id }}
+          <i *ngIf="isJuzSelected(juz.id)" class="fas fa-check chip-check"></i>
+        </button>
+      </div>
+
+      <div class="selected-surahs" *ngIf="memorizedSurahs.length > 0">
+        <div class="selected-title"><b>تم اختيار {{ memorizedSurahs.length }} سورة</b><span>اضغط على السورة لتعديل نطاقها</span></div>
+        <div *ngFor="let surah of memorizedSurahs" class="selected-surah-item">
+          <div class="surah-info-row">
+            <span class="surah-name"><span class="mini-check">✓</span>{{ surah.surahName }}</span>
+            <span class="surah-progress-small">{{ surah.memorizedVerseCount }}/{{ surah.totalVerses }} آية</span>
+          </div>
+          <button type="button" class="toggle-range-btn" (click)="toggleRangeSettings(surah)">
+            <i class="fas fa-sliders-h"></i>{{ surah.showRangeSettings ? 'إخفاء التحديد' : 'تحديد الآيات المحفوظة' }}
+          </button>
+          <div class="surah-range-options" *ngIf="surah.showRangeSettings">
+            <label class="range-main-label">من الآية إلى الآية</label>
+            <div class="range-inputs-flex">
+              <label class="range-input-group"><span>من</span><select [(ngModel)]="surah.fromVerse" (ngModelChange)="updateCount(surah)" class="range-select"><option *ngFor="let v of getVerseRange(surah.totalVerses)" [value]="v">{{ v }}</option></select></label>
+              <label class="range-input-group"><span>إلى</span><select [(ngModel)]="surah.toVerse" (ngModelChange)="updateCount(surah)" class="range-select"><option *ngFor="let v of getVerseRange(surah.totalVerses)" [value]="v">{{ v }}</option></select></label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- الخطوة الثانية -->
+    <section *ngIf="currentStep === 2" class="wizard-panel">
+      <div class="panel-heading">
+        <div class="panel-icon">⚡</div>
+        <div>
+          <h3>ما مقدار وردك اليومي؟</h3>
+          <p>ابدأ بالقليل المستمر؛ يمكنك تغيير الخطة لاحقًا في أي وقت.</p>
+        </div>
+      </div>
+
+      <div class="plan-summary-card">
+        <span class="summary-icon">✨</span>
+        <div><b>{{ memorizedSurahs.length ? 'تم تحديد محفوظاتك' : 'البداية من أول القرآن' }}</b><small>{{ memorizedSurahs.length ? memorizedSurahs.length + ' سورة جاهزة للمراجعة' : 'لا تقلق، سنبدأ معك خطوة خطوة' }}</small></div>
+        <button type="button" (click)="currentStep = 1">تعديل</button>
+      </div>
+
+      <div class="capacity-section focus-section">
+        <div class="section-header"><span class="section-icon">🧠</span><div><label>الحفظ الجديد</label><small>الورد الأساسي الذي ستتعلمه</small></div></div>
+        <div class="capacity-row"><select [(ngModel)]="dailyCapacity.newMemorization" class="capacity-select"><option value="verse">آية واحدة</option><option value="verses">عدد آيات</option><option value="half_page">نصف صفحة</option><option value="page">صفحة كاملة</option></select><input *ngIf="dailyCapacity.newMemorization !== 'verse'" type="number" [(ngModel)]="dailyCapacity.memorizationAmount" min="1" max="100" class="capacity-input" aria-label="الكمية"></div>
+        <div class="days-label">أيام الحفظ <span>اختر الأيام التي تناسبك</span></div>
+        <div class="weekday-selector"><button type="button" class="all-btn" [class.selected]="areAllDaysSelected('hifz')" (click)="toggleAllDays('hifz')">كل الأيام</button><button type="button" *ngFor="let day of weekdayLabels; let i = index" class="day-chip" [class.selected]="isDaySelected('hifz', i)" (click)="toggleDay('hifz', i)">{{ day }}</button></div>
+      </div>
+
+      <div class="capacity-section">
+        <div class="section-header"><span class="section-icon">📖</span><div><label>ورد التلاوة</label><small>للمداومة على القراءة اليومية</small></div></div>
+        <div class="capacity-row"><select [(ngModel)]="dailyCapacity.recitationType" class="capacity-select"><option value="page">صفحة</option><option value="half_hizb">نصف حزب</option><option value="hizb">حزب</option><option value="juz">جزء</option></select><input type="number" [(ngModel)]="dailyCapacity.recitationAmount" min="1" max="10" class="capacity-input" aria-label="كمية التلاوة"></div>
+        <div class="weekday-selector"><button type="button" class="all-btn" [class.selected]="areAllDaysSelected('tilawa')" (click)="toggleAllDays('tilawa')">كل الأيام</button><button type="button" *ngFor="let day of weekdayLabels; let i = index" class="day-chip" [class.selected]="isDaySelected('tilawa', i)" (click)="toggleDay('tilawa', i)">{{ day }}</button></div>
+      </div>
+
+      <div class="capacity-section" *ngIf="hasMemorization">
+        <div class="section-header"><span class="section-icon">🛡️</span><div><label>المراجعة البعيدة</label><small>لتثبيت ما حفظته سابقًا</small></div></div>
+        <div class="capacity-row"><select [(ngModel)]="dailyCapacity.reviewType" class="capacity-select"><option value="light">بالصفحات</option><option value="weekly">بالأجزاء</option></select><input type="number" [(ngModel)]="dailyCapacity.reviewAmount" min="1" max="30" class="capacity-input" aria-label="كمية المراجعة"></div>
+        <div class="weekday-selector"><button type="button" class="all-btn" [class.selected]="areAllDaysSelected('muraja')" (click)="toggleAllDays('muraja')">كل الأيام</button><button type="button" *ngFor="let day of weekdayLabels; let i = index" class="day-chip" [class.selected]="isDaySelected('muraja', i)" (click)="toggleDay('muraja', i)">{{ day }}</button></div>
+      </div>
+
+      <details class="advanced-options">
+        <summary><i class="fas fa-cog"></i> خيارات متقدمة (اختياري)</summary>
+        <label class="toggle-option"><input type="checkbox" [(ngModel)]="specifyWirdStarts"><span>تحديد بداية الأوراد يدويًا</span></label>
+        <div *ngIf="specifyWirdStarts" class="wird-starts-container"><label>بداية التلاوة <input type="number" [(ngModel)]="recitationStartPage" min="1" max="604"></label><label *ngIf="hasMemorization">بداية المراجعة <input type="number" [(ngModel)]="revisionStartPage" min="1" max="604"></label></div>
+        <label class="toggle-option danger-option"><input type="checkbox" [(ngModel)]="resetProgress"><span>إعادة ضبط التقدم الحالي</span></label>
+      </details>
+    </section>
+  </main>
+
+  <div class="loading-state" *ngIf="isLoading && surahList.length === 0"><i class="fas fa-spinner fa-spin"></i><span>نجهز لك خطة الحفظ...</span></div>
+
+  <footer class="wizard-footer">
+    <button type="button" class="nav-btn prev" *ngIf="currentStep > 1" (click)="prevStep()"><i class="fas fa-arrow-right"></i> السابق</button>
+    <button type="button" class="nav-btn next" (click)="nextStep()" [disabled]="isLoading">{{ currentStep === totalSteps ? (isLoading ? 'جاري الحفظ...' : 'حفظ وبدء الرحلة') : 'التالي: الورد اليومي' }}<i class="fas fa-arrow-left" *ngIf="currentStep < totalSteps"></i></button>
+  </footer>
+  <p class="error-msg" *ngIf="error"><i class="fas fa-exclamation-circle"></i>{{ error }}</p>
 </div>

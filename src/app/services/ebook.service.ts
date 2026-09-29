@@ -129,10 +129,10 @@ export class EbookService {
         if (this.adminCategoriesCache) {
             return of(this.adminCategoriesCache);
         }
-        const categoriesUrl = `${environment.apiBaseUrl.replace('/api', '')}/api/categories`;
+        const categoriesUrl = `${environment.apiBaseUrl}/categories`;
         return this.http.get<any>(categoriesUrl).pipe(
             map((res: any) => {
-                const cats = (res.data || res || []).filter((c: any) => c.isActive !== false);
+                const cats = (res.categories || res.data || res || []).filter((c: any) => c.isActive !== false);
                 return cats.map((c: any) => ({ value: c.name, label: c.name }));
             }),
             tap((cats: { value: string; label: string }[]) => {

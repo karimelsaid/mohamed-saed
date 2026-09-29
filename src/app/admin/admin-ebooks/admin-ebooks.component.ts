@@ -67,7 +67,7 @@ export class AdminEbooksComponent implements OnInit {
         _id: '',
         title: '',
         author: '',
-        category: 'روايات وقصص',
+        category: '',
         description: '',
         price: 0,
         availableForSubscription: true,
@@ -83,7 +83,7 @@ export class AdminEbooksComponent implements OnInit {
     showAddProductModal = false;
     newProduct = {
         name: '',
-        category: 'روايات وقصص',
+        category: '',
         author: '',
         publisher: '',
         price: 0,
@@ -124,11 +124,11 @@ export class AdminEbooksComponent implements OnInit {
             next: (cats) => {
                 if (cats && cats.length > 0) {
                     this.availableCategories = cats;
-                    // Set default category to first available
-                    if (!this.editingEbookData.category || this.editingEbookData.category === 'روايات وقصص') {
+                    // Set default category to first available for both edit and new product
+                    if (!this.editingEbookData.category) {
                         this.editingEbookData.category = cats[0].value;
                     }
-                    if (!this.newProduct.category || this.newProduct.category === 'روايات وقصص') {
+                    if (!this.newProduct.category) {
                         this.newProduct.category = cats[0].value;
                     }
                 }
@@ -276,12 +276,15 @@ export class AdminEbooksComponent implements OnInit {
         this.editingEbook = ebook;
         this.selectedFile = null;
         this.selectedCover = null;
-        
+
+        // Use the ebook's category, or first available if not set
+        const categoryValue = ebook.category || (this.availableCategories.length > 0 ? this.availableCategories[0].value : 'روايات وقصص');
+
         this.editingEbookData = {
             _id: ebook._id,
             title: ebook.title,
             author: ebook.author,
-            category: ebook.category || 'Novels-stories',
+            category: categoryValue,
             description: ebook.description || '',
             price: ebook.price || 0,
             availableForSubscription: ebook.availableForSubscription !== false,
@@ -740,7 +743,7 @@ export class AdminEbooksComponent implements OnInit {
     resetNewProduct(): void {
         this.newProduct = {
             name: '',
-            category: 'Novels-stories',
+            category: this.availableCategories.length > 0 ? this.availableCategories[0].value : 'روايات وقصص',
             author: '',
             publisher: '',
             price: 0,

@@ -191,10 +191,17 @@ export class MerchantProfileComponent implements OnInit {
 
   getProductImageUrl(product: any): string {
     let imagePath = product.image_path || product.product_image || '';
-    const merchantName = product.merchantName || (this.merchant ? (this.merchant.merchantName || this.merchant.name) : null);
+    // Use the merchant's original username (this.merchant.name) for folder resolution because backend folders are named by username
+    const merchantName = product.merchantName || (this.merchant ? (this.merchant.name || this.merchant.merchantName) : null);
 
-    if (imagePath && (imagePath.startsWith('http') || imagePath.startsWith('/uploads/'))) {
-      return imagePath;
+    if (imagePath && imagePath.startsWith('http')) {
+      // Absolute URL — use as-is but fix localhost references
+      return imagePath.replace(/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?/, 'https://knoozbook.com');
+    }
+
+    if (imagePath && imagePath.startsWith('/uploads/')) {
+      // Relative path — prepend production domain for Capacitor/Android compatibility
+      return `https://knoozbook.com${imagePath}`;
     }
 
     const imageId = product.products_id || product.product_image;

@@ -20980,6 +20980,7 @@ select:focus {
   box-sizing: border-box;
   padding: 10px;
   background: inherit;
+  background-color: rgba(255, 255, 255, 0.001);
   position: relative;
   touch-action: none !important;
   user-select: none;
@@ -21011,7 +21012,7 @@ select:focus {
   stroke-width: 0;
   vector-effect: non-scaling-stroke;
   cursor: pointer;
-  pointer-events: auto;
+  pointer-events: none;
   touch-action: none !important;
   transition: fill 0.18s ease, stroke 0.18s ease;
 }

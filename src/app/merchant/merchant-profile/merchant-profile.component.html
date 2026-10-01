@@ -67,7 +67,7 @@
       <div class="flex-1 text-center md:text-right pb-4">
         <div class="flex items-center justify-center md:justify-start gap-3 mb-3">
           <h1 class="text-4xl md:text-5xl font-black text-gray-900 dark:text-white tracking-tight">
-            {{ merchant.name || merchant.merchantName }}
+            {{ merchant.merchantName || merchant.name }}
           </h1>
           <!-- Visit Personal Profile Button (Hidden for Virtual Publishers) -->
           <a *ngIf="!merchant.isPublisher" [routerLink]="['/profile', merchant._id]" 

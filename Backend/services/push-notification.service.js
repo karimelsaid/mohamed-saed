@@ -151,7 +151,7 @@ exports.sendToAdmins = async (payload, options = { important: true }) => {
         const notificationData = {
             message: payload.body || payload.notification?.body || 'تنبيه جديد',
             type: payload.data?.type || 'admin_alert',
-            relatedId: payload.data?.productId || payload.data?.orderId || payload.data?.id || null,
+            relatedId: payload.data?.productId || payload.data?.orderId || payload.data?.requestId || payload.data?.id || null,
             read: false,
             createdAt: new Date()
         };

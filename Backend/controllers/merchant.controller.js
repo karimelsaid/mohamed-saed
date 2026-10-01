@@ -404,6 +404,9 @@ async function getPublicMerchants(req, res) {
       .filter(p => p && p.trim())
       .map(p => normalizeArabic(p));
 
+    const activeMerchantIds = await Product.distinct('merchantId');
+    const activeMerchantIdsStr = activeMerchantIds.map(id => id ? id.toString() : '');
+
     // 2. Format Merchants (User model)
     const formattedMerchants = merchants
       .map(m => {
@@ -411,14 +414,19 @@ async function getPublicMerchants(req, res) {
         return {
           _id: m._id,
           name: name,
+          username: m.username,
           logo: m.logo,
           bio: m.bio,
           coverPhoto: m.coverPhoto,
-          normalizedName: normalizeArabic(name)
+          normalizedName: normalizeArabic(m.username)
         };
       })
-      // ONLY show merchants that are in the active publisher list
-      .filter(m => normalizedActivePublishers.includes(m.normalizedName));
+      // ONLY show merchants that have products (either by merchantId or matching name)
+      .filter(m => 
+        activeMerchantIdsStr.includes(m._id.toString()) || 
+        normalizedActivePublishers.includes(m.normalizedName) || 
+        normalizedActivePublishers.includes(normalizeArabic(m.name))
+      );
 
     // 3. Add Virtual Publishers (those who have an uploaded logo in the publishers folder)
     const publishersDir = path.join(__dirname, '..', 'uploads', 'books', 'publishers');
@@ -755,7 +763,7 @@ async function submitProductUpdateRequest(req, res) {
       pushService.sendToAdmins({
         title: 'طلب تعديل منتج 📝',
         body: `التاجر ${req.merchant.username} يطلب تعديل منتج: ${product.product_name}`,
-        url: '/admin/product-update-requests',
+        url: '/admin',
         data: { type: 'product_update_request', requestId: updateRequest._id }
       }).catch(err => console.error('Admin Push Error:', err));
     } catch (pushErr) {
@@ -1047,7 +1055,7 @@ async function getMerchantByUsername(req, res) {
       merchant: {
         _id: merchant._id,
         merchantName: merchant.merchantName,
-        name: merchant.merchantName,
+        name: merchant.username,
         email: merchant.email,
         phone: merchant.phone,
         logo: merchant.logo,
@@ -1212,7 +1220,8 @@ async function updateMerchantProfile(req, res) {
     }
 
     // Update merchant data
-    merchant.username = name || merchant.username;
+    // DO NOT update merchant.username here! It breaks the static file directory structure
+    // since the frontend builds image URLs based on the username.
     merchant.merchantName = name || merchant.merchantName;
     merchant.phone = phone || merchant.phone;
     merchant.taxNumber = taxNumber || merchant.taxNumber;

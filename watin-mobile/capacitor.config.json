@@ -1,0 +1,31 @@
+{
+  "appId": "com.kenouz.watin",
+  "appName": "وَتِين",
+  "webDir": "../dist/watin-mobile/browser",
+  "bundledWebRuntime": false,
+  "server": {
+    "iosScheme": "capacitor",
+    "androidScheme": "https",
+    "allowNavigation": [
+      "*"
+    ]
+  },
+  "plugins": {
+    "CapacitorHttp": {
+      "enabled": true
+    },
+    "SplashScreen": {
+      "launchShowDuration": 1000,
+      "launchAutoHide": true,
+      "backgroundColor": "#ffffffff",
+      "showSpinner": false,
+      "iosSpinnerStyle": "small",
+      "spinnerColor": "#999999",
+      "splashFullScreen": true,
+      "splashImmersive": true
+    },
+    "CapacitorUpdater": {
+      "enabled": true
+    }
+  }
+}

@@ -1983,10 +1983,15 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       next: (config: any) => {
         this.mobileVersionConfig = config;
         if (!this.mobileVersionConfig.liveUpdate) {
+          const zipUrl = this.selectedAppForVersion === 'mushaf'
+            ? 'https://knoozbook.com/mushaf-bundle.zip'
+            : this.selectedAppForVersion === 'watin'
+            ? 'https://knoozbook.com/watin-bundle.zip'
+            : 'https://knoozbook.com/bundle.zip';
           this.mobileVersionConfig.liveUpdate = {
             version: '1.0.0',
             enabled: false,
-            zipUrl: this.selectedAppForVersion === 'mushaf' ? 'https://knoozbook.com/mushaf-bundle.zip' : 'https://knoozbook.com/bundle.zip'
+            zipUrl: zipUrl
           };
         }
       },

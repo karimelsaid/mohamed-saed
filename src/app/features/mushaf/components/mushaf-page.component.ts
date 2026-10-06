@@ -455,6 +455,10 @@ export class MushafPageComponent implements OnInit, OnChanges, OnDestroy, AfterV
         }
     }
 
+    goToTranscription() {
+        this.router.navigate(['/transcription']);
+    }
+
     async ngOnInit(): Promise<void> {
         this.isFontReady = true; // Ensure content is visible by default (optimization)
         this.isAndroid = Capacitor.getPlatform() === 'android';

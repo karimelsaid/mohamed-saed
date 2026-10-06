@@ -8,5 +8,6 @@ export const environment = {
   mushafBaseUrl: 'https://knoozbook.com/uploads/mushaf_assets',
   paymentCallbackUrl: 'https://knoozbook.com/order/callback',
   // ASR Service URL for voice review (update this to actual production URL)
-  asrServiceUrl: 'https://knoozbook.com'  // ← استخدم نفس domain في production
+  asrServiceUrl: 'https://knoozbook.com',  // ← استخدم نفس domain في production
+  transcriptionApiUrl: 'https://knoozbook.com/api/transcription'
 };

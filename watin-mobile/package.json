@@ -1,0 +1,25 @@
+{
+    "name": "watin-mobile",
+    "version": "1.0.0",
+    "private": true,
+    "scripts": {
+        "cap": "cap",
+        "postinstall": "node scripts/patch-capacitor-updater.js"
+    },
+    "dependencies": {
+        "@capacitor/android": "^7.4.1",
+        "@capacitor/app": "^7.1.0",
+        "@capacitor/browser": "^7.0.3",
+        "@capacitor/core": "^7.4.1",
+        "@capacitor/dialog": "^7.0.3",
+        "@capacitor/filesystem": "^7.1.6",
+        "@capacitor/ios": "^7.5.0",
+        "@capacitor/share": "^7.0.0",
+        "@capacitor/status-bar": "^7.0.4",
+        "@capgo/capacitor-updater": "^8.43.10"
+    },
+    "devDependencies": {
+        "@capacitor/assets": "^3.0.5",
+        "@capacitor/cli": "^7.4.1"
+    }
+}

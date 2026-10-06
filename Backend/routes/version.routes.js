@@ -26,8 +26,8 @@ router.get('/', async (req, res) => {
             config = await MobileVersion.create({
                 app: appType,
                 android: {
-                    minBuildNumber: appType === 'mushaf' ? 1 : 8,
-                    storeUrl: appType === 'mushaf' ? 'https://play.google.com/store/apps/details?id=com.kenouz.mushaf' : 'https://play.google.com/store/apps/details?id=com.kenouz.bookstore2',
+                    minBuildNumber: appType === 'mushaf' ? 1 : appType === 'watin' ? 1 : 8,
+                    storeUrl: appType === 'mushaf' ? 'https://play.google.com/store/apps/details?id=com.kenouz.mushaf' : appType === 'watin' ? 'https://play.google.com/store/apps/details?id=com.kenouz.watin' : 'https://play.google.com/store/apps/details?id=com.kenouz.bookstore2',
                     forceUpdate: true
                 },
                 ios: {
@@ -37,7 +37,7 @@ router.get('/', async (req, res) => {
                 },
                 liveUpdate: {
                     version: '1.0.0',
-                    zipUrl: appType === 'mushaf' ? 'https://knoozbook.com/mushaf-bundle.zip' : 'https://knoozbook.com/bundle.zip',
+                    zipUrl: appType === 'mushaf' ? 'https://knoozbook.com/mushaf-bundle.zip' : appType === 'watin' ? 'https://knoozbook.com/watin-bundle.zip' : 'https://knoozbook.com/bundle.zip',
                     enabled: false
                 }
             });
@@ -54,7 +54,7 @@ router.get('/', async (req, res) => {
             projectRoot = path.join(projectRoot, '..');
         }
 
-        const fileName = appType === 'mushaf' ? 'mushaf-bundle.zip' : 'bundle.zip';
+        const fileName = appType === 'mushaf' ? 'mushaf-bundle.zip' : appType === 'watin' ? 'watin-bundle.zip' : 'bundle.zip';
         const possibleZipPaths = [
             path.join(projectRoot, 'Backend/dist/browser', fileName),
             path.join(projectRoot, 'dist/browser', fileName),
@@ -63,8 +63,8 @@ router.get('/', async (req, res) => {
             path.join(projectRoot, fileName)
         ];
 
-        let sizeBytes = appType === 'mushaf' ? 5.5 * 1024 * 1024 : 4.2 * 1024 * 1024; // Default fallbacks
-        let sizeFormatted = appType === 'mushaf' ? '5.50 MB' : '4.20 MB';
+        let sizeBytes = appType === 'mushaf' ? 5.5 * 1024 * 1024 : appType === 'watin' ? 4.2 * 1024 * 1024 : 4.2 * 1024 * 1024; // Default fallbacks
+        let sizeFormatted = appType === 'mushaf' ? '5.50 MB' : appType === 'watin' ? '4.20 MB' : '4.20 MB';
 
         for (const p of possibleZipPaths) {
             if (fs.existsSync(p)) {
@@ -82,11 +82,8 @@ router.get('/', async (req, res) => {
         if (responseData.liveUpdate) {
             responseData.liveUpdate.sizeBytes = sizeBytes;
             responseData.liveUpdate.sizeFormatted = sizeFormatted;
-            // Add cache-busting query param so Cloudflare CDN doesn't serve stale zip for new versions
-            if (responseData.liveUpdate.zipUrl && responseData.liveUpdate.version) {
-                const baseUrl = responseData.liveUpdate.zipUrl.split('?')[0];
-                responseData.liveUpdate.zipUrl = `${baseUrl}?v=${responseData.liveUpdate.version}`;
-            }
+            // Don't add query params here - the client app adds its own cache-busting timestamp
+            // to avoid duplicate query params like ?v=1.0.1?v=1.0.1_timestamp
         }
 
         res.json(responseData);

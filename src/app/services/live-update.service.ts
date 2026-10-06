@@ -12,10 +12,12 @@ export type UpdateStatus = 'idle' | 'checking' | 'downloading' | 'applying' | 'c
   providedIn: 'root'
 })
 export class LiveUpdateService {
-  private currentApp: 'kenouz' | 'mushaf' = 'kenouz';
+  private currentApp: 'kenouz' | 'mushaf' | 'watin' = 'kenouz';
 
-  private getStorageKey(appName: 'kenouz' | 'mushaf'): string {
-    return appName === 'mushaf' ? 'last_live_update_version_mushaf' : 'last_live_update_version';
+  private getStorageKey(appName: 'kenouz' | 'mushaf' | 'watin'): string {
+    if (appName === 'mushaf') return 'last_live_update_version_mushaf';
+    if (appName === 'watin') return 'last_live_update_version_watin';
+    return 'last_live_update_version';
   }
 
   private statusSubject = new BehaviorSubject<UpdateStatus>('idle');
@@ -38,7 +40,7 @@ export class LiveUpdateService {
 
   constructor(private http: HttpClient) { }
 
-  public async initialize(appName: 'kenouz' | 'mushaf' = 'kenouz'): Promise<void> {
+  public async initialize(appName: 'kenouz' | 'mushaf' | 'watin' = 'kenouz'): Promise<void> {
     this.currentApp = appName;
     const storageKey = this.getStorageKey(appName);
 
@@ -152,7 +154,7 @@ export class LiveUpdateService {
 
       console.log(`[LiveUpdate] Downloading from ${zipUrl}...`);
       const bundle = await CapacitorUpdater.download({
-        url: zipUrl,
+        url: `${zipUrl}?v=${latestVersion}_${Date.now()}`,
         version: latestVersion,
       });
 

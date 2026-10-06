@@ -2291,6 +2291,13 @@
             <span class="nav-label">التفسير</span>
         </button>
 
+        <button class="nav-item" (click)="$event.stopPropagation(); goToTranscription()" title="تفريغ الدروس">
+            <div class="nav-icon-wrapper">
+                <i class="fas fa-microphone-alt"></i>
+            </div>
+            <span class="nav-label">التفريغ</span>
+        </button>
+
         <button class="nav-item" [class.active]="showOptionsSheet"
             (click)="$event.stopPropagation(); openMemorizationOptions()" title="الحفظ">
             <div class="nav-icon-wrapper">

@@ -140,3 +140,29 @@ html {
         overflow: visible !important;
     }
 }
+/* =========================================
+   Watin App Design System (Phase A)
+   ========================================= */
+:root {
+  --watin-forest: #1F3A2E;
+  --watin-olive:  #6B7D5C;
+  --watin-sand:   #A89572;
+  --watin-cream:  #EAE5D8;
+  --watin-sage:   #6E7C70;
+
+  --watin-bg:        #F4F0E6;
+  --watin-surface:   #F8F5EE;
+  --watin-text:      #1B2A22;
+  --watin-text-2:    #55635A;
+
+  --watin-ok:        #4F7A5A;
+  --watin-warn:      #A8782E;
+  --watin-danger:    #9A3B34;
+}
+
+body.watin-app {
+  background-color: var(--watin-bg);
+  color: var(--watin-text);
+  font-family: 'Tajawal', 'IBM Plex Sans Arabic', sans-serif;
+  direction: rtl;
+}

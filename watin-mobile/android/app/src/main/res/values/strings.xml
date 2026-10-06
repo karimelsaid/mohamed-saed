@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">وَتِين</string>
+    <string name="title_activity_main">وَتِين</string>
+    <string name="package_name">com.kenouz.watin</string>
+    <string name="custom_url_scheme">com.kenouz.watin</string>
+</resources>

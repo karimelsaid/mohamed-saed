@@ -1193,7 +1193,7 @@
           </h2>
 
           <!-- App Selector Tab Switcher -->
-          <div class="flex gap-4 p-1 bg-gray-100 dark:bg-gray-700/50 rounded-2xl max-w-md mb-8">
+          <div class="flex gap-4 p-1 bg-gray-100 dark:bg-gray-700/50 rounded-2xl max-w-2xl mb-8">
             <button type="button" (click)="onAppForVersionChange('kenouz')"
               [class]="selectedAppForVersion === 'kenouz' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400'"
               class="flex-1 py-3 px-4 rounded-xl font-bold transition-all duration-300 flex items-center justify-center gap-2">
@@ -1205,6 +1205,12 @@
               class="flex-1 py-3 px-4 rounded-xl font-bold transition-all duration-300 flex items-center justify-center gap-2">
               <fa-icon [icon]="['fas', 'mobile-alt']"></fa-icon>
               تطبيق المصحف الشريف
+            </button>
+            <button type="button" (click)="onAppForVersionChange('watin')"
+              [class]="selectedAppForVersion === 'watin' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400'"
+              class="flex-1 py-3 px-4 rounded-xl font-bold transition-all duration-300 flex items-center justify-center gap-2">
+              <fa-icon [icon]="['fas', 'file-audio']"></fa-icon>
+              تطبيق وتين
             </button>
           </div>
 

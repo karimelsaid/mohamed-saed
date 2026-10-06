@@ -23,7 +23,8 @@ const routes: Routes = [
     { path: 'shipping-settings', component: ShippingSettingsComponent },
     { path: 'partnership', component: PartnershipComponent },
     { path: 'youtube-manager', loadComponent: () => import('./youtube-manager/youtube-manager.component').then(m => m.YoutubeManagerComponent) },
-    { path: 'categories', loadComponent: () => import('./admin-categories/admin-categories.component').then(m => m.AdminCategoriesComponent) }
+    { path: 'categories', loadComponent: () => import('./admin-categories/admin-categories.component').then(m => m.AdminCategoriesComponent) },
+    { path: 'watin', loadChildren: () => import('./watin-admin/watin-admin.routes').then(m => m.WATIN_ADMIN_ROUTES) }
 ];
 
 @NgModule({

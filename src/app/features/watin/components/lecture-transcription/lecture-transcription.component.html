@@ -1,0 +1,293 @@
+<div class="transcription-container">
+  <div class="header-section">
+    <h1><i class="fas fa-microphone-alt"></i> تفريغ الدروس القرآنية</h1>
+    <p>قم برفع الدرس أو المقطع الصوتي وسيتم استخراج الآيات القرآنية ومطابقتها آلياً.</p>
+  </div>
+
+  <!-- API Status -->
+  <div class="api-status" [ngClass]="{'ready': apiReady, 'offline': !apiReady}">
+    <i class="fas" [ngClass]="{'fa-check-circle': apiReady, 'fa-exclamation-triangle': !apiReady}"></i>
+    <span *ngIf="apiReady">خدمة التفريغ جاهزة ✅</span>
+    <span *ngIf="!apiReady">خدمة التفريغ غير متصلة - تأكد من تشغيل خادم Python</span>
+    <button *ngIf="!apiReady" class="retry-btn" (click)="checkApiHealth()">إعادة المحاولة</button>
+  </div>
+
+  <!-- Warning Modal -->
+  <div class="modal-overlay" *ngIf="showWarningModal" (click)="closeWarningModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <i class="fas fa-exclamation-triangle warning-icon"></i>
+        <h3>تحذير: ملف صوتي طويل</h3>
+      </div>
+      <div class="modal-body">
+        <p>الملف مدته <strong>{{ warningDuration?.toFixed(1) }} دقيقة</strong>.</p>
+        <p>سيتم تقسيمه إلى <strong>{{ warningSegments }}</strong> مقاطع للمعالجة التدريجية.</p>
+        <p class="modal-note">⏱️ يُنصح بتقسيم الملفات الطويلة (> 30 دقيقة) يدوياً للحصول على نتائج أفضل.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn cancel-btn" (click)="closeWarningModal()">إلغاء</button>
+        <button class="modal-btn confirm-btn" (click)="confirmSplit()">متابعة التقسيم</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Format Warning Modal -->
+  <div class="modal-overlay" *ngIf="showFormatWarningModal" (click)="closeFormatWarningModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <i class="fas fa-exclamation-circle warning-icon" style="color: #e65100;"></i>
+        <h3>تنسيق الملف غير مدعوم</h3>
+      </div>
+      <div class="modal-body">
+        <p>تنسيق الملف <strong>.opus</strong> غير مدعوم حالياً.</p>
+        <p>يرجى استخدام ملف بصيغة <strong>MP3</strong> أو <strong>WAV</strong>.</p>
+        <p class="modal-note">💡 يمكنك تحويل الملف من .opus إلى MP3 باستخدام أي برنامج تحويل صوتي.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn confirm-btn" (click)="closeFormatWarningModal()">حسناً</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="upload-card">
+    <div class="upload-area" (click)="fileInput.click()" 
+         (dragover)="$event.preventDefault()" 
+         (drop)="$event.preventDefault(); onFileSelected({target: {files: $any($event).dataTransfer.files}})">
+      <i class="fas fa-cloud-upload-alt"></i>
+      <h3>اضغط هنا لرفع الملف الصوتي</h3>
+      <p>أو قم بسحب وإفلات الملف هنا (صيغة MP3 أو WAV فقط - لا يدعم .opus)</p>
+      <input #fileInput type="file" (change)="onFileSelected($event)" accept=".mp3,.wav" style="display: none;">
+    </div>
+    
+    <div class="privacy-note">
+      <i class="fas fa-shield-alt"></i>
+      <span><strong>حماية الخصوصية:</strong> الملفات المرفوعة لا يتم حفظها على خوادمنا نهائياً، تُعالج مؤقتاً في الذاكرة وتُحذف فوراً بمجرد انتهاء التفريغ.</span>
+    </div>
+
+    <div *ngIf="selectedFile" class="selected-file">
+      <i class="fas fa-file-audio"></i>
+      <span>{{ selectedFile.name }}</span>
+      <span class="file-size">({{ (selectedFile.size / 1024 / 1024).toFixed(1) }} MB)</span>
+    </div>
+
+    <div class="settings-group">
+      <div class="setting-item">
+        <label>نوع الدرس</label>
+        <select [(ngModel)]="lectureType">
+          <option value="general">درس عام</option>
+          <option value="tafseer">تفسير</option>
+          <option value="tajweed">تجويد وقراءات</option>
+        </select>
+      </div>
+
+      <div class="setting-item">
+        <label>الرواية المتوقعة</label>
+        <select [(ngModel)]="recitationStyle">
+          <option value="hafs">حفص عن عاصم</option>
+          <option value="warsh" disabled>ورش عن نافع (قريباً)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Progress Stepper -->
+    <div class="progress-stepper" *ngIf="isProcessing">
+      <div class="progress-overview">
+        <div class="progress-bar-container">
+          <div class="progress-bar" [style.width.%]="progressPercent"></div>
+        </div>
+        <div class="progress-text">{{ progressPercent }}% - {{ processingProgress }}</div>
+      </div>
+      
+      <div class="steps-container">
+        <div class="step-item" [ngClass]="{'active': currentStep === 1, 'completed': currentStep > 1}">
+          <div class="step-number">1</div>
+          <div class="step-content">
+            <div class="step-title">التحقق من الملف</div>
+            <div class="step-desc">فحص مدة الملف الصوتي</div>
+          </div>
+          <div class="step-status">
+            <i class="fas" [ngClass]="currentStep > 1 ? 'fa-check-circle' : (currentStep === 1 ? 'fa-spinner fa-spin' : 'fa-circle')"></i>
+          </div>
+        </div>
+        
+        <div class="step-item" [ngClass]="{'active': currentStep === 2, 'completed': currentStep > 2}">
+          <div class="step-number">2</div>
+          <div class="step-content">
+            <div class="step-title">استخراج النصوص</div>
+            <div class="step-desc">تحويل الصوت إلى نص</div>
+          </div>
+          <div class="step-status">
+            <i class="fas" [ngClass]="currentStep > 2 ? 'fa-check-circle' : (currentStep === 2 ? 'fa-spinner fa-spin' : 'fa-circle')"></i>
+          </div>
+        </div>
+        
+        <div class="step-item" [ngClass]="{'active': currentStep === 3, 'completed': currentStep > 3}">
+          <div class="step-number">3</div>
+          <div class="step-content">
+            <div class="step-title">مطابقة الآيات</div>
+            <div class="step-desc">تحديد الآيات القرآنية</div>
+          </div>
+          <div class="step-status">
+            <i class="fas" [ngClass]="currentStep > 3 ? 'fa-check-circle' : (currentStep === 3 ? 'fa-spinner fa-spin' : 'fa-circle')"></i>
+          </div>
+        </div>
+        
+        <div class="step-item" [ngClass]="{'active': currentStep === 4, 'completed': currentStep === 4}">
+          <div class="step-number">4</div>
+          <div class="step-content">
+            <div class="step-title">اكتمل</div>
+            <div class="step-desc">جاهز للعرض</div>
+          </div>
+          <div class="step-status">
+            <i class="fas fa-check-circle"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Segments Display -->
+    <div class="segments-container" *ngIf="isSegmentedMode && audioSegments.length > 0">
+      <h3>المقاطع الصوتية ({{ audioSegments.length }})</h3>
+      <div class="segments-list">
+        <div *ngFor="let segment of audioSegments; let i = index" 
+             class="segment-item" 
+             [ngClass]="{
+               'pending': segment.status === 'pending',
+               'processing': segment.status === 'processing',
+               'completed': segment.status === 'completed',
+               'error': segment.status === 'error'
+             }">
+          <div class="segment-info">
+            <div class="segment-number">{{ i + 1 }}</div>
+            <div class="segment-details">
+              <div class="segment-time">{{ formatTime(segment.start) }} - {{ formatTime(segment.end) }}</div>
+              <div class="segment-duration">{{ segment.duration.toFixed(1) }} دقيقة</div>
+            </div>
+          </div>
+          <div class="segment-status">
+            <span *ngIf="segment.status === 'pending'">في الانتظار</span>
+            <span *ngIf="segment.status === 'processing'">
+              <i class="fas fa-spinner fa-spin"></i> جاري المعالجة
+            </span>
+            <span *ngIf="segment.status === 'completed'">
+              <i class="fas fa-check-circle"></i> مكتمل ({{ segment.wordCount }} كلمة)
+            </span>
+            <span *ngIf="segment.status === 'error'">
+              <i class="fas fa-exclamation-circle"></i> خطأ
+            </span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="segments-total" *ngIf="totalWordCount > 0">
+        <strong>إجمالي الكلمات المستفرغة: {{ totalWordCount }}</strong>
+      </div>
+    </div>
+
+    <button class="primary-btn" (click)="startTranscription()" [disabled]="!selectedFile || isProcessing || !apiReady">
+      <span *ngIf="!isProcessing"><i class="fas fa-magic"></i> ابدأ التفريغ</span>
+      <span *ngIf="isProcessing"><i class="fas fa-spinner fa-spin"></i> {{ processingProgress }}</span>
+    </button>
+
+    <div *ngIf="errorMessage" class="error-message">
+      <i class="fas fa-exclamation-circle"></i> {{ errorMessage }}
+    </div>
+  </div>
+
+  <!-- Results Section -->
+  <div class="results-section" *ngIf="results.length > 0">
+    <div class="results-header">
+      <h2>نتائج التفريغ والمطابقة</h2>
+      <div class="header-actions">
+        <div class="results-stats">
+
+          <span class="stat quran-stat"><i class="fas fa-quran"></i> {{ quranSegments }} آية</span>
+          <span class="stat" *ngIf="totalWordCount > 0"><i class="fas fa-font"></i> {{ totalWordCount }} كلمة</span>
+        </div>
+        <div class="export-actions">
+          <button class="export-btn txt" (click)="exportToTxt()" title="تصدير كملف نصي">
+            <i class="fas fa-file-alt"></i> TXT
+          </button>
+          <button class="export-btn word" (click)="exportToWord()" title="تصدير كملف وورد">
+            <i class="fas fa-file-word"></i> Word
+          </button>
+          <button class="export-btn pdf" (click)="exportToPdf()" title="حفظ كملف PDF">
+            <i class="fas fa-file-pdf"></i> PDF
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <div class="transcript-box">
+      <div *ngFor="let res of results; let i = index" 
+           class="transcript-segment" 
+           [ngClass]="{'quran-segment': res.type === 'quran', 'speech-segment': res.type === 'speech'}"
+           [style.animation-delay]="(i * 0.05) + 's'">
+        
+        <div class="segment-header">
+          <span class="time-badge">{{ formatTime(res.start) }} - {{ formatTime(res.end) }}</span>
+          <button class="edit-btn" *ngIf="editingSegmentIndex !== i" (click)="startEdit(i, res.text)" title="تعديل المقطع">
+            <i class="fas fa-pen"></i>
+          </button>
+        </div>
+        
+        <!-- View Mode -->
+        <p class="text" [ngClass]="{'quran-text': res.type === 'quran'}" *ngIf="editingSegmentIndex !== i">
+          {{ res.type === 'quran' && res.match ? res.match.original_text : res.text }}
+        </p>
+
+        <!-- Edit Mode -->
+        <div class="edit-mode-container" *ngIf="editingSegmentIndex === i">
+          <!-- Audio Element for Segment Playback -->
+          <audio #segmentPlayer [src]="audioUrl" preload="auto" style="display: none;"></audio>
+          
+          <div class="segment-player-controls">
+            <button class="play-segment-btn" *ngIf="!isPlayingSegment" (click)="playSegmentAudio(segmentPlayer)" title="تشغيل المقطع">
+              <i class="fas fa-play"></i> استماع للمقطع
+            </button>
+            <button class="play-segment-btn stop-segment-btn" *ngIf="isPlayingSegment" (click)="pauseSegmentAudio(segmentPlayer)" title="إيقاف المقطع">
+              <i class="fas fa-pause"></i> إيقاف
+            </button>
+            
+            <div class="playback-rate-controls">
+              <span>السرعة:</span>
+              <button class="rate-btn" [class.active]="playbackRate === 0.75" (click)="changePlaybackRate(segmentPlayer, 0.75)">0.75x</button>
+              <button class="rate-btn" [class.active]="playbackRate === 1.0" (click)="changePlaybackRate(segmentPlayer, 1.0)">1x</button>
+              <button class="rate-btn" [class.active]="playbackRate === 1.5" (click)="changePlaybackRate(segmentPlayer, 1.5)">1.5x</button>
+            </div>
+          </div>
+
+          <textarea [(ngModel)]="editedText" class="edit-textarea"></textarea>
+          <div class="edit-actions">
+            <button class="save-btn" (click)="saveEdit(i)"><i class="fas fa-check"></i> حفظ التعديل</button>
+            <button class="cancel-btn" (click)="cancelEdit()">إلغاء</button>
+          </div>
+        </div>
+        
+        <div *ngIf="res.match" class="match-info">
+          <span class="surah-badge">
+            <i class="fas fa-bookmark"></i> سورة {{ res.match.surah_name }} - آية {{ res.match.ayah_number }}
+          </span>
+          <span class="confidence-badge" [ngClass]="{'high': res.match.confidence >= 90, 'medium': res.match.confidence >= 75 && res.match.confidence < 90}">
+            {{ res.match.confidence }}%
+          </span>
+        </div>
+
+        <div *ngIf="res.match" class="original-verse">
+          <i class="fas fa-quote-right"></i>
+          {{ res.match.original_text }}
+        </div>
+        
+        <span class="status-badge verified" *ngIf="res.type === 'quran' && res.verified">
+          <i class="fas fa-check-circle"></i> مطابق للنص
+        </span>
+        <span class="status-badge needs-review" *ngIf="res.type === 'quran' && !res.verified">
+          <i class="fas fa-exclamation-circle"></i> يحتاج مراجعة
+        </span>
+        <span class="status-badge speech-badge" *ngIf="res.type === 'speech'">
+          <i class="fas fa-comment"></i> كلام / شرح
+        </span>
+      </div>
+    </div>
+  </div>
+</div>

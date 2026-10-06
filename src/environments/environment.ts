@@ -9,5 +9,6 @@ export const environment = {
   // Always use the production domain for Kashier callback (Kashier rejects localhost)
   paymentCallbackUrl: 'https://knoozbook.com/order/callback',
   // ASR Service URL for voice review
-  asrServiceUrl: 'http://localhost:8000'
+  asrServiceUrl: 'http://localhost:8000',
+  transcriptionApiUrl: '/api/transcription'
 };

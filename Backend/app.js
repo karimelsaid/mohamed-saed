@@ -569,6 +569,8 @@ app.use('/api/hifz-plan', require('./routes/hifzPlan.routes')); // Dynamic Hifz 
 app.use('/api/halaqa', require('./routes/halaqa.routes')); // Community Halaqa Routes
 app.use('/api/asr-review', require('./routes/asr-review.routes')); // ASR Voice Review Routes
 app.use('/api/reading-challenges', require('./routes/reading-challenge.routes')); // Reading Challenges Routes
+app.use('/api/watin', require('./routes/watin.routes')); // Watin App Routes (Public + Admin)
+app.use('/api/admin/watin', require('./routes/watin-admin.routes')); // Watin Admin Routes
 
 // Apply specific rate limiters to sensitive routes
 app.use('/api/users/login', authLimiter);
@@ -641,6 +643,116 @@ const startServer = async () => {
 
     server.listen(port, () => {
       console.log(`🚀 [App] Server running on port ${port} in ${process.env.NODE_ENV || 'development'} mode`);
+
+      // === Auto-start Python Transcription Services ===
+      try {
+        const { spawn } = require('child_process');
+        const fs = require('fs');
+
+        // Try quran_transcriber (legacy for mushaf-wird)
+        const transcriptionDir = path.join(__dirname, '..', 'quran_transcriber');
+        const venvPython = path.join(transcriptionDir, 'venv', 'bin', 'python');
+        const serverScript = path.join(transcriptionDir, 'server.py');
+
+        if (fs.existsSync(venvPython) && fs.existsSync(serverScript)) {
+          console.log('🎙️  [Transcription] Starting Python Transcription API (quran_transcriber)...');
+          const pythonProcess = spawn(venvPython, [serverScript], {
+            cwd: transcriptionDir,
+            stdio: ['ignore', 'pipe', 'pipe'],
+            detached: false
+          });
+
+          pythonProcess.stdout.on('data', (data) => {
+            const msg = data.toString().trim();
+            if (msg) console.log(`🎙️  [Transcription] ${msg}`);
+          });
+
+          pythonProcess.stderr.on('data', (data) => {
+            const msg = data.toString().trim();
+            if (!msg) return;
+            if (msg.includes('INFO:') || msg.includes('Started server') || msg.includes('Application startup')) {
+              console.log(`🎙️  [Transcription] ${msg.replace(/^INFO:\s*/, '')}`);
+            } else if (!msg.includes('WARNING') && !msg.includes('DeprecationWarning')) {
+              console.error(`🎙️  [Transcription-ERR] ${msg}`);
+            }
+          });
+
+          pythonProcess.on('error', (err) => {
+            console.error('🎙️  [Transcription] Failed to start:', err.message);
+          });
+
+          pythonProcess.on('exit', (code) => {
+            if (code !== null && code !== 0) {
+              console.warn(`🎙️  [Transcription] Process exited with code ${code}`);
+            }
+          });
+
+          const cleanup = () => {
+            if (!pythonProcess.killed) {
+              console.log('🎙️  [Transcription] Shutting down Python server...');
+              pythonProcess.kill('SIGTERM');
+            }
+          };
+          process.on('exit', cleanup);
+          process.on('SIGINT', () => { cleanup(); process.exit(0); });
+          process.on('SIGTERM', () => { cleanup(); process.exit(0); });
+        } else {
+          console.log('🎙️  [Transcription] quran_transcriber Python venv or server.py not found. Skipping.');
+        }
+
+        // Try watin-transcriber (for watin app)
+        const watinDir = path.join(__dirname, '..', 'watin-transcriber');
+        const watinVenvPython = path.join(watinDir, 'venv', 'bin', 'python');
+        const watinServerScript = path.join(watinDir, 'server.py');
+
+        if (fs.existsSync(watinVenvPython) && fs.existsSync(watinServerScript)) {
+          console.log('🎙️  [Watin] Starting Python Transcription API (watin-transcriber)...');
+          const watinPythonProcess = spawn(watinVenvPython, [watinServerScript], {
+            cwd: watinDir,
+            stdio: ['ignore', 'pipe', 'pipe'],
+            detached: false
+          });
+
+          watinPythonProcess.stdout.on('data', (data) => {
+            const msg = data.toString().trim();
+            if (msg) console.log(`🎙️  [Watin] ${msg}`);
+          });
+
+          watinPythonProcess.stderr.on('data', (data) => {
+            const msg = data.toString().trim();
+            if (!msg) return;
+            if (msg.includes('INFO:') || msg.includes('Started server') || msg.includes('Application startup')) {
+              console.log(`🎙️  [Watin] ${msg.replace(/^INFO:\s*/, '')}`);
+            } else if (!msg.includes('WARNING') && !msg.includes('DeprecationWarning')) {
+              console.error(`🎙️  [Watin-ERR] ${msg}`);
+            }
+          });
+
+          watinPythonProcess.on('error', (err) => {
+            console.error('🎙️  [Watin] Failed to start:', err.message);
+          });
+
+          watinPythonProcess.on('exit', (code) => {
+            if (code !== null && code !== 0) {
+              console.warn(`🎙️  [Watin] Process exited with code ${code}`);
+            }
+          });
+
+          const watinCleanup = () => {
+            if (!watinPythonProcess.killed) {
+              console.log('🎙️  [Watin] Shutting down Python server...');
+              watinPythonProcess.kill('SIGTERM');
+            }
+          };
+          process.on('exit', watinCleanup);
+          process.on('SIGINT', () => { watinCleanup(); process.exit(0); });
+          process.on('SIGTERM', () => { watinCleanup(); process.exit(0); });
+        } else {
+          console.log('🎙️  [Watin] watin-transcriber Python venv or server.py not found. Skipping.');
+        }
+      } catch (err) {
+        console.error('🎙️  [Transcription] Auto-start error:', err.message);
+      }
     });
   } catch (err) {
     console.error('❌ [App] Failed to start server:', err);

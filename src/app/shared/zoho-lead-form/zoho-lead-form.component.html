@@ -1,0 +1,49 @@
+<section class="zoho-lead-card" dir="rtl" aria-labelledby="zoho-lead-title">
+  <div class="zoho-lead-copy">
+    <span class="zoho-lead-kicker">ترشيحات كنوز بوك</span>
+    <h2 id="zoho-lead-title">خلّينا نرشح لك كتابك القادم</h2>
+    <p>اترك بياناتك وسنرسل لك ترشيحات كتب ورقية وعروضًا تناسب اهتماماتك.</p>
+  </div>
+
+  <form
+    class="zoho-lead-form"
+    action="https://crm.zoho.com/crm/WebToLeadForm"
+    method="POST"
+    accept-charset="UTF-8">
+    <!-- Zoho Web-to-Lead security fields: keep these values unchanged. -->
+    <input type="hidden" name="xnQsjsdp" value="65f6abe9b55c55bdc0ee669479cd99186a6233aeaf1a466c111a63d8076ac78f">
+    <input type="hidden" name="zc_gad" value="">
+    <input type="hidden" name="xmIwtLD" value="6d41e8c6c6e8757ab2ac2ef11e03b261b956352024940e6fe355780ad07ef97ef90b8393d11c2ec79ea851daeb5bf8a5">
+    <input type="hidden" name="actionType" value="TGVhZHM=">
+    <input type="hidden" name="returnURL" value="https://knoozbook.com/">
+
+    <!-- Standard Zoho fields used by the free CRM plan. -->
+    <input type="hidden" name="Company" value="Knooz Book">
+    <input type="hidden" name="Lead Source" value="Website">
+
+    <!-- Honeypot field for simple bot protection. -->
+    <input type="text" name="aG9uZXlwb3Q" tabindex="-1" autocomplete="off" aria-hidden="true" class="zoho-honeypot">
+
+    <div class="zoho-field">
+      <label for="zoho-lead-name">الاسم</label>
+      <input id="zoho-lead-name" type="text" name="Last Name" autocomplete="name" required maxlength="80" placeholder="اسمك الكريم">
+    </div>
+
+    <div class="zoho-field">
+      <label for="zoho-lead-phone">الهاتف المحمول</label>
+      <input id="zoho-lead-phone" type="tel" name="Phone" autocomplete="tel" maxlength="30" placeholder="01xxxxxxxxx">
+    </div>
+
+    <div class="zoho-field">
+      <label for="zoho-lead-email">البريد الإلكتروني</label>
+      <input id="zoho-lead-email" type="email" name="Email" autocomplete="email" maxlength="100" placeholder="name@example.com">
+    </div>
+
+    <label class="zoho-consent">
+      <input type="checkbox" name="marketing_consent" value="yes" required>
+      <span>أوافق على التواصل معي بخصوص ترشيحات الكتب والعروض المناسبة.</span>
+    </label>
+
+    <button type="submit" class="zoho-submit">أرسل لي الترشيحات</button>
+  </form>
+</section>

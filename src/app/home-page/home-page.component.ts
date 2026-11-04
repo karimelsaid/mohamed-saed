@@ -15,11 +15,12 @@ import { MerchantAuthService } from '../services/merchant-auth.service';
 import { FormsModule } from '@angular/forms';
 import { AnalyticsTrackingService } from '../services/analytics-tracking.service';
 import { PremiumAchievementsComponent } from '../shared/premium-achievements/premium-achievements.component';
+import { ZohoLeadFormComponent } from '../shared/zoho-lead-form/zoho-lead-form.component';
 
 @Component({
   selector: 'app-home-page',
   standalone: true,
-  imports: [CommonModule, RouterModule, FontAwesomeModule, FormsModule, PremiumAchievementsComponent],
+  imports: [CommonModule, RouterModule, FontAwesomeModule, FormsModule, PremiumAchievementsComponent, ZohoLeadFormComponent],
   templateUrl: './home-page.component.html',
   styleUrls: ['./home-page.component.css']
 })

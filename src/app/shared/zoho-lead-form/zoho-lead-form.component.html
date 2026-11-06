@@ -19,7 +19,8 @@
 
     <!-- Standard Zoho fields used by the free CRM plan. -->
     <input type="hidden" name="Company" value="Knooz Book">
-    <input type="hidden" name="Lead Source" value="Website">
+    <!-- Zoho only accepts values configured in this account's Lead Source picklist. -->
+    <input type="hidden" name="Lead Source" value="Online Store">
 
     <!-- Honeypot field for simple bot protection. -->
     <input type="text" name="aG9uZXlwb3Q" tabindex="-1" autocomplete="off" aria-hidden="true" class="zoho-honeypot">

@@ -23,7 +23,7 @@ function registerCoreHandlers() {
   // App info
   ipcRouter.register('app:get-info', async () => {
     return {
-      appName: 'نظام إدارة محلات بدل العرائس',
+      appName: 'نظام إدارة محلات بدل ',
       version: app.getVersion() || '1.0.0',
       electronVersion: process.versions.electron || 'standalone',
       nodeVersion: process.versions.node,
@@ -54,7 +54,7 @@ function createWindow() {
     height: 768,
     minWidth: 1024,
     minHeight: 680,
-    title: 'نظام إدارة محلات بيع وتأجير بدل العرائس',
+    title: 'نظام إدارة محلات بيع وتأجير بدل ',
     show: false,
     backgroundColor: '#121824',
     webPreferences: {

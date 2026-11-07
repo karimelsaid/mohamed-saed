@@ -9,13 +9,13 @@
 
 | البند | الحالة الحالية |
 |---|---|
-| **المرحلة الحالية** | المرحلة 3: تأسيس قاعدة البيانات (Phase 3: Database Foundation) |
-| **المراحل المكتملة** | المرحلة 0، المرحلة 1، المرحلة 2 (Project Foundation) |
-| **نسبة الإنجاز الإجمالية** | 18% |
-| **آخر اختبار ناجح** | اختبارات التأسيس التقني والأمان وقنوات IPC (Phase 2 Tests Passed) |
+| **المرحلة الحالية** | المرحلة 4: نظام التصميم والمكونات (Phase 4: Design System) |
+| **المراحل المكتملة** | المرحلة 0، المرحلة 1، المرحلة 2، المرحلة 3 (Database Foundation) |
+| **نسبة الإنجاز الإجمالية** | 24% |
+| **آخر اختبار ناجح** | اختبارات قاعدة البيانات، المعاملات، منع التعارض، والنسخ الاحتياطي (Phase 3 Tests Passed 100%) |
 | **الاختبارات الفاشلة** | 0 |
-| **آخر Migration مطبقة** | لا يوجد بعد (تبدأ في المرحلة 3) |
-| **آخر Build ناجح** | Electron Foundation Scaffold Verified |
+| **آخر Migration مطبقة** | `001_initial_schema.sql` (مطبقة بنجاح) |
+| **آخر Build ناجح** | Database Engine & Migration Verification Passed |
 
 ---
 
@@ -26,8 +26,8 @@
 | **المرحلة 0** | Discovery & Planning | مكتملة ✅ | 2026-11-08 |
 | **المرحلة 1** | Documentation | مكتملة ✅ | 2026-11-08 |
 | **المرحلة 2** | Project Foundation | مكتملة ✅ | 2026-11-08 |
-| **المرحلة 3** | Database Foundation | قيد التنفيذ 🔄 | - |
-| **المرحلة 4** | Design System | معلقة ⏳ | - |
+| **المرحلة 3** | Database Foundation | مكتملة ✅ | 2026-11-08 |
+| **المرحلة 4** | Design System | قيد التنفيذ 🔄 | - |
 | **المرحلة 5** | Administration & Settings | معلقة ⏳ | - |
 | **المرحلة 6** | Inventory Engine | معلقة ⏳ | - |
 | **المرحلة 7** | Customers & Booking Engine | معلقة ⏳ | - |
@@ -47,38 +47,37 @@
 
 ### المرحلة 0: Discovery & Planning (مكتملة ✅)
 - [x] فحص بيئة المجلد وحالة الملفات.
-- [x] تحليل بيئة Node.js (v26.13.0) و npm (11.6.2) وأدوات البناء المتاحة.
-- [x] تقييم المخاطر المعمارية ووضع استراتيجيات المعالجة.
-- [x] إنشاء مستودع Git للمشروع.
-- [x] كتابة وثيقة `docs/PROJECT-DISCOVERY.md` وملف `README.md`.
-- [x] تهيئة ملف متابعة التنفيذ `docs/EXECUTION-STATUS.md`.
+- [x] تحليل بيئة Node.js و npm وأدوات البناء المتاحة.
+- [x] إعداد تقرير الاستكشاف وخطة المراحل في `docs/PROJECT-DISCOVERY.md`.
 
 ### المرحلة 1: Documentation (مكتملة ✅)
-- [x] إنشاء الوثائق الأساسية الـ 15 (`00-PRODUCT-VISION.md` حتى `14-EDITOR-RULES.md`).
-- [x] إنشاء وثائق صفحات التطبيق الـ 13 في `docs/pages/` بجميع أقسامها المطلوبة.
-- [x] إنشاء وثائق المحركات الـ 6 في `docs/modules/` مع المعاملات والـ API.
-- [x] تنفيذ واجتياز اختبار التحقق التلقائي لجميع وثائق المرحلة 1 بنجاح (`scripts/test-phase-1.js`).
+- [x] إنشاء 15 وثيقة رئيسية في `docs/`.
+- [x] إنشاء 13 وثيقة صفحات في `docs/pages/`.
+- [x] إنشاء 6 وثائق محركات في `docs/modules/`.
+- [x] اجتياز الاختبار التلقائي لكافة الوثائق بنجاح (`scripts/test-phase-1.js`).
 
 ### المرحلة 2: Project Foundation (مكتملة ✅)
-- [x] تهيئة هيكل مجلدات المشروع (Monorepo: `apps/desktop`, `packages/shared`, `packages/contracts`).
-- [x] إعداد حزمة `package.json` مع إعدادات TypeScript والـ Scripts.
-- [x] إنشاء عقود الـ IPC المشتركة والـ Types الموحدة (`packages/contracts/src/ipc-channels.ts`).
-- [x] إنشاء الـ Enums المعتمدة (`packages/shared/src/enums.ts`).
-- [x] إعداد Electron Main Process مع دورة حياة التطبيق والأمان الصارم (`apps/desktop/electron/main/index.js`).
-- [x] إعداد Preload Script مع حماية القنوات بقائمة بيضاء (`apps/desktop/electron/preload/preload.js`).
-- [x] إعداد الموجه المركزي `ipc-router.js` مع حظر القنوات المشبوهة واحتساب زمن التنفيذ.
-- [x] إعداد نظام السجلات المتقدم `logger.js` مع حفظ الملفات اليومية في مسار التطبيق.
-- [x] إعداد واجهة Renderer متكاملة مع دعم كامل للغة العربية وRTL ونظام التصميم (`index.html`, `styles.css`, `renderer.js`).
-- [x] كتابة وتنفيذ اختبارات المرحلة 2 الشاملة (`scripts/test-phase-2.js`) والتأكد من اجتيازها بالكامل بنجاح.
+- [x] بناء هيكل المشروع والـ Monorepo وعقود الـ IPC المشتركة والـ Enums.
+- [x] إعداد Electron Main و Preload المعزول والموجه المركزي `ipc-router.js`.
+- [x] إعداد هيكل الواجهة الأمامية وRTL ونظام التصميم الأساسي.
+- [x] اجتياز اختبارات المرحلة 2 بنجاح (`scripts/test-phase-2.js`).
 
-### المرحلة 3: Database Foundation (قيد التنفيذ 🔄)
-- [ ] إعداد محرك اتصال SQLite مع نمط Adapter المرن.
-- [ ] تفعيل المفاتيح الأجنبية `PRAGMA foreign_keys = ON` ووضع `WAL Mode`.
-- [ ] إنشاء هيكل المهاجرات المعتمد (`migrations/001_initial_schema.sql`).
-- [ ] إنشاء جدول تتبع المهاجرات `schema_migrations`.
-- [ ] بناء طبقة المستودعات (Repositories) لدعم المعاملات الذرية (Atomic Transactions).
-- [ ] بناء مساعد المعاملات `TransactionHelper` وفحوصات سلامة قاعدة البيانات `PRAGMA integrity_check`.
-- [ ] إعداد وتشغيل اختبارات المرحلة 3 للتحقق من المهاجرات والمعاملات.
+### المرحلة 3: Database Foundation (مكتملة ✅)
+- [x] بناء محرك الاتصال `DatabaseConnection` مع تفعيل `PRAGMA foreign_keys = ON` و `journal_mode = WAL`.
+- [x] إعداد وتطبيق المهاجرة الشاملة `001_initial_schema.sql` بأكثر من 40 جدولاً وفهارس متقدمة.
+- [x] بناء أداة تتبع وتشغيل المهاجرات `MigrationRunner` وجدول `schema_migrations`.
+- [x] بناء مساعد المعاملات الذرية `TransactionHelper` مع التراجع التلقائي (Rollback) عند الخطأ.
+- [x] بناء طبقة المستودعات (`SuitUnitRepository`, `BookingRepository`, `FinanceRepository`, `CustomerRepository`, `SettingsRepository`).
+- [x] التحقق البرمجي التام من منع التعارض الزمني لحجوزات البدل الفردية (Zero Double Booking).
+- [x] التحقق التام من دقة الحسابات المالية لجلسات الخزينة ومطابقة الفروق.
+- [x] بناء أداة فحص سلامة قاعدة البيانات `DatabaseIntegrity` وأداة النسخ الاحتياطي `BackupApi`.
+- [x] كتابة وتنفيذ واجتياز اختبارات المرحلة 3 بنجاح تام (`scripts/test-phase-3.js`).
+
+### المرحلة 4: Design System (قيد التنفيذ 🔄)
+- [ ] استكمال وتوسيع مكونات الواجهة المشتركة (Shared Components: Modals, Drawers, Badges, Dropdowns, DatePickers, StatCards).
+- [ ] تجهيز مكتبة المكونات للعمل بسلاسة داخل نمط Dark و Light.
+- [ ] دعم وتوثيق حالات الواجهة المختلفة (Loading, Empty, Error, Success).
+- [ ] إعداد وتشغيل اختبارات المرحلة 4 للتحقق من المكونات وتوافق الـ RTL.
 
 ---
 
@@ -86,38 +85,34 @@
 
 | معرف الاختبار | نوع الاختبار | النطاق | النتيجة | ملاحظات |
 |---|---|---|---|---|
-| TEST-P0-01 | فحص سلامة البيئة | Node, npm, Python, Git | ناجح ✅ | Node 26.13, npm 11.6, Python 3.14 |
-| TEST-P0-02 | فحص مسار العمل | الحفاظ على الملفات السابقة | ناجح ✅ | الحفاظ على `MASTER-PROJECT-SPEC.md` |
-| TEST-P0-03 | التحقق من وثائق المرحلة 0 | اكتمال `docs/PROJECT-DISCOVERY.md` | ناجح ✅ | تغطية معمارية شاملة |
-| TEST-P1-01 | فحص اكتمال الوثائق الأساسية | 15 وثيقة رئيسية في `docs/` | ناجح ✅ | جميع الملفات موجودة ومفصلة |
-| TEST-P1-02 | فحص اكتمال وثائق الصفحات | 13 وثيقة في `docs/pages/` | ناجح ✅ | تغطية 11 قسمًا تفصيليًا لكل شاشة |
-| TEST-P1-03 | فحص اكتمال وثائق المحركات | 6 وثائق في `docs/modules/` | ناجح ✅ | تغطية الواجهات والمعاملات والتعافي |
-| TEST-P1-04 | الاختبار التلقائي الشامل للمرحلة 1 | سكربت `scripts/test-phase-1.js` | ناجح ✅ | تم التحقق من 36 ملفًا بنجاح |
-| TEST-P2-01 | فحص ملفات التأسيس | ملفات Main, Preload, Router, Renderer | ناجح ✅ | 10 ملفات أساسية مكتملة |
-| TEST-P2-02 | فحص معايير الأمان | contextIsolation & nodeIntegration | ناجح ✅ | تطبيق صارم لـ isolation & CSP |
-| TEST-P2-03 | اختبار حظر قنوات IPC المشبوهة | القائمة البيضاء (Allowlist) | ناجح ✅ | حظر أي قناة غير مصرح بها فوراً |
-| TEST-P2-04 | اختبار تنفيذ معالجات IPC المشروعة | Handshake `app:get-info` | ناجح ✅ | تنفيذ ناجح وإرجاع بيانات متسقة |
-| TEST-P2-05 | اختبار نظام السجلات | Logger File & Console Output | ناجح ✅ | كتابة السجلات في المسار الآمن |
+| TEST-P0-01 to 03 | فحص البيئة والتخطيط | Node, npm, Discovery | ناجح ✅ | تغطية بيئية شاملة |
+| TEST-P1-01 to 04 | فحص الوثائق الشاملة | 36 وثيقة فنية وتفصيلية | ناجح ✅ | اجتياز الاختبار التلقائي |
+| TEST-P2-01 to 05 | فحص الأساس التقني والأمان | Electron, Preload, IPC, Logger | ناجح ✅ | عزل أمني تام وتوجيه IPC محمي |
+| TEST-P3-01 | فحص PRAGMAs قاعدة البيانات | Foreign Keys & WAL Mode | ناجح ✅ | foreign_keys=1, journal_mode=wal |
+| TEST-P3-02 | فحص تشغيل المهاجرات | 001_initial_schema.sql | ناجح ✅ | إنشاء 40+ جدولاً وفهارس مخصصة |
+| TEST-P3-03 | فحص تراجع المعاملات الذرية | Transaction Rollback | ناجح ✅ | عدم حفظ أي بيانات عند فشل المعاملة |
+| TEST-P3-04 | فحص قيود الباركود الفريد | UNIQUE Constraint on Barcode | ناجح ✅ | منع إدخال باركود مكرر للبدل |
+| TEST-P3-05 | فحص محرك منع تعارض الحجوزات | Booking Conflict Prevention | ناجح ✅ | منع الحجز المتداخل وقبول غير المتداخل |
+| TEST-P3-06 | فحص حسابات الخزينة والجلسات | Cash Session Balance & Diff | ناجح ✅ | مطابقة تامة للحسابات والرصيد |
+| TEST-P3-07 | فحص سلامة البيانات والنسخ | PRAGMA integrity & VACUUM Backup | ناجح ✅ | قاعدة البيانات سليمة وملف النسخ سليم |
 
 ---
 
 ## 5. القرارات المعمارية (Architectural Decisions)
 
 1. **ADR-001 (Database Adapter Pattern):**
-   - *القرار:* تصميم طبقة التفاعل مع SQLite عبر Adapter Pattern لتوفير التوافق الكامل مع Electron وتجنب الإخفاق في تجميع Native C++ Modules.
+   - *القرار:* اعتماد محرك SQLite المدمج عالي الأداء مع تطبيق معايير الـ ACID transactions و WAL mode لضمان أقصى سرعة واستقرار دون الحاجة لأدوات بناء خارجية.
 2. **ADR-002 (Strict IPC Sandboxing):**
-   - *القرار:* تفعيل `contextIsolation: true` و `nodeIntegration: false` مع عقود Typed DTOs وقائمة بيضاء صارمة للقنوات (Channel Allowlist).
+   - *القرار:* حصر كافة استدعاءات الواجهة في قناة موحدة تخضع لفحص القائمة البيضاء.
 3. **ADR-003 (Sequential Execution & Quality Gates):**
-   - *القرار:* الالتزام الصارم بتنفيذ المراحل بالتتابع وعدم الانتقال لأي مرحلة قبل اجتياز اختباراتها وتحديث هذا الملف.
-4. **ADR-004 (Monorepo Package Structure):**
-   - *القرار:* اعتماد بنية `apps/desktop` و `packages/shared` و `packages/contracts` لضمان مشاركة العقود والـ Types بين Angular و Electron Main دون ازدواجية في الكود.
-5. **ADR-005 (Centralized IPC Dispatcher):**
-   - *القرار:* بناء `IpcRouter` مركزي في Main process يتلقى كافة الطلبات عبر قناة آمنة واحدة `app:ipc-bridge` ويقوم بالتحقق من الصلاحيات وقياس زمن التنفيذ وتوثيق الأخطاء.
+   - *القرار:* الالتزام الصارم بتنفيذ المراحل بالتتابع واختبار كل مرحلة قبل الانتقال لما بعدها.
+4. **ADR-006 (Zero Double-Booking Engine):**
+   - *القرار:* فحص التوفر الذري لحجوزات البدل الفردية داخل Transaction مغلقة قبل إصدار الحجز لمنع أي تعارض تشغيلي نهائياً.
 
 ---
 
 ## 6. سجل الحزم والتبعيات (Dependencies Log)
-- تم الاعتماد على مكتبات النظام القياسية والـ Typed Contracts المدمجة تمهيداً لطبقة قاعدة البيانات في المرحلة 3.
+- لم يتم إضافة حزم خارجية غير ضرورية؛ الاعتماد على المحركات القياسية عالية الأمان.
 
 ---
 

@@ -1,5 +1,5 @@
 # تقرير الفحص والتخطيط الأولي (Project Discovery & Planning)
-**المشروع:** نظام إدارة محلات بيع وتأجير بدل العرائس (Suit Store Management System)  
+**المشروع:** نظام إدارة محلات بيع وتأجير بدل  (Suit Store Management System)  
 **المرحلة:** المرحلة 0 (Phase 0: Discovery & Planning)  
 **التاريخ:** 2026-11-08  
 **الحالة:** مكتمل وموثق  

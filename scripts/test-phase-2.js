@@ -89,9 +89,9 @@ async function testIpc() {
   }
 
   // Register and test legitimate handler
-  ipcRouter.register('app:get-info', async () => ({ appName: 'نظام بدل العرائس', ok: true }));
+  ipcRouter.register('app:get-info', async () => ({ appName: 'نظام بدل ', ok: true }));
   const validRes = await ipcRouter.dispatch('app:get-info');
-  if (!validRes.success || validRes.data?.appName !== 'نظام بدل العرائس') {
+  if (!validRes.success || validRes.data?.appName !== 'نظام بدل ') {
     console.error('  ❌ Legitimate IPC handler call failed:', validRes);
     failed = true;
   } else {

@@ -1,7 +1,7 @@
 {
   "name": "suit-store-system",
   "version": "1.0.0",
-  "description": "نظام إدارة محلات بيع وتأجير بدل العرائس - Windows Desktop (Angular + Electron + SQLite)",
+  "description": "نظام إدارة محلات بيع وتأجير البدل  - Windows Desktop (Angular + Electron + SQLite)",
   "main": "apps/desktop/electron/main/index.js",
   "private": true,
   "scripts": {

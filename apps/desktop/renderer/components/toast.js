@@ -82,3 +82,4 @@ if (typeof module !== 'undefined' && module.exports) {
 } else {
   window.AppToast = AppToast;
 }
+

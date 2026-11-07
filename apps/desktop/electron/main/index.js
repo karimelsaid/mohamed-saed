@@ -2,6 +2,8 @@ const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const { logger } = require('../logging/logger');
 const { ipcRouter } = require('../ipc/ipc-router');
+const { adminService } = require('../services/admin-service');
+const { settingsService } = require('../services/settings-service');
 
 let mainWindow = null;
 
@@ -41,6 +43,73 @@ function registerCoreHandlers() {
       memoryUsageMB: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
       time: new Date().toISOString()
     };
+  });
+
+  // Settings & Administration Handlers
+  ipcRouter.register('settings:get', async () => {
+    return {
+      store: settingsService.getStoreProfile(),
+      printers: settingsService.getPrinterSettings()
+    };
+  });
+
+  ipcRouter.register('settings:update', async (payload) => {
+    if (payload?.store) settingsService.updateStoreProfile(payload.store);
+    if (payload?.printers) settingsService.updatePrinterSettings(payload.printers);
+    if (payload?.pin) settingsService.setPin(payload.pin);
+    return { success: true };
+  });
+
+  ipcRouter.register('app:verify-pin', async (payload) => {
+    return { valid: settingsService.verifyPin(payload?.pin) };
+  });
+
+  ipcRouter.register('admin:get-categories', async () => {
+    return adminService.getCategories();
+  });
+
+  ipcRouter.register('admin:create-category', async (payload) => {
+    return adminService.createCategory(payload);
+  });
+
+  ipcRouter.register('admin:update-category', async (payload) => {
+    return adminService.updateCategory(payload.id, payload);
+  });
+
+  ipcRouter.register('admin:get-warehouses', async () => {
+    return adminService.getWarehouses();
+  });
+
+  ipcRouter.register('admin:create-warehouse', async (payload) => {
+    return adminService.createWarehouse(payload);
+  });
+
+  ipcRouter.register('admin:set-default-warehouse', async (payload) => {
+    return adminService.setDefaultWarehouse(payload.id);
+  });
+
+  ipcRouter.register('admin:get-sizes', async (payload) => {
+    return adminService.getSizes(payload?.categoryType);
+  });
+
+  ipcRouter.register('admin:create-size', async (payload) => {
+    return adminService.createSize(payload);
+  });
+
+  ipcRouter.register('admin:get-colors', async () => {
+    return adminService.getColors();
+  });
+
+  ipcRouter.register('admin:create-color', async (payload) => {
+    return adminService.createColor(payload);
+  });
+
+  ipcRouter.register('admin:get-policies', async () => {
+    return adminService.getRentalPolicies();
+  });
+
+  ipcRouter.register('admin:update-policies', async (payload) => {
+    return adminService.updateRentalPolicies(payload);
   });
 
   ipcRouter.attachToElectronIpc(ipcMain);

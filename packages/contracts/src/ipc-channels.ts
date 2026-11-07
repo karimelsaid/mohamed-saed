@@ -9,9 +9,21 @@ export const IPC_CHANNELS = {
   APP_LOCK_SCREEN: 'app:lock-screen',
   APP_VERIFY_PIN: 'app:verify-pin',
   
-  // Settings
+  // Settings & Administration
   SETTINGS_GET: 'settings:get',
   SETTINGS_UPDATE: 'settings:update',
+  ADMIN_GET_CATEGORIES: 'admin:get-categories',
+  ADMIN_CREATE_CATEGORY: 'admin:create-category',
+  ADMIN_UPDATE_CATEGORY: 'admin:update-category',
+  ADMIN_GET_WAREHOUSES: 'admin:get-warehouses',
+  ADMIN_CREATE_WAREHOUSE: 'admin:create-warehouse',
+  ADMIN_SET_DEFAULT_WAREHOUSE: 'admin:set-default-warehouse',
+  ADMIN_GET_SIZES: 'admin:get-sizes',
+  ADMIN_CREATE_SIZE: 'admin:create-size',
+  ADMIN_GET_COLORS: 'admin:get-colors',
+  ADMIN_CREATE_COLOR: 'admin:create-color',
+  ADMIN_GET_POLICIES: 'admin:get-policies',
+  ADMIN_UPDATE_POLICIES: 'admin:update-policies',
 
   // Database & Migrations
   DB_CHECK_INTEGRITY: 'db:check-integrity',

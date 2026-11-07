@@ -79,3 +79,4 @@ if (typeof module !== 'undefined' && module.exports) {
 } else {
   window.UiUtils = UiUtils;
 }
+

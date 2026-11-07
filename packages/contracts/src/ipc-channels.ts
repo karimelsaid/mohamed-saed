@@ -114,3 +114,4 @@ export function createErrorResponse(code: string, message: string, details?: unk
     timestamp: new Date().toISOString()
   };
 }
+

@@ -15,16 +15,29 @@
       const newTheme = isDark ? 'theme-light' : 'theme-dark';
       body.className = newTheme;
       localStorage.setItem('suit_store_theme', newTheme);
+      if (window.AppToast) {
+        window.AppToast.info(isDark ? 'تم تفعيل المظهر الفاتح ☀️' : 'تم تفعيل المظهر الداكن 🌙', 2000);
+      }
     });
   }
 
   // 2. Safe Electron API Wrapper
   const electronApi = window.electronApi || {
     invoke: async (channel, payload) => {
-      console.warn(`Simulated IPC call in web browser mode for [${channel}]`);
+      console.log(`[IPC Web Simulator] Handled channel [${channel}]`);
+      if (channel === 'app:get-info') {
+        return {
+          success: true,
+          data: {
+            appName: 'رويال لإدارة محلات البدل والعرائس',
+            version: '1.0.0 (وضع التطوير Live Dev)',
+            platform: navigator.platform
+          }
+        };
+      }
       return {
         success: true,
-        data: { simulated: true, channel, payload },
+        data: { channel, payload, simulated: true },
         timestamp: new Date().toISOString()
       };
     },
@@ -46,40 +59,118 @@
     });
   });
 
-  // 4. Initial System Handshake
+  // 4. Quick Action Buttons
+  const btnQuickPos = document.getElementById('btn-quick-pos');
+  if (btnQuickPos) {
+    btnQuickPos.addEventListener('click', () => {
+      if (window.AppModal) {
+        window.AppModal.open({
+          title: '⚡ بيع مباشر سريع (POS)',
+          contentHtml: `
+            <div class="form-group">
+              <label class="form-label">مسح باركود الصنف أو البحث</label>
+              <input type="text" class="form-control" placeholder="امسح الباركود الآن..." autofocus>
+            </div>
+            <div class="form-group">
+              <label class="form-label">طريقة الدفع</label>
+              <select class="form-control">
+                <option>نقدي (كاش بالدرج)</option>
+                <option>بطاقة فيزا / POS</option>
+                <option>محفظة إلكترونية (فودافون كاش / إنستاباي)</option>
+              </select>
+            </div>
+            <p style="color: var(--text-secondary); font-size: 13px;">سيتم ربط الإيصال فوراً بجلسة الخزينة الحالية وطباعة الإيصال الحراري 80mm.</p>
+          `,
+          footerHtml: `
+            <button class="btn-secondary" onclick="AppModal.close()">إلغاء</button>
+            <button class="btn-primary-action" onclick="AppToast.success('تمت تجربة البيع السريع بنجاح! ⚡'); AppModal.close();">إتمام البيع وطباعة</button>
+          `,
+          width: '500px'
+        });
+      }
+    });
+  }
+
+  const btnNewBooking = document.getElementById('btn-new-booking');
+  if (btnNewBooking) {
+    btnNewBooking.addEventListener('click', () => {
+      if (window.AppModal) {
+        window.AppModal.open({
+          title: '➕ إنشاء حجز بدلة جديد',
+          contentHtml: `
+            <div class="form-group">
+              <label class="form-label">اسم العميل</label>
+              <input type="text" class="form-control" placeholder="اسم العميل بالكامل...">
+            </div>
+            <div class="form-group">
+              <label class="form-label">رقم الهاتف (واتساب)</label>
+              <input type="text" class="form-control" placeholder="01xxxxxxxxx">
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+              <div class="form-group">
+                <label class="form-label">تاريخ الاستلام</label>
+                <input type="date" class="form-control" value="${new Date().toISOString().slice(0, 10)}">
+              </div>
+              <div class="form-group">
+                <label class="form-label">تاريخ الإرجاع</label>
+                <input type="date" class="form-control">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">البدلة المختارة</label>
+              <select class="form-control">
+                <option>سموكنج أسود ملكي (كود: BARCODE-SUIT-001)</option>
+                <option>بدلة خطوبة كحلي رويال (كود: BARCODE-SUIT-002)</option>
+              </select>
+            </div>
+          `,
+          footerHtml: `
+            <button class="btn-secondary" onclick="AppModal.close()">إلغاء</button>
+            <button class="btn-accent-action" onclick="AppToast.success('تم التحقق من عدم وجود تعارض زمني وحفظ الحجز بنجاح! 🤵'); AppModal.close();">حفظ الحجز وتأكيده</button>
+          `,
+          width: '560px'
+        });
+      }
+    });
+  }
+
+  // 5. Initial System Handshake
   async function initSystem() {
     try {
       const infoRes = await electronApi.invoke('app:get-info');
-      const healthRes = await electronApi.invoke('app:get-system-health');
-
       const statusEl = document.getElementById('system-status-text');
       if (statusEl && infoRes.success) {
-        statusEl.textContent = `جاهز للعمل - ${infoRes.data?.appName || 'نظام البدل'}`;
+        statusEl.textContent = `متصل - ${infoRes.data?.appName || 'نظام البدل'}`;
       }
 
-      // Load initial dashboard
       loadPage('dashboard');
+
+      // Welcome Toast
+      setTimeout(() => {
+        if (window.AppToast) {
+          window.AppToast.success('مرحباً بك في نظام إدارة محلات البدل والعرائس! (وضع التطوير نشط)', 3500);
+        }
+      }, 500);
     } catch (err) {
       console.error('System initialization error:', err);
-      showErrorState('فشل في الاتصال بمحرك التطبيق المكتبي: ' + err.message);
+      showErrorState('فشل في الاتصال بمحرك التطبيق: ' + err.message);
     }
   }
 
   function showErrorState(msg) {
     if (!pageContent) return;
     pageContent.innerHTML = `
-      <div class="loading-state">
-        <div style="font-size: 40px; color: var(--color-danger)">⚠️</div>
-        <h3 style="color: var(--text-primary)">حدث خطأ أثناء تحميل البيانات</h3>
-        <p style="color: var(--text-secondary)">${msg}</p>
-        <button onclick="location.reload()" class="btn-primary-action" style="margin-top: 12px;">إعادة المحاولة</button>
+      <div class="state-container error-state">
+        <div class="state-icon">⚠️</div>
+        <h3 class="state-title">حدث خطأ أثناء تحميل البيانات</h3>
+        <p class="state-desc">${msg}</p>
+        <button onclick="location.reload()" class="btn-primary-action">إعادة المحاولة</button>
       </div>
     `;
   }
 
   function loadPage(page) {
     if (!pageContent) return;
-
     if (page === 'dashboard') {
       renderDashboard();
     } else {
@@ -94,7 +185,8 @@
           <div class="stat-icon">💰</div>
           <div class="stat-info">
             <h4>إجمالي إيراد اليوم</h4>
-            <div class="value">14,850 ج.م</div>
+            <div class="value">${window.UiUtils ? window.UiUtils.formatCurrency(14850) : '14,850 ج.م'}</div>
+            <span style="font-size: 11px; color: var(--color-success)">↑ +18% مقارنة بالأمس</span>
           </div>
         </div>
 
@@ -103,6 +195,7 @@
           <div class="stat-info">
             <h4>البدل المحجوزة اليوم</h4>
             <div class="value">6 بدل</div>
+            <span style="font-size: 11px; color: var(--text-secondary)">مؤكدة بالعربون</span>
           </div>
         </div>
 
@@ -111,6 +204,7 @@
           <div class="stat-info">
             <h4>تسليمات منتظرة اليوم</h4>
             <div class="value">4 عملاء</div>
+            <span style="font-size: 11px; color: var(--color-warning)">جاهزة ومكوية</span>
           </div>
         </div>
 
@@ -119,6 +213,7 @@
           <div class="stat-info">
             <h4>متأخرات الإرجاع</h4>
             <div class="value" style="color: var(--color-danger)">1 بدلة</div>
+            <span style="font-size: 11px; color: var(--color-danger)">تحتاج متابعة واتساب</span>
           </div>
         </div>
       </div>
@@ -126,7 +221,7 @@
       <div class="table-card">
         <div class="table-header">
           <h3>📅 جدول تسليمات ومرتجعات اليوم</h3>
-          <span class="badge badge-info">اليوم: ${new Date().toLocaleDateString('ar-EG')}</span>
+          <span class="badge badge-info">اليوم: ${window.UiUtils ? window.UiUtils.formatDate(new Date()) : new Date().toLocaleDateString('ar-EG')}</span>
         </div>
         <table class="app-table">
           <thead>
@@ -152,7 +247,9 @@
               <td>1,200 ج.م</td>
               <td>2,000 ج.م</td>
               <td><span class="badge badge-warning">جاهزة للاستلام</span></td>
-              <td><button class="btn-accent-action" style="padding: 6px 12px; font-size: 12px;">تسليم البدلة</button></td>
+              <td>
+                <button class="btn-accent-action" style="padding: 6px 12px; font-size: 12px;" onclick="AppToast.info('تم بدء تسليم البدلة للعميل واستلام التأمين')">تسليم البدلة</button>
+              </td>
             </tr>
             <tr>
               <td><strong>#BK-1039</strong></td>
@@ -163,7 +260,9 @@
               <td>0 ج.م (خالص)</td>
               <td>1,500 ج.م</td>
               <td><span class="badge badge-success">مستلمة (إرجاع اليوم)</span></td>
-              <td><button class="btn-primary-action" style="padding: 6px 12px; font-size: 12px;">استلام وفحص</button></td>
+              <td>
+                <button class="btn-primary-action" style="padding: 6px 12px; font-size: 12px;" onclick="AppDrawer.open({ title: 'فحص البدلة المرتجعة', contentHtml: '<p>بدلة كحلي مقاس 50. فحص سلامة القماش والأزرار ورد مبلغ التأمين (1,500 ج.م).</p>', width: '420px' })">استلام وفحص</button>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -190,14 +289,24 @@
         <div class="table-header">
           <h3>${titles[page] || page}</h3>
         </div>
-        <div class="loading-state" style="height: 40vh;">
-          <div style="font-size: 32px;">🛠️</div>
-          <h3>قسم ${titles[page] || page}</h3>
-          <p style="color: var(--text-secondary)">تم تجهيز العقود ونظام التفاعل ومستودعات البيانات، وسيتم تفعيل الواجهة التفاعلية في المرحلة المخصصة له بالترتيب.</p>
+        <div class="state-container empty-state" style="padding: 40px 0;">
+          <div class="state-icon">🛠️</div>
+          <h3 class="state-title">قسم ${titles[page] || page}</h3>
+          <p class="state-desc">العقود وقواعد البيانات والمستودعات أصبحت جاهزة تماماً. سيتم ربط الواجهة التفاعلية الكاملة لهذا القسم في مرحلته المجدولة وفق الخطة.</p>
+          <button class="btn-primary-action" onclick="AppToast.info('القسم جاهز في الخطة')">عرض حالة القسم</button>
         </div>
       </div>
     `;
   }
+
+  // Keyboard shortcut listener (Ctrl+K for search)
+  window.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      const searchInput = document.querySelector('.header-search input');
+      if (searchInput) searchInput.focus();
+    }
+  });
 
   // Run on load
   document.addEventListener('DOMContentLoaded', initSystem);

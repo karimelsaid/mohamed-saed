@@ -54,3 +54,4 @@ class DatabaseIntegrity {
 }
 
 module.exports = { DatabaseIntegrity };
+

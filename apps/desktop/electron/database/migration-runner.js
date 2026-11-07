@@ -82,3 +82,4 @@ class MigrationRunner {
 }
 
 module.exports = { MigrationRunner };
+

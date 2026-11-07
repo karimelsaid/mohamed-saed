@@ -80,3 +80,4 @@ export enum ProductCategoryType {
   ACCESSORIES = 'ACCESSORIES',
   CUSTOM = 'CUSTOM'
 }
+

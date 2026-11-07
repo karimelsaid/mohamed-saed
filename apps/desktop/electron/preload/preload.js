@@ -85,3 +85,4 @@ contextBridge.exposeInMainWorld('electronApi', {
   platform: process.platform,
   isElectron: true
 });
+

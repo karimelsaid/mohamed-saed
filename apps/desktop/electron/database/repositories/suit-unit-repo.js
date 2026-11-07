@@ -91,3 +91,4 @@ class SuitUnitRepository {
 }
 
 module.exports = { SuitUnitRepository };
+

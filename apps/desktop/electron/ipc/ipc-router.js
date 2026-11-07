@@ -147,3 +147,4 @@ class IpcRouter {
 const ipcRouter = new IpcRouter();
 
 module.exports = { ipcRouter, IpcRouter, ALLOWED_CHANNELS };
+

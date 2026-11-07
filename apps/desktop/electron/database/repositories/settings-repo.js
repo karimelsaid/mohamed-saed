@@ -31,3 +31,4 @@ class SettingsRepository {
 }
 
 module.exports = { SettingsRepository };
+

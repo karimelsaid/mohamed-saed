@@ -8,7 +8,8 @@ const testScripts = [
   'scripts/test-phase-0.js',
   'scripts/test-phase-1.js',
   'scripts/test-phase-2.js',
-  'scripts/test-phase-3.js'
+  'scripts/test-phase-3.js',
+  'scripts/test-phase-4.js'
 ];
 
 for (const script of testScripts) {
@@ -25,3 +26,4 @@ for (const script of testScripts) {
 console.log('========================================================');
 console.log('  All Completed Phases Verified Successfully (100%)');
 console.log('========================================================');
+

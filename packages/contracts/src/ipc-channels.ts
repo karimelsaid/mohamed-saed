@@ -35,8 +35,15 @@ export const IPC_CHANNELS = {
   INVENTORY_CREATE_SUIT_MODEL: 'inventory:create-suit-model',
   INVENTORY_CREATE_SUIT_UNIT: 'inventory:create-suit-unit',
   INVENTORY_UPDATE_UNIT_STATUS: 'inventory:update-unit-status',
+  INVENTORY_GET_UNIT_HISTORY: 'inventory:get-unit-history',
+  INVENTORY_SEND_TO_CLEANING: 'inventory:send-to-cleaning',
+  INVENTORY_RETURN_FROM_CLEANING: 'inventory:return-from-cleaning',
   INVENTORY_GET_QUANTITY_PRODUCTS: 'inventory:get-quantity-products',
+  INVENTORY_CREATE_QUANTITY_PRODUCT: 'inventory:create-quantity-product',
+  INVENTORY_GET_PRODUCT_VARIANTS: 'inventory:get-product-variants',
   INVENTORY_ADJUST_STOCK: 'inventory:adjust-stock',
+  INVENTORY_TRANSFER_STOCK: 'inventory:transfer-stock',
+  INVENTORY_GET_STOCK_LEDGER: 'inventory:get-stock-ledger',
   
   // Bookings & Rentals
   BOOKING_CHECK_AVAILABILITY: 'booking:check-availability',

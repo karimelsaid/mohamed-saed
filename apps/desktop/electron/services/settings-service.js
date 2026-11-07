@@ -115,3 +115,4 @@ class SettingsService {
 
 const settingsService = new SettingsService();
 module.exports = { settingsService, SettingsService };
+

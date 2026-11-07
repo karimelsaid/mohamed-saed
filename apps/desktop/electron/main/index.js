@@ -4,6 +4,7 @@ const { logger } = require('../logging/logger');
 const { ipcRouter } = require('../ipc/ipc-router');
 const { adminService } = require('../services/admin-service');
 const { settingsService } = require('../services/settings-service');
+const { inventoryEngineService } = require('../services/inventory-engine-service');
 
 let mainWindow = null;
 
@@ -110,6 +111,63 @@ function registerCoreHandlers() {
 
   ipcRouter.register('admin:update-policies', async (payload) => {
     return adminService.updateRentalPolicies(payload);
+  });
+
+  // Inventory Engine Handlers (Phase 6)
+  ipcRouter.register('inventory:get-suit-models', async (payload) => {
+    return inventoryEngineService.getSuitModels(payload?.onlyActive);
+  });
+
+  ipcRouter.register('inventory:create-suit-model', async (payload) => {
+    return inventoryEngineService.createSuitModel(payload);
+  });
+
+  ipcRouter.register('inventory:get-suit-units', async (payload) => {
+    return inventoryEngineService.getSuitUnits(payload);
+  });
+
+  ipcRouter.register('inventory:create-suit-unit', async (payload) => {
+    return inventoryEngineService.createSuitUnit(payload);
+  });
+
+  ipcRouter.register('inventory:update-unit-status', async (payload) => {
+    return inventoryEngineService.updateUnitStatus(payload.unitId, payload.newStatus, payload.reason, payload.refType, payload.refId);
+  });
+
+  ipcRouter.register('inventory:get-unit-history', async (payload) => {
+    return inventoryEngineService.getUnitHistory(payload.unitId);
+  });
+
+  ipcRouter.register('inventory:send-to-cleaning', async (payload) => {
+    return inventoryEngineService.sendUnitToCleaning(payload.unitId, payload.cleanerName, payload.expectedReturnDate, payload.cost, payload.notes);
+  });
+
+  ipcRouter.register('inventory:return-from-cleaning', async (payload) => {
+    return inventoryEngineService.returnUnitFromCleaning(payload.cleaningRecordId, payload.actualCost, payload.notes);
+  });
+
+  ipcRouter.register('inventory:get-quantity-products', async (payload) => {
+    return inventoryEngineService.getQuantityProducts(payload?.categoryType);
+  });
+
+  ipcRouter.register('inventory:create-quantity-product', async (payload) => {
+    return inventoryEngineService.createQuantityProduct(payload);
+  });
+
+  ipcRouter.register('inventory:get-product-variants', async (payload) => {
+    return inventoryEngineService.getProductVariants(payload.productId);
+  });
+
+  ipcRouter.register('inventory:adjust-stock', async (payload) => {
+    return inventoryEngineService.adjustStock(payload.variantId, payload.warehouseId, payload.deltaQty, payload.reason, payload.notes);
+  });
+
+  ipcRouter.register('inventory:transfer-stock', async (payload) => {
+    return inventoryEngineService.transferStock(payload.variantId, payload.fromWarehouseId, payload.toWarehouseId, payload.quantity, payload.notes);
+  });
+
+  ipcRouter.register('inventory:get-stock-ledger', async (payload) => {
+    return inventoryEngineService.getStockLedger(payload);
   });
 
   ipcRouter.attachToElectronIpc(ipcMain);

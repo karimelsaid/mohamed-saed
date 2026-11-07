@@ -97,6 +97,51 @@
           }
         };
       }
+      if (channel === 'inventory:get-suit-models') {
+        return {
+          success: true,
+          data: [
+            { id: 1, code: 'MDL-ROYAL-01', name: 'سموكنج أسود ملكي فخم', category_name: 'بدل رجالي وعرائس', color_name: 'أسود ملكي', rental_price: 1500, security_deposit: 2000, total_units: 8, available_units: 5 },
+            { id: 2, code: 'MDL-NAVY-02', name: 'بدلة خطوبة كحلي رويال', category_name: 'بدل رجالي وعرائس', color_name: 'كحلي رويال', rental_price: 1200, security_deposit: 1500, total_units: 6, available_units: 4 },
+            { id: 3, code: 'MDL-GREY-03', name: 'بدلة عريس رمادي شارك سكين', category_name: 'بدل رجالي وعرائس', color_name: 'رمادي فحم', rental_price: 1400, security_deposit: 1800, total_units: 5, available_units: 3 }
+          ]
+        };
+      }
+      if (channel === 'inventory:get-suit-units') {
+        return {
+          success: true,
+          data: [
+            { id: 1, unit_barcode: 'ST-101-50-A', model_name: 'سموكنج أسود ملكي فخم', size_name: 'مقاس 50', warehouse_name: 'المخزن الرئيسي', rental_price: 1500, security_deposit: 2000, status: 'AVAILABLE', rental_count: 3 },
+            { id: 2, unit_barcode: 'ST-101-52-B', model_name: 'سموكنج أسود ملكي فخم', size_name: 'مقاس 52', warehouse_name: 'المخزن الرئيسي', rental_price: 1500, security_deposit: 2000, status: 'BOOKED', rental_count: 5 },
+            { id: 3, unit_barcode: 'ST-102-48-C', model_name: 'بدلة خطوبة كحلي رويال', size_name: 'مقاس 48', warehouse_name: 'المخزن الرئيسي', rental_price: 1200, security_deposit: 1500, status: 'IN_USE', rental_count: 2 },
+            { id: 4, unit_barcode: 'ST-102-50-D', model_name: 'بدلة خطوبة كحلي رويال', size_name: 'مقاس 50', warehouse_name: 'قسم الدراي كلين', rental_price: 1200, security_deposit: 1500, status: 'IN_CLEANING', rental_count: 6 },
+            { id: 5, unit_barcode: 'ST-103-54-E', model_name: 'بدلة عريس رمادي شارك سكين', size_name: 'مقاس 54', warehouse_name: 'المخزن الرئيسي', rental_price: 1400, security_deposit: 1800, status: 'AVAILABLE', rental_count: 1 }
+          ]
+        };
+      }
+      if (channel === 'inventory:get-quantity-products') {
+        const type = payload?.categoryType || 'SHOES';
+        if (type === 'SHOES') {
+          return {
+            success: true,
+            data: [
+              { id: 10, code: 'SH-OXFORD-01', name: 'حذاء كلاسيك أوكسفورد أسود لميع', category_name: 'أحذية كلاسيك', sale_price: 1850, rental_price: 350, total_quantity: 12, reserved_quantity: 2, available_quantity: 10, reorder_level: 3 },
+              { id: 11, code: 'SH-DERBY-02', name: 'حذاء كحلي ديربي خياطة يدوي', category_name: 'أحذية كلاسيك', sale_price: 1950, rental_price: 400, total_quantity: 8, reserved_quantity: 1, available_quantity: 7, reorder_level: 2 },
+              { id: 12, code: 'SH-LOAFER-03', name: 'لوفر عريس جلد طبيعي هافان', category_name: 'أحذية كلاسيك', sale_price: 2100, rental_price: 450, total_quantity: 2, reserved_quantity: 1, available_quantity: 1, reorder_level: 3 }
+            ]
+          };
+        } else {
+          return {
+            success: true,
+            data: [
+              { id: 20, code: 'ACC-TIE-01', name: 'كرافتة حرير طبيعي أسود رويال', category_name: 'ربطات عنق وببيونات', sale_price: 250, rental_price: 80, total_quantity: 24, reserved_quantity: 4, available_quantity: 20, reorder_level: 5 },
+              { id: 21, code: 'ACC-BOW-02', name: 'ببيون عريس ساتان أسود عريض', category_name: 'ربطات عنق وببيونات', sale_price: 180, rental_price: 60, total_quantity: 18, reserved_quantity: 3, available_quantity: 15, reorder_level: 5 },
+              { id: 22, code: 'ACC-CUFF-03', name: 'أزرار أكمام فضي كريستال فاخر', category_name: 'أزرار أكمام', sale_price: 350, rental_price: 100, total_quantity: 9, reserved_quantity: 2, available_quantity: 7, reorder_level: 4 },
+              { id: 23, code: 'ACC-SHIRT-04', name: 'قميص بدلة قطن مصري 100% أبيض', category_name: 'قمصان بدل', sale_price: 650, rental_price: 180, total_quantity: 15, reserved_quantity: 5, available_quantity: 10, reorder_level: 4 }
+            ]
+          };
+        }
+      }
       if (channel === 'settings:get') {
         return {
           success: true,
@@ -208,6 +253,12 @@
       renderAdminPage();
     } else if (page === 'settings') {
       renderSettingsPage();
+    } else if (page === 'suits') {
+      renderSuitsPage();
+    } else if (page === 'shoes') {
+      renderShoesPage();
+    } else if (page === 'accessories') {
+      renderAccessoriesPage();
     } else {
       renderPlaceholderPage(page);
     }
@@ -726,7 +777,435 @@
     });
   }
 
-  function renderPlaceholderPage(page) {
+  // --- Phase 6: Render Suits Inventory (مخزون البدل والقطع الفردية) ---
+  async function renderSuitsPage() {
+    const modelsRes = await electronApi.invoke('inventory:get-suit-models');
+    const unitsRes = await electronApi.invoke('inventory:get-suit-units');
+    const models = modelsRes.data || [];
+    const units = unitsRes.data || [];
+
+    const statusBadge = (s) => {
+      const map = {
+        AVAILABLE: '<span class="badge badge-success">متاحة للإيجار</span>',
+        BOOKED: '<span class="badge badge-warning">محجوزة</span>',
+        IN_USE: '<span class="badge badge-info">مع العميل</span>',
+        IN_CLEANING: '<span class="badge" style="background: rgba(168,85,247,0.15); color: #A855F7;">في الدراي كلين</span>',
+        IN_MAINTENANCE: '<span class="badge" style="background: rgba(249,115,22,0.15); color: #F97316;">تحت الصيانة</span>',
+        DAMAGED: '<span class="badge badge-danger">تالفة</span>',
+        RETIRED: '<span class="badge badge-danger">خرجت من الخدمة</span>'
+      };
+      return map[s] || `<span class="badge">${s}</span>`;
+    };
+
+    pageContent.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div>
+          <h2 style="font-size: 20px; font-weight: 700;">🤵 مخزون البدل والقطع الفردية (Suits Inventory)</h2>
+          <p style="color: var(--text-secondary); font-size: 13px;">تتبع موديلات البدل والوحدات الفردية بالباركود، ودورة حياة كل بدلة وحالاتها.</p>
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <button id="btn-add-suit-model" class="btn-secondary">+ إضافة موديل بدلة</button>
+          <button id="btn-add-suit-unit" class="btn-accent-action">+ إضافة قطعة جديدة (باركود)</button>
+        </div>
+      </div>
+
+      <!-- Quick KPI Stats -->
+      <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 20px;">
+        <div class="stat-card">
+          <div class="stat-icon">👔</div>
+          <div class="stat-info">
+            <h4>إجمالي وحدات البدل</h4>
+            <div class="value">${units.length} بدلة</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="color: var(--color-success); background: rgba(16,185,129,0.12)">✅</div>
+          <div class="stat-info">
+            <h4>متاحة للتأجير الفوري</h4>
+            <div class="value" style="color: var(--color-success)">${units.filter(u => u.status === 'AVAILABLE').length} بدلة</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="color: var(--color-info); background: rgba(59,130,246,0.12)">🤵</div>
+          <div class="stat-info">
+            <h4>محجوزة أو مع عميل</h4>
+            <div class="value" style="color: var(--color-info)">${units.filter(u => ['BOOKED', 'IN_USE'].includes(u.status)).length} بدلة</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="color: #A855F7; background: rgba(168,85,247,0.12)">🧼</div>
+          <div class="stat-info">
+            <h4>في المغسلة والدراي كلين</h4>
+            <div class="value" style="color: #A855F7">${units.filter(u => u.status === 'IN_CLEANING').length} بدلة</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Units Table -->
+      <div class="table-card">
+        <div class="table-header">
+          <h3>سجل وحدات البدل الفردية</h3>
+          <div style="display: flex; gap: 8px;">
+            <input type="text" id="suit-search-input" class="form-control" placeholder="بحث بالباركود أو الموديل..." style="width: 250px; padding: 6px 12px;">
+          </div>
+        </div>
+        <table class="app-table">
+          <thead>
+            <tr>
+              <th>باركود القطعة</th>
+              <th>موديل البدلة</th>
+              <th>المقاس</th>
+              <th>المخزن</th>
+              <th>سعر الإيجار</th>
+              <th>التأمين</th>
+              <th>الحالة الحالية</th>
+              <th>مرات التأجير</th>
+              <th>الإجراءات</th>
+            </tr>
+          </thead>
+          <tbody id="suits-table-body">
+            ${units.map(u => `
+              <tr>
+                <td><code style="background: rgba(212,175,55,0.1); color: var(--color-gold-400); padding: 2px 6px; border-radius: 4px;">${u.unit_barcode}</code></td>
+                <td><strong>${u.model_name}</strong></td>
+                <td><span class="badge badge-info">${u.size_name}</span></td>
+                <td>${u.warehouse_name}</td>
+                <td>${window.UiUtils ? window.UiUtils.formatCurrency(u.rental_price) : u.rental_price + ' ج.م'}</td>
+                <td>${window.UiUtils ? window.UiUtils.formatCurrency(u.security_deposit) : u.security_deposit + ' ج.م'}</td>
+                <td>${statusBadge(u.status)}</td>
+                <td>${u.rental_count} مرات</td>
+                <td>
+                  <div style="display: flex; gap: 6px;">
+                    <button class="btn-secondary" style="padding: 4px 8px; font-size: 11px;" onclick="window._openUnitStatusModal(${u.id}, '${u.status}')">تغيير الحالة</button>
+                    <button class="btn-primary-action" style="padding: 4px 8px; font-size: 11px;" onclick="window._openUnitHistoryDrawer(${u.id}, '${u.unit_barcode}', '${u.model_name}')">سجل الحركة</button>
+                  </div>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+
+    // Hook Add Model Modal
+    document.getElementById('btn-add-suit-model')?.addEventListener('click', () => {
+      window.AppModal.open({
+        title: '➕ إضافة موديل بدلة جديد',
+        contentHtml: `
+          <div class="form-group">
+            <label class="form-label">كود الموديل (مثال: MDL-TUX-01)</label>
+            <input type="text" id="new-model-code" class="form-control" placeholder="الكود...">
+          </div>
+          <div class="form-group">
+            <label class="form-label">اسم الموديل بالعربية</label>
+            <input type="text" id="new-model-name" class="form-control" placeholder="مثال: سموكنج شال كول أسود...">
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div class="form-group">
+              <label class="form-label">سعر الإيجار اليومي (ج.م)</label>
+              <input type="number" id="new-model-rental" class="form-control" value="1500">
+            </div>
+            <div class="form-group">
+              <label class="form-label">مبلغ التأمين الافتراضي (ج.م)</label>
+              <input type="number" id="new-model-deposit" class="form-control" value="2000">
+            </div>
+          </div>
+        `,
+        footerHtml: `
+          <button class="btn-secondary" onclick="AppModal.close()">إلغاء</button>
+          <button class="btn-accent-action" onclick="window._saveSuitModel()">حفظ الموديل</button>
+        `,
+        width: '500px'
+      });
+
+      window._saveSuitModel = async () => {
+        const code = document.getElementById('new-model-code')?.value;
+        const name = document.getElementById('new-model-name')?.value;
+        const rental_price = Number(document.getElementById('new-model-rental')?.value) || 0;
+        const security_deposit = Number(document.getElementById('new-model-deposit')?.value) || 0;
+        if (!code || !name) {
+          AppToast.error('يرجى ملء الكود واسم الموديل.');
+          return;
+        }
+        await electronApi.invoke('inventory:create-suit-model', { code, name, rental_price, security_deposit });
+        AppToast.success('تمت إضافة موديل البدلة بنجاح! 🤵');
+        AppModal.close();
+        renderSuitsPage();
+      };
+    });
+
+    // Hook Add Unit Modal
+    document.getElementById('btn-add-suit-unit')?.addEventListener('click', () => {
+      window.AppModal.open({
+        title: '➕ إضافة قطعة بدلة فردية (باركود)',
+        contentHtml: `
+          <div class="form-group">
+            <label class="form-label">موديل البدلة</label>
+            <select id="unit-model-id" class="form-control">
+              ${models.map(m => `<option value="${m.id}">${m.name} (${m.code})</option>`).join('')}
+            </select>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div class="form-group">
+              <label class="form-label">المقاس</label>
+              <select id="unit-size-id" class="form-control">
+                <option value="1">مقاس 46</option>
+                <option value="2">مقاس 48</option>
+                <option value="3" selected>مقاس 50</option>
+                <option value="4">مقاس 52</option>
+                <option value="5">مقاس 54</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">المخزن</label>
+              <select id="unit-wh-id" class="form-control">
+                <option value="1">المخزن الرئيسي (المحل)</option>
+                <option value="2">قسم الدراي كلين</option>
+                <option value="3">مخزن الأمانات</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">الباركود (اتركه فارغًا للتوليد التلقائي)</label>
+            <input type="text" id="unit-custom-barcode" class="form-control" placeholder="توليد تلقائي آلي">
+          </div>
+        `,
+        footerHtml: `
+          <button class="btn-secondary" onclick="AppModal.close()">إلغاء</button>
+          <button class="btn-accent-action" onclick="window._saveSuitUnit()">إضافة وطباعة باركود</button>
+        `,
+        width: '500px'
+      });
+
+      window._saveSuitUnit = async () => {
+        const suit_model_id = Number(document.getElementById('unit-model-id')?.value) || 1;
+        const size_id = Number(document.getElementById('unit-size-id')?.value) || 3;
+        const warehouse_id = Number(document.getElementById('unit-wh-id')?.value) || 1;
+        const unit_barcode = document.getElementById('unit-custom-barcode')?.value || null;
+
+        await electronApi.invoke('inventory:create-suit-unit', { suit_model_id, size_id, warehouse_id, unit_barcode });
+        AppToast.success('تمت إضافة وحدة البدلة الفردية بنجاح! 🏷️');
+        AppModal.close();
+        renderSuitsPage();
+      };
+    });
+
+    window._openUnitStatusModal = (unitId, currentStatus) => {
+      window.AppModal.open({
+        title: 'تعديل حالة البدلة',
+        contentHtml: `
+          <div class="form-group">
+            <label class="form-label">الحالة الجديدة</label>
+            <select id="change-status-val" class="form-control">
+              <option value="AVAILABLE" ${currentStatus === 'AVAILABLE' ? 'selected' : ''}>متاحة للتأجير</option>
+              <option value="IN_CLEANING" ${currentStatus === 'IN_CLEANING' ? 'selected' : ''}>إرسال للدراي كلين / المغسلة</option>
+              <option value="IN_MAINTENANCE" ${currentStatus === 'IN_MAINTENANCE' ? 'selected' : ''}>إرسال للخياط / صيانة</option>
+              <option value="DAMAGED" ${currentStatus === 'DAMAGED' ? 'selected' : ''}>تالفة جزئيًا</option>
+              <option value="RETIRED" ${currentStatus === 'RETIRED' ? 'selected' : ''}>إخراج من الخدمة</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">سبب التعديل أو الملاحظات</label>
+            <input type="text" id="change-status-reason" class="form-control" placeholder="سبب الإجراء...">
+          </div>
+        `,
+        footerHtml: `
+          <button class="btn-secondary" onclick="AppModal.close()">إلغاء</button>
+          <button class="btn-accent-action" onclick="window._confirmStatusChange(${unitId})">حفظ وتحديث الحالة</button>
+        `,
+        width: '450px'
+      });
+
+      window._confirmStatusChange = async (uId) => {
+        const newStatus = document.getElementById('change-status-val')?.value;
+        const reason = document.getElementById('change-status-reason')?.value || 'تعديل يدوي من إدارة المخزون';
+        await electronApi.invoke('inventory:update-unit-status', { unitId: uId, newStatus, reason });
+        AppToast.success('تم تحديث حالة البدلة وتسجيل الحركة في السجل! 🔄');
+        AppModal.close();
+        renderSuitsPage();
+      };
+    };
+
+    window._openUnitHistoryDrawer = async (unitId, barcode, modelName) => {
+      const historyRes = await electronApi.invoke('inventory:get-unit-history', { unitId });
+      const history = historyRes.data || [
+        { old_status: 'IN_CLEANING', new_status: 'AVAILABLE', reason: 'استلام البدلة نظيفة ومكوية من المغسلة', created_at: '2026-11-05 14:30' },
+        { old_status: 'DELIVERED', new_status: 'IN_CLEANING', reason: 'إرجاع البدلة من العميل وإرسالها للغسيل', created_at: '2026-11-04 18:00' },
+        { old_status: 'BOOKED', new_status: 'DELIVERED', reason: 'تسليم البدلة للعميل حجز #BK-1039', created_at: '2026-11-01 12:00' },
+        { old_status: null, new_status: 'AVAILABLE', reason: 'إضافة البدلة للمخزن لأول مرة', created_at: '2026-10-20 10:00' }
+      ];
+
+      window.AppDrawer.open({
+        title: `📜 سجل حركة البدلة [${barcode}]`,
+        contentHtml: `
+          <div style="margin-bottom: 16px; padding: 12px; background: var(--bg-card-hover); border-radius: var(--radius-sm);">
+            <strong>الموديل:</strong> ${modelName}<br>
+            <strong>الباركود:</strong> <code>${barcode}</code>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 14px;">
+            ${history.map(h => `
+              <div style="padding: 12px; border-right: 3px solid var(--color-gold-500); background: var(--bg-card); border-radius: 4px;">
+                <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">
+                  <span>${h.created_at || '—'}</span>
+                  <span>${h.old_status ? h.old_status + ' ← ' + h.new_status : h.new_status}</span>
+                </div>
+                <div style="font-size: 13px; font-weight: 600; color: var(--text-primary);">${h.reason || 'تحديث حالة'}</div>
+              </div>
+            `).join('')}
+          </div>
+        `,
+        width: '440px'
+      });
+    };
+  }
+
+  // --- Phase 6: Render Shoes Inventory (مخزون الأحذية الكمي) ---
+  async function renderShoesPage() {
+    const res = await electronApi.invoke('inventory:get-quantity-products', { categoryType: 'SHOES' });
+    const shoes = res.data || [];
+
+    pageContent.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div>
+          <h2 style="font-size: 20px; font-weight: 700;">👞 مخزون الأحذية الكمي (Shoes Inventory)</h2>
+          <p style="color: var(--text-secondary); font-size: 13px;">إدارة كميات ومقاسات الأحذية الكلاسيك وعرائس للبيع المباشر والتأجير مع البدل.</p>
+        </div>
+        <button id="btn-add-shoe-product" class="btn-accent-action">+ إضافة صنف حذاء جديد</button>
+      </div>
+
+      <div class="table-card">
+        <div class="table-header">
+          <h3>أصناف الأحذية والأرصدة الحالية</h3>
+        </div>
+        <table class="app-table">
+          <thead>
+            <tr>
+              <th>كود الصنف</th>
+              <th>اسم الحذاء</th>
+              <th>الرصيد الإجمالي</th>
+              <th>المحجوز</th>
+              <th>المتاح للبيع/الإيجار</th>
+              <th>سعر البيع</th>
+              <th>سعر الإيجار</th>
+              <th>حالة المخزون</th>
+              <th>تسوية الرصيد</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${shoes.map(sh => `
+              <tr>
+                <td><code>${sh.code}</code></td>
+                <td><strong>${sh.name}</strong></td>
+                <td>${sh.total_quantity} زوج</td>
+                <td>${sh.reserved_quantity} زوج</td>
+                <td><strong style="color: ${sh.available_quantity <= sh.reorder_level ? 'var(--color-danger)' : 'var(--color-success)'}">${sh.available_quantity} زوج</strong></td>
+                <td>${window.UiUtils ? window.UiUtils.formatCurrency(sh.sale_price) : sh.sale_price + ' ج.م'}</td>
+                <td>${window.UiUtils ? window.UiUtils.formatCurrency(sh.rental_price) : sh.rental_price + ' ج.م'}</td>
+                <td>
+                  ${sh.available_quantity <= sh.reorder_level
+                    ? '<span class="badge badge-warning">⚠️ قارب على النفاد</span>'
+                    : '<span class="badge badge-success">متوفر بالمخزن</span>'}
+                </td>
+                <td>
+                  <button class="btn-secondary" style="padding: 4px 10px; font-size: 12px;" onclick="window._openAdjustStockModal(${sh.id}, '${sh.name}')">تسوية جرد (+/-)</button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+
+    window._openAdjustStockModal = (prodId, prodName) => {
+      window.AppModal.open({
+        title: `تسوية رصيد: ${prodName}`,
+        contentHtml: `
+          <div class="form-group">
+            <label class="form-label">الكمية المراد إضافتها أو خصمها (+ وارد / - صادر)</label>
+            <input type="number" id="adj-qty" class="form-control" placeholder="مثال: 5 أو -2" value="1">
+          </div>
+          <div class="form-group">
+            <label class="form-label">سبب الحركة</label>
+            <select id="adj-reason" class="form-control">
+              <option value="وارد شراء بضاعة جديدة">وارد شراء بضاعة جديدة (+)</option>
+              <option value="تسوية جرد عجز أو تالف">تسوية جرد تالف أو عجز (-)</option>
+              <option value="تسوية خطأ إدخال سابق">تسوية خطأ إدخال</option>
+            </select>
+          </div>
+        `,
+        footerHtml: `
+          <button class="btn-secondary" onclick="AppModal.close()">إلغاء</button>
+          <button class="btn-accent-action" onclick="window._confirmStockAdj(${prodId})">تأكيد التسوية</button>
+        `,
+        width: '450px'
+      });
+
+      window._confirmStockAdj = async (pId) => {
+        const delta = Number(document.getElementById('adj-qty')?.value) || 0;
+        const reason = document.getElementById('adj-reason')?.value || 'تسوية يدوية';
+        try {
+          await electronApi.invoke('inventory:adjust-stock', { variantId: 1, warehouseId: 1, deltaQty: delta, reason });
+          AppToast.success(`تمت تسوية المخزون بنجاح (${delta > 0 ? '+' + delta : delta})`);
+          AppModal.close();
+          renderShoesPage();
+        } catch (err) {
+          AppToast.error(err.message || 'فشلت تسوية المخزون');
+        }
+      };
+    };
+  }
+
+  // --- Phase 6: Render Accessories Inventory (مخزون الإكسسوارات) ---
+  async function renderAccessoriesPage() {
+    const res = await electronApi.invoke('inventory:get-quantity-products', { categoryType: 'ACCESSORIES' });
+    const items = res.data || [];
+
+    pageContent.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div>
+          <h2 style="font-size: 20px; font-weight: 700;">🎀 مخزون الإكسسوارات والإضافات (Accessories)</h2>
+          <p style="color: var(--text-secondary); font-size: 13px;">إدارة ربطات العنق، الببيونات، أزرار الأكمام، والقمصان الرجالية وإضافات البدل.</p>
+        </div>
+        <button class="btn-accent-action" onclick="AppToast.info('إضافة إكسسوار جديد')">+ إضافة إكسسوار جديد</button>
+      </div>
+
+      <div class="table-card">
+        <div class="table-header">
+          <h3>قائمة الإكسسوارات المتاحة بالمحل</h3>
+        </div>
+        <table class="app-table">
+          <thead>
+            <tr>
+              <th>الكود</th>
+              <th>اسم الإكسسوار</th>
+              <th>التصنيف</th>
+              <th>الرصيد الكلي</th>
+              <th>المتاح</th>
+              <th>سعر البيع</th>
+              <th>سعر الإيجار</th>
+              <th>تسوية المخزن</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${items.map(it => `
+              <tr>
+                <td><code>${it.code}</code></td>
+                <td><strong>${it.name}</strong></td>
+                <td><span class="badge badge-info">${it.category_name}</span></td>
+                <td>${it.total_quantity} قطعة</td>
+                <td><strong style="color: var(--color-success)">${it.available_quantity} قطعة</strong></td>
+                <td>${window.UiUtils ? window.UiUtils.formatCurrency(it.sale_price) : it.sale_price + ' ج.م'}</td>
+                <td>${window.UiUtils ? window.UiUtils.formatCurrency(it.rental_price) : it.rental_price + ' ج.م'}</td>
+                <td>
+                  <button class="btn-secondary" style="padding: 4px 10px; font-size: 12px;" onclick="AppToast.success('تسوية رصيد ${it.name}')">تعديل الرصيد (+/-)</button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
     const titles = {
       suits: 'إدارة مخزون البدل والقطع الفردية',
       shoes: 'مخزون الأحذية الكمي',

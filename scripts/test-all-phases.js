@@ -10,7 +10,8 @@ const testScripts = [
   'scripts/test-phase-2.js',
   'scripts/test-phase-3.js',
   'scripts/test-phase-4.js',
-  'scripts/test-phase-5.js'
+  'scripts/test-phase-5.js',
+  'scripts/test-phase-6.js'
 ];
 
 for (const script of testScripts) {

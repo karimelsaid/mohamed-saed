@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data:;">
+  <title>نظام إدارة محلات بيع وتأجير بدل العرائس</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="theme-dark">
+  <div id="app-root">
+    <!-- App Shell Layout -->
+    <div class="app-layout">
+      <!-- Right Sidebar (RTL) -->
+      <aside class="sidebar">
+        <div class="sidebar-brand">
+          <div class="brand-logo">👔</div>
+          <div class="brand-text">
+            <h2>رويال للبدل</h2>
+            <span>إدارة البدل والعرائس</span>
+          </div>
+        </div>
+
+        <nav class="nav-menu">
+          <a href="#dashboard" class="nav-item active" data-page="dashboard">
+            <span class="icon">📊</span>
+            <span class="label">لوحة التحكم</span>
+          </a>
+          <a href="#suits" class="nav-item" data-page="suits">
+            <span class="icon">🤵</span>
+            <span class="label">مخزون البدل</span>
+          </a>
+          <a href="#shoes" class="nav-item" data-page="shoes">
+            <span class="icon">👞</span>
+            <span class="label">مخزون الأحذية</span>
+          </a>
+          <a href="#accessories" class="nav-item" data-page="accessories">
+            <span class="icon">🎀</span>
+            <span class="label">الإكسسوارات</span>
+          </a>
+          <a href="#bookings" class="nav-item" data-page="bookings">
+            <span class="icon">📅</span>
+            <span class="label">الحجوزات والتأجير</span>
+          </a>
+          <a href="#pos" class="nav-item" data-page="pos">
+            <span class="icon">💳</span>
+            <span class="label">نقطة البيع (POS)</span>
+          </a>
+          <a href="#customers" class="nav-item" data-page="customers">
+            <span class="icon">👥</span>
+            <span class="label">العملاء</span>
+          </a>
+          <a href="#finance" class="nav-item" data-page="finance">
+            <span class="icon">💰</span>
+            <span class="label">الخزينة والمالية</span>
+          </a>
+          <a href="#tasks" class="nav-item" data-page="tasks">
+            <span class="icon">📋</span>
+            <span class="label">المهام والتنبيهات</span>
+          </a>
+          <a href="#reports" class="nav-item" data-page="reports">
+            <span class="icon">📈</span>
+            <span class="label">التقارير</span>
+          </a>
+          <a href="#settings" class="nav-item" data-page="settings">
+            <span class="icon">⚙️</span>
+            <span class="label">الإعدادات</span>
+          </a>
+        </nav>
+
+        <div class="sidebar-footer">
+          <div class="system-badge">
+            <span class="pulse-indicator"></span>
+            <span id="system-status-text">متصل محلياً (Offline)</span>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Main Container -->
+      <main class="main-container">
+        <!-- Top Header -->
+        <header class="app-header">
+          <div class="header-search">
+            <input type="text" placeholder="بحث سريع عن حجز، عميل، أو باركود بدلة... [Ctrl+K]">
+          </div>
+          <div class="header-actions">
+            <button id="btn-theme-toggle" class="btn-icon" title="تبديل المظهر">🌓</button>
+            <button id="btn-quick-pos" class="btn-primary-action">⚡ بيع سريع</button>
+            <button id="btn-new-booking" class="btn-accent-action">+ حجز جديد</button>
+            <div class="user-avatar" title="مالك المحل">👤</div>
+          </div>
+        </header>
+
+        <!-- Dynamic Content Area -->
+        <section class="content-body" id="page-content">
+          <div class="loading-state" id="initial-loading">
+            <div class="spinner"></div>
+            <p>جاري تهيئة النظام وقاعدة البيانات المحلية...</p>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

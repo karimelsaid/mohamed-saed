@@ -9,13 +9,13 @@
 
 | البند | الحالة الحالية |
 |---|---|
-| **المرحلة الحالية** | المرحلة 2: التأسيس التقني للمشروع (Phase 2: Project Foundation) |
-| **المراحل المكتملة** | المرحلة 0 (Discovery & Planning)، المرحلة 1 (Documentation) |
-| **نسبة الإنجاز الإجمالية** | 12% |
-| **آخر اختبار ناجح** | فحص اكتمال كافة وثائق النظام (Phase 1 Verification: 36/36 Docs Verified) |
+| **المرحلة الحالية** | المرحلة 3: تأسيس قاعدة البيانات (Phase 3: Database Foundation) |
+| **المراحل المكتملة** | المرحلة 0، المرحلة 1، المرحلة 2 (Project Foundation) |
+| **نسبة الإنجاز الإجمالية** | 18% |
+| **آخر اختبار ناجح** | اختبارات التأسيس التقني والأمان وقنوات IPC (Phase 2 Tests Passed) |
 | **الاختبارات الفاشلة** | 0 |
 | **آخر Migration مطبقة** | لا يوجد بعد (تبدأ في المرحلة 3) |
-| **آخر Build ناجح** | قيد الإعداد للمرحلة 2 |
+| **آخر Build ناجح** | Electron Foundation Scaffold Verified |
 
 ---
 
@@ -25,8 +25,8 @@
 |---|---|---|---|
 | **المرحلة 0** | Discovery & Planning | مكتملة ✅ | 2026-11-08 |
 | **المرحلة 1** | Documentation | مكتملة ✅ | 2026-11-08 |
-| **المرحلة 2** | Project Foundation | قيد التنفيذ 🔄 | - |
-| **المرحلة 3** | Database Foundation | معلقة ⏳ | - |
+| **المرحلة 2** | Project Foundation | مكتملة ✅ | 2026-11-08 |
+| **المرحلة 3** | Database Foundation | قيد التنفيذ 🔄 | - |
 | **المرحلة 4** | Design System | معلقة ⏳ | - |
 | **المرحلة 5** | Administration & Settings | معلقة ⏳ | - |
 | **المرحلة 6** | Inventory Engine | معلقة ⏳ | - |
@@ -50,8 +50,7 @@
 - [x] تحليل بيئة Node.js (v26.13.0) و npm (11.6.2) وأدوات البناء المتاحة.
 - [x] تقييم المخاطر المعمارية ووضع استراتيجيات المعالجة.
 - [x] إنشاء مستودع Git للمشروع.
-- [x] كتابة وثيقة `docs/PROJECT-DISCOVERY.md`.
-- [x] كتابة ملف `README.md`.
+- [x] كتابة وثيقة `docs/PROJECT-DISCOVERY.md` وملف `README.md`.
 - [x] تهيئة ملف متابعة التنفيذ `docs/EXECUTION-STATUS.md`.
 
 ### المرحلة 1: Documentation (مكتملة ✅)
@@ -60,15 +59,26 @@
 - [x] إنشاء وثائق المحركات الـ 6 في `docs/modules/` مع المعاملات والـ API.
 - [x] تنفيذ واجتياز اختبار التحقق التلقائي لجميع وثائق المرحلة 1 بنجاح (`scripts/test-phase-1.js`).
 
-### المرحلة 2: Project Foundation (قيد التنفيذ 🔄)
-- [ ] تهيئة هيكل مجلدات المشروع (Monorepo: `apps/desktop`, `packages/shared`, `packages/contracts`).
-- [ ] إعداد حزمة `package.json` مع إعدادات TypeScript والـ Scripts.
-- [ ] إنشاء عقود الـ IPC المشتركة والـ Types الموحدة (`packages/contracts`, `packages/shared`).
-- [ ] إعداد Electron Main Process مع دورة حياة التطبيق والأمان الصارم (`contextIsolation: true`, `nodeIntegration: false`).
-- [ ] إعداد Preload Script مع حماية القنوات بقائمة بيضاء (`channel allowlist`).
-- [ ] إعداد تطبيق Angular Renderer (Standalone) مع دعم RTL والتهيئة الأساسية.
-- [ ] إعداد معالجة الأخطاء المركزية وسجل العمليات (`Logger`).
-- [ ] إعداد واجتياز اختبارات المرحلة 2 (تحقق تشغيل Electron، تحقق عقود IPC، وتحقق بناء الواجهة).
+### المرحلة 2: Project Foundation (مكتملة ✅)
+- [x] تهيئة هيكل مجلدات المشروع (Monorepo: `apps/desktop`, `packages/shared`, `packages/contracts`).
+- [x] إعداد حزمة `package.json` مع إعدادات TypeScript والـ Scripts.
+- [x] إنشاء عقود الـ IPC المشتركة والـ Types الموحدة (`packages/contracts/src/ipc-channels.ts`).
+- [x] إنشاء الـ Enums المعتمدة (`packages/shared/src/enums.ts`).
+- [x] إعداد Electron Main Process مع دورة حياة التطبيق والأمان الصارم (`apps/desktop/electron/main/index.js`).
+- [x] إعداد Preload Script مع حماية القنوات بقائمة بيضاء (`apps/desktop/electron/preload/preload.js`).
+- [x] إعداد الموجه المركزي `ipc-router.js` مع حظر القنوات المشبوهة واحتساب زمن التنفيذ.
+- [x] إعداد نظام السجلات المتقدم `logger.js` مع حفظ الملفات اليومية في مسار التطبيق.
+- [x] إعداد واجهة Renderer متكاملة مع دعم كامل للغة العربية وRTL ونظام التصميم (`index.html`, `styles.css`, `renderer.js`).
+- [x] كتابة وتنفيذ اختبارات المرحلة 2 الشاملة (`scripts/test-phase-2.js`) والتأكد من اجتيازها بالكامل بنجاح.
+
+### المرحلة 3: Database Foundation (قيد التنفيذ 🔄)
+- [ ] إعداد محرك اتصال SQLite مع نمط Adapter المرن.
+- [ ] تفعيل المفاتيح الأجنبية `PRAGMA foreign_keys = ON` ووضع `WAL Mode`.
+- [ ] إنشاء هيكل المهاجرات المعتمد (`migrations/001_initial_schema.sql`).
+- [ ] إنشاء جدول تتبع المهاجرات `schema_migrations`.
+- [ ] بناء طبقة المستودعات (Repositories) لدعم المعاملات الذرية (Atomic Transactions).
+- [ ] بناء مساعد المعاملات `TransactionHelper` وفحوصات سلامة قاعدة البيانات `PRAGMA integrity_check`.
+- [ ] إعداد وتشغيل اختبارات المرحلة 3 للتحقق من المهاجرات والمعاملات.
 
 ---
 
@@ -83,6 +93,11 @@
 | TEST-P1-02 | فحص اكتمال وثائق الصفحات | 13 وثيقة في `docs/pages/` | ناجح ✅ | تغطية 11 قسمًا تفصيليًا لكل شاشة |
 | TEST-P1-03 | فحص اكتمال وثائق المحركات | 6 وثائق في `docs/modules/` | ناجح ✅ | تغطية الواجهات والمعاملات والتعافي |
 | TEST-P1-04 | الاختبار التلقائي الشامل للمرحلة 1 | سكربت `scripts/test-phase-1.js` | ناجح ✅ | تم التحقق من 36 ملفًا بنجاح |
+| TEST-P2-01 | فحص ملفات التأسيس | ملفات Main, Preload, Router, Renderer | ناجح ✅ | 10 ملفات أساسية مكتملة |
+| TEST-P2-02 | فحص معايير الأمان | contextIsolation & nodeIntegration | ناجح ✅ | تطبيق صارم لـ isolation & CSP |
+| TEST-P2-03 | اختبار حظر قنوات IPC المشبوهة | القائمة البيضاء (Allowlist) | ناجح ✅ | حظر أي قناة غير مصرح بها فوراً |
+| TEST-P2-04 | اختبار تنفيذ معالجات IPC المشروعة | Handshake `app:get-info` | ناجح ✅ | تنفيذ ناجح وإرجاع بيانات متسقة |
+| TEST-P2-05 | اختبار نظام السجلات | Logger File & Console Output | ناجح ✅ | كتابة السجلات في المسار الآمن |
 
 ---
 
@@ -96,11 +111,13 @@
    - *القرار:* الالتزام الصارم بتنفيذ المراحل بالتتابع وعدم الانتقال لأي مرحلة قبل اجتياز اختباراتها وتحديث هذا الملف.
 4. **ADR-004 (Monorepo Package Structure):**
    - *القرار:* اعتماد بنية `apps/desktop` و `packages/shared` و `packages/contracts` لضمان مشاركة العقود والـ Types بين Angular و Electron Main دون ازدواجية في الكود.
+5. **ADR-005 (Centralized IPC Dispatcher):**
+   - *القرار:* بناء `IpcRouter` مركزي في Main process يتلقى كافة الطلبات عبر قناة آمنة واحدة `app:ipc-bridge` ويقوم بالتحقق من الصلاحيات وقياس زمن التنفيذ وتوثيق الأخطاء.
 
 ---
 
 ## 6. سجل الحزم والتبعيات (Dependencies Log)
-- سيتم توثيق الحزم المضافة في المرحلة 2 فور اعتمادها مع أسباب اختيارها.
+- تم الاعتماد على مكتبات النظام القياسية والـ Typed Contracts المدمجة تمهيداً لطبقة قاعدة البيانات في المرحلة 3.
 
 ---
 

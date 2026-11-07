@@ -1,0 +1,25 @@
+{
+  "name": "suit-store-system",
+  "version": "1.0.0",
+  "description": "نظام إدارة محلات بيع وتأجير بدل العرائس - Windows Desktop (Angular + Electron + SQLite)",
+  "main": "apps/desktop/electron/main/index.js",
+  "private": true,
+  "scripts": {
+    "start": "electron apps/desktop/electron/main/index.js",
+    "test:phase-0": "node scripts/test-phase-0.js",
+    "test:phase-1": "node scripts/test-phase-1.js",
+    "test:phase-2": "node scripts/test-phase-2.js",
+    "test": "node scripts/test-all-phases.js"
+  },
+  "keywords": [
+    "suit-store",
+    "bridal-suits",
+    "electron",
+    "angular",
+    "sqlite",
+    "offline-first",
+    "arabic-rtl"
+  ],
+  "author": "Suit Store System Team",
+  "license": "PROPRIETARY"
+}

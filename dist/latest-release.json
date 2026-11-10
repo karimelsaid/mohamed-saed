@@ -1,9 +1,9 @@
 {
-  "version": "1.0.1",
-  "previousVersion": "1.0.0",
-  "releaseDate": "2026-11-10",
-  "releaseNotes": "تحديث رسمي جديد للإصدار v1.0.1 يتضمن تحسينات الأداء، تكامل واتساب، وسرعة الاستجابة.",
-  "sha256": "afdd34f644a2475d271706d8b71039d22021eb71cd3dfa137a7c1477c31b358c",
-  "mandatory": false,
-  "publishedAt": "2026-11-10T00:58:06.852Z"
+  "version": "1.0.2",
+  "previousVersion": "1.0.1",
+  "releaseDate": "2026-11-11",
+  "releaseNotes": "تحديث v1.0.2: إصلاح التهيئة التلقائية لقواعد البيانات على الأجهزة الجديدة ومعالجة إغلاق التطبيق وإعادة فتحه بسلاسة.",
+  "sha256": "4392ebbc3d67f1396a83606f376cf47f48a1c97a29a6067faefd70659103c62f",
+  "mandatory": true,
+  "publishedAt": "2026-11-11T00:48:00.000Z"
 }

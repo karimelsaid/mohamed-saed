@@ -45,3 +45,4 @@ try {
   console.error('\n❌ خطأ أثناء البناء:', err.message);
   process.exit(1);
 }
+

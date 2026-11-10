@@ -29,9 +29,28 @@ class MigrationRunner {
   runPendingMigrations() {
     this.initMigrationsTable();
     const applied = this.getAppliedMigrations();
-    const files = fs.readdirSync(this.migrationsDir)
-      .filter(f => f.endsWith('.sql'))
-      .sort();
+    
+    let files = [];
+    try {
+      if (fs.existsSync(this.migrationsDir)) {
+        files = fs.readdirSync(this.migrationsDir)
+          .filter(f => f.endsWith('.sql'))
+          .sort();
+      }
+    } catch (err) {
+      logger.warn(`Could not readdir migrationsDir directly: ${err.message}`);
+    }
+
+    // Safety fallback: if readdir was restricted or returned empty, check standard migration files
+    if (files.length === 0) {
+      const standardMigrations = ['001_initial_schema.sql'];
+      for (const sm of standardMigrations) {
+        const full = path.join(this.migrationsDir, sm);
+        if (fs.existsSync(full)) {
+          files.push(sm);
+        }
+      }
+    }
 
     const pending = files.filter(f => !applied.has(f));
 

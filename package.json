@@ -1,6 +1,6 @@
 {
   "name": "suit-store-system",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "نظام إدارة محلات بيع وتأجير بدل  - Windows Desktop (Angular + Electron + SQLite)",
   "main": "apps/desktop/electron/main/index.js",
   "private": true,
@@ -49,12 +49,6 @@
       "target": [
         {
           "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
-          "target": "portable",
           "arch": [
             "x64"
           ]

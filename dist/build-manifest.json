@@ -1,9 +1,9 @@
 {
-  "buildId": "BUILD-1794344692866",
+  "buildId": "BUILD-1794351372955",
   "appName": "نظام إدارة محلات بيع وتأجير بدل ",
   "appId": "com.royal.suitstore",
-  "version": "1.0.1",
-  "builtAt": "2026-11-10T21:04:52.867Z",
+  "version": "1.0.2",
+  "builtAt": "2026-11-10T22:56:12.955Z",
   "targetPlatform": "win32-x64",
   "packageTargets": [
     "nsis",
@@ -12,12 +12,12 @@
   "filesCount": 26,
   "filesChecksums": {
     "package.json": {
-      "sizeBytes": 2855,
-      "sha256": "3fa8319e193ba850fd1f9195060fc9f54e447b8233ea02e08a750995188d0818"
+      "sizeBytes": 2751,
+      "sha256": "6f423ff29a02799cd2bf563cb66cb921c50fae4eb97e19c50a49fab9ff616f96"
     },
     "apps/desktop/electron/main/index.js": {
-      "sizeBytes": 26302,
-      "sha256": "568e7a69a2e07976b8bece48164fa831dfd573fe0d9f91c839048c7902d628cf"
+      "sizeBytes": 26903,
+      "sha256": "d02c747987a5cd4969f1104a4590d096ee980a09c689599a193c68d4a0979c1b"
     },
     "apps/desktop/electron/preload/preload.js": {
       "sizeBytes": 4726,
@@ -32,12 +32,12 @@
       "sha256": "e49600c4a93da7c2411cb394a48d5923baa70a09c3e6325565bc6e164f150a9b"
     },
     "apps/desktop/electron/database/connection.js": {
-      "sizeBytes": 2032,
-      "sha256": "62db18ed300127e6294a3b25b354057bc709ca70d6de8b08ae6490734d39aa7d"
+      "sizeBytes": 5264,
+      "sha256": "b35dedf3d8b051a98148f30df4d947e283b2f01fe98414ec15c8872bd0eea3e9"
     },
     "apps/desktop/electron/database/migration-runner.js": {
-      "sizeBytes": 2540,
-      "sha256": "32c3c043e269f16bfb076f1a561a7f671a403bf775ae7b3d7b8db7c5c90cbf38"
+      "sizeBytes": 3119,
+      "sha256": "1e5e1886f9cb2ddb30efc38ff5b838509a9d0a6704c6c97cf053ac5936e2db3e"
     },
     "apps/desktop/electron/database/transaction-helper.js": {
       "sizeBytes": 2850,

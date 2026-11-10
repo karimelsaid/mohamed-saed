@@ -15,6 +15,7 @@ const { backupEngineService } = require('../services/backup-engine-service');
 const { googleDriveService } = require('../services/google-drive-service');
 const { updateEngineService } = require('../services/update-engine-service');
 const { whatsappDirectService } = require('../services/whatsapp-direct-service');
+const { dbConnection } = require('../database/connection');
 
 let mainWindow = null;
 
@@ -25,9 +26,12 @@ if (!gotTheLock) {
   app.quit();
 } else {
   app.on('second-instance', () => {
-    if (mainWindow) {
+    if (mainWindow && !mainWindow.isDestroyed()) {
       if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.show();
       mainWindow.focus();
+    } else {
+      createWindow();
     }
   });
 }
@@ -676,12 +680,24 @@ function createWindow() {
 
   mainWindow.on('closed', () => {
     mainWindow = null;
-    logger.info('Main window closed.');
+    logger.info('Main window closed. Cleaning up and exiting application...');
+    try {
+      whatsappDirectService.cleanup();
+    } catch (_) {}
+    app.quit();
   });
 }
 
 app.whenReady().then(() => {
-  logger.info('Electron Application Ready. Registering handlers...');
+  logger.info('Electron Application Ready. Initializing Database Schema...');
+  try {
+    dbConnection.connect();
+    logger.info('Database connection established and all tables verified.');
+  } catch (dbErr) {
+    logger.error('CRITICAL: Database startup initialization failed:', { error: dbErr.message, stack: dbErr.stack });
+  }
+
+  logger.info('Registering IPC handlers and creating window...');
   registerCoreHandlers();
   createWindow();
 

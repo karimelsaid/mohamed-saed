@@ -29,7 +29,7 @@
     "release": "node scripts/publish-release.js patch",
     "release:minor": "node scripts/publish-release.js minor",
     "release:major": "node scripts/publish-release.js major",
-    "dist": "npx electron-builder --win",
+    "dist": "node scripts/build-exe.js",
     "test": "node scripts/test-all-phases.js"
   },
   "build": {
@@ -80,5 +80,9 @@
     "arabic-rtl"
   ],
   "author": "Suit Store System Team",
-  "license": "PROPRIETARY"
+  "license": "PROPRIETARY",
+  "devDependencies": {
+    "electron": "^45.2.3",
+    "electron-builder": "^26.18.0"
+  }
 }

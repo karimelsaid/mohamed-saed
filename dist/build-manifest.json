@@ -1,39 +1,39 @@
 {
-  "buildId": "BUILD-1794099628851",
+  "buildId": "BUILD-1794344692866",
   "appName": "نظام إدارة محلات بيع وتأجير بدل ",
   "appId": "com.royal.suitstore",
-  "version": "1.0.0",
-  "builtAt": "2026-11-08T01:00:28.851Z",
+  "version": "1.0.1",
+  "builtAt": "2026-11-10T21:04:52.867Z",
   "targetPlatform": "win32-x64",
   "packageTargets": [
     "nsis",
     "portable"
   ],
-  "filesCount": 25,
+  "filesCount": 26,
   "filesChecksums": {
     "package.json": {
-      "sizeBytes": 2627,
-      "sha256": "62279ce81b8129b55bdb8e6e4a45b6d1ee4732e504cf6268f626348968fb97ce"
+      "sizeBytes": 2855,
+      "sha256": "3fa8319e193ba850fd1f9195060fc9f54e447b8233ea02e08a750995188d0818"
     },
     "apps/desktop/electron/main/index.js": {
-      "sizeBytes": 18465,
-      "sha256": "a005c6dfc84159530addef72755264c324a8d38e2b95e7f4c375df71634c2a50"
+      "sizeBytes": 26302,
+      "sha256": "568e7a69a2e07976b8bece48164fa831dfd573fe0d9f91c839048c7902d628cf"
     },
     "apps/desktop/electron/preload/preload.js": {
-      "sizeBytes": 3496,
-      "sha256": "38c13c4b60da9d23716748012a19f1560ea68640cbb6670bb0d1ac3499cb018e"
+      "sizeBytes": 4726,
+      "sha256": "8d2387fba1eaf1ec28d7faf0cdee83de4711552bddbfbcb0c24ebb5a60f2980c"
     },
     "apps/desktop/electron/ipc/ipc-router.js": {
-      "sizeBytes": 5981,
-      "sha256": "f162d51e235cd38c31c4983e2b21a816a0f9c7d5ae690a99a281f0b5947b1a47"
+      "sizeBytes": 6896,
+      "sha256": "5e46598fbe6849954e5b9b50201bc04c4cd0cd53a82c17f02f890c2336a70518"
     },
     "apps/desktop/electron/logging/logger.js": {
       "sizeBytes": 1886,
       "sha256": "e49600c4a93da7c2411cb394a48d5923baa70a09c3e6325565bc6e164f150a9b"
     },
     "apps/desktop/electron/database/connection.js": {
-      "sizeBytes": 1983,
-      "sha256": "c54b7b49b94467ae12411645a66147c22ffc3c155663b433581b892826476e47"
+      "sizeBytes": 2032,
+      "sha256": "62db18ed300127e6294a3b25b354057bc709ca70d6de8b08ae6490734d39aa7d"
     },
     "apps/desktop/electron/database/migration-runner.js": {
       "sizeBytes": 2540,
@@ -44,72 +44,76 @@
       "sha256": "29131ed89ce382312fe4407ff0af0952b6fc8962e41b3e744837a4ec40ad6189"
     },
     "apps/desktop/electron/database/migrations/001_initial_schema.sql": {
-      "sizeBytes": 19484,
-      "sha256": "5718c5250cbcf24323d6cabccd436309cb0a6eb596415760c8b5afb900ece199"
+      "sizeBytes": 19500,
+      "sha256": "8c822a1fa9743b8bc2357633a97e61cba703e7fbdb03af63ec4e876953a4ae55"
     },
     "apps/desktop/electron/services/admin-service.js": {
-      "sizeBytes": 5900,
-      "sha256": "deeff85218a91441fa3c1cae4fa29700e5b2b3674d8122b7a29cf5d68763d783"
+      "sizeBytes": 16873,
+      "sha256": "b966d169c5cbf6354e61b383471f929a720fc162a3f5d9beba5c0cc65bd90284"
     },
     "apps/desktop/electron/services/settings-service.js": {
-      "sizeBytes": 4135,
-      "sha256": "7ebac3aab09d7712865c4b0a35cedc282ad2bce7817d1905a6b81ba83b096207"
+      "sizeBytes": 6799,
+      "sha256": "7a71d80c5c506393a593ee52cab6379ea90e111780142883f9718b98acc123f3"
     },
     "apps/desktop/electron/services/inventory-engine-service.js": {
-      "sizeBytes": 16226,
-      "sha256": "ab4f0b58446df7f8c7826ceccfe36ed8d4af324c82c244a09fbf3e6724495f69"
+      "sizeBytes": 32049,
+      "sha256": "7da6082aa8127d6600c3cb3285179f0dd8948b579aae594eb621acdf22a1e13a"
     },
     "apps/desktop/electron/services/booking-engine-service.js": {
-      "sizeBytes": 25142,
-      "sha256": "6a3cff9bbd051deef1168328e6672f4f0b37e332888856f9c6720bf7aea0b335"
+      "sizeBytes": 27733,
+      "sha256": "6295b124929fb284971120ddb48c247b7176bd4a49b7b691dd5062f9963bda72"
     },
     "apps/desktop/electron/services/pos-sales-service.js": {
-      "sizeBytes": 26252,
-      "sha256": "d1703e63b330df90eb79a26d377a5eabd89e524bc468fcd6a07156dc200b1d68"
+      "sizeBytes": 26977,
+      "sha256": "c3d3dd2fa1b3d84ded13a39436714d128c4581bcbd7dd35ab778af37cafbe42d"
     },
     "apps/desktop/electron/services/finance-engine-service.js": {
-      "sizeBytes": 18646,
-      "sha256": "2dd3347ce8dbb20eb351adb4e6b96917206f9a9108f18a526892d23401d5cbe3"
+      "sizeBytes": 19614,
+      "sha256": "d242f2751840ef076ec5a434a3b5d26233dcbeba99065c59204d0bb56d499d11"
     },
     "apps/desktop/electron/services/tasks-notifications-service.js": {
-      "sizeBytes": 14528,
-      "sha256": "ac740652291e5c8abe0f862e5da86eaa0c16b44d6efdee050bff1657a2341fc0"
+      "sizeBytes": 22157,
+      "sha256": "944bf19d17995f12eec4b580135d79eba165d0c02b6c96059d9f85f44331d1ae"
     },
     "apps/desktop/electron/services/reports-engine-service.js": {
-      "sizeBytes": 13062,
-      "sha256": "32ee0e40b8d006eebba368b68b9e9082fc92d578fc5215c502884b4e390ca158"
+      "sizeBytes": 14186,
+      "sha256": "784e0f3817c79586a56871cb9541d0d65086d8b3be8e65efb5277ebdf291b68e"
     },
     "apps/desktop/electron/services/printing-service.js": {
-      "sizeBytes": 31785,
-      "sha256": "925fbe4a4419eed921e4024e914121a312c30e7787b03c6c902fbebdbe54c9dd"
+      "sizeBytes": 31735,
+      "sha256": "77e7dd9c1425f53fdb2df1637d193dca693d00d2050cebaa41582a894f43271f"
     },
     "apps/desktop/electron/services/backup-engine-service.js": {
-      "sizeBytes": 9848,
-      "sha256": "cb29e5d084997d905b895b084445a63612c12c19536590b6bf9acefecce399ae"
+      "sizeBytes": 15959,
+      "sha256": "83d65bed7ef476c4b2f2d732bf1d31583835781faac490e9070472972e6c2012"
     },
     "apps/desktop/electron/services/update-engine-service.js": {
-      "sizeBytes": 10992,
-      "sha256": "fe5e379709a969ba8a039c2d384177da843c24fc78009a8c191619a0e8227730"
+      "sizeBytes": 13266,
+      "sha256": "f915c66b7135960742dde77f0aaed9aa7dbb962f04cf2cb91a4876987c1c3bb3"
     },
     "apps/desktop/renderer/index.html": {
-      "sizeBytes": 4913,
-      "sha256": "7a3afcd76c25af6eb932183162d32fb993277a379a570ce0c7188b3d616f454a"
+      "sizeBytes": 5778,
+      "sha256": "314483d0321f1daae0f953beed2f4b8b63587ff74f1700a6225680ca58558a02"
     },
     "apps/desktop/renderer/styles.css": {
       "sizeBytes": 23809,
       "sha256": "fe5b6c479b506901e16c7614d2ec47da35458626d0c918677b33cccc683487ad"
     },
     "apps/desktop/renderer/renderer.js": {
-      "sizeBytes": 271941,
-      "sha256": "2631a6bda3ae51218af94ad9f1d381413a5e852d41da0cd4b086837549483e5f"
+      "sizeBytes": 575379,
+      "sha256": "f99f5f9524dc26122df58fcce8d9ad71f45c754ee124ab1eac7641261bad9140"
+    },
+    "apps/desktop/renderer/logo.png": {
+      "sizeBytes": 40108,
+      "sha256": "f6ceb900232c73d09dc6e2559a44e10183d4df1065add5ea0bc8beac4798db20"
     },
     "build-resources/icon.ico": {
-      "sizeBytes": 169,
-      "sha256": "1913b88b29bf0f3c59c340791e7d8df91cf4fc8e91f8d9a22a42fa2fe7884e8d"
+      "sizeBytes": 41086,
+      "sha256": "edb8a53eb1cc1220e802dd6e0163205ec51ad070c02da3c2879e2de2d2fe10a8"
     },
     "build-resources/icon.png": {
-      "sizeBytes": 147,
-      "sha256": "09fd4c7e6d6343d6eaff007f39e2f6a579f22866e0ef29f8891b805a38f2e4d9"
+      "sizeBytes": 130883,
+      "sha256": "8d90b0b3ba91ddfc5ca925cfd06ab35850b3f39669ed4a2dc1439cecd054b15d"
     }
   },
   "status": "STAGED_READY_FOR_DISTRIBUTION"

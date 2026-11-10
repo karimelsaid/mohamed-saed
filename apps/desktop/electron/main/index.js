@@ -618,12 +618,17 @@ function registerCoreHandlers() {
 function createWindow() {
   logger.info('Initializing Main Application Window...');
 
+  const appIconPath = process.platform === 'win32'
+    ? path.join(__dirname, '..', '..', '..', 'build-resources', 'icon.ico')
+    : path.join(__dirname, '..', '..', '..', 'build-resources', 'icon.png');
+
   mainWindow = new BrowserWindow({
     width: 1366,
     height: 768,
     minWidth: 1024,
     minHeight: 680,
     title: 'نظام إدارة محلات بيع وتأجير بدل ',
+    icon: appIconPath,
     show: false,
     backgroundColor: '#121824',
     webPreferences: {

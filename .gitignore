@@ -5,3 +5,10 @@ Thumbs.db
 *.tmp
 .env
 
+# Build outputs & Executables
+dist/win-unpacked/
+dist/*.exe
+dist/*.blockmap
+dist/*.yml
+dist/*.yaml
+

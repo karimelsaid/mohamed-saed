@@ -1648,9 +1648,10 @@
         brandLogoContainer.style.padding = '0';
         brandLogoContainer.innerHTML = `<img src="${store.logo}" alt="لوجو المتجر" style="width: 100%; height: 100%; object-fit: contain; border-radius: 8px; display: block;">`;
       } else {
-        brandLogoContainer.style.background = 'linear-gradient(135deg, var(--color-gold-400), var(--color-gold-600))';
-        brandLogoContainer.style.padding = '';
-        brandLogoContainer.innerHTML = '👔';
+        brandLogoContainer.style.background = 'transparent';
+        brandLogoContainer.style.overflow = 'hidden';
+        brandLogoContainer.style.padding = '0';
+        brandLogoContainer.innerHTML = '<img src="logo.png" alt="لوجو المتجر" style="width: 100%; height: 100%; object-fit: contain; border-radius: 8px; display: block;">';
       }
     }
   }

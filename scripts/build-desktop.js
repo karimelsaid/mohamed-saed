@@ -36,6 +36,7 @@ const coreFiles = [
   'apps/desktop/renderer/index.html',
   'apps/desktop/renderer/styles.css',
   'apps/desktop/renderer/renderer.js',
+  'apps/desktop/renderer/logo.png',
   'build-resources/icon.ico',
   'build-resources/icon.png'
 ];

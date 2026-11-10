@@ -96,7 +96,8 @@ if (shouldPush) {
     execSync('git push origin master --tags', { cwd: rootDir, stdio: 'pipe' });
     console.log(`  ✓ تم رفع الإصدار الجديد v${newVersion} والوسم (Tag) إلى GitHub بنجاح!`);
   } catch (gitErr) {
-    console.log(`  ℹ️ ملاحظة أثناء المزامنة: ${gitErr.message || 'سيتم النشر مع الدفعة التالية'}`);
+    const errMsg = gitErr.stderr ? gitErr.stderr.toString() : gitErr.message;
+    console.log(`  ℹ️ ملاحظة أثناء المزامنة: ${errMsg || 'سيتم النشر مع الدفعة التالية'}`);
   }
 }
 

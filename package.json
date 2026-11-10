@@ -1,7 +1,7 @@
 {
   "name": "suit-store-system",
-  "version": "1.0.0",
-  "description": "نظام إدارة محلات بيع وتأجير بدل العرائس - Windows Desktop (Angular + Electron + SQLite)",
+  "version": "1.0.1",
+  "description": "نظام إدارة محلات بيع وتأجير بدل  - Windows Desktop (Angular + Electron + SQLite)",
   "main": "apps/desktop/electron/main/index.js",
   "private": true,
   "scripts": {
@@ -13,7 +13,62 @@
     "test:phase-2": "node scripts/test-phase-2.js",
     "test:phase-3": "node scripts/test-phase-3.js",
     "test:phase-4": "node scripts/test-phase-4.js",
+    "test:phase-5": "node scripts/test-phase-5.js",
+    "test:phase-6": "node scripts/test-phase-6.js",
+    "test:phase-7": "node scripts/test-phase-7.js",
+    "test:phase-8": "node scripts/test-phase-8.js",
+    "test:phase-9": "node scripts/test-phase-9.js",
+    "test:phase-10": "node scripts/test-phase-10.js",
+    "test:phase-11": "node scripts/test-phase-11.js",
+    "test:phase-12": "node scripts/test-phase-12.js",
+    "test:phase-13": "node scripts/test-phase-13.js",
+    "test:phase-14": "node scripts/test-phase-14.js",
+    "test:phase-15": "node scripts/test-phase-15.js",
+    "test:phase-16": "node scripts/test-phase-16.js",
+    "build": "node scripts/build-desktop.js",
+    "release": "node scripts/publish-release.js patch",
+    "release:minor": "node scripts/publish-release.js minor",
+    "release:major": "node scripts/publish-release.js major",
+    "dist": "npx electron-builder --win",
     "test": "node scripts/test-all-phases.js"
+  },
+  "build": {
+    "appId": "com.royal.suitstore",
+    "productName": "نظام إدارة محلات بيع وتأجير بدل ",
+    "copyright": "Copyright © 2026 Suit Store System",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build-resources"
+    },
+    "files": [
+      "apps/desktop/**/*",
+      "packages/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build-resources/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "نظام إدارة محلات بدل "
+    }
   },
   "keywords": [
     "suit-store",

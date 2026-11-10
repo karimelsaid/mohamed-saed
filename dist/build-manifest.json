@@ -1,0 +1,116 @@
+{
+  "buildId": "BUILD-1794099628851",
+  "appName": "نظام إدارة محلات بيع وتأجير بدل ",
+  "appId": "com.royal.suitstore",
+  "version": "1.0.0",
+  "builtAt": "2026-11-08T01:00:28.851Z",
+  "targetPlatform": "win32-x64",
+  "packageTargets": [
+    "nsis",
+    "portable"
+  ],
+  "filesCount": 25,
+  "filesChecksums": {
+    "package.json": {
+      "sizeBytes": 2627,
+      "sha256": "62279ce81b8129b55bdb8e6e4a45b6d1ee4732e504cf6268f626348968fb97ce"
+    },
+    "apps/desktop/electron/main/index.js": {
+      "sizeBytes": 18465,
+      "sha256": "a005c6dfc84159530addef72755264c324a8d38e2b95e7f4c375df71634c2a50"
+    },
+    "apps/desktop/electron/preload/preload.js": {
+      "sizeBytes": 3496,
+      "sha256": "38c13c4b60da9d23716748012a19f1560ea68640cbb6670bb0d1ac3499cb018e"
+    },
+    "apps/desktop/electron/ipc/ipc-router.js": {
+      "sizeBytes": 5981,
+      "sha256": "f162d51e235cd38c31c4983e2b21a816a0f9c7d5ae690a99a281f0b5947b1a47"
+    },
+    "apps/desktop/electron/logging/logger.js": {
+      "sizeBytes": 1886,
+      "sha256": "e49600c4a93da7c2411cb394a48d5923baa70a09c3e6325565bc6e164f150a9b"
+    },
+    "apps/desktop/electron/database/connection.js": {
+      "sizeBytes": 1983,
+      "sha256": "c54b7b49b94467ae12411645a66147c22ffc3c155663b433581b892826476e47"
+    },
+    "apps/desktop/electron/database/migration-runner.js": {
+      "sizeBytes": 2540,
+      "sha256": "32c3c043e269f16bfb076f1a561a7f671a403bf775ae7b3d7b8db7c5c90cbf38"
+    },
+    "apps/desktop/electron/database/transaction-helper.js": {
+      "sizeBytes": 2850,
+      "sha256": "29131ed89ce382312fe4407ff0af0952b6fc8962e41b3e744837a4ec40ad6189"
+    },
+    "apps/desktop/electron/database/migrations/001_initial_schema.sql": {
+      "sizeBytes": 19484,
+      "sha256": "5718c5250cbcf24323d6cabccd436309cb0a6eb596415760c8b5afb900ece199"
+    },
+    "apps/desktop/electron/services/admin-service.js": {
+      "sizeBytes": 5900,
+      "sha256": "deeff85218a91441fa3c1cae4fa29700e5b2b3674d8122b7a29cf5d68763d783"
+    },
+    "apps/desktop/electron/services/settings-service.js": {
+      "sizeBytes": 4135,
+      "sha256": "7ebac3aab09d7712865c4b0a35cedc282ad2bce7817d1905a6b81ba83b096207"
+    },
+    "apps/desktop/electron/services/inventory-engine-service.js": {
+      "sizeBytes": 16226,
+      "sha256": "ab4f0b58446df7f8c7826ceccfe36ed8d4af324c82c244a09fbf3e6724495f69"
+    },
+    "apps/desktop/electron/services/booking-engine-service.js": {
+      "sizeBytes": 25142,
+      "sha256": "6a3cff9bbd051deef1168328e6672f4f0b37e332888856f9c6720bf7aea0b335"
+    },
+    "apps/desktop/electron/services/pos-sales-service.js": {
+      "sizeBytes": 26252,
+      "sha256": "d1703e63b330df90eb79a26d377a5eabd89e524bc468fcd6a07156dc200b1d68"
+    },
+    "apps/desktop/electron/services/finance-engine-service.js": {
+      "sizeBytes": 18646,
+      "sha256": "2dd3347ce8dbb20eb351adb4e6b96917206f9a9108f18a526892d23401d5cbe3"
+    },
+    "apps/desktop/electron/services/tasks-notifications-service.js": {
+      "sizeBytes": 14528,
+      "sha256": "ac740652291e5c8abe0f862e5da86eaa0c16b44d6efdee050bff1657a2341fc0"
+    },
+    "apps/desktop/electron/services/reports-engine-service.js": {
+      "sizeBytes": 13062,
+      "sha256": "32ee0e40b8d006eebba368b68b9e9082fc92d578fc5215c502884b4e390ca158"
+    },
+    "apps/desktop/electron/services/printing-service.js": {
+      "sizeBytes": 31785,
+      "sha256": "925fbe4a4419eed921e4024e914121a312c30e7787b03c6c902fbebdbe54c9dd"
+    },
+    "apps/desktop/electron/services/backup-engine-service.js": {
+      "sizeBytes": 9848,
+      "sha256": "cb29e5d084997d905b895b084445a63612c12c19536590b6bf9acefecce399ae"
+    },
+    "apps/desktop/electron/services/update-engine-service.js": {
+      "sizeBytes": 10992,
+      "sha256": "fe5e379709a969ba8a039c2d384177da843c24fc78009a8c191619a0e8227730"
+    },
+    "apps/desktop/renderer/index.html": {
+      "sizeBytes": 4913,
+      "sha256": "7a3afcd76c25af6eb932183162d32fb993277a379a570ce0c7188b3d616f454a"
+    },
+    "apps/desktop/renderer/styles.css": {
+      "sizeBytes": 23809,
+      "sha256": "fe5b6c479b506901e16c7614d2ec47da35458626d0c918677b33cccc683487ad"
+    },
+    "apps/desktop/renderer/renderer.js": {
+      "sizeBytes": 271941,
+      "sha256": "2631a6bda3ae51218af94ad9f1d381413a5e852d41da0cd4b086837549483e5f"
+    },
+    "build-resources/icon.ico": {
+      "sizeBytes": 169,
+      "sha256": "1913b88b29bf0f3c59c340791e7d8df91cf4fc8e91f8d9a22a42fa2fe7884e8d"
+    },
+    "build-resources/icon.png": {
+      "sizeBytes": 147,
+      "sha256": "09fd4c7e6d6343d6eaff007f39e2f6a579f22866e0ef29f8891b805a38f2e4d9"
+    }
+  },
+  "status": "STAGED_READY_FOR_DISTRIBUTION"
+}

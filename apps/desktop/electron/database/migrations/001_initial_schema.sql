@@ -124,6 +124,7 @@ CREATE TABLE IF NOT EXISTS suit_models (
   color_id INTEGER REFERENCES colors(id),
   sale_price REAL NOT NULL DEFAULT 0.0,
   rental_price REAL NOT NULL DEFAULT 0.0,
+  cost_price REAL NOT NULL DEFAULT 0.0,
   security_deposit REAL NOT NULL DEFAULT 0.0,
   description TEXT,
   is_active INTEGER NOT NULL DEFAULT 1,
@@ -499,8 +500,8 @@ INSERT OR IGNORE INTO warehouses (id, code, name, location, is_default, is_activ
 
 -- Initial Categories
 INSERT OR IGNORE INTO categories (id, code, name, type, is_active) VALUES
-  (1, 'SUITS', 'بدل رجالي وعرائس', 'SUITS', 1),
-  (2, 'SHOES', 'أحذية كلاسيك وعرائس', 'SHOES', 1),
+  (1, 'SUITS', 'بدل رجالي ', 'SUITS', 1),
+  (2, 'SHOES', 'أحذية كلاسيك ', 'SHOES', 1),
   (3, 'TIES', 'ربطات عنق وببيونات', 'ACCESSORIES', 1),
   (4, 'CUFFLINKS', 'أزرار أكمام وإكسسوارات', 'ACCESSORIES', 1),
   (5, 'SHIRTS', 'قمصان بدل وبدل داخلية', 'ACCESSORIES', 1);

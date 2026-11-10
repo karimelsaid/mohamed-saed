@@ -13,12 +13,14 @@ class SettingsService {
     const db = this.dbConn.getDb();
     const rows = db.prepare("SELECT key, value FROM settings WHERE key LIKE 'store_%'").all();
     const profile = {
-      storeName: 'رويال للبدل والعرائس',
+      storeName: 'mohamed saed',
       phone: '01000000000',
       address: 'القاهرة، مصر',
       taxNumber: '',
-      invoiceFooter: 'شكرًا لتعاملكم مع رويال للبدل. يرجى الحفاظ على البدلة وإرجاعها في الموعد المحدد.',
-      currency: 'EGP'
+      invoiceFooter: 'شكرًا لتعاملكم مع mohamed saed. يرجى الحفاظ على البدلة وإرجاعها في الموعد المحدد.',
+      currency: 'EGP',
+      logo: '',
+      logoPosition: 'right'
     };
 
     for (const r of rows) {
@@ -85,6 +87,34 @@ class SettingsService {
     return crypto.createHash('sha256').update(String(pin)).digest('hex');
   }
 
+  getSecuritySettings() {
+    const db = this.dbConn.getDb();
+    const pinRow = db.prepare("SELECT value FROM settings WHERE key = 'security_pin_hash'").get();
+    const pagesRow = db.prepare("SELECT value FROM settings WHERE key = 'security_protected_pages'").get();
+    let protectedPages = [];
+    try {
+      if (pagesRow?.value) protectedPages = JSON.parse(pagesRow.value);
+    } catch (e) {
+      protectedPages = [];
+    }
+    return {
+      hasPin: !!pinRow,
+      protectedPages: Array.isArray(protectedPages) ? protectedPages : []
+    };
+  }
+
+  setProtectedPages(pages) {
+    const db = this.dbConn.getDb();
+    const stmt = db.prepare(`
+      INSERT INTO settings (key, value, description, updated_at)
+      VALUES ('security_protected_pages', ?, 'قائمة الصفحات المحمية برمز PIN', datetime('now'))
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')
+    `);
+    stmt.run(JSON.stringify(Array.isArray(pages) ? pages : []));
+    logger.info('Updated protected pages successfully');
+    return true;
+  }
+
   setPin(newPin) {
     if (!newPin || String(newPin).length < 4) {
       throw new Error('رمز PIN يجب أن يتكون من 4 أرقام على الأقل.');
@@ -110,6 +140,41 @@ class SettingsService {
     }
     const inputHash = this.hashPin(inputPin);
     return row.value === inputHash;
+  }
+
+  // --- 4. WhatsApp Automation Settings (إعدادات الإرسال التلقائي للتنبيهات) ---
+  getWhatsAppSettings() {
+    const db = this.dbConn.getDb();
+    const rows = db.prepare("SELECT key, value FROM settings WHERE key LIKE 'whatsapp_auto_%'").all();
+    const settings = {
+      autoSendAlerts: false, // الزر الرئيسي: إرسال تلقائي بدون الحاجة للضغط اليدوي
+      autoSendReturns: true,  // تذكير بمواعيد إرجاع البدل (اليوم وغداً)
+      autoSendOverdue: true,  // تنبيهات عاجلة للبدل المتأخرة
+      autoSendFittings: true  // تذكير بمواعيد البروفات
+    };
+
+    for (const r of rows) {
+      const cleanKey = r.key.replace('whatsapp_auto_', '');
+      settings[cleanKey] = r.value === 'true' ? true : (r.value === 'false' ? false : r.value);
+    }
+    return settings;
+  }
+
+  updateWhatsAppSettings(settings) {
+    const db = this.dbConn.getDb();
+    return TransactionHelper.runInTransaction(db, (tDb) => {
+      const stmt = tDb.prepare(`
+        INSERT INTO settings (key, value, description, updated_at)
+        VALUES (?, ?, 'إعدادات الإرسال التلقائي لواتساب', datetime('now'))
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')
+      `);
+
+      for (const [k, v] of Object.entries(settings)) {
+        stmt.run(`whatsapp_auto_${k}`, String(v));
+      }
+      logger.info('Updated WhatsApp automation settings successfully');
+      return true;
+    });
   }
 }
 

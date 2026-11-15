@@ -1,0 +1,114 @@
+<div class="comms-page-wrapper">
+
+  <!-- Header Section -->
+  <div class="comms-hero-header">
+    <div class="container header-flex">
+      <div>
+        <h1 class="comms-title">نافذة المحادثات المباشرة</h1>
+        <p class="comms-subtitle">تواصل فوري وآمن مع الصنايعية والتجار لإتمام الاتفاقيات والمواعيد</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="container comms-main-layout">
+    <!-- Chat Messenger Window matching ui-ux-overview.png -->
+    <div class="messenger-box">
+
+      <!-- Right Column: Contacts List -->
+      <aside class="messenger-contacts-sidebar">
+        <div class="contacts-header">
+          <h3 class="contacts-title">المحادثات النشطة</h3>
+        </div>
+
+        <div class="contacts-list">
+          @for (contact of contacts; track contact.id) {
+            <div
+              class="contact-item-row"
+              [class.active]="selectedContact().id === contact.id"
+              (click)="selectContact(contact)">
+
+              <div class="contact-avatar-wrap" [style.background-color]="contact.avatarBg">
+                <span class="avatar-sym">{{ contact.avatarEmoji }}</span>
+                @if (contact.online) {
+                  <span class="online-indicator-dot"></span>
+                }
+              </div>
+
+              <div class="contact-info-col">
+                <div class="contact-name-row">
+                  <h4 class="contact-name">{{ contact.name }}</h4>
+                  <span class="contact-time">{{ contact.lastTime }}</span>
+                </div>
+                <p class="contact-last-msg">{{ contact.lastMessage }}</p>
+              </div>
+
+              @if (contact.unreadCount) {
+                <span class="unread-badge">{{ contact.unreadCount }}</span>
+              }
+            </div>
+          }
+        </div>
+      </aside>
+
+      <!-- Left Column: Active Chat Conversation -->
+      <main class="messenger-thread-main">
+        <!-- Thread Header -->
+        <div class="thread-top-header">
+          <div class="thread-user-info">
+            <div class="thread-avatar-mini" [style.background-color]="selectedContact().avatarBg">
+              <span>{{ selectedContact().avatarEmoji }}</span>
+            </div>
+            <div>
+              <h3 class="thread-user-name">{{ selectedContact().name }}</h3>
+              <span class="thread-user-status">
+                {{ selectedContact().profession }} — {{ selectedContact().online ? 'آخر ظهور الآن' : 'غير متصل' }}
+              </span>
+            </div>
+          </div>
+
+          <div class="thread-actions">
+            <button type="button" class="btn-thread-icon" title="اتصال">📞</button>
+            <button type="button" class="btn-thread-icon" title="معلومات">ℹ️</button>
+          </div>
+        </div>
+
+        <!-- Messages Thread -->
+        <div class="thread-messages-body">
+          @for (msg of messages(); track msg.id) {
+            <div class="message-bubble-row" [class.my-message]="msg.sender === 'me'" [class.their-message]="msg.sender === 'them'">
+              <div class="bubble-content">
+                <p class="bubble-text">{{ msg.text }}</p>
+                <span class="bubble-time">{{ msg.time }}</span>
+              </div>
+            </div>
+          }
+        </div>
+
+        <!-- Chat Input Footer Bar -->
+        <div class="thread-input-footer">
+          <div class="attachment-actions">
+            <button type="button" class="btn-attach" title="إرفاق صورة">📷</button>
+            <button type="button" class="btn-attach" title="إرفاق ملف">📎</button>
+          </div>
+
+          <input
+            type="text"
+            class="chat-text-input"
+            [(ngModel)]="newMessageText"
+            (keyup.enter)="sendMessage()"
+            placeholder="اكتب رسالتك هنا..."
+          />
+
+          <button type="button" class="btn-send-message" (click)="sendMessage()">
+            <span>إرسال</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+            </svg>
+          </button>
+        </div>
+      </main>
+
+    </div>
+  </div>
+
+</div>

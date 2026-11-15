@@ -1,0 +1,380 @@
+<div class="search-page-container">
+
+  <!-- Top Search Bar Header -->
+  <div class="search-topbar-wrapper">
+    <div class="container topbar-flex">
+      <div class="search-field-pill">
+        <svg class="search-pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <input
+          type="text"
+          class="pill-input"
+          [(ngModel)]="searchQuery"
+          (keyup.enter)="applyFilters()"
+          placeholder="ابحث عن خدمة أو مهنة..."
+        />
+        <button type="button" class="btn-pill-search" (click)="applyFilters()">بحث</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="container search-main-layout">
+
+    <!-- ══════════════════════════════════════════════════════════════
+         1. RIGHT SIDEBAR FILTERS (تصفية النتائج)
+         ══════════════════════════════════════════════════════════════ -->
+    <aside class="sidebar-filters">
+      <div class="filter-card">
+        <h3 class="filter-main-title">تصفية النتائج</h3>
+
+        <!-- Profession Filter -->
+        <div class="filter-section">
+          <h4 class="filter-subtitle">• المهنة</h4>
+          <div class="checkbox-list">
+            <label class="custom-check-item">
+              <input type="checkbox" [(ngModel)]="selectedProfessions['plumbing']" (change)="applyFilters()" />
+              <span class="check-box-square"></span>
+              <span class="check-label-text">سباك</span>
+            </label>
+            <label class="custom-check-item">
+              <input type="checkbox" [(ngModel)]="selectedProfessions['electric']" (change)="applyFilters()" />
+              <span class="check-box-square"></span>
+              <span class="check-label-text">كهربائي</span>
+            </label>
+            <label class="custom-check-item">
+              <input type="checkbox" [(ngModel)]="selectedProfessions['carpentry']" (change)="applyFilters()" />
+              <span class="check-box-square"></span>
+              <span class="check-label-text">نجار</span>
+            </label>
+            <label class="custom-check-item">
+              <input type="checkbox" [(ngModel)]="selectedProfessions['blacksmith']" (change)="applyFilters()" />
+              <span class="check-box-square"></span>
+              <span class="check-label-text">حداد</span>
+            </label>
+            <label class="custom-check-item">
+              <input type="checkbox" [(ngModel)]="selectedProfessions['alumital']" (change)="applyFilters()" />
+              <span class="check-box-square"></span>
+              <span class="check-label-text">ألوميتال</span>
+            </label>
+            <label class="custom-check-item">
+              <input type="checkbox" [(ngModel)]="selectedProfessions['painting']" (change)="applyFilters()" />
+              <span class="check-box-square"></span>
+              <span class="check-label-text">نقاشة</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Location Filter -->
+        <div class="filter-section">
+          <h4 class="filter-subtitle">• الموقع</h4>
+          <select class="filter-select" [(ngModel)]="selectedGovId" (change)="applyFilters()">
+            <option value="all">جميع المحافظات</option>
+            <option value="cairo">القاهرة</option>
+            <option value="giza">الجيزة</option>
+            <option value="alexandria">الإسكندرية</option>
+            <option value="sharqia">الشرقية</option>
+            <option value="dakahlia">الدقهلية</option>
+          </select>
+        </div>
+
+        <!-- Rating Filter -->
+        <div class="filter-section">
+          <h4 class="filter-subtitle">• التقييم</h4>
+          <div class="stars-filter-list">
+            <button
+              type="button"
+              class="star-filter-btn"
+              [class.active]="minRating() === 5"
+              (click)="minRating.set(5); applyFilters()">
+              <span class="gold-stars">★★★★★</span>
+              <span class="star-desc">5 نجوم</span>
+            </button>
+            <button
+              type="button"
+              class="star-filter-btn"
+              [class.active]="minRating() === 4"
+              (click)="minRating.set(4); applyFilters()">
+              <span class="gold-stars">★★★★☆</span>
+              <span class="star-desc">4 نجوم وأكثر</span>
+            </button>
+            <button
+              type="button"
+              class="star-filter-btn"
+              [class.active]="minRating() === 3"
+              (click)="minRating.set(3); applyFilters()">
+              <span class="gold-stars">★★★☆☆</span>
+              <span class="star-desc">3 نجوم وأكثر</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Price Range Filter -->
+        <div class="filter-section">
+          <h4 class="filter-subtitle">• السعر</h4>
+          <div class="price-inputs-row">
+            <div class="price-field">
+              <span>من:</span>
+              <input type="number" placeholder="50" class="input-price-num" />
+            </div>
+            <div class="price-field">
+              <span>إلى:</span>
+              <input type="number" placeholder="1000" class="input-price-num" />
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </aside>
+
+    <!-- ══════════════════════════════════════════════════════════════
+         2. RESULTS LIST COLUMN (قائمة نتائج الصنايعية)
+         ══════════════════════════════════════════════════════════════ -->
+    <main class="results-main-col">
+      <div class="results-header">
+        <h2 class="results-count-title">
+          تم العثور على <span class="highlight-count">{{ filteredCraftsmen().length }}</span> نتيجة
+        </h2>
+      </div>
+
+      <div class="craftsmen-results-list">
+        @for (c of filteredCraftsmen(); track c.id) {
+          <div class="craftsman-horizontal-card">
+            <!-- Avatar -->
+            <div class="card-avatar-col">
+              <div class="craftsman-avatar" [style.background-color]="c.avatarBg">
+                <span class="c-emoji">{{ c.avatarEmoji }}</span>
+                <span class="c-verified-badge" title="موثق">✔</span>
+              </div>
+            </div>
+
+            <!-- Details -->
+            <div class="card-details-col">
+              <div class="c-name-rating-row">
+                <h3 class="c-name">{{ c.name }}</h3>
+                <div class="c-rating-pill">
+                  <span class="star-sym">★</span>
+                  <span class="rating-val">{{ c.rating }}</span>
+                  <span class="reviews-count">({{ c.reviewsCount }} تقييم)</span>
+                </div>
+              </div>
+
+              <div class="c-meta-row">
+                <span class="meta-tag profession-tag">{{ c.profession }}</span>
+                <span class="meta-tag loc-tag">
+                  <svg viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
+                  </svg>
+                  منطقة: {{ c.governorate }}
+                </span>
+                <span class="meta-tag price-tag">يبدأ من: <strong>{{ c.startingPriceEgp }} ج.م</strong></span>
+              </div>
+            </div>
+
+            <!-- Action -->
+            <div class="card-actions-col">
+              <button type="button" class="btn-view-profile" (click)="openProfile(c)">
+                عرض الملف
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    </main>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       3. CRAFTSMAN PROFILE MODAL (شاشة تفاصيل الصنايعي)
+       ══════════════════════════════════════════════════════════════ -->
+  @if (selectedCraftsman(); as pro) {
+    <div class="profile-modal-backdrop" (click)="closeProfile()">
+      <div class="profile-modal-sheet" (click)="$event.stopPropagation()">
+
+        <!-- Close Button -->
+        <button type="button" class="btn-close-modal" (click)="closeProfile()">✕</button>
+
+        <!-- Cover & Profile Header Card -->
+        <div class="profile-hero-card">
+          <div class="profile-avatar-big" [style.background-color]="pro.avatarBg">
+            <span class="pro-big-emoji">{{ pro.avatarEmoji }}</span>
+            <span class="pro-verified-big" title="موثق رسمياً">✔</span>
+          </div>
+
+          <div class="profile-header-info">
+            <h2 class="pro-full-name">{{ pro.name }}</h2>
+            <p class="pro-specialty">{{ pro.profession }}</p>
+            <div class="pro-rating-row">
+              <span class="pro-stars">★★★★★</span>
+              <span class="pro-rating-score">{{ pro.rating }}</span>
+              <span class="pro-reviews-total">({{ pro.reviewsCount }} تقييم)</span>
+            </div>
+          </div>
+
+          <!-- CTAs -->
+          <div class="profile-header-ctas">
+            <button type="button" class="btn-hire-orange" (click)="openRequestModal()">
+              طلب خدمة
+            </button>
+            <a [routerLink]="['/messages']" [queryParams]="{ recipientId: pro.id }" class="btn-chat-white">
+              مراسلة
+            </a>
+          </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="profile-tabs-bar">
+          <button
+            type="button"
+            class="tab-btn"
+            [class.active]="activeProfileTab() === 'about'"
+            (click)="setTab('about')">
+            نبذة عني
+          </button>
+          <button
+            type="button"
+            class="tab-btn"
+            [class.active]="activeProfileTab() === 'portfolio'"
+            (click)="setTab('portfolio')">
+            أعمال سابقة
+          </button>
+          <button
+            type="button"
+            class="tab-btn"
+            [class.active]="activeProfileTab() === 'services'"
+            (click)="setTab('services')">
+            الخدمات
+          </button>
+          <button
+            type="button"
+            class="tab-btn"
+            [class.active]="activeProfileTab() === 'reviews'"
+            (click)="setTab('reviews')">
+            التقييمات
+          </button>
+        </div>
+
+        <!-- Tab Body + Sidebar Info -->
+        <div class="profile-body-layout">
+          <!-- Main Tab Content -->
+          <div class="tab-content-area">
+            <!-- About Me Tab -->
+            @if (activeProfileTab() === 'about') {
+              <div class="about-tab-box">
+                <h4 class="tab-box-title">نبذة عن الفني:</h4>
+                <p class="about-bio-text">{{ pro.bio }}</p>
+
+                <h4 class="tab-box-title" style="margin-top: 1.5rem;">معرض من أعمالي السابقة:</h4>
+                <div class="portfolio-grid-mini">
+                  @for (item of pro.portfolio; track item.title) {
+                    <div class="portfolio-card-item">
+                      <div class="portfolio-emoji-preview">{{ item.emoji }}</div>
+                      <span class="portfolio-item-name">{{ item.title }}</span>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+
+            <!-- Portfolio Tab -->
+            @if (activeProfileTab() === 'portfolio') {
+              <div class="portfolio-tab-box">
+                <h4 class="tab-box-title">أعمال تم إنجازها بنجاح:</h4>
+                <div class="portfolio-grid-full">
+                  @for (item of pro.portfolio; track item.title) {
+                    <div class="portfolio-card-item large">
+                      <div class="portfolio-emoji-preview">{{ item.emoji }}</div>
+                      <span class="portfolio-item-name">{{ item.title }}</span>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+
+            <!-- Services Tab -->
+            @if (activeProfileTab() === 'services') {
+              <div class="services-tab-box">
+                <h4 class="tab-box-title">قائمة الخدمات والأسعار:</h4>
+                <div class="services-offered-list">
+                  @for (srv of pro.servicesOffered; track srv.title) {
+                    <div class="service-offered-card">
+                      <div class="service-name-price">
+                        <strong>{{ srv.title }}</strong>
+                        <span class="srv-price">{{ srv.priceEgp }} ج.م</span>
+                      </div>
+                      <button type="button" class="btn-srv-order" (click)="openRequestModal()">طلب الآن</button>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+
+            <!-- Reviews Tab -->
+            @if (activeProfileTab() === 'reviews') {
+              <div class="reviews-tab-box">
+                <h4 class="tab-box-title">آراء العملاء الحقيقيين:</h4>
+                <div class="reviews-list">
+                  @for (rev of pro.reviews; track rev.author) {
+                    <div class="review-card-item">
+                      <div class="review-header-row">
+                        <strong>{{ rev.author }}</strong>
+                        <span class="review-date">{{ rev.date }}</span>
+                      </div>
+                      <div class="review-stars-row">★★★★★</div>
+                      <p class="review-comment">{{ rev.comment }}</p>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+
+          <!-- General Info Sidebar -->
+          <div class="general-info-sidebar">
+            <h4 class="info-sidebar-title">معلومات عامة</h4>
+            <ul class="info-list">
+              <li>
+                <span class="info-label">📍 الموقع:</span>
+                <span class="info-val">{{ pro.governorate }}</span>
+              </li>
+              <li>
+                <span class="info-label">⏱️ سنوات الخبرة:</span>
+                <span class="info-val">{{ pro.experienceYears }} سنة</span>
+              </li>
+              <li>
+                <span class="info-label">🟢 متاح للعمل:</span>
+                <span class="info-val avail-tag">{{ pro.availableNow ? 'متاح الآن' : 'مشغول حالياً' }}</span>
+              </li>
+              <li>
+                <span class="info-label">🚗 مناطق العمل:</span>
+                <span class="info-val">{{ pro.workAreas }}</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  }
+
+  <!-- Request Modal -->
+  @if (showRequestModal()) {
+    <div class="profile-modal-backdrop" (click)="showRequestModal.set(false)">
+      <div class="profile-modal-sheet modal-sm" (click)="$event.stopPropagation()">
+        <h3 class="modal-title">طلب خدمة من {{ selectedCraftsman()?.name }}</h3>
+        @if (requestSubmitted()) {
+          <div class="success-alert">
+            تم إرسال طلبك بنجاح! سيتواصل معك الفني خلال دقائق.
+          </div>
+        } @else {
+          <div class="modal-form">
+            <label>وصف العمل المطلوب بالتفصيل:</label>
+            <textarea [(ngModel)]="requestNotes" rows="4" placeholder="مثال: يوجد تسريب مياه أسفل الحوض ويحتاج تغيير قلب الخلاط..."></textarea>
+            <button type="button" class="btn-hire-orange w-100" (click)="submitServiceRequest()">تأكيد وإرسال الطلب</button>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+</div>

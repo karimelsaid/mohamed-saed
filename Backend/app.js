@@ -253,7 +253,7 @@ const MongoStore = require('connect-mongo');
 
 // Session middleware
 const sessionStore = MongoStore.create({
-  mongoUrl: process.env.MONGO_URI || "mongodb+srv://karimmohamed2729:joufTO0k8VcsbZcd@kenouz.oup4o7v.mongodb.net/?retryWrites=true&w=majority&appName=kenouz",
+  mongoUrl: process.env.MONGO_URI || "mongodb+srv://kenouz_user:nuwRkmwJospZXapy@cluster0.dkmw5bs.mongodb.net/kenouz?retryWrites=true&w=majority&appName=Cluster0",
   collectionName: 'sessions',
   ttl: 14 * 24 * 60 * 60, // 14 days
   autoRemove: 'native'

@@ -1,0 +1,49 @@
+{
+  "/api/transcription": {
+    "target": "http://localhost:5050",
+    "secure": false,
+    "changeOrigin": true,
+    "ws": true,
+    "logLevel": "debug",
+    "proxyTimeout": 900000
+  },
+  "/api": {
+    "target": "http://localhost:3000",
+    "secure": false,
+    "changeOrigin": true,
+    "ws": true,
+    "logLevel": "debug",
+    "proxyTimeout": 900000
+  },
+  "/uploads": {
+    "target": "http://localhost:3000",
+    "secure": false,
+    "changeOrigin": true,
+    "ws": true,
+    "logLevel": "debug",
+    "proxyTimeout": 900000
+  },
+  "/mushaf": {
+    "target": "https://knoozbook.com",
+    "secure": true,
+    "changeOrigin": true,
+    "logLevel": "debug",
+    "proxyTimeout": 900000
+  },
+  "/socket.io": {
+    "target": "http://localhost:3000",
+    "secure": false,
+    "changeOrigin": true,
+    "ws": true,
+    "logLevel": "debug",
+    "proxyTimeout": 900000
+  },
+  "/admin": {
+    "target": "http://localhost:3000",
+    "secure": false,
+    "changeOrigin": true,
+    "ws": true,
+    "logLevel": "debug",
+    "proxyTimeout": 900000
+  }
+}

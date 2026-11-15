@@ -30,10 +30,15 @@ import { Subscription } from 'rxjs';
       </div>
 
       <div class="empty-state" *ngIf="!isLoading && (!user || lectures.length === 0)">
-        <i class="fas fa-folder-open"></i>
+        <div class="empty-icon">
+          <i class="fas fa-folder-open"></i>
+        </div>
+        <h3 *ngIf="!user">المكتبة خاصة بالمستخدمين</h3>
+        <h3 *ngIf="user">مكتبتك فارغة</h3>
         <p *ngIf="!user">قم بتسجيل الدخول لحفظ المحاضرات والرجوع إليها لاحقاً.</p>
-        <p *ngIf="user">لم تقم بحفظ أي محاضرة بعد.</p>
+        <p *ngIf="user">لم تقم بحفظ أي محاضرة بعد. تصفح المحاضرات واحفظ ما يعجبك.</p>
         <button class="btn-primary" *ngIf="!user" [routerLink]="['/login']" [queryParams]="{returnUrl: '/home'}">تسجيل الدخول</button>
+        <button class="btn-secondary" *ngIf="user" routerLink="/lectures">تصفح المحاضرات</button>
       </div>
 
       <!-- Dynamic Content -->
@@ -107,6 +112,26 @@ import { Subscription } from 'rxjs';
       opacity: 0.5;
       margin-bottom: 15px;
     }
+
+    .empty-icon {
+      font-size: 64px;
+      margin-bottom: 20px;
+      opacity: 0.5;
+    }
+
+    .empty-state h3 {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--watin-forest);
+      margin: 0 0 10px 0;
+    }
+
+    .empty-state p {
+      font-size: 14px;
+      margin: 0 0 30px 0;
+      opacity: 0.8;
+    }
+
     .btn-primary {
       background-color: var(--watin-forest);
       color: white;
@@ -116,6 +141,23 @@ import { Subscription } from 'rxjs';
       font-weight: 600;
       cursor: pointer;
       margin-top: 15px;
+    }
+
+    .btn-secondary {
+      background-color: var(--watin-surface);
+      color: var(--watin-forest);
+      border: 2px solid var(--watin-forest);
+      padding: 12px 24px;
+      border-radius: 25px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-secondary:hover {
+      background-color: var(--watin-forest);
+      color: white;
     }
     .library-list {
       display: flex;

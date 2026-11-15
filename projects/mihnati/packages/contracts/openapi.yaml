@@ -1,0 +1,407 @@
+openapi: 3.1.0
+info:
+  title: Mihnati Platform API
+  version: 1.0.0
+  description: >-
+    Modular Monolith REST API for Mihnati services and commerce platform.
+    Adheres strictly to the Mihnati API Specification.
+servers:
+  - url: /api/v1
+    description: Current API v1 endpoint
+paths:
+  /health:
+    get:
+      summary: Liveness check
+      description: Returns service liveness status. Does not fail if dependent services are down.
+      operationId: getHealth
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service is alive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+  /ready:
+    get:
+      summary: Readiness check
+      description: Returns 200 if MongoDB and core configurations are ready, otherwise 503.
+      operationId: getReadiness
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service is ready to handle traffic
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadyResponse'
+        '503':
+          description: Service is not ready (database or required config unavailable)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+
+  /auth/register:
+    post:
+      summary: Register a new user
+      operationId: register
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone, password, name]
+              properties:
+                phone:
+                  type: string
+                password:
+                  type: string
+                  minLength: 8
+                name:
+                  type: string
+                locale:
+                  type: string
+                  enum: [ar, en]
+                otpCode:
+                  type: string
+      responses:
+        '201':
+          description: User registered successfully
+        '400':
+          description: Validation error
+        '409':
+          description: User with phone already exists
+
+  /auth/login:
+    post:
+      summary: User login
+      operationId: login
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone, password]
+              properties:
+                phone:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Login successful
+        '401':
+          description: Invalid phone number or password
+        '403':
+          description: Account suspended or deactivated
+
+  /auth/refresh:
+    post:
+      summary: Rotate session refresh token
+      operationId: refreshSession
+      tags:
+        - Authentication
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        '200':
+          description: Session refreshed
+        '401':
+          description: Token expired or reuse detected
+
+  /auth/logout:
+    post:
+      summary: Logout current session
+      operationId: logout
+      tags:
+        - Authentication
+      security:
+        - BearerAuth: []
+        - CookieAuth: []
+      responses:
+        '200':
+          description: Logged out successfully
+
+  /me:
+    get:
+      summary: Get current authenticated user profile
+      operationId: getMe
+      tags:
+        - Account
+      security:
+        - BearerAuth: []
+        - CookieAuth: []
+      responses:
+        '200':
+          description: User profile retrieved
+        '401':
+          description: Unauthenticated
+    patch:
+      summary: Update user profile
+      operationId: updateMe
+      tags:
+        - Account
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                locale:
+                  type: string
+                  enum: [ar, en]
+      responses:
+        '200':
+          description: Profile updated successfully
+
+  /me/sessions:
+    get:
+      summary: List user active sessions
+      operationId: listSessions
+      tags:
+        - Account
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of active sessions
+
+  /me/sessions/{id}:
+    delete:
+      summary: Revoke a specific session
+      operationId: revokeSession
+      tags:
+        - Account
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Session revoked
+
+  /me/account/deactivation-request:
+    post:
+      summary: Request account deactivation
+      operationId: requestDeactivation
+      tags:
+        - Account
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Deactivation requested
+
+  /me/account/deletion-request:
+    post:
+      summary: Request account deletion
+      operationId: requestDeletion
+      tags:
+        - Account
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Deletion requested and sessions revoked
+
+  /me/account/cancel-request:
+    post:
+      summary: Cancel pending deactivation or deletion request
+      operationId: cancelAccountRequest
+      tags:
+        - Account
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Request cancelled, restored to active
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+    CookieAuth:
+      type: apiKey
+      in: cookie
+      name: mihnati_session
+  headers:
+    X-Request-ID:
+      description: Unique correlation request ID assigned by server or forwarded from client.
+      schema:
+        type: string
+    Idempotency-Key:
+      description: Unique idempotency key for mutating requests with side-effects.
+      schema:
+        type: string
+
+  schemas:
+    ErrorCode:
+      type: string
+      enum:
+        - VALIDATION_ERROR
+        - UNAUTHENTICATED
+        - FORBIDDEN
+        - NOT_FOUND
+        - CONFLICT
+        - INVALID_TRANSITION
+        - IDEMPOTENCY_KEY_REUSED
+        - IDEMPOTENCY_KEY_EXPIRED
+        - STALE_VERSION
+        - FILE_TOO_LARGE
+        - UNSUPPORTED_MEDIA_TYPE
+        - BUSINESS_RULE_FAILED
+        - RATE_LIMITED
+        - RETRYABLE_TRANSACTION_FAILURE
+        - INTERNAL_ERROR
+
+    ResponseMeta:
+      type: object
+      required:
+        - requestId
+      properties:
+        requestId:
+          type: string
+        version:
+          type: integer
+          description: Optimistic lock or aggregate version if applicable
+
+    PaginationMeta:
+      type: object
+      required:
+        - page
+        - pageSize
+        - total
+        - hasNext
+      properties:
+        page:
+          type: integer
+          minimum: 1
+        pageSize:
+          type: integer
+          minimum: 1
+          maximum: 100
+        total:
+          type: integer
+          minimum: 0
+        hasNext:
+          type: boolean
+
+    ErrorDetail:
+      type: object
+      required:
+        - code
+        - message
+        - requestId
+      properties:
+        code:
+          $ref: '#/components/schemas/ErrorCode'
+        message:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+        requestId:
+          type: string
+
+    ErrorEnvelope:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          $ref: '#/components/schemas/ErrorDetail'
+
+    HealthData:
+      type: object
+      required:
+        - status
+        - timestamp
+        - uptime
+      properties:
+        status:
+          type: string
+          enum: [pass, fail]
+        timestamp:
+          type: string
+          format: date-time
+        uptime:
+          type: number
+
+    HealthResponse:
+      type: object
+      required:
+        - data
+        - meta
+      properties:
+        data:
+          $ref: '#/components/schemas/HealthData'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    ReadyCheckItem:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum: [pass, fail]
+        message:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+
+    ReadyData:
+      type: object
+      required:
+        - status
+        - timestamp
+        - checks
+      properties:
+        status:
+          type: string
+          enum: [pass, fail]
+        timestamp:
+          type: string
+          format: date-time
+        checks:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/ReadyCheckItem'
+
+    ReadyResponse:
+      type: object
+      required:
+        - data
+        - meta
+      properties:
+        data:
+          $ref: '#/components/schemas/ReadyData'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+

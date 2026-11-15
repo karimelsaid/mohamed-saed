@@ -1,0 +1,42 @@
+{
+  "/api/transcription": {
+    "target": "https://knoozbook.com",
+    "secure": true,
+    "changeOrigin": true,
+    "ws": true,
+    "logLevel": "warn",
+    "proxyTimeout": 900000
+  },
+  "/api": {
+    "target": "https://knoozbook.com",
+    "secure": true,
+    "changeOrigin": true,
+    "ws": true,
+    "logLevel": "warn",
+    "proxyTimeout": 900000
+  },
+  "/uploads": {
+    "target": "https://knoozbook.com",
+    "secure": true,
+    "changeOrigin": true,
+    "ws": true,
+    "logLevel": "warn",
+    "proxyTimeout": 900000
+  },
+  "/socket.io": {
+    "target": "https://knoozbook.com",
+    "secure": true,
+    "changeOrigin": true,
+    "ws": true,
+    "logLevel": "warn",
+    "proxyTimeout": 900000
+  },
+  "/admin": {
+    "target": "https://knoozbook.com",
+    "secure": true,
+    "changeOrigin": true,
+    "ws": true,
+    "logLevel": "warn",
+    "proxyTimeout": 900000
+  }
+}

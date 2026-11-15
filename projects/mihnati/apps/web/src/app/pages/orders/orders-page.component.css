@@ -1,0 +1,591 @@
+/* ══════════════════════════════════════════════════════════════
+   1. ORDERS HERO HEADER
+   ══════════════════════════════════════════════════════════════ */
+.orders-hero-header {
+  background: linear-gradient(135deg, #06182D 0%, #0B2545 100%);
+  color: #FFFFFF;
+  padding: 2.25rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.orders-header-flex {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.orders-title {
+  font-size: 1.85rem;
+  font-weight: 900;
+  color: #FFFFFF;
+  margin-bottom: 0.25rem;
+}
+
+.orders-subtitle {
+  font-size: 0.95rem;
+  color: #94A3B8;
+}
+
+.btn-create-request-orange {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: var(--color-brand-orange);
+  color: #FFFFFF;
+  font-size: 0.95rem;
+  font-weight: 800;
+  padding: 0.75rem 1.6rem;
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 15px rgba(255, 122, 0, 0.4);
+  transition: all 0.2s ease;
+}
+
+.btn-create-request-orange:hover {
+  background-color: var(--color-brand-orange-hover);
+  transform: translateY(-2px);
+}
+
+.btn-create-request-orange svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   2. DASHBOARD PANEL & CARDS
+   ══════════════════════════════════════════════════════════════ */
+.orders-page-wrapper {
+  background-color: #F8FAFC;
+  min-height: 85vh;
+  padding-bottom: 4rem;
+}
+
+.orders-content-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+.dashboard-panel-card {
+  background-color: #FFFFFF;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.dash-user-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.dash-user-avatar {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: #EFF6FF;
+  border: 2px solid #0284C7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+}
+
+.merchant-avatar {
+  background: #EFF6FF;
+  border-color: #0284C7;
+}
+
+.pro-avatar {
+  background: #F0FDF4;
+  border-color: #16A34A;
+}
+
+.role-badge-pill {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 0.15rem 0.6rem;
+  border-radius: var(--radius-full);
+  margin-bottom: 0.2rem;
+}
+
+.merchant-pill {
+  background-color: #EFF6FF;
+  color: #0284C7;
+  border: 1px solid #BAE6FD;
+}
+
+.pro-pill {
+  background-color: #F0FDF4;
+  color: #15803D;
+  border: 1px solid #BBF7D0;
+}
+
+.customer-pill {
+  background-color: #FFF7ED;
+  color: #EA580C;
+  border: 1px solid #FED7AA;
+}
+
+.cod-tag {
+  display: block;
+  font-size: 0.72rem;
+  color: #64748B;
+  font-weight: 600;
+}
+
+.store-icon-circle {
+  background-color: #EFF6FF !important;
+  border-color: #BAE6FD !important;
+}
+
+.pro-icon-circle {
+  background-color: #F0FDF4 !important;
+  border-color: #BBF7D0 !important;
+}
+
+.user-greeting-name {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--color-brand-navy);
+}
+
+.user-email-tag {
+  font-size: 0.8rem;
+  color: #64748B;
+}
+
+.dash-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.25rem;
+}
+
+.kpi-mini-box {
+  padding: 1.25rem;
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.orange-box { background-color: #FFF7ED; border: 1px solid #FFEDD5; color: #EA580C; }
+.green-box { background-color: #F0FDF4; border: 1px solid #DCFCE7; color: #16A34A; }
+.blue-box { background-color: #EFF6FF; border: 1px solid #DBEAFE; color: #0284C7; }
+.purple-box { background-color: #FAF5FF; border: 1px solid #F3E8FF; color: #9333EA; }
+
+.kpi-num {
+  font-size: 1.6rem;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.kpi-num small {
+  font-size: 0.9rem;
+}
+
+.kpi-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  margin-top: 0.25rem;
+}
+
+/* Orders List Card */
+.orders-section-card {
+  background-color: #FFFFFF;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.card-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.card-title {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--color-brand-navy);
+}
+
+.card-hint {
+  font-size: 0.78rem;
+  color: #16A34A;
+  font-weight: 700;
+}
+
+.orders-items-table {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.order-row-item {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  background-color: #F8FAFC;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 1rem 1.25rem;
+  transition: all 0.15s ease;
+}
+
+.order-row-item:hover {
+  background-color: #F1F5F9;
+  border-color: #CBD5E1;
+}
+
+.order-icon-col {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background-color: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.order-info-col {
+  flex: 1;
+}
+
+.ord-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-brand-navy);
+}
+
+.ord-date {
+  font-size: 0.78rem;
+  color: #64748B;
+}
+
+.order-price-col {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--color-brand-orange);
+}
+
+.status-badge {
+  font-size: 0.78rem;
+  font-weight: 800;
+  padding: 0.35rem 0.85rem;
+  border-radius: var(--radius-full);
+}
+
+.progress-badge {
+  background-color: #FEF3C7;
+  color: #B45309;
+  border: 1px solid #FDE68A;
+}
+
+.completed-badge {
+  background-color: #DCFCE7;
+  color: #15803D;
+  border: 1px solid #BBF7D0;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   3. 3-STEP STEPPER MODAL (نشر طلب جديد)
+   ══════════════════════════════════════════════════════════════ */
+.stepper-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(6, 24, 45, 0.75);
+  backdrop-filter: blur(5px);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+.stepper-modal-box {
+  background-color: #FFFFFF;
+  width: 100%;
+  max-width: 640px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 2rem;
+  position: relative;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.stepper-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+
+.modal-main-title {
+  font-size: 1.45rem;
+  font-weight: 900;
+  color: var(--color-brand-navy);
+}
+
+.btn-close-stepper {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #F1F5F9;
+  color: #0F172A;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Wizard Steps Track */
+.wizard-steps-track {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+  position: relative;
+}
+
+.step-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  z-index: 2;
+}
+
+.step-bubble {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: #E2E8F0;
+  color: #64748B;
+  font-weight: 800;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.step-text {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #64748B;
+}
+
+.step-indicator.active .step-bubble {
+  background-color: var(--color-brand-orange);
+  color: #FFFFFF;
+}
+
+.step-indicator.current .step-text {
+  color: var(--color-brand-navy);
+  font-weight: 800;
+}
+
+.step-line {
+  flex: 1;
+  height: 3px;
+  background-color: #E2E8F0;
+  margin: 0 0.5rem;
+  margin-bottom: 1.25rem;
+  transition: all 0.2s ease;
+}
+
+.step-line.filled {
+  background-color: var(--color-brand-orange);
+}
+
+/* Form Styles */
+.step-form-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.form-row-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.form-row-group label {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--color-brand-navy);
+}
+
+.form-select-lg,
+.form-input-lg,
+.form-textarea-lg {
+  width: 100%;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid #CBD5E1;
+  border-radius: var(--radius-sm);
+  font-size: 0.92rem;
+  color: #0F172A;
+  outline: none;
+}
+
+.form-two-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.upload-dropzone {
+  border: 2px dashed #CBD5E1;
+  background-color: #F8FAFC;
+  padding: 1.25rem;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.upload-dropzone:hover {
+  border-color: var(--color-brand-orange);
+  background-color: #FFF7ED;
+}
+
+.upload-icon {
+  font-size: 1.6rem;
+}
+
+.upload-desc {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.error-msg-box {
+  background-color: #FEE2E2;
+  color: #B91C1C;
+  padding: 0.65rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.stepper-footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.stepper-footer-actions.space-between {
+  justify-content: space-between;
+}
+
+.btn-step-next-orange,
+.btn-publish-final-orange {
+  background-color: var(--color-brand-orange);
+  color: #FFFFFF;
+  font-weight: 800;
+  font-size: 0.95rem;
+  padding: 0.65rem 1.75rem;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 4px 12px rgba(255, 122, 0, 0.35);
+  transition: all 0.2s ease;
+}
+
+.btn-step-next-orange:hover,
+.btn-publish-final-orange:hover {
+  background-color: var(--color-brand-orange-hover);
+}
+
+.btn-step-back-ghost {
+  background-color: #F1F5F9;
+  color: #475569;
+  font-weight: 700;
+  font-size: 0.9rem;
+  padding: 0.65rem 1.4rem;
+  border-radius: var(--radius-sm);
+}
+
+/* Review Summary */
+.review-summary-card {
+  background-color: #F8FAFC;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.review-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.rev-label {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #64748B;
+}
+
+.rev-val {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: var(--color-brand-navy);
+}
+
+.price-accent {
+  color: var(--color-brand-orange);
+  font-size: 1.1rem;
+}
+
+.stepper-success-view {
+  padding: 2.5rem 1rem;
+  text-align: center;
+}
+
+.success-sym {
+  font-size: 3.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.stepper-success-view h3 {
+  font-size: 1.45rem;
+  font-weight: 900;
+  color: var(--color-brand-navy);
+  margin-bottom: 0.4rem;
+}
+
+.stepper-success-view p {
+  color: #64748B;
+  font-size: 0.95rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .dash-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .form-two-cols {
+    grid-template-columns: 1fr;
+  }
+}

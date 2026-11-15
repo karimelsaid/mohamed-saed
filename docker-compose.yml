@@ -1,0 +1,118 @@
+version: '3.8'
+
+services:
+  # Kenouz Main Project (Angular + SSR)
+  kenouz:
+    build:
+      context: .
+      dockerfile: Dockerfile.kenouz
+    container_name: kenouz-app
+    ports:
+      - "4200:4200"
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - .:/app
+      - /app/node_modules
+    working_dir: /app
+    command: npm start
+    networks:
+      - kenouz-network
+
+  # Kemi Project (Angular + Electron - Web only for Docker)
+  kemi:
+    build:
+      context: ./projects/kemi
+      dockerfile: Dockerfile
+    container_name: kemi-app
+    ports:
+      - "4201:4201"
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - ./projects/kemi:/app
+      - /app/node_modules
+    working_dir: /app
+    command: npm start
+    networks:
+      - kenouz-network
+
+  # Mihnati API (Express + MongoDB)
+  mihnati-api:
+    build:
+      context: ./projects/mihnati/apps/api
+      dockerfile: Dockerfile
+    container_name: mihnati-api
+    ports:
+      - "4203:4203"
+    environment:
+      - NODE_ENV=development
+      - PORT=4203
+      - MONGODB_URI=mongodb://mihnati-mongo:27017/mihnati
+      - MONGODB_DB_NAME=mihnati
+      - SESSION_SECRET=dev-secret-key-change-in-production
+    volumes:
+      - ./projects/mihnati/apps/api:/app
+      - /app/node_modules
+    working_dir: /app
+    command: npm run dev
+    depends_on:
+      - mihnati-mongo
+    networks:
+      - kenouz-network
+
+  # Mihnati Web (Angular)
+  mihnati-web:
+    build:
+      context: ./projects/mihnati/apps/web
+      dockerfile: Dockerfile
+    container_name: mihnati-web
+    ports:
+      - "4202:4202"
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - ./projects/mihnati/apps/web:/app
+      - /app/node_modules
+    working_dir: /app
+    command: npm run dev
+    depends_on:
+      - mihnati-api
+    networks:
+      - kenouz-network
+
+  # MongoDB for Mihnati
+  mihnati-mongo:
+    image: mongo:8.0
+    container_name: mihnati-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mihnati-mongo-data:/data/db
+    networks:
+      - kenouz-network
+
+  # Backend (Express)
+  backend:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+    container_name: backend-app
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - ./Backend:/app
+      - /app/node_modules
+    working_dir: /app
+    command: node app.js
+    networks:
+      - kenouz-network
+
+networks:
+  kenouz-network:
+    driver: bridge
+
+volumes:
+  mihnati-mongo-data:

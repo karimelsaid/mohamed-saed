@@ -39,7 +39,14 @@ import { WatinService, WatinLecture, WatinCategory } from '../../services/watin.
       <!-- Lectures List -->
       <div class="lectures-list" *ngIf="!isLoading">
         <div class="empty-state" *ngIf="lectures.length === 0">
-          لا توجد محاضرات مطابقة لبحثك
+          <div class="empty-icon">
+            <i class="fas fa-audio-description"></i>
+          </div>
+          <h3>لا توجد محاضرات حالياً</h3>
+          <p *ngIf="searchQuery">لم يتم العثور على محاضرات مطابقة لـ "{{ searchQuery }}"</p>
+          <p *ngIf="!searchQuery && activeCategoryId">لا توجد محاضرات في هذا القسم بعد</p>
+          <p *ngIf="!searchQuery && !activeCategoryId">لم يتم نشر أي محاضرة بعد</p>
+          <button class="btn-secondary" routerLink="/transcription">بدء تفريغ محاضرة</button>
         </div>
         <div class="lecture-card" *ngFor="let lec of lectures" [routerLink]="['/lectures', lec.slug]">
           <div class="lecture-body">
@@ -101,6 +108,42 @@ import { WatinService, WatinLecture, WatinCategory } from '../../services/watin.
       padding: 50px 20px;
       color: var(--watin-sage);
       font-size: 16px;
+    }
+
+    .empty-icon {
+      font-size: 64px;
+      margin-bottom: 20px;
+      opacity: 0.5;
+    }
+
+    .empty-state h3 {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--watin-forest);
+      margin: 0 0 10px 0;
+    }
+
+    .empty-state p {
+      font-size: 14px;
+      margin: 0 0 30px 0;
+      opacity: 0.8;
+    }
+
+    .btn-secondary {
+      background-color: var(--watin-surface);
+      color: var(--watin-forest);
+      border: 2px solid var(--watin-forest);
+      padding: 12px 24px;
+      border-radius: 25px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-secondary:hover {
+      background-color: var(--watin-forest);
+      color: white;
     }
     .search-box {
       display: flex;

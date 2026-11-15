@@ -1,0 +1,338 @@
+<div class="store-page-container">
+
+  <!-- Store Hero Banner -->
+  <div class="store-banner-header">
+    <div class="container banner-inner">
+      <div class="banner-text">
+        <h1 class="store-main-title">متجر الأدوات المهنية ومواد البناء</h1>
+        <p class="store-sub-title">كل ما تحتاجه من عدد ومعدات أصلية بضمان مِهْنَتي وتوصيل سريع</p>
+      </div>
+
+      <div class="banner-action-buttons">
+        <!-- Merchant Add Product Action -->
+        @if (authService.isMerchant()) {
+          <button type="button" class="btn-merchant-add-product" (click)="openNewProductModal()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+            <span>إضافة منتج جديد للمتجر</span>
+          </button>
+        }
+
+        <!-- Open Cart Button -->
+        <button type="button" class="btn-open-cart-floating" (click)="openCheckout()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+          </svg>
+          <span>سلة المشتريات</span>
+          <span class="cart-num-badge">{{ cartItemsCount }}</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="container store-main-layout">
+
+    <!-- ══════════════════════════════════════════════════════════════
+         1. STORE CATEGORIES SIDEBAR (الأقسام)
+         ══════════════════════════════════════════════════════════════ -->
+    <aside class="store-sidebar">
+      <div class="sidebar-box">
+        <h3 class="sidebar-box-title">الأقسام</h3>
+        <ul class="store-cat-list">
+          @for (cat of storeCategories; track cat.id) {
+            <li>
+              <button
+                type="button"
+                class="store-cat-btn"
+                [class.active]="selectedCategory() === cat.id"
+                (click)="onSelectCategory(cat.id)">
+                <span>• {{ cat.nameAr }}</span>
+              </button>
+            </li>
+          }
+        </ul>
+      </div>
+    </aside>
+
+    <!-- ══════════════════════════════════════════════════════════════
+         2. PRODUCTS CATALOG GRID (شبكة المنتجات)
+         ══════════════════════════════════════════════════════════════ -->
+    <main class="store-catalog-main">
+      <div class="catalog-grid">
+        @for (prod of filteredProducts(); track prod.id) {
+          <div class="product-catalog-card">
+            @if (prod.badge) {
+              <span class="product-badge">{{ prod.badge }}</span>
+            }
+
+            <div class="prod-img-box">
+              <span class="prod-emoji-hero">{{ prod.emoji }}</span>
+            </div>
+
+            <div class="prod-card-body">
+              <h3 class="prod-card-title">{{ prod.title }}</h3>
+              <div class="prod-price-tag">
+                <span class="prod-price-num">{{ prod.priceEgp | number }}</span>
+                <span class="prod-currency">ج.م</span>
+              </div>
+
+              <button type="button" class="btn-add-to-cart-blue" (click)="addToCart(prod)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+                <span>أضف للسلة</span>
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    </main>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       3. ADD PRODUCT MODAL FOR MERCHANTS (نافذة إضافة منتج جديد)
+       ══════════════════════════════════════════════════════════════ -->
+  @if (showNewProductModal()) {
+    <div class="modal-backdrop" (click)="closeNewProductModal()">
+      <div class="modal-card product-modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-card-header">
+          <div class="modal-title-wrap">
+            <span class="modal-header-icon">🏪</span>
+            <div>
+              <h2 class="modal-title">إضافة منتج جديد للمتجر</h2>
+              <p class="modal-subtitle">سيظهر المنتج فوراً للعملاء في دليل المتجر للشراء الفوري</p>
+            </div>
+          </div>
+          <button type="button" class="btn-close-modal" (click)="closeNewProductModal()">✕</button>
+        </div>
+
+        @if (productCreateSuccess()) {
+          <div class="alert alert-success">
+            <span>✅ {{ productCreateSuccess() }}</span>
+          </div>
+        }
+
+        @if (productCreateError()) {
+          <div class="alert alert-danger">
+            <span>⚠️ {{ productCreateError() }}</span>
+          </div>
+        }
+
+        <form (ngSubmit)="submitNewProduct()" class="product-form-body">
+          <div class="form-row-2">
+            <div class="form-field">
+              <label class="field-label">اسم المنتج *</label>
+              <input 
+                type="text" 
+                [(ngModel)]="newProduct.title" 
+                name="prodTitle" 
+                placeholder="مثال: دريل شحن بوش 18V أصلي" 
+                required 
+                class="field-input" />
+            </div>
+
+            <div class="form-field">
+              <label class="field-label">القسم *</label>
+              <select [(ngModel)]="newProduct.category" name="prodCat" class="field-select">
+                <option value="electric">أدوات كهربائية</option>
+                <option value="plumbing">أدوات سباكة</option>
+                <option value="carpentry">أدوات نجارة</option>
+                <option value="building">دهانات ومواد بناء</option>
+                <option value="safety">معدات السلامة</option>
+                <option value="other">أخرى</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row-3">
+            <div class="form-field">
+              <label class="field-label">السعر (ج.م) *</label>
+              <input 
+                type="number" 
+                [(ngModel)]="newProduct.priceEgp" 
+                name="prodPrice" 
+                min="1" 
+                required 
+                class="field-input" />
+            </div>
+
+            <div class="form-field">
+              <label class="field-label">الكمية المتوفرة بالمخزون *</label>
+              <input 
+                type="number" 
+                [(ngModel)]="newProduct.stock" 
+                name="prodStock" 
+                min="1" 
+                required 
+                class="field-input" />
+            </div>
+
+            <div class="form-field">
+              <label class="field-label">الأيقونة / الرمز</label>
+              <select [(ngModel)]="newProduct.emoji" name="prodEmoji" class="field-select emoji-select">
+                <option value="🛠️">🛠️ عدد وأدوات</option>
+                <option value="🔩">🔩 سباكة ومحابس</option>
+                <option value="🧰">🧰 صندوق عدة</option>
+                <option value="🪣">🪣 دهانات وبويات</option>
+                <option value="⚡">⚡ كهرباء وتوصيلات</option>
+                <option value="🥽">🥽 خوذ ونظارات سلامة</option>
+                <option value="🪚">🪚 نجارة وقص</option>
+                <option value="📦">📦 بضاعة عامة</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-field">
+            <label class="field-label">وصف المنتج ومواصفاته الفنية</label>
+            <textarea 
+              [(ngModel)]="newProduct.description" 
+              name="prodDesc" 
+              rows="3" 
+              placeholder="اكتب مواصفات المنتج، الضمان، وبلد المنشأ..." 
+              class="field-textarea"></textarea>
+          </div>
+
+          <div class="modal-card-footer">
+            <button type="button" class="btn-cancel" (click)="closeNewProductModal()">إلغاء</button>
+            <button type="submit" class="btn-submit-product">
+              <span>حفظ وإضافة للمتجر 🚀</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- ══════════════════════════════════════════════════════════════
+       4. CART & CHECKOUT MODAL (سلة المشتريات والدفع)
+       ══════════════════════════════════════════════════════════════ -->
+  @if (showCheckoutModal()) {
+    <div class="checkout-modal-backdrop" (click)="closeCheckout()">
+      <div class="checkout-modal-sheet" (click)="$event.stopPropagation()">
+
+        <!-- Header -->
+        <div class="checkout-sheet-header">
+          <h2 class="sheet-title">سلة المشتريات والدفع</h2>
+          <button type="button" class="btn-close-sheet" (click)="closeCheckout()">✕</button>
+        </div>
+
+        @if (checkoutSuccess()) {
+          <div class="checkout-success-view">
+            <span class="success-icon-big">🎉</span>
+            <h3>تم تأكيد طلبك بنجاح!</h3>
+            <p>سيتم توصيل الأدوات والمعدات إلى عنوانك خلال 24 ساعة، والدفع عند الاستلام مع إيصال رسمي.</p>
+          </div>
+        } @else {
+          <div class="checkout-two-columns">
+
+            <!-- Right Column: Cart Items List -->
+            <div class="cart-items-column">
+              <h3 class="col-title">المنتجات في السلة</h3>
+
+              @if (cart().length === 0) {
+                <div class="empty-cart-view">
+                  <p>سلتك فارغة حالياً. تصفح المتجر وأضف منتجاتك المفضلة.</p>
+                </div>
+              } @else {
+                <div class="cart-list">
+                  @for (item of cart(); track item.product.id; let idx = $index) {
+                    <div class="cart-row-item">
+                      <div class="cart-item-emoji">{{ item.product.emoji }}</div>
+
+                      <div class="cart-item-meta">
+                        <h4 class="cart-item-title">{{ item.product.title }}</h4>
+                        <span class="cart-item-unit-price">{{ item.product.priceEgp | number }} ج.م للقطعة</span>
+                      </div>
+
+                      <!-- Quantity Stepper -->
+                      <div class="quantity-stepper">
+                        <button type="button" class="btn-step" (click)="updateQuantity(idx, -1)">-</button>
+                        <span class="step-num">{{ item.quantity }}</span>
+                        <button type="button" class="btn-step" (click)="updateQuantity(idx, 1)">+</button>
+                      </div>
+
+                      <!-- Subtotal -->
+                      <div class="cart-item-subtotal">
+                        <strong>{{ (item.product.priceEgp * item.quantity) | number }}</strong>
+                        <small>ج.م</small>
+                      </div>
+                    </div>
+                  }
+                </div>
+
+                <!-- Total Box -->
+                <div class="cart-total-box">
+                  <span class="total-label">الإجمالي:</span>
+                  <span class="total-val">{{ totalCartPriceEgp | number }} <strong>ج.م</strong></span>
+                </div>
+
+                <button type="button" class="btn-complete-order-orange" (click)="submitCheckout()">
+                  إتمام الشراء
+                </button>
+              }
+            </div>
+
+            <!-- Left Column: Payment & Delivery Information -->
+            <div class="checkout-forms-column">
+              <!-- Payment Method (طريقة الدفع) -->
+              <div class="checkout-section-box">
+                <h3 class="col-title">طريقة الدفع</h3>
+                <div class="payment-options-list">
+                  <label class="payment-radio-option" [class.selected]="paymentMethod() === 'card'">
+                    <input type="radio" name="paymethod" value="card" [checked]="paymentMethod() === 'card'" (change)="paymentMethod.set('card')" />
+                    <span class="pay-label-content">
+                      <span class="pay-title">بطاقة بنكية (فيزا / ماستركارد)</span>
+                      <span class="pay-icon">💳</span>
+                    </span>
+                  </label>
+
+                  <label class="payment-radio-option" [class.selected]="paymentMethod() === 'wallet'">
+                    <input type="radio" name="paymethod" value="wallet" [checked]="paymentMethod() === 'wallet'" (change)="paymentMethod.set('wallet')" />
+                    <span class="pay-label-content">
+                      <span class="pay-title">محفظة إلكترونية (فودافون كاش / إنستاباي)</span>
+                      <span class="pay-icon">📱</span>
+                    </span>
+                  </label>
+
+                  <label class="payment-radio-option" [class.selected]="paymentMethod() === 'cod'">
+                    <input type="radio" name="paymethod" value="cod" [checked]="paymentMethod() === 'cod'" (change)="paymentMethod.set('cod')" />
+                    <span class="pay-label-content">
+                      <span class="pay-title">الدفع عند الاستلام (COD)</span>
+                      <span class="pay-icon">💵</span>
+                    </span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Delivery Information (معلومات التوصيل) -->
+              <div class="checkout-section-box">
+                <h3 class="col-title">معلومات التوصيل</h3>
+                <div class="delivery-fields-list">
+                  <div class="form-group-field">
+                    <label>اسم المستلم:</label>
+                    <input type="text" [(ngModel)]="customerName" class="form-control" />
+                  </div>
+
+                  <div class="form-group-field">
+                    <label>رقم الهاتف للتواصل:</label>
+                    <input type="tel" [(ngModel)]="customerPhone" class="form-control" />
+                  </div>
+
+                  <div class="form-group-field">
+                    <label>عنوان التوصيل بالتفصيل:</label>
+                    <input type="text" [(ngModel)]="customerAddress" class="form-control" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        }
+
+      </div>
+    </div>
+  }
+
+</div>

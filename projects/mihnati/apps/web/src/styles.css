@@ -1,0 +1,159 @@
+/* Mihnati Global Styles — Arabic RTL First */
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap');
+
+:root {
+  /* Brand Palette from Design Concept */
+  --color-primary: #FF7A00;
+  --color-primary-hover: #EA6C00;
+  --color-primary-light: #FFF3E6;
+  --color-brand-navy: #0B2545;
+  --color-brand-navy-dark: #06182D;
+  --color-brand-navy-surface: #102A45;
+  --color-brand-navy-light: #163E72;
+  --color-brand-orange: #FF7A00;
+  --color-brand-orange-hover: #EA6C00;
+  --color-brand-orange-light: #FFF3E6;
+  --color-action-blue: #1D4ED8;
+  --color-action-blue-hover: #1E40AF;
+  --color-action-blue-light: #EFF6FF;
+
+  /* State & Feedback */
+  --color-verified: #16A34A;
+  --color-verified-bg: #DCFCE7;
+  --color-star: #F59E0B;
+  --color-star-bg: #FEF3C7;
+  --color-danger: #DC2626;
+  --color-danger-light: #FEE2E2;
+
+  /* Neutrals & Surfaces */
+  --color-bg: #F8FAFC;
+  --color-surface: #FFFFFF;
+  --color-surface-hover: #F1F5F9;
+  --color-border: #E2E8F0;
+  --color-border-subtle: #EDF2F7;
+  --color-text-main: #0F172A;
+  --color-text-muted: #64748B;
+  --color-text-light: #94A3B8;
+
+  /* Typography */
+  --font-family: 'Cairo', system-ui, -apple-system, sans-serif;
+
+  /* Radii & Shadows */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-full: 9999px;
+
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.04);
+  --shadow-orange: 0 4px 14px 0 rgba(255, 122, 0, 0.35);
+  --shadow-card: 0 2px 8px -2px rgba(15, 23, 42, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-family);
+  background-color: var(--color-bg);
+  color: var(--color-text-main);
+  direction: rtl;
+  text-align: right;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+input, select, textarea {
+  font-family: inherit;
+}
+
+/* Layout Utilities */
+.container {
+  width: 100%;
+  max-width: 1280px;
+  margin-inline: auto;
+  padding-inline: 1.25rem;
+}
+
+/* Global Button Styles */
+.btn-primary-orange {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background-color: var(--color-brand-orange);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.95rem;
+  padding: 0.65rem 1.4rem;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-orange);
+  transition: all 0.2s ease;
+}
+
+.btn-primary-orange:hover {
+  background-color: var(--color-brand-orange-hover);
+  transform: translateY(-1px);
+}
+
+.btn-secondary-blue {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background-color: var(--color-action-blue);
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: 0.55rem 1.25rem;
+  border-radius: var(--radius-md);
+  transition: all 0.2s ease;
+}
+
+.btn-secondary-blue:hover {
+  background-color: var(--color-action-blue-hover);
+  transform: translateY(-1px);
+}
+
+.btn-ghost-merchant {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background-color: #F1F5F9;
+  color: var(--color-brand-navy);
+  font-weight: 700;
+  font-size: 0.88rem;
+  padding: 0.5rem 1.1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  transition: all 0.2s ease;
+}
+
+.btn-ghost-merchant:hover {
+  background-color: #E2E8F0;
+  color: var(--color-brand-navy-dark);
+}

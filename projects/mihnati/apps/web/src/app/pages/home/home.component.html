@@ -1,0 +1,411 @@
+<div class="homepage">
+
+  <!-- ══════════════════════════════════════════════════════════════
+       1. HERO SECTION (القسم الترويجي الرئيسي)
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="hero-section">
+    <!-- Background Cairo Skyline Overlay -->
+    <div class="skyline-overlay"></div>
+
+    <div class="container hero-container">
+      <!-- Right Side: Hero Craftsmen Composition -->
+      <div class="hero-graphic">
+        <div class="craftsmen-composite">
+          <!-- Stylized Cairo Tower in background -->
+          <div class="cairo-tower-art" title="معالم القاهرة ومصر">
+            <svg viewBox="0 0 80 240" fill="none" class="tower-svg">
+              <path d="M40 0L42 30H38L40 0Z" fill="#38BDF8" opacity="0.6"/>
+              <rect x="36" y="30" width="8" height="15" rx="2" fill="#0284C7" opacity="0.7"/>
+              <path d="M30 45H50L46 170H34L30 45Z" fill="#0369A1" opacity="0.35" stroke="#38BDF8" stroke-width="1.5" stroke-dasharray="3 3"/>
+              <rect x="25" y="170" width="30" height="70" rx="4" fill="#0B2545" opacity="0.8"/>
+            </svg>
+          </div>
+
+          <!-- Craftsmen Showcase Cards -->
+          <div class="craftsmen-avatars">
+            <!-- Craftsman 1: Plumber -->
+            <div class="hero-worker-card worker-1">
+              <div class="worker-avatar-circle" style="background: linear-gradient(135deg, #0284C7, #0369A1)">
+                <span class="worker-icon">👨‍🔧</span>
+                <span class="worker-hardhat">🧢</span>
+              </div>
+              <div class="worker-tag">سباك معتمد</div>
+            </div>
+
+            <!-- Craftsman 2: Master Leader / Engineer -->
+            <div class="hero-worker-card worker-leader">
+              <div class="worker-avatar-circle leader-circle" style="background: linear-gradient(135deg, #FF7A00, #C2410C)">
+                <span class="worker-icon">👷‍♂️</span>
+                <span class="leader-badge">⭐ فني مميز</span>
+              </div>
+              <div class="worker-tag primary-tag">أفضل الصنايعية</div>
+            </div>
+
+            <!-- Craftsman 3: Welder / Blacksmith -->
+            <div class="hero-worker-card worker-2">
+              <div class="worker-avatar-circle" style="background: linear-gradient(135deg, #475569, #1E293B)">
+                <span class="worker-icon">🧑‍🏭</span>
+                <span class="worker-mask">⚡</span>
+              </div>
+              <div class="worker-tag">حداد ولحام</div>
+            </div>
+
+            <!-- Craftsman 4: Carpenter -->
+            <div class="hero-worker-card worker-3">
+              <div class="worker-avatar-circle" style="background: linear-gradient(135deg, #16A34A, #15803D)">
+                <span class="worker-icon">🪚</span>
+              </div>
+              <div class="worker-tag">نجار موبيليا</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Left Side: Hero Title, Search Bar & Trust Grid -->
+      <div class="hero-content">
+        <div class="hero-badge-title">
+          <span class="badge-arabic-calligraphy">مِهْنَتي</span>
+        </div>
+        <h1 class="hero-heading">... حيث تلتقي الخبرة بالثقة</h1>
+        <p class="hero-subheading">
+          ابحث عن أفضل الصنايعية والتجار، أو اطلب خدمتك بسهولة وأمان
+        </p>
+
+        <!-- Big Search Bar Widget matching Design Concept -->
+        <div class="hero-search-card">
+          <!-- Service Input -->
+          <div class="search-input-group">
+            <svg class="search-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <input
+              type="text"
+              class="search-input"
+              [(ngModel)]="searchQuery"
+              placeholder="ما الخدمة التي تحتاجها؟ مثال: سباك، نجار..."
+              (keyup.enter)="onSearch()"
+            />
+          </div>
+
+          <!-- Location Dropdown -->
+          <div class="search-location-group">
+            <svg class="location-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <select class="location-select" [(ngModel)]="selectedGov">
+              <option value="cairo">القاهرة</option>
+              <option value="giza">الجيزة</option>
+              <option value="alexandria">الإسكندرية</option>
+              <option value="sharqia">الشرقية</option>
+              <option value="dakahlia">الدقهلية</option>
+              <option value="all">جميع المحافظات</option>
+            </select>
+          </div>
+
+          <!-- Orange Search Button -->
+          <button type="button" class="btn-hero-search" (click)="onSearch()">
+            <svg class="search-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <span>بحث الآن</span>
+          </button>
+        </div>
+
+        <!-- Trust Badges Bar (شريط الثقة الزجاجي) -->
+        <div class="hero-trust-bar">
+          <div class="trust-card">
+            <div class="trust-icon-box star-box">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+              </svg>
+            </div>
+            <div class="trust-text">
+              <strong>تقييمات حقيقية</strong>
+              <span>من العملاء</span>
+            </div>
+          </div>
+
+          <div class="trust-card">
+            <div class="trust-icon-box handshake-box">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
+              </svg>
+            </div>
+            <div class="trust-text">
+              <strong>ضمان جودة</strong>
+              <span>الخدمة</span>
+            </div>
+          </div>
+
+          <div class="trust-card">
+            <div class="trust-icon-box support-box">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+            </div>
+            <div class="trust-text">
+              <strong>دعم فني</strong>
+              <span>على مدار الساعة</span>
+            </div>
+          </div>
+
+          <div class="trust-card">
+            <div class="trust-icon-box shield-box">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+            </div>
+            <div class="trust-text">
+              <strong>دفع آمن</strong>
+              <span>ومضمون</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       2. CATEGORIES CAROUSEL BAR (شريط التصنيفات)
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="categories-bar-section">
+    <div class="container categories-wrapper">
+      <button type="button" class="carousel-arrow arrow-right" title="السابق">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+        </svg>
+      </button>
+
+      <div class="categories-track">
+        @for (cat of categories(); track cat.id) {
+          <a [routerLink]="['/services']" [queryParams]="{ category: cat.slug }" class="category-item-card">
+            <div class="category-icon-bubble" [style.background-color]="cat.bgColor">
+              @switch (cat.iconSvg) {
+                @case ('plumbing') { <span>🚰</span> }
+                @case ('electricity') { <span>⚡</span> }
+                @case ('carpentry') { <span>🪚</span> }
+                @case ('blacksmith') { <span>⚒️</span> }
+                @case ('alumital') { <span>🪟</span> }
+                @case ('painting') { <span>🖌️</span> }
+                @case ('hvac') { <span>❄️</span> }
+                @case ('building') { <span>🧱</span> }
+                @case ('tools') { <span>🛠️</span> }
+                @case ('paints') { <span>🪣</span> }
+                @default { <span>🔧</span> }
+              }
+            </div>
+            <span class="category-name">{{ cat.nameAr }}</span>
+          </a>
+        }
+
+        <!-- More Category Item -->
+        <a routerLink="/services" class="category-item-card more-card">
+          <div class="category-icon-bubble" style="background-color: #F1F5F9;">
+            <svg class="more-icon" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z" />
+            </svg>
+          </div>
+          <span class="category-name">والمزيد ...</span>
+        </a>
+      </div>
+
+      <button type="button" class="carousel-arrow arrow-left" title="التالي">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+        </svg>
+      </button>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       3. FEATURED PROS & STORES SHOWCASE (قسم الصنايعية والمتاجر)
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="showcase-section">
+    <div class="container showcase-grid">
+
+      <!-- Column 1: Featured Professionals (أبرز الصنايعية) -->
+      <div class="showcase-column pros-column">
+        <div class="section-top-header">
+          <h2 class="section-main-title">أبرز الصنايعية</h2>
+          <a routerLink="/services" class="view-all-link">مشاهدة الكل ←</a>
+        </div>
+
+        <div class="pros-cards-grid">
+          @for (pro of featuredPros(); track pro.id) {
+            <div class="pro-profile-card">
+              <!-- Avatar & Badges Header -->
+              <div class="pro-card-avatar-wrap">
+                <div class="pro-avatar-circle" [style.background-color]="pro.avatarBg">
+                  <span class="pro-emoji-icon">{{ pro.avatarEmoji }}</span>
+                </div>
+                <!-- Green Verified Check Badge -->
+                @if (pro.verified) {
+                  <span class="verified-check-pill" title="صنايعي موثق رسمياً">
+                    <svg viewBox="0 0 20 20" fill="currentColor">
+                      <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                    </svg>
+                  </span>
+                }
+                <!-- Star Rating Badge -->
+                <div class="rating-badge-wrap">
+                  <span class="rating-star">★</span>
+                  <span class="rating-number">{{ pro.rating }}</span>
+                </div>
+              </div>
+
+              <!-- Pro Details -->
+              <div class="pro-info">
+                <h3 class="pro-name">{{ pro.name }}</h3>
+                <p class="pro-profession">{{ pro.profession }}</p>
+                <div class="pro-location">
+                  <svg class="loc-pin" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
+                  </svg>
+                  <span>{{ pro.governorate }}</span>
+                </div>
+              </div>
+
+              <!-- Request Action Button -->
+              <button type="button" class="btn-pro-request" (click)="requestService(pro)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+                <span>طلب الخدمة</span>
+              </button>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Column 2: Featured Stores & Equipment (متاجر مميزة) -->
+      <div class="showcase-column stores-column">
+        <div class="section-top-header">
+          <h2 class="section-main-title">متاجر مميزة</h2>
+          <a routerLink="/products" class="view-all-link">مشاهدة الكل ←</a>
+        </div>
+
+        <div class="stores-content-wrap">
+          <!-- Big Blue Promo Banner (كل ما يحتاجه الصنايعي في مكان واحد) -->
+          <div class="promo-tools-banner">
+            <div class="promo-banner-content">
+              <h3 class="promo-title">كل ما يحتاجه<br>الصنايعي في مكان واحد</h3>
+              <a routerLink="/products" class="btn-promo-shop">
+                <span>تسوق الآن</span>
+                <span class="arrow-sym">←</span>
+              </a>
+            </div>
+            <div class="promo-tool-art">
+              <span class="tool-art-icon">🧰</span>
+            </div>
+          </div>
+
+          <!-- Product Cards Grid -->
+          <div class="products-cards-grid">
+            @for (prod of featuredProducts(); track prod.id) {
+              <div class="product-mini-card">
+                <div class="product-img-wrap">
+                  <span class="product-emoji-view">{{ prod.productEmoji }}</span>
+                </div>
+                <div class="product-body">
+                  <h4 class="product-title">{{ prod.title }}</h4>
+                  <div class="product-price-row">
+                    <span class="price-value">{{ prod.priceEgp | number }} <small>ج.م</small></span>
+                    <button type="button" class="btn-add-cart-icon" (click)="addToCart(prod)" title="إضافة إلى السلة">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       4. STATS & NUMBERS RIBBON (شريط الإحصائيات والأرقام)
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="stats-ribbon-section">
+    <div class="container stats-container">
+      <!-- 24/7 Support -->
+      <div class="stat-unit">
+        <div class="stat-icon-circle blue-circle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 100-6 3 3 0 000 6z" />
+          </svg>
+        </div>
+        <div class="stat-texts">
+          <span class="stat-big-num">24/7</span>
+          <span class="stat-label-text">دعم فني</span>
+        </div>
+      </div>
+
+      <!-- 50k Users -->
+      <div class="stat-unit">
+        <div class="stat-icon-circle navy-circle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+          </svg>
+        </div>
+        <div class="stat-texts">
+          <span class="stat-big-num">50 ألف مستخدم</span>
+          <span class="stat-label-text">أكثر من</span>
+        </div>
+      </div>
+
+      <!-- 10k Craftsmen -->
+      <div class="stat-unit">
+        <div class="stat-icon-circle orange-circle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
+          </svg>
+        </div>
+        <div class="stat-texts">
+          <span class="stat-big-num">10 آلاف صنايعي وتاجر</span>
+          <span class="stat-label-text">أكثر من</span>
+        </div>
+      </div>
+
+      <!-- 5k Products -->
+      <div class="stat-unit">
+        <div class="stat-icon-circle store-circle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+          </svg>
+        </div>
+        <div class="stat-texts">
+          <span class="stat-big-num">5 آلاف منتج</span>
+          <span class="stat-label-text">أكثر من</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       5. COMMUNITY JOIN CTA BANNER (بانر الانضمام إلى مجتمع مهنتي)
+       ══════════════════════════════════════════════════════════════ -->
+  <section class="community-banner-section">
+    <div class="container banner-inner-box">
+      <div class="banner-text-col">
+        <h2 class="banner-title">ابدأ الآن وانضم إلى مجتمع مِهْنَتي</h2>
+        <p class="banner-subtext">سواء كنت عميلاً أو صنايعياً أو تاجراً .. فرصتك أكبر معانا</p>
+      </div>
+
+      <div class="banner-action-col">
+        <a routerLink="/auth" [queryParams]="{ tab: 'register' }" class="btn-banner-register">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+          </svg>
+          <span>إنشاء حساب مجاني</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+</div>

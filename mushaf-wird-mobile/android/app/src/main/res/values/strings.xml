@@ -1,8 +1,0 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources>
-    <string name="app_name">مصحف وِرد</string>
-    <string name="title_activity_main">مصحف وِرد</string>
-    <string name="package_name">com.kenouz.mushafwird</string>
-    <string name="custom_url_scheme">com.kenouz.mushafwird</string>
-    <string name="notification_channel_name">تلاوة القرآن</string>
-</resources>

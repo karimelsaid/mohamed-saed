@@ -1,0 +1,601 @@
+<div class="orders-page-wrapper">
+
+  <!-- Header Section with Dynamic Title based on Active Role -->
+  <div class="orders-hero-header">
+    <div class="container orders-header-flex">
+      <div>
+        <h1 class="orders-title">
+          {{
+            authService.isMerchant() ? 'لوحة تحكم التاجر والمتجر' :
+            authService.isProfessional() ? 'لوحة تحكم الصنايعي والمهني' :
+            'لوحة تحكم العميل والطلبات'
+          }}
+        </h1>
+        <p class="orders-subtitle">
+          {{
+            authService.isMerchant() ? 'متابعة مبيعات المتجر، شحن المنتجات، وتحصيل مستحقات الدفع عند الاستلام' :
+            authService.isProfessional() ? 'إدارة أوامر الخدمات المجدولة، التواصل مع العملاء، ومتابعة الأرباح' :
+            'متابعة مسار أوامر الخدمة، عروض الصنايعية، والتنفيذ بضمان مهنتي'
+          }}
+        </p>
+      </div>
+
+      <div class="header-action-btns">
+        @if (authService.isMerchant()) {
+          <button type="button" class="btn-create-request-orange" (click)="openNewProductModal()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+            <span>إضافة منتج للمتجر</span>
+          </button>
+        } @else if (authService.isProfessional()) {
+          <a routerLink="/services" class="btn-create-request-orange">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <span>تصفح الطلبات لتقديم عرض</span>
+          </a>
+        } @else {
+          <button type="button" class="btn-create-request-orange" (click)="openStepperModal()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+            <span>نشر طلب جديد</span>
+          </button>
+        }
+      </div>
+    </div>
+  </div>
+
+  <div class="container orders-content-body">
+
+    <!-- ══════════════════════════════════════════════════════════════
+         1. ROLE-SPECIFIC DASHBOARD PANELS (لوحات التحكم المخصصة لكل دور)
+         ══════════════════════════════════════════════════════════════ -->
+
+    <!-- Case A: MERCHANT DASHBOARD (لوحة تحكم التاجر) -->
+    @if (authService.isMerchant()) {
+      <div class="dashboard-panel-card merchant-panel">
+        <div class="dash-user-row">
+          <div class="dash-user-avatar merchant-avatar">
+            <span class="avatar-sym">🏪</span>
+          </div>
+          <div class="dash-user-text">
+            <div class="role-badge-pill merchant-pill">تاجر معتمد ومورّد أدوات</div>
+            <h3 class="user-greeting-name">{{ authService.currentUser()?.name || 'متجر النور للأدوات' }}</h3>
+            <span class="user-email-tag">سجل تجاري موثق ومطابق للاشتراطات ✅</span>
+          </div>
+        </div>
+
+        <div class="dash-kpi-grid">
+          <div class="kpi-mini-box orange-box">
+            <span class="kpi-num">{{ merchantStats.todaySalesEgp | number }} <small>ج.م</small></span>
+            <span class="kpi-label">مبيعات المتجر اليوم</span>
+          </div>
+          <div class="kpi-mini-box green-box">
+            <span class="kpi-num">{{ merchantStats.incomingOrdersCount }}</span>
+            <span class="kpi-label">طلبات شحن واردة</span>
+          </div>
+          <div class="kpi-mini-box blue-box">
+            <span class="kpi-num">{{ merchantStats.productsInStock }}</span>
+            <span class="kpi-label">منتجات في المخزون</span>
+          </div>
+          <div class="kpi-mini-box purple-box">
+            <span class="kpi-num">{{ merchantStats.withdrawableBalanceEgp | number }} <small>ج.م</small></span>
+            <span class="kpi-label">أرباح جاهزة للسحب</span>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Case B: CRAFTSMAN DASHBOARD (لوحة تحكم الصنايعي / المهني) -->
+    @else if (authService.isProfessional()) {
+      <div class="dashboard-panel-card pro-panel">
+        <div class="dash-user-row">
+          <div class="dash-user-avatar pro-avatar">
+            <span class="avatar-sym">👨‍🔧</span>
+          </div>
+          <div class="dash-user-text">
+            <div class="role-badge-pill pro-pill">فني وصنايعي محترف معتمد</div>
+            <h3 class="user-greeting-name">{{ authService.currentUser()?.name || 'محمد علي (صنايعي)' }}</h3>
+            <span class="user-email-tag">تم التحقق من بطاقة الرقم القومي والصحيفة الجنائية ✅</span>
+          </div>
+        </div>
+
+        <div class="dash-kpi-grid">
+          <div class="kpi-mini-box green-box">
+            <span class="kpi-num">{{ craftsmanStats.balanceEgp | number }} <small>ج.م</small></span>
+            <span class="kpi-label">الرصيد المتاح للسحب</span>
+          </div>
+          <div class="kpi-mini-box orange-box">
+            <span class="kpi-num">{{ craftsmanStats.rating }} ★</span>
+            <span class="kpi-label">تقييم العملاء العام</span>
+          </div>
+          <div class="kpi-mini-box blue-box">
+            <span class="kpi-num">{{ craftsmanStats.completedCount }}</span>
+            <span class="kpi-label">أعمال منجزة بنجاح</span>
+          </div>
+          <div class="kpi-mini-box purple-box">
+            <span class="kpi-num">{{ craftsmanStats.inReviewCount }}</span>
+            <span class="kpi-label">أوامر جارية الآن</span>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Case C: CUSTOMER DASHBOARD (لوحة تحكم العميل) -->
+    @else {
+      <div class="dashboard-panel-card customer-panel">
+        <div class="dash-user-row">
+          <div class="dash-user-avatar customer-avatar">
+            <span class="avatar-sym">👤</span>
+          </div>
+          <div class="dash-user-text">
+            <div class="role-badge-pill customer-pill">حساب عميل المنصة</div>
+            <h3 class="user-greeting-name">{{ authService.currentUser()?.name || 'أحمد محمد' }}</h3>
+            <span class="user-email-tag">حساب شخصي معتمد لطلب الخدمات والشراء</span>
+          </div>
+        </div>
+
+        <div class="dash-kpi-grid">
+          <div class="kpi-mini-box orange-box">
+            <span class="kpi-num">{{ customerStats.inProgressCount }}</span>
+            <span class="kpi-label">طلب قيد التنفيذ</span>
+          </div>
+          <div class="kpi-mini-box green-box">
+            <span class="kpi-num">{{ customerStats.completedCount }}</span>
+            <span class="kpi-label">مكتملة ومعتمدة</span>
+          </div>
+          <div class="kpi-mini-box blue-box">
+            <span class="kpi-num">{{ customerStats.reviewsCount }}</span>
+            <span class="kpi-label">التقييمات الممنوحة</span>
+          </div>
+          <div class="kpi-mini-box purple-box">
+            <span class="kpi-num">{{ customerStats.balanceEgp | number }} <small>ج.م</small></span>
+            <span class="kpi-label">رصيد المحفظة</span>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- ══════════════════════════════════════════════════════════════
+         2. DYNAMIC ORDERS & TRANSACTIONS LIST
+         ══════════════════════════════════════════════════════════════ -->
+    <div class="orders-section-card">
+      <div class="card-header-row">
+        <h2 class="card-title">
+          {{
+            authService.isMerchant() ? 'أحدث طلبات شراء المنتجات الواردة للمتجر' :
+            authService.isProfessional() ? 'أوامر الخدمات المكلف بتنفيذها والمواعيد' :
+            'آخر طلبات الخدمات والمشتريات الخاصة بك'
+          }}
+        </h2>
+        <span class="card-hint">محدث لحظياً</span>
+      </div>
+
+      <!-- Merchant Orders List -->
+      @if (authService.isMerchant()) {
+        <div class="orders-items-table">
+          <div class="order-row-item">
+            <div class="order-icon-col store-icon-circle">
+              <span class="ord-sym">🛠️</span>
+            </div>
+            <div class="order-info-col">
+              <h4 class="ord-title">طلب شراء: مثقاب كهربائي 18V لاسلكي + طقم بنط</h4>
+              <span class="ord-date">العميل: حسام خيري — التوصيل: مدينة نصر، القاهرة</span>
+            </div>
+            <div class="order-price-col">
+              <strong>1,250 ج.م</strong>
+              <small class="cod-tag">دفع عند الاستلام (COD)</small>
+            </div>
+            <div class="order-status-col">
+              <span class="status-badge progress-badge">جاري تجهيز الشحنة</span>
+            </div>
+          </div>
+
+          <div class="order-row-item">
+            <div class="order-icon-col store-icon-circle">
+              <span class="ord-sym">🔩</span>
+            </div>
+            <div class="order-info-col">
+              <h4 class="ord-title">طلب شراء: طقم أدوات سباكة ومحابس نحاس إيطالي</h4>
+              <span class="ord-date">العميل: كريم سامي — التوصيل: الدقي، الجيزة</span>
+            </div>
+            <div class="order-price-col">
+              <strong>350 ج.م</strong>
+              <small class="cod-tag">دفع عند الاستلام (COD)</small>
+            </div>
+            <div class="order-status-col">
+              <span class="status-badge completed-badge">تم التسليم بنجاح</span>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Professional Service Orders List -->
+      @else if (authService.isProfessional()) {
+        <div class="orders-items-table">
+          <div class="order-row-item">
+            <div class="order-icon-col pro-icon-circle">
+              <span class="ord-sym">🚰</span>
+            </div>
+            <div class="order-info-col">
+              <h4 class="ord-title">أمر تنفيذ: كشف تسريب مياه وتغيير محبس زاوية</h4>
+              <span class="ord-date">العميل: تامر سعيد — الموعد: اليوم الساعة 3:00 م — المعادي</span>
+            </div>
+            <div class="order-price-col">
+              <strong>350 ج.م</strong>
+              <small class="cod-tag">أتعاب الخدمة</small>
+            </div>
+            <div class="order-status-col">
+              <span class="status-badge progress-badge">مجدول بموعد زيارة</span>
+            </div>
+          </div>
+
+          <div class="order-row-item">
+            <div class="order-icon-col pro-icon-circle">
+              <span class="ord-sym">🔧</span>
+            </div>
+            <div class="order-info-col">
+              <h4 class="ord-title">أمر تنفيذ: تشطيب وتأسيس حمام بالكامل</h4>
+              <span class="ord-date">العميل: وليد صبحي — تم إنجاز العمل واعتماد الفاتورة</span>
+            </div>
+            <div class="order-price-col">
+              <strong>2,400 ج.م</strong>
+              <small class="cod-tag">تم تحويل الأرباح</small>
+            </div>
+            <div class="order-status-col">
+              <span class="status-badge completed-badge">مكتمل ومعتمد</span>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Customer Orders List -->
+      @else {
+        <div class="orders-items-table">
+          <div class="order-row-item">
+            <div class="order-icon-col">
+              <span class="ord-sym">🚰</span>
+            </div>
+            <div class="order-info-col">
+              <h4 class="ord-title">طلب خدمة: تركيب وتوصيل سخان مياه جديد</h4>
+              <span class="ord-date">الفني المعين: أحمد محمود (سباك محترف) — تاريخ الطلب: 2026/04/15</span>
+            </div>
+            <div class="order-price-col">
+              <strong>300 ج.م</strong>
+            </div>
+            <div class="order-status-col">
+              <span class="status-badge progress-badge">قيد التنفيذ</span>
+            </div>
+          </div>
+
+          <div class="order-row-item">
+            <div class="order-icon-col">
+              <span class="ord-sym">⚡</span>
+            </div>
+            <div class="order-info-col">
+              <h4 class="ord-title">طلب خدمة: تأسيس لوحة قواطع كهربائية ومفاتيح</h4>
+              <span class="ord-date">الفني المعين: محمود حسن (كهربائي محترف) — تاريخ الإنجاز: 2026/04/10</span>
+            </div>
+            <div class="order-price-col">
+              <strong>650 ج.م</strong>
+            </div>
+            <div class="order-status-col">
+              <span class="status-badge completed-badge">مكتمل ومعتمد</span>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       3. 3-STEP POST REQUEST STEPPER MODAL (نشر طلب جديد)
+       ══════════════════════════════════════════════════════════════ -->
+  @if (showNewRequestModal()) {
+    <div class="stepper-modal-backdrop" (click)="showNewRequestModal.set(false)">
+      <div class="stepper-modal-box" (click)="$event.stopPropagation()">
+
+        <!-- Stepper Top Bar Header -->
+        <div class="stepper-header">
+          <h2 class="modal-main-title">نشر طلب جديد</h2>
+          <button type="button" class="btn-close-stepper" (click)="showNewRequestModal.set(false)">✕</button>
+        </div>
+
+        <!-- 3-Step Wizard Indicators -->
+        <div class="wizard-steps-track">
+          <div class="step-indicator" [class.active]="currentStep() >= 1" [class.current]="currentStep() === 1">
+            <div class="step-bubble">1</div>
+            <span class="step-text">تفاصيل الطلب</span>
+          </div>
+          <div class="step-line" [class.filled]="currentStep() >= 2"></div>
+          <div class="step-indicator" [class.active]="currentStep() >= 2" [class.current]="currentStep() === 2">
+            <div class="step-bubble">2</div>
+            <span class="step-text">تحديد الموقع</span>
+          </div>
+          <div class="step-line" [class.filled]="currentStep() >= 3"></div>
+          <div class="step-indicator" [class.active]="currentStep() >= 3" [class.current]="currentStep() === 3">
+            <div class="step-bubble">3</div>
+            <span class="step-text">مراجعة الطلب</span>
+          </div>
+        </div>
+
+        @if (createSuccess()) {
+          <div class="stepper-success-view">
+            <span class="success-sym">🎉</span>
+            <h3>تم نشر طلبك بنجاح!</h3>
+            <p>{{ createSuccess() }}</p>
+          </div>
+        } @else {
+          <!-- STEP 1: تفاصيل الطلب -->
+          @if (currentStep() === 1) {
+            <div class="step-form-content">
+              <div class="form-row-group">
+                <label>ما نوع الخدمة التي تحتاجها؟</label>
+                <select class="form-select-lg" [(ngModel)]="newRequest.professionType">
+                  <option value="plumbing">سباكة وصيانة مياه</option>
+                  <option value="electric">كهرباء وتأسيس منازل</option>
+                  <option value="carpentry">نجارة وموبيليا</option>
+                  <option value="blacksmith">حدادة ولحام</option>
+                  <option value="painting">نقاشة ودهانات</option>
+                  <option value="alumital">ألوميتال وشبابيك</option>
+                </select>
+              </div>
+
+              <div class="form-row-group">
+                <label>وصف الطلب بالتفصيل:</label>
+                <textarea
+                  class="form-textarea-lg"
+                  rows="3"
+                  [(ngModel)]="newRequest.description"
+                  placeholder="مثال: أريد تركيب خلاط كابينة استحمام في الحمام وتغيير محبس الزاوية...">
+                </textarea>
+              </div>
+
+              <div class="form-two-cols">
+                <div class="form-row-group">
+                  <label>الميزانية المتوقعة (اختياري بالجنيه):</label>
+                  <input
+                    type="number"
+                    class="form-input-lg"
+                    [(ngModel)]="newRequest.expectedBudgetEgp"
+                    placeholder="مثال: 1000"
+                  />
+                </div>
+
+                <div class="form-row-group">
+                  <label>موعد مناسب للمعاينة:</label>
+                  <input
+                    type="date"
+                    class="form-input-lg"
+                    [(ngModel)]="newRequest.preferredDate"
+                  />
+                </div>
+              </div>
+
+              <!-- Image Upload Box -->
+              <div class="form-row-group">
+                <label>إضافة صور للمعاينة:</label>
+                <div class="upload-dropzone" (click)="toggleImageUpload()">
+                  <span class="upload-icon">📷</span>
+                  <span class="upload-desc">
+                    {{ newRequest.imagesUploaded ? 'تم إرفاق صورتين بنجاح ✅' : 'اضغط لإضافة صور مكان العطل أو العمل المطلوب' }}
+                  </span>
+                </div>
+              </div>
+
+              @if (createError()) {
+                <div class="error-msg-box">{{ createError() }}</div>
+              }
+
+              <div class="stepper-footer-actions">
+                <button type="button" class="btn-step-next-orange" (click)="goToStep(2)">
+                  التالي: تحديد الموقع ←
+                </button>
+              </div>
+            </div>
+          }
+
+          <!-- STEP 2: تحديد الموقع -->
+          @if (currentStep() === 2) {
+            <div class="step-form-content">
+              <div class="form-row-group">
+                <label>المحافظة:</label>
+                <select class="form-select-lg" [(ngModel)]="newRequest.governorate">
+                  <option value="cairo">القاهرة</option>
+                  <option value="giza">الجيزة</option>
+                  <option value="alexandria">الإسكندرية</option>
+                  <option value="sharqia">الشرقية</option>
+                </select>
+              </div>
+
+              <div class="form-row-group">
+                <label>الحي / المنطقة:</label>
+                <input
+                  type="text"
+                  class="form-input-lg"
+                  [(ngModel)]="newRequest.locality"
+                  placeholder="مثال: مدينة نصر، المعادي، الدقي..."
+                />
+              </div>
+
+              <div class="form-row-group">
+                <label>العنوان بالتفصيل أو أقرب معلم:</label>
+                <input
+                  type="text"
+                  class="form-input-lg"
+                  [(ngModel)]="newRequest.detailedAddress"
+                  placeholder="شارع الطيران بجوار مسجد رابعة"
+                />
+              </div>
+
+              <div class="stepper-footer-actions space-between">
+                <button type="button" class="btn-step-back-ghost" (click)="goToStep(1)">
+                  → السابق
+                </button>
+                <button type="button" class="btn-step-next-orange" (click)="goToStep(3)">
+                  التالي: مراجعة الطلب ←
+                </button>
+              </div>
+            </div>
+          }
+
+          <!-- STEP 3: مراجعة الطلب -->
+          @if (currentStep() === 3) {
+            <div class="step-form-content">
+              <h3 class="review-heading">ملخص طلبك قبل النشر:</h3>
+
+              <div class="review-summary-card">
+                <div class="review-item">
+                  <span class="rev-label">نوع الحرفة:</span>
+                  <span class="rev-val">سباكة وصيانة مياه</span>
+                </div>
+                <div class="review-item">
+                  <span class="rev-label">وصف العمل:</span>
+                  <span class="rev-val">{{ newRequest.description || 'تركيب خلاط وصيانة سباكة' }}</span>
+                </div>
+                <div class="review-item">
+                  <span class="rev-label">الميزانية المقترحة:</span>
+                  <span class="rev-val price-accent">{{ newRequest.expectedBudgetEgp }} ج.م</span>
+                </div>
+                <div class="review-item">
+                  <span class="rev-label">الموقع:</span>
+                  <span class="rev-val">{{ newRequest.governorate }} — {{ newRequest.locality }}</span>
+                </div>
+              </div>
+
+              <div class="stepper-footer-actions space-between">
+                <button type="button" class="btn-step-back-ghost" (click)="goToStep(2)">
+                  → السابق
+                </button>
+                <button type="button" class="btn-publish-final-orange" (click)="submitCustomRequest()">
+                  نشر الطلب الآن 🚀
+                </button>
+              </div>
+            </div>
+          }
+        }
+
+      </div>
+    </div>
+  }
+
+  <!-- ══════════════════════════════════════════════════════════════
+       ADD PRODUCT MODAL FOR MERCHANT (إضافة منتج للمتجر)
+       ══════════════════════════════════════════════════════════════ -->
+  @if (showNewProductModal()) {
+    <div class="stepper-modal-backdrop" (click)="closeNewProductModal()">
+      <div class="stepper-modal-dialog" (click)="$event.stopPropagation()">
+        <div class="stepper-dialog-header">
+          <div class="header-titles">
+            <span class="stepper-icon-badge">🏪</span>
+            <div>
+              <h2 class="dialog-title">إضافة منتج جديد لمتجرك</h2>
+              <p class="dialog-subtitle">أدخل تفاصيل ومواصفات المنتج لإضافته لمخزونك وعرضه للمشترين</p>
+            </div>
+          </div>
+          <button type="button" class="btn-close-dialog" (click)="closeNewProductModal()">✕</button>
+        </div>
+
+        @if (productCreateSuccess()) {
+          <div class="alert alert-success m-4">
+            <span>✅ {{ productCreateSuccess() }}</span>
+          </div>
+        }
+
+        @if (productCreateError()) {
+          <div class="alert alert-danger m-4">
+            <span>⚠️ {{ productCreateError() }}</span>
+          </div>
+        }
+
+        <form (ngSubmit)="submitNewProduct()" class="step-form-content">
+          <div class="form-group-field">
+            <label class="field-label">اسم المنتج *</label>
+            <input 
+              type="text" 
+              [(ngModel)]="newProduct.title" 
+              name="prodTitle" 
+              placeholder="مثال: دريل شحن 18V بوش أصلي" 
+              required 
+              class="field-input" />
+          </div>
+
+          <div class="row-2-fields">
+            <div class="form-group-field">
+              <label class="field-label">القسم *</label>
+              <select [(ngModel)]="newProduct.category" name="prodCat" class="field-select">
+                <option value="electric">أدوات كهربائية</option>
+                <option value="plumbing">أدوات سباكة</option>
+                <option value="carpentry">أدوات نجارة</option>
+                <option value="building">دهانات ومواد بناء</option>
+                <option value="safety">معدات السلامة</option>
+                <option value="other">أخرى</option>
+              </select>
+            </div>
+
+            <div class="form-group-field">
+              <label class="field-label">السعر (ج.م) *</label>
+              <input 
+                type="number" 
+                [(ngModel)]="newProduct.priceEgp" 
+                name="prodPrice" 
+                min="1" 
+                required 
+                class="field-input" />
+            </div>
+          </div>
+
+          <div class="row-2-fields">
+            <div class="form-group-field">
+              <label class="field-label">الكمية في المخزون *</label>
+              <input 
+                type="number" 
+                [(ngModel)]="newProduct.stock" 
+                name="prodStock" 
+                min="1" 
+                required 
+                class="field-input" />
+            </div>
+
+            <div class="form-group-field">
+              <label class="field-label">الرمز / الأيقونة</label>
+              <select [(ngModel)]="newProduct.emoji" name="prodEmoji" class="field-select">
+                <option value="🛠️">🛠️ عدد وأدوات</option>
+                <option value="🔩">🔩 سباكة ومحابس</option>
+                <option value="🧰">🧰 صندوق عدة</option>
+                <option value="🪣">🪣 دهانات وبويات</option>
+                <option value="⚡">⚡ كهرباء وتوصيلات</option>
+                <option value="🥽">🥽 معدات سلامة</option>
+                <option value="🪚">🪚 نجارة وقص</option>
+                <option value="📦">📦 عام / أخرى</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group-field">
+            <label class="field-label">المواصفات والوصف الفني</label>
+            <textarea 
+              [(ngModel)]="newProduct.description" 
+              name="prodDesc" 
+              rows="3" 
+              placeholder="وصف تفصيلي للضمان، القوة، بلد المنشأ..." 
+              class="field-textarea"></textarea>
+          </div>
+
+          <div class="stepper-footer-actions">
+            <button type="button" class="btn-step-back-ghost" (click)="closeNewProductModal()">
+              إلغاء
+            </button>
+            <button type="submit" class="btn-publish-final-orange">
+              حفظ وإضافة للمتجر 🚀
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+</div>

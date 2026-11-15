@@ -1,0 +1,19 @@
+{
+  "name": "mihnati-platform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Mihnati Platform — Modular Monolith for Services & Commerce",
+  "packageManager": "pnpm@12.16.1",
+  "scripts": {
+    "build": "pnpm --filter \"./packages/*\" --filter \"./apps/*\" run build",
+    "lint": "pnpm --filter \"./packages/*\" --filter \"./apps/*\" run lint",
+    "typecheck": "pnpm --filter \"./packages/*\" --filter \"./apps/*\" run typecheck",
+    "dev:api": "pnpm --filter \"@mihnati/api\" run dev",
+    "dev:web": "pnpm --filter \"@mihnati/web\" run dev",
+    "migrate": "pnpm --filter \"@mihnati/api\" run migrate"
+  },
+  "devDependencies": {
+    "typescript": "~5.8.2"
+  }
+}
+

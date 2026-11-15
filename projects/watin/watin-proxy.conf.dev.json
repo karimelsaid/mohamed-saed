@@ -1,0 +1,10 @@
+{
+  "/api/transcription": {
+    "target": "http://localhost:5050",
+    "secure": false,
+    "changeOrigin": true,
+    "ws": true,
+    "logLevel": "debug",
+    "proxyTimeout": 900000
+  }
+}

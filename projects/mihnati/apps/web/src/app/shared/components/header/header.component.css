@@ -1,0 +1,516 @@
+/* ══════════════════════════════════════════════════════════════
+   1. Topbar Styles (البار العلوي)
+   ══════════════════════════════════════════════════════════════ */
+.topbar {
+  background-color: #06182D;
+  color: #CBD5E1;
+  font-size: 0.82rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0.35rem 0;
+}
+
+.topbar-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.topbar-right,
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.topbar-item {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #CBD5E1;
+  transition: color 0.15s ease;
+  cursor: pointer;
+}
+
+.topbar-item:hover {
+  color: #FFFFFF;
+}
+
+.flag-icon {
+  font-size: 1rem;
+}
+
+.chevron-icon {
+  width: 14px;
+  height: 14px;
+  opacity: 0.7;
+}
+
+.topbar-icon {
+  width: 15px;
+  height: 15px;
+  opacity: 0.85;
+}
+
+.topbar-text {
+  font-weight: 500;
+}
+
+.server-status {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-full);
+  background-color: rgba(239, 68, 68, 0.15);
+  font-size: 0.75rem;
+}
+
+.server-status.connected {
+  background-color: rgba(34, 197, 94, 0.15);
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #EF4444;
+}
+
+.server-status.connected .status-dot {
+  background-color: #22C55E;
+}
+
+.status-label {
+  color: #94A3B8;
+}
+
+.server-status.connected .status-label {
+  color: #86EFAC;
+}
+
+/* User Menu & Buttons */
+.user-menu {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.user-greeting {
+  color: #E2E8F0;
+}
+
+.user-role-badge {
+  background-color: rgba(255, 122, 0, 0.18);
+  color: #FFB366;
+  border: 1px solid rgba(255, 122, 0, 0.35);
+  padding: 0.22rem 0.75rem;
+  border-radius: var(--radius-full);
+  font-size: 0.78rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  user-select: none;
+}
+
+.badge-merchant {
+  background-color: rgba(2, 132, 199, 0.2) !important;
+  color: #7DD3FC !important;
+  border-color: rgba(2, 132, 199, 0.4) !important;
+}
+
+.badge-pro {
+  background-color: rgba(22, 163, 74, 0.2) !important;
+  color: #86EFAC !important;
+  border-color: rgba(22, 163, 74, 0.4) !important;
+}
+
+.badge-admin {
+  background-color: rgba(147, 51, 234, 0.25) !important;
+  color: #D8B4FE !important;
+  border-color: rgba(147, 51, 234, 0.5) !important;
+  font-weight: 800;
+}
+
+.badge-customer {
+  background-color: rgba(148, 163, 184, 0.18) !important;
+  color: #CBD5E1 !important;
+  border-color: rgba(148, 163, 184, 0.35) !important;
+}
+
+.btn-topbar-dash {
+  background-color: rgba(255, 255, 255, 0.15);
+  color: #FFFFFF;
+  padding: 0.2rem 0.65rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 700;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.15s ease;
+}
+
+.btn-topbar-dash:hover {
+  background-color: rgba(255, 255, 255, 0.25);
+  color: #FFFFFF;
+}
+
+.nav-dash-item {
+  color: #0284C7 !important;
+  background-color: #F0F9FF;
+  border: 1px solid #BAE6FD;
+  border-radius: var(--radius-sm);
+  font-weight: 800;
+}
+
+.nav-dash-item:hover {
+  background-color: #0284C7 !important;
+  color: #FFFFFF !important;
+}
+
+.btn-topbar-admin {
+  background-color: #9333EA;
+  color: #FFFFFF;
+  padding: 0.18rem 0.65rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 800;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.btn-topbar-admin:hover {
+  background-color: #7E22CE;
+}
+
+.nav-admin-item {
+  color: #9333EA !important;
+  background-color: #FAF5FF;
+  border: 1px solid #E9D5FF;
+  border-radius: var(--radius-sm);
+}
+
+.nav-admin-item:hover {
+  background-color: #9333EA !important;
+  color: #FFFFFF !important;
+}
+
+.nav-admin-item:hover .admin-nav-icon {
+  color: #FFFFFF !important;
+}
+
+.admin-nav-icon {
+  color: #9333EA !important;
+}
+
+.btn-topbar-logout {
+  color: #F87171;
+  font-size: 0.8rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* Topbar Auth Buttons (High contrast against navy) */
+.auth-link {
+  color: #FFFFFF !important;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.12);
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: all 0.2s ease;
+}
+
+.auth-link:hover {
+  background: rgba(255, 255, 255, 0.22);
+  color: #FFFFFF !important;
+}
+
+.btn-register-orange {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background-color: #FF7A00 !important;
+  color: #FFFFFF !important;
+  padding: 0.28rem 0.85rem;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  font-size: 0.82rem;
+  box-shadow: 0 2px 8px rgba(255, 122, 0, 0.35);
+  transition: all 0.2s ease;
+}
+
+.btn-register-orange:hover {
+  background-color: #EA6C00 !important;
+  transform: translateY(-1px);
+}
+
+/* Navbar Daylight Auth Buttons (Visible in white main navbar) */
+.navbar-auth-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-nav-login {
+  color: #0B2545 !important;
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 0.4rem 0.9rem;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid #CBD5E1;
+  background-color: #FFFFFF;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+}
+
+.btn-nav-login:hover {
+  background-color: #F1F5F9;
+  border-color: #94A3B8;
+  color: #0B2545 !important;
+}
+
+.btn-nav-register {
+  color: #FFFFFF !important;
+  background-color: #FF7A00 !important;
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 0.45rem 1rem;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 2px 8px rgba(255, 122, 0, 0.3);
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+}
+
+.btn-nav-register:hover {
+  background-color: #EA6C00 !important;
+  box-shadow: 0 4px 12px rgba(255, 122, 0, 0.45);
+  transform: translateY(-1px);
+}
+
+.btn-icon {
+  width: 15px;
+  height: 15px;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   2. Main Header Navbar (الهيدر الرئيسي)
+   ══════════════════════════════════════════════════════════════ */
+.main-navbar {
+  background-color: #FFFFFF;
+  border-bottom: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.navbar-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 76px;
+  gap: 1.5rem;
+}
+
+/* Brand / Logo */
+.navbar-brand {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.brand-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.logo-mark {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.brand-titles {
+  display: flex;
+  flex-direction: column;
+}
+
+.brand-name {
+  display: flex;
+  align-items: center;
+}
+
+.brand-arabic {
+  font-size: 1.85rem;
+  font-weight: 900;
+  color: var(--color-brand-navy);
+  letter-spacing: -0.5px;
+  line-height: 1.1;
+}
+
+.brand-tagline {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+/* Nav Links */
+.navbar-links {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.nav-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--color-brand-navy);
+  padding: 0.4rem 0.5rem;
+  border-radius: var(--radius-sm);
+  transition: all 0.15s ease;
+}
+
+.nav-icon {
+  width: 17px;
+  height: 17px;
+  color: #64748B;
+  transition: color 0.15s ease;
+}
+
+.nav-item:hover {
+  color: var(--color-brand-orange);
+}
+
+.nav-item:hover .nav-icon {
+  color: var(--color-brand-orange);
+}
+
+.nav-item.active {
+  color: var(--color-brand-orange);
+}
+
+.nav-item.active .nav-icon {
+  color: var(--color-brand-orange);
+}
+
+/* Actions: Become Merchant & Icons */
+.navbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-shrink: 0;
+}
+
+.btn-merchant-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background-color: #F1F5F9;
+  color: var(--color-brand-navy);
+  font-weight: 800;
+  font-size: 0.88rem;
+  padding: 0.55rem 1.1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid #CBD5E1;
+  transition: all 0.2s ease;
+}
+
+.btn-merchant-cta:hover {
+  background-color: #E2E8F0;
+  border-color: #94A3B8;
+  color: var(--color-brand-navy-dark);
+}
+
+.merchant-icon {
+  width: 17px;
+  height: 17px;
+  color: var(--color-brand-navy);
+}
+
+.action-icons-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.icon-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-brand-navy);
+  position: relative;
+  transition: background-color 0.15s ease;
+}
+
+.icon-btn svg {
+  width: 21px;
+  height: 21px;
+}
+
+.icon-btn:hover {
+  background-color: #F1F5F9;
+  color: var(--color-brand-orange);
+}
+
+.cart-btn {
+  position: relative;
+}
+
+.cart-badge {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  background-color: var(--color-brand-orange);
+  color: #FFFFFF;
+  font-size: 0.7rem;
+  font-weight: 800;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.badge-dot {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 8px;
+  height: 8px;
+  background-color: #EF4444;
+  border-radius: 50%;
+  border: 1.5px solid #FFFFFF;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .navbar-links {
+    gap: 0.6rem;
+  }
+  .nav-item span {
+    display: none;
+  }
+}

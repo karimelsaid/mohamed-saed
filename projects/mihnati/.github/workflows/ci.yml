@@ -1,0 +1,70 @@
+name: Mihnati Platform CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  validate:
+    name: Lint, Typecheck & Tests
+    runs-on: ubuntu-latest
+
+    services:
+      mongodb:
+        image: mongo:8.0
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand({ ping: 1 })'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.16.1
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck Contracts & Apps
+        run: pnpm typecheck
+
+      - name: Build Contracts
+        run: pnpm --filter @mihnati/contracts run build
+
+      - name: Build API
+        run: pnpm --filter @mihnati/api run build
+
+      - name: Run API Unit Tests
+        run: pnpm test:unit
+
+      - name: Run Database Migrations
+        env:
+          NODE_ENV: test
+          MONGODB_URI: mongodb://127.0.0.1:27017/mihnati
+          SESSION_SECRET: test-secret-that-is-at-least-32-characters-long-ok
+        run: pnpm migrate
+
+      - name: Run API Integration Tests
+        env:
+          NODE_ENV: test
+          MONGODB_URI: mongodb://127.0.0.1:27017/mihnati_test
+          SESSION_SECRET: test-secret-that-is-at-least-32-characters-long-ok
+        run: pnpm test:integration
+
+      - name: Build Angular Frontend
+        run: pnpm --filter @mihnati/web run build
+

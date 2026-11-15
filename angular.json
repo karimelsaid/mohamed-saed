@@ -121,6 +121,12 @@
               ]
             },
             "development": {
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.dev.ts"
+                }
+              ],
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true,
@@ -139,16 +145,20 @@
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
           "options": {
-            "proxyConfig": "proxy.conf.json"
+            "proxyConfig": "proxy.conf.dev.json",
+            "port": 4200
           },
           "configurations": {
             "production": {
+              "proxyConfig": "proxy.conf.prod.json",
               "buildTarget": "kenouz:build:production"
             },
             "development": {
+              "proxyConfig": "proxy.conf.dev.json",
               "buildTarget": "kenouz:build:development"
             },
             "no-ssr": {
+              "proxyConfig": "proxy.conf.dev.json",
               "buildTarget": "kenouz:build:no-ssr"
             }
           },
@@ -156,27 +166,6 @@
         },
         "extract-i18n": {
           "builder": "@angular-devkit/build-angular:extract-i18n"
-        },
-        "test": {
-          "builder": "@angular-devkit/build-angular:karma",
-          "options": {
-            "polyfills": [
-              "zone.js",
-              "zone.js/testing"
-            ],
-            "tsConfig": "tsconfig.spec.json",
-            "assets": [
-              {
-                "glob": "**/*",
-                "input": "public"
-              }
-            ],
-            "styles": [
-              "node_modules/@fortawesome/fontawesome-free/css/all.min.css",
-              "src/styles.css"
-            ],
-            "scripts": []
-          }
         }
       }
     },
@@ -212,7 +201,7 @@
             "assets": [
               {
                 "glob": "**/*",
-                "input": "mushaf-public"
+                "input": "projects/mushaf/mushaf-public"
               },
               {
                 "glob": "**/*",
@@ -264,6 +253,12 @@
               "outputHashing": "all"
             },
             "development": {
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.dev.ts"
+                }
+              ],
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
@@ -282,16 +277,20 @@
           "builder": "@angular-devkit/build-angular:dev-server",
           "options": {
             "buildTarget": "mushaf-wird:build",
-            "proxyConfig": "proxy.conf.json"
+            "proxyConfig": "proxy.conf.dev.json",
+            "port": 4204
           },
           "configurations": {
             "production": {
+              "proxyConfig": "proxy.conf.prod.json",
               "buildTarget": "mushaf-wird:build:production"
             },
             "development": {
+              "proxyConfig": "proxy.conf.dev.json",
               "buildTarget": "mushaf-wird:build:development"
             },
             "no-ssr": {
+              "proxyConfig": "proxy.conf.dev.json",
               "buildTarget": "mushaf-wird:build:no-ssr"
             }
           },
@@ -331,7 +330,7 @@
             "assets": [
               {
                 "glob": "**/*",
-                "input": "watin-public"
+                "input": "projects/watin/watin-public"
               },
               {
                 "glob": "**/*",
@@ -393,7 +392,7 @@
               "assets": [
                 {
                   "glob": "**/*",
-                  "input": "watin-public"
+                  "input": "projects/watin/watin-public"
                 },
                 {
                   "glob": "**/*",
@@ -403,6 +402,12 @@
               ]
             },
             "development": {
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.dev.ts"
+                }
+              ],
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
@@ -421,19 +426,24 @@
           "builder": "@angular-devkit/build-angular:dev-server",
           "options": {
             "buildTarget": "watin:build",
-            "proxyConfig": "watin-proxy.conf.json"
+            "proxyConfig": "projects/watin/watin-proxy.conf.dev.json",
+            "port": 4205
           },
           "configurations": {
             "production": {
+              "proxyConfig": "projects/watin/watin-proxy.conf.json",
               "buildTarget": "watin:build:production"
             },
             "mobile": {
+              "proxyConfig": "projects/watin/watin-proxy.conf.json",
               "buildTarget": "watin:build:mobile"
             },
             "development": {
+              "proxyConfig": "projects/watin/watin-proxy.conf.dev.json",
               "buildTarget": "watin:build:development"
             },
             "no-ssr": {
+              "proxyConfig": "projects/watin/watin-proxy.conf.dev.json",
               "buildTarget": "watin:build:no-ssr"
             }
           },

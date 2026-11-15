@@ -1,0 +1,41 @@
+<app-header></app-header>
+
+<main class="app-main">
+  <router-outlet></router-outlet>
+</main>
+
+<footer class="app-footer">
+  <div class="footer-container">
+    <div class="footer-grid">
+      <div class="footer-brand-col">
+        <div class="footer-logo">🛠️ منصة <span>مِهْنَتي</span></div>
+        <p class="footer-desc">
+          المنصة الشاملة المعتمدة في جمهورية مصر العربية لربط العملاء بأمهر الفنيين والمهنيين، وتوفير متجر متخصص لأدوات ومستلزمات الصيانة مع ضمان الجودة والدفع عند الاستلام.
+        </p>
+      </div>
+
+      <div class="footer-links-col">
+        <h4>روابط سريعة</h4>
+        <ul>
+          <li><a routerLink="/services">سوق الخدمات الحرفية</a></li>
+          <li><a routerLink="/products">متجر الأدوات والمعدات</a></li>
+          <li><a routerLink="/orders">متابعة طلبات الخدمات</a></li>
+          <li><a routerLink="/messages">مركز الإشعارات والمحادثات</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-coverage-col">
+        <h4>تغطية المحافظات المصرية 🇪🇬</h4>
+        <p>القاهرة، الجيزة، الإسكندرية، القليوبية، الدقهلية، الشرقية، وباقي محافظات الجمهورية.</p>
+        <div class="security-badges">
+          <span class="sec-badge">🔒 اتصال مؤمن ومشفر بالكامل</span>
+          <span class="sec-badge">🛡️ صنايعية ومهنيون وتجار موثقون رسمياً</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <p>© 2026 منصة مهنتي (Mihnati Platform). جميع الحقوق محفوظة لجمهورية مصر العربية.</p>
+    </div>
+  </div>
+</footer>

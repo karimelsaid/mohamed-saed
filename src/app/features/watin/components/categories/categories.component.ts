@@ -32,6 +32,16 @@ import { WatinService, WatinCategory } from '../../services/watin.service';
             <i class="fas fa-chevron-left arrow"></i>
           </div>
         </div>
+
+        <!-- Empty State -->
+        <div class="empty-state" *ngIf="!categories || categories.length === 0">
+          <div class="empty-icon">
+            <i class="fas fa-folder-open"></i>
+          </div>
+          <h3>لا توجد أقسام حالياً</h3>
+          <p>لم يتم إضافة أي أقسام بعد. يرجى إضافة أقسام الدروس للبدء.</p>
+          <button class="btn-secondary" (click)="goBack()">العودة للرئيسية</button>
+        </div>
       </ng-container>
     </div>
   `,
@@ -127,6 +137,48 @@ import { WatinService, WatinCategory } from '../../services/watin.service';
     .arrow {
       color: var(--watin-sage);
       font-size: 14px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--watin-sage);
+    }
+
+    .empty-icon {
+      font-size: 64px;
+      margin-bottom: 20px;
+      opacity: 0.5;
+    }
+
+    .empty-state h3 {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--watin-forest);
+      margin: 0 0 10px 0;
+    }
+
+    .empty-state p {
+      font-size: 14px;
+      margin: 0 0 30px 0;
+      opacity: 0.8;
+    }
+
+    .btn-secondary {
+      background-color: var(--watin-surface);
+      color: var(--watin-forest);
+      border: 2px solid var(--watin-forest);
+      padding: 12px 24px;
+      border-radius: 25px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-secondary:hover {
+      background-color: var(--watin-forest);
+      color: white;
     }
   `]
 })

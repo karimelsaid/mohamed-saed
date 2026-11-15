@@ -1,0 +1,34 @@
+{
+  "name": "@mihnati/api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/bootstrap/index.js",
+  "scripts": {
+    "dev": "tsx watch src/bootstrap/index.ts",
+    "build": "tsc",
+    "start": "node dist/bootstrap/index.js",
+    "seed:admin": "tsx src/bootstrap/seed-admin.ts",
+    "seed:users": "tsx src/bootstrap/seed-test-users.ts",
+    "migrate": "tsx src/platform/database/migrations/run-cli.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@mihnati/contracts": "workspace:*",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^5.0.1",
+    "mongodb": "^6.13.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/cookie-parser": "^1.4.8",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.13.5",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2"
+  }
+}
+

@@ -13,18 +13,23 @@ const uri = process.env.MONGO_URI || "mongodb+srv://kenouz_user:nuwRkmwJospZXapy
 async function connectDB() {
   try {
     console.log('⏳ جاري الاتصال بـ MongoDB Atlas (البوابة: 27017)...');
-    
+
     await mongoose.connect(uri, {
-      serverSelectionTimeoutMS: 15000,
-      connectTimeoutMS: 15000,
-      socketTimeoutMS: 60000,
-      family: 4
+      serverSelectionTimeoutMS: 30000,
+      connectTimeoutMS: 30000,
+      socketTimeoutMS: 120000,
+      family: 4,
+      maxPoolSize: 10,
+      minPoolSize: 2,
+      retryWrites: true,
+      retryReads: true
     });
 
     console.log('✅ تم الاتصال بنجاح بـ MongoDB!');
   } catch (err) {
     console.error('❌ فشل الاتصال بقاعدة البيانات.');
     console.error('التفاصيل:', err.message);
+    console.error('💡 تلميح: قد تحتاج إلى إضافة IP الحالي إلى IP Whitelist في MongoDB Atlas');
     throw err;
   }
 }

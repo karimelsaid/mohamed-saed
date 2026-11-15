@@ -1,0 +1,17 @@
+node_modules
+dist
+.git
+.gitignore
+.env
+.vscode
+.idea
+*.log
+coverage
+.DS_Store
+Thumbs.db
+output.json
+output_raw.json
+sitemap.xml
+*.xlsx
+*.json
+coverage

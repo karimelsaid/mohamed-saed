@@ -84,6 +84,21 @@ import { Subscription } from 'rxjs';
     <div class="loading-state" *ngIf="isLoading">
       <i class="fas fa-spinner fa-spin"></i> جاري التحميل...
     </div>
+
+    <!-- Empty State -->
+    <div class="empty-state" *ngIf="!isLoading && (!homeData || !homeData.categories?.length)">
+      <div class="empty-icon">
+        <i class="fas fa-folder-open"></i>
+      </div>
+      <h3>لا توجد بيانات حالياً</h3>
+      <p>يبدو أن قاعدة بيانات Watin فارغة. يمكنك:</p>
+      <ul class="empty-actions">
+        <li>إضافة أقسام الدروس</li>
+        <li>إضافة المتحدثين</li>
+        <li>نشر الدروس المتاحة</li>
+      </ul>
+      <button class="btn-secondary" routerLink="/categories">إدارة الأقسام</button>
+    </div>
   `,
   styles: [`
     .watin-app-bar {
@@ -353,6 +368,60 @@ import { Subscription } from 'rxjs';
     .banner-arrow {
       color: rgba(255,255,255,0.6);
       font-size: 14px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--watin-sage);
+    }
+
+    .empty-icon {
+      font-size: 64px;
+      margin-bottom: 20px;
+      opacity: 0.5;
+    }
+
+    .empty-state h3 {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--watin-forest);
+      margin: 0 0 10px 0;
+    }
+
+    .empty-state p {
+      font-size: 14px;
+      margin: 0 0 20px 0;
+      opacity: 0.8;
+    }
+
+    .empty-actions {
+      text-align: right;
+      margin: 0 0 30px 0;
+      padding-right: 20px;
+      font-size: 14px;
+      line-height: 1.8;
+    }
+
+    .empty-actions li {
+      margin-bottom: 8px;
+    }
+
+    .btn-secondary {
+      background-color: var(--watin-surface);
+      color: var(--watin-forest);
+      border: 2px solid var(--watin-forest);
+      padding: 12px 24px;
+      border-radius: 25px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-secondary:hover {
+      background-color: var(--watin-forest);
+      color: white;
     }
   `]
 })

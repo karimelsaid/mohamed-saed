@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data:;">
+  <title>نظام إدارة محلات بيع وتأجير بدل </title>
+  <link rel="icon" type="image/png" href="logo.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body class="theme-dark">
+  <div id="app-root">
+    <!-- App Shell Layout -->
+    <div class="app-layout">
+      <!-- Right Sidebar (RTL) -->
+      <aside class="sidebar">
+        <div class="sidebar-brand" id="sidebar-brand-box">
+          <div class="brand-logo" id="brand-logo-container"><img src="logo.png" alt="اللوجو" style="width: 100%; height: 100%; object-fit: contain; border-radius: 8px;"></div>
+          <div class="brand-text">
+            <h2 class="brand-title" id="brand-title-text">mohamed saed</h2>
+          </div>
+        </div>
+
+        <nav class="nav-menu" id="main-nav-menu">
+          <a href="#dashboard" class="nav-item active" data-page="dashboard">
+            <span class="icon">📊</span>
+            <span class="label">لوحة التحكم</span>
+          </a>
+
+          <!-- Dynamic Inventory Categories Container -->
+          <div id="nav-inventory-categories">
+            <a href="#suits" class="nav-item" data-page="suits">
+              <span class="icon">🤵</span>
+              <span class="label">مخزون البدل</span>
+            </a>
+            <a href="#shoes" class="nav-item" data-page="shoes">
+              <span class="icon">👞</span>
+              <span class="label">مخزون الأحذية</span>
+            </a>
+            <a href="#accessories" class="nav-item" data-page="accessories">
+              <span class="icon">🎀</span>
+              <span class="label">الإكسسوارات</span>
+            </a>
+          </div>
+
+          <a href="#bookings" class="nav-item" data-page="bookings">
+            <span class="icon">📅</span>
+            <span class="label">الحجوزات والتأجير</span>
+          </a>
+          <a href="#pos" class="nav-item" data-page="pos">
+            <span class="icon">💳</span>
+            <span class="label">نقطة البيع (POS)</span>
+          </a>
+          <a href="#customers" class="nav-item" data-page="customers">
+            <span class="icon">👥</span>
+            <span class="label">العملاء</span>
+          </a>
+          <a href="#finance" class="nav-item" data-page="finance">
+            <span class="icon">💰</span>
+            <span class="label">الخزينة والمالية</span>
+          </a>
+          <a href="#tasks" class="nav-item" data-page="tasks">
+            <span class="icon">📋</span>
+            <span class="label">المهام والتنبيهات</span>
+          </a>
+          <a href="#reports" class="nav-item" data-page="reports">
+            <span class="icon">📈</span>
+            <span class="label">التقارير</span>
+          </a>
+          <a href="#admin" class="nav-item" data-page="admin">
+            <span class="icon">🏛️</span>
+            <span class="label">البيانات الأساسية</span>
+          </a>
+          <a href="#settings" class="nav-item" data-page="settings">
+            <span class="icon">⚙️</span>
+            <span class="label">الإعدادات</span>
+          </a>
+        </nav>
+
+        <div class="sidebar-footer">
+          <div class="system-badge">
+            <span class="pulse-indicator"></span>
+            <span id="system-status-text">متصل محلياً (Offline)</span>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Main Container -->
+      <main class="main-container">
+        <!-- Top Header -->
+        <header class="app-header">
+          <div class="header-search">
+            <input type="text" placeholder="بحث سريع عن حجز، عميل، أو باركود بدلة... [Ctrl+K]">
+          </div>
+          <div class="header-actions">
+            <button id="btn-whatsapp-status" class="btn-secondary" style="font-size: 11px; padding: 5px 10px; display: inline-flex; align-items: center; gap: 6px;" title="ربط واتساب للإرسال المباشر الصامت">
+              <span>💬</span> <span id="header-wa-status-text">واتساب</span>
+            </button>
+            <button id="btn-theme-toggle" class="btn-icon" title="تبديل المظهر">🌓</button>
+            <button id="btn-reset-all-data" class="btn-icon" title="تصفير شامل للبيانات المؤقتة"
+              style="color: var(--color-danger); border: 1px solid rgba(239, 68, 68, 0.3);">🗑️</button>
+            <button id="btn-quick-pos" class="btn-primary-action">⚡ بيع سريع</button>
+            <button id="btn-new-booking" class="btn-accent-action">+ حجز جديد</button>
+          </div>
+        </header>
+
+        <!-- Dynamic Content Area -->
+        <section class="content-body" id="page-content">
+          <div class="loading-state" id="initial-loading">
+            <div class="spinner"></div>
+            <p>جاري تهيئة النظام وقاعدة البيانات المحلية...</p>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <!-- Design System Shared Components -->
+  <script src="components/ui-utils.js"></script>
+  <script src="components/toast.js"></script>
+  <script src="components/modal.js"></script>
+  <script src="components/drawer.js"></script>
+  <script src="components/states.js"></script>
+  <script src="renderer.js"></script>
+</body>
+
+</html>

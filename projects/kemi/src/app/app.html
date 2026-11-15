@@ -1,0 +1,2230 @@
+<div dir="rtl" class="studio-root">
+  <!-- Top Studio Header -->
+  <header class="studio-header">
+    <div class="header-brand" (click)="goToHomeScreen()" role="button" tabindex="0" title="الرجوع للواجهة الرئيسية وسجل المشاريع" style="cursor: pointer;">
+      <div class="brand-icon">
+        <img src="kemi-icon.png" alt="Kemi" width="28" height="28" style="border-radius: 6px;" />
+      </div>
+      <div class="brand-text">
+        <h2>كيمي ستوديو <span class="badge-pro">PRO AI</span></h2>
+        <span class="brand-tagline">محرر الفيديو الذكي للمسوقين وصناع المحتوى</span>
+      </div>
+    </div>
+
+    @if (projectPath()) {
+      <div class="header-project-pill" (click)="selectProjectFolder()" title="اضغط لتغيير مجلد المشروع">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+        </svg>
+        <span class="project-path-text">{{ projectPath() }}</span>
+      </div>
+    }
+
+    <!-- Stats Pill (if EDL loaded & cuts applied) -->
+    @if (edl() && aiCutsApplied() && timeSaved() > 0) {
+      <div class="header-stats-pill">
+        <span class="stats-icon">⚡</span>
+        <span class="stats-text">مفلتر ومقصوص: وفرت <strong>{{ timeSaved() }} ثانية</strong> ({{ timeSavedPercentage() }}% من الفيديو)</span>
+      </div>
+    }
+
+    <div class="header-actions">
+      <!-- Whisper Model Selection -->
+      <div class="model-toggle" title="اختيار سرعة ودقة نموذج Whisper">
+        <button
+          type="button"
+          class="model-btn"
+          [class.active]="modelSize() === 'large-v3'"
+          (click)="modelSize.set('large-v3')"
+        >
+          👑 استوديو فائق (Large-v3)
+        </button>
+        <button
+          type="button"
+          class="model-btn"
+          [class.active]="modelSize() === 'medium'"
+          (click)="modelSize.set('medium')"
+        >
+          💎 احترافي (Medium)
+        </button>
+        <button
+          type="button"
+          class="model-btn"
+          [class.active]="modelSize() === 'small'"
+          (click)="modelSize.set('small')"
+        >
+          🎯 متقدم (Small - موصى به)
+        </button>
+        <button
+          type="button"
+          class="model-btn"
+          [class.active]="modelSize() === 'base'"
+          (click)="modelSize.set('base')"
+        >
+          ⚡ سريع (Base)
+        </button>
+      </div>
+
+      @if (edl()) {
+        <button
+          type="button"
+          (click)="runAiTranscription()"
+          class="btn-studio-retranscribe"
+          title="إعادة تفريغ الصوت بالذكاء الاصطناعي (Whisper) وتحديث النص والكلمات بالكامل"
+        >
+          🔄 إعادة التفريغ
+        </button>
+
+        <button type="button" (click)="goToHomeScreen()" class="btn-studio-home" title="الرجوع إلى الواجهة الرئيسية وسجل المشاريع">
+          🏠 الواجهة الرئيسية
+        </button>
+
+        <button type="button" (click)="importVideos()" class="btn-studio-secondary">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          استيراد مقطع آخر
+        </button>
+
+        <button type="button" (click)="exportVideo()" class="btn-studio-primary" [disabled]="isExporting()">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          تصدير الفيديو المفلتر
+        </button>
+      }
+    </div>
+  </header>
+
+  <!-- ===================================================================== -->
+  <!-- HERO STATE: No Video Imported Yet                                    -->
+  <!-- ===================================================================== -->
+  @if (!edl() || !videoUrl()) {
+    <main class="hero-container animate-fade-in">
+      <div class="hero-card studio-glass">
+        <div class="hero-glow"></div>
+        <div class="hero-badge">
+          <span>✨ مونتاج تلقائي فوري وسلس</span>
+        </div>
+
+        <h1 class="hero-title">حول تسجيلك الخام إلى فيديو تسويقي احترافي</h1>
+        <p class="hero-subtitle">
+          استيراد سريع وفوري للمقاطع بدون انتظار • تفريغ الذكاء الاصطناعي متاح عند الحاجة فقط بضغطة زر
+        </p>
+
+        <!-- Multi-Camera Slots Preview -->
+        <div class="camera-slots-preview">
+          <div class="slot-card active">
+            <div class="slot-badge">الرئيسية 🎙️</div>
+            <div class="slot-icon">🎥</div>
+            <div class="slot-name">الكاميرا الأولى (Angle 1)</div>
+            <div class="slot-status">مسار الصوت الأساسي</div>
+          </div>
+          <div class="slot-card">
+            <div class="slot-badge optional">اختياري</div>
+            <div class="slot-icon">📷</div>
+            <div class="slot-name">الكاميرا الثانية (Angle 2)</div>
+            <div class="slot-status">زاوية كلوز أو جانبية</div>
+          </div>
+          <div class="slot-card">
+            <div class="slot-badge optional">اختياري</div>
+            <div class="slot-icon">🎬</div>
+            <div class="slot-name">الكاميرا الثالثة (Angle 3)</div>
+            <div class="slot-status">لقطة عامة واسعة</div>
+          </div>
+        </div>
+
+        <!-- Big Action Buttons -->
+        <div class="hero-cta-group">
+          @if (!projectPath()) {
+            <button type="button" (click)="selectProjectFolder()" class="btn-studio-secondary btn-hero-lg">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+              </svg>
+              1. اختيار مجلد المشروع أولاً
+            </button>
+          }
+
+          <button
+            type="button"
+            (click)="importVideos()"
+            class="btn-studio-primary btn-hero-lg"
+          >
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+            استيراد وعرض الفيديو فوراً (كاميرا أو عدة كاميرات)
+          </button>
+
+          <button
+            type="button"
+            (click)="openExistingProjectFolder()"
+            class="btn-studio-secondary btn-hero-lg"
+            title="فتح مشروع سابق تم حفظه على القرص الصلب"
+          >
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+            </svg>
+            📂 فتح مشروع سابق من مجلد
+          </button>
+        </div>
+
+        <!-- Features list -->
+        <div class="hero-features-grid">
+          <div class="feature-item">
+            <span class="feature-icon">⚡</span>
+            <div>
+              <strong>استيراد وعرض فوري</strong>
+              <p>يفتح الفيديو والمشغل فوراً بدون قفل الشاشة أو انتظار طويل</p>
+            </div>
+          </div>
+          <div class="feature-item">
+            <span class="feature-icon">🧠</span>
+            <div>
+              <strong>المرحلة الرابعة (عند الطلب)</strong>
+              <p>تفريغ Whisper AI وكشف الوقفات بالكامل يتم فقط عند حاجتك بضغطة زر</p>
+            </div>
+          </div>
+          <div class="feature-item">
+            <span class="feature-icon">✂️</span>
+            <div>
+              <strong>تقسيم وفلترة حقيقية</strong>
+              <p>تخطي تام للسكتات والتردد وتعديل المدة الزمنية الفعلية للمقطع</p>
+            </div>
+          </div>
+          <div class="feature-item">
+            <span class="feature-icon">💬</span>
+            <div>
+              <strong>نصوص متحركة مخصصة (CapCut Style)</strong>
+              <p>تحكم كامل في عدد الكلمات وحجم الخط وموضع التعليق على الشاشة</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== Recent Projects ===== -->
+        @if (recentProjects().length > 0) {
+          <div class="recent-projects-panel studio-glass animate-fade-in">
+            <div class="recent-projects-header">
+              <div class="recent-title-group">
+                <span class="recent-icon">📂</span>
+                <div>
+                  <span class="recent-title">سجل المشاريع والأعمال السابقة</span>
+                  <span class="recent-subtitle">اختر أي مشروع للمتابعة فوراً من حيث توقفت أو حذفه نهائياً من القرص</span>
+                </div>
+              </div>
+              <span class="recent-badge">{{ recentProjects().length }} مشاريع محفوظة</span>
+            </div>
+            <div class="recent-projects-list">
+              @for (proj of recentProjects(); track proj.path) {
+                <div
+                  class="recent-project-card"
+                  (click)="openRecentProject(proj)"
+                  [title]="'المسار: ' + proj.path"
+                  role="button"
+                  tabindex="0"
+                >
+                  <div class="recent-project-thumb">🎬</div>
+                  <div class="recent-project-info">
+                    <div class="recent-project-top">
+                      <span class="recent-project-name">{{ proj.name }}</span>
+                      @if (proj.videoName) {
+                        <span class="recent-project-video-badge" title="الفيديو الأصلي">{{ proj.videoName }}</span>
+                      }
+                    </div>
+                    <div class="recent-project-meta">
+                      <span class="recent-project-date">🕒 آخر تعديل: {{ proj.date }}</span>
+                      <span class="recent-project-path-hint">{{ proj.path }}</span>
+                    </div>
+                  </div>
+                  <div class="recent-project-actions">
+                    <button
+                      type="button"
+                      class="btn-recent-open"
+                      (click)="openRecentProject(proj)"
+                      title="فتح المشروع واستكمال العمل فوراً"
+                    >
+                      ▶ متابعة العمل
+                    </button>
+                    <button
+                      type="button"
+                      class="btn-recent-folder"
+                      (click)="revealProjectFolder($event, proj.path)"
+                      title="فتح مجلد المشروع في مستكشف ملفات Windows"
+                    >
+                      📂 المجلد
+                    </button>
+                    <button
+                      type="button"
+                      class="btn-recent-del-perm"
+                      (click)="deleteProjectPermanently($event, proj)"
+                      title="حذف المشروع ومجلده نهائياً من القرص الصلب"
+                    >
+                      🗑️ حذف نهائي
+                    </button>
+                    <button
+                      type="button"
+                      class="btn-recent-del"
+                      (click)="removeRecentProject($event, proj.path)"
+                      title="إزالة من القائمة فقط"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    </main>
+  }
+
+  <!-- ===================================================================== -->
+  <!-- PROCESSING MODAL: High-Tech Animated Pipeline Tracker                -->
+  <!-- ===================================================================== -->
+  @if (processing()) {
+    <div class="modal-backdrop">
+      <div class="pipeline-modal studio-glass animate-fade-in">
+        <div class="pipeline-header">
+          <div class="pipeline-spinner"></div>
+          <div>
+            <h3>جاري معالجة الفيديو بالذكاء الاصطناعي</h3>
+            <p>{{ progressMessage() }}</p>
+          </div>
+        </div>
+
+        <!-- Pipeline Steps Tracker -->
+        <div class="pipeline-steps">
+          <div class="step-item" [class.done]="currentPipelineStep() > 1" [class.active]="currentPipelineStep() === 1">
+            <div class="step-circle">{{ currentPipelineStep() > 1 ? '✓' : '1' }}</div>
+            <div class="step-name">استيراد المقاطع</div>
+          </div>
+
+          <div class="step-divider" [class.filled]="currentPipelineStep() > 1"></div>
+
+          <div class="step-item" [class.done]="currentPipelineStep() > 2" [class.active]="currentPipelineStep() === 2">
+            <div class="step-circle">{{ currentPipelineStep() > 2 ? '✓' : '2' }}</div>
+            <div class="step-name">تجهيز الفيديو (فوري)</div>
+          </div>
+
+          <div class="step-divider" [class.filled]="currentPipelineStep() > 2"></div>
+
+          <div class="step-item" [class.done]="currentPipelineStep() > 3" [class.active]="currentPipelineStep() === 3">
+            <div class="step-circle">{{ currentPipelineStep() > 3 ? '✓' : '3' }}</div>
+            <div class="step-name">استخراج الصوت</div>
+          </div>
+
+          <div class="step-divider" [class.filled]="currentPipelineStep() > 3"></div>
+
+          <div class="step-item" [class.done]="currentPipelineStep() > 4" [class.active]="currentPipelineStep() === 4">
+            <div class="step-circle">{{ currentPipelineStep() > 4 ? '✓' : '4' }}</div>
+            <div class="step-name">تفريغ Whisper AI</div>
+          </div>
+
+          <div class="step-divider" [class.filled]="currentPipelineStep() > 4"></div>
+
+          <div class="step-item" [class.done]="currentPipelineStep() > 5" [class.active]="currentPipelineStep() === 5">
+            <div class="step-circle">{{ currentPipelineStep() > 5 ? '✓' : '5' }}</div>
+            <div class="step-name">كشف الصمت</div>
+          </div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="studio-progress-track">
+          <div class="studio-progress-fill" [style.width.%]="progress()"></div>
+        </div>
+        <div class="progress-details">
+          <span>التقدم: {{ progress() }}%</span>
+          <span>النموذج: Whisper ({{ modelSize() }})</span>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ===================================================================== -->
+  <!-- MAIN STUDIO WORKSPACE: CapCut / Premiere Style 3-Pane Layout          -->
+  <!-- ===================================================================== -->
+  @if (edl() && videoUrl() && !processing()) {
+    <div class="studio-workspace animate-fade-in">
+
+      <!-- Case A: Step 4 has NOT been run yet (On-Demand Option) -->
+      @if (!hasTranscribed()) {
+        <div class="magic-cuts-banner studio-glass animate-fade-in">
+          <div class="banner-content">
+            <span class="magic-icon">🧠</span>
+            <div class="banner-text">
+              <strong>المرحلة الرابعة (اختيارية عند الحاجة): تفريغ الصوت والقص الذكي</strong>
+              <p>
+                تم استيراد الفيديو وتجهيزه للمشاهدة فوراً! اضغط هنا عند رغبتك في تفريغ الكلمات بواسطة Whisper AI وكشف الصمت والوقفات لإزالتها.
+              </p>
+            </div>
+          </div>
+          <div class="banner-action">
+            <button type="button" (click)="runAiTranscription()" class="btn-studio-primary btn-pulse">
+              ⚡ تشغيل المرحلة الرابعة: تفريغ Whisper وكشف الصمت
+            </button>
+          </div>
+        </div>
+      }
+
+      <!-- Case B: Step 4 is done, but cuts are not applied yet (User sees original first!) -->
+      @if (hasTranscribed() && !aiCutsApplied()) {
+        <div class="magic-cuts-banner studio-glass animate-fade-in">
+          <div class="banner-content">
+            <span class="magic-icon">✨</span>
+            <div class="banner-text">
+              <strong>اكتمل التفريغ! تم كشف {{ timeSaved() }} ثانية من الصمت والتردد ({{ timeSavedPercentage() }}%)</strong>
+              <p>
+                الفيديو معروض الآن <strong>بمدته الأصلية الكاملة ({{ formatTime(displayedDuration) }})</strong> حتى تلاحظ الفرق المباشر عند القص.
+              </p>
+            </div>
+          </div>
+          <div class="banner-action">
+            <button type="button" (click)="applyAiCuts()" class="btn-studio-primary btn-pulse">
+              ✂️ تطبيق القص الذكي الآن وتقليص المدة
+            </button>
+          </div>
+        </div>
+      }
+
+      <!-- Case C: AI Cuts are Applied (Filtered & segmented playback active!) -->
+      @if (hasTranscribed() && aiCutsApplied()) {
+        <div class="magic-cuts-applied-banner studio-glass animate-fade-in">
+          <div class="banner-content">
+            <span class="badge-success">✓ تم تقسيم وفلترة الفيديو بالكامل</span>
+            <span class="applied-stats">
+              المدة بعد القص: <strong>{{ formatTime(displayedDuration) }}</strong> (تم حذف {{ timeSaved() }} ثانية من الوقفات - توفير {{ timeSavedPercentage() }}%).
+            </span>
+          </div>
+          <div class="banner-action">
+            <button type="button" (click)="revertAiCuts()" class="btn-studio-ghost btn-sm">
+              👁️ معاينة الفيديو الأصلي الكامل (بدون قص)
+            </button>
+          </div>
+        </div>
+      }
+
+      <!-- =================================================== -->
+      <!-- TOP SECTION: Split Left Inspector & Center Player   -->
+      <!-- =================================================== -->
+      <div
+        class="workspace-top-row"
+        [class.monitor-expanded]="isMonitorExpanded()"
+        [class.resizing]="isDraggingSplit()"
+      >
+
+        <!-- RIGHT SIDEBAR (RTL): Settings on top, Timeline underneath -->
+        @if (!isMonitorExpanded()) {
+          <div
+            class="studio-tools-column"
+            [style.width.%]="inspectorWidthPercent()"
+          >
+            <aside class="studio-inspector studio-glass">
+            <!-- Inspector Tabs -->
+            <div class="inspector-tabs">
+              <button
+                type="button"
+                class="tab-btn tab-btn-highlight"
+                [class.active]="activeTab() === 'script'"
+                (click)="activeTab.set('script')"
+                title="محرر النص والفيديو: تحكم يدوي كامل لحذف أو إبقاء الكلمات والسكتات بالمزامنة مع الفيديو"
+              >
+                📝 محرر النص (Script)
+              </button>
+              <button
+                type="button"
+                class="tab-btn"
+                [class.active]="activeTab() === 'captions'"
+                (click)="activeTab.set('captions')"
+              >
+                💬 التعليقات
+              </button>
+              <button
+                type="button"
+                class="tab-btn"
+                [class.active]="activeTab() === 'cameras'"
+                (click)="activeTab.set('cameras')"
+              >
+                🎥 الكاميرات
+              </button>
+              <button
+                type="button"
+                class="tab-btn"
+                [class.active]="activeTab() === 'cinematic'"
+                (click)="activeTab.set('cinematic')"
+              >
+                🎬 تحسين سينمائي
+              </button>
+              <button
+                type="button"
+                class="tab-btn"
+                [class.active]="activeTab() === 'audio'"
+                (click)="activeTab.set('audio')"
+              >
+                🎙️ استوديو الصوت
+              </button>
+              <button
+                type="button"
+                class="tab-btn"
+                [class.active]="activeTab() === 'export'"
+                (click)="activeTab.set('export')"
+              >
+                📱 التصدير
+              </button>
+            </div>
+
+            <!-- TAB 0: TEXT-BASED SCRIPT & WORD-LEVEL VIDEO EDITOR -->
+            @if (activeTab() === 'script') {
+              <div class="inspector-content script-inspector-content">
+                @if (!hasTranscribed() || !edl()?.transcript?.length) {
+                  <div class="panel-section">
+                    <div class="ai-cuts-status-card script-empty-card">
+                      <div class="script-empty-icon">📝</div>
+                      <h4>محرر النص والفيديو (Text-Based Video Editor)</h4>
+                      <p>
+                        استخرج النص الكامل للفيديو كلمة بكلمة، واحذف أي كلمة بنقرة واحدة ليتم قص وحذف مقطع الفيديو والصوت التابع لها فوراً وبشكل متزامن!
+                      </p>
+                      <button type="button" (click)="runAiTranscription()" class="btn-studio-primary btn-block btn-pulse">
+                        🧠 تفريغ الصوت واستخراج الكلمات الآن
+                      </button>
+                    </div>
+                  </div>
+                } @else {
+                  <!-- Script Editor Toolbar -->
+                  <div class="script-toolbar">
+                    <div class="script-toolbar-row">
+                      <div class="script-search-box">
+                        <span class="search-icon">🔍</span>
+                        <input
+                          type="text"
+                          class="script-search-input"
+                          [ngModel]="scriptSearchQuery()"
+                          (ngModelChange)="scriptSearchQuery.set($event)"
+                          placeholder="ابحث عن أي كلمة في الفيديو..."
+                        />
+                        @if (scriptSearchQuery()) {
+                          <button type="button" class="btn-clear-search" (click)="scriptSearchQuery.set('')">✕</button>
+                        }
+                      </div>
+
+                      <button
+                        type="button"
+                        class="btn-script-action btn-retranscribe-prominent"
+                        (click)="runAiTranscription()"
+                        title="إعادة تفريغ الصوت بالذكاء الاصطناعي (Whisper) وتحديث النص كاملاً بدون كاش"
+                      >
+                        🔄 إعادة التفريغ
+                      </button>
+                    </div>
+
+                    <div class="script-stats-bar">
+                      <div class="stats-pills">
+                        <span class="stat-pill total">
+                          📊 الكلمات: <strong>{{ scriptStats().total }}</strong>
+                        </span>
+                        @if (scriptStats().stuttersCount > 0) {
+                          <span class="stat-pill stutters clickable" (click)="toggleFilterStutters()" title="انقر لتصفية الجمل التي تحتوي على تأتأة">
+                            ⚡ تأتأة: <strong>{{ scriptStats().stuttersCount }}</strong>
+                          </span>
+                        }
+                        @if (scriptStats().repeatsCount > 0) {
+                          <span class="stat-pill repeats clickable" (click)="toggleFilterStutters()" title="انقر لتصفية الجمل التي تحتوي على تكرار">
+                            🔁 تكرار: <strong>{{ scriptStats().repeatsCount }}</strong>
+                          </span>
+                        }
+                        @if (scriptStats().elongationsCount > 0) {
+                          <span class="stat-pill elongations clickable" (click)="toggleFilterStutters()" title="انقر لتصفية الجمل التي تحتوي على مدود">
+                            〰️ مدود: <strong>{{ scriptStats().elongationsCount }}</strong>
+                          </span>
+                        }
+                        @if (scriptStats().fillersCount > 0) {
+                          <span class="stat-pill fillers clickable" (click)="toggleFilterStutters()" title="انقر لتصفية الجمل التي تحتوي على كلمات حشو">
+                            💬 حشو: <strong>{{ scriptStats().fillersCount }}</strong>
+                          </span>
+                        }
+                        @if (silenceStats().total > 0) {
+                          <span class="stat-pill silences" [class.has-cuts]="silenceStats().removed > 0" title="إجمالي فترات السكتات والوقفات المرصودة في الفيديو">
+                            ⏱️ سكتات: <strong>{{ silenceStats().total }}</strong>
+                            @if (silenceStats().removed > 0) {
+                              <small class="saved-time">({{ silenceStats().savedSec }}ث وفر)</small>
+                            }
+                          </span>
+                        }
+                        <span class="stat-pill cut" [class.has-cuts]="scriptStats().removed > 0 || silenceStats().removed > 0">
+                          ✂️ محذوفة: <strong>{{ scriptStats().removed + silenceStats().removed }}</strong>
+                          @if (scriptStats().removed > 0 || silenceStats().removed > 0) {
+                            <small class="saved-time">({{ scriptStats().savedSec }}ث وفر)</small>
+                          }
+                        </span>
+                      </div>
+
+                      <div class="script-quick-actions">
+                        @if (scriptStats().flaggedCount > 0) {
+                          <button
+                            type="button"
+                            class="btn-script-action btn-filter-stutters"
+                            [class.active]="filterStuttersOnly()"
+                            (click)="toggleFilterStutters()"
+                            title="عرض الجمل التي تحتوي على لعثمات أو تكرار فقط"
+                          >
+                            {{ filterStuttersOnly() ? '👁️ عرض كل النص' : '🔍 تصفية اللعثمات (' + scriptStats().flaggedCount + ')' }}
+                          </button>
+                          <button
+                            type="button"
+                            class="btn-script-action btn-nav-stutter"
+                            (click)="navigateToNextFlaggedWord()"
+                            title="القفز للعثمة أو التكرار التالي في المحرر مع التمييز"
+                          >
+                            ⏭ اللعثمة التالية
+                          </button>
+                          <button
+                            type="button"
+                            class="btn-script-action btn-cut-stutters"
+                            (click)="cutAllStuttersAndElongations()"
+                            title="حذف جميع اللعثمات والتكرارات والمدود بنقرة واحدة بالمزامنة مع الفيديو"
+                          >
+                            ⚡ حذف كل اللعثمات
+                          </button>
+                        }
+                        @if (scriptStats().removed > 0 || silenceStats().removed > 0) {
+                          <button
+                            type="button"
+                            class="btn-script-action btn-restore-all"
+                            (click)="restoreAllScriptWords()"
+                            title="استعادة كافة الكلمات والمقاطع والسكتات المحذوفة"
+                          >
+                            ↩ استعادة الكل
+                          </button>
+                        }
+                        <button
+                          type="button"
+                          class="btn-script-action btn-retranscribe"
+                          (click)="runAiTranscription()"
+                          title="إعادة تفريغ الصوت بالذكاء الاصطناعي وتحديث النص كاملاً بدون كاش"
+                        >
+                          🔄 إعادة التفريغ
+                        </button>
+                        <button
+                          type="button"
+                          class="btn-script-action"
+                          [class.active]="scriptAutoScroll()"
+                          (click)="scriptAutoScroll.set(!scriptAutoScroll())"
+                          title="متابعة وتمرير الكلمة المقروءة تلقائياً أثناء تشغيل الفيديو"
+                        >
+                          {{ scriptAutoScroll() ? '👁️ تتبع: مفعل' : '👁️ تتبع: معطل' }}
+                        </button>
+                      </div>
+                    </div>
+
+                    <!-- Usage Guidance Banner -->
+                    <div class="script-instruction-badge">
+                      <span class="badge-icon">💡</span>
+                      <span>
+                        تظهر <strong>اللعثمات [تأتأة]</strong> و<strong>المدود [مد]</strong> و<strong>فترات السكتات [⏸]</strong> بدقة. اضغط على أي كلمة أو سكتة <strong class="badge-cut-sample">لحذفها وقص الفيديو الخاص بها فوراً أو إبقائها</strong>، وانقر مزدوجاً للاستماع.
+                      </span>
+                    </div>
+
+                    <!-- Silence & Pauses Management Panel (جزء فترة السكتات والوقفات) -->
+                    <div class="script-silence-panel studio-glass animate-fade-in">
+                      <div class="silence-panel-header">
+                        <div class="silence-panel-title">
+                          <span class="panel-icon">⏱️</span>
+                          <strong>فترة السكتات والوقفات</strong>
+                        </div>
+                        <div class="silence-quick-stats">
+                          <span class="stat-badge total" title="إجمالي الوقفات المرصودة ومدتها">
+                            المرصودة: <strong>{{ silenceStats().total }}</strong> وقفة ({{ silenceStats().totalSec }}ث)
+                          </span>
+                          <span class="stat-badge cut" [class.has-cuts]="silenceStats().removed > 0" title="الوقفات المحذوفة وإجمالي الوقت الموفر">
+                            ✂️ المحذوفة: <strong>{{ silenceStats().removed }}</strong> (وفر {{ silenceStats().savedSec }}ث)
+                          </span>
+                          <span class="stat-badge kept" title="الوقفات المتروكة في الفيديو">
+                            👁️ المتروكة: <strong>{{ silenceStats().kept }}</strong>
+                          </span>
+                        </div>
+                      </div>
+
+                      <div class="silence-panel-controls">
+                        <div class="silence-threshold-group">
+                          <span class="control-label">أدنى فترة لاحتساب السكتة:</span>
+                          <div class="preset-pill-group">
+                            <button
+                              type="button"
+                              class="preset-pill"
+                              [class.active]="silenceThreshold() === 0.6"
+                              (click)="setSilencePreset('gentle')"
+                              title="كشف الوقفات الطويلة نسبياً فقط (0.6 ثانية فأكثر)"
+                            >
+                              لطيف (0.6ث)
+                            </button>
+                            <button
+                              type="button"
+                              class="preset-pill"
+                              [class.active]="silenceThreshold() === 0.4"
+                              (click)="setSilencePreset('normal')"
+                              title="المعدل المتوازن المناسب لمعظم مقاطع الفيديو (0.4 ثانية)"
+                            >
+                              متوازن (0.4ث)
+                            </button>
+                            <button
+                              type="button"
+                              class="preset-pill"
+                              [class.active]="silenceThreshold() === 0.25"
+                              (click)="setSilencePreset('aggressive')"
+                              title="قص سريع ومكثف لكافة الوقفات القصيرة (0.25 ثانية)"
+                            >
+                              مكثف (0.25ث)
+                            </button>
+                          </div>
+
+                          <div class="threshold-slider-box">
+                            <input
+                              type="range"
+                              min="0.2"
+                              max="1.5"
+                              step="0.05"
+                              [value]="silenceThreshold()"
+                              (input)="onSilenceThresholdSliderChange($event)"
+                              class="studio-range"
+                              title="تحديد مدة السكتة بدقة"
+                            />
+                            <span class="slider-value">{{ silenceThreshold().toFixed(2) }}ث</span>
+                          </div>
+                        </div>
+
+                        <!-- Action Buttons: Delete vs Keep -->
+                        <div class="silence-action-buttons">
+                          <button
+                            type="button"
+                            class="btn-silence-action btn-cut-all-silences"
+                            (click)="cutAllSilences()"
+                            title="حذف كافة فترات السكتات والوقفات المرصودة دفعة واحدة بالمزامنة مع الفيديو"
+                          >
+                            ✂️ حذف كل السكتات
+                          </button>
+                          <button
+                            type="button"
+                            class="btn-silence-action btn-cut-long-silences"
+                            (click)="cutLongSilencesOnly(0.8)"
+                            title="حذف الوقفات الطويلة فقط (أطول من 0.8 ثانية) وإبقاء الوقفات الطبيعية القصيرة"
+                          >
+                            ⚡ حذف السكتات الطويلة فقط (> 0.8ث)
+                          </button>
+                          <button
+                            type="button"
+                            class="btn-silence-action btn-keep-all-silences"
+                            (click)="keepAllSilences()"
+                            title="إبقاء وترك كافة السكتات في الفيديو بدون قص"
+                          >
+                            ↩ إبقاء / ترك كل السكتات
+                          </button>
+                        </div>
+                      </div>
+
+                      <div class="silence-panel-footer">
+                        <label class="zoom-toggle-label">
+                          <input
+                            type="checkbox"
+                            [checked]="enableAlternatingZoom()"
+                            (change)="toggleAlternatingZoom()"
+                          />
+                          <span>🔍 تكبير متبادل (100% / 110%) لإخفاء قفزات المونتاج عند قص السكتات والكلمات</span>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Script Content Area: Grouped by Paragraphs / Sentences -->
+                  <div class="script-document-view" dir="rtl">
+                    @for (p of paragraphs(); track p.id) {
+                      <div
+                        class="script-paragraph-block"
+                        [class.all-removed]="p.allRemoved"
+                        [class.has-removed]="p.hasRemoved && !p.allRemoved"
+                        [class.has-flagged]="p.hasFlagged"
+                      >
+                        <!-- Paragraph Meta Header -->
+                        <div class="paragraph-meta-header">
+                          <button
+                            type="button"
+                            class="para-time-jump"
+                            (click)="seekToTime(p.start)"
+                            title="القفز بالفيديو لبداية هذه الجملة"
+                          >
+                            ▶ {{ formatTime(p.start) }} - {{ formatTime(p.end) }}
+                          </button>
+
+                          @if (p.hasFlagged) {
+                            <span class="para-flagged-badge" title="تحتوي هذه الجملة على لعثمة أو تكرار تم رصده">
+                              ⚡ تلعثم / تكرار ({{ p.flaggedCount }})
+                            </span>
+                          }
+
+                          <div class="para-quick-tools">
+                            <button
+                              type="button"
+                              class="btn-para-cut-all"
+                              [class.btn-restore]="p.allRemoved"
+                              (click)="toggleParagraphCut(p, $event)"
+                              [title]="p.allRemoved ? 'استعادة هذه الجملة بالكامل مع مقطع الفيديو' : 'حذف هذه الجملة بالكامل ومقطع الفيديو التابع لها'"
+                            >
+                              {{ p.allRemoved ? '↩ استعادة الجملة' : '✂ حذف الجملة كلها' }}
+                            </button>
+                            <button
+                              type="button"
+                              class="btn-para-edit-text"
+                              (click)="openEditParagraph(p, $event)"
+                              title="تعديل صياغة أو كلمات هذه الجملة"
+                            >
+                              ✎ تعديل
+                            </button>
+                          </div>
+                        </div>
+
+                        <!-- Words Flow -->
+                        <div class="paragraph-words-flow">
+                          @for (w of p.words; track w.id) {
+                            @if (w.kind === 'silence') {
+                              <span
+                                class="script-silence-chip"
+                                [attr.data-word-id]="w.id"
+                                [class.silence-cut]="w.removed"
+                                [class.silence-kept]="!w.removed"
+                                [class.silence-active]="currentActiveWord()?.id === w.id"
+                                (click)="toggleWord(w)"
+                                (dblclick)="seekToWord(w, $event)"
+                                [title]="getWordTooltip(w)"
+                              >
+                                <span class="silence-icon">{{ w.removed ? '✂️' : '⏸' }}</span>
+                                <span class="silence-text">{{ (w.end - w.start).toFixed(1) }}ث</span>
+                                @if (w.removed) {
+                                  <span class="silence-status-tag cut">محذوفة</span>
+                                } @else {
+                                  <span class="silence-status-tag kept">متروكة</span>
+                                }
+                              </span>
+                            } @else {
+                              <span
+                                class="script-word-chip"
+                                [attr.data-word-id]="w.id"
+                                [class.word-cut]="w.removed"
+                                [class.word-active]="currentActiveWord()?.id === w.id"
+                                [class.word-stutter]="w.removeReason === 'stutter' || isStutterWord(w)"
+                                [class.word-elongation]="w.removeReason === 'elongation' || isElongatedWord(w)"
+                                [class.word-filler]="w.kind === 'filler' || w.removeReason === 'filler'"
+                                [class.word-repeat]="w.removeReason === 'repeat'"
+                                [class.word-matched]="scriptSearchQuery() && w.text.includes(scriptSearchQuery())"
+                                (click)="toggleWord(w)"
+                                (dblclick)="seekToWord(w, $event)"
+                                (contextmenu)="$event.preventDefault(); openEditWord(w, $event)"
+                                [title]="getWordTooltip(w)"
+                              >
+                                <span class="word-text">{{ w.text }}</span>
+                                @if (w.removeReason === 'stutter' || isStutterWord(w)) {
+                                  <span class="word-tag tag-stutter">تأتأة</span>
+                                } @else if (w.removeReason === 'elongation' || isElongatedWord(w)) {
+                                  <span class="word-tag tag-elongation">مد</span>
+                                } @else if (w.removeReason === 'repeat') {
+                                  <span class="word-tag tag-repeat">تكرار</span>
+                                } @else if (w.kind === 'filler' || w.removeReason === 'filler') {
+                                  <span class="word-tag tag-filler">حشو</span>
+                                }
+                                @if (w.removed) {
+                                  <span class="word-cut-mark" title="تم حذف مقطع الفيديو والصوت الخاص بهذه الكلمة">✕</span>
+                                }
+                              </span>
+                            }
+                          }
+                        </div>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            }
+
+            <!-- TAB 1: CAPTIONS CUSTOMIZATION -->
+            @if (activeTab() === 'captions') {
+              <div class="inspector-content">
+                @if (!hasTranscribed()) {
+                  <div class="panel-section">
+                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                      لم يتم تفريغ كلمات الفيديو بعد. اضغط هنا لتفريغ الصوت وتوليد التعليقات:
+                    </p>
+                    <button type="button" (click)="runAiTranscription()" class="btn-studio-primary btn-block">
+                      🧠 تفريغ الصوت الآن (المرحلة 4)
+                    </button>
+                  </div>
+                } @else {
+                  <!-- Show / Hide Captions Toggle -->
+                  <div class="panel-section switch-row">
+                    <div>
+                      <span class="switch-title">عرض التعليقات على الفيديو</span>
+                      <p class="switch-desc">إظهار أو إخفاء النصوص المتحركة أثناء العرض</p>
+                    </div>
+                    <label class="studio-switch">
+                      <input
+                        type="checkbox"
+                        [checked]="showCaptions()"
+                        (change)="showCaptions.set(!showCaptions())"
+                      />
+                      <span class="slider"></span>
+                    </label>
+                  </div>
+
+                  <!-- Words per Line Selector -->
+                  <div class="panel-section">
+                    <label class="section-label">عدد الكلمات في السطر (Phrase Length)</label>
+                    <div class="preset-pill-group">
+                      <button
+                        type="button"
+                        class="preset-pill"
+                        [class.active]="wordsPerLine() === 1"
+                        (click)="wordsPerLine.set(1)"
+                      >
+                        كلمة كلمة
+                      </button>
+                      <button
+                        type="button"
+                        class="preset-pill"
+                        [class.active]="wordsPerLine() === 2"
+                        (click)="wordsPerLine.set(2)"
+                      >
+                        كلمتين
+                      </button>
+                      <button
+                        type="button"
+                        class="preset-pill"
+                        [class.active]="wordsPerLine() === 3"
+                        (click)="wordsPerLine.set(3)"
+                      >
+                        3 كلمات
+                      </button>
+                      <button
+                        type="button"
+                        class="preset-pill"
+                        [class.active]="wordsPerLine() === 4"
+                        (click)="wordsPerLine.set(4)"
+                      >
+                        4 كلمات
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Caption Position -->
+                  <div class="panel-section">
+                    <label class="section-label">موضع التعليق على الشاشة</label>
+                    <div class="preset-pill-group">
+                      <button
+                        type="button"
+                        class="preset-pill"
+                        [class.active]="captionPosition() === 'bottom'"
+                        (click)="captionPosition.set('bottom')"
+                      >
+                        أسفل الشاشة
+                      </button>
+                      <button
+                        type="button"
+                        class="preset-pill"
+                        [class.active]="captionPosition() === 'middle'"
+                        (click)="captionPosition.set('middle')"
+                      >
+                        المنتصف
+                      </button>
+                      <button
+                        type="button"
+                        class="preset-pill"
+                        [class.active]="captionPosition() === 'top'"
+                        (click)="captionPosition.set('top')"
+                      >
+                        أعلى الشاشة
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Font Size Selector -->
+                  <div class="panel-section">
+                    <label class="section-label">حجم خط التعليق (Font Size)</label>
+                    <div class="preset-pill-group">
+                      <button
+                        type="button"
+                        class="preset-pill"
+                        [class.active]="captionFontSize() === 10"
+                        (click)="captionFontSize.set(10)"
+                      >
+                        صغير (10px)
+                      </button>
+                      <button
+                        type="button"
+                        class="preset-pill"
+                        [class.active]="captionFontSize() === 14"
+                        (click)="captionFontSize.set(14)"
+                      >
+                        متوسط (14px)
+                      </button>
+                      <button
+                        type="button"
+                        class="preset-pill"
+                        [class.active]="captionFontSize() === 18"
+                        (click)="captionFontSize.set(18)"
+                      >
+                        كبير (18px)
+                      </button>
+                      <button
+                        type="button"
+                        class="preset-pill"
+                        [class.active]="captionFontSize() === 22"
+                        (click)="captionFontSize.set(22)"
+                      >
+                        ضخم (22px)
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Caption Template Cards -->
+                  <div class="panel-section">
+                    <label class="section-label">قوالب التحريك والألوان</label>
+                    <div class="caption-templates-grid">
+                      <div
+                        class="caption-card"
+                        [class.selected]="selectedCaptionStyle() === 'knooz-default'"
+                        (click)="selectedCaptionStyle.set('knooz-default')"
+                      >
+                        <div class="caption-preview-box knooz-sample">
+                          <span>سويت شيرت</span>
+                        </div>
+                        <strong>كنوز كلاسيك</strong>
+                        <p>أصفر عريض بخلفية داكنة</p>
+                      </div>
+
+                      <div
+                        class="caption-card"
+                        [class.selected]="selectedCaptionStyle() === 'modern-pop'"
+                        (click)="selectedCaptionStyle.set('modern-pop')"
+                      >
+                        <div class="caption-preview-box pop-sample">
+                          <span>سويت شيرت</span>
+                        </div>
+                        <strong>نيون بوب (Pop)</strong>
+                        <p>إضاءة نيون خضراء متوهجة</p>
+                      </div>
+
+                      <div
+                        class="caption-card"
+                        [class.selected]="selectedCaptionStyle() === 'punchy-tiktok'"
+                        (click)="selectedCaptionStyle.set('punchy-tiktok')"
+                      >
+                        <div class="caption-preview-box tiktok-sample">
+                          <span>سويت شيرت</span>
+                        </div>
+                        <strong>ريلز & تيك توك</strong>
+                        <p>خط سميك بلون وردي مبهج</p>
+                      </div>
+
+                      <div
+                        class="caption-card"
+                        [class.selected]="selectedCaptionStyle() === 'minimal-clean'"
+                        (click)="selectedCaptionStyle.set('minimal-clean')"
+                      >
+                        <div class="caption-preview-box minimal-sample">
+                          <span>سويت شيرت</span>
+                        </div>
+                        <strong>مينيمال أنيق</strong>
+                        <p>أبيض ناصع مع تظليل خفيف</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="panel-section">
+                    <button type="button" (click)="generateCaptions()" class="btn-studio-primary btn-block">
+                      💾 حفظ وتوليد ملف الترجمة ASS المحروق
+                    </button>
+                  </div>
+                }
+              </div>
+            }
+
+            <!-- TAB 3: MULTI-CAMERA CONTROLS (VIRTUAL MULTI-ANGLE) -->
+            @if (activeTab() === 'cameras') {
+              <div class="inspector-content">
+                <!-- Virtual Angles List Section -->
+                <div class="panel-section">
+                  <div class="section-label-row">
+                    <label class="section-label">🎥 زوايا التصوير الافتراضية ({{ cameraCount() }})</label>
+                    <button class="btn-add-camera" (click)="addVirtualCamera()" title="إضافة زاوية تصوير جديدة بدون الحاجة لأي ملف خارجي">
+                      ➕ إضافة زاوية جديدة
+                    </button>
+                  </div>
+                  <p class="section-subtext">توليد زوايا متعددة تلقائياً من الفيديو الأصلي (Wide / Close-up / Punch-in) لإخفاء قفزات المونتاج.</p>
+
+                  <div class="camera-cards-list">
+                    @for (cam of virtualCameras(); track cam.id; let i = $index) {
+                      <div class="cam-item-card" [class.main-audio]="cam.id === 'cam1'">
+                        <div class="cam-header">
+                          <div class="cam-icon">🎥</div>
+                          <div class="cam-details">
+                            <div class="cam-name-row">
+                              <input
+                                class="cam-name-input"
+                                [value]="cam.name"
+                                (change)="updateVirtualCameraName(cam.id, $any($event.target).value)"
+                                placeholder="اسم الزاوية..."
+                              />
+                              <span class="cam-badge-id">{{ cam.id.toUpperCase() }}</span>
+                            </div>
+                            <span class="cam-path">زوم: {{ cam.zoom.toFixed(2) }}x | إزاحة: {{ cam.panX || 0 }}%</span>
+                          </div>
+                          <div class="cam-actions">
+                            <button class="btn-preview-cam" (click)="previewVirtualCamera(cam)" title="معاينة الزاوية على المونيتور">
+                              👁️ معاينة
+                            </button>
+                            @if (cam.id === 'cam1') {
+                              <span class="badge-mic active" title="الزاوية الواسعة الأساسية">🌟 أساسية</span>
+                            } @else {
+                              <button class="btn-remove-cam" (click)="removeVirtualCamera(cam.id)" title="حذف هذه الزاوية">
+                                🗑️
+                              </button>
+                            }
+                          </div>
+                        </div>
+
+                        <!-- Zoom Slider for this angle -->
+                        <div class="cam-control-row">
+                          <label>🔍 نسبة التقريب (Zoom):</label>
+                          <input
+                            type="range"
+                            min="1.0"
+                            max="1.50"
+                            step="0.02"
+                            [value]="cam.zoom"
+                            (input)="onVirtualCameraZoomChange(cam.id, $event)"
+                          />
+                          <span class="control-value">{{ cam.zoom.toFixed(2) }}x</span>
+                        </div>
+
+                        <!-- 3D Perspective Yaw (Angle Rotation) -->
+                        <div class="cam-control-row">
+                          <label>📐 زاوية المنظور 3D (Yaw):</label>
+                          <input
+                            type="range"
+                            min="-12"
+                            max="12"
+                            step="0.5"
+                            [value]="cam.rotateY || 0"
+                            (input)="onVirtualCameraRotateYChange(cam.id, $event)"
+                          />
+                          <span class="control-value">{{ (cam.rotateY || 0) > 0 ? '+' : '' }}{{ (cam.rotateY || 0).toFixed(1) }}°</span>
+                        </div>
+
+                        <!-- Horizontal Framing (Pan X) -->
+                        @if (cam.zoom > 1.05) {
+                          <div class="cam-control-row">
+                            <label>↔️ إزاحة الكادر (Pan X):</label>
+                            <input
+                              type="range"
+                              min="-20"
+                              max="20"
+                              step="1"
+                              [value]="cam.panX || 0"
+                              (input)="onVirtualCameraPanXChange(cam.id, $event)"
+                            />
+                            <span class="control-value">{{ (cam.panX || 0) > 0 ? '+' : '' }}{{ cam.panX || 0 }}%</span>
+                          </div>
+                        }
+                      </div>
+                    }
+                  </div>
+                </div>
+
+                <!-- Auto-Switch Settings -->
+                <div class="panel-section cam-auto-switch-section">
+                  <div class="section-label-row">
+                    <label class="section-label">🔄 التبديل التلقائي بين الزوايا</label>
+                    <label class="studio-switch">
+                      <input
+                        type="checkbox"
+                        [checked]="autoSwitchEnabled()"
+                        (change)="autoSwitchEnabled() ? resetCameras() : autoDistributeCameras()"
+                      />
+                      <span class="slider"></span>
+                    </label>
+                  </div>
+
+                  @if (autoSwitchEnabled()) {
+                    <!-- Switch Pattern -->
+                    <div class="cam-pattern-group">
+                      <label class="sub-label">نمط التبديل:</label>
+                      <div class="cam-pattern-pills">
+                        <button
+                          class="cam-pattern-pill"
+                          [class.active]="autoSwitchPattern() === 'alternate-cuts'"
+                          (click)="setAutoSwitchPattern('alternate-cuts')"
+                          title="التبديل بين الواسعة والمقربة عند كل قطعية لإخفاء قفزات المونتاج"
+                        >✂️ قفزات المونتاج</button>
+                        <button
+                          class="cam-pattern-pill"
+                          [class.active]="autoSwitchPattern() === 'sequential'"
+                          (click)="setAutoSwitchPattern('sequential')"
+                          title="التبديل الدوري المنتظم حسب الفاصل الزمني"
+                        >🔁 تسلسلي</button>
+                        <button
+                          class="cam-pattern-pill"
+                          [class.active]="autoSwitchPattern() === 'smart'"
+                          (click)="setAutoSwitchPattern('smart')"
+                          title="التبديل عند الوقفات والسكتات فقط"
+                        >🧠 ذكي</button>
+                        <button
+                          class="cam-pattern-pill"
+                          [class.active]="autoSwitchPattern() === 'random'"
+                          (click)="setAutoSwitchPattern('random')"
+                          title="توزيع عشوائي متنوع"
+                        >🎲 عشوائي</button>
+                      </div>
+                    </div>
+
+                    <!-- Switch Interval (when not in alternate-cuts mode) -->
+                    @if (autoSwitchPattern() !== 'alternate-cuts') {
+                      <div class="cam-interval-group">
+                        <label class="sub-label">فترة التبديل: {{ autoSwitchIntervalSec() }}ث</label>
+                        <input
+                          type="range"
+                          min="3"
+                          max="15"
+                          step="1"
+                          [value]="autoSwitchIntervalSec()"
+                          (input)="onAutoSwitchIntervalChange($event)"
+                        />
+                        <div class="range-labels">
+                          <span>٣ ثواني</span>
+                          <span>١٥ ثانية</span>
+                        </div>
+                      </div>
+                    }
+
+                    <!-- Action Buttons -->
+                    <div class="cam-action-buttons">
+                      <button class="btn-cam-action primary" (click)="autoDistributeCameras()">
+                        🔄 تطبيق التبديل التلقائي على المقاطع
+                      </button>
+                      <button class="btn-cam-action" (click)="resetCameras()">
+                        ↩️ إعادة تعيين للزاوية الواسعة الأصلية
+                      </button>
+                    </div>
+                  }
+                </div>
+
+                <!-- Multi-Camera Info -->
+                <div class="panel-section">
+                  <label class="section-label">💡 كيف يعمل الاستوديو الافتراضي؟</label>
+                  <div class="info-box">
+                    <p>✓ يتم قص وتكبير الفيديو الأصلي بنقاء عالٍ ليبدو وكأنه صُوّر بعدة كاميرات استوديو.</p>
+                    <p>✓ التبديل التلقائي عند قفزات المونتاج (Jump Cuts) يخفي القطع تماماً ويمنح الفيديو احترافية عالية.</p>
+                    <p>✓ يمكنك النقر على أي بلوك كاميرا في خط الزمن للتبديل اليدوي الفوري بين الزوايا.</p>
+                    <p>✓ يمكنك معاينة أي زاوية مباشرة في شاشة العرض بالنقر على زر "معاينة".</p>
+                  </div>
+                </div>
+
+                <!-- AI 3D Multi-Camera Generation -->
+                <div class="panel-section ai-multicam-section">
+                  <div class="section-label-row">
+                    <label class="section-label">🤖 توليد زوايا AI ثلاثية الأبعاد</label>
+                  </div>
+                  <p class="section-subtext">توليد زوايا كاميرا حقيقية ثلاثية الأبعاد بالذكاء الاصطناعي — إعادة بناء المشهد مع عمق وإزاحة حقيقية.</p>
+
+                  @if (aiMulticamStatus() === 'idle') {
+                    <div class="ai-multicam-controls">
+                      <div class="cam-control-row">
+                        <label>📹 وضع المعالجة:</label>
+                        <div class="cam-pattern-pills">
+                          <button
+                            class="cam-pattern-pill"
+                            [class.active]="aiMulticamMode() === 'preview'"
+                            (click)="aiMulticamMode.set('preview')"
+                            title="معالجة سريعة — كل 3 فريمات فقط"
+                          >⚡ سريع (معاينة)</button>
+                          <button
+                            class="cam-pattern-pill"
+                            [class.active]="aiMulticamMode() === 'full'"
+                            (click)="aiMulticamMode.set('full')"
+                            title="معالجة كاملة — كل الفريمات بأعلى جودة"
+                          >🎬 كامل (جودة عالية)</button>
+                        </div>
+                      </div>
+
+                      <div class="cam-control-row">
+                        <label>
+                          <input type="checkbox" [checked]="aiUnmirrorSelfie()" (change)="aiUnmirrorSelfie.set(!aiUnmirrorSelfie())" />
+                          🪞 تصحيح مرآة الكاميرا الأمامية (Selfie)
+                        </label>
+                      </div>
+
+                      <button class="btn-cam-action primary ai-generate-btn" (click)="startAiMulticamGeneration()">
+                        🚀 بدء توليد الزوايا بالذكاء الاصطناعي
+                      </button>
+                    </div>
+                  }
+
+                  @if (aiMulticamStatus() === 'processing') {
+                    <div class="ai-multicam-progress">
+                      <div class="progress-header">
+                        <span>⏳ جاري المعالجة...</span>
+                        <span class="progress-percent">{{ aiMulticamPercent() }}%</span>
+                      </div>
+                      <div class="progress-bar-container">
+                        <div class="progress-bar-fill" [style.width.%]="aiMulticamPercent()"></div>
+                      </div>
+                      <div class="progress-details">
+                        <span>فريم {{ aiMulticamFrame() }} / {{ aiMulticamTotalFrames() }}</span>
+                        <span>⏱️ متبقي: {{ aiMulticamEta() }}ث</span>
+                      </div>
+                      <button class="btn-cam-action danger" (click)="cancelAiMulticam()">
+                        ❌ إلغاء
+                      </button>
+                    </div>
+                  }
+
+                  @if (aiMulticamStatus() === 'complete') {
+                    <div class="ai-multicam-complete">
+                      <div class="success-badge">✅ تم التوليد بنجاح!</div>
+                      <p class="section-subtext">تم إنشاء {{ aiMulticamCameraCount() }} زوايا AI ثلاثية الأبعاد. يمكنك الآن معاينتها واستخدامها في التصدير.</p>
+                      <div class="cam-action-buttons">
+                        <button class="btn-cam-action primary" (click)="startAiMulticamGeneration()">
+                          🔄 إعادة التوليد
+                        </button>
+                      </div>
+                    </div>
+                  }
+
+                  @if (aiMulticamStatus() === 'error') {
+                    <div class="ai-multicam-error">
+                      <div class="error-badge">❌ حدث خطأ</div>
+                      <p class="section-subtext error-text">{{ aiMulticamError() }}</p>
+                      <button class="btn-cam-action" (click)="startAiMulticamGeneration()">
+                        🔄 إعادة المحاولة
+                      </button>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+
+            <!-- TAB 4: CINEMATIC ENHANCEMENT -->
+            @if (activeTab() === 'cinematic') {
+              <div class="inspector-content">
+                <div class="panel-section">
+                  <div class="section-label-row">
+                    <label class="section-label">🎬 تفعيل التحسين السينمائي</label>
+                    <label class="studio-switch">
+                      <input
+                        type="checkbox"
+                        [checked]="cinematicEnabled()"
+                        (change)="cinematicEnabled.set(!cinematicEnabled())"
+                      />
+                      <span class="slider"></span>
+                    </label>
+                  </div>
+
+                  @if (cinematicEnabled()) {
+                    <p class="section-hint">تحسين الألوان والحدة والتباين بجودة استوديو احترافي مع معاينة حية فورية — وبدون زيادة حجم الفيديو عند التصدير.</p>
+
+                    <!-- Cinematic Presets -->
+                    <label class="section-label" style="margin-top: 1rem;">القوالب الجاهزة</label>
+                    <div class="cinematic-presets-row">
+                      <button
+                        type="button"
+                        class="cine-preset-chip"
+                        [class.active]="cinematicPreset() === 'natural'"
+                        (click)="setCinematicPreset('natural')"
+                      >
+                        <span class="cine-dot natural"></span>
+                        طبيعي محسّن
+                      </button>
+                      <button
+                        type="button"
+                        class="cine-preset-chip"
+                        [class.active]="cinematicPreset() === 'warm-cinema'"
+                        (click)="setCinematicPreset('warm-cinema')"
+                      >
+                        <span class="cine-dot warm"></span>
+                        سينما دافئة
+                      </button>
+                      <button
+                        type="button"
+                        class="cine-preset-chip"
+                        [class.active]="cinematicPreset() === 'cool-film'"
+                        (click)="setCinematicPreset('cool-film')"
+                      >
+                        <span class="cine-dot cool"></span>
+                        فيلم بارد
+                      </button>
+                      <button
+                        type="button"
+                        class="cine-preset-chip"
+                        [class.active]="cinematicPreset() === 'vibrant'"
+                        (click)="setCinematicPreset('vibrant')"
+                      >
+                        <span class="cine-dot vibrant"></span>
+                        ألوان نابضة
+                      </button>
+                    </div>
+
+                    <!-- Fine-Tune Sliders -->
+                    <label class="section-label" style="margin-top: 1.25rem;">التحكم اليدوي الدقيق</label>
+                    <div class="cinematic-sliders">
+                      <div class="cine-slider-row">
+                        <label>الحدة (Sharpness)</label>
+                        <input
+                          type="range"
+                          min="0"
+                          max="1.5"
+                          step="0.05"
+                          [value]="cinematicSharpness()"
+                          (input)="cinematicSharpness.set(+$any($event.target).value); cinematicPreset.set('custom')"
+                          class="cine-range"
+                        />
+                        <span class="cine-value">{{ cinematicSharpness().toFixed(2) }}</span>
+                      </div>
+
+                      <div class="cine-slider-row">
+                        <label>التباين (Contrast)</label>
+                        <input
+                          type="range"
+                          min="0.8"
+                          max="1.4"
+                          step="0.01"
+                          [value]="cinematicContrast()"
+                          (input)="cinematicContrast.set(+$any($event.target).value); cinematicPreset.set('custom')"
+                          class="cine-range"
+                        />
+                        <span class="cine-value">{{ cinematicContrast().toFixed(2) }}</span>
+                      </div>
+
+                      <div class="cine-slider-row">
+                        <label>التشبع (Saturation)</label>
+                        <input
+                          type="range"
+                          min="0.5"
+                          max="2.0"
+                          step="0.05"
+                          [value]="cinematicSaturation()"
+                          (input)="cinematicSaturation.set(+$any($event.target).value); cinematicPreset.set('custom')"
+                          class="cine-range"
+                        />
+                        <span class="cine-value">{{ cinematicSaturation().toFixed(2) }}</span>
+                      </div>
+
+                      <div class="cine-slider-row">
+                        <label>السطوع (Brightness)</label>
+                        <input
+                          type="range"
+                          min="-0.1"
+                          max="0.1"
+                          step="0.005"
+                          [value]="cinematicBrightness()"
+                          (input)="cinematicBrightness.set(+$any($event.target).value); cinematicPreset.set('custom')"
+                          class="cine-range"
+                        />
+                        <span class="cine-value">{{ cinematicBrightness().toFixed(3) }}</span>
+                      </div>
+
+                      <div class="cine-slider-row">
+                        <label>حرارة اللون</label>
+                        <div class="temp-btn-group">
+                          <button
+                            type="button"
+                            class="temp-chip"
+                            [class.active]="cinematicTemperature() === 'cool'"
+                            (click)="cinematicTemperature.set('cool'); cinematicPreset.set('custom')"
+                          >
+                            ❄️ بارد
+                          </button>
+                          <button
+                            type="button"
+                            class="temp-chip"
+                            [class.active]="cinematicTemperature() === 'neutral'"
+                            (click)="cinematicTemperature.set('neutral'); cinematicPreset.set('custom')"
+                          >
+                            ⚖️ محايد
+                          </button>
+                          <button
+                            type="button"
+                            class="temp-chip"
+                            [class.active]="cinematicTemperature() === 'warm'"
+                            (click)="cinematicTemperature.set('warm'); cinematicPreset.set('custom')"
+                          >
+                            🔥 دافئ
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  } @else {
+                    <p class="section-hint" style="margin-top: 0.75rem;">قم بتفعيل الزر في الأعلى لتطبيق التأثير السينمائي ومعاينة الفلاتر مباشرة على الفيديو.</p>
+                  }
+                </div>
+              </div>
+            }
+
+            <!-- TAB 5: AUDIO STUDIO (Adobe Podcast Style) -->
+            @if (activeTab() === 'audio') {
+              <div class="inspector-content">
+                <div class="panel-section">
+                  <div class="section-label-row">
+                    <label class="section-label">🎙️ تفعيل هندسة واستوديو الصوت</label>
+                    <label class="studio-switch">
+                      <input
+                        type="checkbox"
+                        [checked]="audioEnhanced()"
+                        (change)="toggleAudioEnhanced()"
+                      />
+                      <span class="slider"></span>
+                    </label>
+                  </div>
+
+                  <p class="section-hint">
+                    تنقية شاملة للصوت بالذكاء الاصطناعي مستوحاة من تقنية Adobe Podcast Enhance Speech: عزل كامل للضوضاء الخلفية وصوت التكييف، إزالة صدى الغرفة، وتعزيز دفء ونقاء مخارج الحروف.
+                  </p>
+
+                  <!-- Offline AI Denoise Action Card -->
+                  <div class="audio-ai-card">
+                    <div class="audio-card-header">
+                      <div class="audio-badge">⚡ 100% بدون إنترنت (Offline)</div>
+                      <div class="audio-title">عزل الضوضاء بالذكاء الاصطناعي (AI Denoise)</div>
+                    </div>
+                    <p class="audio-card-desc">
+                      تحليل البصمة الطيفية للموجات الصوتية وعزل الترددات المشوشة وصوت المروحة وصدا الغرف تلقائياً.
+                    </p>
+
+                    <!-- Profile Selector -->
+                    <label class="section-label" style="margin-top: 0.75rem;">نمط الصوت المفضل</label>
+                    <div class="cinematic-presets-row">
+                      <button
+                        type="button"
+                        class="cine-preset-chip"
+                        [class.active]="audioEnhanceProfile() === 'studio'"
+                        (click)="setAudioEnhanceProfile('studio')"
+                      >
+                        🎙️ استوديو احترافي
+                      </button>
+                      <button
+                        type="button"
+                        class="cine-preset-chip"
+                        [class.active]="audioEnhanceProfile() === 'podcast'"
+                        (click)="setAudioEnhanceProfile('podcast')"
+                      >
+                        📻 بودكاست عميق
+                      </button>
+                      <button
+                        type="button"
+                        class="cine-preset-chip"
+                        [class.active]="audioEnhanceProfile() === 'clean'"
+                        (click)="setAudioEnhanceProfile('clean')"
+                      >
+                        🧹 تنقية طبيعية
+                      </button>
+                    </div>
+
+                    <!-- Strength Slider -->
+                    <div class="cine-slider-row" style="margin-top: 1rem;">
+                      <label>قوة عزل الضوضاء</label>
+                      <input
+                        type="range"
+                        min="0.4"
+                        max="1.0"
+                        step="0.05"
+                        [value]="audioEnhanceStrength()"
+                        (input)="audioEnhanceStrength.set(+$any($event.target).value)"
+                        class="cine-range"
+                      />
+                      <span class="cine-value">{{ (audioEnhanceStrength() * 100).toFixed(0) }}%</span>
+                    </div>
+
+                    <!-- Action Button -->
+                    <button
+                      type="button"
+                      class="btn-studio-primary btn-block"
+                      style="margin-top: 1.25rem;"
+                      [disabled]="audioEnhancing()"
+                      (click)="runAudioEnhancement()"
+                    >
+                      @if (audioEnhancing()) {
+                        <span>⏳ جاري تنقية الصوت بالذكاء الاصطناعي...</span>
+                      } @else {
+                        <span>✨ معالجة وتنقية الصوت الآن</span>
+                      }
+                    </button>
+
+                    @if (audioEnhanceSuccess()) {
+                      <div class="audio-success-banner">
+                        ✅ تم تطبيق تنقية الصوت بنجاح! الصوت الآن بجودة استوديو احترافي وسيطبق عند التصدير.
+                      </div>
+                    }
+                  </div>
+
+                  <!-- Broadcast Chain Explainer -->
+                  <div class="audio-chain-box">
+                    <label class="section-label" style="margin-bottom: 0.5rem;">سلسلة المعالجة المدمجة (Broadcast Chain):</label>
+                    <ul class="audio-chain-list">
+                      <li><span>🔇 80Hz High-Pass</span> — عزل ارتطامات الطاولة وتذبذب المايك</li>
+                      <li><span>🎙️ 200Hz Warmth</span> — زيادة الدفء وقرب المايك (Proximity Effect)</li>
+                      <li><span>🏢 450Hz De-box</span> — عزل الصدى المكتوم ورنين الغرف</li>
+                      <li><span>✨ 3.2kHz Presence</span> — رفع حدة ووضوح مخارج الحروف</li>
+                      <li><span>🎚️ Dynamic Compressor</span> — تسوية وموازنة نبرة الصوت</li>
+                      <li><span>📢 -16 LUFS Normalizer</span> — مطابقة معايير البودكاست العالمية</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            }
+
+            <!-- TAB 6: EXPORT & REELS -->
+            @if (activeTab() === 'export') {
+              <div class="inspector-content">
+                <div class="panel-section">
+                  <label class="section-label">أبعاد ومقاسات التصدير</label>
+                  <div class="aspect-selector-group">
+                    <label class="aspect-checkbox" [class.checked]="exportFormats().includes('9:16')">
+                      <input
+                        type="checkbox"
+                        [checked]="exportFormats().includes('9:16')"
+                        (change)="toggleExportFormat('9:16')"
+                      />
+                      <div class="aspect-box ratio-9-16">9:16</div>
+                      <div>
+                        <strong>9:16 طولي</strong>
+                        <span>Reels / TikTok / Shorts</span>
+                      </div>
+                    </label>
+
+                    <label class="aspect-checkbox" [class.checked]="exportFormats().includes('16:9')">
+                      <input
+                        type="checkbox"
+                        [checked]="exportFormats().includes('16:9')"
+                        (change)="toggleExportFormat('16:9')"
+                      />
+                      <div class="aspect-box ratio-16-9">16:9</div>
+                      <div>
+                        <strong>16:9 عرضي</strong>
+                        <span>YouTube / الشاشات العريضة</span>
+                      </div>
+                    </label>
+
+                    <label class="aspect-checkbox" [class.checked]="exportFormats().includes('1:1')">
+                      <input
+                        type="checkbox"
+                        [checked]="exportFormats().includes('1:1')"
+                        (change)="toggleExportFormat('1:1')"
+                      />
+                      <div class="aspect-box ratio-1-1">1:1</div>
+                      <div>
+                        <strong>1:1 مربع</strong>
+                        <span>Instagram Feed / منشورات</span>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Resolution Selector -->
+                <div class="panel-section">
+                  <label class="section-label">دقة الفيديو وجودة العرض (Resolution)</label>
+                  <div class="resolution-selector-group">
+                    <button
+                      type="button"
+                      class="res-btn"
+                      [class.active]="exportResolution() === '4k'"
+                      (click)="exportResolution.set('4k')"
+                    >
+                      <span class="res-tag badge-4k">4K</span>
+                      <div class="res-info">
+                        <strong>Ultra HD (2160p)</strong>
+                        <small>أعلى دقة سينمائية للشاشات الكبيرة</small>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      class="res-btn"
+                      [class.active]="exportResolution() === '2k'"
+                      (click)="exportResolution.set('2k')"
+                    >
+                      <span class="res-tag badge-2k">2K</span>
+                      <div class="res-info">
+                        <strong>Quad HD (1440p)</strong>
+                        <small>وضوح فائق ممتاز لليوتيوب ومنصات الفيديو</small>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      class="res-btn"
+                      [class.active]="exportResolution() === '1080p'"
+                      (click)="exportResolution.set('1080p')"
+                    >
+                      <span class="res-tag badge-1080">FHD</span>
+                      <div class="res-info">
+                        <strong>Full HD (1080p Pro)</strong>
+                        <small>دقة قياسية احترافية مع أقصى وضوح</small>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Phone Footage Restoration Box -->
+                <div class="panel-section mobile-enhancement-box">
+                  <div class="section-label-row">
+                    <label class="section-label">📱 معالجة تصوير الهاتف واستعادة الجودة</label>
+                    <label class="studio-switch">
+                      <input
+                        type="checkbox"
+                        [checked]="enhancePhoneVideo()"
+                        (change)="enhancePhoneVideo.set(!enhancePhoneVideo())"
+                      />
+                      <span class="slider"></span>
+                    </label>
+                  </div>
+                  <p class="section-hint">
+                    يعالج التدهور وضياع التفاصيل الناتج عن ضغط الهاتف ونقل الفيديو للكمبيوتر. يعيد رسم الحواف وينظف تشويش الكاميرا.
+                  </p>
+
+                  @if (enhancePhoneVideo()) {
+                    <div class="phone-tune-options">
+                      <div class="tune-item">
+                        <label>✨ حدة تفاصيل الوجه والملامح (Detail Sharpening):</label>
+                        <div class="slider-row">
+                          <input
+                            type="range"
+                            min="0.2"
+                            max="1.4"
+                            step="0.05"
+                            [value]="phoneSharpening()"
+                            (input)="onPhoneSharpeningChange($event)"
+                          />
+                          <span class="slider-val">{{ (phoneSharpening() * 100).toFixed(0) }}%</span>
+                        </div>
+                      </div>
+
+                      <div class="tune-toggles">
+                        <label class="tune-check">
+                          <input
+                            type="checkbox"
+                            [checked]="phoneDenoise()"
+                            (change)="phoneDenoise.set(!phoneDenoise())"
+                          />
+                          <span>🧹 إزالة تشويش وحبوب الكاميرا (Denoise)</span>
+                        </label>
+
+                        <label class="tune-check">
+                          <input
+                            type="checkbox"
+                            [checked]="phoneColorBoost()"
+                            (change)="phoneColorBoost.set(!phoneColorBoost())"
+                          />
+                          <span>🎨 حيوية الألوان وتباين البشرة (Color Depth)</span>
+                        </label>
+                      </div>
+                    </div>
+                  }
+                </div>
+
+                <!-- Codec Quality Preset -->
+                <div class="panel-section">
+                  <label class="section-label">جودة الضغط والترميز (Codec Quality)</label>
+                  <div class="quality-preset-pills">
+                    <button
+                      type="button"
+                      class="quality-pill"
+                      [class.active]="exportQualityPreset() === 'master'"
+                      (click)="exportQualityPreset.set('master')"
+                      title="CRF 17 - أعلى جودة سينمائية بدون أي ضياع في البيكسل"
+                    >
+                      💎 سينمائية فائقة (Lossless Pro)
+                    </button>
+                    <button
+                      type="button"
+                      class="quality-pill"
+                      [class.active]="exportQualityPreset() === 'high'"
+                      (click)="exportQualityPreset.set('high')"
+                      title="CRF 19 - توازن ممتاز بين حجم الملف والوضوح العالي"
+                    >
+                      ⚡ جودة عالية (High)
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Export Buttons -->
+                <div class="panel-section export-actions-group">
+                  <button
+                    type="button"
+                    (click)="exportVideo()"
+                    class="btn-studio-primary btn-block btn-lg"
+                    [disabled]="isExporting()"
+                  >
+                    🎬 تصدير الفيديو الحالي ({{ aspectRatio() }})
+                  </button>
+
+                  <button
+                    type="button"
+                    (click)="batchExport()"
+                    class="btn-studio-secondary btn-block"
+                    [disabled]="isExporting()"
+                  >
+                    🚀 تصدير الفيديو بجميع المقاسات المحددة
+                  </button>
+                </div>
+              </div>
+            }
+          </aside>
+
+            <!-- Bottom Bar / Multi-Track Timeline (Placed Under Settings On The Right) -->
+            <app-timeline
+              [isPlaying]="isPlaying()"
+              [totalDuration]="fullMediaDuration"
+              [savedSec]="timeSaved()"
+              [edl]="edl()"
+              [paragraphs]="paragraphs()"
+              [hasMultipleCameras]="(edl()?.sources?.length || 0) > 1"
+              (playPause)="togglePlayPause()"
+              (seek)="onTimelineSeek($event)"
+              (editCaption)="openEditParagraph($event)"
+              (playSnippet)="playSnippetRange($event)">
+            </app-timeline>
+          </div>
+
+          <!-- Interactive Split Drag Bar (Resizable between 40%, 50%, or custom drag) -->
+          <div
+            class="workspace-split-resizer"
+            (mousedown)="startSplitDrag($event)"
+            (dblclick)="toggleSplitHalf()"
+            title="اسحب لتعديل عرض الإعدادات والمعاينة (انقر مرتين للتبديل بين 40% و 50%)"
+          >
+            <div class="split-handle"></div>
+          </div>
+        }
+
+        <!-- CENTER MONITOR: Studio Player & Controls -->
+        <main class="studio-monitor studio-glass">
+          <!-- Top Monitor Bar: Aspect Ratio Switcher & Zoom Controls -->
+          <div class="monitor-top-bar">
+            <!-- Aspect Ratio Switcher -->
+            <div class="aspect-switcher">
+              <button
+                type="button"
+                class="aspect-btn"
+                [class.active]="aspectRatio() === '16:9'"
+                (click)="aspectRatio.set('16:9')"
+              >
+                16:9 YouTube
+              </button>
+              <button
+                type="button"
+                class="aspect-btn"
+                [class.active]="aspectRatio() === '9:16'"
+                (click)="aspectRatio.set('9:16')"
+              >
+                9:16 Reels & TikTok
+              </button>
+              <button
+                type="button"
+                class="aspect-btn"
+                [class.active]="aspectRatio() === '1:1'"
+                (click)="aspectRatio.set('1:1')"
+              >
+                1:1 Square
+              </button>
+            </div>
+
+            <!-- Video Zoom Scale Controls (Fit, 75%, 100%, 125%, 150%) -->
+            <div class="monitor-zoom-tools">
+              <span class="tool-label">التقريب:</span>
+              <div class="zoom-btn-group">
+                <button
+                  type="button"
+                  class="zoom-chip"
+                  [class.active]="videoZoom() === 100"
+                  (click)="setVideoZoom(100)"
+                >
+                  100%
+                </button>
+                <button
+                  type="button"
+                  class="zoom-chip"
+                  [class.active]="videoZoom() === 125"
+                  (click)="setVideoZoom(125)"
+                >
+                  125%
+                </button>
+                <button
+                  type="button"
+                  class="zoom-chip"
+                  [class.active]="videoZoom() === 150"
+                  (click)="setVideoZoom(150)"
+                >
+                  150%
+                </button>
+              </div>
+
+              <!-- Quick Split Ratio Selector (40% / 50%) -->
+              @if (!isMonitorExpanded()) {
+                <div class="split-ratio-group" title="توزيع العرض بين الإعدادات ومعاينة الفيديو">
+                  <button
+                    type="button"
+                    class="split-chip"
+                    [class.active]="inspectorWidthPercent() === 40"
+                    (click)="setSplitPercent(40)"
+                    title="٤٠٪ إعدادات و ٦٠٪ لمعاينة الفيديو"
+                  >
+                    ٤٠٪
+                  </button>
+                  <button
+                    type="button"
+                    class="split-chip"
+                    [class.active]="inspectorWidthPercent() === 50"
+                    (click)="setSplitPercent(50)"
+                    title="نصف الشاشة (50% / 50%)"
+                  >
+                    ٥٠٪
+                  </button>
+                </div>
+              }
+
+              @if (audioEnhanced()) {
+                <span class="audio-live-pill" title="هندسة واستوديو الصوت نشطة في المعاينة الحية">
+                  🎙️ صوت الاستوديو نشط
+                </span>
+              }
+
+              @if (aiCutsApplied()) {
+                <span class="cam-live-pill" [title]="'الزاوية الحالية: ' + activeCameraName()">
+                  🎥 {{ activeCameraName() }} ({{ activeSegmentZoom().toFixed(2) }}x)
+                </span>
+              }
+
+              <!-- Expand Monitor Full Width -->
+              <button
+                type="button"
+                class="btn-expand-monitor"
+                [class.active]="isMonitorExpanded()"
+                (click)="toggleMonitorExpand()"
+                [title]="isMonitorExpanded() ? 'إظهار القائمة الجانبية' : 'توسيع شاشة العرض لأقصى عرض'"
+              >
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+                </svg>
+                {{ isMonitorExpanded() ? 'تقليص' : 'توسيع الشاشة' }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Video Viewport Frame -->
+          <div class="video-viewport-wrapper" [attr.data-aspect]="aspectRatio()">
+            <div
+              class="video-viewport"
+              [style.transform]="'perspective(1100px) scale(' + ((videoZoom() / 100) * (aiCutsApplied() ? activeSegmentZoom() : 1.0)) + ') translate(' + (aiCutsApplied() ? activeSegmentPanX() : 0) + '%, ' + (aiCutsApplied() ? activeSegmentPanY() : 0) + '%) rotateY(' + (aiCutsApplied() ? activeSegmentRotateY() : 0) + 'deg) rotateX(' + (aiCutsApplied() ? activeSegmentRotateX() : 0) + 'deg)'"
+              [style.filter]="cinematicCssFilter()"
+            >
+              <video
+                #videoPlayer
+                [src]="videoUrl()"
+                (timeupdate)="onTimeUpdate($event)"
+                (loadedmetadata)="onVideoLoaded($event)"
+                (play)="onVideoPlay()"
+                (pause)="onVideoPause()"
+                (click)="togglePlayPause()"
+                [style.opacity]="activeCameraVideoUrl() ? 0 : 1"
+                playsinline
+              ></video>
+
+              <!-- Dedicated zero-latency secondary video stream for AI Novel Views (stays synced with master audio) -->
+              @if (activeCameraVideoUrl()) {
+                <video
+                  #aiCameraPlayer
+                  [src]="activeCameraVideoUrl()"
+                  muted
+                  playsinline
+                  (click)="togglePlayPause()"
+                  style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; pointer-events: none;"
+                ></video>
+              }
+
+              <!-- Live Dynamic Caption Overlay (Phrase with Karaoke Highlight) -->
+              @if (showCaptions() && currentActivePhrase()) {
+                <div
+                  class="caption-overlay"
+                  [ngClass]="[selectedCaptionStyle(), 'pos-' + captionPosition()]"
+                  [style.font-size.px]="captionFontSize()"
+                >
+                  <div
+                    class="caption-interactive-box"
+                    (wheel)="onCaptionWheel($event)"
+                    title="استخدم عجلة الماوس للتكبير/التصغير"
+                  >
+                    <div class="caption-phrase-row" dir="rtl">
+                      @for (w of currentActivePhrase()!.words; track w.id) {
+                        <span
+                          class="caption-word-item"
+                          [class.active-karaoke]="w.id === currentActivePhrase()!.activeWordId"
+                        >{{ w.text }}</span>
+                      }
+                    </div>
+
+                    <!-- On-Video Quick Resize Floating Controls (CapCut Style) -->
+                    <div class="caption-quick-controls">
+                      <button
+                        type="button"
+                        class="cap-resize-btn"
+                        (click)="changeCaptionFontSize(-2, $event)"
+                        title="تصغير الخط"
+                      >
+                        <i class="fa-solid fa-minus"></i>
+                      </button>
+                      <span class="cap-size-label">{{ captionFontSize() }}px</span>
+                      <button
+                        type="button"
+                        class="cap-resize-btn"
+                        (click)="changeCaptionFontSize(2, $event)"
+                        title="تكبير الخط"
+                      >
+                        <i class="fa-solid fa-plus"></i>
+                      </button>
+                    </div>
+
+                    <!-- Resize size badge (shows briefly on wheel) -->
+                    @if (showCaptionSizeBadge()) {
+                      <div class="caption-size-badge animate-fade-in">
+                        {{ captionFontSize() }}px
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- CapCut Studio Transport Bar -->
+          <div class="studio-transport-bar">
+            <div class="transport-controls-left">
+              <!-- Play / Pause -->
+              <button
+                type="button"
+                class="btn-play-pause"
+                (click)="togglePlayPause()"
+                [title]="isPlaying() ? 'إيقاف مؤقت (Space)' : 'تشغيل (Space)'"
+              >
+                @if (isPlaying()) {
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                    <rect x="6" y="4" width="4" height="16"></rect>
+                    <rect x="14" y="4" width="4" height="16"></rect>
+                  </svg>
+                } @else {
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                  </svg>
+                }
+              </button>
+
+              <!-- Skip 5s Back -->
+              <button type="button" class="btn-transport" (click)="seekBy(-5)" title="رجوع 5 ثوانٍ">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M1 4v6h6"></path>
+                  <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+                </svg>
+                -5s
+              </button>
+
+              <!-- Skip 5s Forward -->
+              <button type="button" class="btn-transport" (click)="seekBy(5)" title="تقديم 5 ثوانٍ">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M23 4v6h-6"></path>
+                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                </svg>
+                +5s
+              </button>
+
+              <!-- Timecode Display: Displays Virtual Filtered Duration & Time when cuts applied! -->
+              <div class="timecode-display" [title]="aiCutsApplied() ? 'المدة المفلترة الحقيقية بعد القص' : 'المدة الكاملة الأصلية'">
+                <span class="current-tc">{{ formatTime(displayedCurrentTime) }}</span>
+                <span class="divider-tc">/</span>
+                <span class="total-tc">{{ formatTime(displayedDuration) }}</span>
+                @if (aiCutsApplied()) {
+                  <span class="filtered-badge">مفلتر ⚡</span>
+                }
+              </div>
+            </div>
+
+            <!-- Transport Controls Right: Skip Cuts Toggle & Speed -->
+            <div class="transport-controls-right">
+              <!-- Auto Skip Cut Toggle -->
+              <label class="skip-cut-pill" [class.active]="skipRemovedPlayback()">
+                <input
+                  type="checkbox"
+                  [checked]="skipRemovedPlayback()"
+                  (change)="skipRemovedPlayback.set(!skipRemovedPlayback())"
+                />
+                <span>⚡ تخطي الوقفات تلقائياً</span>
+              </label>
+
+              <!-- Playback Speed -->
+              <div class="speed-selector">
+                <button
+                  type="button"
+                  class="speed-chip"
+                  [class.active]="playbackSpeed() === 1.0"
+                  (click)="setSpeed(1.0)"
+                >
+                  1x
+                </button>
+                <button
+                  type="button"
+                  class="speed-chip"
+                  [class.active]="playbackSpeed() === 1.25"
+                  (click)="setSpeed(1.25)"
+                >
+                  1.25x
+                </button>
+                <button
+                  type="button"
+                  class="speed-chip"
+                  [class.active]="playbackSpeed() === 1.5"
+                  (click)="setSpeed(1.5)"
+                >
+                  1.5x
+                </button>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  }
+
+  <!-- ===================================================================== -->
+  <!-- PARAGRAPH BULK EDIT MODAL (تعديل فقرة كاملة مع الحفاظ على التوقيت)      -->
+  <!-- ===================================================================== -->
+  @if (editingParagraph()) {
+    <div class="modal-backdrop" (click)="cancelParagraphEdit()">
+      <div class="edit-paragraph-modal studio-glass animate-fade-in" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <span class="modal-badge">📜 تعديل دفعة واحدة</span>
+            <h3>تعديل نص الفقرة مع الحفاظ على المزامنة</h3>
+          </div>
+          <button type="button" class="btn-close" (click)="cancelParagraphEdit()">×</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="para-meta-bar">
+            <span>⏱️ التوقيت: <strong>{{ editingParagraph()!.start.toFixed(2) }}s ➔ {{ editingParagraph()!.end.toFixed(2) }}s</strong></span>
+            <span>⏳ المدة الإجمالية: <strong>{{ (editingParagraph()!.end - editingParagraph()!.start).toFixed(2) }}s</strong></span>
+            <span>🔤 الكلمات: <strong>{{ editingParagraph()!.words.length }} كلمات</strong></span>
+          </div>
+
+          <div class="form-group">
+            <label>نص الفقرة الكامل (عدّل بحرية وسيقوم البرنامج بمزامنة التوقيت):</label>
+            <textarea
+              [(ngModel)]="editingParagraphText"
+              rows="4"
+              class="studio-textarea input-lg"
+              placeholder="اكتب أو عدل النص هنا..."
+              autoFocus
+            ></textarea>
+            <span class="form-tip">
+              💡 يمكنك تصحيح أي كلمة، أو كتابة الجملة بالطريقة الصحيحة دفعة واحدة. سيتم توزيع التوقيت الزمني تلقائياً على الكلمات مع الحفاظ التام على مزامنة الصوت والترجمة.
+            </span>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" (click)="cancelParagraphEdit()" class="btn-studio-ghost">
+            إلغاء
+          </button>
+          <button type="button" (click)="saveParagraphEdit()" class="btn-studio-primary">
+            ✓ حفظ وتحديث المزامنة
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ===================================================================== -->
+  <!-- WORD EDIT MODAL (تعديل كلمة بالترجمة والنص)                          -->
+  <!-- ===================================================================== -->
+  @if (editingWord()) {
+    <div class="modal-backdrop" (click)="cancelWordEdit()">
+      <div class="edit-word-modal studio-glass animate-fade-in" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>تعديل كلمة في النص والترجمة</h3>
+          <button type="button" class="btn-close" (click)="cancelWordEdit()">×</button>
+        </div>
+
+        <div class="modal-body">
+          <p class="edit-hint">
+            التوقيت: من <strong>{{ editingWord()!.start }}s</strong> إلى <strong>{{ editingWord()!.end }}s</strong>
+          </p>
+          <div class="form-group">
+            <label>نص الكلمة المعدل:</label>
+            <input
+              type="text"
+              [(ngModel)]="editingWordText"
+              (keyup.enter)="saveWordEdit()"
+              class="studio-input input-lg"
+              autoFocus
+            />
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" (click)="cancelWordEdit()" class="btn-studio-ghost">
+            إلغاء
+          </button>
+          <button type="button" (click)="saveWordEdit()" class="btn-studio-primary">
+            حفظ التعديل
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ===================================================================== -->
+  <!-- EXPORT IN-PROGRESS MODAL                                                -->
+  <!-- ===================================================================== -->
+  @if (isExporting()) {
+    <div class="modal-backdrop">
+      <div class="pipeline-modal studio-glass animate-fade-in text-center" style="max-width: 440px; padding: 2rem;">
+        <div class="pipeline-spinner" style="margin: 0 auto 1.25rem;"></div>
+        <h3 style="margin-bottom: 0.5rem; font-size: 1.25rem; font-weight: 800;">جاري تصدير الفيديو وتطبيق القصص...</h3>
+        <p style="color: #94a3b8; font-size: 0.95rem; margin-bottom: 0.75rem;">{{ exportMessage() }}</p>
+        <span style="font-size: 0.8rem; color: #64748b; display: block; margin-bottom: 1rem;">يتم استخدام محرك FFmpeg لتقطيع ودمج المشاهد بأعلى جودة</span>
+        <button type="button" (click)="cancelExport()" class="btn-studio-secondary" style="font-size: 0.85rem; padding: 0.4rem 1.25rem;">
+          إلغاء المعالجة
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- ===================================================================== -->
+  <!-- EXPORT SUCCESS MODAL                                                  -->
+  <!-- ===================================================================== -->
+  @if (exportSuccessDialog()) {
+    <div class="modal-backdrop">
+      <div class="success-modal studio-glass animate-fade-in">
+        <div class="success-icon">🎉</div>
+        <h3>تم تصدير الفيديو المفلتر بنجاح!</h3>
+        <p>تم تطبيق جميع القصص وإزالة الصمت والوقفات وحفظ الملف في:</p>
+        <code class="export-path-box">{{ lastExportedPath() || projectPath() }}</code>
+
+        <div class="modal-btn-row" style="display: flex; gap: 0.75rem; justify-content: center; margin-top: 1.25rem;">
+          <button type="button" (click)="openExportFolder()" class="btn-studio-secondary">
+            📁 فتح مجلد الحفظ
+          </button>
+          <button type="button" (click)="exportSuccessDialog.set(false)" class="btn-studio-primary">
+            تم، إغلاق
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

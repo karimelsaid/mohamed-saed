@@ -15,6 +15,26 @@ venv/
 projects/watin/watin-transcriber/venv/
 projects/mushaf/quran_transcriber/venv/
 
+# Python cache
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+
+# Kemi large files
+projects/kemi/public/*.mp4
+projects/kemi/public/poc_output/
+projects/kemi/dist/
+projects/kemi/release/
+projects/kemi/.angular/
+projects/kemi/.cache/
+
+# Mohamed Saed large files
+projects/mohamed-saed/dist/
+projects/mohamed-saed/build-resources/*.jpeg
+projects/mohamed-saed/build-resources/*.jpg
+projects/mohamed-saed/build-resources/*.png
+
 # Backend build
 Backend/dist/
 Backend/output.json

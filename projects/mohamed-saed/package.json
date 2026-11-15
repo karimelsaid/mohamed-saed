@@ -1,0 +1,64 @@
+{
+  "name": "suit-store-system",
+  "version": "1.0.2",
+  "description": "نظام إدارة محلات بيع وتأجير بدل  - Windows Desktop (Angular + Electron + SQLite)",
+  "main": "apps/desktop/electron/main/index.js",
+  "private": true,
+  "scripts": {
+    "start": "npx electron apps/desktop/electron/main/index.js",
+    "dev": "npx electron apps/desktop/electron/main/index.js",
+    "dev:web": "node scripts/dev-server.js",
+    "build": "node scripts/build-desktop.js",
+    "release": "node scripts/publish-release.js patch",
+    "release:minor": "node scripts/publish-release.js minor",
+    "release:major": "node scripts/publish-release.js major",
+    "dist": "node scripts/build-exe.js"
+  },
+  "build": {
+    "appId": "com.royal.suitstore",
+    "productName": "نظام إدارة محلات بيع وتأجير بدل ",
+    "copyright": "Copyright © 2026 Suit Store System",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build-resources"
+    },
+    "files": [
+      "apps/desktop/**/*",
+      "packages/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build-resources/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "نظام إدارة محلات بدل "
+    }
+  },
+  "keywords": [
+    "suit-store",
+    "bridal-suits",
+    "electron",
+    "angular",
+    "sqlite",
+    "offline-first",
+    "arabic-rtl"
+  ],
+  "author": "Suit Store System Team",
+  "license": "PROPRIETARY",
+  "devDependencies": {
+    "electron": "^45.2.3",
+    "electron-builder": "^26.18.0"
+  }
+}

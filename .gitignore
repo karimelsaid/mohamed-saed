@@ -9,9 +9,41 @@ node_modules/
 Backend/node_modules/
 projects/**/node_modules/
 
+# Python venv
+venv/
+**/venv/
+projects/watin/watin-transcriber/venv/
+projects/mushaf/quran_transcriber/venv/
+
 # Backend build
 Backend/dist/
 Backend/output.json
+
+# Backend test & debug files
+Backend/check-*.js
+Backend/test-*.js
+Backend/debug_*.js
+Backend/scratch/
+Backend/coverage/
+Backend/*.log
+Backend/requests.log
+Backend/logs/
+Backend/output_raw.json
+Backend/sales_history.json
+Backend/ebook-mappings.json
+Backend/restored_backup.xlsx
+
+# Mushaf public images
+mushaf-public/**/*.jpeg
+mushaf-public/**/*.jpg
+mushaf-public/**/*.png
+mushaf-public/**/*.webp
+mushaf-public/**/*.avif
+projects/mushaf/mushaf-public/**/*.jpeg
+projects/mushaf/mushaf-public/**/*.jpg
+projects/mushaf/mushaf-public/**/*.png
+projects/mushaf/mushaf-public/**/*.webp
+projects/mushaf/mushaf-public/**/*.avif
 
 # Android / Gradle
 android/.gradle/
@@ -30,9 +62,7 @@ projects/mushaf/mushaf-wird-mobile/android/build/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-Backend/requests.log
-Backend/logs/
-Backend/output_raw.json
+hs_err_pid*.log
 
 # Environment files
 src/environments/*.local.ts
@@ -52,3 +82,15 @@ Thumbs.db
 *.keystore
 android/keystore.properties
 android/app/google-services.json
+
+# Test scripts
+test-*.js
+check-*.js
+debug-*.js
+deploy.js
+deploy.sh
+convert_*.js
+generate_*.js
+fix_*.js
+fetch_*.js
+migrate_*.js

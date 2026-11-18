@@ -91,7 +91,7 @@ class UpdateEngineService {
 
     // 1. فحص التحديثات من مستودع GitHub السحابي أولاً إن وجد اتصال
     let remoteManifest = null;
-    const defaultRemoteUrl = feedUrl || 'https://raw.githubusercontent.com/karimelsaid/mohamed-saed/master/dist/latest-release.json';
+        const defaultRemoteUrl = feedUrl || 'https://raw.githubusercontent.com/karimelsaid/mohamed-saed/master/dist/latest-release.json';
     try {
       const resp = await fetch(`${defaultRemoteUrl}?t=${Date.now()}`, {
         headers: { 'User-Agent': 'SuitStoreApp' },

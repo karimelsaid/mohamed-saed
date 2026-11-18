@@ -93,7 +93,7 @@ if (shouldPush) {
     execSync('git add package.json dist/latest-release.json', { cwd: rootDir, stdio: 'pipe' });
     execSync(`git commit -m "chore(release): v${newVersion}"`, { cwd: rootDir, stdio: 'pipe' });
     execSync(`git tag -a v${newVersion} -m "Release v${newVersion}"`, { cwd: rootDir, stdio: 'pipe' });
-    execSync('git push origin master --tags', { cwd: rootDir, stdio: 'pipe' });
+    execSync('git push origin main --tags', { cwd: rootDir, stdio: 'pipe' });
     console.log(`  ✓ تم رفع الإصدار الجديد v${newVersion} والوسم (Tag) إلى GitHub بنجاح!`);
   } catch (gitErr) {
     const errMsg = gitErr.stderr ? gitErr.stderr.toString() : gitErr.message;

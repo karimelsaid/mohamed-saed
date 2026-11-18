@@ -89,12 +89,18 @@ console.log(`  ✓ تم إنشاء ملف التحديث: ${manifestPath}`);
 const shouldPush = process.argv.includes('--push') || !process.argv.includes('--no-push');
 if (shouldPush) {
   console.log('\n3. مزامنة ورفع التحديث إلى GitHub...');
+  const repoRoot = path.resolve(rootDir, '..', '..');
   try {
-    execSync('git add package.json dist/latest-release.json', { cwd: rootDir, stdio: 'pipe' });
-    execSync(`git commit -m "chore(release): v${newVersion}"`, { cwd: rootDir, stdio: 'pipe' });
-    execSync(`git tag -a v${newVersion} -m "Release v${newVersion}"`, { cwd: rootDir, stdio: 'pipe' });
-    execSync('git push origin main --tags', { cwd: rootDir, stdio: 'pipe' });
-    console.log(`  ✓ تم رفع الإصدار الجديد v${newVersion} والوسم (Tag) إلى GitHub بنجاح!`);
+    execSync('git add -A', { cwd: repoRoot, stdio: 'pipe' });
+    execSync(`git commit -m "chore(release): v${newVersion}"`, { cwd: repoRoot, stdio: 'pipe' });
+    execSync(`git tag -a v${newVersion} -m "Release v${newVersion}" -f`, { cwd: repoRoot, stdio: 'pipe' });
+    execSync('git push origin main --tags', { cwd: repoRoot, stdio: 'pipe' });
+    console.log(`  ✓ تم رفع الإصدار الجديد v${newVersion} والوسم إلى مستودع Kenouz بنجاح.`);
+
+    console.log('  جاري مزامنة مستودع التحديثات المباشر (mohamed-saed)...');
+    execSync('git subtree split --prefix=projects/mohamed-saed -b release-mohamed-saed', { cwd: repoRoot, stdio: 'pipe' });
+    execSync('git push mohamed-saed release-mohamed-saed:master --tags -f', { cwd: repoRoot, stdio: 'pipe' });
+    console.log(`  ✓ تم نشر التحديث v${newVersion} سحابياً على مستودع التحديثات المباشر بنجاح! 🚀`);
   } catch (gitErr) {
     const errMsg = gitErr.stderr ? gitErr.stderr.toString() : gitErr.message;
     console.log(`  ℹ️ ملاحظة أثناء المزامنة: ${errMsg || 'سيتم النشر مع الدفعة التالية'}`);

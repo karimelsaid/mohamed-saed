@@ -1,9 +1,9 @@
 {
-  "version": "1.0.4",
-  "previousVersion": "1.0.3",
+  "version": "1.0.5",
+  "previousVersion": "1.0.4",
   "releaseDate": "2026-11-18",
-  "releaseNotes": "تحديث رسمي جديد للإصدار v1.0.4 يتضمن تحسينات الأداء، تكامل واتساب، وسرعة الاستجابة.",
-  "sha256": "7d8171e31fb34c33e47f409386b71df05c572832a8e5fa92a0592e6eabf1d351",
+  "releaseNotes": "تحديث رسمي v1.0.5 يتضمن تحسينات الواجهة وإزالة شارة الإصدار التجريبية.",
+  "sha256": "87acd3eb5162a4b1174273baf3e65b651141d7dc96a3ae26cf40d11bec227ac4",
   "mandatory": false,
-  "publishedAt": "2026-11-18T02:30:23.533Z"
+  "publishedAt": "2026-11-18T03:02:43.692Z"
 }

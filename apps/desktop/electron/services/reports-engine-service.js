@@ -172,7 +172,6 @@ class ReportsEngineService {
       },
       cogs: {
         salesCogs: cogsTotal,
-        cleaningExpenses: 0,
         totalDirectCosts: cogsTotal
       },
       grossProfit,
@@ -313,7 +312,7 @@ class ReportsEngineService {
         COUNT(*) as total_units,
         COALESCE(SUM(CASE WHEN status IN ('BOOKED', 'IN_USE') THEN 1 ELSE 0 END), 0) as occupied_units,
         COALESCE(SUM(CASE WHEN status = 'AVAILABLE' THEN 1 ELSE 0 END), 0) as available_units,
-        COALESCE(SUM(CASE WHEN status = 'IN_CLEANING' THEN 1 ELSE 0 END), 0) as cleaning_units,
+
         COALESCE(SUM(CASE WHEN status = 'DAMAGED' THEN 1 ELSE 0 END), 0) as damaged_units
       FROM suit_units
       WHERE status NOT IN ('RETIRED', 'SOLD')
@@ -351,7 +350,6 @@ class ReportsEngineService {
       totalFleet,
       occupiedUnits: occupied,
       availableUnits: fleet.available_units || 0,
-      cleaningUnits: fleet.cleaning_units || 0,
       damagedUnits: fleet.damaged_units || 0,
       occupancyRate
     };

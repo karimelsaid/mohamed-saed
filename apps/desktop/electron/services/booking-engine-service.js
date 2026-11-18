@@ -236,7 +236,6 @@ class BookingEngineService {
   createBooking({
     customer_id,
     event_date,
-    fitting_date = null,
     pickup_date,
     return_due_date,
     items = [], // [{ suit_unit_id, rental_price, deposit_price, tailoring_notes }]
@@ -288,36 +287,41 @@ class BookingEngineService {
       let totalDeposit = 0;
       for (const it of items) {
         totalRental += Number(it.rental_price) || 0;
-        totalDeposit += Number(it.deposit_price) || 0;
+        totalDeposit += Number(it.deposit_price !== undefined ? it.deposit_price : it.security_deposit) || 0;
       }
 
-      const finalAmount = Math.max(0, totalRental - discount_amount);
-      const paid = Math.min(finalAmount, paid_advance);
+      const discountNum = Number(discount_amount) || 0;
+      const finalAmount = Math.max(0, totalRental - discountNum);
+      const paidAdvanceNum = Number(paid_advance) || 0;
+      const paid = Math.min(finalAmount, paidAdvanceNum);
       const bookingNumber = `BK-${Date.now().toString().slice(-6)}`;
+      const cleanMethod = String(payment_method || 'CASH').trim().toUpperCase();
 
       // 3. Insert Booking
       const bStmt = tDb.prepare(`
         INSERT INTO bookings (
-          booking_number, customer_id, event_date, fitting_date, pickup_date, return_due_date,
+          booking_number, customer_id, event_date, pickup_date, return_due_date,
           total_rental_amount, total_deposit_amount, discount_amount, final_amount, paid_amount,
           deposit_paid, deposit_refunded, status, notes
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 'CONFIRMED', ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 'CONFIRMED', ?)
       `);
 
       const bRes = bStmt.run(
-        bookingNumber, customer_id, event_date, fitting_date, pickup_date, return_due_date,
-        totalRental, totalDeposit, discount_amount, finalAmount, paid, notes
+        bookingNumber, customer_id, event_date, pickup_date, return_due_date,
+        totalRental, totalDeposit, discountNum, finalAmount, paid, notes
       );
       const bookingId = bRes.lastInsertRowid;
 
       // 4. Insert Items and mark unit as BOOKED
       const itStmt = tDb.prepare(`
         INSERT INTO booking_items (booking_id, suit_unit_id, item_type, rental_price, deposit_price, tailoring_notes, status)
-        VALUES (?, ?, 'SUIT', ?, ?, ?, 'BOOKED')
+        VALUES (?, ?, ?, ?, ?, ?, 'BOOKED')
       `);
 
       for (const it of items) {
-        itStmt.run(bookingId, it.suit_unit_id || null, it.rental_price, it.deposit_price || 0, it.tailoring_notes || null);
+        const itemDeposit = Number(it.deposit_price !== undefined ? it.deposit_price : it.security_deposit) || 0;
+        const itemType = it.item_type || it.category_name || 'SUIT';
+        itStmt.run(bookingId, it.suit_unit_id || null, itemType, it.rental_price, itemDeposit, it.tailoring_notes || null);
         if (it.suit_unit_id) {
           tDb.prepare("UPDATE suit_units SET status = 'BOOKED' WHERE id = ?").run(it.suit_unit_id);
           tDb.prepare(`
@@ -327,27 +331,45 @@ class BookingEngineService {
         }
       }
 
-      // 5. If advance paid, record payment
+      // 5. If advance paid, record payment and cash transaction
       if (paid > 0) {
+        let activeSes = tDb.prepare("SELECT id FROM cash_sessions WHERE status = 'OPEN' LIMIT 1").get();
+        if (!activeSes) {
+          const sessionCode = `SES-AUTO-${Date.now().toString().slice(-6)}`;
+          const autoRes = tDb.prepare(`
+            INSERT INTO cash_sessions (session_code, status, opening_balance, calculated_balance, total_cash_in, total_cash_out, opened_at)
+            VALUES (?, 'OPEN', 0, 0, 0, 0, datetime('now'))
+          `).run(sessionCode);
+          activeSes = { id: autoRes.lastInsertRowid };
+          logger.info(`Auto-opened cash session #${activeSes.id} (${sessionCode}) for booking advance`);
+        }
+
         const payNum = `PAY-ADV-${Date.now().toString().slice(-5)}`;
-        const activeSes = tDb.prepare("SELECT id FROM cash_sessions WHERE status = 'OPEN' LIMIT 1").get();
+        logger.info(`Recording advance payment: amount=${paid}, method=${cleanMethod}, sessionId=${activeSes.id}`);
+
         tDb.prepare(`
-          INSERT INTO payments (payment_number, cash_session_id, customer_id, reference_type, reference_id, payment_type, amount, payment_method)
-          VALUES (?, ?, ?, 'BOOKING', ?, 'RENTAL_ADVANCE', ?, ?)
-        `).run(payNum, activeSes ? activeSes.id : null, customer_id, bookingId, paid, payment_method);
+          INSERT INTO payments (payment_number, cash_session_id, customer_id, reference_type, reference_id, payment_type, amount, payment_method, created_at)
+          VALUES (?, ?, ?, 'BOOKING', ?, 'RENTAL_ADVANCE', ?, ?, datetime('now'))
+        `).run(payNum, activeSes.id, customer_id, bookingId, paid, cleanMethod);
 
-        if (payment_method === 'CASH' && activeSes) {
-          tDb.prepare(`
-            INSERT INTO cash_transactions (cash_session_id, transaction_type, category, amount, reference_type, reference_id, notes)
-            VALUES (?, 'IN', 'RENTAL', ?, 'BOOKING', ?, ?)
-          `).run(activeSes.id, paid, bookingId, `عربون حجز #${bookingNumber}`);
+        // Always record transaction in cash_transactions with proper category
+        const category = cleanMethod === 'CASH' ? 'RENTAL' : cleanMethod;
+        tDb.prepare(`
+          INSERT INTO cash_transactions (cash_session_id, transaction_type, category, amount, reference_type, reference_id, notes, created_at)
+          VALUES (?, 'IN', ?, ?, 'BOOKING', ?, ?, datetime('now'))
+        `).run(activeSes.id, category, paid, bookingId, `عربون حجز #${bookingNumber} (${cleanMethod})`);
 
+        // Only update cash drawer balance for CASH payments
+        if (cleanMethod === 'CASH') {
           tDb.prepare(`
             UPDATE cash_sessions
             SET total_cash_in = total_cash_in + ?,
                 calculated_balance = calculated_balance + ?
             WHERE id = ?
           `).run(paid, paid, activeSes.id);
+          logger.info(`Updated cash session balance: +${paid} EGP for session #${activeSes.id}`);
+        } else {
+          logger.info(`Non-cash advance recorded: ${cleanMethod} ${paid} EGP (drawer balance not modified)`);
         }
       }
 
@@ -369,26 +391,7 @@ class BookingEngineService {
     });
   }
 
-  scheduleFitting(bookingId, fittingDate, tailoringNotes = '') {
-    const db = this.dbConn.getDb();
-    return TransactionHelper.runInTransaction(db, (tDb) => {
-      tDb.prepare(`
-        UPDATE bookings
-        SET fitting_date = ?, status = 'FITTING_SCHEDULED', notes = COALESCE(notes || ' | ', '') || ?
-        WHERE id = ?
-      `).run(fittingDate, tailoringNotes, bookingId);
-
-      tDb.prepare(`
-        INSERT INTO booking_status_history (booking_id, old_status, new_status, notes)
-        VALUES (?, 'CONFIRMED', 'FITTING_SCHEDULED', ?)
-      `).run(bookingId, `تحديد موعد البروفة: ${fittingDate}`);
-
-      logger.info(`Booking #${bookingId} fitting scheduled for ${fittingDate}`);
-      return true;
-    });
-  }
-
-  markPrepared(bookingId, notes = 'تم التجهيز والكي بالمحل') {
+  markPrepared(bookingId, notes = 'تم التجهيز بالمحل') {
     const db = this.dbConn.getDb();
     return TransactionHelper.runInTransaction(db, (tDb) => {
       tDb.prepare("UPDATE bookings SET status = 'PREPARED' WHERE id = ?").run(bookingId);
@@ -422,7 +425,16 @@ class BookingEngineService {
         WHERE id = ?
       `).run(depositPaidAmount, newPaid, bookingId);
 
-      const activeSes = tDb.prepare("SELECT id FROM cash_sessions WHERE status = 'OPEN' LIMIT 1").get();
+      let activeSes = tDb.prepare("SELECT id FROM cash_sessions WHERE status = 'OPEN' LIMIT 1").get();
+      if (!activeSes && (depositPaidAmount > 0 || remainderPaidAmount > 0)) {
+        const sessionCode = `SES-AUTO-${Date.now().toString().slice(-6)}`;
+        const autoRes = tDb.prepare(`
+          INSERT INTO cash_sessions (session_code, status, opening_balance, calculated_balance, total_cash_in, total_cash_out, opened_at)
+          VALUES (?, 'OPEN', 0, 0, 0, 0, datetime('now'))
+        `).run(sessionCode);
+        activeSes = { id: autoRes.lastInsertRowid };
+        logger.info(`Auto-opened cash session #${activeSes.id} (${sessionCode}) for handover payment`);
+      }
 
       // 2. Record Deposit Payment (Amanat)
       if (depositPaidAmount > 0) {
@@ -493,7 +505,7 @@ class BookingEngineService {
     });
   }
 
-  returnAndSettleBooking(bookingId, actualReturnDate, damageFee = 0, inspectionNotes = '') {
+  returnAndSettleBooking(bookingId, actualReturnDate, damageFee = 0, inspectionNotes = '', remainingPaid = false) {
     const db = this.dbConn.getDb();
     const policies = this.adminService.getRentalPolicies();
     const applyLateFee = policies.applyLateFee !== false && String(policies.applyLateFee) !== '0';
@@ -507,22 +519,103 @@ class BookingEngineService {
         throw new Error('الحجز غير متاح للإرجاع (الحجز مكتمل بالفعل أو ملغي).');
       }
 
-      // Calculate days late considering grace period
-      const dueDate = new Date(booking.return_due_date + 'T23:59:59');
-      const retDate = new Date(actualReturnDate);
-      const graceMs = graceHours * 60 * 60 * 1000;
-      const effectiveDueDate = new Date(dueDate.getTime() + graceMs);
-      const diffTime = retDate.getTime() - effectiveDueDate.getTime();
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      const lateDays = (!applyLateFee || diffDays <= 0) ? 0 : diffDays;
-      const lateFee = applyLateFee ? (lateDays * lateFeePerDay) : 0;
+      // Calculate days late considering calendar dates and grace period
+      const dueStr = String(booking.return_due_date || '').slice(0, 10);
+      const retStr = String(actualReturnDate || new Date().toISOString()).slice(0, 10);
 
-      // Settlement: Refund = Deposit Paid - Damage Fee - Late Fee
-      const totalDeductions = damageFee + lateFee;
-      const refundAmount = Math.max(0, (booking.deposit_paid || 0) - totalDeductions);
-      const remainingOwed = Math.max(0, totalDeductions - (booking.deposit_paid || 0));
+      let lateDays = 0;
+      if (dueStr && retStr) {
+        const [dY, dM, dD] = dueStr.split('-').map(Number);
+        const [rY, rM, rD] = retStr.split('-').map(Number);
+        const dueMidnight = new Date(dY, dM - 1, dD, 0, 0, 0).getTime();
+        const retMidnight = new Date(rY, rM - 1, rD, 0, 0, 0).getTime();
+        const calendarDaysLate = Math.round((retMidnight - dueMidnight) / (1000 * 60 * 60 * 24));
 
-      // 1. Update Booking
+        if (calendarDaysLate > 0) {
+          if (calendarDaysLate === 1 && allowGracePeriod && graceHours > 0 && String(actualReturnDate).includes('T')) {
+            const dueTime = new Date(dY, dM - 1, dD, 23, 59, 59).getTime();
+            const retTime = new Date(actualReturnDate).getTime();
+            if (retTime <= dueTime + (graceHours * 3600000)) {
+              lateDays = 0;
+            } else {
+              lateDays = calendarDaysLate;
+            }
+          } else {
+            lateDays = calendarDaysLate;
+          }
+        }
+      }
+
+      const lateFeePerDay = Number(policies.lateFeePerDay) > 0 ? Number(policies.lateFeePerDay) : 300;
+      const lateFee = lateDays > 0 ? (lateDays * lateFeePerDay) : 0;
+      const damageFeeNum = Math.max(0, Number(damageFee) || 0);
+      logger.info(`Late fee calculation for booking #${bookingId}: due=${dueStr}, actualReturn=${retStr}, lateDays=${lateDays}, rate=${lateFeePerDay}, fee=${lateFee}`);
+
+      // Calculate remaining rental amount
+      const finalAmount = Number(booking.final_amount) || 0;
+      const currentPaid = Number(booking.paid_amount) || 0;
+      const rentalRemaining = Math.max(0, finalAmount - currentPaid);
+      logger.info(`Return settlement for booking #${bookingId}: final_amount=${finalAmount}, currentPaid=${currentPaid}, remaining=${rentalRemaining}, remainingPaid=${remainingPaid}`);
+
+      // Ensure open cash session
+      let activeSes = tDb.prepare("SELECT id FROM cash_sessions WHERE status = 'OPEN' LIMIT 1").get();
+      if (!activeSes) {
+        const sessionCode = `SES-AUTO-${Date.now().toString().slice(-6)}`;
+        const autoRes = tDb.prepare(`
+          INSERT INTO cash_sessions (session_code, status, opening_balance, calculated_balance, total_cash_in, total_cash_out, opened_at)
+          VALUES (?, 'OPEN', 0, 0, 0, 0, datetime('now'))
+        `).run(sessionCode);
+        activeSes = { id: autoRes.lastInsertRowid };
+        logger.info(`Auto-opened cash session #${activeSes.id} (${sessionCode}) for return settlement`);
+      }
+
+      let newPaidAmount = currentPaid;
+      let recordedDebt = 0;
+
+      // Settle rental remaining (Debt vs Paid Now)
+      if (rentalRemaining > 0) {
+        if (!remainingPaid) {
+          // Record customer debt in payments (NO cash_transactions because customer hasn't paid)
+          const debtNum = `DEBT-${Date.now().toString().slice(-5)}`;
+          tDb.prepare(`
+            INSERT INTO payments (payment_number, cash_session_id, customer_id, reference_type, reference_id, payment_type, amount, payment_method, created_at)
+            VALUES (?, NULL, ?, 'BOOKING', ?, 'CUSTOMER_DEBT', ?, 'DEBT', datetime('now'))
+          `).run(debtNum, booking.customer_id, bookingId, rentalRemaining);
+          recordedDebt = rentalRemaining;
+          logger.info(`Recorded CUSTOMER_DEBT in payments: ${debtNum}, amount: ${rentalRemaining}, booking: #${bookingId}, customer: #${booking.customer_id}`);
+        } else {
+          // Customer settled the remaining balance at return
+          const payNum = `PAY-REM-${Date.now().toString().slice(-5)}`;
+          tDb.prepare(`
+            INSERT INTO payments (payment_number, cash_session_id, customer_id, reference_type, reference_id, payment_type, amount, payment_method, created_at)
+            VALUES (?, ?, ?, 'BOOKING', ?, 'RENTAL_REMAINDER', ?, 'CASH', datetime('now'))
+          `).run(payNum, activeSes.id, booking.customer_id, bookingId, rentalRemaining);
+
+          tDb.prepare(`
+            INSERT INTO cash_transactions (cash_session_id, transaction_type, category, amount, reference_type, reference_id, notes, created_at)
+            VALUES (?, 'IN', 'RENTAL', ?, 'BOOKING', ?, ?, datetime('now'))
+          `).run(activeSes.id, rentalRemaining, bookingId, `تحصيل باقي إيجار عند الإرجاع حجز #${booking.booking_number}`);
+
+          tDb.prepare(`
+            UPDATE cash_sessions
+            SET total_cash_in = total_cash_in + ?,
+                calculated_balance = calculated_balance + ?
+            WHERE id = ?
+          `).run(rentalRemaining, rentalRemaining, activeSes.id);
+
+          newPaidAmount = currentPaid + rentalRemaining;
+          logger.info(`Recorded remaining rental payment at return: amount=${rentalRemaining}, session #${activeSes.id}`);
+        }
+      }
+
+      // Settlement of Security Deposit:
+      // Refund = Deposit Paid - Damage Fee - Late Fee
+      const totalDeductions = damageFeeNum + lateFee;
+      const depositPaid = Number(booking.deposit_paid) || 0;
+      const refundAmount = Math.max(0, depositPaid - totalDeductions);
+      const remainingOwed = Math.max(0, totalDeductions - depositPaid);
+
+      // 1. Update Booking record
       tDb.prepare(`
         UPDATE bookings
         SET status = 'COMPLETED',
@@ -530,16 +623,16 @@ class BookingEngineService {
             late_fee = ?,
             damage_fee = ?,
             deposit_refunded = ?,
+            paid_amount = ?,
             notes = COALESCE(notes || ' | ', '') || ?
         WHERE id = ?
-      `).run(actualReturnDate, lateFee, damageFee, refundAmount, inspectionNotes, bookingId);
+      `).run(actualReturnDate, lateFee, damageFeeNum, refundAmount, newPaidAmount, inspectionNotes, bookingId);
 
-      // Record cash refund for deposit settlement if session is active
-      const activeSes = tDb.prepare("SELECT id FROM cash_sessions WHERE status = 'OPEN' LIMIT 1").get();
+      // 2. Refund cash from drawer if refundAmount > 0
       if (refundAmount > 0 && activeSes) {
         tDb.prepare(`
-          INSERT INTO cash_transactions (cash_session_id, transaction_type, category, amount, reference_type, reference_id, notes)
-          VALUES (?, 'OUT', 'DEPOSIT_REFUND', ?, 'BOOKING', ?, ?)
+          INSERT INTO cash_transactions (cash_session_id, transaction_type, category, amount, reference_type, reference_id, notes, created_at)
+          VALUES (?, 'OUT', 'DEPOSIT_REFUND', ?, 'BOOKING', ?, ?, datetime('now'))
         `).run(activeSes.id, refundAmount, bookingId, `رد تأمين أمانات حجز #${booking.booking_number}`);
 
         tDb.prepare(`
@@ -548,45 +641,57 @@ class BookingEngineService {
               calculated_balance = calculated_balance - ?
           WHERE id = ?
         `).run(refundAmount, refundAmount, activeSes.id);
+        logger.info(`Refunded deposit from cash drawer: amount=${refundAmount}, session #${activeSes.id}`);
       }
 
-      // 2. Return Units: mark IN_CLEANING
+      // 3. Return Units: AVAILABLE if clean (no damage and no late fee), IN_CLEANING if damaged or late
+      const isClean = (damageFeeNum === 0 && lateFee === 0);
+      const newStatus = isClean ? 'AVAILABLE' : 'IN_CLEANING';
+      const reason = isClean
+        ? 'إرجاع البدلة سليمة ومتاحة للإيجار فوراً'
+        : `إرجاع البدلة من العميل (غرامة=${lateFee}، تلفيات=${damageFeeNum}) وإرسالها للتنظيف`;
+
+      logger.info(`Suit unit status after return: damageFee=${damageFeeNum}, lateFee=${lateFee}, isClean=${isClean}, newStatus=${newStatus}`);
+
       const items = tDb.prepare('SELECT suit_unit_id FROM booking_items WHERE booking_id = ?').all(bookingId);
       for (const it of items) {
         if (it.suit_unit_id) {
           const unit = tDb.prepare('SELECT status FROM suit_units WHERE id = ?').get(it.suit_unit_id);
           const oldUnitStatus = unit ? unit.status : (booking.status === 'DELIVERED' ? 'IN_USE' : 'BOOKED');
-          tDb.prepare("UPDATE suit_units SET status = 'IN_CLEANING' WHERE id = ?").run(it.suit_unit_id);
+          tDb.prepare("UPDATE suit_units SET status = ?, updated_at = datetime('now') WHERE id = ?").run(newStatus, it.suit_unit_id);
           tDb.prepare(`
-            INSERT INTO unit_status_history (suit_unit_id, old_status, new_status, reason, reference_type, reference_id)
-            VALUES (?, ?, 'IN_CLEANING', 'إرجاع البدلة من العميل وإرسالها للتنظيف', 'BOOKING', ?)
-          `).run(it.suit_unit_id, oldUnitStatus, bookingId);
+            INSERT INTO unit_status_history (suit_unit_id, old_status, new_status, reason, reference_type, reference_id, created_at)
+            VALUES (?, ?, ?, ?, 'BOOKING', ?, datetime('now'))
+          `).run(it.suit_unit_id, oldUnitStatus, newStatus, reason, bookingId);
         }
       }
+      tDb.prepare("UPDATE booking_items SET status = 'RETURNED' WHERE booking_id = ?").run(bookingId);
 
-      // 3. Record status history
+      // 4. Record status history
+      const debtNote = recordedDebt > 0 ? ` | دين على العميل: ${recordedDebt} ج.م` : '';
       tDb.prepare(`
-        INSERT INTO booking_status_history (booking_id, old_status, new_status, notes)
-        VALUES (?, ?, 'COMPLETED', ?)
-      `).run(bookingId, booking.status, `تم استلام البدلة وفحصها وتصفية الحجز: تأخير=${lateDays} أيام (غرامة=${lateFee})، تلفيات=${damageFee}، مسترد=${refundAmount} ج.م`);
+        INSERT INTO booking_status_history (booking_id, old_status, new_status, notes, created_at)
+        VALUES (?, ?, 'COMPLETED', ?, datetime('now'))
+      `).run(bookingId, booking.status, `تم استلام البدلة وفحصها وتصفية الحجز: تأخير=${lateDays} أيام (غرامة=${lateFee})، تلفيات=${damageFeeNum}، مسترد=${refundAmount} ج.م${debtNote}`);
 
-      // 4. Mark any related tasks for this booking as COMPLETED
+      // 5. Mark related tasks as COMPLETED
       tDb.prepare(`
         UPDATE tasks
         SET status = 'COMPLETED', completed_at = datetime('now')
         WHERE booking_id = ? AND status != 'COMPLETED'
       `).run(bookingId);
 
-      logger.info(`Booking #${bookingId} returned and settled: LateDays=${lateDays}, LateFee=${lateFee}, Refund=${refundAmount}`);
+      logger.info(`Booking #${bookingId} returned and settled: LateDays=${lateDays}, LateFee=${lateFee}, Refund=${refundAmount}, CustomerDebt=${recordedDebt}`);
       return {
         bookingId,
         status: 'COMPLETED',
         lateDays,
         lateFee,
-        damageFee,
+        damageFee: damageFeeNum,
         depositPaid: booking.deposit_paid,
         refundAmount,
-        remainingOwed
+        remainingOwed,
+        customerDebt: recordedDebt
       };
     });
   }
@@ -620,6 +725,124 @@ class BookingEngineService {
 
       logger.info(`Booking #${bookingId} cancelled: ${reason}`);
       return true;
+    });
+  }
+
+  /**
+   * تحصيل دين عميل مسجل من حجز سابق
+   */
+  collectDebt({
+    paymentId,
+    amount,
+    paymentMethod = 'CASH',
+    notes = ''
+  }) {
+    if (!paymentId) {
+      throw new Error('معرف الدين (paymentId) حقل إلزامي.');
+    }
+
+    const db = this.dbConn.getDb();
+    return TransactionHelper.runInTransaction(db, (tDb) => {
+      // 1. Fetch debt record
+      const debt = tDb.prepare("SELECT * FROM payments WHERE id = ? AND payment_type = 'CUSTOMER_DEBT'").get(paymentId);
+      if (!debt) {
+        throw new Error(`سجل الدين رقم #${paymentId} غير موجود أو تم تحصيله مسبقاً.`);
+      }
+
+      const debtAmount = Number(debt.amount) || 0;
+      const collectAmount = amount !== undefined && amount !== null && Number(amount) > 0
+        ? Math.min(debtAmount, Number(amount))
+        : debtAmount;
+
+      if (collectAmount <= 0) {
+        throw new Error('مبلغ التحصيل يجب أن يكون أكبر من الصفر.');
+      }
+
+      const cleanMethod = String(paymentMethod || 'CASH').trim().toUpperCase();
+
+      // 2. Fetch booking details
+      const booking = tDb.prepare('SELECT * FROM bookings WHERE id = ?').get(debt.reference_id);
+      const bookingNumber = booking ? booking.booking_number : `BK-${debt.reference_id}`;
+
+      // 3. Ensure active cash session exists
+      let activeSes = tDb.prepare("SELECT id FROM cash_sessions WHERE status = 'OPEN' LIMIT 1").get();
+      if (!activeSes) {
+        const sessionCode = `SES-AUTO-${Date.now().toString().slice(-6)}`;
+        const autoRes = tDb.prepare(`
+          INSERT INTO cash_sessions (session_code, status, opening_balance, calculated_balance, total_cash_in, total_cash_out, opened_at)
+          VALUES (?, 'OPEN', 0, 0, 0, 0, datetime('now'))
+        `).run(sessionCode);
+        activeSes = { id: autoRes.lastInsertRowid };
+        logger.info(`Auto-opened cash session #${activeSes.id} (${sessionCode}) for debt collection`);
+      }
+
+      // 4. Insert collection payment record (as RENTAL_REMAINDER so it counts in rental revenue)
+      const payNum = `PAY-REM-${Date.now().toString().slice(-5)}`;
+      tDb.prepare(`
+        INSERT INTO payments (payment_number, cash_session_id, customer_id, reference_type, reference_id, payment_type, amount, payment_method, created_at)
+        VALUES (?, ?, ?, 'BOOKING', ?, 'RENTAL_REMAINDER', ?, ?, datetime('now'))
+      `).run(payNum, activeSes.id, debt.customer_id, debt.reference_id, collectAmount, cleanMethod);
+
+      // 5. If CASH, update cash_transactions and cash_sessions
+      const category = cleanMethod === 'CASH' ? 'RENTAL' : cleanMethod;
+      const txNote = `تحصيل دين حجز #${bookingNumber} (${cleanMethod})${notes ? ' - ' + notes : ''}`;
+      tDb.prepare(`
+        INSERT INTO cash_transactions (cash_session_id, transaction_type, category, amount, reference_type, reference_id, notes, created_at)
+        VALUES (?, 'IN', ?, ?, 'BOOKING', ?, ?, datetime('now'))
+      `).run(activeSes.id, category, collectAmount, debt.reference_id, txNote);
+
+      if (cleanMethod === 'CASH') {
+        tDb.prepare(`
+          UPDATE cash_sessions
+          SET total_cash_in = total_cash_in + ?,
+              calculated_balance = calculated_balance + ?
+          WHERE id = ?
+        `).run(collectAmount, collectAmount, activeSes.id);
+        logger.info(`Updated cash session balance after debt collection: +${collectAmount} EGP for session #${activeSes.id}`);
+      } else {
+        logger.info(`Debt collected via ${cleanMethod} (${collectAmount} EGP); logged in cash_transactions without altering drawer cash.`);
+      }
+
+      // 6. Update booking paid_amount
+      if (booking) {
+        tDb.prepare(`
+          UPDATE bookings
+          SET paid_amount = paid_amount + ?
+          WHERE id = ?
+        `).run(collectAmount, booking.id);
+
+        tDb.prepare(`
+          INSERT INTO booking_status_history (booking_id, old_status, new_status, notes, created_at)
+          VALUES (?, ?, ?, ?, datetime('now'))
+        `).run(booking.id, booking.status, booking.status, `تم تحصيل دين بقيمة ${collectAmount} ج.م بطريقة ${cleanMethod} (${payNum})`);
+      }
+
+      // 7. Update original debt payment record
+      const remainingDebt = debtAmount - collectAmount;
+      if (remainingDebt <= 0) {
+        tDb.prepare(`
+          UPDATE payments
+          SET payment_type = 'SETTLED_DEBT'
+          WHERE id = ?
+        `).run(debt.id);
+        logger.info(`Debt payment #${debt.id} fully settled (${collectAmount} EGP).`);
+      } else {
+        tDb.prepare(`
+          UPDATE payments
+          SET amount = ?
+          WHERE id = ?
+        `).run(remainingDebt, debt.id);
+        logger.info(`Debt payment #${debt.id} partially settled (${collectAmount} EGP collected, ${remainingDebt} EGP remaining).`);
+      }
+
+      return {
+        paymentId: debt.id,
+        collectedAmount: collectAmount,
+        remainingDebt,
+        paymentMethod: cleanMethod,
+        receiptNumber: payNum,
+        bookingNumber
+      };
     });
   }
 }

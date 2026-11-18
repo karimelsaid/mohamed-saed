@@ -9,6 +9,7 @@
   <title>نظام إدارة محلات بيع وتأجير بدل </title>
   <link rel="icon" type="image/png" href="logo.png">
   <link rel="stylesheet" href="styles.css">
+
 </head>
 
 <body class="theme-dark">
@@ -16,8 +17,9 @@
     <!-- App Shell Layout -->
     <div class="app-layout">
       <!-- Right Sidebar (RTL) -->
-      <aside class="sidebar">
+      <aside class="sidebar" id="main-sidebar">
         <div class="sidebar-brand" id="sidebar-brand-box">
+          <button id="btn-toggle-sidebar" class="btn-toggle-sidebar" title="طي/فتح الشريط الجانبي">☰</button>
           <div class="brand-logo" id="brand-logo-container"><img src="logo.png" alt="اللوجو" style="width: 100%; height: 100%; object-fit: contain; border-radius: 8px;"></div>
           <div class="brand-text">
             <h2 class="brand-title" id="brand-title-text">mohamed saed</h2>
@@ -46,10 +48,6 @@
             </a>
           </div>
 
-          <a href="#bookings" class="nav-item" data-page="bookings">
-            <span class="icon">📅</span>
-            <span class="label">الحجوزات والتأجير</span>
-          </a>
           <a href="#pos" class="nav-item" data-page="pos">
             <span class="icon">💳</span>
             <span class="label">نقطة البيع (POS)</span>
@@ -92,14 +90,10 @@
       <main class="main-container">
         <!-- Top Header -->
         <header class="app-header">
-          <div class="header-search">
-            <input type="text" placeholder="بحث سريع عن حجز، عميل، أو باركود بدلة... [Ctrl+K]">
-          </div>
           <div class="header-actions">
             <button id="btn-whatsapp-status" class="btn-secondary" style="font-size: 11px; padding: 5px 10px; display: inline-flex; align-items: center; gap: 6px;" title="ربط واتساب للإرسال المباشر الصامت">
               <span>💬</span> <span id="header-wa-status-text">واتساب</span>
             </button>
-            <button id="btn-theme-toggle" class="btn-icon" title="تبديل المظهر">🌓</button>
             <button id="btn-reset-all-data" class="btn-icon" title="تصفير شامل للبيانات المؤقتة"
               style="color: var(--color-danger); border: 1px solid rgba(239, 68, 68, 0.3);">🗑️</button>
             <button id="btn-quick-pos" class="btn-primary-action">⚡ بيع سريع</button>

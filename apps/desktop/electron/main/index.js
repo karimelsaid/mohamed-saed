@@ -163,6 +163,20 @@ function registerCoreHandlers() {
     return adminService.getRentalPolicies();
   });
 
+  
+  ipcRouter.register('admin:get-expense-categories', async (payload) => {
+    return adminService.getExpenseCategories(payload?.onlyActive);
+  });
+  ipcRouter.register('admin:create-expense-category', async (payload) => {
+    return adminService.createExpenseCategory(payload);
+  });
+  ipcRouter.register('admin:update-expense-category', async (payload) => {
+    return adminService.updateExpenseCategory(payload?.id, payload);
+  });
+  ipcRouter.register('admin:delete-expense-category', async (payload) => {
+    return adminService.deleteExpenseCategory(payload?.id);
+  });
+
   ipcRouter.register('admin:update-policies', async (payload) => {
     return adminService.updateRentalPolicies(payload);
   });
@@ -213,13 +227,7 @@ function registerCoreHandlers() {
     return inventoryEngineService.getUnitHistory(payload.unitId);
   });
 
-  ipcRouter.register('inventory:send-to-cleaning', async (payload) => {
-    return inventoryEngineService.sendUnitToCleaning(payload.unitId, payload.cleanerName, payload.expectedReturnDate, payload.cost, payload.notes);
-  });
 
-  ipcRouter.register('inventory:return-from-cleaning', async (payload) => {
-    return inventoryEngineService.returnUnitFromCleaning(payload.cleaningRecordId, payload.actualCost, payload.notes);
-  });
 
   ipcRouter.register('inventory:get-quantity-products', async (payload) => {
     return inventoryEngineService.getQuantityProducts(payload?.categoryType);
@@ -267,7 +275,8 @@ function registerCoreHandlers() {
   });
 
   ipcRouter.register('customers:get-details', async (payload) => {
-    return bookingEngineService.getCustomerDetails(payload.id);
+    const id = payload?.id || payload?.customerId || payload;
+    return bookingEngineService.getCustomerDetails(id);
   });
 
   // Booking Engine Handlers (Phase 7)
@@ -284,11 +293,8 @@ function registerCoreHandlers() {
   });
 
   ipcRouter.register('booking:get-details', async (payload) => {
-    return bookingEngineService.getBookingDetails(payload.id);
-  });
-
-  ipcRouter.register('booking:schedule-fitting', async (payload) => {
-    return bookingEngineService.scheduleFitting(payload.bookingId, payload.fittingDate, payload.tailoringNotes);
+    const id = payload?.bookingId || payload?.id || payload;
+    return bookingEngineService.getBookingDetails(id);
   });
 
   ipcRouter.register('booking:mark-prepared', async (payload) => {
@@ -300,7 +306,7 @@ function registerCoreHandlers() {
   });
 
   ipcRouter.register('booking:return', async (payload) => {
-    return bookingEngineService.returnAndSettleBooking(payload.bookingId, payload.actualReturnDate, payload.damageFee, payload.inspectionNotes);
+    return bookingEngineService.returnAndSettleBooking(payload.bookingId, payload.actualReturnDate, payload.damageFee, payload.inspectionNotes, payload.remainingPaid);
   });
 
   ipcRouter.register('booking:cancel', async (payload) => {
@@ -375,6 +381,34 @@ function registerCoreHandlers() {
 
   ipcRouter.register('finance:get-summary', async (payload) => {
     return financeEngineService.getFinancialSummary(payload);
+  });
+
+  // Payments Handlers
+  ipcRouter.register('payments:get-list', async (payload) => {
+    let sql = `
+      SELECT p.*,
+             COALESCE(c.name, cb.name, 'عميل') AS customer_name,
+             COALESCE(c.phone, cb.phone, '-') AS customer_phone,
+             b.booking_number
+      FROM payments p
+      LEFT JOIN customers c ON p.customer_id = c.id
+      LEFT JOIN bookings b ON (p.reference_type = 'BOOKING' AND p.reference_id = b.id)
+      LEFT JOIN customers cb ON b.customer_id = cb.id
+      WHERE 1=1
+    `;
+    const params = [];
+    if (payload?.payment_type) {
+      sql += ' AND p.payment_type = ?';
+      params.push(payload.payment_type);
+    }
+    sql += ' ORDER BY p.id DESC LIMIT ?';
+    params.push(payload?.limit || 100);
+    const data = dbConnection.all(sql, params);
+    return data;
+  });
+
+  ipcRouter.register('payments:collect-debt', async (payload) => {
+    return bookingEngineService.collectDebt(payload);
   });
 
   // Tasks & Notifications Handlers (Phase 10)

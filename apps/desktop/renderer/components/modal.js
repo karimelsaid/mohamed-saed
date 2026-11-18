@@ -43,15 +43,40 @@ class ModalManager {
     return overlay;
   }
 
-  open({ title, contentHtml, footerHtml = '', width = '550px', onClose = null }) {
+  open({ title, contentHtml, footerHtml = '', width = '550px', height = null, maxHeight = null, onClose = null }) {
     const overlay = this.ensureContainer();
     this.activeModal = { title, onClose };
 
     if (overlay) {
       document.getElementById('modal-title').textContent = title || '';
-      document.getElementById('modal-body').innerHTML = contentHtml || '';
+      const bodyEl = document.getElementById('modal-body');
+      bodyEl.innerHTML = contentHtml || '';
       document.getElementById('modal-footer').innerHTML = footerHtml || '';
-      document.getElementById('modal-card').style.maxWidth = width;
+      const cardEl = document.getElementById('modal-card');
+      cardEl.style.maxWidth = width;
+      if (width && (width.includes('%') || width.includes('vw'))) {
+        cardEl.style.width = width;
+      } else {
+        cardEl.style.width = '';
+      }
+
+      if (height) {
+        cardEl.style.height = height;
+        cardEl.style.maxHeight = height;
+        cardEl.style.display = 'flex';
+        cardEl.style.flexDirection = 'column';
+        bodyEl.style.flex = '1';
+        bodyEl.style.maxHeight = 'none';
+        bodyEl.style.overflowY = 'auto';
+      } else {
+        cardEl.style.height = '';
+        cardEl.style.maxHeight = '';
+        cardEl.style.display = '';
+        cardEl.style.flexDirection = '';
+        bodyEl.style.flex = '';
+        bodyEl.style.maxHeight = maxHeight || '70vh';
+        bodyEl.style.overflowY = 'auto';
+      }
 
       overlay.classList.add('active');
       document.body.classList.add('modal-open');
@@ -71,6 +96,21 @@ class ModalManager {
       if (overlay) {
         overlay.classList.remove('active');
         document.body.classList.remove('modal-open');
+        const cardEl = document.getElementById('modal-card');
+        const bodyEl = document.getElementById('modal-body');
+        if (cardEl) {
+          cardEl.style.height = '';
+          cardEl.style.maxHeight = '';
+          cardEl.style.width = '';
+          cardEl.style.maxWidth = '';
+          cardEl.style.display = '';
+          cardEl.style.flexDirection = '';
+        }
+        if (bodyEl) {
+          bodyEl.style.flex = '';
+          bodyEl.style.maxHeight = '';
+          bodyEl.style.overflowY = '';
+        }
       }
     }
   }

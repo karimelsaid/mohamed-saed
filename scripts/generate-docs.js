@@ -64,7 +64,7 @@ Repositories & Database Layer (SQLite, ACID Transactions, Migrations)
 - **النظام والإعدادات:** \`settings\`, \`app_metadata\`, \`owner_account\`
 - **المخازن والأماكن:** \`warehouses\`, \`stock_movements\`, \`stock_balances\`, \`stock_transfers\`
 - **المنتجات والتصنيفات:** \`categories\`, \`products\`, \`product_variants\`, \`sizes\`, \`colors\`
-- **البدل والوحدات الفردية:** \`suit_models\`, \`suit_units\`, \`unit_status_history\`, \`cleaning_records\`
+- **البدل والوحدات الفردية:** \`suit_models\`, \`suit_units\`, \`unit_status_history\`
 - **العملاء:** \`customers\`, \`customer_notes\`
 - **الحجوزات والتأجير:** \`bookings\`, \`booking_items\`, \`booking_status_history\`, \`rental_contracts\`
 - **المبيعات:** \`sales\`, \`sale_items\`, \`sales_returns\`

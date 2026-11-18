@@ -99,12 +99,14 @@ class InventoryEngineService {
   getSuitUnits(filters = {}) {
     let sql = `
       SELECT u.*, m.name as model_name, m.code as model_code, m.rental_price, m.security_deposit,
+             m.category_id, cat.name as category_name, cat.type as category_type,
              s.name as size_name, s.code as size_code, w.name as warehouse_name, col.name as color_name,
              (SELECT b.booking_number FROM booking_items bi JOIN bookings b ON bi.booking_id = b.id WHERE bi.suit_unit_id = u.id AND b.status NOT IN ('CANCELLED', 'COMPLETED') ORDER BY b.id DESC LIMIT 1) as active_booking_number,
              (SELECT c.name FROM booking_items bi JOIN bookings b ON bi.booking_id = b.id JOIN customers c ON b.customer_id = c.id WHERE bi.suit_unit_id = u.id AND b.status NOT IN ('CANCELLED', 'COMPLETED') ORDER BY b.id DESC LIMIT 1) as active_customer_name,
              (SELECT b.status FROM booking_items bi JOIN bookings b ON bi.booking_id = b.id WHERE bi.suit_unit_id = u.id AND b.status NOT IN ('CANCELLED', 'COMPLETED') ORDER BY b.id DESC LIMIT 1) as active_booking_status
       FROM suit_units u
       JOIN suit_models m ON u.suit_model_id = m.id
+      LEFT JOIN categories cat ON m.category_id = cat.id
       JOIN sizes s ON u.size_id = s.id
       JOIN warehouses w ON u.warehouse_id = w.id
       LEFT JOIN colors col ON m.color_id = col.id
@@ -278,7 +280,6 @@ class InventoryEngineService {
         tDb.prepare("UPDATE suit_units SET status = 'RETIRED', updated_at = datetime('now') WHERE id = ?").run(targetId);
       } else {
         tDb.prepare("DELETE FROM unit_status_history WHERE suit_unit_id = ?").run(targetId);
-        tDb.prepare("DELETE FROM cleaning_records WHERE suit_unit_id = ?").run(targetId);
         tDb.prepare("DELETE FROM maintenance_records WHERE suit_unit_id = ?").run(targetId);
         tDb.prepare("DELETE FROM tasks WHERE suit_unit_id = ?").run(targetId);
         tDb.prepare("DELETE FROM suit_units WHERE id = ?").run(targetId);
@@ -327,45 +328,7 @@ class InventoryEngineService {
   }
 
   // --- Cleaning & Laundry Lifecycle ---
-  sendUnitToCleaning(unitId, cleanerName, expectedReturnDate = null, cost = 0, notes = '') {
-    const db = this.dbConn.getDb();
-    return TransactionHelper.runInTransaction(db, (tDb) => {
-      // 1. Update unit status
-      this.updateUnitStatus(unitId, 'IN_CLEANING', `إرسال للدراي كلين: ${cleanerName}`);
 
-      // 2. Insert cleaning record
-      const stmt = tDb.prepare(`
-        INSERT INTO cleaning_records (suit_unit_id, cleaner_name, sent_date, expected_return_date, cost, status, notes)
-        VALUES (?, ?, date('now'), ?, ?, 'IN_CLEANING', ?)
-      `);
-      const res = stmt.run(unitId, cleanerName, expectedReturnDate, cost, notes);
-      logger.info(`Sent Unit #${unitId} to cleaning: ${cleanerName}`);
-      return { cleaningRecordId: res.lastInsertRowid, status: 'IN_CLEANING' };
-    });
-  }
-
-  returnUnitFromCleaning(cleaningRecordId, actualCost = null, notes = '') {
-    const db = this.dbConn.getDb();
-    return TransactionHelper.runInTransaction(db, (tDb) => {
-      const rec = tDb.prepare('SELECT * FROM cleaning_records WHERE id = ?').get(cleaningRecordId);
-      if (!rec || rec.status !== 'IN_CLEANING') {
-        throw new Error('سجل الغسيل غير موجود أو تم استلامه مسبقًا.');
-      }
-
-      tDb.prepare(`
-        UPDATE cleaning_records
-        SET actual_return_date = date('now'),
-            cost = COALESCE(?, cost),
-            status = 'RETURNED',
-            notes = COALESCE(?, notes)
-        WHERE id = ?
-      `).run(actualCost, notes, cleaningRecordId);
-
-      this.updateUnitStatus(rec.suit_unit_id, 'AVAILABLE', 'استلام البدلة جاهزة ونظيفة من المغسلة');
-      logger.info(`Unit #${rec.suit_unit_id} returned from cleaning.`);
-      return true;
-    });
-  }
 
   // =========================================================================
   // 2. QUANTITY INVENTORY: SHOES & ACCESSORIES (المخزون الكمي للأحذية والإكسسوار)

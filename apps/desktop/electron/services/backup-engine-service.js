@@ -91,7 +91,6 @@ class BackupEngineService {
       'financial_reversals',
       'cash_sessions',
       'unit_status_history',
-      'cleaning_records',
       'maintenance_records',
       'suit_units',
       'suit_models',

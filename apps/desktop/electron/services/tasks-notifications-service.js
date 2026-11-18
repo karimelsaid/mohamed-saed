@@ -148,21 +148,7 @@ class TasksNotificationsService {
       `);
 
       for (const b of activeBookings) {
-        // A. Fitting Task (if scheduled)
-        if (b.fitting_date) {
-          const hasFitting = existingTasksStmt.get(b.id, 'FITTING');
-          if (!hasFitting) {
-            insertTaskStmt.run(
-              `بروفة وتعديل خياط للبدلة - حجز #${b.booking_number}`,
-              `العميل: ${b.customer_name} • هاتف: ${b.customer_phone}`,
-              'FITTING',
-              'HIGH',
-              b.fitting_date,
-              b.id
-            );
-            createdCount++;
-          }
-        }
+        // No fitting tasks - removed
 
         // B. Suit Preparation Task (Before Pickup)
         if (['CONFIRMED', 'FITTING_SCHEDULED'].includes(b.status)) {
@@ -302,12 +288,7 @@ class TasksNotificationsService {
       WHERE date(return_due_date) = date(?) AND status = 'DELIVERED'
     `, [todayStr]).count;
 
-    // 4. Today's Fittings
-    const todayFittingsCount = this.dbConn.get(`
-      SELECT COUNT(*) as count
-      FROM bookings
-      WHERE date(fitting_date) = date(?) AND status IN ('CONFIRMED', 'FITTING_SCHEDULED')
-    `, [todayStr]).count;
+
 
     // 5. Unread in-app notifications
     const unreadCount = this.dbConn.get(`

@@ -7,7 +7,9 @@
   "scripts": {
     "start": "npx electron apps/desktop/electron/main/index.js",
     "dev": "npx electron apps/desktop/electron/main/index.js",
-    "dev:web": "node scripts/dev-server.js",
+    "electron:dev": "npx electron apps/desktop/electron/main/index.js",
+    "dev:web": "nodemon scripts/dev-server.js",
+    "dev:web:watch": "nodemon --watch apps/desktop/renderer --watch scripts --ext js,html,css scripts/dev-server.js",
     "build": "node scripts/build-desktop.js",
     "release": "node scripts/publish-release.js patch",
     "release:minor": "node scripts/publish-release.js minor",
@@ -59,6 +61,7 @@
   "license": "PROPRIETARY",
   "devDependencies": {
     "electron": "^45.2.3",
-    "electron-builder": "^26.18.0"
+    "electron-builder": "^26.18.0",
+    "nodemon": "^3.1.14"
   }
 }

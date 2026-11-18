@@ -158,8 +158,16 @@ class WhatsappDirectService {
   openPairingWindow() {
     const win = this.getOrCreateWindow();
     if (win && !win.isDestroyed()) {
-      win.show();
-      win.focus();
+      // إعادة تحميل الصفحة لضمان ظهور QR code
+      win.loadURL('https://web.whatsapp.com').then(() => {
+        // انتظار قصير ثم إظهار النافذة
+        setTimeout(() => {
+          win.show();
+          win.focus();
+          win.maximize();
+          logger.info('WhatsApp pairing window opened and maximized for QR code scanning.');
+        }, 1000);
+      });
       return { success: true };
     }
     return { success: false, error: 'تعذر فتح نافذة واتساب.' };

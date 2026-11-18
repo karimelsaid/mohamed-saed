@@ -159,19 +159,6 @@ CREATE TABLE IF NOT EXISTS unit_status_history (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE TABLE IF NOT EXISTS cleaning_records (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  suit_unit_id INTEGER NOT NULL REFERENCES suit_units(id),
-  cleaner_name TEXT NOT NULL,
-  sent_date TEXT NOT NULL,
-  expected_return_date TEXT,
-  actual_return_date TEXT,
-  cost REAL DEFAULT 0.0,
-  status TEXT NOT NULL DEFAULT 'IN_CLEANING', -- 'IN_CLEANING', 'RETURNED', 'LOST'
-  notes TEXT,
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
-);
-
 CREATE TABLE IF NOT EXISTS maintenance_records (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   suit_unit_id INTEGER NOT NULL REFERENCES suit_units(id),

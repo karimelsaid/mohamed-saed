@@ -96,7 +96,6 @@ class AdminService {
           const units = tDb.prepare("SELECT id FROM suit_units WHERE suit_model_id = ?").all(m.id);
           for (const u of units) {
             tDb.prepare("DELETE FROM unit_status_history WHERE suit_unit_id = ?").run(u.id);
-            tDb.prepare("DELETE FROM cleaning_records WHERE suit_unit_id = ?").run(u.id);
             tDb.prepare("DELETE FROM maintenance_records WHERE suit_unit_id = ?").run(u.id);
             tDb.prepare("DELETE FROM tasks WHERE suit_unit_id = ?").run(u.id);
             tDb.prepare("DELETE FROM suit_units WHERE id = ?").run(u.id);
@@ -341,6 +340,66 @@ class AdminService {
       }
     }
     return policies;
+  }
+
+
+  // --- 6. Expense Categories (تصنيفات المصروفات) ---
+  getExpenseCategories(onlyActive = false) {
+    let sql = `
+      SELECT ec.*,
+             (SELECT COUNT(*) FROM expenses e WHERE e.category_id = ec.id) as expense_count,
+             (SELECT COALESCE(SUM(amount), 0) FROM expenses e WHERE e.category_id = ec.id) as total_spent
+      FROM expense_categories ec
+    `;
+    if (onlyActive) {
+      sql += ' WHERE ec.is_active = 1 ';
+    }
+    sql += ' ORDER BY ec.id ASC';
+    return this.dbConn.all(sql);
+  }
+
+  createExpenseCategory({ name, description = '' }) {
+    if (!name || !name.trim()) throw new Error('اسم تصنيف المصروف مطلوب.');
+    const db = this.dbConn.getDb();
+    const res = db.prepare('INSERT INTO expense_categories (name, description, is_active) VALUES (?, ?, 1)')
+      .run(name.trim(), description ? description.trim() : '');
+    logger.info(`Created expense category: ${name}`);
+    return { id: res.lastInsertRowid, name: name.trim(), description };
+  }
+
+  updateExpenseCategory(id, { name, description, is_active }) {
+    if (!id) throw new Error('معرف تصنيف المصروف مطلوب.');
+    const db = this.dbConn.getDb();
+    const current = db.prepare('SELECT * FROM expense_categories WHERE id = ?').get(id);
+    if (!current) throw new Error('تصنيف المصروف غير موجود.');
+
+    const newName = name !== undefined && name !== null ? name.trim() : current.name;
+    const newDesc = description !== undefined ? (description ? description.trim() : '') : current.description;
+    const newActive = is_active !== undefined ? Number(is_active) : current.is_active;
+
+    db.prepare(`
+      UPDATE expense_categories
+      SET name = ?, description = ?, is_active = ?
+      WHERE id = ?
+    `).run(newName, newDesc, newActive, id);
+
+    logger.info(`Updated expense category ID: ${id}`);
+    return { id, name: newName, description: newDesc, is_active: newActive };
+  }
+
+  deleteExpenseCategory(id) {
+    if (!id) throw new Error('معرف تصنيف المصروف مطلوب.');
+    const db = this.dbConn.getDb();
+    const expenseCount = db.prepare('SELECT COUNT(*) as count FROM expenses WHERE category_id = ?').get(id)?.count || 0;
+    if (expenseCount > 0) {
+      db.prepare('UPDATE expense_categories SET is_active = 0 WHERE id = ?').run(id);
+      logger.info(`Deactivated expense category ID ${id} because it has ${expenseCount} expenses.`);
+      return { id, deactivated: true, message: 'تم تعطيل التصنيف لاحتوائه على سندات صرف مسجلة.' };
+    } else {
+      db.prepare('DELETE FROM expense_categories WHERE id = ?').run(id);
+      logger.info(`Deleted expense category ID ${id}`);
+      return { id, deleted: true, message: 'تم حذف تصنيف المصروف نهائياً.' };
+    }
   }
 
   updateRentalPolicies(policies) {

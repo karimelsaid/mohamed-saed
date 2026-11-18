@@ -24,6 +24,10 @@ export const IPC_CHANNELS = {
   ADMIN_CREATE_COLOR: 'admin:create-color',
   ADMIN_GET_POLICIES: 'admin:get-policies',
   ADMIN_UPDATE_POLICIES: 'admin:update-policies',
+  ADMIN_GET_EXPENSE_CATEGORIES: 'admin:get-expense-categories',
+  ADMIN_CREATE_EXPENSE_CATEGORY: 'admin:create-expense-category',
+  ADMIN_UPDATE_EXPENSE_CATEGORY: 'admin:update-expense-category',
+  ADMIN_DELETE_EXPENSE_CATEGORY: 'admin:delete-expense-category',
 
   // Database & Migrations
   DB_CHECK_INTEGRITY: 'db:check-integrity',
@@ -36,8 +40,6 @@ export const IPC_CHANNELS = {
   INVENTORY_CREATE_SUIT_UNIT: 'inventory:create-suit-unit',
   INVENTORY_UPDATE_UNIT_STATUS: 'inventory:update-unit-status',
   INVENTORY_GET_UNIT_HISTORY: 'inventory:get-unit-history',
-  INVENTORY_SEND_TO_CLEANING: 'inventory:send-to-cleaning',
-  INVENTORY_RETURN_FROM_CLEANING: 'inventory:return-from-cleaning',
   INVENTORY_GET_QUANTITY_PRODUCTS: 'inventory:get-quantity-products',
   INVENTORY_CREATE_QUANTITY_PRODUCT: 'inventory:create-quantity-product',
   INVENTORY_GET_PRODUCT_VARIANTS: 'inventory:get-product-variants',
@@ -51,7 +53,6 @@ export const IPC_CHANNELS = {
   BOOKING_GET_LIST: 'booking:get-list',
   BOOKING_GET_DETAILS: 'booking:get-details',
   BOOKING_UPDATE_STATUS: 'booking:update-status',
-  BOOKING_SCHEDULE_FITTING: 'booking:schedule-fitting',
   BOOKING_MARK_PREPARED: 'booking:mark-prepared',
   BOOKING_HANDOVER: 'booking:handover',
   BOOKING_RETURN: 'booking:return',
@@ -85,6 +86,10 @@ export const IPC_CHANNELS = {
   FINANCE_RECORD_CASH_ADJUSTMENT: 'finance:record-cash-adjustment',
   FINANCE_GET_ESCROW_DEPOSITS: 'finance:get-escrow-deposits',
   FINANCE_GET_SUMMARY: 'finance:get-summary',
+  
+  // Payments
+  PAYMENTS_GET_LIST: 'payments:get-list',
+  PAYMENTS_COLLECT_DEBT: 'payments:collect-debt',
   
   // Tasks & Notifications
   TASKS_GET_LIST: 'tasks:get-list',

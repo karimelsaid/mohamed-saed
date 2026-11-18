@@ -5,49 +5,216 @@
   // State cache for local live preview
   let activeAdminTab = 'categories';
 
-  // 1. Theme Management
-  const themeToggleBtn = document.getElementById('btn-theme-toggle');
+  // Theme Management - Removed theme toggle button, theme is now managed via settings page
   const body = document.body;
-
   const savedTheme = localStorage.getItem('suit_store_theme') || 'theme-dark';
   body.className = savedTheme;
 
-  if (themeToggleBtn) {
-    themeToggleBtn.addEventListener('click', () => {
-      const isDark = body.classList.contains('theme-dark');
-      const newTheme = isDark ? 'theme-light' : 'theme-dark';
-      body.className = newTheme;
-      localStorage.setItem('suit_store_theme', newTheme);
-      if (window.AppToast) {
-        window.AppToast.info(isDark ? 'تم تفعيل المظهر الفاتح ☀️' : 'تم تفعيل المظهر الداكن 🌙', 2000);
+  // MASTER SECURITY CODE (Hardcoded for sensitive operations)
+  const MASTER_SECURITY_CODE = '8888';
+
+
+
+  // Function to verify master security code with professional modal
+  function verifyMasterSecurityCode(callback) {
+    if (!window.AppModal) {
+      const code = prompt('🔐 تأكيد العملية الحساسة:\n\nيرجى إدخال الرقم السري الرئيسي للمتابعة:');
+      const isValid = code === MASTER_SECURITY_CODE;
+      if (callback) callback(isValid);
+      return isValid;
+    }
+
+    // Create custom modal overlay
+    const modalOverlay = document.createElement('div');
+    modalOverlay.id = 'security-modal-overlay';
+    modalOverlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.3s ease-in-out;
+    `;
+
+    modalOverlay.innerHTML = `
+      <div class="security-card" style="background: var(--bg-surface); border-radius: 16px; padding: 40px; max-width: 400px; width: 90%; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); border: 1px solid var(--border-color); text-align: center; animation: slideUp 0.3s ease-out;">
+        <div style="font-size: 64px; margin-bottom: 16px;">🔐</div>
+        <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 8px; color: var(--text-primary);">تأكيد العملية الحساسة</h2>
+        <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 24px;">يرجى إدخال الرقم السري الرئيسي للمتابعة</p>
+        <div style="max-width: 220px; margin: 0 auto;">
+          <input type="password" id="security-modal-input" placeholder="••••" maxlength="8" autocomplete="off" style="width: 100%; padding: 16px; font-size: 32px; text-align: center; letter-spacing: 12px; font-weight: bold; border: 2px solid var(--color-gold-500); border-radius: 8px; background: var(--input-bg); color: var(--text-primary); outline: none;">
+        </div>
+        <div id="security-modal-error" style="color: var(--color-danger); font-size: 13px; font-weight: 600; margin-top: 12px; display: none;">الرقم السري غير صحيح! حاول مجدداً ❌</div>
+        <div style="display: flex; gap: 12px; margin-top: 24px;">
+          <button id="security-modal-cancel" style="flex: 1; padding: 14px; font-size: 15px; font-weight: 600; border-radius: 8px; cursor: pointer; background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border-color);">إلغاء</button>
+          <button id="security-modal-confirm" style="flex: 1; padding: 14px; font-size: 15px; font-weight: 600; border-radius: 8px; cursor: pointer; background: linear-gradient(135deg, var(--color-gold-500), var(--color-gold-600)); color: #0A0F1D; border: none;">تأكيد ✓</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modalOverlay);
+    document.body.style.overflow = 'hidden';
+
+    const input = document.getElementById('security-modal-input');
+    const errorMsg = document.getElementById('security-modal-error');
+    const confirmBtn = document.getElementById('security-modal-confirm');
+    const cancelBtn = document.getElementById('security-modal-cancel');
+
+    const closeModal = () => {
+      modalOverlay.remove();
+      document.body.style.overflow = '';
+    };
+
+    const doVerify = () => {
+      const code = input?.value || '';
+      if (!code) {
+        if (errorMsg) { errorMsg.style.display = 'block'; }
+        return;
+      }
+
+      if (code === MASTER_SECURITY_CODE) {
+        closeModal();
+        if (callback) callback(true);
+      } else {
+        if (errorMsg) { errorMsg.style.display = 'block'; }
+        if (input) { input.value = ''; input.focus(); }
+      }
+    };
+
+    confirmBtn.addEventListener('click', doVerify);
+    cancelBtn.addEventListener('click', closeModal);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        doVerify();
       }
     });
+
+    // Close on overlay click (outside modal)
+    modalOverlay.addEventListener('click', (e) => {
+      if (e.target === modalOverlay) {
+        closeModal();
+        if (callback) callback(false);
+      }
+    });
+
+    setTimeout(() => input?.focus(), 200);
   }
+
+  // ── Cost Price Privacy & Security Blur (Master Code 8888) ──
+  window._isCostPriceRevealed = false;
+
+  window._formatCostPrice = (amount) => {
+    const fmt = window.UiUtils ? window.UiUtils.formatCurrency(amount || 0) : ((amount || 0) + ' ج.م');
+    if (window._isCostPriceRevealed) {
+      return `<span class="cost-price-val unblurred" title="سعر التكلفة ظاهر - انقر للقفل 🔒" onclick="window._toggleCostPrivacy(event)"><span class="cost-amt">${fmt}</span> <span style="font-size: 11px; opacity: 0.7;">👁️</span></span>`;
+    } else {
+      return `<span class="cost-price-val blurred" title="سعر التكلفة محمي بالرمز السري 8888 - انقر لإظهاره 🔐" onclick="window._toggleCostPrivacy(event)"><span class="cost-amt">${fmt}</span> <span style="font-size: 11px;">🔒</span></span>`;
+    }
+  };
+
+  window._renderCostInputField = (inputId, value, required = false) => {
+    const isRev = window._isCostPriceRevealed;
+    return `
+      <div style="position: relative; display: flex; align-items: center;">
+        <input type="${isRev ? 'number' : 'password'}" id="${inputId}" class="form-control cost-input-field" value="${value || 0}" min="0" ${required ? 'required' : ''} style="flex: 1; ${isRev ? '' : 'filter: blur(4px); letter-spacing: 2px;'}" autocomplete="off">
+        <button type="button" class="btn-cost-toggle" onclick="window._toggleCostPrivacy(event)" style="position: absolute; left: 8px; background: none; border: none; cursor: pointer; font-size: 14px;" title="${isRev ? 'قفل سعر التكلفة 🔒' : 'إظهار سعر التكلفة بالرقم السري 8888 👁️'}">
+          ${isRev ? '👁️' : '🔒'}
+        </button>
+      </div>
+    `;
+  };
+
+  window._toggleCostPrivacy = (e) => {
+    if (e && e.stopPropagation) e.stopPropagation();
+    if (window._isCostPriceRevealed) {
+      window._isCostPriceRevealed = false;
+      window._updateCostPrivacyUI();
+      if (window.AppToast) window.AppToast.info('تم قفل وتعتيم أسعار التكلفة للحفاظ على الخصوصية 🔒');
+    } else {
+      verifyMasterSecurityCode((isValid) => {
+        if (isValid) {
+          window._isCostPriceRevealed = true;
+          window._updateCostPrivacyUI();
+          if (window.AppToast) window.AppToast.success('تم فك التعتيم وإظهار أسعار التكلفة بنجاح 🔓');
+        }
+      });
+    }
+  };
+
+  window._updateCostPrivacyUI = () => {
+    document.querySelectorAll('.cost-price-val').forEach(el => {
+      if (window._isCostPriceRevealed) {
+        el.classList.remove('blurred');
+        el.classList.add('unblurred');
+        el.style.filter = 'none';
+        el.style.userSelect = 'auto';
+        el.setAttribute('title', 'سعر التكلفة ظاهر - انقر للقفل 🔒');
+        const icon = el.querySelector('span:last-child');
+        if (icon) icon.textContent = '👁️';
+      } else {
+        el.classList.remove('unblurred');
+        el.classList.add('blurred');
+        el.style.filter = 'blur(5px)';
+        el.style.userSelect = 'none';
+        el.setAttribute('title', 'سعر التكلفة محمي بالرمز السري 8888 - انقر لإظهاره 🔐');
+        const icon = el.querySelector('span:last-child');
+        if (icon) icon.textContent = '🔒';
+      }
+    });
+
+    document.querySelectorAll('.cost-input-field').forEach(input => {
+      if (window._isCostPriceRevealed) {
+        input.type = 'number';
+        input.style.filter = 'none';
+        input.style.letterSpacing = 'normal';
+      } else {
+        input.type = 'password';
+        input.style.filter = 'blur(4px)';
+        input.style.letterSpacing = '2px';
+      }
+    });
+
+    document.querySelectorAll('.btn-cost-toggle').forEach(btn => {
+      btn.innerHTML = window._isCostPriceRevealed ? '👁️' : '🔒';
+      btn.setAttribute('title', window._isCostPriceRevealed ? 'قفل أسعار التكلفة 🔒' : 'إظهار أسعار التكلفة بالرقم السري 8888 👁️');
+    });
+  };
 
   // Quick reset button for user testing (Safe Factory Reset)
   const resetBtn = document.getElementById('btn-reset-all-data');
   if (resetBtn) {
     resetBtn.addEventListener('click', async () => {
-      if (!confirm('⚠️ تحذير تصفير بيانات النظام:\n\nهل أنت متأكد من تصفير وحذف جميع العمليات التشغيلية (العملاء، الحجوزات، المبيعات، ومخزون البدل) لاختبار النظام؟\n\n🛡️ ملاحظة هامة: سيقوم النظام تلقائياً بإنشاء نسخة احتياطية وقائية كاملة وحفظها قبل التصفير حتى تتمكن من استعادتها في أي وقت.')) {
-        return;
-      }
+      verifyMasterSecurityCode((isValid) => {
+        if (!isValid) return;
 
-      try {
-        if (window.AppToast) window.AppToast.info('جاري أخذ نسخة أمان وقائية وتصفير قاعدة البيانات... ⏳');
-        const res = await electronApi.invoke('system:reset-database');
-
-        // Also clean up any localStorage keys
-        Object.keys(localStorage).filter(k => k.startsWith('suit_')).forEach(k => localStorage.removeItem(k));
-
-        if (res?.success) {
-          if (window.AppToast) window.AppToast.success('تم تصفير البيانات بنجاح! وتم حفظ نسخة أمان كاملة قبل التصفير 💾');
-          setTimeout(() => location.reload(), 900);
-        } else {
-          if (window.AppToast) window.AppToast.error(res?.error?.message || 'فشل التصفير.');
+        if (!confirm('⚠️ تحذير تصفير بيانات النظام:\n\nهل أنت متأكد من تصفير وحذف جميع العمليات التشغيلية (العملاء، الحجوزات، المبيعات، ومخزون البدل) لاختبار النظام؟\n\n🛡️ ملاحظة هامة: سيقوم النظام تلقائياً بإنشاء نسخة احتياطية وقائية كاملة وحفظها قبل التصفير حتى تتمكن من استعادتها في أي وقت.')) {
+          return;
         }
-      } catch (err) {
-        if (window.AppToast) window.AppToast.error(`خطأ: ${err.message}`);
-      }
+
+        electronApi.invoke('system:reset-database').then(res => {
+          if (window.AppToast) window.AppToast.info('جاري أخذ نسخة أمان وقائية وتصفير قاعدة البيانات... ⏳');
+
+          // Also clean up any localStorage keys
+          Object.keys(localStorage).filter(k => k.startsWith('suit_')).forEach(k => localStorage.removeItem(k));
+
+          if (res?.success) {
+            if (window.AppToast) window.AppToast.success('تم تصفير البيانات بنجاح! وتم حفظ نسخة أمان كاملة قبل التصفير 💾');
+            setTimeout(() => location.reload(), 900);
+          } else {
+            if (window.AppToast) window.AppToast.error(res?.error?.message || 'فشل التصفير.');
+          }
+        }).catch(err => {
+          if (window.AppToast) window.AppToast.error(`خطأ: ${err.message}`);
+        });
+      });
     });
   }
 
@@ -79,8 +246,7 @@
   ];
   const _BASE_WAREHOUSES = [
     { id: 1, code: 'MAIN', name: 'المخزن الرئيسي (المحل)', location: 'صالة العرض الرئيسية', is_default: 1, is_active: 1 },
-    { id: 2, code: 'CLEANING', name: 'قسم الدراي كلين والمغسلة', location: 'القسم الداخلي', is_default: 0, is_active: 1 },
-    { id: 3, code: 'STORAGE', name: 'مخزن الأمانات والبضاعة الاحتياطية', location: 'الدور العلوي', is_default: 0, is_active: 1 }
+    { id: 2, code: 'STORAGE', name: 'مخزن الأمانات والبضاعة الاحتياطية', location: 'الدور العلوي', is_default: 0, is_active: 1 }
   ];
   const _BASE_SIZES = [
     { id: 1, category_type: 'SUIT', code: '48', name: 'مقاس 48', sort_order: 2 },
@@ -96,15 +262,13 @@
     { id: 4, name: 'أبيض لؤلؤي', hex_code: '#FFFFFF', is_active: 1 }
   ];
   const _BASE_EXPENSE_CATS = [
-    { id: 1, name: 'مغسلة ودراي كلين', description: 'تكاليف تنظيف وكي البدل' },
-    { id: 2, name: 'خياطة وتعديلات', description: 'أجور الخياط وتعديل مقاسات الزبائن' },
-    { id: 3, name: 'نثريات وضيافة', description: 'مشروبات ومستلزمات المحل اليومية' },
-    { id: 4, name: 'فواتير كهرباء وإنترنت', description: 'فواتير ومصروفات دورية' },
-    { id: 5, name: 'مطبوعات وأكياس بدل', description: 'أكياس كفرات شماعات وفواتير' }
+    { id: 1, name: 'خياطة وتعديلات', description: 'أجور الخياط وتعديل مقاسات الزبائن' },
+    { id: 2, name: 'نثريات وضيافة', description: 'مشروبات ومستلزمات المحل اليومية' },
+    { id: 3, name: 'فواتير كهرباء وإنترنت', description: 'فواتير ومصروفات دورية' },
+    { id: 4, name: 'مطبوعات وأكياس بدل', description: 'أكياس كفرات شماعات وفواتير' }
   ];
   const _DEFAULT_POLICIES = {
     defaultRentalDays: 3,
-    bufferCleaningDays: 1,
     enableSecurityDeposit: true,
     defaultDepositRatio: 1.0,
     applyLateFee: true,
@@ -113,7 +277,24 @@
     allowGracePeriodHours: 4
   };
   const _DEFAULT_SETTINGS = {
-    store: { storeName: 'mohamed saed والعرائس', phone: '01012345678', address: 'شارع الهرم، الجيزة، مصر', taxNumber: '123-456-789', invoiceFooter: 'شكرًا لاختياركم mohamed saed. يرجى إحضار العقد عند الاستلام والتأكد من سلامة البدلة.' },
+    store: {
+      storeName: 'mohamed saed والعرائس',
+      phone: '01012345678',
+      address: 'شارع الهرم، الجيزة، مصر',
+      taxNumber: '123-456-789',
+      invoiceFooter: 'شكرًا لاختياركم mohamed saed. يرجى إحضار العقد عند الاستلام والتأكد من سلامة البدلة.',
+      // Appearance settings
+      fontSize: 14,
+      primaryColor: '#D4AF37',
+      bgDarkColor: '#1a1a2e',
+      textColor: '#ffffff',
+      // Google Drive auto backup settings
+      gdriveAutoBackup: false,
+      gdriveBackupInterval: 'daily',
+      gdriveMaxBackups: 10,
+      gdriveBackupTime: '02:00',
+      gdriveLastBackup: null
+    },
     printers: { receiptPrinter: 'Default Thermal 80mm', invoicePrinter: 'Default A4', autoPrintReceipt: true, previewBeforePrint: false },
     security: { hasPin: true, pin: '1234', protectedPages: [] }
   };
@@ -177,6 +358,52 @@
           webStore.set('suit_models', models);
         }
         return { success: true };
+      }
+
+      // ═══ ADMIN: Expense Categories Mock Handlers ═══
+      if (channel === 'admin:get-expense-categories') {
+        const extra = webStore.get('admin_expense_cats', []);
+        const baseCats = [
+          { id: 1, name: 'مغسلة ودراي كلين', description: 'تكاليف تنظيف وكي البدل', is_active: 1 },
+          { id: 2, name: 'خياطة وتعديلات', description: 'أجور الخياط وتعديل مقاسات الزبائن', is_active: 1 },
+          { id: 3, name: 'نثريات وضيافة', description: 'مشروبات ومستلزمات المحل', is_active: 1 },
+          { id: 4, name: 'فواتير كهرباء وإنترنت', description: 'فواتير ومصروفات دورية', is_active: 1 }
+        ];
+        const all = [...baseCats, ...extra];
+        const expenses = webStore.get('expenses', []);
+        const result = all.filter(c => !payload?.onlyActive || c.is_active).map(c => ({
+          ...c,
+          expense_count: expenses.filter(e => e.category_name === c.name || e.category_id === c.id).length,
+          total_spent: expenses.filter(e => e.category_name === c.name || e.category_id === c.id).reduce((s, e) => s + (e.amount || 0), 0)
+        }));
+        return { success: true, data: result };
+      }
+      if (channel === 'admin:create-expense-category') {
+        const list = webStore.get('admin_expense_cats', []);
+        const id = webStore.nextId('expense_cat');
+        const item = { id, name: (payload.name || '').trim(), description: (payload.description || '').trim(), is_active: 1 };
+        list.push(item);
+        webStore.set('admin_expense_cats', list);
+        return { success: true, data: item };
+      }
+      if (channel === 'admin:update-expense-category') {
+        const list = webStore.get('admin_expense_cats', []);
+        const idx = list.findIndex(c => c.id === Number(payload.id));
+        if (idx >= 0) {
+          if (payload.name !== undefined) list[idx].name = payload.name.trim();
+          if (payload.description !== undefined) list[idx].description = (payload.description || '').trim();
+          if (payload.is_active !== undefined) list[idx].is_active = Number(payload.is_active);
+          webStore.set('admin_expense_cats', list);
+          return { success: true, data: list[idx] };
+        }
+        return { success: false, error: { message: 'تصنيف المصروف غير موجود.' } };
+      }
+      if (channel === 'admin:delete-expense-category') {
+        let list = webStore.get('admin_expense_cats', []);
+        const targetId = Number(payload.id);
+        list = list.filter(c => c.id !== targetId);
+        webStore.set('admin_expense_cats', list);
+        return { success: true, data: { id: targetId, deleted: true, message: 'تم حذف تصنيف المصروف نهائياً.' } };
       }
 
       if (channel === 'admin:get-warehouses') {
@@ -341,6 +568,27 @@
         webStore.set('settings_override', cur);
         return { success: true, data: cur };
       }
+      // Mock Google Drive backup test
+      if (channel === 'backup:test-gdrive-upload') {
+        return { success: true, message: 'Test upload successful' };
+      }
+      // Mock Google Drive connect
+      if (channel === 'backup:connect-gdrive') {
+        return { success: true, message: 'Connected to Google Drive' };
+      }
+      // Mock auto backup
+      if (channel === 'backup:create-local') {
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const fileName = `suit-store-backup-${timestamp}.db`;
+        return {
+          success: true,
+          data: {
+            fileName: fileName,
+            sizeBytes: 1024 * 512, // 512 KB
+            timestamp: new Date().toISOString()
+          }
+        };
+      }
       if (channel === 'app:verify-pin') {
         const cur = webStore.get('settings_override', {});
         const expected = cur.pin || '1234';
@@ -381,12 +629,22 @@
       // ═══════════════ INVENTORY: SUIT UNITS (dynamic, starts empty) ═══════════════
       if (channel === 'inventory:get-suit-units') {
         let list = webStore.get('suit_units', []);
+        const models = webStore.get('suit_models', []);
+        const warehouses = webStore.get('warehouses', () => JSON.parse(JSON.stringify(_BASE_WAREHOUSES)));
+        const categories = webStore.get('categories', () => JSON.parse(JSON.stringify(_BASE_CATEGORIES)));
         const bookings = webStore.get('bookings', []);
-        // Attach active booking info if any
+        // Attach active booking info and enrich category / warehouse
         list = list.map(u => {
+          const m = models.find(x => x.id === u.suit_model_id) || {};
+          const wh = warehouses.find(w => w.id === u.warehouse_id || w.name === u.warehouse_name) || warehouses[0] || {};
+          const cat = categories.find(c => c.id === m.category_id || c.name === m.category_name || c.code === m.category_code) || categories[0] || {};
           const activeBk = bookings.find(b => !['CANCELLED', 'COMPLETED'].includes(b.status) && (b.items || []).some(bi => bi.suit_unit_id === u.id));
           return {
             ...u,
+            category_id: u.category_id || m.category_id || cat.id,
+            category_name: u.category_name || m.category_name || cat.name,
+            warehouse_id: u.warehouse_id || wh.id,
+            warehouse_name: u.warehouse_name || wh.name,
             active_booking_number: activeBk?.booking_number || null,
             active_customer_name: activeBk?.customer_name || null
           };
@@ -711,6 +969,11 @@
         if (idx >= 0) { Object.assign(list[idx], payload); webStore.set('customers', list); }
         return { success: true, data: list[idx] || payload };
       }
+      if (channel === 'customers:get-details') {
+        const list = webStore.get('customers', []);
+        const cust = list.find(c => c.id === (payload?.id || payload?.customerId || payload));
+        return { success: true, data: cust || null };
+      }
 
       // ═══════════════ BOOKINGS (dynamic, starts empty) ═══════════════
       if (channel === 'booking:get-list') {
@@ -724,18 +987,20 @@
         const rentDays = Number(pol.defaultRentalDays) > 0 ? Number(pol.defaultRentalDays) : 3;
         const pickup = payload.pickup_date || new Date().toISOString().slice(0, 10);
         const defaultReturnDate = new Date(new Date(pickup).getTime() + rentDays * 86400000).toISOString().slice(0, 10);
+        const advanceAmount = Number(payload.paid_advance) || Number(payload.paid_amount) || 0;
         const item = {
           id,
           booking_number: bkNum,
+          customer_id: payload.customer_id || null,
           customer_name: payload.customer_name || 'عميل',
           customer_phone: payload.customer_phone || '',
           pickup_date: pickup,
           return_due_date: payload.return_due_date || defaultReturnDate,
           event_date: payload.event_date || payload.pickup_date || '',
           final_amount: Number(payload.final_amount) || Number(payload.rental_price) || 0,
-          paid_amount: Number(payload.paid_advance) || Number(payload.paid_amount) || 0,
+          paid_amount: advanceAmount,
           total_deposit_amount: Number(payload.total_deposit_amount) || Number(payload.security_deposit) || 0,
-          deposit_paid: Number(payload.deposit_paid) || 0,
+          deposit_paid: 0,
           deposit_refunded: 0,
           status: 'CONFIRMED',
           items_summary: payload.items_summary || payload.suit_name || 'بدلة فاخرة',
@@ -743,6 +1008,74 @@
         };
         list.push(item);
         webStore.set('bookings', list);
+
+        // Record advance payment in cash drawer if CASH
+        if (advanceAmount > 0) {
+          const payments = webStore.get('payments', []);
+          const payId = webStore.nextId('payment');
+          const cleanMethod = String(payload.payment_method || 'CASH').toUpperCase();
+          payments.push({
+            id: payId,
+            payment_number: `PAY-ADV-${1000 + payId}`,
+            customer_id: item.customer_id,
+            reference_type: 'BOOKING',
+            reference_id: id,
+            payment_type: 'RENTAL_ADVANCE',
+            amount: advanceAmount,
+            payment_method: cleanMethod,
+            created_at: _nowStr()
+          });
+          webStore.set('payments', payments);
+
+          if (cleanMethod === 'CASH') {
+            let session = webStore.get('active_cash_session', null);
+            if (!session) {
+              const sesId = webStore.nextId('cash_session');
+              const code = `SES-AUTO-${1000 + sesId}`;
+              session = {
+                id: sesId,
+                session_code: code,
+                opened_at: _nowStr(),
+                opening_balance: 0,
+                total_cash_in: 0,
+                total_cash_out: 0,
+                calculated_balance: 0,
+                status: 'OPEN',
+                notes: 'جلسة تلقائية',
+                transaction_count: 0,
+                breakdown: { rentalIn: 0, saleIn: 0, depositIn: 0, depositRefundOut: 0, expenseOut: 0, manualIn: 0, manualOut: 0 },
+                recent_transactions: []
+              };
+              const sessions = webStore.get('cash_sessions', []);
+              sessions.push({ ...session, closed_at: null, actual_balance: null, difference: 0 });
+              webStore.set('cash_sessions', sessions);
+            }
+            session.total_cash_in = (session.total_cash_in || 0) + advanceAmount;
+            session.calculated_balance = (session.calculated_balance || 0) + advanceAmount;
+            if (session.breakdown) session.breakdown.rentalIn = (session.breakdown.rentalIn || 0) + advanceAmount;
+            session.transaction_count = (session.transaction_count || 0) + 1;
+            if (!session.recent_transactions) session.recent_transactions = [];
+            session.recent_transactions.unshift({
+              id: Date.now(),
+              transaction_type: 'IN',
+              category: 'RENTAL',
+              amount: advanceAmount,
+              reference_type: 'BOOKING',
+              reference_id: id,
+              notes: `عربون حجز #${bkNum} (CASH)`,
+              created_at: _nowStr()
+            });
+            webStore.set('active_cash_session', session);
+
+            const sessions = webStore.get('cash_sessions', []);
+            const sesIdx = sessions.findIndex(s => s.id === session.id);
+            if (sesIdx !== -1) {
+              sessions[sesIdx].total_cash_in = session.total_cash_in;
+              sessions[sesIdx].calculated_balance = session.calculated_balance;
+              webStore.set('cash_sessions', sessions);
+            }
+          }
+        }
 
         // Mark suit unit as BOOKED if provided
         if (payload.suit_unit_id) {
@@ -754,6 +1087,11 @@
           }
         }
         return { success: true, data: { bookingId: id, bookingNumber: bkNum } };
+      }
+      if (channel === 'booking:get-details') {
+        const list = webStore.get('bookings', []);
+        const bk = list.find(b => b.id === (payload.bookingId || payload.id));
+        return { success: true, data: bk || null };
       }
       if (channel === 'booking:update-status') {
         const list = webStore.get('bookings', []);
@@ -794,6 +1132,7 @@
         const list = webStore.get('bookings', []);
         const bk = list.find(b => b.id === payload.bookingId);
         let refundAmount = 0;
+        let customerDebt = 0;
         if (bk) {
           bk.status = 'COMPLETED';
           const damageFee = Number(payload.damageFee || 0);
@@ -801,41 +1140,85 @@
           const pol = webStore.get('policies', _DEFAULT_POLICIES);
           const applyLateFee = pol.applyLateFee !== false && String(pol.applyLateFee) !== '0';
           const lateFeePerDay = applyLateFee ? (Number(pol.lateFeePerDay) >= 0 ? Number(pol.lateFeePerDay) : 300) : 0;
-          const allowGrace = pol.allowGracePeriod !== false && String(pol.allowGracePeriod) !== '0';
-          const graceHours = allowGrace ? (Number(pol.allowGracePeriodHours) || 0) : 0;
-
-          const dueDate = new Date(bk.return_due_date + 'T23:59:59');
-          const actualDate = new Date(payload.actualReturnDate || new Date());
-          const graceMs = graceHours * 60 * 60 * 1000;
-          const effectiveDue = new Date(dueDate.getTime() + graceMs);
-          const diffDays = Math.ceil((actualDate.getTime() - effectiveDue.getTime()) / 86400000);
-          const lateDays = (!applyLateFee || diffDays <= 0) ? 0 : diffDays;
+          
+          const dueStr = String(bk.return_due_date || '').slice(0, 10);
+          const retStr = String(payload.actualReturnDate || new Date().toISOString()).slice(0, 10);
+          let lateDays = 0;
+          if (dueStr && retStr) {
+            const [dY, dM, dD] = dueStr.split('-').map(Number);
+            const [rY, rM, rD] = retStr.split('-').map(Number);
+            const diffMs = new Date(rY, rM - 1, rD).getTime() - new Date(dY, dM - 1, dD).getTime();
+            const calDays = Math.round(diffMs / 86400000);
+            if (calDays > 0) lateDays = calDays;
+          }
           const lateFee = applyLateFee ? (lateDays * lateFeePerDay) : 0;
+
+          // Rental remainder & Customer Debt
+          const rentalRemaining = Math.max(0, (bk.final_amount || 0) - (bk.paid_amount || 0));
+          if (rentalRemaining > 0) {
+            if (!payload.remainingPaid) {
+              customerDebt = rentalRemaining;
+              const payments = webStore.get('payments', []);
+              const payId = webStore.nextId('payment');
+              payments.push({
+                id: payId,
+                payment_number: `DEBT-${1000 + payId}`,
+                customer_id: bk.customer_id,
+                reference_type: 'BOOKING',
+                reference_id: bk.id,
+                payment_type: 'CUSTOMER_DEBT',
+                amount: rentalRemaining,
+                payment_method: 'DEBT',
+                created_at: _nowStr()
+              });
+              webStore.set('payments', payments);
+            } else {
+              bk.paid_amount = (bk.paid_amount || 0) + rentalRemaining;
+              const session = webStore.get('active_cash_session', null);
+              if (session) {
+                session.total_cash_in = (session.total_cash_in || 0) + rentalRemaining;
+                session.calculated_balance = (session.calculated_balance || 0) + rentalRemaining;
+                webStore.set('active_cash_session', session);
+              }
+            }
+          }
+
           const totalDeductions = damageFee + lateFee;
           refundAmount = Math.max(0, (bk.deposit_paid || 0) - totalDeductions);
           bk.deposit_refunded = refundAmount;
+          bk.late_fee = lateFee;
+          bk.damage_fee = damageFee;
           webStore.set('bookings', list);
+
           // Complete tasks related to this booking
           const tasks = webStore.get('tasks', []);
           tasks.filter(t => t.booking_number === bk.booking_number).forEach(t => { t.status = 'COMPLETED'; });
           webStore.set('tasks', tasks);
-          // Free up suit unit
+
+          // Free up suit unit: AVAILABLE if clean (no damage and no late fee), IN_CLEANING otherwise
+          const isClean = damageFee === 0 && lateFee === 0;
+          const newStatus = isClean ? 'AVAILABLE' : 'IN_CLEANING';
           const units = webStore.get('suit_units', []);
           const u = units.find(x => x.status === 'IN_USE');
-          if (u) { u.status = 'IN_CLEANING'; u.rental_count = (u.rental_count || 0) + 1; webStore.set('suit_units', units); }
+          if (u) {
+            u.status = newStatus;
+            u.rental_count = (u.rental_count || 0) + 1;
+            webStore.set('suit_units', units);
+          }
+
           // Refund from cash session
           const session = webStore.get('active_cash_session', null);
           if (session && refundAmount > 0) {
             session.total_cash_out += refundAmount;
             session.calculated_balance -= refundAmount;
-            session.breakdown.depositRefundOut += refundAmount;
+            if (session.breakdown) session.breakdown.depositRefundOut = (session.breakdown.depositRefundOut || 0) + refundAmount;
             session.transaction_count++;
             webStore.set('active_cash_session', session);
           }
         }
-        return { success: true, data: { bookingId: payload.bookingId, status: 'COMPLETED', refundAmount, inspectionNotes: payload.inspectionNotes || '' } };
+        return { success: true, data: { bookingId: payload.bookingId, status: 'COMPLETED', refundAmount, lateDays, lateFee, customerDebt } };
       }
-
+      
       // ═══════════════ SALES (dynamic, starts empty) ═══════════════
       if (channel === 'sales:get-catalog') {
         let prods = webStore.get('products', []);
@@ -1049,6 +1432,133 @@
       if (channel === 'finance:get-sessions-list') {
         return { success: true, data: webStore.get('cash_sessions', []) };
       }
+      if (channel === 'payments:get-list') {
+        const payments = webStore.get('payments', []);
+        const customers = webStore.get('customers', []);
+        const bookings = webStore.get('bookings', []);
+        let list = payments;
+        if (payload?.payment_type) {
+          list = list.filter(p => p.payment_type === payload.payment_type);
+        }
+        const enriched = list.map(p => {
+          const cust = customers.find(c => c.id === p.customer_id) || {};
+          const bk = bookings.find(b => b.id === p.reference_id) || {};
+          return {
+            ...p,
+            customer_name: p.customer_name || cust.name || bk.customer_name || 'عميل',
+            customer_phone: p.customer_phone || cust.phone || bk.customer_phone || '-',
+            booking_number: bk.booking_number || (p.reference_id ? `BK-${p.reference_id}` : '-')
+          };
+        });
+        return { success: true, data: enriched };
+      }
+      if (channel === 'payments:collect-debt') {
+        const payments = webStore.get('payments', []);
+        const debtIdx = payments.findIndex(p => p.id === Number(payload.paymentId) && p.payment_type === 'CUSTOMER_DEBT');
+        if (debtIdx === -1) {
+          return { success: false, error: { message: 'سجل الدين غير موجود أو تم تحصيله مسبقاً' } };
+        }
+        const debt = payments[debtIdx];
+        const debtAmount = Number(debt.amount) || 0;
+        const collectAmount = payload.amount !== undefined && Number(payload.amount) > 0
+          ? Math.min(debtAmount, Number(payload.amount))
+          : debtAmount;
+        const cleanMethod = String(payload.paymentMethod || 'CASH').toUpperCase();
+        const payId = webStore.nextId('payment');
+        const payNum = `PAY-REM-${1000 + payId}`;
+
+        // Add collection payment
+        payments.push({
+          id: payId,
+          payment_number: payNum,
+          customer_id: debt.customer_id,
+          reference_type: 'BOOKING',
+          reference_id: debt.reference_id,
+          payment_type: 'RENTAL_REMAINDER',
+          amount: collectAmount,
+          payment_method: cleanMethod,
+          created_at: _nowStr()
+        });
+
+        // Settle or reduce debt
+        const remainingDebt = debtAmount - collectAmount;
+        if (remainingDebt <= 0) {
+          debt.payment_type = 'SETTLED_DEBT';
+        } else {
+          debt.amount = remainingDebt;
+        }
+        webStore.set('payments', payments);
+
+        // Update booking paid_amount
+        const bookings = webStore.get('bookings', []);
+        const bk = bookings.find(b => b.id === debt.reference_id);
+        if (bk) {
+          bk.paid_amount = (Number(bk.paid_amount) || 0) + collectAmount;
+          webStore.set('bookings', bookings);
+        }
+
+        // If CASH, update drawer session
+        if (cleanMethod === 'CASH') {
+          let session = webStore.get('active_cash_session', null);
+          if (!session) {
+            const sesId = webStore.nextId('cash_session');
+            const code = `SES-AUTO-${1000 + sesId}`;
+            session = {
+              id: sesId,
+              session_code: code,
+              opened_at: _nowStr(),
+              opening_balance: 0,
+              total_cash_in: 0,
+              total_cash_out: 0,
+              calculated_balance: 0,
+              status: 'OPEN',
+              notes: 'جلسة تلقائية',
+              transaction_count: 0,
+              breakdown: { rentalIn: 0, saleIn: 0, depositIn: 0, depositRefundOut: 0, expenseOut: 0, manualIn: 0, manualOut: 0 },
+              recent_transactions: []
+            };
+            const sessions = webStore.get('cash_sessions', []);
+            sessions.push({ ...session, closed_at: null, actual_balance: null, difference: 0 });
+            webStore.set('cash_sessions', sessions);
+          }
+          session.total_cash_in = (session.total_cash_in || 0) + collectAmount;
+          session.calculated_balance = (session.calculated_balance || 0) + collectAmount;
+          if (session.breakdown) session.breakdown.rentalIn = (session.breakdown.rentalIn || 0) + collectAmount;
+          session.transaction_count = (session.transaction_count || 0) + 1;
+          if (!session.recent_transactions) session.recent_transactions = [];
+          session.recent_transactions.unshift({
+            id: Date.now(),
+            transaction_type: 'IN',
+            category: 'RENTAL',
+            amount: collectAmount,
+            reference_type: 'BOOKING',
+            reference_id: debt.reference_id,
+            notes: `تحصيل دين حجز #${bk?.booking_number || debt.reference_id} (${cleanMethod})`,
+            created_at: _nowStr()
+          });
+          webStore.set('active_cash_session', session);
+
+          const sessions = webStore.get('cash_sessions', []);
+          const sesIdx = sessions.findIndex(s => s.id === session.id);
+          if (sesIdx !== -1) {
+            sessions[sesIdx].total_cash_in = session.total_cash_in;
+            sessions[sesIdx].calculated_balance = session.calculated_balance;
+            webStore.set('cash_sessions', sessions);
+          }
+        }
+
+        return {
+          success: true,
+          data: {
+            paymentId: debt.id,
+            collectedAmount: collectAmount,
+            remainingDebt,
+            paymentMethod: cleanMethod,
+            receiptNumber: payNum,
+            bookingNumber: bk?.booking_number
+          }
+        };
+      }
 
       // ═══════════════ TASKS (dynamic, starts empty) ═══════════════
       if (channel === 'tasks:get-list') {
@@ -1112,7 +1622,7 @@
           const existsPrep = tasks.find(t => t.booking_number === b.booking_number && t.task_type === 'SUIT_PREPARATION');
           if (!existsPrep && b.status !== 'DELIVERED') {
             const id = webStore.nextId('task');
-            tasks.push({ id, title: `تجهيز بدلة حجز #${b.booking_number}`, description: `تجهيز وكي للعميل ${b.customer_name}`, task_type: 'SUIT_PREPARATION', priority: 'HIGH', due_date: b.pickup_date, status: 'PENDING', booking_number: b.booking_number, customer_name: b.customer_name, customer_phone: b.customer_phone, suit_name: b.items_summary || '' });
+            tasks.push({ id, title: `تجهيز بدلة حجز #${b.booking_number}`, description: `تجهيز البدلة للعميل ${b.customer_name}`, task_type: 'SUIT_PREPARATION', priority: 'HIGH', due_date: b.pickup_date, status: 'PENDING', booking_number: b.booking_number, customer_name: b.customer_name, customer_phone: b.customer_phone, suit_name: b.items_summary || '' });
             count++;
           }
           if (b.return_due_date && b.return_due_date < today) {
@@ -1132,8 +1642,7 @@
       if (channel === 'whatsapp:get-templates') {
         return {
           success: true, data: {
-            FITTING_REMINDER: { key: 'FITTING_REMINDER', title: 'تذكير بموعد البروفة', template: 'مرحباً {customer_name}، نذكرك بميعاد بروفة البدلة الخاصة بكم في محل mohamed saed بتاريخ {date}. نسعد بتشريفكم!' },
-            READY_FOR_PICKUP: { key: 'READY_FOR_PICKUP', title: 'تنبيه جاهزية البدلة للاستلام', template: 'مرحباً {customer_name}، بدلتكم جاهزة ومكوية للاستلام اليوم في محل mohamed saed. يرجى إحضار إيصال الحجز.' },
+            READY_FOR_PICKUP: { key: 'READY_FOR_PICKUP', title: 'تنبيه جاهزية البدلة للاستلام', template: 'مرحباً {customer_name}، بدلتكم جاهزة للاستلام اليوم في محل mohamed saed. يرجى إحضار إيصال الحجز.' },
             RETURN_REMINDER: { key: 'RETURN_REMINDER', title: 'تذكير بموعد إرجاع البدلة', template: 'مرحباً {customer_name}، نود تذكيركم بموعد إرجاع البدلة غداً {date} لضمان استرداد كامل مبلغ التأمين. شكراً لتعاملكم معنا.' },
             OVERDUE_ALERT: { key: 'OVERDUE_ALERT', title: 'تنبيه عاجل لمتأخرات الإرجاع', template: 'عاجل: مرحباً {customer_name}، نود تذكيركم بأن موعد إرجاع البدلة قد تجاوز الوقت المحدد ({days_late} يوم تأخير). يرجى التوجه للمحل لتسليمها.' }
           }
@@ -1155,7 +1664,7 @@
         const totalRental = bookings.reduce((s, x) => s + (x.paid_amount || 0), 0);
         const totalExp = expenses.reduce((s, x) => s + (x.amount || 0), 0);
         const gross = totalSales + totalRental;
-        return { success: true, data: { revenue: { salesRevenue: totalSales, rentalRevenue: totalRental, lateFeesRevenue: 0, totalGrossRevenue: gross, discountsGiven: 0, totalNetRevenue: gross }, cogs: { salesCogs: 0, cleaningExpenses: 0, totalDirectCosts: 0 }, grossProfit: gross, grossMarginPercent: gross > 0 ? 100 : 0, operatingExpenses: { totalOperatingExpenses: totalExp, byCategory: [] }, netOperatingProfit: gross - totalExp, netMarginPercent: gross > 0 ? (((gross - totalExp) / gross) * 100).toFixed(1) : 0, escrowFlow: { depositsCollected: 0, depositsRefunded: 0, netEscrowChange: 0 } } };
+        return { success: true, data: { revenue: { salesRevenue: totalSales, rentalRevenue: totalRental, lateFeesRevenue: 0, totalGrossRevenue: gross, discountsGiven: 0, totalNetRevenue: gross }, cogs: { salesCogs: 0, totalDirectCosts: 0 }, grossProfit: gross, grossMarginPercent: gross > 0 ? 100 : 0, operatingExpenses: { totalOperatingExpenses: totalExp, byCategory: [] }, netOperatingProfit: gross - totalExp, netMarginPercent: gross > 0 ? (((gross - totalExp) / gross) * 100).toFixed(1) : 0, escrowFlow: { depositsCollected: 0, depositsRefunded: 0, netEscrowChange: 0 } } };
       }
       if (channel === 'reports:get-stock-summary') {
         const units = webStore.get('suit_units', []);
@@ -1168,9 +1677,8 @@
         const units = webStore.get('suit_units', []);
         const available = units.filter(u => u.status === 'AVAILABLE').length;
         const occupied = units.filter(u => u.status === 'BOOKED' || u.status === 'IN_USE').length;
-        const cleaning = units.filter(u => u.status === 'IN_CLEANING').length;
         const damaged = units.filter(u => u.status === 'DAMAGED').length;
-        return { success: true, data: { fleetSummary: { totalFleet: units.length, occupiedUnits: occupied, availableUnits: available, cleaningUnits: cleaning, damagedUnits: damaged, occupancyRate: units.length > 0 ? ((occupied / units.length) * 100).toFixed(1) : 0 }, topRentedModels: [], popularSizes: [] } };
+        return { success: true, data: { fleetSummary: { totalFleet: units.length, occupiedUnits: occupied, availableUnits: available, damagedUnits: damaged, occupancyRate: units.length > 0 ? ((occupied / units.length) * 100).toFixed(1) : 0 }, topRentedModels: [], popularSizes: [] } };
       }
       if (channel === 'reports:get-top-customers') {
         const customers = webStore.get('customers', []);
@@ -1656,12 +2164,244 @@
     }
   }
 
+  function applyAppearanceSettings(settings) {
+    if (!settings) return;
+
+    console.log('Applying appearance settings:', settings);
+
+    // Remove existing dynamic style sheet if exists
+    let dynamicStyle = document.getElementById('dynamic-theme-styles');
+    if (dynamicStyle) {
+      dynamicStyle.remove();
+    }
+
+    // Create new dynamic style sheet
+    dynamicStyle = document.createElement('style');
+    dynamicStyle.id = 'dynamic-theme-styles';
+    document.head.appendChild(dynamicStyle);
+
+    let cssRules = '';
+
+    // Apply font size to CSS variable
+    if (settings.fontSize) {
+      document.documentElement.style.setProperty('--font-size-base', settings.fontSize + 'px');
+      cssRules += `* { font-size: var(--font-size-base) !important; }\n`;
+      console.log('Font size set to:', settings.fontSize + 'px');
+    }
+
+    // Apply primary color with variations
+    if (settings.primaryColor) {
+      document.documentElement.style.setProperty('--color-gold-400', settings.primaryColor);
+      document.documentElement.style.setProperty('--color-gold-500', settings.primaryColor);
+      document.documentElement.style.setProperty('--color-gold-600', adjustColorBrightness(settings.primaryColor, -20));
+      cssRules += `
+        .btn-accent-action, .btn-accent-action:hover { background: linear-gradient(135deg, ${settings.primaryColor}, ${adjustColorBrightness(settings.primaryColor, -20)}) !important; }
+        .nav-item.active { color: ${settings.primaryColor} !important; border-right-color: ${settings.primaryColor} !important; }
+        .stat-icon { color: ${settings.primaryColor} !important; background-color: ${settings.primaryColor}33 !important; }
+        input:focus, .form-control:focus { border-color: ${settings.primaryColor} !important; box-shadow: 0 0 0 3px ${settings.primaryColor}33 !important; }
+      `;
+      console.log('Primary color set to:', settings.primaryColor);
+    }
+
+    // Apply background color with variations - FORCE APPLY
+    if (settings.bgDarkColor) {
+      const bgDark = settings.bgDarkColor;
+      const bgSidebar = adjustColorBrightness(bgDark, -10);
+      const bgSurface = adjustColorBrightness(bgDark, 10);
+      const bgCard = adjustColorBrightness(bgDark, 15);
+      const bgCardHover = adjustColorBrightness(bgDark, 20);
+      const inputBg = adjustColorBrightness(bgDark, -5);
+
+      document.documentElement.style.setProperty('--bg-app', bgDark);
+      document.documentElement.style.setProperty('--bg-sidebar', bgSidebar);
+      document.documentElement.style.setProperty('--bg-surface', bgSurface);
+      document.documentElement.style.setProperty('--bg-card', bgCard);
+      document.documentElement.style.setProperty('--bg-card-hover', bgCardHover);
+      document.documentElement.style.setProperty('--input-bg', inputBg);
+      document.documentElement.style.setProperty('--table-stripe', adjustColorBrightness(bgDark, 5));
+
+      cssRules += `
+        body { background-color: ${bgDark} !important; color: ${settings.textColor || '#ffffff'} !important; }
+        .sidebar { background-color: ${bgSidebar} !important; }
+        .app-header { background-color: ${bgSurface} !important; }
+        .main-container { background-color: ${bgDark} !important; }
+        .table-card, .stat-card, .pos-cart-pane { background-color: ${bgCard} !important; }
+        .pos-cart-row, .state-container { background-color: ${bgDark} !important; }
+        .form-control, input, select, textarea { background-color: ${inputBg} !important; color: ${settings.textColor || '#ffffff'} !important; }
+        .modal-card { background-color: ${bgSurface} !important; }
+        .drawer-panel { background-color: ${bgSurface} !important; }
+        * { background-color: ${bgDark} !important; }
+      `;
+
+      console.log('Background color set to:', bgDark);
+    }
+
+    // Apply text color with variations - FORCE APPLY
+    if (settings.textColor) {
+      const text = settings.textColor;
+      const textSecondary = adjustColorBrightness(text, -30);
+      const textMuted = adjustColorBrightness(text, -50);
+
+      document.documentElement.style.setProperty('--text-primary', text);
+      document.documentElement.style.setProperty('--text-secondary', textSecondary);
+      document.documentElement.style.setProperty('--text-muted', textMuted);
+
+      cssRules += `
+        body { color: ${text} !important; }
+        * { color: ${text} !important; }
+        h1, h2, h3, h4, h5, h6 { color: ${text} !important; }
+        p, span, div, td, th { color: ${text} !important; }
+        .text-secondary, .badge, label { color: ${textSecondary} !important; }
+        .text-muted { color: ${textMuted} !important; }
+      `;
+
+      console.log('Text color set to:', text);
+    }
+
+    // Apply border color based on background
+    if (settings.bgDarkColor) {
+      const borderColor = adjustColorBrightness(settings.bgDarkColor, 30);
+      document.documentElement.style.setProperty('--border-color', borderColor);
+      cssRules += `
+        * { border-color: ${borderColor} !important; }
+        .table-card, .stat-card, .modal-card, .drawer-panel { border-color: ${borderColor} !important; }
+        input, select, textarea { border-color: ${borderColor} !important; }
+      `;
+      console.log('Border color set to:', borderColor);
+    }
+
+    // Apply CSS rules to dynamic style sheet
+    dynamicStyle.textContent = cssRules;
+
+    // Force style recalculation
+    document.body.offsetHeight;
+
+    console.log('Appearance settings applied successfully');
+  }
+
+  // Helper function to adjust color brightness
+  function adjustColorBrightness(hex, percent) {
+    const num = parseInt(hex.replace('#', ''), 16);
+    const amt = Math.round(2.55 * percent);
+    const R = (num >> 16) + amt;
+    const G = (num >> 8 & 0x00FF) + amt;
+    const B = (num & 0x0000FF) + amt;
+    const newColor = (0x1000000 + (R < 255 ? (R < 1 ? 0 : R) : 255) * 0x10000 +
+      (G < 255 ? (G < 1 ? 0 : G) : 255) * 0x100 +
+      (B < 255 ? (B < 1 ? 0 : B) : 255)).toString(16).slice(1);
+    return '#' + newColor;
+  }
+
+  // Auto Backup Scheduler
+  let backupSchedulerInterval = null;
+
+  function startAutoBackupScheduler() {
+    // Clear any existing scheduler
+    if (backupSchedulerInterval) {
+      clearInterval(backupSchedulerInterval);
+    }
+
+    // Get current settings
+    const settings = cachedAppSettings?.store || {};
+    if (!settings.gdriveAutoBackup) {
+      console.log('Auto backup is disabled');
+      return;
+    }
+
+    const interval = settings.gdriveBackupInterval || 'daily';
+    const backupTime = settings.gdriveBackupTime || '02:00';
+
+    // Calculate the next backup time
+    function getNextBackupTime() {
+      const now = new Date();
+      const [hours, minutes] = backupTime.split(':').map(Number);
+
+      let nextBackup = new Date();
+      nextBackup.setHours(hours, minutes, 0, 0);
+
+      // If the time has already passed today, schedule for tomorrow
+      if (nextBackup <= now) {
+        nextBackup.setDate(nextBackup.getDate() + 1);
+      }
+
+      // Adjust based on interval
+      if (interval === 'hourly') {
+        nextBackup = new Date(now.getTime() + 60 * 60 * 1000); // 1 hour from now
+      } else if (interval === 'weekly') {
+        nextBackup.setDate(nextBackup.getDate() + 7);
+      } else if (interval === 'monthly') {
+        nextBackup.setMonth(nextBackup.getMonth() + 1);
+      }
+
+      return nextBackup;
+    }
+
+    const nextBackup = getNextBackupTime();
+    const delay = nextBackup - new Date();
+
+    console.log(`Next auto backup scheduled for: ${nextBackup.toLocaleString('ar-EG')} (${Math.floor(delay / 1000 / 60)} minutes from now)`);
+
+    // Set timeout for first backup
+    setTimeout(() => {
+      performAutoBackup();
+      // Then set interval for recurring backups
+      let intervalMs;
+      switch (interval) {
+        case 'hourly':
+          intervalMs = 60 * 60 * 1000; // 1 hour
+          break;
+        case 'daily':
+          intervalMs = 24 * 60 * 60 * 1000; // 24 hours
+          break;
+        case 'weekly':
+          intervalMs = 7 * 24 * 60 * 60 * 1000; // 7 days
+          break;
+        case 'monthly':
+          intervalMs = 30 * 24 * 60 * 60 * 1000; // 30 days
+          break;
+        default:
+          intervalMs = 24 * 60 * 60 * 1000;
+      }
+
+      backupSchedulerInterval = setInterval(performAutoBackup, intervalMs);
+    }, delay);
+  }
+
+  async function performAutoBackup() {
+    try {
+      console.log('Starting auto backup...');
+      if (window.AppToast) window.AppToast.info('جاري النسخ الاحتياطي التلقائي... ☁️');
+
+      const res = await electronApi.invoke('backup:create-local');
+      if (res?.success) {
+        console.log('Auto backup completed successfully');
+
+        // Update last backup time
+        const lastBackupEl = document.getElementById('gdrive-last-backup-time');
+        if (lastBackupEl) {
+          lastBackupEl.textContent = new Date().toLocaleString('ar-EG');
+        }
+
+        if (window.AppToast) window.AppToast.success('تم النسخ الاحتياطي التلقائي بنجاح! ☁️✅');
+      } else {
+        console.error('Auto backup failed:', res?.error);
+        if (window.AppToast) window.AppToast.error('فشل النسخ الاحتياطي التلقائي');
+      }
+    } catch (err) {
+      console.error('Auto backup error:', err);
+      if (window.AppToast) window.AppToast.error(`خطأ في النسخ الاحتياطي: ${err.message}`);
+    }
+  }
+
   async function loadSettingsAndApply() {
     try {
       const res = await electronApi.invoke('settings:get');
       if (res?.data) {
         cachedAppSettings = res.data;
         applyStoreSettings(cachedAppSettings.store);
+        applyAppearanceSettings(cachedAppSettings.store);
+        // Start auto backup scheduler
+        startAutoBackupScheduler();
       }
     } catch (e) {
       console.warn('Failed to load settings:', e);
@@ -1671,9 +2411,9 @@
   function navigateToPage(page) {
     const protectedPages = cachedAppSettings?.security?.protectedPages || [];
     const isProtected = protectedPages.includes(page);
-    const isUnlocked = unlockedPagesSession.has(page);
 
-    if (isProtected && !isUnlocked) {
+    // Only prompt if the page is actually in the protected list
+    if (isProtected && protectedPages.length > 0) {
       promptPinForPage(page);
     } else {
       switchActiveNav(page);
@@ -1696,11 +2436,11 @@
       if (pin) {
         electronApi.invoke('app:verify-pin', { pin }).then(res => {
           if (res?.data?.valid || res?.valid) {
-            unlockedPagesSession.add(page);
+            // Don't add to session - always require PIN
             switchActiveNav(page);
             loadPage(page);
           } else {
-            alert('رمز PIN غير صحيح ❌');
+            if (window.AppToast) window.AppToast.error('رمز PIN غير صحيح ❌');
           }
         });
       }
@@ -1740,7 +2480,7 @@
       try {
         const res = await electronApi.invoke('app:verify-pin', { pin });
         if (res?.data?.valid || res?.valid) {
-          unlockedPagesSession.add(page);
+          // Don't add to session - always require PIN
           window.AppModal.close();
           if (window.AppToast) window.AppToast.success(`تم التحقق بنجاح! تم فتح قسم [${pageTitle}] 🔓`);
           switchActiveNav(page);
@@ -1778,6 +2518,19 @@
     });
   }
 
+  // Toggle Sidebar Collapse/Expand
+  const sidebar = document.getElementById('main-sidebar');
+  const toggleBtn = document.getElementById('btn-toggle-sidebar');
+  if (sidebar && toggleBtn) {
+    toggleBtn.addEventListener('click', () => {
+      sidebar.classList.toggle('collapsed');
+      if (window.AppToast) {
+        const isCollapsed = sidebar.classList.contains('collapsed');
+        window.AppToast.info(isCollapsed ? 'تم طي الشريط الجانبي 📐' : 'تم فتح الشريط الجانبي 📋');
+      }
+    });
+  }
+
   // 4. Quick Actions
   const btnQuickPos = document.getElementById('btn-quick-pos');
   if (btnQuickPos) {
@@ -1787,150 +2540,584 @@
     });
   }
 
-  const btnNewBooking = document.getElementById('btn-new-booking');
-  if (btnNewBooking) {
-    btnNewBooking.addEventListener('click', async () => {
-      // Fetch available units, customers, and policies
-      const [unitsRes, custRes, polRes] = await Promise.all([
-        electronApi.invoke('inventory:get-suit-units'),
-        electronApi.invoke('customers:get-list'),
-        electronApi.invoke('admin:get-policies')
-      ]);
-      const units = (unitsRes.data || []).filter(u => u.status === 'AVAILABLE');
-      const customers = custRes.data || [];
-      const pol = polRes?.data || {};
-      const enableDeposit = pol.enableSecurityDeposit !== false && String(pol.enableSecurityDeposit) !== '0';
-      const defaultDeposit = enableDeposit ? (units[0]?.security_deposit || 2000) : 0;
-      const rentalDays = Number(pol.defaultRentalDays) > 0 ? Number(pol.defaultRentalDays) : 3;
-      const today = new Date().toISOString().slice(0, 10);
-      const calcReturnDate = (pickup) => {
-        if (!pickup) return '';
-        const d = new Date(pickup);
-        d.setDate(d.getDate() + rentalDays);
-        return d.toISOString().slice(0, 10);
-      };
-      const initialReturn = calcReturnDate(today);
+  window._openCreateBookingContractModal = async () => {
+    // 1. Fetch available units, customers, policies, categories, and warehouses
+    const [unitsRes, custRes, polRes, catRes, whRes] = await Promise.all([
+      electronApi.invoke('inventory:get-suit-units'),
+      electronApi.invoke('customers:get-list'),
+      electronApi.invoke('admin:get-policies'),
+      electronApi.invoke('admin:get-categories'),
+      electronApi.invoke('admin:get-warehouses')
+    ]);
 
-      window.AppModal.open({
-        title: '➕ إنشاء عقد وحجز بدلة جديد',
-        contentHtml: `
-          <!-- Customer Selection or Creation -->
-          <div class="form-group">
-            <label class="form-label">العميل</label>
-            <div style="display: flex; gap: 8px;">
-              <select id="modal-bk-cust-select" class="form-control" style="flex: 1;">
-                <option value="NEW">+ عميل جديد (تسجيل سريع الآن)</option>
-                ${customers.map(c => `<option value="${c.id}" data-name="${c.name}" data-phone="${c.phone}">${c.name} (${c.phone})</option>`).join('')}
-              </select>
-            </div>
-          </div>
+    const extractList = (res) => {
+      if (Array.isArray(res)) return res;
+      if (Array.isArray(res?.data)) return res.data;
+      if (Array.isArray(res?.data?.data)) return res.data.data;
+      return [];
+    };
 
-          <div id="modal-bk-new-cust-fields" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; background: var(--bg-app); padding: 10px; border-radius: 6px; border: 1px dashed var(--border-color);">
+    const rawUnits = extractList(unitsRes);
+    const allUnits = rawUnits.filter(u => !u.status || String(u.status).toUpperCase() === 'AVAILABLE');
+    const customers = extractList(custRes);
+    const categories = extractList(catRes);
+    const warehouses = extractList(whRes);
+    const pol = polRes?.data || {};
+    const enableDeposit = pol.enableSecurityDeposit !== false && String(pol.enableSecurityDeposit) !== '0';
+    const rentalDays = Number(pol.defaultRentalDays) > 0 ? Number(pol.defaultRentalDays) : 3;
+    const today = new Date().toISOString().slice(0, 10);
+    const calcReturnDate = (pickup) => {
+      if (!pickup) return '';
+      const d = new Date(pickup);
+      d.setDate(d.getDate() + rentalDays);
+      return d.toISOString().slice(0, 10);
+    };
+    const initialReturn = calcReturnDate(today);
+
+    // Modal state
+    let selectedCustomer = null; // { id, name, phone, code }
+    let selectedContractItems = []; // [{ unit_id, unit_barcode, model_name, category_name, warehouse_name, size_name, color_name, rental_price, deposit_price, tailoring_notes }]
+    let isNewCustomerOpen = false;
+
+    const fmt = (v) => window.UiUtils ? window.UiUtils.formatCurrency(v) : (v + ' ج.م');
+
+    window.AppModal.open({
+      title: '📋 إنشاء عقد وحجز جديد (شامل كافة الأقسام والمخازن: بدل، أحذية، وإضافات)',
+      width: '95vw',
+      height: '95vh',
+      contentHtml: `
+        <div style="display: flex; flex-direction: column; gap: 14px; height: 100%; box-sizing: border-box;">
+          
+          <!-- TOP ROW: Customer & Dates Grid -->
+          <div style="display: grid; grid-template-columns: 1.1fr 1fr; gap: 14px; background: var(--bg-card); padding: 14px; border-radius: 10px; border: 1px solid var(--border-color);">
+            
+            <!-- Customer Section with Live Search -->
             <div>
-              <label class="form-label" style="font-size: 11px;">اسم العميل الجديد</label>
-              <input type="text" id="modal-bk-new-name" class="form-control" placeholder="الاسم ثلاثي...">
-            </div>
-            <div>
-              <label class="form-label" style="font-size: 11px;">رقم الهاتف (11 رقم)</label>
-              <input type="text" id="modal-bk-new-phone" class="form-control" placeholder="01xxxxxxxxx">
-            </div>
-          </div>
-
-          <!-- Suit Unit Selection -->
-          <div class="form-group">
-            <label class="form-label">البدلة المراد حجزها (المتاحة حالياً)</label>
-            <select id="modal-bk-unit-select" class="form-control">
-              ${units.length > 0 ? units.map(u => `<option value="${u.id}" data-model="${u.model_name}" data-price="${u.rental_price}" data-deposit="${u.security_deposit}">[${u.unit_barcode}] ${u.model_name} (${u.size_name}) - إيجار: ${u.rental_price} ج.م ${enableDeposit ? ' | تأمين: ' + u.security_deposit + ' ج.م' : ''}</option>`).join('') : '<option value="">لا توجد بدل متاحة بالمخزن حالياً (أضف بدلة من قسم المخزون)</option>'}
-            </select>
-          </div>
-
-          <!-- Dates -->
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-            <div class="form-group">
-              <label class="form-label">تاريخ استلام البدلة</label>
-              <input type="date" id="modal-bk-pickup" class="form-control" value="${today}">
-            </div>
-            <div class="form-group">
-              <label class="form-label">تاريخ الإرجاع المتوقع</label>
-              <input type="date" id="modal-bk-return" class="form-control" value="${initialReturn}">
-              <small style="color: var(--text-muted); font-size: 11px;">محسوب تلقائياً (${rentalDays} أيام وفق البيانات الأساسية)</small>
-            </div>
-          </div>
-
-          <!-- Financials -->
-          <div style="display: grid; grid-template-columns: ${enableDeposit ? '1fr 1fr 1fr' : '1fr 1fr'}; gap: 10px;">
-            <div class="form-group">
-              <label class="form-label">قيمة الإيجار (ج.م)</label>
-              <input type="number" id="modal-bk-rental" class="form-control" value="${units[0]?.rental_price || 1500}">
-            </div>
-            <div class="form-group">
-              <label class="form-label">العربون المدفوع الآن</label>
-              <input type="number" id="modal-bk-advance" class="form-control" value="500">
-            </div>
-            ${enableDeposit ? `
-              <div class="form-group">
-                <label class="form-label">التأمين المسترد</label>
-                <input type="number" id="modal-bk-deposit" class="form-control" value="${defaultDeposit}">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <label class="form-label" style="font-weight: 700; font-size: 13px; margin: 0;">👤 بيانات العميل</label>
+                <button type="button" id="btn-cbk-toggle-new-cust" style="background: none; border: none; color: var(--color-gold-400); cursor: pointer; font-size: 12px; font-weight: 600; text-decoration: underline;">
+                  + تسجيل عميل جديد سريع
+                </button>
               </div>
-            ` : `
-              <input type="hidden" id="modal-bk-deposit" value="0">
-            `}
+
+              <!-- Customer Live Search Input -->
+              <div id="cbk-search-container" style="position: relative;">
+                <input type="text" id="cbk-cust-search" class="form-control" placeholder="🔍 اكتب اسم العميل أو رقم الهاتف للبحث الفوري..." autocomplete="off" style="font-size: 13px;">
+                <div id="cbk-cust-dropdown" style="display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: var(--bg-surface); border: 1px solid var(--color-gold-500); border-radius: 8px; max-height: 220px; overflow-y: auto; z-index: 1000; box-shadow: 0 10px 30px rgba(0,0,0,0.5);"></div>
+              </div>
+
+              <!-- Selected Customer Card -->
+              <div id="cbk-selected-cust-card" style="display: none; padding: 10px 14px; background: rgba(16, 185, 129, 0.08); border: 1px solid var(--color-success); border-radius: 8px; justify-content: space-between; align-items: center;">
+                <div>
+                  <div style="font-weight: 700; font-size: 14px; color: var(--color-success);">
+                    <span id="cbk-cust-display-name"></span>
+                  </div>
+                  <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+                    <span>📞 <span id="cbk-cust-display-phone"></span></span>
+                    <span style="margin-right: 12px;" id="cbk-cust-display-code"></span>
+                  </div>
+                </div>
+                <button type="button" class="btn-secondary" id="btn-cbk-change-cust" style="padding: 4px 10px; font-size: 11px;">تغيير العميل</button>
+              </div>
+
+              <!-- Inline New Customer Form -->
+              <div id="cbk-new-cust-fields" style="display: none; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; padding: 10px; background: var(--bg-app); border: 1px dashed var(--color-gold-500); border-radius: 8px;">
+                <div>
+                  <label class="form-label" style="font-size: 11px;">الاسم ثلاثي *</label>
+                  <input type="text" id="cbk-new-name" class="form-control" placeholder="اسم العميل...">
+                </div>
+                <div>
+                  <label class="form-label" style="font-size: 11px;">رقم الهاتف (11 رقم) *</label>
+                  <input type="text" id="cbk-new-phone" class="form-control" placeholder="01xxxxxxxxx">
+                </div>
+              </div>
+            </div>
+
+            <!-- Booking Dates (Pickup & Return Only - No Event Date) & Payment Method -->
+            <div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div class="form-group" style="margin: 0;">
+                  <label class="form-label" style="font-size: 12px; font-weight: 600;">تاريخ استلام البدلة 📅</label>
+                  <input type="date" id="cbk-pickup-date" class="form-control" value="${today}" style="font-size: 13px;">
+                </div>
+                <div class="form-group" style="margin: 0;">
+                  <label class="form-label" style="font-size: 12px; font-weight: 600;">تاريخ الإرجاع المتوقع 🔄</label>
+                  <input type="date" id="cbk-return-date" class="form-control" value="${initialReturn}" style="font-size: 13px;">
+                  <small style="color: var(--text-secondary); font-size: 10px; display: block; margin-top: 2px;">محسوب تلقائياً (${rentalDays} أيام وفق البيانات الأساسية)</small>
+                </div>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px;">
+                <div class="form-group" style="margin: 0;">
+                  <label class="form-label" style="font-size: 12px; font-weight: 600;">طريقة دفع العربون 💳</label>
+                  <select id="cbk-payment-method" class="form-control" style="font-size: 12px;">
+                    <option value="CASH">💵 نقدي بالدرج (كاش)</option>
+                    <option value="VISA_CARD">💳 بطاقة دفع إلكتروني (POS)</option>
+                    <option value="VODAFONE_CASH">📱 محفظة إلكترونية (فودافون كاش)</option>
+                    <option value="BANK_TRANSFER">🏦 تحويل بنكي مباشر</option>
+                  </select>
+                </div>
+                <div class="form-group" style="margin: 0;">
+                  <label class="form-label" style="font-size: 12px; font-weight: 600;">ملاحظات عامة على العقد</label>
+                  <input type="text" id="cbk-contract-notes" class="form-control" placeholder="أي تفاصيل خاصة بالعقد..." style="font-size: 12px;">
+                </div>
+              </div>
+            </div>
+
           </div>
-        `,
-        footerHtml: `
-          <button class="btn-secondary" onclick="AppModal.close()">إلغاء</button>
-          <button class="btn-accent-action" id="btn-modal-confirm-booking">تأكيد وحفظ الحجز 📅</button>
-        `,
-        width: '540px'
-      });
 
-      // Customer select toggle
-      const custSelect = document.getElementById('modal-bk-cust-select');
-      const newCustFields = document.getElementById('modal-bk-new-cust-fields');
-      custSelect?.addEventListener('change', () => {
-        if (custSelect.value === 'NEW') {
-          if (newCustFields) newCustFields.style.display = 'grid';
-        } else {
-          if (newCustFields) newCustFields.style.display = 'none';
+          <!-- MIDDLE SECTION: Item Selector across all Departments & Warehouses -->
+          <div style="background: var(--bg-card); padding: 14px; border-radius: 10px; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 10px; flex: 1;">
+            
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-weight: 700; font-size: 14px; color: var(--text-primary);">
+                🏬 اختيار وإضافة القطع من المخازن والأقسام (بدل، أحذية، قمصان، إكسسوارات...)
+              </span>
+              <span style="font-size: 12px; color: var(--text-secondary);">
+                المتاح للمطابقة: <strong id="cbk-filtered-count" style="color: var(--color-gold-400);">0</strong> من إجمالي <strong id="cbk-total-count">${allUnits.length}</strong> قطعة بالمخازن
+              </span>
+            </div>
+
+            <!-- Filters & Unit Picker Toolbar -->
+            <div style="display: grid; grid-template-columns: 180px 180px 180px 1fr auto; gap: 8px; align-items: center; background: var(--bg-app); padding: 8px 12px; border-radius: 8px;">
+              <div>
+                <label style="font-size: 11px; color: var(--text-secondary); display: block; margin-bottom: 2px;">القسم / التصنيف:</label>
+                <select id="cbk-filter-cat" class="form-control" style="font-size: 12px; padding: 5px 8px;">
+                  <option value="ALL">📦 كل الأقسام</option>
+                  ${categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}
+                </select>
+              </div>
+
+              <div>
+                <label style="font-size: 11px; color: var(--text-secondary); display: block; margin-bottom: 2px;">المخزن:</label>
+                <select id="cbk-filter-wh" class="form-control" style="font-size: 12px; padding: 5px 8px;">
+                  <option value="ALL">🏬 كل المخازن</option>
+                  ${warehouses.map(w => `<option value="${w.id}">${w.name}</option>`).join('')}
+                </select>
+              </div>
+
+              <div>
+                <label style="font-size: 11px; color: var(--text-secondary); display: block; margin-bottom: 2px;">بحث بالباركود / الاسم:</label>
+                <input type="text" id="cbk-filter-search" class="form-control" placeholder="باركود أو موديل..." style="font-size: 12px; padding: 5px 8px;">
+              </div>
+
+              <div>
+                <label style="font-size: 11px; color: var(--text-secondary); display: block; margin-bottom: 2px;">القطعة المتاحة:</label>
+                <select id="cbk-unit-select" class="form-control" style="font-size: 12px; padding: 5px 8px; font-weight: 600;">
+                  <!-- Options populated dynamically -->
+                </select>
+              </div>
+
+              <div style="align-self: flex-end;">
+                <button type="button" class="btn-accent-action" id="btn-cbk-add-item" style="padding: 7px 16px; font-size: 12px; font-weight: 700; white-space: nowrap;">
+                  ➕ إضافة للعقد
+                </button>
+              </div>
+            </div>
+
+            <!-- Selected Contract Items Table -->
+            <div style="flex: 1; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; min-height: 180px;">
+              <table class="app-table" style="margin: 0; width: 100%;">
+                <thead style="position: sticky; top: 0; background: var(--bg-surface); z-index: 10;">
+                  <tr>
+                    <th style="width: 35px; text-align: center;">#</th>
+                    <th>القسم</th>
+                    <th>القطعة / الموديل</th>
+                    <th>المقاس واللون</th>
+                    <th>المخزن الحالي</th>
+                    <th>الباركود</th>
+                    <th style="width: 120px;">سعر الإيجار</th>
+                    <th style="width: 120px;">التأمين المسترد</th>
+                    <th>ملاحظات التجهيز / الترزي</th>
+                    <th style="width: 50px; text-align: center;">حذف</th>
+                  </tr>
+                </thead>
+                <tbody id="cbk-items-tbody">
+                  <!-- Rendered dynamically -->
+                </tbody>
+              </table>
+            </div>
+
+          </div>
+
+          <!-- BOTTOM SECTION: Comprehensive Financial Summary Bar -->
+          <div style="background: var(--bg-card); padding: 12px 18px; border-radius: 10px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+            
+            <div style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
+              <div>
+                <span style="font-size: 11px; color: var(--text-secondary); display: block;">القطع المضافة:</span>
+                <strong style="font-size: 16px;" id="cbk-stat-items-count">0 قطعة</strong>
+              </div>
+              <div style="width: 1px; height: 32px; background: var(--border-color);"></div>
+              <div>
+                <span style="font-size: 11px; color: var(--text-secondary); display: block;">إجمالي الإيجار:</span>
+                <strong style="font-size: 16px; color: var(--text-primary);" id="cbk-stat-total-rent">0 ج.م</strong>
+              </div>
+              <div>
+                <span style="font-size: 11px; color: var(--text-secondary); display: block;">إجمالي التأمين:</span>
+                <strong style="font-size: 16px; color: var(--color-warning);" id="cbk-stat-total-deposit">0 ج.م</strong>
+              </div>
+              <div>
+                <span style="font-size: 11px; color: var(--text-secondary); display: block;">الخصم الممنوح:</span>
+                <input type="number" id="cbk-input-discount" value="0" min="0" class="form-control" style="width: 90px; height: 32px; font-size: 13px; font-weight: 700; padding: 4px 8px;">
+              </div>
+              <div style="width: 1px; height: 32px; background: var(--border-color);"></div>
+              <div>
+                <span style="font-size: 11px; color: var(--color-gold-400); display: block; font-weight: 600;">الصافي النهائي:</span>
+                <strong style="font-size: 18px; color: var(--color-gold-400); font-weight: 800;" id="cbk-stat-final-amount">0 ج.م</strong>
+              </div>
+              <div>
+                <span style="font-size: 11px; color: var(--color-success); display: block; font-weight: 600;">العربون المدفوع الآن:</span>
+                <input type="number" id="cbk-input-advance" value="0" min="0" class="form-control" style="width: 100px; height: 32px; font-size: 13px; font-weight: 800; color: var(--color-success); padding: 4px 8px;">
+              </div>
+              <div>
+                <span style="font-size: 11px; color: var(--color-danger); display: block; font-weight: 600;">المتبقي عند الاستلام:</span>
+                <strong style="font-size: 18px; color: var(--color-danger); font-weight: 800;" id="cbk-stat-remaining">0 ج.م</strong>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      `,
+      footerHtml: `
+        <button class="btn-secondary" onclick="AppModal.close()">إلغاء</button>
+        <button class="btn-accent-action" id="btn-cbk-confirm-contract" style="padding: 10px 24px; font-size: 14px; font-weight: 700;">
+          📄 تأكيد وحفظ العقد بالكامل 📅
+        </button>
+      `
+    });
+
+    // =========================================================================
+    // DOM Elements & Event Handlers inside Contract Modal
+    // =========================================================================
+
+    const custSearchInput = document.getElementById('cbk-cust-search');
+    const custDropdown = document.getElementById('cbk-cust-dropdown');
+    const selectedCustCard = document.getElementById('cbk-selected-cust-card');
+    const custSearchContainer = document.getElementById('cbk-search-container');
+    const custDisplayName = document.getElementById('cbk-cust-display-name');
+    const custDisplayPhone = document.getElementById('cbk-cust-display-phone');
+    const custDisplayCode = document.getElementById('cbk-cust-display-code');
+    const btnChangeCust = document.getElementById('btn-cbk-change-cust');
+    const btnToggleNewCust = document.getElementById('btn-cbk-toggle-new-cust');
+    const newCustFields = document.getElementById('cbk-new-cust-fields');
+
+    const pickupInput = document.getElementById('cbk-pickup-date');
+    const returnInput = document.getElementById('cbk-return-date');
+    const paymentMethodSelect = document.getElementById('cbk-payment-method');
+    const contractNotesInput = document.getElementById('cbk-contract-notes');
+
+    const filterCat = document.getElementById('cbk-filter-cat');
+    const filterWh = document.getElementById('cbk-filter-wh');
+    const filterSearch = document.getElementById('cbk-filter-search');
+    const unitSelect = document.getElementById('cbk-unit-select');
+    const btnAddItem = document.getElementById('btn-cbk-add-item');
+    const itemsTbody = document.getElementById('cbk-items-tbody');
+
+    const filteredCountEl = document.getElementById('cbk-filtered-count');
+    const statItemsCount = document.getElementById('cbk-stat-items-count');
+    const statTotalRent = document.getElementById('cbk-stat-total-rent');
+    const statTotalDeposit = document.getElementById('cbk-stat-total-deposit');
+    const inputDiscount = document.getElementById('cbk-input-discount');
+    const statFinalAmount = document.getElementById('cbk-stat-final-amount');
+    const inputAdvance = document.getElementById('cbk-input-advance');
+    const statRemaining = document.getElementById('cbk-stat-remaining');
+    const btnConfirmContract = document.getElementById('btn-cbk-confirm-contract');
+
+    // 1. Customer Live Search Logic
+    const renderCustDropdown = (query = '') => {
+      const q = query.trim().toLowerCase();
+      let matches = customers;
+      if (q) {
+        matches = customers.filter(c => 
+          (c.name && c.name.toLowerCase().includes(q)) ||
+          (c.phone && c.phone.includes(q)) ||
+          (c.code && c.code.toLowerCase().includes(q))
+        );
+      }
+      if (matches.length === 0) {
+        custDropdown.innerHTML = '<div style="padding: 10px; color: var(--text-secondary); font-size: 12px; text-align: center;">لم يتم العثور على عملاء مطابقين. يمكنك الضغط على تسجيل عميل جديد أعلاه.</div>';
+      } else {
+        custDropdown.innerHTML = matches.slice(0, 30).map(c => `
+          <div class="cbk-cust-item" data-id="${c.id}" style="padding: 8px 12px; cursor: pointer; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; transition: background 0.15s;">
+            <div>
+              <strong style="font-size: 13px; color: var(--text-primary);">${c.name}</strong>
+              <div style="font-size: 11px; color: var(--text-secondary);">📞 ${c.phone} ${c.address ? ' • ' + c.address : ''}</div>
+            </div>
+            <span class="badge" style="background: rgba(212,175,55,0.15); color: var(--color-gold-400); font-size: 11px;">${c.code || '#CUST'}</span>
+          </div>
+        `).join('');
+      }
+      custDropdown.style.display = 'block';
+
+      // Attach click events
+      custDropdown.querySelectorAll('.cbk-cust-item').forEach(el => {
+        el.addEventListener('click', () => {
+          const cid = Number(el.getAttribute('data-id'));
+          const found = customers.find(x => x.id === cid);
+          if (found) selectCustomer(found);
+        });
+        el.addEventListener('mouseenter', () => { el.style.background = 'var(--bg-card-hover)'; });
+        el.addEventListener('mouseleave', () => { el.style.background = 'transparent'; });
+      });
+    };
+
+    const selectCustomer = (c) => {
+      selectedCustomer = c;
+      isNewCustomerOpen = false;
+      if (newCustFields) newCustFields.style.display = 'none';
+      if (custSearchContainer) custSearchContainer.style.display = 'none';
+      if (custDisplayName) custDisplayName.textContent = c.name;
+      if (custDisplayPhone) custDisplayPhone.textContent = c.phone;
+      if (custDisplayCode) custDisplayCode.textContent = c.code ? `[${c.code}]` : '';
+      if (selectedCustCard) selectedCustCard.style.display = 'flex';
+      custDropdown.style.display = 'none';
+    };
+
+    custSearchInput?.addEventListener('input', (e) => {
+      renderCustDropdown(e.target.value);
+    });
+
+    custSearchInput?.addEventListener('focus', () => {
+      renderCustDropdown(custSearchInput.value);
+    });
+
+    btnChangeCust?.addEventListener('click', () => {
+      selectedCustomer = null;
+      if (selectedCustCard) selectedCustCard.style.display = 'none';
+      if (custSearchContainer) custSearchContainer.style.display = 'block';
+      if (custSearchInput) { custSearchInput.value = ''; custSearchInput.focus(); }
+    });
+
+    btnToggleNewCust?.addEventListener('click', () => {
+      isNewCustomerOpen = !isNewCustomerOpen;
+      if (newCustFields) newCustFields.style.display = isNewCustomerOpen ? 'grid' : 'none';
+      if (isNewCustomerOpen) {
+        selectedCustomer = null;
+        if (selectedCustCard) selectedCustCard.style.display = 'none';
+        if (custSearchContainer) custSearchContainer.style.display = 'none';
+        btnToggleNewCust.textContent = '🔍 الرجوع للبحث عن عميل موجود';
+      } else {
+        if (custSearchContainer) custSearchContainer.style.display = 'block';
+        btnToggleNewCust.textContent = '+ تسجيل عميل جديد سريع';
+      }
+    });
+
+    // Close dropdown on outside click
+    document.addEventListener('click', (e) => {
+      if (custDropdown && !custDropdown.contains(e.target) && e.target !== custSearchInput) {
+        custDropdown.style.display = 'none';
+      }
+    });
+
+    // 2. Dates Calculation
+    pickupInput?.addEventListener('change', () => {
+      if (pickupInput.value && returnInput) {
+        returnInput.value = calcReturnDate(pickupInput.value);
+      }
+    });
+
+    // 3. Populate Unit Picker based on Filters (Robust ID and Name Matching)
+    const updateUnitPicker = () => {
+      const selectedCatId = filterCat?.value || 'ALL';
+      const selectedWhId = filterWh?.value || 'ALL';
+      const term = (filterSearch?.value || '').trim().toLowerCase();
+
+      // Exclude items already added to contract
+      const addedIds = new Set(selectedContractItems.map(it => it.unit_id));
+
+      const filtered = allUnits.filter(u => {
+        if (addedIds.has(u.id)) return false;
+
+        // Category matching: by ID or by Name
+        if (selectedCatId !== 'ALL') {
+          const catObj = categories.find(c => String(c.id) === String(selectedCatId));
+          const catName = catObj ? catObj.name : null;
+          const matchCatId = u.category_id !== undefined && u.category_id !== null && String(u.category_id) === String(selectedCatId);
+          const matchCatName = catName && u.category_name && (u.category_name === catName || u.category_name.includes(catName));
+          if (!matchCatId && !matchCatName) return false;
         }
-      });
 
-      // Unit select price update
-      const unitSelect = document.getElementById('modal-bk-unit-select');
-      unitSelect?.addEventListener('change', () => {
-        const opt = unitSelect.selectedOptions[0];
-        if (opt) {
-          const p = opt.getAttribute('data-price');
-          const d = opt.getAttribute('data-deposit');
-          const rentInput = document.getElementById('modal-bk-rental');
-          const depInput = document.getElementById('modal-bk-deposit');
-          if (rentInput && p) rentInput.value = p;
-          if (depInput && d && enableDeposit) depInput.value = d;
+        // Warehouse matching: by ID or by Name
+        if (selectedWhId !== 'ALL') {
+          const whObj = warehouses.find(w => String(w.id) === String(selectedWhId));
+          const whName = whObj ? whObj.name : null;
+          const matchWhId = u.warehouse_id !== undefined && u.warehouse_id !== null && String(u.warehouse_id) === String(selectedWhId);
+          const matchWhName = whName && u.warehouse_name && (u.warehouse_name === whName || u.warehouse_name.includes(whName));
+          if (!matchWhId && !matchWhName) return false;
         }
-      });
 
-      // Auto-update return date when pickup date changes
-      const pickupInput = document.getElementById('modal-bk-pickup');
-      const returnInput = document.getElementById('modal-bk-return');
-      pickupInput?.addEventListener('change', () => {
-        if (pickupInput.value && returnInput) {
-          returnInput.value = calcReturnDate(pickupInput.value);
+        // Search text matching (barcode, model name, size, category)
+        if (term) {
+          const hay = `${u.unit_barcode || ''} ${u.model_name || ''} ${u.category_name || ''} ${u.size_name || ''} ${u.warehouse_name || ''}`.toLowerCase();
+          if (!hay.includes(term)) return false;
         }
+
+        return true;
       });
 
-      // Submit booking
-      document.getElementById('btn-modal-confirm-booking')?.addEventListener('click', async () => {
-        let custName = '';
-        let custPhone = '';
-        let custId = null;
+      if (filteredCountEl) filteredCountEl.textContent = filtered.length;
 
-        if (custSelect?.value === 'NEW') {
-          custName = document.getElementById('modal-bk-new-name')?.value.trim();
-          custPhone = document.getElementById('modal-bk-new-phone')?.value.trim();
-          if (!custName || !custPhone) {
-            AppToast.error('يرجى إدخال اسم العميل الجديد ورقم هاتفه.');
-            return;
-          }
+      if (filtered.length === 0) {
+        unitSelect.innerHTML = '<option value="">-- لا توجد قطع متاحة تطابق الفلاتر المحددة --</option>';
+        btnAddItem.disabled = true;
+      } else {
+        unitSelect.innerHTML = filtered.map(u => {
+          const catName = u.category_name || 'بدل';
+          const whName = u.warehouse_name || 'المخزن الرئيسي';
+          const sizeName = u.size_name ? ` (${u.size_name})` : '';
+          const colName = u.color_name ? ` - ${u.color_name}` : '';
+          const depText = enableDeposit ? ` | تأمين: ${u.security_deposit || 0} ج.م` : '';
+          return `<option value="${u.id}">[${catName}] ${u.model_name}${sizeName}${colName} | المخزن: ${whName} | باركود: ${u.unit_barcode} | إيجار: ${u.rental_price} ج.م${depText}</option>`;
+        }).join('');
+        btnAddItem.disabled = false;
+      }
+    };
+
+    filterCat?.addEventListener('change', updateUnitPicker);
+    filterWh?.addEventListener('change', updateUnitPicker);
+    filterSearch?.addEventListener('input', updateUnitPicker);
+    updateUnitPicker();
+
+    // 4. Contract Items Table & Financial Calculations
+    const recalculateTotals = () => {
+      let totalRent = 0;
+      let totalDep = 0;
+
+      selectedContractItems.forEach(it => {
+        totalRent += Number(it.rental_price) || 0;
+        totalDep += Number(it.deposit_price) || 0;
+      });
+
+      const disc = Math.max(0, Number(inputDiscount?.value) || 0);
+      const finalAmt = Math.max(0, totalRent - disc);
+      const adv = Math.max(0, Number(inputAdvance?.value) || 0);
+      const rem = Math.max(0, finalAmt - adv);
+
+      if (statItemsCount) statItemsCount.textContent = `${selectedContractItems.length} قطعة`;
+      if (statTotalRent) statTotalRent.textContent = fmt(totalRent);
+      if (statTotalDeposit) statTotalDeposit.textContent = fmt(totalDep);
+      if (statFinalAmount) statFinalAmount.textContent = fmt(finalAmt);
+      if (statRemaining) statRemaining.textContent = fmt(rem);
+    };
+
+    const renderItemsTable = () => {
+      if (selectedContractItems.length === 0) {
+        itemsTbody.innerHTML = `
+          <tr>
+            <td colspan="10" style="text-align: center; padding: 30px; color: var(--text-secondary); font-size: 13px;">
+              📦 لم يتم إضافة أي قطع للعقد بعد. اختر القسم والمخزن أعلاه ثم اضغط على "➕ إضافة للعقد".
+            </td>
+          </tr>
+        `;
+      } else {
+        itemsTbody.innerHTML = selectedContractItems.map((it, idx) => `
+          <tr data-index="${idx}">
+            <td style="text-align: center; font-weight: 700; color: var(--text-secondary);">${idx + 1}</td>
+            <td><span class="badge" style="background: rgba(212,175,55,0.15); color: var(--color-gold-400); font-weight: 600;">${it.category_name || 'بدل'}</span></td>
+            <td><strong style="color: var(--text-primary);">${it.model_name}</strong></td>
+            <td style="font-size: 12px;">${it.size_name || '-'}${it.color_name ? ' / ' + it.color_name : ''}</td>
+            <td><span class="badge" style="background: rgba(59,130,246,0.12); color: #3B82F6;">${it.warehouse_name || 'الرئيسي'}</span></td>
+            <td><code style="font-size: 11px;">${it.unit_barcode}</code></td>
+            <td>
+              <input type="number" class="form-control cbk-row-rent" value="${it.rental_price}" min="0" style="width: 100px; padding: 4px 6px; font-weight: 700;">
+            </td>
+            <td>
+              <input type="number" class="form-control cbk-row-deposit" value="${it.deposit_price}" min="0" style="width: 100px; padding: 4px 6px; font-weight: 700;" ${!enableDeposit ? 'disabled' : ''}>
+            </td>
+            <td>
+              <input type="text" class="form-control cbk-row-notes" value="${it.tailoring_notes || ''}" placeholder="ملاحظات الترزي / التجهيز..." style="font-size: 12px; padding: 4px 8px;">
+            </td>
+            <td style="text-align: center;">
+              <button type="button" class="btn-danger cbk-row-delete" style="padding: 4px 8px; font-size: 12px; border-radius: 4px; cursor: pointer;" title="حذف من العقد">🗑️</button>
+            </td>
+          </tr>
+        `).join('');
+
+        // Wire inputs inside table
+        itemsTbody.querySelectorAll('.cbk-row-rent').forEach((inp, idx) => {
+          inp.addEventListener('input', () => {
+            selectedContractItems[idx].rental_price = Number(inp.value) || 0;
+            recalculateTotals();
+          });
+        });
+        itemsTbody.querySelectorAll('.cbk-row-deposit').forEach((inp, idx) => {
+          inp.addEventListener('input', () => {
+            selectedContractItems[idx].deposit_price = Number(inp.value) || 0;
+            recalculateTotals();
+          });
+        });
+        itemsTbody.querySelectorAll('.cbk-row-notes').forEach((inp, idx) => {
+          inp.addEventListener('input', () => {
+            selectedContractItems[idx].tailoring_notes = inp.value;
+          });
+        });
+        itemsTbody.querySelectorAll('.cbk-row-delete').forEach((btn, idx) => {
+          btn.addEventListener('click', () => {
+            selectedContractItems.splice(idx, 1);
+            renderItemsTable();
+            updateUnitPicker();
+            recalculateTotals();
+          });
+        });
+      }
+      recalculateTotals();
+    };
+
+    btnAddItem?.addEventListener('click', () => {
+      const uid = Number(unitSelect?.value);
+      if (!uid) {
+        if (window.AppToast) window.AppToast.warning('يرجى اختيار قطعة متاحة من القائمة أولاً.');
+        return;
+      }
+      const unit = allUnits.find(u => u.id === uid);
+      if (!unit) {
+        if (window.AppToast) window.AppToast.warning('القطعة المختارة غير متوفرة.');
+        return;
+      }
+
+      selectedContractItems.push({
+        unit_id: unit.id,
+        unit_barcode: unit.unit_barcode,
+        model_name: unit.model_name,
+        category_name: unit.category_name || 'بدل',
+        warehouse_name: unit.warehouse_name || 'المخزن الرئيسي',
+        size_name: unit.size_name || '',
+        color_name: unit.color_name || '',
+        rental_price: Number(unit.rental_price) || 0,
+        deposit_price: enableDeposit ? (Number(unit.security_deposit) || 0) : 0,
+        tailoring_notes: ''
+      });
+
+      renderItemsTable();
+      updateUnitPicker();
+    });
+
+    inputDiscount?.addEventListener('input', recalculateTotals);
+    inputAdvance?.addEventListener('input', recalculateTotals);
+
+    // Initial render of empty table
+    renderItemsTable();
+
+    // 5. Final Confirmation & Submission
+    btnConfirmContract?.addEventListener('click', async () => {
+      let custId = null;
+      let custName = '';
+      let custPhone = '';
+
+      if (isNewCustomerOpen) {
+        const nameInput = document.getElementById('cbk-new-name');
+        const phoneInput = document.getElementById('cbk-new-phone');
+        custName = nameInput?.value.trim();
+        custPhone = phoneInput?.value.trim();
+
+        if (!custName || !custPhone) {
+          AppToast.error('يرجى إدخال اسم العميل الجديد ورقم الهاتف.');
+          return;
+        }
+
+        try {
           const cRes = await electronApi.invoke('customers:create', { name: custName, phone: custPhone });
           if (!cRes || !cRes.success || !cRes.data || !cRes.data.id) {
             const errMsg = cRes?.error?.message || cRes?.error || 'فشل في حفظ بيانات العميل الجديد.';
@@ -1940,60 +3127,98 @@
           custId = cRes.data.id;
           custName = cRes.data.name || custName;
           custPhone = cRes.data.phone || custPhone;
-        } else {
-          const opt = custSelect?.selectedOptions[0];
-          custId = Number(custSelect?.value);
-          custName = opt?.getAttribute('data-name') || '';
-          custPhone = opt?.getAttribute('data-phone') || '';
-        }
-
-        if (!custId) {
-          AppToast.error('يرجى اختيار العميل أو إدخال بيانات عميل جديد صالح.');
+        } catch (e) {
+          AppToast.error('خطأ أثناء إنشاء العميل: ' + e.message);
           return;
         }
+      } else if (selectedCustomer) {
+        custId = selectedCustomer.id;
+        custName = selectedCustomer.name;
+        custPhone = selectedCustomer.phone;
+      } else {
+        AppToast.error('يرجى اختيار العميل بالبحث أو تسجيل عميل جديد.');
+        return;
+      }
 
-        const unitOpt = unitSelect?.selectedOptions[0];
-        const unitId = Number(unitSelect?.value) || null;
-        const suitName = unitOpt?.getAttribute('data-model') || 'بدلة رجالي فاخرة';
-        const pickupDate = document.getElementById('modal-bk-pickup')?.value;
-        const returnDate = document.getElementById('modal-bk-return')?.value;
-        const rentalPrice = Number(document.getElementById('modal-bk-rental')?.value) || 0;
-        const advance = Number(document.getElementById('modal-bk-advance')?.value) || 0;
-        const deposit = Number(document.getElementById('modal-bk-deposit')?.value) || 0;
+      if (selectedContractItems.length === 0) {
+        AppToast.error('يجب إضافة قطعة واحدة على الأقل من المخازن لإتمام العقد.');
+        return;
+      }
 
-        const payload = {
-          customer_id: custId,
-          customer_name: custName,
-          customer_phone: custPhone,
-          suit_unit_id: unitId,
-          items: unitId ? [{ suit_unit_id: unitId, rental_price: rentalPrice, security_deposit: deposit }] : [],
-          pickup_date: pickupDate,
-          return_due_date: returnDate,
-          event_date: pickupDate,
-          final_amount: rentalPrice,
-          paid_advance: advance,
-          paid_amount: advance,
-          total_deposit_amount: deposit,
-          deposit_paid: 0,
-          items_summary: suitName
-        };
+      const pDate = pickupInput?.value;
+      const rDate = returnInput?.value;
 
-        try {
-          const res = await electronApi.invoke('booking:create', payload);
-          AppToast.success(`تم حفظ الحجز بنجاح! رقم الحجز: #${res?.data?.bookingNumber || 'BK-1001'} 📅`);
-          AppModal.close();
-          const curPage = window.location.hash.replace('#', '');
-          if (curPage === 'bookings') renderBookingsPage();
-          else if (curPage === 'dashboard' || !curPage) renderDashboard();
-          else if (curPage === 'suits') renderSuitsPage();
-        } catch (err) {
-          AppToast.error(err.message || 'فشل حفظ الحجز');
+      if (!pDate || !rDate) {
+        AppToast.error('يرجى تحديد تاريخ استلام البدلة وتاريخ الإرجاع المتوقع.');
+        return;
+      }
+
+      const totalRent = selectedContractItems.reduce((s, it) => s + (Number(it.rental_price) || 0), 0);
+      const totalDep = selectedContractItems.reduce((s, it) => s + (Number(it.deposit_price) || 0), 0);
+      const disc = Math.max(0, Number(inputDiscount?.value) || 0);
+      const finalAmt = Math.max(0, totalRent - disc);
+      const adv = Math.max(0, Number(inputAdvance?.value) || 0);
+      const payMethod = paymentMethodSelect?.value || 'CASH';
+      const cNotes = contractNotesInput?.value?.trim() || '';
+
+      const itemsSummary = selectedContractItems.map(it => `${it.model_name} (${it.category_name})`).join(' + ');
+
+      const payload = {
+        customer_id: custId,
+        customer_name: custName,
+        customer_phone: custPhone,
+        suit_unit_id: selectedContractItems[0]?.unit_id,
+        items: selectedContractItems.map(it => ({
+          suit_unit_id: it.unit_id,
+          item_type: it.category_name || 'SUIT',
+          rental_price: it.rental_price,
+          deposit_price: it.deposit_price,
+          security_deposit: it.deposit_price,
+          tailoring_notes: it.tailoring_notes
+        })),
+        pickup_date: pDate,
+        return_due_date: rDate,
+        event_date: pDate,
+        discount_amount: disc,
+        final_amount: finalAmt,
+        paid_advance: adv,
+        paid_amount: adv,
+        total_deposit_amount: totalDep,
+        deposit_paid: 0,
+        items_summary: itemsSummary,
+        payment_method: payMethod,
+        notes: cNotes
+      };
+
+      try {
+        const res = await electronApi.invoke('booking:create', payload);
+        if (res && res.success === false) {
+          throw new Error(res.error?.message || res.error || 'فشل في حفظ العقد');
         }
-      });
-    });
-  }
 
-  // 5. Page Loading Dispatcher
+        const bkNumber = res?.data?.bookingNumber || res?.bookingNumber || 'BK-SUCCESS';
+        AppToast.success(`تم حفظ العقد بنجاح! رقم الحجز: #${bkNumber} 📅`);
+        AppModal.close();
+
+        const curPage = window.location.hash.replace('#', '');
+        if (curPage === 'tasks') renderTasksPage();
+        else if (curPage === 'dashboard' || !curPage) renderDashboard();
+        else if (curPage === 'suits') renderSuitsPage();
+        else if (curPage === 'bookings') renderBookingsPage();
+        else if (curPage === 'finance') renderFinancePage();
+      } catch (err) {
+        AppToast.error(err.message || 'فشل حفظ الحجز');
+      }
+    });
+  };
+  // Wire new booking button to contract modal
+  const btnNewBooking = document.getElementById('btn-new-booking');
+  if (btnNewBooking) {
+    btnNewBooking.addEventListener('click', window._openCreateBookingContractModal);
+  }
+  window._openCreateBookingModal = window._openCreateBookingContractModal;
+
+// 5. Page Loading Dispatcher
   function loadPage(page) {
     if (!pageContent) return;
     if (page === 'dashboard') {
@@ -2011,8 +3236,6 @@
     } else if (page.startsWith('cat_')) {
       const catCode = page.replace('cat_', '');
       renderDynamicCategoryPage(catCode);
-    } else if (page === 'bookings') {
-      renderBookingsPage();
     } else if (page === 'customers') {
       renderCustomersPage();
     } else if (page === 'pos') {
@@ -2162,6 +3385,7 @@
         <button class="admin-tab-btn ${activeAdminTab === 'warehouses' ? 'active' : ''}" data-tab="warehouses">🏬 المخازن والفروع</button>
         <button class="admin-tab-btn ${activeAdminTab === 'sizes' ? 'active' : ''}" data-tab="sizes">📏 المقاسات</button>
         <button class="admin-tab-btn ${activeAdminTab === 'colors' ? 'active' : ''}" data-tab="colors">🎨 الألوان</button>
+        <button class="admin-tab-btn ${activeAdminTab === 'expense-categories' ? 'active' : ''}" data-tab="expense-categories">💸 تصنيفات المصروفات</button>
         <button class="admin-tab-btn ${activeAdminTab === 'policies' ? 'active' : ''}" data-tab="policies">📜 سياسات التأجير</button>
       </div>
 
@@ -2394,6 +3618,46 @@
         }
       };
 
+    } else if (tab === 'expense-categories') {
+      window.AppModal.open({
+        title: '➕ إضافة تصنيف مصروف جديد',
+        contentHtml: `
+          <div class="form-group">
+            <label class="form-label">اسم التصنيف <span style="color:var(--color-danger);">*</span></label>
+            <input type="text" id="new-expcat-name" class="form-control" placeholder="مثال: صيانة ودراي كلين، فواتير كهرباء، نثرية وبوفيه...">
+          </div>
+          <div class="form-group">
+            <label class="form-label">الوصف / البيان (اختياري)</label>
+            <textarea id="new-expcat-desc" class="form-control" rows="2" placeholder="وصف طبيعة هذا المصروف أو بنوده التابعة..."></textarea>
+          </div>
+        `,
+        footerHtml: `
+          <button class="btn-secondary" onclick="AppModal.close()">إلغاء</button>
+          <button class="btn-accent-action" onclick="window._saveNewExpenseCategory()">حفظ التصنيف 🚀</button>
+        `,
+        width: '450px'
+      });
+
+      window._saveNewExpenseCategory = async () => {
+        const name = document.getElementById('new-expcat-name')?.value?.trim();
+        const description = document.getElementById('new-expcat-desc')?.value?.trim();
+        if (!name) {
+          AppToast.error('يرجى إدخال اسم تصنيف المصروف.');
+          return;
+        }
+        try {
+          const res = await electronApi.invoke('admin:create-expense-category', { name, description });
+          if (res && res.success === false) {
+            AppToast.error(res.error?.message || 'فشل في إضافة التصنيف');
+            return;
+          }
+          AppToast.success(`تم إنشاء تصنيف المصروف [${name}] بنجاح! 💸`);
+          AppModal.close();
+          loadAdminTabContent('expense-categories');
+        } catch (err) {
+          AppToast.error(err.message || 'فشل في إضافة التصنيف');
+        }
+      };
     } else if (tab === 'sizes') {
       const res = await electronApi.invoke('admin:get-sizes');
       const sizes = (res.data || []).filter(s => s.is_active !== 0);
@@ -2593,6 +3857,138 @@
         }
       };
 
+    } else if (tab === 'expense-categories') {
+      let expCats = [];
+      try {
+        const res = await electronApi.invoke('admin:get-expense-categories', { onlyActive: false });
+        expCats = (res && res.data) ? res.data : (Array.isArray(res) ? res : []);
+      } catch (err) {
+        console.error('Error loading expense categories:', err);
+        expCats = [];
+      }
+      const fmt = window.UiUtils ? window.UiUtils.formatCurrency : (v => v + ' ج.م');
+
+      container.innerHTML = `
+        <div class="table-card">
+          <div class="table-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <div>
+              <h3>💸 تصنيفات وبنود المصروفات المعتمدة (${expCats.length} تصنيف)</h3>
+              <p style="color: var(--text-secondary); font-size: 12px; margin-top: 3px;">تحديد وإدارة بنود الصرف المعتمدة (مثل: إيجار المحل، فواتير كهرباء، صيانة ودراي كلين، بوفيه، نقل، إلخ) لحسابات الخزينة.</p>
+            </div>
+            <button class="btn-accent-action" style="padding: 6px 14px; font-size: 13px;" onclick="window._openAddExpenseCategoryModal()">+ إضافة تصنيف مصروف جديد</button>
+          </div>
+          <table class="app-table">
+            <thead>
+              <tr>
+                <th style="width: 60px;">#</th>
+                <th>اسم التصنيف</th>
+                <th>البيان / الوصف</th>
+                <th style="text-align: center;">عدد السندات</th>
+                <th style="text-align: center;">إجمالي المنصرف</th>
+                <th style="text-align: center;">الحالة</th>
+                <th style="text-align: center; width: 170px;">الإجراءات</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${expCats.length === 0 ? `
+                <tr><td colspan="7" style="text-align: center; padding: 24px; color: var(--text-muted);">لا توجد تصنيفات مصروفات مضافة بعد.</td></tr>
+              ` : expCats.map(ec => `
+                <tr>
+                  <td><code>${ec.id}</code></td>
+                  <td><strong>${ec.name}</strong></td>
+                  <td style="color: var(--text-secondary); font-size: 12px;">${ec.description || '—'}</td>
+                  <td style="text-align: center;"><span class="badge ${ec.expense_count > 0 ? 'badge-info' : 'badge-neutral'}">${ec.expense_count || 0} سند</span></td>
+                  <td style="text-align: center; font-weight: 700; color: var(--color-danger);">${fmt(ec.total_spent || 0)}</td>
+                  <td style="text-align: center;"><span class="badge ${ec.is_active ? 'badge-success' : 'badge-danger'}">${ec.is_active ? 'نشط' : 'معطل'}</span></td>
+                  <td style="text-align: center;">
+                    <div style="display: flex; gap: 6px; justify-content: center;">
+                      <button class="btn-secondary" style="padding: 4px 10px; font-size: 11px;" onclick="window._openEditExpenseCategoryModal(${ec.id})">✏️ تعديل</button>
+                      <button class="btn-secondary" style="padding: 4px 8px; font-size: 11px; color: var(--color-danger);" onclick="window._deleteExpenseCategory(${ec.id}, '${ec.name.replace(/'/g, "\\'")}', ${ec.expense_count || 0})">🗑️ ${ec.expense_count > 0 ? 'تعطيل' : 'حذف'}</button>
+                    </div>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+
+      window._openAddExpenseCategoryModal = () => openAddAdminModal('expense-categories');
+
+      window._openEditExpenseCategoryModal = (id) => {
+        const cat = expCats.find(c => c.id === id);
+        if (!cat) return;
+        window.AppModal.open({
+          title: `✏️ تعديل تصنيف المصروف [${cat.name}]`,
+          contentHtml: `
+            <div class="form-group">
+              <label class="form-label">اسم التصنيف <span style="color:var(--color-danger);">*</span></label>
+              <input type="text" id="edit-expcat-name" class="form-control" value="${cat.name}" placeholder="مثال: إيجار المحل، فواتير كهرباء وإنترنت...">
+            </div>
+            <div class="form-group">
+              <label class="form-label">الوصف / البيان التوضيحي</label>
+              <textarea id="edit-expcat-desc" class="form-control" rows="2" placeholder="وصف استخدام هذا التصنيف في سندات الصرف...">${cat.description || ''}</textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">حالة التفعيل</label>
+              <select id="edit-expcat-active" class="form-control">
+                <option value="1" ${cat.is_active ? 'selected' : ''}>نشط ومتاح في قائمة تسجيل المصروفات بالخزينة</option>
+                <option value="0" ${!cat.is_active ? 'selected' : ''}>معطل ومخفي من شاشات تسجيل المصروفات</option>
+              </select>
+            </div>
+            <div style="font-size: 12px; color: var(--text-secondary); background: var(--bg-card-hover); padding: 8px 12px; border-radius: 6px;">
+              📊 عدد سندات الصرف المسجلة بهذا التصنيف: <strong>${cat.expense_count || 0} سند</strong> (إجمالي: <strong>${fmt(cat.total_spent || 0)}</strong>)
+            </div>
+          `,
+          footerHtml: `
+            <button class="btn-secondary" onclick="AppModal.close()">إلغاء</button>
+            <button class="btn-accent-action" onclick="window._saveEditExpenseCategory(${cat.id})">حفظ التعديلات</button>
+          `,
+          width: '460px'
+        });
+
+        window._saveEditExpenseCategory = async (catId) => {
+          const name = document.getElementById('edit-expcat-name')?.value?.trim();
+          const description = document.getElementById('edit-expcat-desc')?.value?.trim();
+          const is_active = Number(document.getElementById('edit-expcat-active')?.value);
+          if (!name) {
+            AppToast.error('يرجى إدخال اسم تصنيف المصروف.');
+            return;
+          }
+          try {
+            const res = await electronApi.invoke('admin:update-expense-category', { id: catId, name, description, is_active });
+            if (res && res.success === false) {
+              AppToast.error(res.error?.message || 'فشل في حفظ التعديلات');
+              return;
+            }
+            AppToast.success('تم تعديل تصنيف المصروف بنجاح! 💸');
+            AppModal.close();
+            loadAdminTabContent('expense-categories');
+          } catch (err) {
+            AppToast.error(err.message || 'فشل في حفظ التعديلات');
+          }
+        };
+      };
+
+      window._deleteExpenseCategory = async (id, name, count) => {
+        const confirmMsg = count > 0 
+          ? `تصنيف المصروف "${name}" مسجل تحته (${count}) سند صرف مالي.\nسيتم تعطيل التصنيف لمنع استخدامه مستقبلاً مع الحفاظ على العمليات المالية السابقة.\nهل أنت متأكد من المتابعة؟`
+          : `هل أنت متأكد من حذف تصنيف المصروف "${name}" نهائياً؟`;
+        if (!confirm(confirmMsg)) return;
+
+        try {
+          const res = await electronApi.invoke('admin:delete-expense-category', { id });
+          if (res && res.success === false) {
+            AppToast.error(res.error?.message || 'فشل في حذف التصنيف');
+            return;
+          }
+          AppToast.success(res.data?.message || `تمت المعالجة بنجاح.`);
+          loadAdminTabContent('expense-categories');
+        } catch (err) {
+          AppToast.error(err.message || 'فشل في حذف التصنيف');
+        }
+      };
+
     } else if (tab === 'policies') {
       const res = await electronApi.invoke('admin:get-policies');
       const pol = res.data || {};
@@ -2623,9 +4019,9 @@
               <small style="color: var(--text-muted); font-size: 11px;">عدد الأيام المحسوبة تلقائياً عند إنشاء حجز جديد.</small>
             </div>
             <div class="form-group" style="margin-bottom: 0;">
-              <label class="form-label">فترة الأمان للتجهيز والغسيل (Buffer Days)</label>
+              <label class="form-label">فترة الأمان للتجهيز (Buffer Days)</label>
               <input type="number" id="pol-buffer-days" class="form-control" min="0" value="${bufferDaysVal}">
-              <small style="color: var(--text-muted); font-size: 11px;">أيام حجز إضافية لمنع التعارض حتى انتهاء الغسيل.</small>
+              <small style="color: var(--text-muted); font-size: 11px;">أيام حجز إضافية لمنع التعارض.</small>
             </div>
           </div>
 
@@ -3095,6 +4491,7 @@
                 <button type="button" id="btn-toggle-pin-visibility" class="btn-secondary" style="padding: 0 12px;" title="إظهار/إخفاء الرمز">👁️</button>
               </div>
               <small style="color: var(--text-secondary); font-size: 11px; display: block; margin-top: 4px;">الرمز الافتراضي الأولي هو <strong>1234</strong>. إذا كتبت رمزاً جديداً وضغطت حفظ سيتم اعتماده وتحديثه فوراً.</small>
+              <small style="color: var(--color-warning); font-size: 11px; display: block; margin-top: 2px;">⚠️ يحتاج الرقم السري الرئيسي <strong>8888</strong> لحفظ التغييرات.</small>
             </div>
 
             <!-- Page Protection Checkboxes -->
@@ -3152,6 +4549,9 @@
               <button id="btn-save-security-settings" class="btn-primary-action" style="flex: 1;">حفظ إعدادات الحماية و PIN 🔒</button>
               <button id="btn-relock-all-pages" class="btn-secondary" style="padding: 0 14px;" title="إعادة قفل الصفحات المفتوحة الآن">🔒 إعادة القفل</button>
             </div>
+            <div style="margin-top: 8px; padding: 8px; background: rgba(59, 130, 246, 0.1); border-radius: 6px; border: 1px solid rgba(59, 130, 246, 0.3);">
+              <small style="color: var(--color-info); font-size: 11px;">🔐 <strong>الرقم السري الرئيسي للعمليات الحساسة:</strong> 8888</small>
+            </div>
           </div>
         </div>
       </div>
@@ -3193,10 +4593,7 @@
             <input type="checkbox" id="set-wa-auto-overdue" ${whatsapp.autoSendOverdue !== false ? 'checked' : ''} style="width: 16px; height: 16px; accent-color: #10B981;">
             <span>⚠️ تنبيهات عاجلة للبدل المتأخرة عن الإرجاع</span>
           </label>
-          <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer; background: var(--bg-app); padding: 10px 12px; border-radius: 6px; border: 1px solid var(--border-color);">
-            <input type="checkbox" id="set-wa-auto-fittings" ${whatsapp.autoSendFittings !== false ? 'checked' : ''} style="width: 16px; height: 16px; accent-color: #10B981;">
-            <span>✂️ تذكير بمواعيد البروفات والخياط</span>
-          </label>
+
         </div>
 
         <!-- Action Buttons -->
@@ -3280,6 +4677,209 @@
 
         <div id="backup-status-area" style="font-size: 12px; color: var(--text-secondary); padding: 10px; background: rgba(255,255,255,0.02); border-radius: 4px; border: 1px dashed var(--border-color);">
           💡 <strong>معلومة أمان:</strong> عند الضغط على "استعادة"، يقوم النظام تلقائياً بإنشاء نسخة وقائية (Safety Snapshot) قبل الكتابة لضمان عدم فقدان أي بيانات نهائياً.
+        </div>
+      </div>
+
+      <!-- Phase 15: Appearance & Theme Customization Card -->
+      <div class="table-card" style="margin-top: 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <div>
+            <h3 style="margin: 0; font-size: 16px;">🎨 تخصيص المظهر والألوان والنصوص (Appearance & Theme)</h3>
+            <p style="margin: 4px 0 0; font-size: 12px; color: var(--text-secondary);">تحكم في حجم النص، الألوان الأساسية للبرنامج، والمظهر الشخصي</p>
+          </div>
+          <span class="badge badge-info">تخصيص المظهر ✨</span>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+          <!-- Font Size Control -->
+          <div style="background: var(--bg-app); border: 1px solid var(--border-color); padding: 16px; border-radius: var(--radius-sm);">
+            <h4 style="margin: 0 0 12px; font-size: 14px; font-weight: 600;">📏 حجم النص العام للبرنامج</h4>
+            <div class="form-group">
+              <label class="form-label">حجم النص الأساسي: <span id="font-size-preview">14px</span></label>
+              <input type="range" id="set-font-size" min="12" max="20" value="${store.fontSize || 14}" style="width: 100%; margin: 8px 0;">
+              <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-secondary);">
+                <span>صغير (12px)</span>
+                <span>متوسط (14px)</span>
+                <span>كبير (20px)</span>
+              </div>
+            </div>
+            <div style="margin-top: 12px; padding: 10px; background: rgba(255,255,255,0.03); border-radius: 6px; border: 1px solid var(--border-color);">
+              <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">معاينة:</div>
+              <div id="font-size-sample" style="font-size: ${store.fontSize || 14}px; color: var(--text-primary);">
+                هذا نموذج للنص بالحجم المحدد. حجم النص يتغير في جميع أجزاء البرنامج تلقائياً.
+              </div>
+            </div>
+          </div>
+
+          <!-- Color Theme Customization -->
+          <div style="background: var(--bg-app); border: 1px solid var(--border-color); padding: 16px; border-radius: var(--radius-sm);">
+            <h4 style="margin: 0 0 12px; font-size: 14px; font-weight: 600;">🎨 الألوان الأساسية للبرنامج</h4>
+
+            <!-- Ready-made Themes -->
+            <div class="form-group" style="margin-bottom: 16px;">
+              <label class="form-label" style="font-weight: 600;">اختر ثيم جاهز:</label>
+
+              <!-- Classic Themes -->
+              <div style="margin-bottom: 12px;">
+                <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 6px; font-weight: 600;">ثيمات كلاسيكية:</div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 6px;">
+                  <button type="button" class="theme-preset-btn" data-theme="gold" style="padding: 8px; border: 2px solid #D4AF37; background: linear-gradient(135deg, #D4AF37, #AA8C2C); color: #0A0F1D; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">👑 ذهبي</button>
+                  <button type="button" class="theme-preset-btn" data-theme="blue" style="padding: 8px; border: 2px solid #3B82F6; background: linear-gradient(135deg, #3B82F6, #1D4ED8); color: #FFFFFF; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">🔵 أزرق</button>
+                  <button type="button" class="theme-preset-btn" data-theme="green" style="padding: 8px; border: 2px solid #10B981; background: linear-gradient(135deg, #10B981, #059669); color: #FFFFFF; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">🟢 أخضر</button>
+                  <button type="button" class="theme-preset-btn" data-theme="purple" style="padding: 8px; border: 2px solid #8B5CF6; background: linear-gradient(135deg, #8B5CF6, #7C3AED); color: #FFFFFF; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">🟣 بنفسجي</button>
+                  <button type="button" class="theme-preset-btn" data-theme="red" style="padding: 8px; border: 2px solid #EF4444; background: linear-gradient(135deg, #EF4444, #DC2626); color: #FFFFFF; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">🔴 أحمر</button>
+                  <button type="button" class="theme-preset-btn" data-theme="dark" style="padding: 8px; border: 2px solid #1F2937; background: linear-gradient(135deg, #1F2937, #111827); color: #FFFFFF; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">⬛ داكن</button>
+                </div>
+              </div>
+
+              <!-- Seasonal Themes -->
+              <div style="margin-bottom: 12px;">
+                <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 6px; font-weight: 600;">ثيمات فصلية:</div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 6px;">
+                  <button type="button" class="theme-preset-btn" data-theme="spring" style="padding: 8px; border: 2px solid #84CC16; background: linear-gradient(135deg, #84CC16, #65A30D); color: #FFFFFF; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">🌸 ربيعي</button>
+                  <button type="button" class="theme-preset-btn" data-theme="summer" style="padding: 8px; border: 2px solid #F97316; background: linear-gradient(135deg, #F97316, #EA580C); color: #FFFFFF; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">☀️ صيفي</button>
+                  <button type="button" class="theme-preset-btn" data-theme="autumn" style="padding: 8px; border: 2px solid #EA580C; background: linear-gradient(135deg, #EA580C, #C2410C); color: #FFFFFF; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">🍂 خريفي</button>
+                  <button type="button" class="theme-preset-btn" data-theme="winter" style="padding: 8px; border: 2px solid #0EA5E9; background: linear-gradient(135deg, #0EA5E9, #0284C7); color: #FFFFFF; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">❄️ شتوي</button>
+                </div>
+              </div>
+
+              <!-- Day/Night Themes -->
+              <div style="margin-bottom: 12px;">
+                <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 6px; font-weight: 600;">ثيمات نهارية/ليلية:</div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 6px;">
+                  <button type="button" class="theme-preset-btn" data-theme="day" style="padding: 8px; border: 2px solid #2563EB; background: linear-gradient(135deg, #2563EB, #1D4ED8); color: #FFFFFF; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">🌞 نهاري</button>
+                  <button type="button" class="theme-preset-btn" data-theme="night" style="padding: 8px; border: 2px solid #8B5CF6; background: linear-gradient(135deg, #8B5CF6, #7C3AED); color: #FFFFFF; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">🌙 ليلي</button>
+                  <button type="button" class="theme-preset-btn" data-theme="dawn" style="padding: 8px; border: 2px solid #F472B6; background: linear-gradient(135deg, #F472B6, #EC4899); color: #FFFFFF; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">🌅 فجر</button>
+                  <button type="button" class="theme-preset-btn" data-theme="dusk" style="padding: 8px; border: 2px solid #F59E0B; background: linear-gradient(135deg, #F59E0B, #D97706); color: #FFFFFF; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">🌇 غروب</button>
+                </div>
+              </div>
+
+              <!-- Nature Themes -->
+              <div style="margin-bottom: 12px;">
+                <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 6px; font-weight: 600;">ثيمات طبيعية:</div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 6px;">
+                  <button type="button" class="theme-preset-btn" data-theme="forest" style="padding: 8px; border: 2px solid #22C55E; background: linear-gradient(135deg, #22C55E, #16A34A); color: #FFFFFF; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">🌲 غابة</button>
+                  <button type="button" class="theme-preset-btn" data-theme="ocean" style="padding: 8px; border: 2px solid #06B6D4; background: linear-gradient(135deg, #06B6D4, #0891B2); color: #FFFFFF; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">🌊 محيط</button>
+                  <button type="button" class="theme-preset-btn" data-theme="mountain" style="padding: 8px; border: 2px solid #6366F1; background: linear-gradient(135deg, #6366F1, #4F46E5); color: #FFFFFF; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">⛰️ جبال</button>
+                  <button type="button" class="theme-preset-btn" data-theme="desert" style="padding: 8px; border: 2px solid #D97706; background: linear-gradient(135deg, #D97706, #B45309); color: #FFFFFF; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">🏜️ صحراء</button>
+                </div>
+              </div>
+
+              <!-- Modern Themes -->
+              <div>
+                <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 6px; font-weight: 600;">ثيمات عصرية:</div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 6px;">
+                  <button type="button" class="theme-preset-btn" data-theme="minimal" style="padding: 8px; border: 2px solid #000000; background: linear-gradient(135deg, #000000, #1F2937); color: #FFFFFF; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">⬜ أبسط</button>
+                  <button type="button" class="theme-preset-btn" data-theme="neon" style="padding: 8px; border: 2px solid #00FF41; background: linear-gradient(135deg, #00FF41, #00CC33); color: #000000; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">💡 نيون</button>
+                  <button type="button" class="theme-preset-btn" data-theme="pastel" style="padding: 8px; border: 2px solid #FDA4AF; background: linear-gradient(135deg, #FDA4AF, #F472B6); color: #FFFFFF; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">🎨 باستيل</button>
+                  <button type="button" class="theme-preset-btn" data-theme="retro" style="padding: 8px; border: 2px solid #FB923C; background: linear-gradient(135deg, #FB923C, #F97316); color: #FFFFFF; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">📺 ريترو</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 12px;">
+              <label class="form-label">اللون الأساسي (Primary Color)</label>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <input type="color" id="set-primary-color" value="${store.primaryColor || '#D4AF37'}" style="width: 50px; height: 36px; border: none; border-radius: 4px; cursor: pointer;">
+                <input type="text" id="set-primary-color-text" value="${store.primaryColor || '#D4AF37'}" class="form-control" style="flex: 1; font-family: monospace;">
+              </div>
+            </div>
+            <div class="form-group" style="margin-bottom: 12px;">
+              <label class="form-label">لون الخلفية الداكنة (Dark Background)</label>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <input type="color" id="set-bg-dark-color" value="${store.bgDarkColor || '#1a1a2e'}" style="width: 50px; height: 36px; border: none; border-radius: 4px; cursor: pointer;">
+                <input type="text" id="set-bg-dark-color-text" value="${store.bgDarkColor || '#1a1a2e'}" class="form-control" style="flex: 1; font-family: monospace;">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">لون النص الأساسي (Text Color)</label>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <input type="color" id="set-text-color" value="${store.textColor || '#ffffff'}" style="width: 50px; height: 36px; border: none; border-radius: 4px; cursor: pointer;">
+                <input type="text" id="set-text-color-text" value="${store.textColor || '#ffffff'}" class="form-control" style="flex: 1; font-family: monospace;">
+              </div>
+            </div>
+            <button id="btn-reset-colors" class="btn-secondary" style="margin-top: 12px; font-size: 12px; padding: 6px 12px;">↩️ استعادة الألوان الافتراضية</button>
+          </div>
+        </div>
+
+        <button id="btn-save-appearance-settings" class="btn-accent-action" style="margin-top: 16px;">💾 حفظ تطبيق تخصيص المظهر والألوان</button>
+      </div>
+
+      <!-- Phase 16: Google Drive Auto Backup Configuration -->
+      <div class="table-card" style="margin-top: 24px; border: 1px solid rgba(59, 130, 246, 0.35); background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(30, 58, 138, 0.02));">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <h3 style="margin: 0; font-size: 16px; display: flex; align-items: center; gap: 8px;">
+              <span>☁️</span> النسخ الاحتياطي التلقائي على Google Drive
+            </h3>
+            <p style="margin: 4px 0 0; font-size: 12px; color: var(--text-secondary);">
+              تفعيل النسخ الاحتياطي التلقائي لقاعدة البيانات على Google Drive بشكل دوري مثل الواتساب
+            </p>
+          </div>
+          <span class="badge ${store.gdriveAutoBackup ? 'badge-success' : 'badge-warning'}" id="gdrive-status-badge">
+            ${store.gdriveAutoBackup ? '✅ النسخ التلقائي مفعل' : '⏸️ متوقف'}
+          </span>
+        </div>
+
+        <!-- Master Switch -->
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 8px; padding: 14px 16px; margin-bottom: 16px;">
+          <label style="display: flex; align-items: center; gap: 12px; cursor: pointer; font-size: 14px; font-weight: 700; color: var(--text-primary);">
+            <input type="checkbox" id="set-gdrive-auto-backup" ${store.gdriveAutoBackup ? 'checked' : ''} style="width: 20px; height: 20px; accent-color: #3B82F6;">
+            <span>☁️ تفعيل النسخ الاحتياطي التلقائي على Google Drive</span>
+          </label>
+          <div style="margin-right: 32px; margin-top: 6px; font-size: 12px; color: var(--text-secondary); line-height: 1.6;">
+            عند التفعيل، سيقوم النظام تلقائياً بأخذ نسخة احتياطية من قاعدة البيانات ورفعها إلى Google Drive حسب الفترة المحددة.
+          </div>
+        </div>
+
+        <!-- Backup Interval Configuration -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 16px;">
+          <div style="background: var(--bg-app); border: 1px solid var(--border-color); padding: 12px; border-radius: 6px;">
+            <label class="form-label" style="font-size: 12px; margin-bottom: 8px; display: block;">فترة النسخ الاحتياطي التلقائي:</label>
+            <select id="set-gdrive-backup-interval" class="form-control" style="font-size: 13px;">
+              <option value="hourly" ${store.gdriveBackupInterval === 'hourly' ? 'selected' : ''}>كل ساعة</option>
+              <option value="daily" ${store.gdriveBackupInterval === 'daily' || !store.gdriveBackupInterval ? 'selected' : ''}>يومياً (افتراضي)</option>
+              <option value="weekly" ${store.gdriveBackupInterval === 'weekly' ? 'selected' : ''}>أسبوعياً</option>
+              <option value="monthly" ${store.gdriveBackupInterval === 'monthly' ? 'selected' : ''}>شهرياً</option>
+            </select>
+          </div>
+
+          <div style="background: var(--bg-app); border: 1px solid var(--border-color); padding: 12px; border-radius: 6px;">
+            <label class="form-label" style="font-size: 12px; margin-bottom: 8px; display: block;">أقصى عدد من النسخ الاحتياطية المحفوظة:</label>
+            <select id="set-gdrive-max-backups" class="form-control" style="font-size: 13px;">
+              <option value="5" ${store.gdriveMaxBackups === 5 ? 'selected' : ''}>5 نسخ</option>
+              <option value="10" ${store.gdriveMaxBackups === 10 || !store.gdriveMaxBackups ? 'selected' : ''}>10 نسخ (افتراضي)</option>
+              <option value="20" ${store.gdriveMaxBackups === 20 ? 'selected' : ''}>20 نسخ</option>
+              <option value="30" ${store.gdriveMaxBackups === 30 ? 'selected' : ''}>30 نسخ</option>
+            </select>
+          </div>
+
+          <div style="background: var(--bg-app); border: 1px solid var(--border-color); padding: 12px; border-radius: 6px;">
+            <label class="form-label" style="font-size: 12px; margin-bottom: 8px; display: block;">وقت النسخ الاحتياطي اليومي (للنسخ اليومي):</label>
+            <input type="time" id="set-gdrive-backup-time" value="${store.gdriveBackupTime || '02:00'}" class="form-control" style="font-size: 13px;">
+          </div>
+        </div>
+
+        <!-- Last Backup Info -->
+        <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); padding: 12px; border-radius: 6px; margin-bottom: 16px;">
+          <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">آخر نسخة احتياطية على Google Drive:</div>
+          <div id="gdrive-last-backup-time" style="font-size: 13px; font-weight: 600; color: var(--text-primary);">
+            ${store.gdriveLastBackup ? new Date(store.gdriveLastBackup).toLocaleString('ar-EG') : 'لم يتم النسخ بعد'}
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+          <button id="btn-save-gdrive-settings" class="btn-primary-action" style="background: #3B82F6; border-color: #3B82F6; font-size: 13px; padding: 8px 18px;">
+            💾 حفظ إعدادات النسخ التلقائي
+          </button>
+          <button id="btn-test-gdrive-backup" class="btn-secondary" style="font-size: 13px; padding: 8px 14px; display: inline-flex; align-items: center; gap: 6px;" title="اختبار اتصال Google Drive ورفع نسخة تجريبية">
+            <span>🧪</span> اختبار الرفع الآن
+          </button>
+          <button id="btn-connect-gdrive" class="btn-secondary" style="font-size: 13px; padding: 8px 14px; display: inline-flex; align-items: center; gap: 6px;" title="ربط حساب Google Drive الجديد">
+            <span>🔗</span> ربط حساب Google Drive
+          </button>
+          <span id="gdrive-test-status" style="font-size: 12px; color: var(--text-secondary); margin-right: 6px;"></span>
         </div>
       </div>
 
@@ -3406,50 +5006,126 @@
 
     // Relock all pages
     document.getElementById('btn-relock-all-pages')?.addEventListener('click', () => {
-      unlockedPagesSession.clear();
-      if (window.AppToast) window.AppToast.info('تمت إعادة قفل جميع الصفحات المحمية بنجاح 🔒');
+      verifyMasterSecurityCode((isValid) => {
+        if (!isValid) return;
+        unlockedPagesSession.clear();
+        if (window.AppToast) window.AppToast.info('تمت إعادة قفل جميع الصفحات المحمية بنجاح 🔒');
+      });
     });
 
-    // Save Security PIN & Protected Pages
-    document.getElementById('btn-save-security-settings')?.addEventListener('click', async () => {
-      const pin = document.getElementById('set-pin-code')?.value.trim();
-      const selectedPages = Array.from(document.querySelectorAll('.page-pin-checkbox:checked')).map(cb => cb.value);
+    // Add blur overlay to security settings section immediately
+    const addSecurityBlur = () => {
+      const allCards = document.querySelectorAll('.table-card');
+      let securityCard = null;
 
-      const updatePayload = {
-        protectedPages: selectedPages
-      };
-
-      if (pin) {
-        if (pin.length < 4) {
-          if (window.AppToast) window.AppToast.error('رمز PIN يجب أن يتكون من 4 أرقام على الأقل');
-          return;
+      for (const card of allCards) {
+        if (card.textContent.includes('أمان وقفل الصفحات') || card.textContent.includes('PIN')) {
+          securityCard = card;
+          break;
         }
-        updatePayload.pin = pin;
       }
 
-      await electronApi.invoke('settings:update', updatePayload);
-      if (cachedAppSettings) {
-        cachedAppSettings.security = {
-          ...(cachedAppSettings.security || {}),
+      if (securityCard && !document.getElementById('security-blur-overlay')) {
+        const blurOverlay = document.createElement('div');
+        blurOverlay.id = 'security-blur-overlay';
+        blurOverlay.style.cssText = `
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.75);
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+          z-index: 10;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-direction: column;
+          cursor: pointer;
+          border-radius: 8px;
+        `;
+        blurOverlay.innerHTML = `
+          <div style="font-size: 56px; margin-bottom: 16px;">🔒</div>
+          <div style="color: white; font-size: 18px; font-weight: 700; text-align: center; padding: 0 20px; line-height: 1.5;">
+            قسم محمي للأمان<br>
+            <span style="font-size: 13px; font-weight: 400; opacity: 0.9;">اضغط للكشف بالرقم السري</span>
+          </div>
+        `;
+
+        securityCard.style.position = 'relative';
+        securityCard.style.overflow = 'hidden';
+        securityCard.appendChild(blurOverlay);
+
+        // Click to reveal with master code
+        blurOverlay.addEventListener('click', () => {
+          verifyMasterSecurityCode((isValid) => {
+            if (isValid) {
+              blurOverlay.style.display = 'none';
+              if (window.AppToast) window.AppToast.success('تم كشف القسم المحمي 🔓');
+            }
+          });
+        });
+      }
+    };
+
+    // Add blur immediately
+    addSecurityBlur();
+
+    // Also add blur when settings page is loaded dynamically
+    const originalLoadSettings = loadSettingsAndApply;
+    loadSettingsAndApply = async function() {
+      await originalLoadSettings();
+      addSecurityBlur();
+    };
+
+    // Save Security PIN & Protected Pages
+    document.getElementById('btn-save-security-settings')?.addEventListener('click', () => {
+      verifyMasterSecurityCode((isValid) => {
+        if (!isValid) return;
+
+        const pin = document.getElementById('set-pin-code')?.value.trim();
+        const selectedPages = Array.from(document.querySelectorAll('.page-pin-checkbox:checked')).map(cb => cb.value);
+
+        const updatePayload = {
           protectedPages: selectedPages
         };
-        if (pin) cachedAppSettings.security.hasPin = true;
-      }
 
-      // Reset unlocked session for security
-      unlockedPagesSession.clear();
+        if (pin) {
+          if (pin.length < 4) {
+            if (window.AppToast) window.AppToast.error('رمز PIN يجب أن يتكون من 4 أرقام على الأقل');
+            return;
+          }
+          updatePayload.pin = pin;
+        }
 
-      if (window.AppToast) {
-        window.AppToast.success(`تم حفظ إعدادات الأمان! تم تفعيل القفل على (${selectedPages.length}) صفحات بنجاح 🔒`);
-      }
-      document.getElementById('set-pin-code').value = '';
+        electronApi.invoke('settings:update', updatePayload).then(() => {
+          if (cachedAppSettings) {
+            cachedAppSettings.security = {
+              ...(cachedAppSettings.security || {}),
+              protectedPages: selectedPages
+            };
+            if (pin) cachedAppSettings.security.hasPin = true;
+          }
 
-      // Update badge
-      const badge = document.getElementById('security-status-badge');
-      if (badge) {
-        badge.className = `badge ${selectedPages.length > 0 ? 'badge-warning' : 'badge-info'}`;
-        badge.textContent = selectedPages.length > 0 ? `محمي (${selectedPages.length} صفحات)` : 'غير مفعل على الصفحات';
-      }
+          // Reset unlocked session for security
+          unlockedPagesSession.clear();
+
+          if (window.AppToast) {
+            window.AppToast.success(`تم حفظ إعدادات الأمان! تم تفعيل القفل على (${selectedPages.length}) صفحات بنجاح 🔒`);
+          }
+          document.getElementById('set-pin-code').value = '';
+
+          // Update badge
+          const badge = document.getElementById('security-status-badge');
+          if (badge) {
+            badge.className = `badge ${selectedPages.length > 0 ? 'badge-warning' : 'badge-info'}`;
+            badge.textContent = selectedPages.length > 0 ? `محمي (${selectedPages.length} صفحات)` : 'غير مفعل على الصفحات';
+          }
+        }).catch(err => {
+          if (window.AppToast) window.AppToast.error(`فشل الحفظ: ${err.message} ❌`);
+        });
+      });
     });
 
     // Hook WhatsApp Automation Settings Save
@@ -4286,6 +5962,206 @@
     });
 
     // ══════════════════════════════════════════════════════════════════════════
+    // APPEARANCE & THEME CUSTOMIZATION (Phase 15)
+    // ══════════════════════════════════════════════════════════════════════════
+    // Font Size Control
+    const fontSizeSlider = document.getElementById('set-font-size');
+    const fontSizePreview = document.getElementById('font-size-preview');
+    const fontSizeSample = document.getElementById('font-size-sample');
+
+    if (fontSizeSlider && fontSizePreview && fontSizeSample) {
+      fontSizeSlider.addEventListener('input', (e) => {
+        const size = e.target.value + 'px';
+        fontSizePreview.textContent = size;
+        fontSizeSample.style.fontSize = size;
+      });
+    }
+
+    // Color Pickers Synchronization
+    const colorPairs = [
+      { picker: 'set-primary-color', text: 'set-primary-color-text' },
+      { picker: 'set-bg-dark-color', text: 'set-bg-dark-color-text' },
+      { picker: 'set-text-color', text: 'set-text-color-text' }
+    ];
+
+    colorPairs.forEach(pair => {
+      const picker = document.getElementById(pair.picker);
+      const text = document.getElementById(pair.text);
+      if (picker && text) {
+        picker.addEventListener('input', (e) => {
+          text.value = e.target.value;
+        });
+        text.addEventListener('input', (e) => {
+          picker.value = e.target.value;
+        });
+      }
+    });
+
+    // Reset Colors to Default
+    document.getElementById('btn-reset-colors')?.addEventListener('click', () => {
+      document.getElementById('set-primary-color').value = '#D4AF37';
+      document.getElementById('set-primary-color-text').value = '#D4AF37';
+      document.getElementById('set-bg-dark-color').value = '#1a1a2e';
+      document.getElementById('set-bg-dark-color-text').value = '#1a1a2e';
+      document.getElementById('set-text-color').value = '#ffffff';
+      document.getElementById('set-text-color-text').value = '#ffffff';
+      if (window.AppToast) window.AppToast.info('تم استعادة الألوان الافتراضية، اضغط حفظ للاعتماد.');
+    });
+
+    // Theme Presets - Complete Seasonal & Atmospheric Themes
+    const themePresets = {
+      // Classic Themes
+      gold: { primary: '#D4AF37', bg: '#1a1a2e', text: '#ffffff', name: '👑 ذهبي كلاسيكي' },
+      blue: { primary: '#3B82F6', bg: '#0F172A', text: '#ffffff', name: '🔵 أزرق احترافي' },
+      green: { primary: '#10B981', bg: '#0F172A', text: '#ffffff', name: '🟢 أخضر طبيعي' },
+      purple: { primary: '#8B5CF6', bg: '#1E1B4B', text: '#ffffff', name: '🟣 بنفسجي ملكي' },
+      red: { primary: '#EF4444', bg: '#1F2937', text: '#ffffff', name: '🔴 أحمر ناري' },
+      dark: { primary: '#6B7280', bg: '#0A0A0A', text: '#E5E7EB', name: '⬛ داكن نهائي' },
+
+      // Seasonal Themes
+      spring: { primary: '#84CC16', bg: '#F0FDF4', text: '#14532D', name: '🌸 ربيعي منعش' },
+      summer: { primary: '#F97316', bg: '#FFF7ED', text: '#7C2D12', name: '☀️ صيفي مشرق' },
+      autumn: { primary: '#EA580C', bg: '#FFF1F2', text: '#881337', name: '🍂 خريفي دافئ' },
+      winter: { primary: '#0EA5E9', bg: '#F0F9FF', text: '#0C4A6E', name: '❄️ شتوي بارد' },
+
+      // Day/Night Themes
+      day: { primary: '#2563EB', bg: '#FFFFFF', text: '#1E293B', name: '🌞 نهاري ساطع' },
+      night: { primary: '#8B5CF6', bg: '#0F172A', text: '#E2E8F0', name: '🌙 ليلي هادئ' },
+      dawn: { primary: '#F472B6', bg: '#FDF2F8', text: '#831843', name: '🌅 فجر مبكر' },
+      dusk: { primary: '#F59E0B', bg: '#FFFBEB', text: '#78350F', name: '🌇 غروب ذهبي' },
+
+      // Nature Themes
+      forest: { primary: '#22C55E', bg: '#052E16', text: '#DCFCE7', name: '🌲 غابة كثيفة' },
+      ocean: { primary: '#06B6D4', bg: '#083344', text: '#CFFAFE', name: '🌊 محيط عميق' },
+      mountain: { primary: '#6366F1', bg: '#1E1B4B', text: '#E0E7FF', name: '⛰️ جبلي عالي' },
+      desert: { primary: '#D97706', bg: '#7C2D12', text: '#FEF3C7', name: '🏜️ صحراوي حار' },
+
+      // Modern Themes
+      minimal: { primary: '#000000', bg: '#FFFFFF', text: '#000000', name: '⬜ أبسط بسيط' },
+      neon: { primary: '#00FF41', bg: '#000000', text: '#00FF41', name: '💡 نيون حديث' },
+      pastel: { primary: '#FDA4AF', bg: '#FFF1F2', text: '#881337', name: '🎨 باستيل ناعم' },
+      retro: { primary: '#FB923C', bg: '#451A03', text: '#FFEDD5', name: '📺 ريترو كلاسيكي' }
+    };
+
+    document.querySelectorAll('.theme-preset-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const theme = btn.dataset.theme;
+        const preset = themePresets[theme];
+        if (preset) {
+          document.getElementById('set-primary-color').value = preset.primary;
+          document.getElementById('set-primary-color-text').value = preset.primary;
+          document.getElementById('set-bg-dark-color').value = preset.bg;
+          document.getElementById('set-bg-dark-color-text').value = preset.bg;
+          document.getElementById('set-text-color').value = preset.text;
+          document.getElementById('set-text-color-text').value = preset.text;
+          if (window.AppToast) window.AppToast.info(`تم تطبيق ثيم "${preset.name}"، اضغط حفظ للاعتماد.`);
+        }
+      });
+    });
+
+    // Save Appearance Settings
+    document.getElementById('btn-save-appearance-settings')?.addEventListener('click', async () => {
+      const appearancePayload = {
+        fontSize: parseInt(document.getElementById('set-font-size').value) || 14,
+        primaryColor: document.getElementById('set-primary-color').value,
+        bgDarkColor: document.getElementById('set-bg-dark-color').value,
+        textColor: document.getElementById('set-text-color').value
+      };
+
+      await electronApi.invoke('settings:update', { store: appearancePayload });
+      if (cachedAppSettings) cachedAppSettings.store = { ...cachedAppSettings.store, ...appearancePayload };
+
+      // Apply styles immediately
+      applyAppearanceSettings(appearancePayload);
+
+      if (window.AppToast) window.AppToast.success('تم حفظ تخصيص المظهر والألوان بنجاح! 🎨✨');
+    });
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // GOOGLE DRIVE AUTO BACKUP CONFIGURATION (Phase 16)
+    // ══════════════════════════════════════════════════════════════════════════
+    // Save Google Drive Auto Backup Settings
+    document.getElementById('btn-save-gdrive-settings')?.addEventListener('click', async () => {
+      const gdrivePayload = {
+        gdriveAutoBackup: document.getElementById('set-gdrive-auto-backup').checked,
+        gdriveBackupInterval: document.getElementById('set-gdrive-backup-interval').value,
+        gdriveMaxBackups: parseInt(document.getElementById('set-gdrive-max-backups').value) || 10,
+        gdriveBackupTime: document.getElementById('set-gdrive-backup-time').value
+      };
+
+      await electronApi.invoke('settings:update', { store: gdrivePayload });
+      if (cachedAppSettings) cachedAppSettings.store = { ...cachedAppSettings.store, ...gdrivePayload };
+
+      // Update badge
+      const badge = document.getElementById('gdrive-status-badge');
+      if (badge) {
+        badge.className = gdrivePayload.gdriveAutoBackup ? 'badge badge-success' : 'badge badge-warning';
+        badge.textContent = gdrivePayload.gdriveAutoBackup ? '✅ النسخ التلقائي مفعل' : '⏸️ متوقف';
+      }
+
+      if (window.AppToast) {
+        const intervalText = {
+          hourly: 'كل ساعة',
+          daily: 'يومياً',
+          weekly: 'أسبوعياً',
+          monthly: 'شهرياً'
+        }[gdrivePayload.gdriveBackupInterval];
+        window.AppToast.success(`تم حفظ إعدادات النسخ التلقائي! سيتم النسخ ${intervalText} ☁️✨`);
+      }
+    });
+
+    // Test Google Drive Backup
+    document.getElementById('btn-test-gdrive-backup')?.addEventListener('click', async () => {
+      const btn = document.getElementById('btn-test-gdrive-backup');
+      const statusSpan = document.getElementById('gdrive-test-status');
+      if (btn) btn.disabled = true;
+      if (statusSpan) statusSpan.innerHTML = 'جاري الاختبار... ⏳';
+
+      try {
+        if (window.AppToast) window.AppToast.info('جاري اختبار اتصال Google Drive ورفع نسخة تجريبية... 🧪');
+        const res = await electronApi.invoke('backup:test-gdrive-upload');
+
+        if (res?.success) {
+          if (statusSpan) statusSpan.innerHTML = '<span style="color: var(--color-success);">✅ الاتصال ناجح!</span>';
+          if (window.AppToast) window.AppToast.success('تم اختبار Google Drive بنجاح! الاتصال يعمل بشكل صحيح ☁️✅');
+
+          // Update last backup time
+          const lastBackupEl = document.getElementById('gdrive-last-backup-time');
+          if (lastBackupEl) {
+            lastBackupEl.textContent = new Date().toLocaleString('ar-EG');
+          }
+        } else {
+          if (statusSpan) statusSpan.innerHTML = '<span style="color: var(--color-danger);">❌ فشل الاتصال</span>';
+          if (window.AppToast) window.AppToast.error(res?.error || 'فشل الاتصال بـ Google Drive');
+        }
+      } catch (err) {
+        if (statusSpan) statusSpan.innerHTML = '<span style="color: var(--color-danger);">❌ خطأ</span>';
+        if (window.AppToast) window.AppToast.error(`خطأ: ${err.message}`);
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    });
+
+    // Connect Google Drive Account
+    document.getElementById('btn-connect-gdrive')?.addEventListener('click', async () => {
+      try {
+        if (window.AppToast) window.AppToast.info('جاري فتح نافذة ربط حساب Google Drive... 🔗');
+        const res = await electronApi.invoke('backup:connect-gdrive');
+
+        if (res?.success) {
+          if (window.AppToast) window.AppToast.success('تم ربط حساب Google Drive بنجاح! ☁️✅');
+        } else {
+          if (window.AppToast) window.AppToast.error(res?.error || 'فشل ربط حساب Google Drive');
+        }
+      } catch (err) {
+        if (window.AppToast) window.AppToast.error(`خطأ: ${err.message}`);
+      }
+    });
+
+    // Start Auto Backup Scheduler
+    startAutoBackupScheduler();
+
+    // ══════════════════════════════════════════════════════════════════════════
     // WHATSAPP DIRECT BACKGROUND SERVICE INTEGRATION (الأجهزة المرتبطة)
     // ══════════════════════════════════════════════════════════════════════════
     window._updateWhatsAppHeaderStatus = async () => {
@@ -4750,7 +6626,7 @@
           </div>
           <div class="form-group">
             <label class="form-label">سعر التكلفة (ج.م) <span style="color:var(--color-danger);">*</span></label>
-            <input type="number" id="edit-prod-cost-price" class="form-control" value="${cost_price}" min="1" required>
+            ${window._renderCostInputField('edit-prod-cost-price', cost_price, true)}
           </div>
         </div>
         <div class="form-group">
@@ -4898,13 +6774,7 @@
             <div class="value" style="color: var(--color-info)">${units.filter(u => ['BOOKED', 'IN_USE'].includes(u.status)).length} بدلة</div>
           </div>
         </div>
-        <div class="stat-card">
-          <div class="stat-icon" style="color: #A855F7; background: rgba(168,85,247,0.12)">🧼</div>
-          <div class="stat-info">
-            <h4>في المغسلة والدراي كلين</h4>
-            <div class="value" style="color: #A855F7">${units.filter(u => u.status === 'IN_CLEANING').length} بدلة</div>
-          </div>
-        </div>
+
       </div>
 
       <!-- Models Table with Filter & Sort Toolbar -->
@@ -4931,7 +6801,7 @@
               <th>اسم البدلة / الموديل</th>
               <th>سعر البيع</th>
               <th>سعر الإيجار</th>
-              <th>سعر التكلفة</th>
+              <th>سعر التكلفة <button type="button" class="btn-cost-toggle" onclick="window._toggleCostPrivacy(event)" title="إظهار / إخفاء التكلفة">${window._isCostPriceRevealed ? "👁️" : "🔒"}</button></th>
               <th>مبلغ التأمين ${enableDeposit ? '' : '<span style="font-size: 10px; color: var(--text-muted);">(معطل)</span>'}</th>
               <th>إجمالي الوحدات</th>
               <th>الوحدات المتاحة</th>
@@ -4957,7 +6827,6 @@
               <option value="BOOKED">محجوزة ومؤجرة (جميع المحجوز)</option>
               <option value="BOOKED_ONLY">محجوزة فقط (قيد الانتظار)</option>
               <option value="IN_USE">مسلّمة مع العميل حالياً</option>
-              <option value="IN_CLEANING">في المغسلة</option>
               <option value="IN_MAINTENANCE">تحت الصيانة</option>
               <option value="DAMAGED">تالفة</option>
               <option value="RETIRED">خارج الخدمة</option>
@@ -4982,7 +6851,7 @@
               <th>المقاس</th>
               <th>المخزن</th>
               <th>سعر الإيجار</th>
-              <th>التكلفة</th>
+              <th>التكلفة <button type="button" class="btn-cost-toggle" onclick="window._toggleCostPrivacy(event)" title="إظهار / إخفاء التكلفة">${window._isCostPriceRevealed ? "👁️" : "🔒"}</button></th>
               <th>التأمين ${enableDeposit ? '' : '<span style="font-size: 10px; color: var(--text-muted);">(معطل)</span>'}</th>
               <th>الحالة الحالية</th>
               <th>مرات التأجير</th>
@@ -5041,7 +6910,7 @@
           </td>
           <td>${window.UiUtils ? window.UiUtils.formatCurrency(m.sale_price || 0) : (m.sale_price || 0) + ' ج.م'}</td>
           <td>${window.UiUtils ? window.UiUtils.formatCurrency(m.rental_price) : m.rental_price + ' ج.م'}</td>
-          <td style="color: var(--color-warning); font-weight: 600;">${window.UiUtils ? window.UiUtils.formatCurrency(m.cost_price || 0) : (m.cost_price || 0) + ' ج.م'}</td>
+          <td>${window._formatCostPrice(m.cost_price || 0)}</td>
           <td>${enableDeposit ? (window.UiUtils ? window.UiUtils.formatCurrency(m.security_deposit) : m.security_deposit + ' ج.م') : '<span style="color: var(--text-muted); font-size: 11px;">— (معطل)</span>'}</td>
           <td><span class="badge badge-info">${m.total_units || 0} قطعة</span></td>
           <td><span class="badge badge-success">${m.available_units || 0} متاح</span></td>
@@ -5117,7 +6986,7 @@
           <td><span class="badge badge-info">${u.size_name}</span></td>
           <td>${u.warehouse_name}</td>
           <td>${window.UiUtils ? window.UiUtils.formatCurrency(u.rental_price) : u.rental_price + ' ج.م'}</td>
-          <td style="color: var(--color-warning); font-weight: 600;">${window.UiUtils ? window.UiUtils.formatCurrency(u.purchase_cost || 0) : (u.purchase_cost || 0) + ' ج.م'}</td>
+          <td>${window._formatCostPrice(u.purchase_cost || 0)}</td>
           <td>${enableDeposit ? (window.UiUtils ? window.UiUtils.formatCurrency(u.security_deposit) : u.security_deposit + ' ج.م') : '<span style="color: var(--text-muted); font-size: 11px;">— (معطل)</span>'}</td>
           <td>
             ${statusBadge(u.status)}
@@ -5192,7 +7061,7 @@
             </div>
             <div class="form-group">
               <label class="form-label">سعر التكلفة (ج.م) <span style="color:var(--color-danger);">*</span></label>
-              <input type="number" id="edit-model-cost" class="form-control" value="${m.cost_price || 0}" min="1" required>
+              ${window._renderCostInputField('edit-model-cost', m.cost_price || 0, true)}
             </div>
           </div>
           <div class="form-group">
@@ -5298,7 +7167,7 @@
           </div>
           <div class="form-group">
             <label class="form-label">تكلفة شراء / تفصيل القطعة (ج.م)</label>
-            <input type="number" id="edit-unit-cost" class="form-control" value="${u.purchase_cost || 0}" min="0">
+            ${window._renderCostInputField('edit-unit-cost', u.purchase_cost || 0, false)}
           </div>
           <div class="form-group">
             <label class="form-label">ملاحظات على القطعة</label>
@@ -5402,7 +7271,7 @@
             </div>
             <div class="form-group">
               <label class="form-label">سعر التكلفة (ج.م) <span style="color:var(--color-danger);">*</span></label>
-              <input type="number" id="new-model-cost" class="form-control" value="1200" min="1" required>
+              ${window._renderCostInputField("new-model-cost", 1200, true)}
             </div>
           </div>
           ${enableDeposit ? `
@@ -5479,7 +7348,7 @@
 
           <div class="form-group">
             <label class="form-label">سعر التكلفة لكل قطعة (ج.م) <span style="color:var(--color-danger);">*</span></label>
-            <input type="number" id="batch-cost-price" class="form-control" value="${defCost}" min="1" required>
+            ${window._renderCostInputField('batch-cost-price', defCost, true)}
             <small style="color: var(--text-muted); font-size: 11px;">إجباري لحساب أرباح وخسائر المتجر بدقة في لوحة التحكم.</small>
           </div>
 
@@ -5611,7 +7480,7 @@
             </div>
             <div class="form-group">
               <label class="form-label">تكلفة شراء / تفصيل القطعة (ج.م)</label>
-              <input type="number" id="unit-purchase-cost" class="form-control" placeholder="افتراضياً تكلفة الموديل" min="0">
+              ${window._renderCostInputField("unit-purchase-cost", "", false)}
             </div>
           </div>
         `,
@@ -5648,8 +7517,7 @@
             <label class="form-label">الحالة الجديدة</label>
             <select id="change-status-val" class="form-control">
               <option value="AVAILABLE" ${currentStatus === 'AVAILABLE' ? 'selected' : ''}>متاحة للتأجير</option>
-              <option value="IN_CLEANING" ${currentStatus === 'IN_CLEANING' ? 'selected' : ''}>إرسال للدراي كلين / المغسلة</option>
-              <option value="IN_MAINTENANCE" ${currentStatus === 'IN_MAINTENANCE' ? 'selected' : ''}>إرسال للخياط / صيانة</option>
+              <option value="IN_MAINTENANCE" ${currentStatus === 'IN_MAINTENANCE' ? 'selected' : ''}>تحت الصيانة</option>
               <option value="DAMAGED" ${currentStatus === 'DAMAGED' ? 'selected' : ''}>تالفة جزئيًا</option>
               <option value="RETIRED" ${currentStatus === 'RETIRED' ? 'selected' : ''}>إخراج من الخدمة</option>
             </select>
@@ -5878,7 +7746,7 @@
           <td><strong style="color: ${(sh.available_quantity || 0) <= (sh.reorder_level || 0) ? 'var(--color-danger)' : 'var(--color-success)'}">${sh.available_quantity || 0} زوج</strong></td>
           <td>${window.UiUtils ? window.UiUtils.formatCurrency(sh.sale_price) : sh.sale_price + ' ج.م'}</td>
           <td>${window.UiUtils ? window.UiUtils.formatCurrency(sh.rental_price) : sh.rental_price + ' ج.م'}</td>
-          <td style="color: var(--color-warning); font-weight: 600;">${window.UiUtils ? window.UiUtils.formatCurrency(sh.cost_price || 0) : (sh.cost_price || 0) + ' ج.م'}</td>
+          <td>${window._formatCostPrice(sh.cost_price || 0)}</td>
           <td>
             ${(sh.available_quantity || 0) <= 0
           ? '<span class="badge badge-danger">نفذ المخزون</span>'
@@ -5949,7 +7817,7 @@
             </div>
             <div class="form-group">
               <label class="form-label">سعر التكلفة (ج.م) <span style="color:var(--color-danger);">*</span></label>
-              <input type="number" id="new-shoe-cost-price" class="form-control" value="400" min="1" required>
+              ${window._renderCostInputField("new-shoe-cost-price", 400, true)}
             </div>
           </div>
 
@@ -6267,7 +8135,7 @@
           <td><strong style="color: ${(it.available_quantity || 0) <= (it.reorder_level || 0) ? 'var(--color-danger)' : 'var(--color-success)'}">${it.available_quantity || 0} قطعة</strong></td>
           <td>${window.UiUtils ? window.UiUtils.formatCurrency(it.sale_price) : it.sale_price + ' ج.م'}</td>
           <td>${window.UiUtils ? window.UiUtils.formatCurrency(it.rental_price) : it.rental_price + ' ج.م'}</td>
-          <td style="color: var(--color-warning); font-weight: 600;">${window.UiUtils ? window.UiUtils.formatCurrency(it.cost_price || 0) : (it.cost_price || 0) + ' ج.م'}</td>
+          <td>${window._formatCostPrice(it.cost_price || 0)}</td>
           <td>
             ${(it.available_quantity || 0) <= 0
           ? '<span class="badge badge-danger">نفذ المخزون</span>'
@@ -6357,7 +8225,7 @@
             </div>
             <div class="form-group">
               <label class="form-label">سعر التكلفة (ج.م) <span style="color:var(--color-danger);">*</span></label>
-              <input type="number" id="new-acc-cost-price" class="form-control" value="100" min="1" required>
+              ${window._renderCostInputField("new-acc-cost-price", 100, true)}
             </div>
           </div>
 
@@ -6729,7 +8597,7 @@
           <td><strong style="color: ${(it.available_quantity || 0) <= (it.reorder_level || 0) ? 'var(--color-danger)' : 'var(--color-success)'}">${it.available_quantity || 0} قطعة</strong></td>
           <td>${window.UiUtils ? window.UiUtils.formatCurrency(it.sale_price) : (it.sale_price || 0) + ' ج.م'}</td>
           <td>${window.UiUtils ? window.UiUtils.formatCurrency(it.rental_price) : (it.rental_price || 0) + ' ج.م'}</td>
-          <td style="color: var(--color-warning); font-weight: 600;">${window.UiUtils ? window.UiUtils.formatCurrency(it.cost_price || 0) : (it.cost_price || 0) + ' ج.م'}</td>
+          <td>${window._formatCostPrice(it.cost_price || 0)}</td>
           <td>
             ${(it.available_quantity || 0) <= 0
           ? '<span class="badge badge-danger">نفذ المخزون</span>'
@@ -6800,7 +8668,7 @@
             </div>
             <div class="form-group">
               <label class="form-label">سعر التكلفة (ج.م) <span style="color:var(--color-danger);">*</span></label>
-              <input type="number" id="dyn-prod-cost-price" class="form-control" value="0" min="1" required>
+              ${window._renderCostInputField("dyn-prod-cost-price", 0, true)}
             </div>
           </div>
 
@@ -6988,136 +8856,6 @@
     };
   }
 
-  // --- Phase 7: Render Bookings Page (الحجوزات والتأجير) ---
-  async function renderBookingsPage() {
-    const [res, polRes] = await Promise.all([
-      electronApi.invoke('booking:get-list'),
-      electronApi.invoke('admin:get-policies')
-    ]);
-    const bookings = res.data || [];
-    const pol = polRes?.data || {};
-    const enableDeposit = pol.enableSecurityDeposit !== false && String(pol.enableSecurityDeposit) !== '0';
-
-    const statusBadge = (s) => {
-      const map = {
-        CONFIRMED: '<span class="badge badge-warning">مؤكد بالعربون</span>',
-        FITTING_SCHEDULED: '<span class="badge badge-info">بروفة مجدولة</span>',
-        PREPARED: '<span class="badge badge-info">جاهزة للتسليم</span>',
-        DELIVERED: '<span class="badge badge-success">مستلمة (مع العميل)</span>',
-        RETURNED: '<span class="badge badge-info">أعيدت وجاري الفحص</span>',
-        COMPLETED: '<span class="badge badge-success">مكتملة ومغلقة</span>',
-        CANCELLED: '<span class="badge badge-danger">ملغية</span>'
-      };
-      return map[s] || `<span class="badge">${s}</span>`;
-    };
-
-    pageContent.innerHTML = `
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <div>
-          <h2 style="font-size: 20px; font-weight: 700;">📅 إدارة الحجوزات والتأجير (Bookings Engine)</h2>
-          <p style="color: var(--text-secondary); font-size: 13px;">دورة حياة الحجز، منع التعارض الزمني الذري، تسليم البدلة، تحصيل التأمين ورد الأمانات.</p>
-        </div>
-        <button id="btn-create-booking-page" class="btn-accent-action">+ حجز بدلة جديد</button>
-      </div>
-
-      <!-- Bookings Stats -->
-      <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 20px;">
-        <div class="stat-card">
-          <div class="stat-icon">📅</div>
-          <div class="stat-info">
-            <h4>إجمالي الحجوزات النشطة</h4>
-            <div class="value">${bookings.filter(b => b.status !== 'CANCELLED').length} حجز</div>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon" style="color: var(--color-warning); background: rgba(245,158,11,0.12)">👔</div>
-          <div class="stat-info">
-            <h4>جاهزة للتسليم اليوم</h4>
-            <div class="value" style="color: var(--color-warning)">${bookings.filter(b => b.status === 'PREPARED').length} بدل</div>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon" style="color: var(--color-success); background: rgba(16,185,129,0.12)">🤝</div>
-          <div class="stat-info">
-            <h4>مع العملاء حاليًا</h4>
-            <div class="value" style="color: var(--color-success)">${bookings.filter(b => b.status === 'DELIVERED').length} عملاء</div>
-          </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon" style="color: var(--color-info); background: rgba(59,130,246,0.12)">✅</div>
-          <div class="stat-info">
-            <h4>حجوزات مكتملة</h4>
-            <div class="value" style="color: var(--color-info)">${bookings.filter(b => b.status === 'COMPLETED').length} حجز</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Bookings Table -->
-      <div class="table-card">
-        <div class="table-header">
-          <h3>سجل الحجوزات والعقود</h3>
-        </div>
-        <table class="app-table">
-          <thead>
-            <tr>
-              <th>رقم الحجز</th>
-              <th>العميل</th>
-              <th>الهاتف</th>
-              <th>البدلة المحجوزة</th>
-              <th>الاستلام</th>
-              <th>الإرجاع المتوقع</th>
-              <th>قيمة الإيجار</th>
-              <th>المدفوع</th>
-              <th>التأمين ${enableDeposit ? '' : '<span style="font-size: 10px; color: var(--text-muted);">(معطل)</span>'}</th>
-              <th>الحالة</th>
-              <th>الإجراءات</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${bookings.map(b => `
-              <tr>
-                <td><strong>#${b.booking_number}</strong></td>
-                <td><strong>${b.customer_name}</strong></td>
-                <td>${window.UiUtils ? window.UiUtils.formatPhone(b.customer_phone) : b.customer_phone}</td>
-                <td><small>${b.items_summary || 'بدلة فاخرة'}</small></td>
-                <td>${b.pickup_date}</td>
-                <td>${b.return_due_date}</td>
-                <td>${window.UiUtils ? window.UiUtils.formatCurrency(b.final_amount) : b.final_amount + ' ج.م'}</td>
-                <td>${window.UiUtils ? window.UiUtils.formatCurrency(b.paid_amount) : b.paid_amount + ' ج.م'}</td>
-                <td>
-                  ${enableDeposit ? `
-                    <span style="color: ${b.deposit_paid > 0 ? 'var(--color-success)' : 'var(--text-secondary)'}">
-                      ${window.UiUtils ? window.UiUtils.formatCurrency(b.total_deposit_amount) : b.total_deposit_amount + ' ج.م'}
-                      ${b.deposit_paid > 0 ? ' (مسدد)' : ' (منتظر)'}
-                    </span>
-                  ` : `
-                    <span style="color: var(--text-muted); font-size: 11px;">— (معطل)</span>
-                  `}
-                </td>
-                <td>${statusBadge(b.status)}</td>
-                <td>
-                  <div style="display: flex; gap: 4px;">
-                    ${b.status === 'PREPARED' || b.status === 'CONFIRMED' ? `
-                      <button class="btn-accent-action" style="padding: 4px 8px; font-size: 11px;" onclick="window._openHandoverModal(${b.id}, '${b.booking_number}', ${b.final_amount - b.paid_amount}, ${b.total_deposit_amount})">تسليم البدلة</button>
-                    ` : ''}
-                    ${b.status === 'DELIVERED' ? `
-                      <button class="btn-primary-action" style="padding: 4px 8px; font-size: 11px;" onclick="window._openReturnModal(${b.id}, '${b.booking_number}', '${b.return_due_date}', ${b.deposit_paid})">استلام وتسوية</button>
-                    ` : ''}
-                    <button class="btn-secondary" style="padding: 4px 8px; font-size: 11px;" onclick="AppToast.info('عرض تفاصيل وعقد الحجز #${b.booking_number}')">تفاصيل</button>
-                  </div>
-                </td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
-    `;
-
-    document.getElementById('btn-create-booking-page')?.addEventListener('click', () => {
-      document.getElementById('btn-new-booking')?.click();
-    });
-  }
-
   // --- Handover and Return Modals (Global - accessible anywhere) ---
   window._openHandoverModal = (bId, bNum, remRental, deposit) => {
     window.AppModal.open({
@@ -7172,22 +8910,44 @@
         renderTasksPage();
       } else if (curPage === 'dashboard' || !curPage) {
         renderDashboard();
-      } else {
-        renderBookingsPage();
       }
     } catch (err) {
       AppToast.error(`خطأ: ${err.message}`);
     }
   };
 
-  window._openReturnModal = (bId, bNum, dueDate, depPaid) => {
+  window._openReturnModal = async (bId, bNum, dueDate, depPaid) => {
     const today = new Date().toISOString().slice(0, 10);
+
+    // Fetch booking details to show remaining amount
+    let booking = null;
+    try {
+      const bookingRes = await electronApi.invoke('booking:get-details', { bookingId: bId, id: bId });
+      booking = bookingRes?.data?.data || bookingRes?.data || bookingRes?.payload?.data || bookingRes || {};
+    } catch (e) {
+      console.warn('Error fetching booking details for return modal:', e);
+      booking = {};
+    }
+
+    const finalAmount = Number(booking.final_amount) || 0;
+    const paidAmount = Number(booking.paid_amount) || 0;
+    const remainingAmount = Math.max(0, finalAmount - paidAmount);
+    const hasRemaining = remainingAmount > 0;
+    console.log('Return modal remaining check:', { finalAmount, paidAmount, remainingAmount, hasRemaining });
+
     window.AppModal.open({
       title: `استلام وتسوية البدلة المرتجعة [حجز #${bNum}]`,
       contentHtml: `
         <div style="padding: 12px; background: var(--bg-card-hover); border-radius: 6px; margin-bottom: 16px;">
           <div><strong>تاريخ الإرجاع المتفق عليه:</strong> ${dueDate}</div>
           <div><strong>مبلغ التأمين المحتجز كأمانة:</strong> ${window.UiUtils ? window.UiUtils.formatCurrency(depPaid) : depPaid + ' ج.م'}</div>
+          <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border-color);">
+            <div><strong>إجمالي قيمة الإيجار:</strong> ${window.UiUtils ? window.UiUtils.formatCurrency(finalAmount) : finalAmount + ' ج.م'}</div>
+            <div><strong>المبلغ المسدد مسبقاً:</strong> ${window.UiUtils ? window.UiUtils.formatCurrency(paidAmount) : paidAmount + ' ج.م'}</div>
+            <div style="color: ${hasRemaining ? 'var(--color-danger, #ef4444)' : 'var(--color-success, #10b981)'}; font-weight: 700; font-size: 14px; margin-top: 4px;">
+              <strong>المبلغ المتبقي:</strong> ${window.UiUtils ? window.UiUtils.formatCurrency(remainingAmount) : remainingAmount + ' ج.م'}
+            </div>
+          </div>
         </div>
         <div class="form-group">
           <label class="form-label">تاريخ الإرجاع الفعلي</label>
@@ -7195,19 +8955,32 @@
         </div>
         <div class="form-group">
           <label class="form-label">غرامة تلفيات أو بقع (إن وجدت)</label>
-          <input type="number" id="ret-damage-fee" class="form-control" value="0">
+          <input type="number" id="ret-damage-fee" class="form-control" value="0" min="0">
         </div>
         <div class="form-group">
           <label class="form-label">ملاحظات الفحص</label>
           <input type="text" id="ret-notes" class="form-control" placeholder="حالة البدلة عند الاستلام...">
         </div>
-        <p style="font-size: 12px; color: var(--color-gold-400);">سيقوم النظام باحتساب غرامة التأخير اليومية آلياً وفق سياسات المحل وتخصيمها من التأمين ورد المتبقي للعميل.</p>
+        ${hasRemaining ? `
+        <div class="form-group" style="margin-top: 16px; padding: 12px; background: rgba(239, 68, 68, 0.08); border-radius: 6px; border: 1px solid rgba(239, 68, 68, 0.3);">
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; color: var(--text-primary); font-weight: 600;">
+            <input type="checkbox" id="ret-remaining-paid" style="width: 18px; height: 18px; cursor: pointer;">
+            <span>✅ تأكيد تم سداد المتبقي (${window.UiUtils ? window.UiUtils.formatCurrency(remainingAmount) : remainingAmount + ' ج.م'}) نقداً بالكامل الآن</span>
+          </label>
+          <p style="font-size: 11px; color: var(--text-secondary); margin-top: 6px; margin-bottom: 0;">في حال عدم تحديد هذا الخيار، سيتم تسجيل المبلغ المتبقي كدين على العميل في صفحة مديونيات العملاء تلقائياً.</p>
+        </div>
+        ` : `
+        <div style="margin-top: 16px; padding: 12px; background: rgba(16, 185, 129, 0.1); border-radius: 6px; border: 1px solid rgba(16, 185, 129, 0.3);">
+          <p style="font-size: 13px; color: var(--color-success, #10b981); margin: 0; font-weight: 600;">✅ لا يوجد باقي مبلغ على العميل - الإيجار مسدد بالكامل</p>
+        </div>
+        `}
+        <p style="font-size: 12px; color: var(--color-gold-400); margin-top: 12px;">سيقوم النظام باحتساب غرامة التأخير اليومية آلياً وفق سياسات المحل وتخصيمها من التأمين ورد المتبقي للعميل.</p>
       `,
       footerHtml: `
         <button class="btn-secondary" onclick="AppModal.close()">إلغاء</button>
         <button class="btn-primary-action" onclick="window._confirmReturn(${bId})">فحص البدلة وتصفية التأمين</button>
       `,
-      width: '500px'
+      width: '520px'
     });
   };
 
@@ -7216,28 +8989,143 @@
     const actualDate = document.getElementById('ret-actual-date')?.value || today;
     const damageFee = Number(document.getElementById('ret-damage-fee')?.value) || 0;
     const notes = document.getElementById('ret-notes')?.value || 'تم الاستلام والفحص';
+    const remainingPaidCheckbox = document.getElementById('ret-remaining-paid');
+    const remainingPaid = remainingPaidCheckbox ? remainingPaidCheckbox.checked : false;
+    console.log('Return confirmation submitted:', { bookingId, actualDate, damageFee, notes, remainingPaid });
 
     try {
       const res = await electronApi.invoke('booking:return', {
         bookingId,
         actualReturnDate: actualDate,
         damageFee,
-        inspectionNotes: notes
+        inspectionNotes: notes,
+        remainingPaid
       });
 
       const data = res?.data || {};
-      AppToast.success(`تم استلام البدلة وإغلاق الحجز! صافي التأمين المسترد للعميل: ${window.UiUtils ? window.UiUtils.formatCurrency(data.refundAmount || 0) : (data.refundAmount || 0) + ' ج.م'}`);
+      let msg = 'تم استلام البدلة وتصفية الحجز بنجاح!';
+      if (data.refundAmount > 0) {
+        msg += `\nصافي التأمين المسترد للعميل: ${window.UiUtils ? window.UiUtils.formatCurrency(data.refundAmount) : data.refundAmount + ' ج.م'}`;
+      }
+      if (data.customerDebt > 0) {
+        msg += `\n⚠️ تم تسجيل دين على العميل: ${window.UiUtils ? window.UiUtils.formatCurrency(data.customerDebt) : data.customerDebt + ' ج.م'}`;
+      }
+      AppToast.success(msg);
       AppModal.close();
       const curPage = window.location.hash.replace('#', '');
       if (curPage === 'tasks') {
         renderTasksPage();
       } else if (curPage === 'dashboard' || !curPage) {
         renderDashboard();
-      } else {
-        renderBookingsPage();
+      } else if (curPage === 'suits') {
+        renderSuitsPage();
+      } else if (curPage === 'finance') {
+        renderFinancePage();
       }
     } catch (err) {
       AppToast.error(`خطأ: ${err.message}`);
+    }
+  };
+
+  window._openCollectDebtModal = (debtId, payNum, custName, bkDisplay, amount) => {
+    const fmt = window.UiUtils ? window.UiUtils.formatCurrency : (v) => `${v} ج.م`;
+    window.AppModal.open({
+      title: 'تحصيل دين عميل 💳',
+      contentHtml: `
+        <div style="padding: 14px; background: var(--bg-card-hover); border-radius: 8px; margin-bottom: 16px; border: 1px solid var(--border-color);">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+            <span style="color: var(--text-secondary);">العميل:</span>
+            <strong>${custName || 'عميل'}</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+            <span style="color: var(--text-secondary);">رقم الحجز:</span>
+            <strong>${bkDisplay || '-'}</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+            <span style="color: var(--text-secondary);">رقم إشعار الدين:</span>
+            <strong>${payNum || '-'}</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; padding-top: 8px; border-top: 1px solid var(--border-color); align-items: center;">
+            <span style="color: var(--color-danger); font-weight: 700;">إجمالي الدين المستحق:</span>
+            <span style="font-size: 18px; font-weight: 800; color: var(--color-danger);">${fmt(amount)}</span>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label class="form-label" style="font-weight: 600;">المبلغ المراد تحصيله الآن (ج.م) *</label>
+          <input type="number" id="collect-debt-amount" class="form-control" value="${amount}" min="1" max="${amount}" style="font-size: 16px; font-weight: 700;">
+          <span style="font-size: 11px; color: var(--text-secondary); margin-top: 4px; display: block;">يمكن تحصيل المبلغ بالكامل أو جزء منه.</span>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label class="form-label" style="font-weight: 600;">طريقة استلام المبلغ</label>
+          <select id="collect-debt-method" class="form-control">
+            <option value="CASH">💵 نقدي بالدرج (كاش)</option>
+            <option value="VISA_CARD">💳 بطاقة دفع إلكتروني (POS)</option>
+            <option value="VODAFONE_CASH">📱 محفظة إلكترونية (فودافون كاش)</option>
+            <option value="BANK_TRANSFER">🏦 تحويل بنكي مباشر</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">ملاحظات إضافية (اختياري)</label>
+          <input type="text" id="collect-debt-notes" class="form-control" placeholder="أي تفاصيل أو ملاحظات حول السداد...">
+        </div>
+      `,
+      footerHtml: `
+        <button class="btn-secondary" onclick="AppModal.close()">إلغاء</button>
+        <button class="btn-primary-action" onclick="window._confirmCollectDebt(${debtId}, ${amount})">💰 تأكيد التحصيل والإيداع</button>
+      `,
+      width: '480px'
+    });
+  };
+
+  window._confirmCollectDebt = async (debtId, totalDebt) => {
+    const amtInput = document.getElementById('collect-debt-amount');
+    const methodSelect = document.getElementById('collect-debt-method');
+    const notesInput = document.getElementById('collect-debt-notes');
+
+    const amount = Number(amtInput?.value) || 0;
+    const paymentMethod = methodSelect?.value || 'CASH';
+    const notes = notesInput?.value?.trim() || '';
+
+    if (amount <= 0) {
+      AppToast.error('يرجى إدخال مبلغ تحصيل صالح أكبر من الصفر.');
+      return;
+    }
+
+    if (amount > totalDebt) {
+      AppToast.error('المبلغ المدخل أكبر من إجمالي الدين المستحق.');
+      return;
+    }
+
+    try {
+      const res = await electronApi.invoke('payments:collect-debt', {
+        paymentId: debtId,
+        amount,
+        paymentMethod,
+        notes
+      });
+
+      if (res && res.success === false) {
+        throw new Error(res.error?.message || res.error || 'فشل في تحصيل الدين');
+      }
+
+      const fmt = window.UiUtils ? window.UiUtils.formatCurrency : (v) => `${v} ج.م`;
+      const data = res?.data || res || {};
+      const rem = data.remainingDebt !== undefined ? data.remainingDebt : (totalDebt - amount);
+
+      AppToast.success(`تم تحصيل ${fmt(amount)} بنجاح! ${rem > 0 ? `المتبقي من الدين: ${fmt(rem)}` : 'تم سداد كامل الدين ومسحه من القائمة.'} 💵`);
+      AppModal.close();
+
+      const curPage = window.location.hash.replace('#', '');
+      if (curPage === 'finance' || !curPage) {
+        renderFinancePage();
+      } else {
+        renderFinancePage();
+      }
+    } catch (err) {
+      AppToast.error(`خطأ أثناء التحصيل: ${err.message || 'فشلت العملية'}`);
     }
   };
 
@@ -7267,7 +9155,6 @@
               <th>الاسم بالكامل</th>
               <th>رقم الهاتف</th>
               <th>العنوان</th>
-              <th>مقاس الصدر / الخصر</th>
               <th>مقاس الحذاء</th>
               <th>إجمالي الحجوزات</th>
               <th>الإجراءات</th>
@@ -7280,11 +9167,10 @@
                 <td><strong>${c.name}</strong></td>
                 <td><strong style="color: var(--color-gold-400);">${window.UiUtils ? window.UiUtils.formatPhone(c.phone) : c.phone}</strong></td>
                 <td>${c.address || '—'}</td>
-                <td>${c.chest_size ? c.chest_size + ' سم / ' + c.waist_size + ' سم' : '—'}</td>
                 <td>${c.shoe_size || '—'}</td>
                 <td><span class="badge badge-info">${c.total_bookings || 0} حجز</span></td>
                 <td>
-                  <button class="btn-secondary" style="padding: 4px 10px; font-size: 12px;" onclick="window._openCustomerDrawer(${c.id}, '${c.name}', '${c.phone}', '${c.address || ''}', '${c.chest_size || ''}', '${c.waist_size || ''}', '${c.shoe_size || ''}')">ملف العميل والمقاسات</button>
+                  <button class="btn-secondary" style="padding: 4px 10px; font-size: 12px;" onclick="window._openCustomerDrawer(${c.id}, '${c.name}', '${c.phone}', '${c.address || ''}', '${c.shoe_size || ''}')">ملف العميل والتعاملات</button>
                 </td>
               </tr>
             `).join('')}
@@ -7309,16 +9195,6 @@
             <label class="form-label">العنوان</label>
             <input type="text" id="cust-new-addr" class="form-control" placeholder="العنوان...">
           </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-            <div class="form-group">
-              <label class="form-label">محيط الصدر (سم)</label>
-              <input type="number" id="cust-new-chest" class="form-control" placeholder="مثال: 102">
-            </div>
-            <div class="form-group">
-              <label class="form-label">محيط الخصر (سم)</label>
-              <input type="number" id="cust-new-waist" class="form-control" placeholder="مثال: 88">
-            </div>
-          </div>
         `,
         footerHtml: `
           <button class="btn-secondary" onclick="AppModal.close()">إلغاء</button>
@@ -7331,8 +9207,6 @@
         const name = document.getElementById('cust-new-name')?.value;
         const phone = document.getElementById('cust-new-phone')?.value;
         const address = document.getElementById('cust-new-addr')?.value;
-        const chest_size = Number(document.getElementById('cust-new-chest')?.value) || null;
-        const waist_size = Number(document.getElementById('cust-new-waist')?.value) || null;
 
         if (!name || !phone) {
           AppToast.error('يرجى إدخال اسم العميل ورقم هاتفه.');
@@ -7340,7 +9214,7 @@
         }
 
         try {
-          await electronApi.invoke('customers:create', { name, phone, address, chest_size, waist_size });
+          await electronApi.invoke('customers:create', { name, phone, address });
           AppToast.success('تمت إضافة العميل بنجاح! 👤');
           AppModal.close();
           renderCustomersPage();
@@ -7350,10 +9224,14 @@
       };
     });
 
-    window._openCustomerDrawer = async (cId, name, phone, address, chest, waist, shoe) => {
+    window._openCustomerDrawer = async (cId, name, phone, address, shoe) => {
       const bookingsRes = await electronApi.invoke('booking:get-list');
       const allBookings = bookingsRes.data || [];
       const custBookings = allBookings.filter(b => b.customer_name === name || b.customer_phone === phone);
+
+      const salesRes = await electronApi.invoke('sales:get-list');
+      const allSales = salesRes.data || [];
+      const custSales = allSales.filter(s => s.customer_name === name || s.customer_phone === phone);
 
       const bookingsHtml = custBookings.length > 0 ? custBookings.map(b => `
         <div style="padding: 12px; background: var(--bg-card); border-radius: 6px; border-right: 3px solid ${b.status === 'COMPLETED' ? 'var(--color-success)' : b.status === 'CANCELLED' ? 'var(--color-danger)' : 'var(--color-warning)'}; margin-bottom: 8px;">
@@ -7366,26 +9244,96 @@
         </div>
       `).join('') : '<div style="text-align: center; padding: 20px; color: var(--text-secondary); font-size: 13px;">لا توجد حجوزات مسجلة لهذا العميل بعد.</div>';
 
+      const salesHtml = custSales.length > 0 ? custSales.map(s => `
+        <div style="padding: 12px; background: var(--bg-card); border-radius: 6px; border-right: 3px solid var(--color-gold-500); margin-bottom: 8px;">
+          <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-secondary);">
+            <span>فاتورة #${s.sale_number || s.id}</span>
+            <span class="badge badge-success">${s.total_amount} ج.م</span>
+          </div>
+          <div style="margin-top: 6px; font-weight: 600;">${s.items_summary || 'بيع مباشر'}</div>
+          <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">التاريخ: ${s.sale_date || s.created_at}</div>
+        </div>
+      `).join('') : '<div style="text-align: center; padding: 20px; color: var(--text-secondary); font-size: 13px;">لا توجد مبيعات مسجلة لهذا العميل بعد.</div>';
+
       window.AppDrawer.open({
         title: `👤 ملف العميل: ${name}`,
         contentHtml: `
           <div style="padding: 16px; background: var(--bg-card-hover); border-radius: 8px; margin-bottom: 20px;">
-            <h4 style="color: var(--color-gold-400); margin-bottom: 8px;">📏 جدول المقاسات البدنية</h4>
+            <h4 style="color: var(--color-gold-400); margin-bottom: 8px;">📋 بيانات العميل</h4>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 13px;">
-              <div><strong>محيط الصدر:</strong> ${chest ? chest + ' سم' : 'غير مسجل'}</div>
-              <div><strong>محيط الخصر:</strong> ${waist ? waist + ' سم' : 'غير مسجل'}</div>
-              <div><strong>مقاس الحذاء:</strong> ${shoe || 'غير مسجل'}</div>
+              <div><strong>الاسم:</strong> ${name}</div>
               <div><strong>الهاتف:</strong> ${phone}</div>
+              <div><strong>مقاس الحذاء:</strong> ${shoe || 'غير مسجل'}</div>
             </div>
             <div style="margin-top: 10px; font-size: 13px;"><strong>العنوان:</strong> ${address || '—'}</div>
+            <div style="margin-top: 16px;">
+              <button class="btn-accent-action" style="width: 100%; padding: 10px;" onclick="window._editCustomerModal(${cId}, '${name}', '${phone}', '${address || ''}', '${shoe || ''}')">✏️ تعديل بيانات العميل</button>
+            </div>
           </div>
-          <div>
+          <div style="margin-bottom: 20px;">
             <h4 style="margin-bottom: 12px;">📜 سجل الحجوزات (${custBookings.length})</h4>
             ${bookingsHtml}
           </div>
+          <div>
+            <h4 style="margin-bottom: 12px;">💰 سجل المبيعات (${custSales.length})</h4>
+            ${salesHtml}
+          </div>
         `,
-        width: '450px'
+        width: '500px'
       });
+    };
+
+    window._editCustomerModal = (cId, name, phone, address, shoe) => {
+      // Close the drawer first
+      window.AppDrawer.close();
+
+      window.AppModal.open({
+        title: '✏️ تعديل بيانات العميل',
+        contentHtml: `
+          <div class="form-group">
+            <label class="form-label">اسم العميل</label>
+            <input type="text" id="cust-edit-name" class="form-control" value="${name}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">رقم الهاتف</label>
+            <input type="text" id="cust-edit-phone" class="form-control" value="${phone}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">العنوان</label>
+            <input type="text" id="cust-edit-addr" class="form-control" value="${address}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">مقاس الحذاء</label>
+            <input type="number" id="cust-edit-shoe" class="form-control" value="${shoe}" placeholder="مثال: 42">
+          </div>
+        `,
+        footerHtml: `
+          <button class="btn-secondary" onclick="AppModal.close()">إلغاء</button>
+          <button class="btn-accent-action" onclick="window._saveEditedCustomer(${cId})">حفظ التعديلات</button>
+        `,
+        width: '400px'
+      });
+    };
+
+    window._saveEditedCustomer = async (cId) => {
+      const name = document.getElementById('cust-edit-name')?.value;
+      const phone = document.getElementById('cust-edit-phone')?.value;
+      const address = document.getElementById('cust-edit-addr')?.value;
+      const shoe_size = document.getElementById('cust-edit-shoe')?.value || null;
+
+      if (!name || !phone) {
+        AppToast.error('يرجى إدخال اسم العميل ورقم هاتفه.');
+        return;
+      }
+
+      try {
+        await electronApi.invoke('customers:update', { id: cId, name, phone, address, shoe_size });
+        AppToast.success('تم تحديث بيانات العميل بنجاح! ✅');
+        AppModal.close();
+        renderCustomersPage();
+      } catch (err) {
+        AppToast.error(err.message || 'فشل في تحديث بيانات العميل');
+      }
     };
   }
 
@@ -8350,6 +10298,9 @@
             <button class="admin-tab-btn ${activeFinanceTab === 'expenses' ? 'active' : ''}" data-tab="expenses">
               🧾 المصروفات والنثريات
             </button>
+            <button class="admin-tab-btn ${activeFinanceTab === 'debts' ? 'active' : ''}" data-tab="debts">
+              💳 مديونيات العملاء
+            </button>
             <button class="admin-tab-btn ${activeFinanceTab === 'escrow' ? 'active' : ''}" data-tab="escrow">
               🛡️ أمانات التأمين المعلقة
             </button>
@@ -8511,6 +10462,8 @@
       await renderSessionTransactionsTab(container);
     } else if (activeFinanceTab === 'expenses') {
       await renderExpensesTab(container);
+    } else if (activeFinanceTab === 'debts') {
+      await renderCustomerDebtsTab(container);
     } else if (activeFinanceTab === 'escrow') {
       await renderEscrowDepositsTab(container);
     } else if (activeFinanceTab === 'history') {
@@ -8536,6 +10489,9 @@
 
     const fmt = window.UiUtils ? window.UiUtils.formatCurrency : (v) => `${v} ج.م`;
 
+    // Add payment method filter state
+    const paymentMethodFilter = container.dataset.paymentMethodFilter || 'ALL';
+
     container.innerHTML = `
       <div style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
         <h4 style="margin: 0; font-size: 14px;">سجل حركات النقدية بالدرج (${session.recent_transactions.length} حركة)</h4>
@@ -8543,6 +10499,17 @@
           <span class="badge badge-success">وارد: +${fmt(session.total_cash_in)}</span>
           <span class="badge badge-danger">صادر: -${fmt(session.total_cash_out)}</span>
         </div>
+      </div>
+
+      <div style="margin-bottom: 12px; display: flex; gap: 8px; align-items: center;">
+        <label style="font-size: 12px; color: var(--text-secondary);">فلترة حسب طريقة الدفع:</label>
+        <select id="payment-method-filter" class="form-control" style="width: auto; padding: 4px 8px; font-size: 12px;">
+          <option value="ALL" ${paymentMethodFilter === 'ALL' ? 'selected' : ''}>الكل</option>
+          <option value="CASH" ${paymentMethodFilter === 'CASH' ? 'selected' : ''}>💵 كاش (نقدي)</option>
+          <option value="VISA_CARD" ${paymentMethodFilter === 'VISA_CARD' ? 'selected' : ''}>💳 بطاقة</option>
+          <option value="VODAFONE_CASH" ${paymentMethodFilter === 'VODAFONE_CASH' ? 'selected' : ''}>📱 محفظة إلكترونية</option>
+          <option value="BANK_TRANSFER" ${paymentMethodFilter === 'BANK_TRANSFER' ? 'selected' : ''}>🏦 تحويل بنكي</option>
+        </select>
       </div>
 
       <div style="max-height: 400px; overflow-y: auto;">
@@ -8557,8 +10524,8 @@
               <th>التاريخ والوقت</th>
             </tr>
           </thead>
-          <tbody>
-            ${session.recent_transactions.map(t => {
+          <tbody id="session-transactions-body">
+            ${session.recent_transactions.filter(t => paymentMethodFilter === 'ALL' || t.category === paymentMethodFilter).map(t => {
       const isIncome = t.transaction_type === 'IN';
       const sign = isIncome ? '+' : '-';
       const color = isIncome ? 'var(--color-success)' : 'var(--color-danger)';
@@ -8571,7 +10538,12 @@
         DEPOSIT_REFUND: 'رد تأمين',
         EXPENSE: 'مصروفات',
         MANUAL_IN: 'إيداع نثريات',
-        MANUAL_OUT: 'سحب نقدي'
+        MANUAL_OUT: 'سحب نقدي',
+        DEBT: 'دين على العميل',
+        CASH: '💵 كاش',
+        VISA_CARD: '💳 بطاقة',
+        VODAFONE_CASH: '📱 محفظة إلكترونية',
+        BANK_TRANSFER: '🏦 تحويل بنكي'
       };
 
       return `
@@ -8589,6 +10561,15 @@
         </table>
       </div>
     `;
+
+    // Add payment method filter event listener
+    const filterSelect = document.getElementById('payment-method-filter');
+    if (filterSelect) {
+      filterSelect.addEventListener('change', () => {
+        container.dataset.paymentMethodFilter = filterSelect.value;
+        renderSessionTransactionsTab(container);
+      });
+    }
   }
 
   // --- Sub-Tab 2: Expenses ---
@@ -8639,7 +10620,83 @@
     if (addExpBtn) addExpBtn.addEventListener('click', openExpenseModal);
   }
 
-  // --- Sub-Tab 3: Escrow Deposits ---
+  // --- Sub-Tab 3: Customer Debts ---
+  async function renderCustomerDebtsTab(container) {
+    const res = await electronApi.invoke('payments:get-list', { payment_type: 'CUSTOMER_DEBT' });
+    const debts = Array.isArray(res?.data) ? res.data : (Array.isArray(res?.data?.data) ? res.data.data : (Array.isArray(res) ? res : []));
+    const fmt = window.UiUtils ? window.UiUtils.formatCurrency : (v) => `${v} ج.م`;
+
+    // Fetch customer details for each debt
+    const debtsWithCustomer = await Promise.all(debts.map(async (d) => {
+      let custName = d.customer_name;
+      let custPhone = d.customer_phone;
+
+      if (!custName || custName === 'غير معروف') {
+        const custId = d.customer_id;
+        if (custId) {
+          try {
+            const custRes = await electronApi.invoke('customers:get-details', { id: custId });
+            const customer = custRes?.data?.data || custRes?.data || (custRes?.success ? custRes.data : null);
+            if (customer && customer.name) {
+              custName = customer.name;
+              custPhone = customer.phone || custPhone;
+            }
+          } catch (_) {}
+        }
+      }
+
+      const bkDisplay = d.booking_number ? `#${d.booking_number}` : (d.reference_id ? `حجز #${d.reference_id}` : '-');
+
+      return {
+        ...d,
+        customer_name: custName || 'عميل',
+        customer_phone: custPhone || '-',
+        booking_display: bkDisplay
+      };
+    }));
+
+    container.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+        <h4 style="margin: 0; font-size: 14px;">مديونيات العملاء (${debtsWithCustomer.length} دين)</h4>
+        <span class="badge badge-danger" style="font-size: 13px; font-weight: 700;">إجمالي الديون: ${fmt(debtsWithCustomer.reduce((sum, d) => sum + d.amount, 0))}</span>
+      </div>
+
+      <div style="max-height: 400px; overflow-y: auto;">
+        <table class="app-table">
+          <thead>
+            <tr>
+              <th>رقم الدفع</th>
+              <th>العميل</th>
+              <th>رقم الهاتف</th>
+              <th>رقم الحجز</th>
+              <th>المبلغ المستحق</th>
+              <th>التاريخ</th>
+              <th>الإجراءات</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${debtsWithCustomer.length === 0 ? `
+              <tr><td colspan="7" style="text-align: center; padding: 24px;">لا توجد مديونيات مسجلة حالياً.</td></tr>
+            ` : debtsWithCustomer.map(d => `
+              <tr>
+                <td><strong>${d.payment_number}</strong></td>
+                <td>${d.customer_name}</td>
+                <td style="font-size: 12px;">${d.customer_phone}</td>
+                <td><strong>${d.booking_display || ("حجز #" + d.reference_id)}</strong></td>
+                <td style="font-weight: 800; color: var(--color-danger);">${fmt(d.amount)}</td>
+                <td style="font-size: 12px; color: var(--text-secondary);">${d.created_at}</td>
+                <td>
+                  <button class="btn-primary-action" style="padding: 4px 10px; font-size: 11px; font-weight: 700;" onclick="window._openCollectDebtModal(${d.id}, '${d.payment_number}', '${(d.customer_name || 'عميل').replace(/'/g, "\\'")}', '${d.booking_display || '-' }', ${d.amount})">💰 تحصيل الدين</button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  // --- Sub-Tab 4: Escrow Deposits ---
   async function renderEscrowDepositsTab(container) {
     const res = await electronApi.invoke('finance:get-escrow-deposits');
     const data = res.success ? res.data : { activeDepositsList: [], netEscrowHeld: 0 };
@@ -9024,18 +11081,82 @@
   let activeReturnsFilter = 'ALL';
   let returnsSearchQuery = '';
   let returnsDateFrom = '';
-  let returnsDateTo = '';
-  let tasksSearchQuery = '';
-  let tasksDateFrom = '';
-  let tasksDateTo = '';
-
   async function renderTasksPage() {
-    // 0. Auto-generate tasks from bookings immediately so data is fresh without clicking any button
-    try {
-      await electronApi.invoke('tasks:generate-from-bookings');
-    } catch (e) {
-      console.warn('Auto task sync warning:', e);
-    }
+    // Show loading message immediately
+    pageContent.innerHTML = `
+      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; gap: 20px;">
+        <div style="font-size: 48px;">⏳</div>
+        <h2 style="font-size: 18px; color: var(--text-secondary);">جاري تحميل البيانات...</h2>
+      </div>
+    `;
+
+    // Get bookings data
+    const [res, polRes] = await Promise.all([
+      electronApi.invoke('booking:get-list'),
+      electronApi.invoke('admin:get-policies')
+    ]);
+    const bookings = res.data || [];
+    const pol = polRes?.data || {};
+    const enableDeposit = pol.enableSecurityDeposit !== false && String(pol.enableSecurityDeposit) !== '0';
+    let activeBookingsFilter = 'ALL';
+    let bookingsSearchQuery = '';
+
+    // Pagination variables
+    const ITEMS_PER_PAGE = 10;
+    let currentPageDelivery = 1;
+    let currentPageReturn = 1;
+    let currentPageBookings = 1;
+
+    // Date filter variables
+    const today = new Date().toISOString().slice(0, 10);
+
+    // Filter bookings for different sections with date filtering
+    const deliveryBookings = bookings.filter(b => {
+      const isCorrectStatus = b.status === 'PREPARED' || b.status === 'CONFIRMED';
+      const isDateMatch = b.pickup_date === today;
+      return isCorrectStatus && isDateMatch;
+    });
+    const returnBookings = bookings.filter(b => {
+      const isCorrectStatus = b.status === 'DELIVERED';
+      const isDateMatch = b.return_due_date === today;
+      return isCorrectStatus && isDateMatch;
+    });
+
+    // Function to filter bookings for the table
+    const getFilteredBookings = () => {
+      let filtered = bookings;
+      if (activeBookingsFilter !== 'ALL') {
+        filtered = filtered.filter(b => b.status === activeBookingsFilter);
+      }
+      if (bookingsSearchQuery) {
+        const q = bookingsSearchQuery.toLowerCase();
+        filtered = filtered.filter(b => {
+          const phone = String(b.customer_phone || '').toLowerCase();
+          const name = String(b.customer_name || '').toLowerCase();
+          const num = String(b.booking_number || '').toLowerCase();
+          return name.includes(q) || phone.includes(q) || num.includes(q);
+        });
+      }
+      return filtered;
+    };
+
+    // Pagination function
+    const paginate = (items, page) => {
+      const start = (page - 1) * ITEMS_PER_PAGE;
+      const end = start + ITEMS_PER_PAGE;
+      return items.slice(start, end);
+    };
+
+    const statusBadge = (s) => {
+      const map = {
+        CONFIRMED: '<span class="badge badge-warning">مؤكد بالعربون</span>',
+        PREPARED: '<span class="badge badge-info">جاهزة للتسليم</span>',
+        DELIVERED: '<span class="badge badge-success">مستلمة (مع العميل)</span>',
+        COMPLETED: '<span class="badge badge-success">مكتملة ومغلقة</span>',
+        CANCELLED: '<span class="badge badge-danger">ملغية</span>'
+      };
+      return map[s] || `<span class="badge">${s}</span>`;
+    };
 
     pageContent.innerHTML = `
       <div style="display: flex; flex-direction: column; gap: 16px;">
@@ -9045,709 +11166,517 @@
             <div style="display: flex; align-items: center; gap: 14px;">
               <span style="font-size: 32px;">📋</span>
               <div>
-                <h2 style="font-size: 20px; margin: 0 0 4px 0;">لوحة المهام اليومية والتنبيهات وتواصل واتساب</h2>
-                <span style="font-size: 13px; color: var(--text-secondary);">متابعة بروفات الخياطة، كي وتجهيز البدل، متأخرات الإرجاع، والتذكير التلقائي للزبائن</span>
+                <h2 style="font-size: 20px; margin: 0 0 4px 0;">لوحة المهام والحجوزات</h2>
+                <span style="font-size: 13px; color: var(--text-secondary);">إدارة التسليمات، الإرجاعات، وسجل الحجوزات الكامل</span>
               </div>
             </div>
             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
               <button class="btn-secondary" id="btn-run-auto-wa-tasks" style="font-size: 13px; color: #10B981; border-color: rgba(16,185,129,0.35); background: rgba(16,185,129,0.06);" title="إرسال رسائل التذكير والمتأخرات تلقائياً في الخلفية لجميع العملاء المستحقين الآن">
                 <span>💬🚀</span> إرسال التنبيهات تلقائياً الآن
               </button>
-              <button class="btn-secondary" id="btn-auto-gen-tasks" style="font-size: 13px;">
-                <span>⚡</span> تحديث وتوليد المهام من الحجوزات
-              </button>
-              <button class="btn-primary-action" id="btn-create-task" style="font-size: 13px;">
-                <span>➕</span> إنشاء مهمة جديدة
+              <button class="btn-primary-action" id="btn-create-booking-page" style="font-size: 13px;">
+                <span>➕</span> حجز بدلة جديد
               </button>
             </div>
           </div>
         </div>
 
-        <!-- 2. Alerts & Summary Cards -->
-        <div class="stats-grid" id="tasks-stats-grid">
-          <div class="stat-card">
-            <div class="stat-icon">📅</div>
-            <div class="stat-info">
-              <h4>مهام اليوم المستحقة</h4>
-              <div class="value" id="stat-today-tasks">0 مهام</div>
-              <span style="font-size: 11px; color: var(--color-gold-500)">تحتاج للإنجاز اليوم</span>
+        <!-- 2. Top Section: Delivery (Right) and Returns (Left) -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <!-- Delivery Section (Right) -->
+          <div class="table-card" style="padding: 0; border: 1px solid rgba(16, 185, 129, 0.4);">
+            <div style="background: linear-gradient(90deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%); padding: 14px 20px; border-bottom: 1px solid var(--border-color);">
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="font-size: 26px;">📦</span>
+                <div>
+                  <h3 style="font-size: 16px; margin: 0 0 2px 0; font-weight: 700; color: var(--text-primary);">قسم التسليم</h3>
+                  <span style="font-size: 12px; color: var(--text-secondary);">الحجوزات الجاهزة للتسليم للعملاء</span>
+                </div>
+              </div>
+            </div>
+            <div style="padding: 12px 16px; border-bottom: 1px solid var(--border-color); background: var(--bg-card);">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <label style="font-size: 12px; color: var(--text-secondary); white-space: nowrap;">من تاريخ:</label>
+                <input type="date" id="delivery-date-filter" value="${today}" style="padding: 4px 8px; font-size: 12px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-input); color: var(--text-primary);">
+              </div>
+            </div>
+            <div style="padding: 16px; max-height: 400px; overflow-y: auto;">
+              <div id="delivery-bookings-container">
+                ${paginate(deliveryBookings, currentPageDelivery).map(b => `
+                  <div style="padding: 12px; background: var(--bg-card); border-radius: 6px; border-right: 3px solid var(--color-success); margin-bottom: 8px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-secondary);">
+                      <span>حجز #${b.booking_number}</span>
+                      <span>${statusBadge(b.status)}</span>
+                    </div>
+                    <div style="margin-top: 6px; font-weight: 600;">${b.customer_name}</div>
+                    <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">📱 ${b.customer_phone || '-'}</div>
+                    <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">البدلة: ${b.items_summary || 'بدلة فاخرة'}</div>
+                    <div style="font-size: 12px; color: var(--text-muted);">تاريخ الاستلام: ${b.pickup_date}</div>
+                    <div style="margin-top: 8px;">
+                      <button class="btn-accent-action" style="padding: 4px 8px; font-size: 11px; width: 100%;" onclick="window._openHandoverModal(${b.id}, '${b.booking_number}', ${b.final_amount - b.paid_amount}, ${b.total_deposit_amount})">تسليم البدلة</button>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+              ${deliveryBookings.length > ITEMS_PER_PAGE ? `
+                <div style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-color);">
+                  <button class="btn-secondary" id="delivery-prev-page" style="padding: 4px 12px; font-size: 11px;" ${currentPageDelivery === 1 ? 'disabled' : ''}>السابق</button>
+                  <span style="font-size: 12px; color: var(--text-secondary);">صفحة ${currentPageDelivery} من ${Math.ceil(deliveryBookings.length / ITEMS_PER_PAGE)}</span>
+                  <button class="btn-secondary" id="delivery-next-page" style="padding: 4px 12px; font-size: 11px;" ${currentPageDelivery >= Math.ceil(deliveryBookings.length / ITEMS_PER_PAGE) ? 'disabled' : ''}>التالي</button>
+                </div>
+              ` : ''}
+              ${deliveryBookings.length === 0 ? '<div style="text-align: center; padding: 20px; color: var(--text-secondary); font-size: 13px;">لا توجد حجوزات جاهزة للتسليم</div>' : ''}
             </div>
           </div>
 
-          <div class="stat-card">
-            <div class="stat-icon" style="color: var(--color-danger); background: rgba(239,68,68,0.12)">⚠️</div>
-            <div class="stat-info">
-              <h4>متأخرات وتنبيهات عاجلة</h4>
-              <div class="value" id="stat-overdue-tasks" style="color: var(--color-danger)">0 تنبيه</div>
-              <span style="font-size: 11px; color: var(--color-danger)">بدل تجاوزت موعد الإرجاع</span>
+          <!-- Returns Section (Left) -->
+          <div class="table-card" style="padding: 0; border: 1px solid rgba(245, 158, 11, 0.4);">
+            <div style="background: linear-gradient(90deg, rgba(245, 158, 11, 0.1) 0%, rgba(239, 68, 68, 0.05) 100%); padding: 14px 20px; border-bottom: 1px solid var(--border-color);">
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="font-size: 26px;">🔄</span>
+                <div>
+                  <h3 style="font-size: 16px; margin: 0 0 2px 0; font-weight: 700; color: var(--text-primary);">قسم الإرجاع</h3>
+                  <span style="font-size: 12px; color: var(--text-secondary);">الحجوزات المستحقة للإرجاع من العملاء</span>
+                </div>
+              </div>
             </div>
-          </div>
-
-          <div class="stat-card">
-            <div class="stat-icon" style="color: var(--color-info); background: rgba(59,130,246,0.12)">✂️</div>
-            <div class="stat-info">
-              <h4>بروفات وتعديلات خياط</h4>
-              <div class="value" id="stat-fittings-count" style="color: var(--color-info)">0 بروفات</div>
-              <span style="font-size: 11px; color: var(--text-secondary)">مواعيد قياسات الزبائن</span>
+            <div style="padding: 12px 16px; border-bottom: 1px solid var(--border-color); background: var(--bg-card);">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <label style="font-size: 12px; color: var(--text-secondary); white-space: nowrap;">حتى تاريخ:</label>
+                <input type="date" id="return-date-filter" value="${today}" style="padding: 4px 8px; font-size: 12px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-input); color: var(--text-primary);">
+              </div>
             </div>
-          </div>
-
-          <div class="stat-card">
-            <div class="stat-icon" style="color: var(--color-success); background: rgba(16,185,129,0.12)">📦</div>
-            <div class="stat-info">
-              <h4>تسليمات واستلامات اليوم</h4>
-              <div class="value" id="stat-pickups-returns" style="color: var(--color-success)">0 حجز</div>
-              <span style="font-size: 11px; color: var(--color-success)">جاهزة للتسليم والاستلام</span>
+            <div style="padding: 16px; max-height: 400px; overflow-y: auto;">
+              <div id="return-bookings-container">
+                ${paginate(returnBookings, currentPageReturn).map(b => {
+                  const remainingAmount = b.final_amount - b.paid_amount;
+                  const hasRemaining = remainingAmount > 0;
+                  return `
+                  <div style="padding: 12px; background: var(--bg-card); border-radius: 6px; border-right: 3px solid ${new Date(b.return_due_date) < new Date() ? 'var(--color-danger)' : 'var(--color-warning)'}; margin-bottom: 8px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-secondary);">
+                      <span>حجز #${b.booking_number}</span>
+                      <span style="color: ${new Date(b.return_due_date) < new Date() ? 'var(--color-danger)' : 'var(--color-warning)'};">الإرجاع: ${b.return_due_date}</span>
+                    </div>
+                    <div style="margin-top: 6px; font-weight: 600;">${b.customer_name}</div>
+                    <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">📱 ${b.customer_phone || '-'}</div>
+                    <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">البدلة: ${b.items_summary || 'بدلة فاخرة'}</div>
+                    <div style="margin-top: 6px; padding: 8px; background: ${hasRemaining ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)'}; border-radius: 4px; border: 1px solid ${hasRemaining ? 'rgba(239, 68, 68, 0.3)' : 'rgba(16, 185, 129, 0.3)'};">
+                      <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 4px;">حالة الدفع:</div>
+                      ${hasRemaining ? `
+                        <div style="font-size: 12px; font-weight: 600; color: var(--color-danger);">
+                          ⚠️ باقي: ${remainingAmount} ج.م
+                        </div>
+                        <div style="font-size: 10px; color: var(--color-danger); margin-top: 2px;">يجب سداد المتبقي قبل الإرجاع</div>
+                      ` : `
+                        <div style="font-size: 12px; font-weight: 600; color: var(--color-success);">
+                          ✅ مكتمل (${b.paid_amount} ج.م)
+                        </div>
+                      `}
+                    </div>
+                    <div style="margin-top: 8px;">
+                      <button class="btn-primary-action" style="padding: 4px 8px; font-size: 11px; width: 100%;" onclick="window._openReturnModal(${b.id}, '${b.booking_number}', '${b.return_due_date}', ${b.deposit_paid})">استلام وتسوية</button>
+                    </div>
+                  </div>
+                `}).join('')}
+              </div>
+              ${returnBookings.length > ITEMS_PER_PAGE ? `
+                <div style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-color);">
+                  <button class="btn-secondary" id="return-prev-page" style="padding: 4px 12px; font-size: 11px;" ${currentPageReturn === 1 ? 'disabled' : ''}>السابق</button>
+                  <span style="font-size: 12px; color: var(--text-secondary);">صفحة ${currentPageReturn} من ${Math.ceil(returnBookings.length / ITEMS_PER_PAGE)}</span>
+                  <button class="btn-secondary" id="return-next-page" style="padding: 4px 12px; font-size: 11px;" ${currentPageReturn >= Math.ceil(returnBookings.length / ITEMS_PER_PAGE) ? 'disabled' : ''}>التالي</button>
+                </div>
+              ` : ''}
+              ${returnBookings.length === 0 ? '<div style="text-align: center; padding: 20px; color: var(--text-secondary); font-size: 13px;">لا توجد حجوزات مستحقة للإرجاع</div>' : ''}
             </div>
           </div>
         </div>
 
-        <!-- Active Alerts Banner Area -->
-        <div id="tasks-alerts-container"></div>
-
-        <!-- 3. Returns Reminders & Collection Section (تذكيرات واستلامات المرتجعات) -->
-        <div class="table-card" style="padding: 0; border: 1px solid rgba(245, 158, 11, 0.4); box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
-          <div style="background: linear-gradient(90deg, rgba(245, 158, 11, 0.1) 0%, rgba(239, 68, 68, 0.05) 100%); padding: 14px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-            <div style="display: flex; align-items: center; gap: 12px;">
-              <span style="font-size: 26px;">📦</span>
-              <div>
-                <h3 style="font-size: 16px; margin: 0 0 2px 0; font-weight: 700; color: var(--text-primary);">تذكيرات واستلامات المنتجات المستحقة للإرجاع</h3>
-                <span style="font-size: 12px; color: var(--text-secondary);">متابعة البدل المؤجرة، تنبيهات التأخير وغرامات اليوم، استلام البدلة وتصفية الأمانات مع الزبون</span>
-              </div>
-            </div>
-            <div style="display: flex; gap: 6px; overflow-x: auto;" id="returns-filters-bar">
-              <button class="admin-tab-btn ${activeReturnsFilter === 'ALL' ? 'active' : ''}" data-return-filter="ALL" style="font-size: 12px; padding: 4px 12px;">الكل</button>
-              <button class="admin-tab-btn ${activeReturnsFilter === 'OVERDUE' ? 'active' : ''}" data-return-filter="OVERDUE" style="font-size: 12px; padding: 4px 12px; color: var(--color-danger);">🚨 متأخرات عاجلة</button>
-              <button class="admin-tab-btn ${activeReturnsFilter === 'TODAY' ? 'active' : ''}" data-return-filter="TODAY" style="font-size: 12px; padding: 4px 12px; color: var(--color-gold-500);">📅 مستحقة اليوم</button>
-              <button class="admin-tab-btn ${activeReturnsFilter === 'UPCOMING' ? 'active' : ''}" data-return-filter="UPCOMING" style="font-size: 12px; padding: 4px 12px;">⏳ مستحقة قريباً</button>
-            </div>
-          </div>
-
-          <!-- Returns Search & Date Filter Bar -->
-          <div style="padding: 10px 18px; border-bottom: 1px solid var(--border-color); background: var(--bg-card); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-            <div style="position: relative; min-width: 260px; flex: 1; max-width: 380px;">
-              <input type="text" id="return-search-input" class="form-control" placeholder="🔍 بحث باسم العميل، البدلة/الصنف، أو رقم الحجز..." value="${returnsSearchQuery}" style="font-size: 12px; height: 34px; padding-left: 28px;">
-              <button id="btn-clear-return-search" style="display: ${returnsSearchQuery ? 'inline-block' : 'none'}; position: absolute; left: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 13px;">✕</button>
-            </div>
-
-            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-              <span style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">تاريخ الإرجاع:</span>
-              <div style="display: flex; align-items: center; gap: 4px;">
-                <label style="font-size: 11px; color: var(--text-muted);">من</label>
-                <input type="date" id="return-date-from" class="form-control" value="${returnsDateFrom}" style="font-size: 11px; padding: 3px 6px; width: 130px; height: 34px;">
-              </div>
-              <div style="display: flex; align-items: center; gap: 4px;">
-                <label style="font-size: 11px; color: var(--text-muted);">إلى</label>
-                <input type="date" id="return-date-to" class="form-control" value="${returnsDateTo}" style="font-size: 11px; padding: 3px 6px; width: 130px; height: 34px;">
-              </div>
-              <button class="btn-secondary" id="btn-reset-returns-filter" style="display: ${(returnsDateFrom || returnsDateTo || returnsSearchQuery) ? 'inline-flex' : 'none'}; align-items: center; gap: 4px; padding: 4px 10px; font-size: 11px; height: 34px; color: var(--color-danger); border-color: rgba(239,68,68,0.3);" title="إلغاء وتصفية البحث">
-                مسح الفلترة ✖
-              </button>
-            </div>
-          </div>
-
-          <div id="tasks-returns-container" style="padding: 16px;">
-            <div style="text-align: center; padding: 25px; color: var(--text-secondary);">جاري فحص المرتجعات المستحقة...</div>
-          </div>
-        </div>
-
-        <!-- 4. General Operational Tasks Table -->
+        <!-- 3. Bookings Log (Bottom) -->
         <div class="table-card" style="padding: 0;">
           <div style="padding: 14px 20px 0 20px; border-bottom: 1px solid var(--border-color);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
               <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-size: 20px;">📌</span>
-                <h3 style="font-size: 15px; margin: 0; font-weight: 700;">جدول المهام التشغيلية ومواعيد البروفات</h3>
+                <span style="font-size: 20px;">📋</span>
+                <h3 style="font-size: 15px; margin: 0; font-weight: 700;">سجل الحجوزات الكامل</h3>
               </div>
-              <div style="font-size: 12px; color: var(--text-secondary);" id="tasks-count-label">0 مهام</div>
+              <div style="font-size: 12px; color: var(--text-secondary);">${bookings.length} حجز</div>
             </div>
-            <div style="display: flex; gap: 4px; overflow-x: auto; padding-bottom: 10px;" id="general-tasks-filter-bar">
-              <button class="admin-tab-btn ${activeTasksFilter === 'ALL' ? 'active' : ''}" data-filter="ALL">الكل</button>
-              <button class="admin-tab-btn ${activeTasksFilter === 'TODAY' ? 'active' : ''}" data-filter="TODAY">مهام اليوم 📌</button>
-              <button class="admin-tab-btn ${activeTasksFilter === 'UPCOMING' ? 'active' : ''}" data-filter="UPCOMING">قادمة ومجدولة ⏳</button>
-              <button class="admin-tab-btn ${activeTasksFilter === 'OVERDUE' ? 'active' : ''}" data-filter="OVERDUE">متأخرات عاجلة ⚠️</button>
-              <button class="admin-tab-btn ${activeTasksFilter === 'COMPLETED' ? 'active' : ''}" data-filter="COMPLETED">مكتملة ✅</button>
+            <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 10px; flex-wrap: wrap;">
+              <div style="display: flex; gap: 4px; overflow-x: auto; padding-bottom: 10px;" id="bookings-filter-bar">
+                <button class="admin-tab-btn active" data-filter="ALL">الكل</button>
+                <button class="admin-tab-btn" data-filter="PREPARED">جاهزة للتسليم 👔</button>
+                <button class="admin-tab-btn" data-filter="DELIVERED">مع العملاء 🤝</button>
+                <button class="admin-tab-btn" data-filter="COMPLETED">مكتملة ✅</button>
+                <button class="admin-tab-btn" data-filter="CANCELLED">ملغية ❌</button>
+              </div>
+              <input type="text" id="bookings-search-input" placeholder="بحث بالاسم أو الهاتف أو رقم الحجز..." style="padding: 6px 12px; font-size: 12px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-input); color: var(--text-primary); min-width: 200px;">
             </div>
           </div>
 
-          <!-- General Tasks Search & Date Filter Bar -->
-          <div style="padding: 10px 18px; border-bottom: 1px solid var(--border-color); background: var(--bg-card); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-            <div style="position: relative; min-width: 240px; flex: 1; max-width: 360px;">
-              <input type="text" id="tasks-search-input" class="form-control" placeholder="🔍 بحث بالمهمة، اسم العميل، البدلة..." value="${tasksSearchQuery}" style="font-size: 12px; height: 32px;">
-            </div>
-            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-              <span style="font-size: 11px; color: var(--text-secondary); font-weight: 600;">استحقاق:</span>
-              <div style="display: flex; align-items: center; gap: 4px;">
-                <label style="font-size: 11px; color: var(--text-muted);">من</label>
-                <input type="date" id="tasks-date-from" class="form-control" value="${tasksDateFrom}" style="font-size: 11px; padding: 2px 6px; width: 125px; height: 32px;">
+          <div style="padding: 16px;">
+            <table class="app-table">
+              <thead>
+                <tr>
+                  <th>رقم الحجز</th>
+                  <th>العميل</th>
+                  <th>الهاتف</th>
+                  <th>البدلة المحجوزة</th>
+                  <th>الاستلام</th>
+                  <th>الإرجاع المتوقع</th>
+                  <th>قيمة الإيجار</th>
+                  <th>المدفوع</th>
+                  <th>التأمين ${enableDeposit ? '' : '<span style="font-size: 10px; color: var(--text-muted);">(معطل)</span>'}</th>
+                  <th>الحالة</th>
+                  <th>الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="bookings-table-body">
+                ${paginate(getFilteredBookings(), currentPageBookings).map(b => `
+                  <tr>
+                    <td><strong>#${b.booking_number}</strong></td>
+                    <td><strong>${b.customer_name}</strong></td>
+                    <td>${window.UiUtils ? window.UiUtils.formatPhone(b.customer_phone) : b.customer_phone}</td>
+                    <td><small>${b.items_summary || 'بدلة فاخرة'}</small></td>
+                    <td>${b.pickup_date}</td>
+                    <td>${b.return_due_date}</td>
+                    <td>${window.UiUtils ? window.UiUtils.formatCurrency(b.final_amount) : b.final_amount + ' ج.م'}</td>
+                    <td>${window.UiUtils ? window.UiUtils.formatCurrency(b.paid_amount) : b.paid_amount + ' ج.م'}</td>
+                    <td>
+                      ${enableDeposit ? `
+                        <span style="color: ${b.deposit_paid > 0 ? 'var(--color-success)' : 'var(--text-secondary)'}">
+                          ${window.UiUtils ? window.UiUtils.formatCurrency(b.total_deposit_amount) : b.total_deposit_amount + ' ج.م'}
+                          ${b.deposit_paid > 0 ? ' (مسدد)' : ' (منتظر)'}
+                        </span>
+                      ` : `
+                        <span style="color: var(--text-muted); font-size: 11px;">— (معطل)</span>
+                      `}
+                    </td>
+                    <td>${statusBadge(b.status)}</td>
+                    <td>
+                      <div style="display: flex; gap: 4px;">
+                        ${b.status === 'PREPARED' || b.status === 'CONFIRMED' ? `
+                          <button class="btn-accent-action" style="padding: 4px 8px; font-size: 11px;" onclick="window._openHandoverModal(${b.id}, '${b.booking_number}', ${b.final_amount - b.paid_amount}, ${b.total_deposit_amount})">تسليم</button>
+                        ` : ''}
+                        ${b.status === 'DELIVERED' ? `
+                          <button class="btn-primary-action" style="padding: 4px 8px; font-size: 11px;" onclick="window._openReturnModal(${b.id}, '${b.booking_number}', '${b.return_due_date}', ${b.deposit_paid})">إرجاع</button>
+                        ` : ''}
+                        <button class="btn-secondary" style="padding: 4px 8px; font-size: 11px;" onclick="AppToast.info('عرض تفاصيل وعقد الحجز #${b.booking_number}')">تفاصيل</button>
+                      </div>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+            ${getFilteredBookings().length > ITEMS_PER_PAGE ? `
+              <div style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-color);">
+                <button class="btn-secondary" id="bookings-prev-page" style="padding: 4px 12px; font-size: 11px;" ${currentPageBookings === 1 ? 'disabled' : ''}>السابق</button>
+                <span style="font-size: 12px; color: var(--text-secondary);">صفحة ${currentPageBookings} من ${Math.ceil(getFilteredBookings().length / ITEMS_PER_PAGE)}</span>
+                <button class="btn-secondary" id="bookings-next-page" style="padding: 4px 12px; font-size: 11px;" ${currentPageBookings >= Math.ceil(getFilteredBookings().length / ITEMS_PER_PAGE) ? 'disabled' : ''}>التالي</button>
               </div>
-              <div style="display: flex; align-items: center; gap: 4px;">
-                <label style="font-size: 11px; color: var(--text-muted);">إلى</label>
-                <input type="date" id="tasks-date-to" class="form-control" value="${tasksDateTo}" style="font-size: 11px; padding: 2px 6px; width: 125px; height: 32px;">
-              </div>
-              <button class="btn-secondary" id="btn-reset-tasks-filter" style="display: ${(tasksDateFrom || tasksDateTo || tasksSearchQuery) ? 'inline-flex' : 'none'}; align-items: center; gap: 4px; padding: 2px 8px; font-size: 11px; height: 32px; color: var(--color-danger);" title="إلغاء التصفية">
-                مسح ✖
-              </button>
-            </div>
-          </div>
-
-          <div id="tasks-table-container" style="padding: 16px;">
-            <div style="text-align: center; padding: 30px; color: var(--text-secondary);">جاري تحميل قائمة المهام...</div>
+            ` : ''}
           </div>
         </div>
       </div>
     `;
 
-    // Return Filter Buttons Listener
-    const returnsFilterBar = document.getElementById('returns-filters-bar');
-    if (returnsFilterBar) {
-      returnsFilterBar.querySelectorAll('.admin-tab-btn').forEach(btn => {
+    // Bookings Filter Buttons Listener
+    const bookingsFilterBar = document.getElementById('bookings-filter-bar');
+    if (bookingsFilterBar) {
+      bookingsFilterBar.querySelectorAll('.admin-tab-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-          returnsFilterBar.querySelectorAll('.admin-tab-btn').forEach(b => b.classList.remove('active'));
+          bookingsFilterBar.querySelectorAll('.admin-tab-btn').forEach(b => b.classList.remove('active'));
           btn.classList.add('active');
-          activeReturnsFilter = btn.getAttribute('data-return-filter');
-          loadReturnsDueList();
+          activeBookingsFilter = btn.getAttribute('data-filter');
+          currentPageBookings = 1;
+          renderBookingsTable();
         });
       });
     }
 
-    // Return Search & Date Filter Listeners
-    const retSearchInput = document.getElementById('return-search-input');
-    const retDateFromInput = document.getElementById('return-date-from');
-    const retDateToInput = document.getElementById('return-date-to');
-    const btnResetReturns = document.getElementById('btn-reset-returns-filter');
-    const btnClearRetSearch = document.getElementById('btn-clear-return-search');
-
-    function syncReturnsFilterToolbar() {
-      const hasFilter = Boolean(returnsDateFrom || returnsDateTo || returnsSearchQuery);
-      if (btnResetReturns) btnResetReturns.style.display = hasFilter ? 'inline-flex' : 'none';
-      if (btnClearRetSearch) btnClearRetSearch.style.display = returnsSearchQuery ? 'inline-block' : 'none';
-    }
-
-    retSearchInput?.addEventListener('input', (e) => {
-      returnsSearchQuery = e.target.value;
-      syncReturnsFilterToolbar();
-      loadReturnsDueList();
-    });
-
-    const onReturnDateChange = () => {
-      returnsDateFrom = retDateFromInput?.value || '';
-      returnsDateTo = retDateToInput?.value || '';
-      syncReturnsFilterToolbar();
-      loadReturnsDueList();
-    };
-
-    retDateFromInput?.addEventListener('change', onReturnDateChange);
-    retDateFromInput?.addEventListener('input', onReturnDateChange);
-    retDateToInput?.addEventListener('change', onReturnDateChange);
-    retDateToInput?.addEventListener('input', onReturnDateChange);
-
-    btnResetReturns?.addEventListener('click', () => {
-      returnsSearchQuery = '';
-      returnsDateFrom = '';
-      returnsDateTo = '';
-      if (retSearchInput) retSearchInput.value = '';
-      if (retDateFromInput) retDateFromInput.value = '';
-      if (retDateToInput) retDateToInput.value = '';
-      syncReturnsFilterToolbar();
-      loadReturnsDueList();
-    });
-
-    btnClearRetSearch?.addEventListener('click', () => {
-      returnsSearchQuery = '';
-      if (retSearchInput) retSearchInput.value = '';
-      syncReturnsFilterToolbar();
-      loadReturnsDueList();
-    });
-
-    // General Tasks Filter Buttons Listener
-    const generalFilterBar = document.getElementById('general-tasks-filter-bar');
-    if (generalFilterBar) {
-      generalFilterBar.querySelectorAll('.admin-tab-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          generalFilterBar.querySelectorAll('.admin-tab-btn').forEach(b => b.classList.remove('active'));
-          btn.classList.add('active');
-          activeTasksFilter = btn.getAttribute('data-filter');
-          loadTasksList();
-        });
+    // Bookings Search Listener
+    const bookingsSearchInput = document.getElementById('bookings-search-input');
+    if (bookingsSearchInput) {
+      bookingsSearchInput.addEventListener('input', (e) => {
+        bookingsSearchQuery = e.target.value;
+        currentPageBookings = 1;
+        renderBookingsTable();
       });
     }
 
-    // General Tasks Search & Date Filter Listeners
-    const tasksSearchInput = document.getElementById('tasks-search-input');
-    const tasksDateFromInput = document.getElementById('tasks-date-from');
-    const tasksDateToInput = document.getElementById('tasks-date-to');
-    const btnResetTasks = document.getElementById('btn-reset-tasks-filter');
-
-    function syncTasksFilterToolbar() {
-      const hasFilter = Boolean(tasksDateFrom || tasksDateTo || tasksSearchQuery);
-      if (btnResetTasks) btnResetTasks.style.display = hasFilter ? 'inline-flex' : 'none';
-    }
-
-    tasksSearchInput?.addEventListener('input', (e) => {
-      tasksSearchQuery = e.target.value;
-      syncTasksFilterToolbar();
-      loadTasksList();
-    });
-
-    const onTasksDateChange = () => {
-      tasksDateFrom = tasksDateFromInput?.value || '';
-      tasksDateTo = tasksDateToInput?.value || '';
-      syncTasksFilterToolbar();
-      loadTasksList();
-    };
-
-    tasksDateFromInput?.addEventListener('change', onTasksDateChange);
-    tasksDateFromInput?.addEventListener('input', onTasksDateChange);
-    tasksDateToInput?.addEventListener('change', onTasksDateChange);
-    tasksDateToInput?.addEventListener('input', onTasksDateChange);
-
-    btnResetTasks?.addEventListener('click', () => {
-      tasksSearchQuery = '';
-      tasksDateFrom = '';
-      tasksDateTo = '';
-      if (tasksSearchInput) tasksSearchInput.value = '';
-      if (tasksDateFromInput) tasksDateFromInput.value = '';
-      if (tasksDateToInput) tasksDateToInput.value = '';
-      syncTasksFilterToolbar();
-      loadTasksList();
-    });
-
-    // Top action buttons
-    const btnAutoGen = document.getElementById('btn-auto-gen-tasks');
-    const btnCreate = document.getElementById('btn-create-task');
-
-    if (btnAutoGen) {
-      btnAutoGen.addEventListener('click', async () => {
-        try {
-          const res = await electronApi.invoke('tasks:generate-from-bookings');
-          if (res.success) {
-            const count = res.data?.createdCount || 0;
-            if (window.AppToast) window.AppToast.success(`تم فحص الحجوزات وتحديث ${count} مهمة بنجاح! ⚡`);
-            await refreshTasksPage();
-          }
-        } catch (err) {
-          if (window.AppToast) window.AppToast.error(`خطأ: ${err.message}`);
-        }
-      });
-    }
-
-    const btnRunAutoWa = document.getElementById('btn-run-auto-wa-tasks');
-    if (btnRunAutoWa) {
-      btnRunAutoWa.addEventListener('click', async () => {
-        btnRunAutoWa.disabled = true;
-        btnRunAutoWa.innerHTML = '<span>⏳</span> جاري فحص وإرسال التنبيهات...';
-        try {
-          if (window.AppToast) window.AppToast.info('جاري إرسال التنبيهات للعملاء المؤجرين في الخلفية عبر واتساب... 🚀');
-          const res = await electronApi.invoke('whatsapp:run-auto-alerts');
-          const data = res?.data || res || {};
-          if (data.success) {
-            const sent = data.sentCount || 0;
-            const skipped = data.skippedCount || 0;
-            if (window.AppToast) window.AppToast.success(`تم بنجاح! أُرسلت ${sent} رسائل، وتخطي ${skipped} مكررة. 🎉`);
-            await refreshTasksPage();
-          } else {
-            if (window.AppToast) window.AppToast.warning(data.reason || data.error || 'تعذر الإرسال');
-          }
-        } catch (e) {
-          if (window.AppToast) window.AppToast.error(`خطأ: ${e.message}`);
-        } finally {
-          btnRunAutoWa.disabled = false;
-          btnRunAutoWa.innerHTML = '<span>💬🚀</span> إرسال التنبيهات تلقائياً الآن';
-        }
-      });
-    }
-
-    if (btnCreate) {
-      btnCreate.addEventListener('click', openCreateTaskModal);
-    }
-
-    await refreshTasksPage();
-  }
-
-  async function refreshTasksPage() {
-    await loadAlertsAndStats();
-    await loadReturnsDueList();
-    await loadTasksList();
-  }
-
-  async function loadAlertsAndStats() {
-    try {
-      const res = await electronApi.invoke('tasks:get-alerts');
-      if (res.success && res.data) {
-        const d = res.data;
-        const todayEl = document.getElementById('stat-today-tasks');
-        const overdueEl = document.getElementById('stat-overdue-tasks');
-        const fittingsEl = document.getElementById('stat-fittings-count');
-        const pickupsEl = document.getElementById('stat-pickups-returns');
-
-        if (todayEl) todayEl.textContent = `${(d.todayPickupsCount || 0) + (d.todayFittingsCount || 0)} مهام`;
-        if (overdueEl) overdueEl.textContent = `${d.overdueCount || 0} تنبيه`;
-        if (fittingsEl) fittingsEl.textContent = `${d.todayFittingsCount || 0} بروفات`;
-        if (pickupsEl) pickupsEl.textContent = `${(d.todayPickupsCount || 0) + (d.todayReturnsCount || 0)} حجز`;
-
-        // Render Alerts Banner
-        const alertsContainer = document.getElementById('tasks-alerts-container');
-        if (alertsContainer && d.alertsList && d.alertsList.length > 0) {
-          alertsContainer.innerHTML = d.alertsList.map(a => `
-            <div style="padding: 12px 18px; border-radius: var(--radius-md); margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; gap: 12px; background: ${a.level === 'DANGER' ? 'rgba(239,68,68,0.1)' : a.level === 'WARNING' ? 'rgba(245,158,11,0.1)' : 'rgba(59,130,246,0.1)'}; border: 1px solid ${a.level === 'DANGER' ? 'var(--color-danger)' : a.level === 'WARNING' ? 'var(--color-warning)' : 'var(--color-info)'};">
-              <div style="display: flex; align-items: center; gap: 10px;">
-                <span style="font-size: 20px;">${a.level === 'DANGER' ? '🚨' : a.level === 'WARNING' ? '⚠️' : 'ℹ️'}</span>
-                <div>
-                  <strong style="color: ${a.level === 'DANGER' ? 'var(--color-danger)' : a.level === 'WARNING' ? 'var(--color-warning)' : 'var(--color-info)'}; font-size: 14px;">${a.title}</strong>
-                  <div style="font-size: 12px; color: var(--text-primary); margin-top: 2px;">${a.message}</div>
-                </div>
+    // Function to render bookings table
+    const renderBookingsTable = () => {
+      const tableBody = document.getElementById('bookings-table-body');
+      const filteredBookings = getFilteredBookings();
+      if (tableBody) {
+        tableBody.innerHTML = paginate(filteredBookings, currentPageBookings).map(b => `
+          <tr>
+            <td><strong>#${b.booking_number}</strong></td>
+            <td><strong>${b.customer_name}</strong></td>
+            <td>${window.UiUtils ? window.UiUtils.formatPhone(b.customer_phone) : b.customer_phone}</td>
+            <td><small>${b.items_summary || 'بدلة فاخرة'}</small></td>
+            <td>${b.pickup_date}</td>
+            <td>${b.return_due_date}</td>
+            <td>${window.UiUtils ? window.UiUtils.formatCurrency(b.final_amount) : b.final_amount + ' ج.م'}</td>
+            <td>${window.UiUtils ? window.UiUtils.formatCurrency(b.paid_amount) : b.paid_amount + ' ج.م'}</td>
+            <td>
+              ${enableDeposit ? `
+                <span style="color: ${b.deposit_paid > 0 ? 'var(--color-success)' : 'var(--text-secondary)'}">
+                  ${window.UiUtils ? window.UiUtils.formatCurrency(b.total_deposit_amount) : b.total_deposit_amount + ' ج.م'}
+                  ${b.deposit_paid > 0 ? ' (مسدد)' : ' (منتظر)'}
+                </span>
+              ` : `
+                <span style="color: var(--text-muted); font-size: 11px;">— (معطل)</span>
+              `}
+            </td>
+            <td>${statusBadge(b.status)}</td>
+            <td>
+              <div style="display: flex; gap: 4px;">
+                ${b.status === 'PREPARED' || b.status === 'CONFIRMED' ? `
+                  <button class="btn-accent-action" style="padding: 4px 8px; font-size: 11px;" onclick="window._openHandoverModal(${b.id}, '${b.booking_number}', ${b.final_amount - b.paid_amount}, ${b.total_deposit_amount})">تسليم</button>
+                ` : ''}
+                ${b.status === 'DELIVERED' ? `
+                  <button class="btn-primary-action" style="padding: 4px 8px; font-size: 11px;" onclick="window._openReturnModal(${b.id}, '${b.booking_number}', '${b.return_due_date}', ${b.deposit_paid})">إرجاع</button>
+                ` : ''}
+                <button class="btn-secondary" style="padding: 4px 8px; font-size: 11px;" onclick="AppToast.info('عرض تفاصيل وعقد الحجز #${b.booking_number}')">تفاصيل</button>
               </div>
-            </div>
-          `).join('');
-        } else if (alertsContainer) {
-          alertsContainer.innerHTML = '';
+            </td>
+          </tr>
+        `).join('');
+
+        // Update pagination info
+        const paginationDiv = tableBody.closest('div').querySelector('div[style*="border-top"]');
+        if (paginationDiv && filteredBookings.length > ITEMS_PER_PAGE) {
+          paginationDiv.innerHTML = `
+            <button class="btn-secondary" id="bookings-prev-page" style="padding: 4px 12px; font-size: 11px;" ${currentPageBookings === 1 ? 'disabled' : ''}>السابق</button>
+            <span style="font-size: 12px; color: var(--text-secondary);">صفحة ${currentPageBookings} من ${Math.ceil(filteredBookings.length / ITEMS_PER_PAGE)}</span>
+            <button class="btn-secondary" id="bookings-next-page" style="padding: 4px 12px; font-size: 11px;" ${currentPageBookings >= Math.ceil(filteredBookings.length / ITEMS_PER_PAGE) ? 'disabled' : ''}>التالي</button>
+          `;
+          setupBookingsPagination();
+        } else if (paginationDiv) {
+          paginationDiv.innerHTML = '';
         }
       }
-    } catch (e) {
-      console.warn('Could not load alerts and stats:', e);
-    }
-  }
+    };
 
-  async function loadReturnsDueList() {
-    const container = document.getElementById('tasks-returns-container');
-    if (!container) return;
-
-    try {
-      const res = await electronApi.invoke('tasks:get-returns-due');
-      let items = res.success && res.data ? res.data : [];
-
-      // 1. Status Filter
-      if (activeReturnsFilter === 'OVERDUE') {
-        items = items.filter(r => r.is_overdue || r.days_overdue > 0);
-      } else if (activeReturnsFilter === 'TODAY') {
-        items = items.filter(r => r.is_today || r.days_overdue === 0);
-      } else if (activeReturnsFilter === 'UPCOMING') {
-        items = items.filter(r => r.is_upcoming || r.days_overdue < 0);
-      }
-
-      // 2. Search Filter (Customer name, Product / Suit name, Booking #, Phone)
-      if (returnsSearchQuery && returnsSearchQuery.trim()) {
-        const q = returnsSearchQuery.trim().toLowerCase();
-        items = items.filter(r => {
-          const cName = String(r.customer_name || '').toLowerCase();
-          const pName = String(r.items_summary || '').toLowerCase();
-          const bNum = String(r.booking_number || '').toLowerCase();
-          const phone = String(r.customer_phone || '').toLowerCase();
-          return cName.includes(q) || pName.includes(q) || bNum.includes(q) || phone.includes(q);
-        });
-      }
-
-      // 3. Date Range Filter
-      if (returnsDateFrom) {
-        items = items.filter(r => r.return_due_date >= returnsDateFrom);
-      }
-      if (returnsDateTo) {
-        items = items.filter(r => r.return_due_date <= returnsDateTo);
-      }
-
-      if (items.length === 0) {
-        container.innerHTML = `
-          <div class="state-container empty-state" style="padding: 24px 0;">
-            <div class="state-icon" style="font-size: 32px;">🔍</div>
-            <h4 class="state-title" style="font-size: 15px; margin: 4px 0;">لا توجد بدل متأخرة أو مستحقة للإرجاع تطابق هذا البحث</h4>
-            <p class="state-desc" style="font-size: 12px; margin: 0;">جرّب تعديل كلمات البحث، أو تغيير نطاق التواريخ، أو الضغط على "مسح الفلترة".</p>
-          </div>
-        `;
-        return;
-      }
-
-      container.innerHTML = `
-        <div style="max-height: 380px; overflow-y: auto;">
-          <table class="app-table">
-            <thead>
-              <tr>
-                <th>الحجز والعميل</th>
-                <th>البدلة / الصنف</th>
-                <th>تاريخ الاستلام</th>
-                <th>تاريخ الإرجاع المتوقع</th>
-                <th>حالة الإرجاع</th>
-                <th>التأمين المسترد</th>
-                <th>الإجراءات السريعة</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${items.map(r => {
-                let badge = '<span class="badge badge-info">متبقي ' + Math.abs(r.days_overdue) + ' يوم ⏳</span>';
-                if (r.is_overdue || r.days_overdue > 0) {
-                  badge = '<span class="badge badge-danger">متأخرة ' + r.days_overdue + ' يوم ⚠️</span>';
-                } else if (r.is_today || r.days_overdue === 0) {
-                  badge = '<span class="badge badge-warning">مستحقة اليوم 📅</span>';
-                }
-
-                const depositText = (window.UiUtils ? window.UiUtils.formatCurrency(r.deposit_paid || 0) : (r.deposit_paid || 0) + ' ج.م');
-
-                return `
-                  <tr style="${(r.is_overdue || r.days_overdue > 0) ? 'background: rgba(239,68,68,0.04);' : (r.is_today || r.days_overdue === 0) ? 'background: rgba(245,158,11,0.04);' : ''}">
-                    <td>
-                      <strong>${r.customer_name || 'عميل'}</strong>
-                      <div style="font-size: 11px; color: var(--color-gold-500); font-weight: 600;">#${r.booking_number}</div>
-                      ${r.customer_phone ? `<div style="font-size: 11px; color: var(--text-secondary);">${r.customer_phone}</div>` : ''}
-                    </td>
-                    <td>
-                      <div style="font-weight: 600;">${r.items_summary || 'بدلة رجالي فاخرة'}</div>
-                    </td>
-                    <td style="font-size: 12px;">${r.pickup_date || '-'}</td>
-                    <td style="font-size: 12px; font-weight: 700; color: ${(r.is_overdue || r.days_overdue > 0) ? 'var(--color-danger)' : 'var(--text-primary)'};">${r.return_due_date}</td>
-                    <td>${badge}</td>
-                    <td style="font-weight: 600; color: var(--color-gold-500); font-size: 12px;">${depositText}</td>
-                    <td>
-                      <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-                        ${r.customer_phone ? `
-                          <div style="display: inline-flex; align-items: center; gap: 4px;">
-                            <button class="btn-secondary btn-return-wa"
-                              data-phone="${r.customer_phone}"
-                              data-name="${r.customer_name}"
-                              data-date="${r.return_due_date}"
-                              data-overdue="${r.days_overdue}"
-                              data-bnum="${r.booking_number}"
-                              style="padding: 4px 8px; font-size: 11px; color: #10B981; border-color: rgba(16,185,129,0.3);"
-                              title="إرسال تذكير واتساب">
-                              💬 واتساب
-                            </button>
-                            ${(r.sent_today_count > 0) ? `
-                              <span class="badge" style="background: rgba(16, 185, 129, 0.16); color: #10B981; border: 1px solid rgba(16, 185, 129, 0.4); font-size: 10px; padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 3px; font-weight: 700;" title="تم إرسال تنبيه بالواتساب لهذا العميل اليوم بنجاح (${r.last_sent_at || ''})">
-                                <span>✅</span> تم الإرسال
-                              </span>
-                            ` : (r.last_sent_at) ? `
-                              <span class="badge" style="background: rgba(59, 130, 246, 0.12); color: #60A5FA; border: 1px solid rgba(59, 130, 246, 0.3); font-size: 10px; padding: 2px 5px; border-radius: 4px; display: inline-flex; align-items: center; gap: 2px;" title="تم الإرسال سابقاً: ${r.last_sent_at}">
-                                <span>✓</span> أرسل سابقاً
-                              </span>
-                            ` : ''}
-                          </div>
-                        ` : ''}
-                        <button class="btn-primary-action btn-return-settle"
-                          data-bid="${r.booking_id}"
-                          data-bnum="${r.booking_number}"
-                          data-duedate="${r.return_due_date}"
-                          data-deposit="${r.deposit_paid || 0}"
-                          style="padding: 4px 8px; font-size: 11px;"
-                          title="استلام البدلة وفحصها وتصفية التأمين">
-                          📦 استلام وتسوية
-                        </button>
-                        ${r.customer_phone ? `
-                          <a href="tel:${r.customer_phone}" class="btn-secondary" style="padding: 4px 8px; font-size: 11px; text-decoration: none;" title="اتصال بالعميل">
-                            📞
-                          </a>
-                        ` : ''}
-                      </div>
-                    </td>
-                  </tr>
-                `;
-              }).join('')}
-            </tbody>
-          </table>
-        </div>
-      `;
-
-      // Settle button listener
-      container.querySelectorAll('.btn-return-settle').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          const bid = Number(btn.getAttribute('data-bid'));
-          const bnum = btn.getAttribute('data-bnum');
-          const duedate = btn.getAttribute('data-duedate');
-          const dep = Number(btn.getAttribute('data-deposit')) || 0;
-          if (typeof window._openReturnModal === 'function') {
-            window._openReturnModal(bid, bnum, duedate, dep);
-          } else {
-            console.error('_openReturnModal is not defined');
-            if (window.AppToast) window.AppToast.error('تعذر فتح نافذة الاستلام، يرجى إعادة تحميل الصفحة.');
+    // Setup bookings pagination
+    const setupBookingsPagination = () => {
+      const prevBtn = document.getElementById('bookings-prev-page');
+      const nextBtn = document.getElementById('bookings-next-page');
+      if (prevBtn) {
+        prevBtn.addEventListener('click', () => {
+          if (currentPageBookings > 1) {
+            currentPageBookings--;
+            renderBookingsTable();
           }
         });
-      });
-
-      // Return WhatsApp button listener
-      container.querySelectorAll('.btn-return-wa').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const phone = btn.getAttribute('data-phone');
-          const name = btn.getAttribute('data-name');
-          const date = btn.getAttribute('data-date');
-          const overdue = Number(btn.getAttribute('data-overdue')) || 0;
-          const task_type = overdue > 0 ? 'RETURN_FOLLOWUP' : 'RETURN_REMINDER';
-          openWhatsAppModal({
-            phone,
-            customer_name: name,
-            task_type,
-            date,
-            days_late: overdue > 0 ? overdue : 1
-          });
-        });
-      });
-
-    } catch (err) {
-      container.innerHTML = `<div style="color: var(--color-danger); text-align: center; padding: 15px;">خطأ في تحميل المرتجعات: ${err.message}</div>`;
-    }
-  }
-
-  async function loadTasksList() {
-    const container = document.getElementById('tasks-table-container');
-    const countLabel = document.getElementById('tasks-count-label');
-    if (!container) return;
-
-    try {
-      const res = await electronApi.invoke('tasks:get-list', { filter: activeTasksFilter, limit: 100 });
-      let tasks = res.success && res.data ? res.data : [];
-
-      // Search Filter (Task Title, Customer Name, Product/Suit, Booking #)
-      if (tasksSearchQuery && tasksSearchQuery.trim()) {
-        const q = tasksSearchQuery.trim().toLowerCase();
-        tasks = tasks.filter(t => {
-          const title = String(t.title || '').toLowerCase();
-          const desc = String(t.description || '').toLowerCase();
-          const cName = String(t.customer_name || '').toLowerCase();
-          const sName = String(t.suit_name || '').toLowerCase();
-          const bNum = String(t.booking_number || '').toLowerCase();
-          const phone = String(t.customer_phone || '').toLowerCase();
-          return title.includes(q) || desc.includes(q) || cName.includes(q) || sName.includes(q) || bNum.includes(q) || phone.includes(q);
-        });
       }
-
-      // Date Range Filter
-      if (tasksDateFrom) {
-        tasks = tasks.filter(t => t.due_date >= tasksDateFrom);
-      }
-      if (tasksDateTo) {
-        tasks = tasks.filter(t => t.due_date <= tasksDateTo);
-      }
-
-      if (countLabel) countLabel.textContent = `${tasks.length} مهمة`;
-
-      if (tasks.length === 0) {
-        container.innerHTML = `
-          <div class="state-container empty-state" style="padding: 40px 0;">
-            <div class="state-icon">🔍</div>
-            <h4 class="state-title">لا توجد مهام تطابق هذا البحث أو الفلتر</h4>
-            <p class="state-desc">جرّب تغيير كلمات البحث أو إعادة ضبط خيارات التاريخ.</p>
-          </div>
-        `;
-        return;
-      }
-
-      container.innerHTML = `
-        <div style="max-height: 480px; overflow-y: auto;">
-          <table class="app-table">
-            <thead>
-              <tr>
-                <th>المهمة والبيان</th>
-                <th>النوع</th>
-                <th>الحجز والعميل</th>
-                <th>تاريخ الاستحقاق</th>
-                <th>الأولوية</th>
-                <th>الحالة</th>
-                <th>الإجراءات</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${tasks.map(t => {
-        const isCompleted = t.status === 'COMPLETED';
-
-        // Priority Badge
-        let priorityBadge = '<span class="badge badge-info">عادي</span>';
-        if (t.priority === 'URGENT') priorityBadge = '<span class="badge badge-danger">عاجل جداً ⚡</span>';
-        if (t.priority === 'HIGH') priorityBadge = '<span class="badge badge-warning">هام</span>';
-        if (t.priority === 'LOW') priorityBadge = '<span class="badge badge-secondary">منخفض</span>';
-
-        // Type Badge
-        const typeNames = {
-          FITTING: 'بروفة خياطة ✂️',
-          SUIT_PREPARATION: 'تجهيز وكي 👔',
-          RETURN_FOLLOWUP: 'متابعة متأخرات ⏰',
-          CLEANING: 'مغسلة 🧼'
-        };
-        const typeBadge = `<span class="badge badge-secondary">${typeNames[t.task_type] || t.task_type}</span>`;
-
-        return `
-                  <tr style="${isCompleted ? 'opacity: 0.6;' : ''}">
-                    <td>
-                      <strong style="${isCompleted ? 'text-decoration: line-through;' : ''}">${t.title}</strong>
-                      ${t.description ? `<div style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">${t.description}</div>` : ''}
-                    </td>
-                    <td>${typeBadge}</td>
-                    <td>
-                      ${t.customer_name ? `
-                        <div>${t.customer_name}</div>
-                        <div style="font-size: 11px; color: var(--color-gold-500);">${t.booking_number ? '#' + t.booking_number : ''}</div>
-                      ` : '<span style="color: var(--text-muted);">-</span>'}
-                    </td>
-                    <td style="font-size: 12px; font-weight: 600;">${t.due_date}</td>
-                    <td>${priorityBadge}</td>
-                    <td>
-                      <span class="badge ${isCompleted ? 'badge-success' : 'badge-warning'}">
-                        ${isCompleted ? 'مكتملة ✅' : 'قيد الانتظار'}
-                      </span>
-                    </td>
-                    <td>
-                      <div style="display: flex; gap: 6px;">
-                        ${t.customer_phone ? `
-                          <div style="display: inline-flex; align-items: center; gap: 4px;">
-                            <button class="btn-secondary btn-task-whatsapp" data-id="${t.id}" data-phone="${t.customer_phone}" data-name="${t.customer_name}" data-type="${t.task_type}" data-date="${t.due_date}" style="padding: 4px 8px; font-size: 11px; color: #10B981; border-color: rgba(16,185,129,0.3);" title="تواصل واتساب">
-                              💬 واتساب
-                            </button>
-                            ${(t.sent_today_count > 0) ? `
-                              <span class="badge" style="background: rgba(16, 185, 129, 0.16); color: #10B981; border: 1px solid rgba(16, 185, 129, 0.4); font-size: 10px; padding: 2px 5px; border-radius: 4px; display: inline-flex; align-items: center; gap: 2px; font-weight: 700;" title="تم إرسال رسالة واتساب للعميل اليوم (${t.last_sent_at || ''})">
-                                <span>✅</span> تم الإرسال
-                              </span>
-                            ` : (t.last_sent_at) ? `
-                              <span class="badge" style="background: rgba(59, 130, 246, 0.12); color: #60A5FA; border: 1px solid rgba(59, 130, 246, 0.3); font-size: 10px; padding: 2px 5px; border-radius: 4px; display: inline-flex; align-items: center; gap: 2px;" title="آخر إرسال: ${t.last_sent_at}">
-                                <span>✓</span> أرسل سابقاً
-                              </span>
-                            ` : ''}
-                          </div>
-                        ` : ''}
-                        ${!isCompleted ? `
-                          <button class="btn-primary-action btn-task-complete" data-id="${t.id}" style="padding: 4px 8px; font-size: 11px;" title="تعليم كمكتملة">
-                            ✔️ تم
-                          </button>
-                        ` : ''}
-                      </div>
-                    </td>
-                  </tr>
-                `;
-      }).join('')}
-            </tbody>
-          </table>
-        </div>
-      `;
-
-      // Complete button listeners
-      container.querySelectorAll('.btn-task-complete').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          const tId = Number(btn.getAttribute('data-id'));
-          try {
-            const cres = await electronApi.invoke('tasks:complete', { taskId: tId });
-            if (cres.success) {
-              if (window.AppToast) window.AppToast.success('تم إنجاز المهمة بنجاح! ✅');
-              await refreshTasksPage();
-            }
-          } catch (err) {
-            if (window.AppToast) window.AppToast.error(`خطأ: ${err.message}`);
+      if (nextBtn) {
+        nextBtn.addEventListener('click', () => {
+          const filteredBookings = getFilteredBookings();
+          const totalPages = Math.ceil(filteredBookings.length / ITEMS_PER_PAGE);
+          if (currentPageBookings < totalPages) {
+            currentPageBookings++;
+            renderBookingsTable();
           }
         });
-      });
+      }
+    };
 
-      // WhatsApp button listeners
-      container.querySelectorAll('.btn-task-whatsapp').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const phone = btn.getAttribute('data-phone');
-          const name = btn.getAttribute('data-name');
-          const type = btn.getAttribute('data-type');
-          const date = btn.getAttribute('data-date');
-          openWhatsAppModal({ phone, customer_name: name, task_type: type, date });
+    // Initial setup of bookings pagination
+    setupBookingsPagination();
+
+    document.getElementById('btn-create-booking-page')?.addEventListener('click', () => {
+      document.getElementById('btn-new-booking')?.click();
+    });
+
+    document.getElementById('btn-run-auto-wa-tasks')?.addEventListener('click', async () => {
+      try {
+        const res = await electronApi.invoke('whatsapp:run-auto-alerts');
+        const sent = res?.data?.sent || 0;
+        const skipped = res?.data?.skipped || 0;
+        AppToast.success(`تم إرسال ${sent} رسالة واتساب وتخطي ${skipped} رسالة 💬`);
+      } catch (err) {
+        AppToast.error(`خطأ: ${err.message}`);
+      }
+    });
+
+    // Delivery date filter listener
+    const deliveryDateInput = document.getElementById('delivery-date-filter');
+    if (deliveryDateInput) {
+      deliveryDateInput.addEventListener('change', (e) => {
+        const newDeliveryDateFilter = e.target.value;
+        const filteredDeliveryBookings = bookings.filter(b => {
+          const isCorrectStatus = b.status === 'PREPARED' || b.status === 'CONFIRMED';
+          const isDateMatch = b.pickup_date === newDeliveryDateFilter;
+          return isCorrectStatus && isDateMatch;
         });
+        currentPageDelivery = 1;
+        renderDeliverySection(filteredDeliveryBookings);
       });
-
-    } catch (e) {
-      container.innerHTML = `<div style="color: var(--color-danger); text-align: center; padding: 20px;">خطأ في تحميل المهام: ${e.message}</div>`;
     }
+
+
+
+    // Function to render delivery section
+    const renderDeliverySection = (filteredBookings) => {
+      const deliveryContainer = document.getElementById('delivery-bookings-container');
+      if (deliveryContainer) {
+        deliveryContainer.innerHTML = paginate(filteredBookings, currentPageDelivery).map(b => `
+          <div style="padding: 12px; background: var(--bg-card); border-radius: 6px; border-right: 3px solid var(--color-success); margin-bottom: 8px;">
+            <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-secondary);">
+              <span>حجز #${b.booking_number}</span>
+              <span>${statusBadge(b.status)}</span>
+            </div>
+            <div style="margin-top: 6px; font-weight: 600;">${b.customer_name}</div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">📱 ${b.customer_phone || '-'}</div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">البدلة: ${b.items_summary || 'بدلة فاخرة'}</div>
+            <div style="font-size: 12px; color: var(--text-muted);">تاريخ الاستلام: ${b.pickup_date}</div>
+            <div style="margin-top: 8px;">
+              <button class="btn-accent-action" style="padding: 4px 8px; font-size: 11px; width: 100%;" onclick="window._openHandoverModal(${b.id}, '${b.booking_number}', ${b.final_amount - b.paid_amount}, ${b.total_deposit_amount})">تسليم البدلة</button>
+            </div>
+          </div>
+        `).join('');
+
+        // Update pagination
+        const paginationDiv = deliveryContainer.closest('div').querySelector('div[style*="border-top"]');
+        if (paginationDiv && filteredBookings.length > ITEMS_PER_PAGE) {
+          paginationDiv.innerHTML = `
+            <button class="btn-secondary" id="delivery-prev-page" style="padding: 4px 12px; font-size: 11px;" ${currentPageDelivery === 1 ? 'disabled' : ''}>السابق</button>
+            <span style="font-size: 12px; color: var(--text-secondary);">صفحة ${currentPageDelivery} من ${Math.ceil(filteredBookings.length / ITEMS_PER_PAGE)}</span>
+            <button class="btn-secondary" id="delivery-next-page" style="padding: 4px 12px; font-size: 11px;" ${currentPageDelivery >= Math.ceil(filteredBookings.length / ITEMS_PER_PAGE) ? 'disabled' : ''}>التالي</button>
+          `;
+          // Re-attach listeners
+          const newPrevBtn = document.getElementById('delivery-prev-page');
+          const newNextBtn = document.getElementById('delivery-next-page');
+          if (newPrevBtn) {
+            newPrevBtn.addEventListener('click', () => {
+              if (currentPageDelivery > 1) {
+                currentPageDelivery--;
+                const refiltered = bookings.filter(b => {
+                  const isCorrectStatus = b.status === 'PREPARED' || b.status === 'CONFIRMED';
+                  const isDateMatch = b.pickup_date === deliveryDateInput.value;
+                  return isCorrectStatus && isDateMatch;
+                });
+                renderDeliverySection(refiltered);
+              }
+            });
+          }
+          if (newNextBtn) {
+            newNextBtn.addEventListener('click', () => {
+              const refiltered = bookings.filter(b => {
+                const isCorrectStatus = b.status === 'PREPARED' || b.status === 'CONFIRMED';
+                const isDateMatch = b.pickup_date === deliveryDateInput.value;
+                return isCorrectStatus && isDateMatch;
+              });
+              const totalPages = Math.ceil(refiltered.length / ITEMS_PER_PAGE);
+              if (currentPageDelivery < totalPages) {
+                currentPageDelivery++;
+                renderDeliverySection(refiltered);
+              }
+            });
+          }
+        } else if (paginationDiv) {
+          paginationDiv.innerHTML = '';
+        }
+      }
+    };
+
+    // Return date filter listener
+    const returnDateInput = document.getElementById('return-date-filter');
+    if (returnDateInput) {
+      returnDateInput.addEventListener('change', (e) => {
+        const newReturnDateFilter = e.target.value;
+        const filteredReturnBookings = bookings.filter(b => {
+          const isCorrectStatus = b.status === 'DELIVERED';
+          const isDateMatch = b.return_due_date === newReturnDateFilter;
+          return isCorrectStatus && isDateMatch;
+        });
+        currentPageReturn = 1;
+        renderReturnSection(filteredReturnBookings);
+      });
+    }
+
+    // Function to render return section
+    const renderReturnSection = (filteredBookings) => {
+      const returnContainer = document.getElementById('return-bookings-container');
+      if (returnContainer) {
+        returnContainer.innerHTML = paginate(filteredBookings, currentPageReturn).map(b => {
+          const remainingAmount = b.final_amount - b.paid_amount;
+          const hasRemaining = remainingAmount > 0;
+          return `
+          <div style="padding: 12px; background: var(--bg-card); border-radius: 6px; border-right: 3px solid ${new Date(b.return_due_date) < new Date() ? 'var(--color-danger)' : 'var(--color-warning)'}; margin-bottom: 8px;">
+            <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-secondary);">
+              <span>حجز #${b.booking_number}</span>
+              <span style="color: ${new Date(b.return_due_date) < new Date() ? 'var(--color-danger)' : 'var(--color-warning)'};">الإرجاع: ${b.return_due_date}</span>
+            </div>
+            <div style="margin-top: 6px; font-weight: 600;">${b.customer_name}</div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">📱 ${b.customer_phone || '-'}</div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">البدلة: ${b.items_summary || 'بدلة فاخرة'}</div>
+            <div style="margin-top: 6px; padding: 8px; background: ${hasRemaining ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)'}; border-radius: 4px; border: 1px solid ${hasRemaining ? 'rgba(239, 68, 68, 0.3)' : 'rgba(16, 185, 129, 0.3)'};">
+              <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 4px;">حالة الدفع:</div>
+              ${hasRemaining ? `
+                <div style="font-size: 12px; font-weight: 600; color: var(--color-danger);">
+                  ⚠️ باقي: ${remainingAmount} ج.م
+                </div>
+                <div style="font-size: 10px; color: var(--color-danger); margin-top: 2px;">يجب سداد المتبقي قبل الإرجاع</div>
+              ` : `
+                <div style="font-size: 12px; font-weight: 600; color: var(--color-success);">
+                  ✅ مكتمل (${b.paid_amount} ج.م)
+                </div>
+              `}
+            </div>
+            <div style="margin-top: 8px;">
+              <button class="btn-primary-action" style="padding: 4px 8px; font-size: 11px; width: 100%;" onclick="window._openReturnModal(${b.id}, '${b.booking_number}', '${b.return_due_date}', ${b.deposit_paid})">استلام وتسوية</button>
+            </div>
+          </div>
+        `}).join('');
+
+        // Update pagination
+        const paginationDiv = returnContainer.closest('div').querySelector('div[style*="border-top"]');
+        if (paginationDiv && filteredBookings.length > ITEMS_PER_PAGE) {
+          paginationDiv.innerHTML = `
+            <button class="btn-secondary" id="return-prev-page" style="padding: 4px 12px; font-size: 11px;" ${currentPageReturn === 1 ? 'disabled' : ''}>السابق</button>
+            <span style="font-size: 12px; color: var(--text-secondary);">صفحة ${currentPageReturn} من ${Math.ceil(filteredBookings.length / ITEMS_PER_PAGE)}</span>
+            <button class="btn-secondary" id="return-next-page" style="padding: 4px 12px; font-size: 11px;" ${currentPageReturn >= Math.ceil(filteredBookings.length / ITEMS_PER_PAGE) ? 'disabled' : ''}>التالي</button>
+          `;
+          // Re-attach listeners
+          const newPrevBtn = document.getElementById('return-prev-page');
+          const newNextBtn = document.getElementById('return-next-page');
+          if (newPrevBtn) {
+            newPrevBtn.addEventListener('click', () => {
+              if (currentPageReturn > 1) {
+                currentPageReturn--;
+                const refiltered = bookings.filter(b => {
+                  const isCorrectStatus = b.status === 'DELIVERED';
+                  const isDateMatch = b.return_due_date === returnDateInput.value;
+                  return isCorrectStatus && isDateMatch;
+                });
+                renderReturnSection(refiltered);
+              }
+            });
+          }
+          if (newNextBtn) {
+            newNextBtn.addEventListener('click', () => {
+              const refiltered = bookings.filter(b => {
+                const isCorrectStatus = b.status === 'DELIVERED';
+                const isDateMatch = b.return_due_date === returnDateInput.value;
+                return isCorrectStatus && isDateMatch;
+              });
+              const totalPages = Math.ceil(refiltered.length / ITEMS_PER_PAGE);
+              if (currentPageReturn < totalPages) {
+                currentPageReturn++;
+                renderReturnSection(refiltered);
+              }
+            });
+          }
+        } else if (paginationDiv) {
+          paginationDiv.innerHTML = '';
+        }
+      }
+    };
   }
 
+  // --- Phase 13: Reports Page (التقارير) ---
   function openCreateTaskModal() {
     if (!window.AppModal) return;
 
@@ -10426,7 +12355,7 @@
               </div>
               <div class="breakdown-row" style="border-top: 2px solid var(--border-color); margin-top: 6px; padding-top: 10px;">
                 <span>إجمالي التكلفة الرأسمالية لشراء الأسطول</span>
-                <span style="font-weight: 700; color: var(--color-gold-500); font-size: 15px;">${fmt(d.suits.totalCapitalCost)}</span>
+                <span style="font-weight: 700; color: var(--color-gold-500); font-size: 15px;">${window._formatCostPrice(d.suits.totalCapitalCost)}</span>
               </div>
               <div class="breakdown-row">
                 <span>الدخل الإيجاري التقديري لدورة كاملة</span>
@@ -10455,7 +12384,7 @@
               </div>
               <div class="breakdown-row" style="border-top: 2px solid var(--border-color); margin-top: 6px; padding-top: 10px;">
                 <span>إجمالي تقييم المخزون بسعر التكلفة</span>
-                <span style="font-weight: 700; color: var(--text-primary); font-size: 15px;">${fmt(d.quantityInventory.costValuation)}</span>
+                <span style="font-weight: 700; color: var(--text-primary); font-size: 15px;">${window._formatCostPrice(d.quantityInventory.costValuation)}</span>
               </div>
               <div class="breakdown-row">
                 <span>إجمالي القيمة البيعية السوقية المتوقعة</span>
@@ -10463,7 +12392,7 @@
               </div>
               <div class="breakdown-row">
                 <span>مجمل الربح التجاري المتوقع عند البيع الكامل</span>
-                <span style="font-weight: 700; color: var(--color-success);">${fmt(d.quantityInventory.retailValuation - d.quantityInventory.costValuation)}</span>
+                <span style="font-weight: 700; color: var(--color-success);">${window._formatCostPrice(d.quantityInventory.retailValuation - d.quantityInventory.costValuation)}</span>
               </div>
             </div>
           </div>
@@ -10550,10 +12479,6 @@
               <div style="background: var(--bg-app); padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); text-align: center; flex: 1;">
                 <div style="font-size: 11px; color: var(--text-secondary);">متاحة فوراً</div>
                 <div style="font-size: 16px; font-weight: 700; color: var(--color-success);">${d.fleetSummary.availableUnits}</div>
-              </div>
-              <div style="background: var(--bg-app); padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); text-align: center; flex: 1;">
-                <div style="font-size: 11px; color: var(--text-secondary);">بالمغسلة والتجهيز</div>
-                <div style="font-size: 16px; font-weight: 700; color: #3b82f6;">${d.fleetSummary.cleaningUnits}</div>
               </div>
               <div style="background: var(--bg-app); padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); text-align: center; flex: 1;">
                 <div style="font-size: 11px; color: var(--text-secondary);">تحت الصيانة</div>
@@ -10711,14 +12636,14 @@
     `;
   }
 
-  // Keyboard shortcut listener (Ctrl+K for search)
-  window.addEventListener('keydown', (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
-      e.preventDefault();
-      const searchInput = document.querySelector('.header-search input');
-      if (searchInput) searchInput.focus();
-    }
-  });
+  // Keyboard shortcut listener (Ctrl+K for search) - REMOVED since search is deleted
+  // window.addEventListener('keydown', (e) => {
+  //   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+  //     e.preventDefault();
+  //     const searchInput = document.querySelector('.header-search input');
+  //     if (searchInput) searchInput.focus();
+  //   }
+  // });
 
   // Run on load
   document.addEventListener('DOMContentLoaded', async () => {

@@ -94,7 +94,7 @@ if (shouldPush) {
     execSync('git add -A', { cwd: repoRoot, stdio: 'pipe' });
     execSync(`git commit -m "chore(release): v${newVersion}"`, { cwd: repoRoot, stdio: 'pipe' });
     execSync(`git tag -a v${newVersion} -m "Release v${newVersion}" -f`, { cwd: repoRoot, stdio: 'pipe' });
-    execSync('git push origin main --tags', { cwd: repoRoot, stdio: 'pipe' });
+    execSync(`git push origin main v${newVersion}`, { cwd: repoRoot, stdio: 'pipe' });
     console.log(`  ✓ تم رفع الإصدار الجديد v${newVersion} والوسم إلى مستودع Kenouz بنجاح.`);
 
     console.log('  جاري مزامنة مستودع التحديثات المباشر (mohamed-saed)...');

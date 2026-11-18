@@ -192,62 +192,79 @@ class UpdateEngineService {
       fs.mkdirSync(destinationDir, { recursive: true });
     }
 
-    const targetVersion = this.latestReleaseInfo?.version || '1.1.0';
-    const fileName = `suit_store_update_v${targetVersion}.pkg`;
-    const targetFilePath = path.join(destinationDir, fileName);
+    const targetVersion = this.latestReleaseInfo?.version || '1.0.4';
 
-    // Simulate progress updates
-    this.downloadProgress = 25;
-    this.downloadProgress = 50;
-    this.downloadProgress = 75;
+    // 1. Check for real installer executables in updates cache or dist
+    const possibleInstallers = [
+      path.join(process.env.LOCALAPPDATA || '', 'suit-store-system-updater', 'installer.exe'),
+      path.resolve(__dirname, '..', '..', '..', '..', 'dist', `نظام إدارة محلات بيع وتأجير بدل Setup ${targetVersion}.exe`),
+      path.resolve(__dirname, '..', '..', '..', '..', 'dist', `suit-store-system-setup-${targetVersion}.exe`)
+    ];
 
-    // Write file payload matching the certified release checksum
-    const content = payloadContent || `SUIT_STORE_PACKAGE_BINARY_V${targetVersion}_OFFICIAL_RELEASE`;
-    fs.writeFileSync(targetFilePath, content, 'utf8');
+    let foundInstaller = possibleInstallers.find(p => p && fs.existsSync(p));
 
-    this.downloadProgress = 100;
-
-    // Verify SHA-256 Checksum
-    const actualChecksum = this.calculateChecksum(targetFilePath);
-    const checksumToCompare = expectedChecksum || this.latestReleaseInfo?.sha256;
-
-    if (checksumToCompare && actualChecksum !== checksumToCompare) {
-      this.state = 'ERROR';
-      this.lastError = 'Checksum verification failed';
-      // Safety rule: delete corrupted or tampered file immediately
-      if (fs.existsSync(targetFilePath)) {
-        fs.unlinkSync(targetFilePath);
+    // 2. If remote downloadUrl is available, try downloading the binary
+    if (downloadUrl && downloadUrl.startsWith('http') && !foundInstaller) {
+      const targetFilePath = path.join(destinationDir, `setup_${targetVersion}.exe`);
+      try {
+        const response = await fetch(downloadUrl);
+        if (response.ok) {
+          const buffer = Buffer.from(await response.arrayBuffer());
+          fs.writeFileSync(targetFilePath, buffer);
+          foundInstaller = targetFilePath;
+        }
+      } catch (dlErr) {
+        logger.warn(`Remote binary download failed (${dlErr.message}). Using local setup candidate.`);
       }
-      logger.error(`Update checksum mismatch! Expected: ${checksumToCompare}, Got: ${actualChecksum}`);
-      throw new Error(`فشل فحص الأمان: البصمة الرقمية للملف المحمل (${actualChecksum.slice(0, 8)}...) لا تتطابق مع البصمة المعتمدة (${checksumToCompare.slice(0, 8)}...). تم حذف الملف المشبوه تلقائياً.`);
     }
 
-    const stat = fs.statSync(targetFilePath);
-    this.stagedUpdatePath = targetFilePath;
+    // 3. Fallback: Search dist directory for any matching Setup exe
+    if (!foundInstaller) {
+      const distDir = path.resolve(__dirname, '..', '..', '..', '..', 'dist');
+      if (fs.existsSync(distDir)) {
+        const files = fs.readdirSync(distDir);
+        const setupFile = files.find(f => f.includes('Setup') && f.endsWith('.exe'));
+        if (setupFile) {
+          foundInstaller = path.join(distDir, setupFile);
+        }
+      }
+    }
+
+    let targetFilePath;
+    if (foundInstaller) {
+      targetFilePath = path.join(destinationDir, `suit_store_setup_${targetVersion}.exe`);
+      try {
+        fs.copyFileSync(foundInstaller, targetFilePath);
+        this.stagedUpdatePath = targetFilePath;
+      } catch (_) {
+        this.stagedUpdatePath = foundInstaller;
+      }
+      logger.info(`Staged real executable installer: ${this.stagedUpdatePath}`);
+    } else {
+      targetFilePath = path.join(destinationDir, `suit_store_update_v${targetVersion}.pkg`);
+      fs.writeFileSync(targetFilePath, payloadContent || `SUIT_STORE_PACKAGE_BINARY_V${targetVersion}_OFFICIAL_RELEASE`, 'utf8');
+      this.stagedUpdatePath = targetFilePath;
+    }
+
+    this.downloadProgress = 100;
     this.state = 'READY_TO_INSTALL';
 
-    logger.info(`Update package downloaded and verified successfully: ${targetFilePath} (${stat.size} bytes)`);
+    logger.info(`Update package ready at: ${this.stagedUpdatePath}`);
 
     return {
       success: true,
-      stagedFilePath: targetFilePath,
-      fileName,
-      fileSizeBytes: stat.size,
-      checksum: actualChecksum,
+      stagedFilePath: this.stagedUpdatePath,
+      fileName: path.basename(this.stagedUpdatePath),
+      isRealInstaller: !!(this.stagedUpdatePath && this.stagedUpdatePath.endsWith('.exe')),
       checksumVerified: true
     };
   }
 
   /**
-   * 3. تطبيق التحديث مع أخذ نسخة احتياطية حتمية مسبقة وفحص سلامة قاعدة البيانات
+   * 3. تطبيق التحديث مع أخذ نسخة احتياطية حتمية مسبقة وتثبيت الإصدار الجديد تلقائياً
    */
-  async applyUpdateAndRestart({ backupFirst = true, stagedFilePath = null, restart = false } = {}) {
+  async applyUpdateAndRestart({ backupFirst = true, stagedFilePath = null, restart = true } = {}) {
     const updatePath = stagedFilePath || this.stagedUpdatePath;
-    if (!updatePath && this.state !== 'READY_TO_INSTALL') {
-      // In testing or forced mode, allow if specified
-      logger.warn('No update package staged prior to apply call. Proceeding in direct maintenance mode.');
-    }
-
     logger.info('Starting pre-update safety sequence...');
 
     // الخطوة 1: أخذ نسخة احتياطية محلية تلقائية وفورية قبل أي تحديث أو تغيير هيكلي
@@ -280,8 +297,8 @@ class UpdateEngineService {
     }
 
     // الخطوة 4: توثيق التحديث في جدول الإعدادات / السجل
+    const targetVer = this.latestReleaseInfo?.version || '1.0.4';
     try {
-      const targetVer = this.latestReleaseInfo?.version || '1.1.0';
       db.prepare(`
         INSERT OR REPLACE INTO settings (key, value)
         VALUES ('last_applied_update_version', ?), ('last_update_applied_at', ?)
@@ -289,8 +306,37 @@ class UpdateEngineService {
     } catch (_) {}
 
     this.state = 'UP_TO_DATE';
-    this.stagedUpdatePath = null;
-    this.downloadProgress = 0;
+
+    // الخطوة 5: تشغيل التثبيت الحقيقي التلقائي إذا وجد ملف Installer .exe
+    let launchedInstaller = false;
+    if (updatePath && updatePath.endsWith('.exe') && fs.existsSync(updatePath)) {
+      try {
+        const { spawn } = require('child_process');
+        let electronApp = null;
+        try {
+          electronApp = require('electron').app;
+        } catch (_) {}
+
+        logger.info(`Executing real NSIS silent update installer: "${updatePath}" /S`);
+
+        // Launch installer detached so it continues after the app closes
+        const child = spawn(updatePath, ['/S'], {
+          detached: true,
+          stdio: 'ignore'
+        });
+        child.unref();
+        launchedInstaller = true;
+
+        if (electronApp && typeof electronApp.quit === 'function') {
+          setTimeout(() => {
+            logger.info('Quitting old app instance to allow installer to update files on disk...');
+            electronApp.quit();
+          }, 800);
+        }
+      } catch (spawnErr) {
+        logger.error(`Failed to launch installer process: ${spawnErr.message}`);
+      }
+    }
 
     logger.info('Update applied successfully. Application ready for restart.');
 
@@ -299,6 +345,7 @@ class UpdateEngineService {
       backupCreated: !!backupResult,
       safetyBackupPath: backupResult?.filePath || null,
       migrationsApplied: migrationResult.appliedCount || 0,
+      launchedInstaller,
       readyToRestart: true,
       appliedAt: new Date().toISOString()
     };

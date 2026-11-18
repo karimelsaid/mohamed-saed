@@ -24,13 +24,20 @@ class UpdateEngineService {
 
   readCurrentAppVersion() {
     try {
+      const { app } = require('electron');
+      if (app && typeof app.getVersion === 'function') {
+        const v = app.getVersion();
+        if (v) return v;
+      }
+    } catch (_) {}
+    try {
       const pkgPath = path.resolve(__dirname, '..', '..', '..', '..', 'package.json');
       if (fs.existsSync(pkgPath)) {
         const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
-        return pkg.version || '1.0.0';
+        return pkg.version || '1.0.5';
       }
     } catch (_) {}
-    return '1.0.0';
+    return '1.0.5';
   }
 
   getDefaultUpdatesDir() {

@@ -68,7 +68,8 @@ function registerCoreHandlers() {
       store: settingsService.getStoreProfile(),
       printers: settingsService.getPrinterSettings(),
       security: settingsService.getSecuritySettings(),
-      whatsapp: settingsService.getWhatsAppSettings()
+      whatsapp: settingsService.getWhatsAppSettings(),
+      appVersion: app.getVersion() || '1.0.5'
     };
   });
 

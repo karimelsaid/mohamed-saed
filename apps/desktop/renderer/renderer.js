@@ -2025,6 +2025,7 @@
   const pageContent = document.getElementById('page-content');
   const unlockedPagesSession = new Set();
   let cachedAppSettings = null;
+  let currentAppVersion = '1.0.5';
 
   const PAGE_TITLES = {
     dashboard: 'لوحة التحكم',
@@ -2395,13 +2396,33 @@
 
   async function loadSettingsAndApply() {
     try {
-      const res = await electronApi.invoke('settings:get');
+      const [res, infoRes] = await Promise.all([
+        electronApi.invoke('settings:get'),
+        electronApi.invoke('app:get-info').catch(() => null)
+      ]);
+      if (infoRes?.data?.version) {
+        currentAppVersion = infoRes.data.version;
+      }
       if (res?.data) {
         cachedAppSettings = res.data;
+        if (cachedAppSettings.appVersion) {
+          currentAppVersion = cachedAppSettings.appVersion;
+        } else {
+          cachedAppSettings.appVersion = currentAppVersion;
+        }
         applyStoreSettings(cachedAppSettings.store);
         applyAppearanceSettings(cachedAppSettings.store);
         // Start auto backup scheduler
         startAutoBackupScheduler();
+      }
+      // Update version indicators dynamically
+      const sidebarVerEl = document.getElementById('sidebar-app-version');
+      if (sidebarVerEl && currentAppVersion) {
+        sidebarVerEl.textContent = `v${currentAppVersion}`;
+      }
+      const currentBadge = document.getElementById('current-app-version-badge');
+      if (currentBadge && currentAppVersion) {
+        currentBadge.textContent = `الإصدار الحالي: v${currentAppVersion}`;
       }
     } catch (e) {
       console.warn('Failed to load settings:', e);
@@ -4890,7 +4911,7 @@
             <h3 style="margin: 0; font-size: 16px;">🚀 التحديثات التلقائية للنظام (Auto Updates & Safety Staging)</h3>
             <p style="margin: 4px 0 0; font-size: 12px; color: var(--text-secondary);">فحص وتنزيل وتثبيت التحديثات الجديدة مع فحص البصمة الرقمية (SHA-256) والنسخ الاحتياطي الحتمي قبل التحديث</p>
           </div>
-          <span class="badge badge-gold" id="current-app-version-badge">الإصدار الحالي: v${cachedAppSettings?.appVersion || "1.0.3"}</span>
+          <span class="badge badge-gold" id="current-app-version-badge">الإصدار الحالي: v${cachedAppSettings?.appVersion || currentAppVersion || "1.0.5"}</span>
         </div>
 
         <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 16px;">
@@ -6475,7 +6496,7 @@
         if (btnDownload) btnDownload.style.display = 'none';
 
         // Render Animated Modern Progress & Stages Card
-        const targetVer = currentUpdateData?.latestVersion || '1.0.3';
+        const targetVer = currentUpdateData?.latestVersion || currentAppVersion || '1.0.5';
         const fileSizeMB = currentUpdateData?.fileSizeBytes ? (currentUpdateData.fileSizeBytes / (1024 * 1024)).toFixed(1) : '43.2';
 
         statusArea.innerHTML = `
@@ -6668,7 +6689,7 @@
     };
 
     document.getElementById('btn-apply-update')?.addEventListener('click', () => {
-      window._executeApplyUpdateSequence(currentUpdateData?.latestVersion || '1.0.3');
+      window._executeApplyUpdateSequence(currentUpdateData?.latestVersion || currentAppVersion || '1.0.5');
     });
   }
 

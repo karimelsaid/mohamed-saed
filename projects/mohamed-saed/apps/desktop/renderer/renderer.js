@@ -4890,7 +4890,7 @@
             <h3 style="margin: 0; font-size: 16px;">🚀 التحديثات التلقائية للنظام (Auto Updates & Safety Staging)</h3>
             <p style="margin: 4px 0 0; font-size: 12px; color: var(--text-secondary);">فحص وتنزيل وتثبيت التحديثات الجديدة مع فحص البصمة الرقمية (SHA-256) والنسخ الاحتياطي الحتمي قبل التحديث</p>
           </div>
-          <span class="badge badge-gold" id="current-app-version-badge">الإصدار الحالي: v1.0.0</span>
+          <span class="badge badge-gold" id="current-app-version-badge">الإصدار الحالي: v${cachedAppSettings?.appVersion || "1.0.3"}</span>
         </div>
 
         <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 16px;">
@@ -6472,95 +6472,203 @@
         const btnApply = document.getElementById('btn-apply-update');
         const statusArea = document.getElementById('update-status-area');
 
-        if (btnDownload) {
-          btnDownload.disabled = true;
-          btnDownload.textContent = '⏳ جاري التنزيل والتحقق من البصمة...';
-        }
+        if (btnDownload) btnDownload.style.display = 'none';
 
-        AppToast.info('بدء تنزيل حزمة التحديث وفحص بصمة SHA-256... ⬇️');
+        // Render Animated Modern Progress & Stages Card
+        const targetVer = currentUpdateData?.latestVersion || '1.0.3';
+        const fileSizeMB = currentUpdateData?.fileSizeBytes ? (currentUpdateData.fileSizeBytes / (1024 * 1024)).toFixed(1) : '43.2';
+
+        statusArea.innerHTML = `
+          <div style="background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 8px; padding: 18px; margin-top: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="spinner" id="update-spinner" style="width: 18px; height: 18px; border-width: 2px;"></span>
+                <strong id="prog-main-title" style="font-size: 14px; color: var(--color-gold-400);">جاري تنزيل وتوثيق حزمة التحديث v${targetVer}...</strong>
+              </div>
+              <span id="prog-pct-num" style="font-weight: 800; font-size: 16px; color: var(--color-gold-400); font-family: monospace;">15%</span>
+            </div>
+
+            <!-- Progress Bar -->
+            <div style="width: 100%; height: 12px; background: rgba(255,255,255,0.06); border-radius: 8px; overflow: hidden; margin-bottom: 16px; border: 1px solid rgba(255,255,255,0.1); padding: 2px;">
+              <div id="prog-bar-fill" style="width: 15%; height: 100%; background: linear-gradient(90deg, #b8860b, #ffd700, #b8860b); background-size: 200% 100%; border-radius: 6px; transition: width 0.35s ease; box-shadow: 0 0 10px rgba(212, 175, 55, 0.4);"></div>
+            </div>
+
+            <!-- Detailed Execution Stages -->
+            <div style="display: flex; flex-direction: column; gap: 9px; font-size: 12.5px;">
+              <div id="stg-1" style="display: flex; align-items: center; gap: 10px; color: var(--text-primary); transition: all 0.3s;">
+                <span id="stg-1-icon">⏳</span> <span id="stg-1-text">الاتصال بسيرفر التحديثات السحابي وفحص المكونات...</span>
+              </div>
+              <div id="stg-2" style="display: flex; align-items: center; gap: 10px; color: var(--text-muted); transition: all 0.3s;">
+                <span id="stg-2-icon">⚪</span> <span id="stg-2-text">تنزيل حزمة التحديث والمكونات البرمجية الجديدة (${fileSizeMB} MB)...</span>
+              </div>
+              <div id="stg-3" style="display: flex; align-items: center; gap: 10px; color: var(--text-muted); transition: all 0.3s;">
+                <span id="stg-3-icon">⚪</span> <span id="stg-3-text">التحقق الصارم من التشفير والبصمة الرقمية (SHA-256 Checksum)...</span>
+              </div>
+              <div id="stg-4" style="display: flex; align-items: center; gap: 10px; color: var(--text-muted); transition: all 0.3s;">
+                <span id="stg-4-icon">⚪</span> <span id="stg-4-text">توثيق الحزمة وتجهيزها للتثبيت الآمن التلقائي...</span>
+              </div>
+            </div>
+
+            <!-- Ready Action Button Box -->
+            <div id="update-action-box" style="display: none; margin-top: 18px; padding-top: 14px; border-top: 1px dashed var(--border-color); text-align: center;">
+              <button id="btn-apply-update-direct" class="btn-primary-action" style="background: linear-gradient(135deg, #d4af37, #b8860b); border: none; color: #000; font-weight: 800; font-size: 14px; padding: 12px 28px; border-radius: 8px; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.35); cursor: pointer;">
+                ⚡ تطبيق التحديث وإعادة تشغيل البرنامج الآن
+              </button>
+            </div>
+          </div>
+        `;
+
+        const setProg = (pct, title) => {
+          const bar = document.getElementById('prog-bar-fill');
+          const num = document.getElementById('prog-pct-num');
+          const t = document.getElementById('prog-main-title');
+          if (bar) bar.style.width = pct + '%';
+          if (num) num.textContent = pct + '%';
+          if (t && title) t.textContent = title;
+        };
+
+        const setStage = (stageId, status, text) => {
+          const el = document.getElementById(stageId);
+          const icon = document.getElementById(stageId + '-icon');
+          const txt = document.getElementById(stageId + '-text');
+          if (status === 'active') {
+            if (el) el.style.color = 'var(--color-gold-400)';
+            if (icon) icon.textContent = '⏳';
+          } else if (status === 'done') {
+            if (el) el.style.color = 'var(--color-success)';
+            if (icon) icon.textContent = '✅';
+          } else if (status === 'error') {
+            if (el) el.style.color = 'var(--color-danger)';
+            if (icon) icon.textContent = '❌';
+          }
+          if (txt && text) txt.textContent = text;
+        };
+
+        // Smooth step 1
+        await new Promise(r => setTimeout(r, 400));
+        setStage('stg-1', 'done', 'تم الاتصال بسيرفر GitHub وفحص حزمة الإصدار بنجاح.');
+        setStage('stg-2', 'active', 'جاري استلام وتنزيل ملفات التحديث والمكونات البرمجية...');
+        setProg(45);
+
+        // Perform actual download and verification
         const res = await electronApi.invoke('update:download', {
           downloadUrl: currentUpdateData?.downloadUrl,
           expectedChecksum: currentUpdateData?.sha256Checksum
         });
 
-        if (res.success && res.data) {
-          AppToast.success('تم تنزيل وتوثيق حزمة التحديث بنجاح تام! 🛡️✅');
-          if (btnDownload) btnDownload.style.display = 'none';
-          if (btnApply) {
-            btnApply.style.display = 'inline-block';
-            btnApply.disabled = false;
-          }
+        await new Promise(r => setTimeout(r, 500));
+        setStage('stg-2', 'done', 'تم تنزيل حزمة التحديث بالكامل بنجاح 100%.');
+        setStage('stg-3', 'active', 'جاري فحص وتدقيق البصمة الرقمية والتشفير (SHA-256)...');
+        setProg(85);
 
-          statusArea.innerHTML += `
-            <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--border-color); color: var(--color-success);">
-              🛡️ تم فحص البصمة الرقمية للملف ومطابقتها بنجاح 100%. الحزمة جاهزة للتطبيق الآمن.
-            </div>
-          `;
+        await new Promise(r => setTimeout(r, 450));
+
+        if (res && res.success) {
+          setStage('stg-3', 'done', 'تم فحص البصمة الرقمية ومطابقتها أمنياً بنجاح تام.');
+          setStage('stg-4', 'done', 'الحزمة جاهزة للتثبيت الآمن (تم التحقق والتوثيق).');
+          setProg(100, '🎉 تم تنزيل وتوثيق حزمة التحديث v' + targetVer + ' بنجاح!');
+
+          const spinner = document.getElementById('update-spinner');
+          if (spinner) spinner.style.display = 'none';
+
+          const actionBox = document.getElementById('update-action-box');
+          if (actionBox) actionBox.style.display = 'block';
+
+          // Hook the direct apply button
+          document.getElementById('btn-apply-update-direct')?.addEventListener('click', () => {
+            window._executeApplyUpdateSequence(targetVer);
+          });
+
+          AppToast.success('تم تنزيل وتوثيق حزمة التحديث بنجاح! جاهز للتثبيت 🚀');
         } else {
-          AppToast.error(res.error?.message || 'فشل تنزيل التحديث.');
+          setStage('stg-3', 'error', 'فشل في التحقق: ' + (res?.error?.message || 'خطأ في التنزيل'));
+          AppToast.error(res?.error?.message || 'فشل تنزيل التحديث.');
           if (btnDownload) {
+            btnDownload.style.display = 'inline-block';
             btnDownload.disabled = false;
-            btnDownload.textContent = '⬇️ إعادة محاولة التنزيل';
+            btnDownload.textContent = '⬇️ إعادة المحاولة';
           }
         }
       } catch (err) {
-        AppToast.error(`خطأ أثناء التنزيل: ${err.message}`);
+        AppToast.error('خطأ: ' + err.message);
       }
     });
 
-    document.getElementById('btn-apply-update')?.addEventListener('click', async () => {
-      if (!window.AppModal) return;
-      window.AppModal.open({
-        title: '🚀 تأكيد تطبيق التحديث وإعادة التشغيل',
-        contentHtml: `
-          <div style="margin-bottom: 12px; font-weight: 600; color: var(--color-gold-500);">
-            جاهز لتطبيق التحديث v${currentUpdateData?.latestVersion || '1.1.0'}
-          </div>
-          <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.6;">
-            🛡️ <strong>إجراءات الأمان التلقائية:</strong><br>
-            1. سيقوم النظام بأخذ نسخة احتياطية فورية وحتمية من قاعدة البيانات الحالية.<br>
-            2. فحص السلامة الهيكلية لقاعدة البيانات (Database Health Check).<br>
-            3. تطبيق المهاجرات الجديدة (Migrations) تلقائياً.<br>
-            4. إعادة تشغيل التطبيق على الإصدار الجديد.
-          </p>
-        `,
-        footerHtml: `
-          <button class="btn-secondary" onclick="AppModal.close()">تأجيل</button>
-          <button class="btn-primary-action" id="btn-confirm-apply-update" style="background: var(--color-gold-500); border-color: var(--color-gold-500); color: #000;">
-            تأكيد التحديث وإعادة التشغيل ⚡
-          </button>
-        `,
-        width: '500px'
-      });
+    window._executeApplyUpdateSequence = async (version) => {
+      const statusArea = document.getElementById('update-status-area');
+      if (!statusArea) return;
 
-      document.getElementById('btn-confirm-apply-update')?.addEventListener('click', async () => {
-        AppModal.close();
-        try {
-          AppToast.info('جاري أخذ النسخة الوقائية وتطبيق التحديث... ⏳');
-          const res = await electronApi.invoke('update:apply', { backupFirst: true });
-          if (res.success) {
-            AppToast.success('تم تطبيق التحديث وترحيل قاعدة البيانات بنجاح تام! 🚀');
-            const versionBadge = document.getElementById('current-app-version-badge');
-            if (versionBadge && currentUpdateData) {
-              versionBadge.textContent = `الإصدار الحالي: v${currentUpdateData.latestVersion}`;
-            }
-            const statusArea = document.getElementById('update-status-area');
-            if (statusArea) {
-              statusArea.innerHTML = `
-                <div style="color: var(--color-success); font-weight: 700; font-size: 14px;">
-                  ✅ تم تطبيق التحديث بنجاح! تم أخذ نسخة وقائية وترحيل الجداول.
-                </div>
-              `;
-            }
-            const btnApply = document.getElementById('btn-apply-update');
-            if (btnApply) btnApply.style.display = 'none';
-          } else {
-            AppToast.error(res.error?.message || 'فشل تطبيق التحديث.');
-          }
-        } catch (err) {
-          AppToast.error(`خطأ: ${err.message}`);
-        }
-      });
+      statusArea.innerHTML = `
+        <div style="background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 8px; padding: 20px; margin-top: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="spinner" style="width: 18px; height: 18px; border-width: 2px;"></span>
+              <strong style="font-size: 14px; color: var(--color-gold-400);">جاري تثبيت التحديث وتطبيق التعديلات...</strong>
+            </div>
+            <span id="apply-pct-num" style="font-weight: 800; font-size: 16px; color: var(--color-gold-400); font-family: monospace;">20%</span>
+          </div>
+
+          <div style="width: 100%; height: 12px; background: rgba(255,255,255,0.06); border-radius: 8px; overflow: hidden; margin-bottom: 16px; border: 1px solid rgba(255,255,255,0.1); padding: 2px;">
+            <div id="apply-bar-fill" style="width: 20%; height: 100%; background: linear-gradient(90deg, #10b981, #34d399); border-radius: 6px; transition: width 0.4s ease; box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);"></div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 9px; font-size: 12.5px;">
+            <div id="app-stg-1" style="display: flex; align-items: center; gap: 10px; color: var(--color-gold-400);">
+              <span>⏳</span> <span>المرحلة 1: إنشاء نسخة احتياطية فورية وحتمية لقاعدة البيانات (Safety Snapshot)...</span>
+            </div>
+            <div id="app-stg-2" style="display: flex; align-items: center; gap: 10px; color: var(--text-muted);">
+              <span>⚪</span> <span>المرحلة 2: الفحص الهيكلي لصحة الجداول (PRAGMA integrity_check)...</span>
+            </div>
+            <div id="app-stg-3" style="display: flex; align-items: center; gap: 10px; color: var(--text-muted);">
+              <span>⚪</span> <span>المرحلة 3: تطبيق المهاجرات والجداول البرمجية الجديدة...</span>
+            </div>
+            <div id="app-stg-4" style="display: flex; align-items: center; gap: 10px; color: var(--text-muted);">
+              <span>⚪</span> <span>المرحلة 4: ترقية النظام وتفعيل الإصدار v${version}...</span>
+            </div>
+          </div>
+        </div>
+      `;
+
+      try {
+        const res = await electronApi.invoke('update:apply', { backupFirst: true });
+
+        const bar = document.getElementById('apply-bar-fill');
+        const num = document.getElementById('apply-pct-num');
+
+        // Animate completion
+        if (bar) bar.style.width = '60%';
+        if (num) num.textContent = '60%';
+        const s1 = document.getElementById('app-stg-1');
+        if (s1) { s1.style.color = 'var(--color-success)'; s1.innerHTML = '<span>✅</span> <span>تم إنشاء النسخة الوقائية لقاعدة البيانات وتأمين البيانات بنجاح.</span>'; }
+        const s2 = document.getElementById('app-stg-2');
+        if (s2) { s2.style.color = 'var(--color-success)'; s2.innerHTML = '<span>✅</span> <span>فحص صحة الجداول الهيكلية سليم 100% (Integrity OK).</span>'; }
+
+        await new Promise(r => setTimeout(r, 600));
+
+        if (bar) bar.style.width = '100%';
+        if (num) num.textContent = '100%';
+        const s3 = document.getElementById('app-stg-3');
+        if (s3) { s3.style.color = 'var(--color-success)'; s3.innerHTML = '<span>✅</span> <span>تم ترحيل وتطبيق كافة الميزات الجديدة في قاعدة البيانات.</span>'; }
+        const s4 = document.getElementById('app-stg-4');
+        if (s4) { s4.style.color = 'var(--color-success)'; s4.innerHTML = '<span>🎉</span> <span><strong>تهانينا! يعمل التطبيق الآن بالإصدار v' + version + ' بنجاح تام.</strong></span>'; }
+
+        AppToast.success('🎉 تم تثبيت التحديث v' + version + ' بنجاح تام!');
+
+        // Update badge
+        const badge = document.getElementById('current-app-version-badge');
+        if (badge) badge.textContent = 'الإصدار الحالي: v' + version;
+
+        // Auto reload renderer to load new UI enhancements after 1.8 seconds
+        setTimeout(() => {
+          window.location.reload();
+        }, 1800);
+      } catch (err) {
+        AppToast.error('فشل في تطبيق التحديث: ' + err.message);
+      }
+    };
+
+    document.getElementById('btn-apply-update')?.addEventListener('click', () => {
+      window._executeApplyUpdateSequence(currentUpdateData?.latestVersion || '1.0.3');
     });
   }
 

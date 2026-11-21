@@ -1,0 +1,650 @@
+<div class="amazon-orders-container p-4 md:p-6 bg-gray-50 dark:bg-gray-900 min-h-screen font-sans" dir="rtl">
+
+  <!-- TOAST NOTIFICATION -->
+  <div *ngIf="toastMessage" 
+       [ngClass]="{
+         'bg-emerald-600 text-white': toastType === 'success',
+         'bg-rose-600 text-white': toastType === 'error',
+         'bg-blue-600 text-white': toastType === 'info'
+       }"
+       class="fixed bottom-6 left-6 z-50 px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 transition-all animate-bounce">
+    <span class="text-xl">
+      <ng-container *ngIf="toastType === 'success'">✅</ng-container>
+      <ng-container *ngIf="toastType === 'error'">⚠️</ng-container>
+      <ng-container *ngIf="toastType === 'info'">ℹ️</ng-container>
+    </span>
+    <span class="text-sm font-medium">{{ toastMessage }}</span>
+  </div>
+
+  <!-- PAGE HEADER -->
+  <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div class="flex items-center gap-4">
+      <div class="w-14 h-14 rounded-2xl bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center text-3xl font-bold shadow-inner">
+        📦
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="text-2xl font-black text-gray-900 dark:text-white">طلبات أمازون والشحن</h1>
+          <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300">
+            Amazon.eg Easy Ship
+          </span>
+        </div>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          متابعة طلبات متجر أمازون مصر، جدولة مواعيد استلام المندوب، وطباعة بوالص الشحن الرسمية
+        </p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <button (click)="syncOrdersFromAmazon()" 
+              [disabled]="syncing"
+              class="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white font-bold rounded-xl shadow-md hover:shadow-lg transition flex items-center gap-2 text-sm">
+        <span [class.animate-spin]="syncing">🔄</span>
+        <span>{{ syncing ? 'جاري المزامنة...' : 'مزامنة الطلبات من أمازون' }}</span>
+      </button>
+      <button (click)="loadOrders(1)" 
+              class="p-2.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-xl transition text-sm"
+              title="تحديث البيانات">
+        🔃
+      </button>
+    </div>
+  </div>
+
+  <!-- KPI CARDS -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <!-- Total Orders -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
+      <div class="flex items-center justify-between text-gray-500 dark:text-gray-400 text-xs font-medium mb-2">
+        <span>إجمالي طلبات أمازون</span>
+        <span class="p-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-base">📑</span>
+      </div>
+      <div class="text-2xl font-black text-gray-900 dark:text-white">
+        {{ kpis.totalOrders }}
+      </div>
+      <div class="text-xs text-gray-400 mt-1">جميع الطلبات المسجلة</div>
+    </div>
+
+    <!-- Unshipped Orders -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
+      <div class="flex items-center justify-between text-amber-600 dark:text-amber-400 text-xs font-medium mb-2">
+        <span>بانتظار الشحن / الجدولة</span>
+        <span class="p-2 rounded-xl bg-amber-50 dark:bg-amber-900/30 text-base">⏳</span>
+      </div>
+      <div class="text-2xl font-black text-amber-600 dark:text-amber-400">
+        {{ kpis.unshipped }}
+      </div>
+      <div class="text-xs text-amber-500/80 mt-1 font-semibold">تحتاج تحضير وجدولة مندوب</div>
+    </div>
+
+    <!-- Scheduled Orders -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
+      <div class="flex items-center justify-between text-blue-600 dark:text-blue-400 text-xs font-medium mb-2">
+        <span>مجدولة للاستلام</span>
+        <span class="p-2 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-base">🚚</span>
+      </div>
+      <div class="text-2xl font-black text-blue-600 dark:text-blue-400">
+        {{ kpis.scheduled }}
+      </div>
+      <div class="text-xs text-blue-500/80 mt-1">بانتظار وصول المندوب</div>
+    </div>
+
+    <!-- Revenue -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
+      <div class="flex items-center justify-between text-emerald-600 dark:text-emerald-400 text-xs font-medium mb-2">
+        <span>إجمالي مبيعات أمازون</span>
+        <span class="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 text-base">💰</span>
+      </div>
+      <div class="text-2xl font-black text-emerald-600 dark:text-emerald-400">
+        {{ kpis.totalRevenue | number:'1.2-2' }} <span class="text-sm font-normal">ج.م</span>
+      </div>
+      <div class="text-xs text-emerald-500/80 mt-1">الطلبات غير الملغية</div>
+    </div>
+  </div>
+
+  <!-- FILTERS & SEARCH -->
+  <div class="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 mb-6 flex flex-col md:flex-row items-center justify-between gap-4">
+    <!-- Status Tabs -->
+    <div class="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto pb-2 md:pb-0">
+      <button (click)="onStatusChange('all')" 
+              [ngClass]="selectedStatus === 'all' ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'"
+              class="px-4 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap">
+        الكل ({{ kpis.totalOrders }})
+      </button>
+      <button (click)="onStatusChange('unshipped')" 
+              [ngClass]="selectedStatus === 'unshipped' ? 'bg-amber-500 text-white shadow-md' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'"
+              class="px-4 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap flex items-center gap-1.5">
+        <span>بانتظار الشحن</span>
+        <span *ngIf="kpis.unshipped > 0" class="px-1.5 py-0.2 rounded-full bg-white/20 text-[10px]">
+          {{ kpis.unshipped }}
+        </span>
+      </button>
+      <button (click)="onStatusChange('scheduled')" 
+              [ngClass]="selectedStatus === 'scheduled' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'"
+              class="px-4 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap">
+        مجدولة للاستلام ({{ kpis.scheduled }})
+      </button>
+      <button (click)="onStatusChange('shipped')" 
+              [ngClass]="selectedStatus === 'shipped' ? 'bg-emerald-600 text-white shadow-md' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'"
+              class="px-4 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap">
+        تم الشحن ({{ kpis.shipped }})
+      </button>
+      <button (click)="onStatusChange('canceled')" 
+              [ngClass]="selectedStatus === 'canceled' ? 'bg-rose-600 text-white shadow-md' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'"
+              class="px-4 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap">
+        ملغية
+      </button>
+    </div>
+
+    <!-- Search Input -->
+    <div class="relative w-full md:w-80">
+      <input type="text" 
+             [(ngModel)]="searchQuery" 
+             (keyup.enter)="onSearch()"
+             placeholder="بحث برقم الطلب، العميل، الهاتف، أو الكتاب..." 
+             class="w-full pr-10 pl-10 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white text-xs focus:ring-2 focus:ring-amber-500 outline-none transition">
+      <span class="absolute right-3.5 top-3 text-gray-400 text-sm">🔍</span>
+      <button *ngIf="searchQuery" 
+              (click)="clearSearch()" 
+              class="absolute left-3 top-2.5 text-gray-400 hover:text-gray-600 text-xs">
+        ✖
+      </button>
+    </div>
+  </div>
+
+  <!-- LOADING STATE -->
+  <div *ngIf="loading" class="bg-white dark:bg-gray-800 rounded-2xl p-16 text-center shadow-sm border border-gray-100 dark:border-gray-700">
+    <div class="inline-block animate-spin text-4xl mb-3 text-amber-500">⏳</div>
+    <div class="text-base font-bold text-gray-800 dark:text-gray-200">جاري تحميل طلبات أمازون...</div>
+    <div class="text-xs text-gray-400 mt-1">يرجى الانتظار ثوانٍ معدودة</div>
+  </div>
+
+  <!-- EMPTY STATE -->
+  <div *ngIf="!loading && orders.length === 0" class="bg-white dark:bg-gray-800 rounded-2xl p-16 text-center shadow-sm border border-gray-100 dark:border-gray-700">
+    <div class="text-5xl mb-4">📭</div>
+    <h3 class="text-lg font-bold text-gray-900 dark:text-white">لا توجد طلبات متطابقة</h3>
+    <p class="text-sm text-gray-500 dark:text-gray-400 max-w-md mx-auto mt-1 mb-6">
+      لم يتم العثور على أي طلبات في هذه الفئة. يمكنك النقر على زر المزامنة لاستدعاء أحدث الطلبات من حسابك في أمازون مصر.
+    </p>
+    <button (click)="syncOrdersFromAmazon()" 
+            [disabled]="syncing"
+            class="px-6 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl shadow transition text-sm">
+      {{ syncing ? 'جاري المزامنة...' : 'مزامنة الطلبات الآن 🔄' }}
+    </button>
+  </div>
+
+  <!-- ORDERS LIST -->
+  <div *ngIf="!loading && orders.length > 0" class="space-y-4">
+    <div *ngFor="let order of orders" 
+         class="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition">
+      
+      <!-- ORDER HEADER -->
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-4 border-b border-gray-100 dark:border-gray-700/60">
+        <div class="flex items-center gap-3 flex-wrap">
+          <span class="p-2 rounded-xl bg-amber-50 dark:bg-amber-900/30 text-amber-600 text-lg">
+            📦
+          </span>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-mono font-black text-gray-900 dark:text-white text-base">
+                {{ order.amazonOrderId }}
+              </span>
+              <button (click)="copyToClipboard(order.amazonOrderId, 'رقم الطلب')" 
+                      class="text-gray-400 hover:text-amber-500 transition text-xs" 
+                      title="نسخ رقم الطلب">
+                📋
+              </button>
+            </div>
+            <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 flex items-center gap-2">
+              <span>تاريخ الطلب: {{ formatDate(order.orderDate) }}</span>
+              <span *ngIf="order.latestShipDate" class="text-amber-600 font-semibold">
+                • أقصى موعد للشحن: {{ formatDate(order.latestShipDate) }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 flex-wrap">
+          <!-- Amazon Status Badge -->
+          <span [class]="getStatusBadgeClass(order.amazonOrderStatus)"
+                class="px-3 py-1 rounded-full text-xs font-bold border">
+            {{ getStatusArabic(order.amazonOrderStatus) }}
+          </span>
+
+          <!-- Easy Ship Status Badge -->
+          <span *ngIf="order.easyShipStatus" 
+                [class]="getEasyShipBadgeClass(order.easyShipStatus)"
+                class="px-3 py-1 rounded-full text-xs font-bold border">
+            {{ getEasyShipArabic(order.easyShipStatus) }}
+          </span>
+
+          <!-- Total Amount -->
+          <div class="text-right px-3 py-1 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
+            <span class="text-xs text-gray-400">الإجمالي: </span>
+            <span class="font-black text-gray-900 dark:text-white text-sm">
+              {{ order.totalAmount | number:'1.2-2' }} ج.م
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ORDER BODY: CUSTOMER & PRODUCTS -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 py-4">
+        <!-- Customer & Address -->
+        <div class="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-3.5 text-xs text-gray-600 dark:text-gray-300 space-y-1.5">
+          <div class="font-bold text-gray-900 dark:text-white flex items-center gap-1.5 mb-2">
+            <span>👤</span>
+            <span>{{ order.customerName || 'عميل أمازون' }}</span>
+          </div>
+          <div *ngIf="order.phone" class="flex items-center gap-2">
+            <span class="text-gray-400">الهاتف:</span>
+            <span class="font-mono text-gray-800 dark:text-gray-200">{{ order.phone }}</span>
+          </div>
+          <div class="flex items-start gap-2">
+            <span class="text-gray-400 shrink-0">العنوان:</span>
+            <span class="text-gray-800 dark:text-gray-200 leading-relaxed">{{ order.address || 'عنوان التوصيل محدد في البوليصة' }}</span>
+          </div>
+          <div *ngIf="order.trackingNumber" class="pt-2 border-t border-gray-200 dark:border-gray-800 flex items-center gap-2">
+            <span class="text-blue-600 font-bold">رقم التتبع:</span>
+            <span class="font-mono text-blue-700 dark:text-blue-300">{{ order.trackingNumber }}</span>
+          </div>
+        </div>
+
+        <!-- Products List -->
+        <div class="lg:col-span-2 space-y-2">
+          <div class="text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">
+            المنتجات المطلوبة ({{ order.products.length || 0 }}):
+          </div>
+          <div class="space-y-2 max-h-40 overflow-y-auto pr-1">
+            <div *ngFor="let item of order.products" 
+                 class="flex items-center justify-between gap-3 p-2.5 rounded-xl bg-gray-50 dark:bg-gray-900/40 border border-gray-100 dark:border-gray-700/50">
+              <div class="flex items-center gap-3">
+                <img *ngIf="item.product_image" 
+                     [src]="item.product_image" 
+                     [alt]="item.product_name"
+                     (error)="item.product_image = ''"
+                     class="w-12 h-12 object-cover rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800">
+                <div *ngIf="!item.product_image" class="w-12 h-12 rounded-lg bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-lg shrink-0">
+                  📖
+                </div>
+                <div>
+                  <div class="font-bold text-xs text-gray-900 dark:text-white line-clamp-1">
+                    {{ item.product_name }}
+                  </div>
+                  <div class="text-[11px] text-gray-400 font-mono flex items-center gap-2 mt-0.5">
+                    <span *ngIf="item.sellerSku">SKU: {{ item.sellerSku }}</span>
+                    <span *ngIf="item.asin">ASIN: {{ item.asin }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="text-left shrink-0">
+                <div class="text-xs font-black text-gray-900 dark:text-white">
+                  {{ item.product_quantity }} × {{ item.product_price | number:'1.2-2' }} ج.م
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ORDER FOOTER ACTIONS -->
+      <div class="pt-3 border-t border-gray-100 dark:border-gray-700 flex flex-wrap items-center justify-between gap-3">
+        <!-- Scheduled Slot Info if available -->
+        <div class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2">
+          <span *ngIf="order.easyShipStatus === 'ScheduledForPickup' || order.scheduledPackageId" class="text-blue-600 font-semibold flex items-center gap-1.5">
+            <span>🚚</span>
+            <span>موعد الاستلام: {{ order.handoverSlot?.startTime ? formatDate(order.handoverSlot?.startTime) : 'محدد مع مندوب أمازون' }}</span>
+          </span>
+          <span *ngIf="order.amazonOrderStatus === 'Unshipped' && (!order.easyShipStatus || order.easyShipStatus === 'PendingSchedule')" class="text-amber-600 font-semibold">
+            ⚠️ يتطلب جدولة استلام من أمازون لطباعة البوليصة
+          </span>
+        </div>
+
+        <!-- Buttons -->
+        <div class="flex items-center gap-2">
+          <!-- Official Seller Central Label Link -->
+          <button (click)="openSellerCentralOrder(order.amazonOrderId)"
+                  class="px-3.5 py-2 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl transition text-xs shadow-sm flex items-center gap-1.5"
+                  title="فتح بوليصة الشحن الرسمية في أمازون سيلر سنترال">
+            <span>🏷️</span>
+            <span>البوليصة الرسمية ↗️</span>
+          </button>
+
+          <!-- Schedule Pickup Button -->
+          <button *ngIf="order.amazonOrderStatus !== 'Canceled' && order.amazonOrderStatus !== 'Shipped'"
+                  (click)="openScheduleModal(order)"
+                  class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition text-xs shadow-sm flex items-center gap-1.5">
+            <span>🚚</span>
+            <span>{{ order.easyShipStatus === 'ScheduledForPickup' ? 'تعديل الموعد' : 'جدولة الشحن' }}</span>
+          </button>
+
+          <!-- Print Packing Slip Button -->
+          <button (click)="openLabelModal(order)"
+                  class="px-3.5 py-2 bg-gray-900 hover:bg-black dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 font-bold rounded-xl transition text-xs shadow-sm flex items-center gap-1.5"
+                  title="معاينة وطباعة بوليصة التجهيز الداخلي">
+            <span>📋</span>
+            <span>بوليصة التجهيز</span>
+          </button>
+
+          <!-- Details Button -->
+          <button (click)="openDetails(order)"
+                  class="p-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-xl transition text-xs"
+                  title="عرض التفاصيل">
+            👁️
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGINATION -->
+  <div *ngIf="totalPages > 1" class="flex items-center justify-center gap-3 mt-8">
+    <button (click)="loadOrders(currentPage - 1)" 
+            [disabled]="currentPage === 1"
+            class="px-4 py-2 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs font-bold disabled:opacity-40">
+      السابق
+    </button>
+    <span class="text-xs font-bold text-gray-600 dark:text-gray-400">
+      صفحة {{ currentPage }} من {{ totalPages }}
+    </span>
+    <button (click)="loadOrders(currentPage + 1)" 
+            [disabled]="currentPage === totalPages"
+            class="px-4 py-2 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs font-bold disabled:opacity-40">
+      التالي
+    </button>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODAL: SCHEDULE EASY SHIP PICKUP -->
+  <!-- ======================================================== -->
+  <div *ngIf="showScheduleModal && selectedOrder" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+    <div class="bg-white dark:bg-gray-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-gray-100 dark:border-gray-700 my-8">
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between pb-4 border-b border-gray-100 dark:border-gray-700">
+        <div class="flex items-center gap-2.5">
+          <span class="text-2xl">🚚</span>
+          <div>
+            <h3 class="text-lg font-black text-gray-900 dark:text-white">جدولة استلام شحنة أمازون</h3>
+            <p class="text-xs text-gray-500 font-mono">{{ selectedOrder.amazonOrderId }}</p>
+          </div>
+        </div>
+        <button (click)="closeScheduleModal()" class="text-gray-400 hover:text-gray-600 text-lg">✖</button>
+      </div>
+
+      <!-- Package Dimensions & Weight -->
+      <div class="mt-4 space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
+            أبعاد الطرد والوزن (Easy Ship Package Details):
+          </label>
+          <div class="grid grid-cols-4 gap-2">
+            <div>
+              <span class="text-[10px] text-gray-400 block mb-0.5">الطول (سم)</span>
+              <input type="number" [(ngModel)]="schedulePackage.length" class="w-full p-2 text-center text-xs border rounded-xl dark:bg-gray-700 dark:border-gray-600 font-mono">
+            </div>
+            <div>
+              <span class="text-[10px] text-gray-400 block mb-0.5">العرض (سم)</span>
+              <input type="number" [(ngModel)]="schedulePackage.width" class="w-full p-2 text-center text-xs border rounded-xl dark:bg-gray-700 dark:border-gray-600 font-mono">
+            </div>
+            <div>
+              <span class="text-[10px] text-gray-400 block mb-0.5">الارتفاع (سم)</span>
+              <input type="number" [(ngModel)]="schedulePackage.height" class="w-full p-2 text-center text-xs border rounded-xl dark:bg-gray-700 dark:border-gray-600 font-mono">
+            </div>
+            <div>
+              <span class="text-[10px] text-gray-400 block mb-0.5">الوزن (كجم)</span>
+              <input type="number" step="0.1" [(ngModel)]="schedulePackage.weight" class="w-full p-2 text-center text-xs border rounded-xl dark:bg-gray-700 dark:border-gray-600 font-mono font-bold text-amber-600">
+            </div>
+          </div>
+        </div>
+
+        <button (click)="fetchHandoverSlots()" 
+                [disabled]="loadingSlots"
+                class="w-full py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5">
+          <span>🔄</span>
+          <span>{{ loadingSlots ? 'جاري فحص المواعيد...' : 'تحديث مواعيد المندوب المتاحة' }}</span>
+        </button>
+
+        <!-- Handover Slots Picker -->
+        <div>
+          <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">
+            اختر موعد استلام المندوب (Handover Slot):
+          </label>
+
+          <div *ngIf="loadingSlots" class="text-center py-6 text-gray-400 text-xs">
+            <span class="animate-spin inline-block mr-1">⏳</span> جاري استدعاء فترات استلام الشحنة من أمازون...
+          </div>
+
+          <div *ngIf="!loadingSlots && availableSlots.length > 0" class="space-y-2 max-h-48 overflow-y-auto pr-1">
+            <label *ngFor="let slot of availableSlots" 
+                   class="flex items-center justify-between p-3 rounded-xl border cursor-pointer transition text-xs"
+                   [ngClass]="selectedSlotId === slot.slotId ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/30 font-bold' : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50'">
+              <div class="flex items-center gap-2.5">
+                <input type="radio" 
+                       name="handoverSlot" 
+                       [value]="slot.slotId" 
+                       [(ngModel)]="selectedSlotId"
+                       class="text-amber-500 focus:ring-amber-400">
+                <span class="text-gray-900 dark:text-white">{{ slot.label || slot.slotId }}</span>
+              </div>
+              <span class="text-[10px] text-gray-400 font-mono">{{ slot.handoverMethod }}</span>
+            </label>
+          </div>
+
+          <div *ngIf="scheduleError" class="p-3 rounded-xl bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 text-xs mt-2">
+            ⚠️ {{ scheduleError }}
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Actions -->
+      <div class="mt-6 pt-4 border-t border-gray-100 dark:border-gray-700 flex items-center justify-end gap-3">
+        <button (click)="closeScheduleModal()" 
+                class="px-5 py-2.5 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 text-xs font-bold">
+          إلغاء
+        </button>
+        <button (click)="confirmSchedule()" 
+                [disabled]="schedulingLoading || !selectedSlotId"
+                class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs shadow-md transition flex items-center gap-2">
+          <span *ngIf="schedulingLoading" class="animate-spin">⏳</span>
+          <span>تأكيد حجز موعد المندوب 🚚</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODAL: PRINT SHIPPING LABEL (بوليصة الشحن) -->
+  <!-- ======================================================== -->
+  <div *ngIf="showLabelModal && selectedOrder" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+    <div class="bg-white dark:bg-gray-800 rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-gray-100 dark:border-gray-700 my-8">
+      
+      <!-- Top controls (Hidden during print) -->
+      <div class="print:hidden flex items-center justify-between pb-4 border-b border-gray-100 dark:border-gray-700 mb-4">
+        <div class="flex items-center gap-3">
+          <span class="text-2xl">🖨️</span>
+          <div>
+            <h3 class="text-lg font-black text-gray-900 dark:text-white">بوالص وملصقات شحن أمازون</h3>
+            <p class="text-xs text-gray-500">طباعة البوليصة الأصلية من أمازون أو ملصق التجهيز والتغليف الداخلي</p>
+          </div>
+        </div>
+
+        <button (click)="closeLabelModal()" class="text-gray-400 hover:text-gray-600 p-2 text-lg">
+          ✖
+        </button>
+      </div>
+
+      <!-- Seller Central Official AWB Box -->
+      <div class="print:hidden bg-amber-50 dark:bg-amber-900/25 border-2 border-amber-400/80 rounded-2xl p-4 mb-6 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-sm">
+        <div class="flex items-center gap-3">
+          <span class="text-3xl">🏷️</span>
+          <div>
+            <div class="font-black text-sm text-amber-900 dark:text-amber-200">
+              البوليصة الرسمية المعتمدة لشركة الشحن (Official Easy Ship AWB)
+            </div>
+            <p class="text-xs text-amber-800/80 dark:text-amber-300/80 mt-0.5">
+              تحتوي على باركود مندوب أمازون اللوجستي وتوجيه المحطات وتُطبع مباشرة من Seller Central
+            </p>
+          </div>
+        </div>
+        <button (click)="openSellerCentralOrder(selectedOrder.amazonOrderId)"
+                class="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-black rounded-xl text-xs shadow-md transition flex items-center gap-1.5 whitespace-nowrap">
+          <span>طباعة البوليصة الأصلية (أمازون) ↗️</span>
+        </button>
+      </div>
+
+      <div class="print:hidden flex items-center justify-between mb-3">
+        <div class="text-xs font-bold text-gray-700 dark:text-gray-300">
+          📋 بيان الشحنة والتجهيز الداخلي (Packing Slip & Warehouse Label):
+        </div>
+        <button (click)="printCurrentLabel()" 
+                class="px-4 py-1.5 bg-gray-900 hover:bg-black dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 font-bold rounded-xl text-xs shadow flex items-center gap-1.5 transition">
+          <span>🖨️</span>
+          <span>طباعة هذا البيان</span>
+        </button>
+      </div>
+
+      <!-- THE PRINTABLE SHIPPING LABEL (Target of print stylesheet) -->
+      <div id="printable-shipping-label" class="bg-white text-black p-6 rounded-2xl border-2 border-black font-sans text-right max-w-xl mx-auto shadow-sm">
+        
+        <!-- Header: Amazon + Seller Branding -->
+        <div class="flex items-center justify-between pb-3 border-b-2 border-black">
+          <div class="text-left">
+            <div class="text-2xl font-black tracking-wider uppercase text-black font-mono">amazon.eg</div>
+            <div class="text-[10px] font-bold text-gray-600">EASY SHIP SERVICE</div>
+          </div>
+          <div class="text-right">
+            <div class="text-base font-black">دار كنوز للنشر والتوزيع</div>
+            <div class="text-[10px] text-gray-600">Knooz Book Official Store</div>
+          </div>
+        </div>
+
+        <!-- Barcode Representation -->
+        <div class="my-4 text-center py-2 bg-gray-50 border border-dashed border-gray-400 rounded-lg">
+          <div class="barcode-visual h-12 flex items-center justify-center gap-1 overflow-hidden px-4">
+            <!-- Simulated High Density Barcode Lines -->
+            <div *ngFor="let n of [3,1,4,1,5,9,2,6,5,3,5,8,9,7,9,3,2,3,8,4,6,2,6,4,3,3,8,3,2,7,9,5,0,2,8,8,4,1,9,7,1,6,9,3,9,9,3,7,5,1,0,5,8,2,0,9,7,4,9,4,4,5,9,2,3,0,7,8,1,6,4,0,6,2,8,6]" 
+                 [style.width.px]="(n % 3) + 1" 
+                 class="bg-black h-10"></div>
+          </div>
+          <div class="font-mono text-sm font-black tracking-widest mt-1">
+            *{{ selectedOrder.amazonOrderId }}*
+          </div>
+        </div>
+
+        <!-- Sender & Receiver Grid -->
+        <div class="grid grid-cols-2 gap-4 text-xs py-3 border-b-2 border-black">
+          <!-- Recipient -->
+          <div class="pr-2 border-l-2 border-black">
+            <div class="font-black text-gray-500 uppercase text-[10px] mb-1">المستلم (SHIP TO):</div>
+            <div class="font-black text-sm text-black">{{ selectedOrder.customerName || 'عميل أمازون' }}</div>
+            <div class="text-gray-700 mt-1 leading-relaxed">{{ selectedOrder.address || 'العنوان محدد في نظام أمازون' }}</div>
+            <div *ngIf="selectedOrder.phone" class="font-mono font-bold mt-1 text-black">
+              📞 {{ selectedOrder.phone }}
+            </div>
+          </div>
+
+          <!-- Shipper -->
+          <div class="pl-2">
+            <div class="font-black text-gray-500 uppercase text-[10px] mb-1">الراسل (SHIP FROM):</div>
+            <div class="font-bold text-black">دار كنوز للنشر والتوزيع</div>
+            <div class="text-gray-600">القاهرة، جمهورية مصر العربية</div>
+            <div class="font-mono text-gray-700 mt-1">www.knoozbook.com</div>
+            <div class="mt-2 pt-2 border-t border-gray-200">
+              <span class="font-bold">رقم الطرد: </span>
+              <span class="font-mono">{{ selectedOrder.scheduledPackageId || 'PKG-PENDING' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Order Items Breakdown -->
+        <div class="my-3">
+          <div class="text-[10px] font-black text-gray-500 mb-1">تفاصيل المحتويات (PACKING LIST):</div>
+          <table class="w-full text-xs text-right border-collapse">
+            <thead>
+              <tr class="border-b border-black text-[10px] text-gray-600">
+                <th class="py-1">الكتاب / المنتج</th>
+                <th class="py-1 text-center w-16">الكمية</th>
+                <th class="py-1 text-left w-20">السعر</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of selectedOrder.products" class="border-b border-gray-200">
+                <td class="py-1.5 font-medium">
+                  {{ item.product_name }}
+                  <span *ngIf="item.sellerSku" class="block font-mono text-[9px] text-gray-500">SKU: {{ item.sellerSku }}</span>
+                </td>
+                <td class="py-1.5 text-center font-bold font-mono">{{ item.product_quantity }}</td>
+                <td class="py-1.5 text-left font-mono font-bold">{{ (item.product_price * item.product_quantity) | number:'1.2-2' }} ج.م</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Footer: COD/Prepaid & Instructions -->
+        <div class="pt-3 border-t-2 border-black flex items-center justify-between">
+          <div>
+            <div class="text-xs font-black">الدفع: <span class="text-emerald-700">مدفوع إلكترونياً (أمازون)</span></div>
+            <div class="text-[10px] text-gray-500">تعليمات الشحن: قابل للكسر / احرص على عدم الثني</div>
+          </div>
+          <div class="text-left font-mono text-base font-black">
+            {{ selectedOrder.totalAmount | number:'1.2-2' }} EGP
+          </div>
+        </div>
+      </div>
+
+      <!-- Print hint -->
+      <div class="mt-4 text-center text-xs text-gray-400 print:hidden">
+        💡 يمكنك اختيار طابعة الملصقات الحرارية مقاس 4x6 أو حفظها كـ PDF من نافذة الطباعة
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODAL: ORDER DETAILS -->
+  <!-- ======================================================== -->
+  <div *ngIf="showDetailsModal && selectedOrder" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+    <div class="bg-white dark:bg-gray-800 rounded-3xl max-w-xl w-full p-6 shadow-2xl border border-gray-100 dark:border-gray-700 my-8">
+      <div class="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-700">
+        <h3 class="text-lg font-bold text-gray-900 dark:text-white">تفاصيل طلب أمازون</h3>
+        <button (click)="closeDetails()" class="text-gray-400 hover:text-gray-600">✖</button>
+      </div>
+
+      <div class="mt-4 space-y-4 text-xs">
+        <div class="grid grid-cols-2 gap-3">
+          <div class="p-3 rounded-xl bg-gray-50 dark:bg-gray-900/50">
+            <span class="text-gray-400 block mb-1">رقم الطلب:</span>
+            <span class="font-mono font-bold text-gray-900 dark:text-white">{{ selectedOrder.amazonOrderId }}</span>
+          </div>
+          <div class="p-3 rounded-xl bg-gray-50 dark:bg-gray-900/50">
+            <span class="text-gray-400 block mb-1">حالة الطلب:</span>
+            <span class="font-bold text-amber-600">{{ getStatusArabic(selectedOrder.amazonOrderStatus) }}</span>
+          </div>
+        </div>
+
+        <div class="p-3 rounded-xl bg-gray-50 dark:bg-gray-900/50">
+          <span class="text-gray-400 block mb-1">بيانات العميل والتوصيل:</span>
+          <div class="font-bold text-gray-900 dark:text-white">{{ selectedOrder.customerName }}</div>
+          <div class="text-gray-600 dark:text-gray-300 mt-1">{{ selectedOrder.address }}</div>
+          <div *ngIf="selectedOrder.phone" class="font-mono text-gray-600 dark:text-gray-300 mt-1">📞 {{ selectedOrder.phone }}</div>
+        </div>
+
+        <div class="p-3 rounded-xl bg-gray-50 dark:bg-gray-900/50">
+          <span class="text-gray-400 block mb-2">قائمة المنتجات:</span>
+          <div class="space-y-2">
+            <div *ngFor="let p of selectedOrder.products" class="flex justify-between items-center py-1 border-b border-gray-200 dark:border-gray-700/50 last:border-0">
+              <span>{{ p.product_name }} (×{{ p.product_quantity }})</span>
+              <span class="font-bold font-mono">{{ (p.product_price * p.product_quantity) | number:'1.2-2' }} ج.م</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-6 pt-3 border-t border-gray-100 dark:border-gray-700 text-left">
+        <button (click)="closeDetails()" class="px-5 py-2 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-xl text-xs font-bold">
+          إغلاق
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>

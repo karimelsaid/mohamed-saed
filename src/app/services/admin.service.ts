@@ -121,6 +121,23 @@ export class AdminService {
     );
   }
 
+  getAmazonCatalog(status?: string): Observable<any> {
+    const params: any = {};
+    if (status && status !== 'all') params.status = status;
+    const authOpts = this.getAuthHeaders();
+    const options: any = { params };
+    if (authOpts.headers) options.headers = authOpts.headers;
+    return this.http.get(`${environment.apiBaseUrl}/amazon/catalog`, options).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  repairAmazonProduct(productId: string, data: any): Observable<any> {
+    return this.http.post(`${environment.apiBaseUrl}/amazon/products/${productId}/repair`, data, this.getAuthHeaders()).pipe(
+      catchError(this.handleError)
+    );
+  }
+
   retryProductAmazonPublish(productId: string): Observable<any> {
     return this.http.post(`${environment.apiBaseUrl}/amazon/products/${productId}/amazon/retry`, {}).pipe(
       catchError(this.handleError)
@@ -141,9 +158,14 @@ export class AdminService {
 
   private getAuthHeaders(): { headers?: HttpHeaders } {
     try {
+      let token: string | null = null;
       const user = JSON.parse(localStorage.getItem('user') || 'null');
-      if (user && user.token) {
-        return { headers: new HttpHeaders({ 'Authorization': `Bearer ${user.token}` }) };
+      token = user?.token || user?.accessToken || null;
+      if (!token) {
+        token = localStorage.getItem('token') || localStorage.getItem('auth_token') || localStorage.getItem('merchant_token');
+      }
+      if (token) {
+        return { headers: new HttpHeaders({ 'Authorization': `Bearer ${token}` }) };
       }
     } catch(e) {}
     return {};
@@ -206,19 +228,90 @@ export class AdminService {
   }
 
   updateAmazonProductData(productId: string, data: any): Observable<any> {
-    return this.http.put(`${environment.apiBaseUrl}/amazon/products/${productId}/update`, data).pipe(
+    return this.http.put(`${environment.apiBaseUrl}/amazon/products/${productId}/update`, data, this.getAuthHeaders()).pipe(
       catchError(this.handleError)
     );
   }
 
   republishAmazonProduct(productId: string): Observable<any> {
-    return this.http.post(`${environment.apiBaseUrl}/amazon/products/${productId}/republish`, {}).pipe(
+    return this.http.post(`${environment.apiBaseUrl}/amazon/products/${productId}/republish`, {}, this.getAuthHeaders()).pipe(
       catchError(this.handleError)
     );
   }
 
   syncAllAmazonProducts(): Observable<any> {
-    return this.http.post(`${environment.apiBaseUrl}/amazon/products/bulk/sync`, {}).pipe(
+    return this.http.post(`${environment.apiBaseUrl}/amazon/products/bulk/sync`, {}, this.getAuthHeaders()).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  bulkUpdateAmazonPrice(productIds: string[], adjustmentType: string, adjustmentValue: number): Observable<any> {
+    return this.http.post(`${environment.apiBaseUrl}/amazon/products/bulk/price`, {
+      productIds,
+      adjustmentType,
+      adjustmentValue
+    }, this.getAuthHeaders()).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  syncDeletedAmazonListings(): Observable<any> {
+    return this.http.post(`${environment.apiBaseUrl}/amazon/catalog/sync-deleted`, {}, this.getAuthHeaders()).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  removeAmazonProductFromCatalog(productId: string): Observable<any> {
+    return this.http.post(`${environment.apiBaseUrl}/amazon/catalog/remove/${productId}`, {}, this.getAuthHeaders()).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  // Amazon Orders Management Methods
+  getAmazonOrders(filters: any = {}): Observable<any> {
+    const params: any = {};
+    if (filters.status) params.status = filters.status;
+    if (filters.search) params.search = filters.search;
+    if (filters.page) params.page = filters.page;
+    if (filters.limit) params.limit = filters.limit;
+
+    return this.http.get(`${environment.apiBaseUrl}/amazon/orders`, { params, headers: this.getAuthHeaders().headers }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  syncAmazonOrders(options: any = {}): Observable<any> {
+    return this.http.post(`${environment.apiBaseUrl}/amazon/orders/sync`, options, this.getAuthHeaders()).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  getAmazonOrderDetails(orderId: string): Observable<any> {
+    return this.http.get(`${environment.apiBaseUrl}/amazon/orders/${orderId}`, this.getAuthHeaders()).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  getAmazonHandoverSlots(orderId: string, packageDetails: any): Observable<any> {
+    return this.http.post(`${environment.apiBaseUrl}/amazon/orders/${orderId}/handover-slots`, { packageDetails }, this.getAuthHeaders()).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  scheduleAmazonOrder(orderId: string, scheduleData: any): Observable<any> {
+    return this.http.post(`${environment.apiBaseUrl}/amazon/orders/${orderId}/schedule`, scheduleData, this.getAuthHeaders()).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  confirmAmazonShipment(orderId: string, shipmentData: any): Observable<any> {
+    return this.http.post(`${environment.apiBaseUrl}/amazon/orders/${orderId}/confirm-shipment`, shipmentData, this.getAuthHeaders()).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  getAmazonOrderLabel(orderId: string): Observable<any> {
+    return this.http.get(`${environment.apiBaseUrl}/amazon/orders/${orderId}/label`, this.getAuthHeaders()).pipe(
       catchError(this.handleError)
     );
   }

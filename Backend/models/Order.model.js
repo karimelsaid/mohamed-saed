@@ -16,13 +16,16 @@ const orderSchema = new mongoose.Schema({
   },
   phone: {
     type: String,
-    required: true
+    required: function() { return this.source !== 'amazon'; }
   },
   address: {
     type: String,
     required: true
   },
   products: [{
+    product_id: {
+      type: String
+    },
     product_name: {
       type: String,
       required: true
@@ -34,11 +37,19 @@ const orderSchema = new mongoose.Schema({
     product_price: {
       type: Number,
       required: true
-    }
+    },
+    product_image: {
+      type: String,
+      default: ''
+    },
+    // Amazon-specific item fields
+    sellerSku: { type: String },
+    asin: { type: String },
+    orderItemId: { type: String }
   }],
   status: {
     type: String,
-    enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled'],
+    enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled', 'قيد الانتظار', 'قيد المعالجة', 'تم الشحن', 'تم الاستلام', 'تم التسليم', 'تم الإلغاء', 'مؤرشف', 'ارسال الاستلام'],
     default: 'pending'
   },
   totalAmount: {
@@ -70,6 +81,48 @@ const orderSchema = new mongoose.Schema({
     type: String,
     unique: true,
     sparse: true
+  },
+  amazonOrderStatus: {
+    type: String,
+    default: 'Unshipped'
+  },
+  fulfillmentChannel: {
+    type: String,
+    default: 'MFN'
+  },
+  easyShipStatus: {
+    type: String,
+    default: null
+  },
+  scheduledPackageId: {
+    type: String,
+    default: null
+  },
+  handoverSlot: {
+    slotId: String,
+    startTime: Date,
+    endTime: Date,
+    handoverMethod: String
+  },
+  packageDetails: {
+    weight: { type: Number, default: 0.5 },
+    weightUnit: { type: String, default: 'kg' },
+    length: { type: Number, default: 25 },
+    width: { type: Number, default: 18 },
+    height: { type: Number, default: 5 },
+    dimensionUnit: { type: String, default: 'cm' }
+  },
+  earliestShipDate: Date,
+  latestShipDate: Date,
+  shippingAddressDetails: {
+    name: String,
+    addressLine1: String,
+    addressLine2: String,
+    city: String,
+    stateOrRegion: String,
+    postalCode: String,
+    countryCode: String,
+    phone: String
   },
   // Stock Issue Tracking
   hasStockIssues: {

@@ -724,39 +724,59 @@ exports.getAllOrders = async (req, res) => {
 
         const rawAmazonOrders = await amazonQuery.sort({ orderDate: -1 }).lean();
 
-        // Convert Amazon orders to match website order structure (keep products as array)
-        amazonOrders = rawAmazonOrders.map(order => ({
-          _id: order._id,
-          book: order.products.length > 0 ? order.products[0].product_name : 'Amazon Product',
-          customerName: order.customerName || 'Amazon Customer',
-          email: order.email || '',
-          phone: order.phone || '',
-          address: order.address || '',
-          status: order.status,
-          orderDate: order.orderDate,
-          totalAmount: order.totalAmount,
-          paymentStatus: 'completed', // Amazon orders are always paid
-          isMerchantOrder: false,
-          isCommunityItem: false,
-          communityItemId: null,
-          communityOwnerId: null,
-          communityOwnerName: null,
-          communityOwnerPhone: null,
-          communityOwnerAddress: null,
-          shippingAddress: null,
-          shippingMethod: order.shippingMethod || 'knoozbook',
-          statusLog: [],
-          source: 'amazon',
-          amazonOrderId: order.amazonOrderId,
-          hasStockIssues: order.hasStockIssues || false,
-          stockIssueDetails: order.stockIssueDetails || [],
-          products: order.products.map(p => ({
-            product_name: p.product_name || 'Amazon Product',
-            product_quantity: p.product_quantity,
+        // Map Amazon status to Arabic status recognized by the website dashboard
+        const mapAmazonStatusToWebsite = (order) => {
+          if (order.status === 'تم التسليم' || order.status === 'delivered' || order.amazonOrderStatus === 'Shipped' || order.easyShipStatus === 'Delivered') {
+            return 'تم التسليم';
+          }
+          if (order.status === 'تم الإلغاء' || order.status === 'cancelled' || order.amazonOrderStatus === 'Canceled') {
+            return 'تم الإلغاء';
+          }
+          if (order.status === 'تم الشحن' || order.status === 'shipped' || order.easyShipStatus === 'ScheduledForPickup') {
+            return 'تم الشحن';
+          }
+          return order.status || 'قيد المعالجة';
+        };
+
+        // Convert Amazon orders to match website order structure (with items and quantities)
+        amazonOrders = rawAmazonOrders.flatMap(order => {
+          const mappedStatus = mapAmazonStatusToWebsite(order);
+          const products = order.products && order.products.length > 0 ? order.products : [{ product_name: 'Amazon Product', product_quantity: 1 }];
+
+          return products.map(p => ({
+            _id: order._id,
+            book: p.product_name || 'Amazon Product',
+            quantity: p.product_quantity || 1,
+            customerName: order.customerName || 'عميل أمازون',
+            email: order.email || '',
+            phone: order.phone || '',
+            address: order.address || '',
+            status: mappedStatus,
+            orderDate: order.orderDate,
+            totalAmount: order.totalAmount,
+            paymentStatus: 'completed', // Amazon orders are always paid
             isMerchantOrder: false,
-            isCommunityItem: false
-          }))
-        }));
+            isCommunityItem: false,
+            communityItemId: null,
+            communityOwnerId: null,
+            communityOwnerName: null,
+            communityOwnerPhone: null,
+            communityOwnerAddress: null,
+            shippingAddress: null,
+            shippingMethod: order.shippingMethod || 'knoozbook',
+            statusLog: [],
+            source: 'amazon',
+            amazonOrderId: order.amazonOrderId,
+            hasStockIssues: order.hasStockIssues || false,
+            stockIssueDetails: order.stockIssueDetails || [],
+            products: order.products.map(pr => ({
+              product_name: pr.product_name || 'Amazon Product',
+              product_quantity: pr.product_quantity || 1,
+              isMerchantOrder: false,
+              isCommunityItem: false
+            }))
+          }));
+        });
 
         console.log(`✅ [getAllOrders] Fetched ${amazonOrders.length} Amazon orders`);
       } catch (error) {
@@ -836,6 +856,22 @@ exports.updateOrderStatus = async (req, res) => {
     // Find the user who has this order
     const user = await User.findOne({ 'orders._id': orderId });
     if (!user) {
+      // Check Order collection (Amazon orders)
+      const Order = require('../models/Order.model');
+      const orderDoc = await Order.findById(orderId);
+      if (orderDoc) {
+        orderDoc.status = status;
+        if (status === 'تم التسليم') {
+          orderDoc.amazonOrderStatus = 'Shipped';
+          orderDoc.easyShipStatus = 'Delivered';
+        } else if (status === 'تم الشحن') {
+          orderDoc.easyShipStatus = 'ScheduledForPickup';
+        } else if (status === 'تم الإلغاء') {
+          orderDoc.amazonOrderStatus = 'Canceled';
+        }
+        await orderDoc.save();
+        return res.status(200).json({ message: 'Order status updated successfully' });
+      }
       return res.status(404).json({ message: 'Order not found' });
     }
 

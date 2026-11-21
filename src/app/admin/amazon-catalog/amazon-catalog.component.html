@@ -1,279 +1,576 @@
-<div class="amazon-catalog-container">
-  <div class="catalog-header">
-    <h1>
-      <i class="fas fa-amazon"></i>
-      كتالوج أمازون
-    </h1>
-    <p class="subtitle">إدارة وتحديث منتجاتك على أمازون</p>
-  </div>
+<div class="min-h-screen bg-gray-50 dark:bg-gray-950 p-4 md:p-6" dir="rtl">
 
-  <!-- Controls Section -->
-  <div class="controls-section">
-    <div class="search-box">
-      <input 
-        type="text" 
-        class="form-control" 
-        placeholder="ابحث عن المنتج أو SKU أو ASIN..."
-        [(ngModel)]="searchQuery"
-        (input)="onSearchChange()"
-      >
-      <i class="fas fa-search"></i>
+  <!-- HEADER -->
+  <div class="bg-white dark:bg-gray-800 rounded-2xl p-5 mb-6 shadow-sm border border-gray-100 dark:border-gray-700">
+    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div>
+        <h1 class="text-xl font-black text-gray-900 dark:text-white flex items-center gap-2.5">
+          <span class="p-2 rounded-xl bg-amber-50 dark:bg-amber-900/30 text-amber-600 text-xl">📦</span>
+          إدارة منتجات أمازون (المنتجات المنشورة)
+        </h1>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          إدارة وتعديل أسعار المنتجات المنشورة بنجاح على أمازون مصر
+        </p>
+      </div>
+
+      <div class="flex items-center gap-2 flex-wrap">
+        <button (click)="syncDeletedListings()" [disabled]="syncingDeleted || loading"
+                class="px-3.5 py-2 rounded-xl bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 text-xs font-bold transition flex items-center gap-1.5 shadow-sm disabled:opacity-50"
+                title="فحص المنتجات المنشورة وحذف ما تم حذفه من متجر أمازون">
+          <span [class.animate-spin]="syncingDeleted">🧹</span>
+          <span>{{ syncingDeleted ? 'جاري الفحص من أمازون...' : 'تنظيف المحذوف من أمازون' }}</span>
+        </button>
+        <button (click)="loadProducts()" [disabled]="loading || syncingDeleted"
+                class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition flex items-center gap-2 shadow-sm disabled:opacity-50">
+          <span [class.animate-spin]="loading">🔄</span>
+          <span>تحديث البيانات</span>
+        </button>
+      </div>
     </div>
 
-    <div class="filter-box">
-      <select 
-        class="form-control" 
-        [(ngModel)]="selectedStatus"
-        (change)="onStatusChange()"
-      >
-        <option *ngFor="let status of statusOptions" [value]="status.value">
-          {{ status.label }}
-        </option>
-      </select>
-    </div>
-
-    <div class="info-box">
-      <span class="badge badge-info">
-        <i class="fas fa-info-circle"></i>
-        {{ filteredProducts.length }} منتج
-      </span>
-    </div>
-
-    <div class="actions-box">
-      <button 
-        class="btn btn-primary" 
-        (click)="syncAllProducts()"
-        [disabled]="loading"
-      >
-        <i class="fas fa-sync-alt" [class.fa-spin]="loading"></i>
-        تحديث الكل من أمازون
-      </button>
+    <!-- QUICK STATS -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700/60">
+      <div class="bg-gray-50 dark:bg-gray-900/40 rounded-xl p-3 border border-gray-100 dark:border-gray-700/40">
+        <div class="text-[11px] text-gray-500 dark:text-gray-400 font-medium">المنتجات المنشورة</div>
+        <div class="text-lg font-black text-gray-900 dark:text-white mt-0.5">{{ catalogStats.published || products.length }}</div>
+      </div>
+      <div class="bg-gray-50 dark:bg-gray-900/40 rounded-xl p-3 border border-gray-100 dark:border-gray-700/40">
+        <div class="text-[11px] text-gray-500 dark:text-gray-400 font-medium">متوسط سعر البيع</div>
+        <div class="text-lg font-black text-emerald-600 dark:text-emerald-400 mt-0.5">{{ averagePrice | number:'1.2-2' }} <span class="text-xs font-normal">ج.م</span></div>
+      </div>
+      <div class="col-span-2 sm:col-span-1 bg-gray-50 dark:bg-gray-900/40 rounded-xl p-3 border border-gray-100 dark:border-gray-700/40">
+        <div class="text-[11px] text-gray-500 dark:text-gray-400 font-medium">المنتجات المحددة</div>
+        <div class="text-lg font-black text-amber-600 dark:text-amber-400 mt-0.5">{{ selectedCount }}</div>
+      </div>
     </div>
   </div>
 
-  <!-- Loading Spinner -->
-  <div *ngIf="loading" class="loading-spinner">
-    <div class="spinner-border text-primary" role="status">
-      <span class="sr-only">جاري التحميل...</span>
-    </div>
-    <p>جاري تحميل البيانات...</p>
+  <!-- STATUS FILTER TABS -->
+  <div class="flex items-center gap-2 mb-4 overflow-x-auto pb-1 text-xs font-bold">
+    <button (click)="setStatusFilter('all')"
+            [ngClass]="selectedStatus === 'all' ? 'bg-amber-500 text-white shadow-sm' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700'"
+            class="px-4 py-2.5 rounded-xl transition flex items-center gap-2 whitespace-nowrap">
+      <span>📦 الكل</span>
+      <span class="px-2 py-0.5 rounded-full text-[11px]" [ngClass]="selectedStatus === 'all' ? 'bg-amber-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'">{{ catalogStats.total || products.length }}</span>
+    </button>
+
+    <button (click)="setStatusFilter('published')"
+            [ngClass]="selectedStatus === 'published' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700'"
+            class="px-4 py-2.5 rounded-xl transition flex items-center gap-2 whitespace-nowrap">
+      <span>🟢 النشطة / المنشورة</span>
+      <span class="px-2 py-0.5 rounded-full text-[11px]" [ngClass]="selectedStatus === 'published' ? 'bg-emerald-700 text-white' : 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'">{{ catalogStats.published }}</span>
+    </button>
+
+    <button (click)="setStatusFilter('deleted')"
+            [ngClass]="selectedStatus === 'deleted' ? 'bg-rose-600 text-white shadow-sm' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700'"
+            class="px-4 py-2.5 rounded-xl transition flex items-center gap-2 whitespace-nowrap">
+      <span>🔴 المحذوفة / غير المفعلة</span>
+      <span class="px-2 py-0.5 rounded-full text-[11px]" [ngClass]="selectedStatus === 'deleted' ? 'bg-rose-700 text-white' : 'bg-rose-50 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400'">{{ catalogStats.deleted }}</span>
+    </button>
+
+    <button (click)="setStatusFilter('failed')"
+            [ngClass]="selectedStatus === 'failed' ? 'bg-amber-600 text-white shadow-sm' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700'"
+            class="px-4 py-2.5 rounded-xl transition flex items-center gap-2 whitespace-nowrap">
+      <span>⚠️ أخطاء النشر (تحتاج إصلاح)</span>
+      <span class="px-2 py-0.5 rounded-full text-[11px]" [ngClass]="selectedStatus === 'failed' ? 'bg-amber-700 text-white' : 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400'">{{ catalogStats.failed }}</span>
+    </button>
+
+    <button (click)="setStatusFilter('pending')"
+            [ngClass]="selectedStatus === 'pending' ? 'bg-blue-600 text-white shadow-sm' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700'"
+            class="px-4 py-2.5 rounded-xl transition flex items-center gap-2 whitespace-nowrap">
+      <span>⏳ قيد المزامنة</span>
+      <span class="px-2 py-0.5 rounded-full text-[11px]" [ngClass]="selectedStatus === 'pending' ? 'bg-blue-700 text-white' : 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'">{{ catalogStats.pending }}</span>
+    </button>
   </div>
 
-  <!-- Products Table -->
-  <div *ngIf="!loading" class="products-table-wrapper">
-    <div *ngIf="filteredProducts.length === 0" class="no-products">
-      <i class="fas fa-inbox"></i>
-      <p>لا توجد منتجات تطابق معايير البحث</p>
+  <!-- CONTROLS & FILTER BAR -->
+  <div class="bg-white dark:bg-gray-800 rounded-2xl p-4 mb-4 shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col md:flex-row items-center justify-between gap-4">
+    <!-- Search Box -->
+    <div class="relative w-full md:w-96">
+      <input type="text"
+             [(ngModel)]="searchQuery"
+             (input)="onSearchChange()"
+             placeholder="ابحث باسم الكتاب، SKU، أو ASIN..."
+             class="w-full pr-10 pl-10 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white text-xs focus:ring-2 focus:ring-amber-500 outline-none transition">
+      <span class="absolute right-3.5 top-3 text-gray-400 text-sm">🔍</span>
+      <button *ngIf="searchQuery" (click)="clearSearch()" class="absolute left-3 top-2.5 text-gray-400 hover:text-gray-600 text-xs">✖</button>
     </div>
 
-    <table *ngIf="filteredProducts.length > 0" class="table table-hover">
-      <thead>
-        <tr>
-          <th>الصورة</th>
-          <th>اسم المنتج</th>
-          <th>SKU</th>
-          <th>ASIN</th>
-          <th>السعر</th>
-          <th>الكمية</th>
-          <th>الحالة</th>
-          <th>آخر تحديث</th>
-          <th>الإجراءات</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let product of filteredProducts" class="product-row">
-          <!-- Image -->
-          <td class="image-cell">
-            <img 
-              [src]="getProductImage(product)" 
-              [alt]="product.product_name"
-              class="product-thumbnail"
-              onerror="this.src='/assets/placeholder.png'"
-            >
-          </td>
+    <!-- Page Size Selector & Bulk Action Trigger -->
+    <div class="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end flex-wrap">
+      <!-- Bulk Actions Button (Visible when at least 1 item is selected) -->
+      <div *ngIf="selectedCount > 0" class="flex items-center gap-2">
+        <button (click)="openPriceModal()"
+                class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition flex items-center gap-2 shadow-sm animate-pulse">
+          <span>💰</span>
+          <span>تعديل أسعار المحدد ({{ selectedCount }})</span>
+        </button>
+        <button (click)="clearSelection()"
+                class="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 text-xs font-medium transition"
+                title="إلغاء التحديد">
+          إلغاء
+        </button>
+      </div>
 
-          <!-- Product Name -->
-          <td class="name-cell">
-            <strong>{{ product.product_name }}</strong>
-          </td>
+      <!-- Page Size Dropdown -->
+      <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+        <span>عرض:</span>
+        <select [(ngModel)]="pageSize" (change)="onPageSizeChange()"
+                class="px-2.5 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 text-xs font-bold outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer">
+          <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }} منتج</option>
+        </select>
+      </div>
+    </div>
+  </div>
 
-          <!-- SKU -->
-          <td class="sku-cell">
-            <code>{{ product.amazonSku || 'N/A' }}</code>
-            <button 
-              *ngIf="product.amazonSku"
-              class="btn-copy"
-              (click)="copyToClipboard(product.amazonSku)"
-              title="نسخ"
-            >
-              <i class="fas fa-copy"></i>
+  <!-- MULTI-PAGE SELECTION HELPER BANNER -->
+  <div *ngIf="allSelected && filteredProducts.length > paginatedProducts.length"
+       class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40 rounded-xl p-3 mb-4 text-xs flex items-center justify-between text-amber-800 dark:text-amber-300">
+    <div class="flex items-center gap-2">
+      <span>ℹ️</span>
+      <span>تم تحديد <strong>{{ paginatedProducts.length }}</strong> منتج في الصفحة الحالية.</span>
+    </div>
+    <button (click)="selectAllMatching()"
+            class="underline font-bold hover:text-amber-900 dark:hover:text-amber-200 cursor-pointer">
+      تحديد جميع المنتجات المطابقة للبحث ({{ filteredProducts.length }})
+    </button>
+  </div>
+
+  <!-- LOADING SPINNER -->
+  <div *ngIf="loading" class="flex flex-col items-center justify-center py-20 bg-white dark:bg-gray-800 rounded-2xl shadow-sm">
+    <div class="w-10 h-10 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mb-3"></div>
+    <p class="text-xs font-bold text-gray-500">جاري تحميل كتالوج أمازون...</p>
+  </div>
+
+  <!-- EMPTY STATE -->
+  <div *ngIf="!loading && filteredProducts.length === 0"
+       class="flex flex-col items-center justify-center py-20 bg-white dark:bg-gray-800 rounded-2xl shadow-sm text-center">
+    <span class="text-5xl mb-3">📭</span>
+    <h3 class="text-sm font-bold text-gray-800 dark:text-gray-200 mb-1">لا توجد منتجات مطابقة</h3>
+    <p class="text-xs text-gray-400">تأكد من نشر المنتجات على أمازون أو جرب كلمة بحث أخرى</p>
+  </div>
+
+  <!-- PRODUCTS TABLE -->
+  <div *ngIf="!loading && filteredProducts.length > 0"
+       class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-xs">
+        <thead class="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 font-bold">
+          <tr>
+            <th class="p-3 text-right w-10">
+              <input type="checkbox"
+                     [checked]="allSelected"
+                     (change)="toggleSelectAll()"
+                     class="w-4 h-4 rounded border-gray-300 text-amber-500 focus:ring-amber-500 cursor-pointer"
+                     title="تحديد كل معروض الصفحة">
+            </th>
+            <th class="p-3 text-right w-16">الصورة</th>
+            <th class="p-3 text-right">اسم المنتج / الكتاب</th>
+            <th class="p-3 text-right w-28">حالة المنتج</th>
+            <th class="p-3 text-right w-28">SKU أمازون</th>
+            <th class="p-3 text-right w-28">معرف ASIN</th>
+            <th class="p-3 text-right w-36">سعر أمازون</th>
+            <th class="p-3 text-right w-16">الكمية</th>
+            <th class="p-3 text-right w-28">آخر مزامنة</th>
+            <th class="p-3 text-center w-36">إجراءات</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let product of paginatedProducts"
+              class="border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition"
+              [ngClass]="{ 'bg-amber-50/60 dark:bg-amber-900/10': product.selected }">
+
+            <!-- Checkbox -->
+            <td class="p-3">
+              <input type="checkbox"
+                     [(ngModel)]="product.selected"
+                     (change)="updateSelectAll()"
+                     class="w-4 h-4 rounded border-gray-300 text-amber-500 focus:ring-amber-500 cursor-pointer">
+            </td>
+
+            <!-- Product Image -->
+            <td class="p-3">
+              <img [src]="getProductImage(product)"
+                   [alt]="product.product_name"
+                   (error)="onImageError($event)"
+                   class="w-12 h-12 object-cover rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800">
+            </td>
+
+            <!-- Product Name -->
+            <td class="p-3">
+              <div class="font-bold text-gray-900 dark:text-white line-clamp-2 leading-relaxed">
+                {{ product.product_name }}
+              </div>
+              <div class="text-[10px] text-gray-400 mt-0.5">
+                كود الموقع: {{ product.products_id || product._id }}
+              </div>
+            </td>
+
+            <!-- Product Status -->
+            <td class="p-3">
+              <span class="px-2.5 py-1 rounded-full text-[10px] font-bold border inline-flex items-center gap-1"
+                    [ngClass]="getStatusClass(product.amazonStatus)">
+                {{ getStatusLabel(product.amazonStatus) }}
+              </span>
+              <div *ngIf="product.amazonLastError"
+                   class="text-[10px] text-red-500 mt-1 line-clamp-1 max-w-[140px] cursor-help"
+                   [title]="product.amazonLastError">
+                ⚠️ {{ product.amazonLastError }}
+              </div>
+            </td>
+
+            <!-- SKU -->
+            <td class="p-3">
+              <div *ngIf="product.amazonSku" class="flex items-center gap-1.5">
+                <code class="text-[11px] bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded text-pink-600 dark:text-pink-400 font-mono">{{ product.amazonSku }}</code>
+                <button (click)="copyToClipboard(product.amazonSku!)" class="text-gray-400 hover:text-blue-500 text-xs" title="نسخ SKU">📋</button>
+              </div>
+              <span *ngIf="!product.amazonSku" class="text-gray-400">—</span>
+            </td>
+
+            <!-- ASIN -->
+            <td class="p-3">
+              <div *ngIf="product.amazonAsin" class="flex items-center gap-1.5">
+                <code class="text-[11px] bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded text-purple-600 dark:text-purple-400 font-mono font-bold">{{ product.amazonAsin }}</code>
+                <button (click)="copyToClipboard(product.amazonAsin!)" class="text-gray-400 hover:text-blue-500 text-xs" title="نسخ ASIN">📋</button>
+              </div>
+              <span *ngIf="!product.amazonAsin" class="text-gray-400">—</span>
+            </td>
+
+            <!-- Amazon Price with Inline Quick Edit -->
+            <td class="p-3">
+              <div *ngIf="editingProductId !== product._id"
+                   class="flex items-center gap-2">
+                <span class="font-black text-gray-900 dark:text-white text-sm">
+                  {{ (product.amazonPrice || product.product_price) | number:'1.2-2' }}
+                </span>
+                <span class="text-gray-400 text-[10px]">ج.م</span>
+                <button (click)="startEditPrice(product)"
+                        class="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-amber-500 text-xs transition"
+                        title="تعديل السعر">
+                  ✏️
+                </button>
+              </div>
+
+              <!-- Inline Edit Input -->
+              <div *ngIf="editingProductId === product._id"
+                   class="flex items-center gap-1.5">
+                <input type="number"
+                       [(ngModel)]="editingPrice"
+                       step="0.5"
+                       min="0.01"
+                       class="w-20 p-1 text-center text-xs border rounded-lg dark:bg-gray-700 dark:border-gray-600 font-mono font-bold focus:ring-2 focus:ring-amber-500 outline-none">
+                <button (click)="saveProductPrice(product)" class="text-green-500 hover:text-green-600 text-xs font-bold" title="حفظ">✓</button>
+                <button (click)="cancelEditPrice()" class="text-red-400 hover:text-red-500 text-xs" title="إلغاء">✕</button>
+              </div>
+            </td>
+
+            <!-- Quantity -->
+            <td class="p-3">
+              <span class="font-bold text-gray-800 dark:text-gray-200">{{ product.product_quantity }}</span>
+            </td>
+
+            <!-- Last Updated -->
+            <td class="p-3">
+              <span *ngIf="product.amazonSyncedAt" class="text-[11px] text-gray-500 dark:text-gray-400">
+                {{ product.amazonSyncedAt | date:'shortDate' }}
+              </span>
+              <span *ngIf="!product.amazonSyncedAt" class="text-gray-400 text-[11px]">—</span>
+            </td>
+
+            <!-- Actions -->
+            <td class="p-3 text-center">
+              <div class="flex items-center justify-center gap-1.5 flex-wrap">
+                <!-- Direct Amazon Link -->
+                <button *ngIf="product.amazonAsin && product.amazonStatus === 'published'"
+                        (click)="openAmazonListing(product.amazonAsin!)"
+                        class="p-1.5 rounded-lg text-amber-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/30 text-sm transition"
+                        title="عرض المنتج على أمازون مصر">
+                  🔗
+                </button>
+
+                <!-- Reactivate Button (for non-published / deleted / failed) -->
+                <button *ngIf="product.amazonStatus !== 'published'"
+                        (click)="reactivateProduct(product)"
+                        [disabled]="reactivatingId === product._id"
+                        class="px-2 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:hover:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 text-xs font-bold transition flex items-center gap-1 disabled:opacity-50"
+                        title="إعادة تفعيل ونشر على أمازون">
+                  <span [class.animate-spin]="reactivatingId === product._id">⚡</span>
+                  <span>تفعيل</span>
+                </button>
+
+                <!-- Repair Button (for non-published or failed) -->
+                <button *ngIf="product.amazonStatus !== 'published' || product.amazonLastError"
+                        (click)="openRepairModal(product)"
+                        class="px-2 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 text-xs font-bold transition flex items-center gap-1"
+                        title="إصلاح بيانات المنتج وإعادة النشر">
+                  <span>🛠️</span>
+                  <span>إصلاح</span>
+                </button>
+
+                <!-- Remove / Delete from Amazon Catalog (for published) -->
+                <button *ngIf="product.amazonStatus === 'published'"
+                        (click)="removeProductFromCatalog(product)"
+                        class="p-1.5 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/30 text-sm transition"
+                        title="حذف من كتالوج أمازون">
+                  🗑️
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- PAGINATION FOOTER -->
+    <div class="p-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-500 dark:text-gray-400">
+      <!-- Item Range Display -->
+      <div>
+        عرض <strong>{{ startIndex }}</strong> إلى <strong>{{ endIndex }}</strong> من إجمالي <strong>{{ filteredProducts.length }}</strong> منتج منشور
+      </div>
+
+      <!-- Pagination Navigation Buttons -->
+      <div class="flex items-center gap-1.5">
+        <!-- First Page -->
+        <button (click)="goToPage(1)"
+                [disabled]="currentPage === 1"
+                class="px-2.5 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold disabled:opacity-40 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                title="الصفحة الأولى">
+          «
+        </button>
+
+        <!-- Previous Page -->
+        <button (click)="goToPage(currentPage - 1)"
+                [disabled]="currentPage === 1"
+                class="px-3 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold disabled:opacity-40 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+          السابق
+        </button>
+
+        <!-- Page Numbers -->
+        <ng-container *ngFor="let page of getPageNumbers()">
+          <span *ngIf="page === '...'" class="px-2 py-1 text-gray-400">...</span>
+          <button *ngIf="page !== '...'"
+                  (click)="goToPage(+page)"
+                  class="w-8 h-8 rounded-xl text-xs font-bold transition flex items-center justify-center"
+                  [ngClass]="currentPage === +page ? 'bg-amber-500 text-white shadow-sm' : 'border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'">
+            {{ page }}
+          </button>
+        </ng-container>
+
+        <!-- Next Page -->
+        <button (click)="goToPage(currentPage + 1)"
+                [disabled]="currentPage === totalPages"
+                class="px-3 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold disabled:opacity-40 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+          التالي
+        </button>
+
+        <!-- Last Page -->
+        <button (click)="goToPage(totalPages)"
+                [disabled]="currentPage === totalPages"
+                class="px-2.5 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold disabled:opacity-40 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                title="الصفحة الأخيرة">
+          »
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODAL: BULK PRICE ADJUSTMENT -->
+  <!-- ======================================================== -->
+  <div *ngIf="showPriceModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+    <div class="bg-white dark:bg-gray-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-gray-100 dark:border-gray-700 my-8">
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between pb-4 border-b border-gray-100 dark:border-gray-700">
+        <div class="flex items-center gap-2.5">
+          <span class="text-2xl">💰</span>
+          <div>
+            <h3 class="text-lg font-black text-gray-900 dark:text-white">تعديل الأسعار الجماعي</h3>
+            <p class="text-xs text-gray-500">تم تحديد {{ selectedCount }} منتج من الكتالوج</p>
+          </div>
+        </div>
+        <button (click)="closePriceModal()" class="text-gray-400 hover:text-gray-600 text-lg">✖</button>
+      </div>
+
+      <!-- Adjustment Options -->
+      <div class="mt-5 space-y-4">
+        <!-- Type Selection -->
+        <div>
+          <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">نوع التعديل:</label>
+          <div class="grid grid-cols-2 gap-2">
+            <button (click)="adjustmentType = 'fixed_increase'"
+                    [class]="adjustmentType === 'fixed_increase' ? 'ring-2 ring-green-500 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300' : 'bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-400'"
+                    class="p-3 rounded-xl text-xs font-bold transition text-center border border-gray-200 dark:border-gray-600">
+              📈 زيادة بالقيمة (ج.م)
             </button>
-          </td>
+            <button (click)="adjustmentType = 'fixed_decrease'"
+                    [class]="adjustmentType === 'fixed_decrease' ? 'ring-2 ring-red-500 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300' : 'bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-400'"
+                    class="p-3 rounded-xl text-xs font-bold transition text-center border border-gray-200 dark:border-gray-600">
+              📉 نقصان بالقيمة (ج.م)
+            </button>
+            <button (click)="adjustmentType = 'percent_increase'"
+                    [class]="adjustmentType === 'percent_increase' ? 'ring-2 ring-green-500 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300' : 'bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-400'"
+                    class="p-3 rounded-xl text-xs font-bold transition text-center border border-gray-200 dark:border-gray-600">
+              📈 زيادة بنسبة مئوية %
+            </button>
+            <button (click)="adjustmentType = 'percent_decrease'"
+                    [class]="adjustmentType === 'percent_decrease' ? 'ring-2 ring-red-500 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300' : 'bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-400'"
+                    class="p-3 rounded-xl text-xs font-bold transition text-center border border-gray-200 dark:border-gray-600">
+              📉 نقصان بنسبة مئوية %
+            </button>
+          </div>
+        </div>
 
-          <!-- ASIN -->
-          <td class="asin-cell">
-            <span *ngIf="product.amazonAsin" class="asin-link">
-              <code>{{ product.amazonAsin }}</code>
-              <button 
-                class="btn-copy"
-                (click)="copyToClipboard(product.amazonAsin)"
-                title="نسخ"
-              >
-                <i class="fas fa-copy"></i>
-              </button>
-              <button 
-                class="btn-open"
-                (click)="openAmazonListing(product.amazonAsin)"
-                title="فتح على أمازون"
-              >
-                <i class="fas fa-external-link-alt"></i>
-              </button>
-            </span>
-            <span *ngIf="!product.amazonAsin" class="text-muted">معلق</span>
-          </td>
+        <!-- Value Input -->
+        <div>
+          <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
+            {{ adjustmentType.includes('percent') ? 'النسبة المئوية المراد تطبيقها (%)' : 'القيمة المالية (ج.م)' }}:
+          </label>
+          <input type="number"
+                 [(ngModel)]="adjustmentValue"
+                 [step]="adjustmentType.includes('percent') ? 1 : 0.5"
+                 min="0.01"
+                 class="w-full p-3 text-center text-lg font-mono font-bold border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500 outline-none"
+                 [placeholder]="adjustmentType.includes('percent') ? 'مثال: 10' : 'مثال: 5.00'">
+        </div>
 
-          <!-- Price -->
-          <td class="price-cell">
-            <div *ngIf="editingProductId === product._id" class="edit-input">
-              <input 
-                type="number" 
-                class="form-control form-control-sm"
-                [(ngModel)]="editingData.amazonPrice"
-                step="0.01"
-              >
-            </div>
-            <div *ngIf="editingProductId !== product._id">
-              {{ (product.amazonPrice || product.product_price) | currency:'EGP':'symbol':'1.2-2' }}
-            </div>
-          </td>
-
-          <!-- Quantity -->
-          <td class="quantity-cell">
-            <div *ngIf="editingProductId === product._id" class="edit-input">
-              <input 
-                type="number" 
-                class="form-control form-control-sm"
-                [(ngModel)]="editingData.product_quantity"
-                min="0"
-              >
-            </div>
-            <div *ngIf="editingProductId !== product._id">
-              {{ product.product_quantity }}
-            </div>
-          </td>
-
-          <!-- Status -->
-          <td class="status-cell">
-            <span [ngClass]="'badge ' + getStatusBadgeClass(product.amazonStatus)">
-              <i [ngClass]="'fas fa-' + getStatusIcon(product.amazonStatus)"></i>
-              {{ getStatusLabel(product.amazonStatus) }}
-            </span>
-          </td>
-
-          <!-- Last Updated -->
-          <td class="date-cell">
-            <small *ngIf="product.amazonSyncedAt">
-              {{ product.amazonSyncedAt | date:'short' }}
-            </small>
-            <small *ngIf="!product.amazonSyncedAt" class="text-muted">
-              لم يتم التحديث
-            </small>
-          </td>
-
-          <!-- Actions -->
-          <td class="actions-cell">
-            <div *ngIf="editingProductId === product._id" class="edit-actions">
-              <button 
-                class="btn btn-sm btn-success"
-                (click)="saveProductChanges()"
-                [disabled]="loading"
-              >
-                <i class="fas fa-save"></i>
-                حفظ
-              </button>
-              <button 
-                class="btn btn-sm btn-secondary"
-                (click)="cancelEdit()"
-              >
-                <i class="fas fa-times"></i>
-                إلغاء
-              </button>
-            </div>
-            <div *ngIf="editingProductId !== product._id" class="normal-actions">
-              <button 
-                class="btn btn-sm btn-primary"
-                (click)="editProduct(product)"
-                title="تعديل"
-              >
-                <i class="fas fa-edit"></i>
-              </button>
-              <button 
-                class="btn btn-sm btn-warning"
-                (click)="republishProduct(product)"
-                [disabled]="loading || product.amazonStatus === 'published' || product.amazonStatus === 'publishing'"
-                title="إعادة نشر"
-              >
-                <i class="fas fa-redo"></i>
-              </button>
-            </div>
-          </td>
-        </tr>
-
-        <!-- Error Row -->
-        <tr *ngFor="let product of filteredProducts" 
-            class="error-row" 
-            [style.display]="product.amazonLastError ? 'table-row' : 'none'"
-        >
-          <td colspan="9">
-            <div class="error-message">
-              <i class="fas fa-exclamation-triangle"></i>
-              <strong>آخر خطأ:</strong>
-              {{ product.amazonLastError }}
-              <span *ngIf="product.amazonRetryCount" class="retry-count">
-                (محاولة {{ product.amazonRetryCount }})
+        <!-- Preview Sample Products -->
+        <div *ngIf="adjustmentValue > 0 && selectedProducts.length > 0" class="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-3 space-y-2">
+          <div class="text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">معاينة التغيير على عينة من المنتجات:</div>
+          <div *ngFor="let p of selectedProducts.slice(0, 4)" class="flex items-center justify-between text-xs py-1 border-b border-gray-200/50 dark:border-gray-700/50 last:border-0">
+            <span class="text-gray-700 dark:text-gray-300 truncate max-w-[200px]">{{ p.product_name }}</span>
+            <div class="flex items-center gap-2 shrink-0">
+              <span class="text-gray-400 line-through">{{ (p.amazonPrice || p.product_price) | number:'1.2-2' }}</span>
+              <span class="text-gray-400">←</span>
+              <span class="font-black"
+                    [class.text-green-600]="adjustmentType.includes('increase')"
+                    [class.text-red-600]="adjustmentType.includes('decrease')">
+                {{ previewPrice(p) | number:'1.2-2' }} ج.م
               </span>
             </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+          </div>
+          <div *ngIf="selectedProducts.length > 4" class="text-[11px] text-gray-400 text-center pt-1">
+            ... و {{ selectedProducts.length - 4 }} منتج إضافي محدد
+          </div>
+        </div>
 
-  <!-- Legend -->
-  <div class="legend-section">
-    <h5>
-      <i class="fas fa-key"></i>
-      شرح الحالات
-    </h5>
-    <div class="legend-items">
-      <div class="legend-item">
-        <span class="badge badge-warning">معلق</span>
-        <p>المنتج ينتظر النشر على أمازون</p>
+        <!-- Success Message -->
+        <div *ngIf="priceUpdateResult" class="bg-green-50 dark:bg-green-900/30 rounded-xl p-3 text-xs text-green-700 dark:text-green-300 font-bold text-center">
+          ✅ تم تحديث أسعار {{ priceUpdateResult.count }} منتج بنجاح
+        </div>
       </div>
-      <div class="legend-item">
-        <span class="badge badge-info">قيد النشر</span>
-        <p>المنتج قيد المعالجة على أمازون</p>
-      </div>
-      <div class="legend-item">
-        <span class="badge badge-success">منشور</span>
-        <p>المنتج منشور بنجاح على أمازون</p>
-      </div>
-      <div class="legend-item">
-        <span class="badge badge-warning">غير مكتمل</span>
-        <p>المنتج ينقصه بعض البيانات على أمازون</p>
-      </div>
-      <div class="legend-item">
-        <span class="badge badge-danger">فاشل</span>
-        <p>فشل نشر المنتج - انقر على التفاصيل لرؤية الخطأ</p>
-      </div>
-      <div class="legend-item">
-        <span class="badge badge-warning">إعادة محاولة</span>
-        <p>جاري إعادة محاولة نشر المنتج</p>
-      </div>
-      <div class="legend-item">
-        <span class="badge badge-secondary">مكبوت</span>
-        <p>المنتج مكبوت على أمازون</p>
+
+      <!-- Modal Footer -->
+      <div class="flex items-center justify-between gap-3 mt-5 pt-4 border-t border-gray-100 dark:border-gray-700">
+        <button (click)="closePriceModal()"
+                class="px-5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 text-xs font-bold text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+          {{ priceUpdateResult ? 'إغلاق' : 'إلغاء' }}
+        </button>
+        <button *ngIf="!priceUpdateResult"
+                (click)="applyBulkPrice()"
+                [disabled]="priceUpdateLoading || adjustmentValue <= 0"
+                class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition disabled:opacity-40 flex items-center gap-2 shadow-md">
+          <span *ngIf="priceUpdateLoading" class="animate-spin">⏳</span>
+          <span>تطبيق السعر الجديد على {{ selectedCount }} منتج</span>
+        </button>
       </div>
     </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODAL: REPAIR & REACTIVATE PRODUCT -->
+  <!-- ======================================================== -->
+  <div *ngIf="showRepairModal && repairingProduct" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+    <div class="bg-white dark:bg-gray-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-gray-100 dark:border-gray-700 my-8">
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between pb-4 border-b border-gray-100 dark:border-gray-700">
+        <div class="flex items-center gap-2.5">
+          <span class="text-2xl">🛠️</span>
+          <div>
+            <h3 class="text-lg font-black text-gray-900 dark:text-white">إصلاح وإعادة تفعيل المنتج</h3>
+            <p class="text-xs text-gray-500 dark:text-gray-400">تعديل البيانات الأساسية ثم إعادة النشر على أمازون</p>
+          </div>
+        </div>
+        <button (click)="closeRepairModal()" class="text-gray-400 hover:text-gray-600 text-lg">✖</button>
+      </div>
+
+      <!-- Last Error Banner -->
+      <div *ngIf="repairingProduct.amazonLastError"
+           class="mt-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-xl p-3 text-xs text-red-700 dark:text-red-400">
+        <div class="font-bold mb-1 flex items-center gap-1">⚠️ سبب الخطأ الأخير:</div>
+        <div class="leading-relaxed">{{ repairingProduct.amazonLastError }}</div>
+      </div>
+
+      <!-- Repair Form -->
+      <div class="mt-5 space-y-4">
+        <!-- Product Name -->
+        <div>
+          <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">اسم المنتج:</label>
+          <input type="text"
+                 [(ngModel)]="repairForm.product_name"
+                 class="w-full p-3 text-xs border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                 placeholder="اسم المنتج">
+        </div>
+
+        <!-- Price & Quantity Row -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">سعر أمازون (ج.م):</label>
+            <input type="number"
+                   [(ngModel)]="repairForm.amazonPrice"
+                   step="0.5" min="0.01"
+                   class="w-full p-3 text-xs font-mono font-bold border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none text-center"
+                   placeholder="0.00">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">الكمية المتاحة:</label>
+            <input type="number"
+                   [(ngModel)]="repairForm.product_quantity"
+                   min="0"
+                   class="w-full p-3 text-xs font-mono font-bold border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none text-center"
+                   placeholder="1">
+          </div>
+        </div>
+
+        <!-- Barcode -->
+        <div>
+          <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">الباركود (ISBN / EAN):</label>
+          <input type="text"
+                 [(ngModel)]="repairForm.barcode"
+                 class="w-full p-3 text-xs font-mono border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                 placeholder="مثال: 9786144123456">
+        </div>
+
+        <!-- ASIN -->
+        <div>
+          <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">معرف ASIN أمازون:</label>
+          <input type="text"
+                 [(ngModel)]="repairForm.amazonAsin"
+                 class="w-full p-3 text-xs font-mono border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                 placeholder="مثال: B0HJ1G8WWQ">
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="flex items-center justify-between gap-3 mt-5 pt-4 border-t border-gray-100 dark:border-gray-700">
+        <button (click)="closeRepairModal()"
+                class="px-5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 text-xs font-bold text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+          إلغاء
+        </button>
+        <button (click)="saveAndReactivate()"
+                [disabled]="repairLoading || !repairForm.product_name"
+                class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition disabled:opacity-40 flex items-center gap-2 shadow-md">
+          <span *ngIf="repairLoading" class="animate-spin">⏳</span>
+          <span>🛠️ حفظ وإعادة التفعيل</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div *ngIf="showToast"
+       class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl shadow-2xl text-xs font-bold transition-all duration-300"
+       [class]="toastType === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'">
+    {{ toastMessage }}
   </div>
 </div>

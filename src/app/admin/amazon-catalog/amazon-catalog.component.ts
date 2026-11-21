@@ -15,17 +15,12 @@ interface AmazonProduct {
   amazonStatus: string;
   amazonSku?: string;
   amazonAsin?: string;
-  amazonLastError?: string;
   amazonSyncedAt?: string;
-  amazonRetryCount?: number;
+  amazonLastError?: string;
+  barcode?: string;
   product_image?: string;
   image_path?: string;
-}
-
-interface EditingProduct {
-  _id: string;
-  amazonPrice?: number;
-  product_quantity?: number;
+  selected?: boolean;
 }
 
 @Component({
@@ -38,33 +33,47 @@ interface EditingProduct {
 export class AmazonCatalogComponent implements OnInit, OnDestroy {
   products: AmazonProduct[] = [];
   filteredProducts: AmazonProduct[] = [];
-  
+
   loading = false;
   searchQuery = '';
-  selectedStatus = 'all';
-  
+
+  // Status Filter & Statistics
+  selectedStatus: 'all' | 'published' | 'deleted' | 'failed' | 'pending' = 'all';
+  catalogStats = { total: 0, published: 0, deleted: 0, failed: 0, pending: 0 };
+
+  // Pagination
+  currentPage = 1;
+  pageSize = 20;
+  pageSizeOptions = [10, 20, 50, 100];
+
+  // Selection
+  allSelected = false;
+
+  // Bulk Price Adjustment
+  showPriceModal = false;
+  adjustmentType: 'fixed_increase' | 'fixed_decrease' | 'percent_increase' | 'percent_decrease' = 'fixed_increase';
+  adjustmentValue: number = 0;
+  priceUpdateLoading = false;
+  priceUpdateResult: { count: number; data: any[] } | null = null;
+
+  // Sync deleted listings from Amazon
+  syncingDeleted = false;
+
+  // Single product editing
   editingProductId: string | null = null;
-  editingData: EditingProduct = { _id: '' };
-  
+  editingPrice: number = 0;
+
+  // Toast
+  toastMessage = '';
+  toastType: 'success' | 'error' = 'success';
+  showToast = false;
+
   private destroy$ = new Subject<void>();
 
-  statusOptions = [
-    { value: 'all', label: 'جميع المنتجات' },
-    { value: 'pending', label: 'معلق' },
-    { value: 'publishing', label: 'قيد النشر' },
-    { value: 'published', label: 'منشور' },
-    { value: 'incomplete', label: 'غير مكتمل' },
-    { value: 'failed', label: 'فاشل' },
-    { value: 'retry', label: 'إعادة محاولة' },
-    { value: 'suppressed', label: 'مكبوت' }
-  ];
-
-  constructor(
-    private adminService: AdminService
-  ) {}
+  constructor(private adminService: AdminService) {}
 
   ngOnInit(): void {
-    this.loadAmazonProducts();
+    this.loadProducts();
   }
 
   ngOnDestroy(): void {
@@ -72,183 +81,489 @@ export class AmazonCatalogComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  loadAmazonProducts(): void {
+  loadProducts(): void {
     this.loading = true;
-    this.adminService.getAmazonProducts()
+    this.adminService.getAmazonCatalog(this.selectedStatus)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (response: any) => {
-          this.products = response.data || [];
+        next: (catalogRes: any) => {
+          this.products = (catalogRes.data || []).map((p: any) => ({ ...p, selected: false }));
+          if (catalogRes.stats) {
+            this.catalogStats = catalogRes.stats;
+          } else {
+            // Calculate stats locally if backend didn't provide them
+            this.catalogStats = {
+              total: this.products.length,
+              published: this.products.filter(p => p.amazonStatus === 'published').length,
+              deleted: this.products.filter(p => p.amazonStatus === 'deleted').length,
+              failed: this.products.filter(p => ['failed', 'incomplete', 'suppressed'].includes(p.amazonStatus)).length,
+              pending: this.products.filter(p => ['pending', 'pending_asin', 'publishing', 'queued', 'retry'].includes(p.amazonStatus)).length
+            };
+          }
           this.applyFilters();
           this.loading = false;
         },
-        error: (error) => {
-          console.error('Error loading Amazon products:', error);
-          this.loading = false;
+        error: (err) => {
+          console.error('Catalog API error, falling back to products endpoint:', err);
+          // Fallback to regular products
+          this.adminService.getAmazonProducts(this.selectedStatus === 'all' ? undefined : this.selectedStatus)
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+              next: (res: any) => {
+                this.products = (res.data || [])
+                  .map((p: any) => ({ ...p, selected: false }));
+                // Calculate stats locally from loaded products
+                if (!res.stats) {
+                  this.catalogStats = {
+                    total: this.products.length,
+                    published: this.products.filter(p => p.amazonStatus === 'published').length,
+                    deleted: this.products.filter(p => p.amazonStatus === 'deleted').length,
+                    failed: this.products.filter(p => ['failed', 'incomplete', 'suppressed'].includes(p.amazonStatus)).length,
+                    pending: this.products.filter(p => ['pending', 'pending_asin', 'publishing', 'queued', 'retry'].includes(p.amazonStatus)).length
+                  };
+                } else {
+                  this.catalogStats = res.stats;
+                }
+                this.applyFilters();
+                this.loading = false;
+              },
+              error: (err2) => {
+                console.error('Error loading products:', err2);
+                this.loading = false;
+              }
+            });
         }
       });
   }
 
-  applyFilters(): void {
-    this.filteredProducts = this.products.filter(product => {
-      let matchesStatus = this.selectedStatus === 'all';
-      
-      if (!matchesStatus) {
-        if (this.selectedStatus === 'incomplete') {
-          // Accept both 'incomplete' and 'pending_asin' for incomplete filter
-          matchesStatus = product.amazonStatus === 'incomplete' || product.amazonStatus === 'pending_asin';
-        } else {
-          matchesStatus = product.amazonStatus === this.selectedStatus;
-        }
-      }
-      
-      const matchesSearch = !this.searchQuery || 
-        product.product_name.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
-        product.amazonSku?.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
-        product.amazonAsin?.toLowerCase().includes(this.searchQuery.toLowerCase());
-      
-      return matchesStatus && matchesSearch;
-    });
+  setStatusFilter(status: 'all' | 'published' | 'deleted' | 'failed' | 'pending'): void {
+    if (this.selectedStatus === status) return;
+    this.selectedStatus = status;
+    this.currentPage = 1;
+    this.loadProducts();
   }
 
-  onStatusChange(): void {
-    this.applyFilters();
+  applyFilters(): void {
+    const q = (this.searchQuery || '').toLowerCase().trim();
+    this.filteredProducts = this.products.filter(product => {
+      if (!q) return true;
+      return (
+        product.product_name?.toLowerCase().includes(q) ||
+        product.amazonSku?.toLowerCase().includes(q) ||
+        product.amazonAsin?.toLowerCase().includes(q)
+      );
+    });
+    this.currentPage = 1;
+    this.updateSelectAll();
   }
 
   onSearchChange(): void {
     this.applyFilters();
   }
 
-  getStatusBadgeClass(status: string): string {
-    const statusClasses: { [key: string]: string } = {
-      'pending': 'badge-warning',
-      'publishing': 'badge-info',
-      'published': 'badge-success',
-      'incomplete': 'badge-warning',
-      'failed': 'badge-danger',
-      'retry': 'badge-warning',
-      'suppressed': 'badge-secondary'
-    };
-    return statusClasses[status] || 'badge-secondary';
+  clearSearch(): void {
+    this.searchQuery = '';
+    this.applyFilters();
   }
 
-  getStatusLabel(status: string): string {
-    const statusLabels: { [key: string]: string } = {
-      'pending': 'معلق',
-      'publishing': 'قيد النشر',
-      'published': 'منشور',
-      'incomplete': 'غير مكتمل',
-      'failed': 'فاشل',
-      'retry': 'إعادة محاولة',
-      'suppressed': 'مكبوت'
-    };
-    return statusLabels[status] || status;
+  // ─── Pagination Getters & Methods ────────────────────────────
+  get totalPages(): number {
+    return Math.ceil(this.filteredProducts.length / this.pageSize) || 1;
   }
 
-  getProductImage(product: AmazonProduct): string {
-    return product.product_image || product.image_path || '/assets/placeholder.png';
+  get paginatedProducts(): AmazonProduct[] {
+    const start = (this.currentPage - 1) * this.pageSize;
+    return this.filteredProducts.slice(start, start + this.pageSize);
   }
 
-  editProduct(product: AmazonProduct): void {
-    this.editingProductId = product._id;
-    this.editingData = {
-      _id: product._id,
-      amazonPrice: product.amazonPrice || product.product_price,
-      product_quantity: product.product_quantity
-    };
+  get startIndex(): number {
+    return this.filteredProducts.length === 0 ? 0 : (this.currentPage - 1) * this.pageSize + 1;
   }
 
-  cancelEdit(): void {
-    this.editingProductId = null;
-    this.editingData = { _id: '' };
+  get endIndex(): number {
+    return Math.min(this.currentPage * this.pageSize, this.filteredProducts.length);
   }
 
-  saveProductChanges(): void {
-    if (!this.editingProductId) return;
-
-    this.adminService.updateAmazonProductData(this.editingProductId, this.editingData)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (response: any) => {
-          this.cancelEdit();
-          // Update the product locally to preserve scroll position
-          const product = this.products.find(p => p._id === this.editingProductId);
-          if (product) {
-            if (this.editingData.amazonPrice) product.amazonPrice = this.editingData.amazonPrice;
-            if (this.editingData.product_quantity !== undefined) product.product_quantity = this.editingData.product_quantity;
-            this.applyFilters();
-          }
-        },
-        error: (error) => {
-          console.error('Error updating product:', error);
-        }
-      });
+  get averagePrice(): number {
+    if (!this.products.length) return 0;
+    const sum = this.products.reduce((acc, p) => acc + (p.amazonPrice || p.product_price || 0), 0);
+    return sum / this.products.length;
   }
 
-  republishProduct(product: AmazonProduct): void {
-    this.adminService.republishAmazonProduct(product._id)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (response: any) => {
-          // Update status locally to preserve scroll position
-          const productIndex = this.products.findIndex(p => p._id === product._id);
-          if (productIndex !== -1) {
-            this.products[productIndex].amazonStatus = 'queued';
-            this.applyFilters();
-          }
-        },
-        error: (error) => {
-          console.error('Error republishing product:', error);
-        }
-      });
-  }
-
-  getAmazonUrl(asin: string): string {
-    if (!asin) return '';
-    return `https://www.amazon.eg/dp/${asin}`;
-  }
-
-  openAmazonListing(asin: string): void {
-    if (asin) {
-      window.open(this.getAmazonUrl(asin), '_blank');
+  goToPage(page: number): void {
+    if (page >= 1 && page <= this.totalPages) {
+      this.currentPage = page;
+      this.updateSelectAll();
     }
   }
 
-  syncAllProducts(): void {
-    this.loading = true;
-    this.adminService.syncAllAmazonProducts()
+  onPageSizeChange(): void {
+    this.currentPage = 1;
+    this.updateSelectAll();
+  }
+
+  getPageNumbers(): (number | string)[] {
+    const total = this.totalPages;
+    const current = this.currentPage;
+    if (total <= 7) {
+      return Array.from({ length: total }, (_, i) => i + 1);
+    }
+    const pages: (number | string)[] = [];
+    pages.push(1);
+    if (current > 3) pages.push('...');
+    const start = Math.max(2, current - 1);
+    const end = Math.min(total - 1, current + 1);
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (current < total - 2) pages.push('...');
+    pages.push(total);
+    return pages;
+  }
+
+  // ─── Selection ───────────────────────────────────────────────
+  toggleSelectAll(): void {
+    this.allSelected = !this.allSelected;
+    this.paginatedProducts.forEach(p => p.selected = this.allSelected);
+  }
+
+  selectAllMatching(): void {
+    this.filteredProducts.forEach(p => p.selected = true);
+    this.allSelected = true;
+    this.showToastMessage(`تم تحديد جميع الـ ${this.filteredProducts.length} منتج`, 'success');
+  }
+
+  clearSelection(): void {
+    this.products.forEach(p => p.selected = false);
+    this.allSelected = false;
+  }
+
+  updateSelectAll(): void {
+    this.allSelected = this.paginatedProducts.length > 0 && this.paginatedProducts.every(p => p.selected);
+  }
+
+  get selectedCount(): number {
+    return this.products.filter(p => p.selected).length;
+  }
+
+  get selectedProducts(): AmazonProduct[] {
+    return this.products.filter(p => p.selected);
+  }
+
+  // ─── Single Product Price Edit ───────────────────────────────
+  startEditPrice(product: AmazonProduct): void {
+    this.editingProductId = product._id;
+    this.editingPrice = product.amazonPrice || product.product_price;
+  }
+
+  cancelEditPrice(): void {
+    this.editingProductId = null;
+    this.editingPrice = 0;
+  }
+
+  saveProductPrice(product: AmazonProduct): void {
+    if (this.editingPrice <= 0) return;
+
+    this.adminService.updateAmazonProductData(product._id, { amazonPrice: this.editingPrice })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          product.amazonPrice = this.editingPrice;
+          this.cancelEditPrice();
+          this.showToastMessage('تم تحديث السعر بنجاح', 'success');
+        },
+        error: (err) => {
+          console.error('Error updating price:', err);
+          this.showToastMessage('فشل تحديث السعر', 'error');
+        }
+      });
+  }
+
+  // ─── Bulk Price Modal ────────────────────────────────────────
+  openPriceModal(): void {
+    if (this.selectedCount === 0) return;
+    this.showPriceModal = true;
+    this.adjustmentType = 'fixed_increase';
+    this.adjustmentValue = 0;
+    this.priceUpdateResult = null;
+  }
+
+  closePriceModal(): void {
+    this.showPriceModal = false;
+    this.priceUpdateResult = null;
+  }
+
+  applyBulkPrice(): void {
+    if (this.adjustmentValue <= 0 || this.selectedCount === 0) return;
+
+    this.priceUpdateLoading = true;
+    const ids = this.selectedProducts.map(p => p._id);
+
+    this.adminService.bulkUpdateAmazonPrice(ids, this.adjustmentType, this.adjustmentValue)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response: any) => {
-          alert('جاري بدء المزامنة الشاملة مع أمازون في الخلفية... ستتحدث الحالات والتأكيدات تلقائياً خلال ثوانٍ.');
-          setTimeout(() => this.loadAmazonProducts(), 4000);
-          setTimeout(() => this.loadAmazonProducts(), 12000);
-          setTimeout(() => this.loadAmazonProducts(), 25000);
+          this.priceUpdateLoading = false;
+          this.priceUpdateResult = { count: response.count, data: response.data || [] };
+
+          // Update local products with new prices
+          for (const updated of (response.data || [])) {
+            const p = this.products.find(pr => pr._id === updated._id);
+            if (p) {
+              p.amazonPrice = updated.newPrice;
+              p.selected = false;
+            }
+          }
+          this.allSelected = false;
+
+          this.showToastMessage(`تم تحديث أسعار ${response.count} منتج بنجاح`, 'success');
         },
         error: (error) => {
-          this.loading = false;
-          console.error('Error initiating bulk sync:', error);
-          alert('فشل في بدء المزامنة الشاملة مع أمازون');
+          this.priceUpdateLoading = false;
+          console.error('Error bulk updating prices:', error);
+          this.showToastMessage('فشل تحديث الأسعار', 'error');
         }
       });
+  }
+
+  getAdjustmentLabel(): string {
+    switch (this.adjustmentType) {
+      case 'fixed_increase': return 'زيادة بالقيمة (ج.م)';
+      case 'fixed_decrease': return 'نقصان بالقيمة (ج.م)';
+      case 'percent_increase': return 'زيادة بالنسبة المئوية (%)';
+      case 'percent_decrease': return 'نقصان بالنسبة المئوية (%)';
+      default: return '';
+    }
+  }
+
+  previewPrice(product: AmazonProduct): number {
+    const current = product.amazonPrice || product.product_price || 0;
+    let newPrice = current;
+    switch (this.adjustmentType) {
+      case 'fixed_increase': newPrice = current + this.adjustmentValue; break;
+      case 'fixed_decrease': newPrice = current - this.adjustmentValue; break;
+      case 'percent_increase': newPrice = current * (1 + this.adjustmentValue / 100); break;
+      case 'percent_decrease': newPrice = current * (1 - this.adjustmentValue / 100); break;
+    }
+    return Math.max(0.01, Math.round(newPrice * 100) / 100);
+  }
+
+  // ─── Delete / Sync Deleted Listings ─────────────────────────
+  syncDeletedListings(): void {
+    if (this.syncingDeleted) return;
+    if (!confirm('هل تريد فحص المنتجات ومطابقتها مع حسابك في أمازون مصر لحذف أي منتج غير مفعل أو محذوف؟')) {
+      return;
+    }
+
+    this.syncingDeleted = true;
+    this.adminService.syncDeletedAmazonListings()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res: any) => {
+          this.syncingDeleted = false;
+          const count = res.deletedCount || 0;
+          const amazonDel = res.deletedFromAmazonCount || 0;
+          if (count > 0 || amazonDel > 0) {
+            let msg = `تمت المطابقة: تمت إزالة ${count} منتج محلياً`;
+            if (amazonDel > 0) {
+              msg += ` وحذف ${amazonDel} منتج غير مفعل من أمازون`;
+            }
+            this.showToastMessage(msg, 'success');
+            this.loadProducts();
+          } else {
+            this.showToastMessage('جميع المنتجات المعروضة نشطة ومتطابقة 100% مع أمازون!', 'success');
+          }
+        },
+        error: (err: any) => {
+          this.syncingDeleted = false;
+          console.error('Error syncing deleted listings:', err);
+          this.showToastMessage('فشل فحص المنتجات ومطابقتها مع أمازون', 'error');
+        }
+      });
+  }
+
+  removeProductFromCatalog(product: AmazonProduct): void {
+    if (!confirm(`هل أنت متأكد من إزالة "${product.product_name}" من المخزون المعروض لأمازون؟`)) {
+      return;
+    }
+
+    this.adminService.removeAmazonProductFromCatalog(product._id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.products = this.products.filter(p => p._id !== product._id);
+          this.applyFilters();
+          this.showToastMessage('تم حذف المنتج من قائمة المعروضات بنجاح', 'success');
+        },
+        error: (err: any) => {
+          console.error('Error removing product:', err);
+          this.showToastMessage('فشل حذف المنتج من الكتالوج', 'error');
+        }
+      });
+  }
+
+  // ─── Reactivate & Repair Features ─────────────────────────
+  reactivatingId: string | null = null;
+  showRepairModal = false;
+  repairingProduct: AmazonProduct | null = null;
+  repairForm = {
+    product_name: '',
+    amazonPrice: 0,
+    product_quantity: 0,
+    barcode: '',
+    amazonAsin: ''
+  };
+  repairLoading = false;
+
+  reactivateProduct(product: AmazonProduct): void {
+    if (this.reactivatingId) return;
+    this.reactivatingId = product._id;
+
+    this.adminService.republishAmazonProduct(product._id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res: any) => {
+          this.reactivatingId = null;
+          product.amazonStatus = 'queued';
+          this.showToastMessage('تم بدء إعادة تفعيل ونشر المنتج على أمازون بنجاح 🚀', 'success');
+        },
+        error: (err: any) => {
+          this.reactivatingId = null;
+          console.error('Error reactivating product:', err);
+          this.showToastMessage(err.message || 'فشل إعادة تفعيل المنتج', 'error');
+        }
+      });
+  }
+
+  openRepairModal(product: AmazonProduct): void {
+    this.repairingProduct = product;
+    this.repairForm = {
+      product_name: product.product_name || '',
+      amazonPrice: product.amazonPrice || product.product_price || 0,
+      product_quantity: product.product_quantity || 1,
+      barcode: product.barcode || '',
+      amazonAsin: product.amazonAsin || ''
+    };
+    this.showRepairModal = true;
+  }
+
+  closeRepairModal(): void {
+    this.showRepairModal = false;
+    this.repairingProduct = null;
+  }
+
+  saveAndReactivate(): void {
+    if (!this.repairingProduct) return;
+    this.repairLoading = true;
+
+    this.adminService.repairAmazonProduct(this.repairingProduct._id, this.repairForm)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res: any) => {
+          this.repairLoading = false;
+          if (this.repairingProduct) {
+            this.repairingProduct.product_name = this.repairForm.product_name;
+            this.repairingProduct.amazonPrice = this.repairForm.amazonPrice;
+            this.repairingProduct.product_quantity = this.repairForm.product_quantity;
+            this.repairingProduct.barcode = this.repairForm.barcode;
+            this.repairingProduct.amazonAsin = this.repairForm.amazonAsin;
+            this.repairingProduct.amazonStatus = 'queued';
+            this.repairingProduct.amazonLastError = undefined;
+          }
+          this.closeRepairModal();
+          this.showToastMessage('تم حفظ بيانات الإصلاح وجاري إعادة النشر والتفعيل 🚀', 'success');
+        },
+        error: (err: any) => {
+          this.repairLoading = false;
+          console.error('Error repairing product:', err);
+          this.showToastMessage(err.message || 'فشل حفظ وتفعيل المنتج', 'error');
+        }
+      });
+  }
+
+  getStatusLabel(status: string): string {
+    switch (status) {
+      case 'published': return 'منشور / نشط';
+      case 'deleted': return 'محذوف / غير مفعل';
+      case 'failed': return 'فشل النشر';
+      case 'suppressed': return 'معلق / محظور';
+      case 'incomplete': return 'بيانات ناقصة';
+      case 'pending':
+      case 'publishing':
+      case 'queued':
+      case 'retry':
+        return 'قيد المزامنة';
+      default: return status || 'غير محدد';
+    }
+  }
+
+  getStatusClass(status: string): string {
+    switch (status) {
+      case 'published':
+        return 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800';
+      case 'deleted':
+        return 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800';
+      case 'failed':
+      case 'suppressed':
+      case 'incomplete':
+        return 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800';
+      default:
+        return 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800';
+    }
+  }
+
+  // ─── Helpers ─────────────────────────────────────────────────
+  getProductImage(product: AmazonProduct): string {
+    const path = (product.image_path || '').trim();
+    const img = (product.product_image || '').trim();
+
+    // 1. Full HTTP/HTTPS URLs
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      return path;
+    }
+    if (img.startsWith('http://') || img.startsWith('https://')) {
+      return img;
+    }
+
+    // 2. Relative uploads paths
+    if (path.startsWith('/uploads/')) {
+      return 'https://knoozbook.com' + path;
+    }
+    if (img.startsWith('/uploads/')) {
+      return 'https://knoozbook.com' + img;
+    }
+
+    // 3. Filename with image extension
+    if (img.includes('.webp') || img.includes('.jpg') || img.includes('.jpeg') || img.includes('.png')) {
+      return `https://knoozbook.com/uploads/books/merchant_karim_admin/${product.products_id || product._id}/${img}`;
+    }
+
+    return 'assets/image/book-placeholder.jpg';
+  }
+
+  onImageError(event: Event): void {
+    const target = event.target as HTMLImageElement;
+    if (target && target.src && !target.src.includes('book-placeholder.jpg')) {
+      target.src = 'assets/image/book-placeholder.jpg';
+    }
+  }
+
+  getAmazonUrl(asin: string): string {
+    return asin ? `https://www.amazon.eg/dp/${asin}` : '';
+  }
+
+  openAmazonListing(asin: string): void {
+    if (asin) window.open(this.getAmazonUrl(asin), '_blank');
   }
 
   copyToClipboard(text: string): void {
     navigator.clipboard.writeText(text).then(() => {
-      console.log('Text copied to clipboard');
+      this.showToastMessage('تم النسخ إلى الحافظة', 'success');
     });
   }
 
-  getStatusIcon(status: string): string {
-    const icons: { [key: string]: string } = {
-      'pending': 'clock',
-      'publishing': 'spinner',
-      'published': 'check-circle',
-      'incomplete': 'exclamation-triangle',
-      'failed': 'times-circle',
-      'retry': 'redo',
-      'suppressed': 'ban'
-    };
-    return icons[status] || 'question-circle';
+  showToastMessage(message: string, type: 'success' | 'error'): void {
+    this.toastMessage = message;
+    this.toastType = type;
+    this.showToast = true;
+    setTimeout(() => this.showToast = false, 3000);
   }
 }

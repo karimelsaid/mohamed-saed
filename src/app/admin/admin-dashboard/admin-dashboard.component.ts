@@ -12,7 +12,6 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MerchantManagementComponent } from '../merchant-management/merchant-management.component';
 import { ProductApprovalComponent } from '../product-approval/product-approval.component';
-import { ProductManagementComponent } from '../product-management/product-management.component';
 import Chart from 'chart.js/auto';
 import * as XLSX from 'xlsx';
 import { FreeShippingRulesComponent } from './free-shipping/free-shipping-rules.component';
@@ -43,6 +42,7 @@ import { PartnershipComponent } from '../partnership/partnership.component';
 import { AmazonDiagnosticsComponent } from '../amazon-diagnostics/amazon-diagnostics.component';
 import { AmazonCatalogComponent } from '../amazon-catalog/amazon-catalog.component';
 import { AmazonAccountsComponent } from '../amazon-accounts/amazon-accounts.component';
+import { AmazonOrdersComponent } from '../amazon-orders/amazon-orders.component';
 import { MerchantAmazonLinkComponent } from '../merchant-amazon-link/merchant-amazon-link.component';
 import { ShippingSettingsComponent } from '../shipping-settings/shipping-settings.component';
 import { YoutubeManagerComponent } from '../youtube-manager/youtube-manager.component';
@@ -278,7 +278,7 @@ interface SystemSettings {
   };
 }
 
-export type AdminView = 'dashboard' | 'partnership' | 'partnerDashboard' | 'userIntelligence' | 'orders' | 'requestedBooks' | 'printOrders' | 'printingSettings' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'staff' | 'productApproval' | 'productManagement' | 'merchantManagement' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' | 'gamificationControl' | 'notifications' | 'subscriptionControl' | 'readerFeedback' | 'promotions' | 'salesRegistration' | 'shortagesReport' | 'promotionDates' | 'salesHistory' | 'community' | 'bourseSettings' | 'automation' | 'aiControlCenter' | 'newsletter' | 'marketers' | 'specialOffers' | 'amazonDiagnostics' | 'amazonCatalog' | 'amazonAccounts' | 'merchantAmazonLink' | 'shippingSettings' | 'youtubeManager' | 'categories';
+export type AdminView = 'dashboard' | 'partnership' | 'partnerDashboard' | 'userIntelligence' | 'orders' | 'requestedBooks' | 'printOrders' | 'printingSettings' | 'addProduct' | 'products' | 'newPage' | 'freeShippingRules' | 'merchants' | 'staff' | 'productApproval' | 'productManagement' | 'merchantManagement' | 'merchantOrders' | 'paymentRequests' | 'userHierarchy' | 'urgencyRequests' | 'amazonCalculator' | 'ebooks' | 'mobileVersion' | 'gamificationControl' | 'notifications' | 'subscriptionControl' | 'readerFeedback' | 'promotions' | 'salesRegistration' | 'shortagesReport' | 'promotionDates' | 'salesHistory' | 'community' | 'bourseSettings' | 'automation' | 'aiControlCenter' | 'newsletter' | 'marketers' | 'specialOffers' | 'amazonDiagnostics' | 'amazonCatalog' | 'amazonAccounts' | 'amazonOrders' | 'merchantAmazonLink' | 'shippingSettings' | 'youtubeManager' | 'categories';
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -289,10 +289,10 @@ export type AdminView = 'dashboard' | 'partnership' | 'partnerDashboard' | 'user
     RouterModule,
     FontAwesomeModule,
     MerchantManagementComponent,
-    ProductManagementComponent,
     AmazonDiagnosticsComponent,
     AmazonCatalogComponent,
     AmazonAccountsComponent,
+    AmazonOrdersComponent,
     MerchantAmazonLinkComponent,
     ShippingSettingsComponent,
     YoutubeManagerComponent,
@@ -340,12 +340,12 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     {
       name: 'المخزون والمنتجات',
       icon: 'box',
-      views: ['addProduct', 'products', 'productApproval', 'productManagement', 'amazonCalculator', 'ebooks', 'amazonDiagnostics', 'amazonCatalog', 'amazonAccounts', 'merchantAmazonLink']
+      views: ['addProduct', 'products', 'productApproval', 'productManagement', 'amazonCalculator', 'ebooks', 'amazonDiagnostics', 'amazonCatalog', 'amazonAccounts', 'amazonOrders', 'merchantAmazonLink']
     },
     {
       name: 'المبيعات والطلبات',
       icon: 'shopping-cart',
-      views: ['orders', 'merchantOrders', 'requestedBooks', 'printOrders', 'salesRegistration', 'salesHistory', 'urgencyRequests', 'shortagesReport']
+      views: ['orders', 'amazonOrders', 'merchantOrders', 'requestedBooks', 'printOrders', 'salesRegistration', 'salesHistory', 'urgencyRequests', 'shortagesReport']
     },
     {
       name: 'إعدادات المنصة والأسعار',
@@ -1089,6 +1089,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     'specialOffers': 'إدارة العروض الخاصة (Emails)',
     'amazonDiagnostics': 'Amazon Diagnostics',
     'amazonCatalog': 'كتالوج أمازون',
+    'amazonOrders': 'طلبات أمازون والشحن',
     'amazonAccounts': 'إدارة حسابات أمازون',
     'merchantAmazonLink': 'ربط حسابات أمازون',
     'shippingSettings': 'إعدادات الشحن',
@@ -3366,7 +3367,10 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       if (err.message.includes('timeout') || err.message.includes('Timeout')) {
         userMessage = 'انتهت مهلة الطلب بسبب كثرة المنتجات. جاري معالجتها في الخلفية...';
       } else if (err.message.includes('Failed to fetch')) {
-        userMessage = 'فشل الاتصال بالخادم. يرجى التحقق من اتصال الإنترنت والمحاولة مرة أخرى.';
+        const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
+        userMessage = isOnline 
+          ? 'تعذر الاتصال بالخادم. يرجى التأكد من تشغيل الخادم والمحاولة مرة أخرى.'
+          : 'فشل الاتصال بالخادم. يرجى التحقق من اتصال الإنترنت والمحاولة مرة أخرى.';
       }
       
       this.showErrorModal(userMessage);
@@ -4315,7 +4319,10 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
         let errorMessage = 'حدث خطأ أثناء إضافة المنتج.';
         
         if (error?.status === 0) {
-          errorMessage = 'فشل الاتصال بالخادم. يرجى التحقق من اتصال الإنترنت والمحاولة مرة أخرى.';
+          const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
+          errorMessage = isOnline 
+            ? 'تعذر الاتصال بالخادم. يرجى التأكد من تشغيل الخادم والمحاولة مرة أخرى.'
+            : 'فشل الاتصال بالخادم. يرجى التحقق من اتصال الإنترنت والمحاولة مرة أخرى.';
           console.error('Network connection failed. Possible causes: CORS, server down, or network issue.');
         } else if (error?.status === 401) {
           errorMessage = 'انتهت جلسة العمل. يرجى تسجيل الدخول مرة أخرى.';
@@ -4516,6 +4523,21 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
   isSyncingAmazon(productId: string): boolean {
     return this.syncingAmazon.has(productId);
+  }
+
+  getAmazonStatusArabic(status?: string): string {
+    switch (status?.toLowerCase()) {
+      case 'published': return 'منشور';
+      case 'publishing': return 'قيد النشر';
+      case 'pending': return 'قيد الانتظار';
+      case 'pending_asin': return 'بانتظار ASIN';
+      case 'failed': return 'فشل النشر';
+      case 'suppressed': return 'مكبوت';
+      case 'incomplete': return 'بيانات غير مكتملة';
+      case 'queued': return 'في قائمة الانتظار';
+      case 'retry': return 'إعادة محاولة';
+      default: return 'غير منشور';
+    }
   }
 
   pollAmazonStatus(productId: string): void {

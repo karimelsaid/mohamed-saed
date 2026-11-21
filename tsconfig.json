@@ -27,6 +27,11 @@
       "@fortawesome/free-brands-svg-icons": ["node_modules/@fortawesome/free-brands-svg-icons"]
     }
   },
+  "exclude": [
+    "projects/**",
+    "node_modules",
+    "dist"
+  ],
   "angularCompilerOptions": {
     "enableI18nLegacyMessageIdFormat": false,
     "strictInjectionParameters": true,

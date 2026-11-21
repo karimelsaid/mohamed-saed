@@ -57,7 +57,7 @@ const productSchema = new mongoose.Schema({
   amazonAccountId: { type: mongoose.Schema.Types.ObjectId, ref: 'AmazonAccount' },
   amazonStatus: {
     type: String,
-    enum: ['pending', 'pending_asin', 'incomplete', 'publishing', 'published', 'retry', 'failed', 'suppressed'],
+    enum: ['pending', 'pending_asin', 'incomplete', 'publishing', 'published', 'retry', 'failed', 'suppressed', 'deleted'],
     default: 'pending'
   },
   amazonLastError: { type: String },

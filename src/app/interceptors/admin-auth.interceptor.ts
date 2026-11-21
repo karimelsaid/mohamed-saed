@@ -21,12 +21,20 @@ export class AdminAuthInterceptor implements HttpInterceptor {
 
     // Only intercept admin and amazon API calls
     if (req.url.includes('/api/admin') || req.url.includes('/api/amazon') || req.url.includes('/api/notifications/admin')) {
-      const user = JSON.parse(localStorage.getItem('user') || 'null');
+      let token: string | null = null;
+      try {
+        const user = JSON.parse(localStorage.getItem('user') || 'null');
+        token = user?.token || user?.accessToken || null;
+      } catch (e) {}
 
-      if (user && user.token) {
+      if (!token) {
+        token = localStorage.getItem('token') || localStorage.getItem('auth_token') || localStorage.getItem('merchant_token');
+      }
+
+      if (token) {
         const authReq = req.clone({
           setHeaders: {
-            Authorization: `Bearer ${user.token}`
+            Authorization: `Bearer ${token}`
           }
         });
 

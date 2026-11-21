@@ -20,5 +20,14 @@
             "name": "JavaSE-11",
             "path": "C:\\Program Files\\Java\\jdk-17" 
         }
-    ]
+    ],
+    "files.exclude": {
+        "**/projects/**/node_modules": true,
+        "**/projects/**/node_modules_backup": true
+    },
+    "search.exclude": {
+        "**/projects/**/node_modules": true,
+        "**/projects/**/node_modules_backup": true
+    },
+    "typescript.tsdk": "node_modules/typescript/lib"
 }

@@ -1,0 +1,46 @@
+/* Container styling */
+:host {
+  display: block;
+  width: 100%;
+}
+
+/* Print Styles */
+@media print {
+  /* Hide everything on page except the printable shipping label */
+  body * {
+    visibility: hidden;
+  }
+
+  #printable-shipping-label,
+  #printable-shipping-label * {
+    visibility: visible;
+  }
+
+  #printable-shipping-label {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    max-width: 100mm; /* Perfect for 4x6 inch / 100x150mm thermal shipping label */
+    margin: 0 auto;
+    padding: 10mm;
+    border: 2px solid black !important;
+    background: white !important;
+    color: black !important;
+    font-size: 11pt;
+    page-break-inside: avoid;
+    box-shadow: none !important;
+  }
+
+  @page {
+    size: auto;
+    margin: 5mm;
+  }
+}
+
+/* Barcode visual styling */
+.barcode-visual div {
+  background-color: #000;
+  display: inline-block;
+  margin-right: 1px;
+}

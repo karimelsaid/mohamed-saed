@@ -116,6 +116,7 @@ const marketerRoutes = require('./routes/marketer.routes');
 const marketerController = require('./controllers/marketer.controller');
 const specialOffersRoutes = require('./routes/special-offers.routes');
 const amazonProductRoutes = require('./routes/amazon-product.routes');
+const amazonOrdersRoutes = require('./routes/amazon-orders.routes');
 const amazonDiagnosticsRoutes = require('./routes/amazon-diagnostics.routes');
 const amazonAccountRoutes = require('./routes/amazon-account.routes');
 const amazonOAuthRoutes = require('./routes/amazon-oauth.routes');
@@ -579,6 +580,7 @@ app.use('/api/halaqa/upload-file', uploadLimiter);
 
 // Amazon Integration Routes
 app.use('/api/amazon', amazonProductRoutes);
+app.use('/api/amazon/orders', amazonOrdersRoutes);
 app.use('/api/amazon', amazonDiagnosticsRoutes);
 app.use('/api/amazon/accounts', amazonAccountRoutes);
 app.use('/api/amazon/oauth', amazonOAuthRoutes);

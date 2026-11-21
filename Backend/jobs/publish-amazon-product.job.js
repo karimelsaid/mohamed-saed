@@ -6,9 +6,39 @@ const logger = require('../services/amazon/amazon-logger.service');
 let amazonQueue = null;
 let isRedisAvailable = false;
 let redisError = null;
+let errorLogCount = 0;
+let isInitializing = false;
+let reconnectTimer = null;
+const MAX_ERROR_LOGS = 5; // Stop spamming logs after this many errors
+
+// Pre-check if Redis is reachable before creating the Bull queue
+async function testRedisConnection(redisUrl) {
+  const net = require('net');
+  const url = new URL(redisUrl);
+  const host = url.hostname || 'localhost';
+  const port = parseInt(url.port) || 6379;
+
+  return new Promise((resolve) => {
+    const socket = new net.Socket();
+    socket.setTimeout(3000); // 3 second timeout
+    socket.on('connect', () => {
+      socket.destroy();
+      resolve(true);
+    });
+    socket.on('timeout', () => {
+      socket.destroy();
+      resolve(false);
+    });
+    socket.on('error', () => {
+      socket.destroy();
+      resolve(false);
+    });
+    socket.connect(port, host);
+  });
+}
 
 // Initialize queue with Redis connection handling
-function initializeQueue() {
+async function initializeQueue() {
   try {
     // Log REDIS_URL (without credentials for security)
     const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
@@ -16,6 +46,36 @@ function initializeQueue() {
     console.log('🔍 [Amazon Queue] Attempting to connect to Redis...');
     console.log('🔍 [Amazon Queue] Redis URL:', safeRedisUrl);
     console.log('🔍 [Amazon Queue] REDIS_URL env var set:', !!process.env.REDIS_URL);
+
+    // Pre-check: test if Redis is reachable before creating Bull queue
+    const isReachable = await testRedisConnection(redisUrl);
+    if (!isReachable) {
+      isRedisAvailable = false;
+      redisError = 'Redis server is not reachable at ' + safeRedisUrl;
+      console.warn('⚠️  [Amazon Queue] Redis is not running at ' + safeRedisUrl);
+      console.warn('⚠️  [Amazon Queue] Amazon publishing queue will be DISABLED.');
+      console.warn('⚠️  [Amazon Queue] Reconnection loop active: will automatically connect when Redis starts.');
+      amazonQueue = null;
+
+      // Automatically retry connecting every 10 seconds in the background
+      if (!reconnectTimer) {
+        reconnectTimer = setInterval(async () => {
+          const reachableNow = await testRedisConnection(redisUrl);
+          if (reachableNow) {
+            clearInterval(reconnectTimer);
+            reconnectTimer = null;
+            console.log('🔄 [Amazon Queue] Redis detected online! Connecting queue now...');
+            await initializeQueue();
+          }
+        }, 10000);
+      }
+      return;
+    }
+
+    if (reconnectTimer) {
+      clearInterval(reconnectTimer);
+      reconnectTimer = null;
+    }
 
     amazonQueue = new Queue('amazon-publishing', {
       redis: redisUrl,
@@ -42,6 +102,7 @@ function initializeQueue() {
     console.log('⏳ [Amazon Queue] Testing Redis connection...');
     amazonQueue.isReady().then(async () => {
       isRedisAvailable = true;
+      errorLogCount = 0; // Reset error count on successful connection
       console.log('✅ [Amazon Queue] Redis connection established successfully');
       try {
         await amazonQueue.clean(1000, 'failed');
@@ -50,12 +111,18 @@ function initializeQueue() {
         // ignore clean errors
       }
       console.log('✅ [Amazon Queue] Queue initialized successfully');
-    }).catch((error) => {
+    }).catch(async (error) => {
       isRedisAvailable = false;
       redisError = error.message;
       console.error('❌ [Amazon Queue] Redis connection failed:', error.message);
-      console.error('❌ [Amazon Queue] Full error:', error);
       console.warn('⚠️  [Amazon Queue] Amazon publishing features will be disabled until Redis is available');
+      // Close the queue to stop retry loops
+      try {
+        await amazonQueue.close();
+      } catch (closeErr) {
+        // ignore close errors
+      }
+      amazonQueue = null;
     });
 
     // Set up job processors
@@ -238,19 +305,25 @@ function initializeQueue() {
       });
     });
 
+    // Throttle error logs to prevent log spam
     amazonQueue.on('error', (error) => {
-      console.error('🔥 [Amazon Queue] QUEUE_ERROR', {
-        timestamp: new Date().toISOString(),
-        error: error.message,
-        stack: error.stack
-      });
+      errorLogCount++;
+      if (errorLogCount <= MAX_ERROR_LOGS) {
+        console.error('🔥 [Amazon Queue] QUEUE_ERROR', {
+          timestamp: new Date().toISOString(),
+          error: error.message,
+          stack: error.stack
+        });
+        if (errorLogCount === MAX_ERROR_LOGS) {
+          console.warn('⚠️  [Amazon Queue] Suppressing further error logs. Fix Redis connection and restart.');
+        }
+      }
     });
 
   } catch (error) {
     isRedisAvailable = false;
     redisError = error.message;
     console.error('❌ [Amazon Queue] Redis connection failed:', error.message);
-    console.error('❌ [Amazon Queue] Full error:', error);
     console.warn('⚠️  [Amazon Queue] Amazon publishing features will be disabled until Redis is available');
     amazonQueue = null;
   }
@@ -268,7 +341,13 @@ class PublishAmazonProductJob {
    * Check if Redis is available
    */
   static isAvailable() {
-    return !!amazonQueue;
+    if (!amazonQueue && !isInitializing) {
+      isInitializing = true;
+      initializeQueue().catch(() => {}).finally(() => {
+        isInitializing = false;
+      });
+    }
+    return !!amazonQueue && isRedisAvailable;
   }
 
   /**

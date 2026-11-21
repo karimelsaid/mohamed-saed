@@ -16,9 +16,13 @@ router.get('/amazon/jobs/:jobId/progress', authMiddleware, amazonProductControll
 router.get('/catalog', authMiddleware, amazonCatalogController.getCatalog);
 router.put('/products/:id/update', authMiddleware, amazonCatalogController.updateProductData);
 router.post('/products/:id/republish', authMiddleware, amazonCatalogController.republishProduct);
+router.post('/products/:id/repair', authMiddleware, amazonCatalogController.repairAndReactivate);
 router.get('/products/:id/details', authMiddleware, amazonCatalogController.getProductDetails);
 router.post('/products/bulk/status', authMiddleware, amazonCatalogController.bulkUpdateStatus);
 router.post('/products/bulk/sync', authMiddleware, amazonCatalogController.syncAll);
+router.post('/products/bulk/price', authMiddleware, amazonCatalogController.bulkUpdatePrice);
+router.post('/catalog/sync-deleted', authMiddleware, amazonCatalogController.syncDeletedListings);
+router.post('/catalog/remove/:id', authMiddleware, amazonCatalogController.removeFromCatalog);
 
 // Public route for Amazon to download images as JPEG
 router.get('/image-proxy', amazonProductController.imageProxy);

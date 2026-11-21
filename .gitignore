@@ -8,6 +8,7 @@ tmp/
 node_modules/
 Backend/node_modules/
 projects/**/node_modules/
+projects/**/node_modules_backup/
 
 # Python venv
 venv/
@@ -83,6 +84,9 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 hs_err_pid*.log
+dump.rdb
+err.log
+out.log
 
 # Environment files
 src/environments/*.local.ts

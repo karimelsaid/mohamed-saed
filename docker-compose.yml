@@ -109,10 +109,5 @@ services:
     command: node app.js
     networks:
       - kenouz-network
-
-networks:
-  kenouz-network:
-    driver: bridge
-
-volumes:
+ 
   mihnati-mongo-data:

@@ -51,7 +51,7 @@
   </div>
 
   <!-- KPI CARDS -->
-  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+  <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
     <!-- Total Orders -->
     <div class="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
       <div class="flex items-center justify-between text-gray-500 dark:text-gray-400 text-xs font-medium mb-2">
@@ -64,11 +64,23 @@
       <div class="text-xs text-gray-400 mt-1">جميع الطلبات المسجلة</div>
     </div>
 
+    <!-- Pending Orders -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
+      <div class="flex items-center justify-between text-purple-600 dark:text-purple-400 text-xs font-medium mb-2">
+        <span>طلبات معلقة</span>
+        <span class="p-2 rounded-xl bg-purple-50 dark:bg-purple-900/30 text-base">⏳</span>
+      </div>
+      <div class="text-2xl font-black text-purple-600 dark:text-purple-400">
+        {{ kpis.pending }}
+      </div>
+      <div class="text-xs text-purple-500/80 mt-1 font-semibold">بانتظار تأكيد الدفع من أمازون</div>
+    </div>
+
     <!-- Unshipped Orders -->
     <div class="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
       <div class="flex items-center justify-between text-amber-600 dark:text-amber-400 text-xs font-medium mb-2">
         <span>بانتظار الشحن / الجدولة</span>
-        <span class="p-2 rounded-xl bg-amber-50 dark:bg-amber-900/30 text-base">⏳</span>
+        <span class="p-2 rounded-xl bg-amber-50 dark:bg-amber-900/30 text-base">📦</span>
       </div>
       <div class="text-2xl font-black text-amber-600 dark:text-amber-400">
         {{ kpis.unshipped }}
@@ -89,7 +101,7 @@
     </div>
 
     <!-- Revenue -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700 col-span-2 sm:col-span-1">
       <div class="flex items-center justify-between text-emerald-600 dark:text-emerald-400 text-xs font-medium mb-2">
         <span>إجمالي مبيعات أمازون</span>
         <span class="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 text-base">💰</span>
@@ -109,6 +121,14 @@
               [ngClass]="selectedStatus === 'all' ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'"
               class="px-4 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap">
         الكل ({{ kpis.totalOrders }})
+      </button>
+      <button (click)="onStatusChange('pending')" 
+              [ngClass]="selectedStatus === 'pending' ? 'bg-purple-600 text-white shadow-md' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'"
+              class="px-4 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap flex items-center gap-1.5">
+        <span>معلقة</span>
+        <span *ngIf="kpis.pending > 0" class="px-1.5 py-0.2 rounded-full bg-white/20 text-[10px]">
+          {{ kpis.pending }}
+        </span>
       </button>
       <button (click)="onStatusChange('unshipped')" 
               [ngClass]="selectedStatus === 'unshipped' ? 'bg-amber-500 text-white shadow-md' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'"
@@ -131,7 +151,7 @@
       <button (click)="onStatusChange('canceled')" 
               [ngClass]="selectedStatus === 'canceled' ? 'bg-rose-600 text-white shadow-md' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'"
               class="px-4 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap">
-        ملغية
+        ملغية ({{ kpis.canceled }})
       </button>
     </div>
 
@@ -205,13 +225,13 @@
 
         <div class="flex items-center gap-2 flex-wrap">
           <!-- Amazon Status Badge -->
-          <span [class]="getStatusBadgeClass(order.amazonOrderStatus)"
+          <span [class]="getStatusBadgeClass(order.amazonOrderStatus || order.status)"
                 class="px-3 py-1 rounded-full text-xs font-bold border">
-            {{ getStatusArabic(order.amazonOrderStatus) }}
+            {{ getStatusArabic(order.amazonOrderStatus || order.status) }}
           </span>
 
           <!-- Easy Ship Status Badge -->
-          <span *ngIf="order.easyShipStatus" 
+          <span *ngIf="order.easyShipStatus && order.amazonOrderStatus !== 'Pending' && order.status !== 'pending'" 
                 [class]="getEasyShipBadgeClass(order.easyShipStatus)"
                 class="px-3 py-1 rounded-full text-xs font-bold border">
             {{ getEasyShipArabic(order.easyShipStatus) }}
@@ -291,6 +311,10 @@
       <div class="pt-3 border-t border-gray-100 dark:border-gray-700 flex flex-wrap items-center justify-between gap-3">
         <!-- Scheduled Slot Info if available -->
         <div class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2">
+          <span *ngIf="order.amazonOrderStatus === 'Pending' || order.status === 'pending'" class="text-purple-600 dark:text-purple-400 font-semibold flex items-center gap-1.5">
+            <span>⏳</span>
+            <span>الطلب قيد المراجعة وتأكيد الدفع من أمازون (لا يتطلب شحن حالياً)</span>
+          </span>
           <span *ngIf="order.easyShipStatus === 'ScheduledForPickup' || order.scheduledPackageId" class="text-blue-600 font-semibold flex items-center gap-1.5">
             <span>🚚</span>
             <span>موعد الاستلام: {{ order.handoverSlot?.startTime ? formatDate(order.handoverSlot?.startTime) : 'محدد مع مندوب أمازون' }}</span>
@@ -310,8 +334,8 @@
             <span>البوليصة الرسمية ↗️</span>
           </button>
 
-          <!-- Schedule Pickup Button -->
-          <button *ngIf="order.amazonOrderStatus !== 'Canceled' && order.amazonOrderStatus !== 'Shipped'"
+          <!-- Schedule Pickup Button (Only when not Canceled, not Shipped, not Pending) -->
+          <button *ngIf="order.amazonOrderStatus !== 'Canceled' && order.amazonOrderStatus !== 'Shipped' && order.amazonOrderStatus !== 'Pending' && order.status !== 'pending'"
                   (click)="openScheduleModal(order)"
                   class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition text-xs shadow-sm flex items-center gap-1.5">
             <span>🚚</span>
@@ -617,7 +641,7 @@
           </div>
           <div class="p-3 rounded-xl bg-gray-50 dark:bg-gray-900/50">
             <span class="text-gray-400 block mb-1">حالة الطلب:</span>
-            <span class="font-bold text-amber-600">{{ getStatusArabic(selectedOrder.amazonOrderStatus) }}</span>
+            <span class="font-bold text-amber-600">{{ getStatusArabic(selectedOrder.amazonOrderStatus || selectedOrder.status) }}</span>
           </div>
         </div>
 

@@ -255,8 +255,30 @@ export class AdminService {
     );
   }
 
+  bulkUpdateAmazonQuantity(productIds: string[], adjustmentType: string, adjustmentValue: number): Observable<any> {
+    return this.http.post(`${environment.apiBaseUrl}/amazon/products/bulk/quantity`, {
+      productIds,
+      adjustmentType,
+      adjustmentValue
+    }, this.getAuthHeaders()).pipe(
+      catchError(this.handleError)
+    );
+  }
+
   syncDeletedAmazonListings(): Observable<any> {
     return this.http.post(`${environment.apiBaseUrl}/amazon/catalog/sync-deleted`, {}, this.getAuthHeaders()).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  scanSuppressedAmazonListings(): Observable<any> {
+    return this.http.post(`${environment.apiBaseUrl}/amazon/catalog/scan-suppressed`, {}, this.getAuthHeaders()).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  fixSuppressedImage(productId: string, imageUrl: string, title?: string): Observable<any> {
+    return this.http.post(`${environment.apiBaseUrl}/amazon/products/${productId}/fix-image`, { imageUrl, title }, this.getAuthHeaders()).pipe(
       catchError(this.handleError)
     );
   }

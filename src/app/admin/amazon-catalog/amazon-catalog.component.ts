@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AdminService } from '../../services/admin.service';
+import { environment } from '../../../environments/environment';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
@@ -20,6 +21,12 @@ interface AmazonProduct {
   barcode?: string;
   product_image?: string;
   image_path?: string;
+  product_category?: string;
+  copyType?: string;
+  publisher?: string;
+  author?: string;
+  createdAt?: string;
+  views?: number;
   selected?: boolean;
 }
 
@@ -38,8 +45,8 @@ export class AmazonCatalogComponent implements OnInit, OnDestroy {
   searchQuery = '';
 
   // Status Filter & Statistics
-  selectedStatus: 'all' | 'published' | 'deleted' | 'failed' | 'pending' = 'all';
-  catalogStats = { total: 0, published: 0, deleted: 0, failed: 0, pending: 0 };
+  selectedStatus: 'all' | 'published' | 'deleted' | 'failed' | 'pending' | 'suppressed' = 'all';
+  catalogStats = { total: 0, published: 0, deleted: 0, failed: 0, pending: 0, suppressed: 0 };
 
   // Pagination
   currentPage = 1;
@@ -56,12 +63,38 @@ export class AmazonCatalogComponent implements OnInit, OnDestroy {
   priceUpdateLoading = false;
   priceUpdateResult: { count: number; data: any[] } | null = null;
 
+  // Bulk Quantity Adjustment
+  showQuantityModal = false;
+  qtyAdjustmentType: 'set_fixed' | 'fixed_increase' | 'fixed_decrease' = 'set_fixed';
+  qtyAdjustmentValue: number = 1;
+  qtyUpdateLoading = false;
+  qtyUpdateResult: { count: number; data: any[] } | null = null;
+
   // Sync deleted listings from Amazon
   syncingDeleted = false;
 
-  // Single product editing
+  // Scan & Fix Suppressed
+  scanningSuppressed = false;
+  showFixImageModal = false;
+  fixingImageProduct: AmazonProduct | null = null;
+  fixImageUrl: string = '';
+  fixImageTitle: string = '';
+  fixImageLoading = false;
+
+  // Single product editing (Price & Quantity)
   editingProductId: string | null = null;
   editingPrice: number = 0;
+  editingQuantityId: string | null = null;
+  editingQuantity: number = 0;
+
+  // Sorting & Filtering
+  sortBy: 'newest' | 'oldest' | 'price_desc' | 'price_asc' | 'qty_desc' | 'qty_asc' | 'popular' = 'newest';
+  selectedCategory: string = 'all';
+  selectedCopyType: string = 'all'; // 'all', 'أصلي', 'هاي كوبي'
+  selectedStockStatus: 'all' | 'in_stock' | 'out_of_stock' = 'all';
+
+  availableCategories: string[] = [];
+  availableCopyTypes: string[] = [];
 
   // Toast
   toastMessage = '';
@@ -96,10 +129,12 @@ export class AmazonCatalogComponent implements OnInit, OnDestroy {
               total: this.products.length,
               published: this.products.filter(p => p.amazonStatus === 'published').length,
               deleted: this.products.filter(p => p.amazonStatus === 'deleted').length,
-              failed: this.products.filter(p => ['failed', 'incomplete', 'suppressed'].includes(p.amazonStatus)).length,
-              pending: this.products.filter(p => ['pending', 'pending_asin', 'publishing', 'queued', 'retry'].includes(p.amazonStatus)).length
+              failed: this.products.filter(p => ['failed', 'incomplete'].includes(p.amazonStatus)).length,
+              pending: this.products.filter(p => ['pending', 'pending_asin', 'publishing', 'queued', 'retry'].includes(p.amazonStatus)).length,
+              suppressed: this.products.filter(p => p.amazonStatus === 'search_suppressed').length
             };
           }
+          this.updateAvailableFilters();
           this.applyFilters();
           this.loading = false;
         },
@@ -118,12 +153,14 @@ export class AmazonCatalogComponent implements OnInit, OnDestroy {
                     total: this.products.length,
                     published: this.products.filter(p => p.amazonStatus === 'published').length,
                     deleted: this.products.filter(p => p.amazonStatus === 'deleted').length,
-                    failed: this.products.filter(p => ['failed', 'incomplete', 'suppressed'].includes(p.amazonStatus)).length,
-                    pending: this.products.filter(p => ['pending', 'pending_asin', 'publishing', 'queued', 'retry'].includes(p.amazonStatus)).length
+                    failed: this.products.filter(p => ['failed', 'incomplete'].includes(p.amazonStatus)).length,
+                    pending: this.products.filter(p => ['pending', 'pending_asin', 'publishing', 'queued', 'retry'].includes(p.amazonStatus)).length,
+                    suppressed: this.products.filter(p => p.amazonStatus === 'search_suppressed').length
                   };
                 } else {
                   this.catalogStats = res.stats;
                 }
+                this.updateAvailableFilters();
                 this.applyFilters();
                 this.loading = false;
               },
@@ -136,25 +173,108 @@ export class AmazonCatalogComponent implements OnInit, OnDestroy {
       });
   }
 
-  setStatusFilter(status: 'all' | 'published' | 'deleted' | 'failed' | 'pending'): void {
+  setStatusFilter(status: 'all' | 'published' | 'deleted' | 'failed' | 'pending' | 'suppressed'): void {
     if (this.selectedStatus === status) return;
     this.selectedStatus = status;
     this.currentPage = 1;
     this.loadProducts();
   }
 
+  updateAvailableFilters(): void {
+    const cats = new Set<string>();
+    const types = new Set<string>();
+
+    for (const p of this.products) {
+      if (p.product_category && p.product_category.trim()) {
+        cats.add(p.product_category.trim());
+      }
+      if (p.copyType && p.copyType.trim()) {
+        types.add(p.copyType.trim());
+      }
+    }
+
+    this.availableCategories = Array.from(cats).sort((a, b) => a.localeCompare(b, 'ar'));
+    this.availableCopyTypes = Array.from(types).sort((a, b) => a.localeCompare(b, 'ar'));
+  }
+
   applyFilters(): void {
     const q = (this.searchQuery || '').toLowerCase().trim();
-    this.filteredProducts = this.products.filter(product => {
-      if (!q) return true;
-      return (
-        product.product_name?.toLowerCase().includes(q) ||
-        product.amazonSku?.toLowerCase().includes(q) ||
-        product.amazonAsin?.toLowerCase().includes(q)
-      );
+
+    let result = this.products.filter(product => {
+      // 1. Text Search across multiple fields
+      if (q) {
+        const matchesName = product.product_name?.toLowerCase().includes(q);
+        const matchesSku = product.amazonSku?.toLowerCase().includes(q);
+        const matchesAsin = product.amazonAsin?.toLowerCase().includes(q);
+        const matchesBarcode = product.barcode?.toLowerCase().includes(q);
+        const matchesPublisher = product.publisher?.toLowerCase().includes(q);
+        const matchesAuthor = product.author?.toLowerCase().includes(q);
+        const matchesCategory = product.product_category?.toLowerCase().includes(q);
+        if (!matchesName && !matchesSku && !matchesAsin && !matchesBarcode && !matchesPublisher && !matchesAuthor && !matchesCategory) {
+          return false;
+        }
+      }
+
+      // 2. Category Filter
+      if (this.selectedCategory !== 'all') {
+        if (product.product_category !== this.selectedCategory) {
+          return false;
+        }
+      }
+
+      // 3. Copy Type Filter (أصلي / هاي كوبي)
+      if (this.selectedCopyType !== 'all') {
+        if (product.copyType !== this.selectedCopyType) {
+          return false;
+        }
+      }
+
+      // 4. Stock Filter
+      if (this.selectedStockStatus === 'in_stock' && (product.product_quantity || 0) <= 0) {
+        return false;
+      }
+      if (this.selectedStockStatus === 'out_of_stock' && (product.product_quantity || 0) > 0) {
+        return false;
+      }
+
+      return true;
     });
+
+    // 5. Sorting
+    result.sort((a, b) => {
+      const priceA = a.amazonPrice || a.product_price || 0;
+      const priceB = b.amazonPrice || b.product_price || 0;
+      const qtyA = a.product_quantity || 0;
+      const qtyB = b.product_quantity || 0;
+      const viewsA = a.views || 0;
+      const viewsB = b.views || 0;
+      const dateA = new Date(a.amazonSyncedAt || a.createdAt || 0).getTime();
+      const dateB = new Date(b.amazonSyncedAt || b.createdAt || 0).getTime();
+
+      switch (this.sortBy) {
+        case 'newest': return dateB - dateA;
+        case 'oldest': return dateA - dateB;
+        case 'price_desc': return priceB - priceA;
+        case 'price_asc': return priceA - priceB;
+        case 'qty_desc': return qtyB - qtyA;
+        case 'qty_asc': return qtyA - qtyB;
+        case 'popular': return viewsB - viewsA;
+        default: return dateB - dateA;
+      }
+    });
+
+    this.filteredProducts = result;
     this.currentPage = 1;
     this.updateSelectAll();
+  }
+
+  resetAllFilters(): void {
+    this.searchQuery = '';
+    this.selectedCategory = 'all';
+    this.selectedCopyType = 'all';
+    this.selectedStockStatus = 'all';
+    this.sortBy = 'newest';
+    this.applyFilters();
   }
 
   onSearchChange(): void {
@@ -268,11 +388,40 @@ export class AmazonCatalogComponent implements OnInit, OnDestroy {
         next: () => {
           product.amazonPrice = this.editingPrice;
           this.cancelEditPrice();
-          this.showToastMessage('تم تحديث السعر بنجاح', 'success');
+          this.showToastMessage('تم تحديث السعر على أمازون بنجاح ✅', 'success');
         },
         error: (err) => {
           console.error('Error updating price:', err);
           this.showToastMessage('فشل تحديث السعر', 'error');
+        }
+      });
+  }
+
+  // ─── Single Product Quantity Edit ───────────────────────────
+  startEditQuantity(product: AmazonProduct): void {
+    this.editingQuantityId = product._id;
+    this.editingQuantity = product.product_quantity ?? 0;
+  }
+
+  cancelEditQuantity(): void {
+    this.editingQuantityId = null;
+    this.editingQuantity = 0;
+  }
+
+  saveProductQuantity(product: AmazonProduct): void {
+    if (this.editingQuantity < 0) return;
+
+    this.adminService.updateAmazonProductData(product._id, { product_quantity: this.editingQuantity })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          product.product_quantity = this.editingQuantity;
+          this.cancelEditQuantity();
+          this.showToastMessage('تم تحديث الكمية على أمازون بنجاح ✅', 'success');
+        },
+        error: (err) => {
+          console.error('Error updating quantity:', err);
+          this.showToastMessage('فشل تحديث الكمية', 'error');
         }
       });
   }
@@ -346,6 +495,73 @@ export class AmazonCatalogComponent implements OnInit, OnDestroy {
     return Math.max(0.01, Math.round(newPrice * 100) / 100);
   }
 
+  // ─── Bulk Quantity Modal ─────────────────────────────────────
+  openQuantityModal(): void {
+    if (this.selectedCount === 0) return;
+    this.showQuantityModal = true;
+    this.qtyAdjustmentType = 'set_fixed';
+    this.qtyAdjustmentValue = 1;
+    this.qtyUpdateResult = null;
+  }
+
+  closeQuantityModal(): void {
+    this.showQuantityModal = false;
+    this.qtyUpdateResult = null;
+  }
+
+  applyBulkQuantity(): void {
+    if (this.selectedCount === 0 || this.qtyAdjustmentValue < 0) return;
+
+    this.qtyUpdateLoading = true;
+    const ids = this.selectedProducts.map(p => p._id);
+
+    this.adminService.bulkUpdateAmazonQuantity(ids, this.qtyAdjustmentType, this.qtyAdjustmentValue)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response: any) => {
+          this.qtyUpdateLoading = false;
+          this.qtyUpdateResult = { count: response.count, data: response.data || [] };
+
+          // Update local products with new quantities
+          for (const updated of (response.data || [])) {
+            const p = this.products.find(pr => pr._id === updated._id);
+            if (p) {
+              p.product_quantity = updated.newQuantity;
+              p.selected = false;
+            }
+          }
+          this.allSelected = false;
+
+          this.showToastMessage(`تم تحديث كميات ${response.count} منتج ومزامنتها مع أمازون بنجاح ✅`, 'success');
+        },
+        error: (error) => {
+          this.qtyUpdateLoading = false;
+          console.error('Error bulk updating quantities:', error);
+          this.showToastMessage('فشل تحديث الكميات', 'error');
+        }
+      });
+  }
+
+  getQtyAdjustmentLabel(): string {
+    switch (this.qtyAdjustmentType) {
+      case 'set_fixed': return 'تعيين كمية موحدة';
+      case 'fixed_increase': return 'زيادة بالعدد (+)';
+      case 'fixed_decrease': return 'إنقاص بالعدد (-)';
+      default: return '';
+    }
+  }
+
+  previewQuantity(product: AmazonProduct): number {
+    const current = product.product_quantity ?? 0;
+    let newQty = current;
+    switch (this.qtyAdjustmentType) {
+      case 'set_fixed': newQty = this.qtyAdjustmentValue; break;
+      case 'fixed_increase': newQty = current + this.qtyAdjustmentValue; break;
+      case 'fixed_decrease': newQty = Math.max(0, current - this.qtyAdjustmentValue); break;
+    }
+    return Math.max(0, Math.floor(newQty));
+  }
+
   // ─── Delete / Sync Deleted Listings ─────────────────────────
   syncDeletedListings(): void {
     if (this.syncingDeleted) return;
@@ -409,7 +625,8 @@ export class AmazonCatalogComponent implements OnInit, OnDestroy {
     amazonPrice: 0,
     product_quantity: 0,
     barcode: '',
-    amazonAsin: ''
+    amazonAsin: '',
+    product_image: ''
   };
   repairLoading = false;
 
@@ -440,7 +657,8 @@ export class AmazonCatalogComponent implements OnInit, OnDestroy {
       amazonPrice: product.amazonPrice || product.product_price || 0,
       product_quantity: product.product_quantity || 1,
       barcode: product.barcode || '',
-      amazonAsin: product.amazonAsin || ''
+      amazonAsin: product.amazonAsin || '',
+      product_image: product.product_image || product.image_path || ''
     };
     this.showRepairModal = true;
   }
@@ -465,6 +683,7 @@ export class AmazonCatalogComponent implements OnInit, OnDestroy {
             this.repairingProduct.product_quantity = this.repairForm.product_quantity;
             this.repairingProduct.barcode = this.repairForm.barcode;
             this.repairingProduct.amazonAsin = this.repairForm.amazonAsin;
+            this.repairingProduct.product_image = this.repairForm.product_image;
             this.repairingProduct.amazonStatus = 'queued';
             this.repairingProduct.amazonLastError = undefined;
           }
@@ -479,12 +698,78 @@ export class AmazonCatalogComponent implements OnInit, OnDestroy {
       });
   }
 
+  // ─── Scan & Fix Suppressed Listings ──────────────────────────
+  scanSuppressed(): void {
+    if (this.scanningSuppressed) return;
+    this.scanningSuppressed = true;
+
+    this.adminService.scanSuppressedAmazonListings()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res: any) => {
+          this.scanningSuppressed = false;
+          const count = res.suppressedCount || 0;
+          if (count > 0) {
+            this.showToastMessage(`تم العثور على ${count} منتج محجوب من البحث في أمازون 🔍`, 'success');
+            this.loadProducts();
+          } else {
+            this.showToastMessage('لا توجد منتجات محجوبة من البحث — جميع المنتجات نشطة ✅', 'success');
+          }
+        },
+        error: (err: any) => {
+          this.scanningSuppressed = false;
+          console.error('Error scanning suppressed listings:', err);
+          this.showToastMessage('فشل فحص المنتجات المحجوبة من البحث', 'error');
+        }
+      });
+  }
+
+  openFixImageModal(product: AmazonProduct): void {
+    this.fixingImageProduct = product;
+    this.fixImageUrl = product.product_image || product.image_path || '';
+    this.fixImageTitle = product.product_name || '';
+    this.showFixImageModal = true;
+  }
+
+  closeFixImageModal(): void {
+    this.showFixImageModal = false;
+    this.fixingImageProduct = null;
+    this.fixImageUrl = '';
+    this.fixImageTitle = '';
+  }
+
+  submitFixImage(): void {
+    if (!this.fixingImageProduct || !this.fixImageUrl.trim()) return;
+    this.fixImageLoading = true;
+
+    this.adminService.fixSuppressedImage(this.fixingImageProduct._id, this.fixImageUrl.trim(), this.fixImageTitle.trim() || undefined)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res: any) => {
+          this.fixImageLoading = false;
+          if (this.fixingImageProduct) {
+            this.fixingImageProduct.amazonStatus = 'published';
+            this.fixingImageProduct.product_image = this.fixImageUrl;
+            this.fixingImageProduct.amazonLastError = undefined;
+          }
+          this.closeFixImageModal();
+          this.showToastMessage('تم إرسال الصورة الجديدة لأمازون بنجاح — سيتم رفع الحجب خلال دقائق 🖼️✅', 'success');
+        },
+        error: (err: any) => {
+          this.fixImageLoading = false;
+          console.error('Error fixing suppressed image:', err);
+          this.showToastMessage(err.message || 'فشل إرسال الصورة الجديدة لأمازون', 'error');
+        }
+      });
+  }
+
   getStatusLabel(status: string): string {
     switch (status) {
       case 'published': return 'منشور / نشط';
       case 'deleted': return 'محذوف / غير مفعل';
       case 'failed': return 'فشل النشر';
       case 'suppressed': return 'معلق / محظور';
+      case 'search_suppressed': return 'تم منع البحث';
       case 'incomplete': return 'بيانات ناقصة';
       case 'pending':
       case 'publishing':
@@ -505,6 +790,8 @@ export class AmazonCatalogComponent implements OnInit, OnDestroy {
       case 'suppressed':
       case 'incomplete':
         return 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800';
+      case 'search_suppressed':
+        return 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800';
       default:
         return 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800';
     }
@@ -515,7 +802,7 @@ export class AmazonCatalogComponent implements OnInit, OnDestroy {
     const path = (product.image_path || '').trim();
     const img = (product.product_image || '').trim();
 
-    // 1. Full HTTP/HTTPS URLs
+    // 1. Full HTTP/HTTPS URLs (Asfar, Amazon CDN, Cloudinary, etc.)
     if (path.startsWith('http://') || path.startsWith('https://')) {
       return path;
     }
@@ -523,17 +810,22 @@ export class AmazonCatalogComponent implements OnInit, OnDestroy {
       return img;
     }
 
-    // 2. Relative uploads paths
+    // 2. Relative uploads paths (/uploads/...)
+    const host = environment.production ? 'https://knoozbook.com' : 'http://localhost:3000';
     if (path.startsWith('/uploads/')) {
-      return 'https://knoozbook.com' + path;
+      return `${host}${path}`;
     }
     if (img.startsWith('/uploads/')) {
-      return 'https://knoozbook.com' + img;
+      return `${host}${img}`;
     }
 
-    // 3. Filename with image extension
-    if (img.includes('.webp') || img.includes('.jpg') || img.includes('.jpeg') || img.includes('.png')) {
-      return `https://knoozbook.com/uploads/books/merchant_karim_admin/${product.products_id || product._id}/${img}`;
+    // 3. ID or filename
+    const id = product.products_id || product._id;
+    if (img && (img.includes('.webp') || img.includes('.jpg') || img.includes('.jpeg') || img.includes('.png'))) {
+      return `${environment.uploadsBaseUrl}/merchant_karim_admin/${id}/${img}`;
+    }
+    if (id) {
+      return `${environment.uploadsBaseUrl}/merchant_karim_admin/${id}/${id}.webp`;
     }
 
     return 'assets/image/book-placeholder.jpg';
@@ -541,7 +833,21 @@ export class AmazonCatalogComponent implements OnInit, OnDestroy {
 
   onImageError(event: Event): void {
     const target = event.target as HTMLImageElement;
-    if (target && target.src && !target.src.includes('book-placeholder.jpg')) {
+    if (!target || !target.src) return;
+
+    // If localhost:3000 returned 404, fallback to production knoozbook.com CDN
+    if (target.src.includes('localhost:3000') && !target.src.includes('prod_fallback')) {
+      target.src = target.src.replace('http://localhost:3000', 'https://knoozbook.com') + (target.src.includes('?') ? '&' : '?') + 'prod_fallback=1';
+      return;
+    }
+
+    // If merchant_karim_admin failed, try admin__karim_mohamed__
+    if (target.src.includes('merchant_karim_admin') && !target.src.includes('admin_fallback')) {
+      target.src = target.src.replace('merchant_karim_admin', 'admin__karim_mohamed__') + (target.src.includes('?') ? '&' : '?') + 'admin_fallback=1';
+      return;
+    }
+
+    if (!target.src.includes('book-placeholder.jpg')) {
       target.src = 'assets/image/book-placeholder.jpg';
     }
   }

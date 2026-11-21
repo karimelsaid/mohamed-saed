@@ -359,7 +359,7 @@ class AmazonProductController {
       }
 
       const products = await Product.find(filter)
-        .select('_id product_name product_price product_quantity status publisher image_path product_image amazonStatus amazonSku amazonAsin amazonSyncedAt amazonLastError amazonRetryCount')
+        .select('_id product_name product_price amazonPrice product_quantity status publisher author image_path product_image amazonStatus amazonSku amazonAsin amazonSyncedAt amazonLastError amazonRetryCount product_category copyType createdAt views barcode')
         .sort({ _id: -1 }) // Sort by latest products by default
         .limit(1000);
 

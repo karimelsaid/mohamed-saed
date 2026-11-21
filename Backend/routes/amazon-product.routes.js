@@ -21,7 +21,10 @@ router.get('/products/:id/details', authMiddleware, amazonCatalogController.getP
 router.post('/products/bulk/status', authMiddleware, amazonCatalogController.bulkUpdateStatus);
 router.post('/products/bulk/sync', authMiddleware, amazonCatalogController.syncAll);
 router.post('/products/bulk/price', authMiddleware, amazonCatalogController.bulkUpdatePrice);
+router.post('/products/bulk/quantity', authMiddleware, amazonCatalogController.bulkUpdateQuantity);
 router.post('/catalog/sync-deleted', authMiddleware, amazonCatalogController.syncDeletedListings);
+router.post('/catalog/scan-suppressed', authMiddleware, amazonCatalogController.scanSuppressedListings);
+router.post('/products/:id/fix-image', authMiddleware, amazonCatalogController.fixSuppressedImage);
 router.post('/catalog/remove/:id', authMiddleware, amazonCatalogController.removeFromCatalog);
 
 // Public route for Amazon to download images as JPEG

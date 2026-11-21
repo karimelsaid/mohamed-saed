@@ -84,14 +84,16 @@ export class AmazonOrdersComponent implements OnInit, OnDestroy {
   loading = false;
   syncing = false;
   searchQuery = '';
-  selectedStatus = 'all'; // 'all', 'unshipped', 'scheduled', 'shipped', 'canceled'
+  selectedStatus = 'all'; // 'all', 'pending', 'unshipped', 'scheduled', 'shipped', 'canceled'
 
   // KPIs
   kpis = {
     totalOrders: 0,
+    pending: 0,
     unshipped: 0,
     scheduled: 0,
     shipped: 0,
+    canceled: 0,
     totalRevenue: 0
   };
 

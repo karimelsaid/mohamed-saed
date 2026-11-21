@@ -174,6 +174,17 @@ exports.initCronJobs = async () => {
         }
     });
     scheduledTasks.push(amazonPendingTask);
+
+    // 8. Amazon Orders Automated Sync (Every 10 minutes)
+    const amazonOrdersTask = cron.schedule('*/10 * * * *', async () => {
+        try {
+            const amazonOrdersService = require('./amazon/amazon-orders.service');
+            await amazonOrdersService.syncOrdersFromAmazon();
+        } catch (azErr) {
+            console.error('⚠️ [Amazon Orders Cron] Error auto-syncing orders:', azErr.message);
+        }
+    });
+    scheduledTasks.push(amazonOrdersTask);
 };
 
 /**

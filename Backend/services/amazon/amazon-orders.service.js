@@ -33,6 +33,9 @@ class AmazonOrdersService {
 
       if (options.orderStatuses && Array.isArray(options.orderStatuses) && options.orderStatuses.length > 0) {
         queryParams.OrderStatuses = options.orderStatuses;
+      } else {
+        // Fetch all relevant order statuses including Pending
+        queryParams.OrderStatuses = ['Pending', 'Unshipped', 'PartiallyShipped', 'Shipped', 'Canceled'];
       }
 
       let amazonOrders = [];
@@ -252,9 +255,14 @@ class AmazonOrdersService {
 
       // Status filter
       if (filters.status && filters.status !== 'all') {
-        if (filters.status === 'unshipped') {
+        if (filters.status === 'pending') {
+          query.$or = [
+            { amazonOrderStatus: { $in: ['Pending', 'pending'] } },
+            { status: 'pending' }
+          ];
+        } else if (filters.status === 'unshipped') {
           query.amazonOrderStatus = { $in: ['Unshipped', 'PartiallyShipped'] };
-          query.status = { $nin: ['تم الإلغاء', 'cancelled'] };
+          query.status = { $nin: ['تم الإلغاء', 'cancelled', 'pending'] };
         } else if (filters.status === 'scheduled') {
           query.$or = [
             { easyShipStatus: { $in: ['ScheduledForPickup', 'Scheduled'] } },
@@ -290,12 +298,52 @@ class AmazonOrdersService {
       const limit = parseInt(filters.limit, 10) || 20;
       const skip = (page - 1) * limit;
 
-      const [orders, totalOrdersCount, unshippedCount, scheduledCount, shippedCount, totalRevenueData] = await Promise.all([
+      const [
+        orders,
+        totalOrdersCount,
+        pendingCount,
+        unshippedCount,
+        scheduledCount,
+        shippedCount,
+        canceledCount,
+        totalRevenueData
+      ] = await Promise.all([
         Order.find(query).sort({ orderDate: -1, createdAt: -1 }).skip(skip).limit(limit).lean(),
         Order.countDocuments({ source: 'amazon' }),
-        Order.countDocuments({ source: 'amazon', amazonOrderStatus: { $in: ['Unshipped', 'PartiallyShipped'] }, status: { $nin: ['تم الإلغاء', 'cancelled'] } }),
-        Order.countDocuments({ source: 'amazon', $or: [{ easyShipStatus: { $in: ['ScheduledForPickup', 'Scheduled'] } }, { status: 'تم الشحن' }] }),
-        Order.countDocuments({ source: 'amazon', $or: [{ amazonOrderStatus: 'Shipped' }, { status: { $in: ['تم التسليم', 'shipped', 'delivered'] } }, { easyShipStatus: 'Delivered' }] }),
+        Order.countDocuments({
+          source: 'amazon',
+          $or: [
+            { amazonOrderStatus: { $in: ['Pending', 'pending'] } },
+            { status: 'pending' }
+          ]
+        }),
+        Order.countDocuments({
+          source: 'amazon',
+          amazonOrderStatus: { $in: ['Unshipped', 'PartiallyShipped'] },
+          status: { $nin: ['تم الإلغاء', 'cancelled', 'pending'] }
+        }),
+        Order.countDocuments({
+          source: 'amazon',
+          $or: [
+            { easyShipStatus: { $in: ['ScheduledForPickup', 'Scheduled'] } },
+            { status: 'تم الشحن' }
+          ]
+        }),
+        Order.countDocuments({
+          source: 'amazon',
+          $or: [
+            { amazonOrderStatus: 'Shipped' },
+            { status: { $in: ['تم التسليم', 'shipped', 'delivered'] } },
+            { easyShipStatus: 'Delivered' }
+          ]
+        }),
+        Order.countDocuments({
+          source: 'amazon',
+          $or: [
+            { amazonOrderStatus: 'Canceled' },
+            { status: { $in: ['تم الإلغاء', 'cancelled'] } }
+          ]
+        }),
         Order.aggregate([
           { $match: { source: 'amazon', amazonOrderStatus: { $ne: 'Canceled' }, status: { $nin: ['تم الإلغاء', 'cancelled'] } } },
           { $group: { _id: null, total: { $sum: '$totalAmount' } } }
@@ -316,9 +364,11 @@ class AmazonOrdersService {
         },
         kpis: {
           totalOrders: totalOrdersCount,
+          pending: pendingCount,
           unshipped: unshippedCount,
           scheduled: scheduledCount,
           shipped: shippedCount,
+          canceled: canceledCount,
           totalRevenue: Math.round(totalRevenue * 100) / 100
         }
       };

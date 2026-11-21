@@ -501,6 +501,131 @@ class AmazonListingService {
   }
 
   /**
+   * Update price and/or quantity in real-time via Listings Items API patchListingsItem
+   * PATCH /listings/2021-08-01/items/{sellerId}/{sku}
+   */
+  async updatePriceAndQuantity(sku, { price, quantity, imageUrl, title } = {}) {
+    const startTime = Date.now();
+    const client = await amazonAuth.getClient();
+    const marketplaceId = await amazonAuth.getMarketplaceId();
+    const sellerId = await amazonAuth.getSellerId();
+
+    try {
+      logger.logRequest('PatchListingsItem', { sku, price, quantity, imageUrl, title });
+
+      let productType = 'ELECTRONIC_BOOK_READER';
+      try {
+        const listingInfo = await client.callAPI({
+          operation: 'getListingsItem',
+          endpoint: 'listingsItems',
+          path: { sellerId, sku },
+          query: { marketplaceIds: [marketplaceId], includedData: ['summaries'] }
+        });
+        if (listingInfo.summaries?.[0]?.productType) {
+          productType = listingInfo.summaries[0].productType;
+        }
+      } catch (infoErr) {
+        // Fallback default
+      }
+
+      const patches = [];
+
+      if (price !== undefined && price > 0) {
+        patches.push({
+          op: 'replace',
+          path: '/attributes/purchasable_offer',
+          value: [
+            {
+              currency: 'EGP',
+              our_price: [
+                {
+                  schedule: [{ value_with_tax: price }]
+                }
+              ],
+              marketplace_id: marketplaceId
+            }
+          ]
+        });
+      }
+
+      if (quantity !== undefined && quantity >= 0) {
+        patches.push({
+          op: 'replace',
+          path: '/attributes/fulfillment_availability',
+          value: [
+            {
+              fulfillment_channel_code: 'DEFAULT',
+              quantity: quantity,
+              marketplace_id: marketplaceId
+            }
+          ]
+        });
+      }
+
+      if (imageUrl && typeof imageUrl === 'string' && imageUrl.trim().startsWith('http')) {
+        patches.push({
+          op: 'replace',
+          path: '/attributes/main_product_image_locator',
+          value: [
+            {
+              media_location: imageUrl.trim(),
+              marketplace_id: marketplaceId
+            }
+          ]
+        });
+      }
+
+      if (title && typeof title === 'string' && title.trim()) {
+        patches.push({
+          op: 'replace',
+          path: '/attributes/item_name',
+          value: [
+            {
+              value: title.trim(),
+              language_tag: 'ar_AE',
+              marketplace_id: marketplaceId
+            }
+          ]
+        });
+      }
+
+      if (patches.length === 0) {
+        return { success: false, error: 'No patches provided' };
+      }
+
+      const result = await client.callAPI({
+        operation: 'patchListingsItem',
+        endpoint: 'listingsItems',
+        path: { sellerId, sku },
+        query: { marketplaceIds: [marketplaceId], issueLocale: 'en_US' },
+        body: {
+          productType,
+          patches
+        }
+      });
+
+      const executionTime = Date.now() - startTime;
+      logger.logResponse('PatchListingsItem', result, executionTime);
+
+      const hasErrors = result.status === 'INVALID' || (result.issues || []).some(i => i.severity === 'ERROR');
+
+      return {
+        success: !hasErrors,
+        status: result.status,
+        submissionId: result.submissionId,
+        issues: result.issues || []
+      };
+    } catch (error) {
+      const executionTime = Date.now() - startTime;
+      logger.logError('PatchListingsItem', error, { sku, price, quantity });
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
    * Delete product listing via Listings Items API
    * DELETE /listings/2021-08-01/items/{sellerId}/{sku}
    */

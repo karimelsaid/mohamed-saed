@@ -14,6 +14,12 @@
       </div>
 
       <div class="flex items-center gap-2 flex-wrap">
+        <button (click)="scanSuppressed()" [disabled]="scanningSuppressed || loading"
+                class="px-3.5 py-2 rounded-xl bg-orange-50 hover:bg-orange-100 dark:bg-orange-900/20 dark:hover:bg-orange-900/30 text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-800 text-xs font-bold transition flex items-center gap-1.5 shadow-sm disabled:opacity-50"
+                title="فحص أمازون للبحث عن المنتجات المحجوبة من البحث (Search Suppressed)">
+          <span [class.animate-spin]="scanningSuppressed">🔎</span>
+          <span>{{ scanningSuppressed ? 'جاري فحص أمازون...' : 'فحص المحجوبة من البحث' }}</span>
+        </button>
         <button (click)="syncDeletedListings()" [disabled]="syncingDeleted || loading"
                 class="px-3.5 py-2 rounded-xl bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 text-xs font-bold transition flex items-center gap-1.5 shadow-sm disabled:opacity-50"
                 title="فحص المنتجات المنشورة وحذف ما تم حذفه من متجر أمازون">
@@ -81,43 +87,125 @@
       <span>⏳ قيد المزامنة</span>
       <span class="px-2 py-0.5 rounded-full text-[11px]" [ngClass]="selectedStatus === 'pending' ? 'bg-blue-700 text-white' : 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'">{{ catalogStats.pending }}</span>
     </button>
+
+    <button (click)="setStatusFilter('suppressed')"
+            [ngClass]="selectedStatus === 'suppressed' ? 'bg-orange-600 text-white shadow-sm' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700'"
+            class="px-4 py-2.5 rounded-xl transition flex items-center gap-2 whitespace-nowrap">
+      <span>🚫 تم منع البحث</span>
+      <span class="px-2 py-0.5 rounded-full text-[11px]" [ngClass]="selectedStatus === 'suppressed' ? 'bg-orange-700 text-white' : 'bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400'">{{ catalogStats.suppressed }}</span>
+    </button>
   </div>
 
   <!-- CONTROLS & FILTER BAR -->
-  <div class="bg-white dark:bg-gray-800 rounded-2xl p-4 mb-4 shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col md:flex-row items-center justify-between gap-4">
-    <!-- Search Box -->
-    <div class="relative w-full md:w-96">
-      <input type="text"
-             [(ngModel)]="searchQuery"
-             (input)="onSearchChange()"
-             placeholder="ابحث باسم الكتاب، SKU، أو ASIN..."
-             class="w-full pr-10 pl-10 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white text-xs focus:ring-2 focus:ring-amber-500 outline-none transition">
-      <span class="absolute right-3.5 top-3 text-gray-400 text-sm">🔍</span>
-      <button *ngIf="searchQuery" (click)="clearSearch()" class="absolute left-3 top-2.5 text-gray-400 hover:text-gray-600 text-xs">✖</button>
-    </div>
-
-    <!-- Page Size Selector & Bulk Action Trigger -->
-    <div class="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end flex-wrap">
-      <!-- Bulk Actions Button (Visible when at least 1 item is selected) -->
-      <div *ngIf="selectedCount > 0" class="flex items-center gap-2">
-        <button (click)="openPriceModal()"
-                class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition flex items-center gap-2 shadow-sm animate-pulse">
-          <span>💰</span>
-          <span>تعديل أسعار المحدد ({{ selectedCount }})</span>
-        </button>
-        <button (click)="clearSelection()"
-                class="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 text-xs font-medium transition"
-                title="إلغاء التحديد">
-          إلغاء
-        </button>
+  <div class="bg-white dark:bg-gray-800 rounded-2xl p-4 mb-4 shadow-sm border border-gray-100 dark:border-gray-700 space-y-3">
+    <!-- Top Row: Search, Bulk Actions, Page Size -->
+    <div class="flex flex-col md:flex-row items-center justify-between gap-3">
+      <!-- Search Box -->
+      <div class="relative w-full md:w-96">
+        <input type="text"
+               [(ngModel)]="searchQuery"
+               (input)="onSearchChange()"
+               placeholder="ابحث باسم الكتاب، SKU، ASIN، التصنيف، دار النشر..."
+               class="w-full pr-10 pl-10 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white text-xs focus:ring-2 focus:ring-amber-500 outline-none transition">
+        <span class="absolute right-3.5 top-3 text-gray-400 text-sm">🔍</span>
+        <button *ngIf="searchQuery" (click)="clearSearch()" class="absolute left-3 top-2.5 text-gray-400 hover:text-gray-600 text-xs">✖</button>
       </div>
 
-      <!-- Page Size Dropdown -->
-      <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-        <span>عرض:</span>
-        <select [(ngModel)]="pageSize" (change)="onPageSizeChange()"
-                class="px-2.5 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 text-xs font-bold outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer">
-          <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }} منتج</option>
+      <!-- Actions & Page Size -->
+      <div class="flex items-center gap-2.5 w-full md:w-auto justify-between md:justify-end flex-wrap">
+        <!-- Reset Filters Button -->
+        <button *ngIf="searchQuery || selectedCategory !== 'all' || selectedCopyType !== 'all' || selectedStockStatus !== 'all' || sortBy !== 'newest'"
+                (click)="resetAllFilters()"
+                class="px-3 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 text-xs font-bold transition flex items-center gap-1.5"
+                title="إعادة ضبط جميع الفلاتر">
+          <span>🔄</span>
+          <span>إعادة ضبط</span>
+        </button>
+
+        <!-- Bulk Actions Button (Visible when at least 1 item is selected) -->
+        <div *ngIf="selectedCount > 0" class="flex items-center gap-2 flex-wrap">
+          <button (click)="openPriceModal()"
+                  class="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
+            <span>💰</span>
+            <span>تعديل أسعار المحدد ({{ selectedCount }})</span>
+          </button>
+          <button (click)="openQuantityModal()"
+                  class="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
+            <span>📦</span>
+            <span>تعديل كميات المحدد ({{ selectedCount }})</span>
+          </button>
+          <button (click)="clearSelection()"
+                  class="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 text-xs font-medium transition"
+                  title="إلغاء التحديد">
+            إلغاء
+          </button>
+        </div>
+
+        <!-- Page Size Dropdown -->
+        <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+          <span>عرض:</span>
+          <select [(ngModel)]="pageSize" (change)="onPageSizeChange()"
+                  class="px-2.5 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 text-xs font-bold outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer">
+            <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }} منتج</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Row: Multi-Filters & Sorting Controls -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-3 border-t border-gray-100 dark:border-gray-700/60 text-xs">
+      <!-- Sort By -->
+      <div>
+        <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-1">
+          <span>↕️ الترتيب:</span>
+        </label>
+        <select [(ngModel)]="sortBy" (change)="applyFilters()"
+                class="w-full px-2.5 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 text-xs font-bold outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer">
+          <option value="newest">🕒 الأحدث (آخر مزامنة)</option>
+          <option value="oldest">⌛ الأقدم</option>
+          <option value="price_desc">📈 السعر: الأعلى أولاً</option>
+          <option value="price_asc">📉 السعر: الأقل أولاً</option>
+          <option value="qty_desc">📦 الكمية: الأكثر أولاً</option>
+          <option value="qty_asc">⚠️ الكمية: الأقل أولاً</option>
+          <option value="popular">🔥 الأكثر طلباً / مشاهدة</option>
+        </select>
+      </div>
+
+      <!-- Copy Type (أصلي أم كوبي) -->
+      <div>
+        <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-1">
+          <span>🏷️ نوع النسخة:</span>
+        </label>
+        <select [(ngModel)]="selectedCopyType" (change)="applyFilters()"
+                class="w-full px-2.5 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 text-xs font-bold outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer">
+          <option value="all">الكل (أصلي وكوبي)</option>
+          <option value="أصلي">💎 أصلي</option>
+          <option value="هاي كوبي">📖 هاي كوبي</option>
+        </select>
+      </div>
+
+      <!-- Category Filter -->
+      <div>
+        <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-1">
+          <span>📚 الفئة / التصنيف:</span>
+        </label>
+        <select [(ngModel)]="selectedCategory" (change)="applyFilters()"
+                class="w-full px-2.5 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 text-xs font-bold outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer">
+          <option value="all">جميع الفئات ({{ availableCategories.length }})</option>
+          <option *ngFor="let cat of availableCategories" [value]="cat">{{ cat }}</option>
+        </select>
+      </div>
+
+      <!-- Stock Status -->
+      <div>
+        <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-1">
+          <span>📦 حالة المخزون:</span>
+        </label>
+        <select [(ngModel)]="selectedStockStatus" (change)="applyFilters()"
+                class="w-full px-2.5 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 text-xs font-bold outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer">
+          <option value="all">جميع الحالات</option>
+          <option value="in_stock">✅ متوفر بالمخزون</option>
+          <option value="out_of_stock">❌ نفذ من المخزون</option>
         </select>
       </div>
     </div>
@@ -201,6 +289,25 @@
               <div class="font-bold text-gray-900 dark:text-white line-clamp-2 leading-relaxed">
                 {{ product.product_name }}
               </div>
+              <div class="flex items-center gap-1.5 flex-wrap mt-1">
+                <!-- Copy Type Badge -->
+                <span *ngIf="product.copyType"
+                      class="px-2 py-0.5 rounded-md text-[10px] font-bold border"
+                      [ngClass]="product.copyType === 'أصلي' ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800' : 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800'">
+                  {{ product.copyType === 'أصلي' ? '💎 أصلي' : '📖 هاي كوبي' }}
+                </span>
+                <!-- Category Badge -->
+                <span *ngIf="product.product_category"
+                      class="px-2 py-0.5 rounded-md text-[10px] font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                  📂 {{ product.product_category }}
+                </span>
+                <!-- Publisher / Author -->
+                <span *ngIf="product.publisher || product.author"
+                      class="text-[10px] text-gray-400 truncate max-w-[120px]"
+                      [title]="product.publisher || product.author">
+                  ✍️ {{ product.publisher || product.author }}
+                </span>
+              </div>
               <div class="text-[10px] text-gray-400 mt-0.5">
                 كود الموقع: {{ product.products_id || product._id }}
               </div>
@@ -265,9 +372,31 @@
               </div>
             </td>
 
-            <!-- Quantity -->
+            <!-- Quantity with Inline Quick Edit -->
             <td class="p-3">
-              <span class="font-bold text-gray-800 dark:text-gray-200">{{ product.product_quantity }}</span>
+              <div *ngIf="editingQuantityId !== product._id"
+                   class="flex items-center gap-1.5">
+                <span class="font-bold px-2 py-0.5 rounded-md text-xs font-mono"
+                      [ngClass]="product.product_quantity > 0 ? 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200' : 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 font-black'">
+                  {{ product.product_quantity }}
+                </span>
+                <button (click)="startEditQuantity(product)"
+                        class="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-blue-500 text-xs transition"
+                        title="تعديل الكمية على أمازون">
+                  ✏️
+                </button>
+              </div>
+
+              <!-- Inline Quantity Input -->
+              <div *ngIf="editingQuantityId === product._id"
+                   class="flex items-center gap-1">
+                <input type="number"
+                       [(ngModel)]="editingQuantity"
+                       min="0"
+                       class="w-16 p-1 text-center text-xs border rounded-lg dark:bg-gray-700 dark:border-gray-600 font-mono font-bold focus:ring-2 focus:ring-blue-500 outline-none">
+                <button (click)="saveProductQuantity(product)" class="text-green-500 hover:text-green-600 text-xs font-bold" title="حفظ الكمية">✓</button>
+                <button (click)="cancelEditQuantity()" class="text-red-400 hover:text-red-500 text-xs" title="إلغاء">✕</button>
+              </div>
             </td>
 
             <!-- Last Updated -->
@@ -306,6 +435,15 @@
                         title="إصلاح بيانات المنتج وإعادة النشر">
                   <span>🛠️</span>
                   <span>إصلاح</span>
+                </button>
+
+                <!-- Fix Image Button (for search_suppressed products) -->
+                <button *ngIf="product.amazonStatus === 'search_suppressed'"
+                        (click)="openFixImageModal(product)"
+                        class="px-2 py-1 rounded-lg bg-orange-50 hover:bg-orange-100 dark:bg-orange-900/30 dark:hover:bg-orange-900/50 text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-800 text-xs font-bold transition flex items-center gap-1"
+                        title="إصلاح الصورة لرفع حجب البحث من أمازون">
+                  <span>🖼️</span>
+                  <span>إصلاح صورة</span>
                 </button>
 
                 <!-- Remove / Delete from Amazon Catalog (for published) -->
@@ -478,6 +616,111 @@
   </div>
 
   <!-- ======================================================== -->
+  <!-- MODAL: BULK QUANTITY ADJUSTMENT -->
+  <!-- ======================================================== -->
+  <div *ngIf="showQuantityModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+    <div class="bg-white dark:bg-gray-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-gray-100 dark:border-gray-700 my-8">
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between pb-4 border-b border-gray-100 dark:border-gray-700">
+        <div class="flex items-center gap-2.5">
+          <span class="text-2xl">📦</span>
+          <div>
+            <h3 class="text-lg font-black text-gray-900 dark:text-white">تعديل الكميات الجماعي</h3>
+            <p class="text-xs text-gray-500">تم تحديد {{ selectedCount }} منتج ومزامنتها فورياً على أمازون</p>
+          </div>
+        </div>
+        <button (click)="closeQuantityModal()" class="text-gray-400 hover:text-gray-600 text-lg">✖</button>
+      </div>
+
+      <!-- Adjustment Options -->
+      <div class="mt-5 space-y-4">
+        <!-- Type Selection -->
+        <div>
+          <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">نوع تعديل الكمية:</label>
+          <div class="grid grid-cols-3 gap-2">
+            <button (click)="qtyAdjustmentType = 'set_fixed'"
+                    [class]="qtyAdjustmentType === 'set_fixed' ? 'ring-2 ring-purple-500 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300' : 'bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-400'"
+                    class="p-3 rounded-xl text-xs font-bold transition text-center border border-gray-200 dark:border-gray-600">
+              📌 تعيين كمية موحدة
+            </button>
+            <button (click)="qtyAdjustmentType = 'fixed_increase'"
+                    [class]="qtyAdjustmentType === 'fixed_increase' ? 'ring-2 ring-green-500 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300' : 'bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-400'"
+                    class="p-3 rounded-xl text-xs font-bold transition text-center border border-gray-200 dark:border-gray-600">
+              📈 زيادة بالعدد (+)
+            </button>
+            <button (click)="qtyAdjustmentType = 'fixed_decrease'"
+                    [class]="qtyAdjustmentType === 'fixed_decrease' ? 'ring-2 ring-red-500 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300' : 'bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-400'"
+                    class="p-3 rounded-xl text-xs font-bold transition text-center border border-gray-200 dark:border-gray-600">
+              📉 إنقاص بالعدد (-)
+            </button>
+          </div>
+        </div>
+
+        <!-- Value Input -->
+        <div>
+          <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
+            {{ qtyAdjustmentType === 'set_fixed' ? 'الكمية الموحدة الجديدة لكل منتج:' : (qtyAdjustmentType === 'fixed_increase' ? 'الكمية المراد إضافتها:' : 'الكمية المراد خصمها:') }}
+          </label>
+          <div class="relative">
+            <input type="number"
+                   [(ngModel)]="qtyAdjustmentValue"
+                   [min]="qtyAdjustmentType === 'set_fixed' ? 0 : 1"
+                   step="1"
+                   class="w-full p-3 pl-12 text-sm font-bold border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 outline-none"
+                   placeholder="1">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">قطعة</span>
+          </div>
+          <p *ngIf="qtyAdjustmentType === 'set_fixed' && qtyAdjustmentValue === 0" class="text-[11px] text-amber-600 dark:text-amber-400 mt-1">
+            ⚠️ تعيين الكمية إلى 0 سيجعل المنتجات تظهر كـ "نفذ من المخزون" على أمازون.
+          </p>
+        </div>
+
+        <!-- Live Preview -->
+        <div *ngIf="selectedProducts.length > 0 && qtyAdjustmentValue >= 0"
+             class="bg-gray-50 dark:bg-gray-900/50 rounded-2xl p-3 border border-gray-200/60 dark:border-gray-700/60">
+          <div class="text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">معاينة الكميات على عينة من المنتجات:</div>
+          <div *ngFor="let p of selectedProducts.slice(0, 4)" class="flex items-center justify-between text-xs py-1 border-b border-gray-200/50 dark:border-gray-700/50 last:border-0">
+            <span class="text-gray-700 dark:text-gray-300 truncate max-w-[200px]">{{ p.product_name }}</span>
+            <div class="flex items-center gap-2 shrink-0 font-mono">
+              <span class="text-gray-400 line-through">{{ p.product_quantity }}</span>
+              <span class="text-gray-400">←</span>
+              <span class="font-black"
+                    [class.text-green-600]="qtyAdjustmentType === 'fixed_increase' || (qtyAdjustmentType === 'set_fixed' && previewQuantity(p) > p.product_quantity)"
+                    [class.text-red-600]="qtyAdjustmentType === 'fixed_decrease' || (qtyAdjustmentType === 'set_fixed' && previewQuantity(p) < p.product_quantity)"
+                    [class.text-purple-600]="qtyAdjustmentType === 'set_fixed' && previewQuantity(p) === p.product_quantity">
+                {{ previewQuantity(p) }} قطعة
+              </span>
+            </div>
+          </div>
+          <div *ngIf="selectedProducts.length > 4" class="text-[11px] text-gray-400 text-center pt-1">
+            ... و {{ selectedProducts.length - 4 }} منتج إضافي محدد
+          </div>
+        </div>
+
+        <!-- Success Message -->
+        <div *ngIf="qtyUpdateResult" class="bg-green-50 dark:bg-green-900/30 rounded-xl p-3 text-xs text-green-700 dark:text-green-300 font-bold text-center">
+          ✅ تم تحديث كميات {{ qtyUpdateResult.count }} منتج ومزامنتها مع أمازون بنجاح
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="flex items-center justify-between gap-3 mt-5 pt-4 border-t border-gray-100 dark:border-gray-700">
+        <button (click)="closeQuantityModal()"
+                class="px-5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 text-xs font-bold text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+          {{ qtyUpdateResult ? 'إغلاق' : 'إلغاء' }}
+        </button>
+        <button *ngIf="!qtyUpdateResult"
+                (click)="applyBulkQuantity()"
+                [disabled]="qtyUpdateLoading || qtyAdjustmentValue < 0 || (qtyAdjustmentType !== 'set_fixed' && qtyAdjustmentValue === 0)"
+                class="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition disabled:opacity-40 flex items-center gap-2 shadow-md">
+          <span *ngIf="qtyUpdateLoading" class="animate-spin">⏳</span>
+          <span>تطبيق الكمية الجديدة على {{ selectedCount }} منتج</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
   <!-- MODAL: REPAIR & REACTIVATE PRODUCT -->
   <!-- ======================================================== -->
   <div *ngIf="showRepairModal && repairingProduct" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
@@ -549,6 +792,27 @@
                  class="w-full p-3 text-xs font-mono border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
                  placeholder="مثال: B0HJ1G8WWQ">
         </div>
+
+        <!-- Product Image (Fix for Search Suppressed) -->
+        <div>
+          <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 flex items-center justify-between">
+            <span>🖼️ رابط صورة المنتج (لحل مشاكل منع البحث Search Suppressed):</span>
+            <span class="text-[11px] text-amber-600 dark:text-amber-400 font-normal">خلفية بيضاء وبدون نصوص مضافة</span>
+          </label>
+          <div class="flex items-center gap-3">
+            <div class="w-14 h-14 rounded-xl border border-gray-200 dark:border-gray-600 overflow-hidden bg-gray-50 dark:bg-gray-700 shrink-0 flex items-center justify-center shadow-inner">
+              <img *ngIf="repairForm.product_image" [src]="repairForm.product_image" class="w-full h-full object-contain" (error)="repairForm.product_image = ''">
+              <span *ngIf="!repairForm.product_image" class="text-[10px] text-gray-400 text-center">لا توجد صورة</span>
+            </div>
+            <input type="text"
+                   [(ngModel)]="repairForm.product_image"
+                   class="w-full p-3 text-xs border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                   placeholder="https://... رابط الصورة المباشر المعتمد">
+          </div>
+          <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+            💡 سيتم إرسال الصورة الجديدة فورياً لأمازون عبر SP-API لرفع حظر منع البحث وتفعيل العرض.
+          </p>
+        </div>
       </div>
 
       <!-- Modal Footer -->
@@ -562,6 +826,105 @@
                 class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition disabled:opacity-40 flex items-center gap-2 shadow-md">
           <span *ngIf="repairLoading" class="animate-spin">⏳</span>
           <span>🛠️ حفظ وإعادة التفعيل</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODAL: FIX SUPPRESSED IMAGE -->
+  <!-- ======================================================== -->
+  <div *ngIf="showFixImageModal && fixingImageProduct" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+    <div class="bg-white dark:bg-gray-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-gray-100 dark:border-gray-700 my-8">
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between pb-4 border-b border-gray-100 dark:border-gray-700">
+        <div class="flex items-center gap-2.5">
+          <span class="text-2xl">🖼️</span>
+          <div>
+            <h3 class="text-lg font-black text-gray-900 dark:text-white">إصلاح صورة المنتج المحجوب</h3>
+            <p class="text-xs text-gray-500 dark:text-gray-400">تعديل الصورة لرفع حجب البحث من أمازون (Search Suppressed)</p>
+          </div>
+        </div>
+        <button (click)="closeFixImageModal()" class="text-gray-400 hover:text-gray-600 text-lg">✖</button>
+      </div>
+
+      <!-- Product Info -->
+      <div class="mt-4 bg-gray-50 dark:bg-gray-900/40 rounded-xl p-3 flex items-center gap-3">
+        <img [src]="getProductImage(fixingImageProduct)" [alt]="fixingImageProduct.product_name"
+             (error)="onImageError($event)"
+             class="w-14 h-14 object-cover rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm bg-white">
+        <div class="flex-1 min-w-0">
+          <div class="font-bold text-gray-900 dark:text-white text-xs line-clamp-2">{{ fixingImageProduct.product_name }}</div>
+          <div class="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5 flex items-center gap-2">
+            <span *ngIf="fixingImageProduct.amazonSku">SKU: {{ fixingImageProduct.amazonSku }}</span>
+            <span *ngIf="fixingImageProduct.amazonAsin">ASIN: {{ fixingImageProduct.amazonAsin }}</span>
+          </div>
+        </div>
+        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-orange-50 text-orange-700 border border-orange-200 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800 shrink-0">🚫 محجوب</span>
+      </div>
+
+      <!-- Error Info -->
+      <div *ngIf="fixingImageProduct.amazonLastError"
+           class="mt-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-xl p-3 text-xs text-red-700 dark:text-red-400">
+        <div class="font-bold mb-1 flex items-center gap-1">⚠️ سبب الحجب:</div>
+        <div class="leading-relaxed">{{ fixingImageProduct.amazonLastError }}</div>
+      </div>
+
+      <!-- Fix Form -->
+      <div class="mt-5 space-y-4">
+        <!-- New Image URL -->
+        <div>
+          <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 flex items-center justify-between">
+            <span>🖼️ رابط الصورة الجديدة:</span>
+            <span class="text-[11px] text-orange-600 dark:text-orange-400 font-normal">خلفية بيضاء • بدون نصوص أو علامات</span>
+          </label>
+          <div class="flex items-center gap-3">
+            <div class="w-16 h-16 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 overflow-hidden bg-gray-50 dark:bg-gray-700 shrink-0 flex items-center justify-center shadow-inner">
+              <img *ngIf="fixImageUrl" [src]="fixImageUrl" class="w-full h-full object-contain" (error)="fixImageUrl = ''">
+              <span *ngIf="!fixImageUrl" class="text-[10px] text-gray-400 text-center px-1">معاينة الصورة</span>
+            </div>
+            <input type="text"
+                   [(ngModel)]="fixImageUrl"
+                   class="w-full p-3 text-xs border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none"
+                   placeholder="https://... رابط صورة واضحة بخلفية بيضاء (JPEG/PNG)">
+          </div>
+        </div>
+
+        <!-- Optional: Fix Title -->
+        <div>
+          <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
+            📝 اسم المنتج (اختياري — تعديل إن كان سبب الحجب يتعلق بالعنوان):
+          </label>
+          <input type="text"
+                 [(ngModel)]="fixImageTitle"
+                 class="w-full p-3 text-xs border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none"
+                 placeholder="اسم المنتج (يظهر على أمازون)">
+        </div>
+
+        <!-- Instructions -->
+        <div class="bg-amber-50 dark:bg-amber-900/15 border border-amber-200 dark:border-amber-800/40 rounded-xl p-3 text-xs text-amber-800 dark:text-amber-300 space-y-1">
+          <div class="font-bold flex items-center gap-1">💡 شروط الصورة المقبولة في أمازون:</div>
+          <ul class="list-disc pr-4 space-y-0.5 text-[11px]">
+            <li>خلفية بيضاء نقية (RGB: 255,255,255)</li>
+            <li>بدون أي نصوص أو شعارات أو علامات مائية</li>
+            <li>المنتج يملأ 85% على الأقل من مساحة الصورة</li>
+            <li>دقة لا تقل عن 1000×1000 بكسل (يفضّل 2000×2000)</li>
+            <li>صيغة JPEG أو PNG — رابط مباشر ينتهي بامتداد الصورة</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="flex items-center justify-between gap-3 mt-5 pt-4 border-t border-gray-100 dark:border-gray-700">
+        <button (click)="closeFixImageModal()"
+                class="px-5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 text-xs font-bold text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+          إلغاء
+        </button>
+        <button (click)="submitFixImage()"
+                [disabled]="fixImageLoading || !fixImageUrl.trim()"
+                class="px-5 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold transition disabled:opacity-40 flex items-center gap-2 shadow-md">
+          <span *ngIf="fixImageLoading" class="animate-spin">⏳</span>
+          <span>🖼️ إرسال الصورة الجديدة لأمازون</span>
         </button>
       </div>
     </div>

@@ -1,5 +1,6 @@
 const Product = require('../models/Product.model');
 const PublishAmazonProductJob = require('../jobs/publish-amazon-product.job');
+const amazonListingService = require('../services/amazon/amazon-listing.service');
 
 class AmazonProductCatalogController {
   /**
@@ -15,29 +16,32 @@ class AmazonProductCatalogController {
       } else if (status === 'deleted' || status === 'inactive') {
         filter = { amazonStatus: 'deleted' };
       } else if (status === 'failed') {
-        filter = { amazonStatus: { $in: ['failed', 'incomplete', 'suppressed'] } };
+        filter = { amazonStatus: { $in: ['failed', 'incomplete'] } };
+      } else if (status === 'suppressed') {
+        filter = { amazonStatus: 'search_suppressed' };
       } else if (status === 'pending') {
         filter = { amazonStatus: { $in: ['pending', 'pending_asin', 'publishing', 'queued', 'retry'] } };
       } else {
         // 'all' or default: show all products tracked in Amazon integration
         filter = {
           amazonStatus: {
-            $in: ['published', 'deleted', 'failed', 'incomplete', 'suppressed', 'pending', 'pending_asin', 'publishing', 'queued', 'retry']
+            $in: ['published', 'deleted', 'failed', 'incomplete', 'suppressed', 'search_suppressed', 'pending', 'pending_asin', 'publishing', 'queued', 'retry']
           }
         };
       }
 
       // Calculate statistics across all Amazon statuses
-      const [publishedCount, deletedCount, failedCount, pendingCount] = await Promise.all([
+      const [publishedCount, deletedCount, failedCount, pendingCount, suppressedCount] = await Promise.all([
         Product.countDocuments({ amazonStatus: 'published' }),
         Product.countDocuments({ amazonStatus: 'deleted' }),
-        Product.countDocuments({ amazonStatus: { $in: ['failed', 'incomplete', 'suppressed'] } }),
-        Product.countDocuments({ amazonStatus: { $in: ['pending', 'pending_asin', 'publishing', 'queued', 'retry'] } })
+        Product.countDocuments({ amazonStatus: { $in: ['failed', 'incomplete'] } }),
+        Product.countDocuments({ amazonStatus: { $in: ['pending', 'pending_asin', 'publishing', 'queued', 'retry'] } }),
+        Product.countDocuments({ amazonStatus: 'search_suppressed' })
       ]);
 
       const products = await Product.find(filter)
         .select(
-          '_id products_id product_name product_price amazonPrice product_quantity product_image image_path amazonStatus amazonSku amazonAsin amazonSyncedAt amazonLastError barcode'
+          '_id products_id product_name product_price amazonPrice product_quantity product_image image_path amazonStatus amazonSku amazonAsin amazonSyncedAt amazonLastError barcode product_category copyType publisher author createdAt views'
         )
         .sort({ amazonSyncedAt: -1, _id: -1 })
         .limit(5000);
@@ -46,11 +50,12 @@ class AmazonProductCatalogController {
         success: true,
         count: products.length,
         stats: {
-          total: publishedCount + deletedCount + failedCount + pendingCount,
+          total: publishedCount + deletedCount + failedCount + pendingCount + suppressedCount,
           published: publishedCount,
           deleted: deletedCount,
           failed: failedCount,
-          pending: pendingCount
+          pending: pendingCount,
+          suppressed: suppressedCount
         },
         data: products
       });
@@ -93,6 +98,18 @@ class AmazonProductCatalogController {
           success: false,
           message: 'No valid data to update'
         });
+      }
+
+      // Sync directly to Amazon SP-API if product is published
+      let amazonSyncResult = null;
+      if (product.amazonSku && product.amazonStatus === 'published') {
+        amazonSyncResult = await amazonListingService.updatePriceAndQuantity(product.amazonSku, {
+          price: amazonPrice,
+          quantity: product_quantity
+        });
+        if (amazonSyncResult?.success) {
+          updateData.amazonSyncedAt = new Date();
+        }
       }
 
       const updatedProduct = await Product.findByIdAndUpdate(id, updateData, { new: true });
@@ -182,8 +199,15 @@ class AmazonProductCatalogController {
         newPrice = Math.max(0.01, Math.round(newPrice * 100) / 100);
 
         updates.push(
-          Product.findByIdAndUpdate(product._id, { amazonPrice: newPrice }, { new: true })
+          Product.findByIdAndUpdate(product._id, { amazonPrice: newPrice, amazonSyncedAt: new Date() }, { new: true })
         );
+
+        // Sync to Amazon directly
+        if (product.amazonSku) {
+          amazonListingService.updatePriceAndQuantity(product.amazonSku, { price: newPrice }).catch(err => {
+            console.error(`❌ [AMAZON CATALOG] Failed to push bulk price for ${product.amazonSku}:`, err.message);
+          });
+        }
 
         results.push({
           _id: product._id,
@@ -213,6 +237,116 @@ class AmazonProductCatalogController {
       res.status(500).json({
         success: false,
         message: 'حدث خطأ أثناء تحديث الأسعار',
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * Bulk update Amazon product quantities for selected products
+   * Supports: set_fixed (uniform quantity), fixed_increase (+qty), fixed_decrease (-qty)
+   * Also synchronizes in real-time with Amazon SP-API
+   */
+  async bulkUpdateQuantity(req, res) {
+    try {
+      const { productIds, adjustmentType, adjustmentValue } = req.body;
+
+      if (!Array.isArray(productIds) || productIds.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'يجب تحديد منتج واحد على الأقل'
+        });
+      }
+
+      const numVal = parseInt(adjustmentValue, 10);
+      if (isNaN(numVal) || numVal < 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'قيمة الكمية غير صحيحة'
+        });
+      }
+
+      if (['fixed_increase', 'fixed_decrease'].includes(adjustmentType) && numVal <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'يجب أن تكون قيمة الزيادة أو النقصان أكبر من صفر'
+        });
+      }
+
+      const products = await Product.find({
+        _id: { $in: productIds },
+        amazonStatus: 'published'
+      });
+
+      if (products.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'لم يتم العثور على منتجات منشورة بالمعرفات المحددة'
+        });
+      }
+
+      const updates = [];
+      const results = [];
+
+      for (const product of products) {
+        const currentQty = product.product_quantity ?? 0;
+        let newQty = currentQty;
+
+        switch (adjustmentType) {
+          case 'set_fixed':
+            newQty = numVal;
+            break;
+          case 'fixed_increase':
+            newQty = currentQty + numVal;
+            break;
+          case 'fixed_decrease':
+            newQty = Math.max(0, currentQty - numVal);
+            break;
+          default:
+            continue;
+        }
+
+        newQty = Math.max(0, Math.floor(newQty));
+
+        updates.push(
+          Product.findByIdAndUpdate(product._id, { product_quantity: newQty, amazonSyncedAt: new Date() }, { new: true })
+        );
+
+        // Sync directly to Amazon SP-API
+        if (product.amazonSku) {
+          amazonListingService.updatePriceAndQuantity(product.amazonSku, { quantity: newQty }).catch(err => {
+            console.error(`❌ [AMAZON CATALOG] Failed to push bulk quantity for ${product.amazonSku}:`, err.message);
+          });
+        }
+
+        results.push({
+          _id: product._id,
+          product_name: product.product_name,
+          oldQuantity: currentQty,
+          newQuantity: newQty
+        });
+      }
+
+      await Promise.all(updates);
+
+      console.log('✅ [AMAZON CATALOG] BULK_QUANTITY_UPDATE', {
+        timestamp: new Date().toISOString(),
+        count: results.length,
+        adjustmentType,
+        adjustmentValue: numVal
+      });
+
+      res.json({
+        success: true,
+        message: `تم تحديث كميات ${results.length} منتج ومزامنتها مع أمازون بنجاح`,
+        count: results.length,
+        data: results
+      });
+    } catch (error) {
+      console.error('Error bulk updating quantities:', error);
+      res.status(500).json({
+        success: false,
+        message: 'حدث خطأ أثناء تحديث الكميات',
         error: error.message
       });
     }
@@ -314,7 +448,7 @@ class AmazonProductCatalogController {
   async repairAndReactivate(req, res) {
     try {
       const { id } = req.params;
-      const { product_name, amazonPrice, product_quantity, barcode, amazonAsin } = req.body;
+      const { product_name, amazonPrice, product_quantity, barcode, amazonAsin, product_image } = req.body;
 
       const product = await Product.findById(id);
       if (!product) {
@@ -332,6 +466,24 @@ class AmazonProductCatalogController {
       if (product_quantity !== undefined) updateData.product_quantity = product_quantity;
       if (barcode) updateData.barcode = barcode;
       if (amazonAsin) updateData.amazonAsin = amazonAsin;
+      if (product_image) {
+        updateData.product_image = product_image;
+        updateData.image_path = product_image;
+      }
+
+      // If product already has an active SKU on Amazon, push real-time patch (image, price, quantity, title)
+      if (product.amazonSku) {
+        amazonListingService.updatePriceAndQuantity(product.amazonSku, {
+          price: amazonPrice || product.amazonPrice || product.product_price,
+          quantity: product_quantity !== undefined ? product_quantity : product.product_quantity,
+          imageUrl: product_image || product.product_image,
+          title: product_name || product.product_name
+        }).then(patchRes => {
+          console.log(`✅ [AMAZON CATALOG] Live patch sent during repair for ${product.amazonSku}:`, patchRes.status);
+        }).catch(patchErr => {
+          console.error(`⚠️ [AMAZON CATALOG] Live patch during repair failed for ${product.amazonSku}:`, patchErr.message);
+        });
+      }
 
       const productId = product.products_id || product._id.toString();
 
@@ -678,6 +830,165 @@ class AmazonProductCatalogController {
       res.status(500).json({
         success: false,
         message: 'حدث خطأ أثناء إزالة المنتج من الكتالوج',
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * Scan published products on Amazon and detect SEARCH_SUPPRESSED items.
+   * Checks SP-API getListingsItem issues for each published product and marks suppressions.
+   */
+  async scanSuppressedListings(req, res) {
+    try {
+      const amazonAuth = require('../services/amazon/amazon-auth.service');
+      const client = await amazonAuth.getClient();
+      const marketplaceId = await amazonAuth.getMarketplaceId();
+      const sellerId = await amazonAuth.getSellerId();
+
+      const publishedProducts = await Product.find({ amazonStatus: 'published', amazonSku: { $ne: null } })
+        .select('_id product_name amazonSku amazonAsin product_image')
+        .lean();
+
+      console.log(`🔍 [AMAZON CATALOG] Scanning ${publishedProducts.length} published products for suppression issues...`);
+
+      const suppressedItems = [];
+      const errors = [];
+      let checked = 0;
+
+      // Process in batches of 5 with 1 second delay between batches (SP-API rate limit)
+      const batchSize = 5;
+      for (let i = 0; i < publishedProducts.length; i += batchSize) {
+        const batch = publishedProducts.slice(i, i + batchSize);
+
+        const batchResults = await Promise.allSettled(
+          batch.map(async (product) => {
+            try {
+              const listing = await client.callAPI({
+                operation: 'getListingsItem',
+                endpoint: 'listingsItems',
+                path: { sellerId, sku: product.amazonSku },
+                query: {
+                  marketplaceIds: [marketplaceId],
+                  includedData: ['summaries', 'issues']
+                }
+              });
+
+              const issues = listing.issues || [];
+              const suppressionIssues = issues.filter(issue =>
+                issue.enforcements?.actions?.some(a =>
+                  a.action === 'SEARCH_SUPPRESSED' || a.action === 'LISTING_SUPPRESSED' || a.action === 'ATTRIBUTE_SUPPRESSED'
+                )
+              );
+
+              if (suppressionIssues.length > 0) {
+                const issueMessages = suppressionIssues.map(i => i.message).join(' | ');
+                const issueCodes = suppressionIssues.map(i => i.code).join(', ');
+
+                await Product.findByIdAndUpdate(product._id, {
+                  amazonStatus: 'search_suppressed',
+                  amazonLastError: `🚫 تم منع البحث (Codes: ${issueCodes}): ${issueMessages.substring(0, 500)}`
+                });
+
+                suppressedItems.push({
+                  _id: product._id,
+                  name: product.product_name,
+                  sku: product.amazonSku,
+                  asin: product.amazonAsin,
+                  issues: suppressionIssues.map(i => ({
+                    code: i.code,
+                    message: i.message,
+                    action: i.enforcements?.actions?.[0]?.action
+                  }))
+                });
+              }
+              checked++;
+            } catch (err) {
+              errors.push({ sku: product.amazonSku, error: err.message });
+            }
+          })
+        );
+
+        // Respect SP-API rate limit
+        if (i + batchSize < publishedProducts.length) {
+          await new Promise(r => setTimeout(r, 1200));
+        }
+      }
+
+      console.log(`✅ [AMAZON CATALOG] Scan complete: checked ${checked}, found ${suppressedItems.length} suppressed, ${errors.length} errors`);
+
+      res.json({
+        success: true,
+        message: `تم فحص ${checked} منتج: وُجد ${suppressedItems.length} منتج تم منع بحثه على أمازون`,
+        checkedCount: checked,
+        suppressedCount: suppressedItems.length,
+        errorCount: errors.length,
+        suppressedItems,
+        errors: errors.slice(0, 10) // limit error details
+      });
+    } catch (error) {
+      console.error('Error scanning suppressed listings:', error);
+      res.status(500).json({
+        success: false,
+        message: 'حدث خطأ أثناء فحص المنتجات المحجوبة',
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * Fix a search-suppressed product by patching its image (and optionally title) on Amazon in real-time.
+   */
+  async fixSuppressedImage(req, res) {
+    try {
+      const { id } = req.params;
+      const { imageUrl, title } = req.body;
+
+      if (!imageUrl || !imageUrl.startsWith('http')) {
+        return res.status(400).json({ success: false, message: 'يجب إدخال رابط صورة صحيح يبدأ بـ https://' });
+      }
+
+      const product = await Product.findById(id);
+      if (!product || !product.amazonSku) {
+        return res.status(404).json({ success: false, message: 'المنتج غير موجود أو ليس لديه SKU على أمازون' });
+      }
+
+      // Patch image (and title if provided) on Amazon via SP-API
+      const patchResult = await amazonListingService.updatePriceAndQuantity(product.amazonSku, {
+        imageUrl,
+        title: title || undefined
+      });
+
+      // Update local DB
+      const updateData = {
+        product_image: imageUrl,
+        image_path: imageUrl,
+        amazonSyncedAt: new Date()
+      };
+      if (title) updateData.product_name = title;
+
+      if (patchResult?.success || patchResult?.status === 'ACCEPTED') {
+        updateData.amazonStatus = 'published';
+        updateData.amazonLastError = null;
+      }
+
+      await Product.findByIdAndUpdate(id, updateData);
+
+      console.log(`✅ [AMAZON CATALOG] Fix suppressed image for SKU ${product.amazonSku}:`, patchResult?.status);
+
+      res.json({
+        success: patchResult?.success || patchResult?.status === 'ACCEPTED',
+        message: patchResult?.status === 'ACCEPTED'
+          ? 'تم إرسال الصورة الجديدة لأمازون بنجاح ✅ وسيتم رفع حظر البحث خلال 15 دقيقة - ساعتين'
+          : 'تم إرسال الصورة ولكن قد تحتاج لمراجعة إضافية من أمازون',
+        patchStatus: patchResult?.status,
+        issues: patchResult?.issues || []
+      });
+    } catch (error) {
+      console.error('Error fixing suppressed image:', error);
+      res.status(500).json({
+        success: false,
+        message: 'حدث خطأ أثناء تحديث صورة المنتج',
         error: error.message
       });
     }

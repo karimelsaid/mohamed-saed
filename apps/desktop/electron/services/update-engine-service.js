@@ -319,7 +319,7 @@ class UpdateEngineService {
 
     this.state = 'UP_TO_DATE';
 
-    // الخطوة 5: تشغيل التثبيت الحقيقي التلقائي إذا وجد ملف Installer .exe
+    // الخطوة 5: تشغيل التثبيت الحقيقي التلقائي مع تفادي قفل الملفات في ويندوز
     let launchedInstaller = false;
     if (updatePath && updatePath.endsWith('.exe') && fs.existsSync(updatePath)) {
       try {
@@ -329,21 +329,35 @@ class UpdateEngineService {
           electronApp = require('electron').app;
         } catch (_) {}
 
-        logger.info(`Executing real NSIS silent update installer: "${updatePath}" /S`);
+        logger.info(`Preparing robust updater script for: "${updatePath}"`);
 
-        // Launch installer detached so it continues after the app closes
-        const child = spawn(updatePath, ['/S'], {
+        // إنشاء سكربت باتش مؤقت ينتظر خروج البرنامج بالكامل لتفادي خطأ قفل الملفات (Windows Sharing Violation)
+        const updaterBatPath = path.join(path.dirname(updatePath), 'apply_update.bat');
+        const batContent = `@echo off
+timeout /t 2 /nobreak >nul
+taskkill /F /IM "نظام إدارة محلات بيع وتأجير بدل.exe" >nul 2>&1
+timeout /t 1 /nobreak >nul
+start /wait "" "${updatePath}" /S
+timeout /t 2 /nobreak >nul
+start "" "%LOCALAPPDATA%\\Programs\\suit-store-system\\نظام إدارة محلات بيع وتأجير بدل.exe"
+del "%~f0"
+`;
+        fs.writeFileSync(updaterBatPath, batContent, 'utf8');
+
+        // تشغيل سكربت الباتش في الخلفية بشكل مستقل تماماً
+        const child = spawn('cmd.exe', ['/c', updaterBatPath], {
           detached: true,
-          stdio: 'ignore'
+          stdio: 'ignore',
+          windowsHide: true
         });
         child.unref();
         launchedInstaller = true;
 
         if (electronApp && typeof electronApp.quit === 'function') {
           setTimeout(() => {
-            logger.info('Quitting old app instance to allow installer to update files on disk...');
+            logger.info('Quitting old app instance immediately so updater can replace locked files...');
             electronApp.quit();
-          }, 800);
+          }, 400);
         }
       } catch (spawnErr) {
         logger.error(`Failed to launch installer process: ${spawnErr.message}`);

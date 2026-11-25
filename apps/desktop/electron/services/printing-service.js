@@ -66,12 +66,34 @@ class PrintingService {
   }
 
   /**
+   * تنسيق التاريخ والوقت بصيغة 12 ساعة مع ص/م للطباعة
+   */
+  formatDateTime12h(dateInput) {
+    if (!dateInput) return '—';
+    const date = (dateInput instanceof Date) ? dateInput : new Date(dateInput);
+    if (isNaN(date.getTime())) return String(dateInput);
+
+    const hours = date.getHours();
+    const minutes = date.getMinutes();
+    const period = hours < 12 ? 'ص' : 'م';
+    const hours12 = hours % 12 || 12;
+    const hoursStr = String(hours12).padStart(2, '0');
+    const minutesStr = String(minutes).padStart(2, '0');
+
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+
+    return `${y}/${m}/${d} ${hoursStr}:${minutesStr} ${period}`;
+  }
+
+  /**
    * 1. قالب الإيصال الحراري السريع 80mm (Thermal POS Receipt)
    */
   generateThermalReceipt80mm(data = {}) {
     const store = this.getStoreSettings();
     const receiptNumber = data.receiptNumber || data.invoiceNumber || `REC-${Date.now().toString().slice(-6)}`;
-    const dateStr = data.date || new Date().toLocaleString('ar-EG');
+    const dateStr = data.date ? this.formatDateTime12h(data.date) : this.formatDateTime12h(new Date());
     const cashier = data.cashierName || 'الكاشير الرئيسي';
     const customer = data.customerName ? `${data.customerName} (${data.customerPhone || ''})` : 'عميل نقدي';
     const items = data.items || [];
@@ -231,9 +253,11 @@ class PrintingService {
     const discount = Number(data.discount || 0);
     const tax = Number(data.tax || 0);
     const total = Number(data.totalAmount || (subtotal - discount + tax));
-    const paid = Number(data.paidAmount || total);
+    const paid = Number(data.paidAmount !== undefined ? data.paidAmount : (data.paidAdvance !== undefined ? data.paidAdvance : total));
     const remaining = Math.max(0, total - paid);
-    const paymentStatus = remaining <= 0 ? 'مسددة بالكامل (PAID)' : 'مسددة جزئياً (PARTIAL)';
+    const paymentStatus = remaining <= 0 ? 'مسددة بالكامل (PAID)' : (paid > 0 ? 'مسددة جزئياً (عربون)' : 'غير مسددة (UNPAID)');
+    const invoiceTitle = data.invoiceTitle || (data.isBooking ? 'فاتورة حجز وتأجير بدل' : 'فاتورة مبيعات رسمية');
+    const invoiceType = data.invoiceType || (data.isBooking ? 'حجز وتأجير بدل ومستلزمات' : 'مبيعات نقطة البيع المباشرة (POS)');
 
     const itemRows = items.map((it, idx) => `
       <tr style="border-bottom: 1px solid #e5e7eb;">
@@ -351,7 +375,7 @@ class PrintingService {
         <div style="font-size: 12px; color: #4b5563;">البطاقة الضريبية: ${store.taxNumber} | السجل التجاري: ${store.commercialRegister}</div>
       </td>
       <td style="text-align: left; width: 40%; vertical-align: top;">
-        <h2 style="margin: 0; color: #d4af37; font-size: 18px;">فاتورة مبيعات رسمية</h2>
+        <h2 style="margin: 0; color: #d4af37; font-size: 18px;">${invoiceTitle}</h2>
         <div style="margin-top: 5px;"><strong>رقم الفاتورة:</strong> <span style="font-family: monospace; font-weight: bold;">${invoiceNumber}</span></div>
         <div><strong>تاريخ الإصدار:</strong> ${invoiceDate}</div>
         <div><strong>حالة السداد:</strong> <span class="badge ${remaining <= 0 ? 'badge-paid' : 'badge-partial'}">${paymentStatus}</span></div>
@@ -370,10 +394,12 @@ class PrintingService {
     </div>
     <div class="info-col">
       <h4 style="margin: 0 0 10px; color: #374151; font-size: 14px; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px;">بيانات العملية والمخزن (Order Info)</h4>
-      <div><strong>نوع الفاتورة:</strong> مبيعات نقطة البيع المباشرة (POS)</div>
+      <div><strong>نوع الفاتورة:</strong> ${invoiceType}</div>
       <div><strong>طريقة السداد:</strong> ${data.paymentMethod || 'نقدي (كاش)'}</div>
-      <div><strong>المخزن المنصرف منه:</strong> المخزن الرئيسي (المحل)</div>
-      <div><strong>الموظف المسئول:</strong> ${data.cashierName || 'إدارة المبيعات'}</div>
+      ${data.pickupDate ? `<div><strong>تاريخ استلام البدلة:</strong> ${data.pickupDate}</div>` : ''}
+      ${data.returnDueDate ? `<div><strong>تاريخ الإرجاع المتوقع:</strong> ${data.returnDueDate}</div>` : ''}
+      ${data.depositAmount !== undefined ? `<div><strong>مبلغ التأمين المسترد:</strong> ${Number(data.depositAmount).toFixed(2)} ج.م ${data.depositPaid > 0 ? '(مسدد)' : '(مستحق عند الاستلام)'}</div>` : ''}
+      <div><strong>المخزن / الفرع:</strong> ${data.warehouseName || 'المخزن الرئيسي (المحل)'}</div>
     </div>
   </div>
 
@@ -382,10 +408,10 @@ class PrintingService {
     <thead>
       <tr>
         <th style="width: 40px;">م</th>
-        <th style="width: 110px;">كود الصنف</th>
-        <th style="text-align: right;">البيان والصنف</th>
+        <th style="width: 110px;">كود / باركود</th>
+        <th style="text-align: right;">البيان والصنف والمقاس</th>
         <th style="width: 50px;">الكمية</th>
-        <th style="width: 90px; text-align: left;">سعر الوحدة</th>
+        <th style="width: 90px; text-align: left;">سعر الإيجار/الوحدة</th>
         <th style="width: 70px; text-align: left;">الخصم</th>
         <th style="width: 100px; text-align: left;">الإجمالي</th>
       </tr>
@@ -400,9 +426,16 @@ class PrintingService {
     <div style="float: right; width: 50%; font-size: 12px; color: #6b7280; padding-top: 15px;">
       <strong>الشروط والأحكام:</strong>
       <ul style="padding-right: 18px; margin-top: 5px;">
-        <li>البضاعة المباعة ترد أو تستبدل خلال 14 يوماً من تاريخ الفاتورة بالحالة الأصلية.</li>
-        <li>لا يتم استبدال أو استرجاع الإكسسوارات الشخصية بعد فتح الغلاف.</li>
-        <li>تعتبر هذه الفاتورة سند استلام للبضاعة المباعة بحالة جيدة.</li>
+        ${data.isBooking ? `
+          <li>يلتزم العميل بإرجاع البدلة في موعد الإرجاع المحدد أعلاه وبحالتها الأصلية دون تلف.</li>
+          <li>مبلغ التأمين يُسترد بالكامل فور فحص سلامة البدلة ومشتملاتها عند إرجاعها للمحل.</li>
+          <li>تأخير الإرجاع عن الموعد المحدد يخضع لغرامة التأخير اليومية المتفق عليها بالعقد.</li>
+          <li>العربون المدفوع يخصم بالكامل من إجمالي الفاتورة، ويسدد الباقي عند استلام البدلة.</li>
+        ` : `
+          <li>البضاعة المباعة ترد أو تستبدل خلال 14 يوماً من تاريخ الفاتورة بالحالة الأصلية.</li>
+          <li>لا يتم استبدال أو استرجاع الإكسسوارات الشخصية بعد فتح الغلاف.</li>
+          <li>تعتبر هذه الفاتورة سند استلام للبضاعة المباعة بحالة جيدة.</li>
+        `}
       </ul>
     </div>
 
@@ -426,13 +459,18 @@ class PrintingService {
         <span style="font-family: monospace; color: #d4af37;">${total.toFixed(2)} ج.م</span>
       </div>
       <div class="totals-row" style="font-size: 12px;">
-        <span>المبلغ المسدد:</span>
+        <span>المبلغ المسدد (العربون):</span>
         <span style="font-family: monospace; font-weight: bold;">${paid.toFixed(2)} ج.م</span>
       </div>
       ${remaining > 0 ? `
       <div class="totals-row" style="font-size: 12px; color: #dc2626; font-weight: bold;">
         <span>المتبقي المطلوب:</span>
         <span style="font-family: monospace;">${remaining.toFixed(2)} ج.م</span>
+      </div>` : ''}
+      ${Number(data.depositAmount || 0) > 0 ? `
+      <div class="totals-row" style="color: #b45309; border-top: 1px dashed #d1d5db; margin-top: 4px; padding-top: 4px; font-size: 12px;">
+        <span>التأمين المسترد:</span>
+        <span style="font-family: monospace; font-weight: bold;">${Number(data.depositAmount).toFixed(2)} ج.م</span>
       </div>` : ''}
     </div>
   </div>

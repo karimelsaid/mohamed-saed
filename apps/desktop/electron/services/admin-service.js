@@ -231,12 +231,38 @@ class AdminService {
   }
 
   createSize({ category_type = 'SUIT', code, name, sort_order = 0 }) {
-    if (!code || !name) throw new Error('كود واسم المقاس مطلوبان.');
+    if (!name && !code) throw new Error('اسم أو كود المقاس مطلوب.');
+    const sName = String(name || code).trim();
+    const sCode = String(code || name).trim();
     const db = this.dbConn.getDb();
-    const stmt = db.prepare('INSERT INTO sizes (category_type, code, name, sort_order, is_active) VALUES (?, ?, ?, ?, 1)');
-    const res = stmt.run(category_type, code.trim(), name.trim(), sort_order);
-    logger.info(`Created size: ${name} for ${category_type}`);
-    return { id: res.lastInsertRowid, categoryType: category_type, code, name, sortOrder: sort_order };
+
+    // التحقق مما إذا كان المستخدم أدخل مقاسات متعددة مفصولة بفواصل (مثل: "48, 50, 52, 54, 56" أو "40, 41, 42")
+    const names = sName.split(/[,،\n]+/).map(x => x.trim()).filter(Boolean);
+    if (names.length > 1) {
+      const inserted = [];
+      for (const singleName of names) {
+        const singleCode = singleName;
+        const stmt = db.prepare(`
+          INSERT INTO sizes (category_type, code, name, sort_order, is_active)
+          VALUES (?, ?, ?, ?, 1)
+          ON CONFLICT(category_type, code) DO UPDATE SET is_active = 1, name = excluded.name
+        `);
+        const res = stmt.run(category_type, singleCode, singleName, sort_order);
+        inserted.push({ id: res.lastInsertRowid, categoryType: category_type, code: singleCode, name: singleName });
+      }
+      logger.info(`Created/activated multiple sizes (${inserted.length}) for ${category_type}`);
+      return { count: inserted.length, items: inserted };
+    }
+
+    // إدراج أو إعادة تنشيط المقاس الفردي مع تجنب أي خطأ تكرار (UPSERT)
+    const stmt = db.prepare(`
+      INSERT INTO sizes (category_type, code, name, sort_order, is_active)
+      VALUES (?, ?, ?, ?, 1)
+      ON CONFLICT(category_type, code) DO UPDATE SET is_active = 1, name = excluded.name
+    `);
+    const res = stmt.run(category_type, sCode, sName, sort_order);
+    logger.info(`Created or activated size: ${sName} for ${category_type}`);
+    return { id: res.lastInsertRowid, categoryType: category_type, code: sCode, name: sName, sortOrder: sort_order };
   }
 
   updateSize(id, { category_type, code, name, sort_order, is_active }) {

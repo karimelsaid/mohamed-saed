@@ -43,6 +43,11 @@ class WhatsappDirectService {
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
     );
 
+    // منع تجميد أو تقييد موارد العملية في الخلفية لضمان سرعة الإرسال على كافة الأجهزة
+    try {
+      this.waWindow.webContents.setBackgroundThrottling(false);
+    } catch (_) {}
+
     // عند إغلاق النافذة من قبل المستخدم أثناء الربط، نقوم بإخفائها فقط لتبقى تعمل في الخلفية
     this.waWindow.on('close', (e) => {
       if (!this.isQuitting) {
@@ -200,21 +205,37 @@ class WhatsappDirectService {
   }
 
   /**
-   * تطبيع رقم الهاتف وتحويله للصيغة الدولية (201xxxxxxxxx)
+   * تطبيع رقم الهاتف وتحويله للصيغة الدولية الصحيحة بدون أخطاء
    */
   normalizePhone(phone) {
     if (!phone) return null;
     let clean = String(phone).replace(/\D/g, '');
-    if (clean.startsWith('01') && clean.length === 11) {
+    if (!clean) return null;
+
+    // إزالة أصفار البداية الدولية (مثل 0020... -> 20...)
+    while (clean.startsWith('00')) {
+      clean = clean.slice(2);
+    }
+
+    // معالجة الأرقام المصرية بمختلف أنماط الإدخال:
+    // حالة الخطأ الشائع: كتابة كود مصر متبوعاً بصفر البداية 2001xxxxxxxxx (13 رقم)
+    if (clean.startsWith('2001') && clean.length === 13) {
+      clean = `20${clean.slice(3)}`;
+    }
+    // الرقم المحلي المعتاد 01xxxxxxxxx (11 رقم)
+    else if (clean.startsWith('01') && clean.length === 11) {
       clean = `20${clean.slice(1)}`;
-    } else if (clean.startsWith('1') && clean.length === 10) {
+    }
+    // الرقم بدون صفر البداية 1xxxxxxxxx (10 أرقام)
+    else if (clean.startsWith('1') && clean.length === 10) {
       clean = `20${clean}`;
     }
+
     return clean;
   }
 
   /**
-   * إرسال رسالة واتساب صامتة ومباشرة في الخلفية دون فتح أي متصفح
+   * إرسال رسالة واتساب صامتة ومباشرة في الخلفية تدعم جميع الأجهزة ولغات واتساب
    */
   async sendMessage({ phone, message, customerId = null }) {
     if (!phone) throw new Error('رقم الهاتف مطلوب.');
@@ -230,7 +251,7 @@ class WhatsappDirectService {
     // التحقق من حالة الجاهزية وتسجيل الدخول
     const status = await this.getStatus();
     if (!status.isReady) {
-      throw new Error('واتساب غير متصل. يرجى مسح باركود الربط أولاً من زر (ربط واتساب) بالأعلى.');
+      throw new Error('واتساب غير متصل على هذا الجهاز. يرجى مسح باركود الربط أولاً من زر (ربط واتساب) بالأعلى.');
     }
 
     logger.info(`Starting direct background WhatsApp message to +${cleanPhone}...`);
@@ -246,58 +267,153 @@ class WhatsappDirectService {
 
     try {
       const sendUrl = `https://web.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(message)}`;
-      await win.loadURL(sendUrl);
 
-      // سكريبت الضغط على زر الإرسال آلياً في الخلفية
+      // الانتقال الذكي داخل تطبيق SPA لتسريع فتح المحادثة دون إعادة تحميل كاملة للجلسة
+      const currentUrl = (win.webContents.getURL && win.webContents.getURL()) || '';
+      if (currentUrl.includes('web.whatsapp.com')) {
+        await win.webContents.executeJavaScript(`
+          (() => {
+            window.location.href = ${JSON.stringify(sendUrl)};
+          })()
+        `);
+      } else {
+        await win.loadURL(sendUrl);
+      }
+
+      // سكريبت شامل للإرسال التلقائي في الخلفية متوافق مع كافة واجهات وتحديثات واتساب ويب
       const sendScript = `
         (async () => {
-          for (let attempt = 0; attempt < 35; attempt++) {
-            await new Promise(r => setTimeout(r, 500));
+          function findSendButton() {
+            // محددات أزرار الإرسال في واتساب ويب (العربية، الإنجليزية، والأيقونات الحديثة)
+            const selectors = [
+              'button[data-testid="compose-btn-send"]',
+              'button[data-testid="send"]',
+              'button[aria-label="Send"]',
+              'button[aria-label="إرسال"]',
+              'button[aria-label*="Send"]',
+              'button[aria-label*="إرسال"]',
+              'span[data-icon="send"]',
+              'span[data-icon="wds-ic-send-filled"]',
+              'span[data-icon="send-light"]'
+            ];
 
-            // فحص إذا ظهرت رسالة خطأ بأن الرقم غير مسجل في واتساب
-            const popup = document.querySelector('div[data-animate-modal-popup="true"]');
-            if (popup) {
-              const text = popup.innerText || '';
-              if (text.includes('invalid') || text.includes('غير صحيح') || text.includes('phone number shared via url is invalid')) {
-                const okBtn = popup.querySelector('button');
-                if (okBtn) okBtn.click();
-                return { success: false, error: 'رقم الهاتف غير مسجل على واتساب أو غير صالح.' };
+            for (const sel of selectors) {
+              const el = document.querySelector(sel);
+              if (el) {
+                const btn = el.tagName === 'BUTTON' ? el : el.closest('button');
+                if (btn && !btn.disabled) return btn;
               }
             }
 
-            // فحص زر الإرسال المباشر
-            const sendBtn = document.querySelector('button[aria-label="Send"], span[data-icon="send"]')?.closest('button');
-            if (sendBtn && !sendBtn.disabled) {
-              sendBtn.click();
-              // الانتظار ثانية للتأكد من خروج الرسالة للسيرفر
-              await new Promise(r => setTimeout(r, 1200));
-              return { success: true };
+            // فحص أي زر داخل الفوتر يحمل أيقونة إرسال
+            const footerBtns = document.querySelectorAll('footer button, [data-testid="conversation-footer"] button');
+            for (const btn of footerBtns) {
+              const hasSendIcon = btn.querySelector('svg, span[data-icon*="send"]');
+              const aria = (btn.getAttribute('aria-label') || '').toLowerCase();
+              if ((hasSendIcon || aria.includes('send') || aria.includes('إرسال')) && !btn.disabled) {
+                return btn;
+              }
             }
 
-            // فحص مربع النص القابل للتعديل كطريقة بديلة عبر إرسال Enter
-            const msgBox = document.querySelector('div[contenteditable="true"][data-tab="10"]');
-            if (msgBox && msgBox.innerText.trim().length > 0) {
-              const enterEvt = new KeyboardEvent('keydown', {
-                key: 'Enter',
-                code: 'Enter',
-                keyCode: 13,
-                which: 13,
-                bubbles: true
-              });
-              msgBox.dispatchEvent(enterEvt);
+            return null;
+          }
+
+          function findComposeBox() {
+            return document.querySelector(
+              'footer div[contenteditable="true"], ' +
+              'div[contenteditable="true"][role="textbox"], ' +
+              'div[contenteditable="true"][data-tab], ' +
+              '[data-testid="conversation-compose-box-input"], ' +
+              '#main footer div[contenteditable="true"]'
+            );
+          }
+
+          // حلقة فحص متكيفة حتى 60 محاولة بفارق 750 مللي ثانية (إجمالي 45 ثانية لتغطية بطء شبكات الأجهزة المختلفة)
+          for (let attempt = 0; attempt < 60; attempt++) {
+            await new Promise(r => setTimeout(r, 750));
+
+            // 1. فحص انقطاع الجلسة أو طلب مسح الباركود من جديد
+            const canvas = document.querySelector('canvas');
+            const qrBox = document.querySelector('[data-testid="qrcode"]');
+            if (canvas || qrBox) {
+              return {
+                success: false,
+                error: 'انقطع اتصال واتساب (تم تسجيل الخروج). يرجى الضغط على زر ربط واتساب لمسح الباركود بهاتفك مجدداً.'
+              };
+            }
+
+            // 2. فحص ظهور نافذة تفيد بأن الرقم غير مسجل في واتساب
+            const popup = document.querySelector('div[data-animate-modal-popup="true"], div[role="dialog"], [data-testid="popup-contents"]');
+            if (popup) {
+              const text = (popup.innerText || popup.textContent || '').toLowerCase();
+              if (text.includes('invalid') || text.includes('غير صحيح') || text.includes('غير صالح') || text.includes('phone number shared via url is invalid')) {
+                const okBtn = popup.querySelector('button');
+                if (okBtn) okBtn.click();
+                return {
+                  success: false,
+                  error: 'رقم الهاتف (+${cleanPhone}) غير مسجل في تطبيق واتساب أو غير صحيح.'
+                };
+              }
+            }
+
+            // 3. فحص وتفعيل زر الإرسال
+            const sendBtn = findSendButton();
+            if (sendBtn) {
+              try {
+                sendBtn.focus();
+                sendBtn.click();
+                ['mousedown', 'mouseup', 'click'].forEach(evt => {
+                  sendBtn.dispatchEvent(new MouseEvent(evt, { bubbles: true, cancelable: true, view: window }));
+                });
+              } catch (_) {}
+
+              // الانتظار للتحقق من اختفاء نص الرسالة أو ظهور زر الميكروفون
               await new Promise(r => setTimeout(r, 1200));
-              return { success: true };
+
+              const boxAfter = findComposeBox();
+              const isCleared = !boxAfter || !boxAfter.innerText || boxAfter.innerText.trim().length === 0;
+              const hasPtt = !!document.querySelector('span[data-icon="ptt"], span[data-icon="mic"], [data-testid="ptt"]');
+
+              if (isCleared || hasPtt) {
+                return { success: true };
+              }
+              return { success: true, needsInputEvent: true };
+            }
+
+            // 4. فحص مربع الكتابة وتجهيز المؤشر لإرسال ضغطة Enter
+            const composeBox = findComposeBox();
+            if (composeBox && composeBox.innerText && composeBox.innerText.trim().length > 0) {
+              try {
+                composeBox.focus();
+              } catch (_) {}
+              return { success: true, needsInputEvent: true };
             }
           }
 
-          return { success: false, error: 'انتهت المهلة قبل تأكيد الإرسال. تأكد من استقرار الإنترنت وتوصيل الهاتف.' };
+          return {
+            success: false,
+            error: 'انتهت مهلة انتظار الإرسال (45 ثانية). تأكد من استقرار الإنترنت ومسح باركود الربط بهاتفك.'
+          };
         })()
       `;
 
-      const result = await win.webContents.executeJavaScript(sendScript);
+      let result = await win.webContents.executeJavaScript(sendScript);
 
-      if (!result.success) {
-        throw new Error(result.error || 'تعذر إرسال الرسالة.');
+      if (result && result.needsInputEvent) {
+        // إرسال ضغطة مفتاح Enter حقيقية على مستوى Chromium / OS عبر Electron
+        try {
+          win.webContents.focus();
+          win.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'Return' });
+          win.webContents.sendInputEvent({ type: 'char', keyCode: '\r' });
+          win.webContents.sendInputEvent({ type: 'keyUp', keyCode: 'Return' });
+          await new Promise(r => setTimeout(r, 1000));
+        } catch (inputErr) {
+          logger.warn(`Could not send OS Return input event: ${inputErr.message}`);
+        }
+      }
+
+      if (!result || !result.success) {
+        throw new Error((result && result.error) || 'تعذر إرسال الرسالة.');
       }
 
       logger.info(`WhatsApp message successfully sent to +${cleanPhone}!`);

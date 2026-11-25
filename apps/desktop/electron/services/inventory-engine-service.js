@@ -98,7 +98,12 @@ class InventoryEngineService {
 
   getSuitUnits(filters = {}) {
     let sql = `
-      SELECT u.*, m.name as model_name, m.code as model_code, m.rental_price, m.security_deposit,
+      SELECT u.*, m.name as model_name, m.code as model_code,
+             COALESCE(u.rental_price, m.rental_price) as rental_price,
+             COALESCE(u.sale_price, m.sale_price) as sale_price,
+             COALESCE(u.purchase_cost, m.cost_price) as purchase_cost,
+             m.cost_price as model_cost_price,
+             m.security_deposit,
              m.category_id, cat.name as category_name, cat.type as category_type,
              s.name as size_name, s.code as size_code, w.name as warehouse_name, col.name as color_name,
              (SELECT b.booking_number FROM booking_items bi JOIN bookings b ON bi.booking_id = b.id WHERE bi.suit_unit_id = u.id AND b.status NOT IN ('CANCELLED', 'COMPLETED') ORDER BY b.id DESC LIMIT 1) as active_booking_number,
@@ -205,8 +210,8 @@ class InventoryEngineService {
       const modelCode = m ? m.code : 'SUIT';
 
       const insertStmt = tDb.prepare(`
-        INSERT INTO suit_units (suit_model_id, size_id, warehouse_id, unit_barcode, status, rental_count, purchase_cost, notes)
-        VALUES (?, ?, ?, ?, 'AVAILABLE', 0, ?, 'إضافة دفعة بالمقاسات')
+        INSERT INTO suit_units (suit_model_id, size_id, warehouse_id, unit_barcode, status, rental_count, purchase_cost, rental_price, sale_price, notes)
+        VALUES (?, ?, ?, ?, 'AVAILABLE', 0, ?, ?, ?, 'إضافة دفعة بالمقاسات')
       `);
 
       const histStmt = tDb.prepare(`
@@ -222,10 +227,20 @@ class InventoryEngineService {
         const qty = Number(item.quantity) || 0;
         if (!sizeId || qty <= 0) continue;
 
+        const itemCost = (item.purchase_cost !== undefined && item.purchase_cost !== null && Number(item.purchase_cost) > 0)
+          ? Number(item.purchase_cost)
+          : (item.cost !== undefined && item.cost !== null && Number(item.cost) > 0 ? Number(item.cost) : finalCost);
+        const itemRental = (item.rental_price !== undefined && item.rental_price !== null && Number(item.rental_price) > 0)
+          ? Number(item.rental_price)
+          : null;
+        const itemSale = (item.sale_price !== undefined && item.sale_price !== null && Number(item.sale_price) > 0)
+          ? Number(item.sale_price)
+          : null;
+
         for (let i = 0; i < qty; i++) {
           const randSuffix = Math.floor(1000 + Math.random() * 9000);
           const barcode = `ST-${modelCode}-${sizeId}-${Date.now().toString().slice(-4)}${randSuffix}`;
-          const res = insertStmt.run(suit_model_id, sizeId, warehouse_id, barcode, finalCost);
+          const res = insertStmt.run(suit_model_id, sizeId, warehouse_id, barcode, itemCost, itemRental, itemSale);
           const unitId = res.lastInsertRowid;
           histStmt.run(unitId);
           createdUnits.push({ id: unitId, barcode, size_id: sizeId });
@@ -239,7 +254,7 @@ class InventoryEngineService {
   }
 
   updateSuitUnit(id, payload) {
-    const { size_id, warehouse_id, unit_barcode, purchase_cost, notes } = payload;
+    const { size_id, warehouse_id, unit_barcode, purchase_cost, rental_price, sale_price, notes } = payload;
     const db = this.dbConn.getDb();
     const stmt = db.prepare(`
       UPDATE suit_units
@@ -247,6 +262,8 @@ class InventoryEngineService {
           warehouse_id = COALESCE(?, warehouse_id),
           unit_barcode = COALESCE(?, unit_barcode),
           purchase_cost = COALESCE(?, purchase_cost),
+          rental_price = COALESCE(?, rental_price),
+          sale_price = COALESCE(?, sale_price),
           notes = COALESCE(?, notes)
       WHERE id = ?
     `);
@@ -255,6 +272,8 @@ class InventoryEngineService {
       warehouse_id ? Number(warehouse_id) : null,
       unit_barcode ? unit_barcode.trim() : null,
       purchase_cost !== undefined && purchase_cost !== null ? Number(purchase_cost) : null,
+      rental_price !== undefined && rental_price !== null ? Number(rental_price) : null,
+      sale_price !== undefined && sale_price !== null ? Number(sale_price) : null,
       notes !== undefined ? notes : null,
       Number(id)
     );
@@ -319,12 +338,148 @@ class InventoryEngineService {
   }
 
   getUnitHistory(unitId) {
-    const sql = `
-      SELECT * FROM unit_status_history
-      WHERE suit_unit_id = ?
-      ORDER BY id DESC
-    `;
-    return this.dbConn.all(sql, [unitId]);
+    const db = this.dbConn.getDb();
+    const unit = db.prepare(`
+      SELECT u.id, u.unit_barcode, u.status, u.rental_count,
+             m.name as model_name, m.code as model_code,
+             s.name as size_name,
+             w.name as warehouse_name
+      FROM suit_units u
+      JOIN suit_models m ON u.suit_model_id = m.id
+      LEFT JOIN sizes s ON u.size_id = s.id
+      LEFT JOIN warehouses w ON u.warehouse_id = w.id
+      WHERE u.id = ?
+    `).get(unitId);
+
+    // Get all rental bookings for this unit with customer details
+    const bookings = db.prepare(`
+      SELECT 
+        b.id as booking_id,
+        b.booking_number,
+        b.status as booking_status,
+        b.created_at as booked_at,
+        b.pickup_date,
+        b.return_due_date,
+        b.actual_return_date,
+        b.event_date,
+        bi.id as item_id,
+        bi.rental_price,
+        bi.status as item_status,
+        c.id as customer_id,
+        c.name as customer_name,
+        c.phone as customer_phone
+      FROM booking_items bi
+      JOIN bookings b ON bi.booking_id = b.id
+      JOIN customers c ON b.customer_id = c.id
+      WHERE bi.suit_unit_id = ?
+      ORDER BY b.id DESC
+    `).all(unitId);
+
+    // Get any sales for this unit (if sold)
+    const sales = db.prepare(`
+      SELECT 
+        s.id as sale_id,
+        s.sale_number,
+        s.created_at as sale_date,
+        si.id as item_id,
+        si.unit_price,
+        si.quantity,
+        c.id as customer_id,
+        c.name as customer_name,
+        c.phone as customer_phone
+      FROM sale_items si
+      JOIN sales s ON si.sale_id = s.id
+      LEFT JOIN customers c ON s.customer_id = c.id
+      WHERE si.suit_unit_id = ?
+      ORDER BY s.id DESC
+    `).all(unitId);
+
+    const customerIds = new Set();
+    bookings.forEach(b => { if (b.customer_id) customerIds.add(b.customer_id); });
+    sales.forEach(s => { if (s.customer_id) customerIds.add(s.customer_id); });
+
+    return {
+      unit,
+      usages: bookings,
+      sales,
+      totalUsageCount: bookings.length,
+      uniqueCustomersCount: customerIds.size
+    };
+  }
+
+  getProductHistory(productId) {
+    const db = this.dbConn.getDb();
+    const product = db.prepare(`
+      SELECT p.id, p.code, p.name, p.sale_price, p.rental_price,
+             c.name as category_name, c.type as category_type
+      FROM products p
+      LEFT JOIN categories c ON p.category_id = c.id
+      WHERE p.id = ?
+    `).get(productId);
+
+    // Get all rental bookings for variants of this product
+    const bookings = db.prepare(`
+      SELECT 
+        b.id as booking_id,
+        b.booking_number,
+        b.status as booking_status,
+        b.created_at as booked_at,
+        b.pickup_date,
+        b.return_due_date,
+        b.actual_return_date,
+        b.event_date,
+        bi.id as item_id,
+        bi.rental_price,
+        bi.status as item_status,
+        bi.item_type,
+        c.id as customer_id,
+        c.name as customer_name,
+        c.phone as customer_phone,
+        sz.name as size_name,
+        pv.sku,
+        pv.barcode
+      FROM booking_items bi
+      JOIN bookings b ON bi.booking_id = b.id
+      JOIN customers c ON b.customer_id = c.id
+      JOIN product_variants pv ON bi.product_variant_id = pv.id
+      LEFT JOIN sizes sz ON pv.size_id = sz.id
+      WHERE pv.product_id = ?
+      ORDER BY b.id DESC
+    `).all(productId);
+
+    // Get sales for this product
+    const sales = db.prepare(`
+      SELECT 
+        s.id as sale_id,
+        s.sale_number,
+        s.created_at as sale_date,
+        si.id as item_id,
+        si.unit_price,
+        si.quantity,
+        c.id as customer_id,
+        c.name as customer_name,
+        c.phone as customer_phone,
+        sz.name as size_name
+      FROM sale_items si
+      JOIN sales s ON si.sale_id = s.id
+      LEFT JOIN customers c ON s.customer_id = c.id
+      JOIN product_variants pv ON si.product_variant_id = pv.id
+      LEFT JOIN sizes sz ON pv.size_id = sz.id
+      WHERE pv.product_id = ?
+      ORDER BY s.id DESC
+    `).all(productId);
+
+    const customerIds = new Set();
+    bookings.forEach(b => { if (b.customer_id) customerIds.add(b.customer_id); });
+    sales.forEach(s => { if (s.customer_id) customerIds.add(s.customer_id); });
+
+    return {
+      product,
+      usages: bookings,
+      sales,
+      totalUsageCount: bookings.length,
+      uniqueCustomersCount: customerIds.size
+    };
   }
 
   // --- Cleaning & Laundry Lifecycle ---
@@ -423,8 +578,8 @@ class InventoryEngineService {
 
       // 2. Create variants and default balances
       const vStmt = tDb.prepare(`
-        INSERT INTO product_variants (product_id, size_id, color_id, sku, barcode, additional_price, is_active)
-        VALUES (?, ?, ?, ?, ?, 0, 1)
+        INSERT INTO product_variants (product_id, size_id, color_id, sku, barcode, additional_price, cost_price, rental_price, sale_price, is_active)
+        VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, 1)
       `);
       const bStmt = tDb.prepare(`
         INSERT INTO stock_balances (warehouse_id, product_variant_id, quantity_on_hand, quantity_reserved)
@@ -457,7 +612,10 @@ class InventoryEngineService {
         const vSuffix = v.size_id ? String(v.size_id) : (idx > 0 ? String(idx + 1) : 'U');
         const sku = v.sku || `${code}-${vSuffix}`;
         const barcode = v.barcode || sku;
-        const vRes = vStmt.run(productId, v.size_id || null, v.color_id || null, sku, barcode);
+        const vCost = (v.cost_price !== undefined && v.cost_price !== null && Number(v.cost_price) > 0) ? Number(v.cost_price) : null;
+        const vRental = (v.rental_price !== undefined && v.rental_price !== null && Number(v.rental_price) > 0) ? Number(v.rental_price) : null;
+        const vSale = (v.sale_price !== undefined && v.sale_price !== null && Number(v.sale_price) > 0) ? Number(v.sale_price) : null;
+        const vRes = vStmt.run(productId, v.size_id || null, v.color_id || null, sku, barcode, vCost, vRental, vSale);
         const variantId = vRes.lastInsertRowid;
 
         const initialQty = Number(v.initial_quantity) || 0;
@@ -529,39 +687,37 @@ class InventoryEngineService {
     return true;
   }
 
-  getProductVariants(productId) {
-    const sql = `
-      SELECT pv.*, s.name as size_name, s.code as size_code, col.name as color_name,
-             COALESCE(b.quantity_on_hand, 0) as quantity_on_hand,
-             COALESCE(b.quantity_reserved, 0) as quantity_reserved,
-             (COALESCE(b.quantity_on_hand, 0) - COALESCE(b.quantity_reserved, 0)) as available_quantity,
-             w.name as warehouse_name
-      FROM product_variants pv
-      LEFT JOIN sizes s ON pv.size_id = s.id
-      LEFT JOIN colors col ON pv.color_id = col.id
-      LEFT JOIN stock_balances b ON b.product_variant_id = pv.id
-      LEFT JOIN warehouses w ON b.warehouse_id = w.id
-      WHERE pv.product_id = ? AND pv.is_active = 1
-      ORDER BY s.sort_order ASC, pv.id ASC
-    `;
-    return this.dbConn.all(sql, [productId]);
-  }
-
-  getProductVariants(productId) {
+  getProductVariants(productId = null) {
     const db = this.dbConn.getDb();
-    return db.prepare(`
-      SELECT pv.id as variant_id, pv.product_id, pv.size_id, s.name as size_name, s.code as size_code,
+    let sql = `
+      SELECT pv.id as variant_id, pv.id, pv.product_id, pv.size_id, pv.color_id, pv.sku, pv.barcode,
+             s.name as size_name, s.code as size_code,
+             col.name as color_name,
+             p.name as product_name, p.code as product_code, p.category_id,
+             COALESCE(pv.rental_price, p.rental_price) as rental_price,
+             COALESCE(pv.sale_price, p.sale_price) as sale_price,
+             COALESCE(pv.cost_price, p.cost_price) as cost_price,
+             c.name as category_name, c.type as category_type,
              sb.warehouse_id, w.name as warehouse_name,
              COALESCE(sb.quantity_on_hand, 0) as quantity_on_hand,
              COALESCE(sb.quantity_reserved, 0) as quantity_reserved,
              (COALESCE(sb.quantity_on_hand, 0) - COALESCE(sb.quantity_reserved, 0)) as available_quantity
       FROM product_variants pv
+      JOIN products p ON pv.product_id = p.id
+      LEFT JOIN categories c ON p.category_id = c.id
       LEFT JOIN sizes s ON pv.size_id = s.id
+      LEFT JOIN colors col ON pv.color_id = col.id
       LEFT JOIN stock_balances sb ON sb.product_variant_id = pv.id
       LEFT JOIN warehouses w ON sb.warehouse_id = w.id
-      WHERE pv.product_id = ? AND pv.is_active = 1
-      ORDER BY s.sort_order ASC, pv.id ASC
-    `).all(productId);
+      WHERE pv.is_active = 1
+    `;
+    const params = [];
+    if (productId) {
+      sql += ' AND pv.product_id = ?';
+      params.push(productId);
+    }
+    sql += ' ORDER BY p.name ASC, s.sort_order ASC, pv.id ASC';
+    return db.prepare(sql).all(...params);
   }
 
   // =========================================================================

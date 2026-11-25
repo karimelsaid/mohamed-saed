@@ -89,6 +89,9 @@ CREATE TABLE IF NOT EXISTS product_variants (
   sku TEXT NOT NULL UNIQUE,
   barcode TEXT UNIQUE,
   additional_price REAL NOT NULL DEFAULT 0.0,
+  cost_price REAL DEFAULT NULL,
+  rental_price REAL DEFAULT NULL,
+  sale_price REAL DEFAULT NULL,
   is_active INTEGER NOT NULL DEFAULT 1
 );
 
@@ -142,6 +145,8 @@ CREATE TABLE IF NOT EXISTS suit_units (
   rental_count INTEGER NOT NULL DEFAULT 0,
   purchase_date TEXT,
   purchase_cost REAL DEFAULT 0.0,
+  rental_price REAL DEFAULT NULL,
+  sale_price REAL DEFAULT NULL,
   condition_rating INTEGER DEFAULT 5, -- 1 to 5
   notes TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),

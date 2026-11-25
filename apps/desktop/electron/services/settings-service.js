@@ -176,6 +176,30 @@ class SettingsService {
       return true;
     });
   }
+
+  // --- 5. Keyboard Shortcuts (اختصارات لوحة المفاتيح المخصصة) ---
+  getKeyboardShortcuts() {
+    const db = this.dbConn.getDb();
+    const row = db.prepare("SELECT value FROM settings WHERE key = 'keyboard_shortcuts'").get();
+    if (!row || !row.value) return null;
+    try {
+      return JSON.parse(row.value);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  updateKeyboardShortcuts(shortcuts) {
+    const db = this.dbConn.getDb();
+    const stmt = db.prepare(`
+      INSERT INTO settings (key, value, description, updated_at)
+      VALUES ('keyboard_shortcuts', ?, 'تخصيص اختصارات لوحة المفاتيح السريعة', datetime('now'))
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')
+    `);
+    stmt.run(JSON.stringify(shortcuts || {}));
+    logger.info('Updated keyboard shortcuts settings successfully');
+    return true;
+  }
 }
 
 const settingsService = new SettingsService();

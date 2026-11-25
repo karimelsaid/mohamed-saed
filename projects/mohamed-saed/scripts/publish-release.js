@@ -98,6 +98,7 @@ if (shouldPush) {
     console.log(`  ✓ تم رفع الإصدار الجديد v${newVersion} والوسم إلى مستودع Kenouz بنجاح.`);
 
     console.log('  جاري مزامنة مستودع التحديثات المباشر (mohamed-saed)...');
+    try { execSync('git branch -D release-mohamed-saed', { cwd: repoRoot, stdio: 'pipe' }); } catch (_) {}
     execSync('git subtree split --prefix=projects/mohamed-saed -b release-mohamed-saed', { cwd: repoRoot, stdio: 'pipe' });
     execSync('git push mohamed-saed release-mohamed-saed:master --tags -f', { cwd: repoRoot, stdio: 'pipe' });
     console.log(`  ✓ تم نشر التحديث v${newVersion} سحابياً على مستودع التحديثات المباشر بنجاح! 🚀`);

@@ -38,12 +38,32 @@ if (!gotTheLock) {
   }
 }
 
+function getAppVersion() {
+  try {
+    const pkgPath = path.resolve(__dirname, '..', '..', '..', 'package.json');
+    if (fs.existsSync(pkgPath)) {
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+      if (pkg.version) return pkg.version;
+    }
+  } catch (_) {}
+  try {
+    const db = dbConnection.getDb();
+    const row = db.prepare("SELECT value FROM settings WHERE key = 'last_applied_update_version'").get();
+    if (row && row.value) return row.value;
+  } catch (_) {}
+  if (app && typeof app.getVersion === 'function') {
+    const v = app.getVersion();
+    if (v && v !== '1.0.0') return v;
+  }
+  return '1.0.7';
+}
+
 function registerCoreHandlers() {
   // App info
   ipcRouter.register('app:get-info', async () => {
     return {
       appName: 'نظام إدارة محلات بدل ',
-      version: app.getVersion() || '1.0.0',
+      version: getAppVersion(),
       electronVersion: process.versions.electron || 'standalone',
       nodeVersion: process.versions.node,
       platform: process.platform,
@@ -70,7 +90,7 @@ function registerCoreHandlers() {
       security: settingsService.getSecuritySettings(),
       whatsapp: settingsService.getWhatsAppSettings(),
       shortcuts: settingsService.getKeyboardShortcuts(),
-      appVersion: app.getVersion() || '1.0.5'
+      appVersion: getAppVersion()
     };
   });
 

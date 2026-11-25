@@ -21,6 +21,10 @@ class ToastManager {
   }
 
   show(message, type = 'info', duration = 4000) {
+    let displayMsg = message;
+    if (typeof message === 'object' && message !== null) {
+      displayMsg = message.message || message.error || message.description || JSON.stringify(message);
+    }
     const container = this.ensureContainer();
     const id = `toast_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
 
@@ -31,7 +35,7 @@ class ToastManager {
       info: 'ℹ️'
     };
 
-    const toastData = { id, message, type, duration, icon: icons[type] || 'ℹ️' };
+    const toastData = { id, message: displayMsg, type, duration, icon: icons[type] || 'ℹ️' };
     this.toasts.push(toastData);
 
     if (container) {
@@ -40,7 +44,7 @@ class ToastManager {
       toastEl.className = `toast toast-${type}`;
       toastEl.innerHTML = `
         <span class="toast-icon">${toastData.icon}</span>
-        <div class="toast-body">${message}</div>
+        <div class="toast-body">${displayMsg}</div>
         <button class="toast-close" onclick="AppToast.dismiss('${id}')">×</button>
       `;
 

@@ -17,29 +17,86 @@ const UiUtils = {
   },
 
   /**
-   * تنسيق التاريخ العربي
+   * تنسيق الوقت بنظام 12 ساعة مع ص/م (صباحاً / مساءً)
+   * @param {string|Date} dateStr
+   * @returns {string}
+   */
+  formatTime(dateStr) {
+    if (!dateStr) return '—';
+
+    // دعم نصوص الوقت المباشرة مثل "14:30" أو "02:00:00"
+    if (typeof dateStr === 'string' && /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.test(dateStr.trim())) {
+      const match = dateStr.trim().match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+      let hours = parseInt(match[1], 10);
+      const minutes = match[2];
+      const period = hours < 12 ? 'ص' : 'م';
+      const hours12 = hours % 12 || 12;
+      return `${String(hours12).padStart(2, '0')}:${minutes} ${period}`;
+    }
+
+    const date = (dateStr instanceof Date) ? dateStr : new Date(dateStr);
+    if (isNaN(date.getTime())) return String(dateStr);
+
+    const hours = date.getHours();
+    const minutes = date.getMinutes();
+    const period = hours < 12 ? 'ص' : 'م';
+    const hours12 = hours % 12 || 12; // تحويل 0 إلى 12
+    const minutesStr = String(minutes).padStart(2, '0');
+    const hours12Str = String(hours12).padStart(2, '0');
+
+    return `${hours12Str}:${minutesStr} ${period}`;
+  },
+
+  /**
+   * تنسيق التاريخ العربي مع إمكانية عرض الوقت بنظام 12 ساعة (ص/م)
    * @param {string|Date} dateStr
    * @param {boolean} withTime
    * @returns {string}
    */
   formatDate(dateStr, withTime = false) {
     if (!dateStr) return '—';
-    const date = new Date(dateStr);
+    const date = (dateStr instanceof Date) ? dateStr : new Date(dateStr);
     if (isNaN(date.getTime())) return String(dateStr);
 
-    const options = {
+    const dateFormatted = date.toLocaleDateString('ar-EG', {
       year: 'numeric',
       month: 'long',
       day: 'numeric'
-    };
+    });
 
     if (withTime) {
-      options.hour = '2-digit';
-      options.minute = '2-digit';
-      options.hour12 = true;
+      const timeFormatted = this.formatTime(date);
+      return `${dateFormatted} في ${timeFormatted}`;
     }
 
-    return date.toLocaleDateString('ar-EG', options);
+    return dateFormatted;
+  },
+
+  /**
+   * تنسيق التاريخ والوقت معاً بصيغة 12 ساعة ص/م
+   * @param {string|Date} dateStr
+   * @returns {string}
+   */
+  formatDateTime(dateStr) {
+    return this.formatDate(dateStr, true);
+  },
+
+  /**
+   * تنسيق التاريخ والوقت بالأرقام المختصرة بنظام 12 ساعة
+   * @param {string|Date} dateStr
+   * @returns {string}
+   */
+  formatDateTimeShort(dateStr) {
+    if (!dateStr) return '—';
+    const date = (dateStr instanceof Date) ? dateStr : new Date(dateStr);
+    if (isNaN(date.getTime())) return String(dateStr);
+
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    const timeFormatted = this.formatTime(date);
+
+    return `${y}/${m}/${d} ${timeFormatted}`;
   },
 
   /**
@@ -79,4 +136,3 @@ if (typeof module !== 'undefined' && module.exports) {
 } else {
   window.UiUtils = UiUtils;
 }
-

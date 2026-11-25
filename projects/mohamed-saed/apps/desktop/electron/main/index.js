@@ -69,6 +69,7 @@ function registerCoreHandlers() {
       printers: settingsService.getPrinterSettings(),
       security: settingsService.getSecuritySettings(),
       whatsapp: settingsService.getWhatsAppSettings(),
+      shortcuts: settingsService.getKeyboardShortcuts(),
       appVersion: app.getVersion() || '1.0.5'
     };
   });
@@ -79,6 +80,7 @@ function registerCoreHandlers() {
     if (payload?.pin) settingsService.setPin(payload.pin);
     if (payload?.protectedPages) settingsService.setProtectedPages(payload.protectedPages);
     if (payload?.whatsapp) settingsService.updateWhatsAppSettings(payload.whatsapp);
+    if (payload?.shortcuts) settingsService.updateKeyboardShortcuts(payload.shortcuts);
     return { success: true };
   });
 
@@ -225,7 +227,16 @@ function registerCoreHandlers() {
   });
 
   ipcRouter.register('inventory:get-unit-history', async (payload) => {
-    return inventoryEngineService.getUnitHistory(payload.unitId);
+    if (payload?.productId) {
+      return inventoryEngineService.getProductHistory(payload.productId);
+    }
+    const unitId = payload?.unitId || (typeof payload === 'number' ? payload : null);
+    return inventoryEngineService.getUnitHistory(unitId);
+  });
+
+  ipcRouter.register('inventory:get-product-history', async (payload) => {
+    const prodId = payload?.productId || payload?.id || (typeof payload === 'number' ? payload : null);
+    return inventoryEngineService.getProductHistory(prodId);
   });
 
 
@@ -247,7 +258,7 @@ function registerCoreHandlers() {
   });
 
   ipcRouter.register('inventory:get-product-variants', async (payload) => {
-    return inventoryEngineService.getProductVariants(payload.productId);
+    return inventoryEngineService.getProductVariants(payload?.productId || null);
   });
 
   ipcRouter.register('inventory:adjust-stock', async (payload) => {
@@ -282,11 +293,15 @@ function registerCoreHandlers() {
 
   // Booking Engine Handlers (Phase 7)
   ipcRouter.register('booking:check-availability', async (payload) => {
-    return bookingEngineService.checkUnitAvailability(payload.unitId, payload.pickupDate, payload.returnDueDate);
+    return bookingEngineService.checkUnitAvailability(payload.unitId, payload.pickupDate, payload.returnDueDate, payload.excludeBookingId || null);
   });
 
   ipcRouter.register('booking:create', async (payload) => {
     return bookingEngineService.createBooking(payload);
+  });
+
+  ipcRouter.register('booking:update', async (payload) => {
+    return bookingEngineService.updateBooking(payload.bookingId || payload.id, payload);
   });
 
   ipcRouter.register('booking:get-list', async (payload) => {
@@ -340,8 +355,8 @@ function registerCoreHandlers() {
   });
 
   // Financial Engine & Cash Handlers (Phase 9)
-  ipcRouter.register('finance:get-cash-session', async () => {
-    return financeEngineService.getActiveCashSession();
+  ipcRouter.register('finance:get-cash-session', async (payload) => {
+    return financeEngineService.getActiveCashSession(payload);
   });
 
   ipcRouter.register('finance:open-cash-session', async (payload) => {
@@ -439,6 +454,18 @@ function registerCoreHandlers() {
 
   ipcRouter.register('notifications:get-list', async (payload) => {
     return tasksNotificationsService.getNotifications(payload);
+  });
+
+  ipcRouter.register('notifications:create', async (payload) => {
+    return tasksNotificationsService.createNotification(payload);
+  });
+
+  ipcRouter.register('notifications:delete', async (payload) => {
+    return tasksNotificationsService.deleteNotification(payload?.notificationId);
+  });
+
+  ipcRouter.register('notifications:clear-all', async () => {
+    return tasksNotificationsService.clearAllNotifications();
   });
 
   ipcRouter.register('notifications:mark-read', async (payload) => {
@@ -682,7 +709,9 @@ function createWindow() {
   });
 
   mainWindow.once('ready-to-show', () => {
+    mainWindow.maximize();
     mainWindow.show();
+    mainWindow.focus();
     logger.info('Main Application Window shown successfully.');
   });
 

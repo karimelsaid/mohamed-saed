@@ -35,6 +35,7 @@ const coreFiles = [
   'apps/desktop/electron/services/update-engine-service.js',
   'apps/desktop/renderer/index.html',
   'apps/desktop/renderer/styles.css',
+  'apps/desktop/renderer/components/ui-utils.js',
   'apps/desktop/renderer/renderer.js',
   'apps/desktop/renderer/logo.png',
   'build-resources/icon.ico',

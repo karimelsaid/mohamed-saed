@@ -98,7 +98,7 @@ class PosSalesService {
              col.name as color_name,
              u.unit_barcode as barcode,
              u.unit_barcode as sku,
-             COALESCE(NULLIF(m.sale_price, 0), m.rental_price * 2, m.rental_price, 0) as unit_price,
+             COALESCE(NULLIF(u.sale_price, 0), NULLIF(m.sale_price, 0), u.rental_price * 2, m.rental_price * 2, u.rental_price, m.rental_price, 0) as unit_price,
              1 as quantity_on_hand,
              0 as quantity_reserved,
              1 as available_quantity,
@@ -108,7 +108,7 @@ class PosSalesService {
       JOIN suit_models m ON u.suit_model_id = m.id
       LEFT JOIN sizes s ON u.size_id = s.id
       LEFT JOIN colors col ON m.color_id = col.id
-      WHERE u.status = 'AVAILABLE' AND (m.sale_price > 0 OR m.rental_price > 0)
+      WHERE u.status = 'AVAILABLE' AND (COALESCE(u.sale_price, m.sale_price, 0) > 0 OR COALESCE(u.rental_price, m.rental_price, 0) > 0)
     `;
     const suitParams = [];
     if (search) {

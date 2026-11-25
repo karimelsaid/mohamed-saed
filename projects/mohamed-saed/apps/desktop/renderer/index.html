@@ -48,6 +48,11 @@
             </a>
           </div>
 
+          <a href="#bookings" class="nav-item" data-page="bookings">
+            <span class="icon">📅</span>
+            <span class="label">سجل الحجوزات</span>
+          </a>
+
           <a href="#pos" class="nav-item" data-page="pos">
             <span class="icon">💳</span>
             <span class="label">نقطة البيع (POS)</span>
@@ -93,7 +98,24 @@
       <main class="main-container">
         <!-- Top Header -->
         <header class="app-header">
+          <div class="header-clock" id="header-clock" style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--text-primary); background: var(--bg-card); padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+            <span style="color: var(--color-gold-400); font-size: 14px;">🕒</span>
+            <span id="header-clock-time">--:-- --</span>
+            <span style="color: var(--text-muted); margin: 0 4px; opacity: 0.4;">|</span>
+            <span id="header-clock-date" style="font-size: 12px; color: var(--text-secondary); font-weight: 400;">--</span>
+          </div>
           <div class="header-actions">
+            <!-- Notifications Bell & Dropdown -->
+            <div class="notification-bell-wrapper" id="notification-bell-wrapper" style="position: relative; display: inline-block;">
+              <button id="btn-notifications-toggle" class="btn-icon" title="مركز الإشعارات والتنبيهات" style="position: relative; font-size: 16px;">
+                🔔
+                <span id="notification-badge-count" class="notification-badge" style="display: none;">0</span>
+              </button>
+              <div id="notification-dropdown-panel" class="notification-dropdown" style="display: none;">
+                <!-- Populated dynamically -->
+              </div>
+            </div>
+
             <button id="btn-whatsapp-status" class="btn-secondary" style="font-size: 11px; padding: 5px 10px; display: inline-flex; align-items: center; gap: 6px;" title="ربط واتساب للإرسال المباشر الصامت">
               <span>💬</span> <span id="header-wa-status-text">واتساب</span>
             </button>

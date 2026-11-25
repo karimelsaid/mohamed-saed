@@ -353,6 +353,39 @@ class TasksNotificationsService {
     return this.dbConn.all(sql, [limit]);
   }
 
+  createNotification({ title, message = '', alert_level = 'INFO', reference_type = null, reference_id = null }) {
+    if (!title || !title.trim()) throw new Error('عنوان الإشعار مطلوب.');
+    const db = this.dbConn.getDb();
+    const stmt = db.prepare(`
+      INSERT INTO notifications (title, message, alert_level, is_read, reference_type, reference_id, created_at)
+      VALUES (?, ?, ?, 0, ?, ?, datetime('now'))
+    `);
+    const res = stmt.run(title.trim(), message || '', alert_level, reference_type, reference_id);
+    return {
+      id: res.lastInsertRowid,
+      title: title.trim(),
+      message,
+      alert_level,
+      is_read: 0,
+      reference_type,
+      reference_id,
+      created_at: new Date().toISOString()
+    };
+  }
+
+  deleteNotification(notificationId) {
+    if (!notificationId) throw new Error('معرف الإشعار مطلوب للحذف.');
+    const db = this.dbConn.getDb();
+    db.prepare('DELETE FROM notifications WHERE id = ?').run(notificationId);
+    return { success: true, notificationId };
+  }
+
+  clearAllNotifications() {
+    const db = this.dbConn.getDb();
+    db.prepare('DELETE FROM notifications').run();
+    return { success: true };
+  }
+
   markNotificationRead(notificationId) {
     const db = this.dbConn.getDb();
     if (notificationId === 'ALL') {

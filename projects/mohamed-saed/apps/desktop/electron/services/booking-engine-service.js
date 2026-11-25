@@ -122,8 +122,8 @@ class BookingEngineService {
   // 2. AVAILABILITY CHECKER WITH BUFFER DAYS (فحص التوفر وفترة الأمان)
   // =========================================================================
 
-  checkUnitAvailability(unitId, pickupDate, returnDueDate) {
-    const policies = this.adminService.getRentalPolicies();
+  checkUnitAvailability(unitId, pickupDate, returnDueDate, excludeBookingId = null) {
+    const policies = this.adminService ? this.adminService.getRentalPolicies() : {};
     const bufferDays = policies.bufferCleaningDays || 1;
 
     // Buffer range: expand start and end by buffer days
@@ -136,7 +136,8 @@ class BookingEngineService {
       FROM booking_items bi
       JOIN bookings b ON bi.booking_id = b.id
       WHERE bi.suit_unit_id = ?
-        AND b.status NOT IN ('CANCELLED', 'COMPLETED')
+        AND (? IS NULL OR b.id != ?)
+        AND b.status NOT IN ('CANCELLED', 'COMPLETED', 'RETURNED')
         AND (
           -- Check overlapping with buffer period
           (date(b.pickup_date, '-' || ? || ' days') <= ? AND date(b.return_due_date, '+' || ? || ' days') >= ?)
@@ -147,7 +148,8 @@ class BookingEngineService {
         )
     `;
 
-    const row = db.prepare(sql).get(unitId, bufferDays, returnDueDate, bufferDays, pickupDate, pickupDate, returnDueDate, pickupDate, returnDueDate);
+    const safeExcludeId = (excludeBookingId !== undefined && excludeBookingId !== null && excludeBookingId !== '') ? Number(excludeBookingId) : null;
+    const row = db.prepare(sql).get(Number(unitId), safeExcludeId, safeExcludeId, bufferDays, returnDueDate, bufferDays, pickupDate, pickupDate, returnDueDate, pickupDate, returnDueDate);
 
     const isAvailable = !row;
     return {
@@ -166,7 +168,7 @@ class BookingEngineService {
     let sql = `
       SELECT b.*, c.name as customer_name, c.phone as customer_phone,
              (SELECT COUNT(*) FROM booking_items bi WHERE bi.booking_id = b.id) as items_count,
-             (SELECT GROUP_CONCAT(COALESCE(m.name, 'صنف')) FROM booking_items bi LEFT JOIN suit_units u ON bi.suit_unit_id = u.id LEFT JOIN suit_models m ON u.suit_model_id = m.id WHERE bi.booking_id = b.id) as items_summary
+             (SELECT GROUP_CONCAT(COALESCE(m.name, p.name, bi.item_type, 'صنف')) FROM booking_items bi LEFT JOIN suit_units u ON bi.suit_unit_id = u.id LEFT JOIN suit_models m ON u.suit_model_id = m.id LEFT JOIN product_variants pv ON bi.product_variant_id = pv.id LEFT JOIN products p ON pv.product_id = p.id WHERE bi.booking_id = b.id) as items_summary
       FROM bookings b
       JOIN customers c ON b.customer_id = c.id
       WHERE 1=1
@@ -196,7 +198,7 @@ class BookingEngineService {
     }
 
     sql += ' ORDER BY b.id DESC LIMIT ?';
-    params.push(filters.limit || 50);
+    params.push(filters.limit || 1000);
 
     return this.dbConn.all(sql, params);
   }
@@ -213,12 +215,30 @@ class BookingEngineService {
     if (!booking) return null;
 
     const items = this.dbConn.all(`
-      SELECT bi.*, u.unit_barcode, u.serial_number, m.name as model_name, s.name as size_name, col.name as color_name
+      SELECT bi.*, 
+             COALESCE(u.unit_barcode, pv.barcode, pv.sku, '') as unit_barcode,
+             u.serial_number,
+             COALESCE(u.warehouse_id, psb.warehouse_id, 1) as warehouse_id,
+             COALESCE(m.name, p.name, bi.item_type) as model_name,
+             COALESCE(m.category_id, p.category_id, 1) as category_id,
+             COALESCE(cat.name, pcat.name, bi.item_type) as category_name,
+             COALESCE(w.name, pw.name, 'المخزن الرئيسي') as warehouse_name,
+             COALESCE(s.name, ps.name, '—') as size_name,
+             COALESCE(col.name, pcol.name, '—') as color_name
       FROM booking_items bi
       LEFT JOIN suit_units u ON bi.suit_unit_id = u.id
       LEFT JOIN suit_models m ON u.suit_model_id = m.id
+      LEFT JOIN categories cat ON m.category_id = cat.id
+      LEFT JOIN warehouses w ON u.warehouse_id = w.id
       LEFT JOIN sizes s ON u.size_id = s.id
       LEFT JOIN colors col ON m.color_id = col.id
+      LEFT JOIN product_variants pv ON bi.product_variant_id = pv.id
+      LEFT JOIN products p ON pv.product_id = p.id
+      LEFT JOIN categories pcat ON p.category_id = pcat.id
+      LEFT JOIN sizes ps ON pv.size_id = ps.id
+      LEFT JOIN colors pcol ON pv.color_id = pcol.id
+      LEFT JOIN stock_balances psb ON psb.product_variant_id = pv.id
+      LEFT JOIN warehouses pw ON psb.warehouse_id = pw.id
       WHERE bi.booking_id = ?
     `, [bookingId]);
 
@@ -314,20 +334,24 @@ class BookingEngineService {
 
       // 4. Insert Items and mark unit as BOOKED
       const itStmt = tDb.prepare(`
-        INSERT INTO booking_items (booking_id, suit_unit_id, item_type, rental_price, deposit_price, tailoring_notes, status)
-        VALUES (?, ?, ?, ?, ?, ?, 'BOOKED')
+        INSERT INTO booking_items (booking_id, suit_unit_id, product_variant_id, item_type, rental_price, deposit_price, tailoring_notes, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'BOOKED')
       `);
 
       for (const it of items) {
         const itemDeposit = Number(it.deposit_price !== undefined ? it.deposit_price : it.security_deposit) || 0;
         const itemType = it.item_type || it.category_name || 'SUIT';
-        itStmt.run(bookingId, it.suit_unit_id || null, itemType, it.rental_price, itemDeposit, it.tailoring_notes || null);
-        if (it.suit_unit_id) {
-          tDb.prepare("UPDATE suit_units SET status = 'BOOKED' WHERE id = ?").run(it.suit_unit_id);
+        const unitId = it.suit_unit_id || it.unit_id || null;
+        const variantId = it.product_variant_id || it.variant_id || null;
+        itStmt.run(bookingId, unitId, variantId, itemType, it.rental_price, itemDeposit, it.tailoring_notes || null);
+        if (unitId) {
+          tDb.prepare("UPDATE suit_units SET status = 'BOOKED' WHERE id = ?").run(unitId);
           tDb.prepare(`
             INSERT INTO unit_status_history (suit_unit_id, old_status, new_status, reason, reference_type, reference_id)
             VALUES (?, 'AVAILABLE', 'BOOKED', 'تأكيد حجز العميل', 'BOOKING', ?)
-          `).run(it.suit_unit_id, bookingId);
+          `).run(unitId, bookingId);
+        } else if (variantId) {
+          tDb.prepare("UPDATE stock_balances SET quantity_reserved = quantity_reserved + 1 WHERE product_variant_id = ?").run(variantId);
         }
       }
 
@@ -386,6 +410,209 @@ class BookingEngineService {
         finalAmount,
         paidAmount: paid,
         remainingAmount: finalAmount - paid,
+        totalDeposit
+      };
+    });
+  }
+
+  updateBooking(bookingId, {
+    customer_id,
+    event_date,
+    pickup_date,
+    return_due_date,
+    items = [], // [{ suit_unit_id, rental_price, deposit_price, tailoring_notes }]
+    discount_amount = 0,
+    paid_advance = null,
+    payment_method = 'CASH',
+    notes = ''
+  }) {
+    if (!bookingId) throw new Error('معرف الحجز مطلوب للتعديل.');
+
+    if (pickup_date && (!return_due_date || !String(return_due_date).trim())) {
+      try {
+        const db = this.dbConn.getDb();
+        const row = db.prepare("SELECT value FROM settings WHERE key = 'rental_policy_defaultRentalDays'").get();
+        const days = row && !isNaN(Number(row.value)) ? Number(row.value) : 3;
+        const d = new Date(pickup_date);
+        d.setDate(d.getDate() + days);
+        return_due_date = d.toISOString().slice(0, 10);
+      } catch (e) {
+        const d = new Date(pickup_date);
+        d.setDate(d.getDate() + 3);
+        return_due_date = d.toISOString().slice(0, 10);
+      }
+    }
+
+    if (!pickup_date || !return_due_date) {
+      throw new Error('تاريخ الاستلام وتاريخ الإرجاع حقول إلزامية.');
+    }
+    if (items.length === 0) {
+      throw new Error('يجب اختيار قطعة واحدة على الأقل للحجز.');
+    }
+    if (new Date(return_due_date) < new Date(pickup_date)) {
+      throw new Error('تاريخ الإرجاع يجب أن يلي تاريخ الاستلام.');
+    }
+
+    const db = this.dbConn.getDb();
+
+    return TransactionHelper.runInTransaction(db, (tDb) => {
+      // 1. Fetch existing booking & verify status
+      const existing = tDb.prepare("SELECT * FROM bookings WHERE id = ?").get(bookingId);
+      if (!existing) {
+        throw new Error(`الحجز رقم #${bookingId} غير موجود.`);
+      }
+
+      // Check if booking has already been delivered / completed / cancelled
+      if (['DELIVERED', 'COMPLETED', 'CANCELLED'].includes(existing.status)) {
+        throw new Error('لا يمكن تعديل الحجز بعد تسليم البدلة للعميل أو اكتمال/إلغاء الحجز.');
+      }
+
+      // 2. Strict Availability & Collision Verification (excluding this booking)
+      for (const item of items) {
+        if (item.suit_unit_id) {
+          const avail = this.checkUnitAvailability(item.suit_unit_id, pickup_date, return_due_date, bookingId);
+          if (!avail.isAvailable) {
+            throw new Error(`تعارض زمني: القطعة رقم #${item.suit_unit_id} محجوزة بالفعل في حجز آخر #${avail.conflictingBooking.booking_number}.`);
+          }
+        }
+      }
+
+      // 3. Handle previously booked units and stock (release units no longer in the booking)
+      const prevItems = tDb.prepare("SELECT suit_unit_id, product_variant_id FROM booking_items WHERE booking_id = ?").all(bookingId);
+      const prevUnitIds = prevItems.map(p => p.suit_unit_id).filter(Boolean);
+      const newUnitIds = items.map(it => it.suit_unit_id || it.unit_id).filter(Boolean);
+
+      const unitsToRelease = prevUnitIds.filter(uid => !newUnitIds.includes(uid));
+      for (const uid of unitsToRelease) {
+        tDb.prepare("UPDATE suit_units SET status = 'AVAILABLE' WHERE id = ?").run(uid);
+        tDb.prepare(`
+          INSERT INTO unit_status_history (suit_unit_id, old_status, new_status, reason, reference_type, reference_id)
+          VALUES (?, 'BOOKED', 'AVAILABLE', 'تعديل حجز وإزالة القطعة منه', 'BOOKING', ?)
+        `).run(uid, bookingId);
+      }
+      for (const pi of prevItems) {
+        if (pi.product_variant_id) {
+          tDb.prepare("UPDATE stock_balances SET quantity_reserved = MAX(0, quantity_reserved - 1) WHERE product_variant_id = ?").run(pi.product_variant_id);
+        }
+      }
+
+      // 4. Calculate Totals
+      let totalRental = 0;
+      let totalDeposit = 0;
+      for (const it of items) {
+        totalRental += Number(it.rental_price) || 0;
+        totalDeposit += Number(it.deposit_price !== undefined ? it.deposit_price : it.security_deposit) || 0;
+      }
+
+      const discountNum = Number(discount_amount) || 0;
+      const finalAmount = Math.max(0, totalRental - discountNum);
+
+      // Handle advance payments if specified
+      let newPaidAmount = existing.paid_amount;
+      const cleanMethod = String(payment_method || 'CASH').trim().toUpperCase();
+
+      if (paid_advance !== null && paid_advance !== undefined) {
+        const targetAdvance = Number(paid_advance) || 0;
+        const additionalPaid = targetAdvance - existing.paid_amount;
+
+        if (additionalPaid > 0) {
+          // Additional advance payment received
+          let activeSes = tDb.prepare("SELECT id FROM cash_sessions WHERE status = 'OPEN' LIMIT 1").get();
+          if (!activeSes) {
+            const sessionCode = `SES-AUTO-${Date.now().toString().slice(-6)}`;
+            const autoRes = tDb.prepare(`
+              INSERT INTO cash_sessions (session_code, status, opening_balance, calculated_balance, total_cash_in, total_cash_out, opened_at)
+              VALUES (?, 'OPEN', 0, 0, 0, 0, datetime('now'))
+            `).run(sessionCode);
+            activeSes = { id: autoRes.lastInsertRowid };
+          }
+
+          const payNum = `PAY-ADV-MOD-${Date.now().toString().slice(-5)}`;
+          tDb.prepare(`
+            INSERT INTO payments (payment_number, cash_session_id, customer_id, reference_type, reference_id, payment_type, amount, payment_method, created_at)
+            VALUES (?, ?, ?, 'BOOKING', ?, 'RENTAL_ADVANCE', ?, ?, datetime('now'))
+          `).run(payNum, activeSes.id, customer_id || existing.customer_id, bookingId, additionalPaid, cleanMethod);
+
+          const category = cleanMethod === 'CASH' ? 'RENTAL' : cleanMethod;
+          tDb.prepare(`
+            INSERT INTO cash_transactions (cash_session_id, transaction_type, category, amount, reference_type, reference_id, notes, created_at)
+            VALUES (?, 'IN', ?, ?, 'BOOKING', ?, ?, datetime('now'))
+          `).run(activeSes.id, category, additionalPaid, bookingId, `عربون إضافي بتعديل حجز #${existing.booking_number} (${cleanMethod})`);
+
+          if (cleanMethod === 'CASH') {
+            tDb.prepare(`
+              UPDATE cash_sessions
+              SET total_cash_in = total_cash_in + ?,
+                  calculated_balance = calculated_balance + ?
+              WHERE id = ?
+            `).run(additionalPaid, additionalPaid, activeSes.id);
+          }
+          newPaidAmount += additionalPaid;
+        }
+      }
+
+      // 5. Replace booking items
+      tDb.prepare("DELETE FROM booking_items WHERE booking_id = ?").run(bookingId);
+      const itStmt = tDb.prepare(`
+        INSERT INTO booking_items (booking_id, suit_unit_id, product_variant_id, item_type, rental_price, deposit_price, tailoring_notes, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'BOOKED')
+      `);
+
+      for (const it of items) {
+        const itemDeposit = Number(it.deposit_price !== undefined ? it.deposit_price : it.security_deposit) || 0;
+        const itemType = it.item_type || it.category_name || 'SUIT';
+        const unitId = it.suit_unit_id || it.unit_id || null;
+        const variantId = it.product_variant_id || it.variant_id || null;
+        itStmt.run(bookingId, unitId, variantId, itemType, it.rental_price, itemDeposit, it.tailoring_notes || null);
+        if (unitId) {
+          tDb.prepare("UPDATE suit_units SET status = 'BOOKED' WHERE id = ?").run(unitId);
+        } else if (variantId) {
+          tDb.prepare("UPDATE stock_balances SET quantity_reserved = quantity_reserved + 1 WHERE product_variant_id = ?").run(variantId);
+        }
+      }
+
+      // 6. Update Booking
+      tDb.prepare(`
+        UPDATE bookings SET
+          customer_id = ?,
+          event_date = ?,
+          pickup_date = ?,
+          return_due_date = ?,
+          total_rental_amount = ?,
+          total_deposit_amount = ?,
+          discount_amount = ?,
+          final_amount = ?,
+          paid_amount = ?,
+          notes = ?,
+          updated_at = datetime('now')
+        WHERE id = ?
+      `).run(
+        customer_id || existing.customer_id,
+        event_date || pickup_date,
+        pickup_date,
+        return_due_date,
+        totalRental,
+        totalDeposit,
+        discountNum,
+        finalAmount,
+        newPaidAmount,
+        notes !== undefined ? notes : existing.notes,
+        bookingId
+      );
+
+      // 7. Record status history
+      tDb.prepare(`
+        INSERT INTO booking_status_history (booking_id, old_status, new_status, notes)
+        VALUES (?, ?, ?, 'تم تعديل بيانات وأصناف الحجز')
+      `).run(bookingId, existing.status, existing.status);
+
+      logger.info(`Updated Booking #${existing.booking_number} (ID: ${bookingId})`);
+      return {
+        bookingId,
+        bookingNumber: existing.booking_number,
+        finalAmount,
+        paidAmount: newPaidAmount,
+        remainingAmount: finalAmount - newPaidAmount,
         totalDeposit
       };
     });
@@ -706,8 +933,8 @@ class BookingEngineService {
 
       tDb.prepare("UPDATE bookings SET status = 'CANCELLED', cancellation_reason = ? WHERE id = ?").run(reason, bookingId);
 
-      // Release suit units back to AVAILABLE
-      const items = tDb.prepare('SELECT suit_unit_id FROM booking_items WHERE booking_id = ?').all(bookingId);
+      // Release suit units back to AVAILABLE and decrease quantity_reserved
+      const items = tDb.prepare('SELECT suit_unit_id, product_variant_id FROM booking_items WHERE booking_id = ?').all(bookingId);
       for (const it of items) {
         if (it.suit_unit_id) {
           tDb.prepare("UPDATE suit_units SET status = 'AVAILABLE' WHERE id = ?").run(it.suit_unit_id);
@@ -715,6 +942,8 @@ class BookingEngineService {
             INSERT INTO unit_status_history (suit_unit_id, old_status, new_status, reason, reference_type, reference_id)
             VALUES (?, 'BOOKED', 'AVAILABLE', 'إلغاء الحجز وإتاحة القطعة', 'BOOKING', ?)
           `).run(it.suit_unit_id, bookingId);
+        } else if (it.product_variant_id) {
+          tDb.prepare("UPDATE stock_balances SET quantity_reserved = MAX(0, quantity_reserved - 1) WHERE product_variant_id = ?").run(it.product_variant_id);
         }
       }
 

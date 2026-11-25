@@ -128,7 +128,33 @@ class ReportsEngineService {
     `, paramsSaleItems);
 
     const cogsTotal = cogsRow ? cogsRow.total_cogs : 0;
-    const grossProfit = Math.max(0, grossOperatingRevenue - cogsTotal);
+
+    // Rental COGS (تكلفة الإيجارات - استخدام تكلفة شراء البدلة وتوزيعها)
+    let dateFilterRentalItems = '';
+    const paramsRentalItems = [];
+    if (startDate && endDate) {
+      dateFilterRentalItems = ' WHERE date(b.created_at) BETWEEN date(?) AND date(?)';
+      paramsRentalItems.push(startDate, endDate);
+    } else if (startDate) {
+      dateFilterRentalItems = ' WHERE date(b.created_at) >= date(?)';
+      paramsRentalItems.push(startDate);
+    }
+
+    const rentalCogsRow = this.dbConn.get(`
+      SELECT COALESCE(SUM(
+        COALESCE(NULLIF(u.purchase_cost, 0), sm.cost_price, 0)
+      ), 0) as total_rental_cogs
+      FROM booking_items bi
+      JOIN bookings b ON bi.booking_id = b.id
+      LEFT JOIN suit_units u ON bi.suit_unit_id = u.id
+      LEFT JOIN suit_models sm ON u.suit_model_id = sm.id
+      ${dateFilterRentalItems}
+    `, paramsRentalItems);
+
+    const rentalCogsTotal = rentalCogsRow ? rentalCogsRow.total_rental_cogs : 0;
+    const totalCogs = cogsTotal + rentalCogsTotal;
+
+    const grossProfit = Math.max(0, grossOperatingRevenue - totalCogs);
     const grossMarginPercent = grossOperatingRevenue > 0
       ? Number(((grossProfit / grossOperatingRevenue) * 100).toFixed(1))
       : 0;
@@ -172,7 +198,8 @@ class ReportsEngineService {
       },
       cogs: {
         salesCogs: cogsTotal,
-        totalDirectCosts: cogsTotal
+        rentalCogs: rentalCogsTotal,
+        totalDirectCosts: totalCogs
       },
       grossProfit,
       grossMarginPercent,

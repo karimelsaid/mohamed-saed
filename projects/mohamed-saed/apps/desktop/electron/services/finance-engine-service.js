@@ -14,9 +14,217 @@ class FinanceEngineService {
   // =========================================================================
 
   /**
-   * جلب تفاصيل جلسة الصندوق النشطة المفتوحة حاليًا مع تفصيل الحركات
+   * إثراء تفاصيل الحركة النقدية ببيانات العميل، المنتجات المحجوزة، الملاحظات، وطريقة الدفع الدقيقة
    */
-  getActiveCashSession() {
+  enrichTransaction(t) {
+    let customerName = '-';
+    let customerPhone = '';
+    let refNumber = '-';
+    let paymentMethod = 'CASH';
+    let generalNotes = '';
+    let pickupDate = '';
+    let returnDate = '';
+    let bookingStatus = '';
+    let items = [];
+
+    // استنتاج طريقة الدفع من التصنيف أو البيان
+    if (['VODAFONE_CASH', 'INSTAPAY', 'VISA_CARD', 'BANK_TRANSFER', 'CASH'].includes(t.category)) {
+      paymentMethod = t.category;
+    } else if (t.notes && t.notes.includes('VODAFONE_CASH')) {
+      paymentMethod = 'VODAFONE_CASH';
+    } else if (t.notes && t.notes.includes('INSTAPAY')) {
+      paymentMethod = 'INSTAPAY';
+    } else if (t.notes && (t.notes.includes('VISA_CARD') || t.notes.includes('بطاقة'))) {
+      paymentMethod = 'VISA_CARD';
+    } else if (t.notes && (t.notes.includes('BANK_TRANSFER') || t.notes.includes('تحويل'))) {
+      paymentMethod = 'BANK_TRANSFER';
+    }
+
+    // محاولة استخراج معرّف الحجز إذا لم يكن مسجلاً في reference_id مباشرة
+    let bookingId = (t.reference_type === 'BOOKING') ? t.reference_id : null;
+    let saleId = (t.reference_type === 'SALE') ? t.reference_id : null;
+    let expenseId = (t.reference_type === 'EXPENSE') ? t.reference_id : null;
+
+    if (!bookingId && !saleId && !expenseId && t.notes) {
+      // فحص وجود رقم حجز في البيان مثل #BKG-2026-0001 أو #1
+      const bkgMatch = t.notes.match(/#(BKG-[\w-]+|\d+)/i);
+      if (bkgMatch) {
+        const rawCode = bkgMatch[1];
+        try {
+          const bRow = this.dbConn.get(
+            'SELECT id FROM bookings WHERE booking_number = ? OR id = ?',
+            [rawCode, Number(rawCode) || -1]
+          );
+          if (bRow) bookingId = bRow.id;
+        } catch (_) {}
+      }
+    }
+
+    // جلب بيانات الحجز والعقد والمنتجات المرتبطة
+    if (bookingId) {
+      try {
+        const b = this.dbConn.get(`
+          SELECT b.id, b.booking_number, b.customer_id,
+                 b.pickup_date, b.return_due_date, b.status, b.notes,
+                 c.name as cust_name, c.phone as cust_phone
+          FROM bookings b
+          LEFT JOIN customers c ON c.id = b.customer_id
+          WHERE b.id = ?
+        `, [bookingId]);
+
+        if (b) {
+          refNumber = b.booking_number ? `#${b.booking_number}` : `#${b.id}`;
+          customerName = b.cust_name || 'عميل حجز';
+          customerPhone = b.cust_phone || '';
+          pickupDate = b.pickup_date || '';
+          returnDate = b.return_due_date || '';
+          bookingStatus = b.status || '';
+          generalNotes = b.notes || '';
+
+          // جلب القطع والمنتجات المحجوزة في هذا العقد مع أسمائها ومقاساتها الحقيقية
+          const bItems = this.dbConn.all(`
+            SELECT bi.id, bi.item_type, bi.rental_price, bi.tailoring_notes,
+                   COALESCE(sm.name, p.name, 'قطعة حجز') as model_name,
+                   COALESCE(su.size, pv.size_name, '') as size,
+                   COALESCE(su.color, pv.color_name, '') as color
+            FROM booking_items bi
+            LEFT JOIN suit_units su ON su.id = bi.suit_unit_id
+            LEFT JOIN suit_models sm ON sm.id = su.suit_model_id
+            LEFT JOIN product_variants pv ON pv.id = bi.product_variant_id
+            LEFT JOIN products p ON p.id = pv.product_id
+            WHERE bi.booking_id = ?
+          `, [bookingId]);
+
+          items = (bItems || []).map(it => ({
+            type: it.item_type === 'SUIT' ? 'بدلة كاملة' : (it.item_type === 'SHOE' ? 'حذاء' : (it.item_type || 'قطعة')),
+            name: it.model_name || 'موديل بدلة',
+            size: it.size || '',
+            color: it.color || '',
+            price: it.rental_price || 0,
+            notes: it.tailoring_notes || ''
+          }));
+        }
+      } catch (_) {}
+    }
+    // جلب بيانات فاتورة المبيعات والأصناف المباعة
+    else if (saleId) {
+      try {
+        const s = this.dbConn.get(`
+          SELECT s.id, s.sale_number, s.customer_id, s.payment_method,
+                 c.name as cust_name, c.phone as cust_phone
+          FROM sales s
+          LEFT JOIN customers c ON c.id = s.customer_id
+          WHERE s.id = ?
+        `, [saleId]);
+
+        if (s) {
+          refNumber = s.sale_number ? `#${s.sale_number}` : `#${s.id}`;
+          customerName = s.cust_name || 'عميل نقدي';
+          customerPhone = s.cust_phone || '';
+          if (s.payment_method) paymentMethod = s.payment_method;
+
+          const sItems = this.dbConn.all(`
+            SELECT si.quantity, si.unit_price, si.total_price,
+                   COALESCE(sm.name, p.name, 'صنف مباع') as item_name
+            FROM sale_items si
+            LEFT JOIN suit_units su ON su.id = si.suit_unit_id
+            LEFT JOIN suit_models sm ON sm.id = su.suit_model_id
+            LEFT JOIN product_variants pv ON pv.id = si.product_variant_id
+            LEFT JOIN products p ON p.id = pv.product_id
+            WHERE si.sale_id = ?
+          `, [saleId]);
+
+          items = (sItems || []).map(it => ({
+            type: 'مبيعات',
+            name: it.item_name || 'صنف مباع',
+            size: '',
+            color: '',
+            price: it.unit_price || 0,
+            qty: it.quantity || 1,
+            notes: `الكمية: ${it.quantity || 1}`
+          }));
+        }
+      } catch (_) {}
+    }
+    // جلب بيانات المصروفات
+    else if (expenseId) {
+      try {
+        const exp = this.dbConn.get(`
+          SELECT e.id, e.description, e.payment_method, ec.name as category_name
+          FROM expenses e
+          LEFT JOIN expense_categories ec ON ec.id = e.category_id
+          WHERE e.id = ?
+        `, [expenseId]);
+
+        if (exp) {
+          customerName = exp.category_name || 'مصروف تشغيلي';
+          generalNotes = exp.description || '';
+          if (exp.payment_method) paymentMethod = exp.payment_method;
+        }
+      } catch (_) {}
+    }
+
+    // مطابقة العميل وطريقة الدفع من جدول المدفوعات (payments) كطبقة أمان إضافية
+    if ((!customerName || customerName === '-') && t.reference_type && t.reference_id) {
+      try {
+        const payCust = this.dbConn.get(`
+          SELECT c.name, c.phone, p.payment_method
+          FROM payments p
+          JOIN customers c ON c.id = p.customer_id
+          WHERE p.reference_type = ? AND p.reference_id = ?
+          ORDER BY p.id DESC LIMIT 1
+        `, [t.reference_type, t.reference_id]);
+        if (payCust) {
+          customerName = payCust.name || customerName;
+          customerPhone = payCust.phone || customerPhone;
+          if (payCust.payment_method && (!paymentMethod || paymentMethod === 'CASH')) {
+            paymentMethod = payCust.payment_method;
+          }
+        }
+      } catch (_) {}
+    }
+
+    // مطابقة طريقة الدفع الدقيقة من جدول المدفوعات إن وجدت
+    if (t.reference_type && t.reference_id && (!paymentMethod || paymentMethod === 'CASH')) {
+      try {
+        const pay = this.dbConn.get(`
+          SELECT payment_method FROM payments
+          WHERE reference_type = ? AND reference_id = ?
+          ORDER BY id DESC LIMIT 1
+        `, [t.reference_type, t.reference_id]);
+        if (pay && pay.payment_method) {
+          paymentMethod = pay.payment_method;
+        }
+      } catch (_) {}
+    }
+
+    const methodLabels = {
+      CASH: '💵 كاش بالدرج',
+      VODAFONE_CASH: '📱 محفظة إلكترونية (فودافون كاش)',
+      INSTAPAY: '⚡ إنستاباي (InstaPay)',
+      VISA_CARD: '💳 فيزا / بطاقة بنكية',
+      BANK_TRANSFER: '🏦 تحويل بنكي'
+    };
+
+    return {
+      ...t,
+      payment_method: paymentMethod || 'CASH',
+      payment_method_label: methodLabels[paymentMethod] || '💵 نقدي (كاش)',
+      customer_name: customerName,
+      customer_phone: customerPhone,
+      reference_number: refNumber,
+      pickup_date: pickupDate,
+      return_date: returnDate,
+      booking_status: bookingStatus,
+      general_notes: generalNotes,
+      items: items
+    };
+  }
+
+  /**
+   * جلب تفاصيل جلسة الصندوق النشطة المفتوحة حاليًا مع تفصيل الحركات المثرية
+   */
+  getActiveCashSession(options = {}) {
     const session = this.dbConn.get(`
       SELECT * FROM cash_sessions WHERE status = 'OPEN' ORDER BY id DESC LIMIT 1
     `);
@@ -51,13 +259,29 @@ class FinanceEngineService {
       if (b.category === 'MANUAL_OUT' && b.transaction_type === 'OUT') manualOut += b.total_amount;
     }
 
-    // Recent 50 transactions
-    const recentTransactions = this.dbConn.all(`
-      SELECT * FROM cash_transactions
-      WHERE cash_session_id = ?
-      ORDER BY id DESC
-      LIMIT 50
-    `, [session.id]);
+    // استعلام ديناميكي يدعم الفلترة بالتواريخ وطرق الدفع
+    let query = `SELECT * FROM cash_transactions WHERE cash_session_id = ?`;
+    const params = [session.id];
+
+    if (options && options.startDate) {
+      query += ` AND date(created_at) >= date(?)`;
+      params.push(options.startDate);
+    }
+    if (options && options.endDate) {
+      query += ` AND date(created_at) <= date(?)`;
+      params.push(options.endDate);
+    }
+    if (options && options.paymentMethod && options.paymentMethod !== 'ALL') {
+      query += ` AND (category = ? OR notes LIKE ?)`;
+      params.push(options.paymentMethod, `%${options.paymentMethod}%`);
+    }
+
+    const limit = (options && options.limit) || 100;
+    query += ` ORDER BY id DESC LIMIT ?`;
+    params.push(limit);
+
+    const rawTransactions = this.dbConn.all(query, params);
+    const enrichedTransactions = (rawTransactions || []).map(t => this.enrichTransaction(t));
 
     const txCount = this.dbConn.get('SELECT COUNT(*) as total FROM cash_transactions WHERE cash_session_id = ?', [session.id]).total;
 
@@ -73,7 +297,7 @@ class FinanceEngineService {
         manualIn,
         manualOut
       },
-      recent_transactions: recentTransactions
+      recent_transactions: enrichedTransactions
     };
   }
 
@@ -439,7 +663,7 @@ class FinanceEngineService {
     // 5. Cost of Goods Sold (COGS / تكلفة البضاعة المباعة للبيع المباشر والقطع)
     const cogsRow = this.dbConn.get(`
       SELECT COALESCE(SUM(
-        CASE 
+        CASE
           WHEN si.product_variant_id IS NOT NULL THEN (COALESCE(p.cost_price, 0) * si.quantity)
           WHEN si.suit_unit_id IS NOT NULL THEN COALESCE(NULLIF(u.purchase_cost, 0), sm.cost_price, 0)
           ELSE 0
@@ -452,7 +676,21 @@ class FinanceEngineService {
       LEFT JOIN suit_units u ON si.suit_unit_id = u.id
       LEFT JOIN suit_models sm ON u.suit_model_id = sm.id
     `);
-    const totalCogs = cogsRow ? cogsRow.total_cogs : 0;
+    const salesCogs = cogsRow ? cogsRow.total_cogs : 0;
+
+    // 5b. Rental COGS (تكلفة الإيجارات - استخدام تكلفة شراء البدلة)
+    const rentalCogsRow = this.dbConn.get(`
+      SELECT COALESCE(SUM(
+        COALESCE(NULLIF(u.purchase_cost, 0), sm.cost_price, 0)
+      ), 0) as total_rental_cogs
+      FROM booking_items bi
+      JOIN bookings b ON bi.booking_id = b.id
+      LEFT JOIN suit_units u ON bi.suit_unit_id = u.id
+      LEFT JOIN suit_models sm ON u.suit_model_id = sm.id
+    `);
+    const rentalCogs = rentalCogsRow ? rentalCogsRow.total_rental_cogs : 0;
+
+    const totalCogs = salesCogs + rentalCogs;
 
     // 6. Escrow Deposits Held (Liabilities - NOT Revenue)
     const escrow = this.getEscrowDepositsSummary();
@@ -473,6 +711,8 @@ class FinanceEngineService {
       lateFeesRevenue: fees.total_late_fees,
       damageFeesRevenue: fees.total_damage_fees,
       grossOperatingRevenue,
+      salesCogs,
+      rentalCogs,
       totalCogs,
       grossProfit,
       totalExpenses,

@@ -112,6 +112,35 @@ class DatabaseConnection {
           }
         } catch (_) {}
       }
+
+      // 5. Ensure suit_units has custom rental_price and sale_price columns
+      try {
+        const suitUnitCols = db.prepare("PRAGMA table_info(suit_units)").all().map(c => c.name);
+        if (!suitUnitCols.includes('rental_price')) {
+          db.exec("ALTER TABLE suit_units ADD COLUMN rental_price REAL DEFAULT NULL;");
+          logger.info('Added column rental_price to suit_units table');
+        }
+        if (!suitUnitCols.includes('sale_price')) {
+          db.exec("ALTER TABLE suit_units ADD COLUMN sale_price REAL DEFAULT NULL;");
+          logger.info('Added column sale_price to suit_units table');
+        }
+
+        const variantCols = db.prepare("PRAGMA table_info(product_variants)").all().map(c => c.name);
+        if (!variantCols.includes('cost_price')) {
+          db.exec("ALTER TABLE product_variants ADD COLUMN cost_price REAL DEFAULT NULL;");
+          logger.info('Added column cost_price to product_variants table');
+        }
+        if (!variantCols.includes('rental_price')) {
+          db.exec("ALTER TABLE product_variants ADD COLUMN rental_price REAL DEFAULT NULL;");
+          logger.info('Added column rental_price to product_variants table');
+        }
+        if (!variantCols.includes('sale_price')) {
+          db.exec("ALTER TABLE product_variants ADD COLUMN sale_price REAL DEFAULT NULL;");
+          logger.info('Added column sale_price to product_variants table');
+        }
+      } catch (alterErr) {
+        logger.warn(`Non-fatal error updating schema: ${alterErr.message}`);
+      }
     } catch (seedErr) {
       logger.warn(`Non-fatal error seeding default data: ${seedErr.message}`);
     }

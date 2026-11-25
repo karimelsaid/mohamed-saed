@@ -2122,7 +2122,7 @@
   const pageContent = document.getElementById('page-content');
   const unlockedPagesSession = new Set();
   let cachedAppSettings = null;
-  let currentAppVersion = '1.0.5';
+  let currentAppVersion = '1.0.7';
 
   const PAGE_TITLES = {
     dashboard: 'لوحة التحكم',
@@ -6384,7 +6384,7 @@
             <h3 style="margin: 0; font-size: 16px;">🚀 التحديثات التلقائية للنظام (Auto Updates & Safety Staging)</h3>
             <p style="margin: 4px 0 0; font-size: 12px; color: var(--text-secondary);">فحص وتنزيل وتثبيت التحديثات الجديدة مع فحص البصمة الرقمية (SHA-256) والنسخ الاحتياطي الحتمي قبل التحديث</p>
           </div>
-          <span class="badge badge-gold" id="current-app-version-badge">الإصدار الحالي: v${cachedAppSettings?.appVersion || currentAppVersion || "1.0.5"}</span>
+          <span class="badge badge-gold" id="current-app-version-badge">الإصدار الحالي: v${cachedAppSettings?.appVersion || currentAppVersion || "1.0.7"}</span>
         </div>
 
         <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 16px;">
@@ -8048,7 +8048,7 @@
         if (btnDownload) btnDownload.style.display = 'none';
 
         // Render Animated Modern Progress & Stages Card
-        const targetVer = currentUpdateData?.latestVersion || currentAppVersion || '1.0.5';
+        const targetVer = currentUpdateData?.latestVersion || currentAppVersion || '1.0.7';
         const fileSizeMB = currentUpdateData?.fileSizeBytes ? (currentUpdateData.fileSizeBytes / (1024 * 1024)).toFixed(1) : '43.2';
 
         statusArea.innerHTML = `
@@ -8241,7 +8241,7 @@
     };
 
     document.getElementById('btn-apply-update')?.addEventListener('click', () => {
-      window._executeApplyUpdateSequence(currentUpdateData?.latestVersion || currentAppVersion || '1.0.5');
+      window._executeApplyUpdateSequence(currentUpdateData?.latestVersion || currentAppVersion || '1.0.7');
     });
   }
 

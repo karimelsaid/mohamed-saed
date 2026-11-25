@@ -24,20 +24,25 @@ class UpdateEngineService {
 
   readCurrentAppVersion() {
     try {
-      const { app } = require('electron');
-      if (app && typeof app.getVersion === 'function') {
-        const v = app.getVersion();
-        if (v) return v;
-      }
-    } catch (_) {}
-    try {
       const pkgPath = path.resolve(__dirname, '..', '..', '..', '..', 'package.json');
       if (fs.existsSync(pkgPath)) {
         const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
-        return pkg.version || '1.0.5';
+        if (pkg.version) return pkg.version;
       }
     } catch (_) {}
-    return '1.0.5';
+    try {
+      const db = this.dbConn.getDb();
+      const row = db.prepare("SELECT value FROM settings WHERE key = 'last_applied_update_version'").get();
+      if (row && row.value) return row.value;
+    } catch (_) {}
+    try {
+      const { app } = require('electron');
+      if (app && typeof app.getVersion === 'function') {
+        const v = app.getVersion();
+        if (v && v !== '1.0.0') return v;
+      }
+    } catch (_) {}
+    return '1.0.7';
   }
 
   getDefaultUpdatesDir() {
@@ -199,7 +204,7 @@ class UpdateEngineService {
       fs.mkdirSync(destinationDir, { recursive: true });
     }
 
-    const targetVersion = this.latestReleaseInfo?.version || '1.0.4';
+    const targetVersion = this.latestReleaseInfo?.version || this.readCurrentAppVersion() || '1.0.7';
 
     // 1. Check for real installer executables in updates cache or dist
     const possibleInstallers = [
@@ -225,12 +230,12 @@ class UpdateEngineService {
       }
     }
 
-    // 3. Fallback: Search dist directory for any matching Setup exe
+    // 3. Fallback: Search dist directory for matching Setup exe for the EXACT targetVersion
     if (!foundInstaller) {
       const distDir = path.resolve(__dirname, '..', '..', '..', '..', 'dist');
       if (fs.existsSync(distDir)) {
         const files = fs.readdirSync(distDir);
-        const setupFile = files.find(f => f.includes('Setup') && f.endsWith('.exe'));
+        const setupFile = files.find(f => (f.includes(`Setup ${targetVersion}`) || f.includes(`setup-${targetVersion}`) || f.includes(` ${targetVersion}.exe`)) && f.endsWith('.exe'));
         if (setupFile) {
           foundInstaller = path.join(distDir, setupFile);
         }
@@ -304,7 +309,7 @@ class UpdateEngineService {
     }
 
     // الخطوة 4: توثيق التحديث في جدول الإعدادات / السجل
-    const targetVer = this.latestReleaseInfo?.version || '1.0.4';
+    const targetVer = this.latestReleaseInfo?.version || this.readCurrentAppVersion() || '1.0.7';
     try {
       db.prepare(`
         INSERT OR REPLACE INTO settings (key, value)

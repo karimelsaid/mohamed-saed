@@ -102,6 +102,14 @@ if (shouldPush) {
     execSync('git subtree split --prefix=projects/mohamed-saed -b release-mohamed-saed', { cwd: repoRoot, stdio: 'pipe' });
     execSync('git push mohamed-saed release-mohamed-saed:master --tags -f', { cwd: repoRoot, stdio: 'pipe' });
     console.log(`  ✓ تم نشر التحديث v${newVersion} سحابياً على مستودع التحديثات المباشر بنجاح! 🚀`);
+
+    // رفع ملف التثبيت التنفيذي كـ GitHub Release Asset
+    try {
+      console.log('  جاري رفع ملف التثبيت كـ GitHub Release Asset...');
+      execSync('node scripts/upload-release-asset.js', { cwd: rootDir, stdio: 'inherit' });
+    } catch (assetErr) {
+      console.log(`  ℹ️ ملاحظة أثناء رفع الـ Asset: ${assetErr.message}`);
+    }
   } catch (gitErr) {
     const errMsg = gitErr.stderr ? gitErr.stderr.toString() : gitErr.message;
     console.log(`  ℹ️ ملاحظة أثناء المزامنة: ${errMsg || 'سيتم النشر مع الدفعة التالية'}`);

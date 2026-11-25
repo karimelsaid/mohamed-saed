@@ -3,6 +3,7 @@
   "previousVersion": "1.0.6",
   "releaseDate": "2026-11-25",
   "releaseNotes": "تحديث رسمي جديد للإصدار v1.0.7 يتضمن مركز الإشعارات بالنافبار، تخصيص اختصارات الكيبورد، وتخصيص أسعار وتكاليف المقاسات المستقلة.",
+  "downloadUrl": "https://github.com/karimelsaid/mohamed-saed/releases/download/v1.0.7/suit-store-update-1.0.7.exe",
   "sha256": "6515ced06deabf3f45b51e83ec067854d47e59ef8d9dea5ce1e945a2cf61286c",
   "fileSizeBytes": 121488617,
   "mandatory": false,

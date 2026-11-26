@@ -108,7 +108,9 @@ class InventoryEngineService {
              s.name as size_name, s.code as size_code, w.name as warehouse_name, col.name as color_name,
              (SELECT b.booking_number FROM booking_items bi JOIN bookings b ON bi.booking_id = b.id WHERE bi.suit_unit_id = u.id AND b.status NOT IN ('CANCELLED', 'COMPLETED') ORDER BY b.id DESC LIMIT 1) as active_booking_number,
              (SELECT c.name FROM booking_items bi JOIN bookings b ON bi.booking_id = b.id JOIN customers c ON b.customer_id = c.id WHERE bi.suit_unit_id = u.id AND b.status NOT IN ('CANCELLED', 'COMPLETED') ORDER BY b.id DESC LIMIT 1) as active_customer_name,
-             (SELECT b.status FROM booking_items bi JOIN bookings b ON bi.booking_id = b.id WHERE bi.suit_unit_id = u.id AND b.status NOT IN ('CANCELLED', 'COMPLETED') ORDER BY b.id DESC LIMIT 1) as active_booking_status
+             (SELECT b.status FROM booking_items bi JOIN bookings b ON bi.booking_id = b.id WHERE bi.suit_unit_id = u.id AND b.status NOT IN ('CANCELLED', 'COMPLETED', 'RETURNED') ORDER BY b.return_due_date DESC LIMIT 1) as active_booking_status,
+             (SELECT b.return_due_date FROM booking_items bi JOIN bookings b ON bi.booking_id = b.id WHERE bi.suit_unit_id = u.id AND b.status NOT IN ('CANCELLED', 'COMPLETED', 'RETURNED') ORDER BY b.return_due_date DESC LIMIT 1) as active_return_due_date,
+             (SELECT b.pickup_date FROM booking_items bi JOIN bookings b ON bi.booking_id = b.id WHERE bi.suit_unit_id = u.id AND b.status NOT IN ('CANCELLED', 'COMPLETED', 'RETURNED') ORDER BY b.return_due_date DESC LIMIT 1) as active_pickup_date
       FROM suit_units u
       JOIN suit_models m ON u.suit_model_id = m.id
       LEFT JOIN categories cat ON m.category_id = cat.id

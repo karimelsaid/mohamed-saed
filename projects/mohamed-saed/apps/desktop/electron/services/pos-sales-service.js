@@ -23,7 +23,7 @@ class PosSalesService {
           quantity INTEGER NOT NULL DEFAULT 1,
           refund_amount REAL NOT NULL,
           condition TEXT NOT NULL DEFAULT 'GOOD',
-          created_at TEXT NOT NULL DEFAULT (datetime('now'))
+          created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
         );
       `);
     } catch (err) {
@@ -303,7 +303,7 @@ class PosSalesService {
           sale_number, customer_id, subtotal, discount, tax, total_amount, paid_amount,
           change_amount, payment_method, cash_session_id, created_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))
       `).run(
         saleNumber, customer_id || null, calculatedSubtotal, overallDiscount,
         taxAmount, finalTotal, paid, change, payment_method, cashSession.id
@@ -324,7 +324,7 @@ class PosSalesService {
           tDb.prepare(`
             UPDATE stock_balances
             SET quantity_on_hand = quantity_on_hand - ?,
-                updated_at = datetime('now')
+                updated_at = datetime('now', 'localtime')
             WHERE warehouse_id = ? AND product_variant_id = ?
           `).run(vi.quantity, warehouse_id, vi.product_variant_id);
 
@@ -337,7 +337,7 @@ class PosSalesService {
           // Mark suit unit as SOLD
           tDb.prepare(`
             UPDATE suit_units
-            SET status = 'SOLD', updated_at = datetime('now')
+            SET status = 'SOLD', updated_at = datetime('now', 'localtime')
             WHERE id = ?
           `).run(vi.suit_unit_id);
 
@@ -353,7 +353,7 @@ class PosSalesService {
       const invoiceNumber = `INV-S-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Date.now().toString().slice(-4)}`;
       const invRes = tDb.prepare(`
         INSERT INTO invoices (invoice_number, invoice_type, reference_id, customer_id, subtotal, discount, total, paid, due, created_at)
-        VALUES (?, 'SALE', ?, ?, ?, ?, ?, ?, 0, datetime('now'))
+        VALUES (?, 'SALE', ?, ?, ?, ?, ?, ?, 0, datetime('now', 'localtime'))
       `).run(invoiceNumber, saleId, customer_id || null, calculatedSubtotal, overallDiscount, finalTotal, finalTotal);
       const invoiceId = invRes.lastInsertRowid;
 
@@ -371,7 +371,7 @@ class PosSalesService {
       const paymentNumber = `PAY-S-${Date.now().toString().slice(-8)}`;
       tDb.prepare(`
         INSERT INTO payments (payment_number, cash_session_id, customer_id, reference_type, reference_id, payment_type, amount, payment_method, created_at)
-        VALUES (?, ?, ?, 'SALE', ?, 'SALE', ?, ?, datetime('now'))
+        VALUES (?, ?, ?, 'SALE', ?, 'SALE', ?, ?, datetime('now', 'localtime'))
       `).run(paymentNumber, cashSession.id, customer_id || null, saleId, finalTotal, payment_method);
 
       if (payment_method === 'CASH') {
@@ -470,7 +470,7 @@ class PosSalesService {
       const returnNumber = `RET-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Date.now().toString().slice(-4)}`;
       const retRes = tDb.prepare(`
         INSERT INTO sales_returns (return_number, sale_id, total_refund, reason, cash_session_id, created_at)
-        VALUES (?, ?, ?, ?, ?, datetime('now'))
+        VALUES (?, ?, ?, ?, ?, datetime('now', 'localtime'))
       `).run(returnNumber, sale_id, finalRefund, reason, cashSession.id || null);
       const returnId = retRes.lastInsertRowid;
 
@@ -489,7 +489,7 @@ class PosSalesService {
             tDb.prepare(`
               UPDATE stock_balances
               SET quantity_on_hand = quantity_on_hand + ?,
-                  updated_at = datetime('now')
+                  updated_at = datetime('now', 'localtime')
               WHERE warehouse_id = 1 AND product_variant_id = ?
             `).run(vr.quantity, vr.product_variant_id);
 
@@ -519,7 +519,7 @@ class PosSalesService {
       const invNumber = `INV-RET-${Date.now().toString().slice(-8)}`;
       tDb.prepare(`
         INSERT INTO invoices (invoice_number, invoice_type, reference_id, customer_id, subtotal, discount, total, paid, due, created_at)
-        VALUES (?, 'RETURN', ?, ?, ?, 0, ?, ?, 0, datetime('now'))
+        VALUES (?, 'RETURN', ?, ?, ?, 0, ?, ?, 0, datetime('now', 'localtime'))
       `).run(invNumber, returnId, sale.customer_id, finalRefund, -finalRefund, -finalRefund);
 
       // 6. Record Cash Refund Outflow

@@ -91,7 +91,7 @@ class TasksNotificationsService {
     const db = this.dbConn.getDb();
     const stmt = db.prepare(`
       INSERT INTO tasks (title, description, task_type, priority, due_date, booking_id, suit_unit_id, status, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, 'PENDING', datetime('now'))
+      VALUES (?, ?, ?, ?, ?, ?, ?, 'PENDING', datetime('now', 'localtime'))
     `);
     const res = stmt.run(title.trim(), description.trim(), task_type, priority, due_date, booking_id || null, suit_unit_id || null);
 
@@ -115,7 +115,7 @@ class TasksNotificationsService {
     const res = db.prepare(`
       UPDATE tasks
       SET status = 'COMPLETED',
-          completed_at = datetime('now')
+          completed_at = datetime('now', 'localtime')
       WHERE id = ?
     `).run(taskId);
 
@@ -144,7 +144,7 @@ class TasksNotificationsService {
       const existingTasksStmt = tDb.prepare('SELECT id FROM tasks WHERE booking_id = ? AND task_type = ?');
       const insertTaskStmt = tDb.prepare(`
         INSERT INTO tasks (title, description, task_type, priority, due_date, booking_id, status, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, 'PENDING', datetime('now'))
+        VALUES (?, ?, ?, ?, ?, ?, 'PENDING', datetime('now', 'localtime'))
       `);
 
       for (const b of activeBookings) {
@@ -260,6 +260,37 @@ class TasksNotificationsService {
     }));
   }
 
+  getPickupsDueToday() {
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const sql = `
+      SELECT b.id as booking_id,
+             b.booking_number,
+             b.status,
+             b.pickup_date,
+             b.return_due_date,
+             b.deposit_paid,
+             b.final_amount,
+             c.id as customer_id,
+             c.name as customer_name,
+             c.phone as customer_phone,
+             (SELECT GROUP_CONCAT(COALESCE(m.name, 'بدلة') || ' (' || COALESCE(s.name, '-') || ')')
+              FROM booking_items bi
+              LEFT JOIN suit_units u ON bi.suit_unit_id = u.id
+              LEFT JOIN suit_models m ON u.suit_model_id = m.id
+              LEFT JOIN sizes s ON u.size_id = s.id
+              WHERE bi.booking_id = b.id) as items_summary,
+             (SELECT COUNT(*) FROM notification_logs nl 
+              WHERE (nl.customer_id = c.id OR (c.phone IS NOT NULL AND nl.phone LIKE '%' || SUBSTR(REPLACE(REPLACE(c.phone, '+', ''), ' ', ''), -9)))
+              AND nl.sent_status = 'SENT' AND date(nl.created_at) = date(?)) as sent_today_count
+      FROM bookings b
+      JOIN customers c ON b.customer_id = c.id
+      WHERE b.status = 'CONFIRMED'
+        AND date(b.pickup_date) = date(?)
+      ORDER BY b.id DESC
+    `;
+    return this.dbConn.all(sql, [todayStr, todayStr]);
+  }
+
   // =========================================================================
   // 2. IN-APP ALERTS & NOTIFICATIONS (نظام التنبيهات الذكي)
   // =========================================================================
@@ -358,7 +389,7 @@ class TasksNotificationsService {
     const db = this.dbConn.getDb();
     const stmt = db.prepare(`
       INSERT INTO notifications (title, message, alert_level, is_read, reference_type, reference_id, created_at)
-      VALUES (?, ?, ?, 0, ?, ?, datetime('now'))
+      VALUES (?, ?, ?, 0, ?, ?, datetime('now', 'localtime'))
     `);
     const res = stmt.run(title.trim(), message || '', alert_level, reference_type, reference_id);
     return {
@@ -499,6 +530,33 @@ class TasksNotificationsService {
       }
     }
 
+    // 3. تذكير بموعد استلام البدل (يوم الاستلام)
+    if (waSettings.autoSendPickups) {
+      const pickups = this.getPickupsDueToday();
+      for (const p of pickups) {
+        if (!p.customer_phone) continue;
+        if (p.sent_today_count > 0) {
+          skippedCount++;
+          continue;
+        }
+
+        const pickupMsg = `مرحباً ${p.customer_name}، نود تذكيركم بأن موعد استلام بدلتكم (حجز #${p.booking_number}) لمحل [${storeName}] هو اليوم (${p.pickup_date})! البدلة جاهزة ومجهزة بانتظار تشريفكم. نسعد بخدمتكم دائماً! 🎉`;
+        try {
+          logger.info(`Auto-sending WhatsApp pickup reminder to ${p.customer_name} (${p.customer_phone})...`);
+          await whatsappDirectService.sendMessage({
+            phone: p.customer_phone,
+            message: pickupMsg,
+            customerId: p.customer_id
+          });
+          sentCount++;
+          await new Promise(res => setTimeout(res, 2000));
+        } catch (sendErr) {
+          logger.error(`Failed to auto-send pickup alert to ${p.customer_phone}: ${sendErr.message}`);
+          errors.push({ phone: p.customer_phone, name: p.customer_name, error: sendErr.message });
+        }
+      }
+    }
+
     logger.info(`Completed auto WhatsApp alerts run: ${sentCount} sent, ${skippedCount} skipped.`);
     return {
       success: true,
@@ -543,7 +601,7 @@ class TasksNotificationsService {
       const db = this.dbConn.getDb();
       db.prepare(`
         INSERT INTO notification_logs (customer_id, channel, phone, message_template, sent_status, created_at)
-        VALUES (?, 'WHATSAPP', ?, ?, 'GENERATED', datetime('now'))
+        VALUES (?, 'WHATSAPP', ?, ?, 'GENERATED', datetime('now', 'localtime'))
       `).run(customer_id || null, cleanPhone, renderedText);
     } catch (e) {
       logger.warn('Could not write notification log:', e);

@@ -70,7 +70,7 @@ class FinanceRepository {
 
       tDb.prepare(`
         UPDATE cash_sessions
-        SET closed_at = datetime('now'),
+        SET closed_at = datetime('now', 'localtime'),
             actual_balance = ?,
             difference = ?,
             status = 'CLOSED',

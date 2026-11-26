@@ -35,8 +35,8 @@ class SettingsService {
     return TransactionHelper.runInTransaction(db, (tDb) => {
       const stmt = tDb.prepare(`
         INSERT INTO settings (key, value, description, updated_at)
-        VALUES (?, ?, 'بيانات المتجر العامة', datetime('now'))
-        ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')
+        VALUES (?, ?, 'بيانات المتجر العامة', datetime('now', 'localtime'))
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now', 'localtime')
       `);
 
       for (const [k, v] of Object.entries(data)) {
@@ -70,8 +70,8 @@ class SettingsService {
     return TransactionHelper.runInTransaction(db, (tDb) => {
       const stmt = tDb.prepare(`
         INSERT INTO settings (key, value, description, updated_at)
-        VALUES (?, ?, 'إعدادات الطابعة', datetime('now'))
-        ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')
+        VALUES (?, ?, 'إعدادات الطابعة', datetime('now', 'localtime'))
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now', 'localtime')
       `);
 
       for (const [k, v] of Object.entries(settings)) {
@@ -107,8 +107,8 @@ class SettingsService {
     const db = this.dbConn.getDb();
     const stmt = db.prepare(`
       INSERT INTO settings (key, value, description, updated_at)
-      VALUES ('security_protected_pages', ?, 'قائمة الصفحات المحمية برمز PIN', datetime('now'))
-      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')
+      VALUES ('security_protected_pages', ?, 'قائمة الصفحات المحمية برمز PIN', datetime('now', 'localtime'))
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now', 'localtime')
     `);
     stmt.run(JSON.stringify(Array.isArray(pages) ? pages : []));
     logger.info('Updated protected pages successfully');
@@ -123,8 +123,8 @@ class SettingsService {
     const db = this.dbConn.getDb();
     const stmt = db.prepare(`
       INSERT INTO settings (key, value, description, updated_at)
-      VALUES ('security_pin_hash', ?, 'رمز قفل الشاشة المشفر', datetime('now'))
-      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')
+      VALUES ('security_pin_hash', ?, 'رمز قفل الشاشة المشفر', datetime('now', 'localtime'))
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now', 'localtime')
     `);
     stmt.run(hash);
     logger.info('Security PIN updated successfully');
@@ -150,7 +150,8 @@ class SettingsService {
       autoSendAlerts: false, // الزر الرئيسي: إرسال تلقائي بدون الحاجة للضغط اليدوي
       autoSendReturns: true,  // تذكير بمواعيد إرجاع البدل (اليوم وغداً)
       autoSendOverdue: true,  // تنبيهات عاجلة للبدل المتأخرة
-      autoSendFittings: true  // تذكير بمواعيد البروفات
+      autoSendFittings: true, // تذكير بمواعيد البروفات
+      autoSendPickups: true   // تذكير بمواعيد استلام البدل (يوم الاستلام)
     };
 
     for (const r of rows) {
@@ -165,8 +166,8 @@ class SettingsService {
     return TransactionHelper.runInTransaction(db, (tDb) => {
       const stmt = tDb.prepare(`
         INSERT INTO settings (key, value, description, updated_at)
-        VALUES (?, ?, 'إعدادات الإرسال التلقائي لواتساب', datetime('now'))
-        ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')
+        VALUES (?, ?, 'إعدادات الإرسال التلقائي لواتساب', datetime('now', 'localtime'))
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now', 'localtime')
       `);
 
       for (const [k, v] of Object.entries(settings)) {
@@ -193,8 +194,8 @@ class SettingsService {
     const db = this.dbConn.getDb();
     const stmt = db.prepare(`
       INSERT INTO settings (key, value, description, updated_at)
-      VALUES ('keyboard_shortcuts', ?, 'تخصيص اختصارات لوحة المفاتيح السريعة', datetime('now'))
-      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')
+      VALUES ('keyboard_shortcuts', ?, 'تخصيص اختصارات لوحة المفاتيح السريعة', datetime('now', 'localtime'))
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now', 'localtime')
     `);
     stmt.run(JSON.stringify(shortcuts || {}));
     logger.info('Updated keyboard shortcuts settings successfully');

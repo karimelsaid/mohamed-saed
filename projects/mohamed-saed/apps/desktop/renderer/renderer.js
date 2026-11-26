@@ -3164,7 +3164,7 @@
 
         const rawUnits = extractList(unitsRes);
         this.rawUnitsAll = rawUnits;
-        this.allUnits = rawUnits.filter(u => !u.status || String(u.status).toUpperCase() === 'AVAILABLE');
+        this.allUnits = rawUnits.filter(u => !['RETIRED', 'DAMAGED', 'IN_MAINTENANCE'].includes(u.status));
         this.allProductVariants = extractList(variantsRes);
         this.quantityProducts = extractList(qProdRes);
         this.customers = extractList(custRes);
@@ -3939,7 +3939,8 @@
             return true;
           }
         }
-        return u.status === 'AVAILABLE' || !u.status;
+        // إتاحة القطع المتاحة حالياً وكذلك المحجوزة/المؤجرة لتمكين الحجز المسبق بعد تاريخ الإرجاع
+        return !u.status || ['AVAILABLE', 'BOOKED', 'RENTED', 'IN_USE'].includes(u.status);
       });
 
       const distinctModelsMap = new Map();
@@ -4102,7 +4103,17 @@
           const barcode = u.unit_barcode || `ID-${u.id}`;
           const wh = u.warehouse_name || 'المخزن';
           const price = u.rental_price || 0;
-          unitOpts += `<option value="${u.id}">[${barcode}] - ${wh} (${price} ج.م)</option>`;
+          let availBadge = '';
+          let nextAvail = '';
+          if (u.active_return_due_date) {
+            const d = new Date(u.active_return_due_date);
+            d.setDate(d.getDate() + 1);
+            nextAvail = d.toISOString().slice(0, 10);
+            availBadge = ` ⚠️ [محجوز حتى ${u.active_return_due_date} - متاح من ${nextAvail}]`;
+          } else if (u.status && u.status !== 'AVAILABLE') {
+            availBadge = ` [${u.status}]`;
+          }
+          unitOpts += `<option value="${u.id}" data-next-avail="${nextAvail}">[${barcode}] - ${wh} (${price} ج.م)${availBadge}</option>`;
         });
         unitSelect.innerHTML = unitOpts;
         if (matchingUnits.length > 0) {
@@ -4345,8 +4356,27 @@
               const availData = availRes?.data !== undefined ? availRes.data : availRes;
               if (availData && availData.isAvailable === false) {
                 const conflictNum = availData.conflictingBooking?.booking_number || 'آخر';
-                if (window.AppToast) window.AppToast.error(`تعارض زمني: هذه البدلة [${unit.unit_barcode}] محجوزة بالفعل في حجز #${conflictNum} لنفس الفترة!`);
-                return;
+                const conflictReturn = availData.conflictingBooking?.return_due_date || '';
+                const nextAvail = availData.nextAvailableDate || '';
+                
+                if (nextAvail) {
+                  const confirmMsg = `تنبيه: البدلة [${unit.unit_barcode}] محجوزة حالياً بحجز #${conflictNum} حتى تاريخ (${conflictReturn}).\n\nأول تاريخ متاح لحجزها مقدماً هو: (${nextAvail}).\n\nهل تريد ضبط تاريخ استلام هذا الحجز تلقائياً على أول تاريخ متاح (${nextAvail}) ومتابعة الحجز؟`;
+                  if (confirm(confirmMsg)) {
+                    tab.pickupDate = nextAvail;
+                    tab.returnDate = this.calcReturnDate(nextAvail);
+                    const pInput = document.getElementById(`cbk-pickup-${tab.id}`);
+                    const rInput = document.getElementById(`cbk-return-${tab.id}`);
+                    if (pInput) pInput.value = tab.pickupDate;
+                    if (rInput) rInput.value = tab.returnDate;
+                    if (window.AppToast) window.AppToast.success(`تم ضبط تاريخ الحجز تلقائياً على أول موعد متاح (${nextAvail}) ✅`);
+                  } else {
+                    if (window.AppToast) window.AppToast.error(`تعارض زمني: القطعة محجوزة حتى ${conflictReturn}. أول موعد متاح هو ${nextAvail}`);
+                    return;
+                  }
+                } else {
+                  if (window.AppToast) window.AppToast.error(`تعارض زمني: هذه البدلة [${unit.unit_barcode}] محجوزة بالفعل في حجز #${conflictNum} لنفس الفترة!`);
+                  return;
+                }
               }
             } catch (e) {
               console.warn('Availability check warning:', e);
@@ -5868,7 +5898,7 @@
     const store = res.data?.store || {};
     const printers = res.data?.printers || {};
     const security = res.data?.security || { hasPin: true, protectedPages: [] };
-    const whatsapp = res.data?.whatsapp || { autoSendAlerts: false, autoSendReturns: true, autoSendOverdue: true, autoSendFittings: true };
+    const whatsapp = res.data?.whatsapp || { autoSendAlerts: false, autoSendReturns: true, autoSendOverdue: true, autoSendFittings: true, autoSendPickups: true };
     const protectedPages = Array.isArray(security.protectedPages) ? security.protectedPages : [];
     cachedAppSettings = res.data;
 
@@ -6083,6 +6113,10 @@
           <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer; background: var(--bg-app); padding: 10px 12px; border-radius: 6px; border: 1px solid var(--border-color);">
             <input type="checkbox" id="set-wa-auto-overdue" ${whatsapp.autoSendOverdue !== false ? 'checked' : ''} style="width: 16px; height: 16px; accent-color: #10B981;">
             <span>⚠️ تنبيهات عاجلة للبدل المتأخرة عن الإرجاع</span>
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer; background: var(--bg-app); padding: 10px 12px; border-radius: 6px; border: 1px solid var(--border-color);">
+            <input type="checkbox" id="set-wa-auto-pickups" ${whatsapp.autoSendPickups !== false ? 'checked' : ''} style="width: 16px; height: 16px; accent-color: #10B981;">
+            <span>📦 تذكير بمواعيد استلام البدل (يوم الاستلام)</span>
           </label>
 
         </div>
@@ -6687,7 +6721,8 @@
         autoSendAlerts: isAuto,
         autoSendReturns: document.getElementById('set-wa-auto-returns')?.checked || false,
         autoSendOverdue: document.getElementById('set-wa-auto-overdue')?.checked || false,
-        autoSendFittings: document.getElementById('set-wa-auto-fittings')?.checked || false
+        autoSendFittings: document.getElementById('set-wa-auto-fittings')?.checked || false,
+        autoSendPickups: document.getElementById('set-wa-auto-pickups')?.checked || false
       };
 
       await electronApi.invoke('settings:update', { whatsapp: waPayload });
@@ -7918,10 +7953,17 @@
       });
 
       // Wire Test Send Button
-      document.getElementById('btn-send-test-wa')?.addEventListener('click', async () => {
+      document.getElementById('btn-send-test-wa')?.addEventListener('click', async (e) => {
+        if (e) { e.preventDefault(); e.stopPropagation(); }
+        const sendBtn = document.getElementById('btn-send-test-wa');
+        if (sendBtn && (sendBtn.disabled || sendBtn.dataset.sending === 'true')) return;
+        if (sendBtn) {
+          sendBtn.dataset.sending = 'true';
+          sendBtn.disabled = true;
+          sendBtn.style.pointerEvents = 'none';
+        }
         const phone = document.getElementById('wa-test-phone')?.value.trim();
         const message = document.getElementById('wa-test-msg')?.value.trim();
-        const sendBtn = document.getElementById('btn-send-test-wa');
 
         if (!phone) {
           if (window.AppToast) window.AppToast.warning('يرجى كتابة رقم الهاتف.');
@@ -7940,7 +7982,9 @@
             const sentPhone = res.data?.phone || res.phone || phone;
             if (window.AppToast) window.AppToast.success(`تم إرسال الرسالة إلى +${sentPhone} بنجاح تام! 💬✅`);
             if (sendBtn) {
+              delete sendBtn.dataset.sending;
               sendBtn.disabled = false;
+              sendBtn.style.pointerEvents = 'auto';
               sendBtn.innerHTML = '<span>🚀</span> إرسال الرسالة في الخلفية الآن';
             }
           } else {
@@ -7949,13 +7993,17 @@
               : (res?.error || 'فشل الإرسال.');
             if (window.AppToast) window.AppToast.error(errText);
             if (sendBtn) {
+              delete sendBtn.dataset.sending;
               sendBtn.disabled = false;
+              sendBtn.style.pointerEvents = 'auto';
               sendBtn.innerHTML = '<span>🚀</span> إرسال الرسالة في الخلفية الآن';
             }
           }
         } catch (err) {
           if (sendBtn) {
+            delete sendBtn.dataset.sending;
             sendBtn.disabled = false;
+            sendBtn.style.pointerEvents = 'auto';
             sendBtn.innerHTML = '<span>🚀</span> إرسال الرسالة في الخلفية الآن';
           }
           const errText = typeof err === 'object' ? (err.message || String(err)) : String(err);
@@ -15414,10 +15462,17 @@
     });
 
     // Send Direct Button (Background, silent, 0 windows)
-    document.getElementById('btn-send-wa-direct')?.addEventListener('click', async () => {
+    document.getElementById('btn-send-wa-direct')?.addEventListener('click', async (e) => {
+      if (e) { e.preventDefault(); e.stopPropagation(); }
+      const directBtn = document.getElementById('btn-send-wa-direct');
+      if (directBtn && (directBtn.disabled || directBtn.dataset.sending === 'true')) return;
+      if (directBtn) {
+        directBtn.dataset.sending = 'true';
+        directBtn.disabled = true;
+        directBtn.style.pointerEvents = 'none';
+      }
       const phone = phoneInput?.value.trim();
       const message = textPreview?.value.trim();
-      const directBtn = document.getElementById('btn-send-wa-direct');
 
       if (!phone) {
         if (window.AppToast) window.AppToast.warning('رقم الهاتف مطلوب.');
@@ -15453,7 +15508,9 @@
           }
         } else {
           if (directBtn) {
+            delete directBtn.dataset.sending;
             directBtn.disabled = false;
+            directBtn.style.pointerEvents = 'auto';
             directBtn.innerHTML = '<span>🚀</span> إرسال مباشر في الخلفية (صامت)';
           }
           const errText = typeof sendRes?.error === 'object'
@@ -15468,7 +15525,9 @@
         }
       } catch (err) {
         if (directBtn) {
+          delete directBtn.dataset.sending;
           directBtn.disabled = false;
+          directBtn.style.pointerEvents = 'auto';
           directBtn.innerHTML = '<span>🚀</span> إرسال مباشر في الخلفية (صامت)';
         }
         const errMsg = typeof err === 'object' ? (err.message || String(err)) : String(err);

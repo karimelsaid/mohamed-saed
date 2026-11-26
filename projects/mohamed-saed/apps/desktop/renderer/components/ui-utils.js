@@ -34,8 +34,8 @@ const UiUtils = {
       return `${String(hours12).padStart(2, '0')}:${minutes} ${period}`;
     }
 
-    const date = (dateStr instanceof Date) ? dateStr : new Date(dateStr);
-    if (isNaN(date.getTime())) return String(dateStr);
+    const date = this.parseDate(dateStr);
+    if (!date || isNaN(date.getTime())) return String(dateStr);
 
     const hours = date.getHours();
     const minutes = date.getMinutes();
@@ -53,10 +53,28 @@ const UiUtils = {
    * @param {boolean} withTime
    * @returns {string}
    */
+  parseDate(dateStr) {
+    if (!dateStr) return null;
+    if (dateStr instanceof Date) return dateStr;
+    const str = String(dateStr).trim();
+    // Parse YYYY-MM-DD HH:MM:SS directly into local Date to prevent UTC timezone shifting
+    const match = str.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?/);
+    if (match) {
+      const year = parseInt(match[1], 10);
+      const month = parseInt(match[2], 10) - 1;
+      const day = parseInt(match[3], 10);
+      const hour = match[4] ? parseInt(match[4], 10) : 0;
+      const min = match[5] ? parseInt(match[5], 10) : 0;
+      const sec = match[6] ? parseInt(match[6], 10) : 0;
+      return new Date(year, month, day, hour, min, sec);
+    }
+    return new Date(dateStr);
+  },
+
   formatDate(dateStr, withTime = false) {
     if (!dateStr) return '—';
-    const date = (dateStr instanceof Date) ? dateStr : new Date(dateStr);
-    if (isNaN(date.getTime())) return String(dateStr);
+    const date = this.parseDate(dateStr);
+    if (!date || isNaN(date.getTime())) return String(dateStr);
 
     const dateFormatted = date.toLocaleDateString('ar-EG', {
       year: 'numeric',
@@ -88,8 +106,8 @@ const UiUtils = {
    */
   formatDateTimeShort(dateStr) {
     if (!dateStr) return '—';
-    const date = (dateStr instanceof Date) ? dateStr : new Date(dateStr);
-    if (isNaN(date.getTime())) return String(dateStr);
+    const date = this.parseDate(dateStr);
+    if (!date || isNaN(date.getTime())) return String(dateStr);
 
     const y = date.getFullYear();
     const m = String(date.getMonth() + 1).padStart(2, '0');

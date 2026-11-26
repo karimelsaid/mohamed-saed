@@ -109,7 +109,7 @@ class BookingEngineService {
           trouser_length = COALESCE(?, trouser_length),
           shoe_size = COALESCE(?, shoe_size),
           notes = COALESCE(?, notes),
-          updated_at = datetime('now')
+          updated_at = datetime('now', 'localtime')
       WHERE id = ?
     `);
 
@@ -123,14 +123,11 @@ class BookingEngineService {
   // =========================================================================
 
   checkUnitAvailability(unitId, pickupDate, returnDueDate, excludeBookingId = null) {
-    const policies = this.adminService ? this.adminService.getRentalPolicies() : {};
-    const bufferDays = policies.bufferCleaningDays || 1;
-
-    // Buffer range: expand start and end by buffer days
-    // pickup - bufferDays to returnDueDate + bufferDays
     const db = this.dbConn.getDb();
 
-    // Query overlapping active bookings
+    // Query overlapping active bookings:
+    // A collision occurs if the requested range [pickupDate, returnDueDate] overlaps with any active booking's range [b.pickup_date, b.return_due_date]
+    // Condition: b.pickup_date <= returnDueDate AND b.return_due_date >= pickupDate
     const sql = `
       SELECT b.id, b.booking_number, b.pickup_date, b.return_due_date, b.status
       FROM booking_items bi
@@ -138,25 +135,27 @@ class BookingEngineService {
       WHERE bi.suit_unit_id = ?
         AND (? IS NULL OR b.id != ?)
         AND b.status NOT IN ('CANCELLED', 'COMPLETED', 'RETURNED')
-        AND (
-          -- Check overlapping with buffer period
-          (date(b.pickup_date, '-' || ? || ' days') <= ? AND date(b.return_due_date, '+' || ? || ' days') >= ?)
-          OR
-          (b.pickup_date >= ? AND b.pickup_date <= ?)
-          OR
-          (b.return_due_date >= ? AND b.return_due_date <= ?)
-        )
+        AND (b.pickup_date <= ? AND b.return_due_date >= ?)
+      ORDER BY b.return_due_date DESC
+      LIMIT 1
     `;
 
     const safeExcludeId = (excludeBookingId !== undefined && excludeBookingId !== null && excludeBookingId !== '') ? Number(excludeBookingId) : null;
-    const row = db.prepare(sql).get(Number(unitId), safeExcludeId, safeExcludeId, bufferDays, returnDueDate, bufferDays, pickupDate, pickupDate, returnDueDate, pickupDate, returnDueDate);
+    const row = db.prepare(sql).get(Number(unitId), safeExcludeId, safeExcludeId, returnDueDate, pickupDate);
 
     const isAvailable = !row;
+    let nextAvailableDate = null;
+    if (row && row.return_due_date) {
+      const d = new Date(row.return_due_date);
+      d.setDate(d.getDate() + 1);
+      nextAvailableDate = d.toISOString().slice(0, 10);
+    }
+
     return {
       unitId,
       isAvailable,
       conflictingBooking: row || null,
-      bufferDays
+      nextAvailableDate
     };
   }
 
@@ -345,11 +344,15 @@ class BookingEngineService {
         const variantId = it.product_variant_id || it.variant_id || null;
         itStmt.run(bookingId, unitId, variantId, itemType, it.rental_price, itemDeposit, it.tailoring_notes || null);
         if (unitId) {
-          tDb.prepare("UPDATE suit_units SET status = 'BOOKED' WHERE id = ?").run(unitId);
+          const currentUnit = tDb.prepare("SELECT status FROM suit_units WHERE id = ?").get(unitId);
+          const currentStat = currentUnit ? currentUnit.status : 'AVAILABLE';
+          // If unit is currently rented / in use by an active previous booking, keep its active physical status until returned
+          const targetStatus = ['RENTED', 'IN_USE'].includes(currentStat) ? currentStat : 'BOOKED';
+          tDb.prepare("UPDATE suit_units SET status = ? WHERE id = ?").run(targetStatus, unitId);
           tDb.prepare(`
             INSERT INTO unit_status_history (suit_unit_id, old_status, new_status, reason, reference_type, reference_id)
-            VALUES (?, 'AVAILABLE', 'BOOKED', 'تأكيد حجز العميل', 'BOOKING', ?)
-          `).run(unitId, bookingId);
+            VALUES (?, ?, ?, 'تأكيد حجز العميل', 'BOOKING', ?)
+          `).run(unitId, currentStat, targetStatus, bookingId);
         } else if (variantId) {
           tDb.prepare("UPDATE stock_balances SET quantity_reserved = quantity_reserved + 1 WHERE product_variant_id = ?").run(variantId);
         }
@@ -362,7 +365,7 @@ class BookingEngineService {
           const sessionCode = `SES-AUTO-${Date.now().toString().slice(-6)}`;
           const autoRes = tDb.prepare(`
             INSERT INTO cash_sessions (session_code, status, opening_balance, calculated_balance, total_cash_in, total_cash_out, opened_at)
-            VALUES (?, 'OPEN', 0, 0, 0, 0, datetime('now'))
+            VALUES (?, 'OPEN', 0, 0, 0, 0, datetime('now', 'localtime'))
           `).run(sessionCode);
           activeSes = { id: autoRes.lastInsertRowid };
           logger.info(`Auto-opened cash session #${activeSes.id} (${sessionCode}) for booking advance`);
@@ -373,14 +376,14 @@ class BookingEngineService {
 
         tDb.prepare(`
           INSERT INTO payments (payment_number, cash_session_id, customer_id, reference_type, reference_id, payment_type, amount, payment_method, created_at)
-          VALUES (?, ?, ?, 'BOOKING', ?, 'RENTAL_ADVANCE', ?, ?, datetime('now'))
+          VALUES (?, ?, ?, 'BOOKING', ?, 'RENTAL_ADVANCE', ?, ?, datetime('now', 'localtime'))
         `).run(payNum, activeSes.id, customer_id, bookingId, paid, cleanMethod);
 
         // Always record transaction in cash_transactions with proper category
         const category = cleanMethod === 'CASH' ? 'RENTAL' : cleanMethod;
         tDb.prepare(`
           INSERT INTO cash_transactions (cash_session_id, transaction_type, category, amount, reference_type, reference_id, notes, created_at)
-          VALUES (?, 'IN', ?, ?, 'BOOKING', ?, ?, datetime('now'))
+          VALUES (?, 'IN', ?, ?, 'BOOKING', ?, ?, datetime('now', 'localtime'))
         `).run(activeSes.id, category, paid, bookingId, `عربون حجز #${bookingNumber} (${cleanMethod})`);
 
         // Only update cash drawer balance for CASH payments
@@ -522,7 +525,7 @@ class BookingEngineService {
             const sessionCode = `SES-AUTO-${Date.now().toString().slice(-6)}`;
             const autoRes = tDb.prepare(`
               INSERT INTO cash_sessions (session_code, status, opening_balance, calculated_balance, total_cash_in, total_cash_out, opened_at)
-              VALUES (?, 'OPEN', 0, 0, 0, 0, datetime('now'))
+              VALUES (?, 'OPEN', 0, 0, 0, 0, datetime('now', 'localtime'))
             `).run(sessionCode);
             activeSes = { id: autoRes.lastInsertRowid };
           }
@@ -530,13 +533,13 @@ class BookingEngineService {
           const payNum = `PAY-ADV-MOD-${Date.now().toString().slice(-5)}`;
           tDb.prepare(`
             INSERT INTO payments (payment_number, cash_session_id, customer_id, reference_type, reference_id, payment_type, amount, payment_method, created_at)
-            VALUES (?, ?, ?, 'BOOKING', ?, 'RENTAL_ADVANCE', ?, ?, datetime('now'))
+            VALUES (?, ?, ?, 'BOOKING', ?, 'RENTAL_ADVANCE', ?, ?, datetime('now', 'localtime'))
           `).run(payNum, activeSes.id, customer_id || existing.customer_id, bookingId, additionalPaid, cleanMethod);
 
           const category = cleanMethod === 'CASH' ? 'RENTAL' : cleanMethod;
           tDb.prepare(`
             INSERT INTO cash_transactions (cash_session_id, transaction_type, category, amount, reference_type, reference_id, notes, created_at)
-            VALUES (?, 'IN', ?, ?, 'BOOKING', ?, ?, datetime('now'))
+            VALUES (?, 'IN', ?, ?, 'BOOKING', ?, ?, datetime('now', 'localtime'))
           `).run(activeSes.id, category, additionalPaid, bookingId, `عربون إضافي بتعديل حجز #${existing.booking_number} (${cleanMethod})`);
 
           if (cleanMethod === 'CASH') {
@@ -584,7 +587,7 @@ class BookingEngineService {
           final_amount = ?,
           paid_amount = ?,
           notes = ?,
-          updated_at = datetime('now')
+          updated_at = datetime('now', 'localtime')
         WHERE id = ?
       `).run(
         customer_id || existing.customer_id,
@@ -657,7 +660,7 @@ class BookingEngineService {
         const sessionCode = `SES-AUTO-${Date.now().toString().slice(-6)}`;
         const autoRes = tDb.prepare(`
           INSERT INTO cash_sessions (session_code, status, opening_balance, calculated_balance, total_cash_in, total_cash_out, opened_at)
-          VALUES (?, 'OPEN', 0, 0, 0, 0, datetime('now'))
+          VALUES (?, 'OPEN', 0, 0, 0, 0, datetime('now', 'localtime'))
         `).run(sessionCode);
         activeSes = { id: autoRes.lastInsertRowid };
         logger.info(`Auto-opened cash session #${activeSes.id} (${sessionCode}) for handover payment`);
@@ -790,7 +793,7 @@ class BookingEngineService {
         const sessionCode = `SES-AUTO-${Date.now().toString().slice(-6)}`;
         const autoRes = tDb.prepare(`
           INSERT INTO cash_sessions (session_code, status, opening_balance, calculated_balance, total_cash_in, total_cash_out, opened_at)
-          VALUES (?, 'OPEN', 0, 0, 0, 0, datetime('now'))
+          VALUES (?, 'OPEN', 0, 0, 0, 0, datetime('now', 'localtime'))
         `).run(sessionCode);
         activeSes = { id: autoRes.lastInsertRowid };
         logger.info(`Auto-opened cash session #${activeSes.id} (${sessionCode}) for return settlement`);
@@ -806,7 +809,7 @@ class BookingEngineService {
           const debtNum = `DEBT-${Date.now().toString().slice(-5)}`;
           tDb.prepare(`
             INSERT INTO payments (payment_number, cash_session_id, customer_id, reference_type, reference_id, payment_type, amount, payment_method, created_at)
-            VALUES (?, NULL, ?, 'BOOKING', ?, 'CUSTOMER_DEBT', ?, 'DEBT', datetime('now'))
+            VALUES (?, NULL, ?, 'BOOKING', ?, 'CUSTOMER_DEBT', ?, 'DEBT', datetime('now', 'localtime'))
           `).run(debtNum, booking.customer_id, bookingId, rentalRemaining);
           recordedDebt = rentalRemaining;
           logger.info(`Recorded CUSTOMER_DEBT in payments: ${debtNum}, amount: ${rentalRemaining}, booking: #${bookingId}, customer: #${booking.customer_id}`);
@@ -815,12 +818,12 @@ class BookingEngineService {
           const payNum = `PAY-REM-${Date.now().toString().slice(-5)}`;
           tDb.prepare(`
             INSERT INTO payments (payment_number, cash_session_id, customer_id, reference_type, reference_id, payment_type, amount, payment_method, created_at)
-            VALUES (?, ?, ?, 'BOOKING', ?, 'RENTAL_REMAINDER', ?, 'CASH', datetime('now'))
+            VALUES (?, ?, ?, 'BOOKING', ?, 'RENTAL_REMAINDER', ?, 'CASH', datetime('now', 'localtime'))
           `).run(payNum, activeSes.id, booking.customer_id, bookingId, rentalRemaining);
 
           tDb.prepare(`
             INSERT INTO cash_transactions (cash_session_id, transaction_type, category, amount, reference_type, reference_id, notes, created_at)
-            VALUES (?, 'IN', 'RENTAL', ?, 'BOOKING', ?, ?, datetime('now'))
+            VALUES (?, 'IN', 'RENTAL', ?, 'BOOKING', ?, ?, datetime('now', 'localtime'))
           `).run(activeSes.id, rentalRemaining, bookingId, `تحصيل باقي إيجار عند الإرجاع حجز #${booking.booking_number}`);
 
           tDb.prepare(`
@@ -859,7 +862,7 @@ class BookingEngineService {
       if (refundAmount > 0 && activeSes) {
         tDb.prepare(`
           INSERT INTO cash_transactions (cash_session_id, transaction_type, category, amount, reference_type, reference_id, notes, created_at)
-          VALUES (?, 'OUT', 'DEPOSIT_REFUND', ?, 'BOOKING', ?, ?, datetime('now'))
+          VALUES (?, 'OUT', 'DEPOSIT_REFUND', ?, 'BOOKING', ?, ?, datetime('now', 'localtime'))
         `).run(activeSes.id, refundAmount, bookingId, `رد تأمين أمانات حجز #${booking.booking_number}`);
 
         tDb.prepare(`
@@ -885,11 +888,19 @@ class BookingEngineService {
         if (it.suit_unit_id) {
           const unit = tDb.prepare('SELECT status FROM suit_units WHERE id = ?').get(it.suit_unit_id);
           const oldUnitStatus = unit ? unit.status : (booking.status === 'DELIVERED' ? 'IN_USE' : 'BOOKED');
-          tDb.prepare("UPDATE suit_units SET status = ?, updated_at = datetime('now') WHERE id = ?").run(newStatus, it.suit_unit_id);
+          // Check if there is another confirmed future booking for this unit
+          const nextBooking = tDb.prepare(`
+            SELECT b.id FROM booking_items bi
+            JOIN bookings b ON bi.booking_id = b.id
+            WHERE bi.suit_unit_id = ? AND b.status = 'CONFIRMED'
+            ORDER BY b.pickup_date ASC LIMIT 1
+          `).get(it.suit_unit_id);
+          const targetReturnStatus = nextBooking ? 'BOOKED' : newStatus;
+          tDb.prepare("UPDATE suit_units SET status = ?, updated_at = datetime('now', 'localtime') WHERE id = ?").run(targetReturnStatus, it.suit_unit_id);
           tDb.prepare(`
             INSERT INTO unit_status_history (suit_unit_id, old_status, new_status, reason, reference_type, reference_id, created_at)
-            VALUES (?, ?, ?, ?, 'BOOKING', ?, datetime('now'))
-          `).run(it.suit_unit_id, oldUnitStatus, newStatus, reason, bookingId);
+            VALUES (?, ?, ?, ?, 'BOOKING', ?, datetime('now', 'localtime'))
+          `).run(it.suit_unit_id, oldUnitStatus, targetReturnStatus, reason, bookingId);
         }
       }
       tDb.prepare("UPDATE booking_items SET status = 'RETURNED' WHERE booking_id = ?").run(bookingId);
@@ -898,13 +909,13 @@ class BookingEngineService {
       const debtNote = recordedDebt > 0 ? ` | دين على العميل: ${recordedDebt} ج.م` : '';
       tDb.prepare(`
         INSERT INTO booking_status_history (booking_id, old_status, new_status, notes, created_at)
-        VALUES (?, ?, 'COMPLETED', ?, datetime('now'))
+        VALUES (?, ?, 'COMPLETED', ?, datetime('now', 'localtime'))
       `).run(bookingId, booking.status, `تم استلام البدلة وفحصها وتصفية الحجز: تأخير=${lateDays} أيام (غرامة=${lateFee})، تلفيات=${damageFeeNum}، مسترد=${refundAmount} ج.م${debtNote}`);
 
       // 5. Mark related tasks as COMPLETED
       tDb.prepare(`
         UPDATE tasks
-        SET status = 'COMPLETED', completed_at = datetime('now')
+        SET status = 'COMPLETED', completed_at = datetime('now', 'localtime')
         WHERE booking_id = ? AND status != 'COMPLETED'
       `).run(bookingId);
 
@@ -999,7 +1010,7 @@ class BookingEngineService {
         const sessionCode = `SES-AUTO-${Date.now().toString().slice(-6)}`;
         const autoRes = tDb.prepare(`
           INSERT INTO cash_sessions (session_code, status, opening_balance, calculated_balance, total_cash_in, total_cash_out, opened_at)
-          VALUES (?, 'OPEN', 0, 0, 0, 0, datetime('now'))
+          VALUES (?, 'OPEN', 0, 0, 0, 0, datetime('now', 'localtime'))
         `).run(sessionCode);
         activeSes = { id: autoRes.lastInsertRowid };
         logger.info(`Auto-opened cash session #${activeSes.id} (${sessionCode}) for debt collection`);
@@ -1009,7 +1020,7 @@ class BookingEngineService {
       const payNum = `PAY-REM-${Date.now().toString().slice(-5)}`;
       tDb.prepare(`
         INSERT INTO payments (payment_number, cash_session_id, customer_id, reference_type, reference_id, payment_type, amount, payment_method, created_at)
-        VALUES (?, ?, ?, 'BOOKING', ?, 'RENTAL_REMAINDER', ?, ?, datetime('now'))
+        VALUES (?, ?, ?, 'BOOKING', ?, 'RENTAL_REMAINDER', ?, ?, datetime('now', 'localtime'))
       `).run(payNum, activeSes.id, debt.customer_id, debt.reference_id, collectAmount, cleanMethod);
 
       // 5. If CASH, update cash_transactions and cash_sessions
@@ -1017,7 +1028,7 @@ class BookingEngineService {
       const txNote = `تحصيل دين حجز #${bookingNumber} (${cleanMethod})${notes ? ' - ' + notes : ''}`;
       tDb.prepare(`
         INSERT INTO cash_transactions (cash_session_id, transaction_type, category, amount, reference_type, reference_id, notes, created_at)
-        VALUES (?, 'IN', ?, ?, 'BOOKING', ?, ?, datetime('now'))
+        VALUES (?, 'IN', ?, ?, 'BOOKING', ?, ?, datetime('now', 'localtime'))
       `).run(activeSes.id, category, collectAmount, debt.reference_id, txNote);
 
       if (cleanMethod === 'CASH') {
@@ -1042,7 +1053,7 @@ class BookingEngineService {
 
         tDb.prepare(`
           INSERT INTO booking_status_history (booking_id, old_status, new_status, notes, created_at)
-          VALUES (?, ?, ?, ?, datetime('now'))
+          VALUES (?, ?, ?, ?, datetime('now', 'localtime'))
         `).run(booking.id, booking.status, booking.status, `تم تحصيل دين بقيمة ${collectAmount} ج.م بطريقة ${cleanMethod} (${payNum})`);
       }
 

@@ -254,6 +254,29 @@ class WhatsappDirectService {
       throw new Error('واتساب غير متصل على هذا الجهاز. يرجى مسح باركود الربط أولاً من زر (ربط واتساب) بالأعلى.');
     }
 
+    // منع التكرار: منع إرسال نفس الرسالة لنفس الرقم خلال 5 ثوانٍ
+    const dedupKey = `${cleanPhone}:${message.trim()}`;
+    const now = Date.now();
+    if (!this._lastSentMap) this._lastSentMap = new Map();
+    if (this._lastSentMap.has(dedupKey)) {
+      const lastTime = this._lastSentMap.get(dedupKey);
+      if (now - lastTime < 5000) {
+        logger.warn(`Suppressed duplicate WhatsApp message to +${cleanPhone} (sent ${now - lastTime}ms ago)`);
+        return {
+          success: true,
+          phone: cleanPhone,
+          suppressedDuplicate: true,
+          timestamp: new Date().toISOString()
+        };
+      }
+    }
+    this._lastSentMap.set(dedupKey, now);
+    if (this._lastSentMap.size > 200) {
+      for (const [k, t] of this._lastSentMap.entries()) {
+        if (now - t > 30000) this._lastSentMap.delete(k);
+      }
+    }
+
     logger.info(`Starting direct background WhatsApp message to +${cleanPhone}...`);
 
     // منع التداخل إذا كان هناك إرسال متزامن عبر طابور تسلسلي
@@ -356,28 +379,19 @@ class WhatsappDirectService {
               }
             }
 
-            // 3. فحص وتفعيل زر الإرسال
+            // 3. فحص وتفعيل زر الإرسال (ضغطة واحدة مؤكدة فقط لمنع التكرار)
             const sendBtn = findSendButton();
             if (sendBtn) {
               try {
                 sendBtn.focus();
                 sendBtn.click();
-                ['mousedown', 'mouseup', 'click'].forEach(evt => {
-                  sendBtn.dispatchEvent(new MouseEvent(evt, { bubbles: true, cancelable: true, view: window }));
-                });
-              } catch (_) {}
-
-              // الانتظار للتحقق من اختفاء نص الرسالة أو ظهور زر الميكروفون
-              await new Promise(r => setTimeout(r, 1200));
-
-              const boxAfter = findComposeBox();
-              const isCleared = !boxAfter || !boxAfter.innerText || boxAfter.innerText.trim().length === 0;
-              const hasPtt = !!document.querySelector('span[data-icon="ptt"], span[data-icon="mic"], [data-testid="ptt"]');
-
-              if (isCleared || hasPtt) {
-                return { success: true };
+              } catch (_) {
+                sendBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
               }
-              return { success: true, needsInputEvent: true };
+
+              // الانتظار لتسجيل الإرسال في واتساب ويب
+              await new Promise(r => setTimeout(r, 1500));
+              return { success: true, needsInputEvent: false };
             }
 
             // 4. فحص مربع الكتابة وتجهيز المؤشر لإرسال ضغطة Enter

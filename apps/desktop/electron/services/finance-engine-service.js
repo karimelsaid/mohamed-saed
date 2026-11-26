@@ -317,7 +317,7 @@ class FinanceEngineService {
     return TransactionHelper.runInTransaction(db, (tDb) => {
       const stmt = tDb.prepare(`
         INSERT INTO cash_sessions (session_code, opened_at, opening_balance, total_cash_in, total_cash_out, calculated_balance, status, notes)
-        VALUES (?, datetime('now'), ?, 0, 0, ?, 'OPEN', ?)
+        VALUES (?, datetime('now', 'localtime'), ?, 0, 0, ?, 'OPEN', ?)
       `);
       const res = stmt.run(code, opBal, opBal, notes);
       const sessionId = res.lastInsertRowid;
@@ -363,7 +363,7 @@ class FinanceEngineService {
 
       tDb.prepare(`
         UPDATE cash_sessions
-        SET closed_at = datetime('now'),
+        SET closed_at = datetime('now', 'localtime'),
             actual_balance = ?,
             difference = ?,
             status = 'CLOSED',
@@ -473,7 +473,7 @@ class FinanceEngineService {
       // 4. Insert into expenses
       const expRes = tDb.prepare(`
         INSERT INTO expenses (expense_number, cash_session_id, category_id, amount, description, receipt_image_path, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+        VALUES (?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))
       `).run(expenseNumber, cashSession ? cashSession.id : null, category_id, expAmount, description.trim(), receipt_image_path);
       const expenseId = expRes.lastInsertRowid;
 

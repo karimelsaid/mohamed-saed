@@ -125,10 +125,12 @@ const UiUtils = {
   formatPhone(phone) {
     if (!phone) return '';
     const cleaned = String(phone).replace(/\D/g, '');
+    let formatted = phone;
     if (cleaned.length === 11 && cleaned.startsWith('01')) {
-      return `${cleaned.slice(0, 4)} ${cleaned.slice(4, 7)} ${cleaned.slice(7)}`;
+      formatted = `${cleaned.slice(0, 4)} ${cleaned.slice(4, 7)} ${cleaned.slice(7)}`;
     }
-    return phone;
+    // إحاطة الرقم بعلامة LTR Embedding (‪ ... ‬) لمنع قلب الأرقام في الواجهات العربية RTL
+    return `\u202A${formatted}\u202C`;
   },
 
   /**

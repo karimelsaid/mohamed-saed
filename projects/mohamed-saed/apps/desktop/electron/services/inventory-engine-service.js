@@ -35,19 +35,42 @@ class InventoryEngineService {
     return this.dbConn.all(sql);
   }
 
-  createSuitModel({ code, name, category_id = 1, brand = '', color_id = null, sale_price = 0, rental_price = 0, cost_price = 0, security_deposit = 0, description = '' }) {
+  createSuitModel({ code, name, category_id = null, category_name = '', brand = '', color_id = null, color_name = '', sale_price = 0, rental_price = 0, cost_price = 0, security_deposit = 0, description = '' }) {
     if (!code || !name) throw new Error('كود الموديل واسم البدلة مطلوبان.');
     if (!cost_price || Number(cost_price) <= 0) {
       throw new Error('سعر التكلفة إجباري ومطلوب لحساب الأرباح والخسائر.');
     }
     const db = this.dbConn.getDb();
+
+    // Resolve category_id from category_name if needed
+    let resolvedCatId = category_id ? Number(category_id) : null;
+    if (!resolvedCatId && category_name) {
+      const catRow = db.prepare('SELECT id FROM categories WHERE name = ? OR code = ? LIMIT 1').get(category_name.trim(), category_name.trim());
+      if (catRow) resolvedCatId = catRow.id;
+    }
+    if (!resolvedCatId) resolvedCatId = 1;
+
+    // Resolve color_id from color_name if needed
+    let resolvedColorId = color_id ? Number(color_id) : null;
+    if (!resolvedColorId && color_name && String(color_name).trim()) {
+      const cName = String(color_name).trim();
+      const existingCol = db.prepare('SELECT id FROM colors WHERE name = ? LIMIT 1').get(cName);
+      if (existingCol) {
+        resolvedColorId = existingCol.id;
+        db.prepare('UPDATE colors SET is_active = 1 WHERE id = ?').run(resolvedColorId);
+      } else {
+        const cRes = db.prepare('INSERT INTO colors (name, hex_code, is_active) VALUES (?, ?, 1)').run(cName, '#1e293b');
+        resolvedColorId = cRes.lastInsertRowid;
+      }
+    }
+
     const stmt = db.prepare(`
       INSERT INTO suit_models (category_id, code, name, brand, color_id, sale_price, rental_price, cost_price, security_deposit, description, is_active)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
     `);
-    const res = stmt.run(category_id, code.trim().toUpperCase(), name.trim(), brand.trim(), color_id, Number(sale_price) || 0, Number(rental_price) || 0, Number(cost_price) || 0, Number(security_deposit) || 0, description.trim());
-    logger.info(`Created Suit Model: ${name} (${code})`);
-    return { id: res.lastInsertRowid, code, name, rental_price, sale_price, cost_price, security_deposit };
+    const res = stmt.run(resolvedCatId, code.trim().toUpperCase(), name.trim(), brand.trim(), resolvedColorId, Number(sale_price) || 0, Number(rental_price) || 0, Number(cost_price) || 0, Number(security_deposit) || 0, description.trim());
+    logger.info(`Created Suit Model: ${name} (${code}) with color_id=${resolvedColorId}`);
+    return { id: res.lastInsertRowid, code, name, color_id: resolvedColorId, rental_price, sale_price, cost_price, security_deposit };
   }
 
   updateSuitModel(id, payload) {
@@ -116,7 +139,7 @@ class InventoryEngineService {
       LEFT JOIN categories cat ON m.category_id = cat.id
       JOIN sizes s ON u.size_id = s.id
       JOIN warehouses w ON u.warehouse_id = w.id
-      LEFT JOIN colors col ON m.color_id = col.id
+      LEFT JOIN colors col ON COALESCE(u.color_id, m.color_id) = col.id
       WHERE 1=1
     `;
     const params = [];
@@ -156,7 +179,7 @@ class InventoryEngineService {
     return this.dbConn.all(sql, params);
   }
 
-  createSuitUnit({ suit_model_id, size_id, warehouse_id = 1, unit_barcode = null, serial_number = null, purchase_cost = 0, notes = '' }) {
+  createSuitUnit({ suit_model_id, size_id, warehouse_id = 1, unit_barcode = null, serial_number = null, purchase_cost = 0, color_id = null, notes = '' }) {
     if (!suit_model_id || !size_id) throw new Error('موديل البدلة والمقاس مطلوبان لإنشاء الوحدة.');
 
     // Auto generate barcode if not provided: SUIT-<model_id>-<size_id>-<random>
@@ -176,11 +199,28 @@ class InventoryEngineService {
         if (m && m.cost_price > 0) finalCost = m.cost_price;
       }
 
-      const stmt = tDb.prepare(`
-        INSERT INTO suit_units (suit_model_id, size_id, warehouse_id, unit_barcode, serial_number, status, rental_count, purchase_cost, notes)
-        VALUES (?, ?, ?, ?, ?, 'AVAILABLE', 0, ?, ?)
-      `);
-      const res = stmt.run(suit_model_id, size_id, warehouse_id, barcode, serial_number, finalCost, notes);
+      if (color_id) {
+        tDb.prepare('UPDATE suit_models SET color_id = ? WHERE id = ? AND (color_id IS NULL OR color_id = 0)').run(Number(color_id), Number(suit_model_id));
+      }
+
+      const suitUnitCols = tDb.prepare("PRAGMA table_info(suit_units)").all().map(c => c.name);
+      const hasUnitColor = suitUnitCols.includes('color_id');
+
+      const stmt = hasUnitColor
+        ? tDb.prepare(`
+            INSERT INTO suit_units (suit_model_id, size_id, warehouse_id, unit_barcode, serial_number, status, rental_count, purchase_cost, color_id, notes)
+            VALUES (?, ?, ?, ?, ?, 'AVAILABLE', 0, ?, ?, ?)
+          `)
+        : tDb.prepare(`
+            INSERT INTO suit_units (suit_model_id, size_id, warehouse_id, unit_barcode, serial_number, status, rental_count, purchase_cost, notes)
+            VALUES (?, ?, ?, ?, ?, 'AVAILABLE', 0, ?, ?)
+          `);
+
+      const params = hasUnitColor
+        ? [suit_model_id, size_id, warehouse_id, barcode, serial_number, finalCost, color_id ? Number(color_id) : null, notes]
+        : [suit_model_id, size_id, warehouse_id, barcode, serial_number, finalCost, notes];
+
+      const res = stmt.run(...params);
       const unitId = res.lastInsertRowid;
 
       // Log initial status
@@ -194,7 +234,7 @@ class InventoryEngineService {
     });
   }
 
-  createSuitUnitsBatch({ suit_model_id, warehouse_id = 1, purchase_cost = 0, sizeQuantities = [] }) {
+  createSuitUnitsBatch({ suit_model_id, warehouse_id = 1, purchase_cost = 0, color_id = null, color_ids = [], sizeQuantities = [] }) {
     if (!suit_model_id) throw new Error('موديل البدلة مطلوب.');
     if (!sizeQuantities || sizeQuantities.length === 0) {
       throw new Error('يرجى تحديد المقاسات والكميات.');
@@ -208,13 +248,29 @@ class InventoryEngineService {
         if (m && m.cost_price > 0) finalCost = m.cost_price;
       }
 
-      const m = tDb.prepare('SELECT code FROM suit_models WHERE id = ?').get(suit_model_id);
+      const m = tDb.prepare('SELECT code, color_id FROM suit_models WHERE id = ?').get(suit_model_id);
       const modelCode = m ? m.code : 'SUIT';
 
-      const insertStmt = tDb.prepare(`
-        INSERT INTO suit_units (suit_model_id, size_id, warehouse_id, unit_barcode, status, rental_count, purchase_cost, rental_price, sale_price, notes)
-        VALUES (?, ?, ?, ?, 'AVAILABLE', 0, ?, ?, ?, 'إضافة دفعة بالمقاسات')
-      `);
+      const finalColorIds = (Array.isArray(color_ids) && color_ids.length > 0)
+        ? color_ids.map(Number).filter(Boolean)
+        : (color_id ? [Number(color_id)] : (m?.color_id ? [Number(m.color_id)] : [null]));
+
+      if (finalColorIds.length > 0 && finalColorIds[0]) {
+        tDb.prepare('UPDATE suit_models SET color_id = ? WHERE id = ?').run(finalColorIds[0], suit_model_id);
+      }
+
+      const suitUnitCols = tDb.prepare("PRAGMA table_info(suit_units)").all().map(c => c.name);
+      const hasUnitColor = suitUnitCols.includes('color_id');
+
+      const insertStmt = hasUnitColor
+        ? tDb.prepare(`
+            INSERT INTO suit_units (suit_model_id, size_id, warehouse_id, unit_barcode, status, rental_count, purchase_cost, rental_price, sale_price, color_id, notes)
+            VALUES (?, ?, ?, ?, 'AVAILABLE', 0, ?, ?, ?, ?, 'إضافة دفعة بالمقاسات')
+          `)
+        : tDb.prepare(`
+            INSERT INTO suit_units (suit_model_id, size_id, warehouse_id, unit_barcode, status, rental_count, purchase_cost, rental_price, sale_price, notes)
+            VALUES (?, ?, ?, ?, 'AVAILABLE', 0, ?, ?, ?, 'إضافة دفعة بالمقاسات')
+          `);
 
       const histStmt = tDb.prepare(`
         INSERT INTO unit_status_history (suit_unit_id, old_status, new_status, reason)
@@ -224,29 +280,34 @@ class InventoryEngineService {
       let totalCreated = 0;
       const createdUnits = [];
 
-      for (const item of sizeQuantities) {
-        const sizeId = Number(item.size_id);
-        const qty = Number(item.quantity) || 0;
-        if (!sizeId || qty <= 0) continue;
+      for (const curColorId of finalColorIds) {
+        for (const item of sizeQuantities) {
+          const sizeId = Number(item.size_id);
+          const qty = Number(item.quantity) || 0;
+          if (!sizeId || qty <= 0) continue;
 
-        const itemCost = (item.purchase_cost !== undefined && item.purchase_cost !== null && Number(item.purchase_cost) > 0)
-          ? Number(item.purchase_cost)
-          : (item.cost !== undefined && item.cost !== null && Number(item.cost) > 0 ? Number(item.cost) : finalCost);
-        const itemRental = (item.rental_price !== undefined && item.rental_price !== null && Number(item.rental_price) > 0)
-          ? Number(item.rental_price)
-          : null;
-        const itemSale = (item.sale_price !== undefined && item.sale_price !== null && Number(item.sale_price) > 0)
-          ? Number(item.sale_price)
-          : null;
+          const itemCost = (item.purchase_cost !== undefined && item.purchase_cost !== null && Number(item.purchase_cost) > 0)
+            ? Number(item.purchase_cost)
+            : (item.cost !== undefined && item.cost !== null && Number(item.cost) > 0 ? Number(item.cost) : finalCost);
+          const itemRental = (item.rental_price !== undefined && item.rental_price !== null && Number(item.rental_price) > 0)
+            ? Number(item.rental_price)
+            : null;
+          const itemSale = (item.sale_price !== undefined && item.sale_price !== null && Number(item.sale_price) > 0)
+            ? Number(item.sale_price)
+            : null;
 
-        for (let i = 0; i < qty; i++) {
-          const randSuffix = Math.floor(1000 + Math.random() * 9000);
-          const barcode = `ST-${modelCode}-${sizeId}-${Date.now().toString().slice(-4)}${randSuffix}`;
-          const res = insertStmt.run(suit_model_id, sizeId, warehouse_id, barcode, itemCost, itemRental, itemSale);
-          const unitId = res.lastInsertRowid;
-          histStmt.run(unitId);
-          createdUnits.push({ id: unitId, barcode, size_id: sizeId });
-          totalCreated++;
+          for (let i = 0; i < qty; i++) {
+            const randSuffix = Math.floor(1000 + Math.random() * 9000);
+            const barcode = `ST-${modelCode}-${sizeId}${curColorId ? `-${curColorId}` : ''}-${Date.now().toString().slice(-4)}${randSuffix}`;
+            const params = hasUnitColor
+              ? [suit_model_id, sizeId, warehouse_id, barcode, itemCost, itemRental, itemSale, curColorId || null]
+              : [suit_model_id, sizeId, warehouse_id, barcode, itemCost, itemRental, itemSale];
+            const res = insertStmt.run(...params);
+            const unitId = res.lastInsertRowid;
+            histStmt.run(unitId);
+            createdUnits.push({ id: unitId, barcode, size_id: sizeId, color_id: curColorId });
+            totalCreated++;
+          }
         }
       }
 
@@ -511,11 +572,15 @@ class InventoryEngineService {
              ) as sizes_detail,
              MIN(s.name) as size_name,
              MIN(s.code) as size_code,
-             MIN(s.id) as size_id
+             MIN(s.id) as size_id,
+             GROUP_CONCAT(DISTINCT col.name) as colors_summary,
+             MIN(col.name) as color_name,
+             MIN(col.id) as color_id
       FROM products p
       JOIN categories c ON p.category_id = c.id
       LEFT JOIN product_variants pv ON pv.product_id = p.id
       LEFT JOIN sizes s ON pv.size_id = s.id
+      LEFT JOIN colors col ON pv.color_id = col.id
       LEFT JOIN stock_balances b ON b.product_variant_id = pv.id
       WHERE p.is_active = 1
     `;
@@ -602,7 +667,7 @@ class InventoryEngineService {
       } else {
         effectiveVariants = [{
           size_id: null,
-          color_id: null,
+          color_id: payload.color_id ? Number(payload.color_id) : null,
           sku: code,
           barcode: code,
           initial_quantity: total_quantity || 0
@@ -611,7 +676,9 @@ class InventoryEngineService {
 
       for (let idx = 0; idx < effectiveVariants.length; idx++) {
         const v = effectiveVariants[idx];
-        const vSuffix = v.size_id ? String(v.size_id) : (idx > 0 ? String(idx + 1) : 'U');
+        const sizePart = v.size_id ? String(v.size_id) : (idx > 0 ? String(idx + 1) : 'U');
+        const colorPart = v.color_id ? `-C${v.color_id}` : '';
+        const vSuffix = `${sizePart}${colorPart}`;
         const sku = v.sku || `${code}-${vSuffix}`;
         const barcode = v.barcode || sku;
         const vCost = (v.cost_price !== undefined && v.cost_price !== null && Number(v.cost_price) > 0) ? Number(v.cost_price) : null;
@@ -666,6 +733,12 @@ class InventoryEngineService {
     if (payload.size_id !== undefined) {
       db.prepare(`UPDATE product_variants SET size_id = ? WHERE product_id = ?`).run(
         payload.size_id ? Number(payload.size_id) : null,
+        Number(id)
+      );
+    }
+    if (payload.color_id !== undefined) {
+      db.prepare(`UPDATE product_variants SET color_id = ? WHERE product_id = ?`).run(
+        payload.color_id ? Number(payload.color_id) : null,
         Number(id)
       );
     }

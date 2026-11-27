@@ -55,7 +55,7 @@ function getAppVersion() {
     const v = app.getVersion();
     if (v && v !== '1.0.0') return v;
   }
-  return '1.0.7';
+  return '1.0.8';
 }
 
 function registerCoreHandlers() {
@@ -375,6 +375,9 @@ function registerCoreHandlers() {
   });
 
   // Financial Engine & Cash Handlers (Phase 9)
+  ipcRouter.register('finance:get-transactions', async (payload) => {
+    return financeEngineService.getCashTransactions(payload);
+  });
   ipcRouter.register('finance:get-cash-session', async (payload) => {
     return financeEngineService.getActiveCashSession(payload);
   });
@@ -619,6 +622,15 @@ function registerCoreHandlers() {
     return backupEngineService.getGoogleDriveSyncHistory(limit);
   });
 
+  ipcRouter.register('app:open-external-url', async (payload) => {
+    const targetUrl = payload?.url;
+    if (targetUrl && shell && shell.openExternal) {
+      await shell.openExternal(targetUrl);
+      return { success: true };
+    }
+    return { success: false };
+  });
+
   ipcRouter.register('backup:open-gdrive-url', async (payload) => {
     const targetUrl = payload?.url || 'https://drive.google.com/drive/my-drive';
     if (shell && shell.openExternal) {
@@ -738,7 +750,7 @@ function createWindow() {
   // Security: Intercept new window requests and open securely in system browser
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     logger.warn(`Blocked in-app window creation for URL: ${url}`);
-    if (url.startsWith('https://') || url.startsWith('http://') || url.startsWith('mailto:')) {
+    if (url.startsWith('https://') || url.startsWith('http://') || url.startsWith('mailto:') || url.startsWith('whatsapp:') || url.startsWith('tel:')) {
       shell.openExternal(url).catch(err => {
         logger.error('Failed to open external URL:', { url, error: err.message });
       });

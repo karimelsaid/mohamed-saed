@@ -42,7 +42,7 @@ class UpdateEngineService {
         if (v && v !== '1.0.0') return v;
       }
     } catch (_) {}
-    return '1.0.7';
+    return '1.0.8';
   }
 
   getDefaultUpdatesDir() {
@@ -204,7 +204,7 @@ class UpdateEngineService {
       fs.mkdirSync(destinationDir, { recursive: true });
     }
 
-    const targetVersion = this.latestReleaseInfo?.version || this.readCurrentAppVersion() || '1.0.7';
+    const targetVersion = this.latestReleaseInfo?.version || this.readCurrentAppVersion() || '1.0.8';
 
     // 1. Check for real installer executables in updates cache or dist
     const possibleInstallers = [
@@ -309,7 +309,7 @@ class UpdateEngineService {
     }
 
     // الخطوة 4: توثيق التحديث في جدول الإعدادات / السجل
-    const targetVer = this.latestReleaseInfo?.version || this.readCurrentAppVersion() || '1.0.7';
+    const targetVer = this.latestReleaseInfo?.version || this.readCurrentAppVersion() || '1.0.8';
     try {
       db.prepare(`
         INSERT OR REPLACE INTO settings (key, value)

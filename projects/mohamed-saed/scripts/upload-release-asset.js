@@ -2,10 +2,25 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 
-const TOKEN = process.env.GITHUB_TOKEN || process.env.GH_TOKEN || process.argv[2] || '';
+function getGitToken() {
+  if (process.env.GITHUB_TOKEN || process.env.GH_TOKEN || process.argv[2]) {
+    return process.env.GITHUB_TOKEN || process.env.GH_TOKEN || process.argv[2];
+  }
+  try {
+    const cp = require('child_process');
+    const out = cp.execSync('git credential fill', { input: 'protocol=https\nhost=github.com\n\n', stdio: ['pipe', 'pipe', 'ignore'] }).toString();
+    const match = out.match(/^password=(.+)$/m);
+    if (match && match[1]) return match[1].trim();
+  } catch (_) {}
+  return '';
+}
+
+const TOKEN = getGitToken();
 const REPO = 'karimelsaid/mohamed-saed';
-const TAG = 'v1.0.7';
-const EXE_PATH = path.resolve(__dirname, '..', 'dist', 'نظام إدارة محلات بيع وتأجير بدل Setup 1.0.7.exe');
+const pkgPath = path.resolve(__dirname, '..', 'package.json');
+const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+const TAG = `v${pkg.version}`;
+const EXE_PATH = path.resolve(__dirname, '..', 'dist', `نظام إدارة محلات بيع وتأجير بدل Setup ${pkg.version}.exe`);
 
 if (!fs.existsSync(EXE_PATH)) {
   console.error('Installer EXE not found at:', EXE_PATH);
@@ -66,13 +81,18 @@ async function main() {
     console.log(`  ✓ Release exists (ID: ${release.id})`);
   } else {
     // Create release
+    let releaseNotes = `تحديث رسمي جديد للإصدار ${TAG}`;
+    try {
+      const manifest = JSON.parse(fs.readFileSync(path.resolve(__dirname, '..', 'dist', 'latest-release.json'), 'utf8'));
+      if (manifest.releaseNotes) releaseNotes = manifest.releaseNotes;
+    } catch (_) {}
     const createRes = await githubRequest(`https://api.github.com/repos/${REPO}/releases`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' }
     }, {
       tag_name: TAG,
       name: `Release ${TAG} - نظام إدارة محلات البدل`,
-      body: 'تحديث رسمي للإصدار v1.0.7 يتضمن مركز الإشعارات بالنافبار، تخصيص اختصارات الكيبورد، وتخصيص أسعار وتكاليف المقاسات المستقلة.',
+      body: releaseNotes,
       draft: false,
       prerelease: false
     });
@@ -92,7 +112,7 @@ async function main() {
   const fileSizeMb = (stats.size / 1024 / 1024).toFixed(1);
   console.log(`  File size: ${fileSizeMb} MB`);
 
-  const assetName = 'suit-store-update-1.0.7.exe';
+  const assetName = `suit-store-update-${pkg.version}.exe`;
   const uploadUrl = release.upload_url.replace('{?name,label}', `?name=${encodeURIComponent(assetName)}`);
 
   console.log(`  Uploading ${assetName} to ${uploadUrl}...`);

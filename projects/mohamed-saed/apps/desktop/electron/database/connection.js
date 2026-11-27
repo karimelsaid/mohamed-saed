@@ -124,6 +124,10 @@ class DatabaseConnection {
           db.exec("ALTER TABLE suit_units ADD COLUMN sale_price REAL DEFAULT NULL;");
           logger.info('Added column sale_price to suit_units table');
         }
+        if (!suitUnitCols.includes('color_id')) {
+          db.exec("ALTER TABLE suit_units ADD COLUMN color_id INTEGER DEFAULT NULL REFERENCES colors(id);");
+          logger.info('Added column color_id to suit_units table');
+        }
 
         const variantCols = db.prepare("PRAGMA table_info(product_variants)").all().map(c => c.name);
         if (!variantCols.includes('cost_price')) {

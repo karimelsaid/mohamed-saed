@@ -46,8 +46,8 @@ class FinanceEngineService {
     let expenseId = (t.reference_type === 'EXPENSE') ? t.reference_id : null;
 
     if (!bookingId && !saleId && !expenseId && t.notes) {
-      // فحص وجود رقم حجز في البيان مثل #BKG-2026-0001 أو #1
-      const bkgMatch = t.notes.match(/#(BKG-[\w-]+|\d+)/i);
+      // فحص وجود رقم حجز في البيان مثل #BK-2026-0001 أو #BKG-1 أو #1
+      const bkgMatch = t.notes.match(/#(BK-[\w-]+|\d+)/i) || t.notes.match(/#(BKG-[\w-]+|\d+)/i);
       if (bkgMatch) {
         const rawCode = bkgMatch[1];
         try {
@@ -85,13 +85,17 @@ class FinanceEngineService {
           const bItems = this.dbConn.all(`
             SELECT bi.id, bi.item_type, bi.rental_price, bi.tailoring_notes,
                    COALESCE(sm.name, p.name, 'قطعة حجز') as model_name,
-                   COALESCE(su.size, pv.size_name, '') as size,
-                   COALESCE(su.color, pv.color_name, '') as color
+                   COALESCE(su_s.name, pv_s.name, '') as size,
+                   COALESCE(col.name, pv_col.name, '') as color
             FROM booking_items bi
             LEFT JOIN suit_units su ON su.id = bi.suit_unit_id
             LEFT JOIN suit_models sm ON sm.id = su.suit_model_id
+            LEFT JOIN sizes su_s ON su_s.id = su.size_id
+            LEFT JOIN colors col ON col.id = sm.color_id
             LEFT JOIN product_variants pv ON pv.id = bi.product_variant_id
             LEFT JOIN products p ON p.id = pv.product_id
+            LEFT JOIN sizes pv_s ON pv_s.id = pv.size_id
+            LEFT JOIN colors pv_col ON pv_col.id = pv.color_id
             WHERE bi.booking_id = ?
           `, [bookingId]);
 
@@ -150,16 +154,16 @@ class FinanceEngineService {
     else if (expenseId) {
       try {
         const exp = this.dbConn.get(`
-          SELECT e.id, e.description, e.payment_method, ec.name as category_name
+          SELECT e.id, e.expense_number, e.amount, e.description, ec.name as category_name
           FROM expenses e
           LEFT JOIN expense_categories ec ON ec.id = e.category_id
           WHERE e.id = ?
         `, [expenseId]);
 
         if (exp) {
+          refNumber = exp.expense_number ? `#${exp.expense_number}` : `#EXP-${exp.id}`;
           customerName = exp.category_name || 'مصروف تشغيلي';
           generalNotes = exp.description || '';
-          if (exp.payment_method) paymentMethod = exp.payment_method;
         }
       } catch (_) {}
     }
@@ -225,9 +229,16 @@ class FinanceEngineService {
    * جلب تفاصيل جلسة الصندوق النشطة المفتوحة حاليًا مع تفصيل الحركات المثرية
    */
   getActiveCashSession(options = {}) {
-    const session = this.dbConn.get(`
+    let session = this.dbConn.get(`
       SELECT * FROM cash_sessions WHERE status = 'OPEN' ORDER BY id DESC LIMIT 1
     `);
+
+    // إذا لم تكن هناك جلسة مفتوحة، نجلب آخر جلسة (مغلقة) لإظهار حركاتها وبياناتها بدلاً من إخفاء كل شيء
+    if (!session) {
+      session = this.dbConn.get(`
+        SELECT * FROM cash_sessions ORDER BY id DESC LIMIT 1
+      `);
+    }
 
     if (!session) return null;
 
@@ -298,6 +309,153 @@ class FinanceEngineService {
         manualOut
       },
       recent_transactions: enrichedTransactions
+    };
+  }
+
+
+  syncMissingRecords() {
+    try {
+      const db = this.dbConn.getDb();
+      // Sync any missing payments from payments table
+      const missingPayments = db.prepare(`
+        SELECT p.*, b.booking_number
+        FROM payments p
+        LEFT JOIN bookings b ON p.reference_type = 'BOOKING' AND p.reference_id = b.id
+        LEFT JOIN cash_transactions ct ON ct.reference_type = p.reference_type AND ct.reference_id = p.reference_id AND ct.amount = p.amount
+        WHERE ct.id IS NULL AND p.amount > 0
+      `).all();
+
+      if (missingPayments && missingPayments.length > 0) {
+        let activeSes = db.prepare("SELECT id FROM cash_sessions WHERE status = 'OPEN' ORDER BY id DESC LIMIT 1").get();
+        if (!activeSes) activeSes = db.prepare("SELECT id FROM cash_sessions ORDER BY id DESC LIMIT 1").get();
+        const insertStmt = db.prepare(`
+          INSERT INTO cash_transactions (cash_session_id, transaction_type, category, amount, reference_type, reference_id, notes, created_at)
+          VALUES (?, 'IN', ?, ?, ?, ?, ?, ?)
+        `);
+        for (const mp of missingPayments) {
+          const sId = mp.cash_session_id || (activeSes ? activeSes.id : 1);
+          const cat = mp.payment_type === 'RENTAL_ADVANCE' ? 'RENTAL' : (mp.payment_type || 'RENTAL');
+          const note = mp.payment_type === 'RENTAL_ADVANCE' ? `عربون حجز #${mp.booking_number || mp.reference_id} (${mp.payment_method || 'CASH'})` : `سداد حجز #${mp.booking_number || mp.reference_id} (${mp.payment_method || 'CASH'})`;
+          insertStmt.run(sId, cat, mp.amount, mp.reference_type, mp.reference_id, note, mp.created_at);
+        }
+      }
+
+      // Sync any missing expenses from expenses table
+      const missingExpenses = db.prepare(`
+        SELECT e.*, ec.name as cat_name
+        FROM expenses e
+        LEFT JOIN expense_categories ec ON ec.id = e.category_id
+        LEFT JOIN cash_transactions ct ON ct.reference_type = 'EXPENSE' AND ct.reference_id = e.id
+        WHERE ct.id IS NULL AND e.amount > 0
+      `).all();
+
+      if (missingExpenses && missingExpenses.length > 0) {
+        let activeSes = db.prepare("SELECT id FROM cash_sessions WHERE status = 'OPEN' ORDER BY id DESC LIMIT 1").get();
+        if (!activeSes) activeSes = db.prepare("SELECT id FROM cash_sessions ORDER BY id DESC LIMIT 1").get();
+        const insertStmt = db.prepare(`
+          INSERT INTO cash_transactions (cash_session_id, transaction_type, category, amount, reference_type, reference_id, notes, created_at)
+          VALUES (?, 'OUT', 'EXPENSE', ?, 'EXPENSE', ?, ?, ?)
+        `);
+        for (const me of missingExpenses) {
+          const sId = me.cash_session_id || (activeSes ? activeSes.id : 1);
+          insertStmt.run(sId, me.amount, me.id, `مصروف: ${me.cat_name || 'عام'} - ${me.description || ''}`, me.created_at);
+        }
+      }
+    } catch (_) {}
+  }
+
+  /**
+   * جلب حركات النقدية والخزينة بشكل مستقل ومفصل (سواء داخل جلسة أو عامة أو عبر كل الجلسات)
+   */
+  getCashTransactions({
+    sessionId = null, // null أو 'ALL' = جميع الحركات، 'CURRENT' = الجلسة الحالية/الأخيرة، أو رقم الجلسة
+    paymentMethod = 'ALL',
+    startDate = null,
+    endDate = null,
+    category = null,
+    type = null, // 'IN' | 'OUT' | null
+    limit = 100,
+    offset = 0
+  } = {}) {
+    this.syncMissingRecords();
+    let targetSessionId = null;
+    let sessionInfo = null;
+
+    if (sessionId === 'CURRENT') {
+      const activeOrLast = this.dbConn.get("SELECT * FROM cash_sessions ORDER BY CASE WHEN status = 'OPEN' THEN 1 ELSE 2 END ASC, id DESC LIMIT 1");
+      if (activeOrLast) {
+        targetSessionId = activeOrLast.id;
+        sessionInfo = activeOrLast;
+      }
+    } else if (sessionId && sessionId !== 'ALL') {
+      targetSessionId = Number(sessionId);
+      sessionInfo = this.dbConn.get("SELECT * FROM cash_sessions WHERE id = ?", [targetSessionId]);
+    }
+
+    let query = `
+      SELECT ct.*, cs.session_code, cs.status as session_status
+      FROM cash_transactions ct
+      LEFT JOIN cash_sessions cs ON ct.cash_session_id = cs.id
+      WHERE 1=1
+    `;
+    const params = [];
+
+    if (targetSessionId !== null) {
+      query += ` AND ct.cash_session_id = ?`;
+      params.push(targetSessionId);
+    }
+
+    if (startDate) {
+      query += ` AND date(ct.created_at) >= date(?)`;
+      params.push(startDate);
+    }
+    if (endDate) {
+      query += ` AND date(ct.created_at) <= date(?)`;
+      params.push(endDate);
+    }
+    if (paymentMethod && paymentMethod !== 'ALL') {
+      query += ` AND (ct.category = ? OR ct.notes LIKE ?)`;
+      params.push(paymentMethod, `%${paymentMethod}%`);
+    }
+    if (category && category !== 'ALL') {
+      query += ` AND ct.category = ?`;
+      params.push(category);
+    }
+    if (type && type !== 'ALL') {
+      query += ` AND ct.transaction_type = ?`;
+      params.push(type);
+    }
+
+    // Get counts and totals
+    const countSql = `SELECT COUNT(*) as total_count FROM (${query})`;
+    const countRow = this.dbConn.get(countSql, params);
+    const totalCount = countRow ? countRow.total_count : 0;
+
+    const totalsSql = `
+      SELECT 
+        COALESCE(SUM(CASE WHEN ct.transaction_type = 'IN' THEN ct.amount ELSE 0 END), 0) as total_in,
+        COALESCE(SUM(CASE WHEN ct.transaction_type = 'OUT' THEN ct.amount ELSE 0 END), 0) as total_out
+      FROM (${query}) ct
+    `;
+    const totalsRow = this.dbConn.get(totalsSql, params);
+    const totalIn = totalsRow ? totalsRow.total_in : 0;
+    const totalOut = totalsRow ? totalsRow.total_out : 0;
+
+    query += ` ORDER BY ct.id DESC LIMIT ? OFFSET ?`;
+    params.push(limit, offset);
+
+    const rawRows = this.dbConn.all(query, params);
+    const enriched = (rawRows || []).map(r => this.enrichTransaction(r));
+
+    return {
+      transactions: enriched,
+      totalCount,
+      sessionInfo,
+      summary: {
+        totalIn,
+        totalOut,
+        netChange: totalIn - totalOut
+      }
     };
   }
 

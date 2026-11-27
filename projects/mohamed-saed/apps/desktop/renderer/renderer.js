@@ -143,6 +143,179 @@
     `;
   };
 
+  window._renderColorCardsHtml = (prefix, colorsList = [], selectedIds = []) => {
+    const selSet = new Set((selectedIds || []).map(Number));
+    if (!colorsList || colorsList.length === 0) {
+      return '<div style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); font-size: 12px; padding: 8px;">لا توجد ألوان مسجلة حالياً. اضغط على "إضافة لون جديد" لإضافة لون.</div>';
+    }
+    return colorsList.map(c => {
+      const isSel = selSet.has(Number(c.id));
+      const swatch = c.hex_code || '#334155';
+      return `
+        <div class="color-card-item" data-color-id="${c.id}" style="background: ${isSel ? 'rgba(212,175,55,0.12)' : 'var(--bg-card)'}; padding: 8px 6px; border-radius: 6px; border: ${isSel ? '1.5px solid var(--color-gold-400)' : '1px solid var(--border-color)'}; text-align: center; position: relative; cursor: pointer; transition: all 0.15s ease; user-select: none;">
+          <button type="button" class="btn-remove-color-card" title="حذف هذا اللون" style="position: absolute; top: 2px; right: 4px; background: none; border: none; color: var(--color-danger); cursor: pointer; font-size: 11px; padding: 0; z-index: 2;">×</button>
+          <div style="display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 4px;">
+            <span style="display: inline-block; width: 13px; height: 13px; border-radius: 50%; background: ${swatch}; border: 1px solid rgba(255,255,255,0.35); flex-shrink: 0;"></span>
+            <span style="font-size: 12px; font-weight: 700; color: ${isSel ? 'var(--color-gold-400)' : 'var(--text-primary)'};">${c.name}</span>
+          </div>
+          <input type="checkbox" class="${prefix}-color-checkbox" data-color-id="${c.id}" data-color-name="${c.name}" ${isSel ? 'checked' : ''} style="margin-top: 5px; cursor: pointer; width: 14px; height: 14px;">
+        </div>
+      `;
+    }).join('');
+  };
+
+  window._renderColorSelectorSection = (prefix, colorsList = [], selectedIds = []) => {
+    return `
+      <div class="form-group">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <label class="form-label" style="margin-bottom: 0;">الألوان المتاحة <span style="font-size: 11px; color: var(--text-muted);">(اختر لوناً أو أكثر — اختياري)</span>:</label>
+          <button type="button" class="btn-secondary" id="btn-quick-add-${prefix}-color" style="font-size: 11px; padding: 3px 8px; color: var(--color-gold-400);">
+            🎨 إضافة لون جديد
+          </button>
+        </div>
+        <div id="quick-add-${prefix}-color-box" style="display: none; margin-bottom: 8px; padding: 8px 10px; background: rgba(212,175,55,0.08); border: 1px dashed var(--color-gold-400); border-radius: 6px;">
+          <div style="font-size: 11px; font-weight: 600; color: var(--color-gold-400); margin-bottom: 4px;">اكتب اسم اللون الجديد (أو عدة ألوان مفصولة بفواصل مثل: أسود, كحلي, بني):</div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <input type="color" id="quick-${prefix}-color-hex" value="#1e293b" title="اختر درجة اللون" style="width: 36px; height: 32px; padding: 1px; border: 1px solid var(--border-color); border-radius: 4px; background: transparent; cursor: pointer;">
+            <input type="text" id="quick-${prefix}-color-input" class="form-control" placeholder="مثال: أسود أو أسود, كحلي..." style="font-size: 12px; height: 32px; flex: 1;">
+            <button type="button" class="btn-accent-action" id="btn-confirm-add-${prefix}-color" style="padding: 4px 12px; font-size: 12px; white-space: nowrap;">حفظ اللون ✅</button>
+            <button type="button" class="btn-secondary" id="btn-cancel-add-${prefix}-color" style="padding: 4px 8px; font-size: 12px;">إلغاء</button>
+          </div>
+        </div>
+        <div id="${prefix}-colors-grid-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(105px, 1fr)); gap: 8px; max-height: 150px; overflow-y: auto; background: var(--bg-card-hover); padding: 10px; border-radius: 6px; border: 1px solid var(--border-color);">
+          ${window._renderColorCardsHtml(prefix, colorsList, selectedIds)}
+        </div>
+      </div>
+    `;
+  };
+
+  window._getSelectedColorIds = (prefix) => {
+    const ids = [];
+    document.querySelectorAll(`#${prefix}-colors-grid-container .${prefix}-color-checkbox:checked`).forEach(cb => {
+      const id = Number(cb.dataset.colorId);
+      if (id) ids.push(id);
+    });
+    return ids;
+  };
+
+  window._wireColorSelectorSection = (prefix) => {
+    const wireCards = () => {
+      const container = document.getElementById(`${prefix}-colors-grid-container`);
+      if (!container) return;
+      container.querySelectorAll('.color-card-item').forEach(card => {
+        const cb = card.querySelector(`.${prefix}-color-checkbox`);
+        const syncStyle = () => {
+          const checked = !!cb?.checked;
+          card.style.border = checked ? '1.5px solid var(--color-gold-400)' : '1px solid var(--border-color)';
+          card.style.background = checked ? 'rgba(212,175,55,0.12)' : 'var(--bg-card)';
+        };
+        card.onclick = (e) => {
+          if (e.target.closest('.btn-remove-color-card')) return;
+          if (cb && e.target !== cb) cb.checked = !cb.checked;
+          syncStyle();
+        };
+        cb?.addEventListener('change', syncStyle);
+
+        const delBtn = card.querySelector('.btn-remove-color-card');
+        if (delBtn) {
+          delBtn.onclick = async (e) => {
+            e.stopPropagation();
+            const colorId = card.getAttribute('data-color-id');
+            if (confirm('هل تريد حذف هذا اللون؟')) {
+              if (colorId) {
+                try { await electronApi.invoke('admin:delete-color', colorId); } catch (_) {}
+              }
+              card.remove();
+              AppToast.info('تم حذف اللون.');
+            }
+          };
+        }
+      });
+    };
+
+    wireCards();
+
+    document.getElementById(`btn-quick-add-${prefix}-color`)?.addEventListener('click', () => {
+      const box = document.getElementById(`quick-add-${prefix}-color-box`);
+      if (box) {
+        box.style.display = box.style.display === 'none' ? 'block' : 'none';
+        if (box.style.display === 'block') {
+          const inp = document.getElementById(`quick-${prefix}-color-input`);
+          if (inp) { inp.value = ''; inp.focus(); }
+        }
+      }
+    });
+
+    document.getElementById(`btn-cancel-add-${prefix}-color`)?.addEventListener('click', () => {
+      const box = document.getElementById(`quick-add-${prefix}-color-box`);
+      if (box) box.style.display = 'none';
+    });
+
+    const handleSaveQuickColor = async () => {
+      const inp = document.getElementById(`quick-${prefix}-color-input`);
+      const hexInp = document.getElementById(`quick-${prefix}-color-hex`);
+      const newName = inp?.value?.trim();
+      const hexCode = hexInp?.value || '#1e293b';
+      if (!newName) {
+        AppToast.error('يرجى كتابة اسم اللون الجديد.');
+        return;
+      }
+      const prevSelected = window._getSelectedColorIds(prefix);
+      const res = await electronApi.invoke('admin:create-color', { name: newName, hex_code: hexCode });
+      if (res?.success) {
+        AppToast.success('تمت إضافة اللون بنجاح! 🎨✅');
+        const box = document.getElementById(`quick-add-${prefix}-color-box`);
+        if (box) box.style.display = 'none';
+        if (inp) inp.value = '';
+        const updatedRes = await electronApi.invoke('admin:get-colors');
+        const updatedColors = (updatedRes?.data || (Array.isArray(updatedRes) ? updatedRes : [])).filter(c => c.is_active !== 0);
+        const createdId = res.data?.id;
+        if (createdId && !prevSelected.includes(Number(createdId))) prevSelected.push(Number(createdId));
+        if (Array.isArray(res.data?.items)) {
+          res.data.items.forEach(it => { if (it.id && !prevSelected.includes(Number(it.id))) prevSelected.push(Number(it.id)); });
+        }
+        const container = document.getElementById(`${prefix}-colors-grid-container`);
+        if (container) {
+          container.innerHTML = window._renderColorCardsHtml(prefix, updatedColors, prevSelected);
+          wireCards();
+        }
+      } else {
+        AppToast.error(res?.error?.message || 'تعذر إضافة اللون.');
+      }
+    };
+
+    document.getElementById(`btn-confirm-add-${prefix}-color`)?.addEventListener('click', handleSaveQuickColor);
+    document.getElementById(`quick-${prefix}-color-input`)?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleSaveQuickColor();
+      }
+    });
+  };
+
+  window._buildProductVariantsWithColors = (sizeVariants, selectedColorIds, fallbackQty = 0, defaultPrices = {}) => {
+    if (sizeVariants && sizeVariants.length > 0) {
+      if (!selectedColorIds || selectedColorIds.length === 0) return sizeVariants;
+      const combined = [];
+      sizeVariants.forEach(sv => {
+        selectedColorIds.forEach(cId => {
+          combined.push({ ...sv, color_id: Number(cId) });
+        });
+      });
+      return combined;
+    }
+    if (selectedColorIds && selectedColorIds.length > 0 && fallbackQty > 0) {
+      return selectedColorIds.map(cId => ({
+        size_id: null,
+        color_id: Number(cId),
+        initial_quantity: fallbackQty,
+        rental_price: defaultPrices.rental_price || 0,
+        cost_price: defaultPrices.cost_price || 0
+      }));
+    }
+    return [];
+  };
+
   window._toggleCostPrivacy = (e) => {
     if (e && e.stopPropagation) e.stopPropagation();
     if (window._isCostPriceRevealed) {
@@ -1828,11 +2001,13 @@
             <div style="display: flex; justify-content: space-between; border-bottom: 2px solid #d4af37; padding-bottom: 10px;">
               <div>
                 <h2 style="margin: 0; color: #111;">محل mohamed saed والعرائس</h2>
-                <p style="margin: 4px 0; font-size: 12px; color: #555;">سجل تجاري: 128456 | بطاقة ضريبية: 345-678-901</p>
+                <p style="margin: 4px 0; font-size: 13px; color: #333;">هاتف: <span dir="ltr">01012345678</span></p>
               </div>
               <div style="text-align: left;">
                 <h3 style="margin: 0; color: #d4af37;">فاتورة مبيعات رسمية</h3>
                 <p style="margin: 4px 0; font-size: 12px;">رقم: <strong>${payload.invoiceNumber || 'INV-10492'}</strong></p>
+                <p style="margin: 2px 0; font-size: 11px; color: #555;">التاريخ: ${new Date().toLocaleDateString('ar-EG')}</p>
+                <p style="margin: 2px 0; font-size: 11px; color: #555;">وقت الإنشاء: ${window.UiUtils ? window.UiUtils.formatTime(new Date()) : new Date().toLocaleTimeString('ar-EG')}</p>
               </div>
             </div>
             <div style="margin: 15px 0; background: #f9f9f9; padding: 12px; border-radius: 6px; font-size: 13px;">
@@ -2122,7 +2297,7 @@
   const pageContent = document.getElementById('page-content');
   const unlockedPagesSession = new Set();
   let cachedAppSettings = null;
-  let currentAppVersion = '1.0.7';
+  let currentAppVersion = '1.0.8';
 
   const PAGE_TITLES = {
     dashboard: 'لوحة التحكم',
@@ -2136,7 +2311,8 @@
     pos: 'نقطة البيع السريع (POS)',
     finance: 'الخزينة والمالية',
     tasks: 'المهام اليومية والتنبيهات',
-    reports: 'التقارير المحاسبية والإحصائيات'
+    reports: 'التقارير المحاسبية والإحصائيات',
+    developer: 'عن المطور والدعم الفني'
   };
 
   function getCategoryIcon(code, name, type) {
@@ -3582,8 +3758,17 @@
       const discInput = document.getElementById('cbk-input-discount');
       const advInput = document.getElementById('cbk-input-advance');
 
-      if (pDateInput) tab.pickupDate = pDateInput.value;
-      if (rDateInput) tab.returnDate = rDateInput.value;
+      if (pDateInput && pDateInput.value) {
+        tab.pickupDate = pDateInput.value;
+        if (!rDateInput || !rDateInput.value || rDateInput.value < pDateInput.value) {
+          tab.returnDate = this.calcReturnDate(pDateInput.value);
+          if (rDateInput) rDateInput.value = tab.returnDate;
+        } else {
+          tab.returnDate = rDateInput.value;
+        }
+      } else if (rDateInput && rDateInput.value) {
+        tab.returnDate = rDateInput.value;
+      }
       if (payMethodInput) tab.paymentMethod = payMethodInput.value;
       if (notesInput) tab.contractNotes = notesInput.value;
       if (discInput) tab.discount = Number(discInput.value) || 0;
@@ -4115,8 +4300,11 @@
           }
           unitOpts += `<option value="${u.id}" data-next-avail="${nextAvail}">[${barcode}] - ${wh} (${price} ج.م)${availBadge}</option>`;
         });
+        const curUnit = unitSelect.value;
         unitSelect.innerHTML = unitOpts;
-        if (matchingUnits.length > 0) {
+        if (curUnit && matchingUnits.some(u => String(u.id) === String(curUnit))) {
+          unitSelect.value = curUnit;
+        } else if (matchingUnits.length > 0) {
           unitSelect.value = matchingUnits[0].id;
         }
       };
@@ -4364,10 +4552,18 @@
                   if (confirm(confirmMsg)) {
                     tab.pickupDate = nextAvail;
                     tab.returnDate = this.calcReturnDate(nextAvail);
-                    const pInput = document.getElementById(`cbk-pickup-${tab.id}`);
-                    const rInput = document.getElementById(`cbk-return-${tab.id}`);
-                    if (pInput) pInput.value = tab.pickupDate;
-                    if (rInput) rInput.value = tab.returnDate;
+                    const pInput = document.getElementById('cbk-pickup-date');
+                    const rInput = document.getElementById('cbk-return-date');
+                    if (pInput) {
+                      pInput.value = tab.pickupDate;
+                      pInput.dispatchEvent(new Event('input', { bubbles: true }));
+                      pInput.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                    if (rInput) {
+                      rInput.value = tab.returnDate;
+                      rInput.dispatchEvent(new Event('input', { bubbles: true }));
+                      rInput.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
                     if (window.AppToast) window.AppToast.success(`تم ضبط تاريخ الحجز تلقائياً على أول موعد متاح (${nextAvail}) ✅`);
                   } else {
                     if (window.AppToast) window.AppToast.error(`تعارض زمني: القطعة محجوزة حتى ${conflictReturn}. أول موعد متاح هو ${nextAvail}`);
@@ -4541,24 +4737,28 @@
       const pDateInput = document.getElementById('cbk-pickup-date');
       const rDateInput = document.getElementById('cbk-return-date');
       if (pDateInput) {
-        pDateInput.addEventListener('change', (e) => {
+        const handlePickupChange = (e) => {
           const tab = this.getActiveTab();
-          if (tab) {
+          if (tab && e.target.value) {
             tab.pickupDate = e.target.value;
             tab.returnDate = this.calcReturnDate(e.target.value);
             if (rDateInput) rDateInput.value = tab.returnDate;
             this.updateAllCategoryRows();
           }
-        });
+        };
+        pDateInput.addEventListener('change', handlePickupChange);
+        pDateInput.addEventListener('input', handlePickupChange);
       }
       if (rDateInput) {
-        rDateInput.addEventListener('change', (e) => {
+        const handleReturnChange = (e) => {
           const tab = this.getActiveTab();
-          if (tab) {
+          if (tab && e.target.value) {
             tab.returnDate = e.target.value;
             this.updateAllCategoryRows();
           }
-        });
+        };
+        rDateInput.addEventListener('change', handleReturnChange);
+        rDateInput.addEventListener('input', handleReturnChange);
       }
 
       // Discount & Advance Inputs
@@ -4752,6 +4952,8 @@
       renderTasksPage();
     } else if (page === 'reports') {
       renderReportsPage();
+    } else if (page === 'developer') {
+      renderDeveloperPage();
     } else {
       renderPlaceholderPage(page);
     }
@@ -4762,18 +4964,19 @@
     // Show loading
     pageContent.innerHTML = '<div class="state-container loading-state"><div class="spinner"></div><p>جاري تحميل لوحة التحكم...</p></div>';
 
-    // Fetch data
-    const [alertsRes, bookingsRes, salesRes, sessionRes] = await Promise.all([
-      electronApi.invoke('tasks:get-alerts'),
-      electronApi.invoke('booking:get-list'),
-      electronApi.invoke('sales:get-list'),
-      electronApi.invoke('finance:get-cash-session')
-    ]);
-    const alerts = alertsRes.data || {};
-    const bookings = bookingsRes.data || [];
-    const sales = salesRes.data || [];
-    const session = sessionRes.data;
-    const today = new Date().toISOString().slice(0, 10);
+    try {
+      // Fetch data
+      const [alertsRes, bookingsRes, salesRes, sessionRes] = await Promise.all([
+        electronApi.invoke('tasks:get-alerts').catch(() => ({ data: {} })),
+        electronApi.invoke('booking:get-list').catch(() => ({ data: [] })),
+        electronApi.invoke('sales:get-list').catch(() => ({ data: [] })),
+        electronApi.invoke('finance:get-cash-session').catch(() => ({ data: null }))
+      ]);
+      const alerts = alertsRes?.data || {};
+      const bookings = bookingsRes?.data || [];
+      const sales = salesRes?.data || [];
+      const session = sessionRes?.data;
+      const today = new Date().toISOString().slice(0, 10);
 
     // Compute stats
     const todaySales = sales.filter(s => (s.created_at || '').startsWith(today));
@@ -4872,6 +5075,17 @@
         </table>
       </div>
     `;
+    } catch (err) {
+      console.error('Failed to render dashboard:', err);
+      pageContent.innerHTML = `
+        <div class="state-container error-state" style="padding: 40px; text-align: center;">
+          <div style="font-size: 32px; margin-bottom: 12px;">⚠️</div>
+          <h3 style="margin-bottom: 8px;">تعذر تحميل لوحة التحكم</h3>
+          <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 16px;">${err.message || 'حدث خطأ غير متوقع'}</p>
+          <button class="btn-accent-action" onclick="renderDashboard()">إعادة المحاولة 🔄</button>
+        </div>
+      `;
+    }
   }
 
   // --- Phase 5: Render Administration Page ---
@@ -5892,6 +6106,275 @@
     }
   }
 
+  // --- Render Developer & Support Page (عن المطور والدعم الفني) ---
+  function renderDeveloperPage() {
+    const phoneNumber = '01094612729';
+    const waNumber = '201094612729';
+
+    pageContent.innerHTML = `
+      <div style="max-width: 920px; margin: 0 auto; padding-bottom: 40px; animation: fadeIn 0.25s ease;">
+        
+        <!-- Header Profile Banner -->
+        <div style="background: linear-gradient(135deg, rgba(30,41,59,0.92), rgba(15,23,42,0.98)); border: 1px solid var(--border-color); border-radius: 16px; padding: 32px 28px; margin-bottom: 24px; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.35);">
+          <div style="position: absolute; top: -50px; left: -50px; width: 180px; height: 180px; background: radial-gradient(circle, rgba(212,175,55,0.2) 0%, transparent 70%); border-radius: 50%;"></div>
+          <div style="position: absolute; bottom: -60px; right: -60px; width: 220px; height: 220px; background: radial-gradient(circle, rgba(16,185,129,0.15) 0%, transparent 70%); border-radius: 50%;"></div>
+
+          <div style="display: flex; align-items: center; gap: 28px; flex-wrap: wrap; position: relative; z-index: 1;">
+            <div style="position: relative; flex-shrink: 0;">
+              <img src="developer-avatar.jpg" alt="صورة المطور" style="width: 130px; height: 130px; border-radius: 50%; object-fit: cover; border: 3px solid var(--color-gold-400); box-shadow: 0 8px 25px rgba(212,175,55,0.25);">
+              <span style="position: absolute; bottom: 6px; right: 6px; width: 18px; height: 18px; background: #10B981; border: 3px solid var(--bg-card); border-radius: 50%;" title="متاح للتواصل والمشاريع"></span>
+            </div>
+
+            <div style="flex: 1; min-width: 260px;">
+              <div style="display: inline-block; padding: 4px 12px; background: rgba(212,175,55,0.15); border: 1px solid var(--color-gold-400); border-radius: 20px; color: var(--color-gold-400); font-size: 12px; font-weight: 700; margin-bottom: 8px;">
+                👨‍💻 مهندس برمجيات ومطور ومصمم النظام
+              </div>
+              <h1 style="font-size: 26px; font-weight: 800; margin-bottom: 6px; color: #fff;">م/ كريم</h1>
+              <p style="font-size: 14px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 14px;">
+                مطور برمجيات وأنظمة متكاملة (Full-Stack Software Engineer) — متخصص في برمجة وتطوير تطبيقات سطح المكتب الحديثة، أنظمة إدارة المتاجر والمخازن، نقاط البيع والحجوزات، والحلول البرمجية الذكية.
+              </p>
+
+              <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                <a href="https://wa.me/${waNumber}" target="_blank" class="btn-whatsapp-direct" style="display: inline-flex; align-items: center; gap: 8px; background: #25D366; color: #fff; font-weight: 700; font-size: 13px; padding: 10px 18px; border-radius: 8px; text-decoration: none; box-shadow: 0 4px 15px rgba(37,211,102,0.3); transition: transform 0.15s ease;">
+                  <span style="font-size: 18px;">💬</span>
+                  <span>تواصل عبر واتساب مباشر</span>
+                </a>
+
+                <button type="button" id="btn-copy-phone-num" style="display: inline-flex; align-items: center; gap: 8px; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary); font-weight: 600; font-size: 13px; padding: 10px 16px; border-radius: 8px; cursor: pointer; transition: all 0.15s ease;">
+                  <span>📞 ${phoneNumber}</span>
+                  <span style="font-size: 11px; color: var(--color-gold-400);" id="btn-copy-label">(نسخ الرقم 📋)</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Direct WhatsApp Message Section (إرسال رسالة مباشرة على الواتساب) -->
+        <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; margin-bottom: 24px; box-shadow: 0 4px 16px rgba(0,0,0,0.15);">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+            <span style="font-size: 24px;">💬</span>
+            <div>
+              <h3 style="font-size: 16px; font-weight: 700; margin: 0; color: var(--text-primary);">إرسال رسالة مباشرة للمطور عبر واتساب</h3>
+              <p style="font-size: 12px; color: var(--text-secondary); margin: 2px 0 0 0;">اكتب نص رسالتك أو طلبك بالأسفل وسيتم تحويلك مباشرة لمحادثة الواتساب مع كتابة الرسالة تلقائياً:</p>
+            </div>
+          </div>
+
+          <!-- Quick Templates / Presets -->
+          <div style="margin-bottom: 12px; display: flex; gap: 8px; flex-wrap: wrap;">
+            <span style="font-size: 11px; color: var(--text-muted); align-self: center;">نماذج سريعة:</span>
+            <button type="button" class="btn-wa-preset" data-text="مرحباً م/ كريم، أود طلب تعديل على برنامج المحل (إضافة ميزة أو تعديل مخصص)..." style="font-size: 11px; padding: 4px 10px; border-radius: 6px; background: rgba(212,175,55,0.1); border: 1px solid rgba(212,175,55,0.3); color: var(--color-gold-400); cursor: pointer;">
+              🛠️ طلب تعديل على النظام
+            </button>
+            <button type="button" class="btn-wa-preset" data-text="مرحباً م/ كريم، أود الاستفسار والاتفاق على إنشاء مشروع أو نظام إلكتروني جديد..." style="font-size: 11px; padding: 4px 10px; border-radius: 6px; background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3); color: #60A5FA; cursor: pointer;">
+              🚀 إنشاء مشروع إلكتروني جديد
+            </button>
+            <button type="button" class="btn-wa-preset" data-text="مرحباً م/ كريم، أود استشارة برمجية بخصوص تطوير ميزات المتجر..." style="font-size: 11px; padding: 4px 10px; border-radius: 6px; background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); color: #34D399; cursor: pointer;">
+              💡 استشارة ودعم فني
+            </button>
+          </div>
+
+          <div style="margin-bottom: 14px;">
+            <textarea id="direct-wa-message-input" class="form-control" rows="3" placeholder="اكتب رسالتك هنا للتواصل المباشر مع المطور (طلب تعديل، إضافة ميزة، أو إنشاء أي مشروع إلكتروني برمجي)..." style="font-size: 13px; line-height: 1.6; resize: vertical; padding: 12px;"></textarea>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+            <div id="developer-wa-status-pill" style="font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
+              <span>⏳ فحص حالة اتصال واتساب...</span>
+            </div>
+            
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+              <button type="button" id="btn-open-wa-native" class="btn-secondary" style="font-size: 12px; font-weight: 600; padding: 10px 16px; display: inline-flex; align-items: center; gap: 6px;" title="فتح المحادثة في تطبيق واتساب المكتبي أو المتصفح">
+                <span>📲 فتح في تطبيق واتساب</span>
+              </button>
+              <button type="button" id="btn-send-wa-message" class="btn-accent-action" style="background: linear-gradient(135deg, #25D366, #128C7E); border: none; font-size: 13px; font-weight: 700; padding: 10px 22px; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; border-radius: 8px; color: #fff; box-shadow: 0 4px 14px rgba(37,211,102,0.35);">
+                <span>🚀 إرسال الرسالة مباشرة الآن</span>
+                <span style="font-size: 16px;">💬</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Services & Capabilities Grid -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px;">
+          
+          <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 18px; border-top: 3px solid var(--color-gold-400);">
+            <div style="font-size: 28px; margin-bottom: 8px;">🛠️</div>
+            <h4 style="font-size: 15px; font-weight: 700; margin-bottom: 6px; color: var(--text-primary);">تعديل وتطوير هذا النظام</h4>
+            <p style="font-size: 12.5px; color: var(--text-secondary); line-height: 1.6; margin: 0;">
+              جاهز في أي وقت لإضافة أي تعديلات، شاشات جديدة، تقارير مخصصة، تخصيص نماذج الفواتير والعقود، أو ربط أجهزة وطابعات إضافية.
+            </p>
+          </div>
+
+          <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 18px; border-top: 3px solid #3B82F6;">
+            <div style="font-size: 28px; margin-bottom: 8px;">💻</div>
+            <h4 style="font-size: 15px; font-weight: 700; margin-bottom: 6px; color: var(--text-primary);">إنشاء أي مشروع إلكتروني</h4>
+            <p style="font-size: 12.5px; color: var(--text-secondary); line-height: 1.6; margin: 0;">
+              برمجة وتصميم كافة المشروعات الإلكترونية: برامج محاسبة، إدارة شركات، مصانع، تطبيقات سطح مكتب، ومواقع وتطبيقات هاتف ذكية من الصفر بأعلى جودة.
+            </p>
+          </div>
+
+          <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 18px; border-top: 3px solid #10B981;">
+            <div style="font-size: 28px; margin-bottom: 8px;">⚡</div>
+            <h4 style="font-size: 15px; font-weight: 700; margin-bottom: 6px; color: var(--text-primary);">دعم فني وسرعة استجابة</h4>
+            <p style="font-size: 12.5px; color: var(--text-secondary); line-height: 1.6; margin: 0;">
+              تواصل مباشر ودائم لأي استفسار، حل أي مشكلة، أو تقديم استشارات تقنية لتطوير أعمالك وأتمتة نشاطك التجاري.
+            </p>
+          </div>
+
+        </div>
+
+        <div style="text-align: center; margin-top: 24px; font-size: 11px; color: var(--text-muted);">
+          تم تصميم وبرمجة وتطوير النظام بواسطة <strong>م/ كريم</strong> — رقم الهاتف والواتساب المعتمد: <strong>01094612729</strong> ✨
+        </div>
+
+      </div>
+    `;
+
+    // Hook copy phone number
+    document.getElementById('btn-copy-phone-num')?.addEventListener('click', () => {
+      navigator.clipboard?.writeText(phoneNumber).then(() => {
+        const lbl = document.getElementById('btn-copy-label');
+        if (lbl) lbl.textContent = '(تم النسخ ✅)';
+        if (window.AppToast) window.AppToast.success('تم نسخ رقم الهاتف بنجاح: ' + phoneNumber);
+        setTimeout(() => {
+          if (lbl) lbl.textContent = '(نسخ الرقم 📋)';
+        }, 2500);
+      }).catch(() => {
+        prompt('رقم الهاتف:', phoneNumber);
+      });
+    });
+
+    // Hook preset buttons
+    document.querySelectorAll('.btn-wa-preset').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const txt = btn.getAttribute('data-text');
+        const input = document.getElementById('direct-wa-message-input');
+        if (input && txt) {
+          input.value = txt;
+          input.focus();
+        }
+      });
+    });
+
+    // Check WhatsApp status for status pill
+    const updateDevWaStatus = async () => {
+      const pill = document.getElementById('developer-wa-status-pill');
+      if (!pill) return;
+      try {
+        const res = await electronApi.invoke('whatsapp:get-status');
+        const isReady = !!(res?.data?.isReady || res?.isReady);
+        if (isReady) {
+          pill.innerHTML = '<span style="color: #10B981; font-weight: 600;">🟢 واتساب متصل ومستعد للإرسال الفوري المباشر</span>';
+        } else {
+          pill.innerHTML = `
+            <span style="color: var(--color-warning);">⚠️ واتساب غير متصل.</span>
+            <button type="button" id="btn-dev-open-pairing" style="background: none; border: none; color: var(--color-gold-400); text-decoration: underline; cursor: pointer; font-size: 11px; padding: 0 4px;">اضغط هنا لمسح الباركود والربط</button>
+          `;
+          document.getElementById('btn-dev-open-pairing')?.addEventListener('click', () => {
+            if (typeof window._openWhatsAppManagerModal === 'function') window._openWhatsAppManagerModal();
+          });
+        }
+      } catch (_) {
+        pill.innerHTML = '<span style="color: var(--text-muted);">واتساب جاهز للإرسال</span>';
+      }
+    };
+    updateDevWaStatus();
+
+    // Native app opener (WhatsApp Desktop or Web fallback)
+    const openNativeWhatsApp = async (customMsg) => {
+      const input = document.getElementById('direct-wa-message-input');
+      const textToSend = customMsg || input?.value?.trim() || 'مرحباً م/ كريم، أود التواصل معك بخصوص نظام المحل أو مشروع إلكتروني جديد.';
+      const encodedMsg = encodeURIComponent(textToSend);
+      const nativeUrl = `whatsapp://send?phone=${waNumber}&text=${encodedMsg}`;
+      const webUrl = `https://web.whatsapp.com/send?phone=${waNumber}&text=${encodedMsg}`;
+      
+      if (window.AppToast) window.AppToast.info('جاري فتح تطبيق واتساب... 📲');
+
+      try {
+        await electronApi.invoke('app:open-external-url', { url: nativeUrl });
+      } catch (_) {
+        try {
+          await electronApi.invoke('app:open-external-url', { url: webUrl });
+        } catch (e) {
+          window.open(webUrl, '_blank');
+        }
+      }
+    };
+
+    // Hook send direct WhatsApp message (Background silent sending)
+    const sendDirectWhatsApp = async () => {
+      const input = document.getElementById('direct-wa-message-input');
+      const sendBtn = document.getElementById('btn-send-wa-message');
+      let msg = input?.value?.trim();
+      if (!msg) {
+        if (window.AppToast) window.AppToast.error('يرجى كتابة نص الرسالة أولاً.');
+        input?.focus();
+        return;
+      }
+
+      // Check readiness
+      let isReady = false;
+      try {
+        const st = await electronApi.invoke('whatsapp:get-status');
+        isReady = !!(st?.data?.isReady || st?.isReady);
+      } catch (_) {}
+
+      if (!isReady) {
+        if (confirm('جلسة واتساب غير مرتبطة بالجهاز حالياً.\n\nهل تريد فتح نافذة مسح باركود واتساب لربطه والتمتع بالإرسال المباشر الصامت في الخلفية، أو فتح المحادثة في تطبيق واتساب المكتبي؟\n\nاضغط [موافق] لربط الباركود، أو [إلغاء] لفتح تطبيق واتساب.')) {
+          if (typeof window._openWhatsAppManagerModal === 'function') {
+            window._openWhatsAppManagerModal();
+          }
+          return;
+        } else {
+          openNativeWhatsApp(msg);
+          return;
+        }
+      }
+
+      if (sendBtn) {
+        sendBtn.disabled = true;
+        sendBtn.innerHTML = '<span>⏳</span> جاري الإرسال المباشر في الخلفية...';
+      }
+      if (window.AppToast) window.AppToast.info('جاري إرسال الرسالة إلى واتساب م/ كريم صامتاً في الخلفية... ⏳');
+
+      try {
+        const res = await electronApi.invoke('whatsapp:send-direct', {
+          phone: phoneNumber,
+          message: msg
+        });
+
+        if (res && res.success !== false) {
+          if (window.AppToast) window.AppToast.success('🎉 تم إرسال رسالتك إلى م/ كريم (01094612729) بنجاح تام عبر واتساب!');
+          if (input) input.value = '';
+        } else {
+          const errText = res?.error || 'تعذر الإرسال الصامت';
+          if (confirm(`تعذر الإرسال المباشر الصامت:\n${errText}\n\nهل تريد فتح المحادثة مباشرة في تطبيق واتساب؟`)) {
+            openNativeWhatsApp(msg);
+          }
+        }
+      } catch (err) {
+        console.warn('Direct send failed:', err);
+        if (confirm(`تعذر الإرسال المباشر الصامت:\n${err.message}\n\nهل تريد فتح المحادثة مباشرة في تطبيق واتساب؟`)) {
+          openNativeWhatsApp(msg);
+        }
+      } finally {
+        if (sendBtn) {
+          sendBtn.disabled = false;
+          sendBtn.innerHTML = '<span>🚀 إرسال الرسالة مباشرة الآن</span><span style="font-size: 16px;">💬</span>';
+        }
+      }
+    };
+
+    document.getElementById('btn-send-wa-message')?.addEventListener('click', sendDirectWhatsApp);
+    document.getElementById('btn-open-wa-native')?.addEventListener('click', () => openNativeWhatsApp());
+    document.getElementById('direct-wa-message-input')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        sendDirectWhatsApp();
+      }
+    });
+  }
+
   // --- Phase 5: Render Settings Page ---
   async function renderSettingsPage() {
     const res = await electronApi.invoke('settings:get');
@@ -6418,7 +6901,7 @@
             <h3 style="margin: 0; font-size: 16px;">🚀 التحديثات التلقائية للنظام (Auto Updates & Safety Staging)</h3>
             <p style="margin: 4px 0 0; font-size: 12px; color: var(--text-secondary);">فحص وتنزيل وتثبيت التحديثات الجديدة مع فحص البصمة الرقمية (SHA-256) والنسخ الاحتياطي الحتمي قبل التحديث</p>
           </div>
-          <span class="badge badge-gold" id="current-app-version-badge">الإصدار الحالي: v${cachedAppSettings?.appVersion || currentAppVersion || "1.0.7"}</span>
+          <span class="badge badge-gold" id="current-app-version-badge">الإصدار الحالي: v${cachedAppSettings?.appVersion || currentAppVersion || "1.0.8"}</span>
         </div>
 
         <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 16px;">
@@ -8096,7 +8579,7 @@
         if (btnDownload) btnDownload.style.display = 'none';
 
         // Render Animated Modern Progress & Stages Card
-        const targetVer = currentUpdateData?.latestVersion || currentAppVersion || '1.0.7';
+        const targetVer = currentUpdateData?.latestVersion || currentAppVersion || '1.0.8';
         const fileSizeMB = currentUpdateData?.fileSizeBytes ? (currentUpdateData.fileSizeBytes / (1024 * 1024)).toFixed(1) : '43.2';
 
         statusArea.innerHTML = `
@@ -8289,7 +8772,7 @@
     };
 
     document.getElementById('btn-apply-update')?.addEventListener('click', () => {
-      window._executeApplyUpdateSequence(currentUpdateData?.latestVersion || currentAppVersion || '1.0.7');
+      window._executeApplyUpdateSequence(currentUpdateData?.latestVersion || currentAppVersion || '1.0.8');
     });
   }
 
@@ -8754,20 +9237,42 @@
     document.getElementById('suit-units-sort')?.addEventListener('change', renderUnitsList);
 
     // ── Edit & Delete Suit Model Modals ──
-    window._openEditSuitModel = (modelId) => {
+    window._openEditSuitModel = async (modelId) => {
       const m = models.find(x => x.id === modelId);
       if (!m) return;
+
+      let colorsList = [];
+      try {
+        const colRes = await electronApi.invoke('admin:get-colors');
+        colorsList = (colRes?.data || (Array.isArray(colRes) ? colRes : [])).filter(c => c.is_active !== 0);
+      } catch (_) {}
 
       window.AppModal.open({
         title: `✏️ تعديل موديل البدلة [${m.name}]`,
         contentHtml: `
-          <div class="form-group">
-            <label class="form-label">كود الموديل</label>
-            <input type="text" id="edit-model-code" class="form-control" value="${m.code}">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div class="form-group">
+              <label class="form-label">كود الموديل</label>
+              <input type="text" id="edit-model-code" class="form-control" value="${m.code}">
+            </div>
+            <div class="form-group">
+              <label class="form-label">اسم البدلة / الموديل</label>
+              <input type="text" id="edit-model-name" class="form-control" value="${m.name}">
+            </div>
           </div>
           <div class="form-group">
-            <label class="form-label">اسم البدلة / الموديل</label>
-            <input type="text" id="edit-model-name" class="form-control" value="${m.name}">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <label class="form-label" style="margin-bottom: 0;">اللون الرئيسي</label>
+              <button type="button" class="btn-secondary" id="btn-quick-add-edit-model-col" style="font-size: 11px; padding: 2px 8px; color: var(--color-gold-400);">🎨 + لون جديد</button>
+            </div>
+            <select id="edit-model-col" class="form-control">
+              <option value="">-- بدون لون محدد --</option>
+              ${colorsList.map(col => `<option value="${col.id}" ${(Number(m.color_id) === Number(col.id) || m.color_name === col.name) ? 'selected' : ''}>${col.name}</option>`).join('')}
+            </select>
+            <div id="quick-add-edit-model-col-box" style="display: none; margin-top: 6px; display: none; gap: 6px; align-items: center;">
+              <input type="text" id="quick-edit-model-col-input" class="form-control" placeholder="اكتب اسم اللون الجديد..." style="font-size: 12px; height: 30px; flex: 1;">
+              <button type="button" class="btn-accent-action" id="btn-confirm-edit-model-col" style="padding: 4px 10px; font-size: 11px;">حفظ ✅</button>
+            </div>
           </div>
           <div style="display: grid; grid-template-columns: ${enableDeposit ? '1fr 1fr' : '1fr'}; gap: 12px;">
             <div class="form-group">
@@ -8805,9 +9310,36 @@
         width: '480px'
       });
 
+      document.getElementById('btn-quick-add-edit-model-col')?.addEventListener('click', () => {
+        const box = document.getElementById('quick-add-edit-model-col-box');
+        if (box) {
+          box.style.display = box.style.display === 'none' ? 'flex' : 'none';
+          if (box.style.display === 'flex') document.getElementById('quick-edit-model-col-input')?.focus();
+        }
+      });
+      document.getElementById('btn-confirm-edit-model-col')?.addEventListener('click', async () => {
+        const inp = document.getElementById('quick-edit-model-col-input');
+        const colName = inp?.value?.trim();
+        if (!colName) return AppToast.error('يرجى كتابة اسم اللون.');
+        const res = await electronApi.invoke('admin:create-color', { name: colName });
+        if (res?.success) {
+          AppToast.success('تمت إضافة اللون ✅');
+          const sel = document.getElementById('edit-model-col');
+          const updatedRes = await electronApi.invoke('admin:get-colors');
+          const updatedCols = (updatedRes?.data || []).filter(c => c.is_active !== 0);
+          if (sel) {
+            sel.innerHTML = `<option value="">-- بدون لون محدد --</option>` + updatedCols.map(c => `<option value="${c.id}" ${c.id === res.data?.id ? 'selected' : ''}>${c.name}</option>`).join('');
+          }
+          document.getElementById('quick-add-edit-model-col-box').style.display = 'none';
+          if (inp) inp.value = '';
+        }
+      });
+
       window._saveEditSuitModel = async (id) => {
         const code = document.getElementById('edit-model-code')?.value?.trim();
         const name = document.getElementById('edit-model-name')?.value?.trim();
+        const colorVal = document.getElementById('edit-model-col')?.value;
+        const color_id = colorVal ? Number(colorVal) : null;
         const rental_price = Number(document.getElementById('edit-model-rental')?.value) || 0;
         const security_deposit = Number(document.getElementById('edit-model-deposit')?.value) || 0;
         const sale_price = Number(document.getElementById('edit-model-sale')?.value) || 0;
@@ -8828,6 +9360,7 @@
             id,
             code,
             name,
+            color_id,
             rental_price,
             security_deposit,
             sale_price,
@@ -8977,24 +9510,20 @@
         contentHtml: `
           <div class="form-group">
             <label class="form-label">كود الموديل (مثال: MDL-TUX-01)</label>
-            <input type="text" id="new-model-code" class="form-control" placeholder="الكود...">
-          </div>
-          <div class="form-group">
-            <label class="form-label">اسم الموديل بالعربية</label>
-            <input type="text" id="new-model-name" class="form-control" placeholder="مثال: سموكنج شال كول أسود...">
-          </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-            <div class="form-group">
-              <label class="form-label">القسم / التصنيف</label>
-              <select id="new-model-cat" class="form-control">
-                ${categories.length > 0 ? categories.map(c => `<option value="${c.name}">${c.name}</option>`).join('') : '<option value="بدل رجالي وعرائس">بدل رجالي وعرائس</option>'}
               </select>
             </div>
             <div class="form-group">
-              <label class="form-label">اللون الرئيسي</label>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <label class="form-label" style="margin-bottom: 0;">اللون الرئيسي</label>
+                <button type="button" class="btn-secondary" id="btn-quick-add-new-model-col" style="font-size: 11px; padding: 2px 8px; color: var(--color-gold-400);">🎨 + لون</button>
+              </div>
               <select id="new-model-col" class="form-control">
-                ${colors.length > 0 ? colors.map(col => `<option value="${col.name}">${col.name}</option>`).join('') : '<option value="أسود ملكي">أسود ملكي</option>'}
+                ${colors.length > 0 ? colors.map(col => `<option value="${col.id}" data-name="${col.name}">${col.name}</option>`).join('') : '<option value="" data-name="أسود ملكي">أسود ملكي</option>'}
               </select>
+              <div id="quick-add-new-model-col-box" style="display: none; margin-top: 6px; gap: 6px; align-items: center;">
+                <input type="text" id="quick-new-model-col-input" class="form-control" placeholder="اكتب اسم اللون..." style="font-size: 12px; height: 30px; flex: 1;">
+                <button type="button" class="btn-accent-action" id="btn-confirm-new-model-col" style="padding: 4px 10px; font-size: 11px;">حفظ ✅</button>
+              </div>
             </div>
           </div>
           <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
@@ -9027,11 +9556,38 @@
         width: '500px'
       });
 
+      document.getElementById('btn-quick-add-new-model-col')?.addEventListener('click', () => {
+        const box = document.getElementById('quick-add-new-model-col-box');
+        if (box) {
+          box.style.display = box.style.display === 'none' ? 'flex' : 'none';
+          if (box.style.display === 'flex') document.getElementById('quick-new-model-col-input')?.focus();
+        }
+      });
+      document.getElementById('btn-confirm-new-model-col')?.addEventListener('click', async () => {
+        const inp = document.getElementById('quick-new-model-col-input');
+        const colName = inp?.value?.trim();
+        if (!colName) return AppToast.error('يرجى كتابة اسم اللون.');
+        const res = await electronApi.invoke('admin:create-color', { name: colName });
+        if (res?.success) {
+          AppToast.success('تمت إضافة اللون ✅');
+          const sel = document.getElementById('new-model-col');
+          const updatedRes = await electronApi.invoke('admin:get-colors');
+          const updatedCols = (updatedRes?.data || []).filter(c => c.is_active !== 0);
+          if (sel) {
+            sel.innerHTML = updatedCols.map(c => `<option value="${c.id}" data-name="${c.name}" ${c.id === res.data?.id ? 'selected' : ''}>${c.name}</option>`).join('');
+          }
+          document.getElementById('quick-add-new-model-col-box').style.display = 'none';
+          if (inp) inp.value = '';
+        }
+      });
+
       window._saveSuitModel = async () => {
         const code = document.getElementById('new-model-code')?.value?.trim();
         const name = document.getElementById('new-model-name')?.value?.trim();
         const category_name = document.getElementById('new-model-cat')?.value || 'بدل رجالي';
-        const color_name = document.getElementById('new-model-col')?.value || 'أسود';
+        const colSel = document.getElementById('new-model-col');
+        const color_id = colSel?.value ? Number(colSel.value) : null;
+        const color_name = colSel?.selectedOptions?.[0]?.getAttribute('data-name') || colSel?.selectedOptions?.[0]?.textContent || 'أسود';
         const sale_price = Number(document.getElementById('new-model-sale')?.value) || 0;
         const rental_price = Number(document.getElementById('new-model-rental')?.value) || 0;
         const cost_price = Number(document.getElementById('new-model-cost')?.value) || 0;
@@ -9044,26 +9600,29 @@
           AppToast.error('سعر التكلفة إجباري ومطلوب لحساب الأرباح والخسائر بدقة.');
           return;
         }
-        await electronApi.invoke('inventory:create-suit-model', { code, name, category_name, color_name, sale_price, rental_price, cost_price, security_deposit });
+        await electronApi.invoke('inventory:create-suit-model', { code, name, category_name, color_id, color_name, sale_price, rental_price, cost_price, security_deposit });
         AppToast.success('تمت إضافة موديل البدلة بنجاح! 🤵');
         AppModal.close();
         renderSuitsPage();
       };
     });
 
-    // Hook Add Batch Units Modal (Multi-size quantities per warehouse)
+    // Hook Add Batch Units Modal (Multi-size quantities per warehouse with colors)
     window._openBatchUnitsForModel = async (preselectedModelId) => {
-      const [modelsRes, sizesRes, whRes] = await Promise.all([
+      const [modelsRes, sizesRes, whRes, colorsRes] = await Promise.all([
         electronApi.invoke('inventory:get-suit-models'),
         electronApi.invoke('admin:get-sizes', { categoryType: 'SUIT' }),
-        electronApi.invoke('admin:get-warehouses')
+        electronApi.invoke('admin:get-warehouses'),
+        electronApi.invoke('admin:get-colors')
       ]);
       const curModels = modelsRes.data || models;
       const suitSizes = (sizesRes.data || []).filter(s => s.is_active !== 0);
       const whList = (whRes.data || []).filter(w => w.is_active !== 0);
+      let curColors = (colorsRes.data || (Array.isArray(colorsRes) ? colorsRes : [])).filter(c => c.is_active !== 0);
 
       const selModel = curModels.find(m => m.id === preselectedModelId) || curModels[0] || {};
       const defCost = selModel.cost_price || 0;
+      const initialColorId = selModel.color_id || (curColors[0]?.id) || null;
 
       window.AppModal.open({
         title: '📦 إضافة كميات بالمقاسات لموديل البدلة (دفعة قطع بالباركود)',
@@ -9088,6 +9647,9 @@
             ${window._renderCostInputField('batch-cost-price', defCost, true)}
             <small style="color: var(--text-muted); font-size: 11px;">التكلفة الموحدة لكل القطع (أو يمكنك تخصيص تكلفة وسعر لكل مقاس بالأسفل).</small>
           </div>
+
+          <!-- Color Selector Section (Available Colors & Quick Add Color) -->
+          ${window._renderColorSelectorSection('batch-suit', curColors, initialColorId ? [initialColorId] : [])}
 
           <div style="background: rgba(212,175,55,0.06); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 600; font-size: 13px; color: var(--color-gold-400); margin: 0;">
@@ -9153,8 +9715,15 @@
         const updateTotal = () => {
           let sum = 0;
           inputs.forEach(inp => { sum += Number(inp.value) || 0; });
+          const selColors = window._getSelectedColorIds ? window._getSelectedColorIds('batch-suit') : [];
+          const colMultiplier = selColors.length > 0 ? selColors.length : 1;
+          const finalCount = sum * colMultiplier;
           const b = document.getElementById('suit-batch-total-badge');
-          if (b) b.textContent = `${sum} قطعة`;
+          if (b) {
+            b.textContent = colMultiplier > 1
+              ? `${finalCount} قطعة (${sum} قطع × ${colMultiplier} ألوان)`
+              : `${finalCount} قطعة`;
+          }
         };
         inputs.forEach(inp => {
           inp.removeEventListener('input', updateTotal);
@@ -9181,6 +9750,12 @@
       };
 
       wireSuitQtyInputs();
+      window._wireColorSelectorSection('batch-suit');
+
+      // Listen on color changes to update total count
+      document.getElementById('batch-suit-colors-grid-container')?.addEventListener('click', () => {
+        setTimeout(wireSuitQtyInputs, 20);
+      });
 
       // Custom pricing toggle listener
       const togglePricingBox = document.getElementById('batch-custom-pricing-toggle');
@@ -9272,11 +9847,14 @@
         }
       });
 
-      // Update cost and default prices when model changes
+      // Update cost, default prices, and color when model changes
       document.getElementById('batch-model-id')?.addEventListener('change', (e) => {
         const opt = e.target.selectedOptions[0];
         const c = opt?.getAttribute('data-cost');
         const r = opt?.getAttribute('data-rental');
+        const mId = Number(e.target.value);
+        const curM = curModels.find(m => m.id === mId);
+
         const costInput = document.getElementById('batch-cost-price');
         if (costInput && c) costInput.value = c;
 
@@ -9291,6 +9869,16 @@
             inp.value = c;
           });
         }
+
+        // Auto select the model's color
+        if (curM && curM.color_id) {
+          const colGrid = document.getElementById('batch-suit-colors-grid-container');
+          if (colGrid) {
+            colGrid.innerHTML = window._renderColorCardsHtml('batch-suit', curColors, [curM.color_id]);
+            window._wireColorSelectorSection('batch-suit');
+            wireSuitQtyInputs();
+          }
+        }
       });
 
       window._saveBatchUnits = async () => {
@@ -9298,6 +9886,8 @@
         const warehouse_id = Number(document.getElementById('batch-wh-id')?.value) || 1;
         const purchase_cost = Number(document.getElementById('batch-cost-price')?.value) || 0;
         const isCustomPricing = document.getElementById('batch-custom-pricing-toggle')?.checked;
+        const selectedColorIds = window._getSelectedColorIds ? window._getSelectedColorIds('batch-suit') : [];
+        const primaryColorId = selectedColorIds.length > 0 ? selectedColorIds[0] : null;
 
         if (!suit_model_id) {
           AppToast.error('يرجى اختيار موديل البدلة.');
@@ -9337,13 +9927,16 @@
         }
 
         try {
-          await electronApi.invoke('inventory:create-suit-units-batch', {
+          const res = await electronApi.invoke('inventory:create-suit-units-batch', {
             suit_model_id,
             warehouse_id,
             purchase_cost,
+            color_id: primaryColorId,
+            color_ids: selectedColorIds,
             sizeQuantities
           });
-          AppToast.success(`تمت إضافة وتوليد ${totalCount} قطعة بدلة بنجاح بالمقاسات والأسعار المخصصة والباركود! 👔🏷️`);
+          const createdCount = res?.count || (totalCount * (selectedColorIds.length > 0 ? selectedColorIds.length : 1));
+          AppToast.success(`تمت إضافة وتوليد ${createdCount} قطعة بدلة بنجاح بالألوان والمقاسات والأسعار المخصصة والباركود! 👔🏷️`);
           AppModal.close();
           renderSuitsPage();
         } catch (err) {
@@ -9354,14 +9947,18 @@
 
     document.getElementById('btn-add-suit-batch')?.addEventListener('click', () => window._openBatchUnitsForModel());
 
-    // Hook Add Unit Modal (Dynamic Sizes & Warehouses)
+    // Hook Add Unit Modal (Dynamic Sizes, Warehouses & Colors)
     document.getElementById('btn-add-suit-unit')?.addEventListener('click', async () => {
-      const [sizesRes, whRes] = await Promise.all([
+      const [sizesRes, whRes, colorsRes] = await Promise.all([
         electronApi.invoke('admin:get-sizes', { categoryType: 'SUIT' }),
-        electronApi.invoke('admin:get-warehouses')
+        electronApi.invoke('admin:get-warehouses'),
+        electronApi.invoke('admin:get-colors')
       ]);
       const sizes = (sizesRes.data || []).filter(s => s.is_active !== 0);
       const warehouses = (whRes.data || []).filter(w => w.is_active !== 0);
+      let colors = (colorsRes.data || (Array.isArray(colorsRes) ? colorsRes : [])).filter(c => c.is_active !== 0);
+
+      const firstModel = models[0] || {};
 
       window.AppModal.open({
         title: '➕ إضافة قطعة بدلة فردية (باركود)',
@@ -9369,7 +9966,7 @@
           <div class="form-group">
             <label class="form-label">موديل البدلة</label>
             <select id="unit-model-id" class="form-control">
-              ${models.length > 0 ? models.map(m => `<option value="${m.id}">${m.name} (${m.code})</option>`).join('') : '<option value="">لا توجد موديلات مسجلة (أضف موديل أولاً)</option>'}
+              ${models.length > 0 ? models.map(m => `<option value="${m.id}" data-color-id="${m.color_id || ''}">${m.name} (${m.code})</option>`).join('') : '<option value="">لا توجد موديلات مسجلة (أضف موديل أولاً)</option>'}
             </select>
           </div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
@@ -9380,21 +9977,34 @@
               </select>
             </div>
             <div class="form-group">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <label class="form-label" style="margin-bottom: 0;">اللون</label>
+                <button type="button" class="btn-secondary" id="btn-quick-add-unit-col" style="font-size: 11px; padding: 2px 8px; color: var(--color-gold-400);">🎨 + لون</button>
+              </div>
+              <select id="unit-color-id" class="form-control">
+                ${colors.length > 0 ? colors.map(c => `<option value="${c.id}" data-name="${c.name}" ${c.id === firstModel.color_id ? 'selected' : ''}>${c.name}</option>`).join('') : '<option value="">لا توجد ألوان</option>'}
+              </select>
+              <div id="quick-add-unit-col-box" style="display: none; margin-top: 6px; gap: 6px; align-items: center;">
+                <input type="text" id="quick-unit-col-input" class="form-control" placeholder="اسم اللون الجديد..." style="font-size: 12px; height: 30px; flex: 1;">
+                <button type="button" class="btn-accent-action" id="btn-confirm-unit-col" style="padding: 4px 10px; font-size: 11px;">حفظ ✅</button>
+              </div>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div class="form-group">
               <label class="form-label">المخزن / الفرع</label>
               <select id="unit-wh-id" class="form-control">
                 ${warehouses.length > 0 ? warehouses.map(w => `<option value="${w.id}" data-name="${w.name}" ${w.is_default ? 'selected' : ''}>${w.name} ${w.is_default ? '★ (افتراضي)' : ''}</option>`).join('') : '<option value="1" data-name="المخزن الرئيسي">المخزن الرئيسي</option>'}
               </select>
             </div>
-          </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
             <div class="form-group">
               <label class="form-label">الباركود (اتركه فارغًا للتوليد التلقائي)</label>
               <input type="text" id="unit-custom-barcode" class="form-control" placeholder="توليد تلقائي آلي">
             </div>
-            <div class="form-group">
-              <label class="form-label">تكلفة شراء / تفصيل القطعة (ج.م)</label>
-              ${window._renderCostInputField("unit-purchase-cost", "", false)}
-            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">تكلفة شراء / تفصيل القطعة (ج.م)</label>
+            ${window._renderCostInputField("unit-purchase-cost", "", false)}
           </div>
         `,
         footerHtml: `
@@ -9404,18 +10014,56 @@
         width: '500px'
       });
 
+      // Quick add color in single unit modal
+      document.getElementById('btn-quick-add-unit-col')?.addEventListener('click', () => {
+        const box = document.getElementById('quick-add-unit-col-box');
+        if (box) {
+          box.style.display = box.style.display === 'none' ? 'flex' : 'none';
+          if (box.style.display === 'flex') document.getElementById('quick-unit-col-input')?.focus();
+        }
+      });
+      document.getElementById('btn-confirm-unit-col')?.addEventListener('click', async () => {
+        const inp = document.getElementById('quick-unit-col-input');
+        const colName = inp?.value?.trim();
+        if (!colName) return AppToast.error('يرجى كتابة اسم اللون.');
+        const res = await electronApi.invoke('admin:create-color', { name: colName });
+        if (res?.success) {
+          AppToast.success('تمت إضافة اللون بنجاح! 🎨✅');
+          const sel = document.getElementById('unit-color-id');
+          const updatedRes = await electronApi.invoke('admin:get-colors');
+          colors = (updatedRes?.data || []).filter(c => c.is_active !== 0);
+          if (sel) {
+            sel.innerHTML = colors.map(c => `<option value="${c.id}" data-name="${c.name}" ${c.id === res.data?.id ? 'selected' : ''}>${c.name}</option>`).join('');
+          }
+          document.getElementById('quick-add-unit-col-box').style.display = 'none';
+          if (inp) inp.value = '';
+        }
+      });
+
+      // Auto update color when selected model changes
+      document.getElementById('unit-model-id')?.addEventListener('change', (e) => {
+        const selectedModelId = Number(e.target.value);
+        const m = models.find(x => x.id === selectedModelId);
+        if (m && m.color_id) {
+          const colSel = document.getElementById('unit-color-id');
+          if (colSel) colSel.value = m.color_id;
+        }
+      });
+
       window._saveSuitUnit = async () => {
         const suit_model_id = Number(document.getElementById('unit-model-id')?.value) || 1;
         const sizeSelect = document.getElementById('unit-size-id');
         const whSelect = document.getElementById('unit-wh-id');
+        const colorSelect = document.getElementById('unit-color-id');
         const size_id = Number(sizeSelect?.value) || 3;
         const size_name = sizeSelect?.selectedOptions[0]?.getAttribute('data-name') || '';
         const warehouse_id = Number(whSelect?.value) || 1;
         const warehouse_name = whSelect?.selectedOptions[0]?.getAttribute('data-name') || '';
+        const color_id = colorSelect?.value ? Number(colorSelect.value) : null;
         const unit_barcode = document.getElementById('unit-custom-barcode')?.value || null;
         const purchase_cost = Number(document.getElementById('unit-purchase-cost')?.value) || 0;
 
-        await electronApi.invoke('inventory:create-suit-unit', { suit_model_id, size_id, size_name, warehouse_id, warehouse_name, unit_barcode, purchase_cost });
+        await electronApi.invoke('inventory:create-suit-unit', { suit_model_id, size_id, size_name, warehouse_id, warehouse_name, color_id, unit_barcode, purchase_cost });
         AppToast.success('تمت إضافة وحدة البدلة الفردية بنجاح! 🏷️');
         AppModal.close();
         renderSuitsPage();
@@ -9772,7 +10420,10 @@
       tbody.innerHTML = list.map(sh => `
         <tr>
           <td><code>${sh.code}</code></td>
-          <td><strong>${sh.name}</strong></td>
+          <td>
+            <strong>${sh.name}</strong>
+            ${sh.colors_summary ? `<div style="display: flex; flex-wrap: wrap; gap: 3px; margin-top: 3px;">${sh.colors_summary.split(',').map(c => `<span class="badge" style="font-size: 10px; padding: 1px 6px; background: rgba(212,175,55,0.12); color: var(--color-gold-400); border: 1px solid rgba(212,175,55,0.3);">🎨 ${c.trim()}</span>`).join('')}</div>` : ''}
+          </td>
           <td>
             ${sh.sizes_detail ? `
               <div style="display: flex; flex-wrap: wrap; gap: 3px; max-width: 200px;">
@@ -9816,15 +10467,18 @@
     document.getElementById('btn-add-shoe-product')?.addEventListener('click', async () => {
       let shoeSizes = [];
       let warehouses = [];
+      let colorsList = [];
       try {
-        const [sizesRes, whRes] = await Promise.all([
+        const [sizesRes, whRes, colRes] = await Promise.all([
           electronApi.invoke('admin:get-sizes', { categoryType: 'SHOE' }),
-          electronApi.invoke('admin:get-warehouses')
+          electronApi.invoke('admin:get-warehouses'),
+          electronApi.invoke('admin:get-colors')
         ]);
         shoeSizes = Array.isArray(sizesRes) ? sizesRes : (sizesRes?.data || []);
         warehouses = (whRes?.data || []).filter(w => w.is_active !== 0);
+        colorsList = (colRes?.data || (Array.isArray(colRes) ? colRes : [])).filter(c => c.is_active !== 0);
       } catch (e) {
-        console.warn('Error fetching shoe sizes/warehouses:', e);
+        console.warn('Error fetching shoe sizes/warehouses/colors:', e);
       }
 
       window.AppModal.open({
@@ -9868,6 +10522,8 @@
             </label>
             <span style="font-size: 11px; color: var(--text-muted);">(تحديد سعر إيجار وتكلفة مختلفة لكل مقاس)</span>
           </div>
+
+          ${window._renderColorSelectorSection('shoe', colorsList)}
 
           <!-- Per Size Quantities Grid -->
           <div class="form-group">
@@ -9972,6 +10628,7 @@
       };
 
       wireShoeQtyInputs();
+      window._wireColorSelectorSection('shoe');
 
       // Custom pricing toggle listener for shoes
       const toggleShoePricingBox = document.getElementById('shoe-custom-pricing-toggle');
@@ -10106,7 +10763,13 @@
           totalCreatedQty = Number(document.getElementById('new-shoe-qty')?.value) || 0;
         }
 
-        if (variants.length === 0 && totalCreatedQty <= 0) {
+        const selectedColorIds = window._getSelectedColorIds('shoe');
+        const finalVariants = window._buildProductVariantsWithColors(variants, selectedColorIds, totalCreatedQty, { rental_price, cost_price });
+        if (finalVariants.length > 0) {
+          totalCreatedQty = finalVariants.reduce((sum, v) => sum + (Number(v.initial_quantity) || 0), 0);
+        }
+
+        if (finalVariants.length === 0 && totalCreatedQty <= 0) {
           AppToast.error('يرجى إدخال كمية لزوج واحد على الأقل في أحد المقاسات.');
           return;
         }
@@ -10124,7 +10787,7 @@
             reorder_level,
             warehouse_id,
             targetWarehouse: warehouse_id,
-            variants: variants.length > 0 ? variants : undefined
+            variants: finalVariants.length > 0 ? finalVariants : undefined
           });
           AppToast.success('تمت إضافة صنف الحذاء ومقاساته بنجاح! 👞');
           AppModal.close();
@@ -10322,7 +10985,10 @@
       tbody.innerHTML = list.map(it => `
         <tr>
           <td><code>${it.code}</code></td>
-          <td><strong>${it.name}</strong></td>
+          <td>
+            <strong>${it.name}</strong>
+            ${it.colors_summary ? `<div style="display: flex; flex-wrap: wrap; gap: 3px; margin-top: 3px;">${it.colors_summary.split(',').map(c => `<span class="badge" style="font-size: 10px; padding: 1px 6px; background: rgba(212,175,55,0.12); color: var(--color-gold-400); border: 1px solid rgba(212,175,55,0.3);">🎨 ${c.trim()}</span>`).join('')}</div>` : ''}
+          </td>
           <td>
             ${it.sizes_detail ? `
               <div style="display: flex; flex-wrap: wrap; gap: 3px; max-width: 200px;">
@@ -10365,14 +11031,16 @@
 
     // Wire Add Accessory button (Dynamic Categories from Admin)
     document.getElementById('btn-add-accessory-product')?.addEventListener('click', async () => {
-      const [catRes, sizesRes, allSizesRes, whRes] = await Promise.all([
+      const [catRes, sizesRes, allSizesRes, whRes, colRes] = await Promise.all([
         electronApi.invoke('admin:get-categories'),
         electronApi.invoke('admin:get-sizes', { categoryType: 'ACCESSORIES' }),
         electronApi.invoke('admin:get-sizes'),
-        electronApi.invoke('admin:get-warehouses')
+        electronApi.invoke('admin:get-warehouses'),
+        electronApi.invoke('admin:get-colors')
       ]);
       const allCats = catRes.data || [];
       const warehouses = (whRes?.data || []).filter(w => w.is_active !== 0);
+      const colorsList = (colRes?.data || (Array.isArray(colRes) ? colRes : [])).filter(c => c.is_active !== 0);
       const mainAccCat = allCats.find(c => c.code === 'TIES' || c.type === 'ACCESSORIES' || c.code === 'ACCESSORIES') || { id: 3, code: 'TIES', name: 'اضافات' };
       const accCats = allCats.filter(c => (c.type === 'ACCESSORIES' || c.code === 'TIES' || c.code === 'ACCESSORIES') && c.is_active !== 0);
       const accSizes = Array.isArray(sizesRes) ? sizesRes : (sizesRes?.data || []);
@@ -10437,6 +11105,8 @@
             </label>
             <span style="font-size: 11px; color: var(--text-muted);">(تحديد سعر إيجار وتكلفة مختلفة لكل مقاس)</span>
           </div>
+
+          ${window._renderColorSelectorSection('acc', colorsList)}
 
           <!-- Per Size Quantities Grid or Single Qty -->
           <div class="form-group">
@@ -10528,6 +11198,7 @@
       };
 
       wireAccQtyInputs();
+      window._wireColorSelectorSection('acc');
 
       // Custom pricing toggle listener for accessories
       const toggleAccPricingBox = document.getElementById('acc-custom-pricing-toggle');
@@ -10669,7 +11340,13 @@
           totalCreatedQty = Number(document.getElementById('new-acc-qty')?.value) || 0;
         }
 
-        if (variants.length === 0 && totalCreatedQty <= 0) {
+        const selectedColorIds = window._getSelectedColorIds('acc');
+        const finalVariants = window._buildProductVariantsWithColors(variants, selectedColorIds, totalCreatedQty, { rental_price, cost_price });
+        if (finalVariants.length > 0) {
+          totalCreatedQty = finalVariants.reduce((sum, v) => sum + (Number(v.initial_quantity) || 0), 0);
+        }
+
+        if (finalVariants.length === 0 && totalCreatedQty <= 0) {
           AppToast.error('يرجى إدخال كمية لقطعة واحدة على الأقل في أحد المقاسات.');
           return;
         }
@@ -10688,7 +11365,7 @@
             reorder_level,
             warehouse_id,
             targetWarehouse: warehouse_id,
-            variants: variants.length > 0 ? variants : undefined
+            variants: finalVariants.length > 0 ? finalVariants : undefined
           });
           AppToast.success('تمت إضافة الإكسسوار ومقاساته بنجاح! 🎀');
           AppModal.close();
@@ -10932,7 +11609,10 @@
       tbody.innerHTML = list.map(it => `
         <tr>
           <td><code>${it.code}</code></td>
-          <td><strong>${it.name}</strong></td>
+          <td>
+            <strong>${it.name}</strong>
+            ${it.colors_summary ? `<div style="display: flex; flex-wrap: wrap; gap: 3px; margin-top: 3px;">${it.colors_summary.split(',').map(c => `<span class="badge" style="font-size: 10px; padding: 1px 6px; background: rgba(212,175,55,0.12); color: var(--color-gold-400); border: 1px solid rgba(212,175,55,0.3);">🎨 ${c.trim()}</span>`).join('')}</div>` : ''}
+          </td>
           <td>
             ${it.sizes_detail ? `
               <div style="display: flex; flex-wrap: wrap; gap: 3px; max-width: 200px;">
@@ -10976,13 +11656,16 @@
     document.getElementById('btn-add-dynamic-product')?.addEventListener('click', async () => {
       let warehouses = [];
       let catSizes = [];
+      let colorsList = [];
       try {
-        const [whRes, szRes] = await Promise.all([
+        const [whRes, szRes, colRes] = await Promise.all([
           electronApi.invoke('admin:get-warehouses'),
-          electronApi.invoke('admin:get-sizes', { categoryType: catCode })
+          electronApi.invoke('admin:get-sizes', { categoryType: catCode }),
+          electronApi.invoke('admin:get-colors')
         ]);
         warehouses = (whRes?.data || []).filter(w => w.is_active !== 0);
         catSizes = Array.isArray(szRes) ? szRes : (szRes?.data || []);
+        colorsList = (colRes?.data || (Array.isArray(colRes) ? colRes : [])).filter(c => c.is_active !== 0);
       } catch (e) { }
 
       const suggestedCode = `${catCode.slice(0, 4).toUpperCase()}-${String(items.length + 1).padStart(3, '0')}`;
@@ -11028,6 +11711,8 @@
             </label>
             <span style="font-size: 11px; color: var(--text-muted);">(تحديد سعر إيجار وتكلفة مختلفة لكل مقاس)</span>
           </div>
+
+          ${window._renderColorSelectorSection('dyn', colorsList)}
 
           <!-- Per Size Quantities Grid -->
           <div class="form-group">
@@ -11119,6 +11804,7 @@
       };
 
       wireDynQtyInputs();
+      window._wireColorSelectorSection('dyn');
 
       // Custom pricing toggle listener for dynamic category
       const toggleDynPricingBox = document.getElementById('dyn-custom-pricing-toggle');
@@ -11253,7 +11939,13 @@
           totalCreatedQty = Number(document.getElementById('dyn-prod-qty')?.value) || 0;
         }
 
-        if (variants.length === 0 && totalCreatedQty <= 0) {
+        const selectedColorIds = window._getSelectedColorIds('dyn');
+        const finalVariants = window._buildProductVariantsWithColors(variants, selectedColorIds, totalCreatedQty, { rental_price, cost_price });
+        if (finalVariants.length > 0) {
+          totalCreatedQty = finalVariants.reduce((sum, v) => sum + (Number(v.initial_quantity) || 0), 0);
+        }
+
+        if (finalVariants.length === 0 && totalCreatedQty <= 0) {
           AppToast.error('يرجى إدخال كمية لقطعة واحدة على الأقل في أحد المقاسات.');
           return;
         }
@@ -11272,7 +11964,7 @@
             reorder_level,
             warehouse_id,
             targetWarehouse: warehouse_id,
-            variants: variants.length > 0 ? variants : undefined
+            variants: finalVariants.length > 0 ? finalVariants : undefined
           });
           AppToast.success(`تمت إضافة الصنف ومقاساته بنجاح في قسم [${catName}]! 📦`);
           AppModal.close();
@@ -11633,18 +12325,227 @@
     }
   };
 
+
+  // ── مودال الإرسال الجماعي لرسائل الواتساب مع تعديل الرسالة والفاصل الزمني ──
+  window._openBulkBroadcastModal = (customersList) => {
+    const validCustomers = (customersList || []).filter(c => c.phone && String(c.phone).trim().length >= 10);
+    if (!validCustomers.length) {
+      if (window.AppToast) window.AppToast.warning('لا يوجد عملاء بأرقام هواتف مسجلة صالحة للإرسال.');
+      return;
+    }
+
+    let isBroadcasting = false;
+    let shouldStop = false;
+
+    window.AppModal.open({
+      title: '📢 إرسال رسالة واتساب جماعية للعملاء',
+      contentHtml: `
+        <div style="display: flex; flex-direction: column; gap: 14px;">
+          <!-- تنبيه إرشادي -->
+          <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 6px; padding: 12px; font-size: 12px; color: var(--text-primary); line-height: 1.6;">
+            <strong>💡 ميزة الإرسال الجماعي الآمن:</strong>
+            يمكنك إرسال رسائل ترويجية أو إشعارات بالتشكيلات الجديدة لكافة العملاء المسجلين.
+            يدعم النظام كود <code style="color: var(--color-gold-400); font-weight: bold;">{name}</code> ليتم استبداله باسم العميل في كل رسالة تلقائياً.
+          </div>
+
+          <!-- محرر نص الرسالة -->
+          <div>
+            <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 6px;">نص الرسالة المراد إرسالها:</label>
+            <textarea id="bulk-msg-text" class="form-control" rows="4" style="width: 100%; font-family: inherit; font-size: 13px; resize: vertical;" placeholder="اكتب نص الرسالة هنا...">مرحباً بك عميلنا العزيز {name}، يسعدنا في محل mohamed saed إعلامك بتوفر أحدث تشكيلات البدل والإكسسوارات الرجالي لجميع المناسبات والأفراح، مع عروض وخصومات مميزة بانتظارك! 👔✨</textarea>
+          </div>
+
+          <!-- التحكم في الفاصل الزمني لتجنب حظر الواتساب -->
+          <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 6px; padding: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+              <div>
+                <strong style="color: #F59E0B; font-size: 13px; display: block;">🛡️ ضبط الفاصل الزمني لتجنب حظر الواتساب:</strong>
+                <span style="font-size: 11px; color: var(--text-secondary);">الوقت المستغرق بين إرسال كل رسالة وأخرى لحماية حسابك من الحظر من قبل خوارزميات ميتا.</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <input type="number" id="bulk-msg-delay" class="form-control" value="5" min="2" max="60" style="width: 70px; text-align: center; font-weight: bold; font-size: 14px;">
+                <span style="font-size: 12px; font-weight: 600;">ثانية</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- اختيار العملاء المستهدفين -->
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <label style="font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                <input type="checkbox" id="bulk-select-all" checked style="cursor: pointer;">
+                <span>تحديد جميع العملاء</span>
+              </label>
+              <span id="bulk-selected-counter" class="badge badge-info" style="font-size: 11px; padding: 4px 8px;">
+                تم تحديد ${validCustomers.length} من ${validCustomers.length} عميل
+              </span>
+            </div>
+
+            <!-- قائمة اختيار العملاء مع أرقام هواتفهم -->
+            <div id="bulk-customers-list" style="max-height: 160px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 6px; background: rgba(0,0,0,0.15); padding: 6px 10px;">
+              ${validCustomers.map((c) => `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 4px; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 12px;">
+                  <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" class="bulk-cust-cb" data-id="${c.id}" data-name="${c.name}" data-phone="${c.phone}" checked style="cursor: pointer;">
+                    <strong>${c.name}</strong>
+                  </label>
+                  <span dir="ltr" style="font-family: monospace; color: var(--color-gold-400); font-size: 11px;">${window.UiUtils ? window.UiUtils.formatPhone(c.phone) : c.phone}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+
+          <!-- شريط تقدم الإرسال المباشر -->
+          <div id="bulk-progress-box" style="display: none; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; padding: 12px;">
+            <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px;">
+              <span id="bulk-progress-status" style="font-weight: 600;">جاري الإرسال...</span>
+              <span id="bulk-progress-ratio" style="font-weight: bold; color: var(--color-success);">0 / 0</span>
+            </div>
+            <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden;">
+              <div id="bulk-progress-bar" style="width: 0%; height: 100%; background: #10B981; transition: width 0.3s ease;"></div>
+            </div>
+            <div id="bulk-current-sending" style="font-size: 11px; color: var(--text-secondary); margin-top: 6px;">—</div>
+          </div>
+        </div>
+      `,
+      footerHtml: `
+        <button class="btn-secondary" id="btn-close-bulk" onclick="AppModal.close()">إغلاق</button>
+        <button class="btn-secondary" id="btn-stop-bulk" style="display: none; color: var(--color-danger); border-color: rgba(239,68,68,0.4);">⏸️ إيقاف الإرسال</button>
+        <button class="btn-primary-action" id="btn-start-bulk" style="background: #10B981; border-color: #10B981;">🚀 بدء الإرسال الآن</button>
+      `,
+      width: '640px'
+    });
+
+    // تحديث عداد التحديد
+    const updateSelectedCount = () => {
+      const selected = document.querySelectorAll('.bulk-cust-cb:checked');
+      const counter = document.getElementById('bulk-selected-counter');
+      if (counter) counter.textContent = `تم تحديد ${selected.length} من ${validCustomers.length} عميل`;
+    };
+
+    document.getElementById('bulk-select-all')?.addEventListener('change', (e) => {
+      document.querySelectorAll('.bulk-cust-cb').forEach(cb => { cb.checked = e.target.checked; });
+      updateSelectedCount();
+    });
+
+    document.querySelectorAll('.bulk-cust-cb').forEach(cb => {
+      cb.addEventListener('change', updateSelectedCount);
+    });
+
+    // زر بدء الإرسال
+    document.getElementById('btn-start-bulk')?.addEventListener('click', async () => {
+      const msgTemplate = document.getElementById('bulk-msg-text')?.value.trim();
+      if (!msgTemplate) {
+        if (window.AppToast) window.AppToast.error('يرجى كتابة نص الرسالة أولاً.');
+        return;
+      }
+
+      const delaySec = Math.max(2, Math.min(60, parseInt(document.getElementById('bulk-msg-delay')?.value, 10) || 5));
+      const checkedBoxes = Array.from(document.querySelectorAll('.bulk-cust-cb:checked'));
+      if (!checkedBoxes.length) {
+        if (window.AppToast) window.AppToast.error('يرجى تحديد عميل واحد على الأقل.');
+        return;
+      }
+
+      // فحص حالة الواتساب
+      try {
+        const waStatus = await electronApi.invoke('whatsapp:get-status');
+        if (!waStatus?.isPaired) {
+          if (window.AppToast) window.AppToast.warning('يجب ربط جلسة واتساب أولاً من صفحة الإعدادات أو زر واتساب بالنافبار 📱');
+        }
+      } catch (_) {}
+
+      // تهيئة الواجهة للبدء
+      isBroadcasting = true;
+      shouldStop = false;
+      document.getElementById('btn-start-bulk').style.display = 'none';
+      document.getElementById('btn-close-bulk').style.display = 'none';
+      document.getElementById('btn-stop-bulk').style.display = 'inline-block';
+      const progressBox = document.getElementById('bulk-progress-box');
+      const progressBar = document.getElementById('bulk-progress-bar');
+      const progressRatio = document.getElementById('bulk-progress-ratio');
+      const progressStatus = document.getElementById('bulk-progress-status');
+      const currentSending = document.getElementById('bulk-current-sending');
+      if (progressBox) progressBox.style.display = 'block';
+
+      document.getElementById('btn-stop-bulk')?.addEventListener('click', () => {
+        shouldStop = true;
+        if (progressStatus) progressStatus.textContent = 'جاري إيقاف الإرسال...';
+      });
+
+      let sentCount = 0;
+      let failedCount = 0;
+      const total = checkedBoxes.length;
+
+      for (let i = 0; i < total; i++) {
+        if (shouldStop) break;
+
+        const cb = checkedBoxes[i];
+        const custName = cb.getAttribute('data-name') || 'العميل';
+        const custPhone = cb.getAttribute('data-phone');
+        const personalizedMsg = msgTemplate.replace(/\{name\}/g, custName);
+
+        if (currentSending) currentSending.textContent = `جاري الإرسال للعميل: ${custName} (${custPhone})...`;
+        if (progressBar) progressBar.style.width = `${Math.round(((i + 1) / total) * 100)}%`;
+        if (progressRatio) progressRatio.textContent = `${i + 1} / ${total}`;
+
+        try {
+          const res = await electronApi.invoke('whatsapp:send-direct', { phone: custPhone, message: personalizedMsg });
+          if (res && res.success !== false) {
+            sentCount++;
+          } else {
+            failedCount++;
+          }
+        } catch (err) {
+          failedCount++;
+        }
+
+        // الانتظار الفاصل الزمني لتجنب حظر الواتساب
+        if (i < total - 1 && !shouldStop) {
+          if (currentSending) currentSending.textContent = `تم الإرسال لـ ${custName} ✔️. جاري انتظار ${delaySec} ثوانٍ كفاصل أمان...`;
+          await new Promise(r => setTimeout(r, delaySec * 1000));
+        }
+      }
+
+      // انتهاء الإرسال
+      isBroadcasting = false;
+      document.getElementById('btn-stop-bulk').style.display = 'none';
+      document.getElementById('btn-close-bulk').style.display = 'inline-block';
+      if (progressStatus) progressStatus.textContent = shouldStop ? 'تم إيقاف الإرسال بناءً على طلبك.' : 'اكتمل الإرسال بنجاح! 🎉';
+      if (currentSending) currentSending.textContent = `النتيجة النهائية: تم بنجاح ${sentCount} رسالة | تعذر ${failedCount} رسالة.`;
+
+      if (window.AppToast) {
+        if (shouldStop) window.AppToast.info(`تم إيقاف الإرسال. تم إرسال ${sentCount} رسالة بنجاح.`);
+        else window.AppToast.success(`اكتملت حملة الرسائل المجمعة بنجاح! (${sentCount} من ${total})`);
+      }
+
+      // إضافة إشعار نظام بالنافبار
+      if (typeof addSystemNotification === 'function') {
+        addSystemNotification({
+          title: '📢 حملة رسائل واتساب جماعية للعملاء',
+          message: `تم إرسال ${sentCount} رسالة واتساب مجمعة بنجاح للعملاء (فاصل ${delaySec} ثانية).`,
+          reference_type: 'WHATSAPP'
+        });
+      }
+    });
+  };
+
   // --- Phase 7: Render Customers Page (إدارة العملاء) ---
   async function renderCustomersPage() {
     const res = await electronApi.invoke('customers:get-list');
     const customers = res.data || [];
 
     pageContent.innerHTML = `
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
         <div>
           <h2 style="font-size: 20px; font-weight: 700;">👥 إدارة العملاء والقياسات (Customers)</h2>
           <p style="color: var(--text-secondary); font-size: 13px;">بيانات العملاء، أرقام الهواتف، المقاسات المفصلة، وسجل الحجوزات السابقة.</p>
         </div>
-        <button id="btn-add-customer" class="btn-accent-action">+ إضافة عميل جديد</button>
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <button id="btn-bulk-broadcast-whatsapp" class="btn-secondary" style="font-size: 13px; font-weight: 600; color: #10B981; border-color: rgba(16,185,129,0.4); background: rgba(16,185,129,0.08); padding: 8px 16px;" title="إرسال رسالة ترويجية أو إشعار جماعي عبر الواتساب لكافة العملاء">
+            <span>📢💬</span> إرسال رسالة مجمعة للعملاء (واتساب)
+          </button>
+          <button id="btn-add-customer" class="btn-accent-action">+ إضافة عميل جديد</button>
+        </div>
       </div>
 
       <div class="table-card">
@@ -11669,7 +12570,7 @@
               <tr>
                 <td><code>${c.code}</code></td>
                 <td><strong>${c.name}</strong></td>
-                <td><strong style="color: var(--color-gold-400);">${window.UiUtils ? window.UiUtils.formatPhone(c.phone) : c.phone}</strong></td>
+                <td dir="ltr" style="text-align: right;"><span dir="ltr" style="display: inline-block; direction: ltr; unicode-bidi: embed; font-family: monospace; font-weight: 700; color: var(--color-gold-400); font-size: 13px;">${window.UiUtils ? window.UiUtils.formatPhone(c.phone) : c.phone}</span></td>
                 <td>${c.address || '—'}</td>
                 <td>${c.shoe_size || '—'}</td>
                 <td><span class="badge badge-info">${c.total_bookings || 0} حجز</span></td>
@@ -11682,6 +12583,10 @@
         </table>
       </div>
     `;
+
+    document.getElementById('btn-bulk-broadcast-whatsapp')?.addEventListener('click', () => {
+      window._openBulkBroadcastModal(customers);
+    });
 
     document.getElementById('btn-add-customer')?.addEventListener('click', () => {
       window.AppModal.open({
@@ -12440,9 +13345,10 @@
         <div style="background: #FFFFFF; color: #111827; padding: 20px; border-radius: 8px; font-family: monospace; font-size: 13px;">
           <div style="text-align: center; border-bottom: 1px dashed #9CA3AF; padding-bottom: 12px; margin-bottom: 12px;">
             <h2 style="font-size: 18px; margin: 0 0 4px 0;">mohamed saed والعرائس</h2>
-            <div>الهرم، الجيزة • هاتف: 01012345678</div>
+            <div>هاتف: <span dir="ltr">01012345678</span></div>
             <div style="font-weight: bold; margin-top: 6px;">فاتورة مبيعات #${saleResult.saleNumber}</div>
-            <div style="font-size: 11px; color: #4B5563;">${dateStr}</div>
+            <div style="font-size: 11px; color: #4B5563;">التاريخ: ${new Date().toLocaleDateString('ar-EG')}</div>
+            <div style="font-size: 11px; color: #4B5563;">وقت الإنشاء: ${window.UiUtils ? window.UiUtils.formatTime(new Date()) : new Date().toLocaleTimeString('ar-EG')}</div>
           </div>
 
           <table style="width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 12px;">
@@ -12812,7 +13718,7 @@
         <div class="table-card" style="padding: 0;">
           <div style="display: flex; gap: 4px; padding: 12px 16px 0 16px; border-bottom: 1px solid var(--border-color); overflow-x: auto;">
             <button class="admin-tab-btn ${activeFinanceTab === 'session' ? 'active' : ''}" data-tab="session">
-              💼 حركات الجلسة الحالية
+              💼 حركات الخزينة والوارد والصادر
             </button>
             <button class="admin-tab-btn ${activeFinanceTab === 'expenses' ? 'active' : ''}" data-tab="expenses">
               🧾 المصروفات والنثريات
@@ -13007,6 +13913,8 @@
 
     const catNames = {
       RENTAL: 'إيجار بدل',
+      RENTAL_ADVANCE: 'عربون حجز بدل',
+      RENTAL_REMAINDER: 'سداد باقي إيجار',
       SALE: 'مبيعات نقدية',
       DEPOSIT: 'أمانات تأمين مستردة',
       DEPOSIT_REFUND: 'رد تأمين للعميل',
@@ -13118,69 +14026,121 @@
     });
   };
 
-  // --- Sub-Tab 1: Current Session Transactions ---
+  // --- Sub-Tab 1: Cash Transactions (Independent of sessions & supporting all scopes) ---
+  window._viewSessionTransactions = (sId) => {
+    activeFinanceTab = 'session';
+    const container = document.getElementById('finance-tab-content');
+    if (container) {
+      container.dataset.sessionScope = sId;
+    }
+    document.querySelectorAll('.admin-tab-btn').forEach(b => {
+      if (b.getAttribute('data-tab') === 'session') b.classList.add('active');
+      else b.classList.remove('active');
+    });
+    renderFinanceTabContent();
+  };
+
   async function renderSessionTransactionsTab(container) {
     const paymentMethodFilter = container.dataset.paymentMethodFilter || 'ALL';
     const startDateFilter = container.dataset.startDateFilter || '';
     const endDateFilter = container.dataset.endDateFilter || '';
+    const sessionScope = container.dataset.sessionScope || 'ALL'; // 'ALL' = كل الحركات، 'CURRENT' = الجلسة الحالية/الأخيرة، أو رقم الجلسة
 
-    const res = await electronApi.invoke('finance:get-cash-session', {
-      paymentMethod: paymentMethodFilter,
-      startDate: startDateFilter || null,
-      endDate: endDateFilter || null
-    });
-    const session = res.success ? res.data : null;
+    let res = null;
+    try {
+      res = await electronApi.invoke('finance:get-transactions', {
+        sessionId: sessionScope,
+        paymentMethod: paymentMethodFilter,
+        startDate: startDateFilter || null,
+        endDate: endDateFilter || null,
+        limit: 200
+      });
+    } catch (_) {}
 
-    if (!session || !session.recent_transactions || session.recent_transactions.length === 0) {
-      container.innerHTML = `
-        <div style="margin-bottom: 14px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; background: var(--bg-card); padding: 10px 14px; border-radius: 6px; border: 1px solid var(--border-color);">
-          <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-            <label style="font-size: 12px; color: var(--text-secondary);">طريقة الدفع:</label>
-            <select id="payment-method-filter" class="form-control" style="width: auto; padding: 4px 8px; font-size: 12px;">
-              <option value="ALL" ${paymentMethodFilter === 'ALL' ? 'selected' : ''}>الكل (جميع الطرق)</option>
-              <option value="CASH" ${paymentMethodFilter === 'CASH' ? 'selected' : ''}>💵 كاش بالدرج</option>
-              <option value="VODAFONE_CASH" ${paymentMethodFilter === 'VODAFONE_CASH' ? 'selected' : ''}>📱 محفظة إلكترونية</option>
-              <option value="INSTAPAY" ${paymentMethodFilter === 'INSTAPAY' ? 'selected' : ''}>⚡ إنستاباي (InstaPay)</option>
-              <option value="VISA_CARD" ${paymentMethodFilter === 'VISA_CARD' ? 'selected' : ''}>💳 بطاقة بنكية</option>
-              <option value="BANK_TRANSFER" ${paymentMethodFilter === 'BANK_TRANSFER' ? 'selected' : ''}>🏦 تحويل بنكي</option>
-            </select>
-
-            <label style="font-size: 12px; color: var(--text-secondary); margin-right: 6px;">من:</label>
-            <input type="date" id="tx-filter-start" class="form-control" value="${startDateFilter}" style="width: auto; padding: 4px 8px; font-size: 12px;">
-            <label style="font-size: 12px; color: var(--text-secondary);">إلى:</label>
-            <input type="date" id="tx-filter-end" class="form-control" value="${endDateFilter}" style="width: auto; padding: 4px 8px; font-size: 12px;">
-
-            <button type="button" id="btn-apply-tx-filters" class="btn-secondary" style="padding: 4px 10px; font-size: 12px;">🔍 فلترة</button>
-            <button type="button" id="btn-reset-tx-filters" class="btn-secondary" style="padding: 4px 8px; font-size: 12px;">إعادة تعيين</button>
-          </div>
-        </div>
-
-        <div class="state-container empty-state" style="padding: 40px 0;">
-          <div class="state-icon">💼</div>
-          <h4 class="state-title">لا توجد حركات نقدية مطابقة لمعايير البحث في هذه الجلسة</h4>
-          <p class="state-desc">جرب تغيير طريقة الدفع أو نطاق التواريخ، أو سيتم تسجيل أي عملية جديدة تلقائياً.</p>
-        </div>
-      `;
-      setupSessionFilterListeners(container);
-      return;
+    // Fallback if needed
+    if (!res || !res.success) {
+      try {
+        const sesRes = await electronApi.invoke('finance:get-cash-session', {
+          paymentMethod: paymentMethodFilter,
+          startDate: startDateFilter || null,
+          endDate: endDateFilter || null
+        });
+        if (sesRes?.data) {
+          res = {
+            success: true,
+            data: {
+              transactions: sesRes.data.recent_transactions || [],
+              sessionInfo: sesRes.data,
+              summary: {
+                totalIn: sesRes.data.total_cash_in || 0,
+                totalOut: sesRes.data.total_cash_out || 0,
+                netChange: (sesRes.data.total_cash_in || 0) - (sesRes.data.total_cash_out || 0)
+              }
+            }
+          };
+        }
+      } catch (e) {}
     }
 
+    // دعم فك البيانات المباشرة أو المغلفة لتجنب أي تداخل
+    const rawData = (res?.data && res.data.data) ? res.data.data : (res?.data || {});
+    const transactions = rawData.transactions || rawData.recent_transactions || (Array.isArray(rawData) ? rawData : []);
+    const summary = rawData.summary || {
+      totalIn: rawData.total_cash_in || 0,
+      totalOut: rawData.total_cash_out || 0,
+      netChange: (rawData.total_cash_in || 0) - (rawData.total_cash_out || 0)
+    };
+    const sessionInfo = rawData.sessionInfo || (rawData.session_code ? rawData : null);
+
     const fmt = window.UiUtils ? window.UiUtils.formatCurrency : (v) => `${v} ج.م`;
-    window._sessionTransactionsList = session.recent_transactions;
+    window._sessionTransactionsList = transactions;
+
+    const catNames = {
+      RENTAL: 'إيجار بدل',
+      RENTAL_ADVANCE: 'عربون حجز بدل',
+      RENTAL_REMAINDER: 'سداد باقي إيجار',
+      SALE: 'مبيعات نقدية',
+      DEPOSIT: 'تأمين أمانات',
+      DEPOSIT_REFUND: 'رد تأمين',
+      EXPENSE: 'مصروفات تشغيلية',
+      MANUAL_IN: 'إيداع نثريات بالدرج',
+      MANUAL_OUT: 'سحب نقدي من الدرج',
+      DEBT: 'سداد مديونية عميل',
+      CASH: '💵 كاش بالدرج',
+      VISA_CARD: '💳 بطاقة بنكية',
+      VODAFONE_CASH: '📱 محفظة إلكترونية',
+      INSTAPAY: '⚡ إنستاباي (InstaPay)',
+      BANK_TRANSFER: '🏦 تحويل بنكي'
+    };
 
     container.innerHTML = `
+      <!-- شريط العنوان والملخص المالي للحركات -->
       <div style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-        <h4 style="margin: 0; font-size: 14px;">سجل حركات النقدية بالدرج (${session.recent_transactions.length} حركة مسجلة)</h4>
-        <div style="display: flex; gap: 8px;">
-          <span class="badge badge-success" style="font-size: 12px; padding: 4px 10px;">وارد: +${fmt(session.total_cash_in)}</span>
-          <span class="badge badge-danger" style="font-size: 12px; padding: 4px 10px;">صادر: -${fmt(session.total_cash_out)}</span>
+        <div>
+          <h4 style="margin: 0; font-size: 14px; font-weight: 700;">
+            سجل حركات الخزينة والوارد والصادر (${transactions.length} حركة مسجلة)
+            ${sessionInfo ? `<span class="badge badge-info" style="font-size: 11px; margin-right: 6px;">جلسة [${sessionInfo.session_code}] - ${sessionInfo.status === 'OPEN' ? '🟢 مفتوحة' : '🔒 مغلقة'}</span>` : ''}
+          </h4>
+          <span style="font-size: 11px; color: var(--text-secondary);">عرض الحركات النقدية والبنكية بشكل مستقل سواء كانت الجلسة مفتوحة أو مغلقة</span>
+        </div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <span class="badge badge-success" style="font-size: 12px; padding: 4px 10px;">إجمالي الوارد: +${fmt(summary.totalIn)}</span>
+          <span class="badge badge-danger" style="font-size: 12px; padding: 4px 10px;">إجمالي الصادر: -${fmt(summary.totalOut)}</span>
+          <span class="badge badge-warning" style="font-size: 12px; padding: 4px 10px; font-weight: 800;">الصافي: ${fmt(summary.netChange)}</span>
         </div>
       </div>
 
-      <!-- Advanced Filters Bar (Payment Method & Date Range) -->
+      <!-- شريط الفلاتر المتقدم ونطاق العرض -->
       <div style="margin-bottom: 12px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; background: var(--bg-card); padding: 10px 14px; border-radius: 6px; border: 1px solid var(--border-color);">
         <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-          <label style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">طريقة الدفع:</label>
+          <label style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">نطاق العرض:</label>
+          <select id="tx-session-scope" class="form-control" style="width: auto; padding: 4px 8px; font-size: 12px; font-weight: 600;">
+            <option value="ALL" ${sessionScope === 'ALL' ? 'selected' : ''}>📋 كل الحركات النقدية (عرض شامل لكافة الحركات)</option>
+            <option value="CURRENT" ${sessionScope === 'CURRENT' ? 'selected' : ''}>💼 الجلسة الحالية / الأخيرة فقط</option>
+            ${(!['ALL', 'CURRENT'].includes(String(sessionScope))) ? `<option value="${sessionScope}" selected>🔍 جلسة محددة (#${sessionScope})</option>` : ''}
+          </select>
+
+          <label style="font-size: 12px; color: var(--text-secondary); font-weight: 600; margin-right: 4px;">طريقة الدفع:</label>
           <select id="payment-method-filter" class="form-control" style="width: auto; padding: 4px 8px; font-size: 12px;">
             <option value="ALL" ${paymentMethodFilter === 'ALL' ? 'selected' : ''}>الكل (جميع الطرق)</option>
             <option value="CASH" ${paymentMethodFilter === 'CASH' ? 'selected' : ''}>💵 كاش بالدرج</option>
@@ -13190,7 +14150,7 @@
             <option value="BANK_TRANSFER" ${paymentMethodFilter === 'BANK_TRANSFER' ? 'selected' : ''}>🏦 تحويل بنكي</option>
           </select>
 
-          <label style="font-size: 12px; color: var(--text-secondary); margin-right: 6px; font-weight: 600;">من تاريخ:</label>
+          <label style="font-size: 12px; color: var(--text-secondary); margin-right: 4px; font-weight: 600;">من:</label>
           <input type="date" id="tx-filter-start" class="form-control" value="${startDateFilter}" style="width: auto; padding: 4px 8px; font-size: 12px;">
           <label style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">إلى:</label>
           <input type="date" id="tx-filter-end" class="form-control" value="${endDateFilter}" style="width: auto; padding: 4px 8px; font-size: 12px;">
@@ -13199,76 +14159,71 @@
           <button type="button" id="btn-reset-tx-filters" class="btn-secondary" style="padding: 4px 8px; font-size: 12px;">إعادة تعيين</button>
         </div>
 
-        <span style="font-size: 11px; color: var(--color-gold-400); font-weight: 600;">💡 انقر فوق أي صف أفقي لعرض المنتجات المحجوزة والملاحظات كاملة</span>
+        <span style="font-size: 11px; color: var(--color-gold-400); font-weight: 600;">💡 انقر فوق أي حركة لعرض تفاصيلها والقطع المحجوزة كاملة</span>
       </div>
 
-      <div style="max-height: 480px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 6px;">
-        <table class="app-table" style="margin: 0;">
-          <thead>
-            <tr>
-              <th style="width: 45px;">#</th>
-              <th>النوع</th>
-              <th>طريقة الدفع</th>
-              <th>التصنيف / البيان</th>
-              <th>العميل / الطرف</th>
-              <th>العقد / الفاتورة</th>
-              <th>المبلغ</th>
-              <th>التاريخ والوقت</th>
-              <th style="width: 70px; text-align: center;">التفاصيل</th>
-            </tr>
-          </thead>
-          <tbody id="session-transactions-body">
-            ${session.recent_transactions.map((t, idx) => {
-              const isIncome = t.transaction_type === 'IN';
-              const sign = isIncome ? '+' : '-';
-              const color = isIncome ? 'var(--color-success)' : 'var(--color-danger)';
-              const badgeClass = isIncome ? 'badge-success' : 'badge-danger';
+      <!-- جدول الحركات -->
+      ${transactions.length === 0 ? `
+        <div class="state-container empty-state" style="padding: 45px 0; background: var(--bg-card); border-radius: 8px; border: 1px dashed var(--border-color); text-align: center;">
+          <div class="state-icon" style="font-size: 36px; margin-bottom: 8px;">💼</div>
+          <h4 class="state-title" style="margin: 0 0 6px;">لا توجد حركات نقدية مطابقة لمعايير البحث المحددة</h4>
+          <p class="state-desc" style="margin: 0; font-size: 12px; color: var(--text-secondary);">جرب اختيار "كل الحركات النقدية (عرض شامل)" أو توسيع نطاق التواريخ وطرق الدفع.</p>
+        </div>
+      ` : `
+        <div style="max-height: 520px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 6px;">
+          <table class="app-table" style="margin: 0;">
+            <thead>
+              <tr>
+                <th style="width: 45px;">#</th>
+                <th>النوع</th>
+                <th>الجلسة</th>
+                <th>طريقة الدفع</th>
+                <th>التصنيف / البيان</th>
+                <th>العميل / الطرف</th>
+                <th>العقد / الفاتورة</th>
+                <th>المبلغ</th>
+                <th>التاريخ والوقت</th>
+                <th style="width: 70px; text-align: center;">التفاصيل</th>
+              </tr>
+            </thead>
+            <tbody id="session-transactions-body">
+              ${transactions.map((t, idx) => {
+                const isIncome = t.transaction_type === 'IN';
+                const sign = isIncome ? '+' : '-';
+                const color = isIncome ? 'var(--color-success)' : 'var(--color-danger)';
+                const badgeClass = isIncome ? 'badge-success' : 'badge-danger';
 
-              const catNames = {
-                RENTAL: 'إيجار بدل',
-                SALE: 'مبيعات نقدية',
-                DEPOSIT: 'تأمين أمانات',
-                DEPOSIT_REFUND: 'رد تأمين',
-                EXPENSE: 'مصروفات',
-                MANUAL_IN: 'إيداع نثريات',
-                MANUAL_OUT: 'سحب نقدي',
-                DEBT: 'سداد دين',
-                CASH: '💵 كاش',
-                VISA_CARD: '💳 بطاقة',
-                VODAFONE_CASH: '📱 محفظة',
-                INSTAPAY: '⚡ إنستاباي',
-                BANK_TRANSFER: '🏦 تحويل'
-              };
-
-              return `
-                <tr class="clickable-tx-row" data-index="${idx}" style="cursor: pointer; transition: background 0.15s ease;" title="انقر لعرض تفاصيل الحركة والمنتجات المحجوزة والملاحظات كاملة 🔍">
-                  <td><span style="font-weight: 700; color: var(--text-secondary);">${t.id}</span></td>
-                  <td><span class="badge ${badgeClass}">${isIncome ? 'وارد 📥' : 'صادر 📤'}</span></td>
-                  <td><span class="badge" style="background: rgba(255,255,255,0.06); font-size: 11px; border: 1px solid var(--border-color);">${t.payment_method_label || catNames[t.payment_method] || '💵 كاش'}</span></td>
-                  <td><strong>${catNames[t.category] || t.category}</strong> <span style="font-size: 11px; color: var(--text-secondary); display: block;">${t.notes || ''}</span></td>
-                  <td>
-                    <strong>${t.customer_name || '-'}</strong>
-                    ${t.customer_phone ? `<span style="display: block; font-size: 11px; color: var(--text-secondary);" dir="ltr">${t.customer_phone}</span>` : ''}
-                  </td>
-                  <td><span class="badge badge-info" style="font-size: 11px;">${t.reference_number || '-'}</span></td>
-                  <td style="font-weight: 800; color: ${color}; direction: ltr; text-align: right; font-size: 13px;">${sign}${fmt(t.amount)}</td>
-                  <td style="font-size: 11px; color: var(--text-secondary); white-space: nowrap;">${window.UiUtils ? window.UiUtils.formatDate(t.created_at, true) : t.created_at}</td>
-                  <td style="text-align: center;">
-                    <button type="button" class="btn-secondary btn-view-tx-details" data-index="${idx}" style="font-size: 11px; padding: 2px 8px;" title="عرض كل التفاصيل">
-                      👁️ عرض
-                    </button>
-                  </td>
-                </tr>
-              `;
-            }).join('')}
-          </tbody>
-        </table>
-      </div>
+                return `
+                  <tr class="clickable-tx-row" data-index="${idx}" style="cursor: pointer; transition: background 0.15s ease;" title="انقر لعرض تفاصيل الحركة والملاحظات كاملة 🔍">
+                    <td><span style="font-weight: 700; color: var(--text-secondary);">${t.id}</span></td>
+                    <td><span class="badge ${badgeClass}">${isIncome ? 'وارد 📥' : 'صادر 📤'}</span></td>
+                    <td><span class="badge ${t.session_status === 'OPEN' ? 'badge-success' : 'badge-secondary'}" style="font-size: 10px;">${t.session_code || 'عامة'}</span></td>
+                    <td><span class="badge" style="background: rgba(255,255,255,0.06); font-size: 11px; border: 1px solid var(--border-color);">${t.payment_method_label || catNames[t.payment_method] || '💵 كاش'}</span></td>
+                    <td><strong>${catNames[t.category] || t.category}</strong> <span style="font-size: 11px; color: var(--text-secondary); display: block;">${t.notes || ''}</span></td>
+                    <td>
+                      <strong>${t.customer_name || '-'}</strong>
+                      ${t.customer_phone ? `<span style="display: block; font-size: 11px; color: var(--text-secondary);" dir="ltr">${t.customer_phone}</span>` : ''}
+                    </td>
+                    <td><span class="badge badge-info" style="font-size: 11px;">${t.reference_number || '-'}</span></td>
+                    <td style="font-weight: 800; color: ${color}; direction: ltr; text-align: right; font-size: 13px;">${sign}${fmt(t.amount)}</td>
+                    <td style="font-size: 11px; color: var(--text-secondary); white-space: nowrap;">${window.UiUtils ? window.UiUtils.formatDate(t.created_at, true) : t.created_at}</td>
+                    <td style="text-align: center;">
+                      <button type="button" class="btn-secondary btn-view-tx-details" data-index="${idx}" style="font-size: 11px; padding: 2px 8px;" title="عرض كل التفاصيل">
+                        👁️ عرض
+                      </button>
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      `}
     `;
 
     setupSessionFilterListeners(container);
 
-    // Click handler for table rows (Click any horizontal row to view full details)
+    // ربط النقر على صفوف الحركات
     container.querySelectorAll('.clickable-tx-row').forEach(row => {
       row.addEventListener('click', (e) => {
         const idx = row.getAttribute('data-index');
@@ -13277,42 +14232,50 @@
         }
       });
     });
+
+    container.querySelectorAll('.btn-view-tx-details').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const idx = btn.getAttribute('data-index');
+        if (idx !== null && window._sessionTransactionsList && window._sessionTransactionsList[idx]) {
+          window._openTransactionDetailModal(window._sessionTransactionsList[idx]);
+        }
+      });
+    });
   }
 
   function setupSessionFilterListeners(container) {
-    const filterSelect = document.getElementById('payment-method-filter');
-    const startInput = document.getElementById('tx-filter-start');
-    const endInput = document.getElementById('tx-filter-end');
-    const btnApply = document.getElementById('btn-apply-tx-filters');
-    const btnReset = document.getElementById('btn-reset-tx-filters');
+    const scopeSel = container.querySelector('#tx-session-scope');
+    const methodFilter = container.querySelector('#payment-method-filter');
+    const startInput = container.querySelector('#tx-filter-start');
+    const endInput = container.querySelector('#tx-filter-end');
+    const btnApply = container.querySelector('#btn-apply-tx-filters');
+    const btnReset = container.querySelector('#btn-reset-tx-filters');
 
-    if (filterSelect) {
-      filterSelect.addEventListener('change', () => {
-        container.dataset.paymentMethodFilter = filterSelect.value;
-        renderSessionTransactionsTab(container);
-      });
-    }
+    const applyFilters = () => {
+      if (scopeSel) container.dataset.sessionScope = scopeSel.value;
+      if (methodFilter) container.dataset.paymentMethodFilter = methodFilter.value;
+      if (startInput) container.dataset.startDateFilter = startInput.value;
+      if (endInput) container.dataset.endDateFilter = endInput.value;
+      renderSessionTransactionsTab(container);
+    };
 
-    if (btnApply) {
-      btnApply.addEventListener('click', () => {
-        container.dataset.paymentMethodFilter = filterSelect ? filterSelect.value : 'ALL';
-        container.dataset.startDateFilter = startInput ? startInput.value : '';
-        container.dataset.endDateFilter = endInput ? endInput.value : '';
-        renderSessionTransactionsTab(container);
-      });
-    }
+    if (btnApply) btnApply.addEventListener('click', applyFilters);
+    if (scopeSel) scopeSel.addEventListener('change', applyFilters);
+    if (methodFilter) methodFilter.addEventListener('change', applyFilters);
 
     if (btnReset) {
       btnReset.addEventListener('click', () => {
-        delete container.dataset.paymentMethodFilter;
-        delete container.dataset.startDateFilter;
-        delete container.dataset.endDateFilter;
+        container.dataset.sessionScope = 'ALL';
+        container.dataset.paymentMethodFilter = 'ALL';
+        container.dataset.startDateFilter = '';
+        container.dataset.endDateFilter = '';
         renderSessionTransactionsTab(container);
       });
     }
   }
 
-  // --- Sub-Tab 2: Expenses ---
+    // --- Sub-Tab 2: Expenses ---
   async function renderExpensesTab(container) {
     const res = await electronApi.invoke('finance:get-expenses', { limit: 100 });
     const expenses = res.success && res.data ? res.data : [];
@@ -13513,6 +14476,7 @@
               <th>الرصيد الفعلي</th>
               <th>الفارق (عجز/زيادة)</th>
               <th>الحالة</th>
+              <th style="text-align: center;">الإجراءات</th>
             </tr>
           </thead>
           <tbody>
@@ -13538,6 +14502,11 @@
                   <td style="font-weight: 700;">${s.actual_balance !== null ? fmt(s.actual_balance) : '-'}</td>
                   <td>${diffBadge}</td>
                   <td><span class="badge ${isOpen ? 'badge-success' : 'badge-secondary'}">${isOpen ? 'مفتوحة' : 'مغلقة'}</span></td>
+                  <td style="text-align: center;">
+                    <button class="btn-secondary" style="padding: 2px 8px; font-size: 11px; font-weight: 600;" onclick="window._viewSessionTransactions('${s.id}')" title="عرض الحركات النقدية لهذه الجلسة">
+                      👁️ الحركات
+                    </button>
+                  </td>
                 </tr>
               `;
     }).join('')}
@@ -14840,17 +15809,46 @@
               <span id="delivery-count-badge" class="badge badge-success" style="font-size: 13px; font-weight: 700; padding: 6px 12px;"></span>
             </div>
 
+            <!-- شريط تقويم تسليمات الأيام القادمة مع عدد المهام لكل يوم -->
+            <div style="background: rgba(0,0,0,0.22); padding: 10px 14px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 8px; overflow-x: auto;">
+              <span style="font-size: 11px; font-weight: 700; color: var(--text-secondary); white-space: nowrap;">📅 تقويم الأسبوع:</span>
+              <div id="delivery-week-calendar" style="display: flex; gap: 6px; flex: 1;">
+                ${(() => {
+                  const days = [];
+                  for (let d = 0; d < 7; d++) {
+                    const dt = new Date();
+                    dt.setDate(dt.getDate() + d);
+                    const iso = dt.toISOString().slice(0, 10);
+                    const dName = d === 0 ? 'اليوم' : (d === 1 ? 'غداً' : dt.toLocaleDateString('ar-EG', { weekday: 'short' }));
+                    const dNum = `${dt.getDate()}/${dt.getMonth() + 1}`;
+                    const count = bookings.filter(b => (b.status === 'PREPARED' || b.status === 'CONFIRMED') && b.pickup_date === iso).length;
+                    days.push(`
+                      <button type="button" class="btn-cal-day ${currentDeliveryDateFilter === iso ? 'active-cal-day' : ''}" data-date="${iso}" style="flex: 1; min-width: 58px; padding: 5px 3px; text-align: center; border-radius: 6px; border: 1px solid ${currentDeliveryDateFilter === iso ? '#10B981' : 'var(--border-color)'}; background: ${currentDeliveryDateFilter === iso ? 'rgba(16,185,129,0.2)' : 'rgba(255,255,255,0.03)'}; cursor: pointer; transition: all 0.15s ease;">
+                        <div style="font-size: 11px; font-weight: 700; color: ${currentDeliveryDateFilter === iso ? '#10B981' : 'var(--text-primary)'};">${dName}</div>
+                        <div style="font-size: 9px; color: var(--text-muted);">${dNum}</div>
+                        <div style="margin-top: 3px;">
+                          <span class="badge ${count > 0 ? 'badge-success' : 'badge-secondary'}" style="font-size: 9px; padding: 1px 5px; font-weight: 800;">${count} مهام</span>
+                        </div>
+                      </button>
+                    `);
+                  }
+                  return days.join('');
+                })()}
+              </div>
+            </div>
+
             <!-- Delivery Filters Toolbar -->
-            <div style="padding: 14px 18px; border-bottom: 1px solid var(--border-color); background: rgba(0,0,0,0.15); display: flex; flex-direction: column; gap: 10px;">
+            <div style="padding: 12px 18px; border-bottom: 1px solid var(--border-color); background: rgba(0,0,0,0.15); display: flex; flex-direction: column; gap: 10px;">
               <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
                 <div style="display: flex; align-items: center; gap: 8px;">
                   <label style="font-size: 12px; font-weight: 600; color: var(--text-secondary);">تاريخ الاستلام:</label>
-                  <input type="date" id="delivery-date-filter" value="${today}" style="padding: 6px 10px; font-size: 13px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-input); color: var(--text-primary);">
+                  <input type="date" id="delivery-date-filter" value="${today}" style="padding: 5px 10px; font-size: 13px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-input); color: var(--text-primary);">
+                  <span id="delivery-selected-count-badge" class="badge badge-info" style="font-size: 11px; padding: 4px 8px; font-weight: 700;"></span>
                 </div>
                 <div style="display: flex; gap: 6px;">
-                  <button class="btn-secondary" id="btn-del-today" style="padding: 4px 10px; font-size: 11px;">اليوم</button>
-                  <button class="btn-secondary" id="btn-del-tomorrow" style="padding: 4px 10px; font-size: 11px;">غداً</button>
-                  <button class="btn-secondary" id="btn-del-all" style="padding: 4px 10px; font-size: 11px;">عرض الكل</button>
+                  <button class="btn-secondary" id="btn-del-today" style="padding: 4px 10px; font-size: 11px;">اليوم (${bookings.filter(b => (b.status === 'PREPARED' || b.status === 'CONFIRMED') && b.pickup_date === today).length})</button>
+                  <button class="btn-secondary" id="btn-del-tomorrow" style="padding: 4px 10px; font-size: 11px;">غداً (${bookings.filter(b => (b.status === 'PREPARED' || b.status === 'CONFIRMED') && b.pickup_date === tomorrow).length})</button>
+                  <button class="btn-secondary" id="btn-del-all" style="padding: 4px 10px; font-size: 11px;">عرض الكل (${bookings.filter(b => b.status === 'PREPARED' || b.status === 'CONFIRMED').length})</button>
                 </div>
               </div>
               <div>
@@ -14934,6 +15932,12 @@
 
       const filtered = getFilteredDelivery();
       if (badge) badge.textContent = `${filtered.length} حجز جاهز`;
+      const dateBadge = document.getElementById('delivery-selected-count-badge');
+      if (dateBadge) {
+        dateBadge.textContent = currentDeliveryDateFilter === 'ALL' 
+          ? `إجمالي: ${filtered.length} مهام` 
+          : `مهام هذا التاريخ: ${filtered.length} تسليم`;
+      }
 
       if (filtered.length === 0) {
         container.innerHTML = `

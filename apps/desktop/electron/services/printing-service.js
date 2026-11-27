@@ -68,6 +68,20 @@ class PrintingService {
   /**
    * تنسيق التاريخ والوقت بصيغة 12 ساعة مع ص/م للطباعة
    */
+  formatTime12h(dateInput) {
+    if (!dateInput) return '—';
+    const date = (dateInput instanceof Date) ? dateInput : new Date(dateInput);
+    if (isNaN(date.getTime())) return String(dateInput);
+
+    const hours = date.getHours();
+    const minutes = date.getMinutes();
+    const period = hours < 12 ? 'ص' : 'م';
+    const hours12 = hours % 12 || 12;
+    const hoursStr = String(hours12).padStart(2, '0');
+    const minutesStr = String(minutes).padStart(2, '0');
+    return `${hoursStr}:${minutesStr} ${period}`;
+  }
+
   formatDateTime12h(dateInput) {
     if (!dateInput) return '—';
     const date = (dateInput instanceof Date) ? dateInput : new Date(dateInput);
@@ -160,15 +174,15 @@ class PrintingService {
 <body>
   <div class="text-center">
     <h2 style="margin: 0; font-size: 16px;">${store.name}</h2>
-    <div style="font-size: 10px; margin-top: 3px;">${store.address}</div>
-    <div style="font-size: 10px;">هاتف: ${store.phone} | ضريبي: ${store.taxNumber}</div>
+    <div style="font-size: 11px; margin-top: 4px;">هاتف: <span dir="ltr">${store.phone}</span></div>
   </div>
 
   <div class="divider"></div>
 
   <div style="font-size: 11px;">
     <div><strong>رقم الإيصال:</strong> <span class="mono bold">${receiptNumber}</span></div>
-    <div><strong>التاريخ:</strong> ${dateStr}</div>
+    <div><strong>التاريخ:</strong> ${dateStr.split(' ')[0] || dateStr}</div>
+    <div><strong>وقت الإنشاء:</strong> ${this.formatTime12h(data.date || new Date())}</div>
     <div><strong>الكاشير:</strong> ${cashier}</div>
     <div><strong>العميل:</strong> ${customer}</div>
   </div>
@@ -370,14 +384,13 @@ class PrintingService {
     <tr>
       <td style="text-align: right; width: 60%;">
         <h1 style="margin: 0; font-size: 22px; color: #111827;">${store.name}</h1>
-        <div style="font-size: 12px; color: #4b5563; margin-top: 4px;">${store.address}</div>
-        <div style="font-size: 12px; color: #4b5563;">هاتف: ${store.phone} | البريد: support@royal-suits.com</div>
-        <div style="font-size: 12px; color: #4b5563;">البطاقة الضريبية: ${store.taxNumber} | السجل التجاري: ${store.commercialRegister}</div>
+        <div style="font-size: 13px; color: #4b5563; margin-top: 6px;">هاتف: <span dir="ltr" style="font-weight: 600;">${store.phone}</span></div>
       </td>
       <td style="text-align: left; width: 40%; vertical-align: top;">
         <h2 style="margin: 0; color: #d4af37; font-size: 18px;">${invoiceTitle}</h2>
         <div style="margin-top: 5px;"><strong>رقم الفاتورة:</strong> <span style="font-family: monospace; font-weight: bold;">${invoiceNumber}</span></div>
         <div><strong>تاريخ الإصدار:</strong> ${invoiceDate}</div>
+        <div><strong>وقت الإنشاء:</strong> ${this.formatTime12h(data.created_at || data.createdAt || data.date || new Date())}</div>
         <div><strong>حالة السداد:</strong> <span class="badge ${remaining <= 0 ? 'badge-paid' : 'badge-partial'}">${paymentStatus}</span></div>
       </td>
     </tr>
@@ -653,11 +666,12 @@ class PrintingService {
   <div class="header-box">
     <div class="header-cell" style="width: 60%; text-align: right;">
       <h2 style="margin: 0; font-size: 18px; color: #111827;">${store.name}</h2>
-      <div style="font-size: 11px; color: #4b5563;">${store.address} | هاتف: ${store.phone}</div>
+      <div style="font-size: 12px; color: #4b5563; margin-top: 4px;">هاتف: <span dir="ltr" style="font-weight: 600;">${store.phone}</span></div>
     </div>
     <div class="header-cell" style="width: 40%; text-align: left;">
       <div style="font-size: 12px;"><strong>رقم العقد:</strong> <span style="font-family: monospace; font-weight: bold; color: #d4af37;">${contractNumber}</span></div>
       <div style="font-size: 11px; color: #4b5563;">تاريخ التحرير: ${contractDate}</div>
+      <div style="font-size: 11px; color: #4b5563;">وقت الإنشاء: ${this.formatTime12h(data.created_at || data.createdAt || data.date || new Date())}</div>
     </div>
   </div>
 

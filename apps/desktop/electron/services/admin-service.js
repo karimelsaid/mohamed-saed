@@ -302,12 +302,37 @@ class AdminService {
   }
 
   createColor({ name, hex_code = '#000000' }) {
-    if (!name) throw new Error('اسم اللون مطلوب.');
+    if (!name || !String(name).trim()) throw new Error('اسم اللون مطلوب.');
     const db = this.dbConn.getDb();
-    const stmt = db.prepare('INSERT INTO colors (name, hex_code, is_active) VALUES (?, ?, 1)');
-    const res = stmt.run(name.trim(), hex_code.trim());
-    logger.info(`Created color: ${name} (${hex_code})`);
-    return { id: res.lastInsertRowid, name, hexCode: hex_code };
+    const rawName = String(name).trim();
+    const hex = (hex_code && String(hex_code).trim()) ? String(hex_code).trim() : '#000000';
+
+    const names = rawName.split(/[,،\n]+/).map(x => x.trim()).filter(Boolean);
+    if (names.length > 1) {
+      const inserted = [];
+      const stmt = db.prepare(`
+        INSERT INTO colors (name, hex_code, is_active)
+        VALUES (?, ?, 1)
+        ON CONFLICT(name) DO UPDATE SET is_active = 1
+      `);
+      for (const singleName of names) {
+        const res = stmt.run(singleName, hex);
+        const row = db.prepare('SELECT id, name, hex_code FROM colors WHERE name = ?').get(singleName);
+        inserted.push(row || { id: res.lastInsertRowid, name: singleName, hex_code: hex });
+      }
+      logger.info(`Created/activated multiple colors (${inserted.length})`);
+      return { count: inserted.length, items: inserted };
+    }
+
+    const stmt = db.prepare(`
+      INSERT INTO colors (name, hex_code, is_active)
+      VALUES (?, ?, 1)
+      ON CONFLICT(name) DO UPDATE SET is_active = 1, hex_code = COALESCE(excluded.hex_code, colors.hex_code)
+    `);
+    const res = stmt.run(rawName, hex);
+    const row = db.prepare('SELECT id, name, hex_code FROM colors WHERE name = ?').get(rawName);
+    logger.info(`Created or activated color: ${rawName} (${hex})`);
+    return { id: row?.id || res.lastInsertRowid, name: rawName, hexCode: row?.hex_code || hex };
   }
 
   updateColor(id, { name, hex_code, is_active }) {

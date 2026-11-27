@@ -123,11 +123,23 @@ class BookingEngineService {
   // =========================================================================
 
   checkUnitAvailability(unitId, pickupDate, returnDueDate, excludeBookingId = null) {
+    if (!unitId || !pickupDate) {
+      return { unitId: Number(unitId) || null, isAvailable: true, conflictingBooking: null, nextAvailableDate: null };
+    }
+
+    const cleanPickup = String(pickupDate).trim().slice(0, 10);
+    let cleanReturn = returnDueDate ? String(returnDueDate).trim().slice(0, 10) : '';
+    if (!cleanReturn || cleanReturn < cleanPickup) {
+      const d = new Date(cleanPickup);
+      d.setDate(d.getDate() + 3);
+      cleanReturn = d.toISOString().slice(0, 10);
+    }
+
     const db = this.dbConn.getDb();
 
     // Query overlapping active bookings:
-    // A collision occurs if the requested range [pickupDate, returnDueDate] overlaps with any active booking's range [b.pickup_date, b.return_due_date]
-    // Condition: b.pickup_date <= returnDueDate AND b.return_due_date >= pickupDate
+    // A collision occurs if the requested range [cleanPickup, cleanReturn] overlaps with any active booking's range [b.pickup_date, b.return_due_date]
+    // Condition: date(b.pickup_date) <= date(cleanReturn) AND date(b.return_due_date) >= date(cleanPickup)
     const sql = `
       SELECT b.id, b.booking_number, b.pickup_date, b.return_due_date, b.status
       FROM booking_items bi
@@ -135,13 +147,13 @@ class BookingEngineService {
       WHERE bi.suit_unit_id = ?
         AND (? IS NULL OR b.id != ?)
         AND b.status NOT IN ('CANCELLED', 'COMPLETED', 'RETURNED')
-        AND (b.pickup_date <= ? AND b.return_due_date >= ?)
-      ORDER BY b.return_due_date DESC
+        AND (date(b.pickup_date) <= date(?) AND date(b.return_due_date) >= date(?))
+      ORDER BY date(b.return_due_date) DESC
       LIMIT 1
     `;
 
     const safeExcludeId = (excludeBookingId !== undefined && excludeBookingId !== null && excludeBookingId !== '') ? Number(excludeBookingId) : null;
-    const row = db.prepare(sql).get(Number(unitId), safeExcludeId, safeExcludeId, returnDueDate, pickupDate);
+    const row = db.prepare(sql).get(Number(unitId), safeExcludeId, safeExcludeId, cleanReturn, cleanPickup);
 
     const isAvailable = !row;
     let nextAvailableDate = null;
@@ -152,7 +164,7 @@ class BookingEngineService {
     }
 
     return {
-      unitId,
+      unitId: Number(unitId),
       isAvailable,
       conflictingBooking: row || null,
       nextAvailableDate

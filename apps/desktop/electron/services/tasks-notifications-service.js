@@ -319,6 +319,9 @@ class TasksNotificationsService {
       WHERE date(return_due_date) = date(?) AND status = 'DELIVERED'
     `, [todayStr]).count;
 
+    // 4. Today's Fittings (Not used)
+    const todayFittingsCount = 0;
+
 
 
     // 5. Unread in-app notifications
@@ -377,7 +380,93 @@ class TasksNotificationsService {
     };
   }
 
+
+  /**
+   * مزامنة وتوليد التنبيهات التشغيلية التلقائية في جدول الإشعارات (متأخرات، تسليمات اليوم، الحجوزات الحديثة)
+   */
+  syncOperationalNotifications() {
+    try {
+      const db = this.dbConn.getDb();
+      const todayStr = new Date().toISOString().slice(0, 10);
+
+      // 1. مزامنة البدل المتأخرة عن الإرجاع
+      const overdueBookings = this.dbConn.all(`
+        SELECT b.id, b.booking_number, b.return_due_date, c.name as customer_name
+        FROM bookings b
+        JOIN customers c ON b.customer_id = c.id
+        WHERE b.status = 'DELIVERED' AND date(b.return_due_date) < date(?)
+        ORDER BY b.return_due_date ASC LIMIT 5
+      `, [todayStr]);
+
+      for (const ob of overdueBookings) {
+        const exists = db.prepare(`
+          SELECT id FROM notifications 
+          WHERE reference_type = 'OVERDUE' AND reference_id = ? AND date(created_at) = date(?)
+        `).get(ob.id, todayStr);
+
+        if (!exists) {
+          db.prepare(`
+            INSERT INTO notifications (title, message, alert_level, is_read, reference_type, reference_id, created_at)
+            VALUES (?, ?, 'DANGER', 0, 'OVERDUE', ?, datetime('now', 'localtime'))
+          `).run(
+            `🚨 بدلة متأخرة عن الإرجاع: عقد #${ob.booking_number}`,
+            `العميل ${ob.customer_name} تجاوز موعد إرجاع البدلة المقرر بتاريخ ${ob.return_due_date}.`,
+            ob.id
+          );
+        }
+      }
+
+      // 2. مزامنة تسليمات اليوم المستحقة
+      const todayPickups = this.getPickupsDueToday();
+      for (const tp of (todayPickups || []).slice(0, 5)) {
+        const exists = db.prepare(`
+          SELECT id FROM notifications 
+          WHERE reference_type = 'PICKUP' AND reference_id = ? AND date(created_at) = date(?)
+        `).get(tp.booking_id, todayStr);
+
+        if (!exists) {
+          db.prepare(`
+            INSERT INTO notifications (title, message, alert_level, is_read, reference_type, reference_id, created_at)
+            VALUES (?, ?, 'WARNING', 0, 'PICKUP', ?, datetime('now', 'localtime'))
+          `).run(
+            `📦 موعد تسليم بدلة اليوم: عقد #${tp.booking_number}`,
+            `موعد تسليم بدلة للعميل ${tp.customer_name} اليوم (${tp.items_summary || 'بدلة فاخرة'}).`,
+            tp.booking_id
+          );
+        }
+      }
+
+      // 3. مزامنة أحدث الحجوزات والمبيعات إن كان جدول الإشعارات صغيراً
+      const countTotal = db.prepare("SELECT COUNT(*) as count FROM notifications").get().count;
+      if (countTotal < 3) {
+        const recentBookings = this.dbConn.all(`
+          SELECT b.id, b.booking_number, b.created_at, c.name as customer_name, b.final_amount
+          FROM bookings b
+          JOIN customers c ON b.customer_id = c.id
+          ORDER BY b.id DESC LIMIT 3
+        `);
+        for (const rb of recentBookings) {
+          const exists = db.prepare(`SELECT id FROM notifications WHERE reference_type = 'BOOKING' AND reference_id = ?`).get(rb.id);
+          if (!exists) {
+            db.prepare(`
+              INSERT INTO notifications (title, message, alert_level, is_read, reference_type, reference_id, created_at)
+              VALUES (?, ?, 'INFO', 0, 'BOOKING', ?, COALESCE(?, datetime('now', 'localtime')))
+            `).run(
+              `📅 حجز جديد #${rb.booking_number}`,
+              `تم تسجيل حجز جديد بنجاح للعميل ${rb.customer_name} بإجمالي ${rb.final_amount || 0} ج.م.`,
+              rb.id,
+              rb.created_at
+            );
+          }
+        }
+      }
+    } catch (e) {
+      logger.warn('Failed to sync operational notifications: ' + e.message);
+    }
+  }
+
   getNotifications({ unreadOnly = false, limit = 50 } = {}) {
+    this.syncOperationalNotifications();
     let sql = 'SELECT * FROM notifications WHERE 1=1';
     if (unreadOnly) sql += ' AND is_read = 0';
     sql += ' ORDER BY id DESC LIMIT ?';

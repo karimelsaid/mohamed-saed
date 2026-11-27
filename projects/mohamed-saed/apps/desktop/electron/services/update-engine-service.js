@@ -24,25 +24,20 @@ class UpdateEngineService {
 
   readCurrentAppVersion() {
     try {
-      const pkgPath = path.resolve(__dirname, '..', '..', '..', '..', 'package.json');
-      if (fs.existsSync(pkgPath)) {
-        const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
-        if (pkg.version) return pkg.version;
-      }
-    } catch (_) {}
-    try {
-      const db = this.dbConn.getDb();
-      const row = db.prepare("SELECT value FROM settings WHERE key = 'last_applied_update_version'").get();
-      if (row && row.value) return row.value;
-    } catch (_) {}
-    try {
       const { app } = require('electron');
       if (app && typeof app.getVersion === 'function') {
         const v = app.getVersion();
         if (v && v !== '1.0.0') return v;
       }
     } catch (_) {}
-    return '1.0.8';
+    try {
+      const pkgPath = path.resolve(__dirname, '..', '..', '..', '..', 'package.json');
+      if (fs.existsSync(pkgPath)) {
+        const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+        if (pkg.version) return pkg.version;
+      }
+    } catch (_) {}
+    return '1.0.9';
   }
 
   getDefaultUpdatesDir() {
@@ -204,40 +199,63 @@ class UpdateEngineService {
       fs.mkdirSync(destinationDir, { recursive: true });
     }
 
-    const targetVersion = this.latestReleaseInfo?.version || this.readCurrentAppVersion() || '1.0.8';
+    const targetVersion = this.latestReleaseInfo?.version || this.readCurrentAppVersion() || '1.0.9';
+    const checksum = (expectedChecksum || this.latestReleaseInfo?.sha256 || '').toLowerCase().trim();
 
-    // 1. Check for real installer executables in updates cache or dist
-    const possibleInstallers = [
-      path.join(process.env.LOCALAPPDATA || '', 'suit-store-system-updater', 'installer.exe'),
+    const verifyChecksum = (filePath) => {
+      if (!filePath || !fs.existsSync(filePath)) return false;
+      if (!checksum) return true;
+      try {
+        const fileBuf = fs.readFileSync(filePath);
+        const actualHash = crypto.createHash('sha256').update(fileBuf).digest('hex').toLowerCase();
+        return actualHash === checksum;
+      } catch (_) {
+        return false;
+      }
+    };
+
+    // 1. Check if verified installer is already present locally
+    const possibleCandidates = [
+      path.join(destinationDir, `suit_store_setup_${targetVersion}.exe`),
+      path.join(destinationDir, `setup_${targetVersion}.exe`),
       path.resolve(__dirname, '..', '..', '..', '..', 'dist', `نظام إدارة محلات بيع وتأجير بدل Setup ${targetVersion}.exe`),
       path.resolve(__dirname, '..', '..', '..', '..', 'dist', `suit-store-system-setup-${targetVersion}.exe`)
     ];
 
-    let foundInstaller = possibleInstallers.find(p => p && fs.existsSync(p));
+    let foundInstaller = possibleCandidates.find(p => verifyChecksum(p));
 
-    // 2. If remote downloadUrl is available, try downloading the binary
+    // 2. If remote downloadUrl is available and no verified installer exists, download the binary
     if (downloadUrl && downloadUrl.startsWith('http') && !foundInstaller) {
       const targetFilePath = path.join(destinationDir, `setup_${targetVersion}.exe`);
       try {
+        logger.info(`Downloading update binary from: ${downloadUrl}`);
         const response = await fetch(downloadUrl);
         if (response.ok) {
           const buffer = Buffer.from(await response.arrayBuffer());
           fs.writeFileSync(targetFilePath, buffer);
-          foundInstaller = targetFilePath;
+          if (verifyChecksum(targetFilePath)) {
+            foundInstaller = targetFilePath;
+            logger.info(`Downloaded and verified update binary: ${targetFilePath}`);
+          } else {
+            logger.error(`Downloaded update binary failed checksum validation! Expected: ${checksum}`);
+          }
+        } else {
+          logger.error(`Remote update download failed with status: ${response.status}`);
         }
       } catch (dlErr) {
-        logger.warn(`Remote binary download failed (${dlErr.message}). Using local setup candidate.`);
+        logger.warn(`Remote binary download failed (${dlErr.message}).`);
       }
     }
 
-    // 3. Fallback: Search dist directory for matching Setup exe for the EXACT targetVersion
+    // 3. Fallback search in dist directory
     if (!foundInstaller) {
       const distDir = path.resolve(__dirname, '..', '..', '..', '..', 'dist');
       if (fs.existsSync(distDir)) {
         const files = fs.readdirSync(distDir);
-        const setupFile = files.find(f => (f.includes(`Setup ${targetVersion}`) || f.includes(`setup-${targetVersion}`) || f.includes(` ${targetVersion}.exe`)) && f.endsWith('.exe'));
+        const setupFile = files.find(f => (f.includes(`Setup ${targetVersion}`) || f.includes(`setup-${targetVersion}`)) && f.endsWith('.exe'));
         if (setupFile) {
-          foundInstaller = path.join(distDir, setupFile);
+          const cand = path.join(distDir, setupFile);
+          if (verifyChecksum(cand)) foundInstaller = cand;
         }
       }
     }
@@ -246,7 +264,9 @@ class UpdateEngineService {
     if (foundInstaller) {
       targetFilePath = path.join(destinationDir, `suit_store_setup_${targetVersion}.exe`);
       try {
-        fs.copyFileSync(foundInstaller, targetFilePath);
+        if (foundInstaller !== targetFilePath) {
+          fs.copyFileSync(foundInstaller, targetFilePath);
+        }
         this.stagedUpdatePath = targetFilePath;
       } catch (_) {
         this.stagedUpdatePath = foundInstaller;
@@ -309,7 +329,7 @@ class UpdateEngineService {
     }
 
     // الخطوة 4: توثيق التحديث في جدول الإعدادات / السجل
-    const targetVer = this.latestReleaseInfo?.version || this.readCurrentAppVersion() || '1.0.8';
+    const targetVer = this.latestReleaseInfo?.version || this.readCurrentAppVersion() || '1.0.9';
     try {
       db.prepare(`
         INSERT OR REPLACE INTO settings (key, value)
@@ -331,6 +351,9 @@ class UpdateEngineService {
 
         logger.info(`Preparing robust updater script for: "${updatePath}"`);
 
+        // تحديد مسار التشغيل الفعلي للتطبيق لإعادة تشغيله بعد التثبيت
+        const runningExe = process.execPath || path.join(process.env.LOCALAPPDATA || '', 'Programs', 'suit-store-system', 'نظام إدارة محلات بيع وتأجير بدل.exe');
+
         // إنشاء سكربت باتش مؤقت ينتظر خروج البرنامج بالكامل لتفادي خطأ قفل الملفات (Windows Sharing Violation)
         const updaterBatPath = path.join(path.dirname(updatePath), 'apply_update.bat');
         const batContent = `@echo off
@@ -339,7 +362,7 @@ taskkill /F /IM "نظام إدارة محلات بيع وتأجير بدل.exe" 
 timeout /t 1 /nobreak >nul
 start /wait "" "${updatePath}" /S
 timeout /t 2 /nobreak >nul
-start "" "%LOCALAPPDATA%\\Programs\\suit-store-system\\نظام إدارة محلات بيع وتأجير بدل.exe"
+start "" "${runningExe}"
 del "%~f0"
 `;
         fs.writeFileSync(updaterBatPath, batContent, 'utf8');

@@ -1,11 +1,11 @@
 {
-  "version": "1.0.8",
-  "previousVersion": "1.0.7",
+  "version": "1.0.9",
+  "previousVersion": "1.0.8",
   "releaseDate": "2026-11-27",
-  "releaseNotes": "تحديث جديد للإصدار v1.0.8 يتضمن إضافة قسم عن المطور والدعم الفني مع إمكانية المراسلة المباشرة عبر واتساب، دعم ألوان دفعات البدل والمقاسات، وحل تجمد لوحة التحكم وتحسين الأداء والاستقرار.",
-  "downloadUrl": "https://github.com/karimelsaid/mohamed-saed/releases/download/v1.0.8/suit-store-update-1.0.8.exe",
-  "sha256": "d385aa8ae51830d1a410b64c76e39dc100d36e057f56b9b15e448a9dc08801c7",
-  "fileSizeBytes": 121637758,
+  "releaseNotes": "تحديث رسمي شامل v1.0.9: إضافة قسم عن المطور والدعم الفني مع المراسلة المباشرة عبر واتساب، دعم ألوان دفعات البدل والمقاسات، تحسين منظومة التحديث التلقائي والتحقق من البصمة الرقمية وتفادي أي تجمد في لوحة التحكم.",
+  "downloadUrl": "https://github.com/karimelsaid/mohamed-saed/releases/download/v1.0.9/suit-store-update-1.0.9.exe",
+  "sha256": "90d25fe3fb34f25ce1d39fa1982fb34f0364a148598bdc53cae533e5d9a76a48",
+  "fileSizeBytes": 121637910,
   "mandatory": false,
-  "publishedAt": "2026-11-27T15:00:00.000Z"
+  "publishedAt": "2026-11-27T16:15:00.000Z"
 }

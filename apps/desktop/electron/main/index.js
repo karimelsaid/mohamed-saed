@@ -39,6 +39,10 @@ if (!gotTheLock) {
 }
 
 function getAppVersion() {
+  if (app && typeof app.getVersion === 'function') {
+    const v = app.getVersion();
+    if (v && v !== '1.0.0') return v;
+  }
   try {
     const pkgPath = path.resolve(__dirname, '..', '..', '..', 'package.json');
     if (fs.existsSync(pkgPath)) {
@@ -46,16 +50,7 @@ function getAppVersion() {
       if (pkg.version) return pkg.version;
     }
   } catch (_) {}
-  try {
-    const db = dbConnection.getDb();
-    const row = db.prepare("SELECT value FROM settings WHERE key = 'last_applied_update_version'").get();
-    if (row && row.value) return row.value;
-  } catch (_) {}
-  if (app && typeof app.getVersion === 'function') {
-    const v = app.getVersion();
-    if (v && v !== '1.0.0') return v;
-  }
-  return '1.0.8';
+  return '1.0.9';
 }
 
 function registerCoreHandlers() {
